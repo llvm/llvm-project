@@ -1,0 +1,3 @@
+// Test including filenames without quotes.
+// In this form, the path can't include dashes.
+foo BITMAP ./nested/nested_bitmap.bmp

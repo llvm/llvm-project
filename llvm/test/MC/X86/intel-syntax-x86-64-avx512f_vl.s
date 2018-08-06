@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl,+avx512dq -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK:  vcmppd k3, xmm27, xmm23, 171
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x00,0xc2,0xdf,0xab]

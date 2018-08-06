@@ -39,7 +39,7 @@ define void @foo(i32* %t) {
   %4 = bitcast %struct.my_s* %3 to i8*
   ; CHECK-EABI: bl __aeabi_memcpy
   ; CHECK-GNUEABI: bl memcpy
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %4, i8* inttoptr (i32 1 to i8*), i32 72, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %4, i8* align 4 inttoptr (i32 1 to i8*), i32 72, i1 false)
   ret void
 }
 
@@ -50,22 +50,22 @@ entry:
   ; memmove
   ; CHECK-EABI: bl __aeabi_memmove
   ; CHECK-GNUEABI: bl memmove
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 500, i32 0, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 500, i1 false)
 
   ; memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
   ; CHECK-GNUEABI: bl memcpy
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 500, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 500, i1 false)
 
   ; memset
   ; CHECK-EABI: mov r2, #1
   ; CHECK-EABI: bl __aeabi_memset
   ; CHECK-GNUEABI: mov r1, #1
   ; CHECK-GNUEABI: bl memset
-  call void @llvm.memset.p0i8.i32(i8* %dest, i8 1, i32 500, i32 0, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %dest, i8 1, i32 500, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind

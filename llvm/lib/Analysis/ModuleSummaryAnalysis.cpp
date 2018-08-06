@@ -49,6 +49,7 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -57,6 +58,18 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "module-summary-analysis"
+
+// Option to force edges cold which will block importing when the
+// -import-cold-multiplier is set to 0. Useful for debugging.
+FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
+    FunctionSummary::FSHT_None;
+cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
+    "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
+    cl::desc("Force all edges in the function summary to cold"),
+    cl::values(clEnumValN(FunctionSummary::FSHT_None, "none", "None."),
+               clEnumValN(FunctionSummary::FSHT_AllNonCritical,
+                          "all-non-critical", "All non-critical edges."),
+               clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -268,14 +281,23 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         auto ScaledCount = PSI->getProfileCount(&I, BFI);
         auto Hotness = ScaledCount ? getHotness(ScaledCount.getValue(), PSI)
                                    : CalleeInfo::HotnessType::Unknown;
+        if (ForceSummaryEdgesCold != FunctionSummary::FSHT_None)
+          Hotness = CalleeInfo::HotnessType::Cold;
 
         // Use the original CalledValue, in case it was an alias. We want
         // to record the call edge to the alias in that case. Eventually
         // an alias summary will be created to associate the alias and
         // aliasee.
-        CallGraphEdges[Index.getOrInsertValueInfo(
-                           cast<GlobalValue>(CalledValue))]
-            .updateHotness(Hotness);
+        auto &ValueInfo = CallGraphEdges[Index.getOrInsertValueInfo(
+            cast<GlobalValue>(CalledValue))];
+        ValueInfo.updateHotness(Hotness);
+        // Add the relative block frequency to CalleeInfo if there is no profile
+        // information.
+        if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
+          uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
+          uint64_t EntryFreq = BFI->getEntryFreq();
+          ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
+        }
       } else {
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
@@ -283,6 +305,18 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // Skip direct calls.
         if (!CalledValue || isa<Constant>(CalledValue))
           continue;
+
+        // Check if the instruction has a callees metadata. If so, add callees
+        // to CallGraphEdges to reflect the references from the metadata, and
+        // to enable importing for subsequent indirect call promotion and
+        // inlining.
+        if (auto *MD = I.getMetadata(LLVMContext::MD_callees)) {
+          for (auto &Op : MD->operands()) {
+            Function *Callee = mdconst::extract_or_null<Function>(Op);
+            if (Callee)
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+          }
+        }
 
         uint32_t NumVals, NumCandidates;
         uint64_t TotalCount;
@@ -299,7 +333,9 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
     CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        CalleeInfo::HotnessType::Critical);
+        ForceSummaryEdgesCold == FunctionSummary::FSHT_All
+            ? CalleeInfo::HotnessType::Cold
+            : CalleeInfo::HotnessType::Critical);
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =
@@ -325,7 +361,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       TypeCheckedLoadConstVCalls.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
-  Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
+  Index.addGlobalValueSummary(F, std::move(FuncSummary));
 }
 
 static void
@@ -341,7 +377,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
       llvm::make_unique<GlobalVarSummary>(Flags, RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
-  Index.addGlobalValueSummary(V.getName(), std::move(GVarSummary));
+  Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 
 static void
@@ -357,7 +393,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   AS->setAliasee(AliaseeSummary);
   if (NonRenamableLocal)
     CantBePromoted.insert(A.getGUID());
-  Index.addGlobalValueSummary(A.getName(), std::move(AS));
+  Index.addGlobalValueSummary(A, std::move(AS));
 }
 
 // Set LiveRoot flag on entries matching the given value name.
@@ -372,7 +408,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI) {
   assert(PSI);
-  ModuleSummaryIndex Index;
+  ModuleSummaryIndex Index(/*HaveGVs=*/true);
 
   // Identify the local values in the llvm.used and llvm.compiler.used sets,
   // which should not be exported as they would then require renaming and
@@ -419,7 +455,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                                               /* NotEligibleToImport = */ true,
                                               /* Live = */ true,
                                               /* Local */ GV->isDSOLocal());
-          CantBePromoted.insert(GlobalValue::getGUID(Name));
+          CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
             std::unique_ptr<FunctionSummary> Summary =
@@ -436,12 +472,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ConstVCall>{});
-            Index.addGlobalValueSummary(Name, std::move(Summary));
+            Index.addGlobalValueSummary(*GV, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =
                 llvm::make_unique<GlobalVarSummary>(GVFlags,
                                                     ArrayRef<ValueInfo>{});
-            Index.addGlobalValueSummary(Name, std::move(Summary));
+            Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
         });
   }
@@ -571,14 +607,14 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto &PSI = *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  Index = buildModuleSummaryIndex(
+  Index.emplace(buildModuleSummaryIndex(
       M,
       [this](const Function &F) {
         return &(this->getAnalysis<BlockFrequencyInfoWrapperPass>(
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      &PSI);
+      &PSI));
   return false;
 }
 

@@ -6,9 +6,9 @@ target triple = "x86_64-apple-macosx10.13.0"
 define void @foo(i32* %p) !dbg !4 {
 bb:
   %tmp = load i32, i32* %p, align 4, !dbg !7
-  ; CHECK: %eax = MOV32rm killed {{.*}} %rdi, {{.*}} debug-location !7 :: (load 4 from %ir.p)
-  ; CHECK-NEXT: %edi = MOV32rr killed %eax, implicit-def %rdi, debug-location !7
-  ; CHECK-NEXT: %rcx = MOV64rr %rdi, debug-location !7
+  ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load 4 from %ir.p)
+  ; CHECK-NEXT: $edi = MOV32rr killed $eax, implicit-def $rdi, debug-location !7
+  ; CHECK-NEXT: $rcx = MOV64rr $rdi, debug-location !7
 
   switch i32 %tmp, label %bb7 [
     i32 0, label %bb1

@@ -45,10 +45,10 @@ using ::testing::Field;
 namespace llvm {
 namespace cfi_verify {
 namespace {
-class ELFx86TestFileAnalysis : public FileAnalysis {
+class ELFTestFileAnalysis : public FileAnalysis {
 public:
-  ELFx86TestFileAnalysis()
-      : FileAnalysis(Triple("x86_64--"), SubtargetFeatures()) {}
+  ELFTestFileAnalysis(StringRef Trip)
+      : FileAnalysis(Triple(Trip), SubtargetFeatures()) {}
 
   // Expose this method publicly for testing.
   void parseSectionContents(ArrayRef<uint8_t> SectionBytes,
@@ -62,6 +62,8 @@ public:
 };
 
 class BasicFileAnalysisTest : public ::testing::Test {
+public:
+  BasicFileAnalysisTest(StringRef Trip) : Analysis(Trip) {}
 protected:
   virtual void SetUp() {
     IgnoreDWARFFlag = true;
@@ -70,17 +72,27 @@ protected:
       handleAllErrors(std::move(Err), [&](const UnsupportedDisassembly &E) {
         SuccessfullyInitialised = false;
         outs()
-            << "Note: CFIVerifyTests are disabled due to lack of x86 support "
+            << "Note: CFIVerifyTests are disabled due to lack of support "
                "on this build.\n";
       });
     }
   }
 
   bool SuccessfullyInitialised;
-  ELFx86TestFileAnalysis Analysis;
+  ELFTestFileAnalysis Analysis;
 };
 
-TEST_F(BasicFileAnalysisTest, BasicDisassemblyTraversalTest) {
+class BasicX86FileAnalysisTest : public BasicFileAnalysisTest {
+public:
+  BasicX86FileAnalysisTest() : BasicFileAnalysisTest("x86_64--") {}
+};
+
+class BasicAArch64FileAnalysisTest : public BasicFileAnalysisTest {
+public:
+  BasicAArch64FileAnalysisTest() : BasicFileAnalysisTest("aarch64--") {}
+};
+
+TEST_F(BasicX86FileAnalysisTest, BasicDisassemblyTraversalTest) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -190,7 +202,7 @@ TEST_F(BasicFileAnalysisTest, BasicDisassemblyTraversalTest) {
   EXPECT_EQ(nullptr, Analysis.getPrevInstructionSequential(*InstrMeta));
 }
 
-TEST_F(BasicFileAnalysisTest, PrevAndNextFromBadInst) {
+TEST_F(BasicX86FileAnalysisTest, PrevAndNextFromBadInst) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -213,7 +225,7 @@ TEST_F(BasicFileAnalysisTest, PrevAndNextFromBadInst) {
   EXPECT_EQ(1u, GoodInstrMeta->InstructionSize);
 }
 
-TEST_F(BasicFileAnalysisTest, CFITrapTest) {
+TEST_F(BasicX86FileAnalysisTest, CFITrapTest) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -248,7 +260,7 @@ TEST_F(BasicFileAnalysisTest, CFITrapTest) {
       Analysis.isCFITrap(Analysis.getInstructionOrDie(0xDEADBEEF + 28)));
 }
 
-TEST_F(BasicFileAnalysisTest, FallThroughTest) {
+TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -288,7 +300,7 @@ TEST_F(BasicFileAnalysisTest, FallThroughTest) {
       Analysis.canFallThrough(Analysis.getInstructionOrDie(0xDEADBEEF + 19)));
 }
 
-TEST_F(BasicFileAnalysisTest, DefiniteNextInstructionTest) {
+TEST_F(BasicX86FileAnalysisTest, DefiniteNextInstructionTest) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -378,7 +390,7 @@ TEST_F(BasicFileAnalysisTest, DefiniteNextInstructionTest) {
   EXPECT_EQ(0xDEADBEEF + 4, Next->VMAddress);
 }
 
-TEST_F(BasicFileAnalysisTest, ControlFlowXRefsTest) {
+TEST_F(BasicX86FileAnalysisTest, ControlFlowXRefsTest) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -483,7 +495,7 @@ TEST_F(BasicFileAnalysisTest, ControlFlowXRefsTest) {
   EXPECT_TRUE(Analysis.getDirectControlFlowXRefs(*InstrMetaPtr).empty());
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionInvalidTargets) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionInvalidTargets) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -507,7 +519,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionInvalidTargets) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -522,7 +534,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionBasicJumpToUd2) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionBasicJumpToUd2) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -537,7 +549,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionBasicJumpToUd2) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathUd2) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathUd2) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -555,7 +567,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathUd2) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathSingleUd2) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualPathSingleUd2) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -572,7 +584,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathSingleUd2) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -597,7 +609,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
   SearchLengthForConditionalBranch = PrevSearchLengthForConditionalBranch;
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -621,7 +633,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
   SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionGoodAndBadPaths) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionGoodAndBadPaths) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -637,7 +649,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionGoodAndBadPaths) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -653,7 +665,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionComplexExample) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionComplexExample) {
   if (!SuccessfullyInitialised)
     return;
   // See unittests/GraphBuilder.cpp::BuildFlowGraphComplexExample for this
@@ -683,7 +695,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionComplexExample) {
   SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
-TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTest) {
+TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTest) {
   Analysis.parseSectionContents(
       {
           0x77, 0x0d,                   // 0x688118: ja 0x688127 [+12]
@@ -702,7 +714,7 @@ TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTest) {
   SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
-TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTestFarAway) {
+TEST_F(BasicX86FileAnalysisTest, UndefSearchLengthOneTestFarAway) {
   Analysis.parseSectionContents(
       {
           0x74, 0x73,                         // 0x7759eb: je 0x775a60
@@ -741,7 +753,7 @@ TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTestFarAway) {
   SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -757,7 +769,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -773,7 +785,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -789,7 +801,7 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
             Analysis.validateCFIProtection(Result));
 }
 
-TEST_F(BasicFileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
+TEST_F(BasicX86FileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
   if (!SuccessfullyInitialised)
     return;
   Analysis.parseSectionContents(
@@ -803,6 +815,243 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
       },
       0xDEADBEEF);
   GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 4);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicUnprotected) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x00, 0x01, 0x3f, 0xd6, // 0: blr x8
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_ORPHANS,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64BasicProtected) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x00, 0x01, 0x3f, 0xd6, // 8: blr x8
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 8);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberBasic) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x08, 0x05, 0x00, 0x91, // 8: add x8, x8, #1
+          0x00, 0x01, 0x3f, 0xd6, // 12: blr x8
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 12);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberOneLoad) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x21, 0x09, 0x40, 0xf9, // 8: ldr x1, [x9,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 12: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 12);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddGood) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x21, 0x04, 0x00, 0x91, // 8: add x1, x1, #1
+          0x21, 0x09, 0x40, 0xf9, // 12: ldr x1, [x9,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x21, 0x09, 0x40, 0xf9, // 8: ldr x1, [x9,#16]
+          0x21, 0x04, 0x00, 0x91, // 12: add x1, x1, #1
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberLoadAddBad2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x29, 0x04, 0x00, 0x91, // 16: add x9, x1, #1
+          0x21, 0x09, 0x40, 0xf9, // 12: ldr x1, [x9,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberTwoLoads) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x21, 0x09, 0x40, 0xf9, // 8: ldr x1, [x9,#16]
+          0x21, 0x08, 0x40, 0xf9, // 12: ldr x1, [x1,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedSecondLoad) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x21, 0x09, 0x40, 0xf9, // 8: ldr x1, [x9,#16]
+          0x21, 0x09, 0x40, 0xf9, // 12: ldr x1, [x9,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64ClobberUnrelatedLoads) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x49, 0x00, 0x00, 0x54, // 0: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 4: brk #0x1
+          0x22, 0x09, 0x40, 0xf9, // 8: ldr x2, [x9,#16]
+          0x22, 0x08, 0x40, 0xf9, // 12: ldr x2, [x1,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 16: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 16);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64GoodAndBadPaths) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x03, 0x00, 0x00, 0x14, // 0: b 12
+          0x49, 0x00, 0x00, 0x54, // 4: b.ls 8
+          0x20, 0x00, 0x20, 0xd4, // 8: brk #0x1
+          0x20, 0x00, 0x1f, 0xd6, // 12: br x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 12);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_ORPHANS,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPaths) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0xc9, 0x00, 0x00, 0x54, // 0: b.ls 24
+          0x21, 0x08, 0x40, 0xf9, // 4: ldr x1, [x1,#16]
+          0x03, 0x00, 0x00, 0x14, // 8: b 12
+          0x69, 0x00, 0x00, 0x54, // 12: b.ls 12
+          0x21, 0x08, 0x40, 0xf9, // 16: ldr x1, [x1,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 20: br x1
+          0x20, 0x00, 0x20, 0xd4, // 24: brk #0x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 20);
+  EXPECT_EQ(CFIProtectionStatus::PROTECTED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPathsBadLoad1) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0xe9, 0x00, 0x00, 0x54, // 0: b.ls 28
+          0x21, 0x08, 0x40, 0xf9, // 4: ldr x1, [x1,#16]
+          0x21, 0x08, 0x40, 0xf9, // 8: ldr x1, [x1,#16]
+          0x03, 0x00, 0x00, 0x14, // 12: b 12
+          0x69, 0x00, 0x00, 0x54, // 16: b.ls 12
+          0x21, 0x08, 0x40, 0xf9, // 20: ldr x1, [x1,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 24: br x1
+          0x20, 0x00, 0x20, 0xd4, // 28: brk #0x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 24);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicAArch64FileAnalysisTest, AArch64TwoPathsBadLoad2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0xe9, 0x00, 0x00, 0x54, // 0: b.ls 28
+          0x21, 0x08, 0x40, 0xf9, // 4: ldr x1, [x1,#16]
+          0x03, 0x00, 0x00, 0x14, // 8: b 12
+          0x89, 0x00, 0x00, 0x54, // 12: b.ls 16
+          0x21, 0x08, 0x40, 0xf9, // 16: ldr x1, [x1,#16]
+          0x21, 0x08, 0x40, 0xf9, // 20: ldr x1, [x1,#16]
+          0x20, 0x00, 0x1f, 0xd6, // 24: br x1
+          0x20, 0x00, 0x20, 0xd4, // 28: brk #0x1
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 24);
   EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
             Analysis.validateCFIProtection(Result));
 }

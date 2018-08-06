@@ -622,6 +622,8 @@ public:
   /// \pre \p Reg is a virtual register that either has a bank or a class.
   /// \returns The constrained register class, or nullptr if there is none.
   /// \note This is a generic variant of MachineRegisterInfo::constrainRegClass
+  /// \note Use MachineRegisterInfo::constrainRegAttrs instead for any non-isel
+  /// purpose, including non-select passes of GlobalISel
   static const TargetRegisterClass *
   constrainGenericRegister(unsigned Reg, const TargetRegisterClass &RC,
                            MachineRegisterInfo &MRI);

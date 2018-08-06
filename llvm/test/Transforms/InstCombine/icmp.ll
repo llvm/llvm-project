@@ -545,6 +545,34 @@ define i1 @test36(i32 %x, i32 %y) {
   ret i1 %c
 }
 
+; PR36969 - https://bugs.llvm.org/show_bug.cgi?id=36969
+
+define i1 @ugt_sub(i32 %xsrc, i32 %y) {
+; CHECK-LABEL: @ugt_sub(
+; CHECK-NEXT:    [[X:%.*]] = udiv i32 [[XSRC:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = udiv i32 %xsrc, 42 ; thwart complexity-based canonicalization
+  %sub = sub i32 %x, %y
+  %cmp = icmp ugt i32 %sub, %x
+  ret i1 %cmp
+}
+
+; Swap operands and predicate. Try a vector type to verify that works too.
+
+define <2 x i1> @ult_sub(<2 x i8> %xsrc, <2 x i8> %y) {
+; CHECK-LABEL: @ult_sub(
+; CHECK-NEXT:    [[X:%.*]] = udiv <2 x i8> [[XSRC:%.*]], <i8 42, i8 -42>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = udiv <2 x i8> %xsrc, <i8 42, i8 -42> ; thwart complexity-based canonicalization
+  %sub = sub <2 x i8> %x, %y
+  %cmp = icmp ult <2 x i8> %x, %sub
+  ret <2 x i1> %cmp
+}
+
 ; X - Y > X - Z -> Z > Y if there is no overflow.
 define i1 @test37(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test37(
@@ -3275,9 +3303,9 @@ define i1 @knownbits8(i8 %a, i8 %b) {
 define i32 @abs_preserve(i32 %x) {
 ; CHECK-LABEL: @abs_preserve(
 ; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[NEGA:%.*]] = sub i32 0, [[A]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[C]], i32 [[A]], i32 [[NEGA]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[C]], i32 [[NEGA]], i32 [[A]]
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %a = mul nsw i32 %x, 2
@@ -3288,14 +3316,41 @@ define i32 @abs_preserve(i32 %x) {
 }
 
 ; Don't crash by assuming the compared values are integers.
+
+declare void @llvm.assume(i1)
+define i1 @PR35794(i32* %a) {
+; CHECK-LABEL: @PR35794(
+; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i32* %a, null
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32* %a, inttoptr (i64 -1 to i32*)
+  %maskcond = icmp eq i32* %a, null
+  tail call void @llvm.assume(i1 %maskcond)
+  ret i1 %cmp
+}
+
+; Don't crash by assuming the compared values are integers.
 define <2 x i1> @PR36583(<2 x i8*>)  {
 ; CHECK-LABEL: @PR36583(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8*> %0, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
-entry:
   %cast = ptrtoint <2 x i8*> %0 to <2 x i64>
   %res = icmp eq <2 x i64> %cast, zeroinitializer
   ret <2 x i1> %res
+}
+
+; fold (icmp pred (sub (0, X)) C1) for vec type
+define <2 x i32> @Op1Negated_Vec(<2 x i32> %x) {
+; CHECK-LABEL: @Op1Negated_Vec(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
+;
+  %sub = sub nsw <2 x i32> zeroinitializer, %x
+  %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
+  %cond = select <2 x i1> %cmp, <2 x i32> %sub, <2 x i32> %x
+  ret <2 x i32> %cond
 }

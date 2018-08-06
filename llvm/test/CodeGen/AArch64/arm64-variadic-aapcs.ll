@@ -32,8 +32,8 @@ define void @test_simple(i32 %n, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: mov     [[GRVR:x[0-9]+]], #-545460846720
-; CHECK: movk    [[GRVR]], #65480
+; CHECK: mov     [[GRVR:x[0-9]+]], #-56
+; CHECK: movk    [[GRVR]], #65408, lsl #32
 ; CHECK: str     [[GRVR]], [x[[VA_LIST]], #24]
 
   %addr = bitcast %va_list* @var to i8*
@@ -130,12 +130,9 @@ define void @test_va_copy() {
 
 ; CHECK: add x[[SRC:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: ldr [[BLOCK:q[0-9]+]], [x[[SRC]]]
+; CHECK: ldp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[SRC]]]
 ; CHECK: add x[[DST:[0-9]+]], {{x[0-9]+}}, :lo12:second_list
-; CHECK: str [[BLOCK]], [x[[DST]]]
-
-; CHECK: ldr [[BLOCK:q[0-9]+]], [x[[SRC]], #16]
-; CHECK: str [[BLOCK]], [x[[DST]], #16]
+; CHECK: stp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[DST]]]
   ret void
 ; CHECK: ret
 }

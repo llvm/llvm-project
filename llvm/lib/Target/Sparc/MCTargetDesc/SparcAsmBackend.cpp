@@ -54,6 +54,10 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_hi22:
     return (Value >> 10) & 0x3fffff;
 
+  case Sparc::fixup_sparc_got13:
+  case Sparc::fixup_sparc_13:
+    return Value & 0x1fff;
+
   case Sparc::fixup_sparc_pc10:
   case Sparc::fixup_sparc_got10:
   case Sparc::fixup_sparc_tls_gd_lo10:
@@ -100,14 +104,13 @@ namespace {
   class SparcAsmBackend : public MCAsmBackend {
   protected:
     const Target &TheTarget;
-    bool IsLittleEndian;
     bool Is64Bit;
 
   public:
     SparcAsmBackend(const Target &T)
-        : MCAsmBackend(), TheTarget(T),
-          IsLittleEndian(StringRef(TheTarget.getName()) == "sparcel"),
-          Is64Bit(StringRef(TheTarget.getName()) == "sparcv9") {}
+        : MCAsmBackend(StringRef(T.getName()) == "sparcel" ? support::little
+                                                           : support::big),
+          TheTarget(T), Is64Bit(StringRef(TheTarget.getName()) == "sparcv9") {}
 
     unsigned getNumFixupKinds() const override {
       return Sparc::NumTargetFixupKinds;
@@ -121,6 +124,7 @@ namespace {
         { "fixup_sparc_br19",      13,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_2",    10,      2,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_14",   18,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_13",        19,     13,  0 },
         { "fixup_sparc_hi22",      10,     22,  0 },
         { "fixup_sparc_lo10",      22,     10,  0 },
         { "fixup_sparc_h44",       10,     22,  0 },
@@ -132,6 +136,7 @@ namespace {
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_got22",     10,     22,  0 },
         { "fixup_sparc_got10",     22,     10,  0 },
+        { "fixup_sparc_got13",     19,     13,  0 },
         { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",   10, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",   22, 10,  0 },
@@ -160,6 +165,7 @@ namespace {
         { "fixup_sparc_br19",       0,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_2",    20,      2,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_14",    0,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_13",         0,     13,  0 },
         { "fixup_sparc_hi22",       0,     22,  0 },
         { "fixup_sparc_lo10",       0,     10,  0 },
         { "fixup_sparc_h44",        0,     22,  0 },
@@ -171,6 +177,7 @@ namespace {
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_got22",      0,     22,  0 },
         { "fixup_sparc_got10",      0,     10,  0 },
+        { "fixup_sparc_got13",      0,     13,  0 },
         { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",    0, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",    0, 10,  0 },
@@ -197,7 +204,7 @@ namespace {
 
       assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
              "Invalid kind!");
-      if (IsLittleEndian)
+      if (Endian == support::little)
         return InfosLE[Kind - FirstTargetFixupKind];
 
       return InfosBE[Kind - FirstTargetFixupKind];
@@ -234,7 +241,8 @@ namespace {
       }
     }
 
-    bool mayNeedRelaxation(const MCInst &Inst) const override {
+    bool mayNeedRelaxation(const MCInst &Inst,
+                           const MCSubtargetInfo &STI) const override {
       // FIXME.
       return false;
     }
@@ -255,14 +263,14 @@ namespace {
       llvm_unreachable("relaxInstruction() unimplemented");
     }
 
-    bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override {
+    bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
       // Cannot emit NOP with size not multiple of 32 bits.
       if (Count % 4 != 0)
         return false;
 
       uint64_t NumNops = Count / 4;
       for (uint64_t i = 0; i != NumNops; ++i)
-        OW->write32(0x01000000);
+        support::endian::write<uint32_t>(OS, 0x01000000, Endian);
 
       return true;
     }
@@ -276,7 +284,8 @@ namespace {
 
     void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                     const MCValue &Target, MutableArrayRef<char> Data,
-                    uint64_t Value, bool IsResolved) const override {
+                    uint64_t Value, bool IsResolved,
+                    const MCSubtargetInfo *STI) const override {
 
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.
@@ -287,15 +296,15 @@ namespace {
       // from the fixup value. The Value has been "split up" into the
       // appropriate bitfields above.
       for (unsigned i = 0; i != 4; ++i) {
-        unsigned Idx = IsLittleEndian ? i : 3 - i;
+        unsigned Idx = Endian == support::little ? i : 3 - i;
         Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
       }
     }
 
-    std::unique_ptr<MCObjectWriter>
-    createObjectWriter(raw_pwrite_stream &OS) const override {
+    std::unique_ptr<MCObjectTargetWriter>
+    createObjectTargetWriter() const override {
       uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(OS, Is64Bit, IsLittleEndian, OSABI);
+      return createSparcELFObjectWriter(Is64Bit, OSABI);
     }
   };
 

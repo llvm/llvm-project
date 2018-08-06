@@ -29,7 +29,7 @@
 name:            test
 tracksRegLiveness: true
 liveins:
-  - { reg: '%a0' }
+  - { reg: '$a0' }
 frameInfo:
   stackSize:       24
   maxAlignment:    4
@@ -38,26 +38,26 @@ frameInfo:
   maxCallFrameSize: 16
 stack:
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4,
-      callee-saved-register: '%ra' }
+      callee-saved-register: '$ra' }
 body:             |
   bb.0.entry:
-    liveins: %a0, %ra
+    liveins: $a0, $ra
 
-    Save16 %ra, 24, implicit-def %sp, implicit %sp
+    Save16 $ra, 24, implicit-def $sp, implicit $sp
     CFI_INSTRUCTION def_cfa_offset 24
-    CFI_INSTRUCTION offset %ra_64, -4
-    %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
-    %v0 = SllX16 killed %v0, 16
-    %v0 = AdduRxRyRz16 killed %v1, killed %v0
+    CFI_INSTRUCTION offset $ra_64, -4
+    $v0, $v1 = GotPrologue16 &_gp_disp, &_gp_disp
+    $v0 = SllX16 killed $v0, 16
+    $v0 = AdduRxRyRz16 killed $v1, killed $v0
   ; CHECK-LABEL: name: test
-  ; CHECK: %v1 = LwRxRyOffMemX16 %v0, @foo :: (load 4 from call-entry @foo)
-    %v1 = LwRxRyOffMemX16 %v0, @foo :: (load 4 from call-entry @foo)
-    %t9 = COPY %v1
-    %gp = COPY killed %v0
-    JumpLinkReg16 killed %v1, csr_o32, implicit-def %ra, implicit killed %t9, implicit %a0, implicit killed %gp, implicit-def %sp, implicit-def dead %v0
-    %v0 = LiRxImmX16 0
-    %ra = Restore16 24, implicit-def %sp, implicit %sp
-    RetRA16 implicit %v0
+  ; CHECK: $v1 = LwRxRyOffMemX16 $v0, @foo :: (load 4 from call-entry @foo)
+    $v1 = LwRxRyOffMemX16 $v0, @foo :: (load 4 from call-entry @foo)
+    $t9 = COPY $v1
+    $gp = COPY killed $v0
+    JumpLinkReg16 killed $v1, csr_o32, implicit-def $ra, implicit killed $t9, implicit $a0, implicit killed $gp, implicit-def $sp, implicit-def dead $v0
+    $v0 = LiRxImmX16 0
+    $ra = Restore16 24, implicit-def $sp, implicit $sp
+    RetRA16 implicit $v0
 ...
 ---
 name:            test2
@@ -70,33 +70,33 @@ frameInfo:
   maxCallFrameSize: 16
 stack:
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4,
-      callee-saved-register: '%ra' }
+      callee-saved-register: '$ra' }
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4,
-      callee-saved-register: '%s2' }
+      callee-saved-register: '$s2' }
   - { id: 2, type: spill-slot, offset: -12, size: 4, alignment: 4,
-      callee-saved-register: '%s0' }
+      callee-saved-register: '$s0' }
 body:             |
   bb.0.entry:
-    liveins: %ra, %s2, %s0, %ra, %s2, %s0
+    liveins: $ra, $s2, $s0, $ra, $s2, $s0
 
-    SaveX16 %s0, %ra, %s2, 32, implicit-def %sp, implicit %sp
+    SaveX16 $s0, $ra, $s2, 32, implicit-def $sp, implicit $sp
     CFI_INSTRUCTION def_cfa_offset 32
-    CFI_INSTRUCTION offset %ra_64, -4
-    CFI_INSTRUCTION offset %s2_64, -8
-    CFI_INSTRUCTION offset %s0_64, -12
-    %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
-    %v0 = SllX16 killed %v0, 16
-    %s0 = AdduRxRyRz16 killed %v1, killed %v0
-    %v0 = LwRxRyOffMemX16 %s0, @g :: (load 4 from call-entry @g)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s2_64, -8
+    CFI_INSTRUCTION offset $s0_64, -12
+    $v0, $v1 = GotPrologue16 &_gp_disp, &_gp_disp
+    $v0 = SllX16 killed $v0, 16
+    $s0 = AdduRxRyRz16 killed $v1, killed $v0
+    $v0 = LwRxRyOffMemX16 $s0, @g :: (load 4 from call-entry @g)
   ; CHECK-LABEL: test2
-  ; CHECK: %v1 = LwRxRyOffMemX16 %s0, $__mips16_call_stub_sf_0 :: (load 4 from call-entry $__mips16_call_stub_sf_0)
-    %v1 = LwRxRyOffMemX16 %s0, $__mips16_call_stub_sf_0 :: (load 4 from call-entry $__mips16_call_stub_sf_0)
-    %gp = COPY %s0
-    JumpLinkReg16 killed %v1, csr_o32, implicit-def %ra, implicit %v0, implicit killed %gp, implicit-def %sp, implicit-def %v0
-    %v1 = LwRxRyOffMemX16 %s0, @__mips16_ret_sf :: (load 4 from call-entry @__mips16_ret_sf)
-    %t9 = COPY %v1
-    %gp = COPY killed %s0
-    JumpLinkReg16 killed %v1, csr_mips16rethelper, implicit-def %ra, implicit killed %t9, implicit %v0, implicit killed %gp, implicit-def %sp
-    %s0, %ra, %s2 = RestoreX16 32, implicit-def %sp, implicit %sp
-    RetRA16 implicit %v0
+  ; CHECK: $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
+    $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
+    $gp = COPY $s0
+    JumpLinkReg16 killed $v1, csr_o32, implicit-def $ra, implicit $v0, implicit killed $gp, implicit-def $sp, implicit-def $v0
+    $v1 = LwRxRyOffMemX16 $s0, @__mips16_ret_sf :: (load 4 from call-entry @__mips16_ret_sf)
+    $t9 = COPY $v1
+    $gp = COPY killed $s0
+    JumpLinkReg16 killed $v1, csr_mips16rethelper, implicit-def $ra, implicit killed $t9, implicit $v0, implicit killed $gp, implicit-def $sp
+    $s0, $ra, $s2 = RestoreX16 32, implicit-def $sp, implicit $sp
+    RetRA16 implicit $v0
 ...

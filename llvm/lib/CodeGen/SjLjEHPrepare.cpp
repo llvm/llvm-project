@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -27,7 +28,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "sjljehprepare"
@@ -307,8 +307,8 @@ void SjLjEHPrepare::lowerAcrossUnwindEdges(Function &F,
       for (InvokeInst *Invoke : Invokes) {
         BasicBlock *UnwindBlock = Invoke->getUnwindDest();
         if (UnwindBlock != &BB && LiveBBs.count(UnwindBlock)) {
-          DEBUG(dbgs() << "SJLJ Spill: " << Inst << " around "
-                       << UnwindBlock->getName() << "\n");
+          LLVM_DEBUG(dbgs() << "SJLJ Spill: " << Inst << " around "
+                            << UnwindBlock->getName() << "\n");
           NeedsSpill = true;
           break;
         }

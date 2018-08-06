@@ -1,12 +1,13 @@
 set(LLVM_TARGET_DEFINITIONS ARC.td)
 
-tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM ARCGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM ARCGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARCGenSubtargetInfo.inc -gen-subtarget)
+
 add_public_tablegen_target(ARCCommonTableGen)
 
 add_llvm_target(ARCCodeGen
@@ -24,7 +25,7 @@ add_llvm_target(ARCCodeGen
   ARCTargetMachine.cpp
   )
 
-add_subdirectory(InstPrinter)
-add_subdirectory(TargetInfo)
-add_subdirectory(MCTargetDesc)
 add_subdirectory(Disassembler)
+add_subdirectory(InstPrinter)
+add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)

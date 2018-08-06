@@ -65,7 +65,7 @@ protected:
   }
 };
 
-/// \brief Store a vector of values using a specific number of bits for each
+/// Store a vector of values using a specific number of bits for each
 /// value. Both signed and unsigned types can be used, e.g
 /// @code
 ///   PackedVector<signed, 2> vec;

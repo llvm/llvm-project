@@ -85,13 +85,12 @@ bb:
 define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,  <4 x i16> %tmp3, <4 x i16> %tmp12) {
 ; AVX1-LABEL: test3:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1431655766,1431655766,1431655766,1431655766]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vpmuldq %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmuldq %xmm3, %xmm0, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3],xmm3[4,5],xmm4[6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1431655766,1431655766,1431655766,1431655766]
+; AVX1-NEXT:    vpmuldq %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpmuldq %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1],xmm3[2,3],xmm4[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpsrld $31, %xmm3, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm3, %xmm3

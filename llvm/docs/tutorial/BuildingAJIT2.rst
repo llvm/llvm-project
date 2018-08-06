@@ -12,6 +12,11 @@ we welcome any feedback.
 Chapter 2 Introduction
 ======================
 
+**Warning: This text is currently out of date due to ORC API updates.**
+
+**The example code has been updated and can be used. The text will be updated
+once the API churn dies down.**
+
 Welcome to Chapter 2 of the "Building an ORC-based JIT in LLVM" tutorial. In
 `Chapter 1 <BuildingAJIT1.html>`_ of this series we examined a basic JIT
 class, KaleidoscopeJIT, that could take LLVM IR modules as input and produce
@@ -219,7 +224,7 @@ layer interface. The interface consists of one typedef and five methods:
 |                  | emitAndFinalize.                                          |
 +------------------+-----------------------------------------------------------+
 |                  | Takes a given set of Modules and makes them "available    |
-|                  | for execution. This means that symbols in those modules   |
+|                  | for execution". This means that symbols in those modules  |
 |                  | should be searchable via findSymbol and findSymbolIn, and |
 |                  | the address of the symbols should be read/writable (for   |
 |                  | data symbols), or executable (for function symbols) after |

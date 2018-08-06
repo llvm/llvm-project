@@ -1,4 +1,4 @@
-//RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+vpclmulqdq --show-encoding < %s  | FileCheck %s
+//RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s  | FileCheck %s
 
 // CHECK: vpclmulqdq $1, %zmm3, %zmm22, %zmm1
 // CHECK: encoding: [0x62,0xf3,0x4d,0x40,0x44,0xcb,0x01]

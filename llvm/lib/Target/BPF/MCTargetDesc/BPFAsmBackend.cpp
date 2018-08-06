@@ -12,6 +12,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/EndianStream.h"
 #include <cassert>
 #include <cstdint>
 
@@ -21,18 +22,16 @@ namespace {
 
 class BPFAsmBackend : public MCAsmBackend {
 public:
-  bool IsLittleEndian;
-
-  BPFAsmBackend(bool IsLittleEndian)
-    : MCAsmBackend(), IsLittleEndian(IsLittleEndian) {}
+  BPFAsmBackend(support::endianness Endian) : MCAsmBackend(Endian) {}
   ~BPFAsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -43,22 +42,25 @@ public:
 
   unsigned getNumFixupKinds() const override { return 1; }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
 } // end anonymous namespace
 
-bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   if ((Count % 8) != 0)
     return false;
 
   for (uint64_t i = 0; i < Count; i += 8)
-    OW->write64(0x15000000);
+    support::endian::write<uint64_t>(OS, 0x15000000, Endian);
 
   return true;
 }
@@ -66,19 +68,17 @@ bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) const {
+                               bool IsResolved,
+                               const MCSubtargetInfo *STI) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
     assert(Value == 0);
-  } else if (Fixup.getKind() == FK_Data_4 || Fixup.getKind() == FK_Data_8) {
-    unsigned Size = Fixup.getKind() == FK_Data_4 ? 4 : 8;
-
-    for (unsigned i = 0; i != Size; ++i) {
-      unsigned Idx = IsLittleEndian ? i : Size - i - 1;
-      Data[Fixup.getOffset() + Idx] = uint8_t(Value >> (i * 8));
-    }
+  } else if (Fixup.getKind() == FK_Data_4) {
+    support::endian::write<uint32_t>(&Data[Fixup.getOffset()], Value, Endian);
+  } else if (Fixup.getKind() == FK_Data_8) {
+    support::endian::write<uint64_t>(&Data[Fixup.getOffset()], Value, Endian);
   } else if (Fixup.getKind() == FK_PCRel_4) {
     Value = (uint32_t)((Value - 8) / 8);
-    if (IsLittleEndian) {
+    if (Endian == support::little) {
       Data[Fixup.getOffset() + 1] = 0x10;
       support::endian::write32le(&Data[Fixup.getOffset() + 4], Value);
     } else {
@@ -88,31 +88,26 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   } else {
     assert(Fixup.getKind() == FK_PCRel_2);
     Value = (uint16_t)((Value - 8) / 8);
-    if (IsLittleEndian) {
-      Data[Fixup.getOffset() + 2] = Value & 0xFF;
-      Data[Fixup.getOffset() + 3] = Value >> 8;
-    } else {
-      Data[Fixup.getOffset() + 2] = Value >> 8;
-      Data[Fixup.getOffset() + 3] = Value & 0xFF;
-    }
+    support::endian::write<uint16_t>(&Data[Fixup.getOffset() + 2], Value,
+                                     Endian);
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createBPFELFObjectWriter(OS, 0, IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+BPFAsmBackend::createObjectTargetWriter() const {
+  return createBPFELFObjectWriter(0);
 }
 
 MCAsmBackend *llvm::createBPFAsmBackend(const Target &T,
                                         const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
                                         const MCTargetOptions &) {
-  return new BPFAsmBackend(/*IsLittleEndian=*/true);
+  return new BPFAsmBackend(support::little);
 }
 
 MCAsmBackend *llvm::createBPFbeAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &) {
-  return new BPFAsmBackend(/*IsLittleEndian=*/false);
+  return new BPFAsmBackend(support::big);
 }

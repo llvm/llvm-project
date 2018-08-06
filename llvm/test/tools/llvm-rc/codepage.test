@@ -1,0 +1,44 @@
+; RUN: llvm-rc /C 65001 /FO %t.utf8.res %p/Inputs/utf8.rc
+; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
+
+; UTF8:      Resource type (int): 6
+; UTF8-NEXT: Resource name (int): 1
+; UTF8-NEXT: Data version: 0
+; UTF8-NEXT: Memory flags: 0x1030
+; UTF8-NEXT: Language ID: 1033
+; UTF8-NEXT: Version (major): 0
+; UTF8-NEXT: Version (minor): 0
+; UTF8-NEXT: Characteristics: 0
+; UTF8-NEXT: Data size: 68
+; UTF8-NEXT: Data: (
+; UTF8-NEXT:   0000: 00000700 E500E400 F6002000 A9002000  |.......... ... .|
+; UTF8-NEXT:   0010: 61000B00 E500E400 F6002000 A9002000  |a......... ... .|
+; UTF8-NEXT:   0020: E500E400 F6002000 A9000000 00000000  |...... .........|
+; UTF8-NEXT:   0030: 00000000 00000000 00000000 00000000  |................|
+; UTF8-NEXT:   0040: 00000000                             |....|
+; UTF8-NEXT: )
+
+; RUN: not llvm-rc /C 65001 /FO %t.utf8-escape-narrow.res %p/Inputs/utf8-escape-narrow.rc 2>&1 | FileCheck %s --check-prefix UTF8_ESCAPE
+; UTF8_ESCAPE: llvm-rc: Error in STRINGTABLE statement (ID 1):
+; UTF8_ESCAPE-NEXT: Unable to interpret single byte (195) as UTF-8
+
+; RUN: llvm-rc /C 1252 /FO %t.cp1252.res %p/Inputs/cp1252.rc
+; RUN: llvm-readobj %t.cp1252.res | FileCheck %s --check-prefix=CP1252
+
+; CP1252:      Resource type (int): 6
+; CP1252-NEXT: Resource name (int): 1
+; CP1252-NEXT: Data version: 0
+; CP1252-NEXT: Memory flags: 0x1030
+; CP1252-NEXT: Language ID: 1033
+; CP1252-NEXT: Version (major): 0
+; CP1252-NEXT: Version (minor): 0
+; CP1252-NEXT: Characteristics: 0
+; CP1252-NEXT: Data size: 92
+; CP1252-NEXT: Data: (
+; CP1252-NEXT:   0000: 00000F00 E500E400 F6002000 A9002000  |.......... ... .|
+; CP1252-NEXT:   0010: 92012000 E500E400 F6002000 A9002000  |.. ....... ... .|
+; CP1252-NEXT:   0020: 92010F00 E500E400 F6002000 A9002000  |.......... ... .|
+; CP1252-NEXT:   0030: 92012000 E500E400 F6002000 A9002000  |.. ....... ... .|
+; CP1252-NEXT:   0040: 92010000 00000000 00000000 00000000  |................|
+; CP1252-NEXT:   0050: 00000000 00000000 00000000           |............|
+; CP1252-NEXT: )

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU metadata definitions and in-memory representations.
+/// AMDGPU metadata definitions and in-memory representations.
 ///
 //
 //===----------------------------------------------------------------------===//

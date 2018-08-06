@@ -11,7 +11,9 @@
 // rdar://12637628
 
 // We check that the source name "foo.S" is picked up
-// CHECK:                 Dir  Mod Time   File Len   File Name
-// CHECK:                 ---- ---------- ---------- ---------------------------
-// CHECK: file_names[  1]    1 0x00000000 0x00000000 gen-dwarf-macro-cpp.s
-// CHECK: file_names[  2]    0 0x00000000 0x00000000 foo.S
+// CHECK: file_names[  1]:
+// CHECK-NEXT: name: "gen-dwarf-macro-cpp.s"
+// CHECK-NEXT: dir_index: 1
+// CHECK: file_names[  2]:
+// CHECK-NEXT: name: "foo.S"
+// CHECK-NEXT: dir_index: 0

@@ -36,9 +36,9 @@ CFGBuilder::CFGBuilder(Function *F, const std::vector<Arc> &InitialArcs,
 }
 
 static void ConnectBlocks(BasicBlock *From, BasicBlock *To) {
-  DEBUG(dbgs() << "Creating BB arc " << From->getName() << " -> "
-               << To->getName() << "\n";
-        dbgs().flush());
+  LLVM_DEBUG(dbgs() << "Creating BB arc " << From->getName() << " -> "
+                    << To->getName() << "\n";
+             dbgs().flush());
   auto *IntTy = IntegerType::get(From->getContext(), 32);
 
   if (isa<UnreachableInst>(From->getTerminator()))
@@ -57,9 +57,9 @@ static void ConnectBlocks(BasicBlock *From, BasicBlock *To) {
 }
 
 static void DisconnectBlocks(BasicBlock *From, BasicBlock *To) {
-  DEBUG(dbgs() << "Deleting BB arc " << From->getName() << " -> "
-               << To->getName() << "\n";
-        dbgs().flush());
+  LLVM_DEBUG(dbgs() << "Deleting BB arc " << From->getName() << " -> "
+                    << To->getName() << "\n";
+             dbgs().flush());
   SwitchInst *SI = cast<SwitchInst>(From->getTerminator());
 
   if (SI->getNumCases() == 0) {

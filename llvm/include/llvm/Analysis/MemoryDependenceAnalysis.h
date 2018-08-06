@@ -26,6 +26,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -302,7 +303,7 @@ private:
     /// The maximum size of the dereferences of the pointer.
     ///
     /// May be UnknownSize if the sizes are unknown.
-    uint64_t Size = MemoryLocation::UnknownSize;
+    LocationSize Size = MemoryLocation::UnknownSize;
     /// The AA tags associated with dereferences of the pointer.
     ///
     /// The members may be null if there are no tags or conflicting tags.
@@ -314,7 +315,10 @@ private:
   /// Cache storing single nonlocal def for the instruction.
   /// It is set when nonlocal def would be found in function returning only
   /// local dependencies.
-  DenseMap<Instruction *, NonLocalDepResult> NonLocalDefsCache;
+  DenseMap<AssertingVH<const Value>, NonLocalDepResult> NonLocalDefsCache;
+  using ReverseNonLocalDefsCacheTy =
+    DenseMap<Instruction *, SmallPtrSet<const Value*, 4>>;
+  ReverseNonLocalDefsCacheTy ReverseNonLocalDefsCache;
 
   /// This map stores the cached results of doing a pointer lookup at the
   /// bottom of a block.

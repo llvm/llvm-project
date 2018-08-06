@@ -20,12 +20,14 @@ using namespace llvm;
 using namespace llvm::sys;
 
 std::string LibPath(const std::string Name = "PipSqueak") {
-  const std::vector<testing::internal::string>& Argvs = testing::internal::GetArgvs();
-  const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "DynamicLibraryTests";
+  const std::vector<testing::internal::string> &Argvs =
+      testing::internal::GetArgvs();
+  const char *Argv0 =
+      Argvs.size() > 0 ? Argvs[0].c_str() : "DynamicLibraryTests";
   void *Ptr = (void*)(intptr_t)TestA;
   std::string Path = fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf(path::parent_path(Path));
-  path::append(Buf, (Name+".so").c_str());
+  path::append(Buf, (Name + LTDL_SHLIB_EXT).c_str());
   return Buf.str();
 }
 

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFInstPrinter.h"
-#include "BPF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"

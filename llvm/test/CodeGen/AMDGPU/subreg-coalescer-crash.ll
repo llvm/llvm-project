@@ -65,7 +65,7 @@ bb7:                                              ; preds = %bb6
   br label %bb4
 
 bb9:                                              ; preds = %bb2
-  %tmp10 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %tmp10 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp11 = extractelement <4 x float> %tmp10, i32 1
   %tmp12 = extractelement <4 x float> %tmp10, i32 3
   br label %bb14
@@ -97,7 +97,7 @@ bb27:                                             ; preds = %bb24
 
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #1
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

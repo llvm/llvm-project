@@ -31,7 +31,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
-// \brief If @MI is a DBG_VALUE with debug value described by a
+// If @MI is a DBG_VALUE with debug value described by a
 // defined register, returns the number of this register.
 // In the other case, returns 0.
 static unsigned isDescribedByReg(const MachineInstr &MI) {
@@ -50,8 +50,8 @@ void DbgValueHistoryMap::startInstrRange(InlinedVariable Var,
   auto &Ranges = VarInstrRanges[Var];
   if (!Ranges.empty() && Ranges.back().second == nullptr &&
       Ranges.back().first->isIdenticalTo(MI)) {
-    DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
-                 << "\t" << Ranges.back().first << "\t" << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
+                      << "\t" << Ranges.back().first << "\t" << MI << "\n");
     return;
   }
   Ranges.push_back(std::make_pair(&MI, nullptr));
@@ -86,7 +86,7 @@ using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedVariable, 1>>;
 
 } // end anonymous namespace
 
-// \brief Claim that @Var is not described by @RegNo anymore.
+// Claim that @Var is not described by @RegNo anymore.
 static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                 InlinedVariable Var) {
   const auto &I = RegVars.find(RegNo);
@@ -100,7 +100,7 @@ static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
     RegVars.erase(I);
 }
 
-// \brief Claim that @Var is now described by @RegNo.
+// Claim that @Var is now described by @RegNo.
 static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                InlinedVariable Var) {
   assert(RegNo != 0U);
@@ -109,7 +109,7 @@ static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
   VarSet.push_back(Var);
 }
 
-// \brief Terminate the location range for variables described by register at
+// Terminate the location range for variables described by register at
 // @I by inserting @ClobberingInstr to their history.
 static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
                                 RegDescribedVarsMap::iterator I,
@@ -122,7 +122,7 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
   RegVars.erase(I);
 }
 
-// \brief Terminate the location range for variables described by register
+// Terminate the location range for variables described by register
 // @RegNo by inserting @ClobberingInstr to their history.
 static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                 DbgValueHistoryMap &HistMap,
@@ -133,7 +133,7 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
   clobberRegisterUses(RegVars, I, HistMap, ClobberingInstr);
 }
 
-// \brief Returns the first instruction in @MBB which corresponds to
+// Returns the first instruction in @MBB which corresponds to
 // the function epilogue, or nullptr if @MBB doesn't contain an epilogue.
 static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
   auto LastMI = MBB.getLastNonDebugInstr();
@@ -155,7 +155,7 @@ static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
   return &*MBB.begin();
 }
 
-// \brief Collect registers that are modified in the function body (their
+// Collect registers that are modified in the function body (their
 // contents is changed outside of the prologue and epilogue).
 static void collectChangingRegs(const MachineFunction *MF,
                                 const TargetRegisterInfo *TRI,
@@ -198,7 +198,7 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
   RegDescribedVarsMap RegVars;
   for (const auto &MBB : *MF) {
     for (const auto &MI : MBB) {
-      if (!MI.isDebugValue()) {
+      if (!MI.isDebugInstr()) {
         // Not a DBG_VALUE instruction. It may clobber registers which describe
         // some variables.
         for (const MachineOperand &MO : MI.operands()) {
@@ -234,6 +234,10 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
         continue;
       }
 
+      // Skip DBG_LABEL instructions.
+      if (MI.isDebugLabel())
+        continue;
+
       assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
       // Use the base variable (without any DW_OP_piece expressions)
       // as index into History. The full variables including the
@@ -265,3 +269,33 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
     }
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void DbgValueHistoryMap::dump() const {
+  dbgs() << "DbgValueHistoryMap:\n";
+  for (const auto &VarRangePair : *this) {
+    const InlinedVariable &Var = VarRangePair.first;
+    const InstrRanges &Ranges = VarRangePair.second;
+
+    const DILocalVariable *LocalVar = Var.first;
+    const DILocation *Location = Var.second;
+
+    dbgs() << " - " << LocalVar->getName() << " at ";
+
+    if (Location)
+      dbgs() << Location->getFilename() << ":" << Location->getLine() << ":"
+             << Location->getColumn();
+    else
+      dbgs() << "<unknown location>";
+
+    dbgs() << " --\n";
+
+    for (const InstrRange &Range : Ranges) {
+      dbgs() << "   Begin: " << *Range.first;
+      if (Range.second)
+        dbgs() << "   End  : " << *Range.second;
+      dbgs() << "\n";
+    }
+  }
+}
+#endif

@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+
+# Check that the waitcnt pass does *not* insert a redundant waitcnt instr.
+# In this testcase, ensure that pass does not insert redundant S_WAITCNT 3952
+
+...
+# CHECK-LABEL: name: waitcnt-no-redundant
+# CHECK: S_WAITCNT 3952
+# CHECK-NEXT: FLAT_ATOMIC_CMPSWAP
+# CHECK-NEXT: S_WAITCNT 3952
+# CHECK-NEXT: BUFFER_WBINVL1
+
+name: waitcnt-no-redundant
+body: |
+  bb.0:
+    renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+
+  bb.1:
+    S_WAITCNT 3952
+    FLAT_ATOMIC_CMPSWAP undef renamable $vgpr0_vgpr1, renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    S_WAITCNT 3952
+    BUFFER_WBINVL1 implicit $exec
+    S_BRANCH %bb.1
+
+...

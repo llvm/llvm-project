@@ -6,6 +6,7 @@
 
 @arr = local_unnamed_addr global [32 x i32] zeroinitializer, align 16
 @arr1 = local_unnamed_addr global [32 x float] zeroinitializer, align 16
+@arrp = local_unnamed_addr global [32 x i32*] zeroinitializer, align 16
 @var = global i32 zeroinitializer, align 8
 
 define i32 @maxi8(i32) {
@@ -1964,3 +1965,130 @@ pp:
   ret i32 %23
 }
 
+; PR38191 - We don't handle array-of-pointer reductions.
+define i32* @maxp8(i32) {
+; CHECK-LABEL: @maxp8(
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 0), align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32* [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32* [[TMP2]], i32* [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32* [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32* [[TMP5]], i32* [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i32* [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32* [[TMP8]], i32* [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 4), align 16
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i32* [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32* [[TMP11]], i32* [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 5), align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i32* [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i32* [[TMP14]], i32* [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 6), align 8
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ugt i32* [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32* [[TMP17]], i32* [[TMP18]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 7), align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp ugt i32* [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i32* [[TMP20]], i32* [[TMP21]]
+; CHECK-NEXT:    ret i32* [[TMP23]]
+;
+; AVX-LABEL: @maxp8(
+; AVX-NEXT:    [[TMP2:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 0), align 16
+; AVX-NEXT:    [[TMP3:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 1), align 4
+; AVX-NEXT:    [[TMP4:%.*]] = icmp ugt i32* [[TMP2]], [[TMP3]]
+; AVX-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32* [[TMP2]], i32* [[TMP3]]
+; AVX-NEXT:    [[TMP6:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 2), align 8
+; AVX-NEXT:    [[TMP7:%.*]] = icmp ugt i32* [[TMP5]], [[TMP6]]
+; AVX-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32* [[TMP5]], i32* [[TMP6]]
+; AVX-NEXT:    [[TMP9:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 3), align 4
+; AVX-NEXT:    [[TMP10:%.*]] = icmp ugt i32* [[TMP8]], [[TMP9]]
+; AVX-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32* [[TMP8]], i32* [[TMP9]]
+; AVX-NEXT:    [[TMP12:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 4), align 16
+; AVX-NEXT:    [[TMP13:%.*]] = icmp ugt i32* [[TMP11]], [[TMP12]]
+; AVX-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32* [[TMP11]], i32* [[TMP12]]
+; AVX-NEXT:    [[TMP15:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 5), align 4
+; AVX-NEXT:    [[TMP16:%.*]] = icmp ugt i32* [[TMP14]], [[TMP15]]
+; AVX-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i32* [[TMP14]], i32* [[TMP15]]
+; AVX-NEXT:    [[TMP18:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 6), align 8
+; AVX-NEXT:    [[TMP19:%.*]] = icmp ugt i32* [[TMP17]], [[TMP18]]
+; AVX-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32* [[TMP17]], i32* [[TMP18]]
+; AVX-NEXT:    [[TMP21:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 7), align 4
+; AVX-NEXT:    [[TMP22:%.*]] = icmp ugt i32* [[TMP20]], [[TMP21]]
+; AVX-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i32* [[TMP20]], i32* [[TMP21]]
+; AVX-NEXT:    ret i32* [[TMP23]]
+;
+; AVX2-LABEL: @maxp8(
+; AVX2-NEXT:    [[TMP2:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 0), align 16
+; AVX2-NEXT:    [[TMP3:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 1), align 4
+; AVX2-NEXT:    [[TMP4:%.*]] = icmp ugt i32* [[TMP2]], [[TMP3]]
+; AVX2-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32* [[TMP2]], i32* [[TMP3]]
+; AVX2-NEXT:    [[TMP6:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 2), align 8
+; AVX2-NEXT:    [[TMP7:%.*]] = icmp ugt i32* [[TMP5]], [[TMP6]]
+; AVX2-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32* [[TMP5]], i32* [[TMP6]]
+; AVX2-NEXT:    [[TMP9:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 3), align 4
+; AVX2-NEXT:    [[TMP10:%.*]] = icmp ugt i32* [[TMP8]], [[TMP9]]
+; AVX2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32* [[TMP8]], i32* [[TMP9]]
+; AVX2-NEXT:    [[TMP12:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 4), align 16
+; AVX2-NEXT:    [[TMP13:%.*]] = icmp ugt i32* [[TMP11]], [[TMP12]]
+; AVX2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32* [[TMP11]], i32* [[TMP12]]
+; AVX2-NEXT:    [[TMP15:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 5), align 4
+; AVX2-NEXT:    [[TMP16:%.*]] = icmp ugt i32* [[TMP14]], [[TMP15]]
+; AVX2-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i32* [[TMP14]], i32* [[TMP15]]
+; AVX2-NEXT:    [[TMP18:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 6), align 8
+; AVX2-NEXT:    [[TMP19:%.*]] = icmp ugt i32* [[TMP17]], [[TMP18]]
+; AVX2-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32* [[TMP17]], i32* [[TMP18]]
+; AVX2-NEXT:    [[TMP21:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 7), align 4
+; AVX2-NEXT:    [[TMP22:%.*]] = icmp ugt i32* [[TMP20]], [[TMP21]]
+; AVX2-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i32* [[TMP20]], i32* [[TMP21]]
+; AVX2-NEXT:    ret i32* [[TMP23]]
+;
+; SKX-LABEL: @maxp8(
+; SKX-NEXT:    [[TMP2:%.*]] = load <2 x i32*>, <2 x i32*>* bitcast ([32 x i32*]* @arrp to <2 x i32*>*), align 16
+; SKX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32*> [[TMP2]], i32 0
+; SKX-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32*> [[TMP2]], i32 1
+; SKX-NEXT:    [[TMP5:%.*]] = icmp ugt i32* [[TMP3]], [[TMP4]]
+; SKX-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32* [[TMP3]], i32* [[TMP4]]
+; SKX-NEXT:    [[TMP7:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 2), align 8
+; SKX-NEXT:    [[TMP8:%.*]] = icmp ugt i32* [[TMP6]], [[TMP7]]
+; SKX-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32* [[TMP6]], i32* [[TMP7]]
+; SKX-NEXT:    [[TMP10:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 3), align 4
+; SKX-NEXT:    [[TMP11:%.*]] = icmp ugt i32* [[TMP9]], [[TMP10]]
+; SKX-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32* [[TMP9]], i32* [[TMP10]]
+; SKX-NEXT:    [[TMP13:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 4), align 16
+; SKX-NEXT:    [[TMP14:%.*]] = icmp ugt i32* [[TMP12]], [[TMP13]]
+; SKX-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32* [[TMP12]], i32* [[TMP13]]
+; SKX-NEXT:    [[TMP16:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 5), align 4
+; SKX-NEXT:    [[TMP17:%.*]] = icmp ugt i32* [[TMP15]], [[TMP16]]
+; SKX-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32* [[TMP15]], i32* [[TMP16]]
+; SKX-NEXT:    [[TMP19:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 6), align 8
+; SKX-NEXT:    [[TMP20:%.*]] = icmp ugt i32* [[TMP18]], [[TMP19]]
+; SKX-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i32* [[TMP18]], i32* [[TMP19]]
+; SKX-NEXT:    [[TMP22:%.*]] = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 7), align 4
+; SKX-NEXT:    [[TMP23:%.*]] = icmp ugt i32* [[TMP21]], [[TMP22]]
+; SKX-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], i32* [[TMP21]], i32* [[TMP22]]
+; SKX-NEXT:    ret i32* [[TMP24]]
+;
+  %2 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 0), align 16
+  %3 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 1), align 4
+  %4 = icmp ugt i32* %2, %3
+  %5 = select i1 %4, i32* %2, i32* %3
+  %6 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 2), align 8
+  %7 = icmp ugt i32* %5, %6
+  %8 = select i1 %7, i32* %5, i32* %6
+  %9 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 3), align 4
+  %10 = icmp ugt i32* %8, %9
+  %11 = select i1 %10, i32* %8, i32* %9
+  %12 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 4), align 16
+  %13 = icmp ugt i32* %11, %12
+  %14 = select i1 %13, i32* %11, i32* %12
+  %15 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 5), align 4
+  %16 = icmp ugt i32* %14, %15
+  %17 = select i1 %16, i32* %14, i32* %15
+  %18 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 6), align 8
+  %19 = icmp ugt i32* %17, %18
+  %20 = select i1 %19, i32* %17, i32* %18
+  %21 = load i32*, i32** getelementptr inbounds ([32 x i32*], [32 x i32*]* @arrp, i64 0, i64 7), align 4
+  %22 = icmp ugt i32* %20, %21
+  %23 = select i1 %22, i32* %20, i32* %21
+  ret i32* %23
+}

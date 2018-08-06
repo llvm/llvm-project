@@ -24,7 +24,7 @@ entry:
 ; Think of the monstrosity '{{\[}}[[LB]]]' as '[ [[LB]] ]' without the spaces.
 ; CHECK-NEXT: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]]]
 ; CHECK-NEXT: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
-    tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast ([64 x i32]* @s to i8*), i8* bitcast ([64 x i32]* @d to i8*), i32 17, i32 4, i1 false)
+    tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast ([64 x i32]* @s to i8*), i8* align 4 bitcast ([64 x i32]* @d to i8*), i32 17, i1 false)
     ret void
 }
 
@@ -42,7 +42,7 @@ entry:
 ; CHECK-NEXT: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #2]
 ; CHECK-NEXT: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]], #2]
 ; CHECK-NEXT: strh{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
-    tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* bitcast ([64 x i32]* @s to i8*), i8* bitcast ([64 x i32]* @d to i8*), i32 15, i32 4, i1 false)
+    tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast ([64 x i32]* @s to i8*), i8* align 4 bitcast ([64 x i32]* @d to i8*), i32 15, i1 false)
     ret void
 }
 
@@ -54,13 +54,13 @@ entry:
 
 define void @t3() {
   call void @llvm.memcpy.p0i8.p0i8.i32(
-     i8* getelementptr inbounds (%struct.T, %struct.T* @copy, i32 0, i32 0),
-     i8* getelementptr inbounds (%struct.T, %struct.T* @etest, i32 0, i32 0),
-     i32 24, i32 8, i1 false)
+     i8* align 8 getelementptr inbounds (%struct.T, %struct.T* @copy, i32 0, i32 0),
+     i8* align 8 getelementptr inbounds (%struct.T, %struct.T* @etest, i32 0, i32 0),
+     i32 24, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(
-     i8* getelementptr inbounds (%struct.T, %struct.T* @copy, i32 0, i32 0),
-     i8* getelementptr inbounds (%struct.T, %struct.T* @etest, i32 0, i32 0),
-     i32 24, i32 8, i1 false)
+     i8* align 8 getelementptr inbounds (%struct.T, %struct.T* @copy, i32 0, i32 0),
+     i8* align 8 getelementptr inbounds (%struct.T, %struct.T* @etest, i32 0, i32 0),
+     i32 24, i1 false)
   ret void
 }
 
@@ -70,7 +70,7 @@ define void @t3() {
 define void @test3(%struct.S* %d, %struct.S* %s) #0 {
   %1 = bitcast %struct.S* %d to i8*
   %2 = bitcast %struct.S* %s to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 48, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %2, i32 48, i1 false)
 ; 3 ldm/stm pairs in v6; 2 in v7
 ; CHECK: ldm{{(\.w)?}} {{[rl0-9]+!?}}, [[REGLIST1:{.*}]]
 ; CHECK: stm{{(\.w)?}} {{[rl0-9]+!?}}, [[REGLIST1]]
@@ -91,4 +91,4 @@ declare void @g(i32*)
 attributes #0 = { "no-frame-pointer-elim"="true" }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1

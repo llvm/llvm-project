@@ -80,7 +80,7 @@ public:
   using FunctionStack = SmallVector<FunctionAttr, 4>;
 
   using PerThreadFunctionStackMap =
-      DenseMap<llvm::sys::ProcessInfo::ProcessId, FunctionStack>;
+      DenseMap<llvm::sys::procid_t, FunctionStack>;
 
   class GraphT : public Graph<FunctionStats, CallStats, int32_t> {
   public:

@@ -303,7 +303,7 @@ we need to do to "extend the grammar".
 Now we have useful user-defined binary operators. This builds a lot on
 the previous framework we built for other operators. Adding unary
 operators is a bit more challenging, because we don't have any framework
-for it yet - lets see what it takes.
+for it yet - let's see what it takes.
 
 User-defined Unary Operators
 ============================

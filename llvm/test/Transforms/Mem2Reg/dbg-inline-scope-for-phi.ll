@@ -80,14 +80,14 @@ declare i32 @cond(...)
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"Apple LLVM version 9.1.0 (clang-902.2.37.2)"}
-!8 = distinct !DISubprogram(name: "get1", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "get1", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11}
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !12 = !DILocation(line: 7, column: 11, scope: !8)
 !13 = !DILocation(line: 7, column: 10, scope: !8)
 !14 = !DILocation(line: 7, column: 3, scope: !8)
-!15 = distinct !DISubprogram(name: "get2", scope: !1, file: !1, line: 10, type: !16, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!15 = distinct !DISubprogram(name: "get2", scope: !1, file: !1, line: 10, type: !16, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !16 = !DISubroutineType(types: !17)
 !17 = !{!11, !18}
 !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)
@@ -96,7 +96,7 @@ declare i32 @cond(...)
 !21 = !DILocation(line: 11, column: 11, scope: !15)
 !22 = !DILocation(line: 11, column: 10, scope: !15)
 !23 = !DILocation(line: 11, column: 3, scope: !15)
-!24 = distinct !DISubprogram(name: "bug", scope: !1, file: !1, line: 14, type: !16, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!24 = distinct !DISubprogram(name: "bug", scope: !1, file: !1, line: 14, type: !16, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !25 = !DILocalVariable(name: "p", arg: 1, scope: !24, file: !1, line: 14, type: !18)
 !26 = !DILocation(line: 14, column: 14, scope: !24)
 !27 = !DILocation(line: 15, column: 7, scope: !28)

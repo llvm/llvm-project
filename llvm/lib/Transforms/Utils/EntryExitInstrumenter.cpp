@@ -9,14 +9,13 @@
 
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 static void insertCall(Function &CurFn, StringRef Func,
@@ -92,17 +91,27 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
   if (!ExitFunc.empty()) {
     for (BasicBlock &BB : F) {
-      TerminatorInst *T = BB.getTerminator();
+      Instruction *T = BB.getTerminator();
+      if (!isa<ReturnInst>(T))
+        continue;
+
+      // If T is preceded by a musttail call, that's the real terminator.
+      Instruction *Prev = T->getPrevNode();
+      if (BitCastInst *BCI = dyn_cast_or_null<BitCastInst>(Prev))
+        Prev = BCI->getPrevNode();
+      if (CallInst *CI = dyn_cast_or_null<CallInst>(Prev)) {
+        if (CI->isMustTailCall())
+          T = CI;
+      }
+
       DebugLoc DL;
       if (DebugLoc TerminatorDL = T->getDebugLoc())
         DL = TerminatorDL;
       else if (auto SP = F.getSubprogram())
         DL = DebugLoc::get(0, 0, SP);
 
-      if (isa<ReturnInst>(T)) {
-        insertCall(F, ExitFunc, T, DL);
-        Changed = true;
-      }
+      insertCall(F, ExitFunc, T, DL);
+      Changed = true;
     }
     F.removeAttribute(AttributeList::FunctionIndex, ExitAttr);
   }

@@ -154,7 +154,7 @@ public:
         unsigned MaxInterferingRegs = std::numeric_limits<unsigned>::max());
 
     // Was this virtual register visited during collectInterferingVRegs?
-    bool isSeenInterference(LiveInterval *VReg) const;
+    bool isSeenInterference(LiveInterval *VirtReg) const;
 
     // Did collectInterferingVRegs collect all interferences?
     bool seenAllInterferences() const { return SeenAllInterferences; }

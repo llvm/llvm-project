@@ -15,7 +15,7 @@ When gathering XRay traces in Flight Data Recorder mode, each thread of an
 application will claim buffers to fill with trace data, which at some point
 is finalized and flushed.
 
-A goal of the profiler is to minimize overhead, so the flushed data directly
+A goal of the profiler is to minimize overhead, the flushed data directly
 corresponds to the buffer.
 
 This document describes the format of a trace file.
@@ -106,11 +106,11 @@ There are a few categories of data in the sequence.
 - ``Function Arguments``: The arguments to some functions are included in the
   trace. These are either pointer addresses or primitives that are read and
   logged independently of their types in a high level language. To the tracer,
-  they are all simply numbers. Function Records that have attached arguments
-  will indicate their presence on the function entry record. We only support
-  logging contiguous function argument sequences starting with argument zero,
-  which will be the "this" pointer for member function invocations. For example,
-  we don't support logging the first and third argument.
+  they are all numbers. Function Records that have attached arguments will
+  indicate their presence on the function entry record. We only support logging
+  contiguous function argument sequences starting with argument zero, which will
+  be the "this" pointer for member function invocations. For example, we don't
+  support logging the first and third argument.
 
 A reader of the memory format must maintain a state machine. The format makes no
 attempt to pad for alignment, and it is not seekable.

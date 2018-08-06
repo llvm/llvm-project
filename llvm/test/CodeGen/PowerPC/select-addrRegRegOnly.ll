@@ -21,8 +21,8 @@ define float @testMultipleAccess(i32* nocapture readonly %arr) local_unnamed_add
 ; CHECK-LABEL: testMultipleAccess:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 4, 8(3)
-; CHECK-NEXT:    lwz 12, 12(3)
-; CHECK-NEXT:    add 3, 12, 4
+; CHECK-NEXT:    lwz 3, 12(3)
+; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    mtvsrwa 0, 3
 ; CHECK-NEXT:    xscvsxdsp 1, 0
 ; CHECK-NEXT:    blr

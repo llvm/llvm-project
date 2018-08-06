@@ -77,6 +77,8 @@
 #include <vector>
 using namespace llvm;
 
+#define DEBUG_TYPE "divergence"
+
 namespace {
 
 class DivergencePropagator {
@@ -299,6 +301,10 @@ bool DivergenceAnalysis::runOnFunction(Function &F) {
                           PDT, DivergentValues);
   DP.populateWithSourcesOfDivergence();
   DP.propagate();
+  LLVM_DEBUG(
+    dbgs() << "\nAfter divergence analysis on " << F.getName() << ":\n";
+    print(dbgs(), F.getParent())
+  );
   return false;
 }
 
@@ -318,12 +324,17 @@ void DivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
 
   // Dumps all divergent values in F, arguments and then instructions.
   for (auto &Arg : F->args()) {
-    if (DivergentValues.count(&Arg))
-      OS << "DIVERGENT:  " << Arg << "\n";
+    OS << (DivergentValues.count(&Arg) ? "DIVERGENT: " : "           ");
+    OS << Arg << "\n";
   }
   // Iterate instructions using instructions() to ensure a deterministic order.
-  for (auto &I : instructions(F)) {
-    if (DivergentValues.count(&I))
-      OS << "DIVERGENT:" << I << "\n";
+  for (auto BI = F->begin(), BE = F->end(); BI != BE; ++BI) {
+    auto &BB = *BI;
+    OS << "\n           " << BB.getName() << ":\n";
+    for (auto &I : BB.instructionsWithoutDebug()) {
+      OS << (DivergentValues.count(&I) ? "DIVERGENT:     " : "               ");
+      OS << I << "\n";
+    }
   }
+  OS << "\n";
 }

@@ -47,8 +47,8 @@ static RTLIB::Libcall GetFPLibCall(EVT VT,
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG);
-        dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float result " << ResNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
@@ -738,8 +738,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
 //===----------------------------------------------------------------------===//
 
 bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG);
-        dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   switch (N->getOpcode()) {
@@ -1039,7 +1039,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
 /// have invalid operands or may have other results that need promotion, we just
 /// know that (at least) one result needs expansion.
 void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float result: "; N->dump(&DAG); dbgs() << "\n");
   SDValue Lo, Hi;
   Lo = Hi = SDValue();
 
@@ -1538,7 +1538,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
 /// types of the node are known to be legal, but other operands of the node may
 /// need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand float operand: "; N->dump(&DAG); dbgs() << "\n");
   SDValue Res = SDValue();
 
   // See if the target wants to custom expand this node.
@@ -1658,18 +1658,6 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_SINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
   SDLoc dl(N);
 
-  // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
-  // PPC (the libcall is not available).  FIXME: Do this in a less hacky way.
-  if (RVT == MVT::i32) {
-    assert(N->getOperand(0).getValueType() == MVT::ppcf128 &&
-           "Logic only correct for ppcf128!");
-    SDValue Res = DAG.getNode(ISD::FP_ROUND_INREG, dl, MVT::ppcf128,
-                              N->getOperand(0), DAG.getValueType(MVT::f64));
-    Res = DAG.getNode(ISD::FP_ROUND, dl, MVT::f64, Res,
-                      DAG.getIntPtrConstant(1, dl));
-    return DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Res);
-  }
-
   RTLIB::Libcall LC = RTLIB::getFPTOSINT(N->getOperand(0).getValueType(), RVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_SINT!");
   return TLI.makeLibCall(DAG, LC, RVT, N->getOperand(0), false, dl).first;
@@ -1678,31 +1666,6 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_SINT(SDNode *N) {
 SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_UINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
   SDLoc dl(N);
-
-  // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
-  // PPC (the libcall is not available).  FIXME: Do this in a less hacky way.
-  if (RVT == MVT::i32) {
-    assert(N->getOperand(0).getValueType() == MVT::ppcf128 &&
-           "Logic only correct for ppcf128!");
-    const uint64_t TwoE31[] = {0x41e0000000000000LL, 0};
-    APFloat APF = APFloat(APFloat::PPCDoubleDouble(), APInt(128, TwoE31));
-    SDValue Tmp = DAG.getConstantFP(APF, dl, MVT::ppcf128);
-    //  X>=2^31 ? (int)(X-2^31)+0x80000000 : (int)X
-    // FIXME: generated code sucks.
-    // TODO: Are there fast-math-flags to propagate to this FSUB?
-    return DAG.getSelectCC(dl, N->getOperand(0), Tmp,
-                           DAG.getNode(ISD::ADD, dl, MVT::i32,
-                                       DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32,
-                                                   DAG.getNode(ISD::FSUB, dl,
-                                                               MVT::ppcf128,
-                                                               N->getOperand(0),
-                                                               Tmp)),
-                                       DAG.getConstant(0x80000000, dl,
-                                                       MVT::i32)),
-                           DAG.getNode(ISD::FP_TO_SINT, dl,
-                                       MVT::i32, N->getOperand(0)),
-                           ISD::SETGE);
-  }
 
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(N->getOperand(0).getValueType(), RVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_UINT!");
@@ -2139,13 +2102,12 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
 
   // Load the value as an integer value with the same number of bits.
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  auto MMOFlags =
-      L->getMemOperand()->getFlags() &
-      ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   SDValue newL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), IVT,
                              SDLoc(N), L->getChain(), L->getBasePtr(),
                              L->getOffset(), L->getPointerInfo(), IVT,
-                             L->getAlignment(), MMOFlags, L->getAAInfo());
+                             L->getAlignment(),
+                             L->getMemOperand()->getFlags(),
+                             L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));

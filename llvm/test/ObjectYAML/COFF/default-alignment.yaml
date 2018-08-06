@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# CHECK:      Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+# CHECK-NEXT: SectionData:     '01'
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: []
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData:     01
+symbols:
+...

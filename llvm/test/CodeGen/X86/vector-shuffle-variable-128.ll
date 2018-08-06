@@ -37,8 +37,8 @@ define <2 x double> @var_shuffle_v2f64_v2f64_xx_i64(<2 x double> %x, i64 %i0, i6
 define <2 x i64> @var_shuffle_v2i64_v2i64_xx_i64(<2 x i64> %x, i32 %i0, i32 %i1) nounwind {
 ; SSE-LABEL: var_shuffle_v2i64_v2i64_xx_i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    andl $1, %edi
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $1, %esi
@@ -49,8 +49,8 @@ define <2 x i64> @var_shuffle_v2i64_v2i64_xx_i64(<2 x i64> %x, i32 %i0, i32 %i1)
 ;
 ; AVX-LABEL: var_shuffle_v2i64_v2i64_xx_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $1, %edi
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $1, %esi
@@ -68,56 +68,56 @@ define <2 x i64> @var_shuffle_v2i64_v2i64_xx_i64(<2 x i64> %x, i32 %i0, i32 %i1)
 define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i32 %i1, i32 %i2, i32 %i3) nounwind {
 ; SSE2-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE2-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE2-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE2-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    andl $3, %edi
-; SSE2-NEXT:    andl $3, %esi
-; SSE2-NEXT:    andl $3, %edx
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    andl $3, %ecx
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    andl $3, %esi
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    andl $3, %edx
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    andl $3, %ecx
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSSE3-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSSE3-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSSE3-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSSE3-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    andl $3, %edi
-; SSSE3-NEXT:    andl $3, %esi
-; SSSE3-NEXT:    andl $3, %edx
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    andl $3, %ecx
 ; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    andl $3, %esi
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    andl $3, %edx
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    andl $3, %ecx
 ; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE41-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE41-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE41-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE41-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE41-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $3, %edi
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    andl $3, %esi
 ; SSE41-NEXT:    andl $3, %edx
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $3, %ecx
-; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
@@ -125,16 +125,16 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ;
 ; AVX-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $3, %edi
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    andl $3, %esi
 ; AVX-NEXT:    andl $3, %edx
-; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %ecx
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
@@ -153,10 +153,10 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 define <4 x i32> @var_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32 %i0, i32 %i1, i32 %i2, i32 %i3) nounwind {
 ; SSE2-LABEL: var_shuffle_v4i32_v4i32_xxxx_i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE2-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE2-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE2-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    andl $3, %edi
 ; SSE2-NEXT:    andl $3, %esi
 ; SSE2-NEXT:    andl $3, %edx
@@ -173,10 +173,10 @@ define <4 x i32> @var_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32 %i0, i32 %i
 ;
 ; SSSE3-LABEL: var_shuffle_v4i32_v4i32_xxxx_i32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSSE3-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSSE3-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSSE3-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSSE3-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    andl $3, %edi
 ; SSSE3-NEXT:    andl $3, %esi
 ; SSSE3-NEXT:    andl $3, %edx
@@ -193,10 +193,10 @@ define <4 x i32> @var_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32 %i0, i32 %i
 ;
 ; SSE41-LABEL: var_shuffle_v4i32_v4i32_xxxx_i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE41-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE41-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE41-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE41-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE41-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $3, %edi
 ; SSE41-NEXT:    andl $3, %esi
 ; SSE41-NEXT:    andl $3, %edx
@@ -210,10 +210,10 @@ define <4 x i32> @var_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32 %i0, i32 %i
 ;
 ; AVX-LABEL: var_shuffle_v4i32_v4i32_xxxx_i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $3, %edi
 ; AVX-NEXT:    andl $3, %esi
 ; AVX-NEXT:    andl $3, %edx
@@ -238,12 +238,12 @@ define <4 x i32> @var_shuffle_v4i32_v4i32_xxxx_i32(<4 x i32> %x, i32 %i0, i32 %i
 define <8 x i16> @var_shuffle_v8i16_v8i16_xxxxxxxx_i16(<8 x i16> %x, i16 %i0, i16 %i1, i16 %i2, i16 %i3, i16 %i4, i16 %i5, i16 %i6, i16 %i7) nounwind {
 ; SSE2-LABEL: var_shuffle_v8i16_v8i16_xxxxxxxx_i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE2-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE2-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE2-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE2-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE2-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE2-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE2-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
 ; SSE2-NEXT:    andl $7, %r10d
 ; SSE2-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -282,12 +282,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xxxxxxxx_i16(<8 x i16> %x, i16 %i0, i1
 ;
 ; SSSE3-LABEL: var_shuffle_v8i16_v8i16_xxxxxxxx_i16:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSSE3-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSSE3-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSSE3-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSSE3-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSSE3-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSSE3-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSSE3-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSSE3-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
 ; SSSE3-NEXT:    andl $7, %r10d
 ; SSSE3-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -326,12 +326,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xxxxxxxx_i16(<8 x i16> %x, i16 %i0, i1
 ;
 ; SSE41-LABEL: var_shuffle_v8i16_v8i16_xxxxxxxx_i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE41-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE41-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE41-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE41-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE41-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE41-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE41-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE41-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE41-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
 ; SSE41-NEXT:    andl $7, %r10d
 ; SSE41-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -356,12 +356,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xxxxxxxx_i16(<8 x i16> %x, i16 %i0, i1
 ;
 ; AVX-LABEL: var_shuffle_v8i16_v8i16_xxxxxxxx_i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %r9d killed %r9d def %r9
-; AVX-NEXT:    # kill: def %r8d killed %r8d def %r8
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $r9d killed $r9d def $r9
+; AVX-NEXT:    # kill: def $r8d killed $r8d def $r8
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d
 ; AVX-NEXT:    andl $7, %r10d
 ; AVX-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -405,12 +405,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xxxxxxxx_i16(<8 x i16> %x, i16 %i0, i1
 define <16 x i8> @var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8 %i0, i8 %i1, i8 %i2, i8 %i3, i8 %i4, i8 %i5, i8 %i6, i8 %i7, i8 %i8, i8 %i9, i8 %i10, i8 %i11, i8 %i12, i8 %i13, i8 %i14, i8 %i15) nounwind {
 ; SSE2-LABEL: var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE2-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE2-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE2-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE2-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE2-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE2-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE2-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -489,12 +489,12 @@ define <16 x i8> @var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8 %
 ;
 ; SSSE3-LABEL: var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSSE3-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSSE3-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSSE3-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSSE3-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSSE3-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSSE3-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSSE3-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSSE3-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; SSSE3-NEXT:    andl $15, %eax
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -573,12 +573,12 @@ define <16 x i8> @var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8 %
 ;
 ; SSE41-LABEL: var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE41-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE41-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE41-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE41-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE41-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE41-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE41-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE41-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE41-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $15, %edi
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movzbl -24(%rsp,%rdi), %eax
@@ -627,12 +627,12 @@ define <16 x i8> @var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8 %
 ;
 ; AVX-LABEL: var_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %r9d killed %r9d def %r9
-; AVX-NEXT:    # kill: def %r8d killed %r8d def %r8
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $r9d killed $r9d def $r9
+; AVX-NEXT:    # kill: def $r8d killed $r8d def $r8
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $15, %edi
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movzbl -24(%rsp,%rdi), %eax
@@ -820,7 +820,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSE2-NEXT:    pushq %r12
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movzbl (%rdi), %eax
-; SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE2-NEXT:    movzbl 1(%rdi), %r9d
 ; SSE2-NEXT:    movzbl 2(%rdi), %r10d
 ; SSE2-NEXT:    movzbl 3(%rdi), %r11d
@@ -882,7 +882,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSE2-NEXT:    andl $15, %r9d
 ; SSE2-NEXT:    movzbl -24(%rsp,%r9), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # 8-byte Reload
+; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
@@ -918,7 +918,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSSE3-NEXT:    pushq %r12
 ; SSSE3-NEXT:    pushq %rbx
 ; SSSE3-NEXT:    movzbl (%rdi), %eax
-; SSSE3-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; SSSE3-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSSE3-NEXT:    movzbl 1(%rdi), %r9d
 ; SSSE3-NEXT:    movzbl 2(%rdi), %r10d
 ; SSSE3-NEXT:    movzbl 3(%rdi), %r11d
@@ -980,7 +980,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSSE3-NEXT:    andl $15, %r9d
 ; SSSE3-NEXT:    movzbl -24(%rsp,%r9), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm2
-; SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # 8-byte Reload
+; SSSE3-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; SSSE3-NEXT:    andl $15, %eax
 ; SSSE3-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
@@ -1019,7 +1019,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSE41-NEXT:    andl $15, %r9d
 ; SSE41-NEXT:    movzbl 1(%rdi), %ebx
 ; SSE41-NEXT:    movzbl 2(%rdi), %eax
-; SSE41-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; SSE41-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE41-NEXT:    movzbl 3(%rdi), %r11d
 ; SSE41-NEXT:    movzbl 4(%rdi), %r14d
 ; SSE41-NEXT:    movzbl 5(%rdi), %r15d
@@ -1038,7 +1038,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; SSE41-NEXT:    movd %r9d, %xmm0
 ; SSE41-NEXT:    andl $15, %ebx
 ; SSE41-NEXT:    pinsrb $1, -24(%rsp,%rbx), %xmm0
-; SSE41-NEXT:    movq -{{[0-9]+}}(%rsp), %rbx # 8-byte Reload
+; SSE41-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; SSE41-NEXT:    andl $15, %ebx
 ; SSE41-NEXT:    pinsrb $2, -24(%rsp,%rbx), %xmm0
 ; SSE41-NEXT:    andl $15, %r11d
@@ -1087,7 +1087,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; AVX-NEXT:    andl $15, %r9d
 ; AVX-NEXT:    movzbl 1(%rdi), %ebx
 ; AVX-NEXT:    movzbl 2(%rdi), %eax
-; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; AVX-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    movzbl 3(%rdi), %r11d
 ; AVX-NEXT:    movzbl 4(%rdi), %r14d
 ; AVX-NEXT:    movzbl 5(%rdi), %r15d
@@ -1106,7 +1106,7 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 ; AVX-NEXT:    vmovd %r9d, %xmm0
 ; AVX-NEXT:    andl $15, %ebx
 ; AVX-NEXT:    vpinsrb $1, -24(%rsp,%rbx), %xmm0, %xmm0
-; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rbx # 8-byte Reload
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; AVX-NEXT:    andl $15, %ebx
 ; AVX-NEXT:    vpinsrb $2, -24(%rsp,%rbx), %xmm0, %xmm0
 ; AVX-NEXT:    andl $15, %r11d
@@ -1216,16 +1216,16 @@ define <16 x i8> @mem_shuffle_v16i8_v16i8_xxxxxxxxxxxxxxxx_i8(<16 x i8> %x, i8* 
 define <4 x float> @var_shuffle_v4f32_v4f32_x0yx_i32(<4 x float> %x, <4 x float> %y, i32 %i0, i32 %i1, i32 %i2, i32 %i3) nounwind {
 ; SSE-LABEL: var_shuffle_v4f32_v4f32_x0yx_i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    andl $3, %edi
 ; SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $3, %edx
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $3, %ecx
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -1233,16 +1233,16 @@ define <4 x float> @var_shuffle_v4f32_v4f32_x0yx_i32(<4 x float> %x, <4 x float>
 ;
 ; AVX-LABEL: var_shuffle_v4f32_v4f32_x0yx_i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $3, %edi
 ; AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %edx
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %ecx
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -1261,12 +1261,12 @@ define <4 x float> @var_shuffle_v4f32_v4f32_x0yx_i32(<4 x float> %x, <4 x float>
 define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %y, i16 %i0, i16 %i1, i16 %i2, i16 %i3, i16 %i4, i16 %i5, i16 %i6, i16 %i7) nounwind {
 ; SSE2-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE2-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE2-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE2-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE2-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE2-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE2-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE2-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    andl $7, %edi
 ; SSE2-NEXT:    andl $7, %esi
 ; SSE2-NEXT:    andl $7, %edx
@@ -1298,12 +1298,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ;
 ; SSSE3-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSSE3-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSSE3-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSSE3-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSSE3-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSSE3-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSSE3-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSSE3-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSSE3-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    andl $7, %edi
 ; SSSE3-NEXT:    andl $7, %esi
 ; SSSE3-NEXT:    andl $7, %edx
@@ -1335,12 +1335,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ;
 ; SSE41-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def %r9d killed %r9d def %r9
-; SSE41-NEXT:    # kill: def %r8d killed %r8d def %r8
-; SSE41-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; SSE41-NEXT:    # kill: def %edx killed %edx def %rdx
-; SSE41-NEXT:    # kill: def %esi killed %esi def %rsi
-; SSE41-NEXT:    # kill: def %edi killed %edi def %rdi
+; SSE41-NEXT:    # kill: def $r9d killed $r9d def $r9
+; SSE41-NEXT:    # kill: def $r8d killed $r8d def $r8
+; SSE41-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE41-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $7, %edi
 ; SSE41-NEXT:    andl $7, %esi
 ; SSE41-NEXT:    andl $7, %edx
@@ -1360,12 +1360,12 @@ define <8 x i16> @var_shuffle_v8i16_v8i16_xyxyxy00_i16(<8 x i16> %x, <8 x i16> %
 ;
 ; AVX-LABEL: var_shuffle_v8i16_v8i16_xyxyxy00_i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def %r9d killed %r9d def %r9
-; AVX-NEXT:    # kill: def %r8d killed %r8d def %r8
-; AVX-NEXT:    # kill: def %ecx killed %ecx def %rcx
-; AVX-NEXT:    # kill: def %edx killed %edx def %rdx
-; AVX-NEXT:    # kill: def %esi killed %esi def %rsi
-; AVX-NEXT:    # kill: def %edi killed %edi def %rdi
+; AVX-NEXT:    # kill: def $r9d killed $r9d def $r9
+; AVX-NEXT:    # kill: def $r8d killed $r8d def $r8
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $7, %edi
 ; AVX-NEXT:    andl $7, %esi
 ; AVX-NEXT:    andl $7, %edx

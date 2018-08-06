@@ -36,48 +36,48 @@
 name:            test
 tracksRegLiveness: true
 liveins:
-  - { reg: '%r0', virtual-reg: '' }
-  - { reg: '%r1', virtual-reg: '' }
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
 body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: %r0, %r1
-  ; CHECK:   %r2 = tMOVr %r0, 14, %noreg
-  ; CHECK:   %r0, dead %cpsr = tMOVi8 1, 14, %noreg
-  ; CHECK:   tCMPi8 %r1, 1, 14, %noreg, implicit-def %cpsr
-  ; CHECK:   t2Bcc %bb.2, 11, killed %cpsr
+  ; CHECK:   liveins: $r0, $r1
+  ; CHECK:   $r2 = tMOVr $r0, 14, $noreg
+  ; CHECK:   $r0, dead $cpsr = tMOVi8 1, 14, $noreg
+  ; CHECK:   tCMPi8 $r1, 1, 14, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.2, 11, killed $cpsr
   ; CHECK: bb.1.for.body:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: %r0, %r1, %r2
-  ; CHECK:   %r0, dead %cpsr = tMUL %r2, killed %r0, 14, %noreg
-  ; CHECK:   %r2, dead %cpsr = tADDi8 killed %r2, 1, 14, %noreg
-  ; CHECK:   %r1, %cpsr = tSUBi8 killed %r1, 1, 14, %noreg
-  ; CHECK:   t2Bcc %bb.1, 1, killed %cpsr
+  ; CHECK:   liveins: $r0, $r1, $r2
+  ; CHECK:   $r0, dead $cpsr = tMUL $r2, killed $r0, 14, $noreg
+  ; CHECK:   $r2, dead $cpsr = tADDi8 killed $r2, 1, 14, $noreg
+  ; CHECK:   $r1, $cpsr = tSUBi8 killed $r1, 1, 14, $noreg
+  ; CHECK:   t2Bcc %bb.1, 1, killed $cpsr
   ; CHECK: bb.2.for.cond.cleanup:
-  ; CHECK:   liveins: %r0
-  ; CHECK:   tBX_RET 14, %noreg, implicit %r0
+  ; CHECK:   liveins: $r0
+  ; CHECK:   tBX_RET 14, $noreg, implicit $r0
   bb.0.entry:
     successors: %bb.1.for.body, %bb.2.for.cond.cleanup
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    %r2 = tMOVr %r0, 14, _
-    %r0 = t2MOVi 1, 14, _, _
-    t2CMPri %r1, 1, 14, _, implicit-def %cpsr
-    t2Bcc %bb.2.for.cond.cleanup, 11, killed %cpsr
+    $r2 = tMOVr $r0, 14, _
+    $r0 = t2MOVi 1, 14, _, _
+    t2CMPri $r1, 1, 14, _, implicit-def $cpsr
+    t2Bcc %bb.2.for.cond.cleanup, 11, killed $cpsr
 
   bb.1.for.body:
     successors: %bb.2.for.cond.cleanup, %bb.1.for.body
-    liveins: %r0, %r1, %r2
+    liveins: $r0, $r1, $r2
 
-    %r0 = t2MUL %r2, killed %r0, 14, _
-    %r2 = t2ADDri killed %r2, 1, 14, _, _
-    %r1 = t2SUBri killed %r1, 1, 14, _, def %cpsr
-    t2Bcc %bb.1.for.body, 1, killed %cpsr
+    $r0 = t2MUL $r2, killed $r0, 14, _
+    $r2 = t2ADDri killed $r2, 1, 14, _, _
+    $r1 = t2SUBri killed $r1, 1, 14, _, def $cpsr
+    t2Bcc %bb.1.for.body, 1, killed $cpsr
 
   bb.2.for.cond.cleanup:
-    liveins: %r0
+    liveins: $r0
 
-    tBX_RET 14, _, implicit %r0
+    tBX_RET 14, _, implicit $r0
 
 ...

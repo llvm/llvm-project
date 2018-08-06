@@ -21,7 +21,7 @@ entry:
   store i8 1, i8* %i, align 1, !dbg !19
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   %0 = bitcast [1 x i8]* @g to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %i, i8* %0, i64 1, i32 1, i1 false), !dbg !20
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %i, i8* %0, i64 1, i1 false), !dbg !20
   br label %bb2
 
 bb2:                                              ; preds = %0
@@ -32,7 +32,7 @@ bb2:                                              ; preds = %0
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
@@ -56,7 +56,7 @@ attributes #2 = { argmemonly nounwind }
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{!"clang version 6.0.0"}
-!14 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 5, type: !15, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !2, variables: !4)
+!14 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 5, type: !15, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !2, retainedNodes: !4)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null}
 !17 = !DILocalVariable(name: "i", scope: !14, file: !3, line: 7, type: !7)

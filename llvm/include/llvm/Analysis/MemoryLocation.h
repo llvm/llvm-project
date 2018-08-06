@@ -27,7 +27,15 @@ class LoadInst;
 class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
+class AtomicMemTransferInst;
+class AtomicMemIntrinsic;
+class AnyMemTransferInst;
+class AnyMemIntrinsic;
 class TargetLibraryInfo;
+
+// Represents the size of a MemoryLocation. Logically, it's an
+// Optional<uint64_t>, with a special UnknownSize value from `MemoryLocation`.
+using LocationSize = uint64_t;
 
 /// Representation for a specific memory location.
 ///
@@ -55,7 +63,7 @@ public:
   /// virtual address space, because there are restrictions on stepping out of
   /// one object and into another. See
   /// http://llvm.org/docs/LangRef.html#pointeraliasing
-  uint64_t Size;
+  LocationSize Size;
 
   /// The metadata nodes which describes the aliasing of the location (each
   /// member is null if that kind of information is unavailable).
@@ -90,17 +98,21 @@ public:
 
   /// Return a location representing the source of a memory transfer.
   static MemoryLocation getForSource(const MemTransferInst *MTI);
+  static MemoryLocation getForSource(const AtomicMemTransferInst *MTI);
+  static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
 
   /// Return a location representing the destination of a memory set or
   /// transfer.
   static MemoryLocation getForDest(const MemIntrinsic *MI);
+  static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
+  static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
 
   /// Return a location representing a particular argument of a call.
   static MemoryLocation getForArgument(ImmutableCallSite CS, unsigned ArgIdx,
                                        const TargetLibraryInfo &TLI);
 
   explicit MemoryLocation(const Value *Ptr = nullptr,
-                          uint64_t Size = UnknownSize,
+                          LocationSize Size = UnknownSize,
                           const AAMDNodes &AATags = AAMDNodes())
       : Ptr(Ptr), Size(Size), AATags(AATags) {}
 
@@ -110,7 +122,7 @@ public:
     return Copy;
   }
 
-  MemoryLocation getWithNewSize(uint64_t NewSize) const {
+  MemoryLocation getWithNewSize(LocationSize NewSize) const {
     MemoryLocation Copy(*this);
     Copy.Size = NewSize;
     return Copy;
@@ -137,7 +149,7 @@ template <> struct DenseMapInfo<MemoryLocation> {
   }
   static unsigned getHashValue(const MemoryLocation &Val) {
     return DenseMapInfo<const Value *>::getHashValue(Val.Ptr) ^
-           DenseMapInfo<uint64_t>::getHashValue(Val.Size) ^
+           DenseMapInfo<LocationSize>::getHashValue(Val.Size) ^
            DenseMapInfo<AAMDNodes>::getHashValue(Val.AATags);
   }
   static bool isEqual(const MemoryLocation &LHS, const MemoryLocation &RHS) {

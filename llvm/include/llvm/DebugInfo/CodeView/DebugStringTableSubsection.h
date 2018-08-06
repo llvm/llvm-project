@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSTRINGTABLESUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGSTRINGTABLESUBSECTION_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -66,19 +67,26 @@ public:
   uint32_t insert(StringRef S);
 
   // Return the ID for string S.  Assumes S exists in the table.
-  uint32_t getStringId(StringRef S) const;
+  uint32_t getIdForString(StringRef S) const;
+
+  StringRef getStringForId(uint32_t Id) const;
 
   uint32_t calculateSerializedSize() const override;
   Error commit(BinaryStreamWriter &Writer) const override;
 
   uint32_t size() const;
 
-  StringMap<uint32_t>::const_iterator begin() const { return Strings.begin(); }
+  StringMap<uint32_t>::const_iterator begin() const {
+    return StringToId.begin();
+  }
 
-  StringMap<uint32_t>::const_iterator end() const { return Strings.end(); }
+  StringMap<uint32_t>::const_iterator end() const { return StringToId.end(); }
+
+  std::vector<uint32_t> sortedIds() const;
 
 private:
-  StringMap<uint32_t> Strings;
+  DenseMap<uint32_t, StringRef> IdToString;
+  StringMap<uint32_t> StringToId;
   uint32_t StringSize = 1;
 };
 

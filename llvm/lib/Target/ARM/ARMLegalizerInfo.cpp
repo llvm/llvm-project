@@ -23,6 +23,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace LegalizeActions;
 
 /// FIXME: The following static functions are SizeChangeStrategy functions
 /// that are meant to temporarily mimic the behaviour of the old legalization
@@ -40,7 +41,7 @@ addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
     result.push_back(v[i]);
     if (i + 1 < v[i].first && i + 1 < v.size() &&
         v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, LegalizerInfo::Unsupported});
+      result.push_back({v[i].first + 1, Unsupported});
   }
 }
 
@@ -48,27 +49,14 @@ static LegalizerInfo::SizeAndActionsVec
 widen_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
   assert(v.size() >= 1);
   assert(v[0].first > 17);
-  LegalizerInfo::SizeAndActionsVec result = {
-      {1, LegalizerInfo::Unsupported},
-      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
-      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
+  LegalizerInfo::SizeAndActionsVec result = {{1, Unsupported},
+                                             {8, WidenScalar},
+                                             {9, Unsupported},
+                                             {16, WidenScalar},
+                                             {17, Unsupported}};
   addAndInterleaveWithUnsupported(result, v);
   auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
-  return result;
-}
-
-static LegalizerInfo::SizeAndActionsVec
-widen_1_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
-  assert(v.size() >= 1);
-  assert(v[0].first > 17);
-  LegalizerInfo::SizeAndActionsVec result = {
-      {1, LegalizerInfo::WidenScalar},  {2, LegalizerInfo::Unsupported},
-      {8, LegalizerInfo::WidenScalar},  {9, LegalizerInfo::Unsupported},
-      {16, LegalizerInfo::WidenScalar}, {17, LegalizerInfo::Unsupported}};
-  addAndInterleaveWithUnsupported(result, v);
-  auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  result.push_back({Largest + 1, Unsupported});
   return result;
 }
 
@@ -87,30 +75,21 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  setAction({G_GLOBAL_VALUE, p0}, Legal);
-  setAction({G_FRAME_INDEX, p0}, Legal);
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
-  for (unsigned Op : {G_LOAD, G_STORE}) {
-    for (auto Ty : {s1, s8, s16, s32, p0})
-      setAction({Op, Ty}, Legal);
-    setAction({Op, 1, p0}, Legal);
-  }
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+      .legalFor({s32})
+      .minScalar(0, s32);
 
-  for (unsigned Op : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
-    if (Op != G_ADD)
-      setLegalizeScalarToDifferentSizeStrategy(
-          Op, 0, widenToLargerTypesUnsupportedOtherwise);
-    setAction({Op, s32}, Legal);
-  }
-
-  for (unsigned Op : {G_SDIV, G_UDIV}) {
-    setLegalizeScalarToDifferentSizeStrategy(Op, 0,
-        widenToLargerTypesUnsupportedOtherwise);
-    if (ST.hasDivideInARMMode())
-      setAction({Op, s32}, Legal);
-    else
-      setAction({Op, s32}, Libcall);
-  }
+  if (ST.hasDivideInARMMode())
+    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
+        .legalFor({s32})
+        .clampScalar(0, s32, s32);
+  else
+    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
+        .libcallFor({s32})
+        .clampScalar(0, s32, s32);
 
   for (unsigned Op : {G_SREM, G_UREM}) {
     setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
@@ -122,74 +101,96 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setAction({Op, s32}, Libcall);
   }
 
-  for (unsigned Op : {G_SEXT, G_ZEXT, G_ANYEXT}) {
-    setAction({Op, s32}, Legal);
-  }
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalForCartesianProduct({s32}, {s1, s8, s16});
 
-  setAction({G_INTTOPTR, p0}, Legal);
-  setAction({G_INTTOPTR, 1, s32}, Legal);
+  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
+  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
 
-  setAction({G_PTRTOINT, s32}, Legal);
-  setAction({G_PTRTOINT, 1, p0}, Legal);
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL}).legalFor({s32});
 
-  for (unsigned Op : {G_ASHR, G_LSHR, G_SHL})
-    setAction({Op, s32}, Legal);
+  getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
 
-  setAction({G_GEP, p0}, Legal);
-  setAction({G_GEP, 1, s32}, Legal);
+  getActionDefinitionsBuilder(G_SELECT).legalForCartesianProduct({s32, p0},
+                                                                 {s1});
 
-  setAction({G_SELECT, s32}, Legal);
-  setAction({G_SELECT, p0}, Legal);
-  setAction({G_SELECT, 1, s1}, Legal);
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
-  setAction({G_BRCOND, s1}, Legal);
+  getActionDefinitionsBuilder(G_CONSTANT)
+      .legalFor({s32, p0})
+      .clampScalar(0, s32, s32);
 
-  setAction({G_CONSTANT, s32}, Legal);
-  setAction({G_CONSTANT, p0}, Legal);
-  setLegalizeScalarToDifferentSizeStrategy(G_CONSTANT, 0, widen_1_8_16);
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalForCartesianProduct({s1}, {s32, p0})
+      .minScalar(1, s32);
 
-  setAction({G_ICMP, s1}, Legal);
-  setLegalizeScalarToDifferentSizeStrategy(G_ICMP, 1,
-      widenToLargerTypesUnsupportedOtherwise);
-  for (auto Ty : {s32, p0})
-    setAction({G_ICMP, 1, Ty}, Legal);
+  // We're keeping these builders around because we'll want to add support for
+  // floating point to them.
+  auto &LoadStoreBuilder =
+      getActionDefinitionsBuilder({G_LOAD, G_STORE})
+          .legalForCartesianProduct({s1, s8, s16, s32, p0}, {p0});
+
+  auto &PhiBuilder =
+      getActionDefinitionsBuilder(G_PHI).legalFor({s32, p0}).minScalar(0, s32);
 
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
-    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
-      for (auto Ty : {s32, s64})
-        setAction({BinOp, Ty}, Legal);
+    getActionDefinitionsBuilder(
+        {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
+        .legalFor({s32, s64});
 
-    setAction({G_LOAD, s64}, Legal);
-    setAction({G_STORE, s64}, Legal);
+    LoadStoreBuilder.legalFor({{s64, p0}});
+    PhiBuilder.legalFor({s64});
 
-    setAction({G_FCMP, s1}, Legal);
-    setAction({G_FCMP, 1, s32}, Legal);
-    setAction({G_FCMP, 1, s64}, Legal);
+    getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({s1},
+                                                                 {s32, s64});
 
-    setAction({G_MERGE_VALUES, s64}, Legal);
-    setAction({G_MERGE_VALUES, 1, s32}, Legal);
-    setAction({G_UNMERGE_VALUES, s32}, Legal);
-    setAction({G_UNMERGE_VALUES, 1, s64}, Legal);
+    getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
+    getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
+
+    getActionDefinitionsBuilder(G_FPEXT).legalFor({{s64, s32}});
+    getActionDefinitionsBuilder(G_FPTRUNC).legalFor({{s32, s64}});
+
+    getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+        .legalForCartesianProduct({s32}, {s32, s64});
+    getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+        .legalForCartesianProduct({s32, s64}, {s32});
   } else {
-    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
-      for (auto Ty : {s32, s64})
-        setAction({BinOp, Ty}, Libcall);
+    getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+        .libcallFor({s32, s64});
 
-    setAction({G_FCMP, s1}, Legal);
-    setAction({G_FCMP, 1, s32}, Custom);
-    setAction({G_FCMP, 1, s64}, Custom);
+    LoadStoreBuilder.maxScalar(0, s32);
+
+    for (auto Ty : {s32, s64})
+      setAction({G_FNEG, Ty}, Lower);
+
+    getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
+
+    getActionDefinitionsBuilder(G_FCMP).customForCartesianProduct({s1},
+                                                                  {s32, s64});
 
     if (AEABI(ST))
       setFCmpLibcallsAEABI();
     else
       setFCmpLibcallsGNU();
+
+    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{s64, s32}});
+    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{s32, s64}});
+
+    getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+        .libcallForCartesianProduct({s32}, {s32, s64});
+    getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+        .libcallForCartesianProduct({s32, s64}, {s32});
   }
 
-  for (unsigned Op : {G_FREM, G_FPOW})
-    for (auto Ty : {s32, s64})
-      setAction({Op, Ty}, Libcall);
+  if (!ST.useSoftFloat() && ST.hasVFP4())
+    getActionDefinitionsBuilder(G_FMA).legalFor({s32, s64});
+  else
+    getActionDefinitionsBuilder(G_FMA).libcallFor({s32, s64});
+
+  getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
   computeTables();
+  verify(*ST.getInstrInfo());
 }
 
 void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
@@ -305,6 +306,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
   using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);
+  LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   switch (MI.getOpcode()) {
   default:
@@ -321,7 +323,6 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
     // Our divmod libcalls return a struct containing the quotient and the
     // remainder. We need to create a virtual register for it.
-    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *ArgTy = Type::getInt32Ty(Ctx);
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     auto RetVal = MRI.createGenericVirtualRegister(
@@ -362,7 +363,6 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       return true;
     }
 
-    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     assert((OpSize == 32 || OpSize == 64) && "Unsupported operand size");
     auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     auto *RetTy = Type::getInt32Ty(Ctx);
@@ -405,6 +405,14 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       assert(Results.size() == 2 && "Unexpected number of results");
       MIRBuilder.buildOr(OriginalResult, Results[0], Results[1]);
     }
+    break;
+  }
+  case G_FCONSTANT: {
+    // Convert to integer constants, while preserving the binary representation.
+    auto AsInteger =
+        MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+    MIRBuilder.buildConstant(MI.getOperand(0).getReg(),
+                             *ConstantInt::get(Ctx, AsInteger));
     break;
   }
   }

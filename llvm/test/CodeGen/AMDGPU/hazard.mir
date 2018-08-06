@@ -3,7 +3,7 @@
 
 # GCN-LABEL: name: hazard_implicit_def
 # GCN:    bb.0.entry:
-# GCN:      %m0 = S_MOV_B32
+# GCN:      $m0 = S_MOV_B32
 # GFX9:     S_NOP 0
 # VI-NOT:   S_NOP_0
 # GCN:      V_INTERP_P1_F32
@@ -18,22 +18,22 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '%sgpr7', virtual-reg: '' }
-  - { reg: '%vgpr4', virtual-reg: '' }
+  - { reg: '$sgpr7', virtual-reg: '' }
+  - { reg: '$vgpr4', virtual-reg: '' }
 body:             |
   bb.0.entry:
-    liveins: %sgpr7, %vgpr4
+    liveins: $sgpr7, $vgpr4
 
-    %m0 = S_MOV_B32 killed %sgpr7
-    %vgpr5 = IMPLICIT_DEF
-    %vgpr0 = V_INTERP_P1_F32 killed %vgpr4, 0, 0, implicit %m0, implicit %exec
-    SI_RETURN_TO_EPILOG killed %vgpr5, killed %vgpr0
+    $m0 = S_MOV_B32 killed $sgpr7
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $m0, implicit $exec
+    SI_RETURN_TO_EPILOG killed $vgpr5, killed $vgpr0
 
 ...
 
 # GCN-LABEL: name: hazard_inlineasm
 # GCN:    bb.0.entry:
-# GCN:      %m0 = S_MOV_B32
+# GCN:      $m0 = S_MOV_B32
 # GFX9:     S_NOP 0
 # VI-NOT:   S_NOP_0
 # GCN:      V_INTERP_P1_F32
@@ -47,14 +47,14 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '%sgpr7', virtual-reg: '' }
-  - { reg: '%vgpr4', virtual-reg: '' }
+  - { reg: '$sgpr7', virtual-reg: '' }
+  - { reg: '$vgpr4', virtual-reg: '' }
 body:             |
   bb.0.entry:
-    liveins: %sgpr7, %vgpr4
+    liveins: $sgpr7, $vgpr4
 
-    %m0 = S_MOV_B32 killed %sgpr7
-    INLINEASM $"; no-op", 1, 327690, def %vgpr5
-    %vgpr0 = V_INTERP_P1_F32 killed %vgpr4, 0, 0, implicit %m0, implicit %exec
-    SI_RETURN_TO_EPILOG killed %vgpr5, killed %vgpr0
+    $m0 = S_MOV_B32 killed $sgpr7
+    INLINEASM &"; no-op", 1, 327690, def $vgpr5
+    $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $m0, implicit $exec
+    SI_RETURN_TO_EPILOG killed $vgpr5, killed $vgpr0
 ...

@@ -151,7 +151,7 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                                       Offset,
                                       FramePtr));
   }
-  std::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
+  llvm::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
 }
 
 /// Creates an ordered list of EH info register 'spills'.
@@ -170,7 +170,7 @@ static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
                     TL->getExceptionSelectorRegister(PersonalityFn)));
-  std::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
+  llvm::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
 }
 
 static MachineMemOperand *getFrameIndexMMO(MachineBasicBlock &MBB,
@@ -427,7 +427,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   bool emitFrameMoves = XCoreRegisterInfo::needsFrameMoves(*MF);
 
   DebugLoc DL;
-  if (MI != MBB.end() && !MI->isDebugValue())
+  if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
   for (std::vector<CalleeSavedInfo>::const_iterator it = CSI.begin();

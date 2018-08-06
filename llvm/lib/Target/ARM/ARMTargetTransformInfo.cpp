@@ -15,7 +15,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -26,6 +25,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -125,6 +125,10 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
       // icmp X, #-C -> adds X, #C
       return 0;
   }
+
+  // xor a, -1 can always be folded to MVN
+  if (Opcode == Instruction::Xor && Imm.isAllOnesValue())
+    return 0;
 
   return getIntImmCost(Imm, Ty);
 }
@@ -351,7 +355,7 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  // On NEON a a vector select gets lowered to vbsl.
+  // On NEON a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
     // Lowering of some vector selects is currently far from perfect.
     static const TypeConversionCostTblEntry NEONVectorSelectTbl[] = {
@@ -396,8 +400,8 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
-  // We only handle costs of reverse and alternate shuffles for now.
-  if (Kind != TTI::SK_Reverse && Kind != TTI::SK_Alternate)
+  // We only handle costs of reverse and select shuffles for now.
+  if (Kind != TTI::SK_Reverse && Kind != TTI::SK_Select)
     return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 
   if (Kind == TTI::SK_Reverse) {
@@ -422,9 +426,9 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 
     return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
   }
-  if (Kind == TTI::SK_Alternate) {
-    static const CostTblEntry NEONAltShuffleTbl[] = {
-        // Alt shuffle cost table for ARM. Cost is the number of instructions
+  if (Kind == TTI::SK_Select) {
+    static const CostTblEntry NEONSelShuffleTbl[] = {
+        // Select shuffle cost table for ARM. Cost is the number of instructions
         // required to create the shuffled vector.
 
         {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
@@ -441,7 +445,7 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
         {ISD::VECTOR_SHUFFLE, MVT::v16i8, 32}};
 
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-    if (const auto *Entry = CostTableLookup(NEONAltShuffleTbl,
+    if (const auto *Entry = CostTableLookup(NEONSelShuffleTbl,
                                             ISD::VECTOR_SHUFFLE, LT.second))
       return LT.first * Entry->Cost;
     return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
@@ -579,9 +583,9 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
-  DEBUG(dbgs() << "Loop has:\n"
-      << "Blocks: " << L->getNumBlocks() << "\n"
-      << "Exit blocks: " << ExitingBlocks.size() << "\n");
+  LLVM_DEBUG(dbgs() << "Loop has:\n"
+                    << "Blocks: " << L->getNumBlocks() << "\n"
+                    << "Exit blocks: " << ExitingBlocks.size() << "\n");
 
   // Only allow another exit other than the latch. This acts as an early exit
   // as it mirrors the profitability calculation of the runtime unroller.
@@ -612,12 +616,14 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     }
   }
 
-  DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
+  LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
 
   UP.Partial = true;
   UP.Runtime = true;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = 4;
+  UP.UnrollAndJam = true;
+  UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.

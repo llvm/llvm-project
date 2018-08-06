@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=verde -asm-verbose=0 -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -asm-verbose=0 -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}break_inserted_outside_of_loop:
 
@@ -89,17 +89,24 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; This broke the old AMDIL cfg structurizer
 ; FUNC-LABEL: {{^}}loop_land_info_assert:
-; SI: s_cmp_gt_i32
-; SI-NEXT: s_cbranch_scc0 [[ENDPGM:BB[0-9]+_[0-9]+]]
+; SI:      v_cmp_lt_i32_e64 [[CMP4:s\[[0-9:]+\]]], s{{[0-9]+}}, 4{{$}}
+; SI:      s_and_b64 vcc, exec, [[CMP4]]
+; SI-NEXT: s_cbranch_vccnz [[BR1:BB[0-9_]+]]
+; SI-NEXT: s_branch [[BR2:BB[0-9_]+]]
+; SI-NEXT: BB{{[0-9_]+}}:
+; SI-NEXT: buffer_store_dword
 
-; SI: s_cmpk_gt_i32
-; SI-NEXT: s_cbranch_scc1 [[ENDPGM]]
+; SI:      [[INFLOOP:BB[0-9]+_[0-9]+]]:
 
-; SI: [[INFLOOP:BB[0-9]+_[0-9]+]]
-; SI: s_branch [[INFLOOP]]
+; SI:      [[BR1]]:
+; SI-NEXT: s_and_b64 vcc, exec,
+; SI-NEXT: s_cbranch_vccnz [[ENDPGM:BB[0-9]+_[0-9]+]]
+; SI:      s_branch [[INFLOOP]]
+; SI-NEXT: [[BR2]]:
+; SI:      s_cbranch_vccz [[ENDPGM]]
 
-; SI: [[ENDPGM]]:
-; SI: s_endpgm
+; SI:      [[ENDPGM]]:
+; SI-NEXT: s_endpgm
 define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 %c3, i32 %x, i32 %y, i1 %arg) nounwind {
 entry:
   %cmp = icmp sgt i32 %c0, 0
@@ -143,7 +150,6 @@ self.loop:
 return:
   ret void
 }
-
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 

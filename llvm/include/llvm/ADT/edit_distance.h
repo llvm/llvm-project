@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-/// \brief Determine the edit distance between two sequences.
+/// Determine the edit distance between two sequences.
 ///
 /// \param FromArray the first sequence to compare.
 ///

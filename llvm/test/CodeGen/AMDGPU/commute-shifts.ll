@@ -7,7 +7,7 @@
 define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 bb:
   %tmp = fptosi float %arg0 to i32
-  %tmp1 = call <4 x float> @llvm.amdgcn.image.load.v4f32.v4i32.v8i32(<4 x i32> undef, <8 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false)
+  %tmp1 = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 undef, <8 x i32> undef, i32 0, i32 0)
   %tmp2.f = extractelement <4 x float> %tmp1, i32 0
   %tmp2 = bitcast float %tmp2.f to i32
   %tmp3 = and i32 %tmp, 7
@@ -21,7 +21,7 @@ bb:
 }
 
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.load.v4f32.v4i32.v8i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

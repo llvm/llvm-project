@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=i386-linux -mattr=+avx | FileCheck %s
 
-; In i386 there are only 8 XMMs (xmm0-xmm7), make sure we we are not creating illegal XMM
+; In i386 there are only 8 XMMs (xmm0-xmm7), make sure we are not creating illegal XMM
 define float @only_xmm0_7(i32 %arg) {
 top:
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{dirflag},~{fpsr},~{flags}"()

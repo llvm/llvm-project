@@ -18,10 +18,10 @@ using namespace llvm::codeview;
 LocallyHashedType DenseMapInfo<LocallyHashedType>::Empty{0, {}};
 LocallyHashedType DenseMapInfo<LocallyHashedType>::Tombstone{hash_code(-1), {}};
 
-static std::array<uint8_t, 20> EmptyHash;
-static std::array<uint8_t, 20> TombstoneHash = {
-    {0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static std::array<uint8_t, 8> EmptyHash = {
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static std::array<uint8_t, 8> TombstoneHash = {
+    {0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
 GloballyHashedType DenseMapInfo<GloballyHashedType>::Empty{EmptyHash};
 GloballyHashedType DenseMapInfo<GloballyHashedType>::Tombstone{TombstoneHash};
@@ -39,6 +39,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
   SHA1 S;
   S.init();
   uint32_t Off = 0;
+  S.update(RecordData.take_front(sizeof(RecordPrefix)));
   RecordData = RecordData.drop_front(sizeof(RecordPrefix));
   for (const auto &Ref : Refs) {
     // Hash any data that comes before this TiRef.
@@ -70,5 +71,5 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
   auto TrailingBytes = RecordData.drop_front(Off);
   S.update(TrailingBytes);
 
-  return {S.final()};
+  return {S.final().take_back(8)};
 }

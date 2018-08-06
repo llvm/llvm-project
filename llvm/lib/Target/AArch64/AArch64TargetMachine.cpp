@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -36,6 +35,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include <memory>
@@ -136,7 +136,7 @@ static cl::opt<bool>
 static cl::opt<int> EnableGlobalISelAtO(
     "aarch64-enable-global-isel-at-O", cl::Hidden,
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
-    cl::init(-1));
+    cl::init(0));
 
 static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
                                          cl::init(true), cl::Hidden);
@@ -248,6 +248,13 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = true;
   }
+
+  // Enable GlobalISel at or below EnableGlobalISelAt0.
+  if (getOptLevel() <= EnableGlobalISelAtO)
+    setGlobalISel(true);
+
+  // AArch64 supports the MachineOutliner.
+  setMachineOutliner(true);
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -345,8 +352,6 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
-
-  bool isGlobalISelEnabled() const override;
 };
 
 } // end anonymous namespace
@@ -392,7 +397,7 @@ void AArch64PassConfig::addIRPasses() {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.
-    addPass(createSeparateConstOffsetFromGEPPass(TM, true));
+    addPass(createSeparateConstOffsetFromGEPPass(true));
     // Call EarlyCSE pass to find and remove subexpressions in the lowered
     // result.
     addPass(createEarlyCSEPass());
@@ -458,10 +463,6 @@ void AArch64PassConfig::addPreGlobalInstructionSelect() {
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
-}
-
-bool AArch64PassConfig::isGlobalISelEnabled() const {
-  return TM->getOptLevel() <= EnableGlobalISelAtO;
 }
 
 bool AArch64PassConfig::addILPOpts() {

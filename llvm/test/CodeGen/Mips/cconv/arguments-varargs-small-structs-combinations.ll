@@ -107,7 +107,7 @@ entry:
   %0 = load %struct.SmallStruct_1b1s1b*, %struct.SmallStruct_1b1s1b** %ss.addr, align 8
   %1 = bitcast { i48 }* %.coerce to i8*
   %2 = bitcast %struct.SmallStruct_1b1s1b* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 6, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 6, i1 false)
   %3 = getelementptr { i48 }, { i48 }* %.coerce, i32 0, i32 0
   %4 = load i48, i48* %3, align 1
   call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i48 inreg %4)
@@ -116,7 +116,7 @@ entry:
  ; CHECK: dsll $[[R1:[0-9]+]], $[[R2:[0-9]+]], 16
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
 
 define void @smallStruct_1s1i(%struct.SmallStruct_1s1i* %ss) #0 {
 entry:
@@ -141,7 +141,7 @@ entry:
   %0 = load %struct.SmallStruct_3b1s*, %struct.SmallStruct_3b1s** %ss.addr, align 8
   %1 = bitcast { i48 }* %.coerce to i8*
   %2 = bitcast %struct.SmallStruct_3b1s* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 6, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 6, i1 false)
   %3 = getelementptr { i48 }, { i48 }* %.coerce, i32 0, i32 0
   %4 = load i48, i48* %3, align 1
   call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i48 inreg %4)

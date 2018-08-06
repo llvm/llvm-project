@@ -36,12 +36,13 @@ using namespace llvm;
 /// may also have invalid operands or may have other results that need
 /// expansion, we just know that (at least) one result needs promotion.
 void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Promote integer result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote integer result: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   // See if the target wants to custom expand this node.
   if (CustomLowerNode(N, N->getValueType(ResNo), true)) {
-    DEBUG(dbgs() << "Node has been custom expanded, done\n");
+    LLVM_DEBUG(dbgs() << "Node has been custom expanded, done\n");
     return;
   }
 
@@ -146,6 +147,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_SUB:
   case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_LOAD_NAND:
@@ -501,7 +503,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
 
   SDLoc dl(N);
   SDValue Ops[] = {N->getChain(), ExtSrc0, N->getMask(), N->getBasePtr(),
-                   N->getIndex()};
+                   N->getIndex(), N->getScale() };
   SDValue Res = DAG.getMaskedGather(DAG.getVTList(NVT, MVT::Other),
                                     N->getMemoryVT(), dl, Ops,
                                     N->getMemOperand());
@@ -586,43 +588,39 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SELECT_CC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SETCC(SDNode *N) {
-  EVT SVT = getSetCCResultType(N->getOperand(0).getValueType());
-
+  EVT InVT = N->getOperand(0).getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
-  // Only use the result of getSetCCResultType if it is legal,
-  // otherwise just use the promoted result type (NVT).
-  if (!TLI.isTypeLegal(SVT))
-    SVT = NVT;
+  EVT SVT = getSetCCResultType(InVT);
+
+  // If we got back a type that needs to be promoted, this likely means the
+  // the input type also needs to be promoted. So get the promoted type for
+  // the input and try the query again.
+  if (getTypeAction(SVT) == TargetLowering::TypePromoteInteger) {
+    if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger) {
+      InVT = TLI.getTypeToTransformTo(*DAG.getContext(), InVT);
+      SVT = getSetCCResultType(InVT);
+    } else {
+      // Input type isn't promoted, just use the default promoted type.
+      SVT = NVT;
+    }
+  }
 
   SDLoc dl(N);
   assert(SVT.isVector() == N->getOperand(0).getValueType().isVector() &&
          "Vector compare must return a vector result!");
 
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  if (LHS.getValueType() != RHS.getValueType()) {
-    if (getTypeAction(LHS.getValueType()) == TargetLowering::TypePromoteInteger &&
-        !LHS.getValueType().isVector())
-      LHS = GetPromotedInteger(LHS);
-    if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger &&
-        !RHS.getValueType().isVector())
-      RHS = GetPromotedInteger(RHS);
-  }
-
   // Get the SETCC result using the canonical SETCC type.
-  SDValue SetCC = DAG.getNode(N->getOpcode(), dl, SVT, LHS, RHS,
-                              N->getOperand(2));
+  SDValue SetCC = DAG.getNode(N->getOpcode(), dl, SVT, N->getOperand(0),
+                              N->getOperand(1), N->getOperand(2));
 
   // Convert to the expected type.
   return DAG.getSExtOrTrunc(SetCC, dl, NVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SHL(SDNode *N) {
-  SDValue LHS = N->getOperand(0);
+  SDValue LHS = GetPromotedInteger(N->getOperand(0));
   SDValue RHS = N->getOperand(1);
-  if (getTypeAction(LHS.getValueType()) == TargetLowering::TypePromoteInteger)
-    LHS = GetPromotedInteger(LHS);
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
   return DAG.getNode(ISD::SHL, SDLoc(N), LHS.getValueType(), LHS, RHS);
@@ -661,22 +659,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ZExtIntBinOp(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SRA(SDNode *N) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
   // The input value must be properly sign extended.
-  if (getTypeAction(LHS.getValueType()) == TargetLowering::TypePromoteInteger)
-    LHS = SExtPromotedInteger(LHS);
+  SDValue LHS = SExtPromotedInteger(N->getOperand(0));
+  SDValue RHS = N->getOperand(1);
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
   return DAG.getNode(ISD::SRA, SDLoc(N), LHS.getValueType(), LHS, RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
   // The input value must be properly zero extended.
-  if (getTypeAction(LHS.getValueType()) == TargetLowering::TypePromoteInteger)
-    LHS = ZExtPromotedInteger(LHS);
+  SDValue LHS = ZExtPromotedInteger(N->getOperand(0));
+  SDValue RHS = N->getOperand(1);
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
   return DAG.getNode(ISD::SRL, SDLoc(N), LHS.getValueType(), LHS, RHS);
@@ -904,11 +898,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VAARG(SDNode *N) {
 /// result types of the node are known to be legal, but other operands of the
 /// node may need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Promote integer operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote integer operand: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
-    DEBUG(dbgs() << "Node has been custom lowered, done\n");
+    LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
     return false;
   }
 
@@ -1001,11 +996,11 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     // than the width of NewLHS/NewRH, we can avoid inserting real truncate
     // instruction, which is redudant eventually.
     unsigned OpLEffectiveBits =
-        OpL.getValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
+        OpL.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
     unsigned OpREffectiveBits =
-        OpR.getValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
-    if (OpLEffectiveBits <= NewLHS.getValueSizeInBits() &&
-        OpREffectiveBits <= NewRHS.getValueSizeInBits()) {
+        OpR.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
+    if (OpLEffectiveBits <= NewLHS.getScalarValueSizeInBits() &&
+        OpREffectiveBits <= NewRHS.getScalarValueSizeInBits()) {
       NewLHS = OpL;
       NewRHS = OpR;
     } else {
@@ -1356,7 +1351,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
 /// have invalid operands or may have other results that need promotion, we just
 /// know that (at least) one result needs expansion.
 void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Expand integer result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand integer result: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Lo, Hi;
   Lo = Hi = SDValue();
 
@@ -1413,6 +1409,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_LOAD_ADD:
   case ISD::ATOMIC_LOAD_SUB:
   case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_LOAD_NAND:
@@ -2893,7 +2890,8 @@ void DAGTypeLegalizer::ExpandIntRes_ATOMIC_LOAD(SDNode *N,
 /// result types of the node are known to be legal, but other operands of the
 /// node may need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Expand integer operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand integer operand: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
@@ -2915,7 +2913,6 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
-  case ISD::SETCCE:            Res = ExpandIntOp_SETCCE(N); break;
   case ISD::SETCCCARRY:        Res = ExpandIntOp_SETCCCARRY(N); break;
   case ISD::SINT_TO_FP:        Res = ExpandIntOp_SINT_TO_FP(N); break;
   case ISD::STORE:   Res = ExpandIntOp_STORE(cast<StoreSDNode>(N), OpNo); break;
@@ -3051,15 +3048,14 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
     return;
   }
 
-  // Lower with SETCCE or SETCCCARRY if the target supports it.
+  // Lower with SETCCCARRY if the target supports it.
   EVT HiVT = LHSHi.getValueType();
   EVT ExpandVT = TLI.getTypeToExpandTo(*DAG.getContext(), HiVT);
   bool HasSETCCCARRY = TLI.isOperationLegalOrCustom(ISD::SETCCCARRY, ExpandVT);
 
   // FIXME: Make all targets support this, then remove the other lowering.
-  if (HasSETCCCARRY ||
-      TLI.getOperationAction(ISD::SETCCE, ExpandVT) == TargetLowering::Custom) {
-    // SETCCE/SETCCCARRY can detect < and >= directly. For > and <=, flip
+  if (HasSETCCCARRY) {
+    // SETCCCARRY can detect < and >= directly. For > and <=, flip
     // operands and condition code.
     bool FlipOperands = false;
     switch (CCCode) {
@@ -3074,17 +3070,15 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
       std::swap(LHSHi, RHSHi);
     }
     // Perform a wide subtraction, feeding the carry from the low part into
-    // SETCCE/SETCCCARRY. The SETCCE/SETCCCARRY operation is essentially
-    // looking at the high part of the result of LHS - RHS. It is negative
-    // iff LHS < RHS. It is zero or positive iff LHS >= RHS.
+    // SETCCCARRY. The SETCCCARRY operation is essentially looking at the high
+    // part of the result of LHS - RHS. It is negative iff LHS < RHS. It is
+    // zero or positive iff LHS >= RHS.
     EVT LoVT = LHSLo.getValueType();
-    SDVTList VTList = DAG.getVTList(
-        LoVT, HasSETCCCARRY ? getSetCCResultType(LoVT) : MVT::Glue);
-    SDValue LowCmp = DAG.getNode(HasSETCCCARRY ? ISD::USUBO : ISD::SUBC, dl,
-                                 VTList, LHSLo, RHSLo);
-    SDValue Res = DAG.getNode(HasSETCCCARRY ? ISD::SETCCCARRY : ISD::SETCCE, dl,
-                              getSetCCResultType(HiVT), LHSHi, RHSHi,
-                              LowCmp.getValue(1), DAG.getCondCode(CCCode));
+    SDVTList VTList = DAG.getVTList(LoVT, getSetCCResultType(LoVT));
+    SDValue LowCmp = DAG.getNode(ISD::USUBO, dl, VTList, LHSLo, RHSLo);
+    SDValue Res = DAG.getNode(ISD::SETCCCARRY, dl, getSetCCResultType(HiVT),
+                              LHSHi, RHSHi, LowCmp.getValue(1),
+                              DAG.getCondCode(CCCode));
     NewLHS = Res;
     NewRHS = SDValue();
     return;
@@ -3150,24 +3144,6 @@ SDValue DAGTypeLegalizer::ExpandIntOp_SETCC(SDNode *N) {
   // Otherwise, update N to have the operands specified.
   return SDValue(
       DAG.UpdateNodeOperands(N, NewLHS, NewRHS, DAG.getCondCode(CCCode)), 0);
-}
-
-SDValue DAGTypeLegalizer::ExpandIntOp_SETCCE(SDNode *N) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Carry = N->getOperand(2);
-  SDValue Cond = N->getOperand(3);
-  SDLoc dl = SDLoc(N);
-
-  SDValue LHSLo, LHSHi, RHSLo, RHSHi;
-  GetExpandedInteger(LHS, LHSLo, LHSHi);
-  GetExpandedInteger(RHS, RHSLo, RHSHi);
-
-  // Expand to a SUBE for the low part and a smaller SETCCE for the high.
-  SDVTList VTList = DAG.getVTList(LHSLo.getValueType(), MVT::Glue);
-  SDValue LowCmp = DAG.getNode(ISD::SUBE, dl, VTList, LHSLo, RHSLo, Carry);
-  return DAG.getNode(ISD::SETCCE, dl, N->getValueType(0), LHSHi, RHSHi,
-                     LowCmp.getValue(1), Cond);
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_SETCCCARRY(SDNode *N) {
@@ -3496,21 +3472,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   unsigned NumOperands = N->getNumOperands();
   assert(NumElem * NumOperands == NumOutElem &&
          "Unexpected number of elements");
-
-  // If the input type is legal and we can promote it to a legal type with the
-  // same element size, go ahead do that to create a new concat.
-  if (getTypeAction(N->getOperand(0).getValueType()) ==
-      TargetLowering::TypeLegal) {
-    EVT InPromotedTy = EVT::getVectorVT(*DAG.getContext(), OutElemTy, NumElem);
-    if (TLI.isTypeLegal(InPromotedTy)) {
-      SmallVector<SDValue, 8> Ops(NumOperands);
-      for (unsigned i = 0; i < NumOperands; ++i) {
-        Ops[i] = DAG.getNode(ISD::ANY_EXTEND, dl, InPromotedTy,
-                             N->getOperand(i));
-      }
-      return DAG.getNode(ISD::CONCAT_VECTORS, dl, NOutVT, Ops);
-    }
-  }
 
   // Take the elements from the first vector.
   SmallVector<SDValue, 8> Ops(NumOutElem);

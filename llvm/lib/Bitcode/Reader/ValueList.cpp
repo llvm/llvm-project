@@ -32,7 +32,7 @@ namespace llvm {
 
 namespace {
 
-/// \brief A class for maintaining the slot number definition
+/// A class for maintaining the slot number definition
 /// as a placeholder for the actual definition for forward constants defs.
 class ConstantPlaceHolder : public ConstantExpr {
 public:
@@ -46,7 +46,7 @@ public:
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
 
-  /// \brief Methods to support type inquiry through isa, cast, and dyn_cast.
+  /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return isa<ConstantExpr>(V) &&
            cast<ConstantExpr>(V)->getOpcode() == Instruction::UserOp1;
@@ -144,7 +144,7 @@ Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty) {
 void BitcodeReaderValueList::resolveConstantForwardRefs() {
   // Sort the values by-pointer so that they are efficient to look up with a
   // binary search.
-  std::sort(ResolveConstants.begin(), ResolveConstants.end());
+  llvm::sort(ResolveConstants.begin(), ResolveConstants.end());
 
   SmallVector<Constant *, 64> NewOps;
 

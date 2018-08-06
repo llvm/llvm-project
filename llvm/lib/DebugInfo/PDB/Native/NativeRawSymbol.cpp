@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
@@ -30,13 +31,57 @@ NativeRawSymbol::findChildren(PDB_SymType Type, StringRef Name,
 }
 
 std::unique_ptr<IPDBEnumSymbols>
+NativeRawSymbol::findChildrenByAddr(PDB_SymType Type, StringRef Name,
+    PDB_NameSearchFlags Flags, uint32_t Section, uint32_t Offset) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumSymbols>
+NativeRawSymbol::findChildrenByVA(PDB_SymType Type, StringRef Name,
+   PDB_NameSearchFlags Flags, uint64_t VA) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumSymbols>
 NativeRawSymbol::findChildrenByRVA(PDB_SymType Type, StringRef Name,
     PDB_NameSearchFlags Flags, uint32_t RVA) const {
   return nullptr;
 }
 
 std::unique_ptr<IPDBEnumSymbols>
+NativeRawSymbol::findInlineFramesByAddr(uint32_t Section,
+                                        uint32_t Offset) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumSymbols>
 NativeRawSymbol::findInlineFramesByRVA(uint32_t RVA) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumSymbols>
+NativeRawSymbol::findInlineFramesByVA(uint64_t VA) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+NativeRawSymbol::findInlineeLines() const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+NativeRawSymbol::findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
+                                        uint32_t Length) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+NativeRawSymbol::findInlineeLinesByRVA(uint32_t RVA, uint32_t Length) const {
+  return nullptr;
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+NativeRawSymbol::findInlineeLinesByVA(uint64_t VA, uint32_t Length) const {
   return nullptr;
 }
 
@@ -232,6 +277,11 @@ uint32_t NativeRawSymbol::getSlot() const {
 
 std::string NativeRawSymbol::getSourceFileName() const {
   return {};
+}
+
+std::unique_ptr<IPDBLineNumber>
+NativeRawSymbol::getSrcLineOnTypeDefn() const {
+  return nullptr;
 }
 
 uint32_t NativeRawSymbol::getStride() const {

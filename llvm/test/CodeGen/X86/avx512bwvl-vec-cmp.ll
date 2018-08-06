@@ -26,7 +26,7 @@ define <32 x i8> @test256_2(<32 x i8> %x, <32 x i8> %y, <32 x i8> %x1) nounwind 
 define <16 x i16> @test256_3(<16 x i16> %x, <16 x i16> %y, <16 x i16> %x1) nounwind {
 ; CHECK-LABEL: test256_3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %ymm0, %ymm1, %k1
+; CHECK-NEXT:    vpcmpnltw %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vpblendmw %ymm2, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp sge <16 x i16> %x, %y
@@ -111,7 +111,7 @@ define <32 x i8> @test256_10(<32 x i8> %x, <32 x i8> %y, <32 x i8> %x1, <32 x i8
 ; CHECK-LABEL: test256_10:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleb %ymm1, %ymm0, %k1
-; CHECK-NEXT:    vpcmpleb %ymm2, %ymm3, %k1 {%k1}
+; CHECK-NEXT:    vpcmpnltb %ymm3, %ymm2, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmb %ymm0, %ymm2, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask1 = icmp sge <32 x i8> %x1, %y1
@@ -139,7 +139,7 @@ define <32 x i8> @test256_11(<32 x i8> %x, <32 x i8>* %y.ptr, <32 x i8> %x1, <32
 define <16 x i16> @test256_12(<16 x i16> %x, <16 x i16>* %y.ptr, <16 x i16> %x1, <16 x i16> %y1) nounwind {
 ; CHECK-LABEL: test256_12:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %ymm1, %ymm2, %k1
+; CHECK-NEXT:    vpcmpnltw %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vpcmpleuw (%rdi), %ymm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -176,7 +176,7 @@ define <16 x i8> @test128_2(<16 x i8> %x, <16 x i8> %y, <16 x i8> %x1) nounwind 
 define <8 x i16> @test128_3(<8 x i16> %x, <8 x i16> %y, <8 x i16> %x1) nounwind {
 ; CHECK-LABEL: test128_3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %xmm0, %xmm1, %k1
+; CHECK-NEXT:    vpcmpnltw %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vpblendmw %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp sge <8 x i16> %x, %y
@@ -261,7 +261,7 @@ define <16 x i8> @test128_10(<16 x i8> %x, <16 x i8> %y, <16 x i8> %x1, <16 x i8
 ; CHECK-LABEL: test128_10:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleb %xmm1, %xmm0, %k1
-; CHECK-NEXT:    vpcmpleb %xmm2, %xmm3, %k1 {%k1}
+; CHECK-NEXT:    vpcmpnltb %xmm3, %xmm2, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmb %xmm0, %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask1 = icmp sge <16 x i8> %x1, %y1
@@ -289,7 +289,7 @@ define <16 x i8> @test128_11(<16 x i8> %x, <16 x i8>* %y.ptr, <16 x i8> %x1, <16
 define <8 x i16> @test128_12(<8 x i16> %x, <8 x i16>* %y.ptr, <8 x i16> %x1, <8 x i16> %y1) nounwind {
 ; CHECK-LABEL: test128_12:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpcmplew %xmm1, %xmm2, %k1
+; CHECK-NEXT:    vpcmpnltw %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vpcmpleuw (%rdi), %xmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq

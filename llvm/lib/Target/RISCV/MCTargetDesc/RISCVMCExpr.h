@@ -20,13 +20,16 @@
 namespace llvm {
 
 class StringRef;
+class MCOperand;
 class RISCVMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
     VK_RISCV_None,
     VK_RISCV_LO,
     VK_RISCV_HI,
+    VK_RISCV_PCREL_LO,
     VK_RISCV_PCREL_HI,
+    VK_RISCV_CALL,
     VK_RISCV_Invalid
   };
 

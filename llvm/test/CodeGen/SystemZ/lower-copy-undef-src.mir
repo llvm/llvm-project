@@ -5,10 +5,10 @@
 # dropped.
 ---
 # CHECK-LABEL: name: undef_copy
-# CHECK: %r13d = KILL undef %r0d, implicit killed %r12q, implicit-def %r12q
+# CHECK: $r13d = KILL undef $r0d, implicit killed $r12q, implicit-def $r12q
 name: undef_copy
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: %r12q
-    %r13d = COPY undef %r0d, implicit killed %r12q, implicit-def %r12q
+    liveins: $r12q
+    $r13d = COPY undef $r0d, implicit killed $r12q, implicit-def $r12q

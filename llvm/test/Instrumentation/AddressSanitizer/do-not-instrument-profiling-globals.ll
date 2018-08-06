@@ -5,5 +5,5 @@
 @__llvm_gcov_ctr = internal global [1 x i64] zeroinitializer
 
 ; CHECK-DAG: @asan.module_ctor
-; CHECK-NOT: @__asan_gen{{.*}}__llvm_gcov_ctr
-; CHECK-NOT: @__asan_gen{{.*}}__profc_test
+; CHECK-NOT: @___asan_gen{{.*}}__llvm_gcov_ctr
+; CHECK-NOT: @___asan_gen{{.*}}__profc_test

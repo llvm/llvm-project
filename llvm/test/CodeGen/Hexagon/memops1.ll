@@ -4,7 +4,7 @@
 
 define void @f(i32* %p) nounwind {
 entry:
-; CHECK:  memw(r{{[0-9]+}}{{ *}}+{{ *}}#40){{ *}}-={{ *}}#1
+; CHECK:  memw(r{{[0-9]+}}+#40) -= #1
   %p.addr = alloca i32*, align 4
   store i32* %p, i32** %p.addr, align 4
   %0 = load i32*, i32** %p.addr, align 4
@@ -17,7 +17,7 @@ entry:
 
 define void @g(i32* %p, i32 %i) nounwind {
 entry:
-; CHECK: memw(r{{[0-9]+}}{{ *}}+{{ *}}#40){{ *}}-={{ *}}#1
+; CHECK: memw(r{{[0-9]+}}+#40) -= #1
   %p.addr = alloca i32*, align 4
   %i.addr = alloca i32, align 4
   store i32* %p, i32** %p.addr, align 4

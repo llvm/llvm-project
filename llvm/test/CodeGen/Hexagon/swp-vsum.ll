@@ -1,29 +1,32 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-pipeliner < %s | FileCheck %s --check-prefix=CHECKV60
 
 ; Simple vector total.
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: add([[REG:r([0-9]+)]],r{{[0-9]+}})
-; CHECK-NEXT: add(r{{[0-9]+}},#4)
-; CHECK-NEXT: [[REG]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
+; CHECK: add(r{{[0-9]+}},r{{[0-9]+}})
+; CHECK-NEXT: memw(r{{[0-9]+}}++#4)
 ; CHECK-NEXT: endloop0
 
-define i32 @foo(i32* %a, i32 %n) {
-entry:
-  br label %for.body
+; V60 does not pipeline due to latencies.
+; CHECKV60: memw(r{{[0-9]+}}++#4)
+; CHECKV60: add(r{{[0-9]+}},r{{[0-9]+}})
 
-for.body:
-  %sum.02 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx.phi = phi i32* [ %a, %entry ], [ %arrayidx.inc, %for.body ]
-  %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %0 = load i32, i32* %arrayidx.phi, align 4
-  %add = add nsw i32 %0, %sum.02
-  %inc = add nsw i32 %i.01, 1
-  %exitcond = icmp eq i32 %inc, 10000
-  %arrayidx.inc = getelementptr i32, i32* %arrayidx.phi, i32 1
-  br i1 %exitcond, label %for.end, label %for.body
+define i32 @f0(i32* %a0, i32 %a1) {
+b0:
+  br label %b1
 
-for.end:
-  ret i32 %add
+b1:                                               ; preds = %b1, %b0
+  %v0 = phi i32 [ 0, %b0 ], [ %v4, %b1 ]
+  %v1 = phi i32* [ %a0, %b0 ], [ %v7, %b1 ]
+  %v2 = phi i32 [ 0, %b0 ], [ %v5, %b1 ]
+  %v3 = load i32, i32* %v1, align 4
+  %v4 = add nsw i32 %v3, %v0
+  %v5 = add nsw i32 %v2, 1
+  %v6 = icmp eq i32 %v5, 10000
+  %v7 = getelementptr i32, i32* %v1, i32 1
+  br i1 %v6, label %b2, label %b1
+
+b2:                                               ; preds = %b1
+  ret i32 %v4
 }

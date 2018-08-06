@@ -127,8 +127,8 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   Offset = SPOffset + (int64_t)StackSize;
   Offset += MI.getOperand(OpNo + 1).getImm();
 
-
-  DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
+  LLVM_DEBUG(errs() << "Offset     : " << Offset << "\n"
+                    << "<--------->\n");
 
   if (!MI.isDebugValue() &&
       !Mips16InstrInfo::validImmediate(MI.getOpcode(), FrameReg, Offset)) {

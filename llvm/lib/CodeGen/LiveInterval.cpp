@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -991,6 +992,7 @@ void LiveInterval::print(raw_ostream &OS) const {
   // Print subranges
   for (const SubRange &SR : subranges())
     OS << SR;
+  OS << " weight:" << weight;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

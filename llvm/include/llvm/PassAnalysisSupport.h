@@ -174,7 +174,7 @@ public:
     AnalysisImpls.push_back(pir);
   }
 
-  /// Clear cache that is used to connect a pass to the the analysis (PassInfo).
+  /// Clear cache that is used to connect a pass to the analysis (PassInfo).
   void clearAnalysisImpls() {
     AnalysisImpls.clear();
   }

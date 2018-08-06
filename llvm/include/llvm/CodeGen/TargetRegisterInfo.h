@@ -21,11 +21,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
@@ -238,12 +238,12 @@ private:
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                     regclass_iterator RegClassBegin,
-                     regclass_iterator RegClassEnd,
+                     regclass_iterator RCB,
+                     regclass_iterator RCE,
                      const char *const *SRINames,
                      const LaneBitmask *SRILaneMasks,
                      LaneBitmask CoveringLanes,
-                     const RegClassInfo *const RSI,
+                     const RegClassInfo *const RCIs,
                      unsigned Mode = 0);
   virtual ~TargetRegisterInfo();
 
@@ -443,6 +443,13 @@ public:
         return true;
     return false;
   }
+
+  /// Returns the original SrcReg unless it is the target of a copy-like
+  /// operation, in which case we chain backwards through all such operations
+  /// to the ultimate source register.  If a physical register is encountered,
+  /// we stop the search.
+  virtual unsigned lookThruCopyLike(unsigned SrcReg,
+                                    const MachineRegisterInfo *MRI) const;
 
   /// Return a null-terminated list of all of the callee-saved registers on
   /// this target. The register should be in the order of desired callee-save
@@ -752,6 +759,9 @@ public:
   virtual const RegClassWeight &getRegClassWeight(
     const TargetRegisterClass *RC) const = 0;
 
+  /// Returns size in bits of a phys/virtual/generic register.
+  unsigned getRegSizeInBits(unsigned Reg, const MachineRegisterInfo &MRI) const;
+
   /// Get the weight in units of pressure for this register unit.
   virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
 
@@ -961,7 +971,7 @@ public:
   //===--------------------------------------------------------------------===//
   /// Subtarget Hooks
 
-  /// \brief SrcRC and DstRC will be morphed into NewRC if this returns true.
+  /// SrcRC and DstRC will be morphed into NewRC if this returns true.
   virtual bool shouldCoalesce(MachineInstr *MI,
                               const TargetRegisterClass *SrcRC,
                               unsigned SubReg,
@@ -985,6 +995,12 @@ public:
   /// of the set as well.
   bool checkAllSuperRegsMarked(const BitVector &RegisterSet,
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
+
+  virtual const TargetRegisterClass *
+  getConstrainedRegClassForOperand(const MachineOperand &MO,
+                                   const MachineRegisterInfo &MRI) const {
+    return nullptr;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1151,7 +1167,8 @@ struct VirtReg2IndexFunctor {
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
 Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
-                   unsigned SubRegIdx = 0);
+                   unsigned SubIdx = 0,
+                   const MachineRegisterInfo *MRI = nullptr);
 
 /// Create Printable object to print register units on a \ref raw_ostream.
 ///
@@ -1163,11 +1180,11 @@ Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
 Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
-/// \brief Create Printable object to print virtual registers and physical
+/// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
 Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
-/// \brief Create Printable object to print register classes or register banks
+/// Create Printable object to print register classes or register banks
 /// on a \ref raw_ostream.
 Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
                               const TargetRegisterInfo *TRI);

@@ -142,14 +142,15 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // of trouble.
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader || !L->hasDedicatedExits()) {
-    DEBUG(dbgs()
-          << "Deletion requires Loop with preheader and dedicated exits.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "Deletion requires Loop with preheader and dedicated exits.\n");
     return LoopDeletionResult::Unmodified;
   }
   // We can't remove loops that contain subloops.  If the subloops were dead,
   // they would already have been removed in earlier executions of this pass.
   if (L->begin() != L->end()) {
-    DEBUG(dbgs() << "Loop contains subloops.\n");
+    LLVM_DEBUG(dbgs() << "Loop contains subloops.\n");
     return LoopDeletionResult::Unmodified;
   }
 
@@ -157,7 +158,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
   if (ExitBlock && isLoopNeverExecuted(L)) {
-    DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
+    LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
     // Set incoming value to undef for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
@@ -178,13 +179,13 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // block will be branched to, or trying to preserve the branching logic in
   // a loop invariant manner.
   if (!ExitBlock) {
-    DEBUG(dbgs() << "Deletion requires single exit block\n");
+    LLVM_DEBUG(dbgs() << "Deletion requires single exit block\n");
     return LoopDeletionResult::Unmodified;
   }
   // Finally, we have to check that the loop really is dead.
   bool Changed = false;
   if (!isLoopDead(L, SE, ExitingBlocks, ExitBlock, Changed, Preheader)) {
-    DEBUG(dbgs() << "Loop is not invariant, cannot delete.\n");
+    LLVM_DEBUG(dbgs() << "Loop is not invariant, cannot delete.\n");
     return Changed ? LoopDeletionResult::Modified
                    : LoopDeletionResult::Unmodified;
   }
@@ -193,12 +194,12 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // They could be infinite, in which case we'd be changing program behavior.
   const SCEV *S = SE.getMaxBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(S)) {
-    DEBUG(dbgs() << "Could not compute SCEV MaxBackedgeTakenCount.\n");
+    LLVM_DEBUG(dbgs() << "Could not compute SCEV MaxBackedgeTakenCount.\n");
     return Changed ? LoopDeletionResult::Modified
                    : LoopDeletionResult::Unmodified;
   }
 
-  DEBUG(dbgs() << "Loop is invariant, delete it!");
+  LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!");
   deleteDeadLoop(L, &DT, &SE, &LI);
   ++NumDeleted;
 
@@ -209,8 +210,8 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
                                         LoopStandardAnalysisResults &AR,
                                         LPMUpdater &Updater) {
 
-  DEBUG(dbgs() << "Analyzing Loop for deletion: ");
-  DEBUG(L.dump());
+  LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
+  LLVM_DEBUG(L.dump());
   std::string LoopName = L.getName();
   auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI);
   if (Result == LoopDeletionResult::Unmodified)
@@ -255,8 +256,8 @@ bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
-  DEBUG(dbgs() << "Analyzing Loop for deletion: ");
-  DEBUG(L->dump());
+  LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
+  LLVM_DEBUG(L->dump());
 
   LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI);
 

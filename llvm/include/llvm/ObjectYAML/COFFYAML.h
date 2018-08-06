@@ -67,6 +67,7 @@ struct Section {
   yaml::BinaryRef SectionData;
   std::vector<CodeViewYAML::YAMLDebugSubsection> DebugS;
   std::vector<CodeViewYAML::LeafRecord> DebugT;
+  std::vector<CodeViewYAML::LeafRecord> DebugP;
   Optional<CodeViewYAML::DebugHSection> DebugH;
   std::vector<Relocation> Relocations;
   StringRef Name;

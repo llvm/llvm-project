@@ -147,14 +147,18 @@ entry:
 ; DW-LABEL:   .debug_line contents:
 ; Check that we have the right things in the line table as well.
 
-; DWLW-LABEL: file_names[{{ *}}1]{{.*}} bar.c
+; DWLW-LABEL: file_names[ 1]:
+; DWLW-NEXT: name: "bar.c"
 ; DWLW:        2 0 1 0 0 is_stmt prologue_end
-; DWLW-LABEL: file_names[{{ *}}1]{{.*}} foo.c
+; DWLW-LABEL: file_names[ 1]:
+; DWLW-NEXT: name: "foo.c"
 ; DWLW:       52 0 1 0 0 is_stmt prologue_end
 ; DWLW-NOT:                      prologue_end
 
-; DWWL-LABEL: file_names[{{ *}}1]{{.*}} foo.c
+; DWWL-LABEL: file_names[ 1]:
+; DWWL-NEXT: name: "foo.c"
 ; DWWL:       52 0 1 0 0 is_stmt prologue_end
-; DWWL-LABEL: file_names[{{ *}}1]{{.*}} bar.c
+; DWWL-LABEL: file_names[ 1]:
+; DWWL-NEXT: name: "bar.c"
 ; DWWL:        2 0 1 0 0 is_stmt prologue_end
 ; DWWL-NOT:                      prologue_end

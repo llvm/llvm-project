@@ -16,6 +16,8 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Config/config.h"
+
 #if defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_GETSPECIFIC)
 
 #include <cassert>

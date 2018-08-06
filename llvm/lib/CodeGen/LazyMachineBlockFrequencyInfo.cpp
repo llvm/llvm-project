@@ -57,23 +57,23 @@ MachineBlockFrequencyInfo &
 LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
   auto *MBFI = getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
   if (MBFI) {
-    DEBUG(dbgs() << "MachineBlockFrequencyInfo is available\n");
+    LLVM_DEBUG(dbgs() << "MachineBlockFrequencyInfo is available\n");
     return *MBFI;
   }
 
   auto &MBPI = getAnalysis<MachineBranchProbabilityInfo>();
   auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
   auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
-  DEBUG(dbgs() << "Building MachineBlockFrequencyInfo on the fly\n");
-  DEBUG(if (MLI) dbgs() << "LoopInfo is available\n");
+  LLVM_DEBUG(dbgs() << "Building MachineBlockFrequencyInfo on the fly\n");
+  LLVM_DEBUG(if (MLI) dbgs() << "LoopInfo is available\n");
 
   if (!MLI) {
-    DEBUG(dbgs() << "Building LoopInfo on the fly\n");
+    LLVM_DEBUG(dbgs() << "Building LoopInfo on the fly\n");
     // First create a dominator tree.
-    DEBUG(if (MDT) dbgs() << "DominatorTree is available\n");
+    LLVM_DEBUG(if (MDT) dbgs() << "DominatorTree is available\n");
 
     if (!MDT) {
-      DEBUG(dbgs() << "Building DominatorTree on the fly\n");
+      LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
       OwnedMDT = make_unique<MachineDominatorTree>();
       OwnedMDT->getBase().recalculate(*MF);
       MDT = OwnedMDT.get();

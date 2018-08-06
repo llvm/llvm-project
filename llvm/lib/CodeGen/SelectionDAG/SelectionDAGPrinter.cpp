@@ -229,7 +229,7 @@ bool SelectionDAG::setSubgraphColorHelper(SDNode *N, const char *Color, DenseSet
   if (level >= 20) {
     if (!printed) {
       printed = true;
-      DEBUG(dbgs() << "setSubgraphColor hit max level\n");
+      LLVM_DEBUG(dbgs() << "setSubgraphColor hit max level\n");
     }
     return true;
   }

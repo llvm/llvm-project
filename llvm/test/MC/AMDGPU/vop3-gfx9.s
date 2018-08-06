@@ -421,3 +421,35 @@ v_interp_p2_legacy_f16 v5, v2, attr0.x, v3 high
 
 v_interp_p2_legacy_f16 v5, v2, attr0.x, v3 clamp
 // GFX9: v_interp_p2_legacy_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x76,0xd2,0x00,0x04,0x0e,0x04]
+
+v_cvt_norm_i16_f16_e64 v5, -v1
+// GFX9: v_cvt_norm_i16_f16_e64 v5, -v1 ; encoding: [0x05,0x00,0x8d,0xd1,0x01,0x01,0x00,0x20]
+// NOVI: error: instruction not supported on this GPU
+
+v_cvt_norm_i16_f16_e64 v5, |v1|
+// GFX9: v_cvt_norm_i16_f16_e64 v5, |v1| ; encoding: [0x05,0x01,0x8d,0xd1,0x01,0x01,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_cvt_norm_u16_f16_e64 v5, -v1
+// GFX9: v_cvt_norm_u16_f16_e64 v5, -v1 ; encoding: [0x05,0x00,0x8e,0xd1,0x01,0x01,0x00,0x20]
+// NOVI: error: instruction not supported on this GPU
+
+v_cvt_norm_u16_f16_e64 v5, |v1|
+// GFX9: v_cvt_norm_u16_f16_e64 v5, |v1| ; encoding: [0x05,0x01,0x8e,0xd1,0x01,0x01,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_sat_pk_u8_i16_e64 v5, -1
+// GFX9: v_sat_pk_u8_i16_e64 v5, -1 ; encoding: [0x05,0x00,0x8f,0xd1,0xc1,0x00,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_sat_pk_u8_i16_e64 v5, v255
+// GFX9: v_sat_pk_u8_i16_e64 v5, v255 ; encoding: [0x05,0x00,0x8f,0xd1,0xff,0x01,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_screen_partition_4se_b32_e64 v5, v1
+// GXF9: [0x05,0x00,0x77,0xd1,0x01,0x01,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+v_screen_partition_4se_b32_e64 v5, -1
+// GXF9: [0x05,0x00,0x77,0xd1,0xc1,0x00,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU

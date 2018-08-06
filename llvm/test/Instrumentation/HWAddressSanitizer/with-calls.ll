@@ -74,8 +74,8 @@ entry:
 define i40 @test_load40(i40* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load40(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; ABORT: call void @__hwasan_load(i64 %[[A]], i64 5)
-; RECOVER: call void @__hwasan_load_noabort(i64 %[[A]], i64 5)
+; ABORT: call void @__hwasan_loadN(i64 %[[A]], i64 5)
+; RECOVER: call void @__hwasan_loadN_noabort(i64 %[[A]], i64 5)
 ; CHECK: %[[B:[^ ]*]] = load i40, i40* %a
 ; CHECK: ret i40 %[[B]]
 
@@ -152,8 +152,8 @@ entry:
 define void @test_store40(i40* %a, i40 %b) sanitize_hwaddress {
 ; CHECK-LABEL: @test_store40(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; ABORT: call void @__hwasan_store(i64 %[[A]], i64 5)
-; RECOVER: call void @__hwasan_store_noabort(i64 %[[A]], i64 5)
+; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 5)
+; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 5)
 ; CHECK: store i40 %b, i40* %a
 ; CHECK: ret void
 

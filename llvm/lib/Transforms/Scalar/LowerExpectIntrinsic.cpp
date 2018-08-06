@@ -357,7 +357,7 @@ PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
 }
 
 namespace {
-/// \brief Legacy pass for lowering expect intrinsics out of the IR.
+/// Legacy pass for lowering expect intrinsics out of the IR.
 ///
 /// When this pass is run over a function it uses expect intrinsics which feed
 /// branches and switches to provide branch weight metadata for those

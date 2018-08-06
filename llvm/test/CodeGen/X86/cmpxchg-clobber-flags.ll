@@ -259,7 +259,7 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
 ; 64-ALL-NEXT:    pushq %rax
 ; 64-ALL-NEXT:    movl %edx, %ebx
 ; 64-ALL-NEXT:    movl %esi, %eax
-; 64-ALL-NEXT:    lock cmpxchgl %ebx, (%rdi)
+; 64-ALL-NEXT:    lock cmpxchgl %edx, (%rdi)
 ; 64-ALL-NEXT:    sete %bpl
 ; 64-ALL-NEXT:    callq foo
 ; 64-ALL-NEXT:    testb %bpl, %bpl

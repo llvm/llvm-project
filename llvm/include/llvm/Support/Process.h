@@ -26,7 +26,6 @@
 #define LLVM_SUPPORT_PROCESS_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
@@ -39,13 +38,13 @@ class StringRef;
 namespace sys {
 
 
-/// \brief A collection of legacy interfaces for querying information about the
+/// A collection of legacy interfaces for querying information about the
 /// current executing process.
 class Process {
 public:
   static unsigned getPageSize();
 
-  /// \brief Return process memory usage.
+  /// Return process memory usage.
   /// This static function will return the total amount of memory allocated
   /// by the process. This only counts the memory allocated via the malloc,
   /// calloc and realloc functions and includes any "free" holes in the
@@ -67,10 +66,10 @@ public:
   /// This function makes the necessary calls to the operating system to
   /// prevent core files or any other kind of large memory dumps that can
   /// occur when a program fails.
-  /// @brief Prevent core file generation.
+  /// Prevent core file generation.
   static void PreventCoreFiles();
 
-  /// \brief true if PreventCoreFiles has been called, false otherwise.
+  /// true if PreventCoreFiles has been called, false otherwise.
   static bool AreCoreFilesPrevented();
 
   // This function returns the environment variable \arg name's value as a UTF-8
@@ -89,14 +88,6 @@ public:
 
   static Optional<std::string> FindInEnvPath(StringRef EnvName,
                                              StringRef FileName);
-
-  /// This function returns a SmallVector containing the arguments passed from
-  /// the operating system to the program.  This function expects to be handed
-  /// the vector passed in from main.
-  static std::error_code
-  GetArgumentVector(SmallVectorImpl<const char *> &Args,
-                    ArrayRef<const char *> ArgsFromMain,
-                    SpecificBumpPtrAllocator<char> &ArgAllocator);
 
   // This functions ensures that the standard file descriptors (input, output,
   // and error) are properly mapped to a file descriptor before we use any of

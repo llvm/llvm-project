@@ -303,8 +303,9 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     P.formatLine("unique name: `{0}`", Class.UniqueName);
   P.formatLine("vtable: {0}, base list: {1}, field list: {2}",
                Class.VTableShape, Class.DerivationList, Class.FieldList);
-  P.formatLine("options: {0}",
-               formatClassOptions(P.getIndentLevel(), Class.Options));
+  P.formatLine("options: {0}, sizeof {1}",
+               formatClassOptions(P.getIndentLevel(), Class.Options),
+               Class.Size);
   return Error::success();
 }
 
@@ -314,8 +315,9 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Union.hasUniqueName())
     P.formatLine("unique name: `{0}`", Union.UniqueName);
   P.formatLine("field list: {0}", Union.FieldList);
-  P.formatLine("options: {0}",
-               formatClassOptions(P.getIndentLevel(), Union.Options));
+  P.formatLine("options: {0}, sizeof {1}",
+               formatClassOptions(P.getIndentLevel(), Union.Options),
+               Union.Size);
   return Error::success();
 }
 
@@ -464,6 +466,21 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &R) {
   std::string Type = (R.Mode == LabelType::Far) ? "far" : "near";
   P.format(" type = {0}", Type);
+  return Error::success();
+}
+
+Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                               PrecompRecord &Precomp) {
+  P.format(" start index = {0:X+}, types count = {1:X+}, signature = {2:X+},"
+           " precomp path = {3}",
+           Precomp.StartTypeIndex, Precomp.TypesCount, Precomp.Signature,
+           Precomp.PrecompFilePath);
+  return Error::success();
+}
+
+Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
+                                               EndPrecompRecord &EP) {
+  P.format(" signature = {0:X+}", EP.Signature);
   return Error::success();
 }
 

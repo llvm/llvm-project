@@ -23,14 +23,14 @@
 ;; worthwhile.
 
 ;; CHECK-LABEL: f:
-;; CHECK:      lwzu
-;; CHECK-NEXT: lwz
-;; CHECK-NEXT: lwz
-;; CHECK-NEXT: lwz
-;; CHECK-NEXT: stwu
-;; CHECK-NEXT: stw
-;; CHECK-NEXT: stw
-;; CHECK-NEXT: stw
+;; CHECK-DAG:      lwzu
+;; CHECK-DAG:      stwu
+;; CHECK-DAG: lwz
+;; CHECK-DAG: lwz
+;; CHECK-DAG: lwz
+;; CHECK-DAG: stw
+;; CHECK-DAG: stw
+;; CHECK-DAG: stw
 ;; CHECK-NEXT: blr
 define void @f() {
 entry:

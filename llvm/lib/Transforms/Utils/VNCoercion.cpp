@@ -20,8 +20,14 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
       StoredVal->getType()->isStructTy() || StoredVal->getType()->isArrayTy())
     return false;
 
+  uint64_t StoreSize = DL.getTypeSizeInBits(StoredVal->getType());
+
+  // The store size must be byte-aligned to support future type casts.
+  if (llvm::alignTo(StoreSize, 8) != StoreSize)
+    return false;
+
   // The store has to be at least as big as the load.
-  if (DL.getTypeSizeInBits(StoredVal->getType()) < DL.getTypeSizeInBits(LoadTy))
+  if (StoreSize < DL.getTypeSizeInBits(LoadTy))
     return false;
 
   // Don't coerce non-integral pointers to integers or vice versa.
@@ -389,8 +395,8 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
     NewLoad->takeName(SrcVal);
     NewLoad->setAlignment(SrcVal->getAlignment());
 
-    DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
-    DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
+    LLVM_DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
+    LLVM_DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
 
     // Replace uses of the original load with the wider load.  On a big endian
     // system, we need to shift down to get the relevant bits.

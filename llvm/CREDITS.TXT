@@ -23,7 +23,8 @@ D: MingW Win32 API portability layer
 
 N: Aaron Ballman
 E: aaron@aaronballman.com
-D: __declspec attributes, Windows support, general bug fixing
+D: Clang frontend, frontend attributes, Windows support, general bug fixing
+I: AaronBallman
 
 N: Nate Begeman
 E: natebegeman@mac.com
@@ -34,6 +35,13 @@ N: Daniel Berlin
 E: dberlin@dberlin.org
 D: ET-Forest implementation.
 D: Sparse bitmap
+
+N: Geoff Berry
+E: gberry@codeaurora.org
+E: gcb@acm.org
+D: AArch64 backend improvements
+D: Added EarlyCSE MemorySSA support
+D: CodeGen improvements
 
 N: David Blaikie
 E: dblaikie@gmail.com
@@ -107,8 +115,8 @@ E: stefanus.du.toit@intel.com
 D: Bug fixes and minor improvements
 
 N: Rafael Avila de Espindola
-E: rafael.espindola@gmail.com
-D: The ARM backend
+E: rafael@espindo.la
+D: MC and LLD work
 
 N: Dave Estes
 E: cestes@codeaurora.org
@@ -203,6 +211,11 @@ N: Patrick Jenkins
 E: patjenk@wam.umd.edu
 D: Nightly Tester
 
+N: Tony(Yanjun) Jiang
+E: jtony@ca.ibm.com
+D: PowerPC Backend Developer
+D: Improvements to the PPC backend and miscellaneous bug fixes
+
 N: Dale Johannesen
 E: dalej@apple.com
 D: ARM constant islands improvements
@@ -218,6 +231,11 @@ D: Support for packed types
 N: Rod Kay
 E: rkay@auroraux.org
 D: Author of LLVM Ada bindings
+
+N: Erich Keane
+E: erich.keane@intel.com
+D: A variety of Clang contributions including function multiversioning, regcall/vectorcall.
+I: ErichKeane
 
 N: Eric Kidd
 W: http://randomhacks.net/
@@ -269,7 +287,7 @@ D: Release manager (1.7+)
 N: Sylvestre Ledru
 E: sylvestre@debian.org
 W: http://sylvestre.ledru.info/
-W: http://apt.llvm.org/
+W: https://apt.llvm.org/
 D: Debian and Ubuntu packaging
 D: Continuous integration with jenkins
 
@@ -480,3 +498,7 @@ D: Bunches of stuff
 N: Bob Wilson
 E: bob.wilson@acm.org
 D: Advanced SIMD (NEON) support in the ARM backend.
+
+N: QingShan Zhang
+E: qshanz@cn.ibm.com
+D: PowerPC Backend Developer

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Breakpoint location printer.
+/// Breakpoint location printer.
 ///
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TOOLS_OPT_BREAKPOINTPRINTER_H

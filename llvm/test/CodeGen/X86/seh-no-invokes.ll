@@ -15,7 +15,7 @@
 ; label. This was PR30431.
 
 ; CHECK-LABEL: _f:                                     # @f
-; CHECK: Lf$parent_frame_offset = 0
+; CHECK: .set Lf$parent_frame_offset, 0
 ; CHECK: retl
 
 ; CHECK-LABEL: "?filt$0@0@f@@":                        # @"\01?filt$0@0@f@@"

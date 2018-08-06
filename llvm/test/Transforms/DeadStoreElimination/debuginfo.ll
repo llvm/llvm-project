@@ -7,17 +7,17 @@ declare noalias i8* @malloc(i32)
 declare void @test_f()
 
 define i32* @test_salvage() {
+; Check that all four original local variables have their values preserved.
 ; CHECK-LABEL: @test_salvage()
 ; CHECK-NEXT: malloc
+; CHECK-NEXT: @llvm.dbg.value(metadata i8* %p, metadata ![[p:.*]], metadata !DIExpression())
 ; CHECK-NEXT: bitcast
+; CHECK-NEXT: @llvm.dbg.value(metadata i32* %P, metadata ![[P:.*]], metadata !DIExpression())
+; CHECK-NEXT: @llvm.dbg.value(metadata i32* %P, metadata ![[DEAD:.*]], metadata !DIExpression(DW_OP_deref))
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %P, metadata ![[DEAD2:.*]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 1, DW_OP_stack_value))
 ; CHECK-NEXT: call void @test_f()
 ; CHECK-NEXT: store i32 0, i32* %P
 
-; Check that all four original local variables have their values preserved.
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i8* %p, metadata !8, metadata !DIExpression()), !dbg !14
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %P, metadata !10, metadata !DIExpression()), !dbg !15
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %P, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !18
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %P, metadata !13, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !19
   %p = tail call i8* @malloc(i32 4)
   %P = bitcast i8* %p to i32*
   %DEAD = load i32, i32* %P
@@ -28,13 +28,7 @@ define i32* @test_salvage() {
   ret i32* %P
 }
 
-; CHECK: !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
-; CHECK: !10 = !DILocalVariable(name: "2", scope: !5, file: !1, line: 2, type: !9)
-; CHECK: !11 = !DILocalVariable(name: "3", scope: !5, file: !1, line: 3, type: !12)
-; CHECK: !13 = !DILocalVariable(name: "4", scope: !5, file: !1, line: 4, type: !12)
-; CHECK-DAG: !14 = !DILocation(line: 1, column: 1, scope: !5)
-; CHECK-DAG: !15 = !DILocation(line: 2, column: 1, scope: !5)
-; CHECK-DAG: !18 = !DILocation(line: 3, column: 1, scope: !5)
-; CHECK-DAG: !19 = !DILocation(line: 4, column: 1, scope: !5)
-; CHECK-DAG: !16 = !DILocation(line: 6, column: 1, scope: !5)
-; CHECK-DAG: !17 = !DILocation(line: 7, column: 1, scope: !5)
+; CHECK: ![[p]] = !DILocalVariable(name: "1"
+; CHECK: ![[P]] = !DILocalVariable(name: "2"
+; CHECK: ![[DEAD]] = !DILocalVariable(name: "3"
+; CHECK: ![[DEAD2]] = !DILocalVariable(name: "4"

@@ -45,7 +45,7 @@ std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
   std::string EscapedHTML;
   {
     raw_string_ostream OS{EscapedHTML};
-    PrintHTMLEscaped(TabExpandedResult, OS);
+    printHTMLEscaped(TabExpandedResult, OS);
   }
   return EscapedHTML;
 }
@@ -202,6 +202,9 @@ th, td {
   border-right: solid 1px #eee;
   border-left: solid 1px #eee;
   text-align: left;
+}
+td pre {
+  display: inline-block;
 }
 td:first-child {
   border-left: none;

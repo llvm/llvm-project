@@ -35,12 +35,23 @@ class OrderedInstructions {
   /// The dominator tree of the parent function.
   DominatorTree *DT;
 
+  /// Return true if the first instruction comes before the second in the
+  /// same basic block. It will create an ordered basic block, if it does
+  /// not yet exist in OBBMap.
+  bool localDominates(const Instruction *, const Instruction *) const;
+
 public:
   /// Constructor.
   OrderedInstructions(DominatorTree *DT) : DT(DT) {}
 
   /// Return true if first instruction dominates the second.
   bool dominates(const Instruction *, const Instruction *) const;
+
+  /// Return true if the first instruction comes before the second in the
+  /// dominator tree DFS traversal if they are in different basic blocks,
+  /// or if the first instruction comes before the second in the same basic
+  /// block.
+  bool dfsBefore(const Instruction *, const Instruction *) const;
 
   /// Invalidate the OrderedBasicBlock cache when its basic block changes.
   /// i.e. If an instruction is deleted or added to the basic block, the user

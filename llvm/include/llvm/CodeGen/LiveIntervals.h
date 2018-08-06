@@ -105,7 +105,7 @@ class VirtRegMap;
     /// Calculate the spill weight to assign to a single instruction.
     static float getSpillWeight(bool isDef, bool isUse,
                                 const MachineBlockFrequencyInfo *MBFI,
-                                const MachineInstr &Instr);
+                                const MachineInstr &MI);
 
     /// Calculate the spill weight to assign to a single instruction.
     static float getSpillWeight(bool isDef, bool isUse,
@@ -462,6 +462,10 @@ class VirtRegMap;
     void computeRegUnitRange(LiveRange&, unsigned Unit);
     void computeVirtRegInterval(LiveInterval&);
 
+    using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo*>, 16>;
+    void extendSegmentsToUses(LiveRange &Segments,
+                              ShrinkToUsesWorkList &WorkList, unsigned Reg,
+                              LaneBitmask LaneMask);
 
     /// Helper function for repairIntervalsInRange(), walks backwards and
     /// creates/modifies live segments in \p LR to match the operands found.

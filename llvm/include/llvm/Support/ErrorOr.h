@@ -24,19 +24,7 @@
 
 namespace llvm {
 
-/// \brief Stores a reference that can be changed.
-template <typename T>
-class ReferenceStorage {
-  T *Storage;
-
-public:
-  ReferenceStorage(T &Ref) : Storage(&Ref) {}
-
-  operator T &() const { return *Storage; }
-  T &get() const { return *Storage; }
-};
-
-/// \brief Represents either an error or a value T.
+/// Represents either an error or a value T.
 ///
 /// ErrorOr<T> is a pointer-like class that represents the result of an
 /// operation. The result is either an error, or a value of type T. This is
@@ -71,7 +59,7 @@ class ErrorOr {
 
   static const bool isRef = std::is_reference<T>::value;
 
-  using wrap = ReferenceStorage<typename std::remove_reference<T>::type>;
+  using wrap = std::reference_wrapper<typename std::remove_reference<T>::type>;
 
 public:
   using storage_type = typename std::conditional<isRef, wrap, T>::type;
@@ -161,7 +149,7 @@ public:
       getStorage()->~storage_type();
   }
 
-  /// \brief Return false if there is an error.
+  /// Return false if there is an error.
   explicit operator bool() const {
     return !HasError;
   }

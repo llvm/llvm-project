@@ -120,9 +120,9 @@ define i32 @MemCpy() {
   %hello_u_p = getelementptr [8 x i8], [8 x i8]* @hello_u, i32 0, i32 0
   %target = alloca [1024 x i8]
   %target_p = getelementptr [1024 x i8], [1024 x i8]* %target, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %target_p, i8* %h_p, i32 2, i32 2, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %target_p, i8* %hel_p, i32 4, i32 4, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %target_p, i8* %hello_u_p, i32 8, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 %target_p, i8* align 2 %h_p, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %target_p, i8* align 4 %hel_p, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %target_p, i8* align 8 %hello_u_p, i32 8, i1 false)
   ret i32 0
 
 ; CHECK-LABEL: @MemCpy(
@@ -130,7 +130,7 @@ define i32 @MemCpy() {
 ; CHECK: ret i32 0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 declare i32 @strcmp(i8*, i8*) #0
 

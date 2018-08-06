@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Definition for classes that emit Hexagon machine code from MCInsts
+/// Definition for classes that emit Hexagon machine code from MCInsts
 ///
 //===----------------------------------------------------------------------===//
 
@@ -35,25 +35,20 @@ class raw_ostream;
 class HexagonMCCodeEmitter : public MCCodeEmitter {
   MCContext &MCT;
   MCInstrInfo const &MCII;
-  std::unique_ptr<unsigned> Addend;
-  std::unique_ptr<bool> Extended;
-  std::unique_ptr<MCInst const *> CurrentBundle;
-  std::unique_ptr<size_t> CurrentIndex;
 
-  // helper routine for getMachineOpValue()
-  unsigned getExprOpValue(const MCInst &MI, const MCOperand &MO,
-                          const MCExpr *ME, SmallVectorImpl<MCFixup> &Fixups,
-                          const MCSubtargetInfo &STI) const;
-
-  Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
-                                 const MCOperand &MO,
-                                 const MCSymbolRefExpr::VariantKind kind) const;
+  // A mutable state of the emitter when encoding bundles and duplexes.
+  struct EmitterState {
+    unsigned Addend = 0;
+    bool Extended = false;
+    bool SubInst1 = false;
+    const MCInst *Bundle = nullptr;
+    size_t Index = 0;
+  };
+  mutable EmitterState State;
 
 public:
-  HexagonMCCodeEmitter(MCInstrInfo const &aMII, MCContext &aMCT);
-
-  // Return parse bits for instruction `MCI' inside bundle `MCB'
-  uint32_t parseBits(size_t Last, MCInst const &MCB, MCInst const &MCI) const;
+  HexagonMCCodeEmitter(MCInstrInfo const &MII, MCContext &MCT)
+    : MCT(MCT), MCII(MII) {}
 
   void encodeInstruction(MCInst const &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -64,18 +59,30 @@ public:
                                const MCSubtargetInfo &STI,
                                uint32_t Parse) const;
 
-  // \brief TableGen'erated function for getting the
+  // TableGen'erated function for getting the
   // binary encoding for an instruction.
   uint64_t getBinaryCodeForInstr(MCInst const &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  MCSubtargetInfo const &STI) const;
 
-  /// \brief Return binary encoding of operand.
+  /// Return binary encoding of operand.
   unsigned getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              MCSubtargetInfo const &STI) const;
 
 private:
+  // helper routine for getMachineOpValue()
+  unsigned getExprOpValue(const MCInst &MI, const MCOperand &MO,
+                          const MCExpr *ME, SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
+
+  Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
+                                 const MCOperand &MO,
+                                 const MCSymbolRefExpr::VariantKind Kind) const;
+
+  // Return parse bits for instruction `MCI' inside bundle `MCB'
+  uint32_t parseBits(size_t Last, MCInst const &MCB, MCInst const &MCI) const;
+
   uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
   void verifyInstructionPredicates(const MCInst &MI,
                                    uint64_t AvailableFeatures) const;

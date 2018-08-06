@@ -74,10 +74,10 @@ static bool loadSRW() {
 
 sys::RWMutexImpl::RWMutexImpl() {
   if (loadSRW()) {
-    data_ = calloc(1, sizeof(SRWLOCK));
+    data_ = safe_calloc(1, sizeof(SRWLOCK));
     fpInitializeSRWLock(static_cast<PSRWLOCK>(data_));
   } else {
-    data_ = calloc(1, sizeof(CRITICAL_SECTION));
+    data_ = safe_calloc(1, sizeof(CRITICAL_SECTION));
     InitializeCriticalSection(static_cast<LPCRITICAL_SECTION>(data_));
   }
 }

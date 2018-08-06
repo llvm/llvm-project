@@ -31,7 +31,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -40,6 +39,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -155,6 +155,12 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
+    if (VA.getLocInfo() == CCValAssign::LocInfo::AExt) {
+      Size = VA.getLocVT().getSizeInBits() / 8;
+      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(Size * 8), ValVReg)
+                    ->getOperand(0)
+                    .getReg();
+    }
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, Size, 0);
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
@@ -186,6 +192,9 @@ void AArch64CallLowering::splitToValueTypes(
     const SplitArgTy &PerformArgSplit) const {
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
+
+  if (OrigArg.Ty->isVoidTy())
+    return;
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
@@ -226,9 +235,14 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
   bool Success = true;
   if (VReg) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    // We zero-extend i1s to i8.
+    if (MRI.getType(VReg).getSizeInBits() == 1)
+      VReg = MIRBuilder.buildZExt(LLT::scalar(8), VReg)->getOperand(0).getReg();
+
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-    MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = F.getParent()->getDataLayout();
 
     ArgInfo OrigArg{VReg, Val->getType()};
@@ -369,8 +383,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (Callee.isReg())
     MIB->getOperand(0).setReg(constrainOperandRegClass(
         MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
-        *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
-        Callee.getReg(), 0));
+        *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(), Callee, 0));
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an

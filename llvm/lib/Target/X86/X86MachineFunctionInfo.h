@@ -16,7 +16,7 @@
 
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 
@@ -49,7 +49,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// ReturnAddrIndex - FrameIndex for return slot.
   int ReturnAddrIndex = 0;
 
-  /// \brief FrameIndex for return slot.
+  /// FrameIndex for return slot.
   int FrameAddrIndex = 0;
 
   /// TailCallReturnAddrDelta - The number of bytes by which return address

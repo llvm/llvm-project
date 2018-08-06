@@ -35,7 +35,7 @@ entry:
 invoke.cont:                                      ; preds = %entry
   %__exception_ = getelementptr inbounds %"class.std::__1::__assoc_sub_state", %"class.std::__1::__assoc_sub_state"* %this, i64 0, i32 1
   %0 = bitcast { i64, i64 }* %tmp to i8*
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 16, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 16, i1 false)
   call void @_ZNSt15__exception_ptr13exception_ptrC1EMS0_FvvE(%"class.std::__exception_ptr::exception_ptr"* %ref.tmp, { i64, i64 }* byval %tmp) #5
   %call = call zeroext i1 @_ZNSt15__exception_ptrneERKNS_13exception_ptrES2_(%"class.std::__exception_ptr::exception_ptr"* %__exception_, %"class.std::__exception_ptr::exception_ptr"* %ref.tmp) #5
   call void @_ZNSt15__exception_ptr13exception_ptrD1Ev(%"class.std::__exception_ptr::exception_ptr"* %ref.tmp) #5
@@ -120,7 +120,7 @@ declare void @_ZNSt3__15mutex6unlockEv(%"class.std::__1::mutex"*) #1
 declare void @_ZNSt3__15mutex4lockEv(%"class.std::__1::mutex"*) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #3
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #3
 
 attributes #0 = { optsize "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind optsize "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

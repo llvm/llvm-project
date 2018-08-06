@@ -3,10 +3,10 @@
 # RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # TODO: more exhaustive testing of immediate encoding.
@@ -94,6 +94,12 @@ c.ebreak
 # CHECK-INST: c.lui   s0, 1
 # CHECK: encoding: [0x05,0x64]
 c.lui   s0, 1
-# CHECK-INST: c.lui   s0, 63
+# CHECK-INST: c.lui   s0, 31
+# CHECK: encoding: [0x7d,0x64]
+c.lui   s0, 31
+# CHECK-INST: c.lui   s0, 1048544
+# CHECK: encoding: [0x01,0x74]
+c.lui   s0, 0xfffe0
+# CHECK-INST: c.lui   s0, 1048575
 # CHECK: encoding: [0x7d,0x74]
-c.lui   s0, 63
+c.lui   s0, 0xfffff

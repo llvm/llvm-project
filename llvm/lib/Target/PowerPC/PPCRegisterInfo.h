@@ -85,6 +85,8 @@ public:
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isCallerPreservedPhysReg(unsigned PhysReg, const MachineFunction &MF) const override;
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;

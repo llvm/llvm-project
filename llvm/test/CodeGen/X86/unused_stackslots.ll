@@ -202,14 +202,14 @@ land.lhs.true54:                                  ; preds = %for.end50
   br i1 %tobool56, label %for.inc73, label %for.body61.preheader
 
 for.body61.preheader:                             ; preds = %land.lhs.true54
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 4, i64 0) to i8*), i8* %tmp1, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 6, i64 0) to i8*), i8* %tmp2, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 8, i64 0) to i8*), i8* %tmp3, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 10, i64 0) to i8*), i8* %tmp4, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 12, i64 0) to i8*), i8* %tmp5, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 14, i64 0) to i8*), i8* %tmp6, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 16, i64 0) to i8*), i8* %tmp7, i64 32, i32 16, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 18, i64 0) to i8*), i8* %tmp8, i64 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 4, i64 0) to i8*), i8* align 16 %tmp1, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 6, i64 0) to i8*), i8* align 16 %tmp2, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 8, i64 0) to i8*), i8* align 16 %tmp3, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 10, i64 0) to i8*), i8* align 16 %tmp4, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 12, i64 0) to i8*), i8* align 16 %tmp5, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 14, i64 0) to i8*), i8* align 16 %tmp6, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 16, i64 0) to i8*), i8* align 16 %tmp7, i64 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @e, i64 18, i64 0) to i8*), i8* align 16 %tmp8, i64 32, i1 false)
   %call70 = tail call i32 @distortion4x4(i32* nonnull getelementptr inbounds ([4 x i32], [4 x i32]* @e, i64 0, i64 0)) #3
   %add71 = add nsw i32 %call70, %m.3.lcssa.lcssa
   br label %for.inc73
@@ -234,7 +234,7 @@ declare void @LumaPrediction4x4(i32, i32, i32, i32, i32, i16 signext, i16 signex
 declare i32 @distortion4x4(i32*) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

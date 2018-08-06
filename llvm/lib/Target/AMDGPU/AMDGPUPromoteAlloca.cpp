@@ -65,6 +65,11 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> DisablePromoteAllocaToVector(
+  "disable-promote-alloca-to-vector",
+  cl::desc("Disable promote alloca to vector"),
+  cl::init(false));
+
 // FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass {
 private:
@@ -147,7 +152,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   IsAMDGCN = TT.getArch() == Triple::amdgcn;
   IsAMDHSA = TT.getOS() == Triple::AMDHSA;
 
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
@@ -169,8 +174,8 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
 
 std::pair<Value *, Value *>
 AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
-                                *Builder.GetInsertBlock()->getParent());
+  const Function &F = *Builder.GetInsertBlock()->getParent();
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
 
   if (!IsAMDHSA) {
     Function *LocalSizeYFn
@@ -256,8 +261,8 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
 }
 
 Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
-                                *Builder.GetInsertBlock()->getParent());
+  const AMDGPUSubtarget &ST =
+      AMDGPUSubtarget::get(*TM, *Builder.GetInsertBlock()->getParent());
   Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
 
   switch (N) {
@@ -318,18 +323,19 @@ static Value* GEPToVectorIndex(GetElementPtrInst *GEP) {
 static bool canVectorizeInst(Instruction *Inst, User *User) {
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
+    // Currently only handle the case where the Pointer Operand is a GEP.
+    // Also we could not vectorize volatile or atomic loads.
     LoadInst *LI = cast<LoadInst>(Inst);
-    // Currently only handle the case where the Pointer Operand is a GEP so check for that case.
-    return isa<GetElementPtrInst>(LI->getPointerOperand()) && !LI->isVolatile();
+    return isa<GetElementPtrInst>(LI->getPointerOperand()) && LI->isSimple();
   }
   case Instruction::BitCast:
-  case Instruction::AddrSpaceCast:
     return true;
   case Instruction::Store: {
     // Must be the stored pointer operand, not a stored value, plus
     // since it should be canonical form, the User should be a GEP.
+    // Also we could not vectorize volatile or atomic stores.
     StoreInst *SI = cast<StoreInst>(Inst);
-    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && !SI->isVolatile();
+    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && SI->isSimple();
   }
   default:
     return false;
@@ -337,19 +343,25 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
 }
 
 static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
+
+  if (DisablePromoteAllocaToVector) {
+    LLVM_DEBUG(dbgs() << "  Promotion alloca to vector is disabled\n");
+    return false;
+  }
+
   ArrayType *AllocaTy = dyn_cast<ArrayType>(Alloca->getAllocatedType());
 
-  DEBUG(dbgs() << "Alloca candidate for vectorization\n");
+  LLVM_DEBUG(dbgs() << "Alloca candidate for vectorization\n");
 
   // FIXME: There is no reason why we can't support larger arrays, we
   // are just being conservative for now.
   // FIXME: We also reject alloca's of the form [ 2 x [ 2 x i32 ]] or equivalent. Potentially these
   // could also be promoted but we don't currently handle this case
   if (!AllocaTy ||
-      AllocaTy->getNumElements() > 4 ||
+      AllocaTy->getNumElements() > 16 ||
       AllocaTy->getNumElements() < 2 ||
       !VectorType::isValidElementType(AllocaTy->getElementType())) {
-    DEBUG(dbgs() << "  Cannot convert type to vector\n");
+    LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
 
@@ -370,7 +382,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
     // If we can't compute a vector index from this GEP, then we can't
     // promote this alloca to vector.
     if (!Index) {
-      DEBUG(dbgs() << "  Cannot compute vector index for GEP " << *GEP << '\n');
+      LLVM_DEBUG(dbgs() << "  Cannot compute vector index for GEP " << *GEP
+                        << '\n');
       return false;
     }
 
@@ -385,8 +398,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
 
   VectorType *VectorTy = arrayTypeToVecType(AllocaTy);
 
-  DEBUG(dbgs() << "  Converting alloca to vector "
-        << *AllocaTy << " -> " << *VectorTy << '\n');
+  LLVM_DEBUG(dbgs() << "  Converting alloca to vector " << *AllocaTy << " -> "
+                    << *VectorTy << '\n');
 
   for (Value *V : WorkList) {
     Instruction *Inst = cast<Instruction>(V);
@@ -443,7 +456,8 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::lifetime_end:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
-  case Intrinsic::invariant_group_barrier:
+  case Intrinsic::launder_invariant_group:
+  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -475,7 +489,8 @@ bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
   // important part is both must have the same address space at
   // the end.
   if (OtherObj != BaseAlloca) {
-    DEBUG(dbgs() << "Found a binary instruction with another alloca object\n");
+    LLVM_DEBUG(
+        dbgs() << "Found a binary instruction with another alloca object\n");
     return false;
   }
 
@@ -588,7 +603,7 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
 bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
 
   FunctionType *FTy = F.getFunctionType();
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
 
   // If the function has any arguments in the local address space, then it's
   // possible these arguments require the entire local memory space, so
@@ -597,8 +612,8 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
     PointerType *PtrTy = dyn_cast<PointerType>(ParamTy);
     if (PtrTy && PtrTy->getAddressSpace() == AS.LOCAL_ADDRESS) {
       LocalMemLimit = 0;
-      DEBUG(dbgs() << "Function has local memory argument. Promoting to "
-                      "local memory disabled.\n");
+      LLVM_DEBUG(dbgs() << "Function has local memory argument. Promoting to "
+                           "local memory disabled.\n");
       return false;
     }
   }
@@ -667,13 +682,12 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
 
   LocalMemLimit = MaxSizeWithWaveCount;
 
-  DEBUG(
-    dbgs() << F.getName() << " uses " << CurrentLocalMemUsage << " bytes of LDS\n"
-    << "  Rounding size to " << MaxSizeWithWaveCount
-    << " with a maximum occupancy of " << MaxOccupancy << '\n'
-    << " and " << (LocalMemLimit - CurrentLocalMemUsage)
-    << " available for promotion\n"
-  );
+  LLVM_DEBUG(dbgs() << F.getName() << " uses " << CurrentLocalMemUsage
+                    << " bytes of LDS\n"
+                    << "  Rounding size to " << MaxSizeWithWaveCount
+                    << " with a maximum occupancy of " << MaxOccupancy << '\n'
+                    << " and " << (LocalMemLimit - CurrentLocalMemUsage)
+                    << " available for promotion\n");
 
   return true;
 }
@@ -690,7 +704,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   // First try to replace the alloca with a vector
   Type *AllocaTy = I.getAllocatedType();
 
-  DEBUG(dbgs() << "Trying to promote " << I << '\n');
+  LLVM_DEBUG(dbgs() << "Trying to promote " << I << '\n');
 
   if (tryPromoteAllocaToVector(&I, AS))
     return true; // Promoted to vector.
@@ -706,7 +720,9 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   case CallingConv::SPIR_KERNEL:
     break;
   default:
-    DEBUG(dbgs() << " promote alloca to LDS not supported with calling convention.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << " promote alloca to LDS not supported with calling convention.\n");
     return false;
   }
 
@@ -714,8 +730,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   if (!SufficientLDS)
     return false;
 
-  const AMDGPUSubtarget &ST =
-    TM->getSubtarget<AMDGPUSubtarget>(ContainingFunction);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
   const DataLayout &DL = Mod->getDataLayout();
@@ -735,8 +750,8 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   NewSize += AllocSize;
 
   if (NewSize > LocalMemLimit) {
-    DEBUG(dbgs() << "  " << AllocSize
-          << " bytes of local memory not available to promote\n");
+    LLVM_DEBUG(dbgs() << "  " << AllocSize
+                      << " bytes of local memory not available to promote\n");
     return false;
   }
 
@@ -745,11 +760,11 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   std::vector<Value*> WorkList;
 
   if (!collectUsesWithPtrTypes(&I, &I, WorkList)) {
-    DEBUG(dbgs() << " Do not know how to convert all uses\n");
+    LLVM_DEBUG(dbgs() << " Do not know how to convert all uses\n");
     return false;
   }
 
-  DEBUG(dbgs() << "Promoting alloca to local memory\n");
+  LLVM_DEBUG(dbgs() << "Promoting alloca to local memory\n");
 
   Function *F = I.getParent()->getParent();
 
@@ -843,31 +858,32 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       continue;
     case Intrinsic::memcpy: {
       MemCpyInst *MemCpy = cast<MemCpyInst>(Intr);
-      Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getRawSource(),
-                           MemCpy->getLength(), MemCpy->getAlignment(),
-                           MemCpy->isVolatile());
+      Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getDestAlignment(),
+                           MemCpy->getRawSource(), MemCpy->getSourceAlignment(),
+                           MemCpy->getLength(), MemCpy->isVolatile());
       Intr->eraseFromParent();
       continue;
     }
     case Intrinsic::memmove: {
       MemMoveInst *MemMove = cast<MemMoveInst>(Intr);
-      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getRawSource(),
-                            MemMove->getLength(), MemMove->getAlignment(),
-                            MemMove->isVolatile());
+      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getDestAlignment(),
+                            MemMove->getRawSource(), MemMove->getSourceAlignment(),
+                            MemMove->getLength(), MemMove->isVolatile());
       Intr->eraseFromParent();
       continue;
     }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
       Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
-                           MemSet->getLength(), MemSet->getAlignment(),
+                           MemSet->getLength(), MemSet->getDestAlignment(),
                            MemSet->isVolatile());
       Intr->eraseFromParent();
       continue;
     }
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
-    case Intrinsic::invariant_group_barrier:
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
       Intr->eraseFromParent();
       // FIXME: I think the invariant marker should still theoretically apply,
       // but the intrinsics need to be changed to accept pointers with any

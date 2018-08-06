@@ -330,6 +330,10 @@ public:
     return !!(Attrs & uint32_t(PointerOptions::Unaligned));
   }
 
+  bool isRestrict() const {
+    return !!(Attrs & uint32_t(PointerOptions::Restrict));
+  }
+
   TypeIndex ReferentType;
   uint32_t Attrs;
   Optional<MemberPointerInfo> MemberInfo;
@@ -892,6 +896,33 @@ public:
   TypeIndex ContinuationIndex;
 };
 
+// LF_PRECOMP
+class PrecompRecord : public TypeRecord {
+public:
+  PrecompRecord() = default;
+  explicit PrecompRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
+  uint32_t getStartTypeIndex() const { return StartTypeIndex; }
+  uint32_t getTypesCount() const { return TypesCount; }
+  uint32_t getSignature() const { return Signature; }
+  StringRef getPrecompFilePath() const { return PrecompFilePath; }
+
+  uint32_t StartTypeIndex;
+  uint32_t TypesCount;
+  uint32_t Signature;
+  StringRef PrecompFilePath;
+};
+
+// LF_ENDPRECOMP
+class EndPrecompRecord : public TypeRecord {
+public:
+  EndPrecompRecord() = default;
+  explicit EndPrecompRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
+  uint32_t getSignature() const { return Signature; }
+
+  uint32_t Signature;
+};
 } // end namespace codeview
 } // end namespace llvm
 

@@ -22,4 +22,6 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
   CommentString = "#";
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
 }

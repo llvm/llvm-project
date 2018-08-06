@@ -1,0 +1,13 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump -f %t | FileCheck %s
+# RUN: llvm-objdump -file-headers %t | FileCheck %s
+
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_I386 # (0x14c)
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+sections:
+symbols:
+
+# CHECK: architecture: i386
+# CHECK: start address: 0x0000

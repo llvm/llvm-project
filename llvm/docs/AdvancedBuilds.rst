@@ -151,7 +151,7 @@ The PGO came cache generates the following additional targets:
 =======================
 
 In the ancient lore of compilers non-determinism is like the multi-headed hydra.
-Whenever it's head pops up, terror and chaos ensue.
+Whenever its head pops up, terror and chaos ensue.
 
 Historically one of the tests to verify that a compiler was deterministic would
 be a three stage build. The idea of a three stage build is you take your sources

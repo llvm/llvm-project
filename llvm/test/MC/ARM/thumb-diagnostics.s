@@ -360,3 +360,54 @@
         adds r0
 @ CHECK-ERRORS: error: too few operands for instruction
 @ CHECK-ERRORS: error: too few operands for instruction
+
+@------------------------------------------------------------------------------
+@ Out of range width for SBFX/UBFX
+@------------------------------------------------------------------------------
+
+        sbfx r4, r5, #31, #2
+        ubfx r4, r5, #16, #17
+
+@ CHECK-ERRORS-V8: error: bitfield width must be in range [1,32-lsb]
+@ CHECK-ERRORS-V8:         sbfx r4, r5, #31, #2
+@ CHECK-ERRORS-V8:                           ^
+@ CHECK-ERRORS-V8: error: bitfield width must be in range [1,32-lsb]
+@ CHECK-ERRORS-V8:         ubfx r4, r5, #16, #17
+@ CHECK-ERRORS-V8:                           ^
+
+@------------------------------------------------------------------------------
+@ Writeback store writing to same register as value
+@------------------------------------------------------------------------------
+
+        str r0, [r0, #4]!
+        str r0, [r0], #4
+        strh r0, [r0, #2]!
+        strh r0, [r0], #2
+        strb r0, [r0, #1]!
+        strb r0, [r0], #1
+        strd r0, r1, [r0], #1
+        strd r1, r0, [r0], #1
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: str r0, [r0, #4]!
+@ CHECK-ERRORS-V8:         ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: str r0, [r0], #4
+@ CHECK-ERRORS-V8:         ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strh r0, [r0, #2]!
+@ CHECK-ERRORS-V8:          ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strh r0, [r0], #2
+@ CHECK-ERRORS-V8:          ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strb r0, [r0, #1]!
+@ CHECK-ERRORS-V8:          ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strb r0, [r0], #1
+@ CHECK-ERRORS-V8:          ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strd r0, r1, [r0], #1
+@ CHECK-ERRORS-V8:              ^
+@ CHECK-ERRORS-V8: error: source register and base register can't be identical
+@ CHECK-ERRORS-V8: strd r1, r0, [r0], #1
+@ CHECK-ERRORS-V8:              ^

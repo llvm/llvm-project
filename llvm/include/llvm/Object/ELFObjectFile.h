@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_ELFOBJECTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -67,6 +68,9 @@ public:
 
   virtual elf_symbol_iterator_range getDynamicSymbolIterators() const = 0;
 
+  /// Returns platform-specific object flags, if any.
+  virtual unsigned getPlatformFlags() const = 0;
+
   elf_symbol_iterator_range symbols() const;
 
   static bool classof(const Binary *v) { return v->isELF(); }
@@ -77,7 +81,11 @@ public:
 
   SubtargetFeatures getARMFeatures() const;
 
+  SubtargetFeatures getRISCVFeatures() const;
+
   void setARMSubArch(Triple &TheTriple) const override;
+
+  virtual uint16_t getEType() const = 0;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -195,19 +203,20 @@ ELFObjectFileBase::symbols() const {
 
 template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
+  uint16_t getEType() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  using uintX_t = typename ELFFile<ELFT>::uintX_t;
+  using uintX_t = typename ELFT::uint;
 
-  using Elf_Sym = typename ELFFile<ELFT>::Elf_Sym;
-  using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
-  using Elf_Ehdr = typename ELFFile<ELFT>::Elf_Ehdr;
-  using Elf_Rel = typename ELFFile<ELFT>::Elf_Rel;
-  using Elf_Rela = typename ELFFile<ELFT>::Elf_Rela;
-  using Elf_Dyn = typename ELFFile<ELFT>::Elf_Dyn;
+  using Elf_Sym = typename ELFT::Sym;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Ehdr = typename ELFT::Ehdr;
+  using Elf_Rel = typename ELFT::Rel;
+  using Elf_Rela = typename ELFT::Rela;
+  using Elf_Dyn = typename ELFT::Dyn;
 
 private:
   ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
@@ -251,6 +260,7 @@ protected:
   bool isSectionVirtual(DataRefImpl Sec) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
+  std::vector<SectionRef> dynamic_relocation_sections() const override;
   section_iterator getRelocatedSection(DataRefImpl Sec) const override;
 
   void moveRelocationNext(DataRefImpl &Rel) const override;
@@ -265,7 +275,7 @@ protected:
   uint64_t getSectionOffset(DataRefImpl Sec) const override;
   StringRef getRelocationTypeName(uint32_t Type) const;
 
-  /// \brief Get the relocation section that contains \a Rel.
+  /// Get the relocation section that contains \a Rel.
   const Elf_Shdr *getRelSection(DataRefImpl Rel) const {
     auto RelSecOrErr = EF.getSection(Rel.d.a);
     if (!RelSecOrErr)
@@ -363,11 +373,9 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
+  Expected<uint64_t> getStartAddress() const override;
 
-  std::error_code getPlatformFlags(unsigned &Result) const override {
-    Result = EF.getHeader()->e_flags;
-    return std::error_code();
-  }
+  unsigned getPlatformFlags() const override { return EF.getHeader()->e_flags; }
 
   std::error_code getBuildAttributes(ARMAttributeParser &Attributes) const override {
     auto SectionsOrErr = EF.sections();
@@ -404,10 +412,10 @@ public:
   bool isRelocatableObject() const override;
 };
 
-using ELF32LEObjectFile = ELFObjectFile<ELFType<support::little, false>>;
-using ELF64LEObjectFile = ELFObjectFile<ELFType<support::little, true>>;
-using ELF32BEObjectFile = ELFObjectFile<ELFType<support::big, false>>;
-using ELF64BEObjectFile = ELFObjectFile<ELFType<support::big, true>>;
+using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
+using ELF64LEObjectFile = ELFObjectFile<ELF64LE>;
+using ELF32BEObjectFile = ELFObjectFile<ELF32BE>;
+using ELF64BEObjectFile = ELFObjectFile<ELF64BE>;
 
 template <class ELFT>
 void ELFObjectFile<ELFT>::moveSymbolNext(DataRefImpl &Sym) const {
@@ -503,6 +511,10 @@ uint32_t ELFObjectFile<ELFT>::getSymbolAlignment(DataRefImpl Symb) const {
 template <class ELFT>
 uint16_t ELFObjectFile<ELFT>::getEMachine() const {
   return EF.getHeader()->e_machine;
+}
+
+template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
+  return EF.getHeader()->e_type;
 }
 
 template <class ELFT>
@@ -698,8 +710,9 @@ bool ELFObjectFile<ELFT>::isSectionText(DataRefImpl Sec) const {
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionData(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_flags & (ELF::SHF_ALLOC | ELF::SHF_WRITE) &&
-         EShdr->sh_type == ELF::SHT_PROGBITS;
+  return EShdr->sh_type == ELF::SHT_PROGBITS &&
+         EShdr->sh_flags & ELF::SHF_ALLOC &&
+         !(EShdr->sh_flags & ELF::SHF_EXECINSTR);
 }
 
 template <class ELFT>
@@ -707,6 +720,35 @@ bool ELFObjectFile<ELFT>::isSectionBSS(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   return EShdr->sh_flags & (ELF::SHF_ALLOC | ELF::SHF_WRITE) &&
          EShdr->sh_type == ELF::SHT_NOBITS;
+}
+
+template <class ELFT>
+std::vector<SectionRef>
+ELFObjectFile<ELFT>::dynamic_relocation_sections() const {
+  std::vector<SectionRef> Res;
+  std::vector<uintptr_t> Offsets;
+
+  auto SectionsOrErr = EF.sections();
+  if (!SectionsOrErr)
+    return Res;
+
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
+    if (Sec.sh_type != ELF::SHT_DYNAMIC)
+      continue;
+    Elf_Dyn *Dynamic =
+        reinterpret_cast<Elf_Dyn *>((uintptr_t)base() + Sec.sh_offset);
+    for (; Dynamic->d_tag != ELF::DT_NULL; Dynamic++) {
+      if (Dynamic->d_tag == ELF::DT_REL || Dynamic->d_tag == ELF::DT_RELA ||
+          Dynamic->d_tag == ELF::DT_JMPREL) {
+        Offsets.push_back(Dynamic->d_un.d_val);
+      }
+    }
+  }
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
+    if (is_contained(Offsets, Sec.sh_offset))
+      Res.emplace_back(toDRI(&Sec), this);
+  }
+  return Res;
 }
 
 template <class ELFT>
@@ -790,8 +832,6 @@ ELFObjectFile<ELFT>::getRelocationSymbol(DataRefImpl Rel) const {
 
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getRelocationOffset(DataRefImpl Rel) const {
-  assert(EF.getHeader()->e_type == ELF::ET_REL &&
-         "Only relocatable object files have relocation offsets");
   const Elf_Shdr *sec = getRelSection(Rel);
   if (sec->sh_type == ELF::SHT_REL)
     return getRel(Rel)->r_offset;
@@ -986,8 +1026,6 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_SPARC:
     case ELF::EM_SPARC32PLUS:
       return "ELF32-sparc";
-    case ELF::EM_WEBASSEMBLY:
-      return "ELF32-wasm";
     case ELF::EM_AMDGPU:
       return "ELF32-amdgpu";
     default:
@@ -1011,8 +1049,6 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF64-sparc";
     case ELF::EM_MIPS:
       return "ELF64-mips";
-    case ELF::EM_WEBASSEMBLY:
-      return "ELF64-wasm";
     case ELF::EM_AMDGPU:
       return "ELF64-amdgpu";
     case ELF::EM_BPF:
@@ -1074,26 +1110,20 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     return IsLittleEndian ? Triple::sparcel : Triple::sparc;
   case ELF::EM_SPARCV9:
     return Triple::sparcv9;
-  case ELF::EM_WEBASSEMBLY:
-    switch (EF.getHeader()->e_ident[ELF::EI_CLASS]) {
-    case ELF::ELFCLASS32: return Triple::wasm32;
-    case ELF::ELFCLASS64: return Triple::wasm64;
-    default: return Triple::UnknownArch;
-    }
 
   case ELF::EM_AMDGPU: {
     if (!IsLittleEndian)
       return Triple::UnknownArch;
 
-    unsigned EFlags = EF.getHeader()->e_flags;
-    switch (EFlags & ELF::EF_AMDGPU_ARCH) {
-    case ELF::EF_AMDGPU_ARCH_R600:
+    unsigned MACH = EF.getHeader()->e_flags & ELF::EF_AMDGPU_MACH;
+    if (MACH >= ELF::EF_AMDGPU_MACH_R600_FIRST &&
+        MACH <= ELF::EF_AMDGPU_MACH_R600_LAST)
       return Triple::r600;
-    case ELF::EF_AMDGPU_ARCH_GCN:
+    if (MACH >= ELF::EF_AMDGPU_MACH_AMDGCN_FIRST &&
+        MACH <= ELF::EF_AMDGPU_MACH_AMDGCN_LAST)
       return Triple::amdgcn;
-    default:
-      return Triple::UnknownArch;
-    }
+
+    return Triple::UnknownArch;
   }
 
   case ELF::EM_BPF:
@@ -1102,6 +1132,11 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   default:
     return Triple::UnknownArch;
   }
+}
+
+template <class ELFT>
+Expected<uint64_t> ELFObjectFile<ELFT>::getStartAddress() const {
+  return EF.getHeader()->e_entry;
 }
 
 template <class ELFT>

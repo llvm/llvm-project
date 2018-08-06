@@ -41,3 +41,14 @@ bool Nios2InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MBB.erase(MI);
   return true;
 }
+
+void Nios2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator I,
+                                 const DebugLoc &DL, unsigned DestReg,
+                                 unsigned SrcReg, bool KillSrc) const {
+  unsigned opc = Subtarget.hasNios2r2() ? Nios2::ADD_R2 : Nios2::ADD_R1;
+  BuildMI(MBB, I, DL, get(opc))
+    .addReg(DestReg, RegState::Define)
+    .addReg(Nios2::ZERO)
+    .addReg(SrcReg, getKillRegState(KillSrc));
+}

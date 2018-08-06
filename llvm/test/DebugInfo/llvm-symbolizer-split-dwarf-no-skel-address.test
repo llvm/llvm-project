@@ -1,0 +1,19 @@
+RUN: rm -rf %t && mkdir -p %t
+RUN: cd %t
+RUN: cp %p/Inputs/split-dwarf-no-skel-address.dwo %t
+RUN: echo "%p/Inputs/split-dwarf-no-skel-address.o 0x4" > %t.input
+
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --default-arch=i386 < %t.input | FileCheck %s
+
+Built from the following source:
+void f1();
+__attribute__((always_inline)) inline void f2() { f1(); }
+void f3() { f2(); }
+
+Compiled to assembly with clang, modified the skeleton CU to remove the
+high/low pc (& update the CU length field and abbrev to match) & then
+compile/objcopy to make the .o and .dwo.
+
+CHECK: _Z2f2v
+CHECK: test.cpp:2:51

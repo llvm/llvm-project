@@ -460,7 +460,10 @@ RUN lines:
    Example: ``/home/user/llvm.build/test/MC/ELF/Output/foo_test.s.tmp``
 
 ``%T``
-   Directory of ``%t``.
+   Directory of ``%t``. Deprecated. Shouldn't be used, because it can be easily
+   misused and cause race conditions between tests.
+
+   Use ``rm -rf %t && mkdir %t`` instead if a temporary directory is necessary.
 
    Example: ``/home/user/llvm.build/test/MC/ELF/Output``
 

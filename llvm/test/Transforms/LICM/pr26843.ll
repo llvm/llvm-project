@@ -19,7 +19,7 @@ entry:
  
 for.body:
   store i32 1, i32* @v, align 4
-  tail call void @llvm.memset.p0i8.i32(i8* bitcast (i32* @v to i8*), i8 0, i32 4, i32 4, i1 false)
+  tail call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (i32* @v to i8*), i8 0, i32 4, i1 false)
   br label %for.latch
   
 for.latch:
@@ -29,4 +29,4 @@ end:
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)

@@ -17,10 +17,10 @@
 
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MachineValueType.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -88,7 +88,7 @@ class InstrItineraryData;
     /// Clone - Creates a clone of the specified SUnit. It does not copy the
     /// predecessors / successors info nor the temporary scheduling states.
     ///
-    SUnit *Clone(SUnit *N);
+    SUnit *Clone(SUnit *Old);
 
     /// BuildSchedGraph - Build the SUnit graph from the selection dag that we
     /// are input.  This SUnit graph is similar to the SelectionDAG, but

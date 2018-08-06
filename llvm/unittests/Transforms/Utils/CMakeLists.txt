@@ -8,11 +8,13 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(UtilsTests
   ASanStackFrameLayoutTest.cpp
+  BasicBlockUtils.cpp
   Cloning.cpp
   CodeExtractor.cpp
   FunctionComparator.cpp
   IntegerDivision.cpp
   Local.cpp
   OrderedInstructions.cpp
+  SSAUpdaterBulk.cpp
   ValueMapperTest.cpp
   )

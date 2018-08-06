@@ -226,6 +226,17 @@ static const unsigned QFRegs[] = {
   PPC::QF28, PPC::QF29, PPC::QF30, PPC::QF31
 };
 
+static const unsigned SPERegs[] = {
+  PPC::S0, PPC::S1, PPC::S2, PPC::S3,
+  PPC::S4, PPC::S5, PPC::S6, PPC::S7,
+  PPC::S8, PPC::S9, PPC::S10, PPC::S11,
+  PPC::S12, PPC::S13, PPC::S14, PPC::S15,
+  PPC::S16, PPC::S17, PPC::S18, PPC::S19,
+  PPC::S20, PPC::S21, PPC::S22, PPC::S23,
+  PPC::S24, PPC::S25, PPC::S26, PPC::S27,
+  PPC::S28, PPC::S29, PPC::S30, PPC::S31
+};
+
 template <std::size_t N>
 static DecodeStatus decodeRegisterClass(MCInst &Inst, uint64_t RegNo,
                                         const unsigned (&Regs)[N]) {
@@ -327,6 +338,18 @@ static DecodeStatus DecodeQFRCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, QFRegs);
 }
 
+static DecodeStatus DecodeSPE4RCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, GPRegs);
+}
+
+static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, SPERegs);
+}
+
 #define DecodeQSRCRegisterClass DecodeQFRCRegisterClass
 #define DecodeQBRCRegisterClass DecodeQFRCRegisterClass
 
@@ -417,6 +440,51 @@ static DecodeStatus decodeMemRIX16Operands(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeSPE8Operands(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  // Decode the spe8disp field (imm, reg), which has the low 5-bits as the
+  // displacement with 8-byte aligned, and the next 5 bits as the register #.
+
+  uint64_t Base = Imm >> 5;
+  uint64_t Disp = Imm & 0x1F;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(Disp << 3));
+  Inst.addOperand(MCOperand::createReg(GP0Regs[Base]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeSPE4Operands(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  // Decode the spe4disp field (imm, reg), which has the low 5-bits as the
+  // displacement with 4-byte aligned, and the next 5 bits as the register #.
+
+  uint64_t Base = Imm >> 5;
+  uint64_t Disp = Imm & 0x1F;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(Disp << 2));
+  Inst.addOperand(MCOperand::createReg(GP0Regs[Base]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeSPE2Operands(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  // Decode the spe2disp field (imm, reg), which has the low 5-bits as the
+  // displacement with 2-byte aligned, and the next 5 bits as the register #.
+
+  uint64_t Base = Imm >> 5;
+  uint64_t Disp = Imm & 0x1F;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(Disp << 1));
+  Inst.addOperand(MCOperand::createReg(GP0Regs[Base]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeCRBitMOperand(MCInst &Inst, uint64_t Imm,
                                         int64_t Address, const void *Decoder) {
   // The cr bit encoding is 0x80 >> cr_reg_num.
@@ -448,6 +516,11 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (STI.getFeatureBits()[PPC::FeatureQPX]) {
     DecodeStatus result =
       decodeInstruction(DecoderTableQPX32, MI, Inst, Address, this, STI);
+    if (result != MCDisassembler::Fail)
+      return result;
+  } else if (STI.getFeatureBits()[PPC::FeatureSPE]) {
+    DecodeStatus result =
+      decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);
     if (result != MCDisassembler::Fail)
       return result;
   }

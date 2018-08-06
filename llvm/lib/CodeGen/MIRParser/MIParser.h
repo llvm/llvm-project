@@ -56,6 +56,7 @@ struct PerFunctionMIParsingState {
 
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
   DenseMap<unsigned, VRegInfo*> VRegInfos;
+  StringMap<VRegInfo*> VRegInfosNamed;
   DenseMap<unsigned, int> FixedStackObjectSlots;
   DenseMap<unsigned, int> StackObjectSlots;
   DenseMap<unsigned, unsigned> ConstantPoolSlots;
@@ -66,7 +67,8 @@ struct PerFunctionMIParsingState {
                             const Name2RegClassMap &Names2RegClasses,
                             const Name2RegBankMap &Names2RegBanks);
 
-  VRegInfo &getVRegInfo(unsigned VReg);
+  VRegInfo &getVRegInfo(unsigned Num);
+  VRegInfo &getVRegInfoNamed(StringRef RegName);
 };
 
 /// Parse the machine basic block definitions, and skip the machine

@@ -57,7 +57,7 @@ public:
   using Base::visit;
 
 private:
-  /// \brief A cache of pointer bases and constant-folded offsets corresponding
+  /// A cache of pointer bases and constant-folded offsets corresponding
   /// to GEP (or derived from GEP) instructions.
   ///
   /// In order to find the base pointer one needs to perform non-trivial
@@ -65,11 +65,11 @@ private:
   /// results saved.
   DenseMap<Value *, SimplifiedAddress> SimplifiedAddresses;
 
-  /// \brief SCEV expression corresponding to number of currently simulated
+  /// SCEV expression corresponding to number of currently simulated
   /// iteration.
   const SCEV *IterationNumber;
 
-  /// \brief A Value->Constant map for keeping values that we managed to
+  /// A Value->Constant map for keeping values that we managed to
   /// constant-fold on the given iteration.
   ///
   /// While we walk the loop instructions, we build up and maintain a mapping

@@ -72,10 +72,10 @@ define <2 x float> @uitofp_2i32_buildvector_cvt(i32 %x, i32 %y, <2 x float> %v) 
 define <2 x float> @uitofp_2i32_legalized(<2 x i32> %in, <2 x float> %v) {
 ; X32-LABEL: uitofp_2i32_legalized:
 ; X32:       # %bb.0:
-; X32-NEXT:    pxor %xmm2, %xmm2
-; X32-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = [4.503600e+15,4.503600e+15]
-; X32-NEXT:    por %xmm0, %xmm2
+; X32-NEXT:    xorps %xmm2, %xmm2
+; X32-NEXT:    blendps {{.*#+}} xmm2 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [4.503600e+15,4.503600e+15]
+; X32-NEXT:    orps %xmm0, %xmm2
 ; X32-NEXT:    subpd %xmm0, %xmm2
 ; X32-NEXT:    cvtpd2ps %xmm2, %xmm0
 ; X32-NEXT:    mulps %xmm1, %xmm0
@@ -83,10 +83,10 @@ define <2 x float> @uitofp_2i32_legalized(<2 x i32> %in, <2 x float> %v) {
 ;
 ; X64-LABEL: uitofp_2i32_legalized:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm2, %xmm2
-; X64-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; X64-NEXT:    movdqa {{.*#+}} xmm0 = [4.503600e+15,4.503600e+15]
-; X64-NEXT:    por %xmm0, %xmm2
+; X64-NEXT:    xorps %xmm2, %xmm2
+; X64-NEXT:    blendps {{.*#+}} xmm2 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [4.503600e+15,4.503600e+15]
+; X64-NEXT:    orps %xmm0, %xmm2
 ; X64-NEXT:    subpd %xmm0, %xmm2
 ; X64-NEXT:    cvtpd2ps %xmm2, %xmm0
 ; X64-NEXT:    mulps %xmm1, %xmm0

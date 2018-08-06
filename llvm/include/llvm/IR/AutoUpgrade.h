@@ -37,6 +37,10 @@ namespace llvm {
   /// intrinsic function with a call to the specified new function.
   void UpgradeIntrinsicCall(CallInst *CI, Function *NewFn);
 
+  // This upgrades the comment for objc retain release markers in inline asm
+  // calls
+  void UpgradeInlineAsmString(std::string *AsmStr);
+
   /// This is an auto-upgrade hook for any old intrinsic function syntaxes
   /// which need to have both the function updated as well as all calls updated
   /// to the new function. This should only be run in a post-processing fashion
@@ -50,6 +54,10 @@ namespace llvm {
   /// This checks for module flags which should be upgraded. It returns true if
   /// module is modified.
   bool UpgradeModuleFlags(Module &M);
+
+  /// This checks for objc retain release marker which should be upgraded. It
+  /// returns true if module is modified.
+  bool UpgradeRetainReleaseMarker(Module &M);
 
   void UpgradeSectionAttributes(Module &M);
 

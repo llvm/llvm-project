@@ -21,7 +21,7 @@ namespace llvm {
 
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
-class SISubtarget;
+class GCNSubtarget;
 
 /// This is a minimal scheduler strategy.  The main difference between this
 /// and the GenericScheduler is that GCNSchedStrategy uses different
@@ -62,9 +62,9 @@ public:
 
 class GCNScheduleDAGMILive : public ScheduleDAGMILive {
 
-  const SISubtarget &ST;
+  const GCNSubtarget &ST;
 
-  const SIMachineFunctionInfo &MFI;
+  SIMachineFunctionInfo &MFI;
 
   // Occupancy target at the beginning of function scheduling cycle.
   unsigned StartingOccupancy;

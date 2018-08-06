@@ -198,7 +198,7 @@ define i32 @t3(i32, i32) #0 !prof !0 {
 ; For single-BB loop with <=1 avg trip count, sink load to b1
 ; CHECK: t4
 ; CHECK: .preheader:
-; CHECK-not: load i32, i32* @g
+; CHECK-NOT: load i32, i32* @g
 ; CHECK: .b1:
 ; CHECK: load i32, i32* @g
 ; CHECK: .exit:

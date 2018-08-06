@@ -36,6 +36,8 @@ public:
     VK_Sparc_PC10,
     VK_Sparc_GOT22,
     VK_Sparc_GOT10,
+    VK_Sparc_GOT13,
+    VK_Sparc_13,
     VK_Sparc_WPLT30,
     VK_Sparc_R_DISP32,
     VK_Sparc_TLS_GD_HI22,

@@ -73,5 +73,5 @@ return:                                           ; preds = %bb1.return_crit_edg
   ret void
 }
 
-; CHECK: Loop %bb: backedge-taken count is ((-1 + (2 * (%no /u 2))) /u 2)
+; CHECK: Loop %bb: backedge-taken count is ((-1 + (2 * (%no /u 2))<nuw>) /u 2)
 ; CHECK: Loop %bb: max backedge-taken count is 1073741822

@@ -180,7 +180,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
   SmallVector<MachineInstr *, 8> Front;
   DeadInstr.insert(MI);
 
-  DEBUG(dbgs() << "Deleting base instruction " << *MI << "\n");
+  LLVM_DEBUG(dbgs() << "Deleting base instruction " << *MI << "\n");
   Front.push_back(MI);
 
   while (Front.size() != 0) {
@@ -232,7 +232,7 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
 
       if (!IsDead) continue;
 
-      DEBUG(dbgs() << "Deleting instruction " << *Def << "\n");
+      LLVM_DEBUG(dbgs() << "Deleting instruction " << *Def << "\n");
       DeadInstr.insert(Def);
     }
   }
@@ -264,7 +264,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
           // Is it a subreg copy of ssub_0?
           if (EC && EC->isCopy() &&
               EC->getOperand(1).getSubReg() == ARM::ssub_0) {
-            DEBUG(dbgs() << "Found a subreg copy: " << *SPRMI);
+            LLVM_DEBUG(dbgs() << "Found a subreg copy: " << *SPRMI);
 
             // Find the thing we're subreg copying out of - is it of the same
             // regclass as DPRMI? (i.e. a DPR or QPR).
@@ -272,8 +272,8 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
             const TargetRegisterClass *TRC =
               MRI->getRegClass(MI->getOperand(1).getReg());
             if (TRC->hasSuperClassEq(MRI->getRegClass(FullReg))) {
-              DEBUG(dbgs() << "Subreg copy is compatible - returning ");
-              DEBUG(dbgs() << printReg(FullReg) << "\n");
+              LLVM_DEBUG(dbgs() << "Subreg copy is compatible - returning ");
+              LLVM_DEBUG(dbgs() << printReg(FullReg) << "\n");
               eraseInstrWithNoUses(MI);
               return FullReg;
             }
@@ -387,7 +387,7 @@ void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
          continue;
        Front.push_back(NewMI);
      } else {
-       DEBUG(dbgs() << "Found partial copy" << *MI <<"\n");
+       LLVM_DEBUG(dbgs() << "Found partial copy" << *MI << "\n");
        Outs.push_back(MI);
      }
    }
@@ -642,9 +642,8 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
           // to find.
           MRI->constrainRegClass(NewReg, MRI->getRegClass((*I)->getReg()));
 
-          DEBUG(dbgs() << "Replacing operand "
-                       << **I << " with "
-                       << printReg(NewReg) << "\n");
+          LLVM_DEBUG(dbgs() << "Replacing operand " << **I << " with "
+                            << printReg(NewReg) << "\n");
           (*I)->substVirtReg(NewReg, 0, *TRI);
         }
       }
@@ -668,7 +667,7 @@ bool A15SDOptimizer::runOnMachineFunction(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
   bool Modified = false;
 
-  DEBUG(dbgs() << "Running on function " << Fn.getName()<< "\n");
+  LLVM_DEBUG(dbgs() << "Running on function " << Fn.getName() << "\n");
 
   DeadInstr.clear();
   Replacements.clear();

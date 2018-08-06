@@ -20,8 +20,12 @@
 #ifndef LLVM_BINARYFORMAT_DWARF_H
 #define LLVM_BINARYFORMAT_DWARF_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadicDetails.h"
 
 namespace llvm {
 class StringRef;
@@ -56,6 +60,9 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_LLVM = 5,
   DWARF_VENDOR_MIPS = 6
 };
+
+/// Constants that define the DWARF format as 32 or 64 bit.
+enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
 
 /// Special ID values that distinguish a CIE from a FDE in DWARF CFI.
 /// Not inside an enum because a 64-bit value is needed.
@@ -125,7 +132,7 @@ enum LocationAtom {
   DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
 };
 
-enum TypeKind {
+enum TypeKind : uint8_t {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_ATE_lo_user = 0x80,
@@ -400,8 +407,8 @@ enum GDBIndexEntryLinkage { GIEL_EXTERNAL, GIEL_STATIC };
 /// \defgroup DwarfConstantsDumping Dwarf constants dumping functions
 ///
 /// All these functions map their argument's value back to the
-/// corresponding enumerator name or return nullptr if the value isn't
-/// known.
+/// corresponding enumerator name or return an empty StringRef if the value
+/// isn't known.
 ///
 /// @{
 StringRef TagString(unsigned Tag);
@@ -423,6 +430,7 @@ StringRef ArrayOrderString(unsigned Order);
 StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
+StringRef RangeListEncodingString(unsigned Encoding);
 StringRef CallFrameString(unsigned Encoding);
 StringRef ApplePropertyString(unsigned);
 StringRef UnitTypeString(unsigned);
@@ -481,6 +489,49 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
+/// A helper struct providing information about the byte size of DW_FORM
+/// values that vary in size depending on the DWARF version, address byte
+/// size, or DWARF32/DWARF64.
+struct FormParams {
+  uint16_t Version;
+  uint8_t AddrSize;
+  DwarfFormat Format;
+
+  /// The definition of the size of form DW_FORM_ref_addr depends on the
+  /// version. In DWARF v2 it's the size of an address; after that, it's the
+  /// size of a reference.
+  uint8_t getRefAddrByteSize() const {
+    if (Version == 2)
+      return AddrSize;
+    return getDwarfOffsetByteSize();
+  }
+
+  /// The size of a reference is determined by the DWARF 32/64-bit format.
+  uint8_t getDwarfOffsetByteSize() const {
+    switch (Format) {
+    case DwarfFormat::DWARF32:
+      return 4;
+    case DwarfFormat::DWARF64:
+      return 8;
+    }
+    llvm_unreachable("Invalid Format value");
+  }
+
+  explicit operator bool() const { return Version && AddrSize; }
+};
+
+/// Get the fixed byte size for a given form.
+///
+/// If the form has a fixed byte size, then an Optional with a value will be
+/// returned. If the form is always encoded using a variable length storage
+/// format (ULEB or SLEB numbers or blocks) then None will be returned.
+///
+/// \param Form DWARF form to get the fixed byte size for.
+/// \param Params DWARF parameters to help interpret forms.
+/// \returns Optional<uint8_t> value with the fixed byte size or None if
+/// \p Form doesn't have a fixed byte size.
+Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.
 bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
@@ -488,6 +539,10 @@ bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
 /// Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.
 StringRef AttributeValueString(uint16_t Attr, unsigned Val);
+
+/// Returns the symbolic string representing Val when used as a value
+/// for atom Atom.
+StringRef AtomValueString(uint16_t Atom, unsigned Val);
 
 /// Describes an entry of the various gnu_pub* debug sections.
 ///
@@ -524,11 +579,46 @@ private:
   };
 };
 
-/// Constants that define the DWARF format as 32 or 64 bit.
-enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
+template <typename Enum> struct EnumTraits : public std::false_type {};
 
+template <> struct EnumTraits<Attribute> : public std::true_type {
+  static constexpr char Type[3] = "AT";
+  static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
+};
+
+template <> struct EnumTraits<Form> : public std::true_type {
+  static constexpr char Type[5] = "FORM";
+  static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
+};
+
+template <> struct EnumTraits<Index> : public std::true_type {
+  static constexpr char Type[4] = "IDX";
+  static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
+};
+
+template <> struct EnumTraits<Tag> : public std::true_type {
+  static constexpr char Type[4] = "TAG";
+  static constexpr StringRef (*StringFn)(unsigned) = &TagString;
+};
 } // End of namespace dwarf
 
+/// Dwarf constants format_provider
+///
+/// Specialization of the format_provider template for dwarf enums. Unlike the
+/// dumping functions above, these format unknown enumerator values as
+/// DW_TYPE_unknown_1234 (e.g. DW_TAG_unknown_ffff).
+template <typename Enum>
+struct format_provider<
+    Enum, typename std::enable_if<dwarf::EnumTraits<Enum>::value>::type> {
+  static void format(const Enum &E, raw_ostream &OS, StringRef Style) {
+    StringRef Str = dwarf::EnumTraits<Enum>::StringFn(E);
+    if (Str.empty()) {
+      OS << "DW_" << dwarf::EnumTraits<Enum>::Type << "_unknown_"
+         << llvm::format("%x", E);
+    } else
+      OS << Str;
+  }
+};
 } // End of namespace llvm
 
 #endif

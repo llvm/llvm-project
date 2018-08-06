@@ -29,6 +29,8 @@ struct BPFRegisterInfo : public BPFGenRegisterInfo {
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

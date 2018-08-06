@@ -113,6 +113,13 @@ public:
   /// in LVI, so we need to pass it here as an argument.
   void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS);
 
+  /// Disables use of the DominatorTree within LVI.
+  void disableDT();
+
+  /// Enables use of the DominatorTree within LVI. Does nothing if the class
+  /// instance was initialized without a DT pointer.
+  void enableDT();
+
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();
 
@@ -121,7 +128,7 @@ public:
                   FunctionAnalysisManager::Invalidator &Inv);
 };
 
-/// \brief Analysis to compute lazy value information.
+/// Analysis to compute lazy value information.
 class LazyValueAnalysis : public AnalysisInfoMixin<LazyValueAnalysis> {
 public:
   typedef LazyValueInfo Result;

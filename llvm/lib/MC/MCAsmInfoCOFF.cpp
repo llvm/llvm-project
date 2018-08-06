@@ -41,6 +41,10 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
 
   // At least MSVC inline-asm does AShr.
   UseLogicalShr = false;
+
+  // If this is a COFF target, assume that it supports associative comdats. It's
+  // part of the spec.
+  HasCOFFAssociativeComdats = true;
 }
 
 void MCAsmInfoMicrosoft::anchor() {}
@@ -49,4 +53,9 @@ MCAsmInfoMicrosoft::MCAsmInfoMicrosoft() = default;
 
 void MCAsmInfoGNUCOFF::anchor() {}
 
-MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF() = default;
+MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF() {
+  // If this is a GNU environment (mingw or cygwin), don't use associative
+  // comdats for jump tables, unwind information, and other data associated with
+  // a function.
+  HasCOFFAssociativeComdats = false;
+}

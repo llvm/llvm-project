@@ -67,7 +67,7 @@ target triple = "x86_64-apple-macosx10.4.0"
 define i32 @test1() local_unnamed_addr #0 !dbg !17 {
 ; CHECK-LABEL: bb.0.entry1
 ; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG1]], debug-use {{.}}noreg, ![[FOO1]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG1]], debug-use $noreg, ![[FOO1]], !DIExpression()
 entry1:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !20, metadata !DIExpression()), !dbg !23
   call void @llvm.dbg.value(metadata %struct.SS* null, metadata !22, metadata !DIExpression()), !dbg !24
@@ -78,8 +78,8 @@ entry1:
 define i32 @test2() local_unnamed_addr #0 !dbg !26 {
 ; CHECK-LABEL: bb.0.entry2
 ; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use {{.}}noreg, ![[FOO2]], !DIExpression()
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use {{.}}noreg, ![[BAR2]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use $noreg, ![[FOO2]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG2]], debug-use $noreg, ![[BAR2]], !DIExpression()
 entry2:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !28, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !29, metadata !DIExpression()), !dbg !31
@@ -90,8 +90,8 @@ entry2:
 define i32 @test3() local_unnamed_addr #0 !dbg !33 {
 ; CHECK-LABEL: bb.0.entry3
 ; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use {{.}}noreg, ![[BAR3]], !DIExpression()
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use {{.}}noreg, ![[FOO3]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use $noreg, ![[BAR3]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG3]], debug-use $noreg, ![[FOO3]], !DIExpression()
 entry3:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !36, metadata !DIExpression()), !dbg !38
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !35, metadata !DIExpression()), !dbg !37
@@ -105,7 +105,7 @@ entry3:
 define i32 @test4() local_unnamed_addr #0 !dbg !40 {
 ; CHECK-LABEL: bb.0.entry4
 ; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG4]], debug-use {{.}}noreg, ![[BAR4]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG4]], debug-use $noreg, ![[BAR4]], !DIExpression()
 entry4:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !42, metadata !DIExpression()), !dbg !44
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !43, metadata !DIExpression()), !dbg !45
@@ -119,8 +119,8 @@ entry4:
 define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
 ; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE debug-use [[REG5]], debug-use {{.}}noreg, ![[BAR5]], !DIExpression()
-; CHECK-NOT:     DBG_VALUE debug-use [[REG5]], debug-use {{.}}noreg, ![[FOO5]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE debug-use [[REG5]], debug-use $noreg, ![[BAR5]], !DIExpression()
+; CHECK-NOT:     DBG_VALUE debug-use [[REG5]], debug-use $noreg, ![[FOO5]], !DIExpression()
 ; CHECK:         RET
 entry5:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !49, metadata !DIExpression()), !dbg !51
@@ -156,7 +156,7 @@ attributes #1 = { nounwind readnone speculatable }
 !14 = !{i32 1, !"wchar_size", i32 4}
 !15 = !{i32 7, !"PIC Level", i32 2}
 !16 = !{!"clang version 7.0.0 (trunk 327229) (llvm/trunk 327239)"}
-!17 = distinct !DISubprogram(name: "test1", scope: !3, file: !3, line: 6, type: !18, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: true, unit: !2, variables: !19)
+!17 = distinct !DISubprogram(name: "test1", scope: !3, file: !3, line: 6, type: !18, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: true, unit: !2, retainedNodes: !19)
 !18 = !DISubroutineType(types: !5)
 !19 = !{!20, !22}
 !20 = !DILocalVariable(name: "foo1", scope: !17, file: !3, line: 7, type: !21)
@@ -165,28 +165,28 @@ attributes #1 = { nounwind readnone speculatable }
 !23 = !DILocation(line: 7, column: 14, scope: !17)
 !24 = !DILocation(line: 8, column: 14, scope: !17)
 !25 = !DILocation(line: 9, column: 3, scope: !17)
-!26 = distinct !DISubprogram(name: "test2", scope: !3, file: !3, line: 12, type: !18, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !2, variables: !27)
+!26 = distinct !DISubprogram(name: "test2", scope: !3, file: !3, line: 12, type: !18, isLocal: false, isDefinition: true, scopeLine: 12, isOptimized: true, unit: !2, retainedNodes: !27)
 !27 = !{!28, !29}
 !28 = !DILocalVariable(name: "foo2", scope: !26, file: !3, line: 13, type: !21)
 !29 = !DILocalVariable(name: "bar2", scope: !26, file: !3, line: 14, type: !21)
 !30 = !DILocation(line: 13, column: 14, scope: !26)
 !31 = !DILocation(line: 14, column: 14, scope: !26)
 !32 = !DILocation(line: 15, column: 3, scope: !26)
-!33 = distinct !DISubprogram(name: "test3", scope: !3, file: !3, line: 18, type: !18, isLocal: false, isDefinition: true, scopeLine: 18, isOptimized: true, unit: !2, variables: !34)
+!33 = distinct !DISubprogram(name: "test3", scope: !3, file: !3, line: 18, type: !18, isLocal: false, isDefinition: true, scopeLine: 18, isOptimized: true, unit: !2, retainedNodes: !34)
 !34 = !{!35, !36}
 !35 = !DILocalVariable(name: "bar3", scope: !33, file: !3, line: 19, type: !21)
 !36 = !DILocalVariable(name: "foo3", scope: !33, file: !3, line: 20, type: !21)
 !37 = !DILocation(line: 19, column: 14, scope: !33)
 !38 = !DILocation(line: 20, column: 14, scope: !33)
 !39 = !DILocation(line: 21, column: 3, scope: !33)
-!40 = distinct !DISubprogram(name: "test4", scope: !3, file: !3, line: 24, type: !18, isLocal: false, isDefinition: true, scopeLine: 24, isOptimized: true, unit: !2, variables: !41)
+!40 = distinct !DISubprogram(name: "test4", scope: !3, file: !3, line: 24, type: !18, isLocal: false, isDefinition: true, scopeLine: 24, isOptimized: true, unit: !2, retainedNodes: !41)
 !41 = !{!42, !43}
 !42 = !DILocalVariable(name: "foo4", scope: !40, file: !3, line: 25, type: !21)
 !43 = !DILocalVariable(name: "bar4", scope: !40, file: !3, line: 26, type: !21)
 !44 = !DILocation(line: 25, column: 14, scope: !40)
 !45 = !DILocation(line: 26, column: 14, scope: !40)
 !46 = !DILocation(line: 28, column: 3, scope: !40)
-!47 = distinct !DISubprogram(name: "test5", scope: !3, file: !3, line: 31, type: !18, isLocal: false, isDefinition: true, scopeLine: 31, isOptimized: true, unit: !2, variables: !48)
+!47 = distinct !DISubprogram(name: "test5", scope: !3, file: !3, line: 31, type: !18, isLocal: false, isDefinition: true, scopeLine: 31, isOptimized: true, unit: !2, retainedNodes: !48)
 !48 = !{!49, !50}
 !49 = !DILocalVariable(name: "bar5", scope: !47, file: !3, line: 32, type: !21)
 !50 = !DILocalVariable(name: "foo5", scope: !47, file: !3, line: 33, type: !21)

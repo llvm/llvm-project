@@ -637,13 +637,13 @@ pshufw $90, %mm4, %mm0
 // CHECK:  encoding: [0x66,0xca,0xce,0x7a]
         	lretl	$0x7ace
 
-// CHECK: bound	2(%eax), %bx
+// CHECK: bound	%bx, 2(%eax)
 // CHECK:  encoding: [0x67,0x62,0x58,0x02]
-        	bound	2(%eax),%bx
+        	bound	%bx,2(%eax)
 
-// CHECK: bound	4(%ebx), %ecx
+// CHECK: bound	%ecx, 4(%ebx)
 // CHECK:  encoding: [0x67,0x66,0x62,0x4b,0x04]
-        	bound	4(%ebx),%ecx
+        	bound	%ecx,4(%ebx)
 
 // CHECK: arpl	%bx, %bx
 // CHECK:  encoding: [0x63,0xdb]
@@ -969,3 +969,23 @@ data32
 // CHECK: lgdtw 4(%eax)
 // CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
 data32 lgdt 4(%eax)
+
+// CHECK: wbnoinvd
+// CHECK:  encoding: [0xf3,0x0f,0x09]
+wbnoinvd
+
+// CHECK: umonitor %ax
+// CHECK:  encoding: [0xf3,0x0f,0xae,0xf0]
+umonitor %ax
+
+// CHECK: umonitor %eax
+// CHECK:  encoding: [0x67,0xf3,0x0f,0xae,0xf0]
+umonitor %eax
+
+// CHECK: movdir64b (%esi), %eax
+// CHECK: encoding: [0x67,0x66,0x0f,0x38,0xf8,0x06]
+movdir64b (%esi), %eax
+
+// CHECK: movdir64b (%si), %ax
+// CHECK: encoding: [0x66,0x0f,0x38,0xf8,0x04]
+movdir64b (%si), %ax

@@ -24,7 +24,7 @@
 #include <sys/types.h>
 #include <system_error>
 #include <tuple>
-#if LLVM_ON_WIN32
+#if _WIN32
 #include <windows.h>
 #endif
 #if LLVM_ON_UNIX
@@ -43,7 +43,7 @@
 
 using namespace llvm;
 
-/// \brief Attempt to read the lock file with the given name, if it exists.
+/// Attempt to read the lock file with the given name, if it exists.
 ///
 /// \param LockFileName The name of the lock file to read.
 ///
@@ -123,21 +123,33 @@ bool LockFileManager::processStillExecuting(StringRef HostID, int PID) {
 
 namespace {
 
-/// An RAII helper object for cleanups.
-class RAIICleanup {
-  std::function<void()> Fn;
-  bool Canceled = false;
-
+/// An RAII helper object ensure that the unique lock file is removed.
+///
+/// Ensures that if there is an error or a signal before we finish acquiring the
+/// lock, the unique file will be removed. And if we successfully take the lock,
+/// the signal handler is left in place so that signals while the lock is held
+/// will remove the unique lock file. The caller should ensure there is a
+/// matching call to sys::DontRemoveFileOnSignal when the lock is released.
+class RemoveUniqueLockFileOnSignal {
+  StringRef Filename;
+  bool RemoveImmediately;
 public:
-  RAIICleanup(std::function<void()> Fn) : Fn(Fn) {}
-
-  ~RAIICleanup() {
-    if (Canceled)
-      return;
-    Fn();
+  RemoveUniqueLockFileOnSignal(StringRef Name)
+  : Filename(Name), RemoveImmediately(true) {
+    sys::RemoveFileOnSignal(Filename, nullptr);
   }
 
-  void cancel() { Canceled = true; }
+  ~RemoveUniqueLockFileOnSignal() {
+    if (!RemoveImmediately) {
+      // Leave the signal handler enabled. It will be removed when the lock is
+      // released.
+      return;
+    }
+    sys::fs::remove(Filename);
+    sys::DontRemoveFileOnSignal(Filename);
+  }
+
+  void lockAcquired() { RemoveImmediately = false; }
 };
 
 } // end anonymous namespace
@@ -160,22 +172,16 @@ LockFileManager::LockFileManager(StringRef FileName)
     return;
 
   // Create a lock file that is unique to this instance.
-  Expected<sys::fs::TempFile> Temp =
-      sys::fs::TempFile::create(LockFileName + "-%%%%%%%%");
-  if (!Temp) {
-    std::error_code EC = errorToErrorCode(Temp.takeError());
-    std::string S("failed to create unique file with prefix ");
-    S.append(LockFileName.str());
+  UniqueLockFileName = LockFileName;
+  UniqueLockFileName += "-%%%%%%%%";
+  int UniqueLockFileID;
+  if (std::error_code EC = sys::fs::createUniqueFile(
+          UniqueLockFileName, UniqueLockFileID, UniqueLockFileName)) {
+    std::string S("failed to create unique file ");
+    S.append(UniqueLockFileName.str());
     setError(EC, S);
     return;
   }
-  UniqueLockFile = std::move(*Temp);
-
-  // Make sure we discard the temporary file on exit.
-  RAIICleanup RemoveTempFile([&]() {
-    if (Error E = UniqueLockFile->discard())
-      setError(errorToErrorCode(std::move(E)));
-  });
 
   // Write our process ID to our unique lock file.
   {
@@ -185,46 +191,54 @@ LockFileManager::LockFileManager(StringRef FileName)
       return;
     }
 
-    raw_fd_ostream Out(UniqueLockFile->FD, /*shouldClose=*/false);
+    raw_fd_ostream Out(UniqueLockFileID, /*shouldClose=*/true);
     Out << HostID << ' ';
 #if LLVM_ON_UNIX
     Out << getpid();
 #else
     Out << "1";
 #endif
-    Out.flush();
+    Out.close();
 
     if (Out.has_error()) {
       // We failed to write out PID, so report the error, remove the
       // unique lock file, and fail.
       std::string S("failed to write to ");
-      S.append(UniqueLockFile->TmpName);
+      S.append(UniqueLockFileName.str());
       setError(Out.error(), S);
+      sys::fs::remove(UniqueLockFileName);
       return;
     }
   }
 
+  // Clean up the unique file on signal, which also releases the lock if it is
+  // held since the .lock symlink will point to a nonexistent file.
+  RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
+
   while (true) {
     // Create a link from the lock file name. If this succeeds, we're done.
     std::error_code EC =
-        sys::fs::create_link(UniqueLockFile->TmpName, LockFileName);
+        sys::fs::create_link(UniqueLockFileName, LockFileName);
     if (!EC) {
-      RemoveTempFile.cancel();
+      RemoveUniqueFile.lockAcquired();
       return;
     }
 
     if (EC != errc::file_exists) {
       std::string S("failed to create link ");
       raw_string_ostream OSS(S);
-      OSS << LockFileName.str() << " to " << UniqueLockFile->TmpName;
+      OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
       setError(EC, OSS.str());
       return;
     }
 
     // Someone else managed to create the lock file first. Read the process ID
     // from the lock file.
-    if ((Owner = readLockFile(LockFileName)))
-      return; // RemoveTempFile will delete out our unique lock file.
+    if ((Owner = readLockFile(LockFileName))) {
+      // Wipe out our unique lock file (it's useless now)
+      sys::fs::remove(UniqueLockFileName);
+      return;
+    }
 
     if (!sys::fs::exists(LockFileName)) {
       // The previous owner released the lock file before we could read it.
@@ -236,7 +250,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     // ownership.
     if ((EC = sys::fs::remove(LockFileName))) {
       std::string S("failed to remove lockfile ");
-      S.append(LockFileName.str());
+      S.append(UniqueLockFileName.str());
       setError(EC, S);
       return;
     }
@@ -271,14 +285,17 @@ LockFileManager::~LockFileManager() {
 
   // Since we own the lock, remove the lock file and our own unique lock file.
   sys::fs::remove(LockFileName);
-  consumeError(UniqueLockFile->discard());
+  sys::fs::remove(UniqueLockFileName);
+  // The unique file is now gone, so remove it from the signal handler. This
+  // matches a sys::RemoveFileOnSignal() in LockFileManager().
+  sys::DontRemoveFileOnSignal(UniqueLockFileName);
 }
 
 LockFileManager::WaitForUnlockResult LockFileManager::waitForUnlock() {
   if (getState() != LFS_Shared)
     return Res_Success;
 
-#if LLVM_ON_WIN32
+#if _WIN32
   unsigned long Interval = 1;
 #else
   struct timespec Interval;
@@ -293,7 +310,7 @@ LockFileManager::WaitForUnlockResult LockFileManager::waitForUnlock() {
     // finish up and remove the lock file.
     // FIXME: Should we hook in to system APIs to get a notification when the
     // lock file is deleted?
-#if LLVM_ON_WIN32
+#if _WIN32
     Sleep(Interval);
 #else
     nanosleep(&Interval, nullptr);
@@ -312,7 +329,7 @@ LockFileManager::WaitForUnlockResult LockFileManager::waitForUnlock() {
       return Res_OwnerDied;
 
     // Exponentially increase the time we wait for the lock to be removed.
-#if LLVM_ON_WIN32
+#if _WIN32
     Interval *= 2;
 #else
     Interval.tv_sec *= 2;
@@ -323,7 +340,7 @@ LockFileManager::WaitForUnlockResult LockFileManager::waitForUnlock() {
     }
 #endif
   } while (
-#if LLVM_ON_WIN32
+#if _WIN32
            Interval < MaxSeconds * 1000
 #else
            Interval.tv_sec < (time_t)MaxSeconds

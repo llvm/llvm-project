@@ -15,7 +15,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-
 
 ; Make sure the cmp is not scheduled before the InlineAsm that clobbers cc.
 ; CHECK: bl _f2
-; CHECK: cmp r0, #0
+; CHECK: cmp {{r[0-9]+}}, #0
 ; CHECK-NOT: cmp
 ; CHECK: InlineAsm Start
 define void @test(%s1* %this, i32 %format, i32 %w, i32 %h, i32 %levels, i32* %s, i8* %data, i32* nocapture %rowbytes, void (i8*, i8*)* %release, i8* %info) nounwind {

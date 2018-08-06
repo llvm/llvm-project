@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a pass that replaces physical registers with
+/// This file implements a pass that replaces physical registers with
 /// virtual registers.
 ///
 /// LLVM expects certain physical registers, such as a stack pointer. However,
@@ -53,12 +53,16 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyReplacePhysRegs::ID = 0;
+INITIALIZE_PASS(WebAssemblyReplacePhysRegs, DEBUG_TYPE,
+                "Replace physical registers with virtual registers",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyReplacePhysRegs() {
   return new WebAssemblyReplacePhysRegs();
 }
 
 bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Replace Physical Registers **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

@@ -25,7 +25,6 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -42,6 +41,15 @@ using namespace llvm;
 struct X86EvexToVexCompressTableEntry {
   uint16_t EvexOpcode;
   uint16_t VexOpcode;
+
+  bool operator<(const X86EvexToVexCompressTableEntry &RHS) const {
+    return EvexOpcode < RHS.EvexOpcode;
+  }
+
+  friend bool operator<(const X86EvexToVexCompressTableEntry &TE,
+                        unsigned Opc) {
+    return TE.EvexOpcode < Opc;
+  }
 };
 #include "X86GenEVEX2VEXTables.inc"
 
@@ -54,35 +62,15 @@ namespace {
 
 class EvexToVexInstPass : public MachineFunctionPass {
 
-  /// X86EvexToVexCompressTable - Evex to Vex encoding opcode map.
-  using EvexToVexTableType = DenseMap<unsigned, uint16_t>;
-  EvexToVexTableType EvexToVex128Table;
-  EvexToVexTableType EvexToVex256Table;
-
   /// For EVEX instructions that can be encoded using VEX encoding, replace
   /// them by the VEX encoding in order to reduce size.
   bool CompressEvexToVexImpl(MachineInstr &MI) const;
-
-  /// For initializing the hash map tables of all AVX-512 EVEX
-  /// corresponding to AVX/AVX2 opcodes.
-  void AddTableEntry(EvexToVexTableType &EvexToVexTable, uint16_t EvexOp,
-                     uint16_t VexOp);
 
 public:
   static char ID;
 
   EvexToVexInstPass() : MachineFunctionPass(ID) {
     initializeEvexToVexInstPassPass(*PassRegistry::getPassRegistry());
-
-    // Initialize the EVEX to VEX 128 table map.
-    for (X86EvexToVexCompressTableEntry Entry : X86EvexToVex128CompressTable) {
-      AddTableEntry(EvexToVex128Table, Entry.EvexOpcode, Entry.VexOpcode);
-    }
-
-    // Initialize the EVEX to VEX 256 table map.
-    for (X86EvexToVexCompressTableEntry Entry : X86EvexToVex256CompressTable) {
-      AddTableEntry(EvexToVex256Table, Entry.EvexOpcode, Entry.VexOpcode);
-    }
   }
 
   StringRef getPassName() const override { return EVEX2VEX_DESC; }
@@ -127,11 +115,6 @@ bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-void EvexToVexInstPass::AddTableEntry(EvexToVexTableType &EvexToVexTable,
-                                      uint16_t EvexOp, uint16_t VexOp) {
-  EvexToVexTable[EvexOp] = VexOp;
-}
-
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](unsigned Reg) {
     // Check for XMM register with indexes between 16 - 31.
@@ -164,7 +147,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
 }
 
 // Do any custom cleanup needed to finalize the conversion.
-static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
+static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -197,7 +180,31 @@ static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
     Imm.setImm(0x20 | ((ImmVal & 2) << 3) | (ImmVal & 1));
     break;
   }
+  case X86::VRNDSCALEPDZ128rri:
+  case X86::VRNDSCALEPDZ128rmi:
+  case X86::VRNDSCALEPSZ128rri:
+  case X86::VRNDSCALEPSZ128rmi:
+  case X86::VRNDSCALEPDZ256rri:
+  case X86::VRNDSCALEPDZ256rmi:
+  case X86::VRNDSCALEPSZ256rri:
+  case X86::VRNDSCALEPSZ256rmi:
+  case X86::VRNDSCALESDZr:
+  case X86::VRNDSCALESDZm:
+  case X86::VRNDSCALESSZr:
+  case X86::VRNDSCALESSZm:
+  case X86::VRNDSCALESDZr_Int:
+  case X86::VRNDSCALESDZm_Int:
+  case X86::VRNDSCALESSZr_Int:
+  case X86::VRNDSCALESSZm_Int:
+    const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
+    int64_t ImmVal = Imm.getImm();
+    // Ensure that only bits 3:0 of the immediate are used.
+    if ((ImmVal & 0xf) != ImmVal)
+      return false;
+    break;
   }
+
+  return true;
 }
 
 
@@ -224,46 +231,44 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   if (Desc.TSFlags & (X86II::EVEX_K | X86II::EVEX_B))
     return false;
 
-  // Check for non EVEX_V512 instrs only.
-  // EVEX_V512 instr: bit EVEX_L2 = 1; bit VEX_L = 0.
-  if ((Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L))
+  // Check for EVEX instructions with L2 set. These instructions are 512-bits
+  // and can't be converted to VEX.
+  if (Desc.TSFlags & X86II::EVEX_L2)
     return false;
 
-  // EVEX_V128 instr: bit EVEX_L2 = 0, bit VEX_L = 0.
-  bool IsEVEX_V128 =
-      (!(Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L));
-
-  // EVEX_V256 instr: bit EVEX_L2 = 0, bit VEX_L = 1.
-  bool IsEVEX_V256 =
-      (!(Desc.TSFlags & X86II::EVEX_L2) && (Desc.TSFlags & X86II::VEX_L));
-
-  unsigned NewOpc = 0;
-
-  // Check for EVEX_V256 instructions.
-  if (IsEVEX_V256) {
-    // Search for opcode in the EvexToVex256 table.
-    auto It = EvexToVex256Table.find(MI.getOpcode());
-    if (It != EvexToVex256Table.end())
-      NewOpc = It->second;
+#ifndef NDEBUG
+  // Make sure the tables are sorted.
+  static std::atomic<bool> TableChecked(false);
+  if (!TableChecked.load(std::memory_order_relaxed)) {
+    assert(std::is_sorted(std::begin(X86EvexToVex128CompressTable),
+                          std::end(X86EvexToVex128CompressTable)) &&
+           "X86EvexToVex128CompressTable is not sorted!");
+    assert(std::is_sorted(std::begin(X86EvexToVex256CompressTable),
+                          std::end(X86EvexToVex256CompressTable)) &&
+           "X86EvexToVex256CompressTable is not sorted!");
+    TableChecked.store(true, std::memory_order_relaxed);
   }
-  // Check for EVEX_V128 or Scalar instructions.
-  else if (IsEVEX_V128) {
-    // Search for opcode in the EvexToVex128 table.
-    auto It = EvexToVex128Table.find(MI.getOpcode());
-    if (It != EvexToVex128Table.end())
-      NewOpc = It->second;
-  }
+#endif
 
-  if (!NewOpc)
+  // Use the VEX.L bit to select the 128 or 256-bit table.
+  ArrayRef<X86EvexToVexCompressTableEntry> Table =
+    (Desc.TSFlags & X86II::VEX_L) ? makeArrayRef(X86EvexToVex256CompressTable)
+                                  : makeArrayRef(X86EvexToVex128CompressTable);
+
+  auto I = std::lower_bound(Table.begin(), Table.end(), MI.getOpcode());
+  if (I == Table.end() || I->EvexOpcode != MI.getOpcode())
     return false;
+
+  unsigned NewOpc = I->VexOpcode;
 
   if (usesExtendedRegister(MI))
     return false;
 
-  performCustomAdjustments(MI, NewOpc);
+  if (!performCustomAdjustments(MI, NewOpc))
+    return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
+  MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
   return true;
 }
 

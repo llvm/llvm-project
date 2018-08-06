@@ -108,6 +108,7 @@ def AddrModeT2_so   : AddrMode<13>;
 def AddrModeT2_pc   : AddrMode<14>;
 def AddrModeT2_i8s4 : AddrMode<15>;
 def AddrMode_i12    : AddrMode<16>;
+def AddrMode5FP16   : AddrMode<17>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {
@@ -1023,6 +1024,12 @@ class Thumb2DSPPat<dag pattern, dag result> : Pat<pattern, result> {
 class Thumb2DSPMulPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb2, UseMulOps, HasDSP];
 }
+class FP16Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [HasFP16];
+}
+class FullFP16Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [HasFullFP16];
+}
 //===----------------------------------------------------------------------===//
 // Thumb Instruction Format Definitions.
 //
@@ -1527,7 +1534,7 @@ class ASI5<bits<4> opcod1, bits<2> opcod2, dag oops, dag iops,
 class AHI5<bits<4> opcod1, bits<2> opcod2, dag oops, dag iops,
            InstrItinClass itin,
            string opc, string asm, list<dag> pattern>
-  : VFPI<oops, iops, AddrMode5, 4, IndexModeNone,
+  : VFPI<oops, iops, AddrMode5FP16, 4, IndexModeNone,
          VFPLdStFrm, itin, opc, asm, "", pattern> {
   list<Predicate> Predicates = [HasFullFP16];
 

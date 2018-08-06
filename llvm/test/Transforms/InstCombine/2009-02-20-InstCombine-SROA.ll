@@ -64,7 +64,7 @@ entry:
   %val.i = load i32*, i32** %elt.i
   %tmp.i = bitcast %"struct.std::bidirectional_iterator_tag"* %unnamed_arg.i to i8*
   %tmp9.i = bitcast %"struct.std::bidirectional_iterator_tag"* %2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp.i, i8* %tmp9.i, i64 1, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp.i, i8* %tmp9.i, i64 1, i1 false)
   %26 = getelementptr %"struct.__gnu_cxx::__normal_iterator<int*,std::vector<int, std::allocator<int> > >", %"struct.__gnu_cxx::__normal_iterator<int*,std::vector<int, std::allocator<int> > >"* %__first_addr.i.i, i32 0, i32 0
   store i32* %val.i, i32** %26
   %27 = getelementptr %"struct.__gnu_cxx::__normal_iterator<int*,std::vector<int, std::allocator<int> > >", %"struct.__gnu_cxx::__normal_iterator<int*,std::vector<int, std::allocator<int> > >"* %__last_addr.i.i, i32 0, i32 0
@@ -276,4 +276,4 @@ return:                                           ; preds = %_ZSt4findIN9__gnu_c
   ret i32* %tmp14
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind

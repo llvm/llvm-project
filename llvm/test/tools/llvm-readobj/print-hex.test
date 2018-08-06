@@ -1,0 +1,20 @@
+RUN: llvm-readobj -x .strtab %p/Inputs/trivial.obj.elf-x86-64 \
+RUN:     | FileCheck %s --check-prefix ELF
+
+ELF: 0x00000000 00747269 7669616c 2e6c6c00 6d61696e .trivial.ll.main
+ELF: 0x00000010 002e4c2e 73747200 70757473 00536f6d ..L.str.puts.Som
+ELF: 0x00000020 654f7468 65724675 6e637469 6f6e005f eOtherFunction._
+ELF: 0x00000030 474c4f42 414c5f4f 46465345 545f5441 GLOBAL_OFFSET_TA
+ELF: 0x00000040 424c455f 00                         BLE_.
+
+RUN: llvm-readobj -x 1 %p/Inputs/trivial.obj.coff-x86-64 \
+RUN:     | FileCheck %s --check-prefix COFF
+
+COFF: 0x00000000 4883ec28 488d0d00 000000e8 00000000 H..(H...........
+COFF: 0x00000010 e8000000 0031c048 83c428c3          .....1.H..(.
+
+RUN: llvm-readobj -x 1 %p/Inputs/trivial.obj.macho-x86-64 \
+RUN:     | FileCheck %s --check-prefix MACHO
+
+MACHO: 0x00000000 50488d3d 00000000 e8000000 00e80000 PH.=............
+MACHO: 0x00000010 000031c0 5ac3                       ..1.Z.

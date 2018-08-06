@@ -7,14 +7,14 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file defines types used by the the C interface to LLVM.               *|
+|* This file defines types used by the C interface to LLVM.                   *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
 #ifndef LLVM_C_TYPES_H
 #define LLVM_C_TYPES_H
 
-#include "llvm/Support/DataTypes.h"
+#include "llvm-c/DataTypes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,6 +133,21 @@ typedef struct LLVMOpaqueAttributeRef *LLVMAttributeRef;
  * @see llvm::DiagnosticInfo
  */
 typedef struct LLVMOpaqueDiagnosticInfo *LLVMDiagnosticInfoRef;
+
+/**
+ * @see llvm::Comdat
+ */
+typedef struct LLVMComdat *LLVMComdatRef;
+
+/**
+ * @see llvm::Module::ModuleFlagEntry
+ */
+typedef struct LLVMOpaqueModuleFlagEntry LLVMModuleFlagEntry;
+
+/**
+ * @see llvm::JITEventListener
+ */
+typedef struct LLVMOpaqueJITEventListener *LLVMJITEventListenerRef;
 
 /**
  * @}

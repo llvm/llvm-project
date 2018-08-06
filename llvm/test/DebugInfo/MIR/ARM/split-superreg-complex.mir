@@ -47,7 +47,7 @@
   !3 = !{i32 2, !"Dwarf Version", i32 2}
   !4 = !{i32 2, !"Debug Info Version", i32 3}
   !8 = !{!"clang version 4.0.0 (trunk 286322) (llvm/trunk 286305)"}
-  !9 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !13)
+  !9 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, retainedNodes: !13)
   !10 = !DISubroutineType(types: !11)
   !11 = !{!12}
   !12 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
@@ -74,19 +74,19 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13', 
-                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4', 
-                        '%r5', '%r6', '%r7', '%r8', '%r10', '%r11', '%s16', 
-                        '%s17', '%s18', '%s19', '%s20', '%s21', '%s22', 
-                        '%s23', '%s24', '%s25', '%s26', '%s27', '%s28', 
-                        '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11', '%d10_d12', 
-                        '%d11_d13', '%d12_d14', '%d13_d15', '%q4_q5', '%q5_q6', 
-                        '%q6_q7', '%q4_q5_q6_q7', '%r4_r5', '%r6_r7', '%r10_r11', 
-                        '%d8_d9_d10', '%d9_d10_d11', '%d10_d11_d12', '%d11_d12_d13', 
-                        '%d12_d13_d14', '%d13_d14_d15', '%d8_d10_d12', 
-                        '%d9_d11_d13', '%d10_d12_d14', '%d11_d13_d15', 
-                        '%d8_d10_d12_d14', '%d9_d11_d13_d15', '%d9_d10', 
-                        '%d11_d12', '%d13_d14', '%d9_d10_d11_d12', '%d11_d12_d13_d14' ]
+calleeSavedRegisters: [ '$lr', '$d8', '$d9', '$d10', '$d11', '$d12', '$d13', 
+                        '$d14', '$d15', '$q4', '$q5', '$q6', '$q7', '$r4', 
+                        '$r5', '$r6', '$r7', '$r8', '$r10', '$r11', '$s16', 
+                        '$s17', '$s18', '$s19', '$s20', '$s21', '$s22', 
+                        '$s23', '$s24', '$s25', '$s26', '$s27', '$s28', 
+                        '$s29', '$s30', '$s31', '$d8_d10', '$d9_d11', '$d10_d12', 
+                        '$d11_d13', '$d12_d14', '$d13_d15', '$q4_q5', '$q5_q6', 
+                        '$q6_q7', '$q4_q5_q6_q7', '$r4_r5', '$r6_r7', '$r10_r11', 
+                        '$d8_d9_d10', '$d9_d10_d11', '$d10_d11_d12', '$d11_d12_d13', 
+                        '$d12_d13_d14', '$d13_d14_d15', '$d8_d10_d12', 
+                        '$d9_d11_d13', '$d10_d12_d14', '$d11_d13_d15', 
+                        '$d8_d10_d12_d14', '$d9_d11_d13_d15', '$d9_d10', 
+                        '$d11_d12', '$d13_d14', '$d9_d10_d11_d12', '$d11_d12_d13_d14' ]
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -102,22 +102,22 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 stack:           
-  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr' }
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr' }
 body:             |
   bb.0.entry:
-    liveins: %lr
+    liveins: $lr
   
-    early-clobber %sp = frame-setup t2STR_PRE killed undef %lr, %sp, -4, 14, _
+    early-clobber $sp = frame-setup t2STR_PRE killed undef $lr, $sp, -4, 14, _
     frame-setup CFI_INSTRUCTION def_cfa_offset 4
-    frame-setup CFI_INSTRUCTION offset %lr, -4
-    tBL 14, _, @v, csr_ios, implicit-def dead %lr, implicit %sp, implicit-def %sp, implicit-def %r0, implicit-def %r1, implicit-def %r2, implicit-def %r3, debug-location !19
-    %d1 = VMOVDRR killed %r2, killed %r3, 14, _, implicit-def %q0, debug-location !19
-    %d0 = VMOVDRR killed %r0, killed %r1, 14, _, implicit killed %q0, implicit-def %q0, debug-location !19
-    DBG_VALUE debug-use %q0, debug-use _, !14, !20, debug-location !21
-    %s4 = VMOVS %s1, 14, _, implicit-def %d2, debug-location !24
-    %d0 = VADDfd %d0, killed %d2, 14, _, implicit killed %q0, debug-location !24
-    %r0 = VMOVRS %s0, 14, _, implicit killed %d0, debug-location !25
-    %lr, %sp = t2LDR_POST %sp, 4, 14, _, debug-location !25
-    tBX_RET 14, _, implicit %r0, debug-location !25
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    tBL 14, _, @v, csr_ios, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0, implicit-def $r1, implicit-def $r2, implicit-def $r3, debug-location !19
+    $d1 = VMOVDRR killed $r2, killed $r3, 14, _, implicit-def $q0, debug-location !19
+    $d0 = VMOVDRR killed $r0, killed $r1, 14, _, implicit killed $q0, implicit-def $q0, debug-location !19
+    DBG_VALUE debug-use $q0, debug-use _, !14, !20, debug-location !21
+    $s4 = VMOVS $s1, 14, _, implicit-def $d2, debug-location !24
+    $d0 = VADDfd $d0, killed $d2, 14, _, implicit killed $q0, debug-location !24
+    $r0 = VMOVRS $s0, 14, _, implicit killed $d0, debug-location !25
+    $lr, $sp = t2LDR_POST $sp, 4, 14, _, debug-location !25
+    tBX_RET 14, _, implicit $r0, debug-location !25
 
 ...

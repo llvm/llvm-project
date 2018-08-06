@@ -8,7 +8,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; EH_SjLj_Setup.
 
 ; CHECK: li 3, 1
-; CHECK-NEXT: cmplwi	 3, 0
+; CHECK: cmplwi	 3, 0
 
 define void @h() nounwind {
   %1 = load i8**, i8*** bitcast (i8** @ptr to i8***), align 8

@@ -298,7 +298,7 @@
 ; CHECK:   }
 ; CHECK:   Struct (0x1016) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK:     MemberCount: 2
+; CHECK:     MemberCount: 4
 ; CHECK:     Properties [ (0x200)
 ; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
@@ -476,7 +476,7 @@ attributes #3 = { nounwind }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 3.9.0 "}
-!7 = distinct !DISubprogram(name: "UseTypes", linkageName: "\01?UseTypes@@YAXXZ", scope: !1, file: !1, line: 26, type: !8, isLocal: false, isDefinition: true, scopeLine: 26, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "UseTypes", linkageName: "\01?UseTypes@@YAXXZ", scope: !1, file: !1, line: 26, type: !8, isLocal: false, isDefinition: true, scopeLine: 26, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null}
 !10 = !DILocalVariable(name: "s", scope: !7, file: !1, line: 27, type: !11)
@@ -522,7 +522,7 @@ attributes #3 = { nounwind }
 !50 = !DIDerivedType(tag: DW_TAG_member, name: "n", scope: !48, file: !1, line: 24, baseType: !14, size: 32, align: 32)
 !51 = !DILocation(line: 31, column: 17, scope: !7)
 !52 = !DILocation(line: 32, column: 1, scope: !7)
-!53 = distinct !DISubprogram(name: "DerivedClass::DerivedClass", linkageName: "\01??0DerivedClass@@QEAA@XZ", scope: !36, file: !1, line: 20, type: !54, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !57, variables: !2)
+!53 = distinct !DISubprogram(name: "DerivedClass::DerivedClass", linkageName: "\01??0DerivedClass@@QEAA@XZ", scope: !36, file: !1, line: 20, type: !54, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !57, retainedNodes: !2)
 !54 = !DISubroutineType(types: !55)
 !55 = !{null, !56}
 !56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !36, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)

@@ -20,6 +20,6 @@ registers:
 body: |
   bb.0.entry:
     ; CHECK: [[@LINE+1]]:35: unknown subregister index 'bit8'
-    %0 = INSERT_SUBREG %edi, %al, %subreg.bit8
+    %0 = INSERT_SUBREG $edi, $al, %subreg.bit8
     RETQ %0
 ...

@@ -155,3 +155,42 @@ define i32 @f13(i32 %cmp, i32 %swap, i32 *%src) {
   %res = zext i1 %val to i32
   ret i32 %res
 }
+
+declare void @g()
+
+; Check using the comparison result for a branch.
+; CHECK-LABEL: f14
+; CHECK: cs %r2, %r3, 0(%r4)
+; CHECK-NEXT: jge g
+; CHECK: br %r14
+define void @f14(i32 %cmp, i32 %swap, i32 *%src) {
+  %pairval = cmpxchg i32 *%src, i32 %cmp, i32 %swap seq_cst seq_cst
+  %cond = extractvalue { i32, i1 } %pairval, 1
+  br i1 %cond, label %call, label %exit
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+
+; ... and the same with the inverted direction.
+; CHECK-LABEL: f15
+; CHECK: cs %r2, %r3, 0(%r4)
+; CHECK-NEXT: jgl g
+; CHECK: br %r14
+define void @f15(i32 %cmp, i32 %swap, i32 *%src) {
+  %pairval = cmpxchg i32 *%src, i32 %cmp, i32 %swap seq_cst seq_cst
+  %cond = extractvalue { i32, i1 } %pairval, 1
+  br i1 %cond, label %exit, label %call
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+

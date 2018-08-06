@@ -43,7 +43,7 @@ multiclass MC3<string s> {
   def ZFizz#s : C<s>;
 }
 
-defm : MC3<"Buzz">;
+defm "" : MC3<"Buzz">;
 
 // CHECK: def ZFizzBuzz
 // CHECK: string name = "Buzz";

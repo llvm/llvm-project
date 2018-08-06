@@ -21,7 +21,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -75,6 +74,3 @@ bool StripGCRelocates::runOnFunction(Function &F) {
 INITIALIZE_PASS(StripGCRelocates, "strip-gc-relocates",
                 "Strip gc.relocates inserted through RewriteStatepointsForGC",
                 true, false)
-FunctionPass *llvm::createStripGCRelocatesPass() {
-  return new StripGCRelocates();
-}

@@ -35,7 +35,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -243,6 +242,7 @@ private:
   GlobalVariable *Function8bitCounterArray;  // for inline-8bit-counters.
   GlobalVariable *FunctionPCsArray;  // for pc-table.
   SmallVector<GlobalValue *, 20> GlobalsToAppendToUsed;
+  SmallVector<GlobalValue *, 20> GlobalsToAppendToCompilerUsed;
 
   SanitizerCoverageOptions Options;
 };
@@ -405,6 +405,7 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   // so we need to prevent them from being dead stripped.
   if (TargetTriple.isOSBinFormatMachO())
     appendToUsed(M, GlobalsToAppendToUsed);
+  appendToCompilerUsed(M, GlobalsToAppendToCompilerUsed);
   return true;
 }
 
@@ -479,6 +480,8 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   // initialization.
   if (F.getName() == "__local_stdio_printf_options" ||
       F.getName() == "__local_stdio_scanf_options")
+    return false;
+  if (isa<UnreachableInst>(F.getEntryBlock().getTerminator()))
     return false;
   // Don't instrument functions using SEH for now. Splitting basic blocks like
   // we do for coverage breaks WinEHPrepare.
@@ -592,11 +595,15 @@ void SanitizerCoverageModule::CreateFunctionLocalArrays(
   if (Options.Inline8bitCounters) {
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
-    GlobalsToAppendToUsed.push_back(Function8bitCounterArray);
+    GlobalsToAppendToCompilerUsed.push_back(Function8bitCounterArray);
+    MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
+    Function8bitCounterArray->addMetadata(LLVMContext::MD_associated, *MD);
   }
   if (Options.PCTable) {
     FunctionPCsArray = CreatePCArray(F, AllBlocks);
-    GlobalsToAppendToUsed.push_back(FunctionPCsArray);
+    GlobalsToAppendToCompilerUsed.push_back(FunctionPCsArray);
+    MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
+    FunctionPCsArray->addMetadata(LLVMContext::MD_associated, *MD);
   }
 }
 
@@ -659,11 +666,11 @@ void SanitizerCoverageModule::InjectTraceForSwitch(
           C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
         Initializers.push_back(C);
       }
-      std::sort(Initializers.begin() + 2, Initializers.end(),
-                [](const Constant *A, const Constant *B) {
-                  return cast<ConstantInt>(A)->getLimitedValue() <
-                         cast<ConstantInt>(B)->getLimitedValue();
-                });
+      llvm::sort(Initializers.begin() + 2, Initializers.end(),
+                 [](const Constant *A, const Constant *B) {
+                   return cast<ConstantInt>(A)->getLimitedValue() <
+                          cast<ConstantInt>(B)->getLimitedValue();
+                 });
       ArrayType *ArrayOfInt64Ty = ArrayType::get(Int64Ty, Initializers.size());
       GlobalVariable *GV = new GlobalVariable(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,

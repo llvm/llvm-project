@@ -14,7 +14,7 @@
 !5 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "LLVM", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, imports: !6)
 !6 = !{!7}
 !7 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !8, entity: !8, file: !1, line: 3)
-!8 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !5, variables: !2)
+!8 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !5, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
 !11 = !DINamespace(name: "ns", scope: null)

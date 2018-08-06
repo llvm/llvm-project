@@ -87,27 +87,6 @@ define i42 @test9(i42 %A) {
   ret i42 %C
 }
 
-define i124 @test10(i124 %A, i124 %B) {
-; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[E:%.*]] = mul i124 %A, %B
-; CHECK-NEXT:    ret i124 [[E]]
-;
-  %C = sub i124 0, %A
-  %D = sub i124 0, %B
-  %E = mul i124 %C, %D
-  ret i124 %E
-}
-
-define i55 @test10a(i55 %A) {
-; CHECK-LABEL: @test10a(
-; CHECK-NEXT:    [[E:%.*]] = mul i55 %A, -7
-; CHECK-NEXT:    ret i55 [[E]]
-;
-  %C = sub i55 0, %A
-  %E = mul i55 %C, 7
-  ret i55 %E
-}
-
 define i1 @test11(i9 %A, i9 %B) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[CD:%.*]] = icmp ne i9 %A, %B

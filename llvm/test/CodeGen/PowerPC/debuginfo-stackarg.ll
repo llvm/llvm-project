@@ -33,7 +33,7 @@ define i64 @foo(i64 %bar1, i64 %bar2, i64 %bar3, i64 %bar4, i64 %bar5) local_unn
 ; We expect to find a DBG_VALUE refering to the metadata id for bar5, using the lowest
 ; of the two fixed stack offsets found earlier.
 ; CHECK-LABEL: body:
-; CHECK: DBG_VALUE %r1, 0, !17, !DIExpression(DW_OP_plus_uconst, 56)
+; CHECK: DBG_VALUE debug-use $r1, 0, !17, !DIExpression(DW_OP_plus_uconst, 56)
 entry:
   tail call void @llvm.dbg.value(metadata i64 %bar1, metadata !13, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata i64 %bar2, metadata !14, metadata !DIExpression()), !dbg !19
@@ -65,7 +65,7 @@ attributes #1 = { nounwind readnone speculatable }
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 6.0.0"}
-!8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !11, !11, !11, !11, !11}
 !11 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)

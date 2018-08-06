@@ -1,5 +1,4 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=ppc64 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
 ; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=pwr7  < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -28,18 +27,6 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
   ret void
 }
-
-; CHECK-NoAA-LABEL: @test_GEP_CSE(
-; CHECK-NoAA: [[PTR0:%[a-zA-Z0-9]+]] = ptrtoint [240 x %struct]* %string to i64
-; CHECK-NoAA: [[PTR1:%[a-zA-Z0-9]+]] = mul i64 %idxprom, 96
-; CHECK-NoAA: [[PTR2:%[a-zA-Z0-9]+]] = add i64 [[PTR0]], [[PTR1]]
-; CHECK-NoAA: add i64 [[PTR2]], 23052
-; CHECK-NoAA: inttoptr
-; CHECK-NoAA: if.then:
-; CHECK-NoAA-NOT: ptrtoint
-; CHECK-NoAA-NOT: mul
-; CHECK-NoAA: add i64 [[PTR2]], 23048
-; CHECK-NoAA: inttoptr
 
 ; CHECK-UseAA-LABEL: @test_GEP_CSE(
 ; CHECK-UseAA: [[PTR0:%[a-zA-Z0-9]+]] = bitcast [240 x %struct]* %string to i8*
@@ -80,14 +67,6 @@ exit:
 ; CHECK-NOT: lwzu
 ; CHECK: blr
 
-; CHECK-NoAA-LABEL: test_GEP_across_BB(
-; CHECK-NoAA: add i64 [[TMP:%[a-zA-Z0-9]+]], 528
-; CHECK-NoAA: add i64 [[TMP]], 532
-; CHECK-NoAA: if.true:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, i8* {{.*}}, i64 532
-; CHECK-NoAA: exit:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, i8* {{.*}}, i64 528
-
 ; CHECK-UseAA-LABEL: test_GEP_across_BB(
 ; CHECK-UseAA: [[PTR0:%[a-zA-Z0-9]+]] = getelementptr
 ; CHECK-UseAA: getelementptr i8, i8* [[PTR0]], i64 528
@@ -112,10 +91,6 @@ entry:
   %p = getelementptr [1024 x %struct.S], [1024 x %struct.S]* @struct_array, i64 0, i64 %idxprom, i32 1
   ret double* %p
 }
-; CHECK-NoAA-LABEL: @test-struct_1(
-; CHECK-NoAA-NOT: getelementptr
-; CHECK-NoAA: add i64 %{{[a-zA-Z0-9]+}}, 88
-
 ; CHECK-UseAA-LABEL: @test-struct_1(
 ; CHECK-UseAA: getelementptr i8, i8* %{{[a-zA-Z0-9]+}}, i64 88
 
@@ -134,10 +109,6 @@ entry:
   %ptr2 = getelementptr %struct0, %struct0* %ptr, i64 0, i32 3, i64 %arrayidx, i32 1
   ret %struct2* %ptr2
 }
-; CHECK-NoAA-LABEL: @test-struct_2(
-; CHECK-NoAA-NOT: = getelementptr
-; CHECK-NoAA: add i64 %{{[a-zA-Z0-9]+}}, -40
-
 ; CHECK-UseAA-LABEL: @test-struct_2(
 ; CHECK-UseAA: getelementptr i8, i8* %{{[a-zA-Z0-9]+}}, i64 -40
 

@@ -35,6 +35,11 @@ AARCH64_ARCH("armv8.3-a", ARMV8_3A, "8.3-A", "v8.3a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC))
+AARCH64_ARCH("armv8.4-a", ARMV8_4A, "8.4-A", "v8.4a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -47,6 +52,10 @@ AARCH64_ARCH_EXT_NAME("crc",      AArch64::AEK_CRC,      "+crc",   "-crc")
 AARCH64_ARCH_EXT_NAME("lse",      AArch64::AEK_LSE,      "+lse",   "-lse")
 AARCH64_ARCH_EXT_NAME("rdm",      AArch64::AEK_RDM,      "+rdm",   "-rdm")
 AARCH64_ARCH_EXT_NAME("crypto",   AArch64::AEK_CRYPTO,   "+crypto","-crypto")
+AARCH64_ARCH_EXT_NAME("sm4",      AArch64::AEK_SM4,      "+sm4",   "-sm4")
+AARCH64_ARCH_EXT_NAME("sha3",     AArch64::AEK_SHA3,     "+sha3",  "-sha3")
+AARCH64_ARCH_EXT_NAME("sha2",     AArch64::AEK_SHA2,     "+sha2",  "-sha2")
+AARCH64_ARCH_EXT_NAME("aes",      AArch64::AEK_AES,      "+aes",   "-aes")
 AARCH64_ARCH_EXT_NAME("dotprod",  AArch64::AEK_DOTPROD,  "+dotprod","-dotprod")
 AARCH64_ARCH_EXT_NAME("fp",       AArch64::AEK_FP,       "+fp-armv8",  "-fp-armv8")
 AARCH64_ARCH_EXT_NAME("simd",     AArch64::AEK_SIMD,     "+neon",  "-neon")
@@ -81,6 +90,8 @@ AARCH64_CPU_NAME("exynos-m1", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("exynos-m2", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m3", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                (AArch64::AEK_CRC))
+AARCH64_CPU_NAME("exynos-m4", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("falkor", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC | AArch64::AEK_RDM))

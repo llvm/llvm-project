@@ -10,11 +10,14 @@
 #ifndef LLVM_DEBUGINFO_DWARFDEBUGLINE_H
 #define LLVM_DEBUGINFO_DWARFDEBUGLINE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/MD5.h"
 #include <cstdint>
 #include <map>
@@ -31,11 +34,30 @@ public:
   struct FileNameEntry {
     FileNameEntry() = default;
 
-    StringRef Name;
+    DWARFFormValue Name;
     uint64_t DirIdx = 0;
     uint64_t ModTime = 0;
     uint64_t Length = 0;
     MD5::MD5Result Checksum;
+    DWARFFormValue Source;
+  };
+
+  /// Tracks which optional content types are present in a DWARF file name
+  /// entry format.
+  struct ContentTypeTracker {
+    ContentTypeTracker() = default;
+
+    /// Whether filename entries provide a modification timestamp.
+    bool HasModTime = false;
+    /// Whether filename entries provide a file size.
+    bool HasLength = false;
+    /// For v5, whether filename entries provide an MD5 checksum.
+    bool HasMD5 = false;
+    /// For v5, whether filename entries provide source text.
+    bool HasSource = false;
+
+    /// Update tracked content types with \p ContentType.
+    void trackContentType(dwarf::LineNumberEntryFormat ContentType);
   };
 
   struct Prologue {
@@ -47,7 +69,7 @@ public:
     /// Version, address size (starting in v5), and DWARF32/64 format; these
     /// parameters affect interpretation of forms (used in the directory and
     /// file tables starting with v5).
-    DWARFFormParams FormParams;
+    dwarf::FormParams FormParams;
     /// The number of bytes following the prologue_length field to the beginning
     /// of the first byte of the statement program itself.
     uint64_t PrologueLength;
@@ -68,13 +90,13 @@ public:
     uint8_t LineRange;
     /// The number assigned to the first special opcode.
     uint8_t OpcodeBase;
-    /// For v5, whether filename entries provide an MD5 checksum.
-    bool HasMD5;
+    /// This tracks which optional file format content types are present.
+    ContentTypeTracker ContentTypes;
     std::vector<uint8_t> StandardOpcodeLengths;
-    std::vector<StringRef> IncludeDirectories;
+    std::vector<DWARFFormValue> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
-    const DWARFFormParams getFormParams() const { return FormParams; }
+    const dwarf::FormParams getFormParams() const { return FormParams; }
     uint16_t getVersion() const { return FormParams.Version; }
     uint8_t getAddressSize() const { return FormParams.AddrSize; }
     bool isDWARF64() const { return FormParams.Format == dwarf::DWARF64; }
@@ -82,6 +104,8 @@ public:
     uint32_t sizeofTotalLength() const { return isDWARF64() ? 12 : 4; }
 
     uint32_t sizeofPrologueLength() const { return isDWARF64() ? 8 : 4; }
+
+    bool totalLengthIsValid() const;
 
     /// Length of the prologue in bytes.
     uint32_t getLength() const {
@@ -99,9 +123,9 @@ public:
     }
 
     void clear();
-    void dump(raw_ostream &OS) const;
-    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFUnit *U = nullptr);
+    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
+    Error parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+                const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -219,12 +243,14 @@ public:
                                    DILineInfoSpecifier::FileLineInfoKind Kind,
                                    DILineInfo &Result) const;
 
-    void dump(raw_ostream &OS) const;
+    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     void clear();
 
     /// Parse prologue and all rows.
-    bool parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFUnit *U, raw_ostream *OS = nullptr);
+    Error parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+                const DWARFContext &Ctx, const DWARFUnit *U,
+                std::function<void(Error)> RecoverableErrorCallback = warn,
+                raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -238,11 +264,75 @@ public:
   private:
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           uint64_t Address) const;
+    Optional<StringRef>
+    getSourceByIndex(uint64_t FileIndex,
+                     DILineInfoSpecifier::FileLineInfoKind Kind) const;
   };
 
   const LineTable *getLineTable(uint32_t Offset) const;
-  const LineTable *getOrParseLineTable(DWARFDataExtractor &DebugLineData,
-                                       uint32_t Offset, const DWARFUnit *U);
+  Expected<const LineTable *> getOrParseLineTable(
+      DWARFDataExtractor &DebugLineData, uint32_t Offset,
+      const DWARFContext &Ctx, const DWARFUnit *U,
+      std::function<void(Error)> RecoverableErrorCallback = warn);
+
+  /// Helper to allow for parsing of an entire .debug_line section in sequence.
+  class SectionParser {
+  public:
+    using cu_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
+    using tu_range =
+        iterator_range<std::deque<DWARFUnitSection<DWARFTypeUnit>>::iterator>;
+    using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
+
+    SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, cu_range CUs,
+                  tu_range TUs);
+
+    /// Get the next line table from the section. Report any issues via the
+    /// callbacks.
+    ///
+    /// \param RecoverableErrorCallback - any issues that don't prevent further
+    /// parsing of the table will be reported through this callback.
+    /// \param UnrecoverableErrorCallback - any issues that prevent further
+    /// parsing of the table will be reported through this callback.
+    /// \param OS - if not null, the parser will print information about the
+    /// table as it parses it.
+    LineTable
+    parseNext(function_ref<void(Error)> RecoverableErrorCallback = warn,
+              function_ref<void(Error)> UnrecoverableErrorCallback = warn,
+              raw_ostream *OS = nullptr);
+
+    /// Skip the current line table and go to the following line table (if
+    /// present) immediately.
+    ///
+    /// \param ErrorCallback - report any prologue parsing issues via this
+    /// callback.
+    void skip(function_ref<void(Error)> ErrorCallback = warn);
+
+    /// Indicates if the parser has parsed as much as possible.
+    ///
+    /// \note Certain problems with the line table structure might mean that
+    /// parsing stops before the end of the section is reached.
+    bool done() const { return Done; }
+
+    /// Get the offset the parser has reached.
+    uint32_t getOffset() const { return Offset; }
+
+  private:
+    DWARFUnit *prepareToParse(uint32_t Offset);
+    void moveToNextTable(uint32_t OldOffset, const Prologue &P);
+
+    LineToUnitMap LineToUnit;
+
+    DWARFDataExtractor &DebugLineData;
+    const DWARFContext &Context;
+    uint32_t Offset = 0;
+    bool Done = false;
+  };
+
+  /// Helper function for DWARFDebugLine parse functions, to report issues
+  /// identified during parsing.
+  ///
+  /// \param Err The Error to report.
+  static void warn(Error Err);
 
 private:
   struct ParsingState {

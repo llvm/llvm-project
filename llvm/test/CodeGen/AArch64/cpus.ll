@@ -12,6 +12,7 @@
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m2 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m3 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m4 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=falkor 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=saphira 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=kryo 2>&1 | FileCheck %s

@@ -138,7 +138,7 @@ void Float2IntPass::findRoots(Function &F, SmallPtrSet<Instruction*,8> &Roots) {
 
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
-  DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
+  LLVM_DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
   auto IT = SeenInsts.find(I);
   if (IT != SeenInsts.end())
     IT->second = std::move(R);
@@ -359,7 +359,7 @@ bool Float2IntPass::validateAndTransform() {
         for (User *U : I->users()) {
           Instruction *UI = dyn_cast<Instruction>(U);
           if (!UI || SeenInsts.find(UI) == SeenInsts.end()) {
-            DEBUG(dbgs() << "F2I: Failing because of " << *U << "\n");
+            LLVM_DEBUG(dbgs() << "F2I: Failing because of " << *U << "\n");
             Fail = true;
             break;
           }
@@ -380,7 +380,7 @@ bool Float2IntPass::validateAndTransform() {
     // lower limits, plus one so it can be signed.
     unsigned MinBW = std::max(R.getLower().getMinSignedBits(),
                               R.getUpper().getMinSignedBits()) + 1;
-    DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
+    LLVM_DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
 
     // If we've run off the realms of the exactly representable integers,
     // the floating point result will differ from an integer approximation.
@@ -391,11 +391,12 @@ bool Float2IntPass::validateAndTransform() {
     unsigned MaxRepresentableBits
       = APFloat::semanticsPrecision(ConvertedToTy->getFltSemantics()) - 1;
     if (MinBW > MaxRepresentableBits) {
-      DEBUG(dbgs() << "F2I: Value not guaranteed to be representable!\n");
+      LLVM_DEBUG(dbgs() << "F2I: Value not guaranteed to be representable!\n");
       continue;
     }
     if (MinBW > 64) {
-      DEBUG(dbgs() << "F2I: Value requires more than 64 bits to represent!\n");
+      LLVM_DEBUG(
+          dbgs() << "F2I: Value requires more than 64 bits to represent!\n");
       continue;
     }
 
@@ -490,7 +491,7 @@ void Float2IntPass::cleanup() {
 }
 
 bool Float2IntPass::runImpl(Function &F) {
-  DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");
   // Clear out all state.
   ECs = EquivalenceClasses<Instruction*>();
   SeenInsts.clear();

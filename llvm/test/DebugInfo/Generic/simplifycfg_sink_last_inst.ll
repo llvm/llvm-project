@@ -98,7 +98,7 @@ declare i32 @bar()
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 8, type: !7, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!6 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 8, type: !7, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 9, column: 6, scope: !6)
 !9 = !DILocation(line: 10, column: 10, scope: !6)
@@ -107,6 +107,6 @@ declare i32 @bar()
 !12 = !DILocation(line: 12, column: 10, scope: !6)
 !13 = !DILocation(line: 12, column: 7, scope: !6)
 !14 = !DILocation(line: 13, column: 3, scope: !6)
-!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 16, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 16, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !16 = !DILocation(line: 17, scope: !15)
 !17 = !DILocation(line: 18, scope: !15)

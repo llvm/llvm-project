@@ -133,7 +133,8 @@ ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
 FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
                                         bool Recover = false);
 
-FunctionPass *createHWAddressSanitizerPass(bool Recover = false);
+FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
+                                           bool Recover = false);
 
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();
@@ -186,7 +187,7 @@ struct SanitizerCoverageOptions {
 ModulePass *createSanitizerCoverageModulePass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
 
-/// \brief Calculate what to divide by to scale counts.
+/// Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the
 /// weights to strictly less than std::numeric_limits<uint32_t>::max().
@@ -196,7 +197,7 @@ static inline uint64_t calculateCountScale(uint64_t MaxCount) {
              : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
 }
 
-/// \brief Scale an individual branch count.
+/// Scale an individual branch count.
 ///
 /// Scale a 64-bit weight down to 32-bits using \c Scale.
 ///

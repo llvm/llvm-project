@@ -37,6 +37,7 @@ void LLVMInitializeScalarOpts(LLVMPassRegistryRef R);
 void LLVMInitializeObjCARCOpts(LLVMPassRegistryRef R);
 void LLVMInitializeVectorization(LLVMPassRegistryRef R);
 void LLVMInitializeInstCombine(LLVMPassRegistryRef R);
+void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R);
 void LLVMInitializeIPO(LLVMPassRegistryRef R);
 void LLVMInitializeInstrumentation(LLVMPassRegistryRef R);
 void LLVMInitializeAnalysis(LLVMPassRegistryRef R);

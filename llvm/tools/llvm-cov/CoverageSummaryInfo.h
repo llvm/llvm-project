@@ -20,12 +20,12 @@
 
 namespace llvm {
 
-/// \brief Provides information about region coverage for a function/file.
+/// Provides information about region coverage for a function/file.
 class RegionCoverageInfo {
-  /// \brief The number of regions that were executed at least once.
+  /// The number of regions that were executed at least once.
   size_t Covered;
 
-  /// \brief The total number of regions in a function/file.
+  /// The total number of regions in a function/file.
   size_t NumRegions;
 
 public:
@@ -61,12 +61,12 @@ public:
   }
 };
 
-/// \brief Provides information about line coverage for a function/file.
+/// Provides information about line coverage for a function/file.
 class LineCoverageInfo {
-  /// \brief The number of lines that were executed at least once.
+  /// The number of lines that were executed at least once.
   size_t Covered;
 
-  /// \brief The total number of lines in a function/file.
+  /// The total number of lines in a function/file.
   size_t NumLines;
 
 public:
@@ -102,12 +102,12 @@ public:
   }
 };
 
-/// \brief Provides information about function coverage for a file.
+/// Provides information about function coverage for a file.
 class FunctionCoverageInfo {
-  /// \brief The number of functions that were executed.
+  /// The number of functions that were executed.
   size_t Executed;
 
-  /// \brief The total number of functions in this file.
+  /// The total number of functions in this file.
   size_t NumFunctions;
 
 public:
@@ -142,7 +142,7 @@ public:
   }
 };
 
-/// \brief A summary of function's code coverage.
+/// A summary of function's code coverage.
 struct FunctionCoverageSummary {
   std::string Name;
   uint64_t ExecutionCount;
@@ -158,7 +158,7 @@ struct FunctionCoverageSummary {
       : Name(Name), ExecutionCount(ExecutionCount),
         RegionCoverage(RegionCoverage), LineCoverage(LineCoverage) {}
 
-  /// \brief Compute the code coverage summary for the given function coverage
+  /// Compute the code coverage summary for the given function coverage
   /// mapping record.
   static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
                                      const coverage::FunctionRecord &Function);
@@ -170,7 +170,7 @@ struct FunctionCoverageSummary {
       ArrayRef<FunctionCoverageSummary> Summaries);
 };
 
-/// \brief A summary of file's code coverage.
+/// A summary of file's code coverage.
 struct FileCoverageSummary {
   StringRef Name;
   RegionCoverageInfo RegionCoverage;
@@ -201,11 +201,11 @@ struct FileCoverageSummary {
   }
 };
 
-/// \brief A cache for demangled symbols.
+/// A cache for demangled symbols.
 struct DemangleCache {
   StringMap<std::string> DemangledNames;
 
-  /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
+  /// Demangle \p Sym if possible. Otherwise, just return \p Sym.
   StringRef demangle(StringRef Sym) const {
     const auto DemangledName = DemangledNames.find(Sym);
     if (DemangledName == DemangledNames.end())

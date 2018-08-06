@@ -102,8 +102,8 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 }
 
 // Pseudo instructions
-class Pseudo<dag outs, dag ins, list<dag> pattern>
-    : RVInst<outs, ins, "", "", pattern, InstFormatPseudo> {
+class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
+    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }

@@ -232,7 +232,7 @@ define void @int1_int1_pair(i1 signext %tmp1, i1 signext %tmp2, i2* %ref.tmp) {
 
 define void @mbb_int32_float_pair(i32 %tmp1, float %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: mbb_int32_float_pair:
-; CHECK:       # %bb.0: # %next
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
 ; CHECK-NEXT:    retq
@@ -250,7 +250,7 @@ next:
 
 define void @mbb_int32_float_multi_stores(i32 %tmp1, float %tmp2, i64* %ref.tmp, i64* %ref.tmp1, i1 %cmp) {
 ; CHECK-LABEL: mbb_int32_float_multi_stores:
-; CHECK:       # %bb.0: # %bb1
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
 ; CHECK-NEXT:    testb $1, %cl

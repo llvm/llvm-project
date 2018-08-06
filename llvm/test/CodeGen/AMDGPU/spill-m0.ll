@@ -87,7 +87,7 @@ endif:
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %m0) #0 {
+define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(4)* inreg %arg, <16 x i8> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %m0) #0 {
 main_body:
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0)
   %cmp = fcmp ueq float 0.000000e+00, %tmp
@@ -95,7 +95,8 @@ main_body:
 
 if:                                               ; preds = %main_body
   %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
-  %lds_data = load float, float addrspace(3)* %lds_ptr
+  %lds_data_ = load float, float addrspace(3)* %lds_ptr
+  %lds_data = call float @llvm.amdgcn.wqm.f32(float %lds_data_)
   br label %endif
 
 else:                                             ; preds = %main_body
@@ -191,7 +192,7 @@ endif:
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={M0}"() #0
-  %sval = load volatile i64, i64 addrspace(2)* undef
+  %sval = load volatile i64, i64 addrspace(4)* undef
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 
@@ -208,6 +209,7 @@ declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
+declare float @llvm.amdgcn.wqm.f32(float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

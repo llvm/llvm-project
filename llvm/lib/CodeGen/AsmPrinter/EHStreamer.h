@@ -72,9 +72,9 @@ protected:
 
   /// Compute the actions table and gather the first action index for each
   /// landing pad site.
-  unsigned computeActionsTable(const SmallVectorImpl<const LandingPadInfo*>&LPs,
-                               SmallVectorImpl<ActionEntry> &Actions,
-                               SmallVectorImpl<unsigned> &FirstActions);
+  void computeActionsTable(const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
+                           SmallVectorImpl<ActionEntry> &Actions,
+                           SmallVectorImpl<unsigned> &FirstActions);
 
   void computePadMap(const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
                      RangeMapType &PadMap);
@@ -86,7 +86,7 @@ protected:
   /// no entry and must not be contained in the try-range of any entry - they
   /// form gaps in the table.  Entries must be ordered by try-range address.
   void computeCallSiteTable(SmallVectorImpl<CallSiteEntry> &CallSites,
-                            const SmallVectorImpl<const LandingPadInfo *> &LPs,
+                            const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
                             const SmallVectorImpl<unsigned> &FirstActions);
 
   /// Emit landing pads and actions.
@@ -110,9 +110,9 @@ protected:
   ///     catches in the function.  This tables is reversed indexed base 1.
   void emitExceptionTable();
 
-  virtual void emitTypeInfos(unsigned TTypeEncoding);
+  virtual void emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel);
 
-  // Helpers for for identifying what kind of clause an EH typeid or selector
+  // Helpers for identifying what kind of clause an EH typeid or selector
   // corresponds to. Negative selectors are for filter clauses, the zero
   // selector is for cleanups, and positive selectors are for catch clauses.
   static bool isFilterEHSelector(int Selector) { return Selector < 0; }

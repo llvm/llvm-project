@@ -482,7 +482,7 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
 }
 
 bool AVRAsmParser::parseOperand(OperandVector &Operands) {
-  DEBUG(dbgs() << "parseOperand\n");
+  LLVM_DEBUG(dbgs() << "parseOperand\n");
 
   switch (getLexer().getKind()) {
   default:
@@ -527,7 +527,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands) {
 
 OperandMatchResultTy
 AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
-  DEBUG(dbgs() << "parseMemriOperand()\n");
+  LLVM_DEBUG(dbgs() << "parseMemriOperand()\n");
 
   SMLoc E, S;
   MCExpr const *Expression;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief This file provides AMDGPU specific target descriptions.
+/// This file provides AMDGPU specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +22,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -37,8 +38,16 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_MC_DESC
 #include "AMDGPUGenSubtargetInfo.inc"
 
+#define NoSchedModel NoSchedModelR600
+#define GET_SUBTARGETINFO_MC_DESC
+#include "R600GenSubtargetInfo.inc"
+#undef NoSchedModelR600
+
 #define GET_REGINFO_MC_DESC
 #include "AMDGPUGenRegisterInfo.inc"
+
+#define GET_REGINFO_MC_DESC
+#include "R600GenRegisterInfo.inc"
 
 static MCInstrInfo *createAMDGPUMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -48,12 +57,17 @@ static MCInstrInfo *createAMDGPUMCInstrInfo() {
 
 static MCRegisterInfo *createAMDGPUMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitAMDGPUMCRegisterInfo(X, 0);
+  if (TT.getArch() == Triple::r600)
+    InitR600MCRegisterInfo(X, 0);
+  else
+    InitAMDGPUMCRegisterInfo(X, 0);
   return X;
 }
 
 static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  if (TT.getArch() == Triple::r600)
+    return createR600MCSubtargetInfoImpl(TT, CPU, FS);
   return createAMDGPUMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
@@ -62,8 +76,10 @@ static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
                                                 const MCAsmInfo &MAI,
                                                 const MCInstrInfo &MII,
                                                 const MCRegisterInfo &MRI) {
-  return T.getArch() == Triple::r600 ? new R600InstPrinter(MAI, MII, MRI) : 
-                                       new AMDGPUInstPrinter(MAI, MII, MRI);
+  if (T.getArch() == Triple::r600)
+    return new R600InstPrinter(MAI, MII, MRI);
+  else
+    return new AMDGPUInstPrinter(MAI, MII, MRI);
 }
 
 static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,
@@ -76,23 +92,25 @@ static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,
 static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
                                                    MCStreamer &S,
                                                    const MCSubtargetInfo &STI) {
-  return new AMDGPUTargetELFStreamer(S);
+  return new AMDGPUTargetELFStreamer(S, STI);
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
                                     bool RelaxAll) {
-  return createAMDGPUELFStreamer(T, Context, std::move(MAB), OS,
+  return createAMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                  std::move(Emitter), RelaxAll);
 }
 
 extern "C" void LLVMInitializeAMDGPUTargetMC() {
+
+  TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheAMDGPUTarget(), createR600MCInstrInfo);
   for (Target *T : {&getTheAMDGPUTarget(), &getTheGCNTarget()}) {
     RegisterMCAsmInfo<AMDGPUMCAsmInfo> X(*T);
 
-    TargetRegistry::RegisterMCInstrInfo(*T, createAMDGPUMCInstrInfo);
     TargetRegistry::RegisterMCRegInfo(*T, createAMDGPUMCRegisterInfo);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createAMDGPUMCSubtargetInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createAMDGPUMCInstPrinter);
@@ -103,6 +121,8 @@ extern "C" void LLVMInitializeAMDGPUTargetMC() {
   // R600 specific registration
   TargetRegistry::RegisterMCCodeEmitter(getTheAMDGPUTarget(),
                                         createR600MCCodeEmitter);
+  TargetRegistry::RegisterObjectTargetStreamer(
+      getTheAMDGPUTarget(), createAMDGPUObjectTargetStreamer);
 
   // GCN specific registration
   TargetRegistry::RegisterMCCodeEmitter(getTheGCNTarget(),

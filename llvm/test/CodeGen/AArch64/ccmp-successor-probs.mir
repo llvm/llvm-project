@@ -6,7 +6,7 @@
 # CHECK-LABEL: name: aarch64-ccmp-successor-probs
 # CHECK:       bb.0:
 # CHECK-NEXT:    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
-# CHECK:         CCMPXr %5, %4, 0, 10, implicit-def %nzcv, implicit %nzcv
+# CHECK:         CCMPXr %5, %4, 0, 10, implicit-def $nzcv, implicit $nzcv
 #
 name: aarch64-ccmp-successor-probs
 registers:
@@ -22,21 +22,21 @@ body : |
   bb.0:
     successors: %bb.1(0x7e000000), %bb.2(0x02000000)
 
-    %0 = LDRXui killed %x0, 69
-    %1 = COPY %xzr
-    %2 = SUBSXrr %1, %0, implicit-def dead %nzcv
-    %3 = SUBSXri %x1, 1, 0, implicit-def dead %nzcv
+    %0 = LDRXui killed $x0, 69
+    %1 = COPY $xzr
+    %2 = SUBSXrr %1, %0, implicit-def dead $nzcv
+    %3 = SUBSXri $x1, 1, 0, implicit-def dead $nzcv
     %4 = COPY %0
     %5 = COPY %3
-    %6 = SUBSXrr %x1, killed %2, implicit-def %nzcv
-    Bcc 11, %bb.2, implicit %nzcv
+    %6 = SUBSXrr $x1, killed %2, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
 
   bb.1:
     successors: %bb.2(0x02082082), %bb.3(0x7df7df7e)
 
-    %7 = SUBSXrr %5, %4, implicit-def %nzcv
-    Bcc 12, %bb.2, implicit %nzcv
+    %7 = SUBSXrr %5, %4, implicit-def $nzcv
+    Bcc 12, %bb.2, implicit $nzcv
     B %bb.3
 
   bb.2:

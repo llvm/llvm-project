@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief Common declarations for yaml2obj
+/// Common declarations for yaml2obj
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H
 #define LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H

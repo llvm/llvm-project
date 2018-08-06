@@ -4,31 +4,31 @@
 # CHECK-LABEL: name: func0
 # CHECK: bb.0:
 # CHECK-NOT: successors
-# CHECK: JE_1 %bb.1, implicit undef %eflags
+# CHECK: JE_1 %bb.1, implicit undef $eflags
 # CHECK: JMP_1 %bb.3
 # CHECK: bb.1:
 # CHECK-NOT: successors
 # CHECK: bb.2:
 # CHECK-NOT: successors
-# CHECK: JE_1 %bb.1, implicit undef %eflags
+# CHECK: JE_1 %bb.1, implicit undef $eflags
 # CHECK: bb.3:
-# CHECK: RETQ undef %eax
+# CHECK: RETQ undef $eax
 name: func0
 body: |
   bb.0:
-    JE_1 %bb.1, implicit undef %eflags
+    JE_1 %bb.1, implicit undef $eflags
     JMP_1 %bb.3
 
   bb.1:
 
   bb.2:
-    JE_1 %bb.1, implicit undef %eflags
+    JE_1 %bb.1, implicit undef $eflags
 
   bb.3:
-    JE_1 %bb.4, implicit undef %eflags   ; condjump+fallthrough to same block
+    JE_1 %bb.4, implicit undef $eflags   ; condjump+fallthrough to same block
 
   bb.4:
-    RETQ undef %eax
+    RETQ undef $eax
 ...
 ---
 # Some cases that need explicit successors:
@@ -39,23 +39,23 @@ body: |
     ; CHECK: bb.0:
     ; CHECK: successors: %bb.3, %bb.1
     successors: %bb.3, %bb.1   ; different order than operands
-    JE_1 %bb.1, implicit undef %eflags
+    JE_1 %bb.1, implicit undef $eflags
     JMP_1 %bb.3
 
   bb.1:
     ; CHECK: bb.1:
     ; CHECK: successors: %bb.2, %bb.1
     successors: %bb.2, %bb.1   ; different order (fallthrough variant)
-    JE_1 %bb.1, implicit undef %eflags
+    JE_1 %bb.1, implicit undef $eflags
 
   bb.2:
     ; CHECK: bb.2:
     ; CHECK: successors: %bb.1(0x60000000), %bb.3(0x20000000)
     successors: %bb.1(3), %bb.3(1)  ; branch probabilities not normalized
-    JE_1 %bb.1, implicit undef %eflags
+    JE_1 %bb.1, implicit undef $eflags
 
   bb.3:
     ; CHECK: bb.3:
-    ; CHECK: RETQ undef %eax
-    RETQ undef %eax
+    ; CHECK: RETQ undef $eax
+    RETQ undef $eax
 ...

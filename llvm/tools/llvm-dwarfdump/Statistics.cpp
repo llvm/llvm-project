@@ -34,8 +34,14 @@ struct GlobalStats {
 
 /// Extract the low pc from a Die.
 static uint64_t getLowPC(DWARFDie Die) {
-  if (Die.getAddressRanges().size())
-    return Die.getAddressRanges()[0].LowPC;
+  auto RangesOrError = Die.getAddressRanges();
+  DWARFAddressRangesVector Ranges;
+  if (RangesOrError)
+    Ranges = RangesOrError.get();
+  else
+    llvm::consumeError(RangesOrError.takeError());
+  if (Ranges.size())
+    return Ranges[0].LowPC;
   return dwarf::toAddress(Die.find(dwarf::DW_AT_low_pc), 0);
 }
 
@@ -137,7 +143,13 @@ static void collectStatsRecursive(DWARFDie Die, std::string Prefix,
     }
 
     // PC Ranges.
-    auto Ranges = Die.getAddressRanges();
+    auto RangesOrError = Die.getAddressRanges();
+    if (!RangesOrError) {
+      llvm::consumeError(RangesOrError.takeError());
+      return;
+    }
+       
+    auto Ranges = RangesOrError.get();
     uint64_t BytesInThisScope = 0;
     for (auto Range : Ranges)
       BytesInThisScope += Range.HighPC - Range.LowPC;
@@ -165,11 +177,11 @@ static void collectStatsRecursive(DWARFDie Die, std::string Prefix,
 /// \{
 static void printDatum(raw_ostream &OS, const char *Key, StringRef Value) {
   OS << ",\"" << Key << "\":\"" << Value << '"';
-  DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
+  LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
 }
 static void printDatum(raw_ostream &OS, const char *Key, uint64_t Value) {
   OS << ",\"" << Key << "\":" << Value;
-  DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
+  LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
 }
 /// \}
 
@@ -206,8 +218,9 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     VarWithLoc += Stats.TotalVarWithLoc + Constants;
     VarTotal += TotalVars + Constants;
     VarUnique += Stats.VarsInFunction.size();
-    DEBUG(for (auto V : Stats.VarsInFunction)
-            llvm::dbgs() << Entry.getKey() << ": " << V << "\n");
+    LLVM_DEBUG(for (auto V
+                    : Stats.VarsInFunction) llvm::dbgs()
+               << Entry.getKey() << ": " << V << "\n");
     NumFunctions += Stats.IsFunction;
     NumInlinedFunctions += Stats.IsFunction * Stats.NumFnInlined;
   }
@@ -215,8 +228,8 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // Print summary.
   OS.SetBufferSize(1024);
   OS << "{\"version\":\"" << Version << '"';
-  DEBUG(llvm::dbgs() << "Variable location quality metrics\n";
-        llvm::dbgs() << "---------------------------------\n");
+  LLVM_DEBUG(llvm::dbgs() << "Variable location quality metrics\n";
+             llvm::dbgs() << "---------------------------------\n");
   printDatum(OS, "file", Filename.str());
   printDatum(OS, "format", FormatName);
   printDatum(OS, "source functions", NumFunctions);
@@ -228,7 +241,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
              GlobalStats.ScopeBytesFromFirstDefinition);
   printDatum(OS, "scope bytes covered", GlobalStats.ScopeBytesCovered);
   OS << "}\n";
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "Total Availability: "
                    << (int)std::round((VarWithLoc * 100.0) / VarTotal) << "%\n";
       llvm::dbgs() << "PC Ranges covered: "

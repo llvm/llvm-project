@@ -1,6 +1,5 @@
 ; RUN: opt < %s -analyze -basicaa -da | FileCheck %s
 
-; ModuleID = 'Coupled.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
 
@@ -13,6 +12,7 @@ define void @couple0([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple0
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -49,6 +49,7 @@ define void @couple1([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple1
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent flow [-9]!
 ; CHECK: da analyze - confused!
@@ -85,8 +86,9 @@ define void @couple2([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple2
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [*|<]!
+; CHECK: da analyze - flow [<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -123,6 +125,7 @@ define void @couple3([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple3
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -161,6 +164,7 @@ define void @couple4([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple4
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - flow [*|<]!
 ; CHECK: da analyze - confused!
@@ -200,6 +204,7 @@ define void @couple5([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple5
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -241,8 +246,9 @@ define void @couple6([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple6
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [=|<]!
+; CHECK: da analyze - flow [<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -277,6 +283,7 @@ define void @couple7([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple7
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -313,6 +320,7 @@ define void @couple8([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple8
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -350,6 +358,7 @@ define void @couple9([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple9
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -387,9 +396,9 @@ define void @couple10([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple10
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [>] splitable!
-; CHECK: da analyze - split level = 1, iteration = 3!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -425,9 +434,9 @@ define void @couple11([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple11
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [=|<] splitable!
-; CHECK: da analyze - split level = 1, iteration = 9!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -463,9 +472,9 @@ define void @couple12([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple12
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<] splitable!
-; CHECK: da analyze - split level = 1, iteration = 11!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -501,6 +510,7 @@ define void @couple13([100 x i32]* %A, i32* %B, i32 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple13
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -537,9 +547,9 @@ define void @couple14([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple14
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [=|<] splitable!
-; CHECK: da analyze - split level = 1, iteration = 9!
+; CHECK: da analyze - flow [<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -575,6 +585,7 @@ define void @couple15([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable
 entry:
   br label %for.body
 
+; CHECK-LABEL: couple15
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -600,5 +611,51 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
+  ret void
+}
+
+;;  for(int i = 0; i < N; i+=1) {
+;;    A[M*N*i] = 1;
+;;    for(int j = 0; j < M; j+=1)
+;;      A[M*N + M*i + j] = 2;
+
+define void @couple_weakzerosiv(i32* noalias nocapture %A, i64 %N, i64 %M) {
+entry:
+  %cmp29 = icmp sgt i64 %N, 0
+  br i1 %cmp29, label %for.body.lr.ph, label %for.cond.cleanup
+
+; CHECK-LABEL: couple_weakzerosiv
+; CHECK: da analyze - none!
+; CHECK: da analyze - output [p>]!
+; CHECK: da analyze - none!
+
+for.body.lr.ph:                                   ; preds = %entry
+  %mul = mul nsw i64 %M, %N
+  br label %for.body.us
+
+for.body.us:                                      ; preds = %for.body.lr.ph, %for.cond.cleanup4.loopexit.us
+  %i.030.us = phi i64 [ %add12.us, %for.cond.cleanup4.loopexit.us ], [ 0, %for.body.lr.ph ]
+  %mul1.us = mul nsw i64 %i.030.us, %mul
+  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %mul1.us
+  store i32 1, i32* %arrayidx.us, align 4
+  %mul6.us = mul nsw i64 %i.030.us, %M
+  %add.us = add i64 %mul6.us, %mul
+  br label %for.body5.us
+
+for.body5.us:                                     ; preds = %for.body5.us, %for.body.us
+  %j.028.us = phi i64 [ 0, %for.body.us ], [ %add10.us, %for.body5.us ]
+  %add8.us = add i64 %add.us, %j.028.us
+  %arrayidx9.us = getelementptr inbounds i32, i32* %A, i64 %add8.us
+  store i32 2, i32* %arrayidx9.us, align 4
+  %add10.us = add nuw nsw i64 %j.028.us, 1
+  %exitcond.us = icmp eq i64 %add10.us, %M
+  br i1 %exitcond.us, label %for.cond.cleanup4.loopexit.us, label %for.body5.us
+
+for.cond.cleanup4.loopexit.us:                    ; preds = %for.body5.us
+  %add12.us = add nuw nsw i64 %i.030.us, 1
+  %exitcond31.us = icmp eq i64 %add12.us, %N
+  br i1 %exitcond31.us, label %for.cond.cleanup, label %for.body.us
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup4.loopexit.us, %entry
   ret void
 }

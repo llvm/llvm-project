@@ -54,7 +54,7 @@ public:
   /// Initialize a range to hold the single specified value.
   ConstantRange(APInt Value);
 
-  /// @brief Initialize a range of values explicitly. This will assert out if
+  /// Initialize a range of values explicitly. This will assert out if
   /// Lower==Upper and Lower != Min or Max value for its type. It will also
   /// assert out if the two APInt's are not the same bit width.
   ConstantRange(APInt Lower, APInt Upper);

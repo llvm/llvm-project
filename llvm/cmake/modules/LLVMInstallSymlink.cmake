@@ -3,7 +3,7 @@
 # See PR8397.
 
 function(install_symlink name target outdir)
-  if(UNIX)
+  if(CMAKE_HOST_UNIX)
     set(LINK_OR_COPY create_symlink)
     set(DESTDIR $ENV{DESTDIR})
   else()

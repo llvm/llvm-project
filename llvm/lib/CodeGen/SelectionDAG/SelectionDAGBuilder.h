@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -687,6 +687,13 @@ public:
   SDValue getValue(const Value *V);
   bool findValue(const Value *V) const;
 
+  /// Return the SDNode for the specified IR value if it exists.
+  SDNode *getNodeForIRValue(const Value *V) {
+    if (NodeMap.find(V) == NodeMap.end())
+      return nullptr;
+    return NodeMap[V].getNode();
+  }
+
   SDValue getNonRegisterValue(const Value *V);
   SDValue getValueImpl(const Value *V);
 
@@ -705,13 +712,13 @@ public:
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
-                            Instruction::BinaryOps Opc, BranchProbability TW,
-                            BranchProbability FW, bool InvertCond);
+                            Instruction::BinaryOps Opc, BranchProbability TProb,
+                            BranchProbability FProb, bool InvertCond);
   void EmitBranchForMergedCondition(const Value *Cond, MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     MachineBasicBlock *CurBB,
                                     MachineBasicBlock *SwitchBB,
-                                    BranchProbability TW, BranchProbability FW,
+                                    BranchProbability TProb, BranchProbability FProb,
                                     bool InvertCond);
   bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
@@ -783,11 +790,11 @@ public:
   };
 
   /// Lower \p SLI into a STATEPOINT instruction.
-  SDValue LowerAsSTATEPOINT(StatepointLoweringInfo &SLI);
+  SDValue LowerAsSTATEPOINT(StatepointLoweringInfo &SI);
 
   // This function is responsible for the whole statepoint lowering process.
   // It uniformly handles invoke and call statepoints.
-  void LowerStatepoint(ImmutableStatepoint Statepoint,
+  void LowerStatepoint(ImmutableStatepoint ISP,
                        const BasicBlock *EHPadBB = nullptr);
 
   void LowerCallSiteWithDeoptBundle(ImmutableCallSite CS, SDValue Callee,
@@ -847,7 +854,7 @@ private:
   void visitInvoke(const InvokeInst &I);
   void visitResume(const ResumeInst &I);
 
-  void visitBinary(const User &I, unsigned OpCode);
+  void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);
   void visitAdd(const User &I)  { visitBinary(I, ISD::ADD); }
   void visitFAdd(const User &I) { visitBinary(I, ISD::FADD); }
@@ -890,7 +897,7 @@ private:
 
   void visitExtractValue(const User &I);
   void visitInsertValue(const User &I);
-  void visitLandingPad(const LandingPadInst &I);
+  void visitLandingPad(const LandingPadInst &LP);
 
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
@@ -935,7 +942,7 @@ private:
                        const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
-  void visitGCRelocate(const GCRelocateInst &I);
+  void visitGCRelocate(const GCRelocateInst &Relocate);
   void visitGCResult(const GCResultInst &I);
 
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
@@ -1045,9 +1052,17 @@ struct RegsForValue {
   /// Add this value to the specified inlineasm node operand list. This adds the
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
-  void AddInlineAsmOperands(unsigned Kind, bool HasMatching,
+  void AddInlineAsmOperands(unsigned Code, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
                             SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+
+  /// Check if the total RegCount is greater than one.
+  bool occupiesMultipleRegs() const {
+    return std::accumulate(RegCount.begin(), RegCount.end(), 0) > 1;
+  }
+
+  /// Return a list of registers and their sizes.
+  SmallVector<std::pair<unsigned, unsigned>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

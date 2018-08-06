@@ -132,4 +132,29 @@ entry:
   ret <16 x float> %subadd
 }
 
+; This should not be matched to fmsubadd because the mul is on the wrong side of the fsub.
+define <2 x double> @mul_subadd_bad_commute(<2 x double> %A, <2 x double> %B, <2 x double> %C) #0 {
+; FMA3-LABEL: mul_subadd_bad_commute:
+; FMA3:       # %bb.0: # %entry
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
+; FMA3-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; FMA3-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_bad_commute:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
+; FMA4-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; FMA4-NEXT:    retq
+entry:
+  %AB = fmul <2 x double> %A, %B
+  %Sub = fsub <2 x double> %C, %AB
+  %Add = fadd <2 x double> %AB, %C
+  %subadd = shufflevector <2 x double> %Add, <2 x double> %Sub, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %subadd
+}
+
 attributes #0 = { nounwind "unsafe-fp-math"="true" }

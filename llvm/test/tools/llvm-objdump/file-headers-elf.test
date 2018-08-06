@@ -1,0 +1,14 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump -f %t | FileCheck %s
+# RUN: llvm-objdump -file-headers %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  Entry:           0x123456
+
+# CHECK: architecture: x86_64
+# CHECK: start address: 0x00123456

@@ -270,6 +270,14 @@ def t_addrmode_sp : MemOperand,
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
+// Inspects parent to determine whether an or instruction can be implemented as
+// an add (i.e. whether we know overflow won't occur in the add).
+def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr", [],
+                                 [SDNPWantParent]>;
+
+// Pattern to exclude immediates from matching
+def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
+
 //===----------------------------------------------------------------------===//
 //  Miscellaneous Instructions.
 //
@@ -997,6 +1005,15 @@ let isAdd = 1 in {
   }
 }
 
+// Thumb has more flexible short encodings for ADD than ORR, so use those where
+// possible.
+def : T1Pat<(or AddLikeOrOp:$Rn, imm0_7:$imm), (tADDi3 $Rn, imm0_7:$imm)>;
+
+def : T1Pat<(or AddLikeOrOp:$Rn, imm8_255:$imm), (tADDi8 $Rn, imm8_255:$imm)>;
+
+def : T1Pat<(or AddLikeOrOp:$Rn, tGPR:$Rm), (tADDrr $Rn, $Rm)>;
+
+
 def : tInstAlias <"add${s}${p} $Rdn, $Rm",
                  (tADDrr tGPR:$Rdn,s_cc_out:$s, tGPR:$Rdn, tGPR:$Rm, pred:$p)>;
 
@@ -1154,7 +1171,7 @@ def : tInstAlias <"movs $Rdn, $imm",
 
 // A7-73: MOV(2) - mov setting flag.
 
-let hasSideEffects = 0 in {
+let hasSideEffects = 0, isMoveReg = 1 in {
 def tMOVr : Thumb1pI<(outs GPR:$Rd), (ins GPR:$Rm), AddrModeNone,
                       2, IIC_iMOVr,
                       "mov", "\t$Rd, $Rm", "", []>,

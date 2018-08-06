@@ -38,7 +38,7 @@ entry:
 ; CHECK: define void @call_f() {
 define void @call_f() {
 entry:
-; CHECK: call void select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null)()
+; CHECK: call void @f()
   call void @f()
   ret void
 }
@@ -50,8 +50,8 @@ define i1 @foo(i8* %p) {
   ret i1 %x
 }
 
-; X86: define private void @[[JT]]() #{{.*}} section ".text.cfi" align 8 {
-; ARM: define private void @[[JT]]() #{{.*}} section ".text.cfi" align 4 {
+; X86: define private void @[[JT]]() #{{.*}} align 8 {
+; ARM: define private void @[[JT]]() #{{.*}} align 4 {
 
 ; CHECK: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:

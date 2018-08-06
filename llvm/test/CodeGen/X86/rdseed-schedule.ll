@@ -38,7 +38,7 @@ define i16 @test_rdseed_16(i16* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdseed_16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdseedw %ax # sched: [100:?]
+; ZNVER1-NEXT:    rdseedw %ax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i16, i32} @llvm.x86.rdseed.16()
   %randval = extractvalue {i16, i32} %call, 0
@@ -73,7 +73,7 @@ define i32 @test_rdseed_32(i16* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdseed_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdseedl %eax # sched: [100:?]
+; ZNVER1-NEXT:    rdseedl %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i32, i32} @llvm.x86.rdseed.32()
   %randval = extractvalue {i32, i32} %call, 0
@@ -108,7 +108,7 @@ define i64 @test_rdseed_64(i64* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdseed_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdseedq %rax # sched: [100:?]
+; ZNVER1-NEXT:    rdseedq %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i64, i32} @llvm.x86.rdseed.64()
   %randval = extractvalue {i64, i32} %call, 0

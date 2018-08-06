@@ -18,7 +18,7 @@
 //
 // The algorithm used here is based on recursive state machine matching scheme
 // proposed in "Demand-driven alias analysis for C" by Xin Zheng and Radu
-// Rugina. The general idea is to extend the tranditional transitive closure
+// Rugina. The general idea is to extend the traditional transitive closure
 // algorithm to perform CFL matching along the way: instead of recording
 // "whether X is reachable from Y", we keep track of "whether X is reachable
 // from Y at state Z", where the "state" field indicates where we are in the CFL
@@ -337,7 +337,7 @@ public:
   FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
                const ReachabilitySet &, const AliasAttrMap &);
 
-  bool mayAlias(const Value *, uint64_t, const Value *, uint64_t) const;
+  bool mayAlias(const Value *, LocationSize, const Value *, LocationSize) const;
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
@@ -395,7 +395,7 @@ populateAliasMap(DenseMap<const Value *, std::vector<OffsetValue>> &AliasMap,
     }
 
     // Sort AliasList for faster lookup
-    std::sort(AliasList.begin(), AliasList.end());
+    llvm::sort(AliasList.begin(), AliasList.end());
   }
 }
 
@@ -479,7 +479,7 @@ static void populateExternalRelations(
   }
 
   // Remove duplicates in ExtRelations
-  std::sort(ExtRelations.begin(), ExtRelations.end());
+  llvm::sort(ExtRelations.begin(), ExtRelations.end());
   ExtRelations.erase(std::unique(ExtRelations.begin(), ExtRelations.end()),
                      ExtRelations.end());
 }
@@ -516,9 +516,9 @@ CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
-                                               uint64_t LHSSize,
+                                               LocationSize LHSSize,
                                                const Value *RHS,
-                                               uint64_t RHSSize) const {
+                                               LocationSize RHSSize) const {
   assert(LHS && RHS);
 
   // Check if we've seen LHS and RHS before. Sometimes LHS or RHS can be created
@@ -645,7 +645,7 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
   // relations that are symmetric, we could actually cut the storage by half by
   // sorting FromNode and ToNode before insertion happens.
 
-  // The newly added value alias pair may pontentially generate more memory
+  // The newly added value alias pair may potentially generate more memory
   // alias pairs. Check for them here.
   auto FromNodeBelow = getNodeBelow(Graph, FromNode);
   auto ToNodeBelow = getNodeBelow(Graph, ToNode);
@@ -855,8 +855,9 @@ AliasResult CFLAndersAAResult::query(const MemoryLocation &LocA,
     if (!Fn) {
       // The only times this is known to happen are when globals + InlineAsm are
       // involved
-      DEBUG(dbgs()
-            << "CFLAndersAA: could not extract parent function information.\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "CFLAndersAA: could not extract parent function information.\n");
       return MayAlias;
     }
   } else {

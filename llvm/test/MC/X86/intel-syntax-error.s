@@ -44,3 +44,11 @@ punpcklwd mm0, word ptr [rsp]
 // CHECK: error: invalid operand for instruction
 punpckldq mm0, qword ptr [rsp]
 
+// CHECK: error: invalid 16-bit base register
+lea bx, [ax]
+
+// CHECK: invalid base+index expression
+lea eax, [eax+esp*1]
+
+// CHECK: 16-bit addresses cannot have a scale
+lea ax, [bx+si*1]

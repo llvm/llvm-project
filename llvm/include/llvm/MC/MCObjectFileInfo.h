@@ -14,7 +14,9 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -79,6 +81,7 @@ protected:
   MCSection *DwarfAbbrevSection;
   MCSection *DwarfInfoSection;
   MCSection *DwarfLineSection;
+  MCSection *DwarfLineStrSection;
   MCSection *DwarfFrameSection;
   MCSection *DwarfPubTypesSection;
   const MCSection *DwarfDebugInlineSection;
@@ -91,11 +94,11 @@ protected:
   // can be enabled by a compiler flag.
   MCSection *DwarfPubNamesSection;
 
-  /// DWARF5 Experimental Debug Info Sections
-  /// DwarfAccelNamesSection, DwarfAccelObjCSection,
-  /// DwarfAccelNamespaceSection, DwarfAccelTypesSection -
-  /// If we use the DWARF accelerated hash tables then we want to emit these
-  /// sections.
+  /// Accelerator table sections. DwarfDebugNamesSection is the DWARF v5
+  /// accelerator table, while DwarfAccelNamesSection, DwarfAccelObjCSection,
+  /// DwarfAccelNamespaceSection, DwarfAccelTypesSection are pre-DWARF v5
+  /// extensions.
+  MCSection *DwarfDebugNamesSection;
   MCSection *DwarfAccelNamesSection;
   MCSection *DwarfAccelObjCSection;
   MCSection *DwarfAccelNamespaceSection;
@@ -113,6 +116,11 @@ protected:
   /// The DWARF v5 string offset and address table sections.
   MCSection *DwarfStrOffSection;
   MCSection *DwarfAddrSection;
+  /// The DWARF v5 range list section.
+  MCSection *DwarfRnglistsSection;
+
+  /// The DWARF v5 range list section for fission.
+  MCSection *DwarfRnglistsDWOSection;
 
   // These are for Fission DWP files.
   MCSection *DwarfCUIndexSection;
@@ -157,6 +165,7 @@ protected:
 
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection;
+  mutable DenseMap<const MCSymbol *, unsigned> StackSizesUniquing;
 
   // ELF specific sections.
   MCSection *DataRelROSection;
@@ -197,6 +206,7 @@ protected:
   MCSection *PDataSection;
   MCSection *XDataSection;
   MCSection *SXDataSection;
+  MCSection *GFIDsSection;
 
 public:
   void InitMCObjectFileInfo(const Triple &TT, bool PIC, MCContext &ctx,
@@ -234,6 +244,7 @@ public:
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
   MCSection *getDwarfLineSection() const { return DwarfLineSection; }
+  MCSection *getDwarfLineStrSection() const { return DwarfLineStrSection; }
   MCSection *getDwarfFrameSection() const { return DwarfFrameSection; }
   MCSection *getDwarfPubNamesSection() const { return DwarfPubNamesSection; }
   MCSection *getDwarfPubTypesSection() const { return DwarfPubTypesSection; }
@@ -250,9 +261,12 @@ public:
   MCSection *getDwarfLocSection() const { return DwarfLocSection; }
   MCSection *getDwarfARangesSection() const { return DwarfARangesSection; }
   MCSection *getDwarfRangesSection() const { return DwarfRangesSection; }
+  MCSection *getDwarfRnglistsSection() const { return DwarfRnglistsSection; }
   MCSection *getDwarfMacinfoSection() const { return DwarfMacinfoSection; }
 
-  // DWARF5 Experimental Debug Info Sections
+  MCSection *getDwarfDebugNamesSection() const {
+    return DwarfDebugNamesSection;
+  }
   MCSection *getDwarfAccelNamesSection() const {
     return DwarfAccelNamesSection;
   }
@@ -273,6 +287,9 @@ public:
   MCSection *getDwarfStrOffDWOSection() const { return DwarfStrOffDWOSection; }
   MCSection *getDwarfStrOffSection() const { return DwarfStrOffSection; }
   MCSection *getDwarfAddrSection() const { return DwarfAddrSection; }
+  MCSection *getDwarfRnglistsDWOSection() const {
+    return DwarfRnglistsDWOSection;
+  }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
   MCSection *getDwarfSwiftASTSection() const { return DwarfSwiftASTSection; }
@@ -294,7 +311,7 @@ public:
   MCSection *getStackMapSection() const { return StackMapSection; }
   MCSection *getFaultMapSection() const { return FaultMapSection; }
 
-  MCSection *getStackSizesSection() const { return StackSizesSection; }
+  MCSection *getStackSizesSection(const MCSection &TextSec) const;
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }
@@ -353,6 +370,7 @@ public:
   MCSection *getPDataSection() const { return PDataSection; }
   MCSection *getXDataSection() const { return XDataSection; }
   MCSection *getSXDataSection() const { return SXDataSection; }
+  MCSection *getGFIDsSection() const { return GFIDsSection; }
 
   MCSection *getEHFrameSection() {
     return EHFrameSection;

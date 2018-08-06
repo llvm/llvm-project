@@ -1,6 +1,10 @@
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @some_func() noreturn
+declare void @sink(i32)
+
+declare i1 @cond()
+declare i32 @cond.i32()
 
 ; This test contains two trivial unswitch condition in one loop.
 ; LoopUnswitch pass should be able to unswitch the second one
@@ -133,10 +137,9 @@ loop_begin:
   ]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    load
-; CHECK-NEXT:    switch i32 %cond2, label %[[UNREACHABLE:.*]] [
+; CHECK-NEXT:    switch i32 %cond2, label %loop2 [
 ; CHECK-NEXT:      i32 0, label %loop0
 ; CHECK-NEXT:      i32 1, label %loop1
-; CHECK-NEXT:      i32 2, label %loop2
 ; CHECK-NEXT:    ]
 
 loop0:
@@ -179,9 +182,6 @@ loop_exit3:
   ret i32 0
 ; CHECK:       loop_exit3:
 ; CHECK-NEXT:    ret
-;
-; CHECK:       [[UNREACHABLE]]:
-; CHECK-NEXT:    unreachable
 }
 
 ; This test contains a trivially unswitchable branch with an LCSSA phi node in
@@ -442,4 +442,803 @@ cleanup:
   ret void
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
+}
+
+define i32 @test_partial_condition_unswitch_and(i32* %var, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test_partial_condition_unswitch_and(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br i1 %cond2, label %entry.split.split, label %loop_exit
+;
+; CHECK:       entry.split.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  br i1 %cond1, label %continue, label %loop_exit
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %continue
+
+continue:
+  %var_val = load i32, i32* %var
+  %var_cond = trunc i32 %var_val to i1
+  %cond_and = and i1 %var_cond, %cond2
+  br i1 %cond_and, label %do_something, label %loop_exit
+; CHECK:       continue:
+; CHECK-NEXT:    %[[VAR:.*]] = load i32
+; CHECK-NEXT:    %[[VAR_COND:.*]] = trunc i32 %[[VAR]] to i1
+; CHECK-NEXT:    %[[COND_AND:.*]] = and i1 %[[VAR_COND]], true
+; CHECK-NEXT:    br i1 %[[COND_AND]], label %do_something, label %loop_exit
+
+do_something:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       do_something:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit:
+; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    ret
+}
+
+define i32 @test_partial_condition_unswitch_or(i32* %var, i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4, i1 %cond5, i1 %cond6) {
+; CHECK-LABEL: @test_partial_condition_unswitch_or(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[INV_OR1:.*]] = or i1 %cond4, %cond2
+; CHECK-NEXT:    %[[INV_OR2:.*]] = or i1 %[[INV_OR1]], %cond3
+; CHECK-NEXT:    %[[INV_OR3:.*]] = or i1 %[[INV_OR2]], %cond1
+; CHECK-NEXT:    br i1 %[[INV_OR3]], label %loop_exit.split, label %entry.split
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  %var_val = load i32, i32* %var
+  %var_cond = trunc i32 %var_val to i1
+  %cond_or1 = or i1 %var_cond, %cond1
+  %cond_or2 = or i1 %cond2, %cond3
+  %cond_or3 = or i1 %cond_or1, %cond_or2
+  %cond_xor1 = xor i1 %cond5, %var_cond
+  %cond_and1 = and i1 %cond6, %var_cond
+  %cond_or4 = or i1 %cond_xor1, %cond_and1
+  %cond_or5 = or i1 %cond_or3, %cond_or4
+  %cond_or6 = or i1 %cond_or5, %cond4
+  br i1 %cond_or6, label %loop_exit, label %do_something
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[VAR:.*]] = load i32
+; CHECK-NEXT:    %[[VAR_COND:.*]] = trunc i32 %[[VAR]] to i1
+; CHECK-NEXT:    %[[COND_OR1:.*]] = or i1 %[[VAR_COND]], false
+; CHECK-NEXT:    %[[COND_OR2:.*]] = or i1 false, false
+; CHECK-NEXT:    %[[COND_OR3:.*]] = or i1 %[[COND_OR1]], %[[COND_OR2]]
+; CHECK-NEXT:    %[[COND_XOR:.*]] = xor i1 %cond5, %[[VAR_COND]]
+; CHECK-NEXT:    %[[COND_AND:.*]] = and i1 %cond6, %[[VAR_COND]]
+; CHECK-NEXT:    %[[COND_OR4:.*]] = or i1 %[[COND_XOR]], %[[COND_AND]]
+; CHECK-NEXT:    %[[COND_OR5:.*]] = or i1 %[[COND_OR3]], %[[COND_OR4]]
+; CHECK-NEXT:    %[[COND_OR6:.*]] = or i1 %[[COND_OR5]], false
+; CHECK-NEXT:    br i1 %[[COND_OR6]], label %loop_exit, label %do_something
+
+do_something:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       do_something:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    ret
+}
+
+define i32 @test_partial_condition_unswitch_with_lcssa_phi1(i32* %var, i1 %cond, i32 %x) {
+; CHECK-LABEL: @test_partial_condition_unswitch_with_lcssa_phi1(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %cond, label %entry.split, label %loop_exit.split
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  %var_val = load i32, i32* %var
+  %var_cond = trunc i32 %var_val to i1
+  %cond_and = and i1 %var_cond, %cond
+  br i1 %cond_and, label %do_something, label %loop_exit
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[VAR:.*]] = load i32
+; CHECK-NEXT:    %[[VAR_COND:.*]] = trunc i32 %[[VAR]] to i1
+; CHECK-NEXT:    %[[COND_AND:.*]] = and i1 %[[VAR_COND]], true
+; CHECK-NEXT:    br i1 %[[COND_AND]], label %do_something, label %loop_exit
+
+do_something:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       do_something:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  %x.lcssa = phi i32 [ %x, %loop_begin ]
+  ret i32 %x.lcssa
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[LCSSA:.*]] = phi i32 [ %x, %loop_begin ]
+; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    %[[LCSSA_SPLIT:.*]] = phi i32 [ %x, %entry ], [ %[[LCSSA]], %loop_exit ]
+; CHECK-NEXT:    ret i32 %[[LCSSA_SPLIT]]
+}
+
+define i32 @test_partial_condition_unswitch_with_lcssa_phi2(i32* %var, i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @test_partial_condition_unswitch_with_lcssa_phi2(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %cond, label %entry.split, label %loop_exit.split
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  %var_val = load i32, i32* %var
+  %var_cond = trunc i32 %var_val to i1
+  %cond_and = and i1 %var_cond, %cond
+  br i1 %cond_and, label %do_something, label %loop_exit
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[VAR:.*]] = load i32
+; CHECK-NEXT:    %[[VAR_COND:.*]] = trunc i32 %[[VAR]] to i1
+; CHECK-NEXT:    %[[COND_AND:.*]] = and i1 %[[VAR_COND]], true
+; CHECK-NEXT:    br i1 %[[COND_AND]], label %do_something, label %loop_exit
+
+do_something:
+  call void @some_func() noreturn nounwind
+  br i1 %var_cond, label %loop_begin, label %loop_exit
+; CHECK:       do_something:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br i1 %[[VAR_COND]], label %loop_begin, label %loop_exit
+
+loop_exit:
+  %xy.lcssa = phi i32 [ %x, %loop_begin ], [ %y, %do_something ]
+  ret i32 %xy.lcssa
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[LCSSA:.*]] = phi i32 [ %x, %loop_begin ], [ %y, %do_something ]
+; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    %[[LCSSA_SPLIT:.*]] = phi i32 [ %x, %entry ], [ %[[LCSSA]], %loop_exit ]
+; CHECK-NEXT:    ret i32 %[[LCSSA_SPLIT]]
+}
+
+; Unswitch will not actually change the loop nest from:
+;   A < B < C
+define void @hoist_inner_loop0() {
+; CHECK-LABEL: define void @hoist_inner_loop0(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %v1 = call i1 @cond()
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %[[B_LATCH_SPLIT:.*]], label %[[B_HEADER_SPLIT:.*]]
+;
+; CHECK:       [[B_HEADER_SPLIT]]:
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  br i1 %v1, label %b.latch, label %c.latch
+; CHECK:       c.header:
+; CHECK-NEXT:    br label %c.latch
+
+c.latch:
+  %v2 = call i1 @cond()
+  br i1 %v2, label %c.header, label %b.latch
+; CHECK:       c.latch:
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %c.header, label %b.latch
+
+b.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %b.header, label %a.latch
+; CHECK:       b.latch:
+; CHECK-NEXT:    br label %[[B_LATCH_SPLIT]]
+;
+; CHECK:       [[B_LATCH_SPLIT]]:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %b.header, label %a.latch
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; Unswitch will transform the loop nest from:
+;   A < B < C
+; into
+;   A < (B, C)
+define void @hoist_inner_loop1(i32* %ptr) {
+; CHECK-LABEL: define void @hoist_inner_loop1(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  %x.a = load i32, i32* %ptr
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    %x.a = load i32, i32* %ptr
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %x.b = load i32, i32* %ptr
+  %v1 = call i1 @cond()
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %x.b = load i32, i32* %ptr
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %b.latch, label %[[B_HEADER_SPLIT:.*]]
+;
+; CHECK:       [[B_HEADER_SPLIT]]:
+; CHECK-NEXT:    %[[X_B_LCSSA:.*]] = phi i32 [ %x.b, %b.header ]
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  br i1 %v1, label %b.latch, label %c.latch
+; CHECK:       c.header:
+; CHECK-NEXT:    br label %c.latch
+
+c.latch:
+  ; Use values from other loops to check LCSSA form.
+  store i32 %x.a, i32* %ptr
+  store i32 %x.b, i32* %ptr
+  %v2 = call i1 @cond()
+  br i1 %v2, label %c.header, label %a.exit.c
+; CHECK:       c.latch:
+; CHECK-NEXT:    store i32 %x.a, i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_B_LCSSA]], i32* %ptr
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %c.header, label %a.exit.c
+
+b.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %b.header, label %a.exit.b
+; CHECK:       b.latch:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %b.header, label %a.exit.b
+
+a.exit.c:
+  br label %a.latch
+; CHECK:       a.exit.c
+; CHECK-NEXT:    br label %a.latch
+
+a.exit.b:
+  br label %a.latch
+; CHECK:       a.exit.b:
+; CHECK-NEXT:    br label %a.latch
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; Unswitch will transform the loop nest from:
+;   A < B < C
+; into
+;   (A < B), C
+define void @hoist_inner_loop2(i32* %ptr) {
+; CHECK-LABEL: define void @hoist_inner_loop2(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  %x.a = load i32, i32* %ptr
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    %x.a = load i32, i32* %ptr
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %x.b = load i32, i32* %ptr
+  %v1 = call i1 @cond()
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %x.b = load i32, i32* %ptr
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %b.latch, label %[[B_HEADER_SPLIT:.*]]
+;
+; CHECK:       [[B_HEADER_SPLIT]]:
+; CHECK-NEXT:    %[[X_A_LCSSA:.*]] = phi i32 [ %x.a, %b.header ]
+; CHECK-NEXT:    %[[X_B_LCSSA:.*]] = phi i32 [ %x.b, %b.header ]
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  br i1 %v1, label %b.latch, label %c.latch
+; CHECK:       c.header:
+; CHECK-NEXT:    br label %c.latch
+
+c.latch:
+  ; Use values from other loops to check LCSSA form.
+  store i32 %x.a, i32* %ptr
+  store i32 %x.b, i32* %ptr
+  %v2 = call i1 @cond()
+  br i1 %v2, label %c.header, label %exit
+; CHECK:       c.latch:
+; CHECK-NEXT:    store i32 %[[X_A_LCSSA]], i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_B_LCSSA]], i32* %ptr
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %c.header, label %exit
+
+b.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %b.header, label %a.latch
+; CHECK:       b.latch:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %b.header, label %a.latch
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; Same as @hoist_inner_loop2 but with a nested loop inside the hoisted loop.
+; Unswitch will transform the loop nest from:
+;   A < B < C < D
+; into
+;   (A < B), (C < D)
+define void @hoist_inner_loop3(i32* %ptr) {
+; CHECK-LABEL: define void @hoist_inner_loop3(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  %x.a = load i32, i32* %ptr
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    %x.a = load i32, i32* %ptr
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %x.b = load i32, i32* %ptr
+  %v1 = call i1 @cond()
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %x.b = load i32, i32* %ptr
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %b.latch, label %[[B_HEADER_SPLIT:.*]]
+;
+; CHECK:       [[B_HEADER_SPLIT]]:
+; CHECK-NEXT:    %[[X_A_LCSSA:.*]] = phi i32 [ %x.a, %b.header ]
+; CHECK-NEXT:    %[[X_B_LCSSA:.*]] = phi i32 [ %x.b, %b.header ]
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  br i1 %v1, label %b.latch, label %c.body
+; CHECK:       c.header:
+; CHECK-NEXT:    br label %c.body
+
+c.body:
+  %x.c = load i32, i32* %ptr
+  br label %d.header
+; CHECK:       c.body:
+; CHECK-NEXT:    %x.c = load i32, i32* %ptr
+; CHECK-NEXT:    br label %d.header
+
+d.header:
+  ; Use values from other loops to check LCSSA form.
+  store i32 %x.a, i32* %ptr
+  store i32 %x.b, i32* %ptr
+  store i32 %x.c, i32* %ptr
+  %v2 = call i1 @cond()
+  br i1 %v2, label %d.header, label %c.latch
+; CHECK:       d.header:
+; CHECK-NEXT:    store i32 %[[X_A_LCSSA]], i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_B_LCSSA]], i32* %ptr
+; CHECK-NEXT:    store i32 %x.c, i32* %ptr
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %d.header, label %c.latch
+
+c.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %c.header, label %exit
+; CHECK:       c.latch:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %c.header, label %exit
+
+b.latch:
+  %v4 = call i1 @cond()
+  br i1 %v4, label %b.header, label %a.latch
+; CHECK:       b.latch:
+; CHECK-NEXT:    %v4 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v4, label %b.header, label %a.latch
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; This test is designed to exercise checking multiple remaining exits from the
+; loop being unswitched.
+; Unswitch will transform the loop nest from:
+;   A < B < C < D
+; into
+;   A < B < (C, D)
+define void @hoist_inner_loop4() {
+; CHECK-LABEL: define void @hoist_inner_loop4(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  %v1 = call i1 @cond()
+  br label %d.header
+; CHECK:       c.header:
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %[[C_HEADER_SPLIT:.*]], label %c.latch
+;
+; CHECK:       [[C_HEADER_SPLIT]]:
+; CHECK-NEXT:    br label %d.header
+
+d.header:
+  br i1 %v1, label %d.exiting1, label %c.latch
+; CHECK:       d.header:
+; CHECK-NEXT:    br label %d.exiting1
+
+d.exiting1:
+  %v2 = call i1 @cond()
+  br i1 %v2, label %d.exiting2, label %a.latch
+; CHECK:       d.exiting1:
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %d.exiting2, label %a.latch
+
+d.exiting2:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %d.exiting3, label %loopexit.d
+; CHECK:       d.exiting2:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %d.exiting3, label %loopexit.d
+
+d.exiting3:
+  %v4 = call i1 @cond()
+  br i1 %v4, label %d.latch, label %b.latch
+; CHECK:       d.exiting3:
+; CHECK-NEXT:    %v4 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v4, label %d.latch, label %b.latch
+
+d.latch:
+  br label %d.header
+; CHECK:       d.latch:
+; CHECK-NEXT:    br label %d.header
+
+c.latch:
+  %v5 = call i1 @cond()
+  br i1 %v5, label %c.header, label %loopexit.c
+; CHECK:       c.latch:
+; CHECK-NEXT:    %v5 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v5, label %c.header, label %loopexit.c
+
+b.latch:
+  br label %b.header
+; CHECK:       b.latch:
+; CHECK-NEXT:    br label %b.header
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+loopexit.d:
+  br label %exit
+; CHECK:       loopexit.d:
+; CHECK-NEXT:    br label %exit
+
+loopexit.c:
+  br label %exit
+; CHECK:       loopexit.c:
+; CHECK-NEXT:    br label %exit
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; Unswitch will transform the loop nest from:
+;   A < B < C < D
+; into
+;   A < ((B < C), D)
+define void @hoist_inner_loop5(i32* %ptr) {
+; CHECK-LABEL: define void @hoist_inner_loop5(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  %x.a = load i32, i32* %ptr
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    %x.a = load i32, i32* %ptr
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %x.b = load i32, i32* %ptr
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %x.b = load i32, i32* %ptr
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  %x.c = load i32, i32* %ptr
+  %v1 = call i1 @cond()
+  br label %d.header
+; CHECK:       c.header:
+; CHECK-NEXT:    %x.c = load i32, i32* %ptr
+; CHECK-NEXT:    %v1 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v1, label %c.latch, label %[[C_HEADER_SPLIT:.*]]
+;
+; CHECK:       [[C_HEADER_SPLIT]]:
+; CHECK-NEXT:    %[[X_B_LCSSA:.*]] = phi i32 [ %x.b, %c.header ]
+; CHECK-NEXT:    %[[X_C_LCSSA:.*]] = phi i32 [ %x.c, %c.header ]
+; CHECK-NEXT:    br label %d.header
+
+d.header:
+  br i1 %v1, label %c.latch, label %d.latch
+; CHECK:       d.header:
+; CHECK-NEXT:    br label %d.latch
+
+d.latch:
+  ; Use values from other loops to check LCSSA form.
+  store i32 %x.a, i32* %ptr
+  store i32 %x.b, i32* %ptr
+  store i32 %x.c, i32* %ptr
+  %v2 = call i1 @cond()
+  br i1 %v2, label %d.header, label %a.latch
+; CHECK:       d.latch:
+; CHECK-NEXT:    store i32 %x.a, i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_B_LCSSA]], i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_C_LCSSA]], i32* %ptr
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %d.header, label %a.latch
+
+c.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %c.header, label %b.latch
+; CHECK:       c.latch:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %c.header, label %b.latch
+
+b.latch:
+  br label %b.header
+; CHECK:       b.latch:
+; CHECK-NEXT:    br label %b.header
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+; Same as `@hoist_inner_loop2` but using a switch.
+; Unswitch will transform the loop nest from:
+;   A < B < C
+; into
+;   (A < B), C
+define void @hoist_inner_loop_switch(i32* %ptr) {
+; CHECK-LABEL: define void @hoist_inner_loop_switch(
+entry:
+  br label %a.header
+; CHECK:       entry:
+; CHECK-NEXT:    br label %a.header
+
+a.header:
+  %x.a = load i32, i32* %ptr
+  br label %b.header
+; CHECK:       a.header:
+; CHECK-NEXT:    %x.a = load i32, i32* %ptr
+; CHECK-NEXT:    br label %b.header
+
+b.header:
+  %x.b = load i32, i32* %ptr
+  %v1 = call i32 @cond.i32()
+  br label %c.header
+; CHECK:       b.header:
+; CHECK-NEXT:    %x.b = load i32, i32* %ptr
+; CHECK-NEXT:    %v1 = call i32 @cond.i32()
+; CHECK-NEXT:    switch i32 %v1, label %[[B_HEADER_SPLIT:.*]] [
+; CHECK-NEXT:      i32 1, label %b.latch
+; CHECK-NEXT:      i32 2, label %b.latch
+; CHECK-NEXT:      i32 3, label %b.latch
+; CHECK-NEXT:    ]
+;
+; CHECK:       [[B_HEADER_SPLIT]]:
+; CHECK-NEXT:    %[[X_A_LCSSA:.*]] = phi i32 [ %x.a, %b.header ]
+; CHECK-NEXT:    %[[X_B_LCSSA:.*]] = phi i32 [ %x.b, %b.header ]
+; CHECK-NEXT:    br label %c.header
+
+c.header:
+  switch i32 %v1, label %c.latch [
+    i32 1, label %b.latch
+    i32 2, label %b.latch
+    i32 3, label %b.latch
+  ]
+; CHECK:       c.header:
+; CHECK-NEXT:    br label %c.latch
+
+c.latch:
+  ; Use values from other loops to check LCSSA form.
+  store i32 %x.a, i32* %ptr
+  store i32 %x.b, i32* %ptr
+  %v2 = call i1 @cond()
+  br i1 %v2, label %c.header, label %exit
+; CHECK:       c.latch:
+; CHECK-NEXT:    store i32 %[[X_A_LCSSA]], i32* %ptr
+; CHECK-NEXT:    store i32 %[[X_B_LCSSA]], i32* %ptr
+; CHECK-NEXT:    %v2 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v2, label %c.header, label %exit
+
+b.latch:
+  %v3 = call i1 @cond()
+  br i1 %v3, label %b.header, label %a.latch
+; CHECK:       b.latch:
+; CHECK-NEXT:    %v3 = call i1 @cond()
+; CHECK-NEXT:    br i1 %v3, label %b.header, label %a.latch
+
+a.latch:
+  br label %a.header
+; CHECK:       a.latch:
+; CHECK-NEXT:    br label %a.header
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}
+
+define void @test_unswitch_to_common_succ_with_phis(i32* %var, i32 %cond) {
+; CHECK-LABEL: @test_unswitch_to_common_succ_with_phis(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond, label %loopexit1 [
+; CHECK-NEXT:      i32 13, label %loopexit2
+; CHECK-NEXT:      i32 0, label %entry.split
+; CHECK-NEXT:      i32 1, label %entry.split
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %header
+
+header:
+  %var_val = load i32, i32* %var
+  switch i32 %cond, label %loopexit1 [
+    i32 0, label %latch
+    i32 1, label %latch
+    i32 13, label %loopexit2
+  ]
+; CHECK:       header:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %latch
+
+latch:
+  ; No-op PHI node to exercise weird PHI update scenarios.
+  %phi = phi i32 [ %var_val, %header ], [ %var_val, %header ]
+  call void @sink(i32 %phi)
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %[[PHI:.*]] = phi i32 [ %var_val, %header ]
+; CHECK-NEXT:    call void @sink(i32 %[[PHI]])
+; CHECK-NEXT:    br label %header
+
+loopexit1:
+  ret void
+; CHECK:       loopexit1:
+; CHECK-NEXT:    ret
+
+loopexit2:
+  ret void
+; CHECK:       loopexit2:
+; CHECK-NEXT:    ret
+}
+
+define void @test_unswitch_to_default_common_succ_with_phis(i32* %var, i32 %cond) {
+; CHECK-LABEL: @test_unswitch_to_default_common_succ_with_phis(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond, label %entry.split [
+; CHECK-NEXT:      i32 13, label %loopexit
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %header
+
+header:
+  %var_val = load i32, i32* %var
+  switch i32 %cond, label %latch [
+    i32 0, label %latch
+    i32 1, label %latch
+    i32 13, label %loopexit
+  ]
+; CHECK:       header:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %latch
+
+latch:
+  ; No-op PHI node to exercise weird PHI update scenarios.
+  %phi = phi i32 [ %var_val, %header ], [ %var_val, %header ], [ %var_val, %header ]
+  call void @sink(i32 %phi)
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %[[PHI:.*]] = phi i32 [ %var_val, %header ]
+; CHECK-NEXT:    call void @sink(i32 %[[PHI]])
+; CHECK-NEXT:    br label %header
+
+loopexit:
+  ret void
+; CHECK:       loopexit:
+; CHECK-NEXT:    ret
 }

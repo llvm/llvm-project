@@ -20,20 +20,19 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
-    : Stream(std::move(Stream)) {}
+InfoStream::InfoStream(std::unique_ptr<BinaryStream> Stream)
+    : Stream(std::move(Stream)), Header(nullptr) {}
 
 Error InfoStream::reload() {
   BinaryStreamReader Reader(*Stream);
 
-  const InfoStreamHeader *H;
-  if (auto EC = Reader.readObject(H))
+  if (auto EC = Reader.readObject(Header))
     return joinErrors(
         std::move(EC),
         make_error<RawError>(raw_error_code::corrupt_file,
                              "PDB Stream does not contain a header."));
 
-  switch (H->Version) {
+  switch (Header->Version) {
   case PdbImplVC70:
   case PdbImplVC80:
   case PdbImplVC110:
@@ -43,11 +42,6 @@ Error InfoStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Unsupported PDB stream version.");
   }
-
-  Version = H->Version;
-  Signature = H->Signature;
-  Age = H->Age;
-  Guid = H->Guid;
 
   uint32_t Offset = Reader.getOffset();
   if (auto EC = NamedStreams.load(Reader))
@@ -92,15 +86,14 @@ Error InfoStream::reload() {
 
 uint32_t InfoStream::getStreamSize() const { return Stream->getLength(); }
 
-uint32_t InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
+Expected<uint32_t> InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
   uint32_t Result;
   if (!NamedStreams.get(Name, Result))
-    return 0;
+    return make_error<RawError>(raw_error_code::no_stream);
   return Result;
 }
 
-iterator_range<StringMapConstIterator<uint32_t>>
-InfoStream::named_streams() const {
+StringMap<uint32_t> InfoStream::named_streams() const {
   return NamedStreams.entries();
 }
 
@@ -109,14 +102,16 @@ bool InfoStream::containsIdStream() const {
 }
 
 PdbRaw_ImplVer InfoStream::getVersion() const {
-  return static_cast<PdbRaw_ImplVer>(Version);
+  return static_cast<PdbRaw_ImplVer>(uint32_t(Header->Version));
 }
 
-uint32_t InfoStream::getSignature() const { return Signature; }
+uint32_t InfoStream::getSignature() const {
+  return uint32_t(Header->Signature);
+}
 
-uint32_t InfoStream::getAge() const { return Age; }
+uint32_t InfoStream::getAge() const { return uint32_t(Header->Age); }
 
-GUID InfoStream::getGuid() const { return Guid; }
+GUID InfoStream::getGuid() const { return Header->Guid; }
 
 uint32_t InfoStream::getNamedStreamMapByteSize() const {
   return NamedStreamMapByteSize;

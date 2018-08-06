@@ -42,7 +42,6 @@ Mips16FrameLowering::Mips16FrameLowering(const MipsSubtarget &STI)
 
 void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Mips16InstrInfo &TII =
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
@@ -92,11 +91,11 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 
 void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
                                  MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Mips16InstrInfo &TII =
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
-  DebugLoc dl = MBBI->getDebugLoc();
+  DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   uint64_t StackSize = MFI.getStackSize();
 
   if (!StackSize)
@@ -117,7 +116,6 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                           const std::vector<CalleeSavedInfo> &CSI,
                           const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
-  MachineBasicBlock *EntryBlock = &MF->front();
 
   //
   // Registers RA, S0,S1 are the callee saved registers and they
@@ -134,7 +132,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA)
       && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
-      EntryBlock->addLiveIn(Reg);
+      MBB.addLiveIn(Reg);
   }
 
   return true;

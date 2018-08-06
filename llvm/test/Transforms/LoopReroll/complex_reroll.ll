@@ -10,15 +10,15 @@ entry:
 
 while.body:
 ;CHECK-LABEL: while.body:
-;CHECK-NEXT:    %indvar = phi i32 [ %indvar.next, %while.body ], [ 0, %entry ]
-;CHECK-NEXT:    %buf.021 = phi i8* [ getelementptr inbounds ([16 x i8], [16 x i8]* @aaa, i64 0, i64 0), %entry ], [ %add.ptr, %while.body ]
+;CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %while.body ], [ 0, %entry ]
 ;CHECK-NEXT:    %sum44.020 = phi i64 [ 0, %entry ], [ %add, %while.body ]
-;CHECK-NEXT:    [[T2:%[0-9]+]] = load i8, i8* %buf.021, align 1
+;CHECK-NEXT:    %0 = trunc i64 %indvar to i32
+;CHECK-NEXT:    %scevgep = getelementptr [16 x i8], [16 x i8]* @aaa, i64 0, i64 %indvar
+;CHECK-NEXT:    [[T2:%[0-9]+]] = load i8, i8* %scevgep, align 1
 ;CHECK-NEXT:    %conv = zext i8 [[T2]] to i64
 ;CHECK-NEXT:    %add = add i64 %conv, %sum44.020
-;CHECK-NEXT:    %add.ptr = getelementptr inbounds i8, i8* %buf.021, i64 1
-;CHECK-NEXT:    %indvar.next = add i32 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i32 %indvar, 1
+;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
+;CHECK-NEXT:    %exitcond = icmp eq i32 %0, 15
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end, label %while.body
 
   %dec22 = phi i32 [ 4, %entry ], [ %dec, %while.body ]
@@ -67,14 +67,14 @@ for.cond.cleanup:
 
 for.body:
 ;CHECK-LABEL: for.body:
-;CHECK-NEXT:    %indvar = phi i32 [ %indvar.next, %for.body ], [ 0, %for.body.lr.ph ]
+;CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %for.body.lr.ph ]
 ;CHECK-NEXT:    %S.addr.011 = phi i32 [ %S, %for.body.lr.ph ], [ %add, %for.body ]
-;CHECK-NEXT:    %a.addr.010 = phi i32* [ %a, %for.body.lr.ph ], [ %incdec.ptr1, %for.body ]
-;CHECK-NEXT:    %4 = load i32, i32* %a.addr.010, align 4
-;CHECK-NEXT:    %add = add nsw i32 %4, %S.addr.011
-;CHECK-NEXT:    %incdec.ptr1 = getelementptr inbounds i32, i32* %a.addr.010, i64 1
-;CHECK-NEXT:    %indvar.next = add i32 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i32 %indvar, %3
+;CHECK-NEXT:    %4 = trunc i64 %indvar to i32
+;CHECK-NEXT:    %scevgep = getelementptr i32, i32* %a, i64 %indvar
+;CHECK-NEXT:    %5 = load i32, i32* %scevgep, align 4
+;CHECK-NEXT:    %add = add nsw i32 %5, %S.addr.011
+;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
+;CHECK-NEXT:    %exitcond = icmp eq i32 %4, %3
 ;CHECK-NEXT:    br i1 %exitcond, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
 
   %i.012 = phi i32 [ 0, %for.body.lr.ph ], [ %add3, %for.body ]
@@ -101,14 +101,15 @@ while.body.preheader:                             ; preds = %entry
 
 while.body:                                       ; preds = %while.body.preheader, %while.body
 ;CHECK-LABEL: while.body:
-;CHECK-NEXT:  %indvar = phi i32 [ %indvar.next, %while.body ], [ 0, %while.body.preheader ]
+;CHECK-NEXT:  %indvar = phi i64 [ %indvar.next, %while.body ], [ 0, %while.body.preheader ]
 ;CHECK-NEXT:  %S.012 = phi i32 [ %add, %while.body ], [ undef, %while.body.preheader ]
-;CHECK-NEXT:  %buf.addr.011 = phi i32* [ %add.ptr, %while.body ], [ %buf, %while.body.preheader ]
-;CHECK-NEXT:  %4 = load i32, i32* %buf.addr.011, align 4
-;CHECK-NEXT:  %add = add nsw i32 %4, %S.012
-;CHECK-NEXT:  %add.ptr = getelementptr inbounds i32, i32* %buf.addr.011, i64 -1
-;CHECK-NEXT:  %indvar.next = add i32 %indvar, 1
-;CHECK-NEXT:  %exitcond = icmp eq i32 %indvar, %3
+;CHECK-NEXT:  %4 = trunc i64 %indvar to i32
+;CHECK-NEXT:  %5 = mul i64 %indvar, -1
+;CHECK-NEXT:  %scevgep = getelementptr i32, i32* %buf, i64 %5
+;CHECK-NEXT:  %6 = load i32, i32* %scevgep, align 4
+;CHECK-NEXT:  %add = add nsw i32 %6, %S.012
+;CHECK-NEXT:  %indvar.next = add i64 %indvar, 1
+;CHECK-NEXT:  %exitcond = icmp eq i32 %4, %3
 ;CHECK-NEXT:  br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %i.013 = phi i32 [ %sub, %while.body ], [ %len, %while.body.preheader ]

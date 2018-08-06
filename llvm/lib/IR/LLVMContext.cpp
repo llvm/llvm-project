@@ -332,8 +332,12 @@ void LLVMContext::setDiscardValueNames(bool Discard) {
   pImpl->DiscardValueNames = Discard;
 }
 
-OptBisect &LLVMContext::getOptBisect() {
-  return pImpl->getOptBisect();
+OptPassGate &LLVMContext::getOptPassGate() const {
+  return pImpl->getOptPassGate();
+}
+
+void LLVMContext::setOptPassGate(OptPassGate& OPG) {
+  pImpl->setOptPassGate(OPG);
 }
 
 const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {

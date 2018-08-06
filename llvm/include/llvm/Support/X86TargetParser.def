@@ -65,6 +65,8 @@ X86_CPU_TYPE                  ("athlon-xp",   AMD_ATHLON_XP)
 X86_CPU_TYPE                  ("k8",          AMD_K8)
 X86_CPU_TYPE                  ("k8-sse3",     AMD_K8SSE3)
 X86_CPU_TYPE                  ("goldmont",    INTEL_GOLDMONT)
+X86_CPU_TYPE                  ("goldmont-plus", INTEL_GOLDMONT_PLUS)
+X86_CPU_TYPE                  ("tremont",     INTEL_TREMONT)
 #undef X86_CPU_TYPE_COMPAT_WITH_ALIAS
 #undef X86_CPU_TYPE_COMPAT
 #undef X86_CPU_TYPE

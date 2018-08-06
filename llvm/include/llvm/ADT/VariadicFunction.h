@@ -53,7 +53,7 @@ namespace llvm {
 #define LLVM_COMMA_JOIN31(x) LLVM_COMMA_JOIN30(x), x ## 30
 #define LLVM_COMMA_JOIN32(x) LLVM_COMMA_JOIN31(x), x ## 31
 
-/// \brief Class which can simulate a type-safe variadic function.
+/// Class which can simulate a type-safe variadic function.
 ///
 /// The VariadicFunction class template makes it easy to define
 /// type-safe variadic functions where all arguments have the same

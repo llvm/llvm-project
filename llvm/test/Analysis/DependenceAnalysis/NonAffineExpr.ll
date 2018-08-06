@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -basicaa -da-delinearize -da
+; RUN: opt < %s -analyze -basicaa -da
 ;
 ; CHECK: da analyze - consistent input [S S]!
 ; CHECK: da analyze - confused!

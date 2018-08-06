@@ -111,28 +111,14 @@ def VecElement : Operand<i32> {
 //===----------------------------------------------------------------------===//
 
 
-def hasAtomRedG32 : Predicate<"Subtarget->hasAtomRedG32()">;
-def hasAtomRedS32 : Predicate<"Subtarget->hasAtomRedS32()">;
-def hasAtomRedGen32 : Predicate<"Subtarget->hasAtomRedGen32()">;
-def useAtomRedG32forGen32 :
-  Predicate<"!Subtarget->hasAtomRedGen32() && Subtarget->hasAtomRedG32()">;
-def hasBrkPt : Predicate<"Subtarget->hasBrkPt()">;
-def hasAtomRedG64 : Predicate<"Subtarget->hasAtomRedG64()">;
-def hasAtomRedS64 : Predicate<"Subtarget->hasAtomRedS64()">;
-def hasAtomRedGen64 : Predicate<"Subtarget->hasAtomRedGen64()">;
-def useAtomRedG64forGen64 :
-  Predicate<"!Subtarget->hasAtomRedGen64() && Subtarget->hasAtomRedG64()">;
-def hasAtomAddF32 : Predicate<"Subtarget->hasAtomAddF32()">;
 def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
 def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
 def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
 def hasVote : Predicate<"Subtarget->hasVote()">;
 def hasDouble : Predicate<"Subtarget->hasDouble()">;
-def reqPTX20 : Predicate<"Subtarget->reqPTX20()">;
 def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
-def hasGenericLdSt : Predicate<"Subtarget->hasGenericLdSt()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -156,10 +142,12 @@ def true : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
+def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 
+def useShortPtr : Predicate<"useShortPointers()">;
 def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;
 
 //===----------------------------------------------------------------------===//
@@ -961,13 +949,12 @@ def FDIV321r_prec_ftz :
             (ins f32imm:$a, Float32Regs:$b),
             "rcp.rn.ftz.f32 \t$dst, $b;",
             [(set Float32Regs:$dst, (fdiv FloatConst1:$a, Float32Regs:$b))]>,
-            Requires<[reqPTX20, doF32FTZ]>;
+            Requires<[doF32FTZ]>;
 def FDIV321r_prec :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins f32imm:$a, Float32Regs:$b),
             "rcp.rn.f32 \t$dst, $b;",
-            [(set Float32Regs:$dst, (fdiv FloatConst1:$a, Float32Regs:$b))]>,
-            Requires<[reqPTX20]>;
+            [(set Float32Regs:$dst, (fdiv FloatConst1:$a, Float32Regs:$b))]>;
 //
 // F32 Accurate division
 //
@@ -976,25 +963,23 @@ def FDIV32rr_prec_ftz :
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.rn.ftz.f32 \t$dst, $a, $b;",
             [(set Float32Regs:$dst, (fdiv Float32Regs:$a, Float32Regs:$b))]>,
-            Requires<[doF32FTZ, reqPTX20]>;
+            Requires<[doF32FTZ]>;
 def FDIV32ri_prec_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.rn.ftz.f32 \t$dst, $a, $b;",
             [(set Float32Regs:$dst, (fdiv Float32Regs:$a, fpimm:$b))]>,
-            Requires<[doF32FTZ, reqPTX20]>;
+            Requires<[doF32FTZ]>;
 def FDIV32rr_prec :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, Float32Regs:$b),
             "div.rn.f32 \t$dst, $a, $b;",
-            [(set Float32Regs:$dst, (fdiv Float32Regs:$a, Float32Regs:$b))]>,
-            Requires<[reqPTX20]>;
+            [(set Float32Regs:$dst, (fdiv Float32Regs:$a, Float32Regs:$b))]>;
 def FDIV32ri_prec :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$a, f32imm:$b),
             "div.rn.f32 \t$dst, $a, $b;",
-            [(set Float32Regs:$dst, (fdiv Float32Regs:$a, fpimm:$b))]>,
-            Requires<[reqPTX20]>;
+            [(set Float32Regs:$dst, (fdiv Float32Regs:$a, fpimm:$b))]>;
 
 //
 // FMA
@@ -1544,6 +1529,7 @@ def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex],
                             [SDNPWantRoot]>;
 def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex],
                               [SDNPWantRoot]>;
+def ADDRvar : ComplexPattern<iPTR, 1, "SelectDirectAddr", [], []>;
 
 def MEMri : Operand<i32> {
   let PrintMethod = "printMemOperand";

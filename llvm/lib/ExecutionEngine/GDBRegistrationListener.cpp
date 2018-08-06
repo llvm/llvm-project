@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/Object/ObjectFile.h"
@@ -235,3 +236,8 @@ JITEventListener* JITEventListener::createGDBRegistrationListener() {
 }
 
 } // namespace llvm
+
+LLVMJITEventListenerRef LLVMCreateGDBRegistrationListener(void)
+{
+  return wrap(JITEventListener::createGDBRegistrationListener());
+}

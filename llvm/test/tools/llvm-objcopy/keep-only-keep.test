@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy -keep=.test2 -only-keep=.test %t %t2
-# RUN: llvm-objcopy -j=.test -keep=.test2 %t %t3
+# RUN: llvm-objcopy -j .test -keep=.test2 %t %t3
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
 # RUN: diff %t2 %t3
 

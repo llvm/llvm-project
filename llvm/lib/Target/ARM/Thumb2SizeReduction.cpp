@@ -610,7 +610,8 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
   // Transfer MI flags.
   MIB.setMIFlags(MI->getFlags());
 
-  DEBUG(errs() << "Converted 32-bit: " << *MI << "       to 16-bit: " << *MIB);
+  LLVM_DEBUG(errs() << "Converted 32-bit: " << *MI
+                    << "       to 16-bit: " << *MIB);
 
   MBB.erase_instr(MI);
   ++NumLdSts;
@@ -657,7 +658,8 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
     // Transfer MI flags.
     MIB.setMIFlags(MI->getFlags());
 
-    DEBUG(errs() << "Converted 32-bit: " << *MI << "       to 16-bit: " <<*MIB);
+    LLVM_DEBUG(errs() << "Converted 32-bit: " << *MI
+                      << "       to 16-bit: " << *MIB);
 
     MBB.erase_instr(MI);
     ++NumNarrows;
@@ -826,7 +828,8 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   // Transfer MI flags.
   MIB.setMIFlags(MI->getFlags());
 
-  DEBUG(errs() << "Converted 32-bit: " << *MI << "       to 16-bit: " << *MIB);
+  LLVM_DEBUG(errs() << "Converted 32-bit: " << *MI
+                    << "       to 16-bit: " << *MIB);
 
   MBB.erase_instr(MI);
   ++Num2Addrs;
@@ -933,7 +936,8 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   // Transfer MI flags.
   MIB.setMIFlags(MI->getFlags());
 
-  DEBUG(errs() << "Converted 32-bit: " << *MI << "       to 16-bit: " << *MIB);
+  LLVM_DEBUG(errs() << "Converted 32-bit: " << *MI
+                    << "       to 16-bit: " << *MIB);
 
   MBB.erase_instr(MI);
   ++NumNarrows;
@@ -1033,7 +1037,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
       BundleMI = MI;
       continue;
     }
-    if (MI->isDebugValue())
+    if (MI->isDebugInstr())
       continue;
 
     LiveCPSR = UpdateCPSRUse(*MI, LiveCPSR);

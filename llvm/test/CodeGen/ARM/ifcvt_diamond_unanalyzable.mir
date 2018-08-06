@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+---
+name:            foo
+body:             |
+  bb.0:
+    Bcc %bb.2, 1, $cpsr
+
+  bb.1:
+    $sp = tADDspi $sp, 1, 14, _
+    B %bb.3
+
+  bb.2:
+    $sp = tADDspi $sp, 2, 14, _
+    B %bb.3
+
+  bb.3:
+  successors:
+    $sp = tADDspi $sp, 3, 14, _
+    BX_RET 14, _
+...
+
+# Diamond testcase with unanalyzable instruction in the BB following the
+# diamond.
+
+# CHECK: body:             |
+# CHECK:   bb.0:
+# CHECK:     $sp = tADDspi $sp, 2, 1, $cpsr
+# CHECK:     $sp = tADDspi $sp, 1, 0, $cpsr, implicit $sp
+# CHECK:     $sp = tADDspi $sp, 3, 14, $noreg
+# CHECK:     BX_RET 14, $noreg

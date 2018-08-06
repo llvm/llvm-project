@@ -102,8 +102,8 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !6 = !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ez", line: 4, isLocal: false, isDefinition: false, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !1, scope: !4, type: !7)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, null}
-!10 = distinct !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ez", line: 15, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 15, file: !1, scope: !4, type: !7, declaration: !6, variables: !2)
-!11 = distinct !DISubprogram(name: "f2<int>", linkageName: "_ZN3foo2f2IiEEvv", line: 10, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !4, type: !12, templateParams: !14, declaration: !17, variables: !2)
+!10 = distinct !DISubprogram(name: "f3", linkageName: "_ZN3foo2f3Ez", line: 15, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 15, file: !1, scope: !4, type: !7, declaration: !6, retainedNodes: !2)
+!11 = distinct !DISubprogram(name: "f2<int>", linkageName: "_ZN3foo2f2IiEEvv", line: 10, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !4, type: !12, templateParams: !14, declaration: !17, retainedNodes: !2)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null}
 !14 = !{!15}

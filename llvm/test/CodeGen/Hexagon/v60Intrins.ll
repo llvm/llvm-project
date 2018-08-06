@@ -1,7 +1,6 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2 -disable-post-ra  < %s | FileCheck %s
 
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
-; CHECK: q{{[0-3]}} = vsetq(r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} |= vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} = vand(q{{[0-3]}},r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} = vcmp.eq(v{{[0-9]*}}.b,v{{[0-9]*}}.b)
@@ -108,7 +107,7 @@
 ; CHECK: q{{[0-3]}} = xor{{[0-9]*}}(q{{[0-3]}},q{{[0-3]}})
 ; CHECK: v{{[0-9]*}} = vand(q{{[0-3]}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} = v
-; CHECK: v{{[0-9]*}} = valign(v{{[0-9]*}},v{{[0-9]*}},#0)
+; CHECK: v{{[0-9]*}} = valign(v{{[0-9]*}},v{{[0-9]*}},#1)
 ; CHECK: v{{[0-9]*}} = valign(v{{[0-9]*}},v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} = vand(q{{[0-3]}},r{{[0-9]*}})
@@ -116,7 +115,7 @@
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} |= vand(q{{[0-3]}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} = vdelta(v{{[0-9]*}},v{{[0-9]*}})
-; CHECK: v{{[0-9]*}} = vlalign(v{{[0-9]*}},v{{[0-9]*}},#0)
+; CHECK: v{{[0-9]*}} = vlalign(v{{[0-9]*}},v{{[0-9]*}},#1)
 ; CHECK: v{{[0-9]*}} = vlalign(v{{[0-9]*}},v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: v{{[0-9]*}} = vmux(q{{[0-3]}},v{{[0-9]*}},v{{[0-9]*}})
@@ -670,7 +669,7 @@ entry:
   store volatile <16 x i32> %247, <16 x i32>* @VectorResult, align 64
   %248 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %249 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %250 = call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %248, <16 x i32> %249, i32 0)
+  %250 = call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %248, <16 x i32> %249, i32 1)
   store volatile <16 x i32> %250, <16 x i32>* @VectorResult, align 64
   %251 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %252 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
@@ -695,7 +694,7 @@ entry:
   store volatile <16 x i32> %266, <16 x i32>* @VectorResult, align 64
   %267 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %268 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64
-  %269 = call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> %267, <16 x i32> %268, i32 0)
+  %269 = call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> %267, <16 x i32> %268, i32 1)
   store volatile <16 x i32> %269, <16 x i32>* @VectorResult, align 64
   %270 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 0), align 64
   %271 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vectors, i32 0, i32 1), align 64

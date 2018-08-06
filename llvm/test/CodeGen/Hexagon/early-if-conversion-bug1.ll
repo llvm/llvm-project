@@ -23,7 +23,7 @@ target triple = "hexagon"
 %union.anon.0 = type { i8 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #0
 
 declare i32 @__gxx_personality_v0(...)
 
@@ -98,7 +98,7 @@ entry:
 if.then:                                          ; preds = %entry
   %1 = bitcast %"class.std::__1::ostreambuf_iterator"* %retval to i8*
   %2 = bitcast %"class.std::__1::ostreambuf_iterator"* %__s to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 4, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %2, i32 4, i1 false)
   br label %return
 
 if.end:                                           ; preds = %entry
@@ -166,7 +166,7 @@ if.then12:                                        ; preds = %if.then8
   store %"class.std::__1::basic_streambuf"* null, %"class.std::__1::basic_streambuf"** %__sbuf_13, align 4
   %22 = bitcast %"class.std::__1::ostreambuf_iterator"* %retval to i8*
   %23 = bitcast %"class.std::__1::ostreambuf_iterator"* %__s to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %22, i8* %23, i32 4, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %22, i8* align 4 %23, i32 4, i1 false)
   br label %return
 
 if.end14:                                         ; preds = %if.then8
@@ -296,7 +296,7 @@ if.then22:                                        ; preds = %invoke.cont
   store %"class.std::__1::basic_streambuf"* null, %"class.std::__1::basic_streambuf"** %__sbuf_23, align 4
   %53 = bitcast %"class.std::__1::ostreambuf_iterator"* %retval to i8*
   %54 = bitcast %"class.std::__1::ostreambuf_iterator"* %__s to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %53, i8* %54, i32 4, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %53, i8* align 4 %54, i32 4, i1 false)
   store i32 1, i32* %cleanup.dest.slot
   br label %cleanup
 
@@ -361,7 +361,7 @@ if.then34:                                        ; preds = %if.then30
   store %"class.std::__1::basic_streambuf"* null, %"class.std::__1::basic_streambuf"** %__sbuf_35, align 4
   %69 = bitcast %"class.std::__1::ostreambuf_iterator"* %retval to i8*
   %70 = bitcast %"class.std::__1::ostreambuf_iterator"* %__s to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %69, i8* %70, i32 4, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %69, i8* align 4 %70, i32 4, i1 false)
   br label %return
 
 if.end36:                                         ; preds = %if.then30
@@ -381,7 +381,7 @@ if.end37:                                         ; preds = %if.end36, %if.end25
   %74 = load i32, i32* %__r.i, align 4
   %75 = bitcast %"class.std::__1::ostreambuf_iterator"* %retval to i8*
   %76 = bitcast %"class.std::__1::ostreambuf_iterator"* %__s to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %75, i8* %76, i32 4, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %75, i8* align 4 %76, i32 4, i1 false)
   br label %return
 
 return:                                           ; preds = %if.end37, %if.then34, %cleanup, %if.then12, %if.then

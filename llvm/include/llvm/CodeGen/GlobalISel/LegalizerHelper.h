@@ -93,12 +93,24 @@ public:
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
 private:
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Use by extending the operand's type to \p WideTy using the specified \p
+  /// ExtOpcode for the extension instruction, and replacing the vreg of the
+  /// operand in place.
+  void widenScalarSrc(MachineInstr &MI, LLT WideTy, unsigned OpIdx,
+                      unsigned ExtOpcode);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Def by extending the operand's type to \p WideTy and truncating it back
+  /// with the \p TruncOpcode, and replacing the vreg of the operand in place.
+  void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
+                      unsigned TruncOpcode = TargetOpcode::G_TRUNC);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
   /// registers created are appended to Ops, starting at bit 0 of Reg.
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
-                    SmallVectorImpl<unsigned> &Ops);
+                    SmallVectorImpl<unsigned> &VRegs);
 
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;

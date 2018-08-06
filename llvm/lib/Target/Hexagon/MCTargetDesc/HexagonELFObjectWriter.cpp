@@ -298,9 +298,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createHexagonELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                   StringRef CPU) {
-  auto MOTW = llvm::make_unique<HexagonELFObjectWriter>(OSABI, CPU);
-  return createELFObjectWriter(std::move(MOTW), OS, /*IsLittleEndian*/ true);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU) {
+  return llvm::make_unique<HexagonELFObjectWriter>(OSABI, CPU);
 }

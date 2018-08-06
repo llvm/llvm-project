@@ -40,6 +40,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -55,6 +56,11 @@ namespace llvm {
   void initializeHexagonGenMuxPass(PassRegistry& Registry);
 
 } // end namespace llvm
+
+// Initialize this to 0 to always prefer generating mux by default.
+static cl::opt<unsigned> MinPredDist("hexagon-gen-mux-threshold", cl::Hidden,
+  cl::init(0), cl::desc("Minimum distance between predicate definition and "
+  "farther of the two predicated uses"));
 
 namespace {
 
@@ -269,11 +275,13 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     // There is now a complete definition of DR, i.e. we have the predicate
     // register, the definition if-true, and definition if-false.
 
-    // First, check if both definitions are far enough from the definition
+    // First, check if the definitions are far enough from the definition
     // of the predicate register.
     unsigned MinX = std::min(CI.TrueX, CI.FalseX);
     unsigned MaxX = std::max(CI.TrueX, CI.FalseX);
-    unsigned SearchX = (MaxX > 4) ? MaxX-4 : 0;
+    // Specifically, check if the predicate definition is within a prescribed
+    // distance from the farther of the two predicated instructions.
+    unsigned SearchX = (MaxX >= MinPredDist) ? MaxX-MinPredDist : 0;
     bool NearDef = false;
     for (unsigned X = SearchX; X < MaxX; ++X) {
       const DefUseInfo &DU = DUM.lookup(X);
@@ -348,7 +356,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     return false;
   };
   for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
-    if (I->isDebugValue())
+    if (I->isDebugInstr())
       continue;
     // This isn't 100% accurate, but it's safe.
     // It won't detect (as a kill) a case like this

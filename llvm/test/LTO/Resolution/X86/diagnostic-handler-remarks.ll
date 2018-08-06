@@ -1,11 +1,22 @@
-; RUN: llvm-as < %s >%t.bc
+; Test of LTO with opt remarks YAML output.
 
+; First try with Regular LTO
+; RUN: llvm-as < %s >%t.bc
 ; RUN: rm -f %t.yaml
 ; RUN: llvm-lto2 run -pass-remarks-output=%t.yaml \
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+
+; Try again with ThinLTO
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: rm -f %t.thin.1.yaml
+; RUN: llvm-lto2 run -pass-remarks-output=%t \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc
+; RUN: cat %t.thin.1.yaml | FileCheck %s -check-prefix=YAML
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            inline

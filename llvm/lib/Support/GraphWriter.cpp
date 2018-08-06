@@ -66,7 +66,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
   return Str;
 }
 
-/// \brief Get a color string for this node number. Simply round-robin selects
+/// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
 StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
   static const int NumColors = 20;
@@ -91,20 +91,18 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
 }
 
 // Execute the graph viewer. Return true if there were errors.
-static bool ExecGraphViewer(StringRef ExecPath, std::vector<const char *> &args,
+static bool ExecGraphViewer(StringRef ExecPath, std::vector<StringRef> &args,
                             StringRef Filename, bool wait,
                             std::string &ErrMsg) {
-  assert(args.back() == nullptr);
   if (wait) {
-    if (sys::ExecuteAndWait(ExecPath, args.data(), nullptr, {}, 0, 0,
-                            &ErrMsg)) {
+    if (sys::ExecuteAndWait(ExecPath, args, None, {}, 0, 0, &ErrMsg)) {
       errs() << "Error: " << ErrMsg << "\n";
       return true;
     }
     sys::fs::remove(Filename);
     errs() << " done. \n";
   } else {
-    sys::ExecuteNoWait(ExecPath, args.data(), nullptr, {}, 0, &ErrMsg);
+    sys::ExecuteNoWait(ExecPath, args, None, {}, 0, &ErrMsg);
     errs() << "Remember to erase graph file: " << Filename << "\n";
   }
   return false;
@@ -158,22 +156,20 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
 #ifdef __APPLE__
   wait &= !ViewBackground;
   if (S.TryFindProgram("open", ViewerPath)) {
-    std::vector<const char *> args;
-    args.push_back(ViewerPath.c_str());
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
     if (wait)
       args.push_back("-W");
-    args.push_back(Filename.c_str());
-    args.push_back(nullptr);
+    args.push_back(Filename);
     errs() << "Trying 'open' program... ";
     if (!ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg))
       return false;
   }
 #endif
   if (S.TryFindProgram("xdg-open", ViewerPath)) {
-    std::vector<const char *> args;
-    args.push_back(ViewerPath.c_str());
-    args.push_back(Filename.c_str());
-    args.push_back(nullptr);
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
+    args.push_back(Filename);
     errs() << "Trying 'xdg-open' program... ";
     if (!ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg))
       return false;
@@ -181,10 +177,9 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
 
   // Graphviz
   if (S.TryFindProgram("Graphviz", ViewerPath)) {
-    std::vector<const char *> args;
-    args.push_back(ViewerPath.c_str());
-    args.push_back(Filename.c_str());
-    args.push_back(nullptr);
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
+    args.push_back(Filename);
 
     errs() << "Running 'Graphviz' program... ";
     return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
@@ -192,14 +187,12 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
 
   // xdot
   if (S.TryFindProgram("xdot|xdot.py", ViewerPath)) {
-    std::vector<const char *> args;
-    args.push_back(ViewerPath.c_str());
-    args.push_back(Filename.c_str());
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
+    args.push_back(Filename);
 
     args.push_back("-f");
     args.push_back(getProgramName(program));
-
-    args.push_back(nullptr);
 
     errs() << "Running 'xdot.py' program... ";
     return ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg);
@@ -221,7 +214,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     Viewer = VK_Ghostview;
   if (!Viewer && S.TryFindProgram("xdg-open", ViewerPath))
     Viewer = VK_XDGOpen;
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   if (!Viewer && S.TryFindProgram("cmd", ViewerPath)) {
     Viewer = VK_CmdStart;
   }
@@ -235,18 +228,17 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     std::string OutputFilename =
         Filename + (Viewer == VK_CmdStart ? ".pdf" : ".ps");
 
-    std::vector<const char *> args;
-    args.push_back(GeneratorPath.c_str());
+    std::vector<StringRef> args;
+    args.push_back(GeneratorPath);
     if (Viewer == VK_CmdStart)
       args.push_back("-Tpdf");
     else
       args.push_back("-Tps");
     args.push_back("-Nfontname=Courier");
     args.push_back("-Gsize=7.5,10");
-    args.push_back(Filename.c_str());
+    args.push_back(Filename);
     args.push_back("-o");
-    args.push_back(OutputFilename.c_str());
-    args.push_back(nullptr);
+    args.push_back(OutputFilename);
 
     errs() << "Running '" << GeneratorPath << "' program... ";
 
@@ -258,31 +250,30 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     std::string StartArg;
 
     args.clear();
-    args.push_back(ViewerPath.c_str());
+    args.push_back(ViewerPath);
     switch (Viewer) {
     case VK_OSXOpen:
       args.push_back("-W");
-      args.push_back(OutputFilename.c_str());
+      args.push_back(OutputFilename);
       break;
     case VK_XDGOpen:
       wait = false;
-      args.push_back(OutputFilename.c_str());
+      args.push_back(OutputFilename);
       break;
     case VK_Ghostview:
       args.push_back("--spartan");
-      args.push_back(OutputFilename.c_str());
+      args.push_back(OutputFilename);
       break;
     case VK_CmdStart:
       args.push_back("/S");
       args.push_back("/C");
       StartArg =
           (StringRef("start ") + (wait ? "/WAIT " : "") + OutputFilename).str();
-      args.push_back(StartArg.c_str());
+      args.push_back(StartArg);
       break;
     case VK_None:
       llvm_unreachable("Invalid viewer");
     }
-    args.push_back(nullptr);
 
     ErrMsg.clear();
     return ExecGraphViewer(ViewerPath, args, OutputFilename, wait, ErrMsg);
@@ -290,13 +281,12 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
 
   // dotty
   if (S.TryFindProgram("dotty", ViewerPath)) {
-    std::vector<const char *> args;
-    args.push_back(ViewerPath.c_str());
-    args.push_back(Filename.c_str());
-    args.push_back(nullptr);
+    std::vector<StringRef> args;
+    args.push_back(ViewerPath);
+    args.push_back(Filename);
 
 // Dotty spawns another app and doesn't wait until it returns
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
     wait = false;
 #endif
     errs() << "Running 'dotty' program... ";

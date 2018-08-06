@@ -20,11 +20,12 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 declare void @foo(i32*)
 
+; CHECK: DW_AT_name {{.*}}"f0"
 ; CHECK: DW_AT_name {{.*}}"e"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset] (
 ; CHECK-NEXT:   [0x00000028, 0x0000002c): DW_OP_reg1 AT_64
-; CHECK-NEXT:   [0x0000002c, 0x00000048): DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT:   [0x0000002c, 0x00000048): DW_OP_breg29 SP_64+16)
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
@@ -55,7 +56,7 @@ entry:
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]  (
 ; CHECK-NEXT:   [0x00000080, 0x00000084): DW_OP_reg1 AT_64
-; CHECK-NEXT:   [0x00000084, 0x00000098): DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT:   [0x00000084, 0x00000098): DW_OP_breg29 SP_64+16)
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {
@@ -91,7 +92,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/vk/repos/tmp/dwarf")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
+!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7, !7, !7, !7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -102,7 +103,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !12 = !DILocalVariable(name: "d", arg: 4, scope: !4, file: !1, line: 4, type: !7)
 !13 = !DILocalVariable(name: "e", arg: 5, scope: !4, file: !1, line: 4, type: !7)
 !14 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 5, type: !7)
-!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !16)
+!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !16)
 !16 = !{!17, !18, !19, !20, !21, !22}
 !17 = !DILocalVariable(name: "a", arg: 1, scope: !15, file: !1, line: 11, type: !7)
 !18 = !DILocalVariable(name: "b", arg: 2, scope: !15, file: !1, line: 11, type: !7)

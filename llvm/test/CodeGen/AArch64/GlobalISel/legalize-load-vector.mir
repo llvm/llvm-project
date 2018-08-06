@@ -1,0 +1,61 @@
+# RUN: not llc %s -o - -run-pass=legalizer 2>&1 | FileCheck %s
+
+# Check we don't infinitely loop on (currently) illegal non-extending loads
+# CHECK: LLVM ERROR: unable to legalize instruction
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--linux-gnu"
+  
+  ; Function Attrs: noinline nounwind optnone
+  define dso_local float @simulated_vgetq_lane_f16(<8 x half> %vec, i32 %lane) #0 {
+  entry:
+    %__ret.i = alloca <4 x half>, align 8
+    ret float 0.0
+  }
+  
+  attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a57" "target-features"="+crc,+crypto,+fp-armv8,+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+...
+---
+name:            simulated_vgetq_lane_f16
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+liveins:         
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+  - { id: 0, name: __ret.i, type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       
+body:             |
+  bb.1.entry:
+    liveins: $x0
+  
+    %0:_(p0) = COPY $x0
+    %1:_(<4 x s16>) = G_LOAD %0:_(p0) :: (load 8 from %ir.__ret.i)
+    $x1 = COPY %1(<4 x s16>)
+
+...

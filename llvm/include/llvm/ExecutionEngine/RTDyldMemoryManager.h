@@ -47,6 +47,9 @@ public:
   /// newly loaded object.
   virtual void notifyObjectLoaded(ExecutionEngine *EE,
                                   const object::ObjectFile &) {}
+
+private:
+  void anchor() override;
 };
 
 // RuntimeDyld clients often want to handle the memory management of
@@ -56,7 +59,7 @@ public:
 // FIXME: As the RuntimeDyld fills out, additional routines will be needed
 //        for the varying types of objects to be allocated.
 class RTDyldMemoryManager : public MCJITMemoryManager,
-                            public JITSymbolResolver {
+                            public LegacyJITSymbolResolver {
 public:
   RTDyldMemoryManager() = default;
   RTDyldMemoryManager(const RTDyldMemoryManager&) = delete;
@@ -142,6 +145,9 @@ protected:
   };
   typedef std::vector<EHFrame> EHFrameInfos;
   EHFrameInfos EHFrames;
+
+private:
+  void anchor() override;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

@@ -120,3 +120,41 @@ define i32 @f10(i64 %cmp, i64 %swap, i64 *%src) {
   ret i32 %res
 }
 
+declare void @g()
+
+; Check using the comparison result for a branch.
+; CHECK-LABEL: f11
+; CHECK: csg %r2, %r3, 0(%r4)
+; CHECK-NEXT: jge g
+; CHECK: br %r14
+define void @f11(i64 %cmp, i64 %swap, i64 *%src) {
+  %pairval = cmpxchg i64 *%src, i64 %cmp, i64 %swap seq_cst seq_cst
+  %cond = extractvalue { i64, i1 } %pairval, 1
+  br i1 %cond, label %call, label %exit
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+
+; ... and the same with the inverted direction.
+; CHECK-LABEL: f12
+; CHECK: csg %r2, %r3, 0(%r4)
+; CHECK-NEXT: jgl g
+; CHECK: br %r14
+define void @f12(i64 %cmp, i64 %swap, i64 *%src) {
+  %pairval = cmpxchg i64 *%src, i64 %cmp, i64 %swap seq_cst seq_cst
+  %cond = extractvalue { i64, i1 } %pairval, 1
+  br i1 %cond, label %exit, label %call
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+

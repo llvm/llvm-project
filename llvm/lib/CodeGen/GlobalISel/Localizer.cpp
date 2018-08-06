@@ -44,6 +44,11 @@ bool Localizer::shouldLocalize(const MachineInstr &MI) {
   }
 }
 
+void Localizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  getSelectionDAGFallbackAnalysisUsage(AU);
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
 bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
                            MachineBasicBlock *&InsertMBB) {
   MachineInstr &MIUse = *MOUse.getParent();
@@ -59,7 +64,7 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  DEBUG(dbgs() << "Localize instructions for: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Localize instructions for: " << MF.getName() << '\n');
 
   init(MF);
 
@@ -73,7 +78,7 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB) {
       if (LocalizedInstrs.count(&MI) || !shouldLocalize(MI))
         continue;
-      DEBUG(dbgs() << "Should localize: " << MI);
+      LLVM_DEBUG(dbgs() << "Should localize: " << MI);
       assert(MI.getDesc().getNumDefs() == 1 &&
              "More than one definition not supported yet");
       unsigned Reg = MI.getOperand(0).getReg();
@@ -85,12 +90,12 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
         MachineOperand &MOUse = *MOIt++;
         // Check if the use is already local.
         MachineBasicBlock *InsertMBB;
-        DEBUG(MachineInstr &MIUse = *MOUse.getParent();
-              dbgs() << "Checking use: " << MIUse
-                     << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
+        LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
+                   dbgs() << "Checking use: " << MIUse
+                          << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
         if (isLocalUse(MOUse, MI, InsertMBB))
           continue;
-        DEBUG(dbgs() << "Fixing non-local use\n");
+        LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
         Changed = true;
         auto MBBAndReg = std::make_pair(InsertMBB, Reg);
         auto NewVRegIt = MBBWithLocalDef.find(MBBAndReg);
@@ -111,10 +116,10 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
           LocalizedMI->getOperand(0).setReg(NewReg);
           NewVRegIt =
               MBBWithLocalDef.insert(std::make_pair(MBBAndReg, NewReg)).first;
-          DEBUG(dbgs() << "Inserted: " << *LocalizedMI);
+          LLVM_DEBUG(dbgs() << "Inserted: " << *LocalizedMI);
         }
-        DEBUG(dbgs() << "Update use with: " << printReg(NewVRegIt->second)
-                     << '\n');
+        LLVM_DEBUG(dbgs() << "Update use with: " << printReg(NewVRegIt->second)
+                          << '\n');
         // Update the user reg.
         MOUse.setReg(NewVRegIt->second);
       }

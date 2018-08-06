@@ -11,24 +11,24 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK-NEXT:   bb.1 (%ir-block.0):
 ; CHECK:     successors: %[[GOOD:bb.[0-9]+]]{{.*}}%[[BAD:bb.[0-9]+]]
 ; CHECK:     EH_LABEL
-; CHECK:     %w0 = COPY
-; CHECK:     BL @foo, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0, implicit-def %w0
-; CHECK:     {{%[0-9]+}}:_(s32) = COPY %w0
+; CHECK:     $w0 = COPY
+; CHECK:     BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
+; CHECK:     {{%[0-9]+}}:_(s32) = COPY $w0
 ; CHECK:     EH_LABEL
 ; CHECK:     G_BR %[[GOOD]]
 
 ; CHECK:   [[BAD]].{{[a-z]+}} (landing-pad):
 ; CHECK:     EH_LABEL
-; CHECK:     [[UNDEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
-; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY %x0
-; CHECK:     [[VAL_WITH_PTR:%[0-9]+]]:_(s128) = G_INSERT [[UNDEF]], [[PTR]](p0), 0
-; CHECK:     [[SEL_PTR:%[0-9]+]]:_(p0) = COPY %x1
+; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK:     [[SEL_PTR:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]]
+; CHECK:     [[UNDEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+; CHECK:     [[VAL_WITH_PTR:%[0-9]+]]:_(s128) = G_INSERT [[UNDEF]], [[PTR]](p0), 0
 ; CHECK:     [[PTR_SEL:%[0-9]+]]:_(s128) = G_INSERT [[VAL_WITH_PTR]], [[SEL]](s32), 64
 ; CHECK:     [[PTR_RET:%[0-9]+]]:_(s64) = G_EXTRACT [[PTR_SEL]](s128), 0
 ; CHECK:     [[SEL_RET:%[0-9]+]]:_(s32) = G_EXTRACT [[PTR_SEL]](s128), 64
-; CHECK:     %x0 = COPY [[PTR_RET]]
-; CHECK:     %w1 = COPY [[SEL_RET]]
+; CHECK:     $x0 = COPY [[PTR_RET]]
+; CHECK:     $w1 = COPY [[SEL_RET]]
 
 ; CHECK:   [[GOOD]].{{[a-z]+}}:
 ; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -49,7 +49,7 @@ continue:
 }
 
 ; CHECK-LABEL: name: test_invoke_indirect
-; CHECK: [[CALLEE:%[0-9]+]]:gpr64(p0) = COPY %x0
+; CHECK: [[CALLEE:%[0-9]+]]:gpr64(p0) = COPY $x0
 ; CHECK: BLR [[CALLEE]]
 define void @test_invoke_indirect(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   invoke void %callee() to label %continue unwind label %broken
@@ -64,18 +64,20 @@ continue:
 
 ; CHECK-LABEL: name: test_invoke_varargs
 
-; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
 ; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
 ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.0
 
-; CHECK: %x0 = COPY [[NULL]]
+; CHECK: $x0 = COPY [[NULL]]
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFFSET:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[SLOT:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFFSET]](s64)
-; CHECK: G_STORE [[ANSWER]](s32), [[SLOT]]
+; CHECK: [[ANSWER_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ANSWER]]
+; CHECK: G_STORE [[ANSWER_EXT]](s64), [[SLOT]]
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY %sp
+; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFFSET:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[SLOT:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFFSET]](s64)
 ; CHECK: G_STORE [[ONE]](s32), [[SLOT]]

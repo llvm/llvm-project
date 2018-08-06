@@ -7,7 +7,7 @@ define zeroext i16 @TEST_mm_test_epi8_mask(<2 x i64> %__A, <2 x i64> %__B) local
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestmb %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -21,10 +21,10 @@ entry:
 define zeroext i16 @TEST_mm_mask_test_epi8_mask(i16 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm_mask_test_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestmb %xmm0, %xmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmb %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -42,7 +42,7 @@ define zeroext i8 @TEST_mm_test_epi16_mask(<2 x i64> %__A, <2 x i64> %__B) local
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestmw %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -56,10 +56,10 @@ entry:
 define zeroext i8 @TEST_mm_mask_test_epi16_mask(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm_mask_test_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestmw %xmm0, %xmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmw %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -77,7 +77,7 @@ define zeroext i16 @TEST_mm_testn_epi8_mask(<2 x i64> %__A, <2 x i64> %__B) loca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestnmb %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -91,10 +91,10 @@ entry:
 define zeroext i16 @TEST_mm_mask_testn_epi8_mask(i16 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm_mask_testn_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestnmb %xmm0, %xmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -112,7 +112,7 @@ define zeroext i8 @TEST_mm_testn_epi16_mask(<2 x i64> %__A, <2 x i64> %__B) loca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestnmw %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -126,10 +126,10 @@ entry:
 define zeroext i8 @TEST_mm_mask_testn_epi16_mask(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm_mask_testn_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestnmw %xmm0, %xmm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -161,9 +161,9 @@ entry:
 define i32 @TEST_mm256_mask_test_epi8_mask(i32 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm256_mask_test_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestmb %ymm0, %ymm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmb %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -182,7 +182,7 @@ define zeroext i16 @TEST_mm256_test_epi16_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestmw %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -197,10 +197,10 @@ entry:
 define zeroext i16 @TEST_mm256_mask_test_epi16_mask(i16 zeroext %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm256_mask_test_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestmw %ymm0, %ymm1, %k0 {%k1}
+; CHECK-NEXT:    vptestmw %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -233,9 +233,9 @@ entry:
 define i32 @TEST_mm256_mask_testn_epi8_mask(i32 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm256_mask_testn_epi8_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestnmb %ymm0, %ymm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -254,7 +254,7 @@ define zeroext i16 @TEST_mm256_testn_epi16_mask(<4 x i64> %__A, <4 x i64> %__B) 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestnmw %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
@@ -269,10 +269,10 @@ entry:
 define zeroext i16 @TEST_mm256_mask_testn_epi16_mask(i16 zeroext %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; CHECK-LABEL: TEST_mm256_mask_testn_epi16_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vptestnmw %ymm0, %ymm1, %k0 {%k1}
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

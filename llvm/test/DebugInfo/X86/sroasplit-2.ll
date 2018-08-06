@@ -21,7 +21,8 @@
 
 ; Verify that SROA creates a variable piece when splitting i1.
 ; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce0, metadata ![[O:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)),
-; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce1, metadata ![[O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)),
+; CHECK:  call void @llvm.dbg.value(metadata i32 {{.*}}, metadata ![[O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32)),
+; CHECK:  call void @llvm.dbg.value(metadata i32 {{.*}}, metadata ![[O]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32)),
 ; CHECK:  call void @llvm.dbg.value({{.*}}, metadata ![[I1:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)),
 ; CHECK-DAG: ![[O]] = !DILocalVariable(name: "outer",{{.*}} line: 10
 ; CHECK-DAG: ![[I1]] = !DILocalVariable(name: "i1",{{.*}} line: 11
@@ -48,7 +49,7 @@ define i32 @foo(i64 %outer.coerce0, i64 %outer.coerce1) #0 !dbg !4 {
   %5 = getelementptr inbounds [2 x %struct.Inner], [2 x %struct.Inner]* %4, i32 0, i64 1, !dbg !27
   %6 = bitcast %struct.Inner* %i1 to i8*, !dbg !27
   %7 = bitcast %struct.Inner* %5 to i8*, !dbg !27
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %6, i8* %7, i64 8, i32 4, i1 false), !dbg !27
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %6, i8* align 4 %7, i64 8, i1 false), !dbg !27
   %8 = getelementptr inbounds %struct.Inner, %struct.Inner* %i1, i32 0, i32 0, !dbg !28
   %9 = load i32, i32* %8, align 4, !dbg !28
   ret i32 %9, !dbg !28
@@ -58,7 +59,7 @@ define i32 @foo(i64 %outer.coerce0, i64 %outer.coerce1) #0 !dbg !4 {
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable "no-frame-pointer-elim"="true" }
 attributes #1 = { nounwind readnone }
@@ -71,7 +72,7 @@ attributes #2 = { nounwind }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, globals: !{}, imports: !{})
 !1 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !2 = !DIExpression()
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !{})
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, retainedNodes: !{})
 !5 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}

@@ -83,7 +83,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 6.0.0 (trunk 313291)"}
-!7 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooddb", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!7 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooddb", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !10, !10, !11}
 !10 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
@@ -95,7 +95,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !16 = !DILocation(line: 1, column: 19, scope: !7)
 !17 = !DILocation(line: 2, column: 26, scope: !7)
 !18 = !DILocation(line: 3, column: 20, scope: !7)
-!19 = distinct !DISubprogram(name: "foo1", linkageName: "_Z4foo1ddb", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !20)
+!19 = distinct !DISubprogram(name: "foo1", linkageName: "_Z4foo1ddb", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !20)
 !20 = !{!21, !22, !23}
 !21 = !DILocalVariable(name: "x", arg: 1, scope: !19, file: !1, line: 1, type: !10)
 !22 = !DILocalVariable(name: "y", arg: 2, scope: !19, file: !1, line: 1, type: !10)

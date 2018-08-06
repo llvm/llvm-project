@@ -60,7 +60,7 @@ struct isa_impl {
   }
 };
 
-/// \brief Always allow upcasts, and perform no dynamic check for them.
+/// Always allow upcasts, and perform no dynamic check for them.
 template <typename To, typename From>
 struct isa_impl<
     To, From, typename std::enable_if<std::is_base_of<To, From>::value>::type> {

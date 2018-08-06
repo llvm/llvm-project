@@ -557,6 +557,17 @@ template <typename T> class ArrayRef;
                           const SCEV *X,
                           const SCEV *Y) const;
 
+    /// isKnownLessThan - Compare to see if S is less than Size
+    /// Another wrapper for isKnownNegative(S - max(Size, 1)) with some extra
+    /// checking if S is an AddRec and we can prove lessthan using the loop
+    /// bounds.
+    bool isKnownLessThan(const SCEV *S, const SCEV *Size) const;
+
+    /// isKnownNonNegative - Compare to see if S is known not to be negative
+    /// Uses the fact that S comes from Ptr, which may be an inbound GEP,
+    /// Proving there is no wrapping going on.
+    bool isKnownNonNegative(const SCEV *S, const Value *Ptr) const;
+
     /// collectUpperBound - All subscripts are the same type (on my machine,
     /// an i64). The loop bound may be a smaller type. collectUpperBound
     /// find the bound, if available, and zero extends it to the Type T.
@@ -914,7 +925,7 @@ template <typename T> class ArrayRef;
                         SmallVectorImpl<Subscript> &Pair);
   }; // class DependenceInfo
 
-  /// \brief AnalysisPass to compute dependence information in a function
+  /// AnalysisPass to compute dependence information in a function
   class DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
   public:
     typedef DependenceInfo Result;
@@ -925,7 +936,7 @@ template <typename T> class ArrayRef;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
 
-  /// \brief Legacy pass manager pass to access dependence information
+  /// Legacy pass manager pass to access dependence information
   class DependenceAnalysisWrapperPass : public FunctionPass {
   public:
     static char ID; // Class identification, replacement for typeinfo

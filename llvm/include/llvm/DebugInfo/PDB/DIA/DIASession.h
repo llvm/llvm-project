@@ -30,18 +30,33 @@ public:
                              std::unique_ptr<IPDBSession> &Session);
 
   uint64_t getLoadAddress() const override;
-  void setLoadAddress(uint64_t Address) override;
+  bool setLoadAddress(uint64_t Address) override;
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override;
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override;
 
+  bool addressForVA(uint64_t VA, uint32_t &Section,
+                    uint32_t &Offset) const override;
+  bool addressForRVA(uint32_t RVA, uint32_t &Section,
+                     uint32_t &Offset) const override;
+
   std::unique_ptr<PDBSymbol>
   findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override;
+  std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
+                                             PDB_SymType Type) const override;
+  std::unique_ptr<PDBSymbol>
+  findSymbolBySectOffset(uint32_t Section, uint32_t Offset,
+                         PDB_SymType Type) const override;
 
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbers(const PDBSymbolCompiland &Compiland,
                   const IPDBSourceFile &File) const override;
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByAddress(uint64_t Address, uint32_t Length) const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbersByRVA(uint32_t RVA, uint32_t Length) const override;
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
+                              uint32_t Length) const override;
 
   std::unique_ptr<IPDBEnumSourceFiles>
   findSourceFiles(const PDBSymbolCompiland *Compiland, llvm::StringRef Pattern,
@@ -65,9 +80,14 @@ public:
   std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const override;
 
   std::unique_ptr<IPDBEnumTables> getEnumTables() const override;
+
+  std::unique_ptr<IPDBEnumInjectedSources> getInjectedSources() const override;
+
+  std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override;
+
 private:
   CComPtr<IDiaSession> Session;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

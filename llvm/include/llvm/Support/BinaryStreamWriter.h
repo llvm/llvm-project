@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-/// \brief Provides write only access to a subclass of `WritableBinaryStream`.
+/// Provides write only access to a subclass of `WritableBinaryStream`.
 /// Provides bounds checking and helpers for writing certain common data types
 /// such as null-terminated strings, integers in various flavors of endianness,
 /// etc.  Can be subclassed to provide reading and writing of custom datatypes,
@@ -56,7 +56,7 @@ public:
   /// otherwise returns an appropriate error code.
   Error writeBytes(ArrayRef<uint8_t> Buffer);
 
-  /// Write the the integer \p Value to the underlying stream in the
+  /// Write the integer \p Value to the underlying stream in the
   /// specified endianness.  On success, updates the offset so that
   /// subsequent writes occur at the next unwritten position.
   ///
@@ -80,7 +80,7 @@ public:
     return writeInteger<U>(static_cast<U>(Num));
   }
 
-  /// Write the the string \p Str to the underlying stream followed by a null
+  /// Write the string \p Str to the underlying stream followed by a null
   /// terminator.  On success, updates the offset so that subsequent writes
   /// occur at the next unwritten position.  \p Str need not be null terminated
   /// on input.
@@ -89,7 +89,7 @@ public:
   /// otherwise returns an appropriate error code.
   Error writeCString(StringRef Str);
 
-  /// Write the the string \p Str to the underlying stream without a null
+  /// Write the string \p Str to the underlying stream without a null
   /// terminator.  On success, updates the offset so that subsequent writes
   /// occur at the next unwritten position.
   ///

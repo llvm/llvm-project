@@ -35,7 +35,7 @@ class ToolOutputFile {
     /// The flag which indicates whether we should not delete the file.
     bool Keep;
 
-    explicit CleanupInstaller(StringRef ilename);
+    explicit CleanupInstaller(StringRef Filename);
     ~CleanupInstaller();
   } Installer;
 
@@ -43,7 +43,7 @@ class ToolOutputFile {
   raw_fd_ostream OS;
 
 public:
-  /// This constructor's arguments are passed to to raw_fd_ostream's
+  /// This constructor's arguments are passed to raw_fd_ostream's
   /// constructor.
   ToolOutputFile(StringRef Filename, std::error_code &EC,
                  sys::fs::OpenFlags Flags);

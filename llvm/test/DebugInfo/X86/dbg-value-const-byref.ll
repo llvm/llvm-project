@@ -25,7 +25,7 @@
 ; CHECK-NEXT:  [0x{{0*.*}}, 0x[[C1:.*]]): DW_OP_consts +3
 ; CHECK-NEXT:      [0x[[C1]], 0x[[C2:.*]]): DW_OP_consts +7
 ; CHECK-NEXT:      [0x[[C2]], 0x[[R1:.*]]): DW_OP_reg0 RAX
-; CHECK-NEXT:      [0x[[R1]], 0x[[R2:.*]]): DW_OP_breg7 RSP+4, DW_OP_deref)
+; CHECK-NEXT:      [0x[[R1]], 0x[[R2:.*]]): DW_OP_breg7 RSP+4)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}"i"
 
@@ -67,7 +67,7 @@ attributes #3 = { nounwind }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dbg-value-const-byref.c", directory: "")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "foo", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !9)
+!4 = distinct !DISubprogram(name: "foo", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, retainedNodes: !9)
 !5 = !DIFile(filename: "dbg-value-const-byref.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}

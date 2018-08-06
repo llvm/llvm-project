@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: llvm-dwarfdump -v %t | FileCheck %s
+# RUN: llvm-dwarfdump -v %t 2>%t.err | FileCheck %s
+# RUN: FileCheck %s <%t.err -check-prefix=ERR
 
 # CHECK: .debug_info contents:
 # CHECK: 0x0000000b: DW_TAG_compile_unit [1]
@@ -68,6 +69,38 @@ foo:
 .quad .Lfunc_begin0           # DW_AT_low_pc
 .long .Ldebug_ranges0         # DW_AT_ranges
 
+# A CU with an invalid DW_AT_ranges attribute
+.Lcu_begin1:
+.long 38                      # Length of Unit
+.short 4                      # DWARF version number
+.long .debug_abbrev           # Offset Into Abbrev. Section
+.byte 8                       # Address Size (in bytes)
+.byte 1                       # Abbrev [1] 0xb:0x1f DW_TAG_compile_unit
+.long 0                       # DW_AT_producer
+.short 4                      # DW_AT_language
+.long 0                       # DW_AT_name
+.long 0                       # DW_AT_stmt_list
+.long 0                       # DW_AT_comp_dir
+.quad .Lfunc_begin0           # DW_AT_low_pc
+.long 0x4000                  # DW_AT_ranges
+
+# ERR: error: decoding address ranges: invalid range list offset 0x4000
+
+# A CU where the DW_AT_ranges attribute points to an invalid range list.
+.Lcu_begin2:
+.long 38                      # Length of Unit
+.short 4                      # DWARF version number
+.long .debug_abbrev           # Offset Into Abbrev. Section
+.byte 8                       # Address Size (in bytes)
+.byte 1                       # Abbrev [1] 0xb:0x1f DW_TAG_compile_unit
+.long 0                       # DW_AT_producer
+.short 4                      # DW_AT_language
+.long 0                       # DW_AT_name
+.long 0                       # DW_AT_stmt_list
+.long 0                       # DW_AT_comp_dir
+.quad .Lfunc_begin0           # DW_AT_low_pc
+.long .Ldebug_ranges1         # DW_AT_ranges
+
 .section .debug_ranges,"",@progbits
 .Ldebug_ranges0:
  .quad .Lfunc_begin0-.Lfunc_begin0
@@ -80,3 +113,7 @@ foo:
  .quad .Ltmp5-.text.foo1
  .quad 0
  .quad 0
+.Ldebug_ranges1:
+ .quad 0
+
+# ERR: error: decoding address ranges: invalid range list entry at offset 0x50

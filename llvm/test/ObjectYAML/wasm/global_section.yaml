@@ -5,7 +5,8 @@ FileHeader:
 Sections:
   - Type:            GLOBAL
     Globals:         
-      - Type:        I32
+      - Index:       0
+        Type:        I32
         Mutable:     false
         InitExpr:
           Opcode:          I64_CONST
@@ -17,7 +18,8 @@ Sections:
 # CHECK: Sections:
 # CHECK:  - Type:            GLOBAL
 # CHECK:    Globals:         
-# CHECK:      - Type:        I32
+# CHECK:      - Index:       0
+# CHECK:        Type:        I32
 # CHECK:        Mutable:     false
 # CHECK:        InitExpr:
 # CHECK:          Opcode:          I64_CONST

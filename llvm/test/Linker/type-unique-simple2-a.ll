@@ -35,14 +35,14 @@ define i32 @_Z3barv() #0 !dbg !27 {
 entry:
   %tmp = alloca %class.A, align 8
   %0 = bitcast %class.A* %tmp to i8*, !dbg !38
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 8, i32 8, i1 false), !dbg !38
+  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 8, i1 false), !dbg !38
   call void @_ZN1AC1Ev(%class.A* %tmp) #1, !dbg !38
   %call = call i32 @_ZN1A6getFooEv(%class.A* %tmp), !dbg !38
   ret i32 %call, !dbg !38
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #1
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
 
 ; Function Attrs: inlinehint nounwind
 define linkonce_odr void @_ZN1AC1Ev(%class.A* %this) unnamed_addr #2 align 2 !dbg !31 {
@@ -105,13 +105,13 @@ attributes #4 = { nounwind readnone }
 !22 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !23)
 !23 = !DIDerivedType(tag: DW_TAG_typedef, name: "foo_t", line: 1, file: !24, baseType: !13)
 !24 = !DIFile(filename: "a.cpp", directory: "")
-!27 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !24, scope: !28, type: !29, variables: !2)
+!27 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !24, scope: !28, type: !29, retainedNodes: !2)
 !28 = !DIFile(filename: "a.cpp", directory: "")
 !29 = !DISubroutineType(types: !30)
 !30 = !{!23}
-!31 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC1Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !5, scope: !4, type: !15, declaration: !32, variables: !2)
+!31 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC1Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !5, scope: !4, type: !15, declaration: !32, retainedNodes: !2)
 !32 = !DISubprogram(name: "A", isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, scope: !4, type: !15)
-!34 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC2Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !5, scope: !4, type: !15, declaration: !32, variables: !2)
+!34 = distinct !DISubprogram(name: "A", linkageName: "_ZN1AC2Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !5, scope: !4, type: !15, declaration: !32, retainedNodes: !2)
 !35 = !{i32 2, !"Dwarf Version", i32 2}
 !36 = !{i32 1, !"Debug Info Version", i32 3}
 !37 = !{!"clang version 3.5 "}

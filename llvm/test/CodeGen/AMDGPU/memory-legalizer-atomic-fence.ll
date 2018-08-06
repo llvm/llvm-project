@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=GCN -check-prefix=GFX6 %s
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=GCN -check-prefix=GFX8 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=GCN -check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX6,GFX68 %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX8,GFX68 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX8,GFX68 %s
 
-; FUNC-LABEL: {{^}}system_acquire
+; FUNC-LABEL: {{^}}system_acquire:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GFX6:       s_waitcnt vmcnt(0){{$}}
@@ -16,7 +16,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}system_release
+; FUNC-LABEL: {{^}}system_release:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -27,7 +27,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}system_acq_rel
+; FUNC-LABEL: {{^}}system_acq_rel:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -40,7 +40,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}system_seq_cst
+; FUNC-LABEL: {{^}}system_seq_cst:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -53,7 +53,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}singlethread_acquire
+; FUNC-LABEL: {{^}}singlethread_acquire:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -63,7 +63,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}singlethread_release
+; FUNC-LABEL: {{^}}singlethread_release:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -73,7 +73,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}singlethread_acq_rel
+; FUNC-LABEL: {{^}}singlethread_acq_rel:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -83,7 +83,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}singlethread_seq_cst
+; FUNC-LABEL: {{^}}singlethread_seq_cst:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -93,7 +93,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}agent_acquire
+; FUNC-LABEL: {{^}}agent_acquire:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GFX6:       s_waitcnt vmcnt(0){{$}}
@@ -107,7 +107,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}agent_release
+; FUNC-LABEL: {{^}}agent_release:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -118,7 +118,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}agent_acq_rel
+; FUNC-LABEL: {{^}}agent_acq_rel:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -131,7 +131,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}agent_seq_cst
+; FUNC-LABEL: {{^}}agent_seq_cst:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_waitcnt vmcnt(0){{$}}
@@ -144,8 +144,9 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}workgroup_acquire
+; FUNC-LABEL: {{^}}workgroup_acquire:
 ; GCN:        %bb.0
+; GFX68-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
 define amdgpu_kernel void @workgroup_acquire() {
@@ -154,8 +155,9 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}workgroup_release
+; FUNC-LABEL: {{^}}workgroup_release:
 ; GCN:        %bb.0
+; GFX68-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
 define amdgpu_kernel void @workgroup_release() {
@@ -164,8 +166,9 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}workgroup_acq_rel
+; FUNC-LABEL: {{^}}workgroup_acq_rel:
 ; GCN:        %bb.0
+; GFX68-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
 define amdgpu_kernel void @workgroup_acq_rel() {
@@ -174,8 +177,9 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}workgroup_seq_cst
+; FUNC-LABEL: {{^}}workgroup_seq_cst:
 ; GCN:        %bb.0
+; GFX68-NOT:  s_waitcnt vmcnt(0){{$}}
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
 define amdgpu_kernel void @workgroup_seq_cst() {
@@ -184,7 +188,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}wavefront_acquire
+; FUNC-LABEL: {{^}}wavefront_acquire:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -194,7 +198,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}wavefront_release
+; FUNC-LABEL: {{^}}wavefront_release:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -204,7 +208,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}wavefront_acq_rel
+; FUNC-LABEL: {{^}}wavefront_acq_rel:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm
@@ -214,7 +218,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}wavefront_seq_cst
+; FUNC-LABEL: {{^}}wavefront_seq_cst:
 ; GCN:        %bb.0
 ; GCN-NOT:    ATOMIC_FENCE
 ; GCN:        s_endpgm

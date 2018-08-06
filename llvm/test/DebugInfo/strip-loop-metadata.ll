@@ -81,7 +81,7 @@ return:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0"}
-!7 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 4, column: 3, scope: !7)
 !10 = !DILocation(line: 5, column: 5, scope: !7)
@@ -89,14 +89,14 @@ return:
 !12 = !DILexicalBlockFile(scope: !7, file: !1, discriminator: 1)
 !13 = distinct !{!13, !9}
 !14 = !DILocation(line: 6, column: 1, scope: !7)
-!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!15 = distinct !DISubprogram(name: "test2", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !16 = !DILocation(line: 8, column: 14, scope: !15)
 !17 = !DILocation(line: 11, column: 5, scope: !15)
 !18 = !DILocation(line: 10, column: 3, scope: !15)
 !19 = distinct !{!19, !16, !20}
 !20 = !{!"llvm.loop.unroll.enable"}
 !21 = !DILocation(line: 12, column: 1, scope: !15)
-!22 = distinct !DISubprogram(name: "test3", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!22 = distinct !DISubprogram(name: "test3", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !23 = !DILocation(line: 8, column: 14, scope: !22)
 !24 = !DILocation(line: 11, column: 5, scope: !22)
 !25 = !DILocation(line: 10, column: 3, scope: !22)
@@ -104,7 +104,7 @@ return:
 !27 = !{!"llvm.loop.unroll.enable"}
 !28 = !DILocation(line: 12, column: 1, scope: !22)
 !29 = !DILocation(line: 12, column: 1, scope: !22)
-!30 = distinct !DISubprogram(name: "test4", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!30 = distinct !DISubprogram(name: "test4", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !31 = !DILocation(line: 8, column: 14, scope: !30)
 !32 = !DILocation(line: 11, column: 5, scope: !30)
 !33 = !DILocation(line: 10, column: 3, scope: !30)

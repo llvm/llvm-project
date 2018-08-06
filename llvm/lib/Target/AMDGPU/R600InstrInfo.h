@@ -8,15 +8,18 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface definition for R600InstrInfo
+/// Interface definition for R600InstrInfo
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
 
-#include "AMDGPUInstrInfo.h"
 #include "R600RegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+
+#define GET_INSTRINFO_HEADER
+#include "R600GenInstrInfo.inc"
 
 namespace llvm {
 
@@ -34,7 +37,7 @@ class MachineInstr;
 class MachineInstrBuilder;
 class R600Subtarget;
 
-class R600InstrInfo final : public AMDGPUInstrInfo {
+class R600InstrInfo final : public R600GenInstrInfo {
 private:
   const R600RegisterInfo RI;
   const R600Subtarget &ST;
@@ -150,7 +153,7 @@ public:
   /// Same but using const index set instead of MI set.
   bool fitsConstReadLimitations(const std::vector<unsigned>&) const;
 
-  /// \brief Vector instructions are instructions that must fill all
+  /// Vector instructions are instructions that must fill all
   /// instruction slots within an instruction group.
   bool isVector(const MachineInstr &MI) const;
 
@@ -209,9 +212,10 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  /// \brief Reserve the registers that may be accesed using indirect addressing.
+  /// Reserve the registers that may be accesed using indirect addressing.
   void reserveIndirectRegisters(BitVector &Reserved,
-                                const MachineFunction &MF) const;
+                                const MachineFunction &MF,
+                                const R600RegisterInfo &TRI) const;
 
   /// Calculate the "Indirect Address" for the given \p RegIndex and
   /// \p Channel
@@ -235,7 +239,7 @@ public:
   /// read or write or -1 if indirect addressing is not used by this program.
   int getIndirectIndexEnd(const MachineFunction &MF) const;
 
-  /// \brief Build instruction(s) for an indirect register write.
+  /// Build instruction(s) for an indirect register write.
   ///
   /// \returns The instruction that performs the indirect register write
   MachineInstrBuilder buildIndirectWrite(MachineBasicBlock *MBB,
@@ -243,7 +247,7 @@ public:
                                          unsigned ValueReg, unsigned Address,
                                          unsigned OffsetReg) const;
 
-  /// \brief Build instruction(s) for an indirect register read.
+  /// Build instruction(s) for an indirect register read.
   ///
   /// \returns The instruction that performs the indirect register read
   MachineInstrBuilder buildIndirectRead(MachineBasicBlock *MBB,
@@ -281,23 +285,23 @@ public:
                               MachineBasicBlock::iterator I,
                               unsigned DstReg, unsigned SrcReg) const;
 
-  /// \brief Get the index of Op in the MachineInstr.
+  /// Get the index of Op in the MachineInstr.
   ///
   /// \returns -1 if the Instruction does not contain the specified \p Op.
   int getOperandIdx(const MachineInstr &MI, unsigned Op) const;
 
-  /// \brief Get the index of \p Op for the given Opcode.
+  /// Get the index of \p Op for the given Opcode.
   ///
   /// \returns -1 if the Instruction does not contain the specified \p Op.
   int getOperandIdx(unsigned Opcode, unsigned Op) const;
 
-  /// \brief Helper function for setting instruction flag values.
+  /// Helper function for setting instruction flag values.
   void setImmOperand(MachineInstr &MI, unsigned Op, int64_t Imm) const;
 
-  ///\brief Add one of the MO_FLAG* flags to the specified \p Operand.
+  ///Add one of the MO_FLAG* flags to the specified \p Operand.
   void addFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
-  ///\brief Determine if the specified \p Flag is set on this \p Operand.
+  ///Determine if the specified \p Flag is set on this \p Operand.
   bool isFlagSet(const MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
   /// \param SrcIdx The register source to set the flag on (e.g src0, src1, src2)
@@ -307,7 +311,7 @@ public:
   MachineOperand &getFlagOp(MachineInstr &MI, unsigned SrcIdx = 0,
                             unsigned Flag = 0) const;
 
-  /// \brief Clear the specified flag on the instruction.
+  /// Clear the specified flag on the instruction.
   void clearFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
   // Helper functions that check the opcode for status information
@@ -323,7 +327,7 @@ public:
       PseudoSourceValue::PSVKind Kind) const override;
 };
 
-namespace AMDGPU {
+namespace R600 {
 
 int getLDSNoRetOp(uint16_t Opcode);
 

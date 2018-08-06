@@ -29,6 +29,12 @@ public:
 
   std::string message(int condition) const override {
     switch (static_cast<OrcErrorCode>(condition)) {
+    case OrcErrorCode::UnknownORCError:
+      return "Unknown ORC error";
+    case OrcErrorCode::DuplicateDefinition:
+      return "Duplicate symbol definition";
+    case OrcErrorCode::JITSymbolNotFound:
+      return "JIT symbol not found";
     case OrcErrorCode::RemoteAllocatorDoesNotExist:
       return "Remote allocator does not exist";
     case OrcErrorCode::RemoteAllocatorIdAlreadyInUse:
@@ -45,8 +51,6 @@ public:
       return "Could not negotiate RPC function";
     case OrcErrorCode::RPCResponseAbandoned:
       return "RPC response abandoned";
-    case OrcErrorCode::JITSymbolNotFound:
-      return "JIT symbol not found";
     case OrcErrorCode::UnexpectedRPCCall:
       return "Unexpected RPC call";
     case OrcErrorCode::UnexpectedRPCResponse:
@@ -67,11 +71,28 @@ static ManagedStatic<OrcErrorCategory> OrcErrCat;
 namespace llvm {
 namespace orc {
 
+char DuplicateDefinition::ID = 0;
 char JITSymbolNotFound::ID = 0;
 
 std::error_code orcError(OrcErrorCode ErrCode) {
   typedef std::underlying_type<OrcErrorCode>::type UT;
   return std::error_code(static_cast<UT>(ErrCode), *OrcErrCat);
+}
+
+
+DuplicateDefinition::DuplicateDefinition(std::string SymbolName)
+  : SymbolName(std::move(SymbolName)) {}
+
+std::error_code DuplicateDefinition::convertToErrorCode() const {
+  return orcError(OrcErrorCode::DuplicateDefinition);
+}
+
+void DuplicateDefinition::log(raw_ostream &OS) const {
+  OS << "Duplicate definition of symbol '" << SymbolName << "'";
+}
+
+const std::string &DuplicateDefinition::getSymbolName() const {
+  return SymbolName;
 }
 
 JITSymbolNotFound::JITSymbolNotFound(std::string SymbolName)

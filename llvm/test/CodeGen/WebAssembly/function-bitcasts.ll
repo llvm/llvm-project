@@ -3,7 +3,7 @@
 ; Test that function pointer casts are replaced with wrappers.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 declare void @has_i32_arg(i32)
 declare i32 @has_i32_ret()

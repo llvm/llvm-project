@@ -16,10 +16,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Signals.h"
 #include <cctype>
 #include <string>
 
@@ -94,8 +93,7 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
 }
 
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
+  InitLLVM X(argc, argv);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm string dumper\n");
   if (MinLength == 0) {

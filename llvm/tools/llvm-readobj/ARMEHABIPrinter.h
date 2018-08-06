@@ -323,10 +323,10 @@ inline void OpcodeDecoder::Decode(const uint8_t *Opcodes, off_t Offset,
 
 template <typename ET>
 class PrinterContext {
-  typedef typename object::ELFFile<ET>::Elf_Sym Elf_Sym;
-  typedef typename object::ELFFile<ET>::Elf_Shdr Elf_Shdr;
-  typedef typename object::ELFFile<ET>::Elf_Rel Elf_Rel;
-  typedef typename object::ELFFile<ET>::Elf_Word Elf_Word;
+  typedef typename ET::Sym Elf_Sym;
+  typedef typename ET::Shdr Elf_Shdr;
+  typedef typename ET::Rel Elf_Rel;
+  typedef typename ET::Word Elf_Word;
 
   ScopedPrinter &SW;
   const object::ELFFile<ET> *ELF;
@@ -386,7 +386,7 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
 }
 
 template <typename ET>
-const typename object::ELFFile<ET>::Elf_Shdr *
+const typename ET::Shdr *
 PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
                                        off_t IndexTableOffset) const {
   /// Iterate through the sections, searching for the relocation section
@@ -410,7 +410,7 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
       if (R.r_offset != static_cast<unsigned>(IndexTableOffset))
         continue;
 
-      typename object::ELFFile<ET>::Elf_Rela RelA;
+      typename ET::Rela RelA;
       RelA.r_offset = R.r_offset;
       RelA.r_info = R.r_info;
       RelA.r_addend = 0;
@@ -586,4 +586,3 @@ void PrinterContext<ET>::PrintUnwindInformation() const {
 }
 
 #endif
-

@@ -6,13 +6,16 @@ Introduction
 ============
 
 Building with link time optimization requires cooperation from
-the system linker. LTO support on Linux systems requires that you use the
-`gold linker`_ or ld.bfd from binutils >= 2.21.51.0.2, as they support LTO via plugins. This is the same mechanism
+the system linker. LTO support on Linux systems is available via the
+`gold linker`_ which supports LTO via plugins. This is the same mechanism
 used by the `GCC LTO`_ project.
 
 The LLVM gold plugin implements the gold plugin interface on top of
 :ref:`libLTO`.  The same plugin can also be used by other tools such as
-``ar`` and ``nm``.
+``ar`` and ``nm``.  Note that ld.bfd from binutils version 2.21.51.0.2
+and above also supports LTO via plugins.  However, usage of the LLVM
+gold plugin with ld.bfd is not tested and therefore not officially
+supported or recommended.
 
 .. _`gold linker`: http://sourceware.org/binutils
 .. _`GCC LTO`: http://gcc.gnu.org/wiki/LinkTimeOptimization
@@ -23,24 +26,43 @@ The LLVM gold plugin implements the gold plugin interface on top of
 How to build it
 ===============
 
-Check for plugin support by running ``/usr/bin/ld -plugin``. If it complains
-"missing argument" then you have plugin support. If not, such as an "unknown option"
-error then you will either need to build gold or install a recent version
-of ld.bfd with plugin support and then build gold plugin.
+You need to have gold with plugin support and build the LLVMgold plugin.
+The gold linker is installed as ld.gold. To see whether gold is the default
+on your system, run ``/usr/bin/ld -v``. It will report "GNU
+gold" or else "GNU ld" if not. If gold is already installed at
+``/usr/bin/ld.gold``, one option is to simply make that the default by
+backing up your existing ``/usr/bin/ld`` and creating a symbolic link
+with ``ln -s /usr/bin/ld.gold /usr/bin/ld``. Alternatively, you can build
+with clang's ``-fuse-ld=gold`` or add ``-fuse-ld=gold`` to LDFLAGS, which will
+cause the clang driver to invoke ``/usr/bin/ld.gold`` directly.
 
-* Download, configure and build ld.bfd with plugin support:
+If you have gold installed, check for plugin support by running
+``/usr/bin/ld.gold -plugin``. If it complains "missing argument" then
+you have plugin support. If not, and you get an error such as "unknown option",
+then you will either need to build gold or install a version with plugin
+support.
+
+* Download, configure and build gold with plugin support:
 
   .. code-block:: bash
 
      $ git clone --depth 1 git://sourceware.org/git/binutils-gdb.git binutils
      $ mkdir build
      $ cd build
-     $ ../binutils/configure --disable-werror # ld.bfd includes plugin support by default
-     $ make all-ld
+     $ ../binutils/configure --enable-gold --enable-plugins --disable-werror
+     $ make all-gold
 
-  That should leave you with ``build/ld/ld-new`` which supports
+  That should leave you with ``build/gold/ld-new`` which supports
   the ``-plugin`` option. Running ``make`` will additionally build
   ``build/binutils/ar`` and ``nm-new`` binaries supporting plugins.
+
+  Once you're ready to switch to using gold, backup your existing
+  ``/usr/bin/ld`` then replace it with ``ld-new``. Alternatively, install
+  in ``/usr/bin/ld.gold`` and use ``-fuse-ld=gold`` as described earlier.
+
+  Optionally, add ``--enable=gold=default`` to the above configure invocation
+  to automatically install the newly built gold as the default linker with
+  ``make install``.
 
 * Build the LLVMgold plugin. Run CMake with
   ``-DLLVM_BINUTILS_INCDIR=/path/to/binutils/include``.  The correct include
@@ -49,19 +71,12 @@ of ld.bfd with plugin support and then build gold plugin.
 Usage
 =====
 
-The linker takes a ``-plugin`` option that points to the path of
-the plugin ``.so`` file. To find out what link command ``gcc``
-would run in a given situation, run ``gcc -v [...]`` and
-look for the line where it runs ``collect2``. Replace that with
-``ld-new -plugin /path/to/LLVMgold.so`` to test it out. Once you're
-ready to switch to using gold, backup your existing ``/usr/bin/ld``
-then replace it with ``ld-new``.
-
 You should produce bitcode files from ``clang`` with the option
 ``-flto``. This flag will also cause ``clang`` to look for the gold plugin in
 the ``lib`` directory under its prefix and pass the ``-plugin`` option to
-``ld``. It will not look for an alternate linker, which is why you need
-gold to be the installed system linker in your path.
+``ld``. It will not look for an alternate linker without ``-fuse-ld=gold``,
+which is why you otherwise need gold to be the installed system linker in
+your path.
 
 ``ar`` and ``nm`` also accept the ``-plugin`` option and it's possible to
 to install ``LLVMgold.so`` to ``/usr/lib/bfd-plugins`` for a seamless setup.

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+gfni,+avx512f,+avx512bw --show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s | FileCheck %s
 
 // CHECK: vgf2p8affineinvqb $7, %zmm2, %zmm20, %zmm1
 // CHECK: encoding: [0x62,0xf3,0xdd,0x40,0xcf,0xca,0x07]

@@ -9,7 +9,7 @@
 ; The main and local_func must not be together.
 ; CHECK1: @a
 ; CHECK1: define i32 @main
-; CHECK1: declare fastcc void @local_func
+; CHECK1: declare dso_local fastcc void @local_func
 
 @a = internal global i32 0, align 4
 @global_storage = common global i32 0, align 4

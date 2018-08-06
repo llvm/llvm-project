@@ -1,28 +1,47 @@
 # RUN: yaml2obj < %s | llvm-nm - | FileCheck -strict-whitespace %s
 
+# Check that wasm import of functions/globals/data are displayed correctly
+
 --- !WASM
 FileHeader:
   Version:         0x00000001
 Sections:
   - Type:            TYPE
     Signatures:
-      - ReturnType:      I32
+      - Index:           0
+        ReturnType:      I32
         ParamTypes:
           - I32
   - Type:            IMPORT
     Imports:
       - Module:          env
-        Field:           foo
+        Field:           fimport
         Kind:            FUNCTION
         SigIndex:        0
       - Module:          env
-        Field:           bar
+        Field:           gimport
         Kind:            GLOBAL
         GlobalType:      I32
         GlobalMutable:   false
   - Type:            CUSTOM
-    Name:            "linking"
-    DataSize:        0
+    Name:            linking
+    Version:         1
+    SymbolTable:
+       - Index:           0
+         Kind:            FUNCTION
+         Name:            fimport
+         Flags:           [ UNDEFINED ]
+         Function:        0
+       - Index:           1
+         Kind:            GLOBAL
+         Name:            gimport
+         Flags:           [ UNDEFINED ]
+         Global:          0
+       - Index:           2
+         Kind:            DATA
+         Name:            dimport
+         Flags:           [ UNDEFINED ]
 
-# CHECK:    U bar
-# CHECK:    U foo
+# CHECK:      U dimport
+# CHECK-NEXT: U fimport
+# CHECK-NEXT: U gimport

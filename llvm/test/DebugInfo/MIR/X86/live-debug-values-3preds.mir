@@ -31,9 +31,9 @@
 # DBG_VALUE for variables "x", "y" and "z" are extended into %bb.9 from its
 # predecessors %bb.0, %bb.2 and %bb.8.
 # CHECK:      bb.9.for.end:
-# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use %noreg, ![[X_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
-# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use %noreg, ![[Y_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
-# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use %noreg, ![[Z_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use $edi, debug-use $noreg, ![[X_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use $esi, debug-use $noreg, ![[Y_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use $edx, debug-use $noreg, ![[Z_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 # CHECK:      RET
 
 --- |
@@ -108,7 +108,7 @@
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "LiveDebugValues-3preds.c", directory: "/home/vt/julia/test/tvvikram")
   !2 = !{}
-  !4 = distinct !DISubprogram(name: "add", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
+  !4 = distinct !DISubprogram(name: "add", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !8)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !7, !7, !7, !7}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -163,10 +163,10 @@ alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%edi' }
-  - { reg: '%esi' }
-  - { reg: '%edx' }
-  - { reg: '%ecx' }
+  - { reg: '$edi' }
+  - { reg: '$esi' }
+  - { reg: '$edx' }
+  - { reg: '$ecx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -184,116 +184,116 @@ frameInfo:
 body:             |
   bb.0.entry:
     successors: %bb.1.for.body.preheader(20), %bb.9.for.end(12)
-    liveins: %ecx, %edi, %edx, %esi
+    liveins: $ecx, $edi, $edx, $esi
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %r8d = MOV32rr %esi, debug-location !26
-    %r8d = IMUL32rr killed %r8d, %edi, implicit-def dead %eflags, debug-location !26
-    TEST32rr %r8d, %r8d, implicit-def %eflags, debug-location !31
-    JLE_1 %bb.9.for.end, implicit %eflags
+    $r8d = MOV32rr $esi, debug-location !26
+    $r8d = IMUL32rr killed $r8d, $edi, implicit-def dead $eflags, debug-location !26
+    TEST32rr $r8d, $r8d, implicit-def $eflags, debug-location !31
+    JLE_1 %bb.9.for.end, implicit $eflags
   
   bb.1.for.body.preheader:
     successors: %bb.3.for.body(0)
-    liveins: %ecx, %edi, %edx, %esi, %r8d
+    liveins: $ecx, $edi, $edx, $esi, $r8d
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
   
   bb.3.for.body (align 4):
     successors: %bb.4.if.then(4), %bb.5.if.end(124)
-    liveins: %eax, %ecx, %edi, %edx, %esi, %r8d
+    liveins: $eax, $ecx, $edi, $edx, $esi, $r8d
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    TEST32rr %edi, %edi, implicit-def %eflags, debug-location !35
-    JG_1 %bb.4.if.then, implicit %eflags
+    TEST32rr $edi, $edi, implicit-def $eflags, debug-location !35
+    JG_1 %bb.4.if.then, implicit $eflags
   
   bb.5.if.end:
     successors: %bb.6.if.then.4(4), %bb.7.if.end.6(124)
-    liveins: %eax, %ecx, %edi, %edx, %esi, %r8d
+    liveins: $eax, $ecx, $edi, $edx, $esi, $r8d
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    TEST32rr %esi, %esi, implicit-def %eflags, debug-location !39
-    JG_1 %bb.6.if.then.4, implicit %eflags
+    TEST32rr $esi, $esi, implicit-def $eflags, debug-location !39
+    JG_1 %bb.6.if.then.4, implicit $eflags
   
   bb.7.if.end.6:
     successors: %bb.8.if.then.8(4), %bb.2.for.cond(124)
-    liveins: %eax, %ecx, %edi, %edx, %esi, %r8d
+    liveins: $eax, $ecx, $edi, $edx, $esi, $r8d
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    TEST32rr %edx, %edx, implicit-def %eflags, debug-location !45
-    JG_1 %bb.8.if.then.8, implicit %eflags
+    TEST32rr $edx, $edx, implicit-def $eflags, debug-location !45
+    JG_1 %bb.8.if.then.8, implicit $eflags
   
   bb.2.for.cond:
     successors: %bb.3.for.body(124), %bb.9.for.end(4)
-    liveins: %eax, %ecx, %edi, %edx, %esi, %r8d
+    liveins: $eax, $ecx, $edi, $edx, $esi, $r8d
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %eax = INC32r killed %eax, implicit-def dead %eflags, debug-location !44
-    DBG_VALUE debug-use %eax, debug-use _, !13, !17, debug-location !25
-    CMP32rr %eax, %r8d, implicit-def %eflags, debug-location !31
-    JL_1 %bb.3.for.body, implicit %eflags
+    $eax = INC32r killed $eax, implicit-def dead $eflags, debug-location !44
+    DBG_VALUE debug-use $eax, debug-use _, !13, !17, debug-location !25
+    CMP32rr $eax, $r8d, implicit-def $eflags, debug-location !31
+    JL_1 %bb.3.for.body, implicit $eflags
     JMP_1 %bb.9.for.end
   
   bb.4.if.then:
-    liveins: %ecx, %edi
+    liveins: $ecx, $edi
   
-    DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edi, debug-use _, !9, !17, debug-location !18
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %ecx = IMUL32rr killed %ecx, killed %edi, implicit-def dead %eflags, debug-location !36
+    $ecx = IMUL32rr killed $ecx, killed $edi, implicit-def dead $eflags, debug-location !36
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %eax = MOV32rr killed %ecx, debug-location !50
-    RETQ %eax, debug-location !50
+    $eax = MOV32rr killed $ecx, debug-location !50
+    RETQ $eax, debug-location !50
   
   bb.6.if.then.4:
-    liveins: %ecx, %esi
+    liveins: $ecx, $esi
   
-    DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $esi, debug-use _, !10, !17, debug-location !19
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %ecx = IMUL32rr killed %ecx, killed %esi, implicit-def dead %eflags, debug-location !40
+    $ecx = IMUL32rr killed $ecx, killed $esi, implicit-def dead $eflags, debug-location !40
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %eax = MOV32rr killed %ecx, debug-location !50
-    RETQ %eax, debug-location !50
+    $eax = MOV32rr killed $ecx, debug-location !50
+    RETQ $eax, debug-location !50
   
   bb.8.if.then.8:
     successors: %bb.9.for.end(0)
-    liveins: %ecx, %edx
+    liveins: $ecx, $edx
   
-    DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-    DBG_VALUE debug-use %ecx, debug-use _, !12, !17, debug-location !23
+    DBG_VALUE debug-use $edx, debug-use _, !11, !17, debug-location !21
+    DBG_VALUE debug-use $ecx, debug-use _, !12, !17, debug-location !23
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %ecx = IMUL32rr killed %ecx, killed %edx, implicit-def dead %eflags, debug-location !46
+    $ecx = IMUL32rr killed $ecx, killed $edx, implicit-def dead $eflags, debug-location !46
   
   bb.9.for.end:
-    liveins: %ecx
+    liveins: $ecx
   
     DBG_VALUE 0, 0, !13, !17, debug-location !25
-    %eax = MOV32rr killed %ecx, debug-location !50
-    RETQ %eax, debug-location !50
+    $eax = MOV32rr killed $ecx, debug-location !50
+    RETQ $eax, debug-location !50
 
 ...

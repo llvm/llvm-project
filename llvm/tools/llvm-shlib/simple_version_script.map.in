@@ -1,1 +1,1 @@
-LLVM_@LLVM_VERSION_MAJOR@.@LLVM_VERSION_MINOR@ { global: *; };
+LLVM_@LLVM_VERSION_MAJOR@ { global: *; };

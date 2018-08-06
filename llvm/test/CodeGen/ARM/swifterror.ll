@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE --check-prefix=CHECK-ARMV7 %s
-; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=armv7-linux-androideabi | FileCheck --check-prefix=CHECK-ANDROID %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-APPLE --check-prefix=CHECK-ARMV7 %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs -O0 < %s -mtriple=armv7-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -fast-isel-sink-local-values -verify-machineinstrs < %s -mtriple=armv7-linux-androideabi | FileCheck --check-prefix=CHECK-ANDROID %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -39,11 +39,11 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE-DAG: mov [[ID:r[0-9]+]], r0
 ; CHECK-APPLE-DAG: mov r8, #0
 ; CHECK-APPLE: bl {{.*}}foo
+; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: cmp r8, #0
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r8, #8]
+; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r0, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
-; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
@@ -138,7 +138,7 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE: eq
 ; CHECK-APPLE: mov r0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: mov [[ID:r[0-9]+]], #1
+; CHECK-APPLE-DAG: mov [[ID:r[0-9]+]], #1
 ; CHECK-APPLE-DAG: mov r8, r{{.*}}
 ; CHECK-APPLE-DAG: strb [[ID]], [r{{.*}}, #8]
 
@@ -177,24 +177,21 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE: mov [[CODE:r[0-9]+]], r0
 ; swifterror is kept in a register
-; CHECK-APPLE: mov [[ID:r[0-9]+]], r8
 ; CHECK-APPLE: cmp [[CODE]], #0
 ; CHECK-APPLE: beq
 ; CHECK-APPLE: mov r0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: strb r{{.*}}, [{{.*}}[[ID]], #8]
+; CHECK-APPLE: strb r{{.*}}, [r0, #8]
 ; CHECK-APPLE: ble
-; CHECK-APPLE: mov r8, [[ID]]
 
 ; CHECK-O0-LABEL: foo_loop:
 ; CHECK-O0: mov r{{.*}}, r8
 ; CHECK-O0: cmp r{{.*}}, #0
 ; CHECK-O0: beq
-; CHECK-O0-DAG: movw r{{.*}}, #1
-; CHECK-O0-DAG: mov r{{.*}}, #16
+; CHECK-O0: mov r0, #16
 ; CHECK-O0: malloc
 ; CHECK-O0-DAG: mov [[ID:r[0-9]+]], r0
-; CHECK-O0-DAG: ldr [[ID2:r[0-9]+]], [sp{{.*}}]
+; CHECK-O0-DAG: movw [[ID2:.*]], #1
 ; CHECK-O0: strb [[ID2]], [{{.*}}[[ID]], #8]
 ; spill r0
 ; CHECK-O0: str r0, [sp{{.*}}]
@@ -266,11 +263,11 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: mov [[ID:r[0-9]+]], r0
 ; CHECK-APPLE: mov r8, #0
 ; CHECK-APPLE: bl {{.*}}foo_sret
+; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: cmp r8, #0
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r8, #8]
+; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r0, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
-; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: bl {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
@@ -314,10 +311,9 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-LABEL: foo_vararg:
 ; CHECK-APPLE: mov r0, #16
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: mov [[REG:r[0-9]+]], r0
+; CHECK-APPLE: mov r8, r0
 ; CHECK-APPLE: mov [[ID:r[0-9]+]], #1
-; CHECK-APPLE-DAG: strb [[ID]], [{{.*}}[[REG]], #8]
-; CHECK-APPLE-DAG: mov r8, [[REG]]
+; CHECK-APPLE-DAG: strb [[ID]], [r8, #8]
 
 entry:
   %call = call i8* @malloc(i64 16)
@@ -348,11 +344,11 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-APPLE: mov [[ID:r[0-9]+]], r0
 ; CHECK-APPLE: mov r8, #0
 ; CHECK-APPLE: bl {{.*}}foo_vararg
+; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: cmp r8, #0
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r8, #8]
+; CHECK-APPLE: ldrbeq [[CODE:r[0-9]+]], [r0, #8]
 ; CHECK-APPLE: strbeq [[CODE]], [{{.*}}[[ID]]]
-; CHECK-APPLE: mov r0, r8
 ; CHECK-APPLE: bl {{.*}}free
 entry:
   %error_ptr_ref = alloca swifterror %swift_error*

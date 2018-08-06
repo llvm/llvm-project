@@ -38,7 +38,7 @@ public:
       return false;
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
                                            MI.getOperand(1).getReg(), MRI)) {
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       unsigned DstReg = MI.getOperand(0).getReg();
       unsigned SrcReg = DefMI->getOperand(1).getReg();
       Builder.setInstr(MI);
@@ -59,10 +59,10 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_AND, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
       unsigned ZExtSrc = MI.getOperand(1).getReg();
       LLT ZExtSrcTy = MRI.getType(ZExtSrc);
@@ -87,11 +87,11 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_SHL, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_ASHR, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_ASHR, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
       unsigned SExtSrc = MI.getOperand(1).getReg();
       LLT SExtSrcTy = MRI.getType(SExtSrc);
@@ -121,9 +121,9 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_IMPLICIT_DEF, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
       Builder.setInstr(MI);
       Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, DstReg);
       markInstAndDefDead(MI, *DefMI, DeadInsts);
@@ -139,9 +139,9 @@ public:
       return false;
 
     unsigned NumDefs = MI.getNumOperands() - 1;
-    unsigned SrcReg = MI.getOperand(NumDefs).getReg();
-    MachineInstr *MergeI = MRI.getVRegDef(SrcReg);
-    if (!MergeI || (MergeI->getOpcode() != TargetOpcode::G_MERGE_VALUES))
+    MachineInstr *MergeI = getOpcodeDef(TargetOpcode::G_MERGE_VALUES,
+                                        MI.getOperand(NumDefs).getReg(), MRI);
+    if (!MergeI)
       return false;
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
@@ -253,11 +253,8 @@ private:
     // and as a result, %3, %2, %1 are dead.
     MachineInstr *PrevMI = &MI;
     while (PrevMI != &DefMI) {
-      // If we're dealing with G_UNMERGE_VALUES, tryCombineMerges doesn't really try
-      // to fold copies in between and we can ignore them here.
-      if (PrevMI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES)
-        break;
-      unsigned PrevRegSrc = PrevMI->getOperand(1).getReg();
+      unsigned PrevRegSrc =
+          PrevMI->getOperand(PrevMI->getNumOperands() - 1).getReg();
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
@@ -269,18 +266,16 @@ private:
         break;
       PrevMI = TmpDef;
     }
-    if ((PrevMI == &DefMI ||
-         DefMI.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
-        MRI.hasOneUse(DefMI.getOperand(0).getReg()))
+    if (PrevMI == &DefMI && MRI.hasOneUse(DefMI.getOperand(0).getReg()))
       DeadInsts.push_back(&DefMI);
   }
 
   /// Checks if the target legalizer info has specified anything about the
   /// instruction, or if unsupported.
-  bool isInstUnsupported(unsigned Opcode, const LLT &DstTy) const {
-    auto Action = LI.getAction({Opcode, 0, DstTy});
-    return Action.first == LegalizerInfo::LegalizeAction::Unsupported ||
-           Action.first == LegalizerInfo::LegalizeAction::NotFound;
+  bool isInstUnsupported(const LegalityQuery &Query) const {
+    using namespace LegalizeActions;
+    auto Step = LI.getAction(Query);
+    return Step.Action == Unsupported || Step.Action == NotFound;
   }
 };
 

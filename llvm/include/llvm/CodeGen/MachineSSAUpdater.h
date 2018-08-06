@@ -56,7 +56,7 @@ public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be
   /// filled in with all PHI Nodes created by rewriting.
   explicit MachineSSAUpdater(MachineFunction &MF,
-                        SmallVectorImpl<MachineInstr*> *InsertedPHIs = nullptr);
+                        SmallVectorImpl<MachineInstr*> *NewPHI = nullptr);
   MachineSSAUpdater(const MachineSSAUpdater &) = delete;
   MachineSSAUpdater &operator=(const MachineSSAUpdater &) = delete;
   ~MachineSSAUpdater();

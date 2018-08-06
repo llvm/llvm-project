@@ -1,0 +1,17 @@
+; RUN: llvm-xray convert %S/Inputs/basic-log-arg1-version-3.xray -f=yaml -o - | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         3
+; CHECK-NEXT:   type:            0
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 3900000000
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 0, thread: 2590, process: 2590, kind: function-enter, tsc: 2033303630902004 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 0, thread: 2590, process: 2590, kind: function-exit, tsc: 2033403115246844 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 0, thread: 2590, process: 2590, kind: function-enter, tsc: 2033490200702516 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 0, thread: 2590, process: 2590, kind: function-exit, tsc: 2033504122687120 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', args: [ 67 ], cpu: 0, thread: 2590, process: 2590, kind: function-enter-arg, tsc: 2033505343905936 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 0, thread: 2590, process: 2590, kind: function-exit, tsc: 2033505343936752 }
+; CHECK-NEXT: ...

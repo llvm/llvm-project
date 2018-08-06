@@ -5,7 +5,7 @@
 define void @clwb(i8* %a0) nounwind {
 ; GENERIC-LABEL: clwb:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    clwb (%rdi) # sched: [4:0.50]
+; GENERIC-NEXT:    clwb (%rdi) # sched: [5:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: clwb:

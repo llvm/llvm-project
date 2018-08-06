@@ -26,6 +26,12 @@ def : Proc<"probe", []>;
 def DummyFeature : SubtargetFeature<"dummy", "isDummyMode",
                                     "true", "unused feature">;
 
+def ALU32 : SubtargetFeature<"alu32", "HasAlu32", "true",
+                             "Enable ALU32 instructions">;
+
+def DwarfRIS: SubtargetFeature<"dwarfris", "UseDwarfRIS", "true",
+                               "Disable MCAsmInfo DwarfUsesRelocationsAcrossSections">;
+
 def BPFInstPrinter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
   bit isMCAsmWriter = 1;

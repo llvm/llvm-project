@@ -94,7 +94,7 @@
 ; Check the .debug_str_offsets section header and make sure the referenced string
 ; has the correct offset.
 ; BOTH:           .debug_str_offsets contents:
-; BOTH-NEXT:      0x00000000: Contribution size = 80, Format = DWARF32, Version = 5
+; BOTH-NEXT:      0x00000000: Contribution size = 84, Format = DWARF32, Version = 5
 ; BOTH-NEXT:      0x[[CU1_STROFF]]:
 ; BOTH-NEXT:      {{.*:}}
 ; BOTH-NEXT:      {{.*:}}

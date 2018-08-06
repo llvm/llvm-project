@@ -50,7 +50,7 @@ for.body4.us:                                     ; preds = %for.body4.lr.ph.us,
   %2 = load float, float* %arrayidx.us, align 4
   %arrayidx7.us = getelementptr inbounds [32000 x float], [32000 x float]* @a, i64 0, i64 %indvars.iv
   %3 = load float, float* %arrayidx7.us, align 4
-  %add8.us = fadd float %3, %2
+  %add8.us = tail call float asm "fadd $0, $1, $2", "=f,f,f,~{cr2}"(float %3, float %2)
   store float %add8.us, float* %arrayidx7.us, align 4
   %indvars.iv.next = add i64 %indvars.iv, %1
   %4 = trunc i64 %indvars.iv.next to i32
@@ -179,7 +179,7 @@ for.end.7:                                        ; preds = %entry, %for.end.7
   br i1 %exitcond.7, label %for.end12, label %for.end.7
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare i32 @puts(i8* nocapture) nounwind
 

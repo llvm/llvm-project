@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -19,6 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -49,6 +51,9 @@ static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
 void MachineOperand::setReg(unsigned Reg) {
   if (getReg() == Reg)
     return; // No change.
+
+  // Clear the IsRenamable bit to keep it conservatively correct.
+  IsRenamable = false;
 
   // Otherwise, we have to change the register.  If this operand is embedded
   // into a machine function, we need to update the old and new register's
@@ -110,28 +115,25 @@ bool MachineOperand::isRenamable() const {
   assert(isReg() && "Wrong MachineOperand accessor");
   assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
          "isRenamable should only be checked on physical registers");
-  return IsRenamable;
+  if (!IsRenamable)
+    return false;
+
+  const MachineInstr *MI = getParent();
+  if (!MI)
+    return true;
+
+  if (isDef())
+    return !MI->hasExtraDefRegAllocReq(MachineInstr::IgnoreBundle);
+
+  assert(isUse() && "Reg is not def or use");
+  return !MI->hasExtraSrcRegAllocReq(MachineInstr::IgnoreBundle);
 }
 
 void MachineOperand::setIsRenamable(bool Val) {
   assert(isReg() && "Wrong MachineOperand accessor");
   assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
          "setIsRenamable should only be called on physical registers");
-  if (const MachineInstr *MI = getParent())
-    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
-        (isUse() && MI->hasExtraSrcRegAllocReq()))
-      assert(!Val && "isRenamable should be false for "
-                     "hasExtraDefRegAllocReq/hasExtraSrcRegAllocReq opcodes");
   IsRenamable = Val;
-}
-
-void MachineOperand::setIsRenamableIfNoExtraRegAllocReq() {
-  if (const MachineInstr *MI = getParent())
-    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
-        (isUse() && MI->hasExtraSrcRegAllocReq()))
-      return;
-
-  setIsRenamable(true);
 }
 
 // If this operand is currently a register operand, and if this is in a
@@ -440,7 +442,70 @@ static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
     OS << "<unknown>";
 }
 
-void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
+static void printIRValueReference(raw_ostream &OS, const Value &V,
+                                  ModuleSlotTracker &MST) {
+  if (isa<GlobalValue>(V)) {
+    V.printAsOperand(OS, /*PrintType=*/false, MST);
+    return;
+  }
+  if (isa<Constant>(V)) {
+    // Machine memory operands can load/store to/from constant value pointers.
+    OS << '`';
+    V.printAsOperand(OS, /*PrintType=*/true, MST);
+    OS << '`';
+    return;
+  }
+  OS << "%ir.";
+  if (V.hasName()) {
+    printLLVMNameWithoutPrefix(OS, V.getName());
+    return;
+  }
+  MachineOperand::printIRSlotNumber(OS, MST.getLocalSlot(&V));
+}
+
+static void printSyncScope(raw_ostream &OS, const LLVMContext &Context,
+                           SyncScope::ID SSID,
+                           SmallVectorImpl<StringRef> &SSNs) {
+  switch (SSID) {
+  case SyncScope::System:
+    break;
+  default:
+    if (SSNs.empty())
+      Context.getSyncScopeNames(SSNs);
+
+    OS << "syncscope(\"";
+    printEscapedString(SSNs[SSID], OS);
+    OS << "\") ";
+    break;
+  }
+}
+
+static const char *getTargetMMOFlagName(const TargetInstrInfo &TII,
+                                        unsigned TMMOFlag) {
+  auto Flags = TII.getSerializableMachineMemOperandTargetFlags();
+  for (const auto &I : Flags) {
+    if (I.first == TMMOFlag) {
+      return I.second;
+    }
+  }
+  return nullptr;
+}
+
+static void printFrameIndex(raw_ostream& OS, int FrameIndex, bool IsFixed,
+                            const MachineFrameInfo *MFI) {
+  StringRef Name;
+  if (MFI) {
+    IsFixed = MFI->isFixedObjectIndex(FrameIndex);
+    if (const AllocaInst *Alloca = MFI->getObjectAllocation(FrameIndex))
+      if (Alloca->hasName())
+        Name = Alloca->getName();
+    if (IsFixed)
+      FrameIndex -= MFI->getObjectIndexBegin();
+  }
+  MachineOperand::printStackObjectReference(OS, FrameIndex, IsFixed, Name);
+}
+
+void MachineOperand::printSubRegIdx(raw_ostream &OS, uint64_t Index,
                                     const TargetRegisterInfo *TRI) {
   OS << "%subreg.";
   if (TRI)
@@ -639,15 +704,21 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
 
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
+  print(OS, LLT{}, TRI, IntrinsicInfo);
+}
+
+void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
+                           const TargetRegisterInfo *TRI,
+                           const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, LLT{}, /*PrintDef=*/false,
+  print(OS, DummyMST, TypeToPrint, /*PrintDef=*/false, /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                           LLT TypeToPrint, bool PrintDef,
+                           LLT TypeToPrint, bool PrintDef, bool IsStandalone,
                            bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
                            const TargetRegisterInfo *TRI,
@@ -675,7 +746,15 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "debug-use ";
     if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
       OS << "renamable ";
-    OS << printReg(Reg, TRI);
+
+    const MachineRegisterInfo *MRI = nullptr;
+    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+        MRI = &MF->getRegInfo();
+      }
+    }
+
+    OS << printReg(Reg, TRI, 0, MRI);
     // Print the sub register.
     if (unsigned SubReg = getSubReg()) {
       if (TRI)
@@ -687,7 +766,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       if (const MachineFunction *MF = getMFIfAvailable(*this)) {
         const MachineRegisterInfo &MRI = MF->getRegInfo();
-        if (!PrintDef || MRI.def_empty(Reg)) {
+        if (IsStandalone || !PrintDef || MRI.def_empty(Reg)) {
           OS << ':';
           OS << printRegClassOrBank(Reg, MRI, TRI);
         }
@@ -716,17 +795,10 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_FrameIndex: {
     int FrameIndex = getIndex();
     bool IsFixed = false;
-    StringRef Name;
-    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
-      const MachineFrameInfo &MFI = MF->getFrameInfo();
-      IsFixed = MFI.isFixedObjectIndex(FrameIndex);
-      if (const AllocaInst *Alloca = MFI.getObjectAllocation(FrameIndex))
-        if (Alloca->hasName())
-          Name = Alloca->getName();
-      if (IsFixed)
-        FrameIndex -= MFI.getObjectIndexBegin();
-    }
-    printStackObjectReference(OS, FrameIndex, IsFixed, Name);
+    const MachineFrameInfo *MFI = nullptr;
+    if (const MachineFunction *MF = getMFIfAvailable(*this))
+      MFI = &MF->getFrameInfo();
+    printFrameIndex(OS, FrameIndex, IsFixed, MFI);
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:
@@ -752,7 +824,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     break;
   case MachineOperand::MO_ExternalSymbol: {
     StringRef Name = getSymbolName();
-    OS << '$';
+    OS << '&';
     if (Name.empty()) {
       OS << "\"\"";
     } else {
@@ -905,7 +977,7 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     uint64_t s, unsigned int a,
+                                     uint64_t s, uint64_t a,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
@@ -961,108 +1033,121 @@ void MachineMemOperand::print(raw_ostream &OS) const {
   ModuleSlotTracker DummyMST(nullptr);
   print(OS, DummyMST);
 }
+
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST) const {
-  assert((isLoad() || isStore()) && "SV has to be a load, store or both.");
+  SmallVector<StringRef, 0> SSNs;
+  LLVMContext Ctx;
+  print(OS, MST, SSNs, Ctx, nullptr, nullptr);
+}
 
+void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
+                              SmallVectorImpl<StringRef> &SSNs,
+                              const LLVMContext &Context,
+                              const MachineFrameInfo *MFI,
+                              const TargetInstrInfo *TII) const {
+  OS << '(';
   if (isVolatile())
-    OS << "Volatile ";
+    OS << "volatile ";
+  if (isNonTemporal())
+    OS << "non-temporal ";
+  if (isDereferenceable())
+    OS << "dereferenceable ";
+  if (isInvariant())
+    OS << "invariant ";
+  if (getFlags() & MachineMemOperand::MOTargetFlag1)
+    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag1)
+       << "\" ";
+  if (getFlags() & MachineMemOperand::MOTargetFlag2)
+    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag2)
+       << "\" ";
+  if (getFlags() & MachineMemOperand::MOTargetFlag3)
+    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
+       << "\" ";
 
+  assert((isLoad() || isStore()) &&
+         "machine memory operand must be a load or store (or both)");
   if (isLoad())
-    OS << "LD";
+    OS << "load ";
   if (isStore())
-    OS << "ST";
+    OS << "store ";
+
+  printSyncScope(OS, Context, getSyncScopeID(), SSNs);
+
+  if (getOrdering() != AtomicOrdering::NotAtomic)
+    OS << toIRString(getOrdering()) << ' ';
+  if (getFailureOrdering() != AtomicOrdering::NotAtomic)
+    OS << toIRString(getFailureOrdering()) << ' ';
+
   OS << getSize();
-
-  // Print the address information.
-  OS << "[";
-  if (const Value *V = getValue())
-    V->printAsOperand(OS, /*PrintType=*/false, MST);
-  else if (const PseudoSourceValue *PSV = getPseudoValue())
-    PSV->printCustom(OS);
-  else
-    OS << "<unknown>";
-
-  unsigned AS = getAddrSpace();
-  if (AS != 0)
-    OS << "(addrspace=" << AS << ')';
-
-  // If the alignment of the memory reference itself differs from the alignment
-  // of the base pointer, print the base alignment explicitly, next to the base
-  // pointer.
-  if (getBaseAlignment() != getAlignment())
-    OS << "(align=" << getBaseAlignment() << ")";
-
-  if (getOffset() != 0)
-    OS << "+" << getOffset();
-  OS << "]";
-
-  // Print the alignment of the reference.
-  if (getBaseAlignment() != getAlignment() || getBaseAlignment() != getSize())
-    OS << "(align=" << getAlignment() << ")";
-
-  // Print TBAA info.
-  if (const MDNode *TBAAInfo = getAAInfo().TBAA) {
-    OS << "(tbaa=";
-    if (TBAAInfo->getNumOperands() > 0)
-      TBAAInfo->getOperand(0)->printAsOperand(OS, MST);
-    else
-      OS << "<unknown>";
-    OS << ")";
-  }
-
-  // Print AA scope info.
-  if (const MDNode *ScopeInfo = getAAInfo().Scope) {
-    OS << "(alias.scope=";
-    if (ScopeInfo->getNumOperands() > 0)
-      for (unsigned i = 0, ie = ScopeInfo->getNumOperands(); i != ie; ++i) {
-        ScopeInfo->getOperand(i)->printAsOperand(OS, MST);
-        if (i != ie - 1)
-          OS << ",";
-      }
-    else
-      OS << "<unknown>";
-    OS << ")";
-  }
-
-  // Print AA noalias scope info.
-  if (const MDNode *NoAliasInfo = getAAInfo().NoAlias) {
-    OS << "(noalias=";
-    if (NoAliasInfo->getNumOperands() > 0)
-      for (unsigned i = 0, ie = NoAliasInfo->getNumOperands(); i != ie; ++i) {
-        NoAliasInfo->getOperand(i)->printAsOperand(OS, MST);
-        if (i != ie - 1)
-          OS << ",";
-      }
-    else
-      OS << "<unknown>";
-    OS << ")";
-  }
-
-  if (const MDNode *Ranges = getRanges()) {
-    unsigned NumRanges = Ranges->getNumOperands();
-    if (NumRanges != 0) {
-      OS << "(ranges=";
-
-      for (unsigned I = 0; I != NumRanges; ++I) {
-        Ranges->getOperand(I)->printAsOperand(OS, MST);
-        if (I != NumRanges - 1)
-          OS << ',';
-      }
-
-      OS << ')';
+  if (const Value *Val = getValue()) {
+    OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");
+    printIRValueReference(OS, *Val, MST);
+  } else if (const PseudoSourceValue *PVal = getPseudoValue()) {
+    OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");
+    assert(PVal && "Expected a pseudo source value");
+    switch (PVal->kind()) {
+    case PseudoSourceValue::Stack:
+      OS << "stack";
+      break;
+    case PseudoSourceValue::GOT:
+      OS << "got";
+      break;
+    case PseudoSourceValue::JumpTable:
+      OS << "jump-table";
+      break;
+    case PseudoSourceValue::ConstantPool:
+      OS << "constant-pool";
+      break;
+    case PseudoSourceValue::FixedStack: {
+      int FrameIndex = cast<FixedStackPseudoSourceValue>(PVal)->getFrameIndex();
+      bool IsFixed = true;
+      printFrameIndex(OS, FrameIndex, IsFixed, MFI);
+      break;
+    }
+    case PseudoSourceValue::GlobalValueCallEntry:
+      OS << "call-entry ";
+      cast<GlobalValuePseudoSourceValue>(PVal)->getValue()->printAsOperand(
+          OS, /*PrintType=*/false, MST);
+      break;
+    case PseudoSourceValue::ExternalSymbolCallEntry:
+      OS << "call-entry &";
+      printLLVMNameWithoutPrefix(
+          OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
+      break;
+    case PseudoSourceValue::TargetCustom:
+      // FIXME: This is not necessarily the correct MIR serialization format for
+      // a custom pseudo source value, but at least it allows
+      // -print-machineinstrs to work on a target with custom pseudo source
+      // values.
+      OS << "custom ";
+      PVal->printCustom(OS);
+      break;
     }
   }
+  MachineOperand::printOperandOffset(OS, getOffset());
+  if (getBaseAlignment() != getSize())
+    OS << ", align " << getBaseAlignment();
+  auto AAInfo = getAAInfo();
+  if (AAInfo.TBAA) {
+    OS << ", !tbaa ";
+    AAInfo.TBAA->printAsOperand(OS, MST);
+  }
+  if (AAInfo.Scope) {
+    OS << ", !alias.scope ";
+    AAInfo.Scope->printAsOperand(OS, MST);
+  }
+  if (AAInfo.NoAlias) {
+    OS << ", !noalias ";
+    AAInfo.NoAlias->printAsOperand(OS, MST);
+  }
+  if (getRanges()) {
+    OS << ", !range ";
+    getRanges()->printAsOperand(OS, MST);
+  }
+  // FIXME: Implement addrspace printing/parsing in MIR.
+  // For now, print this even though parsing it is not available in MIR.
+  if (unsigned AS = getAddrSpace())
+    OS << ", addrspace " << AS;
 
-  if (isNonTemporal())
-    OS << "(nontemporal)";
-  if (isDereferenceable())
-    OS << "(dereferenceable)";
-  if (isInvariant())
-    OS << "(invariant)";
-  if (getFlags() & MOTargetFlag1)
-    OS << "(flag1)";
-  if (getFlags() & MOTargetFlag2)
-    OS << "(flag2)";
-  if (getFlags() & MOTargetFlag3)
-    OS << "(flag3)";
+  OS << ')';
 }

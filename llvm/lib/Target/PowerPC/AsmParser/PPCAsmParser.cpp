@@ -83,6 +83,16 @@ static const MCPhysReg FRegs[32] = {
   PPC::F24, PPC::F25, PPC::F26, PPC::F27,
   PPC::F28, PPC::F29, PPC::F30, PPC::F31
 };
+static const MCPhysReg SPERegs[32] = {
+  PPC::S0,  PPC::S1,  PPC::S2,  PPC::S3,
+  PPC::S4,  PPC::S5,  PPC::S6,  PPC::S7,
+  PPC::S8,  PPC::S9,  PPC::S10, PPC::S11,
+  PPC::S12, PPC::S13, PPC::S14, PPC::S15,
+  PPC::S16, PPC::S17, PPC::S18, PPC::S19,
+  PPC::S20, PPC::S21, PPC::S22, PPC::S23,
+  PPC::S24, PPC::S25, PPC::S26, PPC::S27,
+  PPC::S28, PPC::S29, PPC::S30, PPC::S31
+};
 static const MCPhysReg VFRegs[32] = {
   PPC::VF0,  PPC::VF1,  PPC::VF2,  PPC::VF3,
   PPC::VF4,  PPC::VF5,  PPC::VF6,  PPC::VF7,
@@ -646,6 +656,16 @@ public:
   void addRegQBRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(QFRegs[getReg()]));
+  }
+
+  void addRegSPE4RCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(RRegs[getReg()]));
+  }
+
+  void addRegSPERCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(SPERegs[getReg()]));
   }
 
   void addRegCRBITRCOperands(MCInst &Inst, unsigned N) const {
@@ -1394,6 +1414,12 @@ ExtractModifierFromExpr(const MCExpr *E,
     case MCSymbolRefExpr::VK_PPC_HA:
       Variant = PPCMCExpr::VK_PPC_HA;
       break;
+    case MCSymbolRefExpr::VK_PPC_HIGH:
+      Variant = PPCMCExpr::VK_PPC_HIGH;
+      break;
+    case MCSymbolRefExpr::VK_PPC_HIGHA:
+      Variant = PPCMCExpr::VK_PPC_HIGHA;
+      break;
     case MCSymbolRefExpr::VK_PPC_HIGHER:
       Variant = PPCMCExpr::VK_PPC_HIGHER;
       break;
@@ -1973,6 +1999,10 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HA:
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, false, Ctx);
+  case MCSymbolRefExpr::VK_PPC_HIGH:
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, false, Ctx);
+  case MCSymbolRefExpr::VK_PPC_HIGHA:
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHER:
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHERA:

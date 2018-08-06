@@ -27,7 +27,8 @@ DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
   Key = MKey;
 
   raw_string_ostream OS(Val);
-  MI.print(OS, /*SkipOpers=*/false, /*SkipDebugLoc=*/true);
+  MI.print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
+           /*SkipDebugLoc=*/true);
 }
 
 Optional<uint64_t>

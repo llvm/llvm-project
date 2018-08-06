@@ -20,4 +20,4 @@ type = Library
 name = Scalar
 parent = Transforms
 library_name = ScalarOpts
-required_libraries = Analysis Core InstCombine Support TransformUtils
+required_libraries = AggressiveInstCombine Analysis Core InstCombine Support TransformUtils

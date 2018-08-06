@@ -201,6 +201,9 @@ public:
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
+  bool isCopyInstr(const MachineInstr &MI, const MachineOperand *&Src,
+                   const MachineOperand *&Dest) const override;
+
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
                            unsigned SrcReg, bool isKill, int FrameIndex,
@@ -214,6 +217,8 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  bool shouldSink(const MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      unsigned DestReg, unsigned SubIdx,

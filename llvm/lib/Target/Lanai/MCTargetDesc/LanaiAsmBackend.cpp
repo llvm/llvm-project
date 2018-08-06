@@ -47,14 +47,15 @@ class LanaiAsmBackend : public MCAsmBackend {
 
 public:
   LanaiAsmBackend(const Target &T, Triple::OSType OST)
-      : MCAsmBackend(), OSType(OST) {}
+      : MCAsmBackend(support::big), OSType(OST) {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup & /*Fixup*/, uint64_t /*Value*/,
@@ -69,7 +70,8 @@ public:
     return Lanai::NumTargetFixupKinds;
   }
 
-  bool mayNeedRelaxation(const MCInst & /*Inst*/) const override {
+  bool mayNeedRelaxation(const MCInst & /*Inst*/,
+                         const MCSubtargetInfo &STI) const override {
     return false;
   }
 
@@ -77,15 +79,15 @@ public:
                         const MCSubtargetInfo & /*STI*/,
                         MCInst & /*Res*/) const override {}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
-bool LanaiAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool LanaiAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   if ((Count % 4) != 0)
     return false;
 
   for (uint64_t i = 0; i < Count; i += 4)
-    OW->write32(0x15000000);
+    OS.write("\x15\0\0\0", 4);
 
   return true;
 }
@@ -93,7 +95,8 @@ bool LanaiAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 void LanaiAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
-                                 bool /*IsResolved*/) const {
+                                 bool /*IsResolved*/,
+                                 const MCSubtargetInfo * /*STI*/) const {
   MCFixupKind Kind = Fixup.getKind();
   Value = adjustFixupValue(static_cast<unsigned>(Kind), Value);
 
@@ -127,10 +130,9 @@ void LanaiAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-LanaiAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createLanaiELFObjectWriter(OS,
-                                    MCELFObjectTargetWriter::getOSABI(OSType));
+std::unique_ptr<MCObjectTargetWriter>
+LanaiAsmBackend::createObjectTargetWriter() const {
+  return createLanaiELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
 const MCFixupKindInfo &

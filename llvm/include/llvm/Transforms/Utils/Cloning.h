@@ -49,15 +49,15 @@ class ReturnInst;
 
 /// Return an exact copy of the specified module
 ///
-std::unique_ptr<Module> CloneModule(const Module *M);
-std::unique_ptr<Module> CloneModule(const Module *M, ValueToValueMapTy &VMap);
+std::unique_ptr<Module> CloneModule(const Module &M);
+std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified module. The ShouldCloneDefinition function
 /// controls whether a specific GlobalValue's definition is cloned. If the
 /// function returns false, the module copy will contain an external reference
 /// in place of the global definition.
 std::unique_ptr<Module>
-CloneModule(const Module *M, ValueToValueMapTy &VMap,
+CloneModule(const Module &M, ValueToValueMapTy &VMap,
             function_ref<bool(const GlobalValue *)> ShouldCloneDefinition);
 
 /// ClonedCodeInfo - This struct can be used to capture information about code
@@ -240,7 +240,7 @@ bool InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
                     AAResults *CalleeAAR = nullptr, bool InsertLifetime = true,
                     Function *ForwardVarArgsTo = nullptr);
 
-/// \brief Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
+/// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
@@ -252,7 +252,7 @@ Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                              DominatorTree *DT,
                              SmallVectorImpl<BasicBlock *> &Blocks);
 
-/// \brief Remaps instructions in \p Blocks using the mapping in \p VMap.
+/// Remaps instructions in \p Blocks using the mapping in \p VMap.
 void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
                                ValueToValueMapTy &VMap);
 
@@ -265,7 +265,8 @@ void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
 BasicBlock *
 DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
                                     Instruction *StopAt,
-                                    ValueToValueMapTy &ValueMapping);
+                                    ValueToValueMapTy &ValueMapping,
+                                    DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

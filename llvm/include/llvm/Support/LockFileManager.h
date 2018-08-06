@@ -11,14 +11,13 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/FileSystem.h"
 #include <system_error>
 #include <utility> // for std::pair
 
 namespace llvm {
 class StringRef;
 
-/// \brief Class that manages the creation of a lock file to aid
+/// Class that manages the creation of a lock file to aid
 /// implicit coordination between different processes.
 ///
 /// The implicit coordination works by creating a ".lock" file alongside
@@ -28,33 +27,33 @@ class StringRef;
 /// operation.
 class LockFileManager {
 public:
-  /// \brief Describes the state of a lock file.
+  /// Describes the state of a lock file.
   enum LockFileState {
-    /// \brief The lock file has been created and is owned by this instance
+    /// The lock file has been created and is owned by this instance
     /// of the object.
     LFS_Owned,
-    /// \brief The lock file already exists and is owned by some other
+    /// The lock file already exists and is owned by some other
     /// instance.
     LFS_Shared,
-    /// \brief An error occurred while trying to create or find the lock
+    /// An error occurred while trying to create or find the lock
     /// file.
     LFS_Error
   };
 
-  /// \brief Describes the result of waiting for the owner to release the lock.
+  /// Describes the result of waiting for the owner to release the lock.
   enum WaitForUnlockResult {
-    /// \brief The lock was released successfully.
+    /// The lock was released successfully.
     Res_Success,
-    /// \brief Owner died while holding the lock.
+    /// Owner died while holding the lock.
     Res_OwnerDied,
-    /// \brief Reached timeout while waiting for the owner to release the lock.
+    /// Reached timeout while waiting for the owner to release the lock.
     Res_Timeout
   };
 
 private:
   SmallString<128> FileName;
   SmallString<128> LockFileName;
-  Optional<sys::fs::TempFile> UniqueLockFile;
+  SmallString<128> UniqueLockFileName;
 
   Optional<std::pair<std::string, int> > Owner;
   std::error_code ErrorCode;
@@ -73,22 +72,22 @@ public:
   LockFileManager(StringRef FileName);
   ~LockFileManager();
 
-  /// \brief Determine the state of the lock file.
+  /// Determine the state of the lock file.
   LockFileState getState() const;
 
   operator LockFileState() const { return getState(); }
 
-  /// \brief For a shared lock, wait until the owner releases the lock.
+  /// For a shared lock, wait until the owner releases the lock.
   WaitForUnlockResult waitForUnlock();
 
-  /// \brief Remove the lock file.  This may delete a different lock file than
+  /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
   std::error_code unsafeRemoveLockFile();
 
-  /// \brief Get error message, or "" if there is no error.
+  /// Get error message, or "" if there is no error.
   std::string getErrorMessage() const;
 
-  /// \brief Set error and error message
+  /// Set error and error message
   void setError(const std::error_code &EC, StringRef ErrorMsg = "") {
     ErrorCode = EC;
     ErrorDiagMsg = ErrorMsg.str();

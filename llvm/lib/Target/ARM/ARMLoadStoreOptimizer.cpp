@@ -1198,7 +1198,7 @@ findIncDecBefore(MachineBasicBlock::iterator MBBI, unsigned Reg,
 
   // Skip debug values.
   MachineBasicBlock::iterator PrevMBBI = std::prev(MBBI);
-  while (PrevMBBI->isDebugValue() && PrevMBBI != BeginMBBI)
+  while (PrevMBBI->isDebugInstr() && PrevMBBI != BeginMBBI)
     --PrevMBBI;
 
   Offset = isIncrementOrDecrement(*PrevMBBI, Reg, Pred, PredReg);
@@ -1214,7 +1214,7 @@ findIncDecAfter(MachineBasicBlock::iterator MBBI, unsigned Reg,
   MachineBasicBlock::iterator EndMBBI = MBB.end();
   MachineBasicBlock::iterator NextMBBI = std::next(MBBI);
   // Skip debug values.
-  while (NextMBBI != EndMBBI && NextMBBI->isDebugValue())
+  while (NextMBBI != EndMBBI && NextMBBI->isDebugInstr())
     ++NextMBBI;
   if (NextMBBI == EndMBBI)
     return EndMBBI;
@@ -1807,7 +1807,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
       MBBI = I;
       --Position;
       // Fallthrough to look into existing chain.
-    } else if (MBBI->isDebugValue()) {
+    } else if (MBBI->isDebugInstr()) {
       continue;
     } else if (MBBI->getOpcode() == ARM::t2LDRDi8 ||
                MBBI->getOpcode() == ARM::t2STRDi8) {
@@ -1834,7 +1834,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
   auto LessThan = [](const MergeCandidate* M0, const MergeCandidate *M1) {
     return M0->InsertPos < M1->InsertPos;
   };
-  std::sort(Candidates.begin(), Candidates.end(), LessThan);
+  llvm::sort(Candidates.begin(), Candidates.end(), LessThan);
 
   // Go through list of candidates and merge.
   bool Changed = false;
@@ -1891,8 +1891,8 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
        MBBI->getOpcode() == ARM::tBX_RET ||
        MBBI->getOpcode() == ARM::MOVPCLR)) {
     MachineBasicBlock::iterator PrevI = std::prev(MBBI);
-    // Ignore any DBG_VALUE instructions.
-    while (PrevI->isDebugValue() && PrevI != MBB.begin())
+    // Ignore any debug instructions.
+    while (PrevI->isDebugInstr() && PrevI != MBB.begin())
       --PrevI;
     MachineInstr &PrevMI = *PrevI;
     unsigned Opcode = PrevMI.getOpcode();
@@ -2063,7 +2063,7 @@ static bool IsSafeAndProfitableToMove(bool isLd, unsigned Base,
   // Are there stores / loads / calls between them?
   SmallSet<unsigned, 4> AddedRegPressure;
   while (++I != E) {
-    if (I->isDebugValue() || MemOps.count(&*I))
+    if (I->isDebugInstr() || MemOps.count(&*I))
       continue;
     if (I->isCall() || I->isTerminator() || I->hasUnmodeledSideEffects())
       return false;
@@ -2172,13 +2172,13 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
   bool RetVal = false;
 
   // Sort by offset (in reverse order).
-  std::sort(Ops.begin(), Ops.end(),
-            [](const MachineInstr *LHS, const MachineInstr *RHS) {
-              int LOffset = getMemoryOpOffset(*LHS);
-              int ROffset = getMemoryOpOffset(*RHS);
-              assert(LHS == RHS || LOffset != ROffset);
-              return LOffset > ROffset;
-            });
+  llvm::sort(Ops.begin(), Ops.end(),
+             [](const MachineInstr *LHS, const MachineInstr *RHS) {
+               int LOffset = getMemoryOpOffset(*LHS);
+               int ROffset = getMemoryOpOffset(*RHS);
+               assert(LHS == RHS || LOffset != ROffset);
+               return LOffset > ROffset;
+             });
 
   // The loads / stores of the same base are in order. Scan them from first to
   // last and check for the following:
@@ -2253,7 +2253,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
         // This is the new location for the loads / stores.
         MachineBasicBlock::iterator InsertPos = isLd ? FirstOp : LastOp;
         while (InsertPos != MBB->end() &&
-               (MemOps.count(&*InsertPos) || InsertPos->isDebugValue()))
+               (MemOps.count(&*InsertPos) || InsertPos->isDebugInstr()))
           ++InsertPos;
 
         // If we are moving a pair of loads / stores, see if it makes sense
@@ -2291,7 +2291,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
             MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
-            DEBUG(dbgs() << "Formed " << *MIB << "\n");
+            LLVM_DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumLDRDFormed;
           } else {
             MachineInstrBuilder MIB = BuildMI(*MBB, InsertPos, dl, MCID)
@@ -2305,7 +2305,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
             MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
-            DEBUG(dbgs() << "Formed " << *MIB << "\n");
+            LLVM_DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumSTRDFormed;
           }
           MBB->erase(Op0);
@@ -2355,7 +2355,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         break;
       }
 
-      if (!MI.isDebugValue())
+      if (!MI.isDebugInstr())
         MI2LocMap[&MI] = ++Loc;
 
       if (!isMemoryOp(MI))

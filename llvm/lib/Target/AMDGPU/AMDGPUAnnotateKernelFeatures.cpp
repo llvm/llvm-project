@@ -219,7 +219,7 @@ static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
 }
 
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(F);
   bool HasFlat = ST.hasFlatAddressSpace();
   bool HasApertureRegs = ST.hasApertureRegs();
   SmallPtrSet<const Constant *, 8> ConstantExprVisited;

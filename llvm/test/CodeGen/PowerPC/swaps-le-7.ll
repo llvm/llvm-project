@@ -12,15 +12,15 @@
 ; CHECK: xxspltd
 ; CHECK-NEXT: xxspltd
 ; CHECK-NEXT: xvmuldp
-; CHECK-NEXT: xvmuldp
-; CHECK-NEXT: xvsubdp
-; CHECK-NEXT: xvadddp
-; CHECK-NEXT: xxswapd
-; CHECK-NEXT: xxpermdi
-; CHECK-NEXT: xvsubdp
-; CHECK-NEXT: xxswapd
+; CHECK-DAG: xvmuldp
+; CHECK-DAG: xvsubdp
+; CHECK-DAG: xvadddp
+; CHECK-DAG: xxswapd
+; CHECK-DAG: xxpermdi
+; CHECK-DAG: xvsubdp
+; CHECK: xxswapd
 ; CHECK-NEXT: stxvd2x
-; CHECK-NEXT: blr
+; CHECK: blr
 
 ; Function Attrs: noinline
 define void @zg(i8* %.G0011_640.0, i8* %.G0012_642.0, <2 x double>* %JJ, <2 x double>* %.ka0000_391, double %.unpack, double %.unpack66) #0 {

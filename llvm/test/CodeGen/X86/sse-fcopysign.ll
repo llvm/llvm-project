@@ -65,11 +65,11 @@ define float @int1(float %a, float %b) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    andps {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    orps %xmm0, %xmm1
-; X32-NEXT:    movss %xmm1, (%esp)
+; X32-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    orps %xmm1, %xmm0
+; X32-NEXT:    movss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
 ; X32-NEXT:    retl
@@ -91,14 +91,14 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    addss 20(%ebp), %xmm0
-; X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    andps {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    cvtss2sd %xmm0, %xmm0
+; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    addss 20(%ebp), %xmm1
 ; X32-NEXT:    andps {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    orps %xmm1, %xmm0
-; X32-NEXT:    movlps %xmm0, (%esp)
+; X32-NEXT:    cvtss2sd %xmm1, %xmm1
+; X32-NEXT:    andps {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    orps %xmm0, %xmm1
+; X32-NEXT:    movlps %xmm1, (%esp)
 ; X32-NEXT:    fldl (%esp)
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp

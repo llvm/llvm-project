@@ -8,17 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -32,7 +33,7 @@ using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   const DWARFObject &D = C.getDWARFObj();
-  parseImpl(C, Section, C.getDebugAbbrev(), &D.getRangeSection(),
+  parseImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangeSection(),
             D.getStringSection(), D.getStringOffsetSection(),
             &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(), false,
             false);
@@ -41,22 +42,22 @@ void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
                                     const DWARFSection &DWOSection, bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
-  parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
+  parseImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
             D.getStringDWOSection(), D.getStringOffsetDWOSection(),
             &D.getAddrSection(), D.getLineDWOSection(), C.isLittleEndian(),
             true, Lazy);
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
+                     const DWARFUnitHeader &Header,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                      StringRef SS, const DWARFSection &SOS,
                      const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                     bool IsDWO, const DWARFUnitSectionBase &UnitSection,
-                     const DWARFUnitIndex::Entry *IndexEntry)
-    : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
-      LineSection(LS), StringSection(SS), StringOffsetSection(SOS),
-      AddrOffsetSection(AOS), isLittleEndian(LE), isDWO(IsDWO),
-      UnitSection(UnitSection), IndexEntry(IndexEntry) {
+                     bool IsDWO, const DWARFUnitSectionBase &UnitSection)
+    : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
+      RangeSection(RS), LineSection(LS), StringSection(SS),
+      StringOffsetSection(SOS),  AddrOffsetSection(AOS), isLittleEndian(LE),
+      isDWO(IsDWO), UnitSection(UnitSection) {
   clear();
 }
 
@@ -92,9 +93,16 @@ bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
   return true;
 }
 
-bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
+bool DWARFUnitHeader::extract(DWARFContext &Context,
+                              const DWARFDataExtractor &debug_info,
+                              uint32_t *offset_ptr,
+                              DWARFSectionKind SectionKind,
+                              const DWARFUnitIndex *Index) {
+  Offset = *offset_ptr;
+  IndexEntry = Index ? Index->getFromOffset(*offset_ptr) : nullptr;
   Length = debug_info.getU32(offset_ptr);
   // FIXME: Support DWARF64.
+  unsigned SizeOfLength = 4;
   FormParams.Format = DWARF32;
   FormParams.Version = debug_info.getU16(offset_ptr);
   if (FormParams.Version >= 5) {
@@ -102,8 +110,14 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
     AbbrOffset = debug_info.getU32(offset_ptr);
   } else {
-    AbbrOffset = debug_info.getU32(offset_ptr);
+    AbbrOffset = debug_info.getRelocatedValue(4, offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
+    // Fake a unit type based on the section type.  This isn't perfect,
+    // but distinguishing compile and type units is generally enough.
+    if (SectionKind == DW_SECT_TYPES)
+      UnitType = DW_UT_type;
+    else
+      UnitType = DW_UT_compile;
   }
   if (IndexEntry) {
     if (AbbrOffset)
@@ -116,12 +130,27 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
       return false;
     AbbrOffset = AbbrEntry->Offset;
   }
+  if (isTypeUnit()) {
+    TypeHash = debug_info.getU64(offset_ptr);
+    TypeOffset = debug_info.getU32(offset_ptr);
+  } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
+    DWOId = debug_info.getU64(offset_ptr);
 
+  // Header fields all parsed, capture the size of this unit header.
+  assert(*offset_ptr - Offset <= 255 && "unexpected header size");
+  Size = uint8_t(*offset_ptr - Offset);
+
+  // Type offset is unit-relative; should be after the header and before
+  // the end of the current unit.
+  bool TypeOffsetOK =
+      !isTypeUnit()
+          ? true
+          : TypeOffset >= Size && TypeOffset < getLength() + SizeOfLength;
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
   bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
 
-  if (!LengthOK || !VersionOK || !AddrSizeOK)
+  if (!LengthOK || !VersionOK || !AddrSizeOK || !TypeOffsetOK)
     return false;
 
   // Keep track of the highest DWARF version we encounter across all units.
@@ -129,24 +158,31 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   return true;
 }
 
-bool DWARFUnit::extract(DataExtractor debug_info, uint32_t *offset_ptr) {
-  clear();
-
-  Offset = *offset_ptr;
-
-  if (debug_info.isValidOffset(*offset_ptr)) {
-    if (extractImpl(debug_info, offset_ptr))
-      return true;
-
-    // reset the offset to where we tried to parse from if anything went wrong
-    *offset_ptr = Offset;
+// Parse the rangelist table header, including the optional array of offsets
+// following it (DWARF v5 and later).
+static Expected<DWARFDebugRnglistTable>
+parseRngListTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
+  // TODO: Support DWARF64
+  // We are expected to be called with Offset 0 or pointing just past the table
+  // header, which is 12 bytes long for DWARF32.
+  if (Offset > 0) {
+    if (Offset < 12U) {
+      std::string Buffer;
+      raw_string_ostream Stream(Buffer);
+      Stream << format(
+          "Did not detect a valid range list table with base = 0x%x", Offset);
+      return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
+    }
+    Offset -= 12U;
   }
-
-  return false;
+  llvm::DWARFDebugRnglistTable Table;
+  if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
+    return std::move(E);
+  return Table;
 }
 
-bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
-                                 DWARFDebugRangeList &RangeList) const {
+Error DWARFUnit::extractRangeList(uint32_t RangeListOffset,
+                                  DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
   assert(!DieArray.empty());
   DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
@@ -156,10 +192,7 @@ bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
 }
 
 void DWARFUnit::clear() {
-  Offset = 0;
-  Length = 0;
   Abbrevs = nullptr;
-  FormParams = DWARFFormParams({0, 0, DWARF32});
   BaseAddr.reset();
   RangeSectionBase = 0;
   AddrOffsetSectionBase = 0;
@@ -171,10 +204,6 @@ const char *DWARFUnit::getCompilationDir() {
   return dwarf::toString(getUnitDIE().find(DW_AT_comp_dir), nullptr);
 }
 
-Optional<uint64_t> DWARFUnit::getDWOId() {
-  return toUnsigned(getUnitDIE().find(DW_AT_GNU_dwo_id));
-}
-
 void DWARFUnit::extractDIEsToVector(
     bool AppendCUDie, bool AppendNonCUDies,
     std::vector<DWARFDebugInfoEntry> &Dies) const {
@@ -183,7 +212,7 @@ void DWARFUnit::extractDIEsToVector(
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
-  uint32_t DIEOffset = Offset + getHeaderSize();
+  uint32_t DIEOffset = getOffset() + getHeaderSize();
   uint32_t NextCUOffset = getNextUnitOffset();
   DWARFDebugInfoEntry DIE;
   DWARFDataExtractor DebugInfoData = getDebugInfoExtractor();
@@ -224,8 +253,9 @@ void DWARFUnit::extractDIEsToVector(
   // should always terminate at or before the start of the next compilation
   // unit header).
   if (DIEOffset > NextCUOffset)
-    fprintf(stderr, "warning: DWARF compile unit extends beyond its "
-                    "bounds cu 0x%8.8x at 0x%8.8x'\n", getOffset(), DIEOffset);
+    WithColor::warning() << format("DWARF compile unit extends beyond its "
+                                   "bounds cu 0x%8.8x at 0x%8.8x\n",
+                                   getOffset(), DIEOffset);
 }
 
 size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
@@ -242,6 +272,8 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
+    if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
+      Header.setDWOId(*DWOId);
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);
@@ -259,6 +291,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     // which may differ from the unit's format.
     uint64_t StringOffsetsContributionBase =
         isDWO ? 0 : toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
+    auto IndexEntry = Header.getIndexEntry();
     if (IndexEntry)
       if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
         StringOffsetsContributionBase += C->Offset;
@@ -272,6 +305,32 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     else if (getVersion() >= 5)
       StringOffsetsTableContribution = determineStringOffsetsTableContribution(
           DA, StringOffsetsContributionBase);
+
+    // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
+    // describe address ranges.
+    if (getVersion() >= 5) {
+      if (isDWO)
+        setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+      else
+        setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
+                         toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
+      // Parse the range list table header. Individual range lists are
+      // extracted lazily.
+      DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                  isLittleEndian, 0);
+      if (auto TableOrError =
+              parseRngListTableHeader(RangesDA, RangeSectionBase))
+        RngListTable = TableOrError.get();
+      else
+        WithColor::error() << "parsing a range list table: "
+                           << toString(TableOrError.takeError())
+                           << '\n';
+
+      // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
+      // Adjust RangeSectionBase to point past the table header.
+      if (isDWO && RngListTable)
+        RangeSectionBase = RngListTable->getHeaderSize();
+    }
 
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
@@ -311,8 +370,23 @@ bool DWARFUnit::parseDWO() {
   DWO = std::shared_ptr<DWARFCompileUnit>(std::move(DWOContext), DWOCU);
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
   DWO->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
-  auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-  DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+  if (getVersion() >= 5) {
+    DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+    DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                isLittleEndian, 0);
+    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase))
+      DWO->RngListTable = TableOrError.get();
+    else
+      WithColor::error() << "parsing a range list table: "
+                         << toString(TableOrError.takeError())
+                         << '\n';
+    if (DWO->RngListTable)
+      DWO->RangeSectionBase = DWO->RngListTable->getHeaderSize();
+  } else {
+    auto DWORangesBase = UnitDie.getRangesBaseAttribute();
+    DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+  }
+
   return true;
 }
 
@@ -323,16 +397,56 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
   }
 }
 
+Expected<DWARFAddressRangesVector>
+DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
+  if (getVersion() <= 4) {
+    DWARFDebugRangeList RangeList;
+    if (Error E = extractRangeList(Offset, RangeList))
+      return std::move(E);
+    return RangeList.getAbsoluteRanges(getBaseAddress());
+  }
+  if (RngListTable) {
+    DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
+                                  isLittleEndian, RngListTable->getAddrSize());
+    auto RangeListOrError = RngListTable->findRangeList(RangesData, Offset);
+    if (RangeListOrError)
+      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress());
+    return RangeListOrError.takeError();
+  }
+
+  return make_error<StringError>("missing or invalid range list table",
+                                 inconvertibleErrorCode());
+}
+
+Expected<DWARFAddressRangesVector>
+DWARFUnit::findRnglistFromIndex(uint32_t Index) {
+  if (auto Offset = getRnglistOffset(Index))
+    return findRnglistFromOffset(*Offset + RangeSectionBase);
+
+  std::string Buffer;
+  raw_string_ostream Stream(Buffer);
+  if (RngListTable)
+    Stream << format("invalid range list table index %d", Index);
+  else
+    Stream << "missing or invalid range list table";
+  return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
+}
+
 void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
   DWARFDie UnitDie = getUnitDIE();
   if (!UnitDie)
     return;
   // First, check if unit DIE describes address ranges for the whole unit.
-  const auto &CUDIERanges = UnitDie.getAddressRanges();
-  if (!CUDIERanges.empty()) {
-    CURanges.insert(CURanges.end(), CUDIERanges.begin(), CUDIERanges.end());
-    return;
-  }
+  auto CUDIERangesOrError = UnitDie.getAddressRanges();
+  if (CUDIERangesOrError) {
+    if (!CUDIERangesOrError.get().empty()) {
+      CURanges.insert(CURanges.end(), CUDIERangesOrError.get().begin(),
+                      CUDIERangesOrError.get().end());
+      return;
+    }
+  } else
+    WithColor::error() << "decoding address ranges: "
+                       << toString(CUDIERangesOrError.takeError()) << '\n';
 
   // This function is usually called if there in no .debug_aranges section
   // in order to produce a compile unit level set of address ranges that
@@ -356,378 +470,49 @@ void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
     clearDIEs(true);
 }
 
-// Populates a map from PC addresses to subprogram DIEs.
-//
-// This routine tries to look at the smallest amount of the debug info it can
-// to locate the DIEs. This is because many subprograms will never end up being
-// read or needed at all. We want to be as lazy as possible.
-void DWARFUnit::buildSubprogramDIEAddrMap() {
-  assert(SubprogramDIEAddrMap.empty() && "Must only build this map once!");
-  SmallVector<DWARFDie, 16> Worklist;
-  Worklist.push_back(getUnitDIE());
-  do {
-    DWARFDie Die = Worklist.pop_back_val();
-
-    // Queue up child DIEs to recurse through.
-    // FIXME: This causes us to read a lot more debug info than we really need.
-    // We should look at pruning out DIEs which cannot transitively hold
-    // separate subprograms.
-    for (DWARFDie Child : Die.children())
-      Worklist.push_back(Child);
-
-    // If handling a non-subprogram DIE, nothing else to do.
-    if (!Die.isSubprogramDIE())
-      continue;
-
-    // For subprogram DIEs, store them, and insert relevant markers into the
-    // address map. We don't care about overlap at all here as DWARF doesn't
-    // meaningfully support that, so we simply will insert a range with no DIE
-    // starting from the high PC. In the event there are overlaps, sorting
-    // these may truncate things in surprising ways but still will allow
-    // lookups to proceed.
-    int DIEIndex = SubprogramDIEAddrInfos.size();
-    SubprogramDIEAddrInfos.push_back({Die, (uint64_t)-1, {}});
-    for (const auto &R : Die.getAddressRanges()) {
-      // Ignore 0-sized ranges.
-      if (R.LowPC == R.HighPC)
-        continue;
-
-      SubprogramDIEAddrMap.push_back({R.LowPC, DIEIndex});
-      SubprogramDIEAddrMap.push_back({R.HighPC, -1});
-
-      if (R.LowPC < SubprogramDIEAddrInfos.back().SubprogramBasePC)
-        SubprogramDIEAddrInfos.back().SubprogramBasePC = R.LowPC;
-    }
-  } while (!Worklist.empty());
-
-  if (SubprogramDIEAddrMap.empty()) {
-    // If we found no ranges, create a no-op map so that lookups remain simple
-    // but never find anything.
-    SubprogramDIEAddrMap.push_back({0, -1});
-    return;
-  }
-
-  // Next, sort the ranges and remove both exact duplicates and runs with the
-  // same DIE index. We order the ranges so that non-empty ranges are
-  // preferred. Because there may be ties, we also need to use stable sort.
-  std::stable_sort(SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(),
-                   [](const std::pair<uint64_t, int64_t> &LHS,
-                      const std::pair<uint64_t, int64_t> &RHS) {
-                     if (LHS.first < RHS.first)
-                       return true;
-                     if (LHS.first > RHS.first)
-                       return false;
-
-                     // For ranges that start at the same address, keep the one
-                     // with a DIE.
-                     if (LHS.second != -1 && RHS.second == -1)
-                       return true;
-
-                     return false;
-                   });
-  SubprogramDIEAddrMap.erase(
-      std::unique(SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(),
-                  [](const std::pair<uint64_t, int64_t> &LHS,
-                     const std::pair<uint64_t, int64_t> &RHS) {
-                    // If the start addresses are exactly the same, we can
-                    // remove all but the first one as it is the only one that
-                    // will be found and used.
-                    //
-                    // If the DIE indices are the same, we can "merge" the
-                    // ranges by eliminating the second.
-                    return LHS.first == RHS.first || LHS.second == RHS.second;
-                  }),
-      SubprogramDIEAddrMap.end());
-
-  assert(SubprogramDIEAddrMap.back().second == -1 &&
-         "The last interval must not have a DIE as each DIE's address range is "
-         "bounded.");
-}
-
-// Build the second level of mapping from PC to DIE, specifically one that maps
-// a PC *within* a particular DWARF subprogram into a precise, maximally nested
-// inlined subroutine DIE (if any exists). We build a separate map for each
-// subprogram because many subprograms will never get queried for an address
-// and this allows us to be significantly lazier in reading the DWARF itself.
-void DWARFUnit::buildInlinedSubroutineDIEAddrMap(
-    SubprogramDIEAddrInfo &SPInfo) {
-  auto &AddrMap = SPInfo.InlinedSubroutineDIEAddrMap;
-  uint64_t BasePC = SPInfo.SubprogramBasePC;
-
-  auto SubroutineAddrMapSorter = [](const std::pair<int, int> &LHS,
-                                    const std::pair<int, int> &RHS) {
-    if (LHS.first < RHS.first)
-      return true;
-    if (LHS.first > RHS.first)
-      return false;
-
-    // For ranges that start at the same address, keep the
-    // non-empty one.
-    if (LHS.second != -1 && RHS.second == -1)
-      return true;
-
-    return false;
-  };
-  auto SubroutineAddrMapUniquer = [](const std::pair<int, int> &LHS,
-                                     const std::pair<int, int> &RHS) {
-    // If the start addresses are exactly the same, we can
-    // remove all but the first one as it is the only one that
-    // will be found and used.
-    //
-    // If the DIE indices are the same, we can "merge" the
-    // ranges by eliminating the second.
-    return LHS.first == RHS.first || LHS.second == RHS.second;
-  };
-
-  struct DieAndParentIntervalRange {
-    DWARFDie Die;
-    int ParentIntervalsBeginIdx, ParentIntervalsEndIdx;
-  };
-
-  SmallVector<DieAndParentIntervalRange, 16> Worklist;
-  auto EnqueueChildDIEs = [&](const DWARFDie &Die, int ParentIntervalsBeginIdx,
-                              int ParentIntervalsEndIdx) {
-    for (DWARFDie Child : Die.children())
-      Worklist.push_back(
-          {Child, ParentIntervalsBeginIdx, ParentIntervalsEndIdx});
-  };
-  EnqueueChildDIEs(SPInfo.SubprogramDIE, 0, 0);
-  while (!Worklist.empty()) {
-    DWARFDie Die = Worklist.back().Die;
-    int ParentIntervalsBeginIdx = Worklist.back().ParentIntervalsBeginIdx;
-    int ParentIntervalsEndIdx = Worklist.back().ParentIntervalsEndIdx;
-    Worklist.pop_back();
-
-    // If we encounter a nested subprogram, simply ignore it. We map to
-    // (disjoint) subprograms before arriving here and we don't want to examine
-    // any inlined subroutines of an unrelated subpragram.
-    if (Die.getTag() == DW_TAG_subprogram)
-      continue;
-
-    // For non-subroutines, just recurse to keep searching for inlined
-    // subroutines.
-    if (Die.getTag() != DW_TAG_inlined_subroutine) {
-      EnqueueChildDIEs(Die, ParentIntervalsBeginIdx, ParentIntervalsEndIdx);
-      continue;
-    }
-
-    // Capture the inlined subroutine DIE that we will reference from the map.
-    int DIEIndex = InlinedSubroutineDIEs.size();
-    InlinedSubroutineDIEs.push_back(Die);
-
-    int DieIntervalsBeginIdx = AddrMap.size();
-    // First collect the PC ranges for this DIE into our subroutine interval
-    // map.
-    for (auto R : Die.getAddressRanges()) {
-      // Clamp the PCs to be above the base.
-      R.LowPC = std::max(R.LowPC, BasePC);
-      R.HighPC = std::max(R.HighPC, BasePC);
-      // Compute relative PCs from the subprogram base and drop down to an
-      // unsigned 32-bit int to represent them within the data structure. This
-      // lets us cover a 4gb single subprogram. Because subprograms may be
-      // partitioned into distant parts of a binary (think hot/cold
-      // partitioning) we want to preserve as much as we can here without
-      // burning extra memory. Past that, we will simply truncate and lose the
-      // ability to map those PCs to a DIE more precise than the subprogram.
-      const uint32_t MaxRelativePC = std::numeric_limits<uint32_t>::max();
-      uint32_t RelativeLowPC = (R.LowPC - BasePC) > (uint64_t)MaxRelativePC
-                                   ? MaxRelativePC
-                                   : (uint32_t)(R.LowPC - BasePC);
-      uint32_t RelativeHighPC = (R.HighPC - BasePC) > (uint64_t)MaxRelativePC
-                                    ? MaxRelativePC
-                                    : (uint32_t)(R.HighPC - BasePC);
-      // Ignore empty or bogus ranges.
-      if (RelativeLowPC >= RelativeHighPC)
-        continue;
-      AddrMap.push_back({RelativeLowPC, DIEIndex});
-      AddrMap.push_back({RelativeHighPC, -1});
-    }
-
-    // If there are no address ranges, there is nothing to do to map into them
-    // and there cannot be any child subroutine DIEs with address ranges of
-    // interest as those would all be required to nest within this DIE's
-    // non-existent ranges, so we can immediately continue to the next DIE in
-    // the worklist.
-    if (DieIntervalsBeginIdx == (int)AddrMap.size())
-      continue;
-
-    // The PCs from this DIE should never overlap, so we can easily sort them
-    // here.
-    std::sort(AddrMap.begin() + DieIntervalsBeginIdx, AddrMap.end(),
-              SubroutineAddrMapSorter);
-    // Remove any dead ranges. These should only come from "empty" ranges that
-    // were clobbered by some other range.
-    AddrMap.erase(std::unique(AddrMap.begin() + DieIntervalsBeginIdx,
-                              AddrMap.end(), SubroutineAddrMapUniquer),
-                  AddrMap.end());
-
-    // Compute the end index of this DIE's addr map intervals.
-    int DieIntervalsEndIdx = AddrMap.size();
-
-    assert(DieIntervalsBeginIdx != DieIntervalsEndIdx &&
-           "Must not have an empty map for this layer!");
-    assert(AddrMap.back().second == -1 && "Must end with an empty range!");
-    assert(std::is_sorted(AddrMap.begin() + DieIntervalsBeginIdx, AddrMap.end(),
-                          less_first()) &&
-           "Failed to sort this DIE's interals!");
-
-    // If we have any parent intervals, walk the newly added ranges and find
-    // the parent ranges they were inserted into. Both of these are sorted and
-    // neither has any overlaps. We need to append new ranges to split up any
-    // parent ranges these new ranges would overlap when we merge them.
-    if (ParentIntervalsBeginIdx != ParentIntervalsEndIdx) {
-      int ParentIntervalIdx = ParentIntervalsBeginIdx;
-      for (int i = DieIntervalsBeginIdx, e = DieIntervalsEndIdx - 1; i < e;
-           ++i) {
-        const uint32_t IntervalStart = AddrMap[i].first;
-        const uint32_t IntervalEnd = AddrMap[i + 1].first;
-        const int IntervalDieIdx = AddrMap[i].second;
-        if (IntervalDieIdx == -1) {
-          // For empty intervals, nothing is required. This is a bit surprising
-          // however. If the prior interval overlaps a parent interval and this
-          // would be necessary to mark the end, we will synthesize a new end
-          // that switches back to the parent DIE below. And this interval will
-          // get dropped in favor of one with a DIE attached. However, we'll
-          // still include this and so worst-case, it will still end the prior
-          // interval.
+void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
+  if (Die.isSubroutineDIE()) {
+    auto DIERangesOrError = Die.getAddressRanges();
+    if (DIERangesOrError) {
+      for (const auto &R : DIERangesOrError.get()) {
+        // Ignore 0-sized ranges.
+        if (R.LowPC == R.HighPC)
           continue;
+        auto B = AddrDieMap.upper_bound(R.LowPC);
+        if (B != AddrDieMap.begin() && R.LowPC < (--B)->second.first) {
+          // The range is a sub-range of existing ranges, we need to split the
+          // existing range.
+          if (R.HighPC < B->second.first)
+            AddrDieMap[R.HighPC] = B->second;
+          if (R.LowPC > B->first)
+            AddrDieMap[B->first].first = R.LowPC;
         }
-
-        // We are walking the new ranges in order, so search forward from the
-        // last point for a parent range that might overlap.
-        auto ParentIntervalsRange =
-            make_range(AddrMap.begin() + ParentIntervalIdx,
-                       AddrMap.begin() + ParentIntervalsEndIdx);
-        assert(std::is_sorted(ParentIntervalsRange.begin(),
-                              ParentIntervalsRange.end(), less_first()) &&
-               "Unsorted parent intervals can't be searched!");
-        auto PI = std::upper_bound(
-            ParentIntervalsRange.begin(), ParentIntervalsRange.end(),
-            IntervalStart,
-            [](uint32_t LHS, const std::pair<uint32_t, int32_t> &RHS) {
-              return LHS < RHS.first;
-            });
-        if (PI == ParentIntervalsRange.begin() ||
-            PI == ParentIntervalsRange.end())
-          continue;
-
-        ParentIntervalIdx = PI - AddrMap.begin();
-        int32_t &ParentIntervalDieIdx = std::prev(PI)->second;
-        uint32_t &ParentIntervalStart = std::prev(PI)->first;
-        const uint32_t ParentIntervalEnd = PI->first;
-
-        // If the new range starts exactly at the position of the parent range,
-        // we need to adjust the parent range. Note that these collisions can
-        // only happen with the original parent range because we will merge any
-        // adjacent ranges in the child.
-        if (IntervalStart == ParentIntervalStart) {
-          // If there will be a tail, just shift the start of the parent
-          // forward. Note that this cannot change the parent ordering.
-          if (IntervalEnd < ParentIntervalEnd) {
-            ParentIntervalStart = IntervalEnd;
-            continue;
-          }
-          // Otherwise, mark this as becoming empty so we'll remove it and
-          // prefer the child range.
-          ParentIntervalDieIdx = -1;
-          continue;
-        }
-
-        // Finally, if the parent interval will need to remain as a prefix to
-        // this one, insert a new interval to cover any tail.
-        if (IntervalEnd < ParentIntervalEnd)
-          AddrMap.push_back({IntervalEnd, ParentIntervalDieIdx});
+        AddrDieMap[R.LowPC] = std::make_pair(R.HighPC, Die);
       }
-    }
-
-    // Note that we don't need to re-sort even this DIE's address map intervals
-    // after this. All of the newly added intervals actually fill in *gaps* in
-    // this DIE's address map, and we know that children won't need to lookup
-    // into those gaps.
-
-    // Recurse through its children, giving them the interval map range of this
-    // DIE to use as their parent intervals.
-    EnqueueChildDIEs(Die, DieIntervalsBeginIdx, DieIntervalsEndIdx);
+    } else
+      llvm::consumeError(DIERangesOrError.takeError());
   }
-
-  if (AddrMap.empty()) {
-    AddrMap.push_back({0, -1});
-    return;
-  }
-
-  // Now that we've added all of the intervals needed, we need to resort and
-  // unique them. Most notably, this will remove all the empty ranges that had
-  // a parent range covering, etc. We only expect a single non-empty interval
-  // at any given start point, so we just use std::sort. This could potentially
-  // produce non-deterministic maps for invalid DWARF.
-  std::sort(AddrMap.begin(), AddrMap.end(), SubroutineAddrMapSorter);
-  AddrMap.erase(
-      std::unique(AddrMap.begin(), AddrMap.end(), SubroutineAddrMapUniquer),
-      AddrMap.end());
+  // Parent DIEs are added to the AddrDieMap prior to the Children DIEs to
+  // simplify the logic to update AddrDieMap. The child's range will always
+  // be equal or smaller than the parent's range. With this assumption, when
+  // adding one range into the map, it will at most split a range into 3
+  // sub-ranges.
+  for (DWARFDie Child = Die.getFirstChild(); Child; Child = Child.getSibling())
+    updateAddressDieMap(Child);
 }
 
 DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
   extractDIEsIfNeeded(false);
-
-  // We use a two-level mapping structure to locate subroutines for a given PC
-  // address.
-  //
-  // First, we map the address to a subprogram. This can be done more cheaply
-  // because subprograms cannot nest within each other. It also allows us to
-  // avoid detailed examination of many subprograms, instead only focusing on
-  // the ones which we end up actively querying.
-  if (SubprogramDIEAddrMap.empty())
-    buildSubprogramDIEAddrMap();
-
-  assert(!SubprogramDIEAddrMap.empty() &&
-         "We must always end up with a non-empty map!");
-
-  auto I = std::upper_bound(
-      SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(), Address,
-      [](uint64_t LHS, const std::pair<uint64_t, int64_t> &RHS) {
-        return LHS < RHS.first;
-      });
-  // If we find the beginning, then the address is before the first subprogram.
-  if (I == SubprogramDIEAddrMap.begin())
+  if (AddrDieMap.empty())
+    updateAddressDieMap(getUnitDIE());
+  auto R = AddrDieMap.upper_bound(Address);
+  if (R == AddrDieMap.begin())
     return DWARFDie();
-  // Back up to the interval containing the address and see if it
-  // has a DIE associated with it.
-  --I;
-  if (I->second == -1)
+  // upper_bound's previous item contains Address.
+  --R;
+  if (Address >= R->second.first)
     return DWARFDie();
-
-  auto &SPInfo = SubprogramDIEAddrInfos[I->second];
-
-  // Now that we have the subprogram for this address, we do the second level
-  // mapping by building a map within a subprogram's PC range to any specific
-  // inlined subroutine.
-  if (SPInfo.InlinedSubroutineDIEAddrMap.empty())
-    buildInlinedSubroutineDIEAddrMap(SPInfo);
-
-  // We lookup within the inlined subroutine using a subprogram-relative
-  // address.
-  assert(Address >= SPInfo.SubprogramBasePC &&
-         "Address isn't above the start of the subprogram!");
-  uint32_t RelativeAddr = ((Address - SPInfo.SubprogramBasePC) >
-                           (uint64_t)std::numeric_limits<uint32_t>::max())
-                              ? std::numeric_limits<uint32_t>::max()
-                              : (uint32_t)(Address - SPInfo.SubprogramBasePC);
-
-  auto J =
-      std::upper_bound(SPInfo.InlinedSubroutineDIEAddrMap.begin(),
-                       SPInfo.InlinedSubroutineDIEAddrMap.end(), RelativeAddr,
-                       [](uint32_t LHS, const std::pair<uint32_t, int32_t> &RHS) {
-                         return LHS < RHS.first;
-                       });
-  // If we find the beginning, the address is before any inlined subroutine so
-  // return the subprogram DIE.
-  if (J == SPInfo.InlinedSubroutineDIEAddrMap.begin())
-    return SPInfo.SubprogramDIE;
-  // Back up `J` and return the inlined subroutine if we have one or the
-  // subprogram if we don't.
-  --J;
-  return J->second == -1 ? SPInfo.SubprogramDIE
-                         : InlinedSubroutineDIEs[J->second];
+  return R->second.second;
 }
 
 void
@@ -741,11 +526,15 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
   DWARFDie SubroutineDIE =
       (DWO ? DWO.get() : this)->getSubroutineForAddress(Address);
 
-  while (SubroutineDIE) {
-    if (SubroutineDIE.isSubroutineDIE())
+  if (!SubroutineDIE)
+    return;
+
+  while (!SubroutineDIE.isSubprogramDIE()) {
+    if (SubroutineDIE.getTag() == DW_TAG_inlined_subroutine)
       InlinedChain.push_back(SubroutineDIE);
     SubroutineDIE  = SubroutineDIE.getParent();
   }
+  InlinedChain.push_back(SubroutineDIE);
 }
 
 const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
@@ -795,6 +584,25 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   return DWARFDie();
 }
 
+DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
+  if (!Die)
+    return DWARFDie();
+  uint32_t Depth = Die->getDepth();
+  // Unit DIEs always have a depth of zero and never have siblings.
+  if (Depth == 0)
+    return DWARFDie();
+
+  // Find the previous DIE whose depth is the same as the Die's depth.
+  for (size_t I = getDIEIndex(Die); I > 0;) {
+    --I;
+    if (DieArray[I].getDepth() == Depth - 1)
+      return DWARFDie();
+    if (DieArray[I].getDepth() == Depth)
+      return DWARFDie(this, &DieArray[I]);
+  }
+  return DWARFDie();
+}
+
 DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
@@ -806,9 +614,24 @@ DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   return DWARFDie(this, &DieArray[I]);
 }
 
+DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
+  if (!Die->hasChildren())
+    return DWARFDie();
+
+  uint32_t Depth = Die->getDepth();
+  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
+       ++I) {
+    if (DieArray[I].getDepth() == Depth + 1 &&
+        DieArray[I].getTag() == dwarf::DW_TAG_null)
+      return DWARFDie(this, &DieArray[I]);
+    assert(DieArray[I].getDepth() > Depth && "Not processing children?");
+  }
+  return DWARFDie();
+}
+
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
-    Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
+    Abbrevs = Abbrev->getAbbreviationDeclarationSet(Header.getAbbrOffset());
   return Abbrevs;
 }
 
@@ -851,7 +674,9 @@ parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   uint64_t Size = DA.getU64(&Offset);
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
-  return StrOffsetsContributionDescriptor(Offset, Size, Version, DWARF64);
+  // The encoded length includes the 2-byte version field and the 2-byte
+  // padding, so we need to subtract them out when we populate the descriptor.
+  return StrOffsetsContributionDescriptor(Offset, Size - 4, Version, DWARF64);
   //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
 }
 
@@ -866,7 +691,10 @@ parseDWARF32StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
     return Optional<StrOffsetsContributionDescriptor>();
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
-  return StrOffsetsContributionDescriptor(Offset, ContributionSize, Version, DWARF32);
+  // The encoded length includes the 2-byte version field and the 2-byte
+  // padding, so we need to subtract them out when we populate the descriptor.
+  return StrOffsetsContributionDescriptor(Offset, ContributionSize - 4, Version,
+                                          DWARF32);
   //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
 }
 
@@ -899,6 +727,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA,
   // index table (in a package file). In a .dwo file it is simply
   // the length of the string offsets section.
   uint64_t Size = 0;
+  auto IndexEntry = Header.getIndexEntry();
   if (!IndexEntry)
     Size = StringOffsetSection.Data.size();
   else if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))

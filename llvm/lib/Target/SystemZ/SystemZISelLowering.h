@@ -93,6 +93,19 @@ enum NodeType : unsigned {
   SDIVREM,
   UDIVREM,
 
+  // Add/subtract with overflow/carry.  These have the same operands as
+  // the corresponding standard operations, except with the carry flag
+  // replaced by a condition code value.
+  SADDO, SSUBO, UADDO, USUBO, ADDCARRY, SUBCARRY,
+
+  // Set the condition code from a boolean value in operand 0.
+  // Operand 1 is a mask of all condition-code values that may result of this
+  // operation, operand 2 is a mask of condition-code values that may result
+  // if the boolean is true.
+  // Note that this operation is always optimized away, we will never
+  // generate any code for it.
+  GET_CCMASK,
+
   // Use a series of MVCs to copy bytes from one memory location to another.
   // The operands are:
   // - the target address
@@ -142,11 +155,11 @@ enum NodeType : unsigned {
 
   // Transaction begin.  The first operand is the chain, the second
   // the TDB pointer, and the third the immediate control field.
-  // Returns chain and glue.
+  // Returns CC value and chain.
   TBEGIN,
   TBEGIN_NOFLOAT,
 
-  // Transaction end.  Just the chain operand.  Returns chain and glue.
+  // Transaction end.  Just the chain operand.  Returns CC value and chain.
   TEND,
 
   // Create a vector constant by filling byte N of the result with bit
@@ -308,8 +321,8 @@ enum NodeType : unsigned {
   // Operand 5: the width of the field in bits (8 or 16)
   ATOMIC_CMP_SWAPW,
 
-  // Atomic compare-and-swap returning glue (condition code).
-  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  // Atomic compare-and-swap returning CC value.
+  // Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP,
 
   // 128-bit atomic load.
@@ -321,7 +334,7 @@ enum NodeType : unsigned {
   ATOMIC_STORE_128,
 
   // 128-bit atomic compare-and-swap.
-  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  // Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP_128,
 
   // Byte swapping load.
@@ -470,6 +483,7 @@ public:
                              SelectionDAG &DAG) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                           SelectionDAG &DAG) const override;
+  const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
@@ -489,6 +503,20 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  /// Determine which of the bits specified in Mask are known to be either
+  /// zero or one and return them in the KnownZero/KnownOne bitsets.
+  void computeKnownBitsForTargetNode(const SDValue Op,
+                                     KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
+
+  /// Determine the number of bits in the operation that are sign bits.
+  unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           unsigned Depth) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::ANY_EXTEND;
@@ -533,6 +561,8 @@ private:
   SDValue lowerUMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerXALUO(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
@@ -563,7 +593,9 @@ private:
                          bool Force) const;
   SDValue combineTruncateExtract(const SDLoc &DL, EVT TruncVT, SDValue Op,
                                  DAGCombinerInfo &DCI) const;
+  SDValue combineZERO_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSIGN_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSIGN_EXTEND_INREG(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMERGE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSTORE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineEXTRACT_VECTOR_ELT(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -571,6 +603,9 @@ private:
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSHIFTROT(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
 
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.
@@ -582,8 +617,7 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
-  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB,
-                                unsigned LOCROpcode) const;
+  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;

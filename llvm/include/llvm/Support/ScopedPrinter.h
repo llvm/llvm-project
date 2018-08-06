@@ -80,6 +80,8 @@ public:
 
   void resetIndent() { IndentLevel = 0; }
 
+  int getIndentLevel() { return IndentLevel; }
+
   void setPrefix(StringRef P) { Prefix = P; }
 
   void printIndent() {
@@ -136,7 +138,7 @@ public:
       }
     }
 
-    std::sort(SetFlags.begin(), SetFlags.end(), &flagName<TFlag>);
+    llvm::sort(SetFlags.begin(), SetFlags.end(), &flagName<TFlag>);
 
     startLine() << Label << " [ (" << hex(Value) << ")\n";
     for (const auto &Flag : SetFlags) {
@@ -261,7 +263,11 @@ public:
   }
 
   void printString(StringRef Label, const std::string &Value) {
-    startLine() << Label << ": " << Value << "\n";
+    printString(Label, StringRef(Value));
+  }
+
+  void printString(StringRef Label, const char* Value) {
+    printString(Label, StringRef(Value));
   }
 
   template <typename T>

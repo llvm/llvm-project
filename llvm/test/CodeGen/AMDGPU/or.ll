@@ -63,26 +63,26 @@ define amdgpu_kernel void @scalar_or_literal_i32(i32 addrspace(1)* %out, i32 %a)
 }
 
 ; FUNC-LABEL: {{^}}scalar_or_literal_i64:
-; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-DAG: s_or_b32 s[[RES_HI:[0-9]+]], s[[HI]], 0xf237b
 ; SI-DAG: s_or_b32 s[[RES_LO:[0-9]+]], s[[LO]], 0x3039
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_LO]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_HI]]
-define amdgpu_kernel void @scalar_or_literal_i64(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @scalar_or_literal_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
   %or = or i64 %a, 4261135838621753
   store i64 %or, i64 addrspace(1)* %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}scalar_or_literal_multi_use_i64:
-; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0xf237b
 ; SI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x3039
 ; SI: s_or_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 
 ; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_LO]]
 ; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_HI]]
-define amdgpu_kernel void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
   %or = or i64 %a, 4261135838621753
   store i64 %or, i64 addrspace(1)* %out
 
@@ -92,7 +92,7 @@ define amdgpu_kernel void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %ou
 }
 
 ; FUNC-LABEL: {{^}}scalar_or_inline_imm_i64:
-; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
 ; SI-NOT: or_b32
 ; SI: s_or_b32 s[[VAL_LO]], s[[VAL_LO]], 63
 ; SI-NOT: or_b32
@@ -101,7 +101,7 @@ define amdgpu_kernel void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %ou
 ; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[VAL_HI]]
 ; SI-NOT: or_b32
 ; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
-define amdgpu_kernel void @scalar_or_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @scalar_or_inline_imm_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
   %or = or i64 %a, 63
   store i64 %or, i64 addrspace(1)* %out
   ret void
@@ -125,7 +125,7 @@ define amdgpu_kernel void @scalar_or_inline_imm_multi_use_i64(i64 addrspace(1)* 
 ; SI-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], -1{{$}}
 ; SI-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[VAL]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define amdgpu_kernel void @scalar_or_neg_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @scalar_or_neg_inline_imm_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
   %or = or i64 %a, -8
   store i64 %or, i64 addrspace(1)* %out
   ret void
@@ -239,7 +239,7 @@ define amdgpu_kernel void @vector_or_i64_neg_literal(i64 addrspace(1)* %out, i64
 ; SI: s_or_b32 s[[SRESULT:[0-9]+]], s[[SREG1]], s[[SREG0]]
 ; SI: v_mov_b32_e32 [[VRESULT:v[0-9]+]], s[[SRESULT]]
 ; SI: buffer_store_dword [[VRESULT]],
-define amdgpu_kernel void @trunc_i64_or_to_i32(i32 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @trunc_i64_or_to_i32(i32 addrspace(1)* %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
   %add = or i64 %b, %a
   %trunc = trunc i64 %add to i32
   store i32 %trunc, i32 addrspace(1)* %out, align 8
@@ -249,7 +249,7 @@ define amdgpu_kernel void @trunc_i64_or_to_i32(i32 addrspace(1)* %out, i64 %a, i
 ; FUNC-LABEL: {{^}}or_i1:
 ; EG: OR_INT * {{\** *}}T{{[0-9]+\.[XYZW], PS, PV\.[XYZW]}}
 
-; SI: s_or_b64 s[{{[0-9]+:[0-9]+}}], vcc, s[{{[0-9]+:[0-9]+}}]
+; SI: s_or_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], vcc
 define amdgpu_kernel void @or_i1(i32 addrspace(1)* %out, float addrspace(1)* %in0, float addrspace(1)* %in1) {
   %a = load float, float addrspace(1)* %in0
   %b = load float, float addrspace(1)* %in1

@@ -121,6 +121,12 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
 
+  // Handle /help
+  if (Args.hasArg(OPT_help)) {
+    Table.PrintHelp(outs(), ArgsArr[0], "LLVM Lib");
+    return 0;
+  }
+
   // If no input files, silently do nothing to match lib.exe.
   if (!Args.hasArgNoClaim(OPT_INPUT))
     return 0;

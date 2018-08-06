@@ -19,4 +19,4 @@ class CVI_VA_Resource<dag outs, dag ins, string asmstr,
                        list<dag> pattern = [], string cstr = "",
                        InstrItinClass itin = CVI_VA>
    : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeCVI_VA>,
-     OpcodeHexagon, Requires<[HasV60T, UseHVX]>;
+     OpcodeHexagon, Requires<[HasV60, UseHVX]>;

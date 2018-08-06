@@ -1,5 +1,8 @@
 @ RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -s -sd | FileCheck %s
+@ RUN:   | llvm-readobj -s -sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
+
+@ RUN: llvm-mc %s -triple=armebv7-linux-gnueabi -filetype=obj -o - \
+@ RUN:   | llvm-readobj -s -sd | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 
 	.syntax unified
 
@@ -19,7 +22,8 @@ arm_inst:
 @ CHECK: Section {
 @ CHECK:   Name: .inst.arm_inst
 @ CHECK:   SectionData (
-@ CHECK-NEXT:     0000: FEDE0000
+@ CHECK-LE-NEXT:     0000: FEDE0000
+@ CHECK-BE-NEXT:     0000: 0000DEFE
 @ CHECK-NEXT:   )
 
 @-------------------------------------------------------------------------------
@@ -38,7 +42,8 @@ thumb_inst_n:
 @ CHECK: Section {
 @ CHECK:   Name: .inst.thumb_inst_n
 @ CHECK:   SectionData (
-@ CHECK-NEXT:     0000: FEDE
+@ CHECK-LE-NEXT:     0000: FEDE
+@ CHECK-BE-NEXT:     0000: DEFE
 @ CHECK-NEXT:   )
 
 @-------------------------------------------------------------------------------
@@ -52,12 +57,13 @@ thumb_inst_n:
 	.global	thumb_inst_w
 	.type	thumb_inst_w,%function
 thumb_inst_w:
-	.inst.w 0x00000000
+	.inst.w 0x12345678
 
 @ CHECK: Section {
 @ CHECK:   Name: .inst.thumb_inst_w
 @ CHECK:   SectionData (
-@ CHECK-NEXT:     0000: 00000000
+@ CHECK-LE-NEXT:     0000: 34127856
+@ CHECK-BE-NEXT:     0000: 12345678
 @ CHECK-NEXT:   )
 
 @-------------------------------------------------------------------------------
@@ -76,6 +82,7 @@ thumb_inst_inst:
 @ CHECK: Section {
 @ CHECK:   Name: .inst.thumb_inst_inst
 @ CHECK:   SectionData (
-@ CHECK-NEXT:     0000: 40F20000 C0F20000
+@ CHECK-LE-NEXT:     0000: 40F20000 C0F20000
+@ CHECK-BE-NEXT:     0000: F2400000 F2C00000
 @ CHECK-NEXT:   )
 

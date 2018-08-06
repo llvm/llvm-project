@@ -31,79 +31,79 @@
 name:            foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 # CHECK-LABEL: name: foo
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
 # CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
-# CHECK-NEXT: liveins: %edi
-# CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
-# CHECK-NEXT: JG_1 %bb.2, implicit killed %eflags
+# CHECK-NEXT: liveins: $edi
+# CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
+# CHECK-NEXT: JG_1 %bb.2, implicit killed $eflags
 
 # CHECK:      bb.1.less:
-# CHECK-NEXT: %eax = MOV32r0 implicit-def dead %eflags
-# CHECK-NEXT: RETQ killed %eax
+# CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
+# CHECK-NEXT: RETQ killed $eax
 
 # CHECK:      bb.2.exit:
-# CHECK-NEXT: liveins: %edi
-# CHECK:      %eax = COPY killed %edi
-# CHECK-NEXT: RETQ killed %eax
+# CHECK-NEXT: liveins: $edi
+# CHECK:      $eax = COPY killed $edi
+# CHECK-NEXT: RETQ killed $eax
 body: |
   bb.0.entry:
     successors: %bb.1, %bb.2
 
-    liveins: %edi
+    liveins: $edi
 
-    CMP32ri8 %edi, 10, implicit-def %eflags
+    CMP32ri8 $edi, 10, implicit-def $eflags
 
-    JG_1 %bb.2, implicit killed %eflags
+    JG_1 %bb.2, implicit killed $eflags
 
   bb.1.less:
 
 
-    %eax = MOV32r0 implicit-def dead %eflags
-    RETQ killed %eax
+    $eax = MOV32r0 implicit-def dead $eflags
+    RETQ killed $eax
   bb.2.exit:
 
 
-    liveins: %edi
-    %eax = COPY killed %edi
-    RETQ killed %eax
+    liveins: $edi
+    $eax = COPY killed $edi
+    RETQ killed $eax
 
 ...
 ---
 name:            bar
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 # CHECK-LABEL: name: bar
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
 # CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
-# CHECK-NEXT: liveins: %edi
-# CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
-# CHECK-NEXT: JG_1 %bb.2, implicit killed %eflags
+# CHECK-NEXT: liveins: $edi
+# CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
+# CHECK-NEXT: JG_1 %bb.2, implicit killed $eflags
 
 # CHECK:      bb.1.less:
-# CHECK-NEXT: %eax = MOV32r0 implicit-def dead %eflags
-# CHECK-NEXT: RETQ killed %eax
+# CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
+# CHECK-NEXT: RETQ killed $eax
 
 # CHECK:      bb.2.exit:
-# CHECK-NEXT: liveins: %edi
-# CHECK:      %eax = COPY killed %edi
-# CHECK-NEXT: RETQ killed %eax
+# CHECK-NEXT: liveins: $edi
+# CHECK:      $eax = COPY killed $edi
+# CHECK-NEXT: RETQ killed $eax
 body: |
 
   bb.0.entry:
     successors: %bb.1, %bb.2
-    liveins: %edi
-    CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2, implicit killed %eflags
-  bb.1.less:  %eax = MOV32r0 implicit-def dead %eflags
-              RETQ killed %eax
+    liveins: $edi
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JG_1 %bb.2, implicit killed $eflags
+  bb.1.less:  $eax = MOV32r0 implicit-def dead $eflags
+              RETQ killed $eax
 
-  bb.2.exit:  liveins: %edi
-    %eax = COPY killed %edi
-    RETQ killed %eax
+  bb.2.exit:  liveins: $edi
+    $eax = COPY killed $edi
+    RETQ killed $eax
 
 ...

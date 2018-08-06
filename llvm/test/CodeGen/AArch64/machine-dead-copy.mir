@@ -6,35 +6,37 @@
   define i32 @copyprop2(i32 %a, i32 %b) { ret i32 %a }
   define i32 @copyprop3(i32 %a, i32 %b) { ret i32 %a }
   define i32 @copyprop4(i32 %a, i32 %b) { ret i32 %a }
+  define i32 @copyprop5(i32 %a, i32 %b) { ret i32 %a }
+  define i32 @copyprop6(i32 %a, i32 %b) { ret i32 %a }
   declare i32 @foo(i32)
 ...
 ---
 # The first copy is dead copy which is not used.
 # CHECK-LABEL: name: copyprop1
 # CHECK: bb.0:
-# CHECK-NOT: %w20 = COPY
+# CHECK-NOT: $w20 = COPY
 name: copyprop1
 body: |
   bb.0:
-    liveins: %w0,  %w1
-    %w20 = COPY %w1
-    BL @foo, csr_aarch64_aapcs, implicit %w0, implicit-def %w0
-    RET_ReallyLR implicit %w0
+    liveins: $w0,  $w1
+    $w20 = COPY $w1
+    BL @foo, csr_aarch64_aapcs, implicit $w0, implicit-def $w0
+    RET_ReallyLR implicit $w0
 ...
 ---
 # The first copy is not a dead copy which is used in the second copy after the
 # call.
 # CHECK-LABEL: name: copyprop2
 # CHECK: bb.0:
-# CHECK: %w20 = COPY
+# CHECK: $w20 = COPY
 name: copyprop2
 body: |
   bb.0:
-    liveins: %w0,  %w1
-    %w20 = COPY %w1
-    BL @foo, csr_aarch64_aapcs, implicit %w0, implicit-def %w0
-    %w0 = COPY %w20
-    RET_ReallyLR implicit %w0
+    liveins: $w0,  $w1
+    $w20 = COPY $w1
+    BL @foo, csr_aarch64_aapcs, implicit $w0, implicit-def $w0
+    $w0 = COPY $w20
+    RET_ReallyLR implicit $w0
 ...
 ---
 # Both the first and second copy are dead copies which are not used.
@@ -44,11 +46,11 @@ body: |
 name: copyprop3
 body: |
   bb.0:
-    liveins: %w0,  %w1
-    %w20 = COPY %w1
-    BL @foo, csr_aarch64_aapcs, implicit %w0, implicit-def %w0
-    %w20 = COPY %w0
-    RET_ReallyLR implicit %w0
+    liveins: $w0,  $w1
+    $w20 = COPY $w1
+    BL @foo, csr_aarch64_aapcs, implicit $w0, implicit-def $w0
+    $w20 = COPY $w0
+    RET_ReallyLR implicit $w0
 ...
 # The second copy is removed as a NOP copy, after then the first copy become
 # dead which should be removed as well.
@@ -58,10 +60,40 @@ body: |
 name: copyprop4
 body: |
   bb.0:
-    liveins: %w0,  %w1
-    %w20 = COPY %w0
-    %w0 = COPY %w20
-    BL @foo, csr_aarch64_aapcs, implicit %w0, implicit-def %w0
-    RET_ReallyLR implicit %w0
+    liveins: $w0,  $w1
+    $w20 = COPY $w0
+    $w0 = COPY $w20
+    BL @foo, csr_aarch64_aapcs, implicit $w0, implicit-def $w0
+    RET_ReallyLR implicit $w0
+...
+
+# Don't try to erase any COPY which overlaps itself.
+# CHECK-LABEL: name: copyprop5
+# CHECK: bb.0:
+# CHECK: COPY killed $q26_q27_q28_q29
+# CHECK: COPY killed $q28_q29_q30_q31
+name: copyprop5
+body: |
+  bb.0:
+    liveins: $q26_q27_q28_q29
+    $q28_q29_q30_q31 = COPY killed $q26_q27_q28_q29
+    $q26_q27_q28_q29 = COPY killed $q28_q29_q30_q31
+    BL @foo, csr_aarch64_aapcs, implicit killed $q26_q27_q28_q29
+    RET_ReallyLR
+...
+
+# Don't try to analyze any COPY which overlaps itself.
+# CHECK-LABEL: name: copyprop6
+# CHECK: bb.0:
+# CHECK: COPY killed $q26_q27_q28_q29
+# CHECK: $q30 = COPY $q28
+name: copyprop6
+body: |
+  bb.0:
+    liveins: $q26_q27_q28_q29
+    $q28_q29_q30_q31 = COPY killed $q26_q27_q28_q29
+    $q30 = COPY $q28
+    BL @foo, csr_aarch64_aapcs, implicit killed $q28_q29_q30_q31
+    RET_ReallyLR
 ...
 

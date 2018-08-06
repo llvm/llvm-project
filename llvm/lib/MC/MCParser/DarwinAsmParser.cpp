@@ -40,7 +40,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief Implementation of directive handling which is shared across all
+/// Implementation of directive handling which is shared across all
 /// Darwin targets.
 class DarwinAsmParser : public MCAsmParserExtension {
   template<bool (DarwinAsmParser::*HandlerMethod)(StringRef, SMLoc)>
@@ -888,6 +888,7 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   Lex();
 
   StringRef Section;
+  SMLoc SectionLoc = getLexer().getLoc();
   if (getParser().parseIdentifier(Section))
     return TokError("expected section name after comma in '.zerofill' "
                     "directive");
@@ -896,9 +897,10 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   // the section but with no symbol.
   if (getLexer().is(AsmToken::EndOfStatement)) {
     // Create the zerofill section but no symbol
-    getStreamer().EmitZerofill(getContext().getMachOSection(
-                                 Segment, Section, MachO::S_ZEROFILL,
-                                 0, SectionKind::getBSS()));
+    getStreamer().EmitZerofill(
+        getContext().getMachOSection(Segment, Section, MachO::S_ZEROFILL, 0,
+                                     SectionKind::getBSS()),
+        /*Symbol=*/nullptr, /*Size=*/0, /*ByteAlignment=*/0, SectionLoc);
     return false;
   }
 
@@ -957,7 +959,7 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   getStreamer().EmitZerofill(getContext().getMachOSection(
                                Segment, Section, MachO::S_ZEROFILL,
                                0, SectionKind::getBSS()),
-                             Sym, Size, 1 << Pow2Alignment);
+                             Sym, Size, 1 << Pow2Alignment, SectionLoc);
 
   return false;
 }

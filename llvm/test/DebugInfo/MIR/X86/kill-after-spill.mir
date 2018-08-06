@@ -1,0 +1,390 @@
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+#
+# This test is used to acknowledge situation when spill register is killed
+# in instruction after the spill occurs.
+# Generated MIR is changed in order to test case when instruction after
+# possible spill, say instruction B, kills register different than than
+# the one that is used in possible spill, say instruction A. In that case
+# the instruction A is not recognized as spill. Changed instructions are
+# commented in MIR below.
+#
+# ...
+# A - possible spill instruction with register R2
+# B - instruction that kills R3
+# ...
+#
+# CHECK: bb.1.if.end:
+# CHECK: DBG_VALUE debug-use $rbp, 0, !37, !DIExpression(DW_OP_constu, 44, DW_OP_minus), debug-location !58
+# CHECK-NOT: DBG_VALUE debug-use $rbp, 0, !36, !DIExpression(DW_OP_constu, 48, DW_OP_minus), debug-location !57
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  %struct.firstStruct = type { i32, i8, %struct.secondStruct* }
+  %struct.secondStruct = type { i32, i8, i8* }
+  %struct.thirdStruct = type { %struct.fourthStruct, i32*, i8* }
+  %struct.fourthStruct = type { i32, i32, i32, i32 }
+
+  @.str = private unnamed_addr constant [7 x i8] c"Error:\00", align 1
+  @firstStruct = common local_unnamed_addr global %struct.firstStruct zeroinitializer, align 8, !dbg !0
+
+  ; Function Attrs: nounwind uwtable
+  define i32 @foo(i32 %variable2, i32 %variable1) local_unnamed_addr #0 !dbg !31 {
+  entry:
+    %const1 = bitcast i64 -9223372036854775808 to i64
+    %0 = bitcast i64 %const1 to i64
+    call void @llvm.dbg.value(metadata i32 %variable2, metadata !36, metadata !DIExpression()), !dbg !57
+    call void @llvm.dbg.value(metadata i32 %variable1, metadata !37, metadata !DIExpression()), !dbg !58
+    %call = tail call %struct.firstStruct* @func1(i32 %variable1)
+    %1 = ptrtoint %struct.firstStruct* %call to i64
+    %2 = and i64 %1, %0
+    %tobool = icmp eq i64 %2, 0
+    br i1 %tobool, label %cleanup, label %if.end
+
+  if.end:                                           ; preds = %entry
+    %call1 = tail call %struct.thirdStruct* @func2(i32 %variable2, i32 %variable1)
+    %3 = ptrtoint %struct.thirdStruct* %call1 to i64
+    %4 = and i64 %3, -123
+    %tobool2 = icmp eq i64 %4, 0
+    br i1 %tobool2, label %if.then3, label %private.exit
+
+  if.then3:                                         ; preds = %if.end
+    %5 = inttoptr i64 %2 to %struct.firstStruct*
+    %variableLocal11 = bitcast %struct.firstStruct* %5 to i32*
+    %6 = load i32, i32* %variableLocal11, align 8
+    %variableLocal2 = getelementptr inbounds %struct.firstStruct, %struct.firstStruct* %5, i64 0, i32 1
+    %7 = load i8, i8* %variableLocal2, align 4
+    tail call void @func3(i32 %6, i8 zeroext %7, i8 zeroext 5, i8* inttoptr (i64 or (i64 ptrtoint ([7 x i8]* @.str to i64), i64 -92238) to i8*), i32 %variable2)
+    br label %cleanup
+
+  private.exit:                                     ; preds = %if.end
+    %8 = bitcast i64 %const1 to i64
+    %9 = ptrtoint %struct.thirdStruct* %call1 to i64
+    %10 = or i64 %9, %8
+    %11 = inttoptr i64 %10 to i8*
+    %call5.i = tail call i8* @memset(i8* %11, i32 0, i64 16)
+    %call6 = tail call i32 @func4(%struct.thirdStruct* %call1)
+    %tobool7 = icmp eq i32 %call6, 0
+    br i1 %tobool7, label %cleanup, label %if.then8
+
+  if.then8:                                         ; preds = %private.exit
+    %12 = inttoptr i64 %2 to %struct.firstStruct*
+    tail call void @func5(%struct.thirdStruct* %call1, i32 0)
+    %rc_db = getelementptr inbounds %struct.firstStruct, %struct.firstStruct* %12, i64 0, i32 2
+    %13 = bitcast %struct.secondStruct** %rc_db to i64*
+    %14 = load i64, i64* %13, align 8
+    %tobool9 = icmp eq i64 %14, 0
+    br i1 %tobool9, label %cleanup, label %land.lhs.true
+
+  land.lhs.true:                                    ; preds = %if.then8
+    %15 = inttoptr i64 %4 to %struct.thirdStruct*
+    %tot_perf2 = bitcast %struct.thirdStruct* %15 to i32*
+    %16 = load i32, i32* %tot_perf2, align 8
+    %tobool11 = icmp eq i32 %16, 0
+    br i1 %tobool11, label %lor.lhs.false, label %if.then14
+
+  lor.lhs.false:                                    ; preds = %land.lhs.true
+    %17 = inttoptr i64 %4 to %struct.thirdStruct*
+    %tot_bw = getelementptr inbounds %struct.thirdStruct, %struct.thirdStruct* %17, i64 0, i32 0, i32 1
+    %18 = load i32, i32* %tot_bw, align 4
+    %tobool13 = icmp eq i32 %18, 0
+    br i1 %tobool13, label %cleanup, label %if.then14
+
+  if.then14:                                        ; preds = %lor.lhs.false, %land.lhs.true
+    %19 = inttoptr i64 %14 to %struct.secondStruct*
+    %mc_origin = getelementptr inbounds %struct.secondStruct, %struct.secondStruct* %19, i64 0, i32 2
+    %20 = bitcast i8** %mc_origin to i64*
+    %21 = load i64, i64* %20, align 8
+    %22 = inttoptr i64 %21 to i8*
+    tail call void @func6(%struct.thirdStruct* %call1, i32 %variable1, i8* %22)
+    br label %cleanup
+
+  cleanup:                                          ; preds = %if.then14, %lor.lhs.false, %if.then8, %private.exit, %if.then3, %entry
+    %retval.0 = phi i32 [ 0, %if.then3 ], [ 0, %entry ], [ 1, %lor.lhs.false ], [ 1, %if.then8 ], [ 1, %private.exit ], [ 1, %if.then14 ]
+    ret i32 %retval.0
+  }
+
+  declare %struct.firstStruct* @func1(i32) local_unnamed_addr
+
+  declare %struct.thirdStruct* @func2(i32, i32) local_unnamed_addr
+
+  declare void @func3(i32, i8 zeroext, i8 zeroext, i8*, i32) local_unnamed_addr
+
+  declare i32 @func4(%struct.thirdStruct*) local_unnamed_addr
+
+  declare void @func5(%struct.thirdStruct*, i32) local_unnamed_addr
+
+  declare void @func6(%struct.thirdStruct*, i32, i8*) local_unnamed_addr
+
+  declare i8* @__memset_to_buf(i64, i8*, i32, i64) local_unnamed_addr
+
+  declare i8* @memset(i8*, i32, i64) local_unnamed_addr
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) #1
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+
+  attributes #0 = { nounwind uwtable "no-frame-pointer-elim-non-leaf" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { nounwind }
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!27, !28, !29}
+  !llvm.ident = !{!30}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "firstStruct", scope: !2, file: !3, line: 23, type: !11, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !10)
+  !3 = !DIFile(filename: "inlineSpillerTest.c", directory: "/")
+  !4 = !{}
+  !5 = !{!6, !7}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", file: !8, line: 98, baseType: !9)
+  !8 = !DIFile(filename: "/tmp.h", directory: "/tmp")
+  !9 = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
+  !10 = !{!0}
+  !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "firstStruct", file: !3, line: 18, size: 128, elements: !12)
+  !12 = !{!13, !16, !19}
+  !13 = !DIDerivedType(tag: DW_TAG_member, name: "elem1", scope: !11, file: !3, line: 20, baseType: !14, size: 32)
+  !14 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32", file: !3, line: 4, baseType: !15)
+  !15 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !16 = !DIDerivedType(tag: DW_TAG_member, name: "elem2", scope: !11, file: !3, line: 21, baseType: !17, size: 8, offset: 32)
+  !17 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint8", file: !3, line: 5, baseType: !18)
+  !18 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
+  !19 = !DIDerivedType(tag: DW_TAG_member, name: "elem3", scope: !11, file: !3, line: 22, baseType: !20, size: 64, offset: 64)
+  !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
+  !21 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "secondStruct", file: !3, line: 11, size: 128, elements: !22)
+  !22 = !{!23, !24, !25}
+  !23 = !DIDerivedType(tag: DW_TAG_member, name: "structMember", scope: !21, file: !3, line: 13, baseType: !14, size: 32)
+  !24 = !DIDerivedType(tag: DW_TAG_member, name: "elem4", scope: !21, file: !3, line: 14, baseType: !17, size: 8, offset: 32)
+  !25 = !DIDerivedType(tag: DW_TAG_member, name: "elem5", scope: !21, file: !3, line: 15, baseType: !26, size: 64, offset: 64)
+  !26 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+  !27 = !{i32 2, !"Dwarf Version", i32 4}
+  !28 = !{i32 2, !"Debug Info Version", i32 3}
+  !29 = !{i32 7, !"PIC Level", i32 2}
+  !30 = !{!"clang version 4.0.0 "}
+  !31 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 50, type: !32, isLocal: false, isDefinition: true, scopeLine: 52, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !35)
+  !32 = !DISubroutineType(types: !33)
+  !33 = !{!34, !14, !14}
+  !34 = !DIDerivedType(tag: DW_TAG_typedef, name: "boolean", file: !3, line: 6, baseType: !6)
+  !35 = !{!36, !37, !38, !54, !55}
+  !36 = !DILocalVariable(name: "variable2", arg: 1, scope: !31, file: !3, line: 50, type: !14)
+  !37 = !DILocalVariable(name: "variable1", arg: 2, scope: !31, file: !3, line: 51, type: !14)
+  !38 = !DILocalVariable(name: "localVariable5", scope: !31, file: !3, line: 53, type: !39)
+  !39 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !40, size: 64)
+  !40 = !DIDerivedType(tag: DW_TAG_typedef, name: "thirdStruct_", file: !3, line: 37, baseType: !41)
+  !41 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "thirdStruct", file: !3, line: 32, size: 256, elements: !42)
+  !42 = !{!43, !51, !53}
+  !43 = !DIDerivedType(tag: DW_TAG_member, name: "elem6", scope: !41, file: !3, line: 34, baseType: !44, size: 128)
+  !44 = !DIDerivedType(tag: DW_TAG_typedef, name: "fourthStruct_", file: !3, line: 30, baseType: !45)
+  !45 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "fourthStruct", file: !3, line: 25, size: 128, elements: !46)
+  !46 = !{!47, !48, !49, !50}
+  !47 = !DIDerivedType(tag: DW_TAG_member, name: "elem7", scope: !45, file: !3, line: 26, baseType: !14, size: 32)
+  !48 = !DIDerivedType(tag: DW_TAG_member, name: "elem8", scope: !45, file: !3, line: 27, baseType: !14, size: 32, offset: 32)
+  !49 = !DIDerivedType(tag: DW_TAG_member, name: "elem9", scope: !45, file: !3, line: 28, baseType: !34, size: 32, offset: 64)
+  !50 = !DIDerivedType(tag: DW_TAG_member, name: "elem10", scope: !45, file: !3, line: 29, baseType: !34, size: 32, offset: 96)
+  !51 = !DIDerivedType(tag: DW_TAG_member, name: "elem11", scope: !41, file: !3, line: 35, baseType: !52, size: 64, offset: 128)
+  !52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
+  !53 = !DIDerivedType(tag: DW_TAG_member, name: "elem12", scope: !41, file: !3, line: 36, baseType: !26, size: 64, offset: 192)
+  !54 = !DILocalVariable(name: "variable5", scope: !31, file: !3, line: 54, type: !34)
+  !55 = !DILocalVariable(name: "variable6", scope: !31, file: !3, line: 55, type: !56)
+  !56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)
+  !57 = !DILocation(line: 50, column: 34, scope: !31)
+  !58 = !DILocation(line: 51, column: 34, scope: !31)
+
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       56
+  offsetAdjustment: -8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: 0,
+      callee-saved-register: '$rbx', callee-saved-restored: true }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: 0,
+      callee-saved-register: '$r12', callee-saved-restored: true }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: 0,
+      callee-saved-register: '$r13', callee-saved-restored: true }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: 0,
+      callee-saved-register: '$r14', callee-saved-restored: true }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: 0,
+      callee-saved-register: '$r15', callee-saved-restored: true }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0,
+      callee-saved-register: '', callee-saved-restored: true }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -64, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.9(0x30000000), %bb.1(0x50000000)
+    liveins: $edi, $esi, $r15, $r14, $r13, $r12, $rbx
+
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    DBG_VALUE debug-use $edi, debug-use $noreg, !36, !DIExpression(), debug-location !57
+    DBG_VALUE debug-use $esi, debug-use $noreg, !37, !DIExpression(), debug-location !58
+    $ebx = MOV32rr $esi
+    DBG_VALUE debug-use $ebx, debug-use $noreg, !37, !DIExpression(), debug-location !58
+    $r15d = MOV32rr $edi
+    DBG_VALUE debug-use $r15d, debug-use $noreg, !36, !DIExpression(), debug-location !57
+    renamable $r14 = MOV64ri -9223372036854775808
+    $edi = MOV32rr $ebx
+    CALL64pcrel32 @func1, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    $r13 = MOV64rr $rax
+    renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
+    renamable $r13 = AND64rr killed renamable $r13, renamable $r14, implicit-def $eflags
+    JE_1 %bb.9, implicit $eflags
+
+  bb.1.if.end:
+    successors: %bb.2(0x30000000), %bb.3(0x50000000)
+    liveins: $ebx, $r13, $r14, $r15d
+
+    ; The instruction below is inserted additionally in order to test part of the code.
+    $r12d = MOV32rr $r15d
+    MOV32mr $rbp, 1, $noreg, -48, $noreg, renamable $r15d :: (store 4 into %stack.0)
+    ; The instruction below is altered ($r15d -> $r12d) in order to test part of the code.
+    ; The original instruction "$edi = MOV32rr killed $r15d
+    $edi = MOV32rr killed $r12d
+    MOV32mr $rbp, 1, $noreg, -44, $noreg, renamable $ebx :: (store 4 into %stack.1)
+    $esi = MOV32rr killed $ebx
+    CALL64pcrel32 @func2, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    $r12 = MOV64rr $rax
+    $r15 = MOV64rr $r12
+    renamable $r15 = AND64ri8 killed renamable $r15, -123, implicit-def $eflags
+    JE_1 %bb.2, implicit $eflags
+
+  bb.3.private.exit:
+    successors: %bb.9(0x30000000), %bb.4(0x50000000)
+    liveins: $r12, $r13, $r14, $r15
+
+    renamable $r14 = OR64rr killed renamable $r14, renamable $r12, implicit-def dead $eflags
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
+    dead $edx = MOV32ri 16, implicit-def $rdx
+    $rdi = MOV64rr killed $r14
+    CALL64pcrel32 @memset, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    $rdi = MOV64rr $r12
+    CALL64pcrel32 @func4, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    renamable $ecx = MOV32ri 1
+    TEST32rr killed renamable $eax, renamable $eax, implicit-def $eflags
+    JE_1 %bb.9, implicit $eflags
+
+  bb.4.if.then8:
+    successors: %bb.8(0x30000000), %bb.5(0x50000000)
+    liveins: $r12, $r13, $r15
+
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
+    $rdi = MOV64rr $r12
+    CALL64pcrel32 @func5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit-def $rsp, implicit-def $ssp
+    renamable $rax = MOV64rm killed renamable $r13, 1, $noreg, 8, $noreg :: (load 8 from %ir.13)
+    TEST64rr renamable $rax, renamable $rax, implicit-def $eflags
+    JE_1 %bb.8, implicit $eflags
+
+  bb.5.land.lhs.true:
+    successors: %bb.6(0x30000000), %bb.7(0x50000000)
+    liveins: $rax, $r12, $r15
+
+    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_perf2, align 8)
+    JNE_1 %bb.7, implicit $eflags
+
+  bb.6.lor.lhs.false:
+    successors: %bb.8(0x30000000), %bb.7(0x50000000)
+    liveins: $rax, $r12, $r15
+
+    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_bw)
+    JE_1 %bb.8, implicit $eflags
+
+  bb.7.if.then14:
+    successors: %bb.8(0x80000000)
+    liveins: $rax, $r12
+
+    renamable $rdx = MOV64rm killed renamable $rax, 1, $noreg, 8, $noreg :: (load 8 from %ir.20)
+    $rdi = MOV64rr killed $r12
+    $esi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load 4 from %stack.1)
+    CALL64pcrel32 @func6, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $rdx, implicit-def $rsp, implicit-def $ssp
+
+  bb.8.cleanup:
+    successors: %bb.9(0x80000000)
+
+    renamable $ecx = MOV32ri 1
+    JMP_1 %bb.9
+
+  bb.2.if.then3:
+    successors: %bb.9(0x80000000)
+    liveins: $r13
+
+    renamable $edi = MOV32rm renamable $r13, 1, $noreg, 0, $noreg :: (load 4 from %ir.variableLocal11, align 8)
+    renamable $esi = MOVZX32rm8 killed renamable $r13, 1, $noreg, 4, $noreg :: (load 1 from %ir.variableLocal2, align 4)
+    renamable $ecx = MOV32ri @.str, implicit-def $rcx
+    renamable $rcx = OR64ri32 killed renamable $rcx, -92238, implicit-def dead $eflags
+    $edx = MOV32ri 5
+    $r8d = MOV32rm $rbp, 1, $noreg, -48, $noreg :: (load 4 from %stack.0)
+    CALL64pcrel32 @func3, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $edx, implicit $rcx, implicit $r8d, implicit-def $rsp, implicit-def $ssp
+    renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
+
+  bb.9.cleanup:
+    liveins: $ecx
+
+    $eax = MOV32rr killed $ecx
+    $rsp = ADD64ri8 $rsp, 8, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    $r12 = POP64r implicit-def $rsp, implicit $rsp
+    $r13 = POP64r implicit-def $rsp, implicit $rsp
+    $r14 = POP64r implicit-def $rsp, implicit $rsp
+    $r15 = POP64r implicit-def $rsp, implicit $rsp
+    $rbp = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
+
+...

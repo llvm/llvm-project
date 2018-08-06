@@ -1,6 +1,6 @@
-# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
-# RUN: llc -O0 -mtriple=aarch64-linux-gnu -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-DEFAULT
-# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
+# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
+# RUN: llc -O0 -mtriple=aarch64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-DEFAULT
+# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -47,7 +47,7 @@ stack:
 body:             |
   bb.0:
     %0(p0) = G_FRAME_INDEX %stack.0.ptr0
-    %x0 = COPY %0(p0)
+    $x0 = COPY %0(p0)
 ...
 
 ---
@@ -65,11 +65,11 @@ registers:
 # CHECK: %2:gpr64 = ADDXrr %0, %1
 body:             |
   bb.0:
-      liveins: %x0
-    %0(p0) = COPY %x0
+      liveins: $x0
+    %0(p0) = COPY $x0
     %1(s64) = G_CONSTANT i64 42
     %2(p0) = G_GEP %0, %1(s64)
-    %x0 = COPY %2(p0)
+    $x0 = COPY %2(p0)
 ...
 
 ---
@@ -82,10 +82,10 @@ regBankSelected: true
 # CHECK: %1:gpr64sp = ANDXri %0, 8060
 body:             |
   bb.0:
-      liveins: %x0
-    %0:gpr(p0) = COPY %x0
+      liveins: $x0
+    %0:gpr(p0) = COPY $x0
     %1:gpr(p0) = G_PTR_MASK %0, 3
-    %x0 = COPY %1(p0)
+    $x0 = COPY %1(p0)
 ...
 
 ---
@@ -104,7 +104,7 @@ registers:
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
-    %x0 = COPY %0(p0)
+    $x0 = COPY %0(p0)
 ...
 
 ---
@@ -122,7 +122,7 @@ registers:
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got
-    %x0 = COPY %0(p0)
+    $x0 = COPY %0(p0)
 ...
 
 ---
@@ -153,36 +153,36 @@ registers:
   - { id: 11, class: gpr }
 
 # CHECK:  body:
-# CHECK:    %wzr = SUBSWrr %0, %0, implicit-def %nzcv
-# CHECK:    %1:gpr32 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
+# CHECK:    $wzr = SUBSWrr %0, %0, implicit-def $nzcv
+# CHECK:    %1:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
 
-# CHECK:    %xzr = SUBSXrr %2, %2, implicit-def %nzcv
-# CHECK:    %3:gpr32 = CSINCWr %wzr, %wzr, 3, implicit %nzcv
+# CHECK:    $xzr = SUBSXrr %2, %2, implicit-def $nzcv
+# CHECK:    %3:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
 
-# CHECK:    %xzr = SUBSXrr %4, %4, implicit-def %nzcv
-# CHECK:    %5:gpr32 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
+# CHECK:    $xzr = SUBSXrr %4, %4, implicit-def $nzcv
+# CHECK:    %5:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
 
 body:             |
   bb.0:
-    liveins: %w0, %x0
+    liveins: $w0, $x0
 
-    %0(s32) = COPY %w0
+    %0(s32) = COPY $w0
     %1(s32) = G_ICMP intpred(eq), %0, %0
     %6(s1) = G_TRUNC %1(s32)
     %9(s32) = G_ANYEXT %6
-    %w0 = COPY %9(s32)
+    $w0 = COPY %9(s32)
 
-    %2(s64) = COPY %x0
+    %2(s64) = COPY $x0
     %3(s32) = G_ICMP intpred(uge), %2, %2
     %7(s1) = G_TRUNC %3(s32)
     %10(s32) = G_ANYEXT %7
-    %w0 = COPY %10(s32)
+    $w0 = COPY %10(s32)
 
-    %4(p0) = COPY %x0
+    %4(p0) = COPY $x0
     %5(s32) = G_ICMP intpred(ne), %4, %4
     %8(s1) = G_TRUNC %5(s32)
     %11(s32) = G_ANYEXT %8
-    %w0 = COPY %11(s32)
+    $w0 = COPY %11(s32)
 ...
 
 ---
@@ -209,29 +209,29 @@ registers:
   - { id: 7, class: gpr }
 
 # CHECK:  body:
-# CHECK:    FCMPSrr %0, %0, implicit-def %nzcv
-# CHECK:    [[TST_MI:%[0-9]+]]:gpr32 = CSINCWr %wzr, %wzr, 5, implicit %nzcv
-# CHECK:    [[TST_GT:%[0-9]+]]:gpr32 = CSINCWr %wzr, %wzr, 13, implicit %nzcv
+# CHECK:    FCMPSrr %0, %0, implicit-def $nzcv
+# CHECK:    [[TST_MI:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
+# CHECK:    [[TST_GT:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
 # CHECK:    %1:gpr32 = ORRWrr [[TST_MI]], [[TST_GT]]
 
-# CHECK:    FCMPDrr %2, %2, implicit-def %nzcv
-# CHECK:    %3:gpr32 = CSINCWr %wzr, %wzr, 4, implicit %nzcv
+# CHECK:    FCMPDrr %2, %2, implicit-def $nzcv
+# CHECK:    %3:gpr32 = CSINCWr $wzr, $wzr, 4, implicit $nzcv
 
 body:             |
   bb.0:
-    liveins: %w0, %x0
+    liveins: $w0, $x0
 
-    %0(s32) = COPY %s0
+    %0(s32) = COPY $s0
     %1(s32) = G_FCMP floatpred(one), %0, %0
     %4(s1) = G_TRUNC %1(s32)
     %6(s32) = G_ANYEXT %4
-    %w0 = COPY %6(s32)
+    $w0 = COPY %6(s32)
 
-    %2(s64) = COPY %d0
+    %2(s64) = COPY $d0
     %3(s32) = G_FCMP floatpred(uge), %2, %2
     %5(s1) = G_TRUNC %3(s32)
     %7(s32) = G_ANYEXT %5
-    %w0 = COPY %7(s32)
+    $w0 = COPY %7(s32)
 
 ...
 
@@ -257,10 +257,10 @@ registers:
 
 body:             |
   bb.0:
-    liveins: %s0, %w0
+    liveins: $s0, $w0
     successors: %bb.1
-    %0(s32) = COPY %s0
-    %3:gpr(s32) = COPY %w0
+    %0(s32) = COPY $s0
+    %3:gpr(s32) = COPY $w0
     %1(s1) = G_TRUNC %3
 
   bb.1:
@@ -269,8 +269,8 @@ body:             |
     G_BRCOND %1, %bb.1
 
   bb.2:
-    %s0 = COPY %2
-    RET_ReallyLR implicit %s0
+    $s0 = COPY %2
+    RET_ReallyLR implicit $s0
 ...
 
 ---
@@ -304,30 +304,30 @@ registers:
   - { id: 9, class: gpr }
 
 # CHECK:  body:
-# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %3:gpr32 = CSELWr %1, %2, 1, implicit %nzcv
-# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %6:gpr64 = CSELXr %4, %5, 1, implicit %nzcv
-# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %9:gpr64 = CSELXr %7, %8, 1, implicit %nzcv
+# CHECK:      $wzr = ANDSWri %10, 0, implicit-def $nzcv
+# CHECK:      %3:gpr32 = CSELWr %1, %2, 1, implicit $nzcv
+# CHECK:      $wzr = ANDSWri %10, 0, implicit-def $nzcv
+# CHECK:      %6:gpr64 = CSELXr %4, %5, 1, implicit $nzcv
+# CHECK:      $wzr = ANDSWri %10, 0, implicit-def $nzcv
+# CHECK:      %9:gpr64 = CSELXr %7, %8, 1, implicit $nzcv
 body:             |
   bb.0:
-    liveins: %w0, %w1, %w2
-    %10:gpr(s32) = COPY %w0
+    liveins: $w0, $w1, $w2
+    %10:gpr(s32) = COPY $w0
     %0(s1) = G_TRUNC %10
 
-    %1(s32) = COPY %w1
-    %2(s32) = COPY %w2
+    %1(s32) = COPY $w1
+    %2(s32) = COPY $w2
     %3(s32) = G_SELECT %0, %1, %2
-    %w0 = COPY %3(s32)
+    $w0 = COPY %3(s32)
 
-    %4(s64) = COPY %x0
-    %5(s64) = COPY %x1
+    %4(s64) = COPY $x0
+    %5(s64) = COPY $x1
     %6(s64) = G_SELECT %0, %4, %5
-    %x0 = COPY %6(s64)
+    $x0 = COPY %6(s64)
 
-    %7(p0) = COPY %x0
-    %8(p0) = COPY %x1
+    %7(p0) = COPY $x0
+    %8(p0) = COPY $x1
     %9(p0) = G_SELECT %0, %7, %8
-    %x0 = COPY %9(p0)
+    $x0 = COPY %9(p0)
 ...

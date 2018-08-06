@@ -1,4 +1,4 @@
-# RUN: llvm-dsymutil -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck %s
+# RUN: dsymutil -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck %s
 
 # This is the archive member part of basic-archive.macho.x86_64 debug map with corrupted timestamps.
 

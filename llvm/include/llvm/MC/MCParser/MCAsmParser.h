@@ -91,7 +91,7 @@ private:
   IdKind Kind;
 };
 
-/// \brief Generic Sema callback for assembly parser.
+/// Generic Sema callback for assembly parser.
 class MCAsmParserSemaCallback {
 public:
   virtual ~MCAsmParserSemaCallback();
@@ -105,7 +105,7 @@ public:
                                     unsigned &Offset) = 0;
 };
 
-/// \brief Generic assembler parser interface, for use by target specific
+/// Generic assembler parser interface, for use by target specific
 /// assembly parsers.
 class MCAsmParser {
 public:
@@ -153,7 +153,7 @@ public:
 
   virtual MCContext &getContext() = 0;
 
-  /// \brief Return the output streamer for the assembler.
+  /// Return the output streamer for the assembler.
   virtual MCStreamer &getStreamer() = 0;
 
   MCTargetAsmParser &getTargetParser() const { return *TargetParser; }
@@ -168,13 +168,13 @@ public:
   void setEnablePrintSchedInfo(bool Value) { EnablePrintSchedInfo = Value; }
   bool shouldPrintSchedInfo() { return EnablePrintSchedInfo; }
 
-  /// \brief Run the parser on the input source buffer.
+  /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;
 
   virtual void setParsingInlineAsm(bool V) = 0;
   virtual bool isParsingInlineAsm() = 0;
 
-  /// \brief Parse MS-style inline assembly.
+  /// Parse MS-style inline assembly.
   virtual bool parseMSInlineAsm(
       void *AsmLoc, std::string &AsmString, unsigned &NumOutputs,
       unsigned &NumInputs, SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
@@ -182,22 +182,22 @@ public:
       SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
       const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
 
-  /// \brief Emit a note at the location \p L, with the message \p Msg.
+  /// Emit a note at the location \p L, with the message \p Msg.
   virtual void Note(SMLoc L, const Twine &Msg, SMRange Range = None) = 0;
 
-  /// \brief Emit a warning at the location \p L, with the message \p Msg.
+  /// Emit a warning at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is true, if warnings are fatal.
   virtual bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) = 0;
 
-  /// \brief Return an error at the location \p L, with the message \p Msg. This
+  /// Return an error at the location \p L, with the message \p Msg. This
   /// may be modified before being emitted.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
   bool Error(SMLoc L, const Twine &Msg, SMRange Range = None);
 
-  /// \brief Emit an error at the location \p L, with the message \p Msg.
+  /// Emit an error at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
@@ -214,21 +214,23 @@ public:
     return rv;
   }
 
+  void clearPendingErrors() { PendingErrors.clear(); }
+
   bool addErrorSuffix(const Twine &Suffix);
 
-  /// \brief Get the next AsmToken in the stream, possibly handling file
+  /// Get the next AsmToken in the stream, possibly handling file
   /// inclusion first.
   virtual const AsmToken &Lex() = 0;
 
-  /// \brief Get the current AsmToken from the stream.
+  /// Get the current AsmToken from the stream.
   const AsmToken &getTok() const;
 
-  /// \brief Report an error at the current lexer location.
+  /// Report an error at the current lexer location.
   bool TokError(const Twine &Msg, SMRange Range = None);
 
   bool parseTokenLoc(SMLoc &Loc);
   bool parseToken(AsmToken::TokenKind T, const Twine &Msg = "unexpected token");
-  /// \brief Attempt to parse and consume token, returning true on
+  /// Attempt to parse and consume token, returning true on
   /// success.
   bool parseOptionalToken(AsmToken::TokenKind T);
 
@@ -241,23 +243,23 @@ public:
   bool check(bool P, const Twine &Msg);
   bool check(bool P, SMLoc Loc, const Twine &Msg);
 
-  /// \brief Parse an identifier or string (as a quoted identifier) and set \p
+  /// Parse an identifier or string (as a quoted identifier) and set \p
   /// Res to the identifier contents.
   virtual bool parseIdentifier(StringRef &Res) = 0;
 
-  /// \brief Parse up to the end of statement and return the contents from the
+  /// Parse up to the end of statement and return the contents from the
   /// current token until the end of the statement; the current token on exit
   /// will be either the EndOfStatement or EOF.
   virtual StringRef parseStringToEndOfStatement() = 0;
 
-  /// \brief Parse the current token as a string which may include escaped
+  /// Parse the current token as a string which may include escaped
   /// characters and return the string contents.
   virtual bool parseEscapedString(std::string &Data) = 0;
 
-  /// \brief Skip to the end of the current statement, for error recovery.
+  /// Skip to the end of the current statement, for error recovery.
   virtual void eatToEndOfStatement() = 0;
 
-  /// \brief Parse an arbitrary expression.
+  /// Parse an arbitrary expression.
   ///
   /// \param Res - The value of the expression. The result is undefined
   /// on error.
@@ -265,14 +267,14 @@ public:
   virtual bool parseExpression(const MCExpr *&Res, SMLoc &EndLoc) = 0;
   bool parseExpression(const MCExpr *&Res);
 
-  /// \brief Parse a primary expression.
+  /// Parse a primary expression.
   ///
   /// \param Res - The value of the expression. The result is undefined
   /// on error.
   /// \return - False on success.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) = 0;
 
-  /// \brief Parse an arbitrary expression, assuming that an initial '(' has
+  /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.
   ///
   /// \param Res - The value of the expression. The result is undefined
@@ -280,19 +282,19 @@ public:
   /// \return - False on success.
   virtual bool parseParenExpression(const MCExpr *&Res, SMLoc &EndLoc) = 0;
 
-  /// \brief Parse an expression which must evaluate to an absolute value.
+  /// Parse an expression which must evaluate to an absolute value.
   ///
   /// \param Res - The value of the absolute expression. The result is undefined
   /// on error.
   /// \return - False on success.
   virtual bool parseAbsoluteExpression(int64_t &Res) = 0;
 
-  /// \brief Ensure that we have a valid section set in the streamer. Otherwise,
+  /// Ensure that we have a valid section set in the streamer. Otherwise,
   /// report an error and switch to .text.
   /// \return - False on success.
   virtual bool checkForValidSection() = 0;
 
-  /// \brief Parse an arbitrary expression of a specified parenthesis depth,
+  /// Parse an arbitrary expression of a specified parenthesis depth,
   /// assuming that the initial '(' characters have already been consumed.
   ///
   /// \param ParenDepth - Specifies how many trailing expressions outside the
@@ -304,7 +306,7 @@ public:
                                      SMLoc &EndLoc) = 0;
 };
 
-/// \brief Create an MCAsmParser instance.
+/// Create an MCAsmParser instance.
 MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
                                const MCAsmInfo &, unsigned CB = 0);
 

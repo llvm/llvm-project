@@ -6,13 +6,13 @@
 
 # Verify optimized JT code uses TBB instructions.
 # CHECK-LABEL: bb.7.entry:
-# CHECK: tTBB_JT %pc, killed %r2, %jump-table.1, 0
+# CHECK: tTBB_JT $pc, killed $r2, %jump-table.1, 0
 # CHECK-LABEL: bb.8:
 # CHECK: JUMPTABLE_TBB 0, %jump-table.1, 44
 
 # CHECK-LABEL: bb.11.entry:
-# CHECK: %r1 = tMOVSr %r0, implicit-def dead %cpsr
-# CHECK: tTBB_JT %pc, killed %r2, %jump-table.0, 1
+# CHECK: $r1 = tMOVSr $r0, implicit-def dead $cpsr
+# CHECK: tTBB_JT $pc, killed $r2, %jump-table.0, 1
 # CHECK-LABEL: bb.12:
 # CHECK: JUMPTABLE_TBB 1, %jump-table.0, 44
 
@@ -134,7 +134,7 @@ name:            foo4
 alignment:       1
 tracksRegLiveness: true
 liveins:
-  - { reg: '%r0' }
+  - { reg: '$r0' }
 frameInfo:
   stackSize:       8
   maxAlignment:    4
@@ -143,9 +143,9 @@ frameInfo:
   maxCallFrameSize: 0
 stack:
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: 0,
-      callee-saved-register: '%lr', callee-saved-restored: false }
+      callee-saved-register: '$lr', callee-saved-restored: false }
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: 0,
-      callee-saved-register: '%r4' }
+      callee-saved-register: '$r4' }
 jumpTable:
   kind:            inline
   entries:
@@ -160,200 +160,200 @@ jumpTable:
 body:             |
   bb.0.entry:
     successors: %bb.1(0x42c8590b), %bb.9(0x3d37a6f5)
-    liveins: %r0, %r4, %lr
+    liveins: $r0, $r4, $lr
 
-    frame-setup tPUSH 14, %noreg, killed %r4, killed %lr, implicit-def %sp, implicit %sp
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION offset %lr, -4
-    frame-setup CFI_INSTRUCTION offset %r4, -8
-    %r4 = tMOVSr %r0, implicit-def dead %cpsr
-    tBL 14, %noreg, @foo3, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit undef %r0, implicit-def %sp, implicit-def %r0
-    %r1 = tMOVSr %r0, implicit-def dead %cpsr
-    tCMPi8 %r0, 68, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.9, 12, killed %cpsr
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    $r4 = tMOVSr $r0, implicit-def dead $cpsr
+    tBL 14, $noreg, @foo3, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit undef $r0, implicit-def $sp, implicit-def $r0
+    $r1 = tMOVSr $r0, implicit-def dead $cpsr
+    tCMPi8 $r0, 68, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.9, 12, killed $cpsr
 
   bb.1.entry:
     successors: %bb.2(0x20000000), %bb.7(0x60000000)
-    liveins: %r0, %r1, %r4
+    liveins: $r0, $r1, $r4
 
-    tCMPi8 renamable %r1, 47, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.2, 13, killed %cpsr
+    tCMPi8 renamable $r1, 47, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.2, 13, killed $cpsr
 
   bb.7.entry:
     successors: %bb.16(0x71c71c72), %bb.8(0x0e38e38e)
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    %r2 = tMOVSr %r1, implicit-def dead %cpsr
-    renamable %r2, dead %cpsr = tSUBi8 killed renamable %r2, 48, 14, %noreg
-    tCMPi8 killed renamable %r2, 8, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.8, 2, killed %cpsr
+    $r2 = tMOVSr $r1, implicit-def dead $cpsr
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 48, 14, $noreg
+    tCMPi8 killed renamable $r2, 8, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.8, 2, killed $cpsr
 
   bb.16.sw.bb73:
     successors: %bb.17(0x7fffffff), %bb.18(0x00000001)
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    renamable %r2, dead %cpsr = tMOVi8 7, 14, %noreg
-    renamable %r1, dead %cpsr = tBIC killed renamable %r1, killed renamable %r2, 14, %noreg
-    tCMPi8 killed renamable %r1, 48, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.18, 1, killed %cpsr
+    renamable $r2, dead $cpsr = tMOVi8 7, 14, $noreg
+    renamable $r1, dead $cpsr = tBIC killed renamable $r1, killed renamable $r2, 14, $noreg
+    tCMPi8 killed renamable $r1, 48, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.18, 1, killed $cpsr
 
   bb.17.while.body83:
-    renamable %r0, dead %cpsr = tMOVi8 0, 14, %noreg
-    tBL 14, %noreg, @foo3, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit-def %sp, implicit-def dead %r0
-    tB %bb.17, 14, %noreg
+    renamable $r0, dead $cpsr = tMOVi8 0, 14, $noreg
+    tBL 14, $noreg, @foo3, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
+    tB %bb.17, 14, $noreg
 
   bb.9.entry:
     successors: %bb.10(0x45d1745d), %bb.29(0x3a2e8ba3)
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    %r2 = tMOVSr %r1, implicit-def dead %cpsr
-    renamable %r2, dead %cpsr = tSUBi8 killed renamable %r2, 92, 14, %noreg
-    tCMPi8 renamable %r2, 10, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.29, 9, killed %cpsr
+    $r2 = tMOVSr $r1, implicit-def dead $cpsr
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 92, 14, $noreg
+    tCMPi8 renamable $r2, 10, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.29, 9, killed $cpsr
 
   bb.10.entry:
     successors: %bb.11(0x15555555), %bb.14(0x6aaaaaab)
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    %r2 = tMOVSr %r1, implicit-def dead %cpsr
-    renamable %r2, dead %cpsr = tSUBi8 killed renamable %r2, 110, 14, %noreg
-    tCMPi8 renamable %r2, 10, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.11, 8, killed %cpsr
+    $r2 = tMOVSr $r1, implicit-def dead $cpsr
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 110, 14, $noreg
+    tCMPi8 renamable $r2, 10, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.11, 8, killed $cpsr
 
   bb.14.entry:
     successors: %bb.19(0x1999999a), %bb.26(0x00000000), %bb.21(0x1999999a), %bb.20(0x1999999a), %bb.25(0x1999999a), %bb.15(0x1999999a)
-    liveins: %r2
+    liveins: $r2
 
-    renamable %r0, dead %cpsr = tLSLri killed renamable %r2, 2, 14, %noreg
-    renamable %r1 = tLEApcrelJT %jump-table.1, 14, %noreg
-    renamable %r0 = tLDRr killed renamable %r1, killed renamable %r0, 14, %noreg :: (load 4 from jump-table)
-    tBR_JTr killed renamable %r0, %jump-table.1
+    renamable $r0, dead $cpsr = tLSLri killed renamable $r2, 2, 14, $noreg
+    renamable $r1 = tLEApcrelJT %jump-table.1, 14, $noreg
+    renamable $r0 = tLDRr killed renamable $r1, killed renamable $r0, 14, $noreg :: (load 4 from jump-table)
+    tBR_JTr killed renamable $r0, %jump-table.1
 
   bb.19.sw.bb93:
-    renamable %r1, dead %cpsr = tMOVi8 10, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 10, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.15.while.cond:
-    renamable %r0, dead %cpsr = tMOVi8 0, 14, %noreg
-    tBL 14, %noreg, @foo3, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit-def %sp, implicit-def dead %r0
-    tB %bb.15, 14, %noreg
+    renamable $r0, dead $cpsr = tMOVi8 0, 14, $noreg
+    tBL 14, $noreg, @foo3, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
+    tB %bb.15, 14, $noreg
 
   bb.29.entry:
     successors: %bb.28(0x1999999a), %bb.26(0x00000000), %bb.24(0x1999999a), %bb.23(0x1999999a), %bb.12(0x1999999a), %bb.22(0x1999999a)
-    liveins: %r0, %r2
+    liveins: $r0, $r2
 
-    renamable %r1, dead %cpsr = tLSLri killed renamable %r2, 2, 14, %noreg
-    renamable %r2 = tLEApcrelJT %jump-table.0, 14, %noreg
-    renamable %r2 = tLDRr killed renamable %r2, killed renamable %r1, 14, %noreg :: (load 4 from jump-table)
-    %r1 = tMOVSr %r0, implicit-def dead %cpsr
-    tBR_JTr killed renamable %r2, %jump-table.0
+    renamable $r1, dead $cpsr = tLSLri killed renamable $r2, 2, 14, $noreg
+    renamable $r2 = tLEApcrelJT %jump-table.0, 14, $noreg
+    renamable $r2 = tLDRr killed renamable $r2, killed renamable $r1, 14, $noreg :: (load 4 from jump-table)
+    $r1 = tMOVSr $r0, implicit-def dead $cpsr
+    tBR_JTr killed renamable $r2, %jump-table.0
 
   bb.24.sw.bb98:
-    renamable %r1, dead %cpsr = tMOVi8 7, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 7, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.2.entry:
     successors: %bb.27(0x2aaaaaab), %bb.3(0x55555555)
-    liveins: %r0, %r1, %r4
+    liveins: $r0, $r1, $r4
 
-    tCMPi8 renamable %r1, 10, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.27, 0, killed %cpsr
+    tCMPi8 renamable $r1, 10, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.27, 0, killed $cpsr
 
   bb.3.entry:
     successors: %bb.4, %bb.5
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    tCMPi8 renamable %r1, 34, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.5, 1, killed %cpsr
+    tCMPi8 renamable $r1, 34, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.5, 1, killed $cpsr
 
   bb.4:
-    liveins: %r0
+    liveins: $r0
 
-    %r1 = tMOVSr killed %r0, implicit-def dead %cpsr
-    tB %bb.28, 14, %noreg
+    $r1 = tMOVSr killed $r0, implicit-def dead $cpsr
+    tB %bb.28, 14, $noreg
 
   bb.25.sw.bb106:
-    renamable %r1, dead %cpsr = tMOVi8 11, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 11, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.23.sw.bb97:
-    renamable %r1, dead %cpsr = tMOVi8 8, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 8, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.27.sw.bb91:
-    liveins: %r4
+    liveins: $r4
 
-    renamable %r0, dead %cpsr = tMOVi8 1, 14, %noreg
-    tSTRi killed renamable %r0, killed renamable %r4, 0, 14, %noreg :: (store 4 into %ir.ignore_ptr)
-    renamable %r1, dead %cpsr = tMOVi8 0, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r0, dead $cpsr = tMOVi8 1, 14, $noreg
+    tSTRi killed renamable $r0, killed renamable $r4, 0, 14, $noreg :: (store 4 into %ir.ignore_ptr)
+    renamable $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.21.sw.bb95:
-    renamable %r1, dead %cpsr = tMOVi8 13, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 13, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.20.sw.bb94:
-    renamable %r1, dead %cpsr = tMOVi8 9, 14, %noreg
-    tB %bb.28, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 9, 14, $noreg
+    tB %bb.28, 14, $noreg
 
   bb.5.entry:
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    tCMPi8 killed renamable %r1, 39, 14, %noreg, implicit-def %cpsr
-    tB %bb.6, 14, %noreg
+    tCMPi8 killed renamable $r1, 39, 14, $noreg, implicit-def $cpsr
+    tB %bb.6, 14, $noreg
 
   bb.11.entry:
     successors: %bb.12(0x80000000), %bb.26(0x00000000)
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    tCMPi8 killed renamable %r1, 69, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.26, 1, killed %cpsr
+    tCMPi8 killed renamable $r1, 69, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.26, 1, killed $cpsr
 
   bb.12.sw.bb107:
     successors: %bb.28(0x7fffffff), %bb.13(0x00000001)
-    liveins: %r0
+    liveins: $r0
 
-    renamable %r1, dead %cpsr = tMOVi8 27, 14, %noreg
-    renamable %r2, dead %cpsr = tMOVi8 0, 14, %noreg
-    tCMPi8 killed renamable %r2, 0, 14, %noreg, implicit-def %cpsr
-    tBcc %bb.28, 1, killed %cpsr
+    renamable $r1, dead $cpsr = tMOVi8 27, 14, $noreg
+    renamable $r2, dead $cpsr = tMOVi8 0, 14, $noreg
+    tCMPi8 killed renamable $r2, 0, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.28, 1, killed $cpsr
 
   bb.13.if.then109:
     successors:
-    liveins: %r0
+    liveins: $r0
 
-    %r1 = tMOVSr killed %r0, implicit-def dead %cpsr
-    tBL 14, %noreg, @foo1, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit undef %r0, implicit %r1, implicit-def %sp, implicit-def dead %r0
+    $r1 = tMOVSr killed $r0, implicit-def dead $cpsr
+    tBL 14, $noreg, @foo1, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit undef $r0, implicit $r1, implicit-def $sp, implicit-def dead $r0
 
   bb.8.entry:
-    liveins: %r0, %r1
+    liveins: $r0, $r1
 
-    tCMPi8 killed renamable %r1, 63, 14, %noreg, implicit-def %cpsr
+    tCMPi8 killed renamable $r1, 63, 14, $noreg, implicit-def $cpsr
 
   bb.6.entry:
     successors: %bb.28(0x80000000), %bb.26(0x00000000)
-    liveins: %cpsr, %r0
+    liveins: $cpsr, $r0
 
-    tPUSH 14, %noreg, killed %r0, implicit-def %sp, implicit %sp
-    tPOP 14, %noreg, def %r1, implicit-def %sp, implicit %sp
-    tBcc %bb.28, 0, killed %cpsr
+    tPUSH 14, $noreg, killed $r0, implicit-def $sp, implicit $sp
+    tPOP 14, $noreg, def $r1, implicit-def $sp, implicit $sp
+    tBcc %bb.28, 0, killed $cpsr
 
   bb.26.sw.epilog:
     successors:
 
 
   bb.22.sw.bb96:
-    renamable %r1, dead %cpsr = tMOVi8 12, 14, %noreg
+    renamable $r1, dead $cpsr = tMOVi8 12, 14, $noreg
 
   bb.28.cleanup:
-    liveins: %r1
+    liveins: $r1
 
-    %r0 = tMOVSr killed %r1, implicit-def dead %cpsr
-    tPOP_RET 14, %noreg, def %r4, def %pc, implicit-def %sp, implicit %sp, implicit %r0
+    $r0 = tMOVSr killed $r1, implicit-def dead $cpsr
+    tPOP_RET 14, $noreg, def $r4, def $pc, implicit-def $sp, implicit $sp, implicit $r0
 
   bb.18.while.end88:
-    liveins: %r0
+    liveins: $r0
 
-    tBL 14, %noreg, @foo2, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit-def %sp, implicit-def dead %r0
+    tBL 14, $noreg, @foo2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def dead $r0
 
 ...

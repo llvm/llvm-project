@@ -80,7 +80,7 @@ define double @test2(double* %p, double %n) nounwind {
   ret double %t
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 declare void @use(i8*)
 
@@ -90,8 +90,8 @@ define void @test3(%struct.s* sret %a4) {
 ; Check that the alignment is bumped up the alignment of the sret type.
 ; CHECK-LABEL: @test3(
   %a4.cast = bitcast %struct.s* %a4 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %a4.cast, i8 0, i64 16, i32 1, i1 false)
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %a4.cast, i8 0, i64 16, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %a4.cast, i8 0, i64 16, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %a4.cast, i8 0, i64 16, i1 false)
   call void @use(i8* %a4.cast)
   ret void
 }

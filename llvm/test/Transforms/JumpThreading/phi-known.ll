@@ -64,3 +64,41 @@ exit:
   ret void
 }
 
+; The eq predicate is always true if we go through the path from
+; L1 to L3, no matter the phi result %t5 is on the lhs or rhs of
+; the predicate.
+declare void @goo()
+declare void @hoo()
+
+define void @test3(i32 %m, i32** %t1) {
+L1:
+  %t0 = add i32 %m, 7
+  %t2 = load i32*, i32** %t1, align 8
+; CHECK-LABEL: @test3
+; CHECK: %t3 = icmp eq i32* %t2, null
+; CHECK: br i1 %t3, label %[[LABEL2:.*]], label %[[LABEL1:.*]]
+
+  %t3 = icmp eq i32* %t2, null
+  br i1 %t3, label %L3, label %L2
+
+; CHECK: [[LABEL1]]:
+; CHECK-NEXT: %t4 = load i32, i32* %t2, align 4
+L2:
+  %t4 = load i32, i32* %t2, align 4
+  br label %L3
+
+L3:
+  %t5 = phi i32 [ %t0, %L1 ], [ %t4, %L2 ]
+  %t6 = icmp eq i32 %t0, %t5
+  br i1 %t6, label %L4, label %L5
+
+; CHECK: [[LABEL2]]:
+; CHECK-NEXT: call void @goo()
+L4:
+  call void @goo()
+  ret void
+
+L5:
+  call void @hoo()
+  ret void
+}

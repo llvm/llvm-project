@@ -105,21 +105,27 @@ Exit:
 ; CHECK: [[LSDA]]:
 ; CHECK: .byte  255
 ; CHECK: .byte  0
-; CHECK: .asciiz
-; CHECK: .byte  3
-; CHECK: .byte  26
-; CHECK: .long [[PRE_G]]-[[START]]
-; CHECK: .long [[POST_G]]-[[PRE_G]]
-; CHECK: .long [[LANDING]]-[[START]]
+; CHECK: .uleb128 [[TTBASE:.Lttbase[0-9]+]]-[[TTBASEREF:.Lttbaseref[0-9]+]]
+; CHECK: [[TTBASEREF]]:
+; CHECK: .byte  1
+; CHECK: .uleb128 [[CST_END:.Lcst_end[0-9]+]]-[[CST_BEGIN:.Lcst_begin[0-9]+]]
+; CHECK: [[CST_BEGIN]]:
+; CHECK: .uleb128 [[PRE_G]]-[[START]]
+; CHECK: .uleb128 [[POST_G]]-[[PRE_G]]
+; CHECK: .uleb128 [[LANDING]]-[[START]]
 ; CHECK: .byte 5
-; CHECK: .long [[POST_G]]-[[START]]
-; CHECK: .long [[END]]-[[POST_G]]
-; CHECK: .long 0
+; CHECK: .uleb128 [[POST_G]]-[[START]]
+; CHECK: .uleb128 [[END]]-[[POST_G]]
+; CHECK: .byte 0
+; CHECK: .byte 0
+; CHECK: [[CST_END]]:
 ; CHECK: .byte 0
 ; CHECK: .byte 0
 ; CHECK: .byte 1
 ; CHECK: .byte 125
 ; CHECK: .byte 2
 ; CHECK: .byte 125
+; CHECK: .p2align 2
 ; CHECK: .long _ZTIi
 ; CHECK: .long _ZTId
+; CHECK: [[TTBASE]]:

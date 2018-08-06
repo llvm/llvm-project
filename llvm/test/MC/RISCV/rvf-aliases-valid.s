@@ -36,6 +36,13 @@ fabs.s f1, f2
 # CHECK-ALIAS: fneg.s ft2, ft3
 fneg.s f2, f3
 
+# CHECK-INST: flt.s tp, ft6, ft5
+# CHECK-ALIAS: flt.s tp, ft6, ft5
+fgt.s x4, f5, f6
+# CHECK-INST: fle.s t2, fs1, fs0
+# CHECK-ALIAS: fle.s t2, fs1, fs0
+fge.s x7, f8, f9
+
 # The following instructions actually alias instructions from the base ISA.
 # However, it only makes sense to support them when the F extension is enabled.
 # CHECK-INST: csrrs t0, 3, zero
@@ -79,6 +86,13 @@ fsflagsi x14, 0x1d
 # CHECK-INST: csrrwi zero, 1, 28
 # CHECK-ALIAS: fsflagsi 28
 fsflagsi 0x1c
+
+# CHECK-INST: fmv.x.w a2, fs7
+# CHECK-ALIAS: fmv.x.w a2, fs7
+fmv.x.s a2, fs7
+# CHECK-INST: fmv.w.x ft1, a6
+# CHECK-ALIAS: fmv.w.x ft1, a6
+fmv.s.x ft1, a6
 
 ##===----------------------------------------------------------------------===##
 ## Aliases which omit the rounding mode.

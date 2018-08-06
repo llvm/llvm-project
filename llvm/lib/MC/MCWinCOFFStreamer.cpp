@@ -25,6 +25,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
@@ -44,8 +45,8 @@ using namespace llvm;
 MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
                                      std::unique_ptr<MCCodeEmitter> CE,
-                                     raw_pwrite_stream &OS)
-    : MCObjectStreamer(Context, std::move(MAB), OS, std::move(CE)),
+                                     std::unique_ptr<MCObjectWriter> OW)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {}
 
 void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
@@ -62,7 +63,7 @@ void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
     Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
     DF->getFixups().push_back(Fixups[i]);
   }
-
+  DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());
 }
 
@@ -193,6 +194,17 @@ void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
                    << COFF::SCT_COMPLEX_TYPE_SHIFT);
 }
 
+void MCWinCOFFStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
+  MCSection *Sec = getCurrentSectionOnly();
+  getAssembler().registerSection(*Sec);
+  if (Sec->getAlignment() < 4)
+    Sec->setAlignment(4);
+
+  new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
+
+  getAssembler().registerSymbol(*Symbol);
+}
+
 void MCWinCOFFStreamer::EmitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
   MCDataFragment *DF = getOrCreateDataFragment();
@@ -267,7 +279,8 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWinCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                     uint64_t Size, unsigned ByteAlignment) {
+                                     uint64_t Size, unsigned ByteAlignment,
+                                     SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 

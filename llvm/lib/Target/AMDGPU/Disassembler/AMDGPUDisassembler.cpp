@@ -20,7 +20,9 @@
 #include "Disassembler/AMDGPUDisassembler.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/APInt.h"
@@ -198,6 +200,21 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address);
       if (Res) { IsSDWA = true;  break; }
+
+      if (STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem]) {
+        Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
+        if (Res)
+          break;
+      }
+
+      // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
+      // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
+      // table first so we print the correct name.
+      if (STI.getFeatureBits()[AMDGPU::FeatureFmaMixInsts]) {
+        Res = tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address);
+        if (Res)
+          break;
+      }
     }
 
     // Reinitialize Bytes as DPP64 could have eaten too much
@@ -228,7 +245,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_si ||
-              MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi)) {
+              MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi)) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
@@ -241,7 +259,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
-  Size = Res ? (MaxInstBytesNum - Bytes.size()) : 0;
+  // if the opcode was not recognized we'll assume a Size of 4 bytes
+  // (unless there are fewer bytes left)
+  Size = Res ? (MaxInstBytesNum - Bytes.size())
+             : std::min((size_t)4, Bytes_.size());
   return Res;
 }
 
@@ -264,26 +285,70 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
   return MCDisassembler::Success;
 }
 
+// Note that MIMG format provides no information about VADDR size.
+// Consequently, decoded instructions always show address
+// as if it has 1 dword, which could be not really so.
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
+
+  int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                           AMDGPU::OpName::vdst);
+
   int VDataIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::vdata);
 
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
+
+  int TFEIdx   = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                            AMDGPU::OpName::tfe);
+  int D16Idx   = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                            AMDGPU::OpName::d16);
+
+  assert(VDataIdx != -1);
+  assert(DMaskIdx != -1);
+  assert(TFEIdx != -1);
+
+  bool IsAtomic = (VDstIdx != -1);
+  bool IsGather4 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::Gather4;
+
   unsigned DMask = MI.getOperand(DMaskIdx).getImm() & 0xf;
   if (DMask == 0)
     return MCDisassembler::Success;
 
-  unsigned ChannelCount = countPopulation(DMask);
-  if (ChannelCount == 1)
+  unsigned DstSize = IsGather4 ? 4 : countPopulation(DMask);
+  if (DstSize == 1)
     return MCDisassembler::Success;
 
-  int NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), ChannelCount);
-  assert(NewOpcode != -1 && "could not find matching mimg channel instruction");
+  bool D16 = D16Idx >= 0 && MI.getOperand(D16Idx).getImm();
+  if (D16 && AMDGPU::hasPackedD16(STI)) {
+    DstSize = (DstSize + 1) / 2;
+  }
+
+  // FIXME: Add tfe support
+  if (MI.getOperand(TFEIdx).getImm())
+    return MCDisassembler::Success;
+
+  int NewOpcode = -1;
+
+  if (IsGather4) {
+    if (D16 && AMDGPU::hasPackedD16(STI))
+      NewOpcode = AMDGPU::getMaskedMIMGOp(MI.getOpcode(), 2);
+    else
+      return MCDisassembler::Success;
+  } else {
+    NewOpcode = AMDGPU::getMaskedMIMGOp(MI.getOpcode(), DstSize);
+    if (NewOpcode == -1)
+      return MCDisassembler::Success;
+  }
+
   auto RCID = MCII->get(NewOpcode).OpInfo[VDataIdx].RegClass;
 
-  // Widen the register to the correct number of enabled channels.
+  // Get first subregister of VData
   unsigned Vdata0 = MI.getOperand(VDataIdx).getReg();
+  unsigned VdataSub0 = MRI.getSubReg(Vdata0, AMDGPU::sub0);
+  Vdata0 = (VdataSub0 != 0)? VdataSub0 : Vdata0;
+
+  // Widen the register to the correct number of enabled channels.
   auto NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0,
                                           &MRI.getRegClass(RCID));
   if (NewVdata == AMDGPU::NoRegister) {
@@ -297,6 +362,12 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   // how it is usually emitted because the number of register components is not
   // in the instruction encoding.
   MI.getOperand(VDataIdx) = MCOperand::createReg(NewVdata);
+
+  if (IsAtomic) {
+    // Atomic operations have an additional operand (a copy of data)
+    MI.getOperand(VDstIdx) = MCOperand::createReg(NewVdata);
+  }
+
   return MCDisassembler::Success;
 }
 
@@ -690,9 +761,8 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   switch (Val) {
   case 102: return createRegOperand(FLAT_SCR_LO);
   case 103: return createRegOperand(FLAT_SCR_HI);
-    // ToDo: no support for xnack_mask_lo/_hi register
-  case 104:
-  case 105: break;
+  case 104: return createRegOperand(XNACK_MASK_LO);
+  case 105: return createRegOperand(XNACK_MASK_HI);
   case 106: return createRegOperand(VCC_LO);
   case 107: return createRegOperand(VCC_HI);
   case 108: assert(!isGFX9()); return createRegOperand(TBA_LO);
@@ -722,6 +792,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
 
   switch (Val) {
   case 102: return createRegOperand(FLAT_SCR);
+  case 104: return createRegOperand(XNACK_MASK);
   case 106: return createRegOperand(VCC);
   case 108: assert(!isGFX9()); return createRegOperand(TBA);
   case 110: assert(!isGFX9()); return createRegOperand(TMA);
@@ -732,8 +803,9 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
 }
 
 MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
-                                            unsigned Val) const {
+                                            const unsigned Val) const {
   using namespace AMDGPU::SDWA;
+  using namespace AMDGPU::EncValues;
 
   if (STI.getFeatureBits()[AMDGPU::FeatureGFX9]) {
     // XXX: static_cast<int> is needed to avoid stupid warning:
@@ -754,7 +826,15 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
                                Val - SDWA9EncValues::SRC_TTMP_MIN);
     }
 
-    return decodeSpecialReg32(Val - SDWA9EncValues::SRC_SGPR_MIN);
+    const unsigned SVal = Val - SDWA9EncValues::SRC_SGPR_MIN;
+
+    if (INLINE_INTEGER_C_MIN <= SVal && SVal <= INLINE_INTEGER_C_MAX)
+      return decodeIntImmed(SVal);
+
+    if (INLINE_FLOATING_C_MIN <= SVal && SVal <= INLINE_FLOATING_C_MAX)
+      return decodeFPImmed(Width, SVal);
+
+    return decodeSpecialReg32(SVal);
   } else if (STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands]) {
     return createRegOperand(getVgprClassId(Width), Val);
   }
@@ -815,6 +895,9 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
   }
 
   auto *Symbols = static_cast<SectionSymbolsTy *>(DisInfo);
+  if (!Symbols)
+    return false;
+
   auto Result = std::find_if(Symbols->begin(), Symbols->end(),
                              [Value](const SymbolInfoTy& Val) {
                                 return std::get<0>(Val) == static_cast<uint64_t>(Value)

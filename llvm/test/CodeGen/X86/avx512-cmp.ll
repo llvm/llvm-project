@@ -14,7 +14,6 @@ define double @test1(double %a, double %b) nounwind {
 ; ALL-NEXT:  LBB0_2: ## %l2
 ; ALL-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
-; ALL-NEXT:    ## -- End function
   %tobool = fcmp une double %a, %b
   br i1 %tobool, label %l1, label %l2
 
@@ -37,7 +36,6 @@ define float @test2(float %a, float %b) nounwind {
 ; ALL-NEXT:  LBB1_2: ## %l2
 ; ALL-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
-; ALL-NEXT:    ## -- End function
   %tobool = fcmp olt float %a, %b
   br i1 %tobool, label %l1, label %l2
 
@@ -50,19 +48,11 @@ l2:
 }
 
 define i32 @test3(float %a, float %b) {
-; KNL-LABEL: test3:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test3:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    movzbl %al, %eax
-; SKX-NEXT:    retq
+; ALL-LABEL: test3:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; ALL-NEXT:    kmovw %k0, %eax
+; ALL-NEXT:    retq
 
   %cmp10.i = fcmp oeq float %a, %b
   %conv11.i = zext i1 %cmp10.i to i32

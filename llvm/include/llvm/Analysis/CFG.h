@@ -49,7 +49,7 @@ unsigned GetSuccessorNumber(const BasicBlock *BB, const BasicBlock *Succ);
 bool isCriticalEdge(const TerminatorInst *TI, unsigned SuccNum,
                     bool AllowIdenticalEdges = false);
 
-/// \brief Determine whether instruction 'To' is reachable from 'From',
+/// Determine whether instruction 'To' is reachable from 'From',
 /// returning true if uncertain.
 ///
 /// Determine whether there is a path from From to To within a single function.
@@ -68,7 +68,7 @@ bool isPotentiallyReachable(const Instruction *From, const Instruction *To,
                             const DominatorTree *DT = nullptr,
                             const LoopInfo *LI = nullptr);
 
-/// \brief Determine whether block 'To' is reachable from 'From', returning
+/// Determine whether block 'To' is reachable from 'From', returning
 /// true if uncertain.
 ///
 /// Determine whether there is a path from From to To within a single function.
@@ -78,7 +78,7 @@ bool isPotentiallyReachable(const BasicBlock *From, const BasicBlock *To,
                             const DominatorTree *DT = nullptr,
                             const LoopInfo *LI = nullptr);
 
-/// \brief Determine whether there is at least one path from a block in
+/// Determine whether there is at least one path from a block in
 /// 'Worklist' to 'StopBB', returning true if uncertain.
 ///
 /// Determine whether there is a path from at least one block in Worklist to
@@ -89,6 +89,73 @@ bool isPotentiallyReachableFromMany(SmallVectorImpl<BasicBlock *> &Worklist,
                                     BasicBlock *StopBB,
                                     const DominatorTree *DT = nullptr,
                                     const LoopInfo *LI = nullptr);
+
+/// Return true if the control flow in \p RPOTraversal is irreducible.
+///
+/// This is a generic implementation to detect CFG irreducibility based on loop
+/// info analysis. It can be used for any kind of CFG (Loop, MachineLoop,
+/// Function, MachineFunction, etc.) by providing an RPO traversal (\p
+/// RPOTraversal) and the loop info analysis (\p LI) of the CFG. This utility
+/// function is only recommended when loop info analysis is available. If loop
+/// info analysis isn't available, please, don't compute it explicitly for this
+/// purpose. There are more efficient ways to detect CFG irreducibility that
+/// don't require recomputing loop info analysis (e.g., T1/T2 or Tarjan's
+/// algorithm).
+///
+/// Requirements:
+///   1) GraphTraits must be implemented for NodeT type. It is used to access
+///      NodeT successors.
+//    2) \p RPOTraversal must be a valid reverse post-order traversal of the
+///      target CFG with begin()/end() iterator interfaces.
+///   3) \p LI must be a valid LoopInfoBase that contains up-to-date loop
+///      analysis information of the CFG.
+///
+/// This algorithm uses the information about reducible loop back-edges already
+/// computed in \p LI. When a back-edge is found during the RPO traversal, the
+/// algorithm checks whether the back-edge is one of the reducible back-edges in
+/// loop info. If it isn't, the CFG is irreducible. For example, for the CFG
+/// below (canonical irreducible graph) loop info won't contain any loop, so the
+/// algorithm will return that the CFG is irreducible when checking the B <-
+/// -> C back-edge.
+///
+/// (A->B, A->C, B->C, C->B, C->D)
+///    A
+///  /   \
+/// B<- ->C
+///       |
+///       D
+///
+template <class NodeT, class RPOTraversalT, class LoopInfoT,
+          class GT = GraphTraits<NodeT>>
+bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
+  /// Check whether the edge (\p Src, \p Dst) is a reducible loop backedge
+  /// according to LI. I.e., check if there exists a loop that contains Src and
+  /// where Dst is the loop header.
+  auto isProperBackedge = [&](NodeT Src, NodeT Dst) {
+    for (const auto *Lp = LI.getLoopFor(Src); Lp; Lp = Lp->getParentLoop()) {
+      if (Lp->getHeader() == Dst)
+        return true;
+    }
+    return false;
+  };
+
+  SmallPtrSet<NodeT, 32> Visited;
+  for (NodeT Node : RPOTraversal) {
+    Visited.insert(Node);
+    for (NodeT Succ : make_range(GT::child_begin(Node), GT::child_end(Node))) {
+      // Succ hasn't been visited yet
+      if (!Visited.count(Succ))
+        continue;
+      // We already visited Succ, thus Node->Succ must be a backedge. Check that
+      // the head matches what we have in the loop information. Otherwise, we
+      // have an irreducible graph.
+      if (!isProperBackedge(Node, Succ))
+        return true;
+    }
+  }
+
+  return false;
+}
 } // End llvm namespace
 
 #endif

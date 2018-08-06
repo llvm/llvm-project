@@ -46,3 +46,16 @@ class GIComplexOperandMatcher<LLT type, string matcherfn> {
   // overwritten.
   string MatcherFn = matcherfn;
 }
+
+// Defines a custom renderer. This is analogous to SDNodeXForm from
+// SelectionDAG. Unlike SDNodeXForm, this matches a MachineInstr and
+// renders directly to the result instruction without an intermediate node.
+//
+// Definitions that inherit from this may also inherit from GISDNodeXFormEquiv
+// to enable the import of SelectionDAG patterns involving those SDNodeXForms.
+class GICustomOperandRenderer<string rendererfn> {
+  // The function renders the operand(s) of the matched instruction to
+  // the specified instruction. It should be of the form:
+  //   void render(MachineInstrBuilder &MIB, const MachineInstr &MI)
+  string RendererFn = rendererfn;
+}

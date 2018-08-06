@@ -5,8 +5,8 @@
 ; RUN: llvm-bcanalyzer -dump %t2.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
 define private void @private()
-; CHECK: <PERMODULE {{.*}} op1=8
-; COMBINED-DAG: <COMBINED {{.*}} op2=8
+; CHECK: <PERMODULE {{.*}} op1=72
+; COMBINED-DAG: <COMBINED {{.*}} op2=72
 {
   ret void
 }

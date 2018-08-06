@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck --check-prefix=SI --check-prefix=ALL %s
-; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck --check-prefix=CI --check-prefix=ALL %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefix=SI --check-prefix=ALL %s
+; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefix=CI --check-prefix=ALL %s
 
 ; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
 ; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4

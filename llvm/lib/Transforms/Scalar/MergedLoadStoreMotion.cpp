@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 //! \file
-//! \brief This pass performs merges of loads and stores on both sides of a
+//! This pass performs merges of loads and stores on both sides of a
 //  diamond (hammock). It hoists the loads and sinks the stores.
 //
 // The algorithm iteratively hoists two loads to the same address out of a
@@ -80,7 +80,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
@@ -97,7 +96,6 @@ namespace {
 //                         MergedLoadStoreMotion Pass
 //===----------------------------------------------------------------------===//
 class MergedLoadStoreMotion {
-  MemoryDependenceResults *MD = nullptr;
   AliasAnalysis *AA = nullptr;
 
   // The mergeLoad/Store algorithms could have Size0 * Size1 complexity,
@@ -107,14 +105,9 @@ class MergedLoadStoreMotion {
   const int MagicCompileTimeControl = 250;
 
 public:
-  bool run(Function &F, MemoryDependenceResults *MD, AliasAnalysis &AA);
+  bool run(Function &F, AliasAnalysis &AA);
 
 private:
-  ///
-  /// \brief Remove instruction from parent and update memory dependence
-  /// analysis.
-  ///
-  void removeInstruction(Instruction *Inst);
   BasicBlock *getDiamondTail(BasicBlock *BB);
   bool isDiamondHead(BasicBlock *BB);
   // Routines for sinking stores
@@ -128,23 +121,7 @@ private:
 } // end anonymous namespace
 
 ///
-/// \brief Remove instruction from parent and update memory dependence analysis.
-///
-void MergedLoadStoreMotion::removeInstruction(Instruction *Inst) {
-  // Notify the memory dependence analysis.
-  if (MD) {
-    MD->removeInstruction(Inst);
-    if (auto *LI = dyn_cast<LoadInst>(Inst))
-      MD->invalidateCachedPointerInfo(LI->getPointerOperand());
-    if (Inst->getType()->isPtrOrPtrVectorTy()) {
-      MD->invalidateCachedPointerInfo(Inst);
-    }
-  }
-  Inst->eraseFromParent();
-}
-
-///
-/// \brief Return tail block of a diamond.
+/// Return tail block of a diamond.
 ///
 BasicBlock *MergedLoadStoreMotion::getDiamondTail(BasicBlock *BB) {
   assert(isDiamondHead(BB) && "Basic block is not head of a diamond");
@@ -152,7 +129,7 @@ BasicBlock *MergedLoadStoreMotion::getDiamondTail(BasicBlock *BB) {
 }
 
 ///
-/// \brief True when BB is the head of a diamond (hammock)
+/// True when BB is the head of a diamond (hammock)
 ///
 bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
   if (!BB)
@@ -179,7 +156,7 @@ bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
 
 
 ///
-/// \brief True when instruction is a sink barrier for a store
+/// True when instruction is a sink barrier for a store
 /// located in Loc
 ///
 /// Whenever an instruction could possibly read or modify the
@@ -197,13 +174,13 @@ bool MergedLoadStoreMotion::isStoreSinkBarrierInRange(const Instruction &Start,
 }
 
 ///
-/// \brief Check if \p BB contains a store to the same address as \p SI
+/// Check if \p BB contains a store to the same address as \p SI
 ///
 /// \return The store in \p  when it is safe to sink. Otherwise return Null.
 ///
 StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
                                                    StoreInst *Store0) {
-  DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
   BasicBlock *BB0 = Store0->getParent();
   for (Instruction &Inst : reverse(*BB1)) {
     auto *Store1 = dyn_cast<StoreInst>(&Inst);
@@ -222,7 +199,7 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
 }
 
 ///
-/// \brief Create a PHI node in BB for the operands of S0 and S1
+/// Create a PHI node in BB for the operands of S0 and S1
 ///
 PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
                                               StoreInst *S1) {
@@ -236,13 +213,11 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
                                 &BB->front());
   NewPN->addIncoming(Opd1, S0->getParent());
   NewPN->addIncoming(Opd2, S1->getParent());
-  if (MD && NewPN->getType()->isPtrOrPtrVectorTy())
-    MD->invalidateCachedPointerInfo(NewPN);
   return NewPN;
 }
 
 ///
-/// \brief Merge two stores to same address and sink into \p BB
+/// Merge two stores to same address and sink into \p BB
 ///
 /// Also sinks GEP instruction computing the store address
 ///
@@ -254,9 +229,9 @@ bool MergedLoadStoreMotion::sinkStore(BasicBlock *BB, StoreInst *S0,
   if (A0 && A1 && A0->isIdenticalTo(A1) && A0->hasOneUse() &&
       (A0->getParent() == S0->getParent()) && A1->hasOneUse() &&
       (A1->getParent() == S1->getParent()) && isa<GetElementPtrInst>(A0)) {
-    DEBUG(dbgs() << "Sink Instruction into BB \n"; BB->dump();
-          dbgs() << "Instruction Left\n"; S0->dump(); dbgs() << "\n";
-          dbgs() << "Instruction Right\n"; S1->dump(); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Sink Instruction into BB \n"; BB->dump();
+               dbgs() << "Instruction Left\n"; S0->dump(); dbgs() << "\n";
+               dbgs() << "Instruction Right\n"; S1->dump(); dbgs() << "\n");
     // Hoist the instruction.
     BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
     // Intersect optional metadata.
@@ -275,19 +250,19 @@ bool MergedLoadStoreMotion::sinkStore(BasicBlock *BB, StoreInst *S0,
     // New PHI operand? Use it.
     if (PHINode *NewPN = getPHIOperand(BB, S0, S1))
       SNew->setOperand(0, NewPN);
-    removeInstruction(S0);
-    removeInstruction(S1);
+    S0->eraseFromParent();
+    S1->eraseFromParent();
     A0->replaceAllUsesWith(ANew);
-    removeInstruction(A0);
+    A0->eraseFromParent();
     A1->replaceAllUsesWith(ANew);
-    removeInstruction(A1);
+    A1->eraseFromParent();
     return true;
   }
   return false;
 }
 
 ///
-/// \brief True when two stores are equivalent and can sink into the footer
+/// True when two stores are equivalent and can sink into the footer
 ///
 /// Starting from a diamond tail block, iterate over the instructions in one
 /// predecessor block and try to match a store in the second predecessor.
@@ -310,7 +285,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
     return false; // No. More than 2 predecessors.
 
   // #Instructions in Succ1 for Compile Time Control
-  int Size1 = Pred1->size();
+  auto InstsNoDbg = Pred1->instructionsWithoutDebug();
+  int Size1 = std::distance(InstsNoDbg.begin(), InstsNoDbg.end());
   int NStores = 0;
 
   for (BasicBlock::reverse_iterator RBI = Pred0->rbegin(), RBE = Pred0->rend();
@@ -338,19 +314,17 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
         break;
       RBI = Pred0->rbegin();
       RBE = Pred0->rend();
-      DEBUG(dbgs() << "Search again\n"; Instruction *I = &*RBI; I->dump());
+      LLVM_DEBUG(dbgs() << "Search again\n"; Instruction *I = &*RBI; I->dump());
     }
   }
   return MergedStores;
 }
 
-bool MergedLoadStoreMotion::run(Function &F, MemoryDependenceResults *MD,
-                                AliasAnalysis &AA) {
-  this->MD = MD;
+bool MergedLoadStoreMotion::run(Function &F, AliasAnalysis &AA) {
   this->AA = &AA;
 
   bool Changed = false;
-  DEBUG(dbgs() << "Instruction Merger\n");
+  LLVM_DEBUG(dbgs() << "Instruction Merger\n");
 
   // Merge unconditional branches, allowing PRE to catch more
   // optimization opportunities.
@@ -376,15 +350,13 @@ public:
   }
 
   ///
-  /// \brief Run the transformation for each function
+  /// Run the transformation for each function
   ///
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
     MergedLoadStoreMotion Impl;
-    auto *MDWP = getAnalysisIfAvailable<MemoryDependenceWrapperPass>();
-    return Impl.run(F, MDWP ? &MDWP->getMemDep() : nullptr,
-                    getAnalysis<AAResultsWrapperPass>().getAAResults());
+    return Impl.run(F, getAnalysis<AAResultsWrapperPass>().getAAResults());
   }
 
 private:
@@ -392,7 +364,6 @@ private:
     AU.setPreservesCFG();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<MemoryDependenceWrapperPass>();
   }
 };
 
@@ -400,7 +371,7 @@ char MergedLoadStoreMotionLegacyPass::ID = 0;
 } // anonymous namespace
 
 ///
-/// \brief createMergedLoadStoreMotionPass - The public interface to this file.
+/// createMergedLoadStoreMotionPass - The public interface to this file.
 ///
 FunctionPass *llvm::createMergedLoadStoreMotionPass() {
   return new MergedLoadStoreMotionLegacyPass();
@@ -408,7 +379,6 @@ FunctionPass *llvm::createMergedLoadStoreMotionPass() {
 
 INITIALIZE_PASS_BEGIN(MergedLoadStoreMotionLegacyPass, "mldst-motion",
                       "MergedLoadStoreMotion", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MergedLoadStoreMotionLegacyPass, "mldst-motion",
                     "MergedLoadStoreMotion", false, false)
@@ -416,14 +386,12 @@ INITIALIZE_PASS_END(MergedLoadStoreMotionLegacyPass, "mldst-motion",
 PreservedAnalyses
 MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {
   MergedLoadStoreMotion Impl;
-  auto *MD = AM.getCachedResult<MemoryDependenceAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  if (!Impl.run(F, MD, AA))
+  if (!Impl.run(F, AA))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
-  PA.preserve<MemoryDependenceAnalysis>();
   return PA;
 }

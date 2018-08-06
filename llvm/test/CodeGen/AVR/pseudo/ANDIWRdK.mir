@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_andiwrdrr
 
-    ; CHECK:      %r16 = ANDIRdK %r16, 175, implicit-def dead %sreg
-    ; CHECK-NEXT: %r17 = ANDIRdK %r17, 250, implicit-def %sreg
+    ; CHECK:      $r16 = ANDIRdK $r16, 175, implicit-def dead $sreg
+    ; CHECK-NEXT: $r17 = ANDIRdK $r17, 250, implicit-def $sreg
 
-    %r17r16 = ANDIWRdK %r17r16, 64175, implicit-def %sreg
+    $r17r16 = ANDIWRdK $r17r16, 64175, implicit-def $sreg
 ...

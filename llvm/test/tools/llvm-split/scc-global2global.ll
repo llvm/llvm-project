@@ -5,8 +5,8 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK1 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK0 %s
 
-; CHECK0: declare %struct.anon* @local0
-; CHECK0: declare i8** @local1
+; CHECK0: declare dso_local %struct.anon* @local0
+; CHECK0: declare dso_local i8** @local1
 
 ; CHECK1: @bla
 ; CHECK1: @ptr

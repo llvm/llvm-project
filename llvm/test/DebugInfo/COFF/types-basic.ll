@@ -460,7 +460,7 @@ attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 3.9.0 "}
-!7 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXMN_J@Z", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXMN_J@Z", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10, !11, !12}
 !10 = !DIBasicType(name: "float", size: 32, align: 32, encoding: DW_ATE_float)
@@ -525,7 +525,7 @@ attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !69 = !DILocation(line: 18, column: 11, scope: !7)
 !70 = !DILocation(line: 18, column: 3, scope: !7)
 !71 = !DILocation(line: 19, column: 1, scope: !7)
-!72 = distinct !DISubprogram(name: "CharTypes", linkageName: "\01?CharTypes@@YAXXZ", scope: !1, file: !1, line: 20, type: !73, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!72 = distinct !DISubprogram(name: "CharTypes", linkageName: "\01?CharTypes@@YAXXZ", scope: !1, file: !1, line: 20, type: !73, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !73 = !DISubroutineType(types: !74)
 !74 = !{null}
 !75 = !DILocalVariable(name: "w", scope: !72, file: !1, line: 21, type: !76)

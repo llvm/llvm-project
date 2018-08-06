@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a virtual register coloring pass.
+/// This file implements a virtual register coloring pass.
 ///
 /// WebAssembly doesn't have a fixed number of registers, but it is still
 /// desirable to minimize the total number of registers used in each function.
@@ -55,6 +55,9 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyRegColoring::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegColoring, DEBUG_TYPE,
+                "Minimize number of registers used", false, false)
+
 FunctionPass *llvm::createWebAssemblyRegColoring() {
   return new WebAssemblyRegColoring();
 }
@@ -71,7 +74,7 @@ static float computeWeight(const MachineRegisterInfo *MRI,
 }
 
 bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Register Coloring **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
@@ -94,7 +97,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<LiveInterval *, 0> SortedIntervals;
   SortedIntervals.reserve(NumVRegs);
 
-  DEBUG(dbgs() << "Interesting register intervals:\n");
+  LLVM_DEBUG(dbgs() << "Interesting register intervals:\n");
   for (unsigned i = 0; i < NumVRegs; ++i) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(i);
     if (MFI.isVRegStackified(VReg))
@@ -106,27 +109,27 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     LiveInterval *LI = &Liveness->getInterval(VReg);
     assert(LI->weight == 0.0f);
     LI->weight = computeWeight(MRI, MBFI, VReg);
-    DEBUG(LI->dump());
+    LLVM_DEBUG(LI->dump());
     SortedIntervals.push_back(LI);
   }
-  DEBUG(dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 
   // Sort them to put arguments first (since we don't want to rename live-in
   // registers), by weight next, and then by position.
   // TODO: Investigate more intelligent sorting heuristics. For starters, we
   // should try to coalesce adjacent live intervals before non-adjacent ones.
-  std::sort(SortedIntervals.begin(), SortedIntervals.end(),
-            [MRI](LiveInterval *LHS, LiveInterval *RHS) {
-              if (MRI->isLiveIn(LHS->reg) != MRI->isLiveIn(RHS->reg))
-                return MRI->isLiveIn(LHS->reg);
-              if (LHS->weight != RHS->weight)
-                return LHS->weight > RHS->weight;
-              if (LHS->empty() || RHS->empty())
-                return !LHS->empty() && RHS->empty();
-              return *LHS < *RHS;
-            });
+  llvm::sort(SortedIntervals.begin(), SortedIntervals.end(),
+             [MRI](LiveInterval *LHS, LiveInterval *RHS) {
+               if (MRI->isLiveIn(LHS->reg) != MRI->isLiveIn(RHS->reg))
+                 return MRI->isLiveIn(LHS->reg);
+               if (LHS->weight != RHS->weight)
+                 return LHS->weight > RHS->weight;
+               if (LHS->empty() || RHS->empty())
+                 return !LHS->empty() && RHS->empty();
+               return *LHS < *RHS;
+             });
 
-  DEBUG(dbgs() << "Coloring register intervals:\n");
+  LLVM_DEBUG(dbgs() << "Coloring register intervals:\n");
   SmallVector<unsigned, 16> SlotMapping(SortedIntervals.size(), -1u);
   SmallVector<SmallVector<LiveInterval *, 4>, 16> Assignments(
       SortedIntervals.size());
@@ -156,9 +159,9 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     Changed |= Old != New;
     UsedColors.set(Color);
     Assignments[Color].push_back(LI);
-    DEBUG(dbgs() << "Assigning vreg"
-                 << TargetRegisterInfo::virtReg2Index(LI->reg) << " to vreg"
-                 << TargetRegisterInfo::virtReg2Index(New) << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Assigning vreg" << TargetRegisterInfo::virtReg2Index(LI->reg)
+               << " to vreg" << TargetRegisterInfo::virtReg2Index(New) << "\n");
   }
   if (!Changed)
     return false;

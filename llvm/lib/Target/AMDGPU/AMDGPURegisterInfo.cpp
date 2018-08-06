@@ -8,13 +8,15 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Parent TargetRegisterInfo class common to all hw codegen targets.
+/// Parent TargetRegisterInfo class common to all hw codegen targets.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 using namespace llvm;
 
@@ -25,7 +27,7 @@ AMDGPURegisterInfo::AMDGPURegisterInfo() : AMDGPUGenRegisterInfo(0) {}
 // they are not supported at this time.
 //===----------------------------------------------------------------------===//
 
-unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
+unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) {
   static const unsigned SubRegs[] = {
     AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3, AMDGPU::sub4,
     AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7, AMDGPU::sub8, AMDGPU::sub9,
@@ -35,6 +37,13 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 
   assert(Channel < array_lengthof(SubRegs));
   return SubRegs[Channel];
+}
+
+void AMDGPURegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const {
+  MCRegAliasIterator R(Reg, this, true);
+
+  for (; R.isValid(); ++R)
+    Reserved.set(*R);
 }
 
 #define GET_REGINFO_TARGET_DESC
@@ -75,5 +84,6 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 }
 
 unsigned SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return AMDGPU::NoRegister;
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  return FuncInfo->getFrameOffsetReg();
 }

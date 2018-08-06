@@ -50,6 +50,7 @@ define i64 @test_builtin_rdtscp(i8* %A) {
 ; X86-NEXT:    rdtscp
 ; X86-NEXT:    movl %ecx, (%esi)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_builtin_rdtscp:

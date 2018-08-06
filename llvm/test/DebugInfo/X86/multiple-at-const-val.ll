@@ -53,7 +53,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !78 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !79)
 !79 = !DIDerivedType(tag: DW_TAG_typedef, name: "ostate", line: 327, file: !1801, scope: !49, baseType: !26)
 !955 = !{}
-!960 = distinct !DISubprogram(name: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 73, file: !1802, scope: null, type: !54, variables: !955)
+!960 = distinct !DISubprogram(name: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 73, file: !1802, scope: null, type: !54, retainedNodes: !955)
 !961 = !DIFile(filename: "student2.cpp", directory: "/privite/tmp")
 !1786 = !{!1800}
 !1800 = !DIGlobalVariableExpression(var: !1804, expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))

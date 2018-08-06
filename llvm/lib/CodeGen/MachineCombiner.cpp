@@ -39,8 +39,27 @@ inc_threshold("machine-combiner-inc-threshold", cl::Hidden,
               cl::desc("Incremental depth computation will be used for basic "
                        "blocks with more instructions."), cl::init(500));
 
+static cl::opt<bool> dump_intrs("machine-combiner-dump-subst-intrs", cl::Hidden,
+                                cl::desc("Dump all substituted intrs"),
+                                cl::init(false));
+
+#ifdef EXPENSIVE_CHECKS
+static cl::opt<bool> VerifyPatternOrder(
+    "machine-combiner-verify-pattern-order", cl::Hidden,
+    cl::desc(
+        "Verify that the generated patterns are ordered by increasing latency"),
+    cl::init(true));
+#else
+static cl::opt<bool> VerifyPatternOrder(
+    "machine-combiner-verify-pattern-order", cl::Hidden,
+    cl::desc(
+        "Verify that the generated patterns are ordered by increasing latency"),
+    cl::init(false));
+#endif
+
 namespace {
 class MachineCombiner : public MachineFunctionPass {
+  const TargetSubtargetInfo *STI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MCSchedModel SchedModel;
@@ -85,6 +104,14 @@ private:
                             SmallVectorImpl<MachineInstr *> &DelInstrs);
   void instr2instrSC(SmallVectorImpl<MachineInstr *> &Instrs,
                      SmallVectorImpl<const MCSchedClassDesc *> &InstrsSC);
+  std::pair<unsigned, unsigned>
+  getLatenciesForInstrSequences(MachineInstr &MI,
+                                SmallVectorImpl<MachineInstr *> &InsInstrs,
+                                SmallVectorImpl<MachineInstr *> &DelInstrs,
+                                MachineTraceMetrics::Trace BlockTrace);
+
+  void verifyPatternOrder(MachineBasicBlock *MBB, MachineInstr &Root,
+                          SmallVector<MachineCombinerPattern, 16> &Patterns);
 };
 }
 
@@ -140,9 +167,6 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    DEBUG(dbgs() << "NEW INSTR ";
-          InstrPtr->print(dbgs(), TII);
-          dbgs() << "\n";);
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
       if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
@@ -242,6 +266,29 @@ static CombinerObjective getCombinerObjective(MachineCombinerPattern P) {
   }
 }
 
+/// Estimate the latency of the new and original instruction sequence by summing
+/// up the latencies of the inserted and deleted instructions. This assumes
+/// that the inserted and deleted instructions are dependent instruction chains,
+/// which might not hold in all cases.
+std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
+    MachineInstr &MI, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    MachineTraceMetrics::Trace BlockTrace) {
+  assert(!InsInstrs.empty() && "Only support sequences that insert instrs.");
+  unsigned NewRootLatency = 0;
+  // NewRoot is the last instruction in the \p InsInstrs vector.
+  MachineInstr *NewRoot = InsInstrs.back();
+  for (unsigned i = 0; i < InsInstrs.size() - 1; i++)
+    NewRootLatency += TSchedModel.computeInstrLatency(InsInstrs[i]);
+  NewRootLatency += getLatency(&MI, NewRoot, BlockTrace);
+
+  unsigned RootLatency = 0;
+  for (auto I : DelInstrs)
+    RootLatency += TSchedModel.computeInstrLatency(I);
+
+  return {NewRootLatency, RootLatency};
+}
+
 /// The DAGCombine code sequence ends in MI (Machine Instruction) Root.
 /// The new code sequence ends in MI NewRoot. A necessary condition for the new
 /// sequence to replace the old sequence is that it cannot lengthen the critical
@@ -257,56 +304,50 @@ bool MachineCombiner::improvesCriticalPathLen(
     bool SlackIsAccurate) {
   assert(TSchedModel.hasInstrSchedModelOrItineraries() &&
          "Missing machine model\n");
-  // NewRoot is the last instruction in the \p InsInstrs vector.
-  unsigned NewRootIdx = InsInstrs.size() - 1;
-  MachineInstr *NewRoot = InsInstrs[NewRootIdx];
-
   // Get depth and latency of NewRoot and Root.
   unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
   unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
 
-  DEBUG(dbgs() << "DEPENDENCE DATA FOR " << *Root << "\n";
-        dbgs() << " NewRootDepth: " << NewRootDepth << "\n";
-        dbgs() << " RootDepth: " << RootDepth << "\n");
+  LLVM_DEBUG(dbgs() << "  Dependence data for " << *Root << "\tNewRootDepth: "
+                    << NewRootDepth << "\tRootDepth: " << RootDepth);
 
   // For a transform such as reassociation, the cost equation is
   // conservatively calculated so that we must improve the depth (data
   // dependency cycles) in the critical path to proceed with the transform.
   // Being conservative also protects against inaccuracies in the underlying
   // machine trace metrics and CPU models.
-  if (getCombinerObjective(Pattern) == CombinerObjective::MustReduceDepth)
+  if (getCombinerObjective(Pattern) == CombinerObjective::MustReduceDepth) {
+    LLVM_DEBUG(dbgs() << "\tIt MustReduceDepth ");
+    LLVM_DEBUG(NewRootDepth < RootDepth
+                   ? dbgs() << "\t  and it does it\n"
+                   : dbgs() << "\t  but it does NOT do it\n");
     return NewRootDepth < RootDepth;
+  }
 
   // A more flexible cost calculation for the critical path includes the slack
   // of the original code sequence. This may allow the transform to proceed
   // even if the instruction depths (data dependency cycles) become worse.
 
   // Account for the latency of the inserted and deleted instructions by
-  // adding up their latencies. This assumes that the inserted and deleted
-  // instructions are dependent instruction chains, which might not hold
-  // in all cases.
-  unsigned NewRootLatency = 0;
-  for (unsigned i = 0; i < InsInstrs.size() - 1; i++)
-    NewRootLatency += TSchedModel.computeInstrLatency(InsInstrs[i]);
-  NewRootLatency += getLatency(Root, NewRoot, BlockTrace);
-
-  unsigned RootLatency = 0;
-  for (auto I : DelInstrs)
-    RootLatency += TSchedModel.computeInstrLatency(I);
+  unsigned NewRootLatency, RootLatency;
+  std::tie(NewRootLatency, RootLatency) =
+      getLatenciesForInstrSequences(*Root, InsInstrs, DelInstrs, BlockTrace);
 
   unsigned RootSlack = BlockTrace.getInstrSlack(*Root);
   unsigned NewCycleCount = NewRootDepth + NewRootLatency;
-  unsigned OldCycleCount = RootDepth + RootLatency +
-                           (SlackIsAccurate ? RootSlack : 0);
-  DEBUG(dbgs() << " NewRootLatency: " << NewRootLatency << "\n";
-        dbgs() << " RootLatency: " << RootLatency << "\n";
-        dbgs() << " RootSlack: " << RootSlack << " SlackIsAccurate="
-               << SlackIsAccurate << "\n";
-        dbgs() << " NewRootDepth + NewRootLatency = "
-               << NewCycleCount << "\n";
-        dbgs() << " RootDepth + RootLatency + RootSlack = "
-               << OldCycleCount << "\n";
-        );
+  unsigned OldCycleCount =
+      RootDepth + RootLatency + (SlackIsAccurate ? RootSlack : 0);
+  LLVM_DEBUG(dbgs() << "\n\tNewRootLatency: " << NewRootLatency
+                    << "\tRootLatency: " << RootLatency << "\n\tRootSlack: "
+                    << RootSlack << " SlackIsAccurate=" << SlackIsAccurate
+                    << "\n\tNewRootDepth + NewRootLatency = " << NewCycleCount
+                    << "\n\tRootDepth + RootLatency + RootSlack = "
+                    << OldCycleCount;);
+  LLVM_DEBUG(NewCycleCount <= OldCycleCount
+                 ? dbgs() << "\n\t  It IMPROVES PathLen because"
+                 : dbgs() << "\n\t  It DOES NOT improve PathLen because");
+  LLVM_DEBUG(dbgs() << "\n\t\tNewCycleCount = " << NewCycleCount
+                    << ", OldCycleCount = " << OldCycleCount << "\n");
 
   return NewCycleCount <= OldCycleCount;
 }
@@ -352,9 +393,14 @@ bool MachineCombiner::preservesResourceLen(
   unsigned ResLenAfterCombine =
       BlockTrace.getResourceLength(MBBarr, MSCInsArr, MSCDelArr);
 
-  DEBUG(dbgs() << "RESOURCE DATA: \n";
-        dbgs() << " resource len before: " << ResLenBeforeCombine
-               << " after: " << ResLenAfterCombine << "\n";);
+  LLVM_DEBUG(dbgs() << "\t\tResource length before replacement: "
+                    << ResLenBeforeCombine
+                    << " and after: " << ResLenAfterCombine << "\n";);
+  LLVM_DEBUG(
+      ResLenAfterCombine <= ResLenBeforeCombine
+          ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
+          : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
+                      "Length\n");
 
   return ResLenAfterCombine <= ResLenBeforeCombine;
 }
@@ -409,6 +455,35 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   NumInstCombined++;
 }
 
+// Check that the difference between original and new latency is decreasing for
+// later patterns. This helps to discover sub-optimal pattern orderings.
+void MachineCombiner::verifyPatternOrder(
+    MachineBasicBlock *MBB, MachineInstr &Root,
+    SmallVector<MachineCombinerPattern, 16> &Patterns) {
+  long PrevLatencyDiff = std::numeric_limits<long>::max();
+  (void)PrevLatencyDiff; // Variable is used in assert only.
+  for (auto P : Patterns) {
+    SmallVector<MachineInstr *, 16> InsInstrs;
+    SmallVector<MachineInstr *, 16> DelInstrs;
+    DenseMap<unsigned, unsigned> InstrIdxForVirtReg;
+    TII->genAlternativeCodeSequence(Root, P, InsInstrs, DelInstrs,
+                                    InstrIdxForVirtReg);
+    // Found pattern, but did not generate alternative sequence.
+    // This can happen e.g. when an immediate could not be materialized
+    // in a single instruction.
+    if (InsInstrs.empty() || !TSchedModel.hasInstrSchedModelOrItineraries())
+      continue;
+
+    unsigned NewRootLatency, RootLatency;
+    std::tie(NewRootLatency, RootLatency) = getLatenciesForInstrSequences(
+        Root, InsInstrs, DelInstrs, MinInstr->getTrace(MBB));
+    long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
+    assert(CurrentLatencyDiff <= PrevLatencyDiff &&
+           "Current pattern is better than previous pattern.");
+    PrevLatencyDiff = CurrentLatencyDiff;
+  }
+}
+
 /// Substitute a slow code sequence with a faster one by
 /// evaluating instruction combining pattern.
 /// The prototype of such a pattern is MUl + ADD -> MADD. Performs instruction
@@ -418,7 +493,7 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 /// sequence is shorter.
 bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   bool Changed = false;
-  DEBUG(dbgs() << "Combining MBB " << MBB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Combining MBB " << MBB->getName() << "\n");
 
   bool IncrementalUpdate = false;
   auto BlockIter = MBB->begin();
@@ -433,8 +508,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
-
-    DEBUG(dbgs() << "INSTR "; MI.dump(); dbgs() << "\n";);
     SmallVector<MachineCombinerPattern, 16> Patterns;
     // The motivating example is:
     //
@@ -459,10 +532,15 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
     // The algorithm does not try to evaluate all patterns and pick the best.
     // This is only an artificial restriction though. In practice there is
     // mostly one pattern, and getMachineCombinerPatterns() can order patterns
-    // based on an internal cost heuristic.
+    // based on an internal cost heuristic. If
+    // machine-combiner-verify-pattern-order is enabled, all patterns are
+    // checked to ensure later patterns do not provide better latency savings.
 
     if (!TII->getMachineCombinerPatterns(MI, Patterns))
       continue;
+
+    if (VerifyPatternOrder)
+      verifyPatternOrder(MBB, MI, Patterns);
 
     for (auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
@@ -477,6 +555,19 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       // in a single instruction.
       if (!NewInstCount)
         continue;
+
+      LLVM_DEBUG(if (dump_intrs) {
+        dbgs() << "\tFor the Pattern (" << (int)P << ") these instructions could be removed\n";
+        for (auto const *InstrPtr : DelInstrs) {
+          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+          InstrPtr->print(dbgs(), false, false, false, TII);
+        }
+        dbgs() << "\tThese instructions could replace the removed ones\n";
+        for (auto const *InstrPtr : InsInstrs) {
+          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+          InstrPtr->print(dbgs(), false, false, false, TII);
+        }
+      });
 
       bool SubstituteAlways = false;
       if (ML && TII->isThroughputPattern(P))
@@ -539,20 +630,22 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 }
 
 bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
-  TSchedModel.init(SchedModel, &STI, TII);
+  STI = &MF.getSubtarget();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
+  SchedModel = STI->getSchedModel();
+  TSchedModel.init(STI);
   MRI = &MF.getRegInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
   OptSize = MF.getFunction().optForSize();
 
-  DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
   if (!TII->useMachineCombiner()) {
-    DEBUG(dbgs() << "  Skipping pass: Target does not support machine combiner\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "  Skipping pass: Target does not support machine combiner\n");
     return false;
   }
 

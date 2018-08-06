@@ -48,7 +48,7 @@ class MCStreamer;
 class MCSymbol;
 class MachineFunction;
 
-/// \brief Collects and handles line tables information in a CodeView format.
+/// Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
   BumpPtrAllocator Allocator;
@@ -107,9 +107,23 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     unsigned SiteFuncId = 0;
   };
 
+  // Combines information from DILexicalBlock and LexicalScope.
+  struct LexicalBlock {
+    SmallVector<LocalVariable, 1> Locals;
+    SmallVector<LexicalBlock *, 1> Children;
+    const MCSymbol *Begin;
+    const MCSymbol *End;
+    StringRef Name;
+  };
+
   // For each function, store a vector of labels to its instructions, as well as
   // to the end of the function.
   struct FunctionInfo {
+    FunctionInfo() = default;
+
+    // Uncopyable.
+    FunctionInfo(const FunctionInfo &FI) = delete;
+
     /// Map from inlined call site to inlined instructions and child inlined
     /// call sites. Listed in program order.
     std::unordered_map<const DILocation *, InlineSite> InlineSites;
@@ -118,6 +132,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     SmallVector<const DILocation *, 1> ChildSites;
 
     SmallVector<LocalVariable, 1> Locals;
+
+    std::unordered_map<const DILexicalBlockBase*, LexicalBlock> LexicalBlocks;
+
+    // Lexical blocks containing local variables.
+    SmallVector<LexicalBlock *, 1> ChildBlocks;
 
     std::vector<std::pair<MCSymbol *, MDNode *>> Annotations;
 
@@ -128,6 +147,12 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     bool HaveLineInfo = false;
   };
   FunctionInfo *CurFn = nullptr;
+
+  // Map used to seperate variables according to the lexical scope they belong
+  // in.  This is populated by recordLocalVariable() before
+  // collectLexicalBlocks() separates the variables between the FunctionInfo
+  // and LexicalBlocks.
+  DenseMap<const LexicalScope *, SmallVector<LocalVariable, 1>> ScopeVariables;
 
   /// The set of comdat .debug$S sections that we've seen so far. Each section
   /// must start with a magic version number that must only be emitted once.
@@ -159,7 +184,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   /// Remember some debug info about each function. Keep it in a stable order to
   /// emit at the end of the TU.
-  MapVector<const Function *, FunctionInfo> FnDebugInfo;
+  MapVector<const Function *, std::unique_ptr<FunctionInfo>> FnDebugInfo;
 
   /// Map from full file path to .cv_file id. Full paths are built from DIFiles
   /// and are stored in FileToFilepathMap;
@@ -200,7 +225,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   using FileToFilepathMapTy = std::map<const DIFile *, std::string>;
   FileToFilepathMapTy FileToFilepathMap;
 
-  StringRef getFullFilepath(const DIFile *S);
+  StringRef getFullFilepath(const DIFile *File);
 
   unsigned maybeRecordFile(const DIFile *F);
 
@@ -214,7 +239,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   }
 
   /// Emit the magic version number at the start of a CodeView type or symbol
-  /// section. Appears at the front of every .debug$S or .debug$T section.
+  /// section. Appears at the front of every .debug$S or .debug$T or .debug$P
+  /// section.
   void emitCodeViewMagicVersion();
 
   void emitTypeInformation();
@@ -224,6 +250,10 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void emitCompilerInformation();
 
   void emitInlineeLinesSubsection();
+
+  void emitDebugInfoForThunk(const Function *GV,
+                             FunctionInfo &FI,
+                             const MCSymbol *Fn);
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 
@@ -253,15 +283,31 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &Processed);
 
+  // Construct the lexical block tree for a routine, pruning emptpy lexical
+  // scopes, and populate it with local variables.
+  void collectLexicalBlockInfo(SmallVectorImpl<LexicalScope *> &Scopes,
+                               SmallVectorImpl<LexicalBlock *> &Blocks,
+                               SmallVectorImpl<LocalVariable> &Locals);
+  void collectLexicalBlockInfo(LexicalScope &Scope,
+                               SmallVectorImpl<LexicalBlock *> &ParentBlocks,
+                               SmallVectorImpl<LocalVariable> &ParentLocals);
+
   /// Records information about a local variable in the appropriate scope. In
   /// particular, locals from inlined code live inside the inlining site.
-  void recordLocalVariable(LocalVariable &&Var, const DILocation *Loc);
+  void recordLocalVariable(LocalVariable &&Var, const LexicalScope *LS);
 
   /// Emits local variables in the appropriate order.
   void emitLocalVariableList(ArrayRef<LocalVariable> Locals);
 
   /// Emits an S_LOCAL record and its associated defined ranges.
   void emitLocalVariable(const LocalVariable &Var);
+
+  /// Emits a sequence of lexical block scopes and their children.
+  void emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
+                            const FunctionInfo& FI);
+
+  /// Emit a lexical block scope and its children.
+  void emitLexicalBlock(const LexicalBlock &Block, const FunctionInfo& FI);
 
   /// Translates the DIType to codeview if necessary and returns a type index
   /// for it.
@@ -279,12 +325,18 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void addToUDTs(const DIType *Ty);
 
+  void addUDTSrcLine(const DIType *Ty, codeview::TypeIndex TI);
+
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeArray(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeBasic(const DIBasicType *Ty);
-  codeview::TypeIndex lowerTypePointer(const DIDerivedType *Ty);
-  codeview::TypeIndex lowerTypeMemberPointer(const DIDerivedType *Ty);
+  codeview::TypeIndex lowerTypePointer(
+      const DIDerivedType *Ty,
+      codeview::PointerOptions PO = codeview::PointerOptions::None);
+  codeview::TypeIndex lowerTypeMemberPointer(
+      const DIDerivedType *Ty,
+      codeview::PointerOptions PO = codeview::PointerOptions::None);
   codeview::TypeIndex lowerTypeModifier(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeFunction(const DISubroutineType *Ty);
   codeview::TypeIndex lowerTypeVFTableShape(const DIDerivedType *Ty);
@@ -327,21 +379,21 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   unsigned getPointerSizeInBytes();
 
 protected:
-  /// \brief Gather pre-function debug information.
+  /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
-  /// \brief Gather post-function debug information.
+  /// Gather post-function debug information.
   void endFunctionImpl(const MachineFunction *) override;
 
 public:
-  CodeViewDebug(AsmPrinter *Asm);
+  CodeViewDebug(AsmPrinter *AP);
 
   void setSymbolSize(const MCSymbol *, uint64_t) override {}
 
-  /// \brief Emit the COFF section that holds the line table information.
+  /// Emit the COFF section that holds the line table information.
   void endModule() override;
 
-  /// \brief Process beginning of an instruction.
+  /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
 };
 

@@ -333,6 +333,7 @@ define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3) {
 ; X32-NEXT:    idivl %ecx
 ; X32-NEXT:    movb %dl, (%esi)
 ; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR37431:

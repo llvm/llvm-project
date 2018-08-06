@@ -21,6 +21,7 @@ add_llvm_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
+  DomTreeUpdater.cpp
   Function.cpp
   GVMaterializer.cpp
   Globals.cpp
@@ -52,7 +53,6 @@ add_llvm_library(LLVMCore
   User.cpp
   Value.cpp
   ValueSymbolTable.cpp
-  ValueTypes.cpp
   Verifier.cpp
 
   ADDITIONAL_HEADER_DIRS

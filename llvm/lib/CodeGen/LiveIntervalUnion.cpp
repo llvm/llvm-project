@@ -187,7 +187,7 @@ void LiveIntervalUnion::Array::init(LiveIntervalUnion::Allocator &Alloc,
   clear();
   Size = NSize;
   LIUs = static_cast<LiveIntervalUnion*>(
-    malloc(sizeof(LiveIntervalUnion)*NSize));
+      safe_malloc(sizeof(LiveIntervalUnion)*NSize));
   for (unsigned i = 0; i != Size; ++i)
     new(LIUs + i) LiveIntervalUnion(Alloc);
 }

@@ -30,5 +30,5 @@ std::string sys::getDefaultTargetTriple() {
     Triple = EnvTriple;
 #endif
 
-  return Triple::normalize(Triple);
+  return Triple;
 }

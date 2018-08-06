@@ -11,14 +11,14 @@
 ; warnings are issued when the Triples differ only in version numbers.
 
 ; CHECK1: target triple = "x86_64-apple-macosx10.10.0"
-; WARN1-NOT: WARNING
+; WARN1-NOT: warning
 ; CHECK2: target triple = "x86_64-apple-macosx10.9.0"
-; WARN2-NOT: WARNING
+; WARN2-NOT: warning
 
 ; i386 and x86_64 map to different ArchType enums.
-; WARN3: WARNING: Linking two modules of different target triples
+; WARN3: warning: Linking two modules of different target triples
 
 ; x86_64h and x86_64 map to the same ArchType enum.
-; WARN4-NOT: WARNING
+; WARN4-NOT: warning
 
 target triple = "x86_64-apple-macosx10.9.0"

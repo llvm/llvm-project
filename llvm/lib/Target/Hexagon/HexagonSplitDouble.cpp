@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -55,6 +56,8 @@ static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
     cl::desc("Maximum number of split partitions"));
 static cl::opt<bool> MemRefsFixed("hsdr-no-mem", cl::Hidden, cl::init(true),
     cl::desc("Do not split loads or stores"));
+  static cl::opt<bool> SplitAll("hsdr-split-all", cl::Hidden, cl::init(false),
+      cl::desc("Split all partitions"));
 
 namespace {
 
@@ -62,9 +65,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {
-      initializeHexagonSplitDoubleRegsPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon Split Double Registers";
@@ -97,6 +98,7 @@ namespace {
     bool isFixedInstr(const MachineInstr *MI) const;
     void partitionRegisters(UUSetMap &P2Rs);
     int32_t profit(const MachineInstr *MI) const;
+    int32_t profit(unsigned Reg) const;
     bool isProfitable(const USet &Part, LoopRegMap &IRM) const;
 
     void collectIndRegsForLoop(const MachineLoop *L, USet &Rs);
@@ -161,7 +163,7 @@ bool HexagonSplitDoubleRegs::isFixedInstr(const MachineInstr *MI) const {
   if (MI->mayLoad() || MI->mayStore())
     if (MemRefsFixed || isVolatileInstr(MI))
       return true;
-  if (MI->isDebugValue())
+  if (MI->isDebugInstr())
     return false;
 
   unsigned Opc = MI->getOpcode();
@@ -244,7 +246,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     if (FixedRegs[x])
       continue;
     unsigned R = TargetRegisterInfo::index2VirtReg(x);
-    DEBUG(dbgs() << printReg(R, TRI) << " ~~");
+    LLVM_DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
     for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
          U != Z; ++U) {
@@ -267,13 +269,13 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         unsigned u = TargetRegisterInfo::virtReg2Index(T);
         if (FixedRegs[u])
           continue;
-        DEBUG(dbgs() << ' ' << printReg(T, TRI));
+        LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));
         Asc.insert(T);
         // Make it symmetric.
         AssocMap[T].insert(R);
       }
     }
-    DEBUG(dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << '\n');
   }
 
   UUMap R2P;
@@ -304,15 +306,10 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     P2Rs[I.second].insert(I.first);
 }
 
-static inline int32_t profitImm(unsigned Lo, unsigned Hi) {
+static inline int32_t profitImm(unsigned Imm) {
   int32_t P = 0;
-  bool LoZ1 = false, HiZ1 = false;
-  if (Lo == 0 || Lo == 0xFFFFFFFF)
-    P += 10, LoZ1 = true;
-  if (Hi == 0 || Hi == 0xFFFFFFFF)
-    P += 10, HiZ1 = true;
-  if (!LoZ1 && !HiZ1 && Lo == Hi)
-    P += 3;
+  if (Imm == 0 || Imm == 0xFFFFFFFF)
+    P += 10;
   return P;
 }
 
@@ -342,21 +339,28 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
       uint64_t D = MI->getOperand(1).getImm();
       unsigned Lo = D & 0xFFFFFFFFULL;
       unsigned Hi = D >> 32;
-      return profitImm(Lo, Hi);
+      return profitImm(Lo) + profitImm(Hi);
     }
     case Hexagon::A2_combineii:
-    case Hexagon::A4_combineii:
-      return profitImm(MI->getOperand(1).getImm(),
-                       MI->getOperand(2).getImm());
+    case Hexagon::A4_combineii: {
+      const MachineOperand &Op1 = MI->getOperand(1);
+      const MachineOperand &Op2 = MI->getOperand(2);
+      int32_t Prof1 = Op1.isImm() ? profitImm(Op1.getImm()) : 0;
+      int32_t Prof2 = Op2.isImm() ? profitImm(Op2.getImm()) : 0;
+      return Prof1 + Prof2;
+    }
     case Hexagon::A4_combineri:
       ImmX++;
       // Fall through into A4_combineir.
       LLVM_FALLTHROUGH;
     case Hexagon::A4_combineir: {
       ImmX++;
-      int64_t V = MI->getOperand(ImmX).getImm();
-      if (V == 0 || V == -1)
-        return 10;
+      const MachineOperand &OpX = MI->getOperand(ImmX);
+      if (OpX.isImm()) {
+        int64_t V = OpX.getImm();
+        if (V == 0 || V == -1)
+          return 10;
+      }
       // Fall through into A2_combinew.
       LLVM_FALLTHROUGH;
     }
@@ -368,8 +372,11 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
 
     case Hexagon::A2_andp:
     case Hexagon::A2_orp:
-    case Hexagon::A2_xorp:
-      return 1;
+    case Hexagon::A2_xorp: {
+      unsigned Rs = MI->getOperand(1).getReg();
+      unsigned Rt = MI->getOperand(2).getReg();
+      return profit(Rs) + profit(Rt);
+    }
 
     case Hexagon::S2_asl_i_p_or: {
       unsigned S = MI->getOperand(3).getImm();
@@ -390,6 +397,25 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
       return -10;
   }
 
+  return 0;
+}
+
+int32_t HexagonSplitDoubleRegs::profit(unsigned Reg) const {
+  assert(TargetRegisterInfo::isVirtualRegister(Reg));
+
+  const MachineInstr *DefI = MRI->getVRegDef(Reg);
+  switch (DefI->getOpcode()) {
+    case Hexagon::A2_tfrpi:
+    case Hexagon::CONST64:
+    case Hexagon::A2_combineii:
+    case Hexagon::A4_combineii:
+    case Hexagon::A4_combineri:
+    case Hexagon::A4_combineir:
+    case Hexagon::A2_combinew:
+      return profit(DefI);
+    default:
+      break;
+  }
   return 0;
 }
 
@@ -442,7 +468,9 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
   if (FixedNum > 0 && LoopPhiNum > 0)
     TotalP -= 20*LoopPhiNum;
 
-  DEBUG(dbgs() << "Partition profit: " << TotalP << '\n');
+  LLVM_DEBUG(dbgs() << "Partition profit: " << TotalP << '\n');
+  if (SplitAll)
+    return true;
   return TotalP > 0;
 }
 
@@ -535,7 +563,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   Rs.insert(CmpR1);
   Rs.insert(CmpR2);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "For loop at " << printMBBReference(*HB) << " ind regs: ";
     dump_partition(dbgs(), Rs, *TRI);
     dbgs() << '\n';
@@ -710,23 +738,21 @@ void HexagonSplitDoubleRegs::splitCombine(MachineInstr *MI,
   assert(F != PairMap.end());
   const UUPair &P = F->second;
 
-  if (Op1.isImm()) {
+  if (!Op1.isReg()) {
     BuildMI(B, MI, DL, TII->get(Hexagon::A2_tfrsi), P.second)
-      .addImm(Op1.getImm());
-  } else if (Op1.isReg()) {
+      .add(Op1);
+  } else {
     BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), P.second)
       .addReg(Op1.getReg(), getRegState(Op1), Op1.getSubReg());
-  } else
-    llvm_unreachable("Unexpected operand");
+  }
 
-  if (Op2.isImm()) {
+  if (!Op2.isReg()) {
     BuildMI(B, MI, DL, TII->get(Hexagon::A2_tfrsi), P.first)
-      .addImm(Op2.getImm());
-  } else if (Op2.isReg()) {
+      .add(Op2);
+  } else {
     BuildMI(B, MI, DL, TII->get(TargetOpcode::COPY), P.first)
       .addReg(Op2.getReg(), getRegState(Op2), Op2.getSubReg());
-  } else
-    llvm_unreachable("Unexpected operand");
+  }
 }
 
 void HexagonSplitDoubleRegs::splitExt(MachineInstr *MI,
@@ -970,7 +996,7 @@ bool HexagonSplitDoubleRegs::splitInstr(MachineInstr *MI,
       const UUPairMap &PairMap) {
   using namespace Hexagon;
 
-  DEBUG(dbgs() << "Splitting: " << *MI);
+  LLVM_DEBUG(dbgs() << "Splitting: " << *MI);
   bool Split = false;
   unsigned Opc = MI->getOpcode();
 
@@ -1104,8 +1130,8 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
   const TargetRegisterClass *IntRC = &Hexagon::IntRegsRegClass;
   bool Changed = false;
 
-  DEBUG(dbgs() << "Splitting partition: "; dump_partition(dbgs(), Part, *TRI);
-        dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Splitting partition: ";
+             dump_partition(dbgs(), Part, *TRI); dbgs() << '\n');
 
   UUPairMap PairMap;
 
@@ -1122,8 +1148,9 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 
     unsigned LoR = MRI->createVirtualRegister(IntRC);
     unsigned HiR = MRI->createVirtualRegister(IntRC);
-    DEBUG(dbgs() << "Created mapping: " << printReg(DR, TRI) << " -> "
-                 << printReg(HiR, TRI) << ':' << printReg(LoR, TRI) << '\n');
+    LLVM_DEBUG(dbgs() << "Created mapping: " << printReg(DR, TRI) << " -> "
+                      << printReg(HiR, TRI) << ':' << printReg(LoR, TRI)
+                      << '\n');
     PairMap.insert(std::make_pair(DR, UUPair(LoR, HiR)));
   }
 
@@ -1160,11 +1187,11 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 }
 
 bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "Splitting double registers in function: "
-        << MF.getName() << '\n');
-
   if (skipFunction(MF.getFunction()))
     return false;
+
+  LLVM_DEBUG(dbgs() << "Splitting double registers in function: "
+                    << MF.getName() << '\n');
 
   auto &ST = MF.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();
@@ -1178,7 +1205,7 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
   collectIndRegs(IRM);
   partitionRegisters(P2Rs);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Register partitioning: (partition #0 is fixed)\n";
     for (UUSetMap::iterator I = P2Rs.begin(), E = P2Rs.end(); I != E; ++I) {
       dbgs() << '#' << I->first << " -> ";
@@ -1196,7 +1223,8 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
     if (Limit >= 0 && Counter >= Limit)
       break;
     USet &Part = I->second;
-    DEBUG(dbgs() << "Calculating profit for partition #" << I->first << '\n');
+    LLVM_DEBUG(dbgs() << "Calculating profit for partition #" << I->first
+                      << '\n');
     if (!isProfitable(Part, IRM))
       continue;
     Counter++;

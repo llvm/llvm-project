@@ -167,13 +167,6 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
     StringRef Class = Types.getTypeName(MI.getContainingType());
     Name = formatv("{0} {1}::*", Pointee, Class);
   } else {
-    if (Ptr.isConst())
-      Name.append("const ");
-    if (Ptr.isVolatile())
-      Name.append("volatile ");
-    if (Ptr.isUnaligned())
-      Name.append("__unaligned ");
-
     Name.append(Types.getTypeName(Ptr.getReferentType()));
 
     if (Ptr.getMode() == PointerMode::LValueReference)
@@ -182,6 +175,17 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
       Name.append("&&");
     else if (Ptr.getMode() == PointerMode::Pointer)
       Name.append("*");
+
+    // Qualifiers in pointer records apply to the pointer, not the pointee, so
+    // they go on the right.
+    if (Ptr.isConst())
+      Name.append(" const");
+    if (Ptr.isVolatile())
+      Name.append(" volatile");
+    if (Ptr.isUnaligned())
+      Name.append(" __unaligned");
+    if (Ptr.isRestrict())
+      Name.append(" __restrict");
   }
   return Error::success();
 }
@@ -189,7 +193,6 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
 Error TypeNameComputer::visitKnownRecord(CVType &CVR, ModifierRecord &Mod) {
   uint16_t Mods = static_cast<uint16_t>(Mod.getModifiers());
 
-  SmallString<256> TypeName;
   if (Mods & uint16_t(ModifierOptions::Const))
     Name.append("const ");
   if (Mods & uint16_t(ModifierOptions::Volatile))
@@ -233,6 +236,16 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, LabelRecord &R) {
   return Error::success();
 }
 
+Error TypeNameComputer::visitKnownRecord(CVType &CVR,
+                                         PrecompRecord &Precomp) {
+  return Error::success();
+}
+
+Error TypeNameComputer::visitKnownRecord(CVType &CVR,
+                                         EndPrecompRecord &EndPrecomp) {
+  return Error::success();
+}
+
 std::string llvm::codeview::computeTypeName(TypeCollection &Types,
                                             TypeIndex Index) {
   TypeNameComputer Computer(Types);
@@ -273,6 +286,8 @@ static int getSymbolNameOffset(CVSymbol Sym) {
   case SymbolKind::S_GMANDATA:
   case SymbolKind::S_LTHREAD32:
   case SymbolKind::S_GTHREAD32:
+  case SymbolKind::S_PROCREF:
+  case SymbolKind::S_LPROCREF:
     return 10;
   // See RegisterSym and LocalSym
   case SymbolKind::S_REGISTER:

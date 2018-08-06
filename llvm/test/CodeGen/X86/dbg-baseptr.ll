@@ -92,7 +92,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!10, !9}
 
-!8 = distinct !DISubprogram(name: "f0", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, unit: !2, variables: !5)
+!8 = distinct !DISubprogram(name: "f0", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, unit: !2, retainedNodes: !5)
 
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s", elements: !11)
 !10 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
@@ -106,9 +106,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !17 = !DIExpression()
 !18 = !DILocation(line: 5, scope: !8)
 
-!19 = distinct !DISubprogram(name: "f1", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, unit: !2, variables: !5)
+!19 = distinct !DISubprogram(name: "f1", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, unit: !2, retainedNodes: !5)
 !20 = !DILocalVariable(name: "input", arg: 1, scope: !19, file: !3, line: 5, type: !9)
 !21 = !DILocation(line: 5, scope: !19)
-!22 = distinct !DISubprogram(name: "f2", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, unit: !2, variables: !5)
+!22 = distinct !DISubprogram(name: "f2", file: !3, line: 5, type: !6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, unit: !2, retainedNodes: !5)
 !23 = !DILocalVariable(name: "input", arg: 1, scope: !22, file: !3, line: 5, type: !9)
 !24 = !DILocation(line: 5, scope: !22)

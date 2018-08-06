@@ -110,8 +110,8 @@ registers:
   - { id: 50, class: gpr64, preferred-register: '' }
   - { id: 51, class: gpr64, preferred-register: '' }
 liveins:
-  - { reg: '%a0_64', virtual-reg: '%5' }
-  - { reg: '%t9_64', virtual-reg: '' }
+  - { reg: '$a0_64', virtual-reg: '%5' }
+  - { reg: '$t9_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -135,18 +135,18 @@ constants:
 body:             |
   bb.0.entry:
     successors: %bb.1.entry._ZTW1k.exit_crit_edge(0x7fe00000), %bb.2.init.i.i(0x00200000)
-    liveins: %a0_64, %t9_64
+    liveins: $a0_64, $t9_64
 
     %50 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
-    %51 = DADDu %50, %t9_64
+    %51 = DADDu %50, $t9_64
     %43 = DADDiu %51, target-flags(mips-gpoff-lo) @_Z2k1i
-    %5 = COPY %a0_64
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    %5 = COPY $a0_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %6 = COPY %5.sub_32
-    %a0_64 = COPY %5
-    JAL @_Z1gi, csr_n64, implicit-def dead %ra, implicit %a0_64, implicit-def %sp, implicit-def %v0
-    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
-    %7 = COPY %v0
+    $a0_64 = COPY %5
+    JAL @_Z1gi, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %7 = COPY $v0
     %8 = ADDu %7, killed %6
     %9 = LUi64 target-flags(mips-highest) @v
     %10 = DADDiu killed %9, target-flags(mips-higher) @v
@@ -157,46 +157,46 @@ body:             |
     %0 = ADDu killed %8, killed %14
     %15 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
     %16 = DADDiu killed %15, target-flags(mips-tprel-lo) @__tls_guard
-    %17 = RDHWR64 %hwr29
-    %v1_64 = COPY %17
-    %18 = COPY %v1_64
+    %17 = RDHWR64 $hwr29, 0
+    $v1_64 = COPY %17
+    %18 = COPY $v1_64
     %19 = DADDu %18, killed %16
     %20 = LBu killed %19, 0 :: (dereferenceable load 1 from @__tls_guard)
-    BEQ killed %20, %zero, %bb.2.init.i.i, implicit-def dead %at
-    J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead %at
+    BEQ killed %20, $zero, %bb.2.init.i.i, implicit-def dead $at
+    J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead $at
 
   bb.1.entry._ZTW1k.exit_crit_edge:
     successors: %bb.3._ZTW1k.exit(0x80000000)
 
     %32 = LUi64 target-flags(mips-tprel-hi) @k
     %33 = DADDiu killed %32, target-flags(mips-tprel-lo) @k
-    %34 = RDHWR64 %hwr29
-    %v1_64 = COPY %34
-    %35 = COPY %v1_64
+    %34 = RDHWR64 $hwr29, 0
+    $v1_64 = COPY %34
+    %35 = COPY $v1_64
     %36 = DADDu %35, killed %33
     %1 = LW killed %36, 0 :: (dereferenceable load 4 from @k)
-    J %bb.3._ZTW1k.exit, implicit-def dead %at
+    J %bb.3._ZTW1k.exit, implicit-def dead $at
 
   bb.2.init.i.i:
     successors: %bb.3._ZTW1k.exit(0x80000000)
 
     %21 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
     %22 = DADDiu killed %21, target-flags(mips-tprel-lo) @__tls_guard
-    %23 = RDHWR64 %hwr29
-    %v1_64 = COPY %23
-    %24 = COPY %v1_64
+    %23 = RDHWR64 $hwr29, 0
+    $v1_64 = COPY %23
+    %24 = COPY $v1_64
     %25 = DADDu %24, killed %22
-    %26 = ADDiu %zero, 1
+    %26 = ADDiu $zero, 1
     SB killed %26, killed %25, 0 :: (store 1 into @__tls_guard)
     %27 = LUi64 target-flags(mips-tprel-hi) @k
     %28 = DADDiu killed %27, target-flags(mips-tprel-lo) @k
     %29 = DADDu %24, killed %28
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %30 = DADDiu %zero_64, 3
-    %a0_64 = COPY %30
-    JAL @_Z1gi, csr_n64, implicit-def dead %ra, implicit %a0_64, implicit-def %sp, implicit-def %v0
-    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
-    %31 = COPY %v0
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %30 = DADDiu $zero_64, 3
+    $a0_64 = COPY %30
+    JAL @_Z1gi, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %31 = COPY $v0
     SW %31, killed %29, 0 :: (store 4 into @k)
     %2 = COPY %31
 
@@ -211,26 +211,26 @@ body:             |
     %40 = DADDiu killed %39, target-flags(mips-abs-hi) @_ZTH1j
     %41 = DSLL killed %40, 16
     %42 = DADDiu killed %41, target-flags(mips-abs-lo) @_ZTH1j
-    BEQ64 killed %42, %zero_64, %bb.5._ZTW1j.exit, implicit-def dead %at
-    J %bb.4, implicit-def dead %at
+    BEQ64 killed %42, $zero_64, %bb.5._ZTW1j.exit, implicit-def dead $at
+    J %bb.4, implicit-def dead $at
 
   bb.4 (%ir-block.2):
     successors: %bb.5._ZTW1j.exit(0x80000000)
 
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    JAL @_ZTH1j, csr_n64, implicit-def dead %ra, implicit-def %sp
-    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    JAL @_ZTH1j, csr_n64, implicit-def dead $ra, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
   bb.5._ZTW1j.exit:
-    %44 = RDHWR64 %hwr29
-    %v1_64 = COPY %44
+    %44 = RDHWR64 $hwr29, 0
+    $v1_64 = COPY %44
     %45 = LD %43, target-flags(mips-gottprel) @j :: (load 8)
-    %46 = COPY %v1_64
+    %46 = COPY $v1_64
     %47 = DADDu %46, killed %45
     %48 = LW killed %47, 0 :: (dereferenceable load 4 from @j)
     %49 = ADDu %4, killed %48
-    %v0 = COPY %49
-    RetRA implicit %v0
+    $v0 = COPY %49
+    RetRA implicit $v0
 
 ...
 

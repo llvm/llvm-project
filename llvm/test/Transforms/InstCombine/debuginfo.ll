@@ -71,9 +71,11 @@ entry:
 ; NOLOWER-NOT: alloca
 ; NOLOWER-NOT: store
 ; NOLOWER-NOT: call void @llvm.dbg.declare
-; NOLOWER: call void @llvm.dbg.value(metadata i64 %o.coerce0, {{.*}})
+; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce0, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
+; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
 ; NOLOWER-NOT: store
-; NOLOWER: call void @llvm.dbg.value(metadata i64 %o.coerce1, {{.*}})
+; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce1, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
 ; NOLOWER-NOT: store
 ; NOLOWER: call void @tworegs_callee(i64 %o.coerce0, i64 %o.coerce1)
 
@@ -82,7 +84,7 @@ entry:
 !llvm.module.flags = !{!30}
 
 !0 = !DILocalVariable(name: "a", line: 78, arg: 1, scope: !1, file: !2, type: !6)
-!1 = distinct !DISubprogram(name: "passthru", line: 79, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !3, scopeLine: 79, file: !27, scope: !2, type: !4, variables: !25)
+!1 = distinct !DISubprogram(name: "passthru", line: 79, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !3, scopeLine: 79, file: !27, scope: !2, type: !4, retainedNodes: !25)
 !2 = !DIFile(filename: "string.h", directory: "Game")
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 127710)", isOptimized: true, emissionKind: FullDebug, file: !28, enums: !29, retainedTypes: !29)
 !4 = !DISubroutineType(types: !5)
@@ -104,7 +106,7 @@ entry:
 !29 = !{}
 !30 = !{i32 1, !"Debug Info Version", i32 3}
 
-!31 = distinct !DISubprogram(name: "tworegs", scope: !28, file: !28, line: 4, type: !4, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !3, variables: !34)
+!31 = distinct !DISubprogram(name: "tworegs", scope: !28, file: !28, line: 4, type: !4, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !3, retainedNodes: !34)
 !32 = !DILocation(line: 4, column: 23, scope: !31)
 !33 = !DILocation(line: 5, column: 3, scope: !31)
 !34 = !{!35}

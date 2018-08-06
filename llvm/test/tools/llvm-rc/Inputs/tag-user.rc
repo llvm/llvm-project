@@ -1,6 +1,9 @@
 500 500 {
   1, 2, 3, 4, 5, "data", L"wide data", 0xABCD, 0xABCDEF01L
 }
+501 RCDATA {
+  1, 2, 3, 4, 5, "data", L"wide data", 0xABCD, 0xABCDEF01L
+}
 
 NAME1 NAME2 {}
 

@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_cpcwrdrr
 
-    ; CHECK:      CPCRdRr %r20, %r22, implicit-def %sreg, implicit killed %sreg
-    ; CHECK-NEXT: CPCRdRr %r21, %r23, implicit-def %sreg, implicit killed %sreg
+    ; CHECK:      CPCRdRr $r20, $r22, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-NEXT: CPCRdRr $r21, $r23, implicit-def $sreg, implicit killed $sreg
 
-    CPCWRdRr %r21r20, %r23r22, implicit-def %sreg, implicit %sreg
+    CPCWRdRr $r21r20, $r23r22, implicit-def $sreg, implicit $sreg
 ...

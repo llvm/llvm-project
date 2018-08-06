@@ -158,8 +158,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -176,12 +176,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %eax = LEA64_32r killed %rax, 1, killed %rbp, 0
-    ; CHECK: %eax = ADD32ri8 %eax, -5
+    liveins: $rax, $rbp
+    ; CHECK: $eax = LEA64_32r killed $rax, 1, killed $rbp, 0
+    ; CHECK: $eax = ADD32ri8 $eax, -5
  
-    %eax = LEA64_32r killed %rax, 1, killed %rbp, -5, %noreg
-    RETQ %eax
+    $eax = LEA64_32r killed $rax, 1, killed $rbp, -5, $noreg
+    RETQ $eax
 
 ...
 ---
@@ -193,8 +193,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -211,12 +211,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %ebp = LEA64_32r killed %rax, 1,  killed %rbp, 0
-    ; CHECK: %ebp = ADD32ri8 %ebp, -5
+    liveins: $rax, $rbp
+    ; CHECK: $ebp = LEA64_32r killed $rax, 1,  killed $rbp, 0
+    ; CHECK: $ebp = ADD32ri8 $ebp, -5
  
-    %ebp = LEA64_32r killed %rbp, 1, killed %rax, -5, %noreg
-    RETQ %ebp
+    $ebp = LEA64_32r killed $rbp, 1, killed $rax, -5, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -228,8 +228,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -246,11 +246,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %ebp = LEA64_32r killed %rax, 1, killed %rbp, 0
+    liveins: $rax, $rbp
+    ; CHECK: $ebp = LEA64_32r killed $rax, 1, killed $rbp, 0
  
-    %ebp = LEA64_32r killed %rbp, 1, killed %rax, 0, %noreg
-    RETQ %ebp
+    $ebp = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -262,8 +262,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -280,12 +280,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rax = ADD64rr %rax, killed %rbp
-    ; CHECK: %rax = ADD64ri8 %rax, -5
+    liveins: $rax, $rbp
+    ; CHECK: $rax = ADD64rr $rax, killed $rbp
+    ; CHECK: $rax = ADD64ri8 $rax, -5
  
-    %rax = LEA64r killed %rax, 1, killed %rbp, -5, %noreg
-    RETQ %eax
+    $rax = LEA64r killed $rax, 1, killed $rbp, -5, $noreg
+    RETQ $eax
 
 ...
 ---
@@ -297,8 +297,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -315,12 +315,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rbp = ADD64rr %rbp, killed %rax
-    ; CHECK: %rbp = ADD64ri8 %rbp, -5
+    liveins: $rax, $rbp
+    ; CHECK: $rbp = ADD64rr $rbp, killed $rax
+    ; CHECK: $rbp = ADD64ri8 $rbp, -5
  
-    %rbp = LEA64r killed %rbp, 1, killed %rax, -5, %noreg
-    RETQ %ebp
+    $rbp = LEA64r killed $rbp, 1, killed $rax, -5, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -332,8 +332,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -350,11 +350,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rbp = ADD64rr %rbp, killed %rax
+    liveins: $rax, $rbp
+    ; CHECK: $rbp = ADD64rr $rbp, killed $rax
  
-    %rbp = LEA64r killed %rbp, 1, killed %rax, 0, %noreg
-    RETQ %ebp
+    $rbp = LEA64r killed $rbp, 1, killed $rax, 0, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -366,9 +366,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -385,12 +385,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, %noreg
-    ; CHECK: %ebx = ADD32ri8 %ebx, -5
+    liveins: $rax, $rbp
+    ; CHECK: $ebx = LEA64_32r killed $rax, 1, killed $rbp, 0, $noreg
+    ; CHECK: $ebx = ADD32ri8 $ebx, -5
  
-    %ebx = LEA64_32r killed %rax, 1, killed %rbp, -5, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rax, 1, killed $rbp, -5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -402,9 +402,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -421,12 +421,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, %noreg
-    ; CHECK: %ebx = ADD32ri8 %ebx, -5
+    liveins: $rax, $rbp
+    ; CHECK: $ebx = LEA64_32r killed $rax, 1, killed $rbp, 0, $noreg
+    ; CHECK: $ebx = ADD32ri8 $ebx, -5
  
-    %ebx = LEA64_32r killed %rbp, 1, killed %rax, -5, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rbp, 1, killed $rax, -5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -438,9 +438,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -457,11 +457,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, %noreg
+    liveins: $rax, $rbp
+    ; CHECK: $ebx = LEA64_32r killed $rax, 1, killed $rbp, 0, $noreg
  
-    %ebx = LEA64_32r killed %rbp, 1, killed %rax, 0, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -473,9 +473,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -492,12 +492,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, %noreg
-    ; CHECK: %rbx = ADD64ri8 %rbx, -5
+    liveins: $rax, $rbp
+    ; CHECK: $rbx = LEA64r killed $rax, 1, killed $rbp, 0, $noreg
+    ; CHECK: $rbx = ADD64ri8 $rbx, -5
  
-    %rbx = LEA64r killed %rax, 1, killed %rbp, -5, %noreg
-    RETQ %ebx
+    $rbx = LEA64r killed $rax, 1, killed $rbp, -5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -509,9 +509,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -528,12 +528,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, %noreg
-    ; CHECK: %rbx = ADD64ri8 %rbx, -5
+    liveins: $rax, $rbp
+    ; CHECK: $rbx = LEA64r killed $rax, 1, killed $rbp, 0, $noreg
+    ; CHECK: $rbx = ADD64ri8 $rbx, -5
  
-    %rbx = LEA64r killed %rbp, 1, killed %rax, -5, %noreg
-    RETQ %ebx
+    $rbx = LEA64r killed $rbp, 1, killed $rax, -5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -545,9 +545,9 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
-  - { reg: '%rbx' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rbx' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -564,11 +564,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, %noreg
+    liveins: $rax, $rbp
+    ; CHECK: $rbx = LEA64r killed $rax, 1, killed $rbp, 0, $noreg
  
-    %rbx = LEA64r killed %rbp, 1, killed %rax, 0, %noreg
-    RETQ %ebx
+    $rbx = LEA64r killed $rbp, 1, killed $rax, 0, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -580,8 +580,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rdi' }
-  - { reg: '%rbp' }
+  - { reg: '$rdi' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -598,13 +598,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rdi, %rbp
-    ; CHECK:  %r12 = LEA64r %noreg, 2, killed %r13, 5, %noreg
-    ; CHECK:  %r12 = ADD64rr %r12, killed %rbp
-    %rbp = KILL %rbp, implicit-def %rbp
-    %r13 = KILL %rdi, implicit-def %r13
-    %r12 = LEA64r killed %rbp, 2, killed %r13, 5, %noreg
-    RETQ %r12
+    liveins: $rdi, $rbp
+    ; CHECK:  $r12 = LEA64r $noreg, 2, killed $r13, 5, $noreg
+    ; CHECK:  $r12 = ADD64rr $r12, killed $rbp
+    $rbp = KILL $rbp, implicit-def $rbp
+    $r13 = KILL $rdi, implicit-def $r13
+    $r12 = LEA64r killed $rbp, 2, killed $r13, 5, $noreg
+    RETQ $r12
 
 ...
 ---
@@ -616,8 +616,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -634,12 +634,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %eax = LEA64_32r killed %rax, 1, killed %rbp, 0
-    ; CHECK: %eax = ADD32ri %eax, 129
+    liveins: $rax, $rbp
+    ; CHECK: $eax = LEA64_32r killed $rax, 1, killed $rbp, 0
+    ; CHECK: $eax = ADD32ri $eax, 129
  
-    %eax = LEA64_32r killed %rax, 1, killed %rbp, 129, %noreg
-    RETQ %eax
+    $eax = LEA64_32r killed $rax, 1, killed $rbp, 129, $noreg
+    RETQ $eax
 
 ...
 ---
@@ -651,8 +651,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -669,11 +669,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 0, %noreg
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $ebx = LEA64_32r killed $rbp, 1, killed $rbp, 0, $noreg
 
-    %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 0, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rbp, 1, killed $rbp, 0, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -685,8 +685,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -703,11 +703,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 5, %noreg
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $ebx = LEA64_32r killed $rbp, 1, killed $rbp, 5, $noreg
  
-    %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 5, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rbp, 1, killed $rbp, 5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -719,8 +719,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -737,11 +737,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %eax, %ebp, %ebx
-    ; CHECK: %ebx = LEA64_32r killed %rbp, 4, killed %rbp, 5, %noreg
+    liveins: $eax, $ebp, $ebx
+    ; CHECK: $ebx = LEA64_32r killed $rbp, 4, killed $rbp, 5, $noreg
  
-    %ebx = LEA64_32r killed %rbp, 4, killed %rbp, 5, %noreg
-    RETQ %ebx
+    $ebx = LEA64_32r killed $rbp, 4, killed $rbp, 5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -753,8 +753,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -771,12 +771,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp
-    ; CHECK: %rax = ADD64rr %rax, killed %rbp
-    ; CHECK: %rax = ADD64ri32 %rax, 129
+    liveins: $rax, $rbp
+    ; CHECK: $rax = ADD64rr $rax, killed $rbp
+    ; CHECK: $rax = ADD64ri32 $rax, 129
  
-    %rax = LEA64r killed %rax, 1, killed %rbp, 129, %noreg
-    RETQ %eax
+    $rax = LEA64r killed $rax, 1, killed $rbp, 129, $noreg
+    RETQ $eax
 
 ...
 ---
@@ -788,8 +788,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rax' }
-  - { reg: '%rbp' }
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -806,12 +806,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %rbx = MOV64rr %rbp
-    ; CHECK: %rbx = ADD64rr %rbx, %rbp
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $rbx = MOV64rr $rbp
+    ; CHECK: $rbx = ADD64rr $rbx, $rbp
  
-    %rbx = LEA64r %rbp, 1, %rbp, 0, %noreg
-    RETQ %ebx
+    $rbx = LEA64r killed $rbp, 1, $rbp, 0, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -823,8 +823,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -841,12 +841,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %rbx = LEA64r %noreg, 1,  %rbp, 5, %noreg
-    ; CHECK: %rbx = ADD64rr %rbx, %rbp
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $rbx = LEA64r $noreg, 1,  $rbp, 5, $noreg
+    ; CHECK: $rbx = ADD64rr $rbx, $rbp
  
-    %rbx = LEA64r %rbp, 1, %rbp, 5, %noreg
-    RETQ %ebx
+    $rbx = LEA64r $rbp, 1, $rbp, 5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -858,8 +858,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -876,12 +876,12 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %rbx = LEA64r %noreg, 4, %rbp, 5, %noreg
-    ; CHECK: %rbx = ADD64rr %rbx,  %rbp
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $rbx = LEA64r $noreg, 4, $rbp, 5, $noreg
+    ; CHECK: $rbx = ADD64rr $rbx,  $rbp
  
-    %rbx = LEA64r %rbp, 4,  %rbp, 5, %noreg
-    RETQ %ebx
+    $rbx = LEA64r $rbp, 4,  $rbp, 5, $noreg
+    RETQ $ebx
 
 ...
 ---
@@ -893,8 +893,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -911,11 +911,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %rbp = LEA64r killed %rbp, 4, killed %rbp, 0, %noreg
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $rbp = LEA64r killed $rbp, 4, killed $rbp, 0, $noreg
  
-    %rbp = LEA64r killed %rbp, 4, killed %rbp, 0, %noreg
-    RETQ %ebp
+    $rbp = LEA64r killed $rbp, 4, killed $rbp, 0, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -927,8 +927,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbp' }
-  - { reg: '%rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rax' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -945,19 +945,19 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %rbx = LEA64r killed %rax, 4, killed %rax, 5, %noreg
-    ; CHECK: %rbp = LEA64r killed %rbx, 4, killed %rbx, 0, %noreg
-    ; CHECK: %rbp = ADD64ri8 %rbp, 5
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $rbx = LEA64r killed $rax, 4, killed $rax, 5, $noreg
+    ; CHECK: $rbp = LEA64r killed $rbx, 4, killed $rbx, 0, $noreg
+    ; CHECK: $rbp = ADD64ri8 $rbp, 5
    
-    CMP64rr   %rax, killed %rbx, implicit-def %eflags
-    %rbx = LEA64r killed %rax, 4, killed %rax, 5, %noreg
-    JE_1 %bb.1, implicit %eflags
-    RETQ %ebx
+    CMP64rr   $rax, killed $rbx, implicit-def $eflags
+    $rbx = LEA64r killed $rax, 4, killed $rax, 5, $noreg
+    JE_1 %bb.1, implicit $eflags
+    RETQ $ebx
   bb.1:
-    liveins: %rax, %rbp, %rbx
-    %rbp = LEA64r killed %rbx, 4, killed %rbx, 5, %noreg
-    RETQ %ebp
+    liveins: $rax, $rbp, $rbx
+    $rbp = LEA64r killed $rbx, 4, killed $rbx, 5, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -969,8 +969,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbx' }
-  - { reg: '%rbp' }
+  - { reg: '$rbx' }
+  - { reg: '$rbp' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -987,11 +987,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %ebp = LEA64_32r killed %rbp, 4, killed %rbp, 0, %noreg
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $ebp = LEA64_32r killed $rbp, 4, killed $rbp, 0, $noreg
  
-    %ebp = LEA64_32r killed %rbp, 4, killed %rbp, 0, %noreg
-    RETQ %ebp
+    $ebp = LEA64_32r killed $rbp, 4, killed $rbp, 0, $noreg
+    RETQ $ebp
 
 ...
 ---
@@ -1003,8 +1003,8 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%rbp' }
-  - { reg: '%rax' }
+  - { reg: '$rbp' }
+  - { reg: '$rax' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -1021,19 +1021,19 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %rax, %rbp, %rbx
-    ; CHECK: %ebx = LEA64_32r killed %rax, 4, killed %rax, 5, %noreg
-    ; CHECK: %ebp = LEA64_32r killed %rbx, 4, killed %rbx, 0, %noreg
-    ; CHECK: %ebp = ADD32ri8 %ebp, 5
+    liveins: $rax, $rbp, $rbx
+    ; CHECK: $ebx = LEA64_32r killed $rax, 4, killed $rax, 5, $noreg
+    ; CHECK: $ebp = LEA64_32r killed $rbx, 4, killed $rbx, 0, $noreg
+    ; CHECK: $ebp = ADD32ri8 $ebp, 5
    
-    CMP64rr   %rax, killed %rbx, implicit-def %eflags
-    %ebx = LEA64_32r killed %rax, 4, killed %rax, 5, %noreg
-    JE_1 %bb.1, implicit %eflags
-    RETQ %ebx
+    CMP64rr   $rax, killed $rbx, implicit-def $eflags
+    $ebx = LEA64_32r killed $rax, 4, killed $rax, 5, $noreg
+    JE_1 %bb.1, implicit $eflags
+    RETQ $ebx
   bb.1:
-    liveins: %rax, %rbp, %rbx
-    %ebp = LEA64_32r killed %rbx, 4, killed %rbx, 5, %noreg
-    RETQ %ebp
+    liveins: $rax, $rbp, $rbx
+    $ebp = LEA64_32r killed $rbx, 4, killed $rbx, 5, $noreg
+    RETQ $ebp
 
 ...
 

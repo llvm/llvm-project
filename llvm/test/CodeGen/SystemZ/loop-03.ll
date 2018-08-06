@@ -15,7 +15,7 @@
 %7 = type { i64, i64, %8** }
 %8 = type { i64, i64*, i64*, %4*, i64, i32*, %5, i32, i64, i64 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
 
 define void @fun0(%0*) {
 ; CHECK-LABEL: .LBB0_4
@@ -72,7 +72,7 @@ define void @fun0(%0*) {
 
 ; <label>:24:                                     ; preds = %24, %14
   %25 = phi i64 [ %23, %14 ], [ %27, %24 ]
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* nonnull undef, i64 %4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* nonnull undef, i64 %4, i1 false)
   %26 = getelementptr inbounds i8, i8* null, i64 %4
   store i8* %26, i8** undef, align 8
   %27 = add i64 %25, -4
@@ -83,7 +83,7 @@ define void @fun0(%0*) {
   br i1 undef, label %31, label %30
 
 ; <label>:30:                                     ; preds = %29
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %26, i8* nonnull undef, i64 %4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %26, i8* nonnull undef, i64 %4, i1 false)
   br label %31
 
 ; <label>:31:                                     ; preds = %30, %29

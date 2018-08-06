@@ -9,6 +9,9 @@
 
 #include "llvm/Support/Parallel.h"
 #include "llvm/Config/llvm-config.h"
+
+#if LLVM_ENABLE_THREADS
+
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
@@ -19,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-/// \brief An abstract class that takes closures and runs them asynchronously.
+/// An abstract class that takes closures and runs them asynchronously.
 class Executor {
 public:
   virtual ~Executor() = default;
@@ -28,19 +31,8 @@ public:
   static Executor *getDefaultExecutor();
 };
 
-#if !LLVM_ENABLE_THREADS
-class SyncExecutor : public Executor {
-public:
-  virtual void add(std::function<void()> F) { F(); }
-};
-
-Executor *Executor::getDefaultExecutor() {
-  static SyncExecutor Exec;
-  return &Exec;
-}
-
-#elif defined(_MSC_VER)
-/// \brief An Executor that runs tasks via ConcRT.
+#if defined(_MSC_VER)
+/// An Executor that runs tasks via ConcRT.
 class ConcRTExecutor : public Executor {
   struct Taskish {
     Taskish(std::function<void()> Task) : Task(Task) {}
@@ -67,7 +59,7 @@ Executor *Executor::getDefaultExecutor() {
 }
 
 #else
-/// \brief An implementation of an Executor that runs closures on a thread pool
+/// An implementation of an Executor that runs closures on a thread pool
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:
@@ -127,7 +119,6 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
-#if LLVM_ENABLE_THREADS
 void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
   L.inc();
   Executor::getDefaultExecutor()->add([&, F] {
@@ -135,4 +126,4 @@ void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
     L.dec();
   });
 }
-#endif
+#endif // LLVM_ENABLE_THREADS

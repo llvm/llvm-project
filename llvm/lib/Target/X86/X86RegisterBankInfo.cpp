@@ -73,6 +73,8 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const LLT &Ty, bool isFP) {
       return PMI_GPR32;
     case 64:
       return PMI_GPR64;
+    case 128:
+      return PMI_VEC128;
       break;
     default:
       llvm_unreachable("Unsupported register size.");
@@ -83,6 +85,8 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const LLT &Ty, bool isFP) {
       return PMI_FP32;
     case 64:
       return PMI_FP64;
+    case 128:
+      return PMI_VEC128;
     default:
       llvm_unreachable("Unsupported register size.");
     }
@@ -169,6 +173,10 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
     return getSameOperandsMapping(MI, false);
     break;
   case TargetOpcode::G_FADD:
@@ -190,6 +198,34 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Instruction having only floating-point operands (all scalars in VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
     break;
+  case TargetOpcode::G_SITOFP: {
+    // Some of the floating-point instructions have mixed GPR and FP operands:
+    // fine-tune the computed mapping.
+    auto &Op0 = MI.getOperand(0);
+    auto &Op1 = MI.getOperand(1);
+    const LLT Ty0 = MRI.getType(Op0.getReg());
+    const LLT Ty1 = MRI.getType(Op1.getReg());
+    OpRegBankIdx[0] = getPartialMappingIdx(Ty0, /* isFP */ true);
+    OpRegBankIdx[1] = getPartialMappingIdx(Ty1, /* isFP */ false);
+    break;
+  }
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_ANYEXT: {
+    auto &Op0 = MI.getOperand(0);
+    auto &Op1 = MI.getOperand(1);
+    const LLT Ty0 = MRI.getType(Op0.getReg());
+    const LLT Ty1 = MRI.getType(Op1.getReg());
+
+    bool isFPTrunc = (Ty0.getSizeInBits() == 32 || Ty0.getSizeInBits() == 64) &&
+                     Ty1.getSizeInBits() == 128 && Opc == TargetOpcode::G_TRUNC;
+    bool isFPAnyExt =
+        Ty0.getSizeInBits() == 128 &&
+        (Ty1.getSizeInBits() == 32 || Ty1.getSizeInBits() == 64) &&
+        Opc == TargetOpcode::G_ANYEXT;
+
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ isFPTrunc || isFPAnyExt,
+                               OpRegBankIdx);
+  } break;
   default:
     // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP */ false, OpRegBankIdx);

@@ -6,3 +6,5 @@ fun:functional=functional
 
 fun:custom*=uninstrumented
 fun:custom*=custom
+
+fun:uninstrumented*=uninstrumented

@@ -122,8 +122,10 @@
 ; CHECK-LABEL: .debug_line contents:
 ; CHECK: Line table prologue
 ; CHECK-NOT: file_names[
-; SINGLE: file_names{{.*}} bar.h
-; CHECK: file_names{{.*}} bar.cpp
+; SINGLE: file_names[
+; SINGLE-NEXT: name: "bar.h"
+; CHECK: file_names[
+; CHECK-NEXT: name: "bar.cpp"
 ; CHECK-NOT: file_names[
 
 ; FISSION: .debug_line.dwo contents:
@@ -133,8 +135,10 @@
 ; FISSION-NOT: standard_opcode_lengths
 ; FISSION-NOT: include_directories
 ; FISSION-NOT: file_names[
-; FISSION: file_names{{.*}} bar.h
-; FISSION: file_names{{.*}} bar.cpp
+; FISSION: file_names[
+; FISSION-NEXT: name: "bar.h"
+; FISSION: file_names[
+; FISSION-NEXT: name: "bar.cpp"
 ; FISSION-NOT: file_names[
 
 ; CHECK-LABEL: .debug_str contents:
@@ -259,7 +263,7 @@ attributes #1 = { nounwind readnone }
 !37 = !{i32 2, !"Dwarf Version", i32 4}
 !38 = !{i32 1, !"Debug Info Version", i32 3}
 !39 = !{!"clang version 3.5 "}
-!40 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !2, file: !2, line: 5, type: !41, isLocal: false, isDefinition: true, scopeLine: 5, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, variables: !5)
+!40 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !2, file: !2, line: 5, type: !41, isLocal: false, isDefinition: true, scopeLine: 5, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, retainedNodes: !5)
 !41 = !DISubroutineType(types: !42)
 !42 = !{null}
 !43 = !DILocalVariable(name: "b", scope: !40, file: !2, line: 7, type: !44)
@@ -267,14 +271,14 @@ attributes #1 = { nounwind readnone }
 !45 = !DIExpression()
 !46 = !DILocation(line: 7, scope: !40)
 !47 = !DILocation(line: 8, scope: !40)
-!48 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 29, type: !41, isLocal: true, isDefinition: true, scopeLine: 29, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, variables: !5)
+!48 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 29, type: !41, isLocal: true, isDefinition: true, scopeLine: 29, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, retainedNodes: !5)
 !49 = !DILocation(line: 29, scope: !48)
-!50 = distinct !DISubprogram(name: "walrus", linkageName: "_ZN12_GLOBAL__N_16walrusC2Ev", scope: !18, file: !2, line: 25, type: !22, isLocal: true, isDefinition: true, scopeLine: 25, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, declaration: !21, variables: !5)
+!50 = distinct !DISubprogram(name: "walrus", linkageName: "_ZN12_GLOBAL__N_16walrusC2Ev", scope: !18, file: !2, line: 25, type: !22, isLocal: true, isDefinition: true, scopeLine: 25, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !34, declaration: !21, retainedNodes: !5)
 !51 = !DILocalVariable(name: "this", arg: 1, scope: !50, type: !52, flags: DIFlagArtificial | DIFlagObjectPointer)
 !52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64, align: 64)
 !53 = !DILocation(line: 0, scope: !50)
 !54 = !DILocation(line: 25, scope: !50)
-!55 = distinct !DISubprogram(linkageName: "_GLOBAL__I_a", scope: !2, file: !2, line: 25, type: !56, isLocal: true, isDefinition: true, scopeLine: 25, virtualIndex: 6, flags: DIFlagArtificial, isOptimized: false, unit: !34, variables: !5)
+!55 = distinct !DISubprogram(linkageName: "_GLOBAL__I_a", scope: !2, file: !2, line: 25, type: !56, isLocal: true, isDefinition: true, scopeLine: 25, virtualIndex: 6, flags: DIFlagArtificial, isOptimized: false, unit: !34, retainedNodes: !5)
 !56 = !DISubroutineType(types: !5)
 !57 = !DILocation(line: 25, scope: !55)
 

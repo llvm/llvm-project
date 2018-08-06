@@ -3,7 +3,7 @@
 # RUN: echo "src:*tiny*" > %t.blacklist.txt
 # RUN: llvm-cfi-verify %t.o %t.blacklist.txt | FileCheck %s
 
-# CHECK-LABEL: P
+# CHECK-LABEL: {{^Instruction: .* \(PROTECTED\)}}
 # CHECK-NEXT: tiny.cc:11
 # CHECK-NEXT: {{^Blacklist Match:.*blacklist\.txt:1$}}
 # CHECK-NEXT: ====> Unexpected Protected

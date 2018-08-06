@@ -48,14 +48,6 @@ elseif(LLVM_PARALLEL_LINK_JOBS)
   message(WARNING "Job pooling is only available with Ninja generators.")
 endif()
 
-if (LINKER_IS_LLD_LINK)
-  # Pass /MANIFEST:NO so that CMake doesn't run mt.exe on our binaries.  Adding
-  # manifests with mt.exe breaks LLD's symbol tables and takes as much time as
-  # the link. See PR24476.
-  append("/MANIFEST:NO"
-    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-endif()
-
 if( LLVM_ENABLE_ASSERTIONS )
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   if( NOT MSVC )
@@ -115,7 +107,7 @@ if(WIN32)
     set(LLVM_ON_UNIX 0)
   endif(CYGWIN)
 else(WIN32)
-  if(UNIX)
+  if(FUCHSIA OR UNIX)
     set(LLVM_ON_WIN32 0)
     set(LLVM_ON_UNIX 1)
     if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
@@ -123,9 +115,9 @@ else(WIN32)
     else()
       set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
     endif()
-  else(UNIX)
+  else(FUCHSIA OR UNIX)
     MESSAGE(SEND_ERROR "Unable to determine platform")
-  endif(UNIX)
+  endif(FUCHSIA OR UNIX)
 endif(WIN32)
 
 set(EXEEXT ${CMAKE_EXECUTABLE_SUFFIX})
@@ -353,6 +345,19 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+  # Allow users to request PDBs in release mode. CMake offeres the
+  # RelWithDebInfo configuration, but it uses different optimization settings
+  # (/Ob1 vs /Ob2 or -O2 vs -O3). LLVM provides this flag so that users can get
+  # PDBs without changing codegen.
+  option(LLVM_ENABLE_PDB OFF)
+  if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    # /DEBUG disables linker GC and ICF, but we want those in Release mode.
+    append("/DEBUG /OPT:REF /OPT:ICF"
+          CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+
   # /Zc:strictStrings is incompatible with VS12's (Visual Studio 2013's)
   # debug mode headers. Instead of only enabling them in VS2013's debug mode,
   # we'll just enable them for Visual Studio 2015 (VS 14, MSVC_VERSION 1900)
@@ -550,7 +555,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     append("-Wall" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 
-  append("-W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append("-Wcast-qual" CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
@@ -573,6 +578,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   add_flag_if_supported("-Wcovered-switch-default" COVERED_SWITCH_DEFAULT_FLAG)
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
+
+  # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
+  # LLVM's ADT classes.
+  check_cxx_compiler_flag("-Wclass-memaccess" CXX_SUPPORTS_CLASS_MEMACCESS_FLAG)
+  append_if(CXX_SUPPORTS_CLASS_MEMACCESS_FLAG "-Wno-class-memaccess" CMAKE_CXX_FLAGS)
 
   # Check if -Wnon-virtual-dtor warns even though the class is marked final.
   # If it does, don't add it. So it won't be added on clang 3.4 and older.
@@ -626,7 +636,7 @@ macro(append_common_sanitizer_flags)
       add_flag_if_supported("-gline-tables-only" GLINE_TABLES_ONLY)
     endif()
     # Use -O1 even in debug mode, otherwise sanitizers slowdown is too large.
-    if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND LLVM_OPTIMIZE_SANITIZED_BUILDS)
       add_flag_if_supported("-O1" O1)
     endif()
   elseif (CLANG_CL)
@@ -707,11 +717,13 @@ add_definitions( -D__STDC_CONSTANT_MACROS )
 add_definitions( -D__STDC_FORMAT_MACROS )
 add_definitions( -D__STDC_LIMIT_MACROS )
 
-# clang doesn't print colored diagnostics when invoked from Ninja
+# clang and gcc don't default-print colored diagnostics when invoked from Ninja.
 if (UNIX AND
-    CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND
-    CMAKE_GENERATOR STREQUAL "Ninja")
-  append("-fcolor-diagnostics" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    CMAKE_GENERATOR STREQUAL "Ninja" AND
+    (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+     (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+      NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9))))
+  append("-fdiagnostics-color" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
@@ -849,6 +861,13 @@ else()
   set(LLVM_ENABLE_PLUGINS ON)
 endif()
 
+set(LLVM_ENABLE_IDE_default OFF)
+if (XCODE OR MSVC_IDE OR CMAKE_EXTRA_GENERATOR)
+  set(LLVM_ENABLE_IDE_default ON)
+endif()
+option(LLVM_ENABLE_IDE "Generate targets and process sources for use with an IDE"
+    ${LLVM_ENABLE_IDE_default})
+
 function(get_compile_definitions)
   get_directory_property(top_dir_definitions DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
   foreach(definition ${top_dir_definitions})
@@ -861,3 +880,5 @@ function(get_compile_definitions)
   set(LLVM_DEFINITIONS "${result}" PARENT_SCOPE)
 endfunction()
 get_compile_definitions()
+
+option(LLVM_FORCE_ENABLE_STATS "Enable statistics collection for builds that wouldn't normally enable it" OFF)

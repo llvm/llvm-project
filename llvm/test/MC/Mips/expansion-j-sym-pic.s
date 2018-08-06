@@ -10,12 +10,6 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefix=MICRO
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -mattr=micromips -show-encoding |\
-# RUN:   FileCheck %s -check-prefix=MICRO
-
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -mattr=micromips -show-encoding |\
-# RUN:   FileCheck %s -check-prefix=MICRO
-
 # Repeat the tests using ELF output.
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj | \

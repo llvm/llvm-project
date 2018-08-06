@@ -18,10 +18,10 @@ define i32 @test(i32* %addr.i) {
 ; Same as above
 define i32 @test2(i32* %addr.i) {
 ; CHECK-LABEL: @test2
-; CHECK-NEXT: fence
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %addr.i, metadata [[var_a:![0-9]+]], metadata !DIExpression(DW_OP_deref))
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %addr.i, metadata [[var_a2:![0-9]+]], metadata !DIExpression(DW_OP_deref))
+; CHECK-NEXT: fence
 ; CHECK-NOT: load
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %addr.i, metadata [[var_a2:![0-9]+]], metadata !DIExpression(DW_OP_deref))
 ; CHECK: ret
   %a = load i32, i32* %addr.i, align 4
   fence release

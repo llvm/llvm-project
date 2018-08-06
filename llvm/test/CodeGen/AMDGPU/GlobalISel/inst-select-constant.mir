@@ -1,0 +1,61 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+
+--- |
+  define amdgpu_kernel void @constant(i32 addrspace(1)* %global0, i64 addrspace(1)* %global1) {ret void}
+...
+---
+
+name:            constant
+legalized:       true
+regBankSelected: true
+
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN-LABEL: name: constant
+    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    %1:vgpr(s64) = COPY $vgpr2_vgpr3
+
+    ; GCN: %{{[0-9]+}}:sreg_32 = S_MOV_B32 1
+    %2:sreg_32(s32) = G_CONSTANT i32 1
+
+    ; GCN: [[LO0:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
+    ; GCN: [[HI0:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1
+    ; GCN: %{{[0-9]+}}:sreg_64_xexec = REG_SEQUENCE [[LO0]], %subreg.sub0, [[HI0]], %subreg.sub1
+    %3:sgpr(s64) = G_CONSTANT i64 4294967296
+
+    ; GCN: %{{[0-9]+}}:sreg_32 = S_MOV_B32 1065353216
+    %4:sgpr(s32) = G_FCONSTANT float 1.0
+
+    ; GCN: [[LO1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
+    ; GCN: [[HI1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1072693248
+    ; GCN: %{{[0-9]+}}:sreg_64_xexec = REG_SEQUENCE [[LO1]], %subreg.sub0, [[HI1]], %subreg.sub1
+    %5:sgpr(s64) = G_FCONSTANT double 1.0
+
+    ; GCN: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 1
+    %6:vgpr(s32) = G_CONSTANT i32 1
+
+    ; GCN: [[LO2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0
+    ; GCN: [[HI2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1
+    ; GCN: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE [[LO2]], %subreg.sub0, [[HI2]], %subreg.sub1
+    %7:vgpr(s64) = G_CONSTANT i64 4294967296
+
+    ; GCN: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 1065353216
+    %8:vgpr(s32) = G_FCONSTANT float 1.0
+
+    ; GCN: [[LO3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0
+    ; GCN: [[HI3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1072693248
+    ; GCN: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE [[LO3]], %subreg.sub0, [[HI3]], %subreg.sub1
+    %9:vgpr(s64) = G_FCONSTANT double 1.0
+
+    G_STORE %2, %0 :: (volatile store 4 into %ir.global0)
+    G_STORE %4, %0 :: (volatile store 4 into %ir.global0)
+    G_STORE %6, %0 :: (volatile store 4 into %ir.global0)
+    G_STORE %8, %0 :: (volatile store 4 into %ir.global0)
+    G_STORE %3, %1 :: (volatile store 8 into %ir.global1)
+    G_STORE %5, %1 :: (volatile store 8 into %ir.global1)
+    G_STORE %7, %1 :: (volatile store 8 into %ir.global1)
+    G_STORE %9, %1 :: (volatile store 8 into %ir.global1)
+...
+---

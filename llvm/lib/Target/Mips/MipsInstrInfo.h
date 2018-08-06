@@ -86,6 +86,10 @@ public:
   /// Determine the opcode of a non-delay slot form for a branch if one exists.
   unsigned getEquivalentCompactForm(const MachineBasicBlock::iterator I) const;
 
+  /// Determine if the branch target is in range.
+  bool isBranchOffsetInRange(unsigned BranchOpc,
+                             int64_t BrOffset) const override;
+
   /// Predicate to determine if an instruction can go in a forbidden slot.
   bool SafeInForbiddenSlot(const MachineInstr &MI) const;
 

@@ -158,6 +158,10 @@ public:
     return false;
   }
 
+  /// Returns true if the target can safely skip saving callee-saved registers
+  /// for noreturn nounwind functions.
+  virtual bool enableCalleeSaveSkip(const MachineFunction &MF) const;
+
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   virtual void emitPrologue(MachineFunction &MF,
@@ -341,6 +345,14 @@ public:
           return false;
     return true;
   }
+
+  /// Return initial CFA offset value i.e. the one valid at the beginning of the
+  /// function (before any stack operations).
+  virtual int getInitialCFAOffset(const MachineFunction &MF) const;
+
+  /// Return initial CFA register value i.e. the one valid at the beginning of
+  /// the function (before any stack operations).
+  virtual unsigned getInitialCFARegister(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace

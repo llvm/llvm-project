@@ -1,4 +1,5 @@
 # RUN: llvm-nm -B -S %p/Inputs/weak.obj.elf-x86_64 | FileCheck --match-full-lines %s
+# RUN: llvm-nm -W -B -S %p/Inputs/weak.obj.elf-x86_64 | count 0
 
 CHECK:                  w weak_extern_func
 CHECK:                  w weak_extern_var

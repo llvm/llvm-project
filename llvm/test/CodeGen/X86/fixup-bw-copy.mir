@@ -40,14 +40,14 @@
 name:            test_movb_killed
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
-    %al = MOV8rr killed %dil
-    RETQ killed %al
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
+    $al = MOV8rr killed $dil
+    RETQ killed $al
 
 ...
 
@@ -55,14 +55,14 @@ body:             |
 name:            test_movb_impuse
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
-    %al = MOV8rr %dil, implicit %edi
-    RETQ killed %al
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
+    $al = MOV8rr $dil, implicit $edi
+    RETQ killed $al
 
 ...
 
@@ -70,14 +70,14 @@ body:             |
 name:            test_movb_impdef_gr64
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil, implicit-def %rax
-    %al = MOV8rr %dil, implicit-def %rax
-    RETQ killed %al
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $dil, implicit-def $rax
+    $al = MOV8rr $dil, implicit-def $rax
+    RETQ killed $al
 
 ...
 
@@ -85,14 +85,14 @@ body:             |
 name:            test_movb_impdef_gr32
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
-    %al = MOV8rr %dil, implicit-def %eax
-    RETQ killed %al
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
+    $al = MOV8rr $dil, implicit-def $eax
+    RETQ killed $al
 
 ...
 
@@ -100,14 +100,14 @@ body:             |
 name:            test_movb_impdef_gr16
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
-    %al = MOV8rr %dil, implicit-def %ax
-    RETQ killed %al
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
+    $al = MOV8rr $dil, implicit-def $ax
+    RETQ killed $al
 
 ...
 
@@ -115,14 +115,14 @@ body:             |
 name:            test_movw_impdef_gr32
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %di
-    %ax = MOV16rr %di, implicit-def %eax
-    RETQ killed %ax
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $di
+    $ax = MOV16rr $di, implicit-def $eax
+    RETQ killed $ax
 
 ...
 
@@ -130,13 +130,13 @@ body:             |
 name:            test_movw_impdef_gr64
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi' }
+  - { reg: '$edi' }
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
-    ; CHECK: %eax = MOV32rr undef %edi, implicit %di, implicit-def %rax
-    %ax = MOV16rr %di, implicit-def %rax
-    RETQ killed %ax
+    ; CHECK: $eax = MOV32rr undef $edi, implicit $di, implicit-def $rax
+    $ax = MOV16rr $di, implicit-def $rax
+    RETQ killed $ax
 
 ...

@@ -5,4 +5,4 @@ symbol that has st_shndx == SHN_XINDEX. To print the section name llvm-objdump
 has to use the shndx section.
 
 CHECK:      RELOCATION RECORDS FOR [.rela.text]:
-CHECK-NEXT: 0000000000000000 R_X86_64_32 bar+0
+CHECK-NEXT: 0000000000000000 R_X86_64_32 bar

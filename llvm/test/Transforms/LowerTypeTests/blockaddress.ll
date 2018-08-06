@@ -1,7 +1,7 @@
 ; RUN: opt -S %s -lowertypetests | FileCheck %s
 
 
-; CHECK: define internal i8* @f2.cfi() !type !0 {
+; CHECK: define hidden i8* @f2.cfi() !type !0 {
 ; CHECK-NEXT:  br label %b
 ; CHECK: b:
 ; CHECK-NEXT:  ret i8* blockaddress(@f2.cfi, %b)

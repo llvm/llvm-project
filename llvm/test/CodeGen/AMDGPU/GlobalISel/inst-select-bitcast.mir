@@ -1,0 +1,26 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+
+--- |
+  define amdgpu_kernel void @bitcast(i32 addrspace(1)* %global0) {ret void}
+...
+---
+
+name:            bitcast
+legalized:       true
+regBankSelected: true
+
+# GCN-LABEL: name: bitcast
+# GCN: [[A:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+# GCN: [[B:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+# GCN: FLAT_STORE_DWORD [[B]], [[A]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr3_vgpr4
+    %0:vgpr(s32) = COPY $vgpr0
+    %1:vgpr(s64) = COPY $vgpr3_vgpr4
+    %2:vgpr(<2 x s16>) = G_BITCAST %0
+    %3:vgpr(s32) = G_BITCAST %2
+    G_STORE %3, %1 :: (store 4 into %ir.global0)
+...
+---

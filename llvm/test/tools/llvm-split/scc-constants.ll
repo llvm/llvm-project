@@ -5,8 +5,8 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK1 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK0 %s
 
-; CHECK0: declare i32 @foo
-; CHECK0: declare i32 @baz
+; CHECK0: declare dso_local i32 @foo
+; CHECK0: declare dso_local i32 @baz
 ; CHECK0: declare i32 @bar
 ; CHECK0: declare i32 @bar2
 

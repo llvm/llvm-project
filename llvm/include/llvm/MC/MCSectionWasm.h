@@ -26,8 +26,6 @@ class MCSymbol;
 
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {
-private:
-
   /// This is the name of the section.  The referenced memory is owned by
   /// TargetLoweringObjectFileWasm's WasmUniqueMap.
   StringRef SectionName;
@@ -39,17 +37,17 @@ private:
   // The offset of the MC function/data section in the wasm code/data section.
   // For data relocations the offset is relative to start of the data payload
   // itself and does not include the size of the section header.
-  uint64_t SectionOffset;
+  uint64_t SectionOffset = 0;
 
-  // For data sections, this is the offset of the corresponding wasm data
+  // For data sections, this is the index of of the corresponding wasm data
   // segment
-  uint64_t MemoryOffset;
+  uint32_t SegmentIndex = 0;
 
   friend class MCContext;
   MCSectionWasm(StringRef Section, SectionKind K, const MCSymbolWasm *group,
                 unsigned UniqueID, MCSymbol *Begin)
       : MCSection(SV_Wasm, K, Begin), SectionName(Section), UniqueID(UniqueID),
-        Group(group), SectionOffset(0) {}
+        Group(group) {}
 
   void setSectionName(StringRef Name) { SectionName = Name; }
 
@@ -79,8 +77,8 @@ public:
   uint64_t getSectionOffset() const { return SectionOffset; }
   void setSectionOffset(uint64_t Offset) { SectionOffset = Offset; }
 
-  uint32_t getMemoryOffset() const { return MemoryOffset; }
-  void setMemoryOffset(uint32_t Offset) { MemoryOffset = Offset; }
+  uint32_t getSegmentIndex() const { return SegmentIndex; }
+  void setSegmentIndex(uint32_t Index) { SegmentIndex = Index; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_Wasm; }
 };

@@ -50,6 +50,15 @@ FunctionPass *createX86FloatingPointStackifierPass();
 /// transition penalty between functions encoded with AVX and SSE.
 FunctionPass *createX86IssueVZeroUpperPass();
 
+/// This pass instruments the function prolog to save the return address to a
+/// 'shadow call stack' and the function epilog to check that the return address
+/// did not change during function execution.
+FunctionPass *createShadowCallStackPass();
+
+/// This pass inserts ENDBR instructions before indirect jump/call
+/// destinations as part of CET IBT mechanism.
+FunctionPass *createX86IndirectBranchTrackingPass();
+
 /// Return a pass that pads short functions with NOOPs.
 /// This will prevent a stall when returning on the Atom.
 FunctionPass *createX86PadShortFunctions();
@@ -65,6 +74,9 @@ FunctionPass *createX86OptimizeLEAs();
 
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
+
+/// Return a pass that avoids creating store forward block issues in the hardware.
+FunctionPass *createX86AvoidStoreForwardingBlocks();
 
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
 FunctionPass *createX86FlagsCopyLoweringPass();
@@ -114,6 +126,8 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   X86RegisterBankInfo &);
 
 void initializeEvexToVexInstPassPass(PassRegistry &);
+
+FunctionPass *createX86SpeculativeLoadHardeningPass();
 
 } // End llvm namespace
 

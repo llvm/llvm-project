@@ -36,7 +36,7 @@ class LLVMContext;
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
 /// Int64Ty.
-/// @brief Integer representation type
+/// Integer representation type
 class IntegerType : public Type {
   friend class LLVMContextImpl;
 
@@ -59,10 +59,10 @@ public:
   /// If an IntegerType with the same NumBits value was previously instantiated,
   /// that instance will be returned. Otherwise a new one will be created. Only
   /// one instance with a given NumBits value is ever created.
-  /// @brief Get or create an IntegerType instance.
+  /// Get or create an IntegerType instance.
   static IntegerType *get(LLVMContext &C, unsigned NumBits);
 
-  /// @brief Get the number of bits in this IntegerType
+  /// Get the number of bits in this IntegerType
   unsigned getBitWidth() const { return getSubclassData(); }
 
   /// Return a bitmask with ones set for all of the bits that can be set by an
@@ -79,13 +79,13 @@ public:
 
   /// For example, this is 0xFF for an 8 bit integer, 0xFFFF for i16, etc.
   /// @returns a bit mask with ones set for all the bits of this type.
-  /// @brief Get a bit mask for this type.
+  /// Get a bit mask for this type.
   APInt getMask() const;
 
   /// This method determines if the width of this IntegerType is a power-of-2
   /// in terms of 8 bit bytes.
   /// @returns true if this is a power-of-2 byte width.
-  /// @brief Is this a power-of-2 byte-width IntegerType ?
+  /// Is this a power-of-2 byte-width IntegerType ?
   bool isPowerOf2ByteWidth() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
@@ -193,7 +193,7 @@ public:
 /// StructType::create() forms.
 ///
 /// Independent of what kind of struct you have, the body of a struct type are
-/// laid out in memory consequtively with the elements directly one after the
+/// laid out in memory consecutively with the elements directly one after the
 /// other (if the struct is packed) or (if not packed) with padding between the
 /// elements as defined by DataLayout (which is required to match what the code
 /// generator for a target expects).

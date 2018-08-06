@@ -1,3 +1,4 @@
+// REQUIRES: zlib
 // Check zlib-gnu style
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple x86_64-pc-linux-gnu < %s -o %t
 // RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-GNU-STYLE %s
@@ -12,8 +13,6 @@
 // RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu < %s \
 // RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS-ZLIB %s
 // RUN: llvm-readobj -sections %t | FileCheck --check-prefix=ZLIB-STYLE-FLAGS %s
-
-// REQUIRES: zlib
 
 // Don't compress small sections, such as this simple debug_abbrev example
 // CHECK-GNU-STYLE: Contents of section .debug_abbrev:

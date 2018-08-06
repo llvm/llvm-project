@@ -95,6 +95,12 @@ void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
     for (StructType *Ty : SpeculativeDstOpaqueTypes)
       DstResolvedOpaqueTypes.erase(Ty);
   } else {
+    // SrcTy and DstTy are recursively ismorphic. We clear names of SrcTy
+    // and all its descendants to lower amount of renaming in LLVM context
+    // Renaming occurs because we load all source modules to the same context
+    // and declaration with existing name gets renamed (i.e Foo -> Foo.42).
+    // As a result we may get several different types in the destination
+    // module, which are in fact the same.
     for (Type *Ty : SpeculativeTypes)
       if (auto *STy = dyn_cast<StructType>(Ty))
         if (STy->hasName())
@@ -235,18 +241,27 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // These are types that LLVM itself will unique.
   bool IsUniqued = !isa<StructType>(Ty) || cast<StructType>(Ty)->isLiteral();
 
-#ifndef NDEBUG
   if (!IsUniqued) {
+    StructType *STy = cast<StructType>(Ty);
+    // This is actually a type from the destination module, this can be reached
+    // when this type is loaded in another module, added to DstStructTypesSet,
+    // and then we reach the same type in another module where it has not been
+    // added to MappedTypes. (PR37684)
+    if (STy->getContext().isODRUniquingDebugTypes() && !STy->isOpaque() &&
+        DstStructTypesSet.hasType(STy))
+      return *Entry = STy;
+
+#ifndef NDEBUG
     for (auto &Pair : MappedTypes) {
       assert(!(Pair.first != Ty && Pair.second == Ty) &&
              "mapping to a source type");
     }
-  }
 #endif
 
-  if (!IsUniqued && !Visited.insert(cast<StructType>(Ty)).second) {
-    StructType *DTy = StructType::create(Ty->getContext());
-    return *Entry = DTy;
+    if (!Visited.insert(STy).second) {
+      StructType *DTy = StructType::create(Ty->getContext());
+      return *Entry = DTy;
+    }
   }
 
   // If this is not a recursive type, then just map all of the elements and
@@ -676,6 +691,14 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
   return NewGV;
 }
 
+static StringRef getTypeNamePrefix(StringRef Name) {
+  size_t DotPos = Name.rfind('.');
+  return (DotPos == 0 || DotPos == StringRef::npos || Name.back() == '.' ||
+          !isdigit(static_cast<unsigned char>(Name[DotPos + 1])))
+             ? Name
+             : Name.substr(0, DotPos);
+}
+
 /// Loop over all of the linked values to compute type mappings.  For example,
 /// if we link "extern Foo *x" and "Foo *x = NULL", then we have two struct
 /// types 'Foo' but one got renamed when the module was loaded into the same
@@ -722,15 +745,12 @@ void IRLinker::computeTypeMapping() {
       continue;
     }
 
-    // Check to see if there is a dot in the name followed by a digit.
-    size_t DotPos = ST->getName().rfind('.');
-    if (DotPos == 0 || DotPos == StringRef::npos ||
-        ST->getName().back() == '.' ||
-        !isdigit(static_cast<unsigned char>(ST->getName()[DotPos + 1])))
+    auto STTypePrefix = getTypeNamePrefix(ST->getName());
+    if (STTypePrefix.size()== ST->getName().size())
       continue;
 
     // Check to see if the destination module has a struct with the prefix name.
-    StructType *DST = DstM.getTypeByName(ST->getName().substr(0, DotPos));
+    StructType *DST = DstM.getTypeByName(STTypePrefix);
     if (!DST)
       continue;
 
@@ -928,7 +948,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     if (DoneLinkingBodies)
       return nullptr;
 
-    NewGV = copyGlobalValueProto(SGV, ShouldLink);
+    NewGV = copyGlobalValueProto(SGV, ShouldLink || ForAlias);
     if (ShouldLink || !ForAlias)
       forceRenaming(NewGV, SGV->getName());
   }
@@ -1040,14 +1060,10 @@ void IRLinker::prepareCompileUnitsForImport() {
     ValueMap.MD()[CU->getRawEnumTypes()].reset(nullptr);
     ValueMap.MD()[CU->getRawMacros()].reset(nullptr);
     ValueMap.MD()[CU->getRawRetainedTypes()].reset(nullptr);
-    // If we ever start importing global variable defs, we'll need to
-    // add their DIGlobalVariable to the globals list on the imported
-    // DICompileUnit. Confirm none are imported, and then we can
-    // map the list of global variables to nullptr.
-    assert(none_of(
-               ValuesToLink,
-               [](const GlobalValue *GV) { return isa<GlobalVariable>(GV); }) &&
-           "Unexpected importing of a GlobalVariable definition");
+    // We import global variables only temporarily in order for instcombine
+    // and globalopt to perform constant folding and static constructor
+    // evaluation. After that elim-avail-extern will covert imported globals
+    // back to declarations, so we don't need debug info for them.
     ValueMap.MD()[CU->getRawGlobalVariables()].reset(nullptr);
 
     // Imported entities only need to be mapped in if they have local

@@ -1,6 +1,7 @@
 set(LLVM_TARGET_DEFINITIONS Attributes.td)
-tablegen(LLVM Attributes.gen -gen-attrs)
+tablegen(LLVM Attributes.inc -gen-attrs)
 
 set(LLVM_TARGET_DEFINITIONS Intrinsics.td)
-tablegen(LLVM Intrinsics.gen -gen-intrinsic)
+tablegen(LLVM IntrinsicEnums.inc -gen-intrinsic-enums)
+tablegen(LLVM IntrinsicImpl.inc -gen-intrinsic-impl)
 add_public_tablegen_target(intrinsics_gen)

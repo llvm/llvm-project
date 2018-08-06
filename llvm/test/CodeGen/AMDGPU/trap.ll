@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-TRAP %s
+; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
 
 ; RUN: llc -mtriple=amdgcn--amdhsa -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
@@ -15,18 +15,18 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 declare void @llvm.trap() #0
-declare void @llvm.debugtrap() #0
+declare void @llvm.debugtrap() #1
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   204
+; MESA-TRAP-NEXT: .long   208
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   140
+; NOMESA-TRAP-NEXT: .long   144
 
 ; GCN-LABEL: {{^}}hsa_trap:
-; HSA-TRAP: enable_trap_handler = 1
+; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
 ; HSA-TRAP: s_trap 2
 
@@ -38,24 +38,27 @@ declare void @llvm.debugtrap() #0
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-MESA-TRAP: s_endpgm
-define amdgpu_kernel void @hsa_trap() {
+define amdgpu_kernel void @hsa_trap(i32 addrspace(1)* nocapture readonly %arg0) {
+  store volatile i32 1, i32 addrspace(1)* %arg0
   call void @llvm.trap()
+  unreachable
+  store volatile i32 2, i32 addrspace(1)* %arg0
   ret void
 }
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   204
+; MESA-TRAP-NEXT: .long   208
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   140
+; NOMESA-TRAP-NEXT: .long   144
 
-; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (): debugtrap handler not supported
+; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
 ; GCN-LABEL: {{^}}hsa_debugtrap:
-; HSA-TRAP: enable_trap_handler = 1
-; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
+; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_trap 3
+; HSA-TRAP: flat_store_dword v[0:1], v3
 
 ; for llvm.debugtrap in non-hsa path without ABI, generate a warning and a s_endpgm instruction
 ; NO-HSA-TRAP: enable_trap_handler = 0
@@ -64,8 +67,10 @@ define amdgpu_kernel void @hsa_trap() {
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-MESA-TRAP: s_endpgm
-define amdgpu_kernel void @hsa_debugtrap() {
+define amdgpu_kernel void @hsa_debugtrap(i32 addrspace(1)* nocapture readonly %arg0) {
+  store volatile i32 1, i32 addrspace(1)* %arg0
   call void @llvm.debugtrap()
+  store volatile i32 2, i32 addrspace(1)* %arg0
   ret void
 }
 
@@ -75,8 +80,11 @@ define amdgpu_kernel void @hsa_debugtrap() {
 ; NO-TRAP-BIT: enable_trap_handler = 0
 ; NO-HSA-TRAP: s_endpgm
 ; NO-MESA-TRAP: s_endpgm
-define amdgpu_kernel void @trap() {
+define amdgpu_kernel void @trap(i32 addrspace(1)* nocapture readonly %arg0) {
+  store volatile i32 1, i32 addrspace(1)* %arg0
   call void @llvm.trap()
+  unreachable
+  store volatile i32 2, i32 addrspace(1)* %arg0
   ret void
 }
 
@@ -84,10 +92,10 @@ define amdgpu_kernel void @trap() {
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
 
-; HSA: BB{{[0-9]_[0-9]+]]: ; %trap
+; HSA-TRAP: BB{{[0-9]_[0-9]+}}: ; %trap
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
 ; HSA-TRAP-NEXT: s_trap 2
-define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %arg0) local_unnamed_addr #1 {
+define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %arg0) local_unnamed_addr {
 entry:
   %tmp29 = load volatile i32, i32 addrspace(1)* %arg0
   %cmp = icmp eq i32 %tmp29, -1
@@ -98,7 +106,9 @@ trap:
   unreachable
 
 ret:
+  store volatile i32 3, i32 addrspace(1)* %arg0
   ret void
 }
 
 attributes #0 = { nounwind noreturn }
+attributes #1 = { nounwind }

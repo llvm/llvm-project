@@ -9,7 +9,7 @@
 
 //Rdd[+]=vrmpybsu(Rss,Rtt)
 //Rdd[+]=vrmpybuu(Rss,Rtt)
-let Predicates = [HasV5T]  in {
+let Predicates = [HasV5]  in {
 def : T_PP_pat  <M5_vrmpybsu, int_hexagon_M5_vrmpybsu>;
 def : T_PP_pat  <M5_vrmpybuu, int_hexagon_M5_vrmpybuu>;
 

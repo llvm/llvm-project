@@ -32,19 +32,19 @@ define i32 @foo(i32 %guard, ...) {
 ; issue the memcpy.
 ; CHECK: [[GRP:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i64 {{%.*}}
 ; CHECK: [[GRSIZE:%.*]] = sub i64 64, {{%.*}}
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{%.*}}, i8* [[GRP]], i64 [[GRSIZE]], i32 8, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{%.*}}, i8* align 8 [[GRP]], i64 [[GRSIZE]], i1 false)
 
 ; Propagate the VR shadow values on for the va_list::__vr_top, adjust the 
 ; offset in the __msan_va_arg_tls based on va_list:__vr_off, and finally
 ; issue the memcpy.
 ; CHECK: [[VRP:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i64 {{%.*}}
 ; CHECK: [[VRSIZE:%.*]] = sub i64 128, {{%.*}}
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{%.*}}, i8* [[VRP]], i64 [[VRSIZE]], i32 8, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{%.*}}, i8* align 8 [[VRP]], i64 [[VRSIZE]], i1 false)
 
 ; Copy the remaining shadow values on the va_list::__stack position (it is
 ; on the constant offset of 192 from __msan_va_arg_tls).
 ; CHECK: [[STACK:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i32 192
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{%.*}}, i8* [[STACK]], i64 {{%.*}}, i32 16, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 {{%.*}}, i8* align 16 [[STACK]], i64 {{%.*}}, i1 false)
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 declare void @llvm.va_start(i8*) #2

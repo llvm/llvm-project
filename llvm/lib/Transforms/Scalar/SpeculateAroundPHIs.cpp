@@ -64,7 +64,7 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
     // block. We should consider using actual post-dominance here in the
     // future.
     if (UI->getParent() != PhiBB) {
-      DEBUG(dbgs() << "  Unsafe: use in a different BB: " << *UI << "\n");
+      LLVM_DEBUG(dbgs() << "  Unsafe: use in a different BB: " << *UI << "\n");
       return false;
     }
 
@@ -75,7 +75,7 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
     // probably change this to do at least a limited scan of the intervening
     // instructions and allow handling stores in easily proven safe cases.
     if (mayBeMemoryDependent(*UI)) {
-      DEBUG(dbgs() << "  Unsafe: can't speculate use: " << *UI << "\n");
+      LLVM_DEBUG(dbgs() << "  Unsafe: can't speculate use: " << *UI << "\n");
       return false;
     }
 
@@ -126,8 +126,8 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
         // If when we directly test whether this is safe it fails, bail.
         if (UnsafeSet.count(OpI) || ParentBB != PhiBB ||
             mayBeMemoryDependent(*OpI)) {
-          DEBUG(dbgs() << "  Unsafe: can't speculate transitive use: " << *OpI
-                       << "\n");
+          LLVM_DEBUG(dbgs() << "  Unsafe: can't speculate transitive use: "
+                            << *OpI << "\n");
           // Record the stack of instructions which reach this node as unsafe
           // so we prune subsequent searches.
           UnsafeSet.insert(OpI);
@@ -229,7 +229,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
     NonFreeMat |= MatCost != TTI.TCC_Free;
   }
   if (!NonFreeMat) {
-    DEBUG(dbgs() << "    Free: " << PN << "\n");
+    LLVM_DEBUG(dbgs() << "    Free: " << PN << "\n");
     // No profit in free materialization.
     return false;
   }
@@ -237,7 +237,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
   // Now check that the uses of this PHI can actually be speculated,
   // otherwise we'll still have to materialize the PHI value.
   if (!isSafeToSpeculatePHIUsers(PN, DT, PotentialSpecSet, UnsafeSet)) {
-    DEBUG(dbgs() << "    Unsafe PHI: " << PN << "\n");
+    LLVM_DEBUG(dbgs() << "    Unsafe PHI: " << PN << "\n");
     return false;
   }
 
@@ -266,7 +266,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       // Assume we will commute the constant to the RHS to be canonical.
       Idx = 1;
 
-    // Get the intrinsic ID if this user is an instrinsic.
+    // Get the intrinsic ID if this user is an intrinsic.
     Intrinsic::ID IID = Intrinsic::not_intrinsic;
     if (auto *UserII = dyn_cast<IntrinsicInst>(UserI))
       IID = UserII->getIntrinsicID();
@@ -288,9 +288,13 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       // just bail. We're only interested in cases where folding the incoming
       // constants is at least break-even on all paths.
       if (FoldedCost > MatCost) {
-        DEBUG(dbgs() << "  Not profitable to fold imm: " << *IncomingC << "\n"
-                        "    Materializing cost:    " << MatCost << "\n"
-                        "    Accumulated folded cost: " << FoldedCost << "\n");
+        LLVM_DEBUG(dbgs() << "  Not profitable to fold imm: " << *IncomingC
+                          << "\n"
+                             "    Materializing cost:    "
+                          << MatCost
+                          << "\n"
+                             "    Accumulated folded cost: "
+                          << FoldedCost << "\n");
         return false;
       }
     }
@@ -310,8 +314,8 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
                                             "less that its materialized cost, "
                                             "the sum must be as well.");
 
-  DEBUG(dbgs() << "    Cost savings " << (TotalMatCost - TotalFoldedCost)
-               << ": " << PN << "\n");
+  LLVM_DEBUG(dbgs() << "    Cost savings " << (TotalMatCost - TotalFoldedCost)
+                    << ": " << PN << "\n");
   CostSavingsMap[&PN] = TotalMatCost - TotalFoldedCost;
   return true;
 }
@@ -489,9 +493,13 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
           // and zero out the cost of everything it depends on.
           int CostSavings = CostSavingsMap.find(PN)->second;
           if (SpecCost > CostSavings) {
-            DEBUG(dbgs() << "  Not profitable, speculation cost: " << *PN << "\n"
-                            "    Cost savings:     " << CostSavings << "\n"
-                            "    Speculation cost: " << SpecCost << "\n");
+            LLVM_DEBUG(dbgs() << "  Not profitable, speculation cost: " << *PN
+                              << "\n"
+                                 "    Cost savings:     "
+                              << CostSavings
+                              << "\n"
+                                 "    Speculation cost: "
+                              << SpecCost << "\n");
             continue;
           }
 
@@ -545,7 +553,7 @@ static void speculatePHIs(ArrayRef<PHINode *> SpecPNs,
                           SmallPtrSetImpl<Instruction *> &PotentialSpecSet,
                           SmallSetVector<BasicBlock *, 16> &PredSet,
                           DominatorTree &DT) {
-  DEBUG(dbgs() << "  Speculating around " << SpecPNs.size() << " PHIs!\n");
+  LLVM_DEBUG(dbgs() << "  Speculating around " << SpecPNs.size() << " PHIs!\n");
   NumPHIsSpeculated += SpecPNs.size();
 
   // Split any critical edges so that we have a block to hoist into.
@@ -558,8 +566,8 @@ static void speculatePHIs(ArrayRef<PHINode *> SpecPNs,
         CriticalEdgeSplittingOptions(&DT).setMergeIdenticalEdges());
     if (NewPredBB) {
       ++NumEdgesSplit;
-      DEBUG(dbgs() << "  Split critical edge from: " << PredBB->getName()
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "  Split critical edge from: " << PredBB->getName()
+                        << "\n");
       SpecPreds.push_back(NewPredBB);
     } else {
       assert(PredBB->getSingleSuccessor() == ParentBB &&
@@ -593,14 +601,15 @@ static void speculatePHIs(ArrayRef<PHINode *> SpecPNs,
 
   int NumSpecInsts = SpecList.size() * SpecPreds.size();
   int NumRedundantInsts = NumSpecInsts - SpecList.size();
-  DEBUG(dbgs() << "  Inserting " << NumSpecInsts << " speculated instructions, "
-               << NumRedundantInsts << " redundancies\n");
+  LLVM_DEBUG(dbgs() << "  Inserting " << NumSpecInsts
+                    << " speculated instructions, " << NumRedundantInsts
+                    << " redundancies\n");
   NumSpeculatedInstructions += NumSpecInsts;
   NumNewRedundantInstructions += NumRedundantInsts;
 
   // Each predecessor is numbered by its index in `SpecPreds`, so for each
   // instruction we speculate, the speculated instruction is stored in that
-  // index of the vector asosciated with the original instruction. We also
+  // index of the vector associated with the original instruction. We also
   // store the incoming values for each predecessor from any PHIs used.
   SmallDenseMap<Instruction *, SmallVector<Value *, 2>, 16> SpeculatedValueMap;
 
@@ -716,7 +725,7 @@ static void speculatePHIs(ArrayRef<PHINode *> SpecPNs,
 /// true when at least some speculation occurs.
 static bool tryToSpeculatePHIs(SmallVectorImpl<PHINode *> &PNs,
                                DominatorTree &DT, TargetTransformInfo &TTI) {
-  DEBUG(dbgs() << "Evaluating phi nodes for speculation:\n");
+  LLVM_DEBUG(dbgs() << "Evaluating phi nodes for speculation:\n");
 
   // Savings in cost from speculating around a PHI node.
   SmallDenseMap<PHINode *, int, 16> CostSavingsMap;
@@ -745,7 +754,7 @@ static bool tryToSpeculatePHIs(SmallVectorImpl<PHINode *> &PNs,
             PNs.end());
   // If no PHIs were profitable, skip.
   if (PNs.empty()) {
-    DEBUG(dbgs() << "  No safe and profitable PHIs found!\n");
+    LLVM_DEBUG(dbgs() << "  No safe and profitable PHIs found!\n");
     return false;
   }
 
@@ -763,13 +772,13 @@ static bool tryToSpeculatePHIs(SmallVectorImpl<PHINode *> &PNs,
     // differently.
     if (isa<IndirectBrInst>(PredBB->getTerminator()) ||
         isa<InvokeInst>(PredBB->getTerminator())) {
-      DEBUG(dbgs() << "  Invalid: predecessor terminator: " << PredBB->getName()
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "  Invalid: predecessor terminator: "
+                        << PredBB->getName() << "\n");
       return false;
     }
   }
   if (PredSet.size() < 2) {
-    DEBUG(dbgs() << "  Unimportant: phi with only one predecessor\n");
+    LLVM_DEBUG(dbgs() << "  Unimportant: phi with only one predecessor\n");
     return false;
   }
 

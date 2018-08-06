@@ -22,7 +22,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 3490ab8630d5643f71f1f04e46984f05b27b8d67) (http://llvm.org/git/llvm.git d2643e2ff955ed234944fe3c6b4ffc1250085843)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "movpc-test")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, variables: !2)
+!4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{i32 2, !"Dwarf Version", i32 4}

@@ -18,16 +18,16 @@ registers:
   - { id: 1, class: gpr32 }
   - { id: 2, class: gpr32 }
 liveins:
-  - { reg: '%x0', virtual-reg: '%0' }
+  - { reg: '$x0', virtual-reg: '%0' }
 body:             |
   bb.0.entry:
-    liveins: %x0
+    liveins: $x0
 
     ; CHECK-LABEL: swp
     ; CHECK: {{[0-9]+}}:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic 4 on %ir.addr)
-    %0:gpr64common = COPY %x0
+    %0:gpr64common = COPY $x0
     %1:gpr32 = MOVi32imm 1
     %2:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic 4 on %ir.addr)
-    %w0 = COPY %2
-    RET_ReallyLR implicit %w0
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
 ...

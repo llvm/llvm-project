@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file converts pseudo call_indirect instructions into real
+/// This file converts pseudo call_indirect instructions into real
 /// call_indirects.
 ///
 /// The order of arguments for a call_indirect is the arguments to the function
@@ -54,6 +54,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCallIndirectFixup::ID = 0;
+INITIALIZE_PASS(WebAssemblyCallIndirectFixup, DEBUG_TYPE,
+                "Rewrite call_indirect argument orderings", false, false)
+
 FunctionPass *llvm::createWebAssemblyCallIndirectFixup() {
   return new WebAssemblyCallIndirectFixup();
 }
@@ -80,8 +83,8 @@ static bool IsPseudoCallIndirect(const MachineInstr &MI) {
 }
 
 bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Fixing up CALL_INDIRECTs **********\n"
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Fixing up CALL_INDIRECTs **********\n"
+                    << MF.getName() << '\n');
 
   bool Changed = false;
   const WebAssemblyInstrInfo *TII =
@@ -90,7 +93,7 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (IsPseudoCallIndirect(MI)) {
-        DEBUG(dbgs() << "Found call_indirect: " << MI << '\n');
+        LLVM_DEBUG(dbgs() << "Found call_indirect: " << MI << '\n');
 
         // Rewrite pseudo to non-pseudo
         const MCInstrDesc &Desc = TII->get(GetNonPseudoCallIndirectOpcode(MI));
@@ -120,13 +123,13 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
         for (const MachineOperand &MO : Ops)
           MI.addOperand(MO);
 
-        DEBUG(dbgs() << "  After transform: " << MI);
+        LLVM_DEBUG(dbgs() << "  After transform: " << MI);
         Changed = true;
       }
     }
   }
 
-  DEBUG(dbgs() << "\nDone fixing up CALL_INDIRECTs\n\n");
+  LLVM_DEBUG(dbgs() << "\nDone fixing up CALL_INDIRECTs\n\n");
 
   return Changed;
 }

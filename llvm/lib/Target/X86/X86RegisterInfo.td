@@ -21,12 +21,14 @@ class X86Reg<string n, bits<16> Enc, list<Register> subregs = []> : Register<n> 
 
 // Subregister indices.
 let Namespace = "X86" in {
-  def sub_8bit    : SubRegIndex<8>;
-  def sub_8bit_hi : SubRegIndex<8, 8>;
-  def sub_16bit   : SubRegIndex<16>;
-  def sub_32bit   : SubRegIndex<32>;
-  def sub_xmm     : SubRegIndex<128>;
-  def sub_ymm     : SubRegIndex<256>;
+  def sub_8bit     : SubRegIndex<8>;
+  def sub_8bit_hi  : SubRegIndex<8, 8>;
+  def sub_8bit_hi_phony  : SubRegIndex<8, 8>;
+  def sub_16bit    : SubRegIndex<16>;
+  def sub_16bit_hi : SubRegIndex<16, 16>;
+  def sub_32bit    : SubRegIndex<32>;
+  def sub_xmm      : SubRegIndex<128>;
+  def sub_ymm      : SubRegIndex<256>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -73,6 +75,40 @@ def R14B : X86Reg<"r14b", 14>;
 def R15B : X86Reg<"r15b", 15>;
 }
 
+let isArtificial = 1 in {
+// High byte of the low 16 bits of the super-register:
+def SIH   : X86Reg<"", -1>;
+def DIH   : X86Reg<"", -1>;
+def BPH   : X86Reg<"", -1>;
+def SPH   : X86Reg<"", -1>;
+def R8BH  : X86Reg<"", -1>;
+def R9BH  : X86Reg<"", -1>;
+def R10BH : X86Reg<"", -1>;
+def R11BH : X86Reg<"", -1>;
+def R12BH : X86Reg<"", -1>;
+def R13BH : X86Reg<"", -1>;
+def R14BH : X86Reg<"", -1>;
+def R15BH : X86Reg<"", -1>;
+// High word of the low 32 bits of the super-register:
+def HAX   : X86Reg<"", -1>;
+def HDX   : X86Reg<"", -1>;
+def HCX   : X86Reg<"", -1>;
+def HBX   : X86Reg<"", -1>;
+def HSI   : X86Reg<"", -1>;
+def HDI   : X86Reg<"", -1>;
+def HBP   : X86Reg<"", -1>;
+def HSP   : X86Reg<"", -1>;
+def HIP   : X86Reg<"", -1>;
+def R8WH  : X86Reg<"", -1>;
+def R9WH  : X86Reg<"", -1>;
+def R10WH : X86Reg<"", -1>;
+def R11WH : X86Reg<"", -1>;
+def R12WH : X86Reg<"", -1>;
+def R13WH : X86Reg<"", -1>;
+def R14WH : X86Reg<"", -1>;
+def R15WH : X86Reg<"", -1>;
+}
+
 // 16-bit registers
 let SubRegIndices = [sub_8bit, sub_8bit_hi], CoveredBySubRegs = 1 in {
 def AX : X86Reg<"ax", 0, [AL,AH]>;
@@ -80,49 +116,52 @@ def DX : X86Reg<"dx", 2, [DL,DH]>;
 def CX : X86Reg<"cx", 1, [CL,CH]>;
 def BX : X86Reg<"bx", 3, [BL,BH]>;
 }
-let SubRegIndices = [sub_8bit] in {
-def SI : X86Reg<"si", 6, [SIL]>;
-def DI : X86Reg<"di", 7, [DIL]>;
-def BP : X86Reg<"bp", 5, [BPL]>;
-def SP : X86Reg<"sp", 4, [SPL]>;
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
+def SI : X86Reg<"si", 6, [SIL,SIH]>;
+def DI : X86Reg<"di", 7, [DIL,DIH]>;
+def BP : X86Reg<"bp", 5, [BPL,BPH]>;
+def SP : X86Reg<"sp", 4, [SPL,SPH]>;
 }
 def IP : X86Reg<"ip", 0>;
 
 // X86-64 only, requires REX.
-let SubRegIndices = [sub_8bit], CostPerUse = 1 in {
-def R8W  : X86Reg<"r8w",   8, [R8B]>;
-def R9W  : X86Reg<"r9w",   9, [R9B]>;
-def R10W : X86Reg<"r10w", 10, [R10B]>;
-def R11W : X86Reg<"r11w", 11, [R11B]>;
-def R12W : X86Reg<"r12w", 12, [R12B]>;
-def R13W : X86Reg<"r13w", 13, [R13B]>;
-def R14W : X86Reg<"r14w", 14, [R14B]>;
-def R15W : X86Reg<"r15w", 15, [R15B]>;
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = 1,
+    CoveredBySubRegs = 1 in {
+def R8W  : X86Reg<"r8w",   8, [R8B,R8BH]>;
+def R9W  : X86Reg<"r9w",   9, [R9B,R9BH]>;
+def R10W : X86Reg<"r10w", 10, [R10B,R10BH]>;
+def R11W : X86Reg<"r11w", 11, [R11B,R11BH]>;
+def R12W : X86Reg<"r12w", 12, [R12B,R12BH]>;
+def R13W : X86Reg<"r13w", 13, [R13B,R13BH]>;
+def R14W : X86Reg<"r14w", 14, [R14B,R14BH]>;
+def R15W : X86Reg<"r15w", 15, [R15B,R15BH]>;
 }
 
 // 32-bit registers
-let SubRegIndices = [sub_16bit] in {
-def EAX : X86Reg<"eax", 0, [AX]>, DwarfRegNum<[-2, 0, 0]>;
-def EDX : X86Reg<"edx", 2, [DX]>, DwarfRegNum<[-2, 2, 2]>;
-def ECX : X86Reg<"ecx", 1, [CX]>, DwarfRegNum<[-2, 1, 1]>;
-def EBX : X86Reg<"ebx", 3, [BX]>, DwarfRegNum<[-2, 3, 3]>;
-def ESI : X86Reg<"esi", 6, [SI]>, DwarfRegNum<[-2, 6, 6]>;
-def EDI : X86Reg<"edi", 7, [DI]>, DwarfRegNum<[-2, 7, 7]>;
-def EBP : X86Reg<"ebp", 5, [BP]>, DwarfRegNum<[-2, 4, 5]>;
-def ESP : X86Reg<"esp", 4, [SP]>, DwarfRegNum<[-2, 5, 4]>;
-def EIP : X86Reg<"eip", 0, [IP]>, DwarfRegNum<[-2, 8, 8]>;
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
+def EAX : X86Reg<"eax", 0, [AX, HAX]>, DwarfRegNum<[-2, 0, 0]>;
+def EDX : X86Reg<"edx", 2, [DX, HDX]>, DwarfRegNum<[-2, 2, 2]>;
+def ECX : X86Reg<"ecx", 1, [CX, HCX]>, DwarfRegNum<[-2, 1, 1]>;
+def EBX : X86Reg<"ebx", 3, [BX, HBX]>, DwarfRegNum<[-2, 3, 3]>;
+def ESI : X86Reg<"esi", 6, [SI, HSI]>, DwarfRegNum<[-2, 6, 6]>;
+def EDI : X86Reg<"edi", 7, [DI, HDI]>, DwarfRegNum<[-2, 7, 7]>;
+def EBP : X86Reg<"ebp", 5, [BP, HBP]>, DwarfRegNum<[-2, 4, 5]>;
+def ESP : X86Reg<"esp", 4, [SP, HSP]>, DwarfRegNum<[-2, 5, 4]>;
+def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
+}
 
 // X86-64 only, requires REX
-let CostPerUse = 1 in {
-def R8D  : X86Reg<"r8d",   8, [R8W]>;
-def R9D  : X86Reg<"r9d",   9, [R9W]>;
-def R10D : X86Reg<"r10d", 10, [R10W]>;
-def R11D : X86Reg<"r11d", 11, [R11W]>;
-def R12D : X86Reg<"r12d", 12, [R12W]>;
-def R13D : X86Reg<"r13d", 13, [R13W]>;
-def R14D : X86Reg<"r14d", 14, [R14W]>;
-def R15D : X86Reg<"r15d", 15, [R15W]>;
-}}
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = 1,
+    CoveredBySubRegs = 1 in {
+def R8D  : X86Reg<"r8d",   8, [R8W,R8WH]>;
+def R9D  : X86Reg<"r9d",   9, [R9W,R9WH]>;
+def R10D : X86Reg<"r10d", 10, [R10W,R10WH]>;
+def R11D : X86Reg<"r11d", 11, [R11W,R11WH]>;
+def R12D : X86Reg<"r12d", 12, [R12W,R12WH]>;
+def R13D : X86Reg<"r13d", 13, [R13W,R13WH]>;
+def R14D : X86Reg<"r14d", 14, [R14W,R14WH]>;
+def R15D : X86Reg<"r15d", 15, [R15W,R15WH]>;
+}
 
 // 64-bit registers, X86-64 only
 let SubRegIndices = [sub_32bit] in {
@@ -261,7 +300,7 @@ def FPSW : X86Reg<"fpsw", 0>;
 def EFLAGS : X86Reg<"flags", 0>;
 
 // The direction flag.
-def DF : X86Reg<"DF", 0>;
+def DF : X86Reg<"dirflag", 0>;
 
 
 // Segment registers
@@ -347,9 +386,20 @@ def GR8 : RegisterClass<"X86", [i8],  8,
   }];
 }
 
+let isAllocatable = 0 in
+def GRH8 : RegisterClass<"X86", [i8],  8,
+                         (add SIH, DIH, BPH, SPH, R8BH, R9BH, R10BH, R11BH,
+                              R12BH, R13BH, R14BH, R15BH)>;
+
 def GR16 : RegisterClass<"X86", [i16], 16,
                          (add AX, CX, DX, SI, DI, BX, BP, SP,
                               R8W, R9W, R10W, R11W, R14W, R15W, R12W, R13W)>;
+
+let isAllocatable = 0 in
+def GRH16 : RegisterClass<"X86", [i16], 16,
+                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP,
+                               R8WH, R9WH, R10WH, R11WH, R12WH, R13WH, R14WH,
+                               R15WH)>;
 
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,
@@ -410,11 +460,6 @@ def GR32_NOREX : RegisterClass<"X86", [i32], 32,
 def GR64_NOREX : RegisterClass<"X86", [i64], 64,
                             (add RAX, RCX, RDX, RSI, RDI, RBX, RBP, RSP, RIP)>;
 
-// GR32_NOAX - GR32 registers except EAX. Used by AddRegFrm of XCHG32 in 64-bit
-// mode to prevent encoding using the 0x90 NOP encoding. xchg %eax, %eax needs
-// to clear upper 32-bits of RAX so is not a NOP.
-def GR32_NOAX : RegisterClass<"X86", [i32], 32, (sub GR32, EAX)>;
-
 // GR32_NOSP - GR32 registers except ESP.
 def GR32_NOSP : RegisterClass<"X86", [i32], 32, (sub GR32, ESP)>;
 
@@ -459,8 +504,6 @@ def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 
 def FR64 : RegisterClass<"X86", [f64], 64, (add FR32)>;
 
-def FR128 : RegisterClass<"X86", [i128, f128], 128, (add FR32)>;
-
 
 // FIXME: This sets up the floating point register files as though they are f64
 // values, though they really are f80 values.  This will cause us to spill
@@ -482,16 +525,16 @@ def RST : RegisterClass<"X86", [f80, f64, f32], 32, (sequence "ST%u", 0, 7)> {
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.
 def VR64: RegisterClass<"X86", [x86mmx], 64, (sequence "MM%u", 0, 7)>;
-def VR128 : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+def VR128 : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
                           128, (add FR32)>;
 def VR256 : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                           256, (sequence "YMM%u", 0, 15)>;
 
 // Special classes that help the assembly parser choose some alternate
 // instructions to favor 2-byte VEX encodings.
-def VR128L : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+def VR128L : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
                            128, (sequence "XMM%u", 0, 7)>;
-def VR128H : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+def VR128H : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
                            128, (sequence "XMM%u", 8, 15)>;
 def VR256L : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                            256, (sequence "YMM%u", 0, 7)>;
@@ -522,7 +565,7 @@ def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;
 def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
 
 // Extended VR128 and VR256 for AVX-512 instructions
-def VR128X : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+def VR128X : RegisterClass<"X86", [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, f128],
                            128, (add FR32X)>;
 def VR256X : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                            256, (sequence "YMM%u", 0, 31)>;

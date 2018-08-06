@@ -185,12 +185,12 @@ TEST_F(HostTest, getMacOSHostVersion) {
   path::append(OutputFile, "out");
 
   const char *SwVersPath = "/usr/bin/sw_vers";
-  const char *argv[] = {SwVersPath, "-productVersion", nullptr};
+  StringRef argv[] = {SwVersPath, "-productVersion"};
   StringRef OutputPath = OutputFile.str();
   const Optional<StringRef> Redirects[] = {/*STDIN=*/None,
                                            /*STDOUT=*/OutputPath,
                                            /*STDERR=*/None};
-  int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/nullptr, Redirects);
+  int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/llvm::None, Redirects);
   ASSERT_EQ(0, RetCode);
 
   int FD = 0;

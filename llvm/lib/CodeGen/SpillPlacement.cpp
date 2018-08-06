@@ -246,7 +246,7 @@ void SpillPlacement::activate(unsigned n) {
   }
 }
 
-/// \brief Set the threshold for a given entry frequency.
+/// Set the threshold for a given entry frequency.
 ///
 /// Set the threshold relative to \c Entry.  Since the threshold is used as a
 /// bound on the open interval (-Threshold;Threshold), 1 is the minimum

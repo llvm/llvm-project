@@ -1,4 +1,4 @@
-//===- llvm/unittest/DebugInfo/DWARFFormValueTest.cpp ---------------------===//
+//===- llvm/unittest/DebugInfo/DWARFDebugInfoTest.cpp ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfGenerator.h"
+#include "DwarfUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
@@ -15,7 +16,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -36,35 +36,9 @@
 
 using namespace llvm;
 using namespace dwarf;
+using namespace utils;
 
 namespace {
-
-void initLLVMIfNeeded() {
-  static bool gInitialized = false;
-  if (!gInitialized) {
-    gInitialized = true;
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-    InitializeAllAsmPrinters();
-    InitializeAllAsmParsers();
-  }
-}
-
-Triple getHostTripleForAddrSize(uint8_t AddrSize) {
-  Triple PT(Triple::normalize(LLVM_HOST_TRIPLE));
-
-  if (AddrSize == 8 && PT.isArch32Bit())
-    return PT.get64BitArchVariant();
-  if (AddrSize == 4 && PT.isArch64Bit())
-    return PT.get32BitArchVariant();
-  return PT;
-}
-
-static bool isConfigurationSupported(Triple &T) {
-  initLLVMIfNeeded();
-  std::string Err;
-  return TargetRegistry::lookupTarget(T.getTriple(), Err);
-}
 
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
@@ -516,6 +490,11 @@ template <uint16_t Version, class AddrType> void TestChildren() {
     EXPECT_TRUE(!NullDieDG.getSibling().isValid());
     EXPECT_TRUE(!NullDieDG.getFirstChild().isValid());
   }
+
+  // Verify the previous sibling of our subprogram is our integer base type.
+  IntDieDG = NullDieDG.getPreviousSibling();
+  EXPECT_TRUE(IntDieDG.isValid());
+  EXPECT_EQ(IntDieDG.getTag(), DW_TAG_base_type);
 }
 
 TEST(DWARFDebugInfo, TestDWARF32Version2Addr4Children) {
@@ -1098,6 +1077,58 @@ TEST(DWARFDebugInfo, TestRelations) {
   // Make sure the parent of all the children of the B are the B.
   EXPECT_EQ(C1.getParent(), C);
   EXPECT_EQ(C2.getParent(), C);
+
+  // Make sure iterators work as expected.
+  EXPECT_THAT(std::vector<DWARFDie>(A.begin(), A.end()),
+              testing::ElementsAre(B, C, D));
+  EXPECT_THAT(std::vector<DWARFDie>(A.rbegin(), A.rend()),
+              testing::ElementsAre(D, C, B));
+
+  // Make sure iterator is bidirectional.
+  {
+    auto Begin = A.begin();
+    auto End = A.end();
+    auto It = A.begin();
+
+    EXPECT_EQ(It, Begin);
+    EXPECT_EQ(*It, B);
+    ++It;
+    EXPECT_EQ(*It, C);
+    ++It;
+    EXPECT_EQ(*It, D);
+    ++It;
+    EXPECT_EQ(It, End);
+    --It;
+    EXPECT_EQ(*It, D);
+    --It;
+    EXPECT_EQ(*It, C);
+    --It;
+    EXPECT_EQ(*It, B);
+    EXPECT_EQ(It, Begin);
+  }
+
+  // Make sure reverse iterator is bidirectional.
+  {
+    auto Begin = A.rbegin();
+    auto End = A.rend();
+    auto It = A.rbegin();
+
+    EXPECT_EQ(It, Begin);
+    EXPECT_EQ(*It, D);
+    ++It;
+    EXPECT_EQ(*It, C);
+    ++It;
+    EXPECT_EQ(*It, B);
+    ++It;
+    EXPECT_EQ(It, End);
+    --It;
+    EXPECT_EQ(*It, B);
+    --It;
+    EXPECT_EQ(*It, C);
+    --It;
+    EXPECT_EQ(*It, D);
+    EXPECT_EQ(It, Begin);
+  }
 }
 
 TEST(DWARFDebugInfo, TestDWARFDie) {
@@ -1191,7 +1222,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "    Attributes:\n"
                          "debug_info:\n"
                          "  - Length:\n"
-                         "      TotalLength:          9\n"
+                         "      TotalLength:          0\n"
                          "    Version:         4\n"
                          "    AbbrOffset:      0\n"
                          "    AddrSize:        8\n"
@@ -1201,7 +1232,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "      - AbbrCode:        0x00000000\n"
                          "        Values:\n";
 
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata), true);
   ASSERT_TRUE((bool)ErrOrSections);
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);

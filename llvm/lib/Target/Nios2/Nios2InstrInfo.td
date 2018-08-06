@@ -30,6 +30,10 @@ def simm16     : Operand<i32> {
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
 
+// Custom return SDNode
+def Nios2Ret : SDNode<"Nios2ISD::Ret", SDTNone,
+    [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
@@ -45,6 +49,16 @@ multiclass ArithLogicRegImm16<bits<6> op, string mnemonic, SDNode opNode,
 			         (opNode CPURegs:$rA, immType:$imm))],
                                IIAlu>;
 
+// Arithmetic and logical instructions with 3 register operands.
+// Defines R1 and R2 instruction at the same time.
+multiclass ArithLogicReg<bits<6> opx, string mnemonic,
+                         SDNode opNode>:
+  CommonInstr_R_F3X6<opx, (outs CPURegs:$rC),
+                     (ins CPURegs:$rA, CPURegs:$rB),
+                     !strconcat(mnemonic, "\t$rC, $rA, $rB"),
+                     [(set CPURegs:$rC, (opNode CPURegs:$rA, CPURegs:$rB))],
+                     IIAlu>;
+
 multiclass Return<bits<6> opx, dag outs, dag ins, string mnemonic> {
   let rB = 0, rC = 0,
       isReturn = 1,
@@ -55,13 +69,30 @@ multiclass Return<bits<6> opx, dag outs, dag ins, string mnemonic> {
   }
 }
 
-// Custom return SDNode
-def Nios2Ret : SDNode<"Nios2ISD::Ret", SDTNone,
-    [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-
 //===----------------------------------------------------------------------===//
 // Nios2 Instructions
 //===----------------------------------------------------------------------===//
+
+/// Arithmetic instructions operating on registers.
+let isCommutable = 1 ,
+    isReMaterializable = 1 in {
+  defm ADD    : ArithLogicReg<0x31, "add",    add>;
+  defm AND    : ArithLogicReg<0x0e, "and",    and>;
+  defm OR     : ArithLogicReg<0x16, "or",     or>;
+  defm XOR    : ArithLogicReg<0x1e, "xor",    xor>;
+  defm MUL    : ArithLogicReg<0x27, "mul",    mul>;
+}
+
+let isReMaterializable = 1 in {
+  defm SUB    : ArithLogicReg<0x39, "sub",    sub>;
+}
+
+defm DIVU : ArithLogicReg<0x24, "divu",   udiv>;
+defm DIV  : ArithLogicReg<0x25, "div",    sdiv>;
+
+defm SLL : ArithLogicReg<0x13, "sll",  shl>;
+defm SRL : ArithLogicReg<0x1b, "srl",  srl>;
+defm SRA : ArithLogicReg<0x3b, "sra",  sra>;
 
 /// Arithmetic Instructions (ALU Immediate)
 defm ADDI  : ArithLogicRegImm16<0x04, "addi",  add, simm16, immSExt16>;

@@ -1,9 +1,8 @@
-; RUN: llc -o /dev/null %s
+; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -o /dev/null %s
 ; This testcase produces a situation with unused value numbers in subregister
 ; liveranges that get distributed by ConnectedVNInfoEqClasses.
-target triple = "amdgcn--"
 
-define spir_kernel void @hoge() {
+define amdgpu_kernel void @hoge() {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br i1 undef, label %bb2, label %bb23

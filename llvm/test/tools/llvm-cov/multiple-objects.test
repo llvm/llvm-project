@@ -6,6 +6,11 @@ REPORT: Filename{{ +}}Regions{{ +}}Missed Regions{{ +}}Cover
 REPORT-NEXT: ---
 REPORT-NEXT: header.h{{ +}}25{{ +}}14{{ +}}44.00%
 
+# Make sure that both use_1.cc and use_2.cc have coverage reported.
+# Before https://reviews.llvm.org/D46478, only one of them used to be reported.
+REPORT-NEXT: use_1.cc{{ +}}1{{ +}}0{{ +}}100.00%
+REPORT-NEXT: use_2.cc{{ +}}2{{ +}}0{{ +}}100.00%
+
 Instructions for regenerating the test:
 
 clang -std=c++11 -mllvm -enable-name-compression=false -fprofile-instr-generate -fcoverage-mapping use_1.cc -o use_1

@@ -4,34 +4,36 @@
 define <4 x i32> @testSpill(<4 x i32> %a, <4 x i32> %b) {
 
 ; CHECK-LABEL: testSpill:
-; CHECK:    li 11, 80
-; CHECK:    li 12, 96
-; CHECK:    li 3, 48
-; CHECK:    li 10, 64
-; CHECK:    stxvd2x 62, 1, 11 # 16-byte Folded Spill
-; CHECK:    stxvd2x 63, 1, 12 # 16-byte Folded Spill
-; CHECK:    stxvd2x 60, 1, 3 # 16-byte Folded Spill
-; CHECK:    stxvd2x 61, 1, 10 # 16-byte Folded Spill
-; CHECK:    li 9, 96
-; CHECK:    li 10, 80
-; CHECK:    li 11, 64
-; CHECK:    li 12, 48
-; CHECK:    lxvd2x 63, 1, 9 # 16-byte Folded Reload
-; CHECK:    lxvd2x 62, 1, 10 # 16-byte Folded Reload
-; CHECK:    lxvd2x 61, 1, 11 # 16-byte Folded Reload
-; CHECK:    lxvd2x 60, 1, 12 # 16-byte Folded Reload
+; CHECK-DAG:    li [[REG48:[0-9]+]], 48
+; CHECK-DAG:    li [[REG64:[0-9]+]], 64
+; CHECK-DAG:    li [[REG80:[0-9]+]], 80
+; CHECK-DAG:    li [[REG96:[0-9]+]], 96
+; CHECK-DAG:    stxvd2x 60, 1, [[REG48]] # 16-byte Folded Spill
+; CHECK-DAG:    stxvd2x 61, 1, [[REG64]] # 16-byte Folded Spill
+; CHECK-DAG:    stxvd2x 62, 1, [[REG80]] # 16-byte Folded Spill
+; CHECK-DAG:    stxvd2x 63, 1, [[REG96]] # 16-byte Folded Spill
+; CHECK:        .LBB0_3
+; CHECK-DAG:    li [[REG96_LD:[0-9]+]], 96
+; CHECK-DAG:    li [[REG80_LD:[0-9]+]], 80
+; CHECK-DAG:    li [[REG64_LD:[0-9]+]], 64
+; CHECK-DAG:    li [[REG48_LD:[0-9]+]], 48
+; CHECK-DAG:    lxvd2x 63, 1, [[REG96_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lxvd2x 62, 1, [[REG80_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lxvd2x 61, 1, [[REG64_LD]] # 16-byte Folded Reload
+; CHECK-DAG:    lxvd2x 60, 1, [[REG48_LD]] # 16-byte Folded Reload
 ; CHECK:    mtlr 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: testSpill:
-; CHECK-PWR9:    stxv 62, 80(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 63, 96(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 60, 48(1) # 16-byte Folded Spill
-; CHECK-PWR9:    stxv 61, 64(1) # 16-byte Folded Spill
-; CHECK-PWR9:    lxv 63, 96(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 62, 80(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 61, 64(1) # 16-byte Folded Reload
-; CHECK-PWR9:    lxv 60, 48(1) # 16-byte Folded Reload
+; CHECK-PWR9-DAG:    stxv 62, 64(1) # 16-byte Folded Spill
+; CHECK-PWR9-DAG:    stxv 63, 80(1) # 16-byte Folded Spill
+; CHECK-PWR9-DAG:    stxv 60, 32(1) # 16-byte Folded Spill
+; CHECK-PWR9-DAG:    stxv 61, 48(1) # 16-byte Folded Spill
+; CHECK-PWR9-NOT:    NOT
+; CHECK-PWR9-DAG:    lxv 63, 80(1) # 16-byte Folded Reload
+; CHECK-PWR9-DAG:    lxv 62, 64(1) # 16-byte Folded Reload
+; CHECK-PWR9-DAG:    lxv 61, 48(1) # 16-byte Folded Reload
+; CHECK-PWR9-DAG:    lxv 60, 32(1) # 16-byte Folded Reload
 ; CHECK-PWR9:    mtlr 0
 ; CHECK-PWR9-NEXT:    blr
 

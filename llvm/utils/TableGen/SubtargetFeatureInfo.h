@@ -27,20 +27,20 @@ using SubtargetFeatureInfoMap = std::map<Record *, SubtargetFeatureInfo, LessRec
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.
 struct SubtargetFeatureInfo {
-  /// \brief The predicate record for this feature.
+  /// The predicate record for this feature.
   Record *TheDef;
 
-  /// \brief An unique index assigned to represent this feature.
+  /// An unique index assigned to represent this feature.
   uint64_t Index;
 
   SubtargetFeatureInfo(Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
 
-  /// \brief The name of the enumerated constant identifying this feature.
+  /// The name of the enumerated constant identifying this feature.
   std::string getEnumName() const {
     return "Feature_" + TheDef->getName().str();
   }
 
-  /// \brief The name of the enumerated constant identifying the bitnumber for
+  /// The name of the enumerated constant identifying the bitnumber for
   /// this feature.
   std::string getEnumBitName() const {
     return "Feature_" + TheDef->getName().str() + "Bit";

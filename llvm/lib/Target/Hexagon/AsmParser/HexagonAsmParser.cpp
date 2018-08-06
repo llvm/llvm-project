@@ -118,7 +118,6 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseDirectiveSubsection(SMLoc L);
-  bool ParseDirectiveValue(unsigned Size, SMLoc L);
   bool ParseDirectiveComm(bool IsLocal, SMLoc L);
   bool RegisterMatchesArch(unsigned MatchNum) const;
 
@@ -164,6 +163,10 @@ public:
       InBrackets(false) {
     MCB.setOpcode(Hexagon::BUNDLE);
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
+
+    Parser.addAliasForDirective(".half", ".2byte");
+    Parser.addAliasForDirective(".hword", ".2byte");
+    Parser.addAliasForDirective(".word", ".4byte");
 
     MCAsmParserExtension::Initialize(_Parser);
   }
@@ -462,9 +465,9 @@ void HexagonOperand::print(raw_ostream &OS) const {
 }
 
 bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
-  DEBUG(dbgs() << "Bundle:");
-  DEBUG(MCB.dump_pretty(dbgs()));
-  DEBUG(dbgs() << "--\n");
+  LLVM_DEBUG(dbgs() << "Bundle:");
+  LLVM_DEBUG(MCB.dump_pretty(dbgs()));
+  LLVM_DEBUG(dbgs() << "--\n");
 
   MCB.setLoc(IDLoc);
   // Check the bundle for errors.
@@ -506,16 +509,19 @@ bool HexagonAsmParser::matchBundleOptions() {
         "supported with this architecture";
     StringRef Option = Parser.getTok().getString();
     auto IDLoc = Parser.getTok().getLoc();
-    if (Option.compare_lower("endloop0") == 0)
+    if (Option.compare_lower("endloop01") == 0) {
       HexagonMCInstrInfo::setInnerLoop(MCB);
-    else if (Option.compare_lower("endloop1") == 0)
       HexagonMCInstrInfo::setOuterLoop(MCB);
-    else if (Option.compare_lower("mem_noshuf") == 0)
+    } else if (Option.compare_lower("endloop0") == 0) {
+      HexagonMCInstrInfo::setInnerLoop(MCB);
+    } else if (Option.compare_lower("endloop1") == 0) {
+      HexagonMCInstrInfo::setOuterLoop(MCB);
+    } else if (Option.compare_lower("mem_noshuf") == 0) {
       if (getSTI().getFeatureBits()[Hexagon::FeatureMemNoShuf])
         HexagonMCInstrInfo::setMemReorderDisabled(MCB);
       else
         return getParser().Error(IDLoc, MemNoShuffMsg);
-    else
+    } else
       return getParser().Error(IDLoc, llvm::Twine("'") + Option +
                                           "' is not a valid bundle option");
     Lex();
@@ -554,9 +560,9 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
     canonicalizeImmediates(MCI);
     result = processInstruction(MCI, InstOperands, IDLoc);
 
-    DEBUG(dbgs() << "Insn:");
-    DEBUG(MCI.dump_pretty(dbgs()));
-    DEBUG(dbgs() << "\n\n");
+    LLVM_DEBUG(dbgs() << "Insn:");
+    LLVM_DEBUG(MCI.dump_pretty(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n\n");
 
     MCI.setLoc(IDLoc);
   }
@@ -648,11 +654,6 @@ bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 /// ParseDirective parses the Hexagon specific directives
 bool HexagonAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if ((IDVal.lower() == ".word") || (IDVal.lower() == ".4byte"))
-    return ParseDirectiveValue(4, DirectiveID.getLoc());
-  if (IDVal.lower() == ".short" || IDVal.lower() == ".hword" ||
-      IDVal.lower() == ".half")
-    return ParseDirectiveValue(2, DirectiveID.getLoc());
   if (IDVal.lower() == ".falign")
     return ParseDirectiveFalign(256, DirectiveID.getLoc());
   if ((IDVal.lower() == ".lcomm") || (IDVal.lower() == ".lcommon"))
@@ -717,39 +718,6 @@ bool HexagonAsmParser::ParseDirectiveFalign(unsigned Size, SMLoc L) {
   getTargetStreamer().emitFAlign(16, MaxBytesToFill);
   Lex();
 
-  return false;
-}
-
-///  ::= .word [ expression (, expression)* ]
-bool HexagonAsmParser::ParseDirectiveValue(unsigned Size, SMLoc L) {
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    while (true) {
-      const MCExpr *Value;
-      SMLoc ExprLoc = L;
-      if (getParser().parseExpression(Value))
-        return true;
-
-      // Special case constant expressions to match code generator.
-      if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Value)) {
-        assert(Size <= 8 && "Invalid size");
-        uint64_t IntValue = MCE->getValue();
-        if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
-          return Error(ExprLoc, "literal value out of range for directive");
-        getStreamer().EmitIntValue(IntValue, Size);
-      } else
-        getStreamer().EmitValue(Value, Size);
-
-      if (getLexer().is(AsmToken::EndOfStatement))
-        break;
-
-      // FIXME: Improve diagnostic.
-      if (getLexer().isNot(AsmToken::Comma))
-        return TokError("unexpected token in directive");
-      Lex();
-    }
-  }
-
-  Lex();
   return false;
 }
 
@@ -1293,9 +1261,9 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       return Match_Success;
   }
 
-  DEBUG(dbgs() << "Unmatched Operand:");
-  DEBUG(Op->dump());
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Unmatched Operand:");
+  LLVM_DEBUG(Op->dump());
+  LLVM_DEBUG(dbgs() << "\n");
 
   return Match_InvalidOperand;
 }
@@ -1330,6 +1298,17 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
           "Found pseudo instruction with no expansion");
       Diag.print("", errs());
       report_fatal_error("Invalid pseudo instruction");
+    }
+    break;
+
+  case Hexagon::J2_trap1:
+    if (!getSTI().getFeatureBits()[Hexagon::ArchV65]) {
+      MCOperand &Rx = Inst.getOperand(0);
+      MCOperand &Ry = Inst.getOperand(1);
+      if (Rx.getReg() != Hexagon::R0 || Ry.getReg() != Hexagon::R0) {
+        Error(IDLoc, "trap1 can only have register r0 as operand");
+        return Match_InvalidOperand;
+      }
     }
     break;
 

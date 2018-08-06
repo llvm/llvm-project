@@ -15,13 +15,14 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris10 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris11 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx800 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI800 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx801 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx802 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx803 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx810 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX900 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX902 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX904 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX906 %s
 
 ; HSA: .hsa_code_object_version 2,1
 ; HSA-SI600: .hsa_code_object_isa 6,0,0,"AMD","AMDGPU"
@@ -31,10 +32,11 @@
 ; HSA-CI702: .hsa_code_object_isa 7,0,2,"AMD","AMDGPU"
 ; HSA-CI703: .hsa_code_object_isa 7,0,3,"AMD","AMDGPU"
 ; HSA-CI704: .hsa_code_object_isa 7,0,4,"AMD","AMDGPU"
-; HSA-VI800: .hsa_code_object_isa 8,0,0,"AMD","AMDGPU"
 ; HSA-VI801: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 ; HSA-VI802: .hsa_code_object_isa 8,0,2,"AMD","AMDGPU"
 ; HSA-VI803: .hsa_code_object_isa 8,0,3,"AMD","AMDGPU"
 ; HSA-VI810: .hsa_code_object_isa 8,1,0,"AMD","AMDGPU"
 ; HSA-GFX900: .hsa_code_object_isa 9,0,0,"AMD","AMDGPU"
 ; HSA-GFX902: .hsa_code_object_isa 9,0,2,"AMD","AMDGPU"
+; HSA-GFX904: .hsa_code_object_isa 9,0,4,"AMD","AMDGPU"
+; HSA-GFX906: .hsa_code_object_isa 9,0,6,"AMD","AMDGPU"

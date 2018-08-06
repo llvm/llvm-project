@@ -111,7 +111,7 @@ public:
   void operator=(const SectionMemoryManager &) = delete;
   ~SectionMemoryManager() override;
 
-  /// \brief Allocates a memory block of (at least) the given size suitable for
+  /// Allocates a memory block of (at least) the given size suitable for
   /// executable code.
   ///
   /// The value of \p Alignment must be a power of two.  If \p Alignment is zero
@@ -120,7 +120,7 @@ public:
                                unsigned SectionID,
                                StringRef SectionName) override;
 
-  /// \brief Allocates a memory block of (at least) the given size suitable for
+  /// Allocates a memory block of (at least) the given size suitable for
   /// executable code.
   ///
   /// The value of \p Alignment must be a power of two.  If \p Alignment is zero
@@ -129,7 +129,7 @@ public:
                                unsigned SectionID, StringRef SectionName,
                                bool isReadOnly) override;
 
-  /// \brief Update section-specific memory permissions and other attributes.
+  /// Update section-specific memory permissions and other attributes.
   ///
   /// This method is called when object loading is complete and section page
   /// permissions can be applied.  It is up to the memory manager implementation
@@ -142,7 +142,7 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool finalizeMemory(std::string *ErrMsg = nullptr) override;
 
-  /// \brief Invalidate instruction cache for code sections.
+  /// Invalidate instruction cache for code sections.
   ///
   /// Some platforms with separate data cache and instruction cache require
   /// explicit cache flush, otherwise JIT code manipulations (like resolved
@@ -181,6 +181,8 @@ private:
 
   std::error_code applyMemoryGroupPermissions(MemoryGroup &MemGroup,
                                               unsigned Permissions);
+
+  void anchor() override;
 
   MemoryGroup CodeMem;
   MemoryGroup RWDataMem;

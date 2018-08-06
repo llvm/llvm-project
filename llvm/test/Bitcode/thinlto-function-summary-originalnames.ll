@@ -1,10 +1,11 @@
 ; Test to check the callgraph in summary
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t.o
-; RUN: llvm-bcanalyzer -dump %t.index.bc | FileCheck %s --check-prefix=COMBINED
+; RUN: llvm-bcanalyzer -dump %t.index.bc | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=COMBINED
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION
+; COMBINED-NEXT:    <FLAGS
 ; COMBINED-NEXT:    <VALUE_GUID {{.*}} op1=4947176790635855146/>
 ; COMBINED-NEXT:    <VALUE_GUID {{.*}} op1=-6591587165810580810/>
 ; COMBINED-NEXT:    <VALUE_GUID {{.*}} op1=-4377693495213223786/>

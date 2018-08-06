@@ -7,8 +7,8 @@
 
 ; Function Attrs: nounwind
 define i32 @test2(i8 zeroext %a, i8 zeroext %b) #0 {
-; CHECK: if{{ *}}({{!*}}p{{[0-3]+}}{{[.new]*}}){{ *}}r{{[0-9]+}}{{ *}}={{ *}}memw(##{{[cd]}})
-; CHECK: if{{ *}}({{!*}}p{{[0-3]+}}){{ *}}r{{[0-9]+}}{{ *}}={{ *}}memw(##{{[cd]}})
+; CHECK: if ({{!?}}p{{[0-3]+}}{{(.new)?}}) r{{[0-9]+}} = memw(##{{[cd]}})
+; CHECK: if ({{!?}}p{{[0-3]+}}) r{{[0-9]+}} = memw(##{{[cd]}})
 entry:
   %cmp = icmp eq i8 %a, %b
   br i1 %cmp, label %if.then, label %entry.if.end_crit_edge

@@ -102,37 +102,37 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
 }
 
 void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
-  DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI)
-               << " to " << printReg(PhysReg, TRI) << ':');
+  LLVM_DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI) << " to "
+                    << printReg(PhysReg, TRI) << ':');
   assert(!VRM->hasPhys(VirtReg.reg) && "Duplicate VirtReg assignment");
   VRM->assignVirt2Phys(VirtReg.reg, PhysReg);
 
-  foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                         const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
-    Matrix[Unit].unify(VirtReg, Range);
-    return false;
-  });
+  foreachUnit(
+      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+        LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
+        Matrix[Unit].unify(VirtReg, Range);
+        return false;
+      });
 
   ++NumAssigned;
-  DEBUG(dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 }
 
 void LiveRegMatrix::unassign(LiveInterval &VirtReg) {
   unsigned PhysReg = VRM->getPhys(VirtReg.reg);
-  DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI)
-               << " from " << printReg(PhysReg, TRI) << ':');
+  LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI) << " from "
+                    << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg);
 
-  foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                         const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
-    Matrix[Unit].extract(VirtReg, Range);
-    return false;
-  });
+  foreachUnit(TRI, VirtReg, PhysReg,
+              [&](unsigned Unit, const LiveRange &Range) {
+                LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
+                Matrix[Unit].extract(VirtReg, Range);
+                return false;
+              });
 
   ++NumUnassigned;
-  DEBUG(dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 }
 
 bool LiveRegMatrix::isPhysRegUsed(unsigned PhysReg) const {
@@ -204,4 +204,20 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
     return IK_VirtReg;
 
   return IK_Free;
+}
+
+bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
+                                      unsigned PhysReg) {
+  // Construct artificial live range containing only one segment [Start, End).
+  VNInfo valno(0, Start);
+  LiveRange::Segment Seg(Start, End, &valno);
+  LiveRange LR;
+  LR.addSegment(Seg);
+
+  // Check for interference with that segment
+  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
+    if (query(LR, *Units).checkInterference())
+      return true;
+  }
+  return false;
 }

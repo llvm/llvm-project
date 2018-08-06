@@ -147,7 +147,7 @@ attributes #4 = { nounwind }
 !20 = !{!15, !21}
 !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
 !22 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !4)
-!24 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barii", scope: !1, file: !1, line: 11, type: !25, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !28)
+!24 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barii", scope: !1, file: !1, line: 11, type: !25, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !28)
 !25 = !DISubroutineType(types: !26)
 !26 = !{null, !27, !27}
 !27 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -157,12 +157,12 @@ attributes #4 = { nounwind }
 !31 = !DILocalVariable(name: "temp", scope: !24, file: !1, line: 12, type: !15)
 !32 = !DILocalVariable(name: "var1", scope: !24, file: !1, line: 17, type: !4)
 !33 = !DILocalVariable(name: "var2", scope: !24, file: !1, line: 18, type: !4)
-!34 = distinct !DISubprogram(name: "AAA3", linkageName: "_ZN4AAA3C2EPKc", scope: !4, file: !1, line: 5, type: !12, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !11, variables: !35)
+!34 = distinct !DISubprogram(name: "AAA3", linkageName: "_ZN4AAA3C2EPKc", scope: !4, file: !1, line: 5, type: !12, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !11, retainedNodes: !35)
 !35 = !{!36, !38}
 !36 = !DILocalVariable(name: "this", arg: 1, scope: !34, type: !37, flags: DIFlagArtificial | DIFlagObjectPointer)
 !37 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)
 !38 = !DILocalVariable(name: "value", arg: 2, scope: !34, file: !1, line: 5, type: !15)
-!39 = distinct !DISubprogram(name: "operator=", linkageName: "_ZN4AAA3aSEPKc", scope: !4, file: !1, line: 6, type: !12, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !17, variables: !40)
+!39 = distinct !DISubprogram(name: "operator=", linkageName: "_ZN4AAA3aSEPKc", scope: !4, file: !1, line: 6, type: !12, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !17, retainedNodes: !40)
 !40 = !{!41, !42}
 !41 = !DILocalVariable(name: "this", arg: 1, scope: !39, type: !37, flags: DIFlagArtificial | DIFlagObjectPointer)
 !42 = !DILocalVariable(name: "value", arg: 2, scope: !39, file: !1, line: 6, type: !15)

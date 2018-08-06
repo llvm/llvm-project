@@ -155,18 +155,18 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   LiveRegs.init(TII->getRegisterInfo());
 
-  DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
+  LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
 
   // Process all basic blocks.
   for (auto &MBB : MF)
     processBasicBlock(MF, MBB);
 
-  DEBUG(dbgs() << "End X86FixupBWInsts\n";);
+  LLVM_DEBUG(dbgs() << "End X86FixupBWInsts\n";);
 
   return true;
 }
 
-/// \brief Check if after \p OrigMI the only portion of super register
+/// Check if after \p OrigMI the only portion of super register
 /// of the destination register of \p OrigMI that is alive is that
 /// destination register.
 ///
@@ -249,15 +249,16 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
 
     assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
 
-    for (MCSuperRegIterator Supers(OrigDestReg, TRI, true); Supers.isValid();
-         ++Supers) {
-      if (*Supers == MO.getReg()) {
-        if (MO.isDef())
-          IsDefined = true;
-        else
-          return false; // SuperReg Imp-used' -> live before the MI
-      }
-    }
+    if (MO.isDef() && TRI->isSuperRegisterEq(OrigDestReg, MO.getReg()))
+        IsDefined = true;
+
+    // If MO is a use of any part of the destination register but is not equal
+    // to OrigDestReg or one of its subregisters, we cannot use SuperDestReg.
+    // For example, if OrigDestReg is %al then an implicit use of %ah, %ax,
+    // %eax, or %rax will prevent us from using the %eax register.
+    if (MO.isUse() && !TRI->isSubRegisterEq(OrigDestReg, MO.getReg()) &&
+        TRI->regsOverlap(SuperDestReg, MO.getReg()))
+      return false;
   }
   // Reg is not Imp-def'ed -> it's live both before/after the instruction.
   if (!IsDefined)

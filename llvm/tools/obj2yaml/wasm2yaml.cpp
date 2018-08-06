@@ -53,42 +53,71 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
   if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec = make_unique<WasmYAML::NameSection>();
-    for (const object::SymbolRef& Sym: Obj.symbols()) {
-      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
-      if (Symbol.Type != object::WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME)
-        continue;
+    for (const llvm::wasm::WasmFunctionName &Func: Obj.debugNames()) {
       WasmYAML::NameEntry NameEntry;
-      NameEntry.Name = Symbol.Name;
-      NameEntry.Index = Sym.getValue();
+      NameEntry.Name = Func.Name;
+      NameEntry.Index = Func.Index;
       NameSec->FunctionNames.push_back(NameEntry);
     }
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
     std::unique_ptr<WasmYAML::LinkingSection> LinkingSec = make_unique<WasmYAML::LinkingSection>();
-    size_t Index = 0;
+    LinkingSec->Version = Obj.linkingData().Version;
+
+    ArrayRef<StringRef> Comdats = Obj.linkingData().Comdats;
+    for (StringRef ComdatName : Comdats)
+      LinkingSec->Comdats.emplace_back(WasmYAML::Comdat{ComdatName, {}});
+    for (auto &Func : Obj.functions()) {
+      if (Func.Comdat != UINT32_MAX) {
+        LinkingSec->Comdats[Func.Comdat].Entries.emplace_back(
+                WasmYAML::ComdatEntry{wasm::WASM_COMDAT_FUNCTION, Func.Index});
+      }
+    }
+
+    uint32_t SegmentIndex = 0;
     for (const object::WasmSegment &Segment : Obj.dataSegments()) {
       if (!Segment.Data.Name.empty()) {
         WasmYAML::SegmentInfo SegmentInfo;
         SegmentInfo.Name = Segment.Data.Name;
-        SegmentInfo.Index = Index;
+        SegmentInfo.Index = SegmentIndex;
         SegmentInfo.Alignment = Segment.Data.Alignment;
         SegmentInfo.Flags = Segment.Data.Flags;
         LinkingSec->SegmentInfos.push_back(SegmentInfo);
       }
-      Index++;
-    }
-    for (const object::SymbolRef& Sym: Obj.symbols()) {
-      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
-      if (Symbol.Flags != 0) {
-        WasmYAML::SymbolInfo Info{Symbol.Name, Symbol.Flags};
-        LinkingSec->SymbolInfos.emplace_back(Info);
+      if (Segment.Data.Comdat != UINT32_MAX) {
+        LinkingSec->Comdats[Segment.Data.Comdat].Entries.emplace_back(
+            WasmYAML::ComdatEntry{wasm::WASM_COMDAT_DATA, SegmentIndex});
       }
+      SegmentIndex++;
     }
-    LinkingSec->DataSize = Obj.linkingData().DataSize;
+
+    uint32_t SymbolIndex = 0;
+    for (const wasm::WasmSymbolInfo &Symbol : Obj.linkingData().SymbolTable) {
+      WasmYAML::SymbolInfo Info;
+      Info.Index = SymbolIndex++;
+      Info.Kind = static_cast<uint32_t>(Symbol.Kind);
+      Info.Name = Symbol.Name;
+      Info.Flags = Symbol.Flags;
+      switch (Symbol.Kind) {
+      case wasm::WASM_SYMBOL_TYPE_DATA:
+        Info.DataRef = Symbol.DataRef;
+        break;
+      case wasm::WASM_SYMBOL_TYPE_FUNCTION:
+      case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+        Info.ElementIndex = Symbol.ElementIndex;
+        break;
+      case wasm::WASM_SYMBOL_TYPE_SECTION:
+        Info.ElementIndex = Symbol.ElementIndex;
+        break;
+      }
+      LinkingSec->SymbolTable.emplace_back(Info);
+    }
+
     for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
-      WasmYAML::InitFunction F{Func.Priority, Func.FunctionIndex};
+      WasmYAML::InitFunction F{Func.Priority, Func.Symbol};
       LinkingSec->InitFunctions.emplace_back(F);
     }
+
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
@@ -186,8 +215,9 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       auto GlobalSec = make_unique<WasmYAML::GlobalSection>();
       for (auto &Global : Obj.globals()) {
         WasmYAML::Global G;
-        G.Type = Global.Type;
-        G.Mutable = Global.Mutable;
+        G.Index = Global.Index;
+        G.Type = Global.Type.Type;
+        G.Mutable = Global.Type.Mutable;
         G.InitExpr = Global.InitExpr;
         GlobalSec->Globals.push_back(G);
       }
@@ -230,6 +260,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       auto CodeSec = make_unique<WasmYAML::CodeSection>();
       for (auto &Func : Obj.functions()) {
         WasmYAML::Function Function;
+        Function.Index = Func.Index;
         for (auto &Local : Func.Locals) {
           WasmYAML::LocalDecl LocalDecl;
           LocalDecl.Type = Local.Type;

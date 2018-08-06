@@ -29,7 +29,7 @@ entry:
 ; CHECK-HARDFLOAT-EABI: __aeabi_h2f
 ; CHECK-HARDFLOAT-GNU: __gnu_h2f_ieee
 ; CHECK-FP16: vcvtb.f32.f16
-; CHECK-ARMv8: vcvtb.f32.f16
+; CHECK-ARMV8: vcvtb.f32.f16
 ; CHECK-SOFTFLOAT-EABI: __aeabi_h2f
 ; CHECK-SOFTFLOAT-GNU: __gnu_h2f_ieee
   %3 = tail call float @llvm.convert.from.fp16.f32(i16 %1)

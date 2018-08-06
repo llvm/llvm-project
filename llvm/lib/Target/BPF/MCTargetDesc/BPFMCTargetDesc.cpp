@@ -52,10 +52,10 @@ static MCSubtargetInfo *createBPFMCSubtargetInfo(const Triple &TT,
 
 static MCStreamer *createBPFMCStreamer(const Triple &T, MCContext &Ctx,
                                        std::unique_ptr<MCAsmBackend> &&MAB,
-                                       raw_pwrite_stream &OS,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
                                        std::unique_ptr<MCCodeEmitter> &&Emitter,
                                        bool RelaxAll) {
-  return createELFStreamer(Ctx, std::move(MAB), OS, std::move(Emitter),
+  return createELFStreamer(Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
                            RelaxAll);
 }
 

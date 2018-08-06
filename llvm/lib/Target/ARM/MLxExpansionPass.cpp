@@ -309,17 +309,17 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
   }
   MIB.addImm(Pred).addReg(PredReg);
 
-  DEBUG({
-      dbgs() << "Expanding: " << *MI;
-      dbgs() << "  to:\n";
-      MachineBasicBlock::iterator MII = MI;
-      MII = std::prev(MII);
-      MachineInstr &MI2 = *MII;
-      MII = std::prev(MII);
-      MachineInstr &MI1 = *MII;
-      dbgs() << "    " << MI1;
-      dbgs() << "    " << MI2;
-   });
+  LLVM_DEBUG({
+    dbgs() << "Expanding: " << *MI;
+    dbgs() << "  to:\n";
+    MachineBasicBlock::iterator MII = MI;
+    MII = std::prev(MII);
+    MachineInstr &MI2 = *MII;
+    MII = std::prev(MII);
+    MachineInstr &MI1 = *MII;
+    dbgs() << "    " << MI1;
+    dbgs() << "    " << MI2;
+  });
 
   MI->eraseFromParent();
   ++NumExpand;

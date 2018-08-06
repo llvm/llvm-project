@@ -19,6 +19,12 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <unistd.h>
+#else
+#include <io.h>
+#endif
+
 using namespace llvm;
 using namespace llvm::lto;
 
@@ -33,16 +39,32 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
     SmallString<64> EntryPath;
     sys::path::append(EntryPath, CacheDirectoryPath, "llvmcache-" + Key);
     // First, see if we have a cache hit.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getFile(EntryPath);
-    if (MBOrErr) {
-      AddBuffer(Task, std::move(*MBOrErr), EntryPath);
-      return AddStreamFn();
+    int FD;
+    SmallString<64> ResultPath;
+    std::error_code EC = sys::fs::openFileForRead(
+        Twine(EntryPath), FD, sys::fs::OF_UpdateAtime, &ResultPath);
+    if (!EC) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+          MemoryBuffer::getOpenFile(FD, EntryPath,
+                                    /*FileSize*/ -1,
+                                    /*RequiresNullTerminator*/ false);
+      close(FD);
+      if (MBOrErr) {
+        AddBuffer(Task, std::move(*MBOrErr));
+        return AddStreamFn();
+      }
+      EC = MBOrErr.getError();
     }
 
-    if (MBOrErr.getError() != errc::no_such_file_or_directory)
+    // On Windows we can fail to open a cache file with a permission denied
+    // error. This generally means that another process has requested to delete
+    // the file while it is still open, but it could also mean that another
+    // process has opened the file without the sharing permissions we need.
+    // Since the file is probably being deleted we handle it in the same way as
+    // if the file did not exist at all.
+    if (EC != errc::no_such_file_or_directory && EC != errc::permission_denied)
       report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
-                         ": " + MBOrErr.getError().message() + "\n");
+                         ": " + EC.message() + "\n");
 
     // This native object stream is responsible for commiting the resulting
     // file to the cache and calling AddBuffer to add it to the link.
@@ -103,7 +125,7 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
                              TempFile.TmpName + " to " + EntryPath + ": " +
                              toString(std::move(E)) + "\n");
 
-        AddBuffer(Task, std::move(*MBOrErr), EntryPath);
+        AddBuffer(Task, std::move(*MBOrErr));
       }
     };
 

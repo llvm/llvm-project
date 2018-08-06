@@ -31,7 +31,7 @@ exit:
   ret i32 %i
 
 ; CHECK-LABEL: @test2
-; CHECK: Loop %loop: backedge-taken count is ((-32 + (32 * (%n /u 32))) /u 32)
+; CHECK: Loop %loop: backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
 ; CHECK: Loop %loop: max backedge-taken count is 134217727
 }
 

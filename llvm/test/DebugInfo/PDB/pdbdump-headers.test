@@ -65,10 +65,15 @@ ALL-NEXT:   134 | '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
 ALL:      		                    Modules
 ALL-NEXT: ============================================================
 ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:               SC[.text]  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
+ALL-NEXT:                            IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+ALL-NEXT:                            IMAGE_SCN_MEM_READ
 ALL-NEXT:              Obj: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
 ALL-NEXT:              debug stream: 12, # files: 1, has ec info: false
 ALL-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
 ALL-NEXT:   Mod 0001 |  `* Linker *`:
+ALL-NEXT:               SC[.text]  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
+ALL-NEXT:                            IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
 ALL-NEXT:              Obj: ``:
 ALL-NEXT:              debug stream: 14, # files: 0, has ec info: false
 ALL-NEXT:              pdb file ni: 1 `{{.*empty.pdb}}`, src file ni: 0 ``

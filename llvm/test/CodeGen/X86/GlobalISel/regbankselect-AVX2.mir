@@ -107,12 +107,12 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi
+    liveins: $rdi
 
-    %0(p0) = COPY %rdi
+    %0(p0) = COPY $rdi
     %1(<8 x s32>) = G_LOAD %0(p0) :: (load 32 from %ir.p1, align 1)
-    %ymm0 = COPY %1(<8 x s32>)
-    RET 0, implicit %ymm0
+    $ymm0 = COPY %1(<8 x s32>)
+    RET 0, implicit $ymm0
 
 ...
 ---
@@ -129,10 +129,10 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %rdi, %ymm0
+    liveins: $rdi, $ymm0
 
-    %0(<8 x s32>) = COPY %ymm0
-    %1(p0) = COPY %rdi
+    %0(<8 x s32>) = COPY $ymm0
+    %1(p0) = COPY $rdi
     G_STORE %0(<8 x s32>), %1(p0) :: (store 32 into %ir.p1, align 1)
     RET 0
 

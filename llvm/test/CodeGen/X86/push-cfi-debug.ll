@@ -6,17 +6,15 @@ declare void @foo(i32, i32) #0
 declare x86_stdcallcc void @stdfoo(i32, i32) #0
 
 ; CHECK-LABEL: test1:
-; CHECK: subl $8, %esp
-; CHECK: .cfi_adjust_cfa_offset 8
+; CHECK: subl $20, %esp
+; CHECK: .cfi_adjust_cfa_offset 20
 ; CHECK: pushl $2
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: pushl $1
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: calll foo
-; CHECK: addl $16, %esp
-; CHECK: .cfi_adjust_cfa_offset -16
-; CHECK: subl $8, %esp
-; CHECK: .cfi_adjust_cfa_offset 8
+; CHECK: addl $8, %esp
+; CHECK: .cfi_adjust_cfa_offset -8
 ; CHECK: pushl $4
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: pushl $3
@@ -24,7 +22,7 @@ declare x86_stdcallcc void @stdfoo(i32, i32) #0
 ; CHECK: calll stdfoo
 ; CHECK: .cfi_adjust_cfa_offset -8
 ; CHECK: addl $20, %esp
-; CHECK: .cfi_adjust_cfa_offset -8
+; CHECK: .cfi_adjust_cfa_offset -20
 define void @test1() #0 !dbg !4 {
 entry:
   tail call void @foo(i32 1, i32 2) #1, !dbg !10
@@ -41,7 +39,7 @@ attributes #0 = { nounwind optsize }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 250289)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "foo.c", directory: "foo")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !2)
+!4 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{i32 2, !"Dwarf Version", i32 4}

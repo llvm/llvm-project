@@ -480,3 +480,18 @@ Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
 
   return Error::success();
 }
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
+                                          PrecompRecord &Precomp) {
+  error(IO.mapInteger(Precomp.StartTypeIndex));
+  error(IO.mapInteger(Precomp.TypesCount));
+  error(IO.mapInteger(Precomp.Signature));
+  error(IO.mapStringZ(Precomp.PrecompFilePath));
+  return Error::success();
+}
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
+                                          EndPrecompRecord &EndPrecomp) {
+  error(IO.mapInteger(EndPrecomp.Signature));
+  return Error::success();
+}

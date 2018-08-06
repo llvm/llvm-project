@@ -38,6 +38,9 @@ bool CallLowering::lowerCall(
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CS);
+    // We don't currently support swifterror or swiftself args.
+    if (OrigArg.Flags.isSwiftError() || OrigArg.Flags.isSwiftSelf())
+      return false;
     OrigArgs.push_back(OrigArg);
     ++i;
   }

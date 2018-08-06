@@ -103,3 +103,28 @@ define i32 @test7() {
 }
 
 declare i32 @bar(i32, i32, i32, i32)
+
+; Regression test for failure to load indirect branch target (class tcGPR) from
+; a stack slot.
+%struct.S = type { i32 }
+
+define void @test8(i32 (i32, i32, i32)* nocapture %fn, i32 %x) local_unnamed_addr {
+entry:
+  %call = tail call %struct.S* bitcast (%struct.S* (...)* @test8_u to %struct.S* ()*)()
+  %a = getelementptr inbounds %struct.S, %struct.S* %call, i32 0, i32 0
+  %0 = load i32, i32* %a, align 4
+  %call1 = tail call i32 @test8_h(i32 0)
+  %call2 = tail call i32 @test8_g(i32 %0, i32 %call1, i32 0)
+  store i32 %x, i32* %a, align 4
+  %call4 = tail call i32 %fn(i32 1, i32 2, i32 3)
+  ret void
+}
+
+declare %struct.S* @test8_u(...)
+
+declare i32 @test8_g(i32, i32, i32)
+
+declare i32 @test8_h(i32)
+; CHECK: str r0, [sp] @ 4-byte Spill
+; CHECK: ldr r3, [sp] @ 4-byte Reload
+; CHECK: bx r3

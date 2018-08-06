@@ -100,6 +100,8 @@ void install_bad_alloc_error_handler(fatal_error_handler_t handler,
 /// Restores default bad alloc error handling behavior.
 void remove_bad_alloc_error_handler();
 
+void install_out_of_memory_new_handler();
+
 /// Reports a bad alloc error, calling any user defined bad alloc
 /// error handler. In contrast to the generic 'report_fatal_error'
 /// functions, this function is expected to return, e.g. the user
@@ -110,7 +112,7 @@ void remove_bad_alloc_error_handler();
 /// in the unwind chain.
 ///
 /// If no error handler is installed (default), then a bad_alloc exception
-/// is thrown if LLVM is compiled with exception support, otherwise an assertion
+/// is thrown, if LLVM is compiled with exception support, otherwise an assertion
 /// is called.
 void report_bad_alloc_error(const char *Reason, bool GenCrashDiag = true);
 

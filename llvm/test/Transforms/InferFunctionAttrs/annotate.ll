@@ -514,6 +514,9 @@ declare i32 @getc_unlocked(%opaque*)
 ; CHECK: declare i32 @getchar()
 declare i32 @getchar()
 
+; CHECK: declare i32 @getchar_unlocked()
+declare i32 @getchar_unlocked()
+
 ; CHECK: declare i8* @getenv(i8* nocapture) [[G1]]
 declare i8* @getenv(i8*)
 
@@ -699,6 +702,9 @@ declare i32 @putc(i32, %opaque*)
 
 ; CHECK: declare i32 @putchar(i32)
 declare i32 @putchar(i32)
+
+; CHECK: declare i32 @putchar_unlocked(i32)
+declare i32 @putchar_unlocked(i32)
 
 ; CHECK: declare i32 @puts(i8* nocapture readonly) [[G0]]
 declare i32 @puts(i8*)

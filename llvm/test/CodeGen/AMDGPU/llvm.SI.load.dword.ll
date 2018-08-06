@@ -14,10 +14,10 @@
 ; CHECK: s_movk_i32 [[K:s[0-9]+]], 0x4d2 ; encoding
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, [[K]] idxen offen offset:65535 glc slc
 
-define amdgpu_vs void @main([17 x <4 x i32>] addrspace(2)* byval %arg, [32 x <4 x i32>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, [2 x <4 x i32>] addrspace(2)* byval %arg3, [17 x <4 x i32>] addrspace(2)* inreg %arg4, [17 x <4 x i32>] addrspace(2)* inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9) {
+define amdgpu_vs void @main([17 x <4 x i32>] addrspace(4)* byval %arg, [32 x <4 x i32>] addrspace(4)* byval %arg1, [16 x <32 x i8>] addrspace(4)* byval %arg2, [2 x <4 x i32>] addrspace(4)* byval %arg3, [17 x <4 x i32>] addrspace(4)* inreg %arg4, [17 x <4 x i32>] addrspace(4)* inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9) {
 main_body:
-  %tmp = getelementptr [2 x <4 x i32>], [2 x <4 x i32>] addrspace(2)* %arg3, i64 0, i32 1
-  %tmp10 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp, !tbaa !0
+  %tmp = getelementptr [2 x <4 x i32>], [2 x <4 x i32>] addrspace(4)* %arg3, i64 0, i32 1
+  %tmp10 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
   %tmp11 = shl i32 %arg6, 2
   %tmp12 = call i32 @llvm.SI.buffer.load.dword.i32.i32(<4 x i32> %tmp10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 0)
   %tmp13 = bitcast i32 %tmp12 to float

@@ -45,7 +45,7 @@ public:
   /// \returns nullptr if a parsing error occurred.
   std::unique_ptr<Module> parseIRModule();
 
-  /// \brief Parses MachineFunctions in the MIR file and add them to the given
+  /// Parses MachineFunctions in the MIR file and add them to the given
   /// MachineModuleInfo \p MMI.
   ///
   /// \returns true if an error occurred.

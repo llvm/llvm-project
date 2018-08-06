@@ -22,7 +22,7 @@
 namespace llvm {
 
 struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
-  /// \brief Run the pass over the function.
+  /// Run the pass over the function.
   ///
   /// This will lower all of the expect intrinsic calls in this function into
   /// branch weight metadata. That metadata will subsequently feed the analysis

@@ -23,58 +23,58 @@ frameInfo:
 stack:
   - { id: 0, name: mem, offset: -48, size: 40, alignment: 4 }
   - { id: 1, type: spill-slot, offset: -4, size: 4, alignment: 4,
-      callee-saved-register: '%lr' }
+      callee-saved-register: '$lr' }
   - { id: 2, type: spill-slot, offset: -8, size: 4, alignment: 4,
-      callee-saved-register: '%r11' }
+      callee-saved-register: '$r11' }
 body: |
   bb.0:
     successors: %bb.2, %bb.1
-    liveins: %r11, %lr
+    liveins: $r11, $lr
 
-    %sp = STMDB_UPD %sp, 14, _, %r4, %r5
+    $sp = STMDB_UPD $sp, 14, _, $r4, $r5
     CFI_INSTRUCTION def_cfa_offset 8
-    CFI_INSTRUCTION offset %r5, -4
-    CFI_INSTRUCTION offset %r4, -8
-    %r5 = MOVr %sp, 14, _, _
-    %r4 = MRC 15, 0, 13, 0, 3, 14, _
-    %r4 = LDRi12 %r4, 4, 14, _
-    CMPrr %r4, %r5, 14, _, implicit-def %cpsr
-    Bcc %bb.2, 3, %cpsr
+    CFI_INSTRUCTION offset $r5, -4
+    CFI_INSTRUCTION offset $r4, -8
+    $r5 = MOVr $sp, 14, _, _
+    $r4 = MRC 15, 0, 13, 0, 3, 14, _
+    $r4 = LDRi12 $r4, 4, 14, _
+    CMPrr $r4, $r5, 14, _, implicit-def $cpsr
+    Bcc %bb.2, 3, $cpsr
 
   bb.1:
     successors: %bb.2
-    liveins: %r11, %lr
+    liveins: $r11, $lr
 
-    %r4 = MOVi 48, 14, _, _
-    %r5 = MOVi 0, 14, _, _
-    %sp = STMDB_UPD %sp, 14, _, %lr
+    $r4 = MOVi 48, 14, _, _
+    $r5 = MOVi 0, 14, _, _
+    $sp = STMDB_UPD $sp, 14, _, $lr
     CFI_INSTRUCTION def_cfa_offset 12
-    CFI_INSTRUCTION offset %lr, -12
-    BL $__morestack, implicit-def %lr, implicit %sp
-    %sp = LDMIA_UPD %sp, 14, _, %lr
-    %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
+    CFI_INSTRUCTION offset $lr, -12
+    BL &__morestack, implicit-def $lr, implicit $sp
+    $sp = LDMIA_UPD $sp, 14, _, $lr
+    $sp = LDMIA_UPD $sp, 14, _, $r4, $r5
     CFI_INSTRUCTION def_cfa_offset 0
     BX_RET 14, _
 
   bb.2:
-    liveins: %r11, %lr
+    liveins: $r11, $lr
 
-    %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
+    $sp = LDMIA_UPD $sp, 14, _, $r4, $r5
     CFI_INSTRUCTION def_cfa_offset 0
-  ; CHECK:      CFI_INSTRUCTION same_value %r4
-  ; CHECK-NEXT: CFI_INSTRUCTION same_value %r5
-    CFI_INSTRUCTION same_value %r4
-    CFI_INSTRUCTION same_value %r5
-    %sp = frame-setup STMDB_UPD %sp, 14, _, killed %r11, killed %lr
+  ; CHECK:      CFI_INSTRUCTION same_value $r4
+  ; CHECK-NEXT: CFI_INSTRUCTION same_value $r5
+    CFI_INSTRUCTION same_value $r4
+    CFI_INSTRUCTION same_value $r5
+    $sp = frame-setup STMDB_UPD $sp, 14, _, killed $r11, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION offset %lr, -4
-    frame-setup CFI_INSTRUCTION offset %r11, -8
-    %sp = frame-setup SUBri killed %sp, 40, 14, _, _
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r11, -8
+    $sp = frame-setup SUBri killed $sp, 40, 14, _, _
     frame-setup CFI_INSTRUCTION def_cfa_offset 48
-    %r0 = MOVr %sp, 14, _, _
-    %r1 = MOVi 10, 14, _, _
-    BL @dummy_use, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit killed %r1, implicit-def %sp
-    %sp = ADDri killed %sp, 40, 14, _, _
-    %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
+    $r0 = MOVr $sp, 14, _, _
+    $r1 = MOVi 10, 14, _, _
+    BL @dummy_use, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit killed $r1, implicit-def $sp
+    $sp = ADDri killed $sp, 40, 14, _, _
+    $sp = LDMIA_UPD $sp, 14, _, $r4, $r5
     MOVPCLR 14, _
 ...

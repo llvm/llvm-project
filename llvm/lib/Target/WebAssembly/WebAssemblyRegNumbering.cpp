@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements a pass which assigns WebAssembly register
+/// This file implements a pass which assigns WebAssembly register
 /// numbers for CodeGen virtual registers.
 ///
 //===----------------------------------------------------------------------===//
@@ -51,14 +51,18 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyRegNumbering::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegNumbering, DEBUG_TYPE,
+                "Assigns WebAssembly register numbers for virtual registers",
+                false, false)
+
 FunctionPass *llvm::createWebAssemblyRegNumbering() {
   return new WebAssemblyRegNumbering();
 }
 
 bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Register Numbering **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Register Numbering **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -73,8 +77,8 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
       break;
 
     int64_t Imm = MI.getOperand(1).getImm();
-    DEBUG(dbgs() << "Arg VReg " << MI.getOperand(0).getReg() << " -> WAReg "
-                 << Imm << "\n");
+    LLVM_DEBUG(dbgs() << "Arg VReg " << MI.getOperand(0).getReg()
+                      << " -> WAReg " << Imm << "\n");
     MFI.setWAReg(MI.getOperand(0).getReg(), Imm);
   }
 
@@ -92,13 +96,13 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
       continue;
     // Handle stackified registers.
     if (MFI.isVRegStackified(VReg)) {
-      DEBUG(dbgs() << "VReg " << VReg << " -> WAReg "
-                   << (INT32_MIN | NumStackRegs) << "\n");
+      LLVM_DEBUG(dbgs() << "VReg " << VReg << " -> WAReg "
+                        << (INT32_MIN | NumStackRegs) << "\n");
       MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
       continue;
     }
     if (MFI.getWAReg(VReg) == WebAssemblyFunctionInfo::UnusedReg) {
-      DEBUG(dbgs() << "VReg " << VReg << " -> WAReg " << CurReg << "\n");
+      LLVM_DEBUG(dbgs() << "VReg " << VReg << " -> WAReg " << CurReg << "\n");
       MFI.setWAReg(VReg, CurReg++);
     }
   }

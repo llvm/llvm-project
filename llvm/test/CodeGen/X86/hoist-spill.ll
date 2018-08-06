@@ -48,9 +48,6 @@ for.cond:                                         ; preds = %for.inc14, %entry
   %cmp326 = icmp sgt i32 %k.0, %p1
   br i1 %cmp326, label %for.cond4.preheader, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %for.cond
-  br label %for.body
-
 for.cond4.preheader:                              ; preds = %for.body, %for.cond
   %k.1.lcssa = phi i32 [ %k.0, %for.cond ], [ %add, %for.body ]
   %cmp528 = icmp sgt i32 %sub., %p1
@@ -94,6 +91,9 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body, %vector.body.preheader.split
   br i1 undef, label %for.inc14, label %for.body6
+
+for.body.preheader:                               ; preds = %for.cond
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %k.127 = phi i32 [ %k.0, %for.body.preheader ], [ %add, %for.body ]

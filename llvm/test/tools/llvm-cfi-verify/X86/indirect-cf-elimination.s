@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-linux-elf -o %t.o
-# RUN: llvm-cfi-verify %t.o 2>&1 | FileCheck %s
+# RUN: llvm-cfi-verify %t.o 2>&1 --summarize | FileCheck %s
 
 # This is the same file as protected-lineinfo.s, however contains a hand-
 # assembled function (fake_function) that has no line table information
@@ -9,6 +9,8 @@
 # We can test that this indirect call is ignored from the final statistics
 # reporting of the cfi-verify program. It should only find a single indirect CF
 # instruction at `tiny.cc:11` (see protected-lineinfo.s for the source).
+
+# CHECK-NOT: Begin Instruction
 
 # CHECK: Expected Protected: 1 (100.00%)
 # CHECK: Unexpected Protected: 0 (0.00%)

@@ -33,13 +33,13 @@
 ; ASM:         callq   vardef
 ; ASM:         movl    %eax, %esi
 ; ASM: [[p_b1:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   barrier
 ; ASM:         movl    %esi, %ecx
 ; ASM:         testl   %eax, %eax
 ; ASM:         jne     .LBB0_5
 ; ASM: # %bb.2:                                 # %if.end
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   use
 ; ASM:         jmp     .LBB0_4
 ; ASM: [[p_e1:\.Ltmp[0-9]+]]:
@@ -52,7 +52,7 @@
 ; ASM:         retq
 ; ASM: .LBB0_5:                                # %if.then4
 ; ASM: [[p_b2:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: p <- %esi
+; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   call_noreturn
 ; ASM:         ud2
 ; ASM: .Lfunc_end0:
@@ -151,7 +151,7 @@ attributes #5 = { noreturn nounwind }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0 "}
-!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 19, type: !8, isLocal: false, isDefinition: true, scopeLine: 19, isOptimized: true, unit: !0, variables: !11)
+!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 19, type: !8, isLocal: false, isDefinition: true, scopeLine: 19, isOptimized: true, unit: !0, retainedNodes: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10}
 !10 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

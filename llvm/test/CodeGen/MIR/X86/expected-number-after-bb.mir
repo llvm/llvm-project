@@ -20,14 +20,14 @@
 name:            foo
 body: |
   bb.0.entry:
-    %eax = MOV32rm %rdi, 1, _, 0, _
-    CMP32ri8 %eax, 10, implicit-def %eflags
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    CMP32ri8 $eax, 10, implicit-def $eflags
     ; CHECK: [[@LINE+1]]:14: expected a number after '%bb.'
-    JG_1 %bb.nah, implicit %eflags
+    JG_1 %bb.nah, implicit $eflags
 
   bb.1.true:
-    %eax = MOV32r0 implicit-def %eflags
+    $eax = MOV32r0 implicit-def $eflags
 
   bb.2.nah:
-    RETQ %eax
+    RETQ $eax
 ...

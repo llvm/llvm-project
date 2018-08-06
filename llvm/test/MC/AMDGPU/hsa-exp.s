@@ -65,14 +65,13 @@ amd_kernel_code_t_minimal:
 // ASM-LABEL: {{^}}amd_kernel_code_t_minimal:
 // ASM: .amd_kernel_code_t
 // ASM:	amd_code_version_major = 7
-// ASM:	amd_code_version_minor = 1
+// ASM:	amd_code_version_minor = 2
 // ASM:	amd_machine_kind = 1
 // ASM:	amd_machine_version_major = 7
 // ASM:	amd_machine_version_minor = 0
 // ASM:	amd_machine_version_stepping = 0
 // ASM:	kernel_code_entry_byte_offset = 256
 // ASM:	kernel_code_prefetch_byte_size = 0
-// ASM:	max_scratch_backing_memory_byte_size = 0
 // ASM: granulated_workitem_vgpr_count = 1
 // ASM: granulated_wavefront_sgpr_count = 1
 // ASM: priority = 0

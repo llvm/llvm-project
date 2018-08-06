@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file moves ARGUMENT instructions after ScheduleDAG scheduling.
+/// This file moves ARGUMENT instructions after ScheduleDAG scheduling.
 ///
 /// Arguments are really live-in registers, however, since we use virtual
 /// registers and LLVM doesn't support live-in virtual registers, we're
@@ -60,12 +60,15 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyArgumentMove::ID = 0;
+INITIALIZE_PASS(WebAssemblyArgumentMove, DEBUG_TYPE,
+                "Move ARGUMENT instructions for WebAssembly", false, false)
+
 FunctionPass *llvm::createWebAssemblyArgumentMove() {
   return new WebAssemblyArgumentMove();
 }
 
 bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Argument Move **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

@@ -1,0 +1,29 @@
+# RUN: cp %p/Inputs/dwarf.dwo %t
+# RUN: llvm-objcopy -strip-dwo %t
+# RUN: llvm-readobj -file-headers -sections %t | FileCheck %s
+
+CHECK:     SectionHeaderCount: 24
+
+CHECK:    Name: .text
+CHECK:    Name: .rodata.str1.1
+CHECK:    Name: .debug_str
+CHECK:    Name: .debug_abbrev
+CHECK:    Name: .debug_info
+CHECK:    Name: .debug_ranges
+CHECK:    Name: .debug_macinfo
+CHECK:    Name: .debug_addr
+CHECK:    Name: .debug_pubnames
+CHECK:    Name: .debug_pubtypes
+CHECK:    Name: .comment
+CHECK:    Name: .note.GNU-stack
+CHECK:    Name: .debug_frame
+CHECK:    Name: .debug_line
+CHECK:    Name: .symtab
+CHECK:    Name: .rela.text
+CHECK:    Name: .rela.debug_info
+CHECK:    Name: .rela.debug_addr
+CHECK:    Name: .rela.debug_pubnames
+CHECK:    Name: .rela.debug_pubtypes
+CHECK:    Name: .rela.debug_frame
+CHECK:    Name: .rela.debug_line
+CHECK:    Name: .strtab

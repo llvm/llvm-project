@@ -37,8 +37,10 @@ void initializeAVRRelaxMemPass(PassRegistry&);
 /// Contains the AVR backend.
 namespace AVR {
 
+/// An integer that identifies all of the supported AVR address spaces.
 enum AddressSpace { DataMemory, ProgramMemory };
 
+/// Checks if a given type is a pointer to program memory.
 template <typename T> bool isProgramMemoryAddress(T *V) {
   return cast<PointerType>(V->getType())->getAddressSpace() == ProgramMemory;
 }

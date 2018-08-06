@@ -2,6 +2,9 @@
 
 CHECK-NOT: test
 
-DIAG:         CHECK-NOT: pattern specified here
+DIAG:         error: CHECK-NOT: excluded string found in input
+DIAG-NEXT:    CHECK-NOT: test
+DIAG-NEXT: {{^           \^}}
+DIAG-NEXT:    note: found here
 DIAG-NEXT:    CHECK-NOT: test
 DIAG-NEXT: {{^           \^}}

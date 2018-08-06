@@ -11,7 +11,7 @@ define void @f() {
   ret void
 }
 
-; CHECK: define internal dso_local void @g() {
+; CHECK: define internal void @g() {
 define hidden void @g() {
   ret void
 }

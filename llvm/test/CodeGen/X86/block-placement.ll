@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=i686-linux -pre-RA-sched=source < %s | FileCheck %s
+; RUN: opt -disable-output -debugify < %s
 
 declare void @error(i32 %i, i32 %a, i32 %b)
 
@@ -316,7 +317,7 @@ define void @unnatural_cfg1() {
 ; a function. This is a gross CFG reduced out of the single source GCC.
 ; CHECK-LABEL: unnatural_cfg1
 ; CHECK: %entry
-; CHECK: %loop.body1
+; CHECK: %loop.header
 ; CHECK: %loop.body2
 ; CHECK: %loop.body3
 
@@ -610,7 +611,7 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ; CHECK-LABEL: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
 ; CHECK: %loop2b
-; CHECK: %loop1
+; CHECK: %loop3
 
 entry:
   br i1 undef, label %loop2a, label %body

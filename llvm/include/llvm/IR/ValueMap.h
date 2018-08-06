@@ -106,8 +106,12 @@ public:
       : Map(NumInitBuckets), Data() {}
   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
       : Map(NumInitBuckets), Data(Data) {}
+  // ValueMap can't be copied nor moved, beucase the callbacks store pointer
+  // to it.
   ValueMap(const ValueMap &) = delete;
+  ValueMap(ValueMap &&) = delete;
   ValueMap &operator=(const ValueMap &) = delete;
+  ValueMap &operator=(ValueMap &&) = delete;
 
   bool hasMD() const { return bool(MDMap); }
   MDMapT &MD() {

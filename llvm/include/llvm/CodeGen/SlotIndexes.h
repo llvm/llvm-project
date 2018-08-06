@@ -578,9 +578,9 @@ class raw_ostream;
       assert(!MI.isInsideBundle() &&
              "Instructions inside bundles should use bundle start's slot.");
       assert(mi2iMap.find(&MI) == mi2iMap.end() && "Instr already indexed.");
-      // Numbering DBG_VALUE instructions could cause code generation to be
+      // Numbering debug instructions could cause code generation to be
       // affected by debug information.
-      assert(!MI.isDebugValue() && "Cannot number DBG_VALUE instructions.");
+      assert(!MI.isDebugInstr() && "Cannot number debug instructions.");
 
       assert(MI.getParent() != nullptr && "Instr must be added to function.");
 
@@ -674,10 +674,10 @@ class raw_ostream;
       idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      std::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
+      llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
     }
 
-    /// \brief Free the resources that were required to maintain a SlotIndex.
+    /// Free the resources that were required to maintain a SlotIndex.
     ///
     /// Once an index is no longer needed (for instance because the instruction
     /// at that index has been moved), the resources required to maintain the

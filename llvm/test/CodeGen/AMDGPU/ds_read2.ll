@@ -613,13 +613,55 @@ bb:
   ret void
 }
 
+; GCN-LABEL: ds_read_call_read:
+; GCN: ds_read_b32
+; GCN: s_swappc_b64
+; GCN: ds_read_b32
+define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspace(3)* %arg) {
+  %x = call i32 @llvm.amdgcn.workitem.id.x()
+  %arrayidx0 = getelementptr i32, i32 addrspace(3)* %arg, i32 %x
+  %arrayidx1 = getelementptr i32, i32 addrspace(3)* %arrayidx0, i32 1
+  %v0 = load i32, i32 addrspace(3)* %arrayidx0, align 4
+  call void @void_func_void()
+  %v1 = load i32, i32 addrspace(3)* %arrayidx1, align 4
+  %r = add i32 %v0, %v1
+  store i32 %r, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}ds_read_interp_read:
+; CI: s_mov_b32 m0, -1
+; CI: ds_read_b32
+; CI: s_mov_b32 m0, s0
+; CI: v_interp_mov_f32
+; CI: s_mov_b32 m0, -1
+; CI: ds_read_b32
+; GFX9: ds_read2_b32 v[0:1], v0 offset1:4
+; GFX9: s_mov_b32 m0, s0
+; GFX9: v_interp_mov_f32
+define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, float addrspace(3)* %inptr) {
+  %v0 = load float, float addrspace(3)* %inptr, align 4
+  %intrp = call float @llvm.amdgcn.interp.mov(i32 0, i32 0, i32 0, i32 %prims)
+  %ptr1 = getelementptr float, float addrspace(3)* %inptr, i32 4
+  %v1 = load float, float addrspace(3)* %ptr1, align 4
+  %v1b = fadd float %v1, %intrp
+  %r0 = insertelement <2 x float> undef, float %v0, i32 0
+  %r1 = insertelement <2 x float> %r0, float %v1b, i32 1
+  ret <2 x float> %r1
+}
+
+declare void @void_func_void() #3
+
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.y() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workitem.id.y() #1
+
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) nounwind readnone
 
 declare void @llvm.amdgcn.s.barrier() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }
+attributes #3 = { nounwind noinline }

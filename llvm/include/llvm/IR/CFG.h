@@ -107,6 +107,9 @@ inline const_pred_iterator pred_end(const BasicBlock *BB) {
 inline bool pred_empty(const BasicBlock *BB) {
   return pred_begin(BB) == pred_end(BB);
 }
+inline unsigned pred_size(const BasicBlock *BB) {
+  return std::distance(pred_begin(BB), pred_end(BB));
+}
 inline pred_range predecessors(BasicBlock *BB) {
   return pred_range(pred_begin(BB), pred_end(BB));
 }
@@ -139,6 +142,9 @@ inline succ_const_iterator succ_end(const BasicBlock *BB) {
 }
 inline bool succ_empty(const BasicBlock *BB) {
   return succ_begin(BB) == succ_end(BB);
+}
+inline unsigned succ_size(const BasicBlock *BB) {
+  return std::distance(succ_begin(BB), succ_end(BB));
 }
 inline succ_range successors(BasicBlock *BB) {
   return succ_range(succ_begin(BB), succ_end(BB));

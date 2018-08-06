@@ -76,8 +76,7 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
 
 SubtargetFeatures ELFObjectFileBase::getMIPSFeatures() const {
   SubtargetFeatures Features;
-  unsigned PlatformFlags;
-  getPlatformFlags(PlatformFlags);
+  unsigned PlatformFlags = getPlatformFlags();
 
   switch (PlatformFlags & ELF::EF_MIPS_ARCH) {
   case ELF::EF_MIPS_ARCH_1:
@@ -239,12 +238,25 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
+SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
+  SubtargetFeatures Features;
+  unsigned PlatformFlags = getPlatformFlags();
+
+  if (PlatformFlags & ELF::EF_RISCV_RVC) {
+    Features.AddFeature("c");
+  }
+
+  return Features;
+}
+
 SubtargetFeatures ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
     return getMIPSFeatures();
   case ELF::EM_ARM:
     return getARMFeatures();
+  case ELF::EM_RISCV:
+    return getRISCVFeatures();
   default:
     return SubtargetFeatures();
   }

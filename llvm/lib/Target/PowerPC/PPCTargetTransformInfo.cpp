@@ -27,6 +27,11 @@ static cl::opt<unsigned>
 CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
               cl::desc("The loop prefetch cache line size"));
 
+static cl::opt<bool>
+EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
+                cl::desc("Enable using coldcc calling conv for cold "
+                         "internal functions"));
+
 //===----------------------------------------------------------------------===//
 //
 // PPC cost model.
@@ -213,6 +218,14 @@ void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 
   BaseT::getUnrollingPreferences(L, SE, UP);
+}
+
+// This function returns true to allow using coldcc calling convention.
+// Returning true results in coldcc being used for functions which are cold at
+// all call sites when the callers of the functions are not calling any other
+// non coldcc functions.
+bool PPCTTIImpl::useColdCCForColdCall(Function &F) {
+  return EnablePPCColdCC;
 }
 
 bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {

@@ -92,6 +92,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: LBB2_{{.*}}:                                 # %if.end
 ; CHECK-NEXT:    .cv_loc {{.*}} # t.c:5:3
 ; CHECK:         leal 4(%esp), %[[reg:[^ ]*]]
+; CHECK:         #DEBUG_VALUE: lea_dbg_value:v <- [DW_OP_deref] $[[reg]]
 ; CHECK:         movl    %[[reg]], (%esp)
 ; CHECK:         calll   _use_i32
 
@@ -107,7 +108,7 @@ return:                                           ; preds = %if.end, %if.then
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{i32 1, !"wchar_size", i32 2}
 !7 = !{!"clang version 5.0.0 "}
-!8 = distinct !DISubprogram(name: "lea_str_loc", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!8 = distinct !DISubprogram(name: "lea_str_loc", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11}
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -119,12 +120,12 @@ return:                                           ; preds = %if.end, %if.then
 !18 = !DILocation(line: 4, column: 5, scope: !16)
 !19 = !DILocation(line: 5, column: 3, scope: !8)
 !20 = !DILocation(line: 6, column: 1, scope: !8)
-!21 = distinct !DISubprogram(name: "instr_no_loc", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!21 = distinct !DISubprogram(name: "instr_no_loc", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !22 = !DILocation(line: 3, column: 7, scope: !21)
 !23 = !DILocation(line: 4, column: 5, scope: !21)
 !24 = !DILocation(line: 5, column: 3, scope: !21)
 !25 = !DILocation(line: 6, column: 1, scope: !21)
-!30 = distinct !DISubprogram(name: "lea_dbg_value", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!30 = distinct !DISubprogram(name: "lea_dbg_value", scope: !1, file: !1, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !31 = !DILocation(line: 3, column: 7, scope: !30)
 !32 = !DILocation(line: 4, column: 5, scope: !30)
 !33 = !DILocation(line: 5, column: 3, scope: !30)

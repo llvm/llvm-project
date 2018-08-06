@@ -7,9 +7,6 @@
  *
  *===----------------------------------------------------------------------===*)
 
-external add_bb_vectorize
-  : [<Llvm.PassManager.any] Llvm.PassManager.t -> unit
-  = "llvm_add_bb_vectorize"
 external add_loop_vectorize
   : [<Llvm.PassManager.any] Llvm.PassManager.t -> unit
   = "llvm_add_loop_vectorize"

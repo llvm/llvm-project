@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -30,7 +30,7 @@
 #ifdef LLVM_ON_UNIX
 #include "Unix/Host.inc"
 #endif
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/Host.inc"
 #endif
 #ifdef _MSC_VER
@@ -65,8 +65,7 @@ static std::unique_ptr<llvm::MemoryBuffer>
   return std::move(*Text);
 }
 
-StringRef sys::detail::getHostCPUNameForPowerPC(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
   // Access to the Processor Version Register (PVR) on PowerPC is privileged,
   // and so we must use an operating-system interface to determine the current
   // processor type. On Linux, this is exposed through the /proc/cpuinfo file.
@@ -145,8 +144,7 @@ StringRef sys::detail::getHostCPUNameForPowerPC(
       .Default(generic);
 }
 
-StringRef sys::detail::getHostCPUNameForARM(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // The cpuid register on arm is not accessible from user space. On Linux,
   // it is exposed through the /proc/cpuinfo file.
 
@@ -250,8 +248,7 @@ StringRef sys::detail::getHostCPUNameForARM(
   return "generic";
 }
 
-StringRef sys::detail::getHostCPUNameForS390x(
-    const StringRef &ProcCpuinfoContent) {
+StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // STIDP is a privileged operation, so use /proc/cpuinfo instead.
 
   // The "processor 0:" line comes after a fair amount of other information,
@@ -654,9 +651,11 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Goldmont:
     case 0x5c: // Apollo Lake
     case 0x5f: // Denverton
-    case 0x7a: // Gemini Lake
       *Type = X86::INTEL_GOLDMONT;
       break; // "goldmont"
+    case 0x7a:
+      *Type = X86::INTEL_GOLDMONT_PLUS;
+      break;
     case 0x57:
       *Type = X86::INTEL_KNL; // knl
       break;
@@ -841,9 +840,9 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::AMDFAM15H_BDVER3;
       break; // "bdver3"; 30h-3Fh: Steamroller
     }
-    if (Model >= 0x10 && Model <= 0x1f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || Model == 0x02) {
       *Subtype = X86::AMDFAM15H_BDVER2;
-      break; // "bdver2"; 10h-1Fh: Piledriver
+      break; // "bdver2"; 02h, 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM15H_BDVER1;
@@ -1062,19 +1061,19 @@ StringRef sys::getHostCPUName() {
 #elif defined(__linux__) && (defined(__ppc__) || defined(__powerpc__))
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForPowerPC(Content);
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForARM(Content);
 }
 #elif defined(__linux__) && defined(__s390x__)
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
-  const StringRef& Content = P ? P->getBuffer() : "";
+  StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForS390x(Content);
 }
 #else
@@ -1206,6 +1205,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  Features["sahf"]   = HasExtLeaf1 && ((ECX >>  0) & 1);
   Features["lzcnt"]  = HasExtLeaf1 && ((ECX >>  5) & 1);
   Features["sse4a"]  = HasExtLeaf1 && ((ECX >>  6) & 1);
   Features["prfchw"] = HasExtLeaf1 && ((ECX >>  8) & 1);
@@ -1215,9 +1215,12 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
+  // Miscellaneous memory related features, detected by
+  // using the 0x80000008 leaf of the CPUID instruction
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
                      !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
-  Features["clzero"] = HasExtLeaf8 && ((EBX >> 0) & 1);
+  Features["clzero"]   = HasExtLeaf8 && ((EBX >> 0) & 1);
+  Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
@@ -1228,6 +1231,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // AVX2 is only supported if we have the OS save support from AVX.
   Features["avx2"]       = HasLeaf7 && ((EBX >>  5) & 1) && HasAVXSave;
   Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
+  Features["invpcid"]    = HasLeaf7 && ((EBX >> 10) & 1);
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
@@ -1247,6 +1251,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchwt1"]     = HasLeaf7 && ((ECX >>  0) & 1);
   Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
   Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
+  Features["waitpkg"]         = HasLeaf7 && ((ECX >>  5) & 1);
   Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
   Features["shstk"]           = HasLeaf7 && ((ECX >>  7) & 1);
   Features["gfni"]            = HasLeaf7 && ((ECX >>  8) & 1);
@@ -1255,7 +1260,22 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512vnni"]      = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
   Features["avx512bitalg"]    = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
-  Features["ibt"]             = HasLeaf7 && ((EDX >> 20) & 1);
+  Features["rdpid"]           = HasLeaf7 && ((ECX >> 22) & 1);
+  Features["cldemote"]        = HasLeaf7 && ((ECX >> 25) & 1);
+  Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
+  Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
+
+  // There are two CPUID leafs which information associated with the pconfig
+  // instruction:
+  // EAX=0x7, ECX=0x0 indicates the availability of the instruction (via the 18th
+  // bit of EDX), while the EAX=0x1b leaf returns information on the
+  // availability of specific pconfig leafs.
+  // The target feature here only refers to the the first of these two.
+  // Users might need to check for the availability of specific pconfig
+  // leaves using cpuid, since that information is ignored while
+  // detecting features using the "-march=native" flag.
+  // For more info, see X86 ISA docs.
+  Features["pconfig"] = HasLeaf7 && ((EDX >> 18) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1264,6 +1284,11 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["xsaveopt"] = HasLeafD && ((EAX >> 0) & 1) && HasAVXSave;
   Features["xsavec"]   = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
   Features["xsaves"]   = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
+
+  bool HasLeaf14 = MaxLevel >= 0x14 &&
+                  !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
+
+  Features["ptwrite"] = HasLeaf14 && ((EBX >> 4) & 1);
 
   return true;
 }

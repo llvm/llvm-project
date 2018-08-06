@@ -22,10 +22,10 @@ namespace {
 template <class ELFT>
 class ELFDumper {
   typedef object::Elf_Sym_Impl<ELFT> Elf_Sym;
-  typedef typename object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Word Elf_Word;
-  typedef typename object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
 
   ArrayRef<Elf_Shdr> Sections;
 

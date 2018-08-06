@@ -48,8 +48,8 @@ void InterferenceCache::reinitPhysRegEntries() {
   if (PhysRegEntriesCount == TRI->getNumRegs()) return;
   free(PhysRegEntries);
   PhysRegEntriesCount = TRI->getNumRegs();
-  PhysRegEntries = (unsigned char*)
-    calloc(PhysRegEntriesCount, sizeof(unsigned char));
+  PhysRegEntries = static_cast<unsigned char*>(
+      safe_calloc(PhysRegEntriesCount, sizeof(unsigned char)));
 }
 
 void InterferenceCache::init(MachineFunction *mf,

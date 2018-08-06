@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
-; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | llvm-mc -triple=x86_64-unknown-linux-gnu -mcpu=skylake-avx512
+; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | llvm-mc -triple=x86_64-unknown-linux-gnu
 
 ; Check that the X86 domain reassignment pass doesn't introduce an illegal
 ; test instruction. See PR37396

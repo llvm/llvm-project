@@ -33,6 +33,9 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
+  if( FUCHSIA )
+    set(system_libs ${system_libs} zircon)
+  endif()
 endif( MSVC OR MINGW )
 
 add_llvm_library(LLVMSupport
@@ -76,9 +79,11 @@ add_llvm_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
+  InitLLVM.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
   JamCRC.cpp
+  JSON.cpp
   KnownBits.cpp
   LEB128.cpp
   LineIterator.cpp
@@ -120,6 +125,7 @@ add_llvm_library(LLVMSupport
   Twine.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
+  VersionTuple.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp

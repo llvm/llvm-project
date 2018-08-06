@@ -67,6 +67,17 @@ let Namespace = "Hexagon" in {
     let HWEncoding{0} = num;
   }
 
+  // Rg - Guest/Hypervisor registers
+  class Rg<bits<5> num, string n,
+           list<string> alt = [], list<Register> alias = []> :
+        HexagonReg<num, n, alt, alias>;
+
+  // Rgg - 64-bit Guest/Hypervisor registers
+  class Rgg<bits<5> num, string n, list<Register> subregs> :
+        HexagonDoubleReg<num, n, subregs> {
+    let SubRegs = subregs;
+  }
+
   def isub_lo  : SubRegIndex<32>;
   def isub_hi  : SubRegIndex<32, 32>;
   def vsub_lo  : SubRegIndex<512>;
@@ -200,40 +211,87 @@ let Namespace = "Hexagon" in {
   def Q1 : Rq<1, "q1">, DwarfRegNum<[132]>;
   def Q2 : Rq<2, "q2">, DwarfRegNum<[133]>;
   def Q3 : Rq<3, "q3">, DwarfRegNum<[134]>;
+
+  // Guest Registers
+  def GELR:      Rg<0,  "gelr", ["g0"]>,       DwarfRegNum<[220]>;
+  def GSR:       Rg<1,  "gsr", ["g1"]>,        DwarfRegNum<[221]>;
+  def GOSP:      Rg<2,  "gosp", ["g2"]>,       DwarfRegNum<[222]>;
+  def G3:        Rg<3,  "gbadva", ["g3"]>,     DwarfRegNum<[223]>;
+  def G4:        Rg<4,  "g4">,                 DwarfRegNum<[224]>;
+  def G5:        Rg<5,  "g5">,                 DwarfRegNum<[225]>;
+  def G6:        Rg<6,  "g6">,                 DwarfRegNum<[226]>;
+  def G7:        Rg<7,  "g7">,                 DwarfRegNum<[227]>;
+  def G8:        Rg<8,  "g8">,                 DwarfRegNum<[228]>;
+  def G9:        Rg<9,  "g9">,                 DwarfRegNum<[229]>;
+  def G10:       Rg<10, "g10">,                DwarfRegNum<[230]>;
+  def G11:       Rg<11, "g11">,                DwarfRegNum<[231]>;
+  def G12:       Rg<12, "g12">,                DwarfRegNum<[232]>;
+  def G13:       Rg<13, "g13">,                DwarfRegNum<[233]>;
+  def G14:       Rg<14, "g14">,                DwarfRegNum<[234]>;
+  def G15:       Rg<15, "g15">,                DwarfRegNum<[235]>;
+  def GPMUCNT4:  Rg<16, "gpmucnt4", ["g16"]>,  DwarfRegNum<[236]>;
+  def GPMUCNT5:  Rg<17, "gpmucnt5", ["g17"]>,  DwarfRegNum<[237]>;
+  def GPMUCNT6:  Rg<18, "gpmucnt6", ["g18"]>,  DwarfRegNum<[238]>;
+  def GPMUCNT7:  Rg<19, "gpmucnt7", ["g19"]>,  DwarfRegNum<[239]>;
+  def G20:       Rg<20, "g20">,                DwarfRegNum<[240]>;
+  def G21:       Rg<21, "g21">,                DwarfRegNum<[241]>;
+  def G22:       Rg<22, "g22">,                DwarfRegNum<[242]>;
+  def G23:       Rg<23, "g23">,                DwarfRegNum<[243]>;
+  def GPCYCLELO: Rg<24, "gpcyclelo", ["g24"]>, DwarfRegNum<[244]>;
+  def GPCYCLEHI: Rg<25, "gpcyclehi", ["g25"]>, DwarfRegNum<[245]>;
+  def GPMUCNT0:  Rg<26, "gpmucnt0",  ["g26"]>, DwarfRegNum<[246]>;
+  def GPMUCNT1:  Rg<27, "gpmucnt1",  ["g27"]>, DwarfRegNum<[247]>;
+  def GPMUCNT2:  Rg<28, "gpmucnt2",  ["g28"]>, DwarfRegNum<[248]>;
+  def GPMUCNT3:  Rg<29, "gpmucnt3",  ["g29"]>, DwarfRegNum<[249]>;
+  def G30:       Rg<30, "g30">,                DwarfRegNum<[250]>;
+  def G31:       Rg<31, "g31">,                DwarfRegNum<[251]>;
+
+  // Guest Register Pairs
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
+    def G1_0   : Rgg<0,  "g1:0",   [GELR, GSR]>,            DwarfRegNum<[220]>;
+    def G3_2   : Rgg<2,  "g3:2",   [GOSP, G3]>,             DwarfRegNum<[222]>;
+    def G5_4   : Rgg<4,  "g5:4",   [G4, G5]>,               DwarfRegNum<[224]>;
+    def G7_6   : Rgg<6,  "g7:6",   [G6, G7]>,               DwarfRegNum<[226]>;
+    def G9_8   : Rgg<8,  "g9:8",   [G8, G9]>,               DwarfRegNum<[228]>;
+    def G11_10 : Rgg<10, "g11:10", [G10, G11]>,             DwarfRegNum<[230]>;
+    def G13_12 : Rgg<12, "g13:12", [G12, G13]>,             DwarfRegNum<[232]>;
+    def G15_14 : Rgg<14, "g15:14", [G14, G15]>,             DwarfRegNum<[234]>;
+    def G17_16 : Rgg<16, "g17:16", [GPMUCNT4, GPMUCNT5]>,   DwarfRegNum<[236]>;
+    def G19_18 : Rgg<18, "g19:18", [GPMUCNT6, GPMUCNT7]>,   DwarfRegNum<[238]>;
+    def G21_20 : Rgg<20, "g21:20", [G20, G21]>,             DwarfRegNum<[240]>;
+    def G23_22 : Rgg<22, "g23:22", [G22, G23]>,             DwarfRegNum<[242]>;
+    def G25_24 : Rgg<24, "g25:24", [GPCYCLELO, GPCYCLEHI]>, DwarfRegNum<[244]>;
+    def G27_26 : Rgg<26, "g27:26", [GPMUCNT0, GPMUCNT1]>,   DwarfRegNum<[246]>;
+    def G29_28 : Rgg<28, "g29:28", [GPMUCNT2, GPMUCNT3]>,   DwarfRegNum<[248]>;
+    def G31_30 : Rgg<30, "g31:30", [G30, G31]>,             DwarfRegNum<[250]>;
+  }
+
 }
 
 // HVX types
 
-def VecI1
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v512i1, v512i1,    v1024i1, v1024i1,   v512i1]>;
-def VecI8
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v64i8,  v64i8,     v128i8,  v128i8,    v64i8]>;
-def VecI16
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v32i16, v32i16,    v64i16,  v64i16,    v32i16]>;
-def VecI32
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v16i32, v16i32,    v32i32,  v32i32,    v16i32]>;
-def VecPI8
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v128i8, v128i8,    v256i8,  v256i8,    v128i8]>;
-def VecPI16
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v64i16, v64i16,    v128i16, v128i16,   v64i16]>;
-def VecPI32
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v32i32, v32i32,    v64i32,  v64i32,    v32i32]>;
-def VecQ8
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v64i1,  v64i1,     v128i1,  v128i1,    v64i1]>;
-def VecQ16
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v32i1,  v32i1,     v64i1,   v64i1,     v32i1]>;
-def VecQ32
-  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
-                      [v16i1,  v16i1,     v32i1,   v32i1,     v16i1]>;
+def VecI1:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v512i1, v1024i1, v512i1]>;
+def VecI8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v64i8,  v128i8,  v64i8]>;
+def VecI16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32i16, v64i16,  v32i16]>;
+def VecI32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v16i32, v32i32,  v16i32]>;
+
+def VecPI8:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v128i8, v256i8,  v128i8]>;
+def VecPI16: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v64i16, v128i16, v64i16]>;
+def VecPI32: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32i32, v64i32,  v32i32]>;
+
+def VecQ8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v64i1,  v128i1,  v64i1]>;
+def VecQ16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32i1,  v64i1,   v32i1]>;
+def VecQ32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v16i1,  v32i1,   v16i1]>;
 
 // HVX register classes
 
@@ -242,7 +300,7 @@ def VecQ32
 // FIXME: the register order should be defined in terms of the preferred
 // allocation order...
 //
-def IntRegs : RegisterClass<"Hexagon", [i32, f32, v32i1, v4i8, v2i16], 32,
+def IntRegs : RegisterClass<"Hexagon", [i32, f32, v4i8, v2i16], 32,
   (add (sequence "R%u", 0, 9), (sequence "R%u", 12, 28),
        R10, R11, R29, R30, R31)>;
 
@@ -254,8 +312,7 @@ def GeneralSubRegs : RegisterClass<"Hexagon", [i32], 32,
 def IntRegsLow8 : RegisterClass<"Hexagon", [i32], 32,
   (add R7, R6, R5, R4, R3, R2, R1, R0)> ;
 
-def DoubleRegs : RegisterClass<"Hexagon",
-  [i64, f64, v64i1, v8i8, v4i16, v2i32], 64,
+def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
   (add (sequence "D%u", 0, 4), (sequence "D%u", 6, 13), D5, D14, D15)>;
 
 def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,
@@ -301,6 +358,25 @@ def CtrRegs64 : RegisterClass<"Hexagon", [i64], 64,
   (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPCYCLE, C17_16,
        PKTCOUNT, UTIMER)>;
 
+let Size = 32, isAllocatable = 0 in
+def GuestRegs : RegisterClass<"Hexagon", [i32], 32,
+  (add GELR, GSR, GOSP,
+       (sequence "G%u", 3, 15),
+       GPMUCNT4, GPMUCNT5, GPMUCNT6, GPMUCNT7,
+       G20, G21, G22, G23,
+       GPCYCLELO, GPCYCLEHI, GPMUCNT0, GPMUCNT1,
+       GPMUCNT2,  GPMUCNT3,
+       G30, G31)>;
+
+let Size = 64, isAllocatable = 0 in
+def GuestRegs64 : RegisterClass<"Hexagon", [i64], 64,
+  (add G1_0, G3_2,
+       G5_4, G7_6, G9_8, G11_10, G13_12, G15_14,
+       G17_16, G19_18,
+       G21_20, G23_22,
+       G25_24, G27_26, G29_28,
+       G31_30)>;
+
 // These registers are new for v62 and onward.
 // The function RegisterMatchesArch() uses this list for validation.
 let isAllocatable = 0 in
@@ -311,7 +387,6 @@ def V62Regs : RegisterClass<"Hexagon", [i32], 32,
 // These registers are new for v65 and onward.
 let Size = 32, isAllocatable = 0 in
 def V65Regs : RegisterClass<"Hexagon", [i32], 32, (add VTMP)>;
-
 
 
 def HexagonCSR

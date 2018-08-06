@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface definition of the TargetLowering class that is common
+/// Interface definition of the TargetLowering class that is common
 /// to all AMD GPUs.
 //
 //===----------------------------------------------------------------------===//
@@ -28,6 +28,8 @@ struct ArgDescriptor;
 
 class AMDGPUTargetLowering : public TargetLowering {
 private:
+  const AMDGPUSubtarget *Subtarget;
+
   /// \returns AMDGPUISD::FFBH_U32 node if the incoming \p Op may have been
   /// legalized from a smaller type VT. Need to match pre-legalized type because
   /// the generic legalization inserts the add/sub between the select and
@@ -39,12 +41,11 @@ public:
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
 protected:
-  const AMDGPUSubtarget *Subtarget;
   AMDGPUAS AMDGPUASI;
 
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-  /// \brief Split a vector store into multiple scalar stores.
+  /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
   SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) const;
@@ -78,7 +79,6 @@ protected:
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performClampCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAssertSZExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue splitBinaryBitConstantOpImpl(DAGCombinerInfo &DCI, const SDLoc &SL,
@@ -87,6 +87,7 @@ protected:
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSraCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performTruncateCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhuCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -96,6 +97,7 @@ protected:
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
@@ -108,10 +110,10 @@ protected:
   SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
-  /// \brief Split a vector load into 2 loads of half the vector.
+  /// Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
-  /// \brief Split a vector store into 2 stores of half the vector.
+  /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
@@ -136,6 +138,10 @@ public:
     return false;
   }
 
+  static inline SDValue stripBitcast(SDValue Val) {
+    return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
+  }
+
   static bool allUsesHaveSourceMods(const SDNode *N,
                                     unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;
@@ -146,7 +152,6 @@ public:
   bool isZExtFree(Type *Src, Type *Dest) const override;
   bool isZExtFree(EVT Src, EVT Dest) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
-  bool isFPExtFoldable(unsigned Opcode, EVT DestVT, EVT SrcVT) const override;
 
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 
@@ -168,6 +173,7 @@ public:
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
 
+  bool isSDNodeAlwaysUniform(const SDNode *N) const override;
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 
@@ -224,7 +230,7 @@ public:
   virtual SDNode *PostISelFolding(MachineSDNode *N,
                                   SelectionDAG &DAG) const = 0;
 
-  /// \brief Determine which of the bits specified in \p Mask are known to be
+  /// Determine which of the bits specified in \p Mask are known to be
   /// either zero or one and return them in the \p KnownZero and \p KnownOne
   /// bitsets.
   void computeKnownBitsForTargetNode(const SDValue Op,
@@ -237,7 +243,7 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  /// \brief Helper function that adds Reg to the LiveIn list of the DAG's
+  /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///
   /// \returns a RegisterSDNode representing Reg if \p RawReg is true, otherwise
@@ -285,9 +291,9 @@ public:
     GRID_OFFSET,
   };
 
-  /// \brief Helper function that returns the byte offset of the given
+  /// Helper function that returns the byte offset of the given
   /// type of implicit parameter.
-  uint32_t getImplicitParameterOffset(const AMDGPUMachineFunction *MFI,
+  uint32_t getImplicitParameterOffset(const MachineFunction &MF,
                                       const ImplicitParameter Param) const;
 
   AMDGPUAS getAMDGPUAS() const {
@@ -357,6 +363,7 @@ enum NodeType : unsigned {
   FMED3,
   SMED3,
   UMED3,
+  FDOT2,
   URECIP,
   DIV_SCALE,
   DIV_FMAS,
@@ -372,6 +379,7 @@ enum NodeType : unsigned {
   RSQ,
   RCP_LEGACY,
   RSQ_LEGACY,
+  RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
   LDEXP,
@@ -396,6 +404,7 @@ enum NodeType : unsigned {
   MAD_I64_I32,
   MUL_LOHI_I24,
   MUL_LOHI_U24,
+  PERM,
   TEXTURE_FETCH,
   EXPORT, // exp on SI+
   EXPORT_DONE, // exp on SI+ with done bit set
@@ -455,14 +464,21 @@ enum NodeType : unsigned {
   LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,
   TBUFFER_STORE_FORMAT_X3,
+  TBUFFER_STORE_FORMAT_D16,
   TBUFFER_LOAD_FORMAT,
+  TBUFFER_LOAD_FORMAT_D16,
   ATOMIC_CMP_SWAP,
   ATOMIC_INC,
   ATOMIC_DEC,
+  ATOMIC_LOAD_FADD,
+  ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_FORMAT,
+  BUFFER_LOAD_FORMAT_D16,
   BUFFER_STORE,
   BUFFER_STORE_FORMAT,
+  BUFFER_STORE_FORMAT_D16,
   BUFFER_ATOMIC_SWAP,
   BUFFER_ATOMIC_ADD,
   BUFFER_ATOMIC_SUB,
@@ -474,6 +490,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_OR,
   BUFFER_ATOMIC_XOR,
   BUFFER_ATOMIC_CMPSWAP,
+
   LAST_AMDGPU_ISD_NUMBER
 };
 

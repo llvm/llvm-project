@@ -1,6 +1,6 @@
-RUN: llvm-dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
-RUN: llvm-dsymutil -update %t.dSYM
-RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM/Contents/Resources/DWARF/objc.macho.x86_64 | FileCheck %s
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
+RUN: dsymutil -update %t.dSYM
+RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s
 
 CHECK: .apple_types contents:
 CHECK: Hash 0x2b5e6 [

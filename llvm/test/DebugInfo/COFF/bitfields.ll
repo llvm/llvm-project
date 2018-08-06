@@ -63,15 +63,29 @@
 ; CHECK:    BitSize: 2
 ; CHECK:    BitOffset: 23
 ; CHECK:  }
+; CHECK:  FieldList ([[anon_fl:.*]]) {
+; CHECK:    TypeLeafKind: LF_FIELDLIST (0x1203)
+; CHECK:    DataMember {
+; CHECK:      TypeLeafKind: LF_MEMBER (0x150D)
+; CHECK:      Type: char (0x70)
+; CHECK:      FieldOffset: 0x0
+; CHECK:      Name: c
+; CHECK:    }
+; CHECK:    DataMember {
+; CHECK:      TypeLeafKind: LF_MEMBER (0x150D)
+; CHECK:      Type: short (0x11)
+; CHECK:      FieldOffset: 0x1
+; CHECK:      Name: s
+; CHECK:    }
+; CHECK:  }
 ; CHECK:  Struct ([[anon_ty:.*]]) {
 ; CHECK:    TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK:    MemberCount: 0
-; CHECK:    Properties [ (0x88)
-; CHECK:      ForwardReference (0x80)
+; CHECK:    MemberCount: 2
+; CHECK:    Properties [ (0x8)
 ; CHECK:      Nested (0x8)
 ; CHECK:    ]
-; CHECK:    FieldList: 0x0
-; CHECK:    SizeOf: 0
+; CHECK:    FieldList: <field list> ([[anon_fl]])
+; CHECK:    SizeOf: 3
 ; CHECK:    Name: S1::<unnamed-tag>
 ; CHECK:  }
 ; CHECK:  BitField ([[S1_u:.*]]) {
@@ -125,29 +139,6 @@
 ; CHECK:    FieldList: <field list> ([[S1_fl]])
 ; CHECK:    SizeOf: 16
 ; CHECK:    Name: S1
-; CHECK:  }
-; CHECK:  FieldList ([[anon_fl:.*]]) {
-; CHECK:    TypeLeafKind: LF_FIELDLIST (0x1203)
-; CHECK:    DataMember {
-; CHECK:      Type: char (0x70)
-; CHECK:      FieldOffset: 0x0
-; CHECK:      Name: c
-; CHECK:    }
-; CHECK:    DataMember {
-; CHECK:      Type: short (0x11)
-; CHECK:      FieldOffset: 0x1
-; CHECK:      Name: s
-; CHECK:    }
-; CHECK:  }
-; CHECK:  Struct ({{.*}}) {
-; CHECK:    TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHECK:    MemberCount: 2
-; CHECK:    Properties [ (0x8)
-; CHECK:      Nested (0x8)
-; CHECK:    ]
-; CHECK:    FieldList: <field list> ([[anon_fl]])
-; CHECK:    SizeOf: 3
-; CHECK:    Name: S1::<unnamed-tag>
 ; CHECK:  }
 ; CHECK:  BitField ([[S2_y:.*]]) {
 ; CHECK:    TypeLeafKind: LF_BITFIELD (0x1205)

@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_BUILDLIBCALLS_H
 #define LLVM_TRANSFORMS_UTILS_BUILDLIBCALLS_H
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -28,6 +29,12 @@ namespace llvm {
   ///
   /// Returns true if any attributes were set and false otherwise.
   bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
+
+  /// Check whether the overloaded unary floating point function
+  /// corresponding to \a Ty is available.
+  bool hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                       LibFunc DoubleFn, LibFunc FloatFn,
+                       LibFunc LongDoubleFn);
 
   /// Return V if it is an i8*, otherwise cast it to i8*.
   Value *castToCStr(Value *V, IRBuilder<> &B);
@@ -104,15 +111,54 @@ namespace llvm {
   Value *emitFPutC(Value *Char, Value *File, IRBuilder<> &B,
                    const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the puts function. Str is required to be a pointer and
+  /// Emit a call to the fputc_unlocked function. This assumes that Char is an
+  /// i32, and File is a pointer to FILE.
+  Value *emitFPutCUnlocked(Value *Char, Value *File, IRBuilder<> &B,
+                           const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the fputs function. Str is required to be a pointer and
   /// File is a pointer to FILE.
   Value *emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the fputs_unlocked function. Str is required to be a
+  /// pointer and File is a pointer to FILE.
+  Value *emitFPutSUnlocked(Value *Str, Value *File, IRBuilder<> &B,
+                           const TargetLibraryInfo *TLI);
 
   /// Emit a call to the fwrite function. This assumes that Ptr is a pointer,
   /// Size is an 'intptr_t', and File is a pointer to FILE.
   Value *emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the malloc function.
+  Value *emitMalloc(Value *Num, IRBuilder<> &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the calloc function.
+  Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
+                    IRBuilder<> &B, const TargetLibraryInfo &TLI);
+
+  /// Emit a call to the fwrite_unlocked function. This assumes that Ptr is a
+  /// pointer, Size is an 'intptr_t', N is nmemb and File is a pointer to FILE.
+  Value *emitFWriteUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
+                            IRBuilder<> &B, const DataLayout &DL,
+                            const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the fgetc_unlocked function. File is a pointer to FILE.
+  Value *emitFGetCUnlocked(Value *File, IRBuilder<> &B,
+                           const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the fgets_unlocked function. Str is required to be a
+  /// pointer, Size is an i32 and File is a pointer to FILE.
+  Value *emitFGetSUnlocked(Value *Str, Value *Size, Value *File, IRBuilder<> &B,
+                           const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the fread_unlocked function. This assumes that Ptr is a
+  /// pointer, Size is an 'intptr_t', N is nmemb and File is a pointer to FILE.
+  Value *emitFReadUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
+                           IRBuilder<> &B, const DataLayout &DL,
+                           const TargetLibraryInfo *TLI);
 }
 
 #endif

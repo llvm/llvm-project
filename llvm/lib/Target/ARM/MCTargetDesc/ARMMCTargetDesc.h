@@ -25,6 +25,7 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCInstPrinter;
+class MCObjectTargetWriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
@@ -68,11 +69,6 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                                  const MCRegisterInfo &MRI,
-                                  const MCTargetOptions &Options,
-                                  bool IsLittleEndian);
-
 MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
@@ -81,39 +77,26 @@ MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-MCAsmBackend *createThumbLEAsmBackend(const Target &T,
-                                      const MCSubtargetInfo &STI,
-                                      const MCRegisterInfo &MRI,
-                                      const MCTargetOptions &Options);
-
-MCAsmBackend *createThumbBEAsmBackend(const Target &T,
-                                      const MCSubtargetInfo &STI,
-                                      const MCRegisterInfo &MRI,
-                                      const MCTargetOptions &Options);
-
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
 MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      bool RelaxAll,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an ELF Mach-O object writer.
-std::unique_ptr<MCObjectWriter> createARMELFObjectWriter(raw_pwrite_stream &OS,
-                                                         uint8_t OSABI,
-                                                         bool IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter> createARMELFObjectWriter(uint8_t OSABI);
 
 /// Construct an ARM Mach-O object writer.
-std::unique_ptr<MCObjectWriter> createARMMachObjectWriter(raw_pwrite_stream &OS,
-                                                          bool Is64Bit,
-                                                          uint32_t CPUType,
-                                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectTargetWriter>
+createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
+                          uint32_t CPUSubtype);
 
 /// Construct an ARM PE/COFF object writer.
-std::unique_ptr<MCObjectWriter>
-createARMWinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+createARMWinCOFFObjectWriter(bool Is64Bit);
 
 /// Construct ARM Mach-O relocation info.
 MCRelocationInfo *createARMMachORelocationInfo(MCContext &Ctx);

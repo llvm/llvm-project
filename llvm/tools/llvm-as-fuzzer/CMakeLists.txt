@@ -4,4 +4,6 @@ set(LLVM_LINK_COMPONENTS
     Core
     Support
 )
-add_llvm_fuzzer(llvm-as-fuzzer llvm-as-fuzzer.cpp)
+add_llvm_fuzzer(llvm-as-fuzzer
+  llvm-as-fuzzer.cpp
+  )

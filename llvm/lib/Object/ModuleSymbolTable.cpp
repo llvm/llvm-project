@@ -24,7 +24,6 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -69,84 +68,9 @@ void ModuleSymbolTable::addModule(Module *M) {
   });
 }
 
-// Ensure ELF .symver aliases get the same binding as the defined symbol
-// they alias with.
-static void handleSymverAliases(const Module &M, RecordStreamer &Streamer) {
-  if (Streamer.symverAliases().empty())
-    return;
-
-  // The name in the assembler will be mangled, but the name in the IR
-  // might not, so we first compute a mapping from mangled name to GV.
-  Mangler Mang;
-  SmallString<64> MangledName;
-  StringMap<const GlobalValue *> MangledNameMap;
-  auto GetMangledName = [&](const GlobalValue &GV) {
-    if (!GV.hasName())
-      return;
-
-    MangledName.clear();
-    MangledName.reserve(GV.getName().size() + 1);
-    Mang.getNameWithPrefix(MangledName, &GV, /*CannotUsePrivateLabel=*/false);
-    MangledNameMap[MangledName] = &GV;
-  };
-  for (const Function &F : M)
-    GetMangledName(F);
-  for (const GlobalVariable &GV : M.globals())
-    GetMangledName(GV);
-  for (const GlobalAlias &GA : M.aliases())
-    GetMangledName(GA);
-
-  // Walk all the recorded .symver aliases, and set up the binding
-  // for each alias.
-  for (auto &Symver : Streamer.symverAliases()) {
-    const MCSymbol *Aliasee = Symver.first;
-    MCSymbolAttr Attr = MCSA_Invalid;
-
-    // First check if the aliasee binding was recorded in the asm.
-    RecordStreamer::State state = Streamer.getSymbolState(Aliasee);
-    switch (state) {
-    case RecordStreamer::Global:
-    case RecordStreamer::DefinedGlobal:
-      Attr = MCSA_Global;
-      break;
-    case RecordStreamer::UndefinedWeak:
-    case RecordStreamer::DefinedWeak:
-      Attr = MCSA_Weak;
-      break;
-    default:
-      break;
-    }
-
-    // If we don't have a symbol attribute from assembly, then check if
-    // the aliasee was defined in the IR.
-    if (Attr == MCSA_Invalid) {
-      const auto *GV = M.getNamedValue(Aliasee->getName());
-      if (!GV) {
-        auto MI = MangledNameMap.find(Aliasee->getName());
-        if (MI != MangledNameMap.end())
-          GV = MI->second;
-        else
-          continue;
-      }
-      if (GV->hasExternalLinkage())
-        Attr = MCSA_Global;
-      else if (GV->hasLocalLinkage())
-        Attr = MCSA_Local;
-      else if (GV->isWeakForLinker())
-        Attr = MCSA_Weak;
-    }
-    if (Attr == MCSA_Invalid)
-      continue;
-
-    // Set the detected binding on each alias with this aliasee.
-    for (auto &Alias : Symver.second)
-      Streamer.EmitSymbolAttribute(Alias, Attr);
-  }
-}
-
-void ModuleSymbolTable::CollectAsmSymbols(
-    const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+static void
+initializeRecordStreamer(const Module &M,
+                         function_ref<void(RecordStreamer &)> Init) {
   StringRef InlineAsm = M.getModuleInlineAsm();
   if (InlineAsm.empty())
     return;
@@ -176,7 +100,7 @@ void ModuleSymbolTable::CollectAsmSymbols(
   MCObjectFileInfo MOFI;
   MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
   MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, MCCtx);
-  RecordStreamer Streamer(MCCtx);
+  RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);
 
   std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
@@ -195,36 +119,53 @@ void ModuleSymbolTable::CollectAsmSymbols(
   if (Parser->Run(false))
     return;
 
-  handleSymverAliases(M, Streamer);
+  Init(Streamer);
+}
 
-  for (auto &KV : Streamer) {
-    StringRef Key = KV.first();
-    RecordStreamer::State Value = KV.second;
-    // FIXME: For now we just assume that all asm symbols are executable.
-    uint32_t Res = BasicSymbolRef::SF_Executable;
-    switch (Value) {
-    case RecordStreamer::NeverSeen:
-      llvm_unreachable("NeverSeen should have been replaced earlier");
-    case RecordStreamer::DefinedGlobal:
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::Defined:
-      break;
-    case RecordStreamer::Global:
-    case RecordStreamer::Used:
-      Res |= BasicSymbolRef::SF_Undefined;
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::DefinedWeak:
-      Res |= BasicSymbolRef::SF_Weak;
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::UndefinedWeak:
-      Res |= BasicSymbolRef::SF_Weak;
-      Res |= BasicSymbolRef::SF_Undefined;
+void ModuleSymbolTable::CollectAsmSymbols(
+    const Module &M,
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
+    Streamer.flushSymverDirectives();
+
+    for (auto &KV : Streamer) {
+      StringRef Key = KV.first();
+      RecordStreamer::State Value = KV.second;
+      // FIXME: For now we just assume that all asm symbols are executable.
+      uint32_t Res = BasicSymbolRef::SF_Executable;
+      switch (Value) {
+      case RecordStreamer::NeverSeen:
+        llvm_unreachable("NeverSeen should have been replaced earlier");
+      case RecordStreamer::DefinedGlobal:
+        Res |= BasicSymbolRef::SF_Global;
+        break;
+      case RecordStreamer::Defined:
+        break;
+      case RecordStreamer::Global:
+      case RecordStreamer::Used:
+        Res |= BasicSymbolRef::SF_Undefined;
+        Res |= BasicSymbolRef::SF_Global;
+        break;
+      case RecordStreamer::DefinedWeak:
+        Res |= BasicSymbolRef::SF_Weak;
+        Res |= BasicSymbolRef::SF_Global;
+        break;
+      case RecordStreamer::UndefinedWeak:
+        Res |= BasicSymbolRef::SF_Weak;
+        Res |= BasicSymbolRef::SF_Undefined;
+      }
+      AsmSymbol(Key, BasicSymbolRef::Flags(Res));
     }
-    AsmSymbol(Key, BasicSymbolRef::Flags(Res));
-  }
+  });
+}
+
+void ModuleSymbolTable::CollectAsmSymvers(
+    const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver) {
+  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
+    for (auto &KV : Streamer.symverAliases())
+      for (auto &Alias : KV.second)
+        AsmSymver(KV.first->getName(), Alias);
+  });
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {

@@ -7,7 +7,7 @@
         mrs x29, icc_rpr_el1
         mrs x4, ich_vtr_el2
         mrs x24, ich_eisr_el2
-        mrs x9, ich_elsr_el2
+        mrs x9, ich_elrsr_el2
         mrs x24, icc_bpr1_el1
         mrs x14, icc_bpr0_el1
         mrs x19, icc_pmr_el1
@@ -63,7 +63,7 @@
 // CHECK: mrs      x29, {{icc_rpr_el1|ICC_RPR_EL1}}           // encoding: [0x7d,0xcb,0x38,0xd5]
 // CHECK: mrs      x4, {{ich_vtr_el2|ICH_VTR_EL2}}            // encoding: [0x24,0xcb,0x3c,0xd5]
 // CHECK: mrs      x24, {{ich_eisr_el2|ICH_EISR_EL2}}          // encoding: [0x78,0xcb,0x3c,0xd5]
-// CHECK: mrs      x9, {{ich_elsr_el2|ICH_ELSR_EL2}}           // encoding: [0xa9,0xcb,0x3c,0xd5]
+// CHECK: mrs      x9, {{ich_elrsr_el2|ICH_ELRSR_EL2}}           // encoding: [0xa9,0xcb,0x3c,0xd5]
 // CHECK: mrs      x24, {{icc_bpr1_el1|ICC_BPR1_EL1}}          // encoding: [0x78,0xcc,0x38,0xd5]
 // CHECK: mrs      x14, {{icc_bpr0_el1|ICC_BPR0_EL1}}          // encoding: [0x6e,0xc8,0x38,0xd5]
 // CHECK: mrs      x19, {{icc_pmr_el1|ICC_PMR_EL1}}           // encoding: [0x13,0x46,0x38,0xd5]

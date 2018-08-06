@@ -3,7 +3,7 @@ target datalayout = "A5"
 
 declare {}* @llvm.invariant.start.p5i8(i64, i8 addrspace(5)* nocapture) #0
 declare void @llvm.invariant.end.p5i8({}*, i64, i8 addrspace(5)* nocapture) #0
-declare i8 addrspace(5)* @llvm.invariant.group.barrier.p5i8(i8 addrspace(5)*) #1
+declare i8 addrspace(5)* @llvm.launder.invariant.group.p5i8(i8 addrspace(5)*) #1
 
 ; GCN-LABEL: {{^}}use_invariant_promotable_lds:
 ; GCN: buffer_load_dword
@@ -17,7 +17,7 @@ bb:
   store i32 %tmp3, i32 addrspace(5)* %tmp
   %tmp4 = call {}* @llvm.invariant.start.p5i8(i64 4, i8 addrspace(5)* %tmp1) #0
   call void @llvm.invariant.end.p5i8({}* %tmp4, i64 4, i8 addrspace(5)* %tmp1) #0
-  %tmp5 = call i8 addrspace(5)* @llvm.invariant.group.barrier.p5i8(i8 addrspace(5)* %tmp1) #1
+  %tmp5 = call i8 addrspace(5)* @llvm.launder.invariant.group.p5i8(i8 addrspace(5)* %tmp1) #1
   ret void
 }
 

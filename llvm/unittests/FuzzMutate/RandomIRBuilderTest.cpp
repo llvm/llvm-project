@@ -266,4 +266,34 @@ TEST(RandomIRBuilderTest, FirstClassTypes) {
   }
 }
 
+TEST(RandomIRBuilderTest, SwiftError) {
+  // Check that we never pick swifterror value as a source for operation
+  // other than load, store and call.
+
+  LLVMContext Ctx;
+  const char *SourceCode = "declare void @use(i8** swifterror %err)"
+                           "define void @test() {\n"
+                           "entry:\n"
+                           "  %err = alloca swifterror i8*, align 8\n"
+                           "  call void @use(i8** swifterror %err)\n"
+                           "  ret void\n"
+                           "}";
+  auto M = parseAssembly(SourceCode, Ctx);
+
+  std::vector<Type *> Types = {Type::getInt8Ty(Ctx)};
+  RandomIRBuilder IB(Seed, Types);
+
+  // Get first basic block of the test function
+  Function &F = *M->getFunction("test");
+  BasicBlock &BB = *F.begin();
+  Instruction *Alloca = &*BB.begin();
+
+  fuzzerop::OpDescriptor Descr = fuzzerop::gepDescriptor(1);
+
+  for (int i = 0; i < 10; ++i) {
+    Value *V = IB.findOrCreateSource(BB, {Alloca}, {}, Descr.SourcePreds[0]);
+    ASSERT_FALSE(isa<AllocaInst>(V));
+  }
+}
+
 }

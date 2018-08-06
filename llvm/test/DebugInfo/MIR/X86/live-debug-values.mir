@@ -35,7 +35,7 @@
 # CHECK: ![[N_VAR:[0-9]+]] = !DILocalVariable(name: "n",{{.*}})
 #
 # CHECK:      bb.5.if.end.7:
-# CHECK:        DBG_VALUE debug-use %ebx, debug-use %noreg, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK:        DBG_VALUE debug-use $ebx, debug-use $noreg, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 
 
 --- |
@@ -111,7 +111,7 @@
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !15)
   !1 = !DIFile(filename: "LiveDebugValues.c", directory: "/home/vt/julia/test/tvvikram")
   !2 = !{}
-  !4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
+  !4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !7, !8}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -163,12 +163,12 @@ alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:         
-  - { reg: '%edi' }
-  - { reg: '%rsi' }
-calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx', 
-                        '%rbp', '%rbx', '%r12', '%r13', '%r14', '%r15', 
-                        '%r12b', '%r13b', '%r14b', '%r15b', '%r12d', '%r13d', 
-                        '%r14d', '%r15d', '%r12w', '%r13w', '%r14w', '%r15w' ]
+  - { reg: '$edi' }
+  - { reg: '$rsi' }
+calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 
+                        '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15', 
+                        '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d', 
+                        '$r14d', '$r15d', '$r12w', '$r13w', '$r14w', '$r15w' ]
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -184,74 +184,74 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 fixedStack:      
-  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%rbx' }
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
 body:             |
   bb.0.entry:
     successors: %bb.1.if.else(16), %bb.2.if.end(16)
-    liveins: %edi, %rsi, %rbx
+    liveins: $edi, $rsi, $rbx
   
-    frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CFI_INSTRUCTION offset %rbx, -16
-    DBG_VALUE debug-use %edi, debug-use _, !12, !20, debug-location !21
-    DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
-    %eax = MOV32rr %edi
-    DBG_VALUE debug-use %eax, debug-use _, !12, !20, debug-location !21
-    %edi = MOV32ri 2
-    CMP32ri8 killed %eax, 2, implicit-def %eflags, debug-location !26
-    JNE_1 %bb.2.if.end, implicit %eflags
+    CFI_INSTRUCTION offset $rbx, -16
+    DBG_VALUE debug-use $edi, debug-use _, !12, !20, debug-location !21
+    DBG_VALUE debug-use $rsi, debug-use _, !13, !20, debug-location !22
+    $eax = MOV32rr $edi
+    DBG_VALUE debug-use $eax, debug-use _, !12, !20, debug-location !21
+    $edi = MOV32ri 2
+    CMP32ri8 killed $eax, 2, implicit-def $eflags, debug-location !26
+    JNE_1 %bb.2.if.end, implicit $eflags
   
   bb.1.if.else:
     successors: %bb.2.if.end(0)
-    liveins: %rsi
+    liveins: $rsi
   
-    DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
-    %rdi = MOV64rm killed %rsi, 1, _, 8, _, debug-location !27 :: (load 8 from %ir.arrayidx, !tbaa !28)
-    dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al, debug-location !32
-    CALL64pcrel32 @atoi, csr_64, implicit %rsp, implicit %rdi, implicit %al, implicit-def %rsp, implicit-def %eax, debug-location !32
-    %edi = MOV32rr %eax, debug-location !32
-    DBG_VALUE debug-use %edi, debug-use _, !14, !20, debug-location !33
+    DBG_VALUE debug-use $rsi, debug-use _, !13, !20, debug-location !22
+    $rdi = MOV64rm killed $rsi, 1, _, 8, _, debug-location !27 :: (load 8 from %ir.arrayidx, !tbaa !28)
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !32
+    CALL64pcrel32 @atoi, csr_64, implicit $rsp, implicit $rdi, implicit $al, implicit-def $rsp, implicit-def $eax, debug-location !32
+    $edi = MOV32rr $eax, debug-location !32
+    DBG_VALUE debug-use $edi, debug-use _, !14, !20, debug-location !33
   
   bb.2.if.end:
     successors: %bb.3.if.then.3(16), %bb.4.if.else.5(16)
-    liveins: %edi
+    liveins: $edi
   
-    CALL64pcrel32 @change, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, implicit-def %eax, debug-location !34
-    %ebx = MOV32rr %eax, debug-location !34
-    DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
-    CMP32ri8 %ebx, 11, implicit-def %eflags, debug-location !37
-    JL_1 %bb.4.if.else.5, implicit killed %eflags, debug-location !37
+    CALL64pcrel32 @change, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !34
+    $ebx = MOV32rr $eax, debug-location !34
+    DBG_VALUE debug-use $ebx, debug-use _, !14, !20, debug-location !33
+    CMP32ri8 $ebx, 11, implicit-def $eflags, debug-location !37
+    JL_1 %bb.4.if.else.5, implicit killed $eflags, debug-location !37
   
   bb.3.if.then.3:
     successors: %bb.5.if.end.7(0)
-    liveins: %ebx
+    liveins: $ebx
   
-    DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
-    %edi = MOV32rr %ebx, debug-location !38
-    CALL64pcrel32 @modify, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, implicit-def %eax, debug-location !38
-    %ecx = MOV32rr %eax, debug-location !38
-    %ecx = ADD32rr killed %ecx, killed %ebx, implicit-def dead %eflags, debug-location !40
+    DBG_VALUE debug-use $ebx, debug-use _, !14, !20, debug-location !33
+    $edi = MOV32rr $ebx, debug-location !38
+    CALL64pcrel32 @modify, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !38
+    $ecx = MOV32rr $eax, debug-location !38
+    $ecx = ADD32rr killed $ecx, killed $ebx, implicit-def dead $eflags, debug-location !40
     JMP_1 %bb.5.if.end.7
   
   bb.4.if.else.5:
     successors: %bb.5.if.end.7(0)
-    liveins: %ebx
+    liveins: $ebx
   
-    DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
-    %edi = MOV32rr killed %ebx, debug-location !42
-    CALL64pcrel32 @inc, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, implicit-def %eax, debug-location !42
-    %ecx = MOV32rr %eax, debug-location !42
+    DBG_VALUE debug-use $ebx, debug-use _, !14, !20, debug-location !33
+    $edi = MOV32rr killed $ebx, debug-location !42
+    CALL64pcrel32 @inc, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !42
+    $ecx = MOV32rr $eax, debug-location !42
   
   bb.5.if.end.7:
-    liveins: %ecx
+    liveins: $ecx
   
-    MOV32mr %rip, 1, _, @m, _, %ecx, debug-location !43 :: (store 4 into @m, !tbaa !44)
-    dead undef %edi = MOV32ri64 @.str, implicit-def %rdi, debug-location !46
-    dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al, debug-location !47
-    %esi = MOV32rr killed %ecx, debug-location !46
-    CALL64pcrel32 @printf, csr_64, implicit %rsp, implicit %rdi, implicit %esi, implicit %al, implicit-def %rsp, implicit-def dead %eax, debug-location !46
-    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, debug-location !47
-    %rbx = POP64r implicit-def %rsp, implicit %rsp, debug-location !47
-    RETQ %eax, debug-location !47
+    MOV32mr $rip, 1, _, @m, _, $ecx, debug-location !43 :: (store 4 into @m, !tbaa !44)
+    dead undef $edi = MOV32ri64 @.str, implicit-def $rdi, debug-location !46
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !47
+    $esi = MOV32rr killed $ecx, debug-location !46
+    CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit $al, implicit-def $rsp, implicit-def dead $eax, debug-location !46
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !47
+    $rbx = POP64r implicit-def $rsp, implicit $rsp, debug-location !47
+    RETQ $eax, debug-location !47
 
 ...

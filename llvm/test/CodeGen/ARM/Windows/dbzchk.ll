@@ -33,11 +33,11 @@ return:
 }
 
 ; CHECK-DIV-DAG: %bb.0
-; CHECK-DIV-DAG: Successors according to CFG: %bb.1({{.*}}) %bb.2
+; CHECK-DIV-DAG: successors: %bb.1({{.*}}), %bb.2
 ; CHECK-DIV-DAG: %bb.1
-; CHECK-DIV-DAG: Successors according to CFG: %bb.3
+; CHECK-DIV-DAG: successors: %bb.3
 ; CHECK-DIV-DAG: %bb.2
-; CHECK-DIV-DAG: Successors according to CFG: %bb.3
+; CHECK-DIV-DAG: successors: %bb.3
 ; CHECK-DIV-DAG: %bb.3
 
 ; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
@@ -67,11 +67,11 @@ return:
 }
 
 ; CHECK-MOD-DAG: %bb.0
-; CHECK-MOD-DAG: Successors according to CFG: %bb.2({{.*}}) %bb.1
+; CHECK-MOD-DAG: successors: %bb.2({{.*}}), %bb.1
 ; CHECK-MOD-DAG: %bb.1
-; CHECK-MOD-DAG: Successors according to CFG: %bb.3
+; CHECK-MOD-DAG: successors: %bb.3
 ; CHECK-MOD-DAG: %bb.3
-; CHECK-MOD-DAG: Successors according to CFG: %bb.2
+; CHECK-MOD-DAG: successors: %bb.2
 ; CHECK-MOD-DAG: %bb.2
 
 ; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
@@ -119,7 +119,7 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: t2B %bb.3
 
 ; CHECK-CFG-DAG: %bb.2
-; CHECK-CFG-DAG: tCMPi8 %{{[0-9]}}, 0
+; CHECK-CFG-DAG: tCMPi8 %{{[0-9]}}{{[^,]*}}, 0
 ; CHECK-CFG-DAG: t2Bcc %bb.5
 
 ; CHECK-CFG-DAG: %bb.4

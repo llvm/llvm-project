@@ -185,6 +185,17 @@ define i1 @gep13(i8* %ptr) {
 ; CHECK-NEXT: ret i1 false
 }
 
+define i1 @gep13_no_null_opt(i8* %ptr) #0 {
+; We can't prove this GEP is non-null.
+; CHECK-LABEL: @gep13_no_null_opt(
+; CHECK: getelementptr
+; CHECK: icmp
+; CHECK: ret
+  %x = getelementptr inbounds i8, i8* %ptr, i32 1
+  %cmp = icmp eq i8* %x, null
+  ret i1 %cmp
+}
+
 define i1 @gep14({ {}, i8 }* %ptr) {
 ; CHECK-LABEL: @gep14(
 ; We can't simplify this because the offset of one in the GEP actually doesn't
@@ -205,6 +216,17 @@ define i1 @gep15({ {}, [4 x {i8, i8}]}* %ptr, i32 %y) {
 ; CHECK-NEXT: ret i1 false
 }
 
+define i1 @gep15_no_null_opt({ {}, [4 x {i8, i8}]}* %ptr, i32 %y) #0 {
+; We can't prove this GEP is non-null.
+; CHECK-LABEL: @gep15_no_null_opt(
+; CHECK: getelementptr
+; CHECK: icmp
+; CHECK: ret
+  %x = getelementptr inbounds { {}, [4 x {i8, i8}]}, { {}, [4 x {i8, i8}]}* %ptr, i32 0, i32 1, i32 %y, i32 1
+  %cmp = icmp eq i8* %x, null
+  ret i1 %cmp
+}
+
 define i1 @gep16(i8* %ptr, i32 %a) {
 ; CHECK-LABEL: @gep16(
 ; We can prove this GEP is non-null because it is inbounds and because we know
@@ -214,6 +236,18 @@ define i1 @gep16(i8* %ptr, i32 %a) {
   %cmp = icmp eq i8* %x, null
   ret i1 %cmp
 ; CHECK-NEXT: ret i1 false
+}
+
+define i1 @gep16_no_null_opt(i8* %ptr, i32 %a) #0 {
+; We can't prove this GEP is non-null.
+; CHECK-LABEL: @gep16_no_null_opt(
+; CHECK getelementptr inbounds i8, i8* %ptr, i32 %b
+; CHECK: %cmp = icmp eq i8* %x, null
+; CHECK-NEXT: ret i1 %cmp
+  %b = or i32 %a, 1
+  %x = getelementptr inbounds i8, i8* %ptr, i32 %b
+  %cmp = icmp eq i8* %x, null
+  ret i1 %cmp
 }
 
 define i1 @gep17() {
@@ -712,6 +746,17 @@ define i1 @alloca_compare(i64 %idx) {
   ; CHECK: ret i1 false
 }
 
+define i1 @alloca_compare_no_null_opt(i64 %idx) #0 {
+; CHECK-LABEL: alloca_compare_no_null_opt(
+; CHECK: %sv = alloca { i32, i32, [124 x i32] }
+; CHECK: %cmp = getelementptr inbounds { i32, i32, [124 x i32] }, { i32, i32, [124 x i32] }* %sv, i32 0, i32 2, i64 %idx
+; CHECK: %X = icmp eq i32* %cmp, null
+; CHECK: ret i1 %X
+  %sv = alloca { i32, i32, [124 x i32] }
+  %cmp = getelementptr inbounds { i32, i32, [124 x i32] }, { i32, i32, [124 x i32] }* %sv, i32 0, i32 2, i64 %idx
+  %X = icmp eq i32* %cmp, null
+  ret i1 %X
+}
 ; PR12075
 define i1 @infinite_gep() {
   ret i1 1
@@ -766,6 +811,19 @@ define i1 @alloca_gep(i64 %a, i64 %b) {
   %cmp = icmp eq i8* %x, null
   ret i1 %cmp
 ; CHECK-NEXT: ret i1 false
+}
+
+define i1 @alloca_gep_no_null_opt(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @alloca_gep_no_null_opt(
+; We can't prove this GEP is non-null.
+; CHECK: alloca
+; CHECK: getelementptr
+; CHECK: icmp
+; CHECK: ret
+  %strs = alloca [1000 x [1001 x i8]], align 16
+  %x = getelementptr inbounds [1000 x [1001 x i8]], [1000 x [1001 x i8]]* %strs, i64 0, i64 %a, i64 %b
+  %cmp = icmp eq i8* %x, null
+  ret i1 %cmp
 }
 
 define i1 @non_inbounds_gep_compare(i64* %a) {
@@ -865,6 +923,13 @@ define i1 @nonnull_arg(i32* nonnull %i) {
 ; CHECK: ret i1 false
 }
 
+define i1 @nonnull_arg_no_null_opt(i32* nonnull %i) #0 {
+  %cmp = icmp eq i32* %i, null
+  ret i1 %cmp
+; CHECK-LABEL: @nonnull_arg_no_null_opt
+; CHECK: ret i1 false
+}
+
 define i1 @nonnull_deref_arg(i32* dereferenceable(4) %i) {
   %cmp = icmp eq i32* %i, null
   ret i1 %cmp
@@ -872,6 +937,13 @@ define i1 @nonnull_deref_arg(i32* dereferenceable(4) %i) {
 ; CHECK: ret i1 false
 }
 
+define i1 @nonnull_deref_arg_no_null_opt(i32* dereferenceable(4) %i) #0 {
+  %cmp = icmp eq i32* %i, null
+  ret i1 %cmp
+; CHECK-LABEL: @nonnull_deref_arg_no_null_opt
+; CHECK-NEXT: icmp
+; CHECK: ret
+}
 define i1 @nonnull_deref_as_arg(i32 addrspace(1)* dereferenceable(4) %i) {
   %cmp = icmp eq i32 addrspace(1)* %i, null
   ret i1 %cmp
@@ -896,6 +968,15 @@ define i1 @returns_nonnull_deref() {
   ret i1 %cmp
 ; CHECK-LABEL: @returns_nonnull_deref
 ; CHECK: ret i1 false
+}
+
+define i1 @returns_nonnull_deref_no_null_opt () #0 {
+  %call = call dereferenceable(4) i32* @returns_nonnull_deref_helper()
+  %cmp = icmp eq i32* %call, null
+  ret i1 %cmp
+; CHECK-LABEL: @returns_nonnull_deref_no_null_opt
+; CHECK: icmp
+; CHECK: ret
 }
 
 declare dereferenceable(4) i32 addrspace(1)* @returns_nonnull_deref_as_helper()
@@ -1276,3 +1357,5 @@ define i1 @constant_fold_null_inttoptr() {
   %x = icmp eq i32* null, inttoptr (i64 32 to i32*)
   ret i1 %x
 }
+
+attributes #0 = { "null-pointer-is-valid"="true" }

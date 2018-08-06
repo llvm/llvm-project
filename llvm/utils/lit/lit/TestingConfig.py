@@ -22,7 +22,7 @@ class TestingConfig:
             }
 
         pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
-                     'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
+                     'CLANG', 'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
                      'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
                      'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT']
@@ -170,4 +170,10 @@ class SubstituteCaptures:
 
     def __str__(self):
         return self.substitution
+
+    def __len__(self):
+        return len(self.substitution)
+
+    def __getitem__(self, item):
+        return self.substitution.__getitem__(item)
 

@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=thumbv7-unknown-unknown 2>&1 | grep und
+# RUN: llvm-mc --disassemble %s -triple=thumbv7-unknown-unknown 2>&1 | FileCheck %s
 # rdar://10841671
 
 0xe3 0xbf
@@ -11,8 +11,8 @@
 # above sequence of junk bytes and not allowing the disassembler to abort on
 # printing the final instruction in this list.
 # 
-#	ittte	al
-#	vldr	d19, [pc, #388]
-#	vsub.f64	d17, d17, d16
-#	vadd.f64	d18, d18, d19
-#	vldr<und>	d16, [pc, #384]
+# CHECK: ittte	al
+# CHECK: vldr	d19, [pc, #388]
+# CHECK: vsub.f64	d17, d17, d16
+# CHECK: vadd.f64	d18, d18, d19
+# CHECK: vldr	d16, [pc, #384]

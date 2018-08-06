@@ -264,7 +264,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
 
   for (LazyCallGraph::Edge &E : A1.populate())
     Nodes.push_back(E.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("a2", Nodes[0]);
   EXPECT_EQ("b2", Nodes[1]);
   EXPECT_EQ("c3", Nodes[2]);
@@ -279,7 +279,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
 
   for (LazyCallGraph::Edge &E : B1.populate())
     Nodes.push_back(E.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("b2", Nodes[0]);
   EXPECT_EQ("d3", Nodes[1]);
   Nodes.clear();
@@ -293,7 +293,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
 
   for (LazyCallGraph::Edge &E : C1.populate())
     Nodes.push_back(E.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("c2", Nodes[0]);
   EXPECT_EQ("d2", Nodes[1]);
   Nodes.clear();
@@ -323,7 +323,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   ASSERT_EQ(1, D.size());
   for (LazyCallGraph::Node &N : *D.begin())
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("d1", Nodes[0]);
   EXPECT_EQ("d2", Nodes[1]);
@@ -339,7 +339,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   ASSERT_EQ(1, C.size());
   for (LazyCallGraph::Node &N : *C.begin())
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("c1", Nodes[0]);
   EXPECT_EQ("c2", Nodes[1]);
@@ -355,7 +355,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   ASSERT_EQ(1, B.size());
   for (LazyCallGraph::Node &N : *B.begin())
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("b1", Nodes[0]);
   EXPECT_EQ("b2", Nodes[1]);
@@ -373,7 +373,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   ASSERT_EQ(1, A.size());
   for (LazyCallGraph::Node &N : *A.begin())
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("a1", Nodes[0]);
   EXPECT_EQ("a2", Nodes[1]);
@@ -477,7 +477,7 @@ TEST(LazyCallGraphTest, InnerSCCFormation) {
   LazyCallGraph::SCC &D = *J++;
   for (LazyCallGraph::Node &N : D)
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("d1", Nodes[0]);
   EXPECT_EQ("d2", Nodes[1]);
@@ -487,7 +487,7 @@ TEST(LazyCallGraphTest, InnerSCCFormation) {
   LazyCallGraph::SCC &B = *J++;
   for (LazyCallGraph::Node &N : B)
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("b1", Nodes[0]);
   EXPECT_EQ("b2", Nodes[1]);
@@ -497,7 +497,7 @@ TEST(LazyCallGraphTest, InnerSCCFormation) {
   LazyCallGraph::SCC &C = *J++;
   for (LazyCallGraph::Node &N : C)
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("c1", Nodes[0]);
   EXPECT_EQ("c2", Nodes[1]);
@@ -507,7 +507,7 @@ TEST(LazyCallGraphTest, InnerSCCFormation) {
   LazyCallGraph::SCC &A = *J++;
   for (LazyCallGraph::Node &N : A)
     Nodes.push_back(N.getFunction().getName());
-  std::sort(Nodes.begin(), Nodes.end());
+  llvm::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ(3u, Nodes.size());
   EXPECT_EQ("a1", Nodes[0]);
   EXPECT_EQ("a2", Nodes[1]);

@@ -333,6 +333,37 @@ bb2:
   ret i8* %v2
 }
 
+declare i32* @func27(i32);
+
+; Check that ObjCARCOpt::OptimizeAutoreleaseRVCall doesn't turn a call to
+; @objc_autoreleaseReturnValue into a call to @objc_autorelease when a return
+; instruction uses a value equivalent to @objc_autoreleaseReturnValue's operand.
+; In the code below, %phival and %retval are considered equivalent.
+
+; CHECK-LABEL: define i32* @test27(
+; CHECK: %[[PHIVAL:.*]] = phi i8* [ %{{.*}}, %bb1 ], [ %{{.*}}, %bb2 ]
+; CHECK: %[[RETVAL:.*]] = phi i32* [ %{{.*}}, %bb1 ], [ %{{.*}}, %bb2 ]
+; CHECK: tail call i8* @objc_autoreleaseReturnValue(i8* %[[PHIVAL]])
+; CHECK: ret i32* %[[RETVAL]]
+
+define i32* @test27(i1 %cond) {
+entry:
+  br i1 %cond, label %bb1, label %bb2
+bb1:
+  %v0 = call i32* @func27(i32 1)
+  %v1 = bitcast i32* %v0 to i8*
+  br label %bb3
+bb2:
+  %v2 = call i32* @func27(i32 2)
+  %v3 = bitcast i32* %v2 to i8*
+  br label %bb3
+bb3:
+  %phival = phi i8* [ %v1, %bb1 ], [ %v3, %bb2 ]
+  %retval = phi i32* [ %v0, %bb1 ], [ %v2, %bb2 ]
+  %v4 = tail call i8* @objc_autoreleaseReturnValue(i8* %phival)
+  ret i32* %retval
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }

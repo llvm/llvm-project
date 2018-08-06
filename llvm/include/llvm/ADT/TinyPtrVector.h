@@ -108,6 +108,12 @@ public:
     return *this;
   }
 
+  TinyPtrVector(std::initializer_list<EltTy> IL)
+      : Val(IL.size() == 0
+                ? PtrUnion()
+                : IL.size() == 1 ? PtrUnion(*IL.begin())
+                                 : PtrUnion(new VecTy(IL.begin(), IL.end()))) {}
+
   /// Constructor from an ArrayRef.
   ///
   /// This also is a constructor for individual array elements due to the single

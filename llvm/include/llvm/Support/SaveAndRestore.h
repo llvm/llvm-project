@@ -32,18 +32,6 @@ private:
   T OldValue;
 };
 
-/// Similar to \c SaveAndRestore.  Operates only on bools; the old value of a
-/// variable is saved, and during the dstor the old value is or'ed with the new
-/// value.
-struct SaveOr {
-  SaveOr(bool &X) : X(X), OldValue(X) { X = false; }
-  ~SaveOr() { X |= OldValue; }
-
-private:
-  bool &X;
-  const bool OldValue;
-};
-
 } // namespace llvm
 
 #endif

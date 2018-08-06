@@ -37,3 +37,11 @@ bb2:		; preds = %bb1
 	ret i32 %3
 }
 
+define void @bam(i64 %Size) nounwind noinline #0 {
+entry:
+        %0 = load %struct.foo*, %struct.foo** @X, align 4
+        ret void
+}
+
+attributes #0 = { "null-pointer-is-valid"="true" }
+

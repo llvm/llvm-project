@@ -27,6 +27,9 @@ def ThunderXT8XModel : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = [HasSVE];
+
+  // FIXME: Remove when all errors have been fixed.
+  let FullInstRWOverlapCheck = 0;
 }
 
 // Modeling each pipeline with BufferSize == 0 since T8X is in-order.

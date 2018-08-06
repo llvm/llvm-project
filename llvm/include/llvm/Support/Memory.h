@@ -25,7 +25,7 @@ namespace sys {
   /// and a size. It is used by the Memory class (a friend) as the result of
   /// various memory allocation operations.
   /// @see Memory
-  /// @brief Memory block abstraction.
+  /// Memory block abstraction.
   class MemoryBlock {
   public:
     MemoryBlock() : Address(nullptr), Size(0) { }
@@ -42,7 +42,7 @@ namespace sys {
   /// This class provides various memory handling functions that manipulate
   /// MemoryBlock instances.
   /// @since 1.4
-  /// @brief An abstraction for memory operations.
+  /// An abstraction for memory operations.
   class Memory {
   public:
     enum ProtectionFlags {
@@ -74,7 +74,7 @@ namespace sys {
     /// \r a non-null MemoryBlock if the function was successful,
     /// otherwise a null MemoryBlock is with \p EC describing the error.
     ///
-    /// @brief Allocate mapped memory.
+    /// Allocate mapped memory.
     static MemoryBlock allocateMappedMemory(size_t NumBytes,
                                             const MemoryBlock *const NearBlock,
                                             unsigned Flags,
@@ -88,7 +88,7 @@ namespace sys {
     /// \r error_success if the function was successful, or an error_code
     /// describing the failure if an error occurred.
     ///
-    /// @brief Release mapped memory.
+    /// Release mapped memory.
     static std::error_code releaseMappedMemory(MemoryBlock &Block);
 
     /// This method sets the protection flags for a block of memory to the
@@ -105,7 +105,7 @@ namespace sys {
     /// \r error_success if the function was successful, or an error_code
     /// describing the failure if an error occurred.
     ///
-    /// @brief Set memory protection state.
+    /// Set memory protection state.
     static std::error_code protectMappedMemory(const MemoryBlock &Block,
                                                unsigned Flags);
 

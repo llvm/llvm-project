@@ -13,7 +13,7 @@ define void @int322(i32 %foo) !dbg !5 {
 entry:
   %val = load i64, i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0), !dbg !16
   %0 = load i32, i32* getelementptr inbounds (%struct.S1, %struct.S1* @g_10, i32 0, i32 1), align 4, !dbg !17
-; MIR: renamable %rax = MOVSX64rm32 {{.*}}, @g_10 + 4,{{.*}} debug-location !17 :: (dereferenceable load 4 from `i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0)` + 4)
+; MIR: renamable $rax = MOVSX64rm32 {{.*}}, @g_10 + 4,{{.*}} debug-location !17 :: (dereferenceable load 4 from `i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0)` + 4)
   %1 = sext i32 %0 to i64, !dbg !18
   %tmp4.i = lshr i64 %val, 32, !dbg !19
   %tmp5.i = trunc i64 %tmp4.i to i32, !dbg !20
@@ -38,7 +38,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !2 = !{}
 !3 = !{i32 8}
 !4 = !{i32 6}
-!5 = distinct !DISubprogram(name: "int322", linkageName: "int322", scope: null, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, variables: !7)
+!5 = distinct !DISubprogram(name: "int322", linkageName: "int322", scope: null, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !7)
 !6 = !DISubroutineType(types: !2)
 !7 = !{!8, !10, !12, !13, !14, !15}
 !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)

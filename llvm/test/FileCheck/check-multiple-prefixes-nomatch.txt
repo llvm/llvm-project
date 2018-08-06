@@ -8,5 +8,5 @@ foo
 ; BAR: ba{{z}}
 ; FOO: fo{{o}}
 
-; CHECK: {{error: expected string not found in input}}
+; CHECK: {{error: BAR: expected string not found in input}}
 ; CHECK-NEXT: {{B}}AR: ba{{[{][{]z[}][}]}}

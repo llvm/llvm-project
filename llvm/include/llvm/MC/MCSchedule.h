@@ -15,18 +15,22 @@
 #ifndef LLVM_MC_MCSCHEDULE_H
 #define LLVM_MC_MCSCHEDULE_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
 namespace llvm {
 
 struct InstrItinerary;
+class MCSubtargetInfo;
+class MCInstrInfo;
+class MCInst;
+class InstrItineraryData;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char *Name;
-#endif
   unsigned NumUnits; // Number of resource of this kind
   unsigned SuperIdx; // Index of the resources kind that contains this kind.
 
@@ -44,6 +48,11 @@ struct MCProcResourceDesc {
   // an out-of-order cpus.
   int BufferSize;
 
+  // If the resource has sub-units, a pointer to the first element of an array
+  // of `NumUnits` elements containing the ProcResourceIdx of the sub units.
+  // nullptr if the resource does not have sub-units.
+  const unsigned *SubUnitsIdxBegin;
+
   bool operator==(const MCProcResourceDesc &Other) const {
     return NumUnits == Other.NumUnits && SuperIdx == Other.SuperIdx
       && BufferSize == Other.BufferSize;
@@ -53,8 +62,8 @@ struct MCProcResourceDesc {
 /// Identify one of the processor resource kinds consumed by a particular
 /// scheduling class for the specified number of cycles.
 struct MCWriteProcResEntry {
-  unsigned ProcResourceIdx;
-  unsigned Cycles;
+  uint16_t ProcResourceIdx;
+  uint16_t Cycles;
 
   bool operator==(const MCWriteProcResEntry &Other) const {
     return ProcResourceIdx == Other.ProcResourceIdx && Cycles == Other.Cycles;
@@ -67,8 +76,8 @@ struct MCWriteProcResEntry {
 /// the WriteResources of this def. When the operand expands to a sequence of
 /// writes, this ID is the last write in the sequence.
 struct MCWriteLatencyEntry {
-  int Cycles;
-  unsigned WriteResourceID;
+  int16_t Cycles;
+  uint16_t WriteResourceID;
 
   bool operator==(const MCWriteLatencyEntry &Other) const {
     return Cycles == Other.Cycles && WriteResourceID == Other.WriteResourceID;
@@ -99,21 +108,21 @@ struct MCReadAdvanceEntry {
 ///
 /// Defined as an aggregate struct for creating tables with initializer lists.
 struct MCSchedClassDesc {
-  static const unsigned short InvalidNumMicroOps = UINT16_MAX;
-  static const unsigned short VariantNumMicroOps = UINT16_MAX - 1;
+  static const unsigned short InvalidNumMicroOps = (1U << 14) - 1;
+  static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char* Name;
 #endif
-  unsigned short NumMicroOps;
-  bool     BeginGroup;
-  bool     EndGroup;
-  unsigned WriteProcResIdx; // First index into WriteProcResTable.
-  unsigned NumWriteProcResEntries;
-  unsigned WriteLatencyIdx; // First index into WriteLatencyTable.
-  unsigned NumWriteLatencyEntries;
-  unsigned ReadAdvanceIdx; // First index into ReadAdvanceTable.
-  unsigned NumReadAdvanceEntries;
+  uint16_t NumMicroOps : 14;
+  bool     BeginGroup : 1;
+  bool     EndGroup : 1;
+  uint16_t WriteProcResIdx; // First index into WriteProcResTable.
+  uint16_t NumWriteProcResEntries;
+  uint16_t WriteLatencyIdx; // First index into WriteLatencyTable.
+  uint16_t NumWriteLatencyEntries;
+  uint16_t ReadAdvanceIdx; // First index into ReadAdvanceTable.
+  uint16_t NumReadAdvanceEntries;
 
   bool isValid() const {
     return NumMicroOps != InvalidNumMicroOps;
@@ -121,6 +130,64 @@ struct MCSchedClassDesc {
   bool isVariant() const {
     return NumMicroOps == VariantNumMicroOps;
   }
+};
+
+/// Specify the cost of a register definition in terms of number of physical
+/// register allocated at register renaming stage. For example, AMD Jaguar.
+/// natively supports 128-bit data types, and operations on 256-bit registers
+/// (i.e. YMM registers) are internally split into two COPs (complex operations)
+/// and each COP updates a physical register. Basically, on Jaguar, a YMM
+/// register write effectively consumes two physical registers. That means,
+/// the cost of a YMM write in the BtVer2 model is 2.
+struct MCRegisterCostEntry {
+  unsigned RegisterClassID;
+  unsigned Cost;
+};
+
+/// A register file descriptor.
+///
+/// This struct allows to describe processor register files. In particular, it
+/// helps describing the size of the register file, as well as the cost of
+/// allocating a register file at register renaming stage.
+/// FIXME: this struct can be extended to provide information about the number
+/// of read/write ports to the register file.  A value of zero for field
+/// 'NumPhysRegs' means: this register file has an unbounded number of physical
+/// registers.
+struct MCRegisterFileDesc {
+  const char *Name;
+  uint16_t NumPhysRegs;
+  uint16_t NumRegisterCostEntries;
+  // Index of the first cost entry in MCExtraProcessorInfo::RegisterCostTable.
+  uint16_t RegisterCostEntryIdx;
+};
+
+/// Provide extra details about the machine processor.
+///
+/// This is a collection of "optional" processor information that is not
+/// normally used by the LLVM machine schedulers, but that can be consumed by
+/// external tools like llvm-mca to improve the quality of the peformance
+/// analysis.
+struct MCExtraProcessorInfo {
+  // Actual size of the reorder buffer in hardware.
+  unsigned ReorderBufferSize;
+  // Number of instructions retired per cycle.
+  unsigned MaxRetirePerCycle;
+  const MCRegisterFileDesc *RegisterFiles;
+  unsigned NumRegisterFiles;
+  const MCRegisterCostEntry *RegisterCostTable;
+  unsigned NumRegisterCostEntries;
+
+  struct PfmCountersInfo {
+    // An optional name of a performance counter that can be used to measure
+    // cycles.
+    const char *CycleCounter;
+
+    // For each MCProcResourceDesc defined by the processor, an optional list of
+    // names of performance counters that can be used to measure the resource
+    // utilization.
+    const char **IssueCounters;
+  };
+  PfmCountersInfo PfmCounters;
 };
 
 /// Machine model for scheduling, bundling, and heuristics.
@@ -133,9 +200,62 @@ struct MCSchedClassDesc {
 /// provides a detailed reservation table describing each cycle of instruction
 /// execution. Subtargets may define any or all of the above categories of data
 /// depending on the type of CPU and selected scheduler.
+///
+/// The machine independent properties defined here are used by the scheduler as
+/// an abstract machine model. A real micro-architecture has a number of
+/// buffers, queues, and stages. Declaring that a given machine-independent
+/// abstract property corresponds to a specific physical property across all
+/// subtargets can't be done. Nonetheless, the abstract model is
+/// useful. Futhermore, subtargets typically extend this model with processor
+/// specific resources to model any hardware features that can be exploited by
+/// sceduling heuristics and aren't sufficiently represented in the abstract.
+///
+/// The abstract pipeline is built around the notion of an "issue point". This
+/// is merely a reference point for counting machine cycles. The physical
+/// machine will have pipeline stages that delay execution. The scheduler does
+/// not model those delays because they are irrelevant as long as they are
+/// consistent. Inaccuracies arise when instructions have different execution
+/// delays relative to each other, in addition to their intrinsic latency. Those
+/// special cases can be handled by TableGen constructs such as, ReadAdvance,
+/// which reduces latency when reading data, and ResourceCycles, which consumes
+/// a processor resource when writing data for a number of abstract
+/// cycles.
+///
+/// TODO: One tool currently missing is the ability to add a delay to
+/// ResourceCycles. That would be easy to add and would likely cover all cases
+/// currently handled by the legacy itinerary tables.
+///
+/// A note on out-of-order execution and, more generally, instruction
+/// buffers. Part of the CPU pipeline is always in-order. The issue point, which
+/// is the point of reference for counting cycles, only makes sense as an
+/// in-order part of the pipeline. Other parts of the pipeline are sometimes
+/// falling behind and sometimes catching up. It's only interesting to model
+/// those other, decoupled parts of the pipeline if they may be predictably
+/// resource constrained in a way that the scheduler can exploit.
+///
+/// The LLVM machine model distinguishes between in-order constraints and
+/// out-of-order constraints so that the target's scheduling strategy can apply
+/// appropriate heuristics. For a well-balanced CPU pipeline, out-of-order
+/// resources would not typically be treated as a hard scheduling
+/// constraint. For example, in the GenericScheduler, a delay caused by limited
+/// out-of-order resources is not directly reflected in the number of cycles
+/// that the scheduler sees between issuing an instruction and its dependent
+/// instructions. In other words, out-of-order resources don't directly increase
+/// the latency between pairs of instructions. However, they can still be used
+/// to detect potential bottlenecks across a sequence of instructions and bias
+/// the scheduling heuristics appropriately.
 struct MCSchedModel {
   // IssueWidth is the maximum number of instructions that may be scheduled in
-  // the same per-cycle group.
+  // the same per-cycle group. This is meant to be a hard in-order constraint
+  // (a.k.a. "hazard"). In the GenericScheduler strategy, no more than
+  // IssueWidth micro-ops can ever be scheduled in a particular cycle.
+  //
+  // In practice, IssueWidth is useful to model any bottleneck between the
+  // decoder (after micro-op expansion) and the out-of-order reservation
+  // stations or the decoder bandwidth itself. If the total number of
+  // reservation stations is also a bottleneck, or if any other pipeline stage
+  // has a bandwidth limitation, then that can be naturally modeled by adding an
+  // out-of-order processor resource.
   unsigned IssueWidth;
   static const unsigned DefaultIssueWidth = 1;
 
@@ -193,10 +313,20 @@ struct MCSchedModel {
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
 
+  const MCExtraProcessorInfo *ExtraProcessorInfo;
+
+  bool hasExtraProcessorInfo() const { return ExtraProcessorInfo; }
+
   unsigned getProcessorID() const { return ProcID; }
 
   /// Does this machine model include instruction-level scheduling.
   bool hasInstrSchedModel() const { return SchedClassTable; }
+
+  const MCExtraProcessorInfo &getExtraProcessorInfo() const {
+    assert(hasExtraProcessorInfo() &&
+           "No extra information available for this model");
+    return *ExtraProcessorInfo;
+  }
 
   /// Return true if this machine model data for all instructions with a
   /// scheduling class (itinerary class or SchedRW list).
@@ -223,11 +353,31 @@ struct MCSchedModel {
     return &SchedClassTable[SchedClassIdx];
   }
 
+  /// Returns the latency value for the scheduling class.
+  static int computeInstrLatency(const MCSubtargetInfo &STI,
+                                 const MCSchedClassDesc &SCDesc);
+
+  int computeInstrLatency(const MCSubtargetInfo &STI, unsigned SClass) const;
+  int computeInstrLatency(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                          const MCInst &Inst) const;
+
+  // Returns the reciprocal throughput information from a MCSchedClassDesc.
+  static double
+  getReciprocalThroughput(const MCSubtargetInfo &STI,
+                          const MCSchedClassDesc &SCDesc);
+
+  static double
+  getReciprocalThroughput(unsigned SchedClass, const InstrItineraryData &IID);
+
+  double
+  getReciprocalThroughput(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                          const MCInst &Inst) const;
+
   /// Returns the default initialized model.
   static const MCSchedModel &GetDefaultSchedModel() { return Default; }
   static const MCSchedModel Default;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

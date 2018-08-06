@@ -8,14 +8,14 @@ define zeroext i16 @test1(i16 zeroext %x) nounwind {
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $63551, %eax, %eax # imm = 0xF83F
 ; X32-NEXT:    shrl $21, %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $63551, %edi, %eax # imm = 0xF83F
 ; X64-NEXT:    shrl $21, %eax
-; X64-NEXT:    # kill: def %ax killed %ax killed %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
 	%div = udiv i16 %x, 33
@@ -28,14 +28,14 @@ define zeroext i16 @test2(i8 signext %x, i16 zeroext %c) nounwind readnone ssp n
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $43691, %eax, %eax # imm = 0xAAAB
 ; X32-NEXT:    shrl $17, %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $43691, %esi, %eax # imm = 0xAAAB
 ; X64-NEXT:    shrl $17, %eax
-; X64-NEXT:    # kill: def %ax killed %ax killed %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
   %div = udiv i16 %c, 3
@@ -49,16 +49,14 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) nounwind readnone ssp nor
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $171, %eax, %eax
 ; X32-NEXT:    shrl $9, %eax
-; X32-NEXT:    movzwl %ax, %eax
-; X32-NEXT:    # kill: def %al killed %al killed %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $171, %esi, %eax
 ; X64-NEXT:    shrl $9, %eax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    # kill: def %al killed %al killed %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 entry:
   %div = udiv i8 %c, 3
@@ -74,7 +72,7 @@ define signext i16 @test4(i16 signext %x) nounwind {
 ; X32-NEXT:    shrl $31, %ecx
 ; X32-NEXT:    shrl $16, %eax
 ; X32-NEXT:    addl %ecx, %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
@@ -84,7 +82,7 @@ define signext i16 @test4(i16 signext %x) nounwind {
 ; X64-NEXT:    shrl $31, %ecx
 ; X64-NEXT:    shrl $16, %eax
 ; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    # kill: def %ax killed %ax killed %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
 	%div = sdiv i16 %x, 33		; <i32> [#uses=1]
@@ -105,7 +103,7 @@ define i32 @test5(i32 %A) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    imulq $365384439, %rax, %rax # imm = 0x15C752F7
 ; X64-NEXT:    shrq $59, %rax
-; X64-NEXT:    # kill: def %eax killed %eax killed %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
         %tmp1 = udiv i32 %A, 1577682821         ; <i32> [#uses=1]
         ret i32 %tmp1
@@ -120,7 +118,7 @@ define signext i16 @test6(i16 signext %x) nounwind {
 ; X32-NEXT:    shrl $31, %ecx
 ; X32-NEXT:    sarl $18, %eax
 ; X32-NEXT:    addl %ecx, %eax
-; X32-NEXT:    # kill: def %ax killed %ax killed %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test6:
@@ -130,7 +128,7 @@ define signext i16 @test6(i16 signext %x) nounwind {
 ; X64-NEXT:    shrl $31, %ecx
 ; X64-NEXT:    sarl $18, %eax
 ; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    # kill: def %ax killed %ax killed %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
   %div = sdiv i16 %x, 10
@@ -149,11 +147,11 @@ define i32 @test7(i32 %x) nounwind {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def %edi killed %edi def %rdi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    shrl $2, %edi
 ; X64-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
 ; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    # kill: def %eax killed %eax killed %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %div = udiv i32 %x, 28
   ret i32 %div
@@ -168,8 +166,7 @@ define i8 @test8(i8 %x) nounwind {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $211, %eax, %eax
 ; X32-NEXT:    shrl $13, %eax
-; X32-NEXT:    movzwl %ax, %eax
-; X32-NEXT:    # kill: def %al killed %al killed %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test8:
@@ -178,8 +175,7 @@ define i8 @test8(i8 %x) nounwind {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $211, %eax, %eax
 ; X64-NEXT:    shrl $13, %eax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    # kill: def %al killed %al killed %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, 78
   ret i8 %div
@@ -193,8 +189,7 @@ define i8 @test9(i8 %x) nounwind {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $71, %eax, %eax
 ; X32-NEXT:    shrl $11, %eax
-; X32-NEXT:    movzwl %ax, %eax
-; X32-NEXT:    # kill: def %al killed %al killed %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test9:
@@ -203,8 +198,7 @@ define i8 @test9(i8 %x) nounwind {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $71, %eax, %eax
 ; X64-NEXT:    shrl $11, %eax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    # kill: def %al killed %al killed %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, 116
   ret i8 %div
@@ -318,7 +312,7 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    movabsq $6120523590596543007, %rdx # imm = 0x54F077C718E7C21F
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    shrq $12, %rdx
 ; X64-NEXT:    imulq $12345, %rdx, %rax # imm = 0x3039

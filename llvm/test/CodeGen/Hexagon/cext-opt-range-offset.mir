@@ -29,8 +29,8 @@ body: |
   bb.2:
     successors: %bb.3, %bb.4
         %4 = IMPLICIT_DEF
-        J2_jumpt %4, %bb.4, implicit-def %pc
-        J2_jump %bb.3, implicit-def %pc
+        J2_jumpt %4, %bb.4, implicit-def $pc
+        J2_jump %bb.3, implicit-def $pc
 
   bb.3:
     successors: %bb.4

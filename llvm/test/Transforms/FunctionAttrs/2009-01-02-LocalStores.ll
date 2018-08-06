@@ -1,4 +1,5 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
+; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 ; CHECK: define i32* @a(i32** nocapture readonly %p)
 define i32* @a(i32** %p) {

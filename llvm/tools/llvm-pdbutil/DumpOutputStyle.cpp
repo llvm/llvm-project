@@ -90,7 +90,13 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
-  if (opts::dump::DumpStringTable) {
+  if (opts::dump::DumpNamedStreams) {
+    if (auto EC = dumpNamedStreams())
+      return EC;
+    P.NewLine();
+  }
+
+  if (opts::dump::DumpStringTable || opts::dump::DumpStringTableDetails) {
     if (auto EC = dumpStringTable())
       return EC;
     P.NewLine();
@@ -143,6 +149,11 @@ Error DumpOutputStyle::dump() {
       if (auto EC = dumpTpiStream(StreamIPI))
         return EC;
     }
+  }
+
+  if (opts::dump::DumpGSIRecords) {
+    if (auto EC = dumpGSIRecords())
+      return EC;
   }
 
   if (opts::dump::DumpGlobals) {
@@ -434,6 +445,86 @@ static void iterateModuleSubsections(
                       });
 }
 
+static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
+                          ArrayRef<llvm::object::coff_section>>>
+loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
+  if (!File.hasPDBDbiStream())
+    return make_error<StringError>(
+        "Section headers require a DBI Stream, which could not be loaded",
+        inconvertibleErrorCode());
+
+  auto &Dbi = cantFail(File.getPDBDbiStream());
+  uint32_t SI = Dbi.getDebugStreamIndex(Type);
+
+  if (SI == kInvalidStreamIndex)
+    return make_error<StringError>(
+        "PDB does not contain the requested image section header type",
+        inconvertibleErrorCode());
+
+  auto Stream = File.createIndexedStream(SI);
+  if (!Stream)
+    return make_error<StringError>("Could not load the required stream data",
+                                   inconvertibleErrorCode());
+
+  ArrayRef<object::coff_section> Headers;
+  if (Stream->getLength() % sizeof(object::coff_section) != 0)
+    return make_error<StringError>(
+        "Section header array size is not a multiple of section header size",
+        inconvertibleErrorCode());
+
+  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
+  BinaryStreamReader Reader(*Stream);
+  cantFail(Reader.readArray(Headers, NumHeaders));
+  return std::make_pair(std::move(Stream), Headers);
+}
+
+static std::vector<std::string> getSectionNames(PDBFile &File) {
+  auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
+  if (!ExpectedHeaders)
+    return {};
+
+  std::unique_ptr<MappedBlockStream> Stream;
+  ArrayRef<object::coff_section> Headers;
+  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
+  std::vector<std::string> Names;
+  for (const auto &H : Headers)
+    Names.push_back(H.Name);
+  return Names;
+}
+
+static void dumpSectionContrib(LinePrinter &P, const SectionContrib &SC,
+                               ArrayRef<std::string> SectionNames,
+                               uint32_t FieldWidth) {
+  std::string NameInsert;
+  if (SC.ISect > 0 && SC.ISect <= SectionNames.size()) {
+    StringRef SectionName = SectionNames[SC.ISect - 1];
+    NameInsert = formatv("[{0}]", SectionName).str();
+  } else
+    NameInsert = "[???]";
+  P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+               "crc = {4}",
+               formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),
+               fmtle(SC.Imod), fmtle(SC.DataCrc), fmtle(SC.RelocCrc),
+               fmt_align(NameInsert, AlignStyle::Left, FieldWidth + 2));
+  AutoIndent Indent(P, FieldWidth + 2);
+  P.formatLine("      {0}",
+               formatSectionCharacteristics(P.getIndentLevel() + 6,
+                                            SC.Characteristics, 3, " | "));
+}
+
+static void dumpSectionContrib(LinePrinter &P, const SectionContrib2 &SC,
+                               ArrayRef<std::string> SectionNames,
+                               uint32_t FieldWidth) {
+  P.formatLine("SC2[{6}] | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+               "crc = {4}, coff section = {5}",
+               formatSegmentOffset(SC.Base.ISect, SC.Base.Off),
+               fmtle(SC.Base.Size), fmtle(SC.Base.Imod), fmtle(SC.Base.DataCrc),
+               fmtle(SC.Base.RelocCrc), fmtle(SC.ISectCoff));
+  P.formatLine("      {0}",
+               formatSectionCharacteristics(P.getIndentLevel() + 6,
+                                            SC.Base.Characteristics, 3, " | "));
+}
+
 Error DumpOutputStyle::dumpModules() {
   printHeader(P, "Modules");
   AutoIndent Indent(P);
@@ -456,6 +547,10 @@ Error DumpOutputStyle::dumpModules() {
   iterateSymbolGroups(
       File, PrintScope{P, 11}, [&](uint32_t Modi, const SymbolGroup &Strings) {
         auto Desc = Modules.getModuleDescriptor(Modi);
+        if (opts::dump::DumpSectionContribs) {
+          std::vector<std::string> Sections = getSectionNames(getPdb());
+          dumpSectionContrib(P, Desc.getSectionContrib(), Sections, 0);
+        }
         P.formatLine("Obj: `{0}`: ", Desc.getObjFileName());
         P.formatLine("debug stream: {0}, # files: {1}, has ec info: {2}",
                      Desc.getModuleStreamIndex(), Desc.getNumberOfFiles(),
@@ -848,14 +943,7 @@ Error DumpOutputStyle::dumpXme() {
   return Error::success();
 }
 
-Error DumpOutputStyle::dumpStringTable() {
-  printHeader(P, "String Table");
-
-  if (File.isObj()) {
-    P.formatLine("Dumping string table is not supported for object files");
-    return Error::success();
-  }
-
+Error DumpOutputStyle::dumpStringTableFromPdb() {
   AutoIndent Indent(P);
   auto IS = getPdb().getStringTable();
   if (!IS) {
@@ -864,35 +952,119 @@ Error DumpOutputStyle::dumpStringTable() {
     return Error::success();
   }
 
-  if (IS->name_ids().empty()) {
-    P.formatLine("Empty");
-    return Error::success();
+  if (opts::dump::DumpStringTable) {
+    if (IS->name_ids().empty())
+      P.formatLine("Empty");
+    else {
+      auto MaxID =
+          std::max_element(IS->name_ids().begin(), IS->name_ids().end());
+      uint32_t Digits = NumDigits(*MaxID);
+
+      P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
+                   "String");
+
+      std::vector<uint32_t> SortedIDs(IS->name_ids().begin(),
+                                      IS->name_ids().end());
+      llvm::sort(SortedIDs.begin(), SortedIDs.end());
+      for (uint32_t I : SortedIDs) {
+        auto ES = IS->getStringForID(I);
+        llvm::SmallString<32> Str;
+        if (!ES) {
+          consumeError(ES.takeError());
+          Str = "Error reading string";
+        } else if (!ES->empty()) {
+          Str.append("'");
+          Str.append(*ES);
+          Str.append("'");
+        }
+
+        if (!Str.empty())
+          P.formatLine("{0} | {1}", fmt_align(I, AlignStyle::Right, Digits),
+                       Str);
+      }
+    }
   }
 
-  auto MaxID = std::max_element(IS->name_ids().begin(), IS->name_ids().end());
-  uint32_t Digits = NumDigits(*MaxID);
-
-  P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
-               "String");
-
-  std::vector<uint32_t> SortedIDs(IS->name_ids().begin(), IS->name_ids().end());
-  std::sort(SortedIDs.begin(), SortedIDs.end());
-  for (uint32_t I : SortedIDs) {
-    auto ES = IS->getStringForID(I);
-    llvm::SmallString<32> Str;
-    if (!ES) {
-      consumeError(ES.takeError());
-      Str = "Error reading string";
-    } else if (!ES->empty()) {
-      Str.append("'");
-      Str.append(*ES);
-      Str.append("'");
+  if (opts::dump::DumpStringTableDetails) {
+    P.NewLine();
+    {
+      P.printLine("String Table Header:");
+      AutoIndent Indent(P);
+      P.formatLine("Signature: {0}", IS->getSignature());
+      P.formatLine("Hash Version: {0}", IS->getHashVersion());
+      P.formatLine("Name Buffer Size: {0}", IS->getByteSize());
+      P.NewLine();
     }
 
-    if (!Str.empty())
-      P.formatLine("{0} | {1}", fmt_align(I, AlignStyle::Right, Digits), Str);
+    BinaryStreamRef NameBuffer = IS->getStringTable().getBuffer();
+    ArrayRef<uint8_t> Contents;
+    cantFail(NameBuffer.readBytes(0, NameBuffer.getLength(), Contents));
+    P.formatBinary("Name Buffer", Contents, 0);
+    P.NewLine();
+    {
+      P.printLine("Hash Table:");
+      AutoIndent Indent(P);
+      P.formatLine("Bucket Count: {0}", IS->name_ids().size());
+      for (const auto &Entry : enumerate(IS->name_ids()))
+        P.formatLine("Bucket[{0}] : {1}", Entry.index(),
+                     uint32_t(Entry.value()));
+      P.formatLine("Name Count: {0}", IS->getNameCount());
+    }
   }
   return Error::success();
+}
+
+Error DumpOutputStyle::dumpStringTableFromObj() {
+  iterateModuleSubsections<DebugStringTableSubsectionRef>(
+      File, PrintScope{P, 4},
+      [&](uint32_t Modi, const SymbolGroup &Strings,
+          DebugStringTableSubsectionRef &Strings2) {
+        BinaryStreamRef StringTableBuffer = Strings2.getBuffer();
+        BinaryStreamReader Reader(StringTableBuffer);
+        while (Reader.bytesRemaining() > 0) {
+          StringRef Str;
+          uint32_t Offset = Reader.getOffset();
+          cantFail(Reader.readCString(Str));
+          if (Str.empty())
+            continue;
+
+          P.formatLine("{0} | {1}", fmt_align(Offset, AlignStyle::Right, 4),
+                       Str);
+        }
+      });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpNamedStreams() {
+  printHeader(P, "Named Streams");
+  AutoIndent Indent(P, 2);
+
+  if (File.isObj()) {
+    P.formatLine("Dumping Named Streams is only supported for PDB files.");
+    return Error::success();
+  }
+  ExitOnError Err("Invalid PDB File: ");
+
+  auto &IS = Err(File.pdb().getPDBInfoStream());
+  const NamedStreamMap &NS = IS.getNamedStreams();
+  for (const auto &Entry : NS.entries()) {
+    P.printLine(Entry.getKey());
+    AutoIndent Indent2(P, 2);
+    P.formatLine("Index: {0}", Entry.getValue());
+    P.formatLine("Size in bytes: {0}",
+                 File.pdb().getStreamByteSize(Entry.getValue()));
+  }
+
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpStringTable() {
+  printHeader(P, "String Table");
+
+  if (File.isPdb())
+    return dumpStringTableFromPdb();
+
+  return dumpStringTableFromObj();
 }
 
 static void buildDepSet(LazyRandomTypeCollection &Types,
@@ -975,8 +1147,15 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     if (auto EC = S.getName(SectionName))
       return errorCodeToError(EC);
 
-    if (SectionName != ".debug$T")
+    // .debug$T is a standard CodeView type section, while .debug$P is the same
+    // format but used for MSVC precompiled header object files.
+    if (SectionName == ".debug$T")
+      printHeader(P, "Types (.debug$T)");
+    else if (SectionName == ".debug$P")
+      printHeader(P, "Precompiled Types (.debug$P)");
+    else
       continue;
+
     StringRef Contents;
     if (auto EC = S.getContents(Contents))
       return errorCodeToError(EC);
@@ -1124,6 +1303,7 @@ Error DumpOutputStyle::dumpModuleSymsForObj() {
       File, PrintScope{P, 2},
       [&](uint32_t Modi, const SymbolGroup &Strings,
           DebugSymbolsSubsectionRef &Symbols) {
+        Dumper.setSymbolGroup(&Strings);
         for (auto Symbol : Symbols) {
           if (auto EC = Visitor.visitSymbolRecord(Symbol)) {
             SymbolError = llvm::make_unique<Error>(std::move(EC));
@@ -1165,8 +1345,8 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
 
         SymbolVisitorCallbackPipeline Pipeline;
         SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids,
-                                   Types);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Strings,
+                                   Ids, Types);
 
         Pipeline.addCallbackToPipeline(Deserializer);
         Pipeline.addCallbackToPipeline(Dumper);
@@ -1179,6 +1359,39 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
           return;
         }
       });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpGSIRecords() {
+  printHeader(P, "GSI Records");
+  AutoIndent Indent(P);
+
+  if (File.isObj()) {
+    P.formatLine("Dumping Globals is not supported for object files");
+    return Error::success();
+  }
+
+  if (!getPdb().hasPDBSymbolStream()) {
+    P.formatLine("GSI Common Symbol Stream not present");
+    return Error::success();
+  }
+
+  auto &Records = cantFail(getPdb().getPDBSymbolStream());
+  auto &Types = File.types();
+  auto &Ids = File.ids();
+
+  P.printLine("Records");
+  SymbolVisitorCallbackPipeline Pipeline;
+  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids, Types);
+
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(Dumper);
+  CVSymbolVisitor Visitor(Pipeline);
+
+  BinaryStreamRef SymStream = Records.getSymbolArray().getUnderlyingStream();
+  if (auto E = Visitor.visitSymbolStream(Records.getSymbolArray(), 0))
+    return E;
   return Error::success();
 }
 
@@ -1287,6 +1500,7 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
     Pipeline.addCallbackToPipeline(Dumper);
     CVSymbolVisitor Visitor(Pipeline);
 
+
     BinaryStreamRef SymStream =
         ExpectedSyms->getSymbolArray().getUnderlyingStream();
     for (uint32_t PubSymOff : Table) {
@@ -1299,24 +1513,23 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
   }
 
   // Return early if we aren't dumping public hash table and address map info.
-  if (!HashExtras)
-    return Error::success();
+  if (HashExtras) {
+    P.formatBinary("Hash Bitmap", Table.HashBitmap, 0);
 
-  P.formatLine("Hash Entries");
-  {
-    AutoIndent Indent2(P);
-    for (const PSHashRecord &HR : Table.HashRecords)
-      P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
-                   uint32_t(HR.CRef));
-  }
+    P.formatLine("Hash Entries");
+    {
+      AutoIndent Indent2(P);
+      for (const PSHashRecord &HR : Table.HashRecords)
+        P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
+          uint32_t(HR.CRef));
+    }
 
-  // FIXME: Dump the bitmap.
-
-  P.formatLine("Hash Buckets");
-  {
-    AutoIndent Indent2(P);
-    for (uint32_t Hash : Table.HashBuckets)
-      P.formatLine("{0:x8}", Hash);
+    P.formatLine("Hash Buckets");
+    {
+      AutoIndent Indent2(P);
+      for (uint32_t Hash : Table.HashBuckets)
+        P.formatLine("{0:x8}", Hash);
+    }
   }
 
   return Error::success();
@@ -1342,39 +1555,6 @@ Error DumpOutputStyle::dumpSectionHeaders() {
   dumpSectionHeaders("Section Headers", DbgHeaderType::SectionHdr);
   dumpSectionHeaders("Original Section Headers", DbgHeaderType::SectionHdrOrig);
   return Error::success();
-}
-
-static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
-                          ArrayRef<llvm::object::coff_section>>>
-loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
-  if (!File.hasPDBDbiStream())
-    return make_error<StringError>(
-        "Section headers require a DBI Stream, which could not be loaded",
-        inconvertibleErrorCode());
-
-  auto &Dbi = cantFail(File.getPDBDbiStream());
-  uint32_t SI = Dbi.getDebugStreamIndex(Type);
-
-  if (SI == kInvalidStreamIndex)
-    return make_error<StringError>(
-        "PDB does not contain the requested image section header type",
-        inconvertibleErrorCode());
-
-  auto Stream = File.createIndexedStream(SI);
-  if (!Stream)
-    return make_error<StringError>("Could not load the required stream data",
-                                   inconvertibleErrorCode());
-
-  ArrayRef<object::coff_section> Headers;
-  if (Stream->getLength() % sizeof(object::coff_section) != 0)
-    return make_error<StringError>(
-        "Section header array size is not a multiple of section header size",
-        inconvertibleErrorCode());
-
-  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
-  BinaryStreamReader Reader(*Stream);
-  cantFail(Reader.readArray(Headers, NumHeaders));
-  return std::make_pair(std::move(Stream), Headers);
 }
 
 void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
@@ -1423,20 +1603,6 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
   return;
 }
 
-std::vector<std::string> getSectionNames(PDBFile &File) {
-  auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
-  if (!ExpectedHeaders)
-    return {};
-
-  std::unique_ptr<MappedBlockStream> Stream;
-  ArrayRef<object::coff_section> Headers;
-  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
-  std::vector<std::string> Names;
-  for (const auto &H : Headers)
-    Names.push_back(H.Name);
-  return Names;
-}
-
 Error DumpOutputStyle::dumpSectionContribs() {
   printHeader(P, "Section Contributions");
 
@@ -1465,33 +1631,10 @@ Error DumpOutputStyle::dumpSectionContribs() {
       MaxNameLen = (Max == Names.end() ? 0 : Max->size());
     }
     void visit(const SectionContrib &SC) override {
-      assert(SC.ISect > 0);
-      std::string NameInsert;
-      if (SC.ISect < Names.size()) {
-        StringRef SectionName = Names[SC.ISect - 1];
-        NameInsert = formatv("[{0}]", SectionName).str();
-      } else
-        NameInsert = "[???]";
-      P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
-                   "crc = {4}",
-                   formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),
-                   fmtle(SC.Imod), fmtle(SC.DataCrc), fmtle(SC.RelocCrc),
-                   fmt_align(NameInsert, AlignStyle::Left, MaxNameLen + 2));
-      AutoIndent Indent(P, MaxNameLen + 2);
-      P.formatLine("      {0}",
-                   formatSectionCharacteristics(P.getIndentLevel() + 6,
-                                                SC.Characteristics, 3, " | "));
+      dumpSectionContrib(P, SC, Names, MaxNameLen);
     }
     void visit(const SectionContrib2 &SC) override {
-      P.formatLine(
-          "SC2[{6}] | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
-          "crc = {4}, coff section = {5}",
-          formatSegmentOffset(SC.Base.ISect, SC.Base.Off), fmtle(SC.Base.Size),
-          fmtle(SC.Base.Imod), fmtle(SC.Base.DataCrc), fmtle(SC.Base.RelocCrc),
-          fmtle(SC.ISectCoff));
-      P.formatLine("      {0}", formatSectionCharacteristics(
-                                    P.getIndentLevel() + 6,
-                                    SC.Base.Characteristics, 3, " | "));
+      dumpSectionContrib(P, SC, Names, MaxNameLen);
     }
 
   private:

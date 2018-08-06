@@ -119,6 +119,12 @@ TLI_DEFINE_STRING_INTERNAL("_ZdaPv")
 /// void operator delete[](void*, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZdaPvRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZdaPvRKSt9nothrow_t")
+/// void operator delete[](void*, align_val_t);
+TLI_DEFINE_ENUM_INTERNAL(ZdaPvSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdaPvSt11align_val_t")
+/// void operator delete[](void*, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZdaPvSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdaPvSt11align_val_tRKSt9nothrow_t")
 /// void operator delete[](void*, unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(ZdaPvj)
 TLI_DEFINE_STRING_INTERNAL("_ZdaPvj")
@@ -131,6 +137,12 @@ TLI_DEFINE_STRING_INTERNAL("_ZdlPv")
 /// void operator delete(void*, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZdlPvRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZdlPvRKSt9nothrow_t")
+/// void operator delete(void*, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZdlPvSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdlPvSt11align_val_t")
+/// void operator delete(void*, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZdlPvSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZdlPvSt11align_val_tRKSt9nothrow_t")
 /// void operator delete(void*, unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(ZdlPvj)
 TLI_DEFINE_STRING_INTERNAL("_ZdlPvj")
@@ -143,24 +155,48 @@ TLI_DEFINE_STRING_INTERNAL("_Znaj")
 /// void *new[](unsigned int, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZnajRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnajRKSt9nothrow_t")
+/// void *new[](unsigned int, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnajSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnajSt11align_val_t")
+/// void *new[](unsigned int, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZnajSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnajSt11align_val_tRKSt9nothrow_t")
 /// void *new[](unsigned long);
 TLI_DEFINE_ENUM_INTERNAL(Znam)
 TLI_DEFINE_STRING_INTERNAL("_Znam")
 /// void *new[](unsigned long, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZnamRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnamRKSt9nothrow_t")
+/// void *new[](unsigned long, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_t")
+/// void *new[](unsigned long, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_tRKSt9nothrow_t")
 /// void *new(unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(Znwj)
 TLI_DEFINE_STRING_INTERNAL("_Znwj")
 /// void *new(unsigned int, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZnwjRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwjRKSt9nothrow_t")
+/// void *new(unsigned int, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnwjSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwjSt11align_val_t")
+/// void *new(unsigned int, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZnwjSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwjSt11align_val_tRKSt9nothrow_t")
 /// void *new(unsigned long);
 TLI_DEFINE_ENUM_INTERNAL(Znwm)
 TLI_DEFINE_STRING_INTERNAL("_Znwm")
 /// void *new(unsigned long, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZnwmRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmRKSt9nothrow_t")
+/// void *new(unsigned long, align_val_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_t")
+/// void *new(unsigned long, align_val_t, nothrow)
+TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_tRKSt9nothrow_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_tRKSt9nothrow_t")
 /// double __acos_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(acos_finite)
 TLI_DEFINE_STRING_INTERNAL("__acos_finite")
@@ -601,12 +637,18 @@ TLI_DEFINE_STRING_INTERNAL("ffsll")
 /// int fgetc(FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fgetc)
 TLI_DEFINE_STRING_INTERNAL("fgetc")
+/// int fgetc_unlocked(FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fgetc_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fgetc_unlocked")
 /// int fgetpos(FILE *stream, fpos_t *pos);
 TLI_DEFINE_ENUM_INTERNAL(fgetpos)
 TLI_DEFINE_STRING_INTERNAL("fgetpos")
 /// char *fgets(char *s, int n, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fgets)
 TLI_DEFINE_STRING_INTERNAL("fgets")
+/// char *fgets_unlocked(char *s, int n, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fgets_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fgets_unlocked")
 /// int fileno(FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fileno)
 TLI_DEFINE_STRING_INTERNAL("fileno")
@@ -673,12 +715,21 @@ TLI_DEFINE_STRING_INTERNAL("fprintf")
 /// int fputc(int c, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fputc)
 TLI_DEFINE_STRING_INTERNAL("fputc")
+/// int fputc_unlocked(int c, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fputc_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fputc_unlocked")
 /// int fputs(const char *s, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fputs)
 TLI_DEFINE_STRING_INTERNAL("fputs")
+/// int fputs_unlocked(const char *s, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fputs_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fputs_unlocked")
 /// size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fread)
 TLI_DEFINE_STRING_INTERNAL("fread")
+/// size_t fread_unlocked(void *ptr, size_t size, size_t nitems, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fread_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fread_unlocked")
 /// void free(void *ptr);
 TLI_DEFINE_ENUM_INTERNAL(free)
 TLI_DEFINE_STRING_INTERNAL("free")
@@ -736,6 +787,9 @@ TLI_DEFINE_STRING_INTERNAL("funlockfile")
 /// size_t fwrite(const void *ptr, size_t size, size_t nitems, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fwrite)
 TLI_DEFINE_STRING_INTERNAL("fwrite")
+/// size_t fwrite_unlocked(const void *ptr, size_t size, size_t nitems, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(fwrite_unlocked)
+TLI_DEFINE_STRING_INTERNAL("fwrite_unlocked")
 /// int getc(FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(getc)
 TLI_DEFINE_STRING_INTERNAL("getc")
@@ -745,6 +799,9 @@ TLI_DEFINE_STRING_INTERNAL("getc_unlocked")
 /// int getchar(void);
 TLI_DEFINE_ENUM_INTERNAL(getchar)
 TLI_DEFINE_STRING_INTERNAL("getchar")
+/// int getchar_unlocked(void);
+TLI_DEFINE_ENUM_INTERNAL(getchar_unlocked)
+TLI_DEFINE_STRING_INTERNAL("getchar_unlocked")
 /// char *getenv(const char *name);
 TLI_DEFINE_ENUM_INTERNAL(getenv)
 TLI_DEFINE_STRING_INTERNAL("getenv")
@@ -950,9 +1007,15 @@ TLI_DEFINE_STRING_INTERNAL("printf")
 /// int putc(int c, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(putc)
 TLI_DEFINE_STRING_INTERNAL("putc")
+/// int putc_unlocked(int c, FILE *stream);
+TLI_DEFINE_ENUM_INTERNAL(putc_unlocked)
+TLI_DEFINE_STRING_INTERNAL("putc_unlocked")
 /// int putchar(int c);
 TLI_DEFINE_ENUM_INTERNAL(putchar)
 TLI_DEFINE_STRING_INTERNAL("putchar")
+/// int putchar_unlocked(int c);
+TLI_DEFINE_ENUM_INTERNAL(putchar_unlocked)
+TLI_DEFINE_STRING_INTERNAL("putchar_unlocked")
 /// int puts(const char *s);
 TLI_DEFINE_ENUM_INTERNAL(puts)
 TLI_DEFINE_STRING_INTERNAL("puts")

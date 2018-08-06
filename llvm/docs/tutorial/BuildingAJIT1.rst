@@ -8,6 +8,11 @@ Building a JIT: Starting out with KaleidoscopeJIT
 Chapter 1 Introduction
 ======================
 
+**Warning: This text is currently out of date due to ORC API updates.**
+
+**The example code has been updated and can be used. The text will be updated
+once the API churn dies down.**
+
 Welcome to Chapter 1 of the "Building an ORC-based JIT in LLVM" tutorial. This
 tutorial runs through the implementation of a JIT compiler using LLVM's
 On-Request-Compilation (ORC) APIs. It begins with a simplified version of the

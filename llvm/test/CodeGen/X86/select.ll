@@ -22,8 +22,7 @@ define i32 @test1(%0* %p, %0* %q, i1 %r) nounwind {
 ; MCU-NEXT:    jne .LBB0_1
 ; MCU-NEXT:  # %bb.2:
 ; MCU-NEXT:    addl $8, %edx
-; MCU-NEXT:    movl %edx, %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    movl (%edx), %eax
 ; MCU-NEXT:    retl
 ; MCU-NEXT:  .LBB0_1:
 ; MCU-NEXT:    addl $8, %eax
@@ -105,14 +104,23 @@ declare i1 @return_false()
 
 ;; Select between two floating point constants.
 define float @test3(i32 %x) nounwind readnone {
-; CHECK-LABEL: test3:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test3:
+; GENERIC:       ## %bb.0: ## %entry
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    testl %edi, %edi
+; GENERIC-NEXT:    sete %al
+; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test3:
+; ATOM:       ## %bb.0: ## %entry
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    testl %edi, %edi
+; ATOM-NEXT:    sete %al
+; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test3:
 ; MCU:       # %bb.0: # %entry
@@ -145,7 +153,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU-NEXT:    fucompp
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    xorl %edx, %edx
-; MCU-NEXT:    # kill: def %ah killed %ah killed %ax
+; MCU-NEXT:    # kill: def $ah killed $ah killed $ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    seta %dl
 ; MCU-NEXT:    movb (%ecx,%edx,4), %al
@@ -267,23 +275,32 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 
 ; Select with fp80's
 define x86_fp80 @test7(i32 %tmp8) nounwind {
-; CHECK-LABEL: test7:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
-; CHECK-NEXT:    fldt (%rax,%rcx)
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test7:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    testl %edi, %edi
+; GENERIC-NEXT:    setns %al
+; GENERIC-NEXT:    shlq $4, %rax
+; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    fldt (%rax,%rcx)
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test7:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    testl %edi, %edi
+; ATOM-NEXT:    setns %al
+; ATOM-NEXT:    shlq $4, %rax
+; ATOM-NEXT:    fldt (%rax,%rcx)
+; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test7:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
-; MCU-NEXT:    testl %eax, %eax
-; MCU-NEXT:    setns %cl
-; MCU-NEXT:    shll $4, %ecx
-; MCU-NEXT:    fldt {{\.LCPI.*}}(%ecx)
+; MCU-NEXT:    notl %eax
+; MCU-NEXT:    shrl $27, %eax
+; MCU-NEXT:    andl $-16, %eax
+; MCU-NEXT:    fldt {{\.LCPI.*}}(%eax)
 ; MCU-NEXT:    retl
   %tmp9 = icmp sgt i32 %tmp8, -1
   %retval = select i1 %tmp9, x86_fp80 0xK4005B400000000000000, x86_fp80 0xK40078700000000000000
@@ -331,31 +348,32 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; ATOM-NEXT:    testb $1, %dil
 ; ATOM-NEXT:    jne LBB7_1
 ; ATOM-NEXT:  ## %bb.2:
-; ATOM-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; ATOM-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; ATOM-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    jmp LBB7_3
 ; ATOM-NEXT:  LBB7_1:
-; ATOM-NEXT:    movd %r9d, %xmm0
+; ATOM-NEXT:    movd %r9d, %xmm1
 ; ATOM-NEXT:    movd %r8d, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; ATOM-NEXT:    movd %ecx, %xmm3
 ; ATOM-NEXT:    movd %edx, %xmm0
-; ATOM-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:  LBB7_3:
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; ATOM-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; ATOM-NEXT:    pcmpeqd %xmm2, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
+; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
-; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    movq %xmm1, 16(%rsi)
+; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    retq
 ;
 ; MCU-LABEL: test8:
@@ -635,8 +653,8 @@ define noalias i8* @test12(i64 %count) nounwind ssp noredzone {
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    movl $4, %ecx
-; ATOM-NEXT:    mulq %rcx
 ; ATOM-NEXT:    movq $-1, %rdi
+; ATOM-NEXT:    mulq %rcx
 ; ATOM-NEXT:    cmovnoq %rax, %rdi
 ; ATOM-NEXT:    jmp __Znam ## TAILCALL
 ;
@@ -798,14 +816,14 @@ define i16 @test17(i16 %x) nounwind {
 ; GENERIC:       ## %bb.0: ## %entry
 ; GENERIC-NEXT:    negw %di
 ; GENERIC-NEXT:    sbbl %eax, %eax
-; GENERIC-NEXT:    ## kill: def %ax killed %ax killed %eax
+; GENERIC-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test17:
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    negw %di
 ; ATOM-NEXT:    sbbl %eax, %eax
-; ATOM-NEXT:    ## kill: def %ax killed %ax killed %eax
+; ATOM-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
@@ -816,7 +834,7 @@ define i16 @test17(i16 %x) nounwind {
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    negw %ax
 ; MCU-NEXT:    sbbl %eax, %eax
-; MCU-NEXT:    # kill: def %ax killed %ax killed %eax
+; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
 ; MCU-NEXT:    retl
 entry:
   %cmp = icmp ne i16 %x, 0
@@ -895,8 +913,8 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
 ; ATOM-NEXT:    jl LBB22_2
 ; ATOM-NEXT:  ## %bb.1:
@@ -938,8 +956,8 @@ define void @clamp(i32 %src, i16* %dst) {
 ; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; GENERIC-NEXT:    movw $-32768, %cx ## imm = 0x8000
-; GENERIC-NEXT:    cmovgew %ax, %cx
+; GENERIC-NEXT:    movl $32768, %ecx ## imm = 0x8000
+; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movw %cx, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
@@ -947,10 +965,10 @@ define void @clamp(i32 %src, i16* %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
+; ATOM-NEXT:    movl $32768, %ecx ## imm = 0x8000
 ; ATOM-NEXT:    cmovlel %edi, %eax
-; ATOM-NEXT:    movw $-32768, %cx ## imm = 0x8000
 ; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; ATOM-NEXT:    cmovgew %ax, %cx
+; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movw %cx, (%rsi)
 ; ATOM-NEXT:    retq
 ;
@@ -963,7 +981,7 @@ define void @clamp(i32 %src, i16* %dst) {
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB23_2:
 ; MCU-NEXT:    cmpl $-32768, %ecx # imm = 0x8000
-; MCU-NEXT:    movw $-32768, %ax # imm = 0x8000
+; MCU-NEXT:    movl $32768, %eax # imm = 0x8000
 ; MCU-NEXT:    jl .LBB23_4
 ; MCU-NEXT:  # %bb.3:
 ; MCU-NEXT:    movl %ecx, %eax
@@ -1027,7 +1045,7 @@ define void @test19() {
 ; MCU-NEXT:    cmpl %eax, %ecx
 ; MCU-NEXT:    fucom %st(0)
 ; MCU-NEXT:    fnstsw %ax
-; MCU-NEXT:    # kill: def %ah killed %ah killed %ax
+; MCU-NEXT:    # kill: def $ah killed $ah killed $ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    jp .LBB24_4
 ; MCU-NEXT:  # %bb.5: # %CF244
@@ -1063,8 +1081,8 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    xorl $43, %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    cmovnew %ax, %di
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmovel %edi, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; MCU-LABEL: select_xor_1:
@@ -1073,11 +1091,40 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; MCU-NEXT:    negl %edx
 ; MCU-NEXT:    andl $43, %edx
 ; MCU-NEXT:    xorl %edx, %eax
-; MCU-NEXT:    # kill: def %ax killed %ax killed %eax
+; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp eq i8 %and, 0
+ %0 = xor i16 %A, 43
+ %1 = select i1 %cmp10, i16 %A, i16 %0
+ ret i16 %1
+}
+
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i16 @select_xor_1b(i16 %A, i8 %cond) {
+; CHECK-LABEL: select_xor_1b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl $43, %eax
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    cmovel %edi, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_xor_1b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %dl
+; MCU-NEXT:    je .LBB26_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    xorl $43, %eax
+; MCU-NEXT:  .LBB26_2: # %entry
+; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
  %0 = xor i16 %A, 43
  %1 = select i1 %cmp10, i16 %A, i16 %0
  ret i16 %1
@@ -1107,6 +1154,33 @@ entry:
  ret i32 %1
 }
 
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
+; CHECK-LABEL: select_xor_2b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    xorl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_xor_2b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB28_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    xorl %edx, %eax
+; MCU-NEXT:  .LBB28_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
+ %0 = xor i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
 define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_or:
 ; CHECK:       ## %bb.0: ## %entry
@@ -1131,6 +1205,33 @@ entry:
  ret i32 %1
 }
 
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
+; CHECK-LABEL: select_or_b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_or_b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB30_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    orl %edx, %eax
+; MCU-NEXT:  .LBB30_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
+ %0 = or i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
 define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_1:
 ; CHECK:       ## %bb.0: ## %entry
@@ -1150,6 +1251,33 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 entry:
  %and = and i32 %cond, 1
  %cmp10 = icmp eq i32 %and, 0
+ %0 = or i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
+; CHECK-LABEL: select_or_1b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_or_1b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB32_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    orl %edx, %eax
+; MCU-NEXT:  .LBB32_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i32 %cond, 1
+ %cmp10 = icmp ne i32 %and, 1
  %0 = or i32 %B, %A
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1

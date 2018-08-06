@@ -20,7 +20,7 @@ class TypeCollection;
 class TypeVisitorCallbacks;
 
 enum VisitorDataSource {
-  VDS_BytesPresent, // The record bytes are passed into the the visitation
+  VDS_BytesPresent, // The record bytes are passed into the visitation
                     // function.  The algorithm should first deserialize them
                     // before passing them on through the pipeline.
   VDS_BytesExternal // The record bytes are not present, and it is the

@@ -1,7 +1,7 @@
 ; Test LOCFH.  See comments in asm-18.ll about testing high-word operations.
 ;
 ; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z13 \
-; RUN:   -no-integrated-as | FileCheck %s
+; RUN:   -no-integrated-as | FileCheck -allow-deprecated-dag-overlap %s
 
 declare void @foo(i32 *)
 

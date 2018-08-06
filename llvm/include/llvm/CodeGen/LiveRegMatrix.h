@@ -107,6 +107,13 @@ public:
   /// with the highest enum value is returned.
   InterferenceKind checkInterference(LiveInterval &VirtReg, unsigned PhysReg);
 
+  /// Check for interference in the segment [Start, End) that may prevent
+  /// assignment to PhysReg. If this function returns true, there is
+  /// interference in the segment [Start, End) of some other interval already
+  /// assigned to PhysReg. If this function returns false, PhysReg is free at
+  /// the segment [Start, End).
+  bool checkInterference(SlotIndex Start, SlotIndex End, unsigned PhysReg);
+
   /// Assign VirtReg to PhysReg.
   /// This will mark VirtReg's live range as occupied in the LiveRegMatrix and
   /// update VirtRegMap. The live range is expected to be available in PhysReg.

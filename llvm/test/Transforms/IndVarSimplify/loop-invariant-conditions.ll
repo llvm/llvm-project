@@ -141,8 +141,6 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
-!0 = !{i64 0, i64 100}
-
 ; Negative test - we can't show that the internal branch executes, so we can't
 ; fold the test to a loop invariant one.
 define void @test1_neg(i64 %start) {
@@ -295,6 +293,8 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
+declare void @use(i1 %x)
+
 ; check that we handle conditions with loop invariant operands which
 ; *aren't* in the header - this is a very rare and fragile case where
 ; we have a "loop" which is known to run exactly one iteration but
@@ -322,10 +322,73 @@ latch:
   br i1 true, label %exit, label %loop
 
 exit:
+  call void @use(i1 %cmp)
   ret void
 }
 
-!1 = !{i64 -1, i64 100}
+; check that we can figure out that iv.next > 1 from the facts that iv >= 0 and
+; iv.start != 0.
+define void @test11(i64* %inc_ptr) {
+; CHECK-LABEL: @test11
+entry:
+  %inc = load i64, i64* %inc_ptr, !range !0
+  %ne.cond = icmp ne i64 %inc, 0
+  br i1 %ne.cond, label %loop, label %exit
 
+loop:
+  %iv = phi i64 [ %inc, %entry ], [ %iv.next, %backedge ]
+  %iv.next = add i64 %iv, 1
+  %brcond = icmp sgt i64 %iv.next, 1
+  ; CHECK: br i1 true, label %if.true, label %if.false
+  br i1 %brcond, label %if.true, label %if.false
+
+if.true:
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %loopcond = icmp slt i64 %iv, 200
+  br i1 %loopcond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; check that we can prove that a recurrency is greater than another recurrency
+; in the same loop, with the same step, and with smaller starting value.
+define void @test12(i64* %inc_ptr) {
+; CHECK-LABEL: @test12
+entry:
+  %inc = load i64, i64* %inc_ptr, !range !0
+  %inc.minus.1 = sub i64 %inc, 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %inc, %entry ], [ %iv.next, %backedge ]
+  %iv.minus.1 = phi i64 [ %inc.minus.1, %entry ], [ %iv.minus.1.next, %backedge ]
+  %iv.next = add i64 %iv, 1
+  %iv.minus.1.next = add i64 %iv.minus.1, 1
+  %brcond = icmp sgt i64 %iv.next, %iv.minus.1.next
+  ; CHECK: br i1 true, label %if.true, label %if.false
+  br i1 %brcond, label %if.true, label %if.false
+
+if.true:
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %loopcond = icmp slt i64 %iv, 200
+  br i1 %loopcond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+!0 = !{i64 0, i64 100}
+!1 = !{i64 -1, i64 100}
 
 declare void @foo()

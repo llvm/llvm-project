@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -131,7 +132,7 @@ void GCNRegPressure::inc(unsigned Reg,
   }
 }
 
-bool GCNRegPressure::less(const SISubtarget &ST,
+bool GCNRegPressure::less(const GCNSubtarget &ST,
                           const GCNRegPressure& O,
                           unsigned MaxOccupancy) const {
   const auto SGPROcc = std::min(MaxOccupancy,
@@ -177,7 +178,7 @@ bool GCNRegPressure::less(const SISubtarget &ST,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void GCNRegPressure::print(raw_ostream &OS, const SISubtarget *ST) const {
+void GCNRegPressure::print(raw_ostream &OS, const GCNSubtarget *ST) const {
   OS << "VGPRs: " << getVGPRNum();
   if (ST) OS << "(O" << ST->getOccupancyWithNumVGPRs(getVGPRNum()) << ')';
   OS << ", SGPRs: " << getSGPRNum();
@@ -283,16 +284,25 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
-void GCNUpwardRPTracker::reset(const MachineInstr &MI,
-                               const LiveRegSet *LiveRegsCopy) {
-  MRI = &MI.getParent()->getParent()->getRegInfo();
+void GCNRPTracker::reset(const MachineInstr &MI,
+                         const LiveRegSet *LiveRegsCopy,
+                         bool After) {
+  const MachineFunction &MF = *MI.getMF();
+  MRI = &MF.getRegInfo();
   if (LiveRegsCopy) {
     if (&LiveRegs != LiveRegsCopy)
       LiveRegs = *LiveRegsCopy;
   } else {
-    LiveRegs = getLiveRegsAfter(MI, LIS);
+    LiveRegs = After ? getLiveRegsAfter(MI, LIS)
+                     : getLiveRegsBefore(MI, LIS);
   }
+
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+}
+
+void GCNUpwardRPTracker::reset(const MachineInstr &MI,
+                               const LiveRegSet *LiveRegsCopy) {
+  GCNRPTracker::reset(MI, LiveRegsCopy, true);
 }
 
 void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
@@ -300,7 +310,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
   LastTrackedMI = &MI;
 
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return;
 
   auto const RegUses = collectVirtualRegUses(MI, LIS, *MRI);
@@ -348,13 +358,7 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
   if (NextMI == MBBEnd)
     return false;
-  if (LiveRegsCopy) {
-    if (&LiveRegs != LiveRegsCopy)
-      LiveRegs = *LiveRegsCopy;
-  } else {
-    LiveRegs = getLiveRegsBefore(*NextMI, LIS);
-  }
-  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+  GCNRPTracker::reset(*NextMI, LiveRegsCopy, false);
   return true;
 }
 

@@ -63,7 +63,7 @@ SyTime.exit2720:
   br i1 %cmp293427, label %for.body.lr.ph, label %while.body.preheader
 
 for.body.lr.ph:
-  call void @llvm.memset.p0i8.i64(i8* undef, i8 32, i64 512, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 16 undef, i8 32, i64 512, i1 false)
   br label %while.body.preheader
 
 while.body.preheader:
@@ -377,7 +377,7 @@ cleanup:
 declare i32 @fileno(%struct.TMP.2* nocapture)
 declare i64 @"\01_write"(i32, i8*, i64)
 declare i32 @__maskrune(i32, i64)
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 !llvm.ident = !{!0}
 

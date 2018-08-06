@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=EG,FUNC %s
 
 ; mul24 and mad24 are affected
 
@@ -114,7 +114,7 @@ define amdgpu_kernel void @v_mul64_sext_inline_imm(i64 addrspace(1)* %out, i32 a
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[VRESULT]],
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_mul_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_mul_i32(i32 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b) nounwind {
   %mul = mul i32 %a, %b
   store i32 %mul, i32 addrspace(1)* %out, align 4
   ret void
@@ -201,10 +201,8 @@ endif:
 
 ; FIXME: Load dwordx4
 ; FUNC-LABEL: {{^}}s_mul_i128:
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2
+; GCN: s_load_dwordx4
+; GCN: s_load_dwordx4
 
 ; SI: v_mul_hi_u32
 ; SI: v_mul_hi_u32
@@ -220,18 +218,23 @@ endif:
 ; SI-DAG: s_mul_i32
 ; SI-DAG: v_mul_hi_u32
 
+; VI: v_mul_hi_u32
+; VI: s_mul_i32
+; VI: s_mul_i32
+; VI: v_mul_hi_u32
+; VI: v_mul_hi_u32
 ; VI: s_mul_i32
 ; VI: v_mad_u64_u32
 ; VI: s_mul_i32
-; VI: v_mul_hi_u32
 ; VI: v_mad_u64_u32
-; VI: v_mul_hi_u32
+; VI: s_mul_i32
+; VI: s_mul_i32
 ; VI: v_mad_u64_u32
-
+; VI: s_mul_i32
 
 
 ; GCN: buffer_store_dwordx4
-define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, i128 %a, i128 %b) nounwind #0 {
+define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, [8 x i32], i128 %a, [8 x i32], i128 %b) nounwind #0 {
   %mul = mul i128 %a, %b
   store i128 %mul, i128 addrspace(1)* %out
   ret void

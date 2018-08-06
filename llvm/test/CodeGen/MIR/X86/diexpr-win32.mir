@@ -1,4 +1,4 @@
-# RUN: llc -filetype=obj -O0 %s -o - | llvm-readobj -codeview | FileCheck %s
+# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj -codeview | FileCheck %s
 #
 # (DW_OP_plus_uconst 12)
 # CHECK: LocalSym {
@@ -123,7 +123,7 @@
   !9 = !{!"clang version 6.0.0 "}
   !10 = !DIExpression(DW_OP_plus_uconst, 12)
   !11 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref)
-  !12 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !12 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
   !13 = !DISubroutineType(types: !14)
   !14 = !{!15}
   !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "string", file: !1, line: 1, size: 96, elements: !16, identifier: ".?AUstring@@")
@@ -142,7 +142,7 @@
   !28 = !DIExpression(DW_OP_constu, 4, DW_OP_minus)
   !29 = !DILocation(line: 11, scope: !12)
   !30 = !DILocation(line: 12, scope: !12)
-  !31 = distinct !DISubprogram(name: "len", linkageName: "len", scope: !1, file: !1, line: 14, type: !32, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !31 = distinct !DISubprogram(name: "len", linkageName: "len", scope: !1, file: !1, line: 14, type: !32, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
   !32 = !DISubroutineType(types: !33)
   !33 = !{!18}
   !34 = !DILocation(line: 15, scope: !31)
@@ -179,7 +179,7 @@ frameInfo:
   restorePoint:    ''
 fixedStack:
   - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: 0,
-      callee-saved-register: '%esi' }
+      callee-saved-register: '$esi' }
   - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0,
       isImmutable: true, isAliased: false, callee-saved-register: '' }
   - { id: 2, type: default, offset: 0, size: 4, alignment: 4, stack-id: 0,
@@ -188,24 +188,24 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: %esi
+    liveins: $esi
 
-    frame-setup PUSH32r killed %esi, implicit-def %esp, implicit %esp
+    frame-setup PUSH32r killed $esi, implicit-def $esp, implicit $esp
     CFI_INSTRUCTION def_cfa_offset 8
-    CFI_INSTRUCTION offset %esi, -8
-    %esi = MOV32rm %esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
-    DBG_VALUE %esp, 0, !26, !10, debug-location !25
-    DBG_VALUE %esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
-    CALLpcrel32 @getString, csr_32, implicit %esp, implicit-def %esp, implicit-def %eax, debug-location !29
-    %ecx = MOV32rm %eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
-    %edx = MOV32rm %eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
-    MOV32mr %esi, 1, _, 0, _, killed %ecx, debug-location !29 :: (store 4 into %ir.0)
-    MOV32mr %esi, 1, _, 4, _, killed %edx, debug-location !29 :: (store 4 into %ir.0 + 4)
-    %eax = MOV32rm killed %eax, 1, _, 8, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 8)
-    MOV32mr %esi, 1, _, 8, _, killed %eax, debug-location !29 :: (store 4 into %ir.0 + 8)
-    %eax = COPY killed %esi, debug-location !30
-    %esi = POP32r implicit-def %esp, implicit %esp, debug-location !30
-    RET 0, %eax, debug-location !30
+    CFI_INSTRUCTION offset $esi, -8
+    $esi = MOV32rm $esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
+    DBG_VALUE debug-use $esp, 0, !26, !10, debug-location !25
+    DBG_VALUE debug-use $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
+    CALLpcrel32 @getString, csr_32, implicit $esp, implicit-def $esp, implicit-def $eax, debug-location !29
+    $ecx = MOV32rm $eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
+    $edx = MOV32rm $eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
+    MOV32mr $esi, 1, _, 0, _, killed $ecx, debug-location !29 :: (store 4 into %ir.0)
+    MOV32mr $esi, 1, _, 4, _, killed $edx, debug-location !29 :: (store 4 into %ir.0 + 4)
+    $eax = MOV32rm killed $eax, 1, _, 8, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 8)
+    MOV32mr $esi, 1, _, 8, _, killed $eax, debug-location !29 :: (store 4 into %ir.0 + 8)
+    $eax = COPY killed $esi, debug-location !30
+    $esi = POP32r implicit-def $esp, implicit $esp, debug-location !30
+    RET 0, $eax, debug-location !30
 
 ...
 ---
@@ -244,10 +244,10 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    %eax = MOV32rm %esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
-    %eax = MOV32rm killed %eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
-    DBG_VALUE debug-use %eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
-    %eax = ADD32rm killed %eax, %esp, 1, _, 8, _, implicit-def dead %eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
-    RET 0, %eax, debug-location !36
+    $eax = MOV32rm $esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
+    $eax = MOV32rm killed $eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
+    DBG_VALUE debug-use $eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
+    $eax = ADD32rm killed $eax, $esp, 1, _, 8, _, implicit-def dead $eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
+    RET 0, $eax, debug-location !36
 
 ...

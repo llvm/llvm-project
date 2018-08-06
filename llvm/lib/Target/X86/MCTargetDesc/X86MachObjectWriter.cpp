@@ -94,6 +94,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
+  case X86::reloc_branch_4byte_pcrel:
   case FK_Data_4: return 2;
   case FK_Data_8: return 3;
   }
@@ -597,10 +598,8 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   Writer->addRelocation(RelSymbol, Fragment->getParent(), MRE);
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createX86MachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                uint32_t CPUType, uint32_t CPUSubtype) {
-  return createMachObjectWriter(
-      llvm::make_unique<X86MachObjectWriter>(Is64Bit, CPUType, CPUSubtype), OS,
-      /*IsLittleEndian=*/true);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createX86MachObjectWriter(bool Is64Bit, uint32_t CPUType,
+                                uint32_t CPUSubtype) {
+  return llvm::make_unique<X86MachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
 }

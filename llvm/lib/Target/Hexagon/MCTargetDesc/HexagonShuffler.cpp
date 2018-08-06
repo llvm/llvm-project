@@ -641,14 +641,14 @@ bool HexagonShuffler::shuffle() {
     }
 
   for (iterator ISJ = begin(); ISJ != end(); ++ISJ)
-    DEBUG(dbgs().write_hex(ISJ->Core.getUnits()); if (ISJ->CVI.isValid()) {
+    LLVM_DEBUG(dbgs().write_hex(ISJ->Core.getUnits()); if (ISJ->CVI.isValid()) {
       dbgs() << '/';
       dbgs().write_hex(ISJ->CVI.getUnits()) << '|';
       dbgs() << ISJ->CVI.getLanes();
     } dbgs() << ':'
              << HexagonMCInstrInfo::getDesc(MCII, ISJ->getDesc()).getOpcode();
-          dbgs() << '\n');
-  DEBUG(dbgs() << '\n');
+               dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 
   return Ok;
 }

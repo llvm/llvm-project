@@ -195,10 +195,19 @@ For later versions of Visual Studio, no setup is required.
   </Type>
   
   <Type Name="llvm::Optional&lt;*&gt;">
-    <DisplayString Condition="!hasVal">empty</DisplayString>
-    <DisplayString Condition="hasVal">{*(($T1 *)(unsigned char *)storage.buffer)}</DisplayString>
+    <DisplayString Condition="!Storage.hasVal">None</DisplayString>
+    <DisplayString Condition="Storage.hasVal">{*(($T1 *)(unsigned char *)Storage.storage.buffer)}</DisplayString>
     <Expand>
-      <Item Name="[underlying]" Condition="hasVal">*(($T1 *)(unsigned char *)storage.buffer)</Item>
+      <Item Name="[underlying]" Condition="Storage.hasVal">*(($T1 *)(unsigned char *)Storage.storage.buffer)</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::Expected&lt;*&gt;">
+    <DisplayString Condition="HasError">Error</DisplayString>
+    <DisplayString Condition="!HasError">{*((storage_type *)TStorage.buffer)}</DisplayString>
+    <Expand>
+      <Item Name="[value]" Condition="!HasError">*((storage_type *)TStorage.buffer)</Item>
+      <Item Name="[error]" Condition="HasError">*((error_type *)ErrorStorage.buffer)</Item>
     </Expand>
   </Type>
 

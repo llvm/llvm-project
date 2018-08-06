@@ -29,9 +29,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -52,6 +52,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -222,7 +223,7 @@ public:
   virtual ~TargetLoweringBase() = default;
 
 protected:
-  /// \brief Initialize all of the actions to default values.
+  /// Initialize all of the actions to default values.
   void initActions();
 
 public:
@@ -253,7 +254,8 @@ public:
   /// A documentation for this function would be nice...
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
 
-  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL) const;
+  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
+                       bool LegalTypes = true) const;
 
   /// Returns the type to be used for the index operand of:
   /// ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
@@ -421,17 +423,17 @@ public:
     return true;
   }
 
-  /// \brief Return true if it is cheap to speculate a call to intrinsic cttz.
+  /// Return true if it is cheap to speculate a call to intrinsic cttz.
   virtual bool isCheapToSpeculateCttz() const {
     return false;
   }
 
-  /// \brief Return true if it is cheap to speculate a call to intrinsic ctlz.
+  /// Return true if it is cheap to speculate a call to intrinsic ctlz.
   virtual bool isCheapToSpeculateCtlz() const {
     return false;
   }
 
-  /// \brief Return true if ctlz instruction is fast.
+  /// Return true if ctlz instruction is fast.
   virtual bool isCtlzFast() const {
     return false;
   }
@@ -444,13 +446,13 @@ public:
     return false;
   }
 
-  /// \brief Return true if it is cheaper to split the store of a merged int val
+  /// Return true if it is cheaper to split the store of a merged int val
   /// from a pair of smaller values into multiple stores.
   virtual bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const {
     return false;
   }
 
-  /// \brief Return if the target supports combining a
+  /// Return if the target supports combining a
   /// chain like:
   /// \code
   ///   %andResult = and %val1, #mask
@@ -507,7 +509,30 @@ public:
     return hasAndNotCompare(X);
   }
 
-  /// \brief Return true if the target wants to use the optimization that
+  /// There are two ways to clear extreme bits (either low or high):
+  /// Mask:    x &  (-1 << y)  (the instcombine canonical form)
+  /// Shifts:  x >> y << y
+  /// Return true if the variant with 2 shifts is preferred.
+  /// Return false if there is no preference.
+  virtual bool preferShiftsToClearExtremeBits(SDValue X) const {
+    // By default, let's assume that no one prefers shifts.
+    return false;
+  }
+
+  /// Should we tranform the IR-optimal check for whether given truncation
+  /// down into KeptBits would be truncating or not:
+  ///   (add %x, (1 << (KeptBits-1))) srccond (1 << KeptBits)
+  /// Into it's more traditional form:
+  ///   ((%x << C) a>> C) dstcond %x
+  /// Return true if we should transform.
+  /// Return false if there is no preference.
+  virtual bool shouldTransformSignedTruncationCheck(EVT XVT,
+                                                    unsigned KeptBits) const {
+    // By default, let's assume that no one prefers shifts.
+    return false;
+  }
+
+  /// Return true if the target wants to use the optimization that
   /// turns ext(promotableInst1(...(promotableInstN(load)))) into
   /// promotedInst1(...(promotedInstN(ext(load)))).
   bool enableExtLdPromotion() const { return EnableExtLdPromotion; }
@@ -746,10 +771,10 @@ public:
   /// operations don't trap except for integer divide and remainder.
   virtual bool canOpTrap(unsigned Op, EVT VT) const;
 
-  /// Similar to isShuffleMaskLegal. This is used by Targets can use this to
-  /// indicate if there is a suitable VECTOR_SHUFFLE that can be used to replace
-  /// a VAND with a constant pool entry.
-  virtual bool isVectorClearMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
+  /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
+  /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
+  /// constant pool entry.
+  virtual bool isVectorClearMaskLegal(ArrayRef<int> /*Mask*/,
                                       EVT /*VT*/) const {
     return false;
   }
@@ -763,6 +788,39 @@ public:
     // to provide custom legalization for it.
     if (Op >= array_lengthof(OpActions[0])) return Custom;
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
+  }
+
+  LegalizeAction getStrictFPOperationAction(unsigned Op, EVT VT) const {
+    unsigned EqOpc;
+    switch (Op) {
+      default: llvm_unreachable("Unexpected FP pseudo-opcode");
+      case ISD::STRICT_FADD: EqOpc = ISD::FADD; break;
+      case ISD::STRICT_FSUB: EqOpc = ISD::FSUB; break;
+      case ISD::STRICT_FMUL: EqOpc = ISD::FMUL; break;
+      case ISD::STRICT_FDIV: EqOpc = ISD::FDIV; break;
+      case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
+      case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
+      case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;
+      case ISD::STRICT_FMA: EqOpc = ISD::FMA; break;
+      case ISD::STRICT_FSIN: EqOpc = ISD::FSIN; break;
+      case ISD::STRICT_FCOS: EqOpc = ISD::FCOS; break;
+      case ISD::STRICT_FEXP: EqOpc = ISD::FEXP; break;
+      case ISD::STRICT_FEXP2: EqOpc = ISD::FEXP2; break;
+      case ISD::STRICT_FLOG: EqOpc = ISD::FLOG; break;
+      case ISD::STRICT_FLOG10: EqOpc = ISD::FLOG10; break;
+      case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
+      case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
+      case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
+    }
+
+    auto Action = getOperationAction(EqOpc, VT);
+
+    // We don't currently handle Custom or Promote for strict FP pseudo-ops.
+    // For now, we just expand for those cases.
+    if (Action != Legal)
+      Action = Expand;
+
+    return Action;
   }
 
   /// Return true if the specified operation is legal on this target or can be
@@ -812,7 +870,7 @@ public:
   bool rangeFitsInWord(const APInt &Low, const APInt &High,
                        const DataLayout &DL) const {
     // FIXME: Using the pointer type doesn't seem ideal.
-    uint64_t BW = DL.getPointerSizeInBits();
+    uint64_t BW = DL.getIndexSizeInBits(0u);
     uint64_t Range = (High - Low).getLimitedValue(UINT64_MAX - 1) + 1;
     return Range <= BW;
   }
@@ -820,7 +878,7 @@ public:
   /// Return true if lowering to a jump table is suitable for a set of case
   /// clusters which may contain \p NumCases cases, \p Range range of values.
   /// FIXME: This function check the maximum table size and density, but the
-  /// minimum size is not checked. It would be nice if the the minimum size is
+  /// minimum size is not checked. It would be nice if the minimum size is
   /// also combined within this function. Currently, the minimum size check is
   /// performed in findJumpTable() in SelectionDAGBuiler and
   /// getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
@@ -986,9 +1044,14 @@ public:
 
   /// Return true if the specified condition code is legal on this target.
   bool isCondCodeLegal(ISD::CondCode CC, MVT VT) const {
-    return
-      getCondCodeAction(CC, VT) == Legal ||
-      getCondCodeAction(CC, VT) == Custom;
+    return getCondCodeAction(CC, VT) == Legal;
+  }
+
+  /// Return true if the specified condition code is legal or custom on this
+  /// target.
+  bool isCondCodeLegalOrCustom(ISD::CondCode CC, MVT VT) const {
+    return getCondCodeAction(CC, VT) == Legal ||
+           getCondCodeAction(CC, VT) == Custom;
   }
 
   /// If the action for this operation is to promote, this method returns the
@@ -1110,10 +1173,6 @@ public:
   /// Certain combinations of ABIs, Targets and features require that types
   /// are legal for some operations and not for other operations.
   /// For MIPS all vector types must be passed through the integer register set.
-  virtual MVT getRegisterTypeForCallingConv(MVT VT) const {
-    return getRegisterType(VT);
-  }
-
   virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                             EVT VT) const {
     return getRegisterType(Context, VT);
@@ -1172,7 +1231,7 @@ public:
     return getPointerTy(DL).getSizeInBits();
   }
 
-  /// \brief Get maximum # of store operations permitted for llvm.memset
+  /// Get maximum # of store operations permitted for llvm.memset
   ///
   /// This function returns the maximum number of store operations permitted
   /// to replace a call to llvm.memset. The value is set by the target at the
@@ -1182,7 +1241,7 @@ public:
     return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
   }
 
-  /// \brief Get maximum # of store operations permitted for llvm.memcpy
+  /// Get maximum # of store operations permitted for llvm.memcpy
   ///
   /// This function returns the maximum number of store operations permitted
   /// to replace a call to llvm.memcpy. The value is set by the target at the
@@ -1190,6 +1249,15 @@ public:
   /// return the limit for functions that have OptSize attribute.
   unsigned getMaxStoresPerMemcpy(bool OptSize) const {
     return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+  }
+
+  /// \brief Get maximum # of store operations to be glued together
+  ///
+  /// This function returns the maximum number of store operations permitted
+  /// to glue together during lowering of llvm.memcpy. The value is set by
+  //  the target at the performance threshold for such a replacement.
+  virtual unsigned getMaxGluedStoresPerMemcpy() const {
+    return MaxGluedStoresPerMemcpy;
   }
 
   /// Get maximum # of load operations permitted for memcmp
@@ -1202,7 +1270,19 @@ public:
     return OptSize ? MaxLoadsPerMemcmpOptSize : MaxLoadsPerMemcmp;
   }
 
-  /// \brief Get maximum # of store operations permitted for llvm.memmove
+  /// For memcmp expansion when the memcmp result is only compared equal or
+  /// not-equal to 0, allow up to this number of load pairs per block. As an
+  /// example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
+  ///   a0 = load2bytes &a[0]
+  ///   b0 = load2bytes &b[0]
+  ///   a2 = load1byte  &a[2]
+  ///   b2 = load1byte  &b[2]
+  ///   r  = cmp eq (a0 ^ b0 | a2 ^ b2), 0
+  virtual unsigned getMemcmpEqZeroLoadsPerBlock() const {
+    return 1;
+  }
+
+  /// Get maximum # of store operations permitted for llvm.memmove
   ///
   /// This function returns the maximum number of store operations permitted
   /// to replace a call to llvm.memmove. The value is set by the target at the
@@ -1212,7 +1292,7 @@ public:
     return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
   }
 
-  /// \brief Determine if the target supports unaligned memory accesses.
+  /// Determine if the target supports unaligned memory accesses.
   ///
   /// This function returns true if the target allows unaligned memory accesses
   /// of the specified type in the given address space. If true, it also returns
@@ -1350,7 +1430,7 @@ public:
   /// If the target has a standard location for the stack protector guard,
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize
-  ///             LOAD_STACK_GUARD, or customize @llvm.stackguard().
+  ///             LOAD_STACK_GUARD, or customize \@llvm.stackguard().
   virtual Value *getIRStackGuard(IRBuilder<> &IRB) const;
 
   /// Inserts necessary declarations for SSP (stack protection) purpose.
@@ -1905,7 +1985,7 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
-  /// \brief Return the cost of the scaling factor used in the addressing mode
+  /// Return the cost of the scaling factor used in the addressing mode
   /// represented by AM for this target, for a load/store of the specified type.
   ///
   /// If the AM is supported, the return value must be >= 0.
@@ -2098,11 +2178,14 @@ public:
     return false;
   }
 
-  /// \brief Get the maximum supported factor for interleaved memory accesses.
+  /// Return true if the target has a vector blend instruction.
+  virtual bool hasVectorBlend() const { return false; }
+
+  /// Get the maximum supported factor for interleaved memory accesses.
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
-  /// \brief Lower an interleaved load to target specific intrinsics. Return
+  /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
   /// \p LI is the vector load instruction.
@@ -2116,7 +2199,7 @@ public:
     return false;
   }
 
-  /// \brief Lower an interleaved store to target specific intrinsics. Return
+  /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
   /// \p SI is the vector store instruction.
@@ -2189,7 +2272,7 @@ public:
     return false;
   }
 
-  /// \brief Return true if it is beneficial to convert a load of a constant to
+  /// Return true if it is beneficial to convert a load of a constant to
   /// just the constant itself.
   /// On some targets it might be more efficient to use a combination of
   /// arithmetic instructions to materialize the constant instead of loading it
@@ -2213,6 +2296,11 @@ public:
   virtual bool aggressivelyPreferBuildVectorSources(EVT VecVT) const {
     return false;
   }
+
+  // Return true if CodeGenPrepare should consider splitting large offset of a
+  // GEP to make the GEP fit into the addressing mode and can be sunk into the
+  // same blocks of its users.
+  virtual bool shouldConsiderGEPOffsetSplit() const { return false; }
 
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
@@ -2453,7 +2541,7 @@ protected:
   /// expected to be merged.
   unsigned GatherAllAliasesMaxDepth;
 
-  /// \brief Specify maximum number of store instructions per memset call.
+  /// Specify maximum number of store instructions per memset call.
   ///
   /// When lowering \@llvm.memset this field specifies the maximum number of
   /// store operations that may be substituted for the call to memset. Targets
@@ -2469,7 +2557,7 @@ protected:
   /// to memset, used for functions with OptSize attribute.
   unsigned MaxStoresPerMemsetOptSize;
 
-  /// \brief Specify maximum bytes of store instructions per memcpy call.
+  /// Specify maximum bytes of store instructions per memcpy call.
   ///
   /// When lowering \@llvm.memcpy this field specifies the maximum number of
   /// store operations that may be substituted for a call to memcpy. Targets
@@ -2482,13 +2570,21 @@ protected:
   /// constant size.
   unsigned MaxStoresPerMemcpy;
 
+
+  /// \brief Specify max number of store instructions to glue in inlined memcpy.
+  ///
+  /// When memcpy is inlined based on MaxStoresPerMemcpy, specify maximum number
+  /// of store instructions to keep together. This helps in pairing and
+  //  vectorization later on.
+  unsigned MaxGluedStoresPerMemcpy = 0;
+
   /// Maximum number of store operations that may be substituted for a call to
   /// memcpy, used for functions with OptSize attribute.
   unsigned MaxStoresPerMemcpyOptSize;
   unsigned MaxLoadsPerMemcmp;
   unsigned MaxLoadsPerMemcmpOptSize;
 
-  /// \brief Specify maximum bytes of store instructions per memmove call.
+  /// Specify maximum bytes of store instructions per memmove call.
   ///
   /// When lowering \@llvm.memmove this field specifies the maximum number of
   /// store instructions that may be substituted for a call to memmove. Targets
@@ -2520,6 +2616,16 @@ protected:
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
+
+  /// Replace/modify the XRay custom event operands with target-dependent
+  /// details.
+  MachineBasicBlock *emitXRayCustomEvent(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
+  /// Replace/modify the XRay typed event operands with target-dependent
+  /// details.
+  MachineBasicBlock *emitXRayTypedEvent(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
 };
 
 /// This class defines information used to lower LLVM code to legal SelectionDAG
@@ -2538,6 +2644,16 @@ public:
   explicit TargetLowering(const TargetMachine &TM);
 
   bool isPositionIndependent() const;
+
+  virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
+                                          FunctionLoweringInfo *FLI,
+                                          DivergenceAnalysis *DA) const {
+    return false;
+  }
+
+  virtual bool isSDNodeAlwaysUniform(const SDNode * N) const {
+    return false;
+  }
 
   /// Returns true by value, base pointer and offset pointer and addressing mode
   /// by reference if the node's address can be legally represented as
@@ -2690,6 +2806,30 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
+  /// Look at Vector Op. At this point, we know that only the DemandedElts
+  /// elements of the result of Op are ever used downstream.  If we can use
+  /// this information to simplify Op, create a new simplified DAG node and
+  /// return true, storing the original and new nodes in TLO.
+  /// Otherwise, analyze the expression and return a mask of KnownUndef and
+  /// KnownZero elements for the expression (used to simplify the caller).
+  /// The KnownUndef/Zero elements may only be accurate for those bits
+  /// in the DemandedMask.
+  /// \p AssumeSingleUse When this parameter is true, this function will
+  ///    attempt to simplify \p Op even if there are multiple uses.
+  ///    Callers are responsible for correctly updating the DAG based on the
+  ///    results of this function, because simply replacing replacing TLO.Old
+  ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
+  ///    has multiple uses.
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  TargetLoweringOpt &TLO, unsigned Depth = 0,
+                                  bool AssumeSingleUse = false) const;
+
+  /// Helper wrapper around SimplifyDemandedVectorElts
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  DAGCombinerInfo &DCI) const;
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -2718,6 +2858,15 @@ public:
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth = 0) const;
 
+  /// Attempt to simplify any target nodes based on the demanded vector
+  /// elements, returning true on success. Otherwise, analyze the expression and
+  /// return a mask of KnownUndef and KnownZero elements for the expression
+  /// (used to simplify the caller). The KnownUndef/Zero elements may only be
+  /// accurate for those bits in the DemandedMask
+  virtual bool SimplifyDemandedVectorEltsForTargetNode(
+      SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
+      APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
@@ -2731,7 +2880,7 @@ public:
 
     bool isBeforeLegalize() const { return Level == BeforeLegalizeTypes; }
     bool isBeforeLegalizeOps() const { return Level < AfterLegalizeVectorOps; }
-    bool isAfterLegalizeVectorOps() const {
+    bool isAfterLegalizeDAG() const {
       return Level == AfterLegalizeDAG;
     }
     CombineLevel getDAGCombineLevel() { return Level; }
@@ -2753,12 +2902,8 @@ public:
   /// from getBooleanContents().
   bool isConstFalseVal(const SDNode *N) const;
 
-  /// Return a constant of type VT that contains a true value that respects
-  /// getBooleanContents()
-  SDValue getConstTrueVal(SelectionDAG &DAG, EVT VT, const SDLoc &DL) const;
-
   /// Return if \p N is a True value when extended to \p VT.
-  bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool Signed) const;
+  bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool SExt) const;
 
   /// Try to simplify a setcc built with the specified operands and cc. If it is
   /// unable to simplify it, return a null SDValue.
@@ -3479,7 +3624,7 @@ public:
   /// bounds the returned pointer is unspecified, but will be within the vector
   /// bounds.
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                  SDValue Idx) const;
+                                  SDValue Index) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
@@ -3518,6 +3663,13 @@ public:
   virtual SDValue LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
                                           SelectionDAG &DAG) const;
 
+  /// Expands target specific indirect branch for the case of JumpTable
+  /// expanasion.
+  virtual SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value, SDValue Addr,
+                                         SelectionDAG &DAG) const {
+    return DAG.getNode(ISD::BRIND, dl, MVT::Other, Value, Addr);
+  }
+
   // seteq(x, 0) -> truncate(srl(ctlz(zext(x)), log2(#bits)))
   // If we're comparing for equality to zero and isCtlzFast is true, expose the
   // fact that this can be implemented as a ctlz/srl pair, so that the dag
@@ -3528,6 +3680,11 @@ private:
   SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
                                ISD::CondCode Cond, DAGCombinerInfo &DCI,
                                const SDLoc &DL) const;
+
+  SDValue optimizeSetCCOfSignedTruncationCheck(EVT SCCVT, SDValue N0,
+                                               SDValue N1, ISD::CondCode Cond,
+                                               DAGCombinerInfo &DCI,
+                                               const SDLoc &DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

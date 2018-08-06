@@ -22,6 +22,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -192,20 +193,10 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   const char BaseIndent[] = "            ";
   OS << BaseIndent;
   OS.indent(Indent + 2);
-  auto attrString = AttributeString(Attr);
-  if (!attrString.empty())
-    WithColor(OS, HighlightColor::Attribute) << attrString;
-  else
-    WithColor(OS, HighlightColor::Attribute).get()
-        << format("DW_AT_Unknown_%x", Attr);
+  WithColor(OS, HighlightColor::Attribute) << formatv("{0}", Attr);
 
-  if (DumpOpts.Verbose || DumpOpts.ShowForm) {
-    auto formString = FormEncodingString(Form);
-    if (!formString.empty())
-      OS << " [" << formString << ']';
-    else
-      OS << format(" [DW_FORM_Unknown_%x]", Form);
-  }
+  if (DumpOpts.Verbose || DumpOpts.ShowForm)
+    OS << formatv(" [{0}]", Form);
 
   DWARFUnit *U = Die.getDwarfUnit();
   DWARFFormValue formValue(Form);
@@ -269,8 +260,22 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       dumpApplePropertyAttribute(OS, *OptVal);
   } else if (Attr == DW_AT_ranges) {
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
-    dumpRanges(Obj, OS, Die.getAddressRanges(), U->getAddressByteSize(),
-               sizeof(BaseIndent) + Indent + 4, DumpOpts);
+    // For DW_FORM_rnglistx we need to dump the offset separately, since
+    // we have only dumped the index so far.
+    Optional<DWARFFormValue> Value = Die.find(DW_AT_ranges);
+    if (Value && Value->getForm() == DW_FORM_rnglistx)
+      if (auto RangeListOffset =
+              U->getRnglistOffset(*Value->getAsSectionOffset())) {
+        DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
+        FV.setUValue(*RangeListOffset);
+        FV.dump(OS, DumpOpts);
+      }
+    if (auto RangesOrError = Die.getAddressRanges())
+      dumpRanges(Obj, OS, RangesOrError.get(), U->getAddressByteSize(),
+                 sizeof(BaseIndent) + Indent + 4, DumpOpts);
+    else
+      WithColor::error() << "decoding address ranges: "
+                         << toString(RangesOrError.takeError()) << '\n';
   }
 
   OS << ")\n";
@@ -384,20 +389,19 @@ bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
   return false;
 }
 
-DWARFAddressRangesVector DWARFDie::getAddressRanges() const {
+Expected<DWARFAddressRangesVector> DWARFDie::getAddressRanges() const {
   if (isNULL())
     return DWARFAddressRangesVector();
   // Single range specified by low/high PC.
   uint64_t LowPC, HighPC, Index;
   if (getLowAndHighPC(LowPC, HighPC, Index))
-    return {{LowPC, HighPC, Index}};
+    return DWARFAddressRangesVector{{LowPC, HighPC, Index}};
 
-  // Multiple ranges from .debug_ranges section.
-  auto RangesOffset = toSectionOffset(find(DW_AT_ranges));
-  if (RangesOffset) {
-    DWARFDebugRangeList RangeList;
-    if (U->extractRangeList(*RangesOffset, RangeList))
-      return RangeList.getAbsoluteRanges(U->getBaseAddress());
+  Optional<DWARFFormValue> Value = find(DW_AT_ranges);
+  if (Value) {
+    if (Value->getForm() == DW_FORM_rnglistx)
+      return U->findRnglistFromIndex(*Value->getAsSectionOffset());
+    return U->findRnglistFromOffset(*Value->getAsSectionOffset());
   }
   return DWARFAddressRangesVector();
 }
@@ -407,8 +411,11 @@ void DWARFDie::collectChildrenAddressRanges(
   if (isNULL())
     return;
   if (isSubprogramDIE()) {
-    const auto &DIERanges = getAddressRanges();
-    Ranges.insert(Ranges.end(), DIERanges.begin(), DIERanges.end());
+    if (auto DIERangesOrError = getAddressRanges())
+      Ranges.insert(Ranges.end(), DIERangesOrError.get().begin(),
+                    DIERangesOrError.get().end());
+    else
+      llvm::consumeError(DIERangesOrError.takeError());
   }
 
   for (auto Child : children())
@@ -416,10 +423,15 @@ void DWARFDie::collectChildrenAddressRanges(
 }
 
 bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
-  for (const auto &R : getAddressRanges()) {
+  auto RangesOrError = getAddressRanges();
+  if (!RangesOrError) {
+    llvm::consumeError(RangesOrError.takeError());
+    return false;
+  }
+
+  for (const auto &R : RangesOrError.get())
     if (R.LowPC <= Address && Address < R.HighPC)
       return true;
-  }
   return false;
 }
 
@@ -490,13 +502,8 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
       if (AbbrevDecl) {
-        auto tagString = TagString(getTag());
-        if (!tagString.empty())
-          WithColor(OS, HighlightColor::Tag).get().indent(Indent) << tagString;
-        else
-          WithColor(OS, HighlightColor::Tag).get().indent(Indent)
-              << format("DW_TAG_Unknown_%x", getTag());
-
+        WithColor(OS, HighlightColor::Tag).get().indent(Indent)
+            << formatv("{0}", getTag());
         if (DumpOpts.Verbose)
           OS << format(" [%u] %c", abbrCode,
                        AbbrevDecl->hasChildren() ? '*' : ' ');
@@ -548,9 +555,21 @@ DWARFDie DWARFDie::getSibling() const {
   return DWARFDie();
 }
 
+DWARFDie DWARFDie::getPreviousSibling() const {
+  if (isValid())
+    return U->getPreviousSibling(Die);
+  return DWARFDie();
+}
+
 DWARFDie DWARFDie::getFirstChild() const {
   if (isValid())
     return U->getFirstChild(Die);
+  return DWARFDie();
+}
+
+DWARFDie DWARFDie::getLastChild() const {
+  if (isValid())
+    return U->getLastChild(Die);
   return DWARFDie();
 }
 

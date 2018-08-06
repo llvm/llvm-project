@@ -1,6 +1,5 @@
 #include "llvm/Support/Locale.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Unicode.h"
 
 namespace llvm {
@@ -8,7 +7,7 @@ namespace sys {
 namespace locale {
 
 int columnWidth(StringRef Text) {
-#if LLVM_ON_WIN32
+#if _WIN32
   return Text.size();
 #else
   return llvm::sys::unicode::columnWidthUTF8(Text);
@@ -16,7 +15,7 @@ int columnWidth(StringRef Text) {
 }
 
 bool isPrint(int UCS) {
-#if LLVM_ON_WIN32
+#if _WIN32
   // Restrict characters that we'll try to print to the lower part of ASCII
   // except for the control characters (0x20 - 0x7E). In general one can not
   // reliably output code points U+0080 and higher using narrow character C/C++

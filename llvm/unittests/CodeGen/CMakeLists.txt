@@ -8,17 +8,13 @@ set(LLVM_LINK_COMPONENTS
   Target
   )
 
-set(CodeGenSources
+add_llvm_unittest(CodeGenTests
   DIEHashTest.cpp
   LowLevelTypeTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
   ScalableVectorMVTsTest.cpp
-  )
-
-add_llvm_unittest(CodeGenTests
-  ${CodeGenSources}
   )
 
 add_subdirectory(GlobalISel)

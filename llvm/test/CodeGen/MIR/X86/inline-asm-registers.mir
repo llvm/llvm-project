@@ -21,32 +21,32 @@
 name:            test
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
-  - { reg: '%rsi' }
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
 body: |
   bb.0.entry:
-    liveins: %rdi, %rsi
+    liveins: $rdi, $rsi
 
   ; CHECK-LABEL: name: test
-  ; CHECK: INLINEASM $foo, 0, 2818058, def %rsi, 2818058, def dead %rdi,
-    INLINEASM $foo, 0, 2818058, def %rsi, 2818058, def dead %rdi, 2147549193, killed %rdi, 2147483657, killed %rsi, 12, implicit-def dead early-clobber %eflags
-    %rax = MOV64rr killed %rsi
-    RETQ killed %rax
+  ; CHECK: INLINEASM &foo, 0, 2818058, def $rsi, 2818058, def dead $rdi,
+    INLINEASM &foo, 0, 2818058, def $rsi, 2818058, def dead $rdi, 2147549193, killed $rdi, 2147483657, killed $rsi, 12, implicit-def dead early-clobber $eflags
+    $rax = MOV64rr killed $rsi
+    RETQ killed $rax
 ...
 ---
 name:            test2
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
-  - { reg: '%rsi' }
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
 body: |
   bb.0.entry:
-    liveins: %rdi, %rsi
+    liveins: $rdi, $rsi
 
   ; Verify that the register ties are preserved.
   ; CHECK-LABEL: name: test2
-  ; CHECK: INLINEASM $foo, 0, 2818058, def %rsi, 2818058, def dead %rdi, 2147549193, killed %rdi(tied-def 5), 2147483657, killed %rsi(tied-def 3), 12, implicit-def dead early-clobber %eflags
-    INLINEASM $foo, 0, 2818058, def %rsi, 2818058, def dead %rdi, 2147549193, killed %rdi(tied-def 5), 2147483657, killed %rsi(tied-def 3), 12, implicit-def dead early-clobber %eflags
-    %rax = MOV64rr killed %rsi
-    RETQ killed %rax
+  ; CHECK: INLINEASM &foo, 0, 2818058, def $rsi, 2818058, def dead $rdi, 2147549193, killed $rdi(tied-def 5), 2147483657, killed $rsi(tied-def 3), 12, implicit-def dead early-clobber $eflags
+    INLINEASM &foo, 0, 2818058, def $rsi, 2818058, def dead $rdi, 2147549193, killed $rdi(tied-def 5), 2147483657, killed $rsi(tied-def 3), 12, implicit-def dead early-clobber $eflags
+    $rax = MOV64rr killed $rsi
+    RETQ killed $rax
 ...

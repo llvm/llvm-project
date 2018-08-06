@@ -11,7 +11,7 @@ define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 
   tail call void @llvm.dbg.value(metadata %struct.tag_s* %c, metadata !13, metadata !DIExpression()), !dbg !21
   tail call void @llvm.dbg.value(metadata i64 %x, metadata !14, metadata !DIExpression()), !dbg !22
   tail call void @llvm.dbg.value(metadata i64 %y, metadata !17, metadata !DIExpression()), !dbg !23
-;CHECK:	@DEBUG_VALUE: foo:y <- [DW_OP_plus_uconst 8] [%r7+0]
+;CHECK:	@DEBUG_VALUE: foo:y <- [DW_OP_plus_uconst 8] [$r7+0]
   tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr1, metadata !18, metadata !DIExpression()), !dbg !24
   tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr2, metadata !19, metadata !DIExpression()), !dbg !25
   %1 = icmp eq %struct.tag_s* %c, null, !dbg !26
@@ -33,7 +33,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!33}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "Apple clang version 3.0 (tags/Apple/clang-211.10.1) (based on LLVM 3.0svn)", isOptimized: true, emissionKind: FullDebug, file: !32, enums: !{}, retainedTypes: !{}, imports:  null)
-!1 = distinct !DISubprogram(name: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !2, scope: !2, type: !3, variables: !31)
+!1 = distinct !DISubprogram(name: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !2, scope: !2, type: !3, retainedNodes: !31)
 !2 = !DIFile(filename: "one.c", directory: "/Volumes/Athwagate/R10048772")
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}

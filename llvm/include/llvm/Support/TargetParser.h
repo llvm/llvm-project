@@ -86,6 +86,8 @@ enum ArchExtKind : unsigned {
   AEK_RAS =         1 << 12,
   AEK_SVE =         1 << 13,
   AEK_DOTPROD =     1 << 14,
+  AEK_SHA2    =     1 << 15,
+  AEK_AES     =     1 << 16,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,
@@ -137,6 +139,7 @@ unsigned parseFPU(StringRef FPU);
 ArchKind parseArch(StringRef Arch);
 unsigned parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
+void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 ISAKind parseArchISA(StringRef Arch);
 EndianKind parseArchEndian(StringRef Arch);
 ProfileKind parseArchProfile(StringRef Arch);
@@ -170,7 +173,11 @@ enum ArchExtKind : unsigned {
   AEK_SVE =         1 << 9,
   AEK_DOTPROD =     1 << 10,
   AEK_RCPC =        1 << 11,
-  AEK_RDM =         1 << 12
+  AEK_RDM =         1 << 12,
+  AEK_SM4 =         1 << 13,
+  AEK_SHA3 =        1 << 14,
+  AEK_SHA2 =        1 << 15,
+  AEK_AES =         1 << 16,
 };
 
 StringRef getCanonicalArchName(StringRef Arch);
@@ -203,12 +210,15 @@ StringRef getDefaultCPU(StringRef Arch);
 // Parser
 unsigned parseFPU(StringRef FPU);
 AArch64::ArchKind parseArch(StringRef Arch);
-unsigned parseArchExt(StringRef ArchExt);
+ArchExtKind parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
+void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 ARM::ISAKind parseArchISA(StringRef Arch);
 ARM::EndianKind parseArchEndian(StringRef Arch);
 ARM::ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
+
+bool isX18ReservedByDefault(const Triple &TT);
 
 } // namespace AArch64
 

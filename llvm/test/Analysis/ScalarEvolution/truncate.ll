@@ -1,11 +1,14 @@
-; RUN: opt < %s -analyze -scalar-evolution
-; RUN: opt < %s -passes='print<scalar-evolution>'
+; RUN: opt < %s -analyze -scalar-evolution 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='print<scalar-evolution>' -S 2>&1 | FileCheck %s
 ; Regression test for assert ScalarEvolution::getTruncateExpr.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @snork(i8* %arg, i8 %arg1, i64 %arg2) {
+
+; CHECK-LABEL: Classifying expressions for: @snork
+
 bb:
   br label %bb12
 
@@ -69,4 +72,38 @@ bb34:                                             ; preds = %bb25
   %tmp35 = add nuw nsw i32 %tmp16, 2
   %tmp36 = icmp ugt i32 %tmp16, 52
   br i1 %tmp36, label %bb3, label %bb13
+}
+
+; Make sure that no nuw flag is assigned to %tmp27, otherwise we will have a
+; poisoned value.
+define void @no_nuw(i64 %param)  {
+
+; CHECK-LABEL: Classifying expressions for: @no_nuw
+; CHECK:         %tmp27 = add i64 %tmp20, -1
+; CHECK-NOT:    (-1 + %tmp20)<nuw>
+; CHECK-NEXT:    -->  (-1 + %tmp20) U:
+
+bb:
+  %shift = shl i64 %param, 58
+  br label %bb18
+
+bb18:                                             ; preds = %bb36, %bb
+  %tmp20 = phi i64 [ %shift, %bb ], [ 0, %bb36 ]
+  %tmp21 = phi i64 [ 0, %bb ], [ %tmp24, %bb36 ]
+  %tmp22 = phi i32 [ -6, %bb ], [ %tmp46, %bb36 ]
+  %tmp25 = add i32 %tmp22, 1
+  %tmp26 = sext i32 %tmp25 to i64
+  %tmp27 = add i64 %tmp20, -1
+  %tmp28 = mul i64 %tmp27, %tmp26
+  %tmp29 = icmp ult i64 %tmp21, 1048576
+  br i1 %tmp29, label %bb36, label %bb30
+
+bb30:                                             ; preds = %bb18
+  ret void
+
+bb36:                                             ; preds = %bb18
+  %tmp24 = add nuw i64 %tmp21, 1
+  %tmp45 = trunc i64 %tmp28 to i32
+  %tmp46 = sub i32 %tmp22, %tmp45
+  br label %bb18
 }

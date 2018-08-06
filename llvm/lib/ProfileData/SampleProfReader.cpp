@@ -43,7 +43,7 @@
 using namespace llvm;
 using namespace sampleprof;
 
-/// \brief Dump the function profile for \p FName.
+/// Dump the function profile for \p FName.
 ///
 /// \param FName Name of the function to print.
 /// \param OS Stream to emit the output to.
@@ -52,13 +52,13 @@ void SampleProfileReader::dumpFunctionProfile(StringRef FName,
   OS << "Function: " << FName << ": " << Profiles[FName];
 }
 
-/// \brief Dump all the function profiles found on stream \p OS.
+/// Dump all the function profiles found on stream \p OS.
 void SampleProfileReader::dump(raw_ostream &OS) {
   for (const auto &I : Profiles)
     dumpFunctionProfile(I.getKey(), OS);
 }
 
-/// \brief Parse \p Input as function head.
+/// Parse \p Input as function head.
 ///
 /// Parse one line of \p Input, and update function name in \p FName,
 /// function's total sample count in \p NumSamples, function's entry
@@ -79,10 +79,10 @@ static bool ParseHead(const StringRef &Input, StringRef &FName,
   return true;
 }
 
-/// \brief Returns true if line offset \p L is legal (only has 16 bits).
+/// Returns true if line offset \p L is legal (only has 16 bits).
 static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 
-/// \brief Parse \p Input as line sample.
+/// Parse \p Input as line sample.
 ///
 /// \param Input input line.
 /// \param IsCallsite true if the line represents an inlined callsite.
@@ -127,19 +127,52 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
       if (Rest.substr(0, n3).getAsInteger(10, NumSamples))
         return false;
     }
+    // Find call targets and their sample counts.
+    // Note: In some cases, there are symbols in the profile which are not
+    // mangled. To accommodate such cases, use colon + integer pairs as the
+    // anchor points.
+    // An example:
+    // _M_construct<char *>:1000 string_view<std::allocator<char> >:437
+    // ":1000" and ":437" are used as anchor points so the string above will
+    // be interpreted as
+    // target: _M_construct<char *>
+    // count: 1000
+    // target: string_view<std::allocator<char> >
+    // count: 437
     while (n3 != StringRef::npos) {
       n3 += Rest.substr(n3).find_first_not_of(' ');
       Rest = Rest.substr(n3);
-      n3 = Rest.find(' ');
-      StringRef pair = Rest;
-      if (n3 != StringRef::npos) {
-        pair = Rest.substr(0, n3);
-      }
-      size_t n4 = pair.find(':');
-      uint64_t count;
-      if (pair.substr(n4 + 1).getAsInteger(10, count))
+      n3 = Rest.find_first_of(':');
+      if (n3 == StringRef::npos || n3 == 0)
         return false;
-      TargetCountMap[pair.substr(0, n4)] = count;
+
+      StringRef Target;
+      uint64_t count, n4;
+      while (true) {
+        // Get the segment after the current colon.
+        StringRef AfterColon = Rest.substr(n3 + 1);
+        // Get the target symbol before the current colon.
+        Target = Rest.substr(0, n3);
+        // Check if the word after the current colon is an integer.
+        n4 = AfterColon.find_first_of(' ');
+        n4 = (n4 != StringRef::npos) ? n3 + n4 + 1 : Rest.size();
+        StringRef WordAfterColon = Rest.substr(n3 + 1, n4 - n3 - 1);
+        if (!WordAfterColon.getAsInteger(10, count))
+          break;
+
+        // Try to find the next colon.
+        uint64_t n5 = AfterColon.find_first_of(':');
+        if (n5 == StringRef::npos)
+          return false;
+        n3 += n5 + 1;
+      }
+
+      // An anchor point is found. Save the {target, count} pair
+      TargetCountMap[Target] = count;
+      if (n4 == Rest.size())
+        break;
+      // Change n3 to the next blank space after colon + integer pair.
+      n3 = n4;
     }
   } else {
     IsCallsite = true;
@@ -151,7 +184,7 @@ static bool ParseLine(const StringRef &Input, bool &IsCallsite, uint32_t &Depth,
   return true;
 }
 
-/// \brief Load samples from a text file.
+/// Load samples from a text file.
 ///
 /// See the documentation at the top of the file for an explanation of
 /// the expected format.
@@ -286,14 +319,31 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
   return Str;
 }
 
-ErrorOr<StringRef> SampleProfileReaderBinary::readStringFromTable() {
+template <typename T>
+inline ErrorOr<uint32_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
   std::error_code EC;
   auto Idx = readNumber<uint32_t>();
   if (std::error_code EC = Idx.getError())
     return EC;
-  if (*Idx >= NameTable.size())
+  if (*Idx >= Table.size())
     return sampleprof_error::truncated_name_table;
+  return *Idx;
+}
+
+ErrorOr<StringRef> SampleProfileReaderRawBinary::readStringFromTable() {
+  auto Idx = readStringIndex(NameTable);
+  if (std::error_code EC = Idx.getError())
+    return EC;
+
   return NameTable[*Idx];
+}
+
+ErrorOr<StringRef> SampleProfileReaderCompactBinary::readStringFromTable() {
+  auto Idx = readStringIndex(NameTable);
+  if (std::error_code EC = Idx.getError())
+    return EC;
+
+  return StringRef(NameTable[*Idx]);
 }
 
 std::error_code
@@ -396,28 +446,20 @@ std::error_code SampleProfileReaderBinary::read() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderBinary::readHeader() {
-  Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
-  End = Data + Buffer->getBufferSize();
+std::error_code SampleProfileReaderRawBinary::verifySPMagic(uint64_t Magic) {
+  if (Magic == SPMagic())
+    return sampleprof_error::success;
+  return sampleprof_error::bad_magic;
+}
 
-  // Read and check the magic identifier.
-  auto Magic = readNumber<uint64_t>();
-  if (std::error_code EC = Magic.getError())
-    return EC;
-  else if (*Magic != SPMagic())
-    return sampleprof_error::bad_magic;
+std::error_code
+SampleProfileReaderCompactBinary::verifySPMagic(uint64_t Magic) {
+  if (Magic == SPMagic(SPF_Compact_Binary))
+    return sampleprof_error::success;
+  return sampleprof_error::bad_magic;
+}
 
-  // Read the version number.
-  auto Version = readNumber<uint64_t>();
-  if (std::error_code EC = Version.getError())
-    return EC;
-  else if (*Version != SPVersion())
-    return sampleprof_error::unsupported_version;
-
-  if (std::error_code EC = readSummary())
-    return EC;
-
-  // Read the name table.
+std::error_code SampleProfileReaderRawBinary::readNameTable() {
   auto Size = readNumber<uint32_t>();
   if (std::error_code EC = Size.getError())
     return EC;
@@ -429,6 +471,46 @@ std::error_code SampleProfileReaderBinary::readHeader() {
     NameTable.push_back(*Name);
   }
 
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderCompactBinary::readNameTable() {
+  auto Size = readNumber<uint64_t>();
+  if (std::error_code EC = Size.getError())
+    return EC;
+  NameTable.reserve(*Size);
+  for (uint32_t I = 0; I < *Size; ++I) {
+    auto FID = readNumber<uint64_t>();
+    if (std::error_code EC = FID.getError())
+      return EC;
+    NameTable.push_back(std::to_string(*FID));
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderBinary::readHeader() {
+  Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+  End = Data + Buffer->getBufferSize();
+
+  // Read and check the magic identifier.
+  auto Magic = readNumber<uint64_t>();
+  if (std::error_code EC = Magic.getError())
+    return EC;
+  else if (std::error_code EC = verifySPMagic(*Magic))
+    return EC;
+
+  // Read the version number.
+  auto Version = readNumber<uint64_t>();
+  if (std::error_code EC = Version.getError())
+    return EC;
+  else if (*Version != SPVersion())
+    return sampleprof_error::unsupported_version;
+
+  if (std::error_code EC = readSummary())
+    return EC;
+
+  if (std::error_code EC = readNameTable())
+    return EC;
   return sampleprof_error::success;
 }
 
@@ -488,11 +570,18 @@ std::error_code SampleProfileReaderBinary::readSummary() {
   return sampleprof_error::success;
 }
 
-bool SampleProfileReaderBinary::hasFormat(const MemoryBuffer &Buffer) {
+bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
   const uint8_t *Data =
       reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
   uint64_t Magic = decodeULEB128(Data);
   return Magic == SPMagic();
+}
+
+bool SampleProfileReaderCompactBinary::hasFormat(const MemoryBuffer &Buffer) {
+  const uint8_t *Data =
+      reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
+  uint64_t Magic = decodeULEB128(Data);
+  return Magic == SPMagic(SPF_Compact_Binary);
 }
 
 std::error_code SampleProfileReaderGCC::skipNextWord() {
@@ -717,7 +806,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
   return sampleprof_error::success;
 }
 
-/// \brief Read a GCC AutoFDO profile.
+/// Read a GCC AutoFDO profile.
 ///
 /// This format is generated by the Linux Perf conversion tool at
 /// https://github.com/google/autofdo.
@@ -738,7 +827,7 @@ bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
   return Magic == "adcg*704";
 }
 
-/// \brief Prepare a memory buffer for the contents of \p Filename.
+/// Prepare a memory buffer for the contents of \p Filename.
 ///
 /// \returns an error code indicating the status of the buffer.
 static ErrorOr<std::unique_ptr<MemoryBuffer>>
@@ -755,7 +844,7 @@ setupMemoryBuffer(const Twine &Filename) {
   return std::move(Buffer);
 }
 
-/// \brief Create a sample profile reader based on the format of the input file.
+/// Create a sample profile reader based on the format of the input file.
 ///
 /// \param Filename The file to open.
 ///
@@ -770,7 +859,7 @@ SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
   return create(BufferOrError.get(), C);
 }
 
-/// \brief Create a sample profile reader based on the format of the input data.
+/// Create a sample profile reader based on the format of the input data.
 ///
 /// \param B The memory buffer to create the reader from (assumes ownership).
 ///
@@ -780,8 +869,10 @@ SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
   std::unique_ptr<SampleProfileReader> Reader;
-  if (SampleProfileReaderBinary::hasFormat(*B))
-    Reader.reset(new SampleProfileReaderBinary(std::move(B), C));
+  if (SampleProfileReaderRawBinary::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderRawBinary(std::move(B), C));
+  else if (SampleProfileReaderCompactBinary::hasFormat(*B))
+    Reader.reset(new SampleProfileReaderCompactBinary(std::move(B), C));
   else if (SampleProfileReaderGCC::hasFormat(*B))
     Reader.reset(new SampleProfileReaderGCC(std::move(B), C));
   else if (SampleProfileReaderText::hasFormat(*B))

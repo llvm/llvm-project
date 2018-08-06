@@ -27,7 +27,7 @@ lexer, parser, AST, and LLVM code emitter. This example is nice, because
 it shows how easy it is to "grow" a language over time, incrementally
 extending it as new ideas are discovered.
 
-Before we get going on "how" we add this extension, lets talk about
+Before we get going on "how" we add this extension, let's talk about
 "what" we want. The basic idea is that we want to be able to write this
 sort of thing:
 
@@ -54,7 +54,7 @@ false, the second subexpression is evaluated and returned. Since
 Kaleidoscope allows side-effects, this behavior is important to nail
 down.
 
-Now that we know what we "want", lets break this down into its
+Now that we know what we "want", let's break this down into its
 constituent pieces.
 
 Lexer Extensions for If/Then/Else
@@ -176,7 +176,7 @@ of the if/then/else example, because this is where it starts to
 introduce new concepts. All of the code above has been thoroughly
 described in previous chapters.
 
-To motivate the code we want to produce, lets take a look at a simple
+To motivate the code we want to produce, let's take a look at a simple
 example. Consider:
 
 ::
@@ -276,7 +276,7 @@ of using the techniques that we will describe for #1, or you can insert
 Phi nodes directly, if convenient. In this case, it is really
 easy to generate the Phi node, so we choose to do it directly.
 
-Okay, enough of the motivation and overview, lets generate code!
+Okay, enough of the motivation and overview, let's generate code!
 
 Code Generation for If/Then/Else
 --------------------------------
@@ -429,7 +429,7 @@ languages...
 =====================
 
 Now that we know how to add basic control flow constructs to the
-language, we have the tools to add more powerful things. Lets add
+language, we have the tools to add more powerful things. Let's add
 something more aggressive, a 'for' expression:
 
 ::
@@ -450,7 +450,7 @@ it executes its body expression. Because we don't have anything better
 to return, we'll just define the loop as always returning 0.0. In the
 future when we have mutable variables, it will get more useful.
 
-As before, lets talk about the changes that we need to Kaleidoscope to
+As before, let's talk about the changes that we need to Kaleidoscope to
 support this.
 
 Lexer Extensions for the 'for' Loop
@@ -619,7 +619,7 @@ this dump is generated with optimizations disabled for clarity):
     }
 
 This loop contains all the same constructs we saw before: a phi node,
-several expressions, and some basic blocks. Lets see how this fits
+several expressions, and some basic blocks. Let's see how this fits
 together.
 
 Code Generation for the 'for' Loop

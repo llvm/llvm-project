@@ -51,7 +51,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
 !16 = !{i32 2, !"Debug Info Version", i32 3}
 !17 = !{!"clang"}
-!18 = distinct !DISubprogram(name: "main", scope: !14, file: !14, line: 2, type: !19, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!18 = distinct !DISubprogram(name: "main", scope: !14, file: !14, line: 2, type: !19, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !19 = !DISubroutineType(types: !20)
 !20 = !{!21, !21, !11}
 !21 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

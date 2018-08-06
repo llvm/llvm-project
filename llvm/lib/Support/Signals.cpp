@@ -15,7 +15,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -100,15 +100,10 @@ static FormattedNumber format_ptr(void *PC) {
   return format_hex((uint64_t)PC, PtrWidth);
 }
 
-static bool printSymbolizedStackTrace(StringRef Argv0,
-                                      void **StackTrace, int Depth,
-                                      llvm::raw_ostream &OS)
-  LLVM_ATTRIBUTE_USED;
-
 /// Helper that launches llvm-symbolizer and symbolizes a backtrace.
-static bool printSymbolizedStackTrace(StringRef Argv0,
-                                      void **StackTrace, int Depth,
-                                      llvm::raw_ostream &OS) {
+LLVM_ATTRIBUTE_USED
+static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
+                                      int Depth, llvm::raw_ostream &OS) {
   if (DisableSymbolicationFlag)
     return false;
 
@@ -159,17 +154,18 @@ static bool printSymbolizedStackTrace(StringRef Argv0,
     }
   }
 
-  Optional<StringRef> Redirects[] = {InputFile.str(), OutputFile.str(), llvm::None};
-  const char *Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
-#ifdef LLVM_ON_WIN32
-                        // Pass --relative-address on Windows so that we don't
-                        // have to add ImageBase from PE file.
-                        // FIXME: Make this the default for llvm-symbolizer.
-                        "--relative-address",
+  Optional<StringRef> Redirects[] = {StringRef(InputFile),
+                                     StringRef(OutputFile), llvm::None};
+  StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
+#ifdef _WIN32
+                      // Pass --relative-address on Windows so that we don't
+                      // have to add ImageBase from PE file.
+                      // FIXME: Make this the default for llvm-symbolizer.
+                      "--relative-address",
 #endif
-                        "--demangle", nullptr};
+                      "--demangle"};
   int RunResult =
-      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, nullptr, Redirects);
+      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, None, Redirects);
   if (RunResult != 0)
     return false;
 
@@ -216,6 +212,6 @@ static bool printSymbolizedStackTrace(StringRef Argv0,
 #ifdef LLVM_ON_UNIX
 #include "Unix/Signals.inc"
 #endif
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/Signals.inc"
 #endif

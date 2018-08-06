@@ -1,10 +1,10 @@
-; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck %s -check-prefixes=ALL,32
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=ALL,32
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefixes=ALL,32R6
-; RUN: llc -march=mips -mcpu=mips32 -mattr=dsp < %s | FileCheck %s -check-prefix=DSP
-; RUN: llc -march=mips -mcpu=mips64   -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64
-; RUN: llc -march=mips -mcpu=mips64r2 -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64
-; RUN: llc -march=mips -mcpu=mips64r6 -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64R6
+; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32R6
+; RUN: llc -march=mips -mcpu=mips32 -mattr=dsp < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=DSP
+; RUN: llc -march=mips -mcpu=mips64   -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r2 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r6 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64R6
 
 ; FIXME: The MIPS16 test should check its output
 ; RUN: llc -march=mips -mattr=mips16 < %s

@@ -12,7 +12,7 @@ entry:
 	br i1 undef, label %bb, label %bb6.preheader
 
 bb6.preheader:		; preds = %entry
-        call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* undef, i32 12, i32 4, i1 false)
+        call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 undef, i8* align 4 undef, i32 12, i1 false)
 	br i1 undef, label %bb15, label %bb13
 
 bb:		; preds = %entry
@@ -30,4 +30,4 @@ bb15:		; preds = %bb13, %bb6.preheader
 	ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

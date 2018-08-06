@@ -1,6 +1,6 @@
 //===- tools/dsymutil/DebugMap.cpp - Generic debug map representation -----===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -9,7 +9,6 @@
 
 #include "DebugMap.h"
 #include "BinaryHolder.h"
-#include "ErrorReporting.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -63,7 +63,7 @@ void DebugMapObject::print(raw_ostream &OS) const {
   Entries.reserve(Symbols.getNumItems());
   for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
     Entries.push_back(std::make_pair(Sym.getKey(), Sym.getValue()));
-  std::sort(
+  llvm::sort(
       Entries.begin(), Entries.end(),
       [](const Entry &LHS, const Entry &RHS) { return LHS.first < RHS.first; });
   for (const auto &Sym : Entries) {
@@ -240,26 +240,31 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   StringMap<uint64_t> SymbolAddresses;
 
   sys::path::append(Path, Filename);
-  auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
-  if (auto EC = ErrOrObjectFiles.getError()) {
-    warn_ostream() << "Unable to open " << Path << " " << EC.message() << '\n';
-  } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
-    // Rewrite the object file symbol addresses in the debug map. The
-    // YAML input is mainly used to test llvm-dsymutil without
-    // requiring binaries checked-in. If we generate the object files
-    // during the test, we can't hard-code the symbols addresses, so
-    // look them up here and rewrite them.
-    for (const auto &Sym : ErrOrObjectFile->symbols()) {
-      uint64_t Address = Sym.getValue();
-      Expected<StringRef> Name = Sym.getName();
-      if (!Name ||
-          (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
-        // TODO: Actually report errors helpfully.
-        if (!Name)
-          consumeError(Name.takeError());
-        continue;
+
+  auto ObjectEntry = BinHolder.getObjectEntry(Path);
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
+    WithColor::warning() << "Unable to open " << Path << " "
+                         << toString(std::move(Err)) << '\n';
+  } else {
+    auto Object = ObjectEntry->getObject(Ctxt.BinaryTriple);
+    if (!Object) {
+      auto Err = Object.takeError();
+      WithColor::warning() << "Unable to open " << Path << " "
+                           << toString(std::move(Err)) << '\n';
+    } else {
+      for (const auto &Sym : Object->symbols()) {
+        uint64_t Address = Sym.getValue();
+        Expected<StringRef> Name = Sym.getName();
+        if (!Name || (Sym.getFlags() &
+                      (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
+          // TODO: Actually report errors helpfully.
+          if (!Name)
+            consumeError(Name.takeError());
+          continue;
+        }
+        SymbolAddresses[*Name] = Address;
       }
-      SymbolAddresses[*Name] = Address;
     }
   }
 

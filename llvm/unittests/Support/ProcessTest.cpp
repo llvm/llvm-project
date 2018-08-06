@@ -10,7 +10,7 @@
 #include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -45,7 +45,7 @@ TEST(ProcessTest, None) {
 } 
 #endif
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 
 TEST(ProcessTest, EmptyVal) {
   SetEnvironmentVariableA("__LLVM_TEST_ENVIRON_VAR__", "");

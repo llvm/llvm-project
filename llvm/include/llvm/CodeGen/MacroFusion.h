@@ -25,7 +25,7 @@ class ScheduleDAGMutation;
 class TargetInstrInfo;
 class TargetSubtargetInfo;
 
-/// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
+/// Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 using ShouldSchedulePredTy = std::function<bool(const TargetInstrInfo &TII,
@@ -33,13 +33,13 @@ using ShouldSchedulePredTy = std::function<bool(const TargetInstrInfo &TII,
                                                 const MachineInstr *FirstMI,
                                                 const MachineInstr &SecondMI)>;
 
-/// \brief Create a DAG scheduling mutation to pair instructions back to back
+/// Create a DAG scheduling mutation to pair instructions back to back
 /// for instructions that benefit according to the target-specific
 /// shouldScheduleAdjacent predicate function.
 std::unique_ptr<ScheduleDAGMutation>
 createMacroFusionDAGMutation(ShouldSchedulePredTy shouldScheduleAdjacent);
 
-/// \brief Create a DAG scheduling mutation to pair branch instructions with one
+/// Create a DAG scheduling mutation to pair branch instructions with one
 /// of their predecessors back to back for instructions that benefit according
 /// to the target-specific shouldScheduleAdjacent predicate function.
 std::unique_ptr<ScheduleDAGMutation>

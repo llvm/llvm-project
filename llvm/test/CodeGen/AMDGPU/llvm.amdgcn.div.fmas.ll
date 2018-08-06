@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=SI %s
-; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SI %s
+; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,VI %s
 
 ; FIXME: Enable for VI.
 
@@ -8,33 +8,36 @@ declare float @llvm.amdgcn.div.fmas.f32(float, float, float, i1) nounwind readno
 declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind readnone
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32:
-; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
-; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
-; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
-; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
+
+; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
+; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
+; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x94
+
+; GCN-DAG: s_and_b32 [[AND_I1:s[0-9]+]], 1, s{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e64 vcc, [[AND_I1]], 1
+
 ; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
 ; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
-; GCN: s_endpgm
-define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_inline_imm_0:
-; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
-; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
+; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
 ; SI-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; SI-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], 1.0, [[VB]], [[VC]]
 ; SI: buffer_store_dword [[RESULT]],
-; SI: s_endpgm
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float 1.0, float %b, float %c, i1 %d) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
   ret void
@@ -43,26 +46,32 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %o
 ; GCN-LABEL: {{^}}test_div_fmas_f32_inline_imm_1:
 ; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
-; SI-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
-; SI-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
-; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], 1.0, [[VC]]
-; SI: buffer_store_dword [[RESULT]],
-; SI: s_endpgm
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
+
+; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
+; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x94
+
+; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
+; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
+; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], 1.0, [[VC]]
+; GCN: buffer_store_dword [[RESULT]],
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %out, float %a, float %b, float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float 1.0, float %c, i1 %d) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_inline_imm_2:
-; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
-; SI-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
-; SI-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
-; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], 1.0
-; SI: buffer_store_dword [[RESULT]],
-; SI: s_endpgm
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
+; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+
+; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
+; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
+
+; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
+; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
+; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], 1.0
+; GCN: buffer_store_dword [[RESULT]],
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float 1.0, i1 %d) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
   ret void
@@ -77,8 +86,8 @@ define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_cond_to_vcc:
-; SI: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
-; SI: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c, i32 %i) nounwind {
   %cmp = icmp eq i32 %i, 0
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cmp) nounwind readnone
@@ -87,8 +96,8 @@ define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_imm_false_cond_to_vcc:
-; SI: s_mov_b64 vcc, 0
-; SI: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GCN: s_mov_b64 vcc, 0
+; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
@@ -96,8 +105,8 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(float addrspa
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_imm_true_cond_to_vcc:
-; SI: s_mov_b64 vcc, -1
-; SI: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GCN: s_mov_b64 vcc, -1
+; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4

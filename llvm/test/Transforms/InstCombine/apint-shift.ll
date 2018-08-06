@@ -3,56 +3,6 @@
 ; even with arbitrary precision integers.
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
-define i47 @test1(i47 %A) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i47 %A
-;
-  %B = shl i47 %A, 0
-  ret i47 %B
-}
-
-define i41 @test2(i7 %X) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i41 0
-;
-  %A = zext i7 %X to i41
-  %B = shl i41 0, %A
-  ret i41 %B
-}
-
-define i41 @test3(i41 %A) {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i41 %A
-;
-  %B = ashr i41 %A, 0
-  ret i41 %B
-}
-
-define i39 @test4(i7 %X) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    ret i39 0
-;
-  %A = zext i7 %X to i39
-  %B = ashr i39 0, %A
-  ret i39 %B
-}
-
-define i55 @test5(i55 %A) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret i55 undef
-;
-  %B = lshr i55 %A, 55
-  ret i55 %B
-}
-
-define i32 @test5a(i32 %A) {
-; CHECK-LABEL: @test5a(
-; CHECK-NEXT:    ret i32 undef
-;
-  %B = shl i32 %A, 32
-  ret i32 %B
-}
-
 define i55 @test6(i55 %A) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[C:%.*]] = mul i55 %A, 6

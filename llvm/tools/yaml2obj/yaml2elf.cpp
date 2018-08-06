@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief The ELF component of yaml2obj.
+/// The ELF component of yaml2obj.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +19,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -102,27 +103,28 @@ static void zero(T &Obj) {
 }
 
 namespace {
-/// \brief "Single point of truth" for the ELF file construction.
+/// "Single point of truth" for the ELF file construction.
 /// TODO: This class still has a ways to go before it is truly a "single
 /// point of truth".
 template <class ELFT>
 class ELFState {
-  typedef typename object::ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Phdr Elf_Phdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  typedef typename ELFT::Phdr Elf_Phdr;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Relr Elf_Relr;
 
   enum class SymtabType { Static, Dynamic };
 
-  /// \brief The future ".strtab" section.
+  /// The future ".strtab" section.
   StringTableBuilder DotStrtab{StringTableBuilder::ELF};
 
-  /// \brief The future ".shstrtab" section.
+  /// The future ".shstrtab" section.
   StringTableBuilder DotShStrtab{StringTableBuilder::ELF};
 
-  /// \brief The future ".dynstr" section.
+  /// The future ".dynstr" section.
   StringTableBuilder DotDynstr{StringTableBuilder::ELF};
 
   NameToIdxMap SN2I;
@@ -243,8 +245,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     if (!Sec->Link.empty()) {
       unsigned Index;
       if (SN2I.lookup(Sec->Link, Index)) {
-        errs() << "error: Unknown section referenced: '" << Sec->Link
-               << "' at YAML section '" << Sec->Name << "'.\n";
+        WithColor::error() << "Unknown section referenced: '" << Sec->Link
+                           << "' at YAML section '" << Sec->Name << "'.\n";
         return false;
       }
       SHeader.sh_link = Index;
@@ -260,8 +262,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       unsigned Index;
       if (SN2I.lookup(S->Info, Index)) {
         if (S->Info.getAsInteger(0, Index)) {
-          errs() << "error: Unknown section referenced: '" << S->Info
-                 << "' at YAML section '" << S->Name << "'.\n";
+          WithColor::error() << "Unknown section referenced: '" << S->Info
+                             << "' at YAML section '" << S->Name << "'.\n";
           return false;
         }
       }
@@ -272,8 +274,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec.get())) {
       unsigned SymIdx;
       if (SymN2I.lookup(S->Info, SymIdx)) {
-        errs() << "error: Unknown symbol referenced: '" << S->Info
-               << "' at YAML section '" << S->Name << "'.\n";
+        WithColor::error() << "Unknown symbol referenced: '" << S->Info
+                           << "' at YAML section '" << S->Name << "'.\n";
         return false;
       }
       SHeader.sh_info = SymIdx;
@@ -430,8 +432,8 @@ void ELFState<ELFT>::addSymbols(const std::vector<ELFYAML::Symbol> &Symbols,
     if (!Sym.Section.empty()) {
       unsigned Index;
       if (SN2I.lookup(Sym.Section, Index)) {
-        errs() << "error: Unknown section referenced: '" << Sym.Section
-               << "' by YAML symbol " << Sym.Name << ".\n";
+        WithColor::error() << "Unknown section referenced: '" << Sym.Section
+                           << "' by YAML symbol " << Sym.Name << ".\n";
         exit(1);
       }
       Symbol.st_shndx = Index;
@@ -458,7 +460,10 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   Section.Content.writeAsBinary(OS);
   for (auto i = Section.Content.binary_size(); i < Section.Size; ++i)
     OS.write(0);
-  SHeader.sh_entsize = 0;
+  if (Section.Type == llvm::ELF::SHT_RELR)
+    SHeader.sh_entsize = sizeof(Elf_Relr);
+  else
+    SHeader.sh_entsize = 0;
   SHeader.sh_size = Section.Size;
 }
 
@@ -513,7 +518,7 @@ template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::Group &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename object::ELFFile<ELFT>::Elf_Word Elf_Word;
+  typedef typename ELFT::Word Elf_Word;
   assert(Section.Type == llvm::ELF::SHT_GROUP &&
          "Section type is not SHT_GROUP");
 
@@ -528,9 +533,9 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     if (member.sectionNameOrType == "GRP_COMDAT")
       sectionIndex = llvm::ELF::GRP_COMDAT;
     else if (SN2I.lookup(member.sectionNameOrType, sectionIndex)) {
-      errs() << "error: Unknown section referenced: '"
-             << member.sectionNameOrType << "' at YAML section' "
-             << Section.Name << "\n";
+      WithColor::error() << "Unknown section referenced: '"
+                         << member.sectionNameOrType << "' at YAML section' "
+                         << Section.Name << "\n";
       return false;
     }
     SIdx = sectionIndex;
@@ -574,8 +579,8 @@ template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
     DotShStrtab.add(Name);
     // "+ 1" to take into account the SHT_NULL entry.
     if (SN2I.addName(Name, i + 1)) {
-      errs() << "error: Repeated section name: '" << Name
-             << "' at YAML section number " << i << ".\n";
+      WithColor::error() << "Repeated section name: '" << Name
+                         << "' at YAML section number " << i << ".\n";
       return false;
     }
   }
@@ -602,7 +607,7 @@ ELFState<ELFT>::buildSymbolIndex(std::size_t &StartIndex,
     if (Sym.Name.empty())
       continue;
     if (SymN2I.addName(Sym.Name, StartIndex)) {
-      errs() << "error: Repeated symbol name: '" << Sym.Name << "'.\n";
+      WithColor::error() << "Repeated symbol name: '" << Sym.Name << "'.\n";
       return false;
     }
   }
@@ -692,20 +697,15 @@ static bool isLittleEndian(const ELFYAML::Object &Doc) {
 }
 
 int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
-  using object::ELFType;
-  typedef ELFType<support::little, true> LE64;
-  typedef ELFType<support::big, true> BE64;
-  typedef ELFType<support::little, false> LE32;
-  typedef ELFType<support::big, false> BE32;
   if (is64Bit(Doc)) {
     if (isLittleEndian(Doc))
-      return ELFState<LE64>::writeELF(Out, Doc);
+      return ELFState<object::ELF64LE>::writeELF(Out, Doc);
     else
-      return ELFState<BE64>::writeELF(Out, Doc);
+      return ELFState<object::ELF64BE>::writeELF(Out, Doc);
   } else {
     if (isLittleEndian(Doc))
-      return ELFState<LE32>::writeELF(Out, Doc);
+      return ELFState<object::ELF32LE>::writeELF(Out, Doc);
     else
-      return ELFState<BE32>::writeELF(Out, Doc);
+      return ELFState<object::ELF32BE>::writeELF(Out, Doc);
   }
 }

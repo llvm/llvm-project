@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Inserts one nop instruction for each high level source statement for
+/// Inserts one nop instruction for each high level source statement for
 /// debugger usage.
 ///
 /// Tools, such as a debugger, need to pause execution based on user input (i.e.
@@ -21,6 +21,7 @@
 
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -62,7 +63,7 @@ FunctionPass *llvm::createSIDebuggerInsertNopsPass() {
 bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
   // Skip this pass if "amdgpu-debugger-insert-nops" attribute was not
   // specified.
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.debuggerInsertNops())
     return false;
 
@@ -78,8 +79,8 @@ bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
-      // Skip DBG_VALUE instructions and instructions without location.
-      if (MI->isDebugValue() || !MI->getDebugLoc())
+      // Skip debug instructions and instructions without location.
+      if (MI->isDebugInstr() || !MI->getDebugLoc())
         continue;
 
       // Insert nop instruction if line number does not have nop inserted.

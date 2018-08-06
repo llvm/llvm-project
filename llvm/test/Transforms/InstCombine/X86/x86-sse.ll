@@ -33,10 +33,8 @@ define float @test_rcp_ss_1(float %a) {
 
 define float @test_sqrt_ss_0(float %a) {
 ; CHECK-LABEL: @test_sqrt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float %a)
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %1 = insertelement <4 x float> undef, float %a, i32 0
   %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1

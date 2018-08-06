@@ -17,6 +17,7 @@
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/TypeBuilder.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TargetRegistry.h"
 #include <memory>
 
 namespace llvm {
@@ -59,15 +61,26 @@ public:
       // If we found a TargetMachine, check that it's one that Orc supports.
       const Triple& TT = TM->getTargetTriple();
 
+      // Bail out for windows platforms. We do not support these yet.
       if ((TT.getArch() != Triple::x86_64 && TT.getArch() != Triple::x86) ||
-          TT.isOSWindows())
-        TM = nullptr;
+           TT.isOSWindows())
+        return;
+
+      // Target can JIT?
+      SupportsJIT = TM->getTarget().hasJIT();
+      // Use ability to create callback manager to detect whether Orc
+      // has indirection support on this platform. This way the test
+      // and Orc code do not get out of sync.
+      SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, ES, 0);
     }
   };
 
 protected:
+  orc::ExecutionSession ES;
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
+  bool SupportsJIT = false;
+  bool SupportsIndirection = false;
 };
 
 class ModuleBuilder {

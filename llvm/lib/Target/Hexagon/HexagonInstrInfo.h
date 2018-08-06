@@ -18,9 +18,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <vector>
 
@@ -65,6 +65,20 @@ public:
   /// any side effects other than storing to the stack slot.
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+
+  /// Check if the instruction or the bundle of instructions has
+  /// load from stack slots. Return the frameindex and machine memory operand
+  /// if true.
+  bool hasLoadFromStackSlot(const MachineInstr &MI,
+                           const MachineMemOperand *&MMO,
+                           int &FrameIndex) const override;
+
+  /// Check if the instruction or the bundle of instructions has
+  /// store to stack slots. Return the frameindex and machine memory operand
+  /// if true.
+  bool hasStoreToStackSlot(const MachineInstr &MI,
+                           const MachineMemOperand *&MMO,
+                           int &FrameIndex) const override;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
@@ -122,8 +136,8 @@ public:
   bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
                    MachineInstr *&CmpInst) const override;
 
-  /// Generate code to reduce the loop iteration by one and check if the loop is
-  /// finished.  Return the value/register of the the new loop count.  We need
+  /// Generate code to reduce the loop iteration by one and check if the loop
+  /// is finished.  Return the value/register of the new loop count.  We need
   /// this function when peeling off one or more iterations of a loop. This
   /// function assumes the nth iteration is peeled first.
   unsigned reduceLoopCount(MachineBasicBlock &MBB,
@@ -201,7 +215,7 @@ public:
   /// anything was changed.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  /// \brief Get the base register and byte offset of a load/store instr.
+  /// Get the base register and byte offset of a load/store instr.
   bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
                              int64_t &Offset,
                              const TargetRegisterInfo *TRI) const override;
@@ -332,7 +346,11 @@ public:
   /// HexagonInstrInfo specifics.
 
   unsigned createVR(MachineFunction *MF, MVT VT) const;
+  MachineInstr *findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
+                              MachineBasicBlock *TargetBB,
+                              SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
 
+  bool isBaseImmOffset(const MachineInstr &MI) const;
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
   bool isAddrModeWithOffset(const MachineInstr &MI) const;

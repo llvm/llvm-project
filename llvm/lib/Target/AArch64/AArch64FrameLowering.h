@@ -53,7 +53,7 @@ public:
                                   std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
-  /// \brief Can this function use the red zone for local allocations.
+  /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
 
   bool hasFP(const MachineFunction &MF) const override;

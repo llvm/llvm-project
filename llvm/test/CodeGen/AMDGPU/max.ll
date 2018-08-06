@@ -216,14 +216,14 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(<2 x i32> addrspace(1)* %ou
 
 ; Make sure redundant and removed
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umax_ugt_i16:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
+; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
 ; SI: s_max_u32 [[MAX:s[0-9]+]], [[A]], [[B]]
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
 
 ; EG: MAX_UINT
-define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b) nounwind {
+define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspace(1)* %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) nounwind {
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %cmp = icmp ugt i32 %a.ext, %b.ext
@@ -236,14 +236,14 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umax_ugt_i16(i32 addrspac
 ; Make sure redundant sign_extend_inreg removed.
 
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_max_slt_i16:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
+; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
 ; SI: s_max_i32 [[MAX:s[0-9]+]], [[A]], [[B]]
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
 
 ; EG: MAX_INT
-define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, i16 signext %a, i16 signext %b) nounwind {
+define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace(1)* %out, [8 x i32], i16 signext %a, [8 x i32], i16 signext %b) nounwind {
   %a.ext = sext i16 %a to i32
   %b.ext = sext i16 %b to i32
   %cmp = icmp sgt i32 %a.ext, %b.ext
@@ -262,7 +262,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(i32 addrspace
 ; SI: s_max_i32
 
 ; EG: MAX_INT
-define amdgpu_kernel void @s_test_imax_sge_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwind {
+define amdgpu_kernel void @s_test_imax_sge_i16(i16 addrspace(1)* %out, [8 x i32], i16 %a, [8 x i32], i16 %b) nounwind {
   %cmp = icmp sge i16 %a, %b
   %val = select i1 %cmp, i16 %a, i16 %b
   store i16 %val, i16 addrspace(1)* %out

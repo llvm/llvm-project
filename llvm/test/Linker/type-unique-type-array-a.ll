@@ -56,7 +56,7 @@ entry:
   %0 = load %class.A*, %class.A** %a.addr, align 8, !dbg !28
   %1 = bitcast %struct.SA* %agg.tmp to i8*, !dbg !28
   %2 = bitcast %struct.SA* %sa to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 4, i32 4, i1 false), !dbg !28
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %2, i64 4, i1 false), !dbg !28
   %coerce.dive1 = getelementptr %struct.SA, %struct.SA* %agg.tmp, i32 0, i32 0, !dbg !28
   %3 = load i32, i32* %coerce.dive1, !dbg !28
   call void @_ZN1A5testAE2SA(%class.A* %0, i32 %3), !dbg !28
@@ -81,7 +81,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
 
 attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -106,12 +106,12 @@ attributes #3 = { nounwind }
 !11 = !{!12}
 !12 = !DIDerivedType(tag: DW_TAG_member, name: "a", line: 2, size: 32, align: 32, file: !1, scope: !10, baseType: !13)
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!15 = distinct !DISubprogram(name: "topA", linkageName: "_Z4topAP1A2SA", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 11, file: !1, scope: !16, type: !17, variables: !2)
+!15 = distinct !DISubprogram(name: "topA", linkageName: "_Z4topAP1A2SA", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 11, file: !1, scope: !16, type: !17, retainedNodes: !2)
 !16 = !DIFile(filename: "a.cpp", directory: "/Users/manmanren/test-Nov/type_unique/rdar_di_array")
 !17 = !DISubroutineType(types: !18)
 !18 = !{null, !19, !10}
 !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4)
-!20 = distinct !DISubprogram(name: "testA", linkageName: "_ZN1A5testAE2SA", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !4, type: !7, declaration: !6, variables: !2)
+!20 = distinct !DISubprogram(name: "testA", linkageName: "_ZN1A5testAE2SA", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !4, type: !7, declaration: !6, retainedNodes: !2)
 !21 = !{i32 2, !"Dwarf Version", i32 2}
 !22 = !{i32 2, !"Debug Info Version", i32 3}
 !23 = !{!"clang version 3.5.0 (trunk 214102:214113M) (llvm/trunk 214102:214115M)"}

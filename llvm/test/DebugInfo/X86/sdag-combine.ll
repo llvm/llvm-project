@@ -15,7 +15,7 @@ define swiftcc void @g() #0 !dbg !5 {
 entry:
   %0 = alloca %TSb, align 1
   %1 = call swiftcc i1 @f(), !dbg !7
-  ; CHECK: DBG_VALUE debug-use %rax, debug-use %noreg, !8, !DIExpression(), debug-location !7
+  ; CHECK: DBG_VALUE debug-use $rcx, debug-use $noreg, !8, !DIExpression(), debug-location !7
   call void @llvm.dbg.value(metadata i1 %1, metadata !8, metadata !DIExpression()), !dbg !7
   %2 = getelementptr inbounds %TSb, %TSb* %0, i32 0, i32 0, !dbg !7
   store i1 %1, i1* %2, align 1, !dbg !7
@@ -37,7 +37,7 @@ attributes #0 = { nounwind readnone speculatable }
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "g", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "g", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !2)
 !7 = !DILocation(line: 4, scope: !5)
 !8 = !DILocalVariable(name: "hasInput", scope: !5, file: !1, line: 3, type: !9)

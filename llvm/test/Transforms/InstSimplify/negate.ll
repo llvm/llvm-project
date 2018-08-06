@@ -17,6 +17,14 @@ define <2 x i32> @negate_nuw_vec(<2 x i32> %x) {
   ret <2 x i32> %neg
 }
 
+define <2 x i32> @negate_nuw_vec_undef_elt(<2 x i32> %x) {
+; CHECK-LABEL: @negate_nuw_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %neg = sub nuw <2 x i32> <i32 0, i32 undef>, %x
+  ret <2 x i32> %neg
+}
+
 define i8 @negate_zero_or_minsigned_nsw(i8 %x) {
 ; CHECK-LABEL: @negate_zero_or_minsigned_nsw(
 ; CHECK-NEXT:    ret i8 0
@@ -35,9 +43,18 @@ define <2 x i8> @negate_zero_or_minsigned_nsw_vec(<2 x i8> %x) {
   ret <2 x i8> %neg
 }
 
+define <2 x i8> @negate_zero_or_minsigned_nsw_vec_undef_elt(<2 x i8> %x) {
+; CHECK-LABEL: @negate_zero_or_minsigned_nsw_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %signbit = shl <2 x i8> %x, <i8 7, i8 7>
+  %neg = sub nsw <2 x i8> <i8 undef, i8 0>, %signbit
+  ret <2 x i8> %neg
+}
+
 define i8 @negate_zero_or_minsigned(i8 %x) {
 ; CHECK-LABEL: @negate_zero_or_minsigned(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = shl i8 %x, 7
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = shl i8 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i8 [[SIGNBIT]]
 ;
   %signbit = shl i8 %x, 7
@@ -47,7 +64,7 @@ define i8 @negate_zero_or_minsigned(i8 %x) {
 
 define <2 x i8> @negate_zero_or_minsigned_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @negate_zero_or_minsigned_vec(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = and <2 x i8> %x, <i8 -128, i8 -128>
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = and <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
 ; CHECK-NEXT:    ret <2 x i8> [[SIGNBIT]]
 ;
   %signbit = and <2 x i8> %x, <i8 128, i8 128>

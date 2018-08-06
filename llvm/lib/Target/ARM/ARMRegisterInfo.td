@@ -307,6 +307,18 @@ def SPR : RegisterClass<"ARM", [f32], 32, (sequence "S%u", 0, 31)> {
   let DiagnosticString = "operand must be a register in range [s0, s31]";
 }
 
+def HPR : RegisterClass<"ARM", [f16], 32, (sequence "S%u", 0, 31)> {
+  let AltOrders = [(add (decimate HPR, 2), SPR),
+                   (add (decimate HPR, 4),
+                        (decimate HPR, 2),
+                        (decimate (rotl HPR, 1), 4),
+                        (decimate (rotl HPR, 1), 2))];
+  let AltOrderSelect = [{
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+  }];
+  let DiagnosticString = "operand must be a register in range [s0, s31]";
+}
+
 // Subset of SPR which can be used as a source of NEON scalars for 16-bit
 // operations
 def SPR_8 : RegisterClass<"ARM", [f32], 32, (sequence "S%u", 0, 15)> {

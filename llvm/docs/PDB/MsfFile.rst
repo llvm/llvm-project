@@ -5,6 +5,44 @@ The MSF File Format
 .. contents::
    :local:
 
+.. _msf_layout:
+
+File Layout
+===========
+
+The MSF file format consists of the following components:
+
+1. :ref:`msf_superblock`
+2. :ref:`msf_freeblockmap` (also know as Free Page Map, or FPM)
+3. Data
+
+Each component is stored as an indexed block, the length of which is specified
+in ``SuperBlock::BlockSize``. The file consists of 1 or more iterations of the
+following pattern (sometimes referred to as an "interval"):
+
+1. 1 block of data
+2. Free Block Map 1 (corresponds to ``SuperBlock::FreeBlockMapBlock`` 1)
+3. Free Block Map 2 (corresponds to ``SuperBlock::FreeBlockMapBlock`` 2)
+4. ``SuperBlock::BlockSize - 3`` blocks of data
+
+In the first interval, the first data block is used to store
+:ref:`msf_superblock`.
+
+The following diagram demonstrates the general layout of the file (\| denotes
+the end of an interval, and is for visualization purposes only):
+
++-------------+-----------------------+------------------+------------------+----------+----+------+------+------+-------------+----+-----+
+| Block Index | 0                     | 1                | 2                | 3 - 4095 | \| | 4096 | 4097 | 4098 | 4099 - 8191 | \| | ... |
++=============+=======================+==================+==================+==========+====+======+======+======+=============+====+=====+
+| Meaning     | :ref:`msf_superblock` | Free Block Map 1 | Free Block Map 2 | Data     | \| | Data | FPM1 | FPM2 | Data        | \| | ... |
++-------------+-----------------------+------------------+------------------+----------+----+------+------+------+-------------+----+-----+
+
+The file may end after any block, including immediately after a FPM1.
+
+.. note::
+  LLVM only supports 4096 byte blocks (sometimes referred to as the "BigMsf"
+  variant), so the rest of this document will assume a block size of 4096.
+
 .. _msf_superblock:
 
 The Superblock
@@ -32,14 +70,9 @@ follows:
   sizes of 4KiB, and all further discussion assumes a block size of 4KiB.
 - **FreeBlockMapBlock** - The index of a block within the file, at which begins
   a bitfield representing the set of all blocks within the file which are "free"
-  (i.e. the data within that block is not used).  This bitfield is spread across
-  the MSF file at ``BlockSize`` intervals.
-  **Important**: ``FreeBlockMapBlock`` can only be ``1`` or ``2``!  This field
-  is designed to support incremental and atomic updates of the underlying MSF
-  file.  While writing to an MSF file, if the value of this field is `1`, you
-  can write your new modified bitfield to page 2, and vice versa.  Only when
-  you commit the file to disk do you need to swap the value in the SuperBlock
-  to point to the new ``FreeBlockMapBlock``.
+  (i.e. the data within that block is not used).  See :ref:`msf_freeblockmap` for
+  more information.
+  **Important**: ``FreeBlockMapBlock`` can only be ``1`` or ``2``!
 - **NumBlocks** - The total number of blocks in the file.  ``NumBlocks * BlockSize``
   should equal the size of the file on disk.
 - **NumDirectoryBytes** - The size of the stream directory, in bytes.  The stream
@@ -53,7 +86,32 @@ follows:
   contains the list of blocks that the stream directory occupies, and the stream
   directory itself can be stitched together accordingly.  The number of
   ``ulittle32_t``'s in this array is given by ``ceil(NumDirectoryBytes / BlockSize)``.
-  
+
+.. _msf_freeblockmap:
+
+The Free Block Map
+==================
+
+The Free Block Map (sometimes referred to as the Free Page Map, or FPM) is a
+series of blocks which contains a bit flag for every block in the file. The
+flag will be set to 0 if the block is in use, and 1 if the block is unused.
+
+Each file contains two FPMs, one of which is active at any given time. This
+feature is designed to support incremental and atomic updates of the underlying
+MSF file. While writing to an MSF file, if the active FPM is FPM1, you can
+write your new modified bitfield to FPM2, and vice versa. Only when you commit
+the file to disk do you need to swap the value in the SuperBlock to point to
+the new ``FreeBlockMapBlock``.
+
+The Free Block Maps are stored as a series of single blocks thoughout the file
+at intervals of BlockSize. Because each FPM block is of size ``BlockSize``
+bytes, it contains 8 times as many bits as an interval has blocks. This means
+that the first block of each FPM refers to the first 8 intervals of the file
+(the first 32768 blocks), the second block of each FPM refers to the next 8
+blocks, and so on. This results in far more FPM blocks being present than are
+required, but in order to maintain backwards compatibility the format must stay
+this way.
+
 The Stream Directory
 ====================
 The Stream Directory is the root of all access to the other streams in an MSF
@@ -66,10 +124,10 @@ file.  Beginning at byte 0 of the stream directory is the following structure:
     ulittle32_t StreamSizes[NumStreams];
     ulittle32_t StreamBlocks[NumStreams][];
   };
-  
+
 And this structure occupies exactly ``SuperBlock->NumDirectoryBytes`` bytes.
 Note that each of the last two arrays is of variable length, and in particular
-that the second array is jagged.  
+that the second array is jagged.
 
 **Example:** Suppose a hypothetical PDB file with a 4KiB block size, and 4
 streams of lengths {1000 bytes, 8000 bytes, 16000 bytes, 9000 bytes}.
@@ -97,7 +155,7 @@ like:
       {10, 15, 12}
     };
   };
-  
+
 In total, this occupies ``15 * 4 = 60`` bytes, so ``SuperBlock->NumDirectoryBytes``
 would equal ``60``, and ``SuperBlock->BlockMapAddr`` would be an array of one
 ``ulittle32_t``, since ``60 <= SuperBlock->BlockSize``.

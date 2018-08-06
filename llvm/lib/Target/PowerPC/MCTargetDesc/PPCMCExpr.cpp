@@ -44,6 +44,8 @@ void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     case VK_PPC_LO: OS << "@l"; break;
     case VK_PPC_HI: OS << "@h"; break;
     case VK_PPC_HA: OS << "@ha"; break;
+    case VK_PPC_HIGH: OS << "@high"; break;
+    case VK_PPC_HIGHA: OS << "@higha"; break;
     case VK_PPC_HIGHER: OS << "@higher"; break;
     case VK_PPC_HIGHERA: OS << "@highera"; break;
     case VK_PPC_HIGHEST: OS << "@highest"; break;
@@ -74,6 +76,10 @@ PPCMCExpr::evaluateAsInt64(int64_t Value) const {
     case VK_PPC_HI:
       return (Value >> 16) & 0xffff;
     case VK_PPC_HA:
+      return ((Value + 0x8000) >> 16) & 0xffff;
+    case VK_PPC_HIGH:
+      return (Value >> 16) & 0xffff;
+    case VK_PPC_HIGHA:
       return ((Value + 0x8000) >> 16) & 0xffff;
     case VK_PPC_HIGHER:
       return (Value >> 32) & 0xffff;
@@ -124,6 +130,12 @@ PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
         break;
       case VK_PPC_HA:
         Modifier = MCSymbolRefExpr::VK_PPC_HA;
+        break;
+      case VK_PPC_HIGH:
+        Modifier = MCSymbolRefExpr::VK_PPC_HIGH;
+        break;
+      case VK_PPC_HIGHA:
+        Modifier = MCSymbolRefExpr::VK_PPC_HIGHA;
         break;
       case VK_PPC_HIGHERA:
         Modifier = MCSymbolRefExpr::VK_PPC_HIGHERA;

@@ -171,10 +171,10 @@ class RegisterOperands {
 public:
   /// List of virtual registers and register units read by the instruction.
   SmallVector<RegisterMaskPair, 8> Uses;
-  /// \brief List of virtual registers and register units defined by the
+  /// List of virtual registers and register units defined by the
   /// instruction which are not dead.
   SmallVector<RegisterMaskPair, 8> Defs;
-  /// \brief List of virtual registers and register units defined by the
+  /// List of virtual registers and register units defined by the
   /// instruction but dead.
   SmallVector<RegisterMaskPair, 8> DeadDefs;
 
@@ -219,7 +219,7 @@ public:
     return const_cast<PressureDiffs*>(this)->operator[](Idx);
   }
 
-  /// \brief Record pressure difference induced by the given operand list to
+  /// Record pressure difference induced by the given operand list to
   /// node with index \p Idx.
   void addInstruction(unsigned Idx, const RegisterOperands &RegOpers,
                       const MachineRegisterInfo &MRI);
@@ -546,7 +546,7 @@ protected:
   /// Add Reg to the live in set and increase max pressure.
   void discoverLiveIn(RegisterMaskPair Pair);
 
-  /// \brief Get the SlotIndex for the first nondebug instruction including or
+  /// Get the SlotIndex for the first nondebug instruction including or
   /// after the current position.
   SlotIndex getCurrSlot() const;
 

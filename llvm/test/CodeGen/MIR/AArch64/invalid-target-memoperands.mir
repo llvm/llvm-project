@@ -12,7 +12,7 @@ name:            target_memoperands_error
 body: |
   bb.0:
 
-    %0:_(p0) = COPY %x0
+    %0:_(p0) = COPY $x0
   ; CHECK: [[@LINE+1]]:35: use of undefined target MMO flag 'aarch64-invalid'
     %1:_(s64) = G_LOAD %0(p0) :: ("aarch64-invalid" load 8)
     RET_ReallyLR

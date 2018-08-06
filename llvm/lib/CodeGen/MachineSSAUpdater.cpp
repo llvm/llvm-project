@@ -204,7 +204,7 @@ unsigned MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
   // If the client wants to know about all new instructions, tell it.
   if (InsertedPHIs) InsertedPHIs->push_back(InsertedPHI);
 
-  DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI << "\n");
+  LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI << "\n");
   return InsertedPHI->getOperand(0).getReg();
 }
 
@@ -248,11 +248,6 @@ public:
 
   static BlkSucc_iterator BlkSucc_begin(BlkT *BB) { return BB->succ_begin(); }
   static BlkSucc_iterator BlkSucc_end(BlkT *BB) { return BB->succ_end(); }
-
-  /// Iterator over phis in a block.
-  typedef BlkT::iterator PhiItT;
-  static PhiItT PhiItT_begin(BlkT *BB) { return BB->begin(); }
-  static PhiItT PhiItT_end(BlkT *BB) { return BB->end(); }
 
   /// Iterator for PHI operands.
   class PHI_iterator {

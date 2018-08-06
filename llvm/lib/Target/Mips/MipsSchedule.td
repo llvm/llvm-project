@@ -57,6 +57,14 @@ def II_CFC1             : InstrItinClass;
 def II_CFC2             : InstrItinClass;
 def II_CLO              : InstrItinClass;
 def II_CLZ              : InstrItinClass;
+def II_CRC32B           : InstrItinClass;
+def II_CRC32CB          : InstrItinClass;
+def II_CRC32CD          : InstrItinClass;
+def II_CRC32CH          : InstrItinClass;
+def II_CRC32CW          : InstrItinClass;
+def II_CRC32D           : InstrItinClass;
+def II_CRC32H           : InstrItinClass;
+def II_CRC32W           : InstrItinClass;
 def II_CTC1             : InstrItinClass;
 def II_CTC2             : InstrItinClass;
 def II_CVT              : InstrItinClass;
@@ -84,8 +92,10 @@ def II_DIVU             : InstrItinClass;
 def II_DIV_D            : InstrItinClass;
 def II_DIV_S            : InstrItinClass;
 def II_DMFC0            : InstrItinClass;
+def II_DMFGC0           : InstrItinClass;
 def II_DMT              : InstrItinClass;
 def II_DMTC0            : InstrItinClass;
+def II_DMTGC0           : InstrItinClass;
 def II_DMFC1            : InstrItinClass;
 def II_DMTC1            : InstrItinClass;
 def II_DMOD             : InstrItinClass;
@@ -120,6 +130,9 @@ def II_EVPE             : InstrItinClass;
 def II_EXT              : InstrItinClass; // Any EXT instruction
 def II_FLOOR            : InstrItinClass;
 def II_FORK             : InstrItinClass;
+def II_GINVI            : InstrItinClass;
+def II_GINVT            : InstrItinClass;
+def II_HYPCALL          : InstrItinClass;
 def II_INS              : InstrItinClass; // Any INS instruction
 def II_IndirectBranchPseudo : InstrItinClass; // Indirect branch pseudo.
 def II_J                : InstrItinClass;
@@ -225,6 +238,8 @@ def II_MFHC0            : InstrItinClass;
 def II_MFC1             : InstrItinClass;
 def II_MFHC1            : InstrItinClass;
 def II_MFC2             : InstrItinClass;
+def II_MFGC0            : InstrItinClass;
+def II_MFHGC0           : InstrItinClass;
 def II_MFHI_MFLO        : InstrItinClass; // mfhi and mflo
 def II_MFTR             : InstrItinClass;
 def II_MOD              : InstrItinClass;
@@ -255,6 +270,8 @@ def II_MTHC0            : InstrItinClass;
 def II_MTC1             : InstrItinClass;
 def II_MTHC1            : InstrItinClass;
 def II_MTC2             : InstrItinClass;
+def II_MTGC0            : InstrItinClass;
+def II_MTHGC0           : InstrItinClass;
 def II_MTHI_MTLO        : InstrItinClass; // mthi and mtlo
 def II_MTTR             : InstrItinClass;
 def II_MUL              : InstrItinClass;
@@ -346,6 +363,12 @@ def II_CACHEE           : InstrItinClass;
 def II_PREFE            : InstrItinClass;
 def II_LLE              : InstrItinClass;
 def II_SCE              : InstrItinClass;
+def II_TLBGINV          : InstrItinClass;
+def II_TLBGINVF         : InstrItinClass;
+def II_TLBGP            : InstrItinClass;
+def II_TLBGR            : InstrItinClass;
+def II_TLBGWI           : InstrItinClass;
+def II_TLBGWR           : InstrItinClass;
 def II_TLBINV           : InstrItinClass;
 def II_TLBINVF          : InstrItinClass;
 def II_WRPGPR           : InstrItinClass;
@@ -686,5 +709,28 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_RDPGPR          , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DVP             , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_EVP             , [InstrStage<1,  [ALU]>]>,
-  InstrItinData<II_YIELD           , [InstrStage<5,  [ALU]>]>
+  InstrItinData<II_YIELD           , [InstrStage<5,  [ALU]>]>,
+  InstrItinData<II_CRC32B          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32H          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32W          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32D          , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CB         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CH         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CW         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_CRC32CD         , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_MFGC0           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_MTGC0           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_MFHGC0          , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_MTHGC0          , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_HYPCALL         , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBGINV         , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBGINVF        , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBGP           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBGR           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBWI           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_TLBWR           , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_DMFGC0          , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_DMTGC0          , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_GINVI           , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_GINVT           , [InstrStage<1,  [ALU]>]>
 ]>;

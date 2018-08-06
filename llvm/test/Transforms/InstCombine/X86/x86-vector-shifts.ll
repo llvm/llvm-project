@@ -2032,10 +2032,11 @@ define <4 x i64> @avx2_psrlv_q_256_allbig(<4 x i64> %v) {
   ret <4 x i64> %1
 }
 
+; The shift amount is 0 (the undef lane could be 0), so we return the unshifted input.
+
 define <2 x i64> @avx2_psrlv_q_128_undef(<2 x i64> %v) {
 ; CHECK-LABEL: @avx2_psrlv_q_128_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> %v, <i64 0, i64 undef>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i64> [[V:%.*]]
 ;
   %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 undef, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %v, <2 x i64> %1)
@@ -2432,10 +2433,11 @@ define <4 x i64> @avx2_psllv_q_256_allbig(<4 x i64> %v) {
   ret <4 x i64> %1
 }
 
+; The shift amount is 0 (the undef lane could be 0), so we return the unshifted input.
+
 define <2 x i64> @avx2_psllv_q_128_undef(<2 x i64> %v) {
 ; CHECK-LABEL: @avx2_psllv_q_128_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> %v, <i64 0, i64 undef>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i64> [[V:%.*]]
 ;
   %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 undef, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %v, <2 x i64> %1)

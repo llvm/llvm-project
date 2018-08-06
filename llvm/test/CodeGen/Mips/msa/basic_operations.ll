@@ -1,21 +1,21 @@
 ; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-BE,O32-BE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,O32,MIPS32,ALL-BE,O32-BE %s
 ; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-LE,O32-LE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,O32,MIPS32,ALL-LE,O32-LE %s
 ; RUN: llc -march=mips64 -target-abi n32 -mattr=+msa,+fp64 \
 ; RUN:   -relocation-model=pic -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,N32,MIPS64,ALL-BE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,N32,MIPS64,ALL-BE %s
 ; RUN: llc -march=mips64el -target-abi n32 -mattr=+msa,+fp64 \
 ; RUN:   -relocation-model=pic -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,N32,MIPS64,ALL-LE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,N32,MIPS64,ALL-LE %s
 ; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,N64,MIPS64,ALL-BE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,N64,MIPS64,ALL-BE %s
 ; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,N64,MIPS64,ALL-LE %s
+; RUN:   FileCheck -allow-deprecated-dag-overlap -check-prefixes=ALL,N64,MIPS64,ALL-LE %s
 
 @v4i8 = global <4 x i8> <i8 0, i8 0, i8 0, i8 0>
 @v16i8 = global <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>

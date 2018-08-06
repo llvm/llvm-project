@@ -7,6 +7,7 @@
 ;
 ; int ctlz_and_other(int n, char *a)
 ; {
+;   n = n >= 0 ? n : -n;
 ;   int i = 0, n0 = n;
 ;   while(n >>= 1) {
 ;     a[i] = (n0 & (1 << i)) ? 1 : 0;
@@ -30,7 +31,10 @@
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @ctlz_and_other(i32 %n, i8* nocapture %a) {
 entry:
-  %shr8 = ashr i32 %n, 1
+  %c = icmp sgt i32 %n, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %shr8 = lshr i32 %abs_n, 1
   %tobool9 = icmp eq i32 %shr8, 0
   br i1 %tobool9, label %while.end, label %while.body.preheader
 
@@ -42,7 +46,7 @@ while.body:                                       ; preds = %while.body.preheade
   %shr11 = phi i32 [ %shr, %while.body ], [ %shr8, %while.body.preheader ]
   %0 = trunc i64 %indvars.iv to i32
   %shl = shl i32 1, %0
-  %and = and i32 %shl, %n
+  %and = and i32 %shl, %abs_n
   %tobool1 = icmp ne i32 %and, 0
   %conv = zext i1 %tobool1 to i8
   %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
@@ -67,6 +71,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ;
 ; int ctlz_zero_check(int n)
 ; {
+;   n = n >= 0 ? n : -n;
 ;   int i = 0;
 ;   while(n) {
 ;     n >>= 1;
@@ -76,7 +81,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; }
 ;
 ; ALL:  entry
-; ALL:  %0 = call i32 @llvm.ctlz.i32(i32 %n, i1 true)
+; ALL:  %0 = call i32 @llvm.ctlz.i32(i32 %abs_n, i1 true)
 ; ALL-NEXT:  %1 = sub i32 32, %0
 ; ALL:  %inc.lcssa = phi i32 [ %1, %while.body ]
 ; ALL:  %i.0.lcssa = phi i32 [ 0, %entry ], [ %inc.lcssa, %while.end.loopexit ]
@@ -85,7 +90,10 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz_zero_check(i32 %n) {
 entry:
-  %tobool4 = icmp eq i32 %n, 0
+  %c = icmp sgt i32 %n, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
+  %tobool4 = icmp eq i32 %abs_n, 0
   br i1 %tobool4, label %while.end, label %while.body.preheader
 
 while.body.preheader:                             ; preds = %entry
@@ -93,7 +101,7 @@ while.body.preheader:                             ; preds = %entry
 
 while.body:                                       ; preds = %while.body.preheader, %while.body
   %i.06 = phi i32 [ %inc, %while.body ], [ 0, %while.body.preheader ]
-  %n.addr.05 = phi i32 [ %shr, %while.body ], [ %n, %while.body.preheader ]
+  %n.addr.05 = phi i32 [ %shr, %while.body ], [ %abs_n, %while.body.preheader ]
   %shr = ashr i32 %n.addr.05, 1
   %inc = add nsw i32 %i.06, 1
   %tobool = icmp eq i32 %shr, 0
@@ -113,6 +121,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ;
 ; int ctlz(int n)
 ; {
+;   n = n >= 0 ? n : -n;
 ;   int i = 0;
 ;   while(n >>= 1) {
 ;     i++;
@@ -121,7 +130,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; }
 ;
 ; ALL:  entry
-; ALL:  %0 = ashr i32 %n, 1
+; ALL:  %0 = ashr i32 %abs_n, 1
 ; ALL-NEXT:  %1 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
 ; ALL-NEXT:  %2 = sub i32 32, %1
 ; ALL-NEXT:  %3 = add i32 %2, 1
@@ -131,10 +140,13 @@ while.end:                                        ; preds = %while.end.loopexit,
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz(i32 %n) {
 entry:
+  %c = icmp sgt i32 %n, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
-  %n.addr.0 = phi i32 [ %n, %entry ], [ %shr, %while.cond ]
+  %n.addr.0 = phi i32 [ %abs_n, %entry ], [ %shr, %while.cond ]
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %while.cond ]
   %shr = ashr i32 %n.addr.0, 1
   %tobool = icmp eq i32 %shr, 0
@@ -151,6 +163,7 @@ while.end:                                        ; preds = %while.cond
 ;
 ; int ctlz_add(int n, int i0)
 ; {
+;   n = n >= 0 ? n : -n;
 ;   int i = i0;
 ;   while(n >>= 1) {
 ;     i++;
@@ -159,7 +172,7 @@ while.end:                                        ; preds = %while.cond
 ; }
 ;
 ; ALL:  entry
-; ALL:  %0 = ashr i32 %n, 1
+; ALL:  %0 = ashr i32 %abs_n, 1
 ; ALL-NEXT:  %1 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
 ; ALL-NEXT:  %2 = sub i32 32, %1
 ; ALL-NEXT:  %3 = add i32 %2, 1
@@ -170,11 +183,59 @@ while.end:                                        ; preds = %while.cond
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @ctlz_add(i32 %n, i32 %i0) {
 entry:
+  %c = icmp sgt i32 %n, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %entry
-  %n.addr.0 = phi i32 [ %n, %entry ], [ %shr, %while.cond ]
+  %n.addr.0 = phi i32 [ %abs_n, %entry ], [ %shr, %while.cond ]
   %i.0 = phi i32 [ %i0, %entry ], [ %inc, %while.cond ]
+  %shr = ashr i32 %n.addr.0, 1
+  %tobool = icmp eq i32 %shr, 0
+  %inc = add nsw i32 %i.0, 1
+  br i1 %tobool, label %while.end, label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  ret i32 %i.0
+}
+
+; Recognize CTLZ builtin pattern.
+; Here it will replace the loop -
+; assume builtin is always profitable.
+;
+; int ctlz_sext(short in)
+; {
+;   int n = in;
+;   if (in < 0)
+;     n = -n;
+;   int i = 0;
+;   while(n >>= 1) {
+;     i++;
+;   }
+;   return i;
+; }
+;
+; ALL:  entry
+; ALL:  %0 = ashr i32 %abs_n, 1
+; ALL-NEXT:  %1 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
+; ALL-NEXT:  %2 = sub i32 32, %1
+; ALL-NEXT:  %3 = add i32 %2, 1
+; ALL:  %i.0.lcssa = phi i32 [ %2, %while.cond ]
+; ALL:  ret i32 %i.0.lcssa
+
+; Function Attrs: norecurse nounwind readnone uwtable
+define i32 @ctlz_sext(i16 %in) {
+entry:
+  %n = sext i16 %in to i32
+  %c = icmp sgt i16 %in, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.cond, %entry
+  %n.addr.0 = phi i32 [ %abs_n, %entry ], [ %shr, %while.cond ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %while.cond ]
   %shr = ashr i32 %n.addr.0, 1
   %tobool = icmp eq i32 %shr, 0
   %inc = add nsw i32 %i.0, 1

@@ -8,9 +8,9 @@
 
 ; JSON: {
 ; JSON-DAG:   "instsimplify.NumSimplified": 1
-; JSONTIME-DAG:   "time.pass.Remove redundant instructions.wall"
-; JSONTIME-DAG:   "time.pass.Remove redundant instructions.user"
-; JSONTIME-DAG:   "time.pass.Remove redundant instructions.sys"
+; JSONTIME-DAG:   "time.pass.instsimplify.wall"
+; JSONTIME-DAG:   "time.pass.instsimplify.user"
+; JSONTIME-DAG:   "time.pass.instsimplify.sys"
 ; JSON: }
 
 ; DEFAULT: 1 instsimplify - Number of redundant instructions removed

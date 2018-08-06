@@ -43,7 +43,7 @@
 declare void @fS1(i48 inreg) #1
 declare void @fS2(i40 inreg) #1
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 define void @f1() #0 {
 entry:
@@ -51,7 +51,7 @@ entry:
   %s1_1.coerce = alloca { i48 }
   %0 = bitcast { i48 }* %s1_1.coerce to i8*
   %1 = bitcast %struct.S1* %s1_1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 6, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 6, i1 false)
   %2 = getelementptr { i48 }, { i48 }* %s1_1.coerce, i32 0, i32 0
   %3 = load i48, i48* %2, align 1
   call void @fS1(i48 inreg %3)
@@ -68,7 +68,7 @@ entry:
   %s2_1.coerce = alloca { i40 }
   %0 = bitcast { i40 }* %s2_1.coerce to i8*
   %1 = bitcast %struct.S2* %s2_1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 5, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 5, i1 false)
   %2 = getelementptr { i40 }, { i40 }* %s2_1.coerce, i32 0, i32 0
   %3 = load i40, i40* %2, align 1
   call void @fS2(i40 inreg %3)

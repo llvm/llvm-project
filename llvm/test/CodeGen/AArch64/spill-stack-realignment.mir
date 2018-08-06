@@ -21,15 +21,15 @@ stack:
   - { id: 1, size: 4, alignment: 4, local-offset: -68 }
 
 # CHECK: body:
-# CHECK:   %sp = ANDXri killed %{{x[0-9]+}}, 7865
-# CHECK:   STRSui %s0, %sp, 0
-# CHECK:   STURSi %s0, %fp, -4
+# CHECK:   $sp = ANDXri killed ${{x[0-9]+}}, 7865
+# CHECK:   STRSui $s0, $sp, 0
+# CHECK:   STURSi $s0, $fp, -4
 body:             |
   bb.0.entry:
-    liveins: %s0
+    liveins: $s0
 
-    STRSui %s0, %stack.0, 0
-    STRSui %s0, %stack.1, 0
+    STRSui $s0, %stack.0, 0
+    STRSui $s0, %stack.1, 0
     ; Force preserve a CSR to create a hole in the CSR stack region.
-    %x28 = IMPLICIT_DEF
+    $x28 = IMPLICIT_DEF
     RET_ReallyLR

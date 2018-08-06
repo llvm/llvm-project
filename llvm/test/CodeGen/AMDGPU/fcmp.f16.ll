@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}fcmp_f16_lt
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
@@ -16,8 +16,8 @@ define amdgpu_kernel void @fcmp_f16_lt(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp olt half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -42,8 +42,8 @@ define amdgpu_kernel void @fcmp_f16_lt_abs(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %a.abs = call half @llvm.fabs.f16(half %a.val)
   %b.abs = call half @llvm.fabs.f16(half %b.val)
   %r.val = fcmp olt half %a.abs, %b.abs
@@ -67,8 +67,8 @@ define amdgpu_kernel void @fcmp_f16_eq(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp oeq half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -90,8 +90,8 @@ define amdgpu_kernel void @fcmp_f16_le(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ole half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -113,8 +113,8 @@ define amdgpu_kernel void @fcmp_f16_gt(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ogt half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -136,8 +136,8 @@ define amdgpu_kernel void @fcmp_f16_lg(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp one half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -159,8 +159,8 @@ define amdgpu_kernel void @fcmp_f16_ge(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp oge half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -182,8 +182,8 @@ define amdgpu_kernel void @fcmp_f16_o(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ord half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -205,8 +205,8 @@ define amdgpu_kernel void @fcmp_f16_u(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp uno half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -228,8 +228,8 @@ define amdgpu_kernel void @fcmp_f16_nge(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ult half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -251,8 +251,8 @@ define amdgpu_kernel void @fcmp_f16_nlg(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ueq half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -274,8 +274,8 @@ define amdgpu_kernel void @fcmp_f16_ngt(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ule half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -297,8 +297,8 @@ define amdgpu_kernel void @fcmp_f16_nle(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp ugt half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -320,8 +320,8 @@ define amdgpu_kernel void @fcmp_f16_neq(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp une half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r
@@ -343,8 +343,8 @@ define amdgpu_kernel void @fcmp_f16_nlt(
     half addrspace(1)* %a,
     half addrspace(1)* %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
   %r.val = fcmp uge half %a.val, %b.val
   %r.val.sext = sext i1 %r.val to i32
   store i32 %r.val.sext, i32 addrspace(1)* %r

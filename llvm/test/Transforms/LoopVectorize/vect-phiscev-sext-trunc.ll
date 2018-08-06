@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -scev-version-unknown < %s | FileCheck %s -check-prefix=VF8
-; RUN: opt -S -loop-vectorize -force-vector-width=1 -force-vector-interleave=4 -scev-version-unknown < %s | FileCheck %s -check-prefix=VF1
+; RUN: opt -S -loop-vectorize -force-vector-width=8 -force-vector-interleave=1 < %s | FileCheck %s -check-prefix=VF8
+; RUN: opt -S -loop-vectorize -force-vector-width=1 -force-vector-interleave=4 < %s | FileCheck %s -check-prefix=VF1
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

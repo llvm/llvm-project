@@ -39,6 +39,8 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
+  bool enableMultipleCopyHints() const override { return true; }
+
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
 
@@ -61,6 +63,10 @@ public:
     return true;
   }
 
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+        unsigned SubReg, const TargetRegisterClass *DstRC, unsigned DstSubReg,
+        const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
+
   // Debug information queries.
   unsigned getRARegister() const;
   unsigned getFrameRegister(const MachineFunction &MF) const override;
@@ -74,6 +80,10 @@ public:
         const TargetRegisterClass *RC) const;
 
   unsigned getFirstCallerSavedNonParamReg() const;
+
+  const TargetRegisterClass *
+  getPointerRegClass(const MachineFunction &MF,
+                     unsigned Kind = 0) const override;
 
   bool isEHReturnCalleeSaveReg(unsigned Reg) const;
 };

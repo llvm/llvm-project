@@ -86,7 +86,7 @@ entry:
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 1, !"min_enum_size", i32 4}
 !7 = !{!"clang version 6.0.0"}
-!8 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!8 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !11}
 !11 = !DIBasicType(name: "int", size: 19, encoding: DW_ATE_signed)
@@ -94,11 +94,11 @@ entry:
 !13 = !DILocalVariable(name: "v", arg: 1, scope: !8, file: !1, line: 3, type: !11)
 !14 = !DILocation(line: 5, column: 10, scope: !8)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 9, column: 7)
-!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !17 = !DILocation(line: 10, column: 7, scope: !15)
-!18 = distinct !DISubprogram(name: "callee2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!18 = distinct !DISubprogram(name: "callee2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !19 = distinct !DILexicalBlock(scope: !18, file: !1, line: 100, column: 1)
 !20 = !DILocation(line: 110, column: 17, scope: !19)
-!21 = distinct !DISubprogram(name: "caller2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
+!21 = distinct !DISubprogram(name: "caller2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !22 = !DILocation(line: 110, column: 17, scope: !21)
 !23 = !DILocation(line: 15, column: 7, scope: !15)

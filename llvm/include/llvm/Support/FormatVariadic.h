@@ -118,7 +118,7 @@ public:
 
       auto W = Adapters[R.Index];
 
-      FmtAlign Align(*W, R.Where, R.Align);
+      FmtAlign Align(*W, R.Where, R.Align, R.Pad);
       Align.format(S, R.Options);
     }
   }
@@ -168,7 +168,7 @@ public:
   }
 };
 
-// \brief Format text given a format string and replacement parameters.
+// Format text given a format string and replacement parameters.
 //
 // ===General Description===
 //
@@ -237,6 +237,8 @@ public:
 //      for type T containing a method whose signature is:
 //      void format(const T &Obj, raw_ostream &Stream, StringRef Options)
 //      Then this method is invoked as described in Step 1.
+//   3. If an appropriate operator<< for raw_ostream exists, it will be used.
+//      For this to work, (raw_ostream& << const T&) must return raw_ostream&.
 //
 // If a match cannot be found through either of the above methods, a compiler
 // error is generated.
@@ -257,13 +259,6 @@ inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
       Fmt,
       std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
 }
-
-// Allow a formatv_object to be formatted (no options supported).
-template <typename T> struct format_provider<formatv_object<T>> {
-  static void format(const formatv_object<T> &V, raw_ostream &OS, StringRef) {
-    OS << V;
-  }
-};
 
 } // end namespace llvm
 

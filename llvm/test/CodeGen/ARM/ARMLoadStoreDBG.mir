@@ -42,7 +42,7 @@
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0  (llvm/trunk 237059)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
   !1 = !DIFile(filename: "<stdin>", directory: "/Users/compnerd/Source/llvm")
   !2 = !{}
-  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !17)
+  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !17)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !8, !11, !12, !16}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -81,24 +81,24 @@ alignment:       1
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:
-  - { reg: '%r0' }
-  - { reg: '%r1' }
-  - { reg: '%r2' }
-  - { reg: '%r3' }
-calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13',
-                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4',
-                        '%r5', '%r6', '%r7', '%r8', '%r9', '%r10', '%r11',
-                        '%s16', '%s17', '%s18', '%s19', '%s20', '%s21',
-                        '%s22', '%s23', '%s24', '%s25', '%s26', '%s27',
-                        '%s28', '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11',
-                        '%d10_d12', '%d11_d13', '%d12_d14', '%d13_d15',
-                        '%q4_q5', '%q5_q6', '%q6_q7', '%q4_q5_q6_q7', '%r4_r5',
-                        '%r6_r7', '%r8_r9', '%r10_r11', '%d8_d9_d10', '%d9_d10_d11',
-                        '%d10_d11_d12', '%d11_d12_d13', '%d12_d13_d14',
-                        '%d13_d14_d15', '%d8_d10_d12', '%d9_d11_d13', '%d10_d12_d14',
-                        '%d11_d13_d15', '%d8_d10_d12_d14', '%d9_d11_d13_d15',
-                        '%d9_d10', '%d11_d12', '%d13_d14', '%d9_d10_d11_d12',
-                        '%d11_d12_d13_d14' ]
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+  - { reg: '$r2' }
+  - { reg: '$r3' }
+calleeSavedRegisters: [ '$lr', '$d8', '$d9', '$d10', '$d11', '$d12', '$d13',
+                        '$d14', '$d15', '$q4', '$q5', '$q6', '$q7', '$r4',
+                        '$r5', '$r6', '$r7', '$r8', '$r9', '$r10', '$r11',
+                        '$s16', '$s17', '$s18', '$s19', '$s20', '$s21',
+                        '$s22', '$s23', '$s24', '$s25', '$s26', '$s27',
+                        '$s28', '$s29', '$s30', '$s31', '$d8_d10', '$d9_d11',
+                        '$d10_d12', '$d11_d13', '$d12_d14', '$d13_d15',
+                        '$q4_q5', '$q5_q6', '$q6_q7', '$q4_q5_q6_q7', '$r4_r5',
+                        '$r6_r7', '$r8_r9', '$r10_r11', '$d8_d9_d10', '$d9_d10_d11',
+                        '$d10_d11_d12', '$d11_d12_d13', '$d12_d13_d14',
+                        '$d13_d14_d15', '$d8_d10_d12', '$d9_d11_d13', '$d10_d12_d14',
+                        '$d11_d13_d15', '$d8_d10_d12_d14', '$d9_d11_d13_d15',
+                        '$d9_d10', '$d11_d12', '$d13_d14', '$d9_d10_d11_d12',
+                        '$d11_d12_d13_d14' ]
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -114,46 +114,46 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 stack:
-  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr', callee-saved-restored: false }
-  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%r7', callee-saved-restored: true }
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr', callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r7', callee-saved-restored: true }
 body:             |
   bb.0.entry:
-    liveins: %r0, %r1, %r2, %r3, %lr, %r7
+    liveins: $r0, $r1, $r2, $r3, $lr, $r7
 
-    DBG_VALUE debug-use %r0, debug-use %noreg, !18, !27, debug-location !28
-    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
-    DBG_VALUE debug-use %r2, debug-use %noreg, !20, !27, debug-location !28
-    DBG_VALUE debug-use %r3, debug-use %noreg, !21, !27, debug-location !28
-    t2CMPri %r3, 4, 14, %noreg, implicit-def %cpsr, debug-location !31
-    t2Bcc %bb.2.if.end, 2, killed %cpsr
+    DBG_VALUE debug-use $r0, debug-use $noreg, !18, !27, debug-location !28
+    DBG_VALUE debug-use $r1, debug-use $noreg, !19, !27, debug-location !28
+    DBG_VALUE debug-use $r2, debug-use $noreg, !20, !27, debug-location !28
+    DBG_VALUE debug-use $r3, debug-use $noreg, !21, !27, debug-location !28
+    t2CMPri $r3, 4, 14, $noreg, implicit-def $cpsr, debug-location !31
+    t2Bcc %bb.2.if.end, 2, killed $cpsr
 
   bb.1:
-    liveins: %lr, %r7
+    liveins: $lr, $r7
 
-    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
-    %r0 = t2MOVi -1, 14, %noreg, %noreg
-    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
-    tBX_RET 14, %noreg, implicit %r0, debug-location !34
+    DBG_VALUE debug-use $r1, debug-use $noreg, !19, !27, debug-location !28
+    $r0 = t2MOVi -1, 14, $noreg, $noreg
+    DBG_VALUE debug-use $r1, debug-use $noreg, !19, !27, debug-location !28
+    tBX_RET 14, $noreg, implicit $r0, debug-location !34
 
   bb.2.if.end:
-    liveins: %r0, %r2, %r3, %r7, %lr
+    liveins: $r0, $r2, $r3, $r7, $lr
 
-    %sp = frame-setup t2STMDB_UPD %sp, 14, %noreg, killed %r7, killed %lr
+    $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION offset %lr, -4
-    frame-setup CFI_INSTRUCTION offset %r7, -8
-    DBG_VALUE debug-use %r0, debug-use %noreg, !18, !27, debug-location !28
-    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
-    DBG_VALUE debug-use %r2, debug-use %noreg, !20, !27, debug-location !28
-    DBG_VALUE debug-use %r3, debug-use %noreg, !21, !27, debug-location !28
-    %r1 = COPY killed %r2, debug-location !32
-    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
-    %r2 = COPY killed %r3, debug-location !32
-    tBL 14, %noreg, @g, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit-def %sp, debug-location !32
-    %r0 = t2MOVi 0, 14, %noreg, %noreg
-    %sp = t2LDMIA_UPD %sp, 14, %noreg, def %r7, def %lr
-    tBX_RET 14, %noreg, implicit %r0, debug-location !34
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    DBG_VALUE debug-use $r0, debug-use $noreg, !18, !27, debug-location !28
+    DBG_VALUE debug-use $r1, debug-use $noreg, !19, !27, debug-location !28
+    DBG_VALUE debug-use $r2, debug-use $noreg, !20, !27, debug-location !28
+    DBG_VALUE debug-use $r3, debug-use $noreg, !21, !27, debug-location !28
+    $r1 = COPY killed $r2, debug-location !32
+    DBG_VALUE debug-use $r1, debug-use $noreg, !19, !27, debug-location !28
+    $r2 = COPY killed $r3, debug-location !32
+    tBL 14, $noreg, @g, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit-def $sp, debug-location !32
+    $r0 = t2MOVi 0, 14, $noreg, $noreg
+    $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
+    tBX_RET 14, $noreg, implicit $r0, debug-location !34
 # Verify that the DBG_VALUE is ignored.
-# CHECK: %sp = t2LDMIA_RET %sp, 14, %noreg, def %r7, def %pc, implicit %r0
+# CHECK: $sp = t2LDMIA_RET $sp, 14, $noreg, def $r7, def $pc, implicit $r0
 
 ...

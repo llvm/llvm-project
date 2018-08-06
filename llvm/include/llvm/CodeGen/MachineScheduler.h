@@ -237,7 +237,7 @@ public:
   /// be scheduled at the bottom.
   virtual SUnit *pickNode(bool &IsTopNode) = 0;
 
-  /// \brief Scheduler callback to notify that a new subtree is scheduled.
+  /// Scheduler callback to notify that a new subtree is scheduled.
   virtual void scheduleTree(unsigned SubtreeID) {}
 
   /// Notify MachineSchedStrategy that ScheduleDAGMI has scheduled an
@@ -318,11 +318,11 @@ public:
       Mutations.push_back(std::move(Mutation));
   }
 
-  /// \brief True if an edge can be added from PredSU to SuccSU without creating
+  /// True if an edge can be added from PredSU to SuccSU without creating
   /// a cycle.
   bool canAddEdge(SUnit *SuccSU, SUnit *PredSU);
 
-  /// \brief Add a DAG edge to the given SU with the given predecessor
+  /// Add a DAG edge to the given SU with the given predecessor
   /// dependence data.
   ///
   /// \returns true if the edge may be added without creating a cycle OR if an
@@ -374,7 +374,7 @@ protected:
   /// Reinsert debug_values recorded in ScheduleDAGInstrs::DbgValues.
   void placeDebugValues();
 
-  /// \brief dump the scheduled Sequence.
+  /// dump the scheduled Sequence.
   void dumpSchedule() const;
 
   // Lesser helpers...
@@ -445,7 +445,7 @@ public:
   /// Return true if this DAG supports VReg liveness and RegPressure.
   bool hasVRegLiveness() const override { return true; }
 
-  /// \brief Return true if register pressure tracking is enabled.
+  /// Return true if register pressure tracking is enabled.
   bool isTrackingPressure() const { return ShouldTrackPressure; }
 
   /// Get current register pressure for the top scheduled instructions.
@@ -897,6 +897,28 @@ protected:
 #endif
 };
 
+// Utility functions used by heuristics in tryCandidate().
+bool tryLess(int TryVal, int CandVal,
+             GenericSchedulerBase::SchedCandidate &TryCand,
+             GenericSchedulerBase::SchedCandidate &Cand,
+             GenericSchedulerBase::CandReason Reason);
+bool tryGreater(int TryVal, int CandVal,
+                GenericSchedulerBase::SchedCandidate &TryCand,
+                GenericSchedulerBase::SchedCandidate &Cand,
+                GenericSchedulerBase::CandReason Reason);
+bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
+                GenericSchedulerBase::SchedCandidate &Cand,
+                SchedBoundary &Zone);
+bool tryPressure(const PressureChange &TryP,
+                 const PressureChange &CandP,
+                 GenericSchedulerBase::SchedCandidate &TryCand,
+                 GenericSchedulerBase::SchedCandidate &Cand,
+                 GenericSchedulerBase::CandReason Reason,
+                 const TargetRegisterInfo *TRI,
+                 const MachineFunction &MF);
+unsigned getWeakLeft(const SUnit *SU, bool isTop);
+int biasPhysRegCopy(const SUnit *SU, bool isTop);
+
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
 class GenericScheduler : public GenericSchedulerBase {
@@ -963,9 +985,8 @@ protected:
                      const RegPressureTracker &RPTracker,
                      RegPressureTracker &TempTracker);
 
-  void tryCandidate(SchedCandidate &Cand,
-                    SchedCandidate &TryCand,
-                    SchedBoundary *Zone);
+  virtual void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                            SchedBoundary *Zone) const;
 
   SUnit *pickNodeBidirectional(bool &IsTopNode);
 

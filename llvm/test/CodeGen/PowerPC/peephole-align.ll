@@ -239,8 +239,8 @@ entry:
 ; Make sure the optimization fails to fire if the symbol is aligned, but the offset is not.
 ; CHECK-LABEL: test_misalign
 ; CHECK: addis [[REGSTRUCT_0:[0-9]+]], 2, misalign_v@toc@ha
-; CHECK: addi [[REGSTRUCT:[0-9]+]], [[REGSTRUCT_0]], misalign_v@toc@l
-; CHECK: li [[OFFSET_REG:[0-9]+]], 1
+; CHECK-DAG: addi [[REGSTRUCT:[0-9]+]], [[REGSTRUCT_0]], misalign_v@toc@l
+; CHECK-DAG: li [[OFFSET_REG:[0-9]+]], 1
 ; CHECK: ldx [[REG0_0:[0-9]+]], [[REGSTRUCT]], [[OFFSET_REG]]
 ; CHECK: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
 ; CHECK: stdx [[REG0_1]], [[REGSTRUCT]], [[OFFSET_REG]]

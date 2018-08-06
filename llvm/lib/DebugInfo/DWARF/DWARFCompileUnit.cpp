@@ -22,9 +22,10 @@ void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (getVersion() >= 5)
     OS << " unit_type = " << dwarf::UnitTypeString(getUnitType());
   OS << " abbr_offset = " << format("0x%04x", getAbbreviations()->getOffset())
-     << " addr_size = " << format("0x%02x", getAddressByteSize())
-     << " (next unit at " << format("0x%08x", getNextUnitOffset())
-     << ")\n";
+     << " addr_size = " << format("0x%02x", getAddressByteSize());
+  if (getVersion() >= 5 && getUnitType() != dwarf::DW_UT_compile)
+    OS << " DWO_id = " << format("0x%016" PRIx64, *getDWOId());
+  OS << " (next unit at " << format("0x%08x", getNextUnitOffset()) << ")\n";
 
   if (DWARFDie CUDie = getUnitDIE(false))
     CUDie.dump(OS, 0, DumpOpts);

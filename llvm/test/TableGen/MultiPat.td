@@ -73,14 +73,6 @@ def VR128 : RegisterClass<[v2i64, v2f64],
 def REGCLASS : RegisterClass<[], []>;
 def MNEMONIC;
 
-class decls {
-  // Dummy for foreach
-  dag pattern;
-  int operand;
-}
-
-def Decls : decls;
-
 // Define intrinsics
 def int_x86_sse2_add_ps : Intrinsic<"addps">;
 def int_x86_sse2_add_pd : Intrinsic<"addpd">;
@@ -92,16 +84,16 @@ class MakePat<list<dag> patterns> : Pat<patterns[0], patterns[1]>;
 class Base<bits<8> opcode, dag opnds, dag iopnds, string asmstr, Intrinsic intr, 
            list<list<dag>> patterns>
       : Inst<opcode, opnds, iopnds, asmstr, 
-             !foreach(Decls.pattern, patterns[0], 
-		      !foreach(Decls.operand, Decls.pattern, 
+             !foreach(pattern, patterns[0],
+		      !foreach(operand, pattern,
 			       !subst(INTRINSIC, intr, 
 		               !subst(REGCLASS, VR128, 
-                               !subst(MNEMONIC, set, Decls.operand)))))>,
-        MakePat<!foreach(Decls.pattern, patterns[1], 
-		         !foreach(Decls.operand, Decls.pattern, 
+                               !subst(MNEMONIC, set, operand)))))>,
+        MakePat<!foreach(pattern, patterns[1],
+		         !foreach(operand, pattern,
 			          !subst(INTRINSIC, intr, 
 				  !subst(REGCLASS, VR128, 
-                                  !subst(MNEMONIC, set, Decls.operand)))))>;
+                                  !subst(MNEMONIC, set, operand)))))>;
 
 multiclass arith<bits<8> opcode, string asmstr, string intr, list<list<dag>> patterns> {
   def PS : Base<opcode, (outs VR128:$dst), (ins VR128:$src1, VR128:$src2),

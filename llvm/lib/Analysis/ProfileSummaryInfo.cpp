@@ -112,7 +112,7 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
   // FIXME: The heuristic used below for determining hotness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isHotCount(FunctionCount.getValue());
+  return FunctionCount && isHotCount(FunctionCount.getCount());
 }
 
 /// Returns true if the function contains hot code. This can include a hot
@@ -125,7 +125,7 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
   if (!F || !computeSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
-    if (isHotCount(FunctionCount.getValue()))
+    if (isHotCount(FunctionCount.getCount()))
       return true;
 
   if (hasSampleProfile()) {
@@ -154,7 +154,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
   if (!F || !computeSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
-    if (!isColdCount(FunctionCount.getValue()))
+    if (!isColdCount(FunctionCount.getCount()))
       return false;
 
   if (hasSampleProfile()) {
@@ -187,7 +187,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
   // FIXME: The heuristic used below for determining coldness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isColdCount(FunctionCount.getValue());
+  return FunctionCount && isColdCount(FunctionCount.getCount());
 }
 
 /// Compute the hot and cold thresholds.
@@ -223,6 +223,18 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
 }
 
+uint64_t ProfileSummaryInfo::getOrCompHotCountThreshold() {
+  if (!HotCountThreshold)
+    computeThresholds();
+  return HotCountThreshold && HotCountThreshold.getValue();
+}
+
+uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() {
+  if (!ColdCountThreshold)
+    computeThresholds();
+  return ColdCountThreshold && ColdCountThreshold.getValue();
+}
+
 bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(B);
   return Count && isHotCount(*Count);
@@ -247,7 +259,7 @@ bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
     return isColdCount(*C);
 
   // In SamplePGO, if the caller has been sampled, and there is no profile
-  // annotatedon the callsite, we consider the callsite as cold.
+  // annotated on the callsite, we consider the callsite as cold.
   // If there is no profile for the caller, and we know the profile is
   // accurate, we consider the callsite as cold.
   return (hasSampleProfile() &&

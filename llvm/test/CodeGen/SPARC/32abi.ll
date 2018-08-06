@@ -88,36 +88,28 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ; SOFT-NEXT:  mov  %i2, %o0
 ; SOFT-NEXT: call __extendsfdf2
 ; SOFT-NEXT: nop
-; SOFT-NEXT:  mov  %o0, %i2
-; SOFT-NEXT:  mov  %o1, %g2
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i0, %o0
 ; SOFT-NEXT:  mov  %i1, %o1
-; SOFT-NEXT:  mov  %i2, %o2
-; SOFT-NEXT:  mov  %g2, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i3, %o0
 ; SOFT-NEXT:  mov  %i4, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %i5, %o0
 ; SOFT-NEXT:  mov  %l3, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
-; SOFT-NEXT:  mov  %o0, %i0
-; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %o0, %o2
+; SOFT-NEXT:  mov  %o1, %o3
 ; SOFT-NEXT:  mov  %l1, %o0
 ; SOFT-NEXT:  mov  %l2, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
 ; SOFT-NEXT:  call __adddf3
 ; SOFT-NEXT:  nop
 ; SOFT-NEXT:  mov  %o0, %i0
@@ -156,9 +148,9 @@ define double @floatarg(double %a0,   ; %i0,%i1
 ; HARD-NEXT: std %o0, [%sp+96]
 ; HARD-NEXT: st %o1, [%sp+92]
 ; HARD-NEXT: mov %i0, %o2
-; HARD-NEXT: mov %o0, %o3
+; HARD-NEXT: mov %i1, %o3
 ; HARD-NEXT: mov %o1, %o4
-; HARD-NEXT: mov %o0, %o5
+; HARD-NEXT: mov %i1, %o5
 ; HARD-NEXT: call floatarg
 ; HARD: std %f0, [%i4]
 ; SOFT: st %i0, [%sp+104]

@@ -66,7 +66,7 @@ define internal i32* @returnFoo() #1 {
 
 ;CHECK:	.type	.L_MergedGlobals,@object  // @_MergedGlobals
 ;CHECK:	.local	.L_MergedGlobals
-;CHECK:	.comm	.L_MergedGlobals,60,16
+;CHECK:	.comm	.L_MergedGlobals,60,4
 
 attributes #0 = { nounwind ssp }
 attributes #1 = { nounwind readnone ssp }

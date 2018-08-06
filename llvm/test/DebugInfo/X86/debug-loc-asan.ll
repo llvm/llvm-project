@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
+; RUN: llc -fast-isel-sink-local-values -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code
@@ -14,8 +14,8 @@
 ; The address of the (potentially now malloc'ed) alloca ends up
 ; in rdi, after which it is spilled to the stack. We record the
 ; spill OFFSET on the stack for checking the debug info below.
-; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%rdi+0]
-; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
+; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [$rcx+0]
+; CHECK: movq %rcx, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
 ; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
 ; This location should be valid until the end of the function.
@@ -26,13 +26,13 @@
 ; CHECK: .Ldebug_loc{{[0-9]+}}:
 ; We expect two location ranges for the variable.
 
-; First, its address is stored in %rdi:
+; First, its address is stored in %rcx:
 ; CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
-; CHECK: DW_OP_breg5
+; CHECK: DW_OP_breg2
 ; DWARF:       DW_TAG_formal_parameter
 ; DWARF:         DW_AT_location
-; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0, DW_OP_deref
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg2 RCX+0, DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -48,7 +48,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 1, void ()* @asan.module_ctor }]
 @__asan_option_detect_stack_use_after_return = external global i32
-@__asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 6 y.addr\00", align 1
+@___asan_gen_ = private unnamed_addr constant [16 x i8] c"1 32 4 6 y.addr\00", align 1
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @_Z3bari(i32 %y) #0 !dbg !4 {
@@ -71,7 +71,7 @@ entry:
   store i64 1102416563, i64* %9
   %10 = add i64 %6, 8
   %11 = inttoptr i64 %10 to i64*
-  store i64 ptrtoint ([16 x i8]* @__asan_gen_ to i64), i64* %11
+  store i64 ptrtoint ([16 x i8]* @___asan_gen_ to i64), i64* %11
   %12 = add i64 %6, 16
   %13 = inttoptr i64 %12 to i64*
   store i64 ptrtoint (i32 (i32)* @_Z3bari to i64), i64* %13
@@ -177,7 +177,7 @@ attributes #1 = { nounwind readnone }
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}

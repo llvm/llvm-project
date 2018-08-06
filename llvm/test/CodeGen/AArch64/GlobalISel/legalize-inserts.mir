@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=legalizer %s -o - | FileCheck %s
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -16,7 +16,7 @@
 name:            test_inserts_1
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
 
       ; Low part of insertion wipes out the old register entirely, so %0 gets
       ; forwarded to the G_STORE. Hi part is unchanged so (split) G_LOAD gets
@@ -26,9 +26,9 @@ body: |
     ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD
     ; CHECK: G_STORE %0(s64)
     ; CHECK: G_STORE [[HI]]
-    %0:_(s64) = COPY %x0
-    %1:_(s32) = COPY %w1
-    %2:_(p0) = COPY %x2
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(p0) = COPY $x2
     %3:_(s128) = G_LOAD %2(p0) :: (load 16)
     %4:_(s128) = G_INSERT %3(s128), %0(s64), 0
     G_STORE %4(s128), %2(p0) :: (store 16)
@@ -39,7 +39,7 @@ body: |
 name:            test_inserts_2
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
 
       ; Low insertion wipes out the old register entirely, so %0 gets forwarded
       ; to the G_STORE again. Second insertion is real.
@@ -49,9 +49,9 @@ body: |
     ; CHECK: [[NEWHI:%[0-9]+]]:_(s64) = G_INSERT [[HI]], %1(s32), 0
     ; CHECK: G_STORE %0(s64)
     ; CHECK: G_STORE [[NEWHI]]
-    %0:_(s64) = COPY %x0
-    %1:_(s32) = COPY %w1
-    %2:_(p0) = COPY %x2
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(p0) = COPY $x2
     %3:_(s128) = G_LOAD %2(p0) :: (load 16)
     %4:_(s128) = G_INSERT %3(s128), %0(s64), 0
     %5:_(s128) = G_INSERT %4(s128), %1(s32), 64
@@ -63,7 +63,7 @@ body: |
 name:            test_inserts_3
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
 
       ; I'm not entirely convinced inserting a p0 into an s64 is valid, but it's
       ; certainly better than the alternative of directly forwarding the value
@@ -74,9 +74,9 @@ body: |
     ; CHECK: [[NEWLO:%[0-9]+]]:_(s64) = G_PTRTOINT %0(p0)
     ; CHECK: G_STORE [[NEWLO]](s64)
     ; CHECK: G_STORE [[HI]]
-    %0:_(p0) = COPY %x0
-    %1:_(s32) = COPY %w1
-    %2:_(p0) = COPY %x2
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(p0) = COPY $x2
     %3:_(s128) = G_LOAD %2(p0) :: (load 16)
     %4:_(s128) = G_INSERT %3(s128), %0(p0), 0
     G_STORE %4(s128), %2(p0) :: (store 16)
@@ -87,18 +87,18 @@ body: |
 name:            test_inserts_4
 body: |
   bb.0:
-    liveins: %w0
+    liveins: $w0
 
       ; A narrow insert gets surrounded by a G_ANYEXT/G_TRUNC pair.
     ; CHECK-LABEL: name: test_inserts_4
     ; CHECK: [[VALEXT:%[0-9]+]]:_(s32) = COPY %2(s32)
     ; CHECK: [[VAL:%[0-9]+]]:_(s32) = G_INSERT [[VALEXT]], %1(s1), 0
     ; CHECK: %5:_(s8) = G_TRUNC [[VAL]](s32)
-    %4:_(s32) = COPY %w0
+    %4:_(s32) = COPY $w0
     %0:_(s1) = G_TRUNC %4
-    %5:_(s32) = COPY %w1
+    %5:_(s32) = COPY $w1
     %1:_(s8) = G_TRUNC %5
-    %2:_(p0) = COPY %x2
+    %2:_(p0) = COPY $x2
     %3:_(s8) = G_INSERT %1(s8), %0(s1), 0
     G_STORE %3(s8), %2(p0) :: (store 1)
     RET_ReallyLR
@@ -108,7 +108,7 @@ body: |
 name:            test_inserts_5
 body: |
   bb.0:
-    liveins: %x0, %x1, %x2
+    liveins: $x0, $x1, $x2
 
 
     ; CHECK-LABEL: name: test_inserts_5
@@ -117,13 +117,13 @@ body: |
     ; CHECK: [[INS_HI:%[0-9]+]]:_(s32) = G_EXTRACT %2(s64), 32
     ; CHECK: [[VAL_HI:%[0-9]+]]:_(s64) = G_INSERT %1, [[INS_HI]](s32), 0
     ; CHECK: %4:_(s128) = G_MERGE_VALUES [[VAL_LO]](s64), [[VAL_HI]](s64)
-    %0:_(s64) = COPY %x0
-    %1:_(s64) = COPY %x1
-    %2:_(s64) = COPY %x2
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
     %5:_(s64) = G_TRUNC %4
-    %x0 = COPY %5
+    $x0 = COPY %5
     RET_ReallyLR
 ...
 
@@ -131,19 +131,19 @@ body: |
 name:            test_inserts_6
 body: |
   bb.0:
-    liveins: %x0, %x1, %x2
+    liveins: $x0, $x1, $x2
 
 
     ; CHECK-LABEL: name: test_inserts_6
     ; CHECK: [[VAL_LO:%[0-9]+]]:_(s64) = G_INSERT %0, %2(s32), 32
     ; CHECK: %4:_(s128) = G_MERGE_VALUES [[VAL_LO]](s64), %1(s64)
-    %0:_(s64) = COPY %x0
-    %1:_(s64) = COPY %x1
-    %2:_(s32) = COPY %w2
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s32) = COPY $w2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
     %5:_(s64) = G_TRUNC %4
-    %x0 = COPY %5
+    $x0 = COPY %5
     RET_ReallyLR
 ...
 
@@ -151,19 +151,19 @@ body: |
 name:            test_inserts_nonpow2
 body: |
   bb.0:
-    liveins: %x0, %x1, %x2
+    liveins: $x0, $x1, $x2
 
 
     ; CHECK-LABEL: name: test_inserts_nonpow2
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = COPY %x3
-    ; CHECK: %x0 = COPY [[C]]
-    %0:_(s64) = COPY %x0
-    %1:_(s64) = COPY %x1
-    %2:_(s64) = COPY %x2
-    %3:_(s64) = COPY %x3
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: $x0 = COPY [[C]]
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
     %4:_(s192) = G_MERGE_VALUES %0, %1, %2
     %5:_(s192) = G_INSERT %4, %3, 0
     %6:_(s64), %7:_(s64), %8:_(s64) = G_UNMERGE_VALUES %5
-    %x0 = COPY %6
+    $x0 = COPY %6
     RET_ReallyLR
 ...

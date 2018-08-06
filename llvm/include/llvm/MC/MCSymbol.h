@@ -85,7 +85,7 @@ protected:
   /// "Lfoo" or ".foo".
   unsigned IsTemporary : 1;
 
-  /// \brief True if this symbol can be redefined.
+  /// True if this symbol can be redefined.
   unsigned IsRedefinable : 1;
 
   /// IsUsed - True if this symbol has been used.
@@ -141,7 +141,7 @@ protected:
   friend class MCExpr;
   friend class MCContext;
 
-  /// \brief The name for a symbol.
+  /// The name for a symbol.
   /// MCSymbol contains a uint64_t so is probably aligned to 8.  On a 32-bit
   /// system, the name is a pointer so isn't going to satisfy the 8 byte
   /// alignment of uint64_t.  Account for that here.
@@ -168,24 +168,24 @@ protected:
 
 private:
   void operator delete(void *);
-  /// \brief Placement delete - required by std, but never called.
+  /// Placement delete - required by std, but never called.
   void operator delete(void*, unsigned) {
     llvm_unreachable("Constructor throws?");
   }
-  /// \brief Placement delete - required by std, but never called.
+  /// Placement delete - required by std, but never called.
   void operator delete(void*, unsigned, bool) {
     llvm_unreachable("Constructor throws?");
   }
 
-  MCSection *getSectionPtr(bool SetUsed = true) const {
-    if (MCFragment *F = getFragment(SetUsed)) {
+  MCSection *getSectionPtr() const {
+    if (MCFragment *F = getFragment()) {
       assert(F != AbsolutePseudoFragment);
       return F->getParent();
     }
     return nullptr;
   }
 
-  /// \brief Get a reference to the name field.  Requires that we have a name
+  /// Get a reference to the name field.  Requires that we have a name
   const StringMapEntry<bool> *&getNameEntryPtr() {
     assert(FragmentAndHasName.getInt() && "Name is required");
     NameEntryStorageTy *Name = reinterpret_cast<NameEntryStorageTy *>(this);
@@ -221,13 +221,12 @@ public:
 
   /// isUsed - Check if this is used.
   bool isUsed() const { return IsUsed; }
-  void setUsed(bool Value) const { IsUsed |= Value; }
 
-  /// \brief Check if this symbol is redefinable.
+  /// Check if this symbol is redefinable.
   bool isRedefinable() const { return IsRedefinable; }
-  /// \brief Mark this symbol as redefinable.
+  /// Mark this symbol as redefinable.
   void setRedefinable(bool Value) { IsRedefinable = Value; }
-  /// \brief Prepare this symbol to be redefined.
+  /// Prepare this symbol to be redefined.
   void redefineIfPossible() {
     if (IsRedefinable) {
       if (SymbolContents == SymContentsVariable) {
@@ -246,28 +245,28 @@ public:
   /// isDefined - Check if this symbol is defined (i.e., it has an address).
   ///
   /// Defined symbols are either absolute or in some section.
-  bool isDefined(bool SetUsed = true) const {
-    return getFragment(SetUsed) != nullptr;
-  }
+  bool isDefined() const { return !isUndefined(); }
 
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
-  bool isInSection(bool SetUsed = true) const {
-    return isDefined(SetUsed) && !isAbsolute(SetUsed);
+  bool isInSection() const {
+    return isDefined() && !isAbsolute();
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).
-  bool isUndefined(bool SetUsed = true) const { return !isDefined(SetUsed); }
+  bool isUndefined(bool SetUsed = true) const {
+    return getFragment(SetUsed) == nullptr;
+  }
 
   /// isAbsolute - Check if this is an absolute symbol.
-  bool isAbsolute(bool SetUsed = true) const {
-    return getFragment(SetUsed) == AbsolutePseudoFragment;
+  bool isAbsolute() const {
+    return getFragment() == AbsolutePseudoFragment;
   }
 
   /// Get the section associated with a defined, non-absolute symbol.
-  MCSection &getSection(bool SetUsed = true) const {
-    assert(isInSection(SetUsed) && "Invalid accessor!");
-    return *getSectionPtr(SetUsed);
+  MCSection &getSection() const {
+    assert(isInSection() && "Invalid accessor!");
+    return *getSectionPtr();
   }
 
   /// Mark the symbol as defined in the fragment \p F.
@@ -316,6 +315,8 @@ public:
   void setIndex(uint32_t Value) const {
     Index = Value;
   }
+
+  bool isUnset() const { return SymbolContents == SymContentsUnset; }
 
   uint64_t getOffset() const {
     assert((SymbolContents == SymContentsUnset ||

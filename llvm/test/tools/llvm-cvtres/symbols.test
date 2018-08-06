@@ -10,6 +10,10 @@
 RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res
 RUN: llvm-readobj -symbols %t | FileCheck %s
 
+// Test that parameters can be preceded by '-' in addition to '/':
+RUN: llvm-cvtres -verbose -machine:X86 -out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -symbols %t | FileCheck %s
+
 CHECK:        Name: $R000000
 CHECK-NEXT:    Value: 0
 CHECK-NEXT:    Section: .rsrc$02

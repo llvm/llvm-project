@@ -886,12 +886,12 @@ To do this, set up your .h file with your option, like this for example:
   // debug build, then the code specified as the option to the macro will be
   // executed.  Otherwise it will not be.
   #ifdef NDEBUG
-  #define DEBUG(X)
+  #define LLVM_DEBUG(X)
   #else
-  #define DEBUG(X) do { if (DebugFlag) { X; } } while (0)
+  #define LLVM_DEBUG(X) do { if (DebugFlag) { X; } } while (0)
   #endif
 
-This allows clients to blissfully use the ``DEBUG()`` macro, or the
+This allows clients to blissfully use the ``LLVM_DEBUG()`` macro, or the
 ``DebugFlag`` explicitly if they want to.  Now we just need to be able to set
 the ``DebugFlag`` boolean when the option is set.  To do this, we pass an
 additional argument to our command line argument processor, and we specify where
@@ -1716,7 +1716,7 @@ line option outside of the library. In these cases the library does or should
 provide an external storage location that is accessible to users of the
 library. Examples of this include the ``llvm::DebugFlag`` exported by the
 ``lib/Support/Debug.cpp`` file and the ``llvm::TimePassesIsEnabled`` flag
-exported by the ``lib/VMCore/PassManager.cpp`` file.
+exported by the ``lib/IR/PassManager.cpp`` file.
 
 .. todo::
 

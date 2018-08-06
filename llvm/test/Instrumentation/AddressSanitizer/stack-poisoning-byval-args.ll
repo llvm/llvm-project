@@ -22,7 +22,7 @@ entry:
 ; CHECK: [[copyPtr:%[^ \t]+]] = inttoptr i64 %{{[^ \t]+}} to %struct.A*
 ; CHECK: [[copyBytePtr:%[^ \t]+]] = bitcast %struct.A* [[copyPtr]]
 ; CHECK: [[aBytePtr:%[^ \t]+]] = bitcast %struct.A* %a
-; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyBytePtr]]{{[^%]+}}[[aBytePtr]],{{[^,]+}}, i32 64
+; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyBytePtr]]{{[^%]+}} align 64 [[aBytePtr]],{{[^,]+}},
 ; CHECK: call i32 @bar(%struct.A* [[copyPtr]])
 ; CHECK: ret void
 
@@ -43,7 +43,7 @@ entry:
 ; CHECK: [[copyPtr:%[^ \t]+]] = inttoptr i64 %{{[^ \t]+}} to %struct.A*
 ; CHECK: [[copyBytePtr:%[^ \t]+]] = bitcast %struct.A* [[copyPtr]]
 ; CHECK: [[aBytePtr:%[^ \t]+]] = bitcast %struct.A* %0
-; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyBytePtr]]{{[^%]+}}[[aBytePtr]],{{[^,]+}}, i32 4
+; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyBytePtr]]{{[^%]+}} align 4 [[aBytePtr]],{{[^,]+}}
 ; CHECK: call i32 @bar(%struct.A* [[copyPtr]])
 ; CHECK: ret void
 

@@ -40,6 +40,12 @@
 ; BACKEND2-NEXT: <COMBINED_ALIAS
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
+; Make sure that when the alias is imported as a copy of the aliasee, but the
+; aliasee is not being imported by itself, that we can still print the summary.
+; The aliasee should be "null".
+; RUN: llvm-dis %t1.bc.thinlto.bc -o - | FileCheck %s --check-prefix=DIS
+; DIS: aliasee: null
+
 declare void @g(...)
 declare void @analias(...)
 

@@ -11,9 +11,8 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-pdbutil
   Analyze.cpp
   BytesOutputStyle.cpp
-  Diff.cpp
-  DiffPrinter.cpp
   DumpOutputStyle.cpp
+  ExplainOutputStyle.cpp
   InputFile.cpp
   llvm-pdbutil.cpp
   FormatUtil.cpp

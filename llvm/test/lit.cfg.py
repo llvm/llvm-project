@@ -134,17 +134,19 @@ tools = [
     ToolSubst('%ocamlc', ocamlc_command, unresolved='ignore'),
     ToolSubst('%ocamlopt', ocamlopt_command, unresolved='ignore'),
     ToolSubst('%opt-viewer', opt_viewer_cmd),
+    ToolSubst('%llvm-objcopy', FindTool('llvm-objcopy')),
+    ToolSubst('%llvm-strip', FindTool('llvm-strip')),
 ]
 
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
 tools.extend([
-    'lli', 'lli-child-target', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
-    'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis', 'llvm-dsymutil',
+    'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer',
+    'llvm-config', 'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis',
     'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib',
-    'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mcmarkup',
+    'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-readobj',
-    'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings', 'llvm-tblgen',
+    'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings', 'llvm-strip', 'llvm-tblgen',
     'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
     'yaml-bench', 'verify-uselistorder',
     'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
@@ -194,6 +196,36 @@ if loadable_module:
 if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')
 
+def have_cxx_shared_library():
+    readobj_exe = lit.util.which('llvm-readobj', config.llvm_tools_dir)
+    if not readobj_exe:
+        print('llvm-readobj not found')
+        return False
+
+    try:
+        readobj_cmd = subprocess.Popen(
+            [readobj_exe, '-needed-libs', readobj_exe], stdout=subprocess.PIPE)
+    except OSError:
+        print('could not exec llvm-readobj')
+        return False
+
+    readobj_out = readobj_cmd.stdout.read().decode('ascii')
+    readobj_cmd.wait()
+
+    regex = re.compile(r'(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)')
+    needed_libs = False
+    for line in readobj_out.splitlines():
+        if 'NeededLibraries [' in line:
+            needed_libs = True
+        if ']' in line:
+            needed_libs = False
+        if needed_libs and regex.search(line.lower()):
+            return True
+    return False
+
+if have_cxx_shared_library():
+    config.available_features.add('cxx-shared-library')
+
 # Direct object generation
 if not 'hexagon' in config.target_triple:
     config.available_features.add('object-emission')
@@ -210,7 +242,7 @@ import subprocess
 
 
 def have_ld_plugin_support():
-    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold.so')):
+    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold' + config.llvm_shlib_ext)):
         return False
 
     ld_cmd = subprocess.Popen(

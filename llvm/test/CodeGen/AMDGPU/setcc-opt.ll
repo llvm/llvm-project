@@ -180,16 +180,14 @@ define amdgpu_kernel void @cmp_sext_k_neg1(i1 addrspace(1)* %out, i8 addrspace(1
   ret void
 }
 
-; FUNC-LABEL: {{^}}cmp_sext_k_neg1_i8_sext_arg:
-; GCN: s_load_dword [[B:s[0-9]+]]
-; GCN: v_cmp_ne_u32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], [[B]], -1{{$}}
-; GCN-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CMP]]
-; GCN-NEXT: buffer_store_byte [[RESULT]]
-; GCN: s_endpgm
-define amdgpu_kernel void @cmp_sext_k_neg1_i8_sext_arg(i1 addrspace(1)* %out, i8 signext %b) nounwind {
+; FUNC-LABEL: {{^}}v_cmp_sext_k_neg1_i8_sext_arg:
+; GCN: v_cmp_ne_u32_e32 vcc, -1, v0
+; GCN-NEXT: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 0, 1, vcc
+; GCN: buffer_store_byte [[SELECT]]
+define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
   %b.ext = sext i8 %b to i32
   %icmp0 = icmp ne i32 %b.ext, -1
-  store i1 %icmp0, i1 addrspace(1)* %out
+  store i1 %icmp0, i1 addrspace(1)* undef
   ret void
 }
 

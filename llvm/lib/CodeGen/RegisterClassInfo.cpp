@@ -49,9 +49,6 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   if (MF->getSubtarget().getRegisterInfo() != TRI) {
     TRI = MF->getSubtarget().getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
-    unsigned NumPSets = TRI->getNumRegPressureSets();
-    PSetLimits.reset(new unsigned[NumPSets]);
-    std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     Update = true;
   }
 
@@ -80,8 +77,12 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   }
 
   // Invalidate cached information from previous function.
-  if (Update)
+  if (Update) {
+    unsigned NumPSets = TRI->getNumRegPressureSets();
+    PSetLimits.reset(new unsigned[NumPSets]);
+    std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     ++Tag;
+  }
 }
 
 /// compute - Compute the preferred allocation order for RC with reserved
@@ -150,7 +151,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   RCI.MinCost = uint8_t(MinCost);
   RCI.LastCostChange = LastCostChange;
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "AllocationOrder(" << TRI->getRegClassName(RC) << ") = [";
     for (unsigned I = 0; I != RCI.NumRegs; ++I)
       dbgs() << ' ' << printReg(RCI.Order[I], TRI);

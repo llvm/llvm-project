@@ -38,7 +38,7 @@ namespace {
 /// directed by the GCStrategy. It also performs automatic root initialization
 /// and custom intrinsic lowering.
 class LowerIntrinsics : public FunctionPass {
-  bool PerformDefaultLowering(Function &F, GCStrategy &Coll);
+  bool PerformDefaultLowering(Function &F, GCStrategy &S);
 
 public:
   static char ID;
@@ -61,7 +61,7 @@ class GCMachineCodeAnalysis : public MachineFunctionPass {
   const TargetInstrInfo *TII;
 
   void FindSafePoints(MachineFunction &MF);
-  void VisitCallPoint(MachineBasicBlock::iterator MI);
+  void VisitCallPoint(MachineBasicBlock::iterator CI);
   MCSymbol *InsertLabel(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                         const DebugLoc &DL) const;
 

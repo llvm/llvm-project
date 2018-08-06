@@ -27,6 +27,6 @@ define void @f(double* %r, double* %w) {
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)"}
-!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 5, column: 10, scope: !7)

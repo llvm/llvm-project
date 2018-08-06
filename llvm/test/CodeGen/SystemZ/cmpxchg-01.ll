@@ -89,3 +89,83 @@ define i32 @f3(i8 %dummy, i8 *%src, i8 %cmp, i8 %swap) {
   ret i32 %res
 }
 
+
+declare void @g()
+
+; Check using the comparison result for a branch.
+; CHECK-LABEL: f4
+; CHECK-MAIN-LABEL: f4:
+; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK-MAIN-DAG: sll %r2, 3
+; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
+; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 8(%r2)
+; CHECK-MAIN: risbg %r3, [[TMP]], 32, 55, 0
+; CHECK-MAIN: cr [[TMP]], %r3
+; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 55, 0
+; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -8({{%r[1-9]+}})
+; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
+; CHECK-MAIN: jl [[LOOP]]
+; CHECK-MAIN: [[EXIT]]:
+; CHECK-MAIN-NEXT: jlh [[LABEL:\.[^ ]*]]
+; CHECK-MAIN: jg g
+; CHECK-MAIN: [[LABEL]]:
+; CHECK-MAIN: br %r14
+;
+; CHECK-SHIFT-LABEL: f4:
+; CHECK-SHIFT: sll %r2, 3
+; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], %r2
+; CHECK-SHIFT: rll
+; CHECK-SHIFT: rll {{%r[0-9]+}}, %r4, -8([[NEGSHIFT]])
+define void @f4(i8 *%src, i8 %cmp, i8 %swap) {
+  %pair = cmpxchg i8 *%src, i8 %cmp, i8 %swap seq_cst seq_cst
+  %cond = extractvalue { i8, i1 } %pair, 1
+  br i1 %cond, label %call, label %exit
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+
+; ... and the same with the inverted direction.
+; CHECK-MAIN-LABEL: f5:
+; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK-MAIN-DAG: sll %r2, 3
+; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
+; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 8(%r2)
+; CHECK-MAIN: risbg %r3, [[TMP]], 32, 55, 0
+; CHECK-MAIN: cr [[TMP]], %r3
+; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 55, 0
+; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -8({{%r[1-9]+}})
+; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
+; CHECK-MAIN: jl [[LOOP]]
+; CHECK-MAIN: [[EXIT]]:
+; CHECK-MAIN-NEXT: jlh [[LABEL:\.[^ ]*]]
+; CHECK-MAIN: br %r14
+; CHECK-MAIN: [[LABEL]]:
+; CHECK-MAIN: jg g
+;
+; CHECK-SHIFT-LABEL: f5:
+; CHECK-SHIFT: sll %r2, 3
+; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], %r2
+; CHECK-SHIFT: rll
+; CHECK-SHIFT: rll {{%r[0-9]+}}, %r4, -8([[NEGSHIFT]])
+define void @f5(i8 *%src, i8 %cmp, i8 %swap) {
+  %pair = cmpxchg i8 *%src, i8 %cmp, i8 %swap seq_cst seq_cst
+  %cond = extractvalue { i8, i1 } %pair, 1
+  br i1 %cond, label %exit, label %call
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+

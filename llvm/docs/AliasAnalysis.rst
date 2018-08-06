@@ -389,11 +389,6 @@ in its ``getAnalysisUsage`` that it does so. Some passes attempt to use
 ``AU.addPreserved<AliasAnalysis>``, however this doesn't actually have any
 effect.
 
-``AliasAnalysisCounter`` (``-count-aa``) are implemented as ``ModulePass``
-classes, so if your alias analysis uses ``FunctionPass``, it won't be able to
-use these utilities. If you try to use them, the pass manager will silently
-route alias analysis queries directly to ``BasicAliasAnalysis`` instead.
-
 Similarly, the ``opt -p`` option introduces ``ModulePass`` passes between each
 pass, which prevents the use of ``FunctionPass`` alias analysis passes.
 
@@ -408,17 +403,10 @@ before it appears in an alias query. However, popular clients such as ``GVN``
 don't support this, and are known to trigger errors when run with the
 ``AliasAnalysisDebugger``.
 
-Due to several of the above limitations, the most obvious use for the
-``AliasAnalysisCounter`` utility, collecting stats on all alias queries in a
-compilation, doesn't work, even if the ``AliasAnalysis`` implementations don't
-use ``FunctionPass``.  There's no way to set a default, much less a default
-sequence, and there's no way to preserve it.
-
 The ``AliasSetTracker`` class (which is used by ``LICM``) makes a
-non-deterministic number of alias queries. This can cause stats collected by
-``AliasAnalysisCounter`` to have fluctuations among identical runs, for
-example. Another consequence is that debugging techniques involving pausing
-execution after a predetermined number of queries can be unreliable.
+non-deterministic number of alias queries. This can cause debugging techniques
+involving pausing execution after a predetermined number of queries to be
+unreliable.
 
 Many alias queries can be reformulated in terms of other alias queries. When
 multiple ``AliasAnalysis`` queries are chained together, it would make sense to
@@ -675,21 +663,6 @@ you're using the ``AliasSetTracker`` class.  To use it, use something like:
 .. code-block:: bash
 
   % opt -ds-aa -print-alias-sets -disable-output
-
-The ``-count-aa`` pass
-^^^^^^^^^^^^^^^^^^^^^^
-
-The ``-count-aa`` pass is useful to see how many queries a particular pass is
-making and what responses are returned by the alias analysis.  As an example:
-
-.. code-block:: bash
-
-  % opt -basicaa -count-aa -ds-aa -count-aa -licm
-
-will print out how many queries (and what responses are returned) by the
-``-licm`` pass (of the ``-ds-aa`` pass) and how many queries are made of the
-``-basicaa`` pass by the ``-ds-aa`` pass.  This can be useful when debugging a
-transformation or an alias analysis implementation.
 
 The ``-aa-eval`` pass
 ^^^^^^^^^^^^^^^^^^^^^

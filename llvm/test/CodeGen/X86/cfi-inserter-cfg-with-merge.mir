@@ -1,0 +1,17 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs -run-pass=cfi-instr-inserter
+
+--- |
+  define void @foo() { ret void }
+...
+---
+name: foo
+body: |
+  bb.0:
+    JE_1 %bb.3, implicit $eflags
+  bb.1:
+    CFI_INSTRUCTION def_cfa_offset 24
+  bb.2:
+    CFI_INSTRUCTION def_cfa_offset 8
+  bb.3:
+    RET 0
+...

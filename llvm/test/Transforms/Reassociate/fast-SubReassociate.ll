@@ -29,7 +29,20 @@ define float @test2(float %A, float %B) {
 }
 
 ; Check again using minimal subset of FMF.
+; Both 'reassoc' and 'nsz' are required.
+define float @test2_minimal(float %A, float %B) {
+; CHECK-LABEL: @test2_minimal(
+; CHECK-NEXT:    [[Z:%.*]] = fsub reassoc nsz float %A, %B
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %W = fadd reassoc nsz float %B, 5.000000e+00
+  %X = fadd reassoc nsz float %A, -7.000000e+00
+  %Y = fsub reassoc nsz float %X, %W
+  %Z = fadd reassoc nsz float %Y, 1.200000e+01
+  ret float %Z
+}
 
+; Verify the fold is not done with only 'reassoc' ('nsz' is required).
 define float @test2_reassoc(float %A, float %B) {
 ; CHECK-LABEL: @test2_reassoc(
 ; CHECK-NEXT:    [[W:%.*]] = fadd reassoc float %B, 5.000000e+00

@@ -1,9 +1,9 @@
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect -global-isel %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect %s -verify-machineinstrs -o - | FileCheck %s
 
 # REQUIRES: global-isel
 
 --- |
-  define amdgpu_kernel void @load_constant(i32 addrspace(2)* %ptr0) { ret void }
+  define amdgpu_kernel void @load_constant(i32 addrspace(4)* %ptr0) { ret void }
   define amdgpu_kernel void @load_global_uniform(i32 addrspace(1)* %ptr1) {
     %tmp0 = load i32, i32 addrspace(1)* %ptr1
     ret void
@@ -29,8 +29,8 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p2) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr0)
 ...
 
@@ -45,8 +45,8 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p1) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr1)
 ...
 
@@ -63,7 +63,7 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: %sgpr0_sgpr1
-    %0:_(p1) = COPY %sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1
+    %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.tmp1)
 ...

@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CodeGenCoverage.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +32,6 @@ namespace llvm {
 
 class APInt;
 class APFloat;
-class LLT;
 class MachineInstr;
 class MachineInstrBuilder;
 class MachineFunction;
@@ -81,6 +81,23 @@ enum {
   ///        failed match.
   GIM_Try,
 
+  /// Switch over the opcode on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - LowerBound - numerically minimum opcode supported
+  /// - UpperBound - numerically maximum + 1 opcode supported
+  /// - Default - failure jump target
+  /// - JumpTable... - (UpperBound - LowerBound) (at least 2) jump targets
+  GIM_SwitchOpcode,
+
+  /// Switch over the LLT on the specified instruction operand
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - LowerBound - numerically minimum Type ID supported
+  /// - UpperBound - numerically maximum + 1 Type ID supported
+  /// - Default - failure jump target
+  /// - JumpTable... - (UpperBound - LowerBound) (at least 2) jump targets
+  GIM_SwitchType,
+
   /// Record the specified instruction
   /// - NewInsnID - Instruction ID to define
   /// - InsnID - Instruction ID
@@ -117,6 +134,23 @@ enum {
   GIM_CheckAtomicOrdering,
   GIM_CheckAtomicOrderingOrStrongerThan,
   GIM_CheckAtomicOrderingWeakerThan,
+  /// Check the size of the memory access for the given machine memory operand.
+  /// - InsnID - Instruction ID
+  /// - MMOIdx - MMO index
+  /// - Size - The size in bytes of the memory access
+  GIM_CheckMemorySizeEqualTo,
+  /// Check the size of the memory access for the given machine memory operand
+  /// against the size of an operand.
+  /// - InsnID - Instruction ID
+  /// - MMOIdx - MMO index
+  /// - OpIdx - The operand index to compare the MMO against
+  GIM_CheckMemorySizeEqualToLLT,
+  GIM_CheckMemorySizeLessThanLLT,
+  GIM_CheckMemorySizeGreaterThanLLT,
+  /// Check a generic C++ instruction predicate
+  /// - InsnID - Instruction ID
+  /// - PredicateID - The ID of the predicate function to call
+  GIM_CheckCxxInsnPredicate,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
@@ -133,12 +167,14 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected register bank (specified as a register class)
   GIM_CheckRegBankForClass,
+
   /// Check the operand matches a complex predicate
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
   /// - RendererID - The renderer to hold the result
   /// - Complex predicate ID
   GIM_CheckComplexPattern,
+
   /// Check the operand is a specific integer
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
@@ -155,6 +191,7 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected Intrinsic ID
   GIM_CheckIntrinsicID,
+
   /// Check the specified operand is an MBB
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
@@ -183,6 +220,7 @@ enum {
   /// - OldInsnID - Instruction ID to mutate
   /// - NewOpcode - The new opcode to use
   GIR_MutateOpcode,
+
   /// Build a new instruction
   /// - InsnID - Instruction ID to define
   /// - Opcode - The new opcode to use
@@ -193,6 +231,7 @@ enum {
   /// - OldInsnID - Instruction ID to copy from
   /// - OpIdx - The operand to copy
   GIR_Copy,
+
   /// Copy an operand to the specified instruction or add a zero register if the
   /// operand is a zero immediate.
   /// - NewInsnID - Instruction ID to modify
@@ -206,6 +245,7 @@ enum {
   /// - OpIdx - The operand to copy
   /// - SubRegIdx - The subregister to copy
   GIR_CopySubReg,
+
   /// Add an implicit register def to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RegNum - The register to add
@@ -218,10 +258,13 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - RegNum - The register to add
   GIR_AddRegister,
-  /// Add a a temporary register to the specified instruction
+
+  /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - TempRegID - The temporary register ID to add
+  /// - TempRegFlags - The register flags to set
   GIR_AddTempRegister,
+
   /// Add an immediate to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
@@ -230,11 +273,17 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - RendererID - The renderer to call
   GIR_ComplexRenderer,
+
   /// Render sub-operands of complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RendererID - The renderer to call
   /// - RenderOpID - The suboperand to render.
   GIR_ComplexSubOperandRenderer,
+  /// Render operands to the specified instruction using a custom function
+  /// - InsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to get the matched operand from
+  /// - RendererFnID - Custom renderer function to call
+  GIR_CustomRenderer,
 
   /// Render a G_CONSTANT operator as a sign-extended immediate.
   /// - NewInsnID - Instruction ID to modify
@@ -242,24 +291,34 @@ enum {
   /// The operand index is implicitly 1.
   GIR_CopyConstantAsSImm,
 
+  /// Render a G_FCONSTANT operator as a sign-extended immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// The operand index is implicitly 1.
+  GIR_CopyFConstantAsFPImm,
+
   /// Constrain an instruction operand to a register class.
   /// - InsnID - Instruction ID to modify
   /// - OpIdx - Operand index
   /// - RCEnum - Register class enumeration value
   GIR_ConstrainOperandRC,
+
   /// Constrain an instructions operands according to the instruction
   /// description.
   /// - InsnID - Instruction ID to modify
   GIR_ConstrainSelectedInstOperands,
+
   /// Merge all memory operands into instruction.
   /// - InsnID - Instruction ID to modify
   /// - MergeInsnID... - One or more Instruction ID to merge into the result.
   /// - GIU_MergeMemOperands_EndOfList - Terminates the list of instructions to
   ///                                    merge.
   GIR_MergeMemOperands,
+
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
   GIR_EraseFromParent,
+
   /// Create a new temporary register that's not constrained.
   /// - TempRegID - The temporary register ID to initialize.
   /// - Expected type
@@ -271,6 +330,9 @@ enum {
   /// Increment the rule coverage counter.
   /// - RuleID - The ID of the rule that was covered.
   GIR_Coverage,
+
+  /// Keeping track of the number of the GI opcodes. Must be the last entry.
+  GIU_NumOpcodes,
 };
 
 enum {
@@ -311,11 +373,27 @@ protected:
   };
 
 public:
-  template <class PredicateBitset, class ComplexMatcherMemFn>
-  struct MatcherInfoTy {
+  template <class PredicateBitset, class ComplexMatcherMemFn,
+            class CustomRendererFn>
+  struct ISelInfoTy {
+    ISelInfoTy(const LLT *TypeObjects, size_t NumTypeObjects,
+               const PredicateBitset *FeatureBitsets,
+               const ComplexMatcherMemFn *ComplexPredicates,
+               const CustomRendererFn *CustomRenderers)
+        : TypeObjects(TypeObjects),
+          FeatureBitsets(FeatureBitsets),
+          ComplexPredicates(ComplexPredicates),
+          CustomRenderers(CustomRenderers) {
+
+      for (size_t I = 0; I < NumTypeObjects; ++I)
+        TypeIDMap[TypeObjects[I]] = I;
+    }
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
     const ComplexMatcherMemFn *ComplexPredicates;
+    const CustomRendererFn *CustomRenderers;
+
+    SmallDenseMap<LLT, unsigned, 64> TypeIDMap;
   };
 
 protected:
@@ -324,23 +402,35 @@ protected:
   /// Execute a given matcher table and return true if the match was successful
   /// and false otherwise.
   template <class TgtInstructionSelector, class PredicateBitset,
-            class ComplexMatcherMemFn>
+            class ComplexMatcherMemFn, class CustomRendererFn>
   bool executeMatchTable(
       TgtInstructionSelector &ISel, NewMIVector &OutMIs, MatcherState &State,
-      const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> &MatcherInfo,
+      const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
+          &ISelInfo,
       const int64_t *MatchTable, const TargetInstrInfo &TII,
       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
       const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
       CodeGenCoverage &CoverageInfo) const;
 
+  virtual const int64_t *getMatchTable() const {
+    llvm_unreachable("Should have been overridden by tablegen if used");
+  }
+
   virtual bool testImmPredicate_I64(unsigned, int64_t) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
   virtual bool testImmPredicate_APInt(unsigned, const APInt &) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
   virtual bool testImmPredicate_APFloat(unsigned, const APFloat &) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
+  }
+  virtual bool testMIPredicate_MI(unsigned, const MachineInstr &) const {
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
 
   /// Constrain a register operand of an instruction \p I to a specified
@@ -352,20 +442,6 @@ protected:
                                      const TargetInstrInfo &TII,
                                      const TargetRegisterInfo &TRI,
                                      const RegisterBankInfo &RBI) const;
-
-  /// Mutate the newly-selected instruction \p I to constrain its (possibly
-  /// generic) virtual register operands to the instruction's register class.
-  /// This could involve inserting COPYs before (for uses) or after (for defs).
-  /// This requires the number of operands to match the instruction description.
-  /// \returns whether operand regclass constraining succeeded.
-  ///
-  // FIXME: Not all instructions have the same number of operands. We should
-  // probably expose a constrain helper per operand and let the target selector
-  // constrain individual registers, like fast-isel.
-  bool constrainSelectedInstRegOperands(MachineInstr &I,
-                                        const TargetInstrInfo &TII,
-                                        const TargetRegisterInfo &TRI,
-                                        const RegisterBankInfo &RBI) const;
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                          const MachineRegisterInfo &MRI) const;

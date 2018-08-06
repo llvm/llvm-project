@@ -16,7 +16,7 @@ registers:
   - { id: 0, class: gr32 }
 body: |
   bb.0:
-    JG_1 %bb.2, implicit %eflags
+    JG_1 %bb.2, implicit $eflags
     JMP_1 %bb.3
 
   bb.2:
@@ -24,6 +24,6 @@ body: |
     JMP_1 %bb.3
 
   bb.3:
-    %eax = COPY %0
-    RETQ %eax
+    $eax = COPY %0
+    RETQ $eax
 ...

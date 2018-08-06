@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_stswkrr
 
-    ; CHECK:      STSKRr 2560, %r31
-    ; CHECK-NEXT: STSKRr 2559, %r30
+    ; CHECK:      STSKRr 2560, $r31
+    ; CHECK-NEXT: STSKRr 2559, $r30
 
-    STSWKRr 2559, %r31r30
+    STSWKRr 2559, $r31r30
 ...

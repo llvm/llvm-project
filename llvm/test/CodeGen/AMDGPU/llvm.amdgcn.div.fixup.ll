@@ -5,18 +5,20 @@ declare float @llvm.amdgcn.div.fixup.f32(float, float, float) nounwind readnone
 declare double @llvm.amdgcn.div.fixup.f64(double, double, double) nounwind readnone
 
 ; GCN-LABEL: {{^}}test_div_fixup_f32:
-; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
-; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
-; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
-; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; SI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
+
+; VI-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
+; VI-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
+; VI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x94
+
 ; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; GCN: v_div_fixup_f32 [[RESULT:v[0-9]+]], [[SA]], [[VB]], [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_div_fixup_f32(float addrspace(1)* %out, float %a, float %b, float %c) nounwind {
+define amdgpu_kernel void @test_div_fixup_f32(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fixup.f32(float %a, float %b, float %c) nounwind readnone
   store float %result, float addrspace(1)* %out, align 4
   ret void

@@ -21,26 +21,25 @@ define void @_Z1av() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movl struct_obj_3+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    movzbl {{.*}}(%rip), %edx
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %esi
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    leal (%rax,%rax), %edi
-; CHECK-NEXT:    subl %ecx, %edi
-; CHECK-NEXT:    subl %edx, %edi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    notl %ecx
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    movw %cx, struct_obj_12+{{.*}}(%rip)
+; CHECK-NEXT:    leal (%rax,%rax), %esi
+; CHECK-NEXT:    subl %ecx, %esi
+; CHECK-NEXT:    subl %edx, %esi
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    cmovel %eax, %ecx
+; CHECK-NEXT:    movzbl {{.*}}(%rip), %edx
 ; CHECK-NEXT:    andl struct_obj_8+{{.*}}(%rip), %ecx
 ; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    andl %esi, %ecx
+; CHECK-NEXT:    andl %edx, %ecx
 ; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    andl %eax, %ecx
 ; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    testl %ecx, %edi
+; CHECK-NEXT:    testl %ecx, %esi
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    movw %ax, struct_obj_12+{{.*}}(%rip)
 ; CHECK-NEXT:    setne {{.*}}(%rip)
 ; CHECK-NEXT:    retq
 entry:

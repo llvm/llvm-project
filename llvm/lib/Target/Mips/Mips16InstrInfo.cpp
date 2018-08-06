@@ -97,6 +97,17 @@ void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MIB.addReg(SrcReg, getKillRegState(KillSrc));
 }
 
+bool Mips16InstrInfo::isCopyInstr(const MachineInstr &MI,
+                                  const MachineOperand *&Src,
+                                  const MachineOperand *&Dest) const {
+  if (MI.isMoveReg()) {
+    Dest = &MI.getOperand(0);
+    Src = &MI.getOperand(1);
+    return true;
+  }
+  return false;
+}
+
 void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       unsigned SrcReg, bool isKill, int FI,

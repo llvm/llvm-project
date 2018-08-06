@@ -37,8 +37,8 @@ namespace llvm {
 class AliasSetTracker;
 class BasicBlock;
 class LoadInst;
-class MemSetInst;
-class MemTransferInst;
+class AnyMemSetInst;
+class AnyMemTransferInst;
 class raw_ostream;
 class StoreInst;
 class VAArgInst;
@@ -52,7 +52,7 @@ class AliasSet : public ilist_node<AliasSet> {
     PointerRec **PrevInList = nullptr;
     PointerRec *NextInList = nullptr;
     AliasSet *AS = nullptr;
-    uint64_t Size = 0;
+    LocationSize Size = 0;
     AAMDNodes AAInfo;
 
   public:
@@ -69,7 +69,7 @@ class AliasSet : public ilist_node<AliasSet> {
       return &NextInList;
     }
 
-    bool updateSizeAndAAInfo(uint64_t NewSize, const AAMDNodes &NewAAInfo) {
+    bool updateSizeAndAAInfo(LocationSize NewSize, const AAMDNodes &NewAAInfo) {
       bool SizeChanged = false;
       if (NewSize > Size) {
         Size = NewSize;
@@ -91,7 +91,7 @@ class AliasSet : public ilist_node<AliasSet> {
       return SizeChanged;
     }
 
-    uint64_t getSize() const { return Size; }
+    LocationSize getSize() const { return Size; }
 
     /// Return the AAInfo, or null if there is no information or conflicting
     /// information.
@@ -247,7 +247,7 @@ public:
     value_type *operator->() const { return &operator*(); }
 
     Value *getPointer() const { return CurNode->getValue(); }
-    uint64_t getSize() const { return CurNode->getSize(); }
+    LocationSize getSize() const { return CurNode->getSize(); }
     AAMDNodes getAAInfo() const { return CurNode->getAAInfo(); }
 
     iterator& operator++() {                // Preincrement
@@ -287,9 +287,8 @@ private:
 
   void removeFromTracker(AliasSetTracker &AST);
 
-  void addPointer(AliasSetTracker &AST, PointerRec &Entry, uint64_t Size,
-                  const AAMDNodes &AAInfo,
-                  bool KnownMustAlias = false);
+  void addPointer(AliasSetTracker &AST, PointerRec &Entry, LocationSize Size,
+                  const AAMDNodes &AAInfo, bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, AliasAnalysis &AA);
 
   void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
@@ -309,8 +308,8 @@ private:
 public:
   /// Return true if the specified pointer "may" (or must) alias one of the
   /// members in the set.
-  bool aliasesPointer(const Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo,
-                      AliasAnalysis &AA) const;
+  bool aliasesPointer(const Value *Ptr, LocationSize Size,
+                      const AAMDNodes &AAInfo, AliasAnalysis &AA) const;
   bool aliasesUnknownInst(const Instruction *Inst, AliasAnalysis &AA) const;
 };
 
@@ -364,12 +363,12 @@ public:
   /// These methods return true if inserting the instruction resulted in the
   /// addition of a new alias set (i.e., the pointer did not alias anything).
   ///
-  void add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo); // Add a loc.
+  void add(Value *Ptr, LocationSize Size, const AAMDNodes &AAInfo); // Add a loc
   void add(LoadInst *LI);
   void add(StoreInst *SI);
   void add(VAArgInst *VAAI);
-  void add(MemSetInst *MSI);
-  void add(MemTransferInst *MTI);
+  void add(AnyMemSetInst *MSI);
+  void add(AnyMemTransferInst *MTI);
   void add(Instruction *I);       // Dispatch to one of the other add methods...
   void add(BasicBlock &BB);       // Add all instructions in basic block
   void add(const AliasSetTracker &AST); // Add alias relations from another AST
@@ -384,12 +383,12 @@ public:
   /// argument is non-null, this method sets the value to true if a new alias
   /// set is created to contain the pointer (because the pointer didn't alias
   /// anything).
-  AliasSet &getAliasSetForPointer(Value *P, uint64_t Size,
+  AliasSet &getAliasSetForPointer(Value *P, LocationSize Size,
                                   const AAMDNodes &AAInfo);
 
   /// Return the alias set containing the location specified if one exists,
   /// otherwise return null.
-  AliasSet *getAliasSetForPointerIfExists(const Value *P, uint64_t Size,
+  AliasSet *getAliasSetForPointerIfExists(const Value *P, LocationSize Size,
                                           const AAMDNodes &AAInfo) {
     return mergeAliasSetsForPointer(P, Size, AAInfo);
   }
@@ -446,9 +445,9 @@ private:
     return *Entry;
   }
 
-  AliasSet &addPointer(Value *P, uint64_t Size, const AAMDNodes &AAInfo,
+  AliasSet &addPointer(Value *P, LocationSize Size, const AAMDNodes &AAInfo,
                        AliasSet::AccessLattice E);
-  AliasSet *mergeAliasSetsForPointer(const Value *Ptr, uint64_t Size,
+  AliasSet *mergeAliasSetsForPointer(const Value *Ptr, LocationSize Size,
                                      const AAMDNodes &AAInfo);
 
   /// Merge all alias sets into a single set that is considered to alias any

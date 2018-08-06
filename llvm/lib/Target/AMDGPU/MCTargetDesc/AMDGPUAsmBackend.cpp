@@ -26,14 +26,14 @@ namespace {
 
 class AMDGPUAsmBackend : public MCAsmBackend {
 public:
-  AMDGPUAsmBackend(const Target &T)
-    : MCAsmBackend() {}
+  AMDGPUAsmBackend(const Target &T) : MCAsmBackend(support::little) {}
 
   unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
@@ -43,10 +43,13 @@ public:
                         MCInst &Res) const override {
     llvm_unreachable("Not implemented");
   }
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   unsigned getMinimumNopSize() const override;
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 };
@@ -103,7 +106,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) const {
+                                  bool IsResolved,
+                                  const MCSubtargetInfo *STI) const {
   Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
   if (!Value)
     return; // Doesn't change encoding.
@@ -140,11 +144,11 @@ unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
   return 4;
 }
 
-bool AMDGPUAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // If the count is not 4-byte aligned, we must be writing data into the text
   // section (otherwise we have unaligned instructions, and thus have far
   // bigger problems), so just write zeros instead.
-  OW->WriteZeros(Count % 4);
+  OS.write_zeros(Count % 4);
 
   // We are properly aligned, so write NOPs as requested.
   Count /= 4;
@@ -154,7 +158,7 @@ bool AMDGPUAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   const uint32_t Encoded_S_NOP_0 = 0xbf800000;
 
   for (uint64_t I = 0; I != Count; ++I)
-    OW->write32(Encoded_S_NOP_0);
+    support::endian::write<uint32_t>(OS, Encoded_S_NOP_0, Endian);
 
   return true;
 }
@@ -189,9 +193,9 @@ public:
     }
   }
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend, OS);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
   }
 };
 

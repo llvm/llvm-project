@@ -29,6 +29,39 @@ define amdgpu_kernel void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, 
   ret void
 }
 
+; GCN-LABEL: {{^}}scalar_to_vector_v4i16:
+; VI: v_lshlrev_b16_e32
+; VI: v_lshlrev_b16_e32
+; VI: v_or_b32_e32
+; VI: v_lshlrev_b32
+; VI: v_or_b32_sdwa
+; VI: v_or_b32_sdwa
+define amdgpu_kernel void @scalar_to_vector_v4i16() {
+bb:
+  %tmp = load <2 x i8>, <2 x i8> addrspace(1)* undef, align 1
+  %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  store <8 x i8> %tmp2, <8 x i8> addrspace(1)* undef, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}scalar_to_vector_v4f16:
+; VI: v_lshlrev_b16_e32
+; VI: v_lshlrev_b16_e32
+; VI: v_or_b32_e32
+; VI: v_lshlrev_b32
+; VI: v_or_b32_sdwa
+; VI: v_or_b32_sdwa
+define amdgpu_kernel void @scalar_to_vector_v4f16() {
+bb:
+  %load = load half, half addrspace(1)* undef, align 1
+  %tmp = bitcast half %load to <2 x i8>
+  %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  store <8 x i8> %tmp2, <8 x i8> addrspace(1)* undef, align 8
+  ret void
+}
+
 ; Getting a SCALAR_TO_VECTOR seems to be tricky. These cases managed
 ; to produce one, but for some reason never made it to selection.
 

@@ -34,7 +34,7 @@ entry:
   %local = alloca i32, align 4
   call void @llvm.dbg.declare(metadata %struct.prog_src_register* %a, metadata !16, metadata !17), !dbg !18
   %0 = bitcast %struct.prog_src_register* %a to i8*, !dbg !19
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 8, i32 4, i1 false), !dbg !19
+  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 8, i1 false), !dbg !19
   call void @llvm.dbg.declare(metadata i32* %local, metadata !20, metadata !17), !dbg !21
   %1 = bitcast %struct.prog_src_register* %a to i32*, !dbg !21
   %bf.load = load i32, i32* %1, align 4, !dbg !21
@@ -43,7 +43,7 @@ entry:
   store i32 %bf.ashr, i32* %local, align 4, !dbg !21
   %2 = bitcast %struct.prog_src_register* %retval to i8*, !dbg !22
   %3 = bitcast %struct.prog_src_register* %a to i8*, !dbg !22
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 8, i32 4, i1 false), !dbg !22
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %2, i8* align 4 %3, i64 8, i1 false), !dbg !22
   %4 = bitcast %struct.prog_src_register* %retval to i64*, !dbg !22
   %5 = load i64, i64* %4, align 1, !dbg !22
   ret i64 %5, !dbg !22
@@ -53,10 +53,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #2
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
@@ -69,7 +69,7 @@ attributes #2 = { nounwind }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "src_reg_for_float", line: 7, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 7, file: !5, scope: !6, type: !7, variables: !2)
+!4 = distinct !DISubprogram(name: "src_reg_for_float", line: 7, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 7, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !5 = !DIFile(filename: "pr22495.c", directory: "")
 !6 = !DIFile(filename: "pr22495.c", directory: "")
 !7 = !DISubroutineType(types: !8)

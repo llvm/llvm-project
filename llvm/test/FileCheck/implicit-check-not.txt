@@ -9,36 +9,36 @@
 
 warning: aaa
 ; CHECK-PASS: warning: aaa
-; CHECK-ERROR1: error: CHECK-FAIL1-NOT: string occurred!
-; CHECK-ERROR1: command line:1:22: note: CHECK-FAIL1-NOT: pattern specified here
+; CHECK-ERROR1: command line:1:22: error: CHECK-FAIL1-NOT: excluded string found in input
 ; CHECK-ERROR1-NEXT: -implicit-check-not='warning:'
+; CHECK-ERROR1: note: found here
 ; CHECK-FAIL2: warning: aaa
 ; CHECK-FAIL3: warning: aaa
-; CHECK-ERROR4: error: CHECK-FAIL1-NOT: string occurred!
-; CHECK-ERROR4: command line:1:22: note: CHECK-FAIL1-NOT: pattern specified here
+; CHECK-ERROR4: command line:1:22: error: CHECK-FAIL1-NOT: excluded string found in input
 ; CHECK-ERROR4-NEXT: {{-implicit-check-not='\{\{aaa\|bbb\|ccc\}\}'}}
-; CHECK-ERROR5: error: CHECK-FAIL1-NOT: string occurred!
-; CHECK-ERROR5: command line:1:22: note: CHECK-FAIL1-NOT: pattern specified here
+; CHECK-ERROR4: note: found here
+; CHECK-ERROR5: command line:1:22: error: CHECK-FAIL1-NOT: excluded string found in input
 ; CHECK-ERROR5-NEXT: -implicit-check-not='aaa'
+; CHECK-ERROR5: note: found here
 
 warning: bbb
 ; CHECK-PASS: warning: bbb
 ; CHECK-FAIL1: warning: bbb
-; CHECK-ERROR2: error: CHECK-FAIL2-NOT: string occurred!
-; CHECK-ERROR2: command line:1:22: note: CHECK-FAIL2-NOT: pattern specified here
+; CHECK-ERROR2: command line:1:22: error: CHECK-FAIL2-NOT: excluded string found in input
 ; CHECK-ERROR2-NEXT: -implicit-check-not='warning:'
+; CHECK-ERROR2: note: found here
 ; CHECK-FAIL3: warning: bbb
-; CHECK-ERROR6: error: CHECK-FAIL2-NOT: string occurred!
-; CHECK-ERROR6: command line:1:22: note: CHECK-FAIL2-NOT: pattern specified here
+; CHECK-ERROR6: command line:1:22: error: CHECK-FAIL2-NOT: excluded string found in input
 ; CHECK-ERROR6-NEXT: -implicit-check-not='bbb'
+; CHECK-ERROR6: note: found here
 
 warning: ccc
 ; CHECK-PASS: warning: ccc
 ; CHECK-FAIL1: warning: ccc
 ; CHECK-FAIL2: warning: ccc
-; CHECK-ERROR3: error: CHECK-FAIL3-NOT: string occurred!
-; CHECK-ERROR3: command line:1:22: note: CHECK-FAIL3-NOT: pattern specified here
+; CHECK-ERROR3: command line:1:22: error: CHECK-FAIL3-NOT: excluded string found in input
 ; CHECK-ERROR3-NEXT: -implicit-check-not='warning:'
-; CHECK-ERROR7: error: CHECK-FAIL3-NOT: string occurred!
-; CHECK-ERROR7: command line:1:22: note: CHECK-FAIL3-NOT: pattern specified here
+; CHECK-ERROR3: note: found here
+; CHECK-ERROR7: command line:1:22: error: CHECK-FAIL3-NOT: excluded string found in input
 ; CHECK-ERROR7-NEXT: -implicit-check-not='ccc'
+; CHECK-ERROR7: note: found here

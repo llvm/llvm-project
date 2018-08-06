@@ -18,7 +18,7 @@
 ; MEMBERS_TEST: class MembersTest::A [sizeof = 16] {
 ; MEMBERS_TEST-DAG: typedef int NestedTypedef
 ; MEMBERS_TEST-DAG: enum NestedEnum
-; MEMBERS_TEST: void MemberFunc()
+; MEMBERS_TEST: void {{(MembersTest::A::)?}}MemberFunc()
 ; MEMBERS_TEST-DAG: data +0x00 [sizeof=4] int IntMemberVar
 ; MEMBERS_TEST-NEXT: <padding> (4 bytes)
 ; MEMBERS_TEST-NEXT: data +0x08 [sizeof=8] double DoubleMemberVar

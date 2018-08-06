@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -45,7 +46,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -178,13 +178,13 @@ struct RenamePassData {
   LocationVector Locations;
 };
 
-/// \brief This assigns and keeps a per-bb relative ordering of load/store
+/// This assigns and keeps a per-bb relative ordering of load/store
 /// instructions in the block that directly load or store an alloca.
 ///
 /// This functionality is important because it avoids scanning large basic
 /// blocks multiple times when promoting many allocas in the same block.
 class LargeBlockInfo {
-  /// \brief For each instruction that we track, keep the index of the
+  /// For each instruction that we track, keep the index of the
   /// instruction.
   ///
   /// The index starts out as the number of the instruction from the start of
@@ -243,7 +243,7 @@ struct PromoteMem2Reg {
   /// Reverse mapping of Allocas.
   DenseMap<AllocaInst *, unsigned> AllocaLookup;
 
-  /// \brief The PhiNodes we're adding.
+  /// The PhiNodes we're adding.
   ///
   /// That map is used to simplify some Phi nodes as we iterate over it, so
   /// it should have deterministic iterators.  We could use a MapVector, but
@@ -295,7 +295,7 @@ private:
   unsigned getNumPreds(const BasicBlock *BB) {
     unsigned &NP = BBNumPreds[BB];
     if (NP == 0)
-      NP = std::distance(pred_begin(BB), pred_end(BB)) + 1;
+      NP = pred_size(BB) + 1;
     return NP - 1;
   }
 
@@ -347,7 +347,7 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
   }
 }
 
-/// \brief Rewrite as many loads as possible given a single store.
+/// Rewrite as many loads as possible given a single store.
 ///
 /// When there is only a single store, we can use the domtree to trivially
 /// replace all of the dominated loads with the stored value. Do so, and return
@@ -477,7 +477,7 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 
   // Sort the stores by their index, making it efficient to do a lookup with a
   // binary search.
-  std::sort(StoresByIndex.begin(), StoresByIndex.end(), less_first());
+  llvm::sort(StoresByIndex.begin(), StoresByIndex.end(), less_first());
 
   // Walk all of the loads from this alloca, replacing them with the nearest
   // store above them, if any.
@@ -510,6 +510,11 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
       if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
           !isKnownNonZero(ReplVal, DL, 0, AC, LI, &DT))
         addAssumeNonNull(AC, LI);
+
+      // If the replacement value is the load, this must occur in unreachable
+      // code.
+      if (ReplVal == LI)
+        ReplVal = UndefValue::get(LI->getType());
 
       LI->replaceAllUsesWith(ReplVal);
     }
@@ -633,10 +638,10 @@ void PromoteMem2Reg::run() {
     SmallVector<BasicBlock *, 32> PHIBlocks;
     IDF.calculate(PHIBlocks);
     if (PHIBlocks.size() > 1)
-      std::sort(PHIBlocks.begin(), PHIBlocks.end(),
-                [this](BasicBlock *A, BasicBlock *B) {
-                  return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-                });
+      llvm::sort(PHIBlocks.begin(), PHIBlocks.end(),
+                 [this](BasicBlock *A, BasicBlock *B) {
+                   return BBNumbers.lookup(A) < BBNumbers.lookup(B);
+                 });
 
     unsigned CurrentVersion = 0;
     for (BasicBlock *BB : PHIBlocks)
@@ -747,7 +752,7 @@ void PromoteMem2Reg::run() {
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient
     // access.
-    std::sort(Preds.begin(), Preds.end());
+    llvm::sort(Preds.begin(), Preds.end());
 
     // Now we loop through all BB's which have entries in SomePHI and remove
     // them from the Preds list.
@@ -779,7 +784,7 @@ void PromoteMem2Reg::run() {
   NewPhiNodes.clear();
 }
 
-/// \brief Determine which blocks the value is live in.
+/// Determine which blocks the value is live in.
 ///
 /// These are blocks which lead to uses.  Knowing this allows us to avoid
 /// inserting PHI nodes into blocks which don't lead to uses (thus, the
@@ -853,7 +858,7 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
   }
 }
 
-/// \brief Queue a phi-node to be added to a basic-block for a specific Alloca.
+/// Queue a phi-node to be added to a basic-block for a specific Alloca.
 ///
 /// Returns true if there wasn't already a phi-node for that variable
 bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
@@ -885,7 +890,7 @@ static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
     PN->setDebugLoc(DL);
 }
 
-/// \brief Recursively traverse the CFG of the function, renaming loads and
+/// Recursively traverse the CFG of the function, renaming loads and
 /// stores to the allocas which we are promoting.
 ///
 /// IncomingVals indicates what value each Alloca contains on exit from the

@@ -17,8 +17,8 @@ name: inc
 body: |
   bb.0.entry:
     ; CHECK: [[@LINE+1]]:37: expected an integer literal after '+'
-    %rax = MOV64rm %rip, 1, _, @G + , _
-    %eax = MOV32rm %rax, 1, _, 0, _
-    %eax = INC32r %eax, implicit-def %eflags
-    RETQ %eax
+    $rax = MOV64rm $rip, 1, _, @G + , _
+    $eax = MOV32rm $rax, 1, _, 0, _
+    $eax = INC32r $eax, implicit-def $eflags
+    RETQ $eax
 ...

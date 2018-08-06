@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=legalizer %s -o - -verify-machineinstrs | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_sextload(i8* %addr) {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_sextload
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_sextload
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load 1 from %ir.addr)
+    $w0 = COPY %1
+...

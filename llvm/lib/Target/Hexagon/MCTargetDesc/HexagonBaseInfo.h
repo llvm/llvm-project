@@ -25,7 +25,7 @@ namespace llvm {
 /// HexagonII - This namespace holds all of the target specific flags that
 /// instruction info tracks.
 namespace HexagonII {
-  unsigned const TypeCVI_FIRST = TypeCVI_HIST;
+  unsigned const TypeCVI_FIRST = TypeCVI_4SLOT_MPY;
   unsigned const TypeCVI_LAST = TypeCVI_VX_LATE;
 
   enum SubTarget {

@@ -15,6 +15,7 @@
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_GOT22 .LC0 0x0
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_GOT10 .LC0 0x0
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_WPLT30 bar 0x0
+! PIC:        0x{{[0-9,A-F]+}} R_SPARC_GOT13 value 0x0
 ! PIC:      ]
 
 ! NOPIC:      Relocations [
@@ -30,6 +31,7 @@
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_HI22 .rodata 0x0
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_LO10 .rodata 0x0
 ! NOPIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_WDISP30 bar 0x0
+! NOPIC:        0x{{[0-9,A-F]+}} R_SPARC_13 value 0x0
 ! NOPIC:      ]
 
         .section        ".rodata"
@@ -78,3 +80,24 @@ foo:
 AGlobalVar:
         .xword  0                       ! 0x0
         .size   AGlobalVar, 8
+
+        .section ".text"
+        .text
+        .globl  pic13
+        .align  4
+        .type   pic13,@function
+pic13:
+        save %sp, -128, %sp
+.Ltmp0:
+        call .Ltmp1
+.Ltmp2:
+        sethi %hi(_GLOBAL_OFFSET_TABLE_+(.Ltmp2-.Ltmp0)), %i0
+.Ltmp1:
+        or %i0, %lo(_GLOBAL_OFFSET_TABLE_+(.Ltmp1-.Ltmp0)), %i0
+        add %i0, %o7, %i0
+        ldx [%i0+value], %i0
+        ld [%i0], %i0
+        ret
+        restore
+.Lfunc_end0:
+        .size pic13, .Lfunc_end0-pic13

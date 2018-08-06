@@ -39,7 +39,7 @@ attributes #1 = { nounwind readnone }
 !5 = !DIGlobalVariable(name: "ret", scope: !1, file: !1, line: 7, type: !6, isLocal: false, isDefinition: true)
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 1, !"Debug Info Version", i32 3}
-!8 = distinct !DISubprogram(name: "bar", linkageName: "bar", scope: !1, file: !1, line: 17, type: !9, isLocal: false, isDefinition: true, scopeLine: 17, virtualIndex: 6, isOptimized: true, unit: !0, variables: !17)
+!8 = distinct !DISubprogram(name: "bar", linkageName: "bar", scope: !1, file: !1, line: 17, type: !9, isLocal: false, isDefinition: true, scopeLine: 17, virtualIndex: 6, isOptimized: true, unit: !0, retainedNodes: !17)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !12}
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, scope: !1, file: !1, baseType: null, size: 64, align: 64)
@@ -65,15 +65,15 @@ attributes #1 = { nounwind readnone }
 ; CHECK-NEXT: [[CLOBBER:Ltmp[0-9]*]]
 
 ; CHECK: Ldebug_loc0:
-; CHECK-NEXT: [[SET1:.*]] = Lfunc_begin0-Lfunc_begin0
+; CHECK-NEXT: .set [[SET1:.*]], Lfunc_begin0-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET1]]
-; CHECK-NEXT: [[SET2:.*]] = [[LABEL]]-Lfunc_begin0
+; CHECK-NEXT: .set [[SET2:.*]], [[LABEL]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET2]]
 ; CHECK-NEXT: .short  1     ## Loc expr size
 ; CHECK-NEXT: .byte   85
-; CHECK-NEXT: [[SET3:.*]] = [[LABEL]]-Lfunc_begin0
+; CHECK-NEXT: .set [[SET3:.*]], [[LABEL]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET3]]
-; CHECK-NEXT: [[SET4:.*]] = [[CLOBBER]]-Lfunc_begin0
+; CHECK-NEXT: .set [[SET4:.*]], [[CLOBBER]]-Lfunc_begin0
 ; CHECK-NEXT: .quad   [[SET4]]
 ; CHECK-NEXT: .short  1     ## Loc expr size
 ; CHECK-NEXT: .byte   83

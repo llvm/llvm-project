@@ -68,7 +68,9 @@ enum {
 
   /// The VSX instruction that uses VSX register (vs0-vs63), instead of VMX
   /// register (v0-v31).
-  UseVSXReg = 0x1 << NewDef_Shift
+  UseVSXReg = 0x1 << NewDef_Shift,
+  /// This instruction is an X-Form memory operation.
+  XFormMemOp = 0x1 << (NewDef_Shift+1)
 };
 } // end namespace PPCII
 
@@ -114,20 +116,19 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   PPCSubtarget &Subtarget;
   const PPCRegisterInfo RI;
 
-  bool StoreRegToStackSlot(MachineFunction &MF,
-                           unsigned SrcReg, bool isKill, int FrameIdx,
-                           const TargetRegisterClass *RC,
-                           SmallVectorImpl<MachineInstr*> &NewMIs,
-                           bool &NonRI, bool &SpillsVRS) const;
-  bool LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
+  void StoreRegToStackSlot(MachineFunction &MF, unsigned SrcReg, bool isKill,
+                           int FrameIdx, const TargetRegisterClass *RC,
+                           SmallVectorImpl<MachineInstr *> &NewMIs) const;
+  void LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
                             unsigned DestReg, int FrameIdx,
                             const TargetRegisterClass *RC,
-                            SmallVectorImpl<MachineInstr *> &NewMIs,
-                            bool &NonRI, bool &SpillsVRS) const;
+                            SmallVectorImpl<MachineInstr *> &NewMIs) const;
   bool transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
                           unsigned ConstantOpNo, int64_t Imm) const;
   MachineInstr *getConstantDefMI(MachineInstr &MI, unsigned &ConstOp,
                                  bool &SeenIntermediateUse) const;
+  const unsigned *getStoreOpcodesForSpillArray() const;
+  const unsigned *getLoadOpcodesForSpillArray() const;
   virtual void anchor();
 
 protected:
@@ -153,6 +154,10 @@ public:
   /// always be able to get register info as well (through this method).
   ///
   const PPCRegisterInfo &getRegisterInfo() const { return RI; }
+
+  bool isXFormMemOp(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::XFormMemOp;
+  }
 
   ScheduleHazardRecognizer *
   CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
@@ -250,6 +255,12 @@ public:
                             unsigned DestReg, int FrameIndex,
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
+
+  unsigned getStoreOpcodeForSpill(unsigned Reg,
+                                  const TargetRegisterClass *RC = nullptr) const;
+
+  unsigned getLoadOpcodeForSpill(unsigned Reg,
+                                 const TargetRegisterClass *RC = nullptr) const;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
@@ -359,13 +370,6 @@ public:
                               MachineInstr **KilledDef = nullptr) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
 
-  // This is used to find the "true" source register for n
-  // Machine instruction. Returns the original SrcReg unless it is the target
-  // of a copy-like operation, in which case we chain backwards through all
-  // such operations to the ultimate source register.  If a
-  // physical register is encountered, we stop the search.
-  static unsigned lookThruCopyLike(unsigned SrcReg,
-                                   const MachineRegisterInfo *MRI);
   bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III) const;
 };
 

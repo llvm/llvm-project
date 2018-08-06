@@ -178,6 +178,12 @@ public:
     return DenseBlockSet;
   }
 
+  /// Return a direct, immutable handle to the blocks set.
+  const SmallPtrSetImpl<const BlockT *> &getBlocksSet() const {
+    assert(!isInvalid() && "Loop not in a valid state!");
+    return DenseBlockSet;
+  }
+
   /// Return true if this loop is no longer valid.  The only valid use of this
   /// helper is "assert(L.isInvalid())" or equivalent, since IsInvalid is set to
   /// true by the destructor.  In other words, if this accessor returns true,
@@ -254,6 +260,20 @@ public:
   /// If getExitBlocks would return exactly one block, return that block.
   /// Otherwise return null.
   BlockT *getExitBlock() const;
+
+  /// Return true if no exit block for the loop has a predecessor that is
+  /// outside the loop.
+  bool hasDedicatedExits() const;
+
+  /// Return all unique successor blocks of this loop.
+  /// These are the blocks _outside of the current loop_ which are branched to.
+  /// This assumes that loop exits are in canonical form, i.e. all exits are
+  /// dedicated exits.
+  void getUniqueExitBlocks(SmallVectorImpl<BlockT *> &ExitBlocks) const;
+
+  /// If getUniqueExitBlocks would return exactly one block, return that block.
+  /// Otherwise return null.
+  BlockT *getUniqueExitBlock() const;
 
   /// Edge type.
   typedef std::pair<const BlockT *, const BlockT *> Edge;
@@ -438,7 +458,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 /// in the CFG are necessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
-  /// \brief A range representing the start and end location of a loop.
+  /// A range representing the start and end location of a loop.
   class LocRange {
     DebugLoc Start;
     DebugLoc End;
@@ -452,7 +472,7 @@ public:
     const DebugLoc &getStart() const { return Start; }
     const DebugLoc &getEnd() const { return End; }
 
-    /// \brief Check for null.
+    /// Check for null.
     ///
     explicit operator bool() const { return Start && End; }
   };
@@ -527,7 +547,7 @@ public:
   ///
   /// If this loop contains the same llvm.loop metadata on each branch to the
   /// header then the node is returned. If any latch instruction does not
-  /// contain llvm.loop or or if multiple latches contain different nodes then
+  /// contain llvm.loop or if multiple latches contain different nodes then
   /// 0 is returned.
   MDNode *getLoopID() const;
   /// Set the llvm.loop loop id metadata for this loop.
@@ -546,20 +566,6 @@ public:
   /// from being unrolled more than is directed by a pragma if the loop
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
-
-  /// Return true if no exit block for the loop has a predecessor that is
-  /// outside the loop.
-  bool hasDedicatedExits() const;
-
-  /// Return all unique successor blocks of this loop.
-  /// These are the blocks _outside of the current loop_ which are branched to.
-  /// This assumes that loop exits are in canonical form, i.e. all exits are
-  /// dedicated exits.
-  void getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const;
-
-  /// If getUniqueExitBlocks would return exactly one block, return that block.
-  /// Otherwise return null.
-  BasicBlock *getUniqueExitBlock() const;
 
   void dump() const;
   void dumpVerbose() const;
@@ -929,7 +935,7 @@ template <> struct GraphTraits<Loop *> {
   static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-/// \brief Analysis pass that exposes the \c LoopInfo for a function.
+/// Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
   static AnalysisKey Key;
@@ -940,7 +946,7 @@ public:
   LoopInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for the \c LoopAnalysis results.
+/// Printer pass for the \c LoopAnalysis results.
 class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
@@ -949,12 +955,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for the \c LoopAnalysis results.
+/// Verifier pass for the \c LoopAnalysis results.
 struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief The legacy pass manager's analysis pass to compute loop information.
+/// The legacy pass manager's analysis pass to compute loop information.
 class LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;
 
@@ -968,7 +974,7 @@ public:
   LoopInfo &getLoopInfo() { return LI; }
   const LoopInfo &getLoopInfo() const { return LI; }
 
-  /// \brief Calculate the natural loop information for a given function.
+  /// Calculate the natural loop information for a given function.
   bool runOnFunction(Function &F) override;
 
   void verifyAnalysis() const override;

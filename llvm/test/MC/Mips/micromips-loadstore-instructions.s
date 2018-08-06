@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips \
+# RUN: llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips -show-inst \
 # RUN: | FileCheck -check-prefix=CHECK-EL %s
-# RUN: llvm-mc %s -triple=mips -show-encoding -mattr=micromips \
+# RUN: llvm-mc %s -triple=mips -show-encoding -mattr=micromips -show-inst \
 # RUN: | FileCheck -check-prefix=CHECK-EB %s
 # Check that the assembler can handle the documented syntax
 # for load and store instructions.
@@ -24,34 +24,47 @@
 # CHECK-EL: sc     $2, 8($4)                  # encoding: [0x44,0x60,0x08,0xb0]
 # CHECK-EL: lwu    $2, 8($4)                  # encoding: [0x44,0x60,0x08,0xe0]
 # CHECK-EL: lwxs   $2, $3($4)                 # encoding: [0x64,0x00,0x18,0x11]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWXS_MM
 # CHECK-EL: lwm32  $16, $17, 8($4)            # encoding: [0x44,0x20,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $18, $19, 8($4)  # encoding: [0x84,0x20,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # encoding: [0x24,0x21,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $18, $19, $ra, 8($4)                          # encoding: [0x84,0x22,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x24,0x23,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x24,0x23,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: swm32  $16, $17, 8($4)            # encoding: [0x44,0x20,0x08,0xd0]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EL: swm32  $16, $17, $18, $19, 8($4)  # encoding: [0x84,0x20,0x08,0xd0]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EL: lwm16  $16, $17, $ra, 8($sp)      # encoding: [0x12,0x45]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM16_MM
 # CHECK-EL: swm16  $16, $17, $ra, 8($sp)      # encoding: [0x52,0x45]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM16_MM
 # CHECK-EL: lwm16  $16, $17, $ra, 8($sp)      # encoding: [0x12,0x45]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM16_MM
 # CHECK-EL: lwm32  $16, $17, $ra, 64($sp)     # encoding: [0x5d,0x22,0x40,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, $ra, 8($4)       # encoding: [0x44,0x22,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: lwm32  $16, $17, 8($sp)           # encoding: [0x5d,0x20,0x08,0x50]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EL: swm16  $16, $17, $ra, 8($sp)      # encoding: [0x52,0x45]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM16_MM
 # CHECK-EL: swm32  $16, $17, $ra, 64($sp)     # encoding: [0x5d,0x22,0x40,0xd0]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EL: swm32  $16, $17, $ra, 8($4)       # encoding: [0x44,0x22,0x08,0xd0]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EL: swm32  $16, $17, 8($sp)           # encoding: [0x5d,0x20,0x08,0xd0]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EL: swp    $16, 8($4)                 # encoding: [0x04,0x22,0x08,0x90]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} SWP_MM
 # CHECK-EL: lwp    $16, 8($4)                 # encoding: [0x04,0x22,0x08,0x10]
-# CHECK-EL: lhue   $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x62]
-# CHECK-EL: lbe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x68]
-# CHECK-EL: lbue   $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x60]
-# CHECK-EL: lhe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x6a]
-# CHECK-EL: lwe    $4, 8($2)                  # encoding: [0x82,0x60,0x08,0x6e]
-# CHECK-EL: sbe    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xa8]
-# CHECK-EL: she    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xaa]
-# CHECK-EL: swe    $5, 8($4)                  # encoding: [0xa4,0x60,0x08,0xae]
+# CHECK-EL-NEXT:                              # <MCInst #{{[0-9]+}} LWP_MM
 #------------------------------------------------------------------------------
 # Big endian
 #------------------------------------------------------------------------------
@@ -70,34 +83,47 @@
 # CHECK-EB: sc     $2, 8($4)                 # encoding: [0x60,0x44,0xb0,0x08]
 # CHECK-EB: lwu    $2, 8($4)                 # encoding: [0x60,0x44,0xe0,0x08]
 # CHECK-EB: lwxs   $2, $3($4)                # encoding: [0x00,0x64,0x11,0x18]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWXS_MM
 # CHECK-EB: lwm32  $16, $17, 8($4)           # encoding: [0x20,0x44,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $18, $19, 8($4) # encoding: [0x20,0x84,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # encoding: [0x21,0x24,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $18, $19, $ra, 8($4)                          # encoding: [0x22,0x84,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: swm32  $16, $17, 8($4)           # encoding: [0x20,0x44,0xd0,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EB: swm32  $16, $17, $18, $19, 8($4) # encoding: [0x20,0x84,0xd0,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EB: lwm16  $16, $17, $ra, 8($sp)     # encoding: [0x45,0x12]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM16_MM
 # CHECK-EB: swm16  $16, $17, $ra, 8($sp)     # encoding: [0x45,0x52]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM16_MM
 # CHECK-EB: lwm16  $16, $17, $ra, 8($sp)     # encoding: [0x45,0x12]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM16_MM
 # CHECK-EB: lwm32  $16, $17, $ra, 64($sp)    # encoding: [0x22,0x5d,0x50,0x40]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, $ra, 8($4)      # encoding: [0x22,0x44,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: lwm32  $16, $17, 8($sp)          # encoding: [0x20,0x5d,0x50,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWM32_MM
 # CHECK-EB: swm16  $16, $17, $ra, 8($sp)     # encoding: [0x45,0x52]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM16_MM
 # CHECK-EB: swm32  $16, $17, $ra, 64($sp)    # encoding: [0x22,0x5d,0xd0,0x40]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EB: swm32  $16, $17, $ra, 8($4)      # encoding: [0x22,0x44,0xd0,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EB: swm32  $16, $17, 8($sp)          # encoding: [0x20,0x5d,0xd0,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWM32_MM
 # CHECK-EB: swp    $16, 8($4)                # encoding: [0x22,0x04,0x90,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} SWP_MM
 # CHECK-EB: lwp    $16, 8($4)                # encoding: [0x22,0x04,0x10,0x08]
-# CHECK-EB: lhue   $4, 8($2)                 # encoding: [0x60,0x82,0x62,0x08]
-# CHECK-EB: lbe    $4, 8($2)                 # encoding: [0x60,0x82,0x68,0x08]
-# CHECK-EB: lbue   $4, 8($2)                 # encoding: [0x60,0x82,0x60,0x08]
-# CHECK-EB: lhe    $4, 8($2)                 # encoding: [0x60,0x82,0x6a,0x08]
-# CHECK-EB: lwe    $4, 8($2)                 # encoding: [0x60,0x82,0x6e,0x08]
-# CHECK-EB: sbe    $5, 8($4)                 # encoding: [0x60,0xa4,0xa8,0x08]
-# CHECK-EB: she    $5, 8($4)                 # encoding: [0x60,0xa4,0xaa,0x08]
-# CHECK-EB: swe    $5, 8($4)                 # encoding: [0x60,0xa4,0xae,0x08]
+# CHECK-EB-NEXT:                             # <MCInst #{{[0-9]+}} LWP_MM
      lb     $5, 8($4)
      lbu    $6, 8($4)
      lh     $2, 8($4)
@@ -133,11 +159,4 @@
      swm    $16, $17, 8($sp)
      swp    $16, 8($4)
      lwp    $16, 8($4)
-     lhue   $4, 8($2)
-     lbe    $4, 8($2)
-     lbue   $4, 8($2)
-     lhe    $4, 8($2)
-     lwe    $4, 8($2)
-     sbe    $5, 8($4)
-     she    $5, 8($4)
-     swe    $5, 8($4)
+

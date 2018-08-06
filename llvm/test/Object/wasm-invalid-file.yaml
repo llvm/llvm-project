@@ -1,0 +1,16 @@
+# RUN: yaml2obj %s > %t.wasm
+# RUN: echo -e -n "\x01" >> %t.wasm
+# Append a new section but truncate the encoding of the section size
+# RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s -check-prefix=CHECK-LEB-DECODE
+
+!WASM
+FileHeader:
+  Version:         0x00000001
+
+# CHECK-LEB-DECODE: malformed uleb128, extends past end
+
+# RUN: echo -en "\x99hello" >> %t.wasm
+# Append a section size that extends beyond the end of the file
+# RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s -check-prefix=CHECK-SECTION-SIZE
+
+# CHECK-SECTION-SIZE: '{{.*}}.wasm': Section too large

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=bpf -mcpu=v2 -verify-machineinstrs | FileCheck %s
 ;
 ; Source file:
 ; int b, c;
@@ -60,3 +60,28 @@ define i32 @foo(i8*) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readonly
 declare i64 @llvm.bpf.load.word(i8*, i64) #1
+
+; Source file:
+; int m, n;
+; int test2() {
+;   int a = m;
+;   if (a < 6)
+;     a = n;
+;   return a;
+; }
+
+@m = common local_unnamed_addr global i32 0, align 4
+@n = common local_unnamed_addr global i32 0, align 4
+
+; Function Attrs: norecurse nounwind readonly
+define i32 @test2() local_unnamed_addr #0 {
+entry:
+  %0 = load i32, i32* @m, align 4
+  %cmp = icmp slt i32 %0, 6
+; CHECK:  if r{{[0-9]+}} s{{<|>}} 6 goto
+  %1 = load i32, i32* @n, align 4
+  %spec.select = select i1 %cmp, i32 %1, i32 %0
+  ret i32 %spec.select
+}
+
+attributes #0 = { norecurse nounwind readonly }

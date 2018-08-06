@@ -75,7 +75,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
 bool
 X86RegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // ExecutionDepsFixer and PostRAScheduler require liveness.
+  // ExecutionDomainFix, BreakFalseDeps and PostRAScheduler require liveness.
   return true;
 }
 
@@ -552,6 +552,10 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(X86::DIL);
     Reserved.set(X86::BPL);
     Reserved.set(X86::SPL);
+    Reserved.set(X86::SIH);
+    Reserved.set(X86::DIH);
+    Reserved.set(X86::BPH);
+    Reserved.set(X86::SPH);
 
     for (unsigned n = 0; n != 8; ++n) {
       // R8, R9, ...
@@ -571,7 +575,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   assert(checkAllSuperRegsMarked(Reserved,
-                                 {X86::SIL, X86::DIL, X86::BPL, X86::SPL}));
+                                 {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
+                                  X86::SIH, X86::DIH, X86::BPH, X86::SPH}));
   return Reserved;
 }
 

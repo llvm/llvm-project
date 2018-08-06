@@ -27,46 +27,74 @@ using namespace llvm;
 
 namespace {
 class RISCVAsmBackend : public MCAsmBackend {
+  const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;
 
 public:
-  RISCVAsmBackend(uint8_t OSABI, bool Is64Bit)
-      : MCAsmBackend(), OSABI(OSABI), Is64Bit(Is64Bit) {}
+  RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit)
+      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI),
+        Is64Bit(Is64Bit) {}
   ~RISCVAsmBackend() override {}
 
+  // Generate diff expression relocations if the relax feature is enabled,
+  // otherwise it is safe for the assembler to calculate these internally.
+  bool requiresDiffExpressionRelocations() const override {
+    return STI.getFeatureBits()[RISCV::FeatureRelax];
+  }
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
+
+  // If linker relaxation is enabled, always emit relocations even if the fixup
+  // can be resolved. This is necessary for correctness as offsets may change
+  // during relaxation.
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override {
+    return STI.getFeatureBits()[RISCV::FeatureRelax];
+  }
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
-    return false;
+    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
+
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const MCAsmLayout &Layout,
+                                    const bool WasForced) const override;
 
   unsigned getNumFixupKinds() const override {
     return RISCV::NumTargetFixupKinds;
   }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
-    const static MCFixupKindInfo Infos[RISCV::NumTargetFixupKinds] = {
+    const static MCFixupKindInfo Infos[] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // RISCVFixupKinds.h.
       //
-      // name                    offset bits  flags
-      { "fixup_riscv_hi20",       12,     20,  0 },
-      { "fixup_riscv_lo12_i",     20,     12,  0 },
-      { "fixup_riscv_lo12_s",      0,     32,  0 },
-      { "fixup_riscv_pcrel_hi20", 12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_jal",        12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_branch",      0,     32,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_jump",    2,     11,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_branch",  0,     16,  MCFixupKindInfo::FKF_IsPCRel }
+      // name                      offset bits  flags
+      { "fixup_riscv_hi20",         12,     20,  0 },
+      { "fixup_riscv_lo12_i",       20,     12,  0 },
+      { "fixup_riscv_lo12_s",        0,     32,  0 },
+      { "fixup_riscv_pcrel_hi20",   12,     20,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_pcrel_lo12_i", 20,     12,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_pcrel_lo12_s",  0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_jal",          12,     20,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_branch",        0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_call",          0,     64,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_relax",         0,      0,  0 }
     };
+    static_assert((array_lengthof(Infos)) == RISCV::NumTargetFixupKinds,
+                  "Not all fixup kinds added to Infos array");
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
@@ -76,26 +104,121 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
+  unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {
+                        MCInst &Res) const override;
 
-    report_fatal_error("RISCVAsmBackend::relaxInstruction() unimplemented");
-  }
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
-bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
-  // Once support for the compressed instruction set is added, we will be able
-  // to conditionally support 16-bit NOPs
-  if ((Count % 4) != 0)
+
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+                                                   bool Resolved,
+                                                   uint64_t Value,
+                                                   const MCRelaxableFragment *DF,
+                                                   const MCAsmLayout &Layout,
+                                                   const bool WasForced) const {
+  // Return true if the symbol is actually unresolved.
+  // Resolved could be always false when shouldForceRelocation return true.
+  // We use !WasForced to indicate that the symbol is unresolved and not forced
+  // by shouldForceRelocation.
+  if (!Resolved && !WasForced)
+    return true;
+
+  int64_t Offset = int64_t(Value);
+  switch ((unsigned)Fixup.getKind()) {
+  default:
+    return false;
+  case RISCV::fixup_riscv_rvc_branch:
+    // For compressed branch instructions the immediate must be
+    // in the range [-256, 254].
+    return Offset > 254 || Offset < -256;
+  case RISCV::fixup_riscv_rvc_jump:
+    // For compressed jump instructions the immediate must be
+    // in the range [-2048, 2046].
+    return Offset > 2046 || Offset < -2048;
+  }
+}
+
+void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI,
+                                       MCInst &Res) const {
+  // TODO: replace this with call to auto generated uncompressinstr() function.
+  switch (Inst.getOpcode()) {
+  default:
+    llvm_unreachable("Opcode not expected!");
+  case RISCV::C_BEQZ:
+    // c.beqz $rs1, $imm -> beq $rs1, X0, $imm.
+    Res.setOpcode(RISCV::BEQ);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case RISCV::C_BNEZ:
+    // c.bnez $rs1, $imm -> bne $rs1, X0, $imm.
+    Res.setOpcode(RISCV::BNE);
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  case RISCV::C_J:
+    // c.j $imm -> jal X0, $imm.
+    Res.setOpcode(RISCV::JAL);
+    Res.addOperand(MCOperand::createReg(RISCV::X0));
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  case RISCV::C_JAL:
+    // c.jal $imm -> jal X1, $imm.
+    Res.setOpcode(RISCV::JAL);
+    Res.addOperand(MCOperand::createReg(RISCV::X1));
+    Res.addOperand(Inst.getOperand(0));
+    break;
+  }
+}
+
+// Given a compressed control flow instruction this function returns
+// the expanded instruction.
+unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
+  switch (Op) {
+  default:
+    return Op;
+  case RISCV::C_BEQZ:
+    return RISCV::BEQ;
+  case RISCV::C_BNEZ:
+    return RISCV::BNE;
+  case RISCV::C_J:
+  case RISCV::C_JAL: // fall through.
+    return RISCV::JAL;
+  }
+}
+
+bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                        const MCSubtargetInfo &STI) const {
+  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
+}
+
+bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+  unsigned MinNopLen = HasStdExtC ? 2 : 4;
+
+  if ((Count % MinNopLen) != 0)
     return false;
 
-  // The canonical nop on RISC-V is addi x0, x0, 0
-  for (uint64_t i = 0; i < Count; i += 4)
-    OW->write32(0x13);
+  // The canonical nop on RISC-V is addi x0, x0, 0.
+  uint64_t Nop32Count = Count / 4;
+  for (uint64_t i = Nop32Count; i != 0; --i)
+    OS.write("\x13\0\0\0", 4);
+
+  // The canonical nop on RVC is c.nop.
+  if (HasStdExtC) {
+    uint64_t Nop16Count = (Count - Nop32Count * 4) / 2;
+    for (uint64_t i = Nop16Count; i != 0; --i)
+      OS.write("\x01\0", 2);
+  }
 
   return true;
 }
@@ -112,8 +235,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_8:
     return Value;
   case RISCV::fixup_riscv_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_i:
     return Value & 0xfff;
   case RISCV::fixup_riscv_lo12_s:
+  case RISCV::fixup_riscv_pcrel_lo12_s:
     return (((Value >> 5) & 0x7f) << 25) | ((Value & 0x1f) << 7);
   case RISCV::fixup_riscv_hi20:
   case RISCV::fixup_riscv_pcrel_hi20:
@@ -154,6 +279,14 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Sbit << 31) | (Mid6 << 25) | (Lo4 << 8) | (Hi1 << 7);
     return Value;
   }
+  case RISCV::fixup_riscv_call: {
+    // Jalr will add UpperImm with the sign-extended 12-bit LowerImm,
+    // we need to add 0x800ULL before extract upper bits to reflect the
+    // effect of the sign extension.
+    uint64_t UpperImm = (Value + 0x800ULL) & 0xfffff000ULL;
+    uint64_t LowerImm = Value & 0xfffULL;
+    return UpperImm | ((LowerImm << 20) << 32);
+  }
   case RISCV::fixup_riscv_rvc_jump: {
     // Need to produce offset[11|4|9:8|10|6|7|3:1|5] from the 11-bit Value.
     unsigned Bit11  = (Value >> 11) & 0x1;
@@ -183,20 +316,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-static unsigned getSize(unsigned Kind) {
-  switch (Kind) {
-  default:
-    return 4;
-  case RISCV::fixup_riscv_rvc_jump:
-  case RISCV::fixup_riscv_rvc_branch:
-    return 2;
-  }
-}
-
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
-                                 bool IsResolved) const {
+                                 bool IsResolved,
+                                 const MCSubtargetInfo *STI) const {
   MCContext &Ctx = Asm.getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)
@@ -208,23 +332,20 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
-  unsigned FullSize = getSize(Fixup.getKind());
+  unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
 
-#ifndef NDEBUG
-  unsigned NumBytes = (Info.TargetSize + 7) / 8;
   assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-#endif
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  for (unsigned i = 0; i != FullSize; ++i) {
+  for (unsigned i = 0; i != NumBytes; ++i) {
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createRISCVELFObjectWriter(OS, OSABI, Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+RISCVAsmBackend::createObjectTargetWriter() const {
+  return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
 } // end anonymous namespace
@@ -235,5 +356,5 @@ MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new RISCVAsmBackend(OSABI, TT.isArch64Bit());
+  return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit());
 }

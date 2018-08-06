@@ -39,7 +39,7 @@ namespace Intrinsic {
 
     // Get the intrinsic enums generated from Intrinsics.td
 #define GET_INTRINSIC_ENUM_VALUES
-#include "llvm/IR/Intrinsics.gen"
+#include "llvm/IR/IntrinsicEnums.inc"
 #undef GET_INTRINSIC_ENUM_VALUES
     , num_intrinsics
   };
@@ -97,7 +97,7 @@ namespace Intrinsic {
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
   struct IITDescriptor {
     enum IITDescriptorKind {
-      Void, VarArg, MMX, Token, Metadata, Half, Float, Double,
+      Void, VarArg, MMX, Token, Metadata, Half, Float, Double, Quad,
       Integer, Vector, Pointer, Struct,
       Argument, ExtendArgument, TruncArgument, HalfVecArgument,
       SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfAnyPtrsToElt

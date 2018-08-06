@@ -91,7 +91,7 @@ bool X86RetpolineThunks::doInitialization(Module &M) {
 }
 
 bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << getPassName() << '\n');
+  LLVM_DEBUG(dbgs() << getPassName() << '\n');
 
   TM = &MF.getTarget();;
   STI = &MF.getSubtarget<X86Subtarget>();
@@ -214,6 +214,15 @@ void X86RetpolineThunks::createThunkFunction(Module &M, StringRef Name) {
   IRBuilder<> Builder(Entry);
 
   Builder.CreateRetVoid();
+
+  // MachineFunctions/MachineBasicBlocks aren't created automatically for the
+  // IR-level constructs we already made. Create them and insert them into the
+  // module.
+  MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
+  MachineBasicBlock *EntryMBB = MF.CreateMachineBasicBlock(Entry);
+
+  // Insert EntryMBB into MF. It's not in the module until we do this.
+  MF.insert(MF.end(), EntryMBB);
 }
 
 void X86RetpolineThunks::insertRegReturnAddrClobber(MachineBasicBlock &MBB,

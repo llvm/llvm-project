@@ -34,8 +34,8 @@
 define void @Precompute_Patch_Values(%struct.Bicubic_Patch_Struct* %Shape) {
 ; CHECK: Precompute_Patch_Values
 ; CHECK: ldr [[VAL:x[0-9]+]], [x0, #288]
-; CHECK-NEXT: str [[VAL]], [sp, #232]
 ; CHECK-NEXT: ldr [[VAL2:q[0-9]+]], [x0, #272]
+; CHECK-NEXT: str [[VAL]], [sp, #232]
 ; CHECK-NEXT: stur [[VAL2]], {{\[}}sp, #216]
 entry:
   %Control_Points = alloca [16 x [3 x double]], align 8
@@ -43,9 +43,9 @@ entry:
   %tmp14 = bitcast double* %arraydecay5.3.1 to i8*
   %arraydecay11.3.1 = getelementptr inbounds %struct.Bicubic_Patch_Struct, %struct.Bicubic_Patch_Struct* %Shape, i64 0, i32 12, i64 1, i64 3, i64 0
   %tmp15 = bitcast double* %arraydecay11.3.1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp14, i8* %tmp15, i64 24, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp14, i8* %tmp15, i64 24, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)

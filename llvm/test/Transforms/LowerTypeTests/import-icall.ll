@@ -28,8 +28,8 @@ declare void @external()
 declare extern_weak void @external_weak()
 
 ; CHECK:      define hidden i8 @local_a.cfi() {
-; CHECK-NEXT:   call void @external.cfi_jt()
-; CHECK-NEXT:   call void select (i1 icmp ne (void ()* @external_weak, void ()* null), void ()* @external_weak.cfi_jt, void ()* null)()
+; CHECK-NEXT:   call void @external()
+; CHECK-NEXT:   call void @external_weak()
 ; CHECK-NEXT:   ret i8 1
 ; CHECK-NEXT: }
 

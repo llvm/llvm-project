@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+vaes --show-encoding < %s  | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s  | FileCheck %s
 
 // CHECK: vaesenc %zmm3, %zmm2, %zmm21
 // CHECK: encoding: [0x62,0xe2,0x6d,0x48,0xdc,0xeb]

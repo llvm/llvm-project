@@ -20,10 +20,12 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -50,10 +52,8 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -67,6 +67,12 @@
 
 using namespace llvm;
 using namespace object;
+
+cl::opt<bool>
+    llvm::AllHeaders("all-headers",
+                     cl::desc("Display all available header information"));
+static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
+                                 cl::aliasopt(AllHeaders));
 
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
@@ -85,8 +91,28 @@ static cl::alias
 DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
              cl::aliasopt(DisassembleAll));
 
+cl::opt<std::string> llvm::Demangle("demangle",
+                                    cl::desc("Demangle symbols names"),
+                                    cl::ValueOptional, cl::init("none"));
+
+static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
+                               cl::aliasopt(Demangle));
+
+static cl::list<std::string>
+DisassembleFunctions("df",
+                     cl::CommaSeparated,
+                     cl::desc("List of functions to disassemble"));
+static StringSet<> DisasmFuncsSet;
+
 cl::opt<bool>
 llvm::Relocations("r", cl::desc("Display the relocation entries in the file"));
+
+cl::opt<bool>
+llvm::DynamicRelocations("dynamic-reloc",
+  cl::desc("Display the dynamic relocation entries in the file"));
+static cl::alias
+DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
+             cl::aliasopt(DynamicRelocations));
 
 cl::opt<bool>
 llvm::SectionContents("s", cl::desc("Display the content of each section"));
@@ -182,6 +208,21 @@ static cl::alias
 PrivateHeadersShort("p", cl::desc("Alias for --private-headers"),
                     cl::aliasopt(PrivateHeaders));
 
+cl::opt<bool> llvm::FileHeaders(
+    "file-headers",
+    cl::desc("Display the contents of the overall file header"));
+
+static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
+                                  cl::aliasopt(FileHeaders));
+
+cl::opt<bool>
+    llvm::ArchiveHeaders("archive-headers",
+                         cl::desc("Display archive header information"));
+
+cl::alias
+ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
+                    cl::aliasopt(ArchiveHeaders));
+
 cl::opt<bool>
     llvm::PrintImmHex("print-imm-hex",
                       cl::desc("Use hex format for immediate values"));
@@ -196,7 +237,7 @@ cl::opt<DIDumpType> llvm::DwarfDumpType(
 cl::opt<bool> PrintSource(
     "source",
     cl::desc(
-        "Display source inlined with disassembly. Implies disassmble object"));
+        "Display source inlined with disassembly. Implies disassemble object"));
 
 cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
                            cl::aliasopt(PrintSource));
@@ -295,6 +336,11 @@ LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
   errs() << ToolName << ": " << Message << ".\n";
   errs().flush();
   exit(1);
+}
+
+void llvm::warn(StringRef Message) {
+  errs() << ToolName << ": warning: " << Message << ".\n";
+  errs().flush();
 }
 
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
@@ -396,252 +442,6 @@ bool llvm::RelocAddressLess(RelocationRef a, RelocationRef b) {
   return a.getOffset() < b.getOffset();
 }
 
-namespace {
-class SourcePrinter {
-protected:
-  DILineInfo OldLineInfo;
-  const ObjectFile *Obj = nullptr;
-  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
-  // File name to file contents of source
-  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
-  // Mark the line endings of the cached source
-  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
-
-private:
-  bool cacheSource(const std::string& File);
-
-public:
-  SourcePrinter() = default;
-  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
-    symbolize::LLVMSymbolizer::Options SymbolizerOpts(
-        DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
-        DefaultArch);
-    Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
-  }
-  virtual ~SourcePrinter() = default;
-  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
-                               StringRef Delimiter = "; ");
-};
-
-bool SourcePrinter::cacheSource(const std::string& File) {
-  auto BufferOrError = MemoryBuffer::getFile(File);
-  if (!BufferOrError)
-    return false;
-  // Chomp the file to get lines
-  size_t BufferSize = (*BufferOrError)->getBufferSize();
-  const char *BufferStart = (*BufferOrError)->getBufferStart();
-  for (const char *Start = BufferStart, *End = BufferStart;
-       End < BufferStart + BufferSize; End++)
-    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
-        (*End == '\r' && *(End + 1) == '\n')) {
-      LineCache[File].push_back(StringRef(Start, End - Start));
-      if (*End == '\r')
-        End++;
-      Start = End + 1;
-    }
-  SourceCache[File] = std::move(*BufferOrError);
-  return true;
-}
-
-void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
-                                    StringRef Delimiter) {
-  if (!Symbolizer)
-    return;
-  DILineInfo LineInfo = DILineInfo();
-  auto ExpectecLineInfo =
-      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
-  if (!ExpectecLineInfo)
-    consumeError(ExpectecLineInfo.takeError());
-  else
-    LineInfo = *ExpectecLineInfo;
-
-  if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
-      LineInfo.Line == 0)
-    return;
-
-  if (PrintLines)
-    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
-  if (PrintSource) {
-    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
-      if (!cacheSource(LineInfo.FileName))
-        return;
-    auto FileBuffer = SourceCache.find(LineInfo.FileName);
-    if (FileBuffer != SourceCache.end()) {
-      auto LineBuffer = LineCache.find(LineInfo.FileName);
-      if (LineBuffer != LineCache.end()) {
-        if (LineInfo.Line > LineBuffer->second.size())
-          return;
-        // Vector begins at 0, line numbers are non-zero
-        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
-           << "\n";
-      }
-    }
-  }
-  OldLineInfo = LineInfo;
-}
-
-static bool isArmElf(const ObjectFile *Obj) {
-  return (Obj->isELF() &&
-          (Obj->getArch() == Triple::aarch64 ||
-           Obj->getArch() == Triple::aarch64_be ||
-           Obj->getArch() == Triple::arm || Obj->getArch() == Triple::armeb ||
-           Obj->getArch() == Triple::thumb ||
-           Obj->getArch() == Triple::thumbeb));
-}
-
-class PrettyPrinter {
-public:
-  virtual ~PrettyPrinter() = default;
-  virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
-                         ArrayRef<uint8_t> Bytes, uint64_t Address,
-                         raw_ostream &OS, StringRef Annot,
-                         MCSubtargetInfo const &STI, SourcePrinter *SP) {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
-    }
-    if (MI)
-      IP.printInst(MI, OS, "", STI);
-    else
-      OS << " <unknown>";
-  }
-};
-PrettyPrinter PrettyPrinterInst;
-class HexagonPrettyPrinter : public PrettyPrinter {
-public:
-  void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                 raw_ostream &OS) {
-    uint32_t opcode =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("%08" PRIx32, opcode);
-    }
-  }
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, "");
-    if (!MI) {
-      printLead(Bytes, Address, OS);
-      OS << " <unknown>";
-      return;
-    }
-    std::string Buffer;
-    {
-      raw_string_ostream TempStream(Buffer);
-      IP.printInst(MI, TempStream, "", STI);
-    }
-    StringRef Contents(Buffer);
-    // Split off bundle attributes
-    auto PacketBundle = Contents.rsplit('\n');
-    // Split off first instruction from the rest
-    auto HeadTail = PacketBundle.first.split('\n');
-    auto Preamble = " { ";
-    auto Separator = "";
-    while(!HeadTail.first.empty()) {
-      OS << Separator;
-      Separator = "\n";
-      if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, "");
-      printLead(Bytes, Address, OS);
-      OS << Preamble;
-      Preamble = "   ";
-      StringRef Inst;
-      auto Duplex = HeadTail.first.split('\v');
-      if(!Duplex.second.empty()){
-        OS << Duplex.first;
-        OS << "; ";
-        Inst = Duplex.second;
-      }
-      else
-        Inst = HeadTail.first;
-      OS << Inst;
-      Bytes = Bytes.slice(4);
-      Address += 4;
-      HeadTail = HeadTail.second.split('\n');
-    }
-    OS << " } " << PacketBundle.second;
-  }
-};
-HexagonPrettyPrinter HexagonPrettyPrinterInst;
-
-class AMDGCNPrettyPrinter : public PrettyPrinter {
-public:
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-
-    if (!MI) {
-      OS << " <unknown>";
-      return;
-    }
-
-    SmallString<40> InstStr;
-    raw_svector_ostream IS(InstStr);
-
-    IP.printInst(MI, IS, "", STI);
-
-    OS << left_justify(IS.str(), 60) << format("// %012" PRIX64 ": ", Address);
-    typedef support::ulittle32_t U32;
-    for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
-                               Bytes.size() / sizeof(U32)))
-      // D should be explicitly casted to uint32_t here as it is passed
-      // by format to snprintf as vararg.
-      OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
-
-    if (!Annot.empty())
-      OS << "// " << Annot;
-  }
-};
-AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
-
-class BPFPrettyPrinter : public PrettyPrinter {
-public:
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRId64 ":", Address / 8);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
-    }
-    if (MI)
-      IP.printInst(MI, OS, "", STI);
-    else
-      OS << " <unknown>";
-  }
-};
-BPFPrettyPrinter BPFPrettyPrinterInst;
-
-PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
-  switch(Triple.getArch()) {
-  default:
-    return PrettyPrinterInst;
-  case Triple::hexagon:
-    return HexagonPrettyPrinterInst;
-  case Triple::amdgcn:
-    return AMDGCNPrettyPrinterInst;
-  case Triple::bpfel:
-  case Triple::bpfeb:
-    return BPFPrettyPrinterInst;
-  }
-}
-}
-
 template <class ELFT>
 static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
                                                 const RelocationRef &RelRef,
@@ -671,9 +471,11 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   if (!StrTabOrErr)
     return errorToErrorCode(StrTabOrErr.takeError());
   StringRef StrTab = *StrTabOrErr;
-  uint8_t type = RelRef.getType();
-  StringRef res;
   int64_t addend = 0;
+  // If there is no Symbol associated with the relocation, we set the undef
+  // boolean value to 'true'. This will prevent us from calling functions that
+  // requires the relocation to be associated with a symbol.
+  bool undef = false;
   switch (Sec->sh_type) {
   default:
     return object_error::parse_failed;
@@ -684,97 +486,41 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   case ELF::SHT_RELA: {
     const Elf_Rela *ERela = Obj->getRela(Rel);
     addend = ERela->r_addend;
+    undef = ERela->getSymbol(false) == 0;
     break;
   }
   }
-  symbol_iterator SI = RelRef.getSymbol();
-  const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
   StringRef Target;
-  if (symb->getType() == ELF::STT_SECTION) {
-    Expected<section_iterator> SymSI = SI->getSection();
-    if (!SymSI)
-      return errorToErrorCode(SymSI.takeError());
-    const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
-    auto SecName = EF.getSectionName(SymSec);
-    if (!SecName)
-      return errorToErrorCode(SecName.takeError());
-    Target = *SecName;
-  } else {
-    Expected<StringRef> SymName = symb->getName(StrTab);
-    if (!SymName)
-      return errorToErrorCode(SymName.takeError());
-    Target = *SymName;
-  }
-  switch (EF.getHeader()->e_machine) {
-  case ELF::EM_X86_64:
-    switch (type) {
-    case ELF::R_X86_64_PC8:
-    case ELF::R_X86_64_PC16:
-    case ELF::R_X86_64_PC32: {
-      std::string fmtbuf;
-      raw_string_ostream fmt(fmtbuf);
-      fmt << Target << (addend < 0 ? "" : "+") << addend << "-P";
-      fmt.flush();
-      Result.append(fmtbuf.begin(), fmtbuf.end());
-    } break;
-    case ELF::R_X86_64_8:
-    case ELF::R_X86_64_16:
-    case ELF::R_X86_64_32:
-    case ELF::R_X86_64_32S:
-    case ELF::R_X86_64_64: {
-      std::string fmtbuf;
-      raw_string_ostream fmt(fmtbuf);
-      fmt << Target << (addend < 0 ? "" : "+") << addend;
-      fmt.flush();
-      Result.append(fmtbuf.begin(), fmtbuf.end());
-    } break;
-    default:
-      res = "Unknown";
+  if (!undef) {
+    symbol_iterator SI = RelRef.getSymbol();
+    const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
+    if (symb->getType() == ELF::STT_SECTION) {
+      Expected<section_iterator> SymSI = SI->getSection();
+      if (!SymSI)
+        return errorToErrorCode(SymSI.takeError());
+      const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
+      auto SecName = EF.getSectionName(SymSec);
+      if (!SecName)
+        return errorToErrorCode(SecName.takeError());
+      Target = *SecName;
+    } else {
+      Expected<StringRef> SymName = symb->getName(StrTab);
+      if (!SymName)
+        return errorToErrorCode(SymName.takeError());
+      Target = *SymName;
     }
-    break;
-  case ELF::EM_LANAI:
-  case ELF::EM_AVR:
-  case ELF::EM_AARCH64: {
-    std::string fmtbuf;
-    raw_string_ostream fmt(fmtbuf);
-    fmt << Target;
-    if (addend != 0)
-      fmt << (addend < 0 ? "" : "+") << addend;
-    fmt.flush();
-    Result.append(fmtbuf.begin(), fmtbuf.end());
-    break;
-  }
-  case ELF::EM_386:
-  case ELF::EM_IAMCU:
-  case ELF::EM_ARM:
-  case ELF::EM_HEXAGON:
-  case ELF::EM_MIPS:
-  case ELF::EM_BPF:
-  case ELF::EM_RISCV:
-    res = Target;
-    break;
-  case ELF::EM_WEBASSEMBLY:
-    switch (type) {
-    case ELF::R_WEBASSEMBLY_DATA: {
-      std::string fmtbuf;
-      raw_string_ostream fmt(fmtbuf);
-      fmt << Target << (addend < 0 ? "" : "+") << addend;
-      fmt.flush();
-      Result.append(fmtbuf.begin(), fmtbuf.end());
-      break;
-    }
-    case ELF::R_WEBASSEMBLY_FUNCTION:
-      res = Target;
-      break;
-    default:
-      res = "Unknown";
-    }
-    break;
-  default:
-    res = "Unknown";
-  }
-  if (Result.empty())
-    Result.append(res.begin(), res.end());
+  } else
+    Target = "*ABS*";
+
+  // Default scheme is to print Target, as well as "+ <addend>" for nonzero
+  // addend. Should be acceptable for all normal purposes.
+  std::string fmtbuf;
+  raw_string_ostream fmt(fmtbuf);
+  fmt << Target;
+  if (addend != 0)
+    fmt << (addend < 0 ? "" : "+") << addend;
+  fmt.flush();
+  Result.append(fmtbuf.begin(), fmtbuf.end());
   return std::error_code();
 }
 
@@ -887,9 +633,21 @@ static std::error_code getRelocationValueString(const WasmObjectFile *Obj,
                                                 const RelocationRef &RelRef,
                                                 SmallVectorImpl<char> &Result) {
   const wasm::WasmRelocation& Rel = Obj->getWasmRelocation(RelRef);
+  symbol_iterator SI = RelRef.getSymbol();
   std::string fmtbuf;
   raw_string_ostream fmt(fmtbuf);
-  fmt << Rel.Index << (Rel.Addend < 0 ? "" : "+") << Rel.Addend;
+  if (SI == Obj->symbol_end()) {
+    // Not all wasm relocations have symbols associated with them.
+    // In particular R_WEBASSEMBLY_TYPE_INDEX_LEB.
+    fmt << Rel.Index;
+  } else {
+    Expected<StringRef> SymNameOrErr = SI->getName();
+    if (!SymNameOrErr)
+      return errorToErrorCode(SymNameOrErr.takeError());
+    StringRef SymName = *SymNameOrErr;
+    Result.append(SymName.begin(), SymName.end());
+  }
+  fmt << (Rel.Addend < 0 ? "" : "+") << Rel.Addend;
   fmt.flush();
   Result.append(fmtbuf.begin(), fmtbuf.end());
   return std::error_code();
@@ -1087,7 +845,7 @@ static std::error_code getRelocationValueString(const RelocationRef &Rel,
   llvm_unreachable("unknown object file format");
 }
 
-/// @brief Indicates whether this relocation should hidden when listing
+/// Indicates whether this relocation should hidden when listing
 /// relocations, usually because it is the trailing part of a multipart
 /// relocation that will be printed as part of the leading relocation.
 static bool getHidden(RelocationRef RelRef) {
@@ -1118,6 +876,304 @@ static bool getHidden(RelocationRef RelRef) {
   }
 
   return false;
+}
+
+namespace {
+class SourcePrinter {
+protected:
+  DILineInfo OldLineInfo;
+  const ObjectFile *Obj = nullptr;
+  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+  // File name to file contents of source
+  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
+  // Mark the line endings of the cached source
+  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
+
+private:
+  bool cacheSource(const DILineInfo& LineInfoFile);
+
+public:
+  SourcePrinter() = default;
+  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
+    symbolize::LLVMSymbolizer::Options SymbolizerOpts(
+        DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
+        DefaultArch);
+    Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
+  }
+  virtual ~SourcePrinter() = default;
+  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
+                               StringRef Delimiter = "; ");
+};
+
+bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (LineInfo.Source) {
+    Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
+  } else {
+    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
+    if (!BufferOrError)
+      return false;
+    Buffer = std::move(*BufferOrError);
+  }
+  // Chomp the file to get lines
+  size_t BufferSize = Buffer->getBufferSize();
+  const char *BufferStart = Buffer->getBufferStart();
+  for (const char *Start = BufferStart, *End = BufferStart;
+       End < BufferStart + BufferSize; End++)
+    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
+        (*End == '\r' && *(End + 1) == '\n')) {
+      LineCache[LineInfo.FileName].push_back(StringRef(Start, End - Start));
+      if (*End == '\r')
+        End++;
+      Start = End + 1;
+    }
+  SourceCache[LineInfo.FileName] = std::move(Buffer);
+  return true;
+}
+
+void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
+                                    StringRef Delimiter) {
+  if (!Symbolizer)
+    return;
+  DILineInfo LineInfo = DILineInfo();
+  auto ExpectecLineInfo =
+      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
+  if (!ExpectecLineInfo)
+    consumeError(ExpectecLineInfo.takeError());
+  else
+    LineInfo = *ExpectecLineInfo;
+
+  if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
+      LineInfo.Line == 0)
+    return;
+
+  if (PrintLines)
+    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
+  if (PrintSource) {
+    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
+      if (!cacheSource(LineInfo))
+        return;
+    auto FileBuffer = SourceCache.find(LineInfo.FileName);
+    if (FileBuffer != SourceCache.end()) {
+      auto LineBuffer = LineCache.find(LineInfo.FileName);
+      if (LineBuffer != LineCache.end()) {
+        if (LineInfo.Line > LineBuffer->second.size())
+          return;
+        // Vector begins at 0, line numbers are non-zero
+        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
+           << "\n";
+      }
+    }
+  }
+  OldLineInfo = LineInfo;
+}
+
+static bool isArmElf(const ObjectFile *Obj) {
+  return (Obj->isELF() &&
+          (Obj->getArch() == Triple::aarch64 ||
+           Obj->getArch() == Triple::aarch64_be ||
+           Obj->getArch() == Triple::arm || Obj->getArch() == Triple::armeb ||
+           Obj->getArch() == Triple::thumb ||
+           Obj->getArch() == Triple::thumbeb));
+}
+
+class PrettyPrinter {
+public:
+  virtual ~PrettyPrinter() = default;
+  virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
+                         ArrayRef<uint8_t> Bytes, uint64_t Address,
+                         raw_ostream &OS, StringRef Annot,
+                         MCSubtargetInfo const &STI, SourcePrinter *SP,
+                         std::vector<RelocationRef> *Rels = nullptr) {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes, OS);
+    }
+    if (MI)
+      IP.printInst(MI, OS, "", STI);
+    else
+      OS << " <unknown>";
+  }
+};
+PrettyPrinter PrettyPrinterInst;
+class HexagonPrettyPrinter : public PrettyPrinter {
+public:
+  void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                 raw_ostream &OS) {
+    uint32_t opcode =
+      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes.slice(0, 4), OS);
+      OS << format("%08" PRIx32, opcode);
+    }
+  }
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, "");
+    if (!MI) {
+      printLead(Bytes, Address, OS);
+      OS << " <unknown>";
+      return;
+    }
+    std::string Buffer;
+    {
+      raw_string_ostream TempStream(Buffer);
+      IP.printInst(MI, TempStream, "", STI);
+    }
+    StringRef Contents(Buffer);
+    // Split off bundle attributes
+    auto PacketBundle = Contents.rsplit('\n');
+    // Split off first instruction from the rest
+    auto HeadTail = PacketBundle.first.split('\n');
+    auto Preamble = " { ";
+    auto Separator = "";
+    StringRef Fmt = "\t\t\t%08" PRIx64 ":  ";
+    std::vector<RelocationRef>::const_iterator rel_cur = Rels->begin();
+    std::vector<RelocationRef>::const_iterator rel_end = Rels->end();
+
+    // Hexagon's packets require relocations to be inline rather than
+    // clustered at the end of the packet.
+    auto PrintReloc = [&]() -> void {
+      while ((rel_cur != rel_end) && (rel_cur->getOffset() <= Address)) {
+        if (rel_cur->getOffset() == Address) {
+          SmallString<16> name;
+          SmallString<32> val;
+          rel_cur->getTypeName(name);
+          error(getRelocationValueString(*rel_cur, val));
+          OS << Separator << format(Fmt.data(), Address) << name << "\t" << val
+                << "\n";
+          return;
+        }
+        rel_cur++;
+      }
+    };
+
+    while(!HeadTail.first.empty()) {
+      OS << Separator;
+      Separator = "\n";
+      if (SP && (PrintSource || PrintLines))
+        SP->printSourceLine(OS, Address, "");
+      printLead(Bytes, Address, OS);
+      OS << Preamble;
+      Preamble = "   ";
+      StringRef Inst;
+      auto Duplex = HeadTail.first.split('\v');
+      if(!Duplex.second.empty()){
+        OS << Duplex.first;
+        OS << "; ";
+        Inst = Duplex.second;
+      }
+      else
+        Inst = HeadTail.first;
+      OS << Inst;
+      HeadTail = HeadTail.second.split('\n');
+      if (HeadTail.first.empty())
+        OS << " } " << PacketBundle.second;
+      PrintReloc();
+      Bytes = Bytes.slice(4);
+      Address += 4;
+    }
+  }
+};
+HexagonPrettyPrinter HexagonPrettyPrinterInst;
+
+class AMDGCNPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+
+    typedef support::ulittle32_t U32;
+
+    if (MI) {
+      SmallString<40> InstStr;
+      raw_svector_ostream IS(InstStr);
+
+      IP.printInst(MI, IS, "", STI);
+
+      OS << left_justify(IS.str(), 60);
+    } else {
+      // an unrecognized encoding - this is probably data so represent it
+      // using the .long directive, or .byte directive if fewer than 4 bytes
+      // remaining
+      if (Bytes.size() >= 4) {
+        OS << format("\t.long 0x%08" PRIx32 " ",
+                     static_cast<uint32_t>(*reinterpret_cast<const U32*>(Bytes.data())));
+        OS.indent(42);
+      } else {
+          OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
+          for (unsigned int i = 1; i < Bytes.size(); i++)
+            OS << format(", 0x%02" PRIx8, Bytes[i]);
+          OS.indent(55 - (6 * Bytes.size()));
+      }
+    }
+
+    OS << format("// %012" PRIX64 ": ", Address);
+    if (Bytes.size() >=4) {
+      for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
+                                 Bytes.size() / sizeof(U32)))
+        // D should be explicitly casted to uint32_t here as it is passed
+        // by format to snprintf as vararg.
+        OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
+    } else {
+      for (unsigned int i = 0; i < Bytes.size(); i++)
+        OS << format("%02" PRIX8 " ", Bytes[i]);
+    }
+
+    if (!Annot.empty())
+      OS << "// " << Annot;
+  }
+};
+AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
+
+class BPFPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRId64 ":", Address / 8);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes, OS);
+    }
+    if (MI)
+      IP.printInst(MI, OS, "", STI);
+    else
+      OS << " <unknown>";
+  }
+};
+BPFPrettyPrinter BPFPrettyPrinterInst;
+
+PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
+  switch(Triple.getArch()) {
+  default:
+    return PrettyPrinterInst;
+  case Triple::hexagon:
+    return HexagonPrettyPrinterInst;
+  case Triple::amdgcn:
+    return AMDGCNPrettyPrinterInst;
+  case Triple::bpfel:
+  case Triple::bpfeb:
+    return BPFPrettyPrinterInst;
+  }
+}
 }
 
 static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
@@ -1254,6 +1310,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
+  SectionSymbolsTy AbsoluteSymbols;
   for (const SymbolRef &Symbol : Obj->symbols()) {
     Expected<uint64_t> AddressOrErr = Symbol.getAddress();
     if (!AddressOrErr)
@@ -1269,15 +1326,17 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     Expected<section_iterator> SectionOrErr = Symbol.getSection();
     if (!SectionOrErr)
       report_error(Obj->getFileName(), SectionOrErr.takeError());
-    section_iterator SecI = *SectionOrErr;
-    if (SecI == Obj->section_end())
-      continue;
 
     uint8_t SymbolType = ELF::STT_NOTYPE;
     if (Obj->isELF())
       SymbolType = getElfSymbolType(Obj, Symbol);
 
-    AllSymbols[*SecI].emplace_back(Address, *Name, SymbolType);
+    section_iterator SecI = *SectionOrErr;
+    if (SecI != Obj->section_end())
+      AllSymbols[*SecI].emplace_back(Address, *Name, SymbolType);
+    else
+      AbsoluteSymbols.emplace_back(Address, *Name, SymbolType);
+
 
   }
   if (AllSymbols.empty() && Obj->isELF())
@@ -1313,6 +1372,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
       if (Sec != SectionAddresses.end())
         AllSymbols[Sec->second].emplace_back(VA, Name, ELF::STT_NOTYPE);
+      else
+        AbsoluteSymbols.emplace_back(VA, Name, ELF::STT_NOTYPE);
     }
   }
 
@@ -1320,6 +1381,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   // a symbol near an address.
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
     array_pod_sort(SecSyms.second.begin(), SecSyms.second.end());
+  array_pod_sort(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
 
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     if (!DisassembleAll && (!Section.isText() || Section.isVirtual()))
@@ -1349,8 +1411,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       }
     }
 
-    std::sort(DataMappingSymsAddr.begin(), DataMappingSymsAddr.end());
-    std::sort(TextMappingSymsAddr.begin(), TextMappingSymsAddr.end());
+    llvm::sort(DataMappingSymsAddr.begin(), DataMappingSymsAddr.end());
+    llvm::sort(TextMappingSymsAddr.begin(), TextMappingSymsAddr.end());
 
     if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
@@ -1375,30 +1437,22 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     }
 
     // Sort relocations by address.
-    std::sort(Rels.begin(), Rels.end(), RelocAddressLess);
+    llvm::sort(Rels.begin(), Rels.end(), RelocAddressLess);
 
     StringRef SegmentName = "";
     if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj)) {
       DataRefImpl DR = Section.getRawDataRefImpl();
       SegmentName = MachO->getSectionFinalSegmentName(DR);
     }
-    StringRef name;
-    error(Section.getName(name));
-
-    if ((SectionAddr <= StopAddress) &&
-        (SectionAddr + SectSize) >= StartAddress) {
-    outs() << "Disassembly of section ";
-    if (!SegmentName.empty())
-      outs() << SegmentName << ",";
-    outs() << name << ':';
-    }
+    StringRef SectionName;
+    error(Section.getName(SectionName));
 
     // If the section has no symbol at the start, just insert a dummy one.
     if (Symbols.empty() || std::get<0>(Symbols[0]) != 0) {
-      Symbols.insert(Symbols.begin(),
-                     std::make_tuple(SectionAddr, name, Section.isText()
-                                                            ? ELF::STT_FUNC
-                                                            : ELF::STT_OBJECT));
+      Symbols.insert(
+          Symbols.begin(),
+          std::make_tuple(SectionAddr, SectionName,
+                          Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT));
     }
 
     SmallString<40> Comments;
@@ -1411,6 +1465,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
     uint64_t Size;
     uint64_t Index;
+    bool PrintedSection = false;
 
     std::vector<RelocationRef>::const_iterator rel_cur = Rels.begin();
     std::vector<RelocationRef>::const_iterator rel_end = Rels.end();
@@ -1435,13 +1490,24 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         continue;
       }
 
+      /// Skip if user requested specific symbols and this is not in the list
+      if (!DisasmFuncsSet.empty() &&
+          !DisasmFuncsSet.count(std::get<1>(Symbols[si])))
+        continue;
+
+      if (!PrintedSection) {
+        PrintedSection = true;
+        outs() << "Disassembly of section ";
+        if (!SegmentName.empty())
+          outs() << SegmentName << ",";
+        outs() << SectionName << ':';
+      }
+
       // Stop disassembly at the stop address specified
       if (End + SectionAddr > StopAddress)
         End = StopAddress - SectionAddr;
 
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
-        // make size 4 bytes folded
-        End = Start + ((End - Start) & ~0x3ull);
         if (std::get<2>(Symbols[si]) == ELF::STT_AMDGPU_HSA_KERNEL) {
           // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
           Start += 256;
@@ -1458,7 +1524,25 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         }
       }
 
-      outs() << '\n' << std::get<1>(Symbols[si]) << ":\n";
+      auto PrintSymbol = [](StringRef Name) {
+        outs() << '\n' << Name << ":\n";
+      };
+      StringRef SymbolName = std::get<1>(Symbols[si]);
+      if (Demangle.getValue() == "" || Demangle.getValue() == "itanium") {
+        char *DemangledSymbol = nullptr;
+        size_t Size = 0;
+        int Status;
+        DemangledSymbol =
+            itaniumDemangle(SymbolName.data(), DemangledSymbol, &Size, &Status);
+        if (Status == 0)
+          PrintSymbol(StringRef(DemangledSymbol));
+        else
+          PrintSymbol(SymbolName);
+
+        if (Size != 0)
+          free(DemangledSymbol);
+      } else
+        PrintSymbol(SymbolName);
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
@@ -1601,7 +1685,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
         PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
                       Bytes.slice(Index, Size), SectionAddr + Index, outs(), "",
-                      *STI, &SP);
+                      *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1630,55 +1714,65 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                 --SectionAddress;
                 TargetSectionSymbols = &AllSymbols[SectionAddress->second];
               } else {
-                TargetSectionSymbols = nullptr;
+                TargetSectionSymbols = &AbsoluteSymbols;
               }
             }
 
             // Find the first symbol in the section whose offset is less than
-            // or equal to the target.
-            if (TargetSectionSymbols) {
-              auto TargetSym = std::upper_bound(
-                  TargetSectionSymbols->begin(), TargetSectionSymbols->end(),
+            // or equal to the target. If there isn't a section that contains
+            // the target, find the nearest preceding absolute symbol.
+            auto TargetSym = std::upper_bound(
+                TargetSectionSymbols->begin(), TargetSectionSymbols->end(),
+                Target, [](uint64_t LHS,
+                           const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
+                  return LHS < std::get<0>(RHS);
+                });
+            if (TargetSym == TargetSectionSymbols->begin()) {
+              TargetSectionSymbols = &AbsoluteSymbols;
+              TargetSym = std::upper_bound(
+                  AbsoluteSymbols.begin(), AbsoluteSymbols.end(),
                   Target, [](uint64_t LHS,
                              const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                    return LHS < std::get<0>(RHS);
-                  });
-              if (TargetSym != TargetSectionSymbols->begin()) {
-                --TargetSym;
-                uint64_t TargetAddress = std::get<0>(*TargetSym);
-                StringRef TargetName = std::get<1>(*TargetSym);
-                outs() << " <" << TargetName;
-                uint64_t Disp = Target - TargetAddress;
-                if (Disp)
-                  outs() << "+0x" << Twine::utohexstr(Disp);
-                outs() << '>';
-              }
+                            return LHS < std::get<0>(RHS);
+                          });
+            }
+            if (TargetSym != TargetSectionSymbols->begin()) {
+              --TargetSym;
+              uint64_t TargetAddress = std::get<0>(*TargetSym);
+              StringRef TargetName = std::get<1>(*TargetSym);
+              outs() << " <" << TargetName;
+              uint64_t Disp = Target - TargetAddress;
+              if (Disp)
+                outs() << "+0x" << Twine::utohexstr(Disp);
+              outs() << '>';
             }
           }
         }
         outs() << "\n";
 
-        // Print relocation for instruction.
-        while (rel_cur != rel_end) {
-          bool hidden = getHidden(*rel_cur);
-          uint64_t addr = rel_cur->getOffset();
-          SmallString<16> name;
-          SmallString<32> val;
+        // Hexagon does this in pretty printer
+        if (Obj->getArch() != Triple::hexagon)
+          // Print relocation for instruction.
+          while (rel_cur != rel_end) {
+            bool hidden = getHidden(*rel_cur);
+            uint64_t addr = rel_cur->getOffset();
+            SmallString<16> name;
+            SmallString<32> val;
 
-          // If this relocation is hidden, skip it.
-          if (hidden || ((SectionAddr + addr) < StartAddress)) {
+            // If this relocation is hidden, skip it.
+            if (hidden || ((SectionAddr + addr) < StartAddress)) {
+              ++rel_cur;
+              continue;
+            }
+
+            // Stop when rel_cur's address is past the current instruction.
+            if (addr >= Index + Size) break;
+            rel_cur->getTypeName(name);
+            error(getRelocationValueString(*rel_cur, val));
+            outs() << format(Fmt.data(), SectionAddr + addr) << name
+                   << "\t" << val << "\n";
             ++rel_cur;
-            continue;
           }
-
-          // Stop when rel_cur's address is past the current instruction.
-          if (addr >= Index + Size) break;
-          rel_cur->getTypeName(name);
-          error(getRelocationValueString(*rel_cur, val));
-          outs() << format(Fmt.data(), SectionAddr + addr) << name
-                 << "\t" << val << "\n";
-          ++rel_cur;
-        }
       }
     }
   }
@@ -1714,10 +1808,44 @@ void llvm::PrintRelocations(const ObjectFile *Obj) {
   }
 }
 
+void llvm::PrintDynamicRelocations(const ObjectFile *Obj) {
+
+  // For the moment, this option is for ELF only
+  if (!Obj->isELF())
+    return;
+
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
+
+  if (!Elf || Elf->getEType() != ELF::ET_DYN) {
+    error("not a dynamic object");
+    return;
+  }
+
+  StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
+
+  std::vector<SectionRef> DynRelSec = Obj->dynamic_relocation_sections();
+  if (DynRelSec.empty())
+    return;
+
+  outs() << "DYNAMIC RELOCATION RECORDS\n";
+  for (const SectionRef &Section : DynRelSec) {
+    if (Section.relocation_begin() == Section.relocation_end())
+      continue;
+    for (const RelocationRef &Reloc : Section.relocations()) {
+      uint64_t address = Reloc.getOffset();
+      SmallString<32> relocname;
+      SmallString<32> valuestr;
+      Reloc.getTypeName(relocname);
+      error(getRelocationValueString(Reloc, valuestr));
+      outs() << format(Fmt.data(), address) << " " << relocname << " "
+             << valuestr << "\n";
+    }
+  }
+}
+
 void llvm::PrintSectionHeaders(const ObjectFile *Obj) {
   outs() << "Sections:\n"
             "Idx Name          Size      Address          Type\n";
-  unsigned i = 0;
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     error(Section.getName(Name));
@@ -1728,9 +1856,9 @@ void llvm::PrintSectionHeaders(const ObjectFile *Obj) {
     bool BSS = Section.isBSS();
     std::string Type = (std::string(Text ? "TEXT " : "") +
                         (Data ? "DATA " : "") + (BSS ? "BSS" : ""));
-    outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n", i,
-                     Name.str().c_str(), Size, Address, Type.c_str());
-    ++i;
+    outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n",
+                     (unsigned)Section.getIndex(), Name.str().c_str(), Size,
+                     Address, Type.c_str());
   }
 }
 
@@ -2040,7 +2168,86 @@ static void printPrivateFileHeaders(const ObjectFile *o, bool onlyFirst) {
   report_error(o->getFileName(), "Invalid/Unsupported object file format");
 }
 
-static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
+static void printFileHeaders(const ObjectFile *o) {
+  if (!o->isELF() && !o->isCOFF())
+    report_error(o->getFileName(), "Invalid/Unsupported object file format");
+
+  Triple::ArchType AT = o->getArch();
+  outs() << "architecture: " << Triple::getArchTypeName(AT) << "\n";
+  Expected<uint64_t> StartAddrOrErr = o->getStartAddress();
+  if (!StartAddrOrErr)
+    report_error(o->getFileName(), StartAddrOrErr.takeError());
+  outs() << "start address: "
+         << format("0x%0*x", o->getBytesInAddress(), StartAddrOrErr.get())
+         << "\n";
+}
+
+static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
+  Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
+  if (!ModeOrErr) {
+    errs() << "ill-formed archive entry.\n";
+    consumeError(ModeOrErr.takeError());
+    return;
+  }
+  sys::fs::perms Mode = ModeOrErr.get();
+  outs() << ((Mode & sys::fs::owner_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::owner_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::owner_exe) ? "x" : "-");
+  outs() << ((Mode & sys::fs::group_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::group_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::group_exe) ? "x" : "-");
+  outs() << ((Mode & sys::fs::others_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::others_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::others_exe) ? "x" : "-");
+
+  outs() << " ";
+
+  Expected<unsigned> UIDOrErr = C.getUID();
+  if (!UIDOrErr)
+    report_error(Filename, UIDOrErr.takeError());
+  unsigned UID = UIDOrErr.get();
+  outs() << format("%d/", UID);
+
+  Expected<unsigned> GIDOrErr = C.getGID();
+  if (!GIDOrErr)
+    report_error(Filename, GIDOrErr.takeError());
+  unsigned GID = GIDOrErr.get();
+  outs() << format("%-d ", GID);
+
+  Expected<uint64_t> Size = C.getRawSize();
+  if (!Size)
+    report_error(Filename, Size.takeError());
+  outs() << format("%6" PRId64, Size.get()) << " ";
+
+  StringRef RawLastModified = C.getRawLastModified();
+  unsigned Seconds;
+  if (RawLastModified.getAsInteger(10, Seconds))
+    outs() << "(date: \"" << RawLastModified
+           << "\" contains non-decimal chars) ";
+  else {
+    // Since ctime(3) returns a 26 character string of the form:
+    // "Sun Sep 16 01:03:52 1973\n\0"
+    // just print 24 characters.
+    time_t t = Seconds;
+    outs() << format("%.24s ", ctime(&t));
+  }
+
+  StringRef Name = "";
+  Expected<StringRef> NameOrErr = C.getName();
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    Expected<StringRef> RawNameOrErr = C.getRawName();
+    if (!RawNameOrErr)
+      report_error(Filename, NameOrErr.takeError());
+    Name = RawNameOrErr.get();
+  } else {
+    Name = NameOrErr.get();
+  }
+  outs() << Name << "\n";
+}
+
+static void DumpObject(ObjectFile *o, const Archive *a = nullptr,
+                       const Archive::Child *c = nullptr) {
   StringRef ArchiveName = a != nullptr ? a->getFileName() : "";
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
@@ -2052,10 +2259,14 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     outs() << ":\tfile format " << o->getFileFormatName() << "\n\n";
   }
 
+  if (ArchiveHeaders && !MachOOpt)
+    printArchiveChild(a->getFileName(), *c);
   if (Disassemble)
     DisassembleObject(o, Relocations);
   if (Relocations && !Disassemble)
     PrintRelocations(o);
+  if (DynamicRelocations)
+    PrintDynamicRelocations(o);
   if (SectionHeaders)
     PrintSectionHeaders(o);
   if (SectionContents)
@@ -2066,6 +2277,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     PrintUnwindInfo(o);
   if (PrivateHeaders || FirstPrivateHeader)
     printPrivateFileHeaders(o, FirstPrivateHeader);
+  if (FileHeaders)
+    printFileHeaders(o);
   if (ExportsTrie)
     printExportsTrie(o);
   if (Rebase)
@@ -2089,7 +2302,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   }
 }
 
-static void DumpObject(const COFFImportFile *I, const Archive *A) {
+static void DumpObject(const COFFImportFile *I, const Archive *A,
+                       const Archive::Child *C = nullptr) {
   StringRef ArchiveName = A ? A->getFileName() : "";
 
   // Avoid other output when using a raw option.
@@ -2099,11 +2313,13 @@ static void DumpObject(const COFFImportFile *I, const Archive *A) {
            << ":\tfile format COFF-import-file"
            << "\n\n";
 
+  if (ArchiveHeaders && !MachOOpt)
+    printArchiveChild(A->getFileName(), *C);
   if (SymbolTable)
     printCOFFSymbolTable(I);
 }
 
-/// @brief Dump each object file in \a a;
+/// Dump each object file in \a a;
 static void DumpArchive(const Archive *a) {
   Error Err = Error::success();
   for (auto &C : a->children(Err)) {
@@ -2114,9 +2330,9 @@ static void DumpArchive(const Archive *a) {
       continue;
     }
     if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
-      DumpObject(o, a);
+      DumpObject(o, a, &C);
     else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
-      DumpObject(I, a);
+      DumpObject(I, a, &C);
     else
       report_error(a->getFileName(), object_error::invalid_file_type);
   }
@@ -2124,7 +2340,7 @@ static void DumpArchive(const Archive *a) {
     report_error(a->getFileName(), std::move(Err));
 }
 
-/// @brief Open file and figure out how to dump it.
+/// Open file and figure out how to dump it.
 static void DumpInput(StringRef file) {
 
   // If we are using the Mach-O specific object file parser, then let it parse
@@ -2150,10 +2366,7 @@ static void DumpInput(StringRef file) {
 }
 
 int main(int argc, char **argv) {
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
-  PrettyStackTraceProgram X(argc, argv);
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
+  InitLLVM X(argc, argv);
 
   // Initialize targets and assembly printers/parsers.
   llvm::InitializeAllTargetInfos();
@@ -2172,15 +2385,25 @@ int main(int argc, char **argv) {
   if (InputFilenames.size() == 0)
     InputFilenames.push_back("a.out");
 
+  if (AllHeaders)
+    PrivateHeaders = Relocations = SectionHeaders = SymbolTable = true;
+
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
+
+  if (Demangle.getValue() != "none" && Demangle.getValue() != "" &&
+      Demangle.getValue() != "itanium")
+    warn("Unsupported demangling style");
+
   if (!Disassemble
       && !Relocations
+      && !DynamicRelocations
       && !SectionHeaders
       && !SectionContents
       && !SymbolTable
       && !UnwindInfo
       && !PrivateHeaders
+      && !FileHeaders
       && !FirstPrivateHeader
       && !ExportsTrie
       && !Rebase
@@ -2189,7 +2412,7 @@ int main(int argc, char **argv) {
       && !WeakBind
       && !RawClangAST
       && !(UniversalHeaders && MachOOpt)
-      && !(ArchiveHeaders && MachOOpt)
+      && !ArchiveHeaders
       && !(IndirectSymbols && MachOOpt)
       && !(DataInCode && MachOOpt)
       && !(LinkOptHints && MachOOpt)
@@ -2203,6 +2426,9 @@ int main(int argc, char **argv) {
     cl::PrintHelpMessage();
     return 2;
   }
+
+  DisasmFuncsSet.insert(DisassembleFunctions.begin(),
+                        DisassembleFunctions.end());
 
   llvm::for_each(InputFilenames, DumpInput);
 

@@ -38,6 +38,8 @@ the command line. To get you set up, follow the
 You can learn more about how to use arc to interact with
 Phabricator in the `Arcanist User Guide`_.
 
+.. _phabricator-request-review-web:
+
 Requesting a review via the web interface
 -----------------------------------------
 
@@ -63,15 +65,16 @@ To upload a new patch:
 * Click *Differential*.
 * Click *+ Create Diff*.
 * Paste the text diff or browse to the patch file. Click *Create Diff*.
-* Leave the Repository field blank.
+* Leave this first Repository field blank. (We'll fill in the Repository
+  later, when sending the review.)
 * Leave the drop down on *Create a new Revision...* and click *Continue*.
 * Enter a descriptive title and summary.  The title and summary are usually
   in the form of a :ref:`commit message <commit messages>`.
-* Add reviewers (see below for advice) and subscribe mailing
-  lists that you want to be included in the review. If your patch is
-  for LLVM, add llvm-commits as a Subscriber; if your patch is for Clang,
-  add cfe-commits.
-* Leave the Repository and Project fields blank.
+* Add reviewers (see below for advice). (If you set the Repository field
+  correctly, llvm-commits or cfe-commits will be subscribed automatically;
+  otherwise, you will have to manually subscribe them.)
+* In the Repository field, enter the name of the project (LLVM, Clang,
+  etc.) to which the review should be sent.
 * Click *Save*.
 
 To submit an updated patch:
@@ -81,7 +84,8 @@ To submit an updated patch:
 * Paste the updated diff or browse to the updated patch file. Click *Create Diff*.
 * Select the review you want to from the *Attach To* dropdown and click
   *Continue*.
-* Leave the Repository and Project fields blank.
+* Leave the Repository field blank. (We previously filled out the Repository
+  for the review request.)
 * Add comments about the changes in the new diff. Click *Save*.
 
 Choosing reviewers: You typically pick one or two people as initial reviewers.

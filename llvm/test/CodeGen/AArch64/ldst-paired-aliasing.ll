@@ -5,7 +5,7 @@ target triple = "aarch64--linux-gnu"
 declare void @f(i8*, i8*)
 declare void @f2(i8*, i8*)
 declare void @_Z5setupv()
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #3
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #3
 
 define i32 @main() local_unnamed_addr #1 {
 ; Make sure the stores happen in the correct order (the exact instructions could change).
@@ -24,7 +24,7 @@ for.body.lr.ph.i.i.i.i.i.i63:
   tail call void @_Z5setupv()
   %x2 = getelementptr inbounds [10 x i32], [10 x i32]* %b1, i64 0, i64 6
   %x3 = bitcast i32* %x2 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %x3, i8 0, i64 16, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 8 %x3, i8 0, i64 16, i1 false)
   %arraydecay2 = getelementptr inbounds [10 x i32], [10 x i32]* %b1, i64 0, i64 0
   %x4 = bitcast [10 x i32]* %b1 to <4 x i32>*
   store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %x4, align 16

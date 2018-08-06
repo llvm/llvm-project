@@ -3,7 +3,7 @@
 ; performCallSlotOptzn in MemCpy should not exchange the calls to
 ; @llvm.lifetime.start and @llvm.memcpy.
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
@@ -17,7 +17,7 @@ bb:
   call void @llvm.lifetime.start.p0i8(i64 16, i8* %tmp5)
   %tmp10 = getelementptr inbounds i8, i8* %tmp5, i64 7
   store i8 0, i8* %tmp10, align 1
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arg1, i8* %tmp5, i64 16, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %arg1, i8* align 8 %tmp5, i64 16, i1 false)
   call void @llvm.lifetime.end.p0i8(i64 16, i8* %tmp5)
   ret void
 }

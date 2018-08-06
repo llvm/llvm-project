@@ -460,7 +460,7 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   } else if (BPFOperand::isValidIdAtStart (Name))
     Operands.push_back(BPFOperand::createToken(Name, NameLoc));
   else
-    return true;
+    return Error(NameLoc, "invalid register/token name");
 
   while (!getLexer().is(AsmToken::EndOfStatement)) {
     // Attempt to parse token as operator
@@ -472,8 +472,10 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       continue;
 
     // Attempt to parse token as an immediate
-    if (parseImmediate(Operands) != MatchOperand_Success)
-      return true;
+    if (parseImmediate(Operands) != MatchOperand_Success) {
+      SMLoc Loc = getLexer().getLoc();
+      return Error(Loc, "unexpected token");
+    }
   }
 
   if (getLexer().isNot(AsmToken::EndOfStatement)) {

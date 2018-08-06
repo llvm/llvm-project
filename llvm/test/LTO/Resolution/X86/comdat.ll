@@ -77,7 +77,7 @@ bb11:
 ; CHECK-NEXT:   ret i32 42
 ; CHECK-NEXT: }
 
-; CHECK:      define internal dso_local i32 @f1.2(i8* %this) comdat($c2) {
+; CHECK:      define internal i32 @f1.2(i8* %this) comdat($c2) {
 ; CHECK-NEXT: bb20:
 ; CHECK-NEXT:   store i8* %this, i8** null
 ; CHECK-NEXT:   br label %bb21

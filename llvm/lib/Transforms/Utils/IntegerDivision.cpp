@@ -372,7 +372,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
 /// information about the operands are known. Implements both 32bit and 64bit
 /// scalar division.
 ///
-/// @brief Replace Rem with generated code.
+/// Replace Rem with generated code.
 bool llvm::expandRemainder(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
@@ -430,7 +430,7 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
 /// when more information about the operands are known. Implements both
 /// 32bit and 64bit scalar division.
 ///
-/// @brief Replace Div with generated code.
+/// Replace Div with generated code.
 bool llvm::expandDivision(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&
@@ -482,7 +482,7 @@ bool llvm::expandDivision(BinaryOperator *Div) {
 /// that have no or very little suppport for smaller than 32 bit integer 
 /// arithmetic.
 ///
-/// @brief Replace Rem with emulation code.
+/// Replace Rem with emulation code.
 bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
@@ -531,7 +531,7 @@ bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem) {
 /// 64 bits. Uses the above routines and extends the inputs/truncates the
 /// outputs to operate in 64 bits.
 ///
-/// @brief Replace Rem with emulation code.
+/// Replace Rem with emulation code.
 bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
@@ -580,7 +580,7 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem) {
 /// in 32 bits; that is, these routines are good for targets that have no
 /// or very little support for smaller than 32 bit integer arithmetic.
 ///
-/// @brief Replace Div with emulation code.
+/// Replace Div with emulation code.
 bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&
@@ -628,7 +628,7 @@ bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div) {
 /// above routines and extends the inputs/truncates the outputs to operate
 /// in 64 bits.
 ///
-/// @brief Replace Div with emulation code.
+/// Replace Div with emulation code.
 bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&

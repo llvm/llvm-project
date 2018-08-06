@@ -1,16 +1,37 @@
-; Verify the emission of accelerator tables for various targets.
+; Verify the emission of accelerator tables for various targets for the DWARF<=4 case
 
-; Darwin has the tables unless we specifically tune for gdb
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK1 %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
+; Darwin has the apple tables unless we specifically tune for gdb
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
 
-; Linux does not have the tables even if we explicitly tune for lldb
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
+; Linux does has debug_names tables only if we explicitly tune for lldb
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 
-; CHECK1: apple_names
+; No accelerator tables if type units are enabled, as DWARF v4 type units are
+; not compatible with accelerator tables.
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units -debugger-tune=lldb < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=NONE %s
 
-; CHECK2-NOT: apple_names
+; Debug types are ignored for non-ELF targets which means it shouldn't affect
+; accelerator table generation.
+; RUN: llc -mtriple=x86_64-apple-darwin12 -generate-type-units -filetype=obj < %s \
+; RUN:   | llvm-readobj -sections - | FileCheck --check-prefix=APPLE %s
+
+; APPLE-NOT: debug_names
+; APPLE: apple_names
+; APPLE-NOT: debug_names
+
+; NONE-NOT: apple_names
+; NONE-NOT: debug_names
+
+; DEBUG_NAMES-NOT: apple_names
+; DEBUG_NAMES: debug_names
+; DEBUG_NAMES-NOT: apple_names
 
 @var = thread_local global i32 0, align 4, !dbg !0
 
@@ -42,7 +63,7 @@ attributes #1 = { norecurse uwtable }
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
 !10 = !{!"clang version 7.0.0 (trunk 322268) (llvm/trunk 322267)"}
-!11 = distinct !DISubprogram(name: "fun", linkageName: "_Z3funv", scope: !3, file: !3, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !4)
+!11 = distinct !DISubprogram(name: "fun", linkageName: "_Z3funv", scope: !3, file: !3, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !4)
 !12 = !DISubroutineType(types: !13)
 !13 = !{null}
 !14 = !DILocation(line: 2, column: 13, scope: !11)

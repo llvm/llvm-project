@@ -83,3 +83,24 @@ define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
   store i1 %C9, i1* undef
   ret i177 %B1
 }
+
+define i32 @udiv_demanded(i32 %a) {
+; CHECK-LABEL: @udiv_demanded(
+; CHECK-NEXT:    [[U:%.*]] = udiv i32 [[A:%.*]], 12
+; CHECK-NEXT:    ret i32 [[U]]
+;
+  %o = or i32 %a, 3
+  %u = udiv i32 %o, 12
+  ret i32 %u
+}
+
+define i32 @udiv_exact_demanded(i32 %a) {
+; CHECK-LABEL: @udiv_exact_demanded(
+; CHECK-NEXT:    [[O:%.*]] = and i32 [[A:%.*]], -3
+; CHECK-NEXT:    [[U:%.*]] = udiv exact i32 [[O]], 12
+; CHECK-NEXT:    ret i32 [[U]]
+;
+  %o = and i32 %a, -3
+  %u = udiv exact i32 %o, 12
+  ret i32 %u
+}

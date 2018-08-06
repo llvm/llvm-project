@@ -1,0 +1,57 @@
+
+RUN: rm -rf %t1/
+RUN: mkdir %t1
+RUN: obj2yaml %S/Inputs/precomp-a.obj > %t1/precomp-a.yaml
+RUN: obj2yaml %S/Inputs/precomp.obj > %t1/precomp.yaml
+RUN: yaml2obj %t1/precomp-a.yaml > %t1/a.obj
+RUN: yaml2obj %t1/precomp.yaml > %t1/precomp.obj
+RUN: llvm-readobj -codeview %t1/a.obj | FileCheck %s -check-prefix PRECOMP
+RUN: llvm-readobj -codeview %t1/precomp.obj | FileCheck %s -check-prefix ENDPRECOMP
+RUN: llvm-pdbutil dump -types %t1/a.obj | FileCheck %s -check-prefix PDB-PRECOMP
+RUN: llvm-pdbutil dump -types %t1/precomp.obj | FileCheck %s -check-prefix PDB-ENDPRECOMP
+
+ENDPRECOMP:      CodeViewTypes [
+ENDPRECOMP-NEXT:   Section: .debug$P (3)
+ENDPRECOMP:        EndPrecomp (0x1407) {
+ENDPRECOMP-NEXT:     TypeLeafKind: LF_ENDPRECOMP (0x14)
+ENDPRECOMP-NEXT:     Signature: 0x1116980E
+ENDPRECOMP-NEXT:   }
+
+PRECOMP:      CodeViewTypes [
+PRECOMP-NEXT:   Section: .debug$T (3)
+PRECOMP-NEXT:   Magic: 0x4
+PRECOMP-NEXT:   Precomp (0x1000) {
+PRECOMP-NEXT:     TypeLeafKind: LF_PRECOMP (0x1509)
+PRECOMP-NEXT:     StartIndex: 0x1000
+PRECOMP-NEXT:     Count: 0x407
+PRECOMP-NEXT:     Signature: 0x1116980E
+
+PDB-PRECOMP:                              Types (.debug$T)
+PDB-PRECOMP-NEXT: ============================================================
+PDB-PRECOMP-NEXT: Showing 0 records
+PDB-PRECOMP-NEXT: 0x1000 | LF_PRECOMP [size = 60] start index = 0x1000, types count = 0x407, signature = 0x1116980E, precomp path = f:\svn\lld\test\coff\precomp\precomp.obj
+
+PDB-ENDPRECOMP:                     Precompiled Types (.debug$P)
+PDB-ENDPRECOMP-NEXT: ============================================================
+PDB-ENDPRECOMP-NEXT: Showing 0 records
+PDB-ENDPRECOMP:      0x1407 | LF_ENDPRECOMP [size = 8] signature = 0x1116980E
+
+# // precomp.h
+# #pragma once
+# int Function(char A);
+#
+# // precomp.cpp
+# // cl.exe precomp.cpp /Z7 /Ycprecomp.h /c
+# #include "precomp.h"
+#
+# // a.cpp
+# #include "precomp.h"
+# int main(void) {
+#   Function('a');
+#   return 0;
+# }
+#
+# // cl.exe a.cpp /Z7 /Yuprecomp.h /c
+#
+# // obj2yaml precomp.obj >precomp-precomp.yaml
+# // obj2yaml a.obj >precomp-a.yaml

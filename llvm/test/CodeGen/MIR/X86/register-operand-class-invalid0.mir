@@ -9,5 +9,5 @@ name: t
 body: |
   bb.0:
     ; CHECK: [[@LINE+1]]:10: register class specification expects a virtual register
-    %eax : gr32 = COPY %rdx
+    $eax : gr32 = COPY $rdx
 ...

@@ -219,6 +219,40 @@ declare <2 x float> @llvm.aarch64.neon.fabd.v2f32(<2 x float>, <2 x float>) noun
 declare <4 x float> @llvm.aarch64.neon.fabd.v4f32(<4 x float>, <4 x float>) nounwind readnone
 declare <2 x double> @llvm.aarch64.neon.fabd.v2f64(<2 x double>, <2 x double>) nounwind readnone
 
+define <2 x float> @fabd_2s_from_fsub_fabs(<2 x float>* %A, <2 x float>* %B) nounwind {
+;CHECK-LABEL: fabd_2s_from_fsub_fabs:
+;CHECK: fabd.2s
+        %tmp1 = load <2 x float>, <2 x float>* %A
+        %tmp2 = load <2 x float>, <2 x float>* %B
+        %sub = fsub <2 x float> %tmp1, %tmp2
+        %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
+        ret <2 x float> %abs
+}
+
+define <4 x float> @fabd_4s_from_fsub_fabs(<4 x float>* %A, <4 x float>* %B) nounwind {
+;CHECK-LABEL: fabd_4s_from_fsub_fabs:
+;CHECK: fabd.4s
+        %tmp1 = load <4 x float>, <4 x float>* %A
+        %tmp2 = load <4 x float>, <4 x float>* %B
+        %sub = fsub <4 x float> %tmp1, %tmp2
+        %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %sub)
+        ret <4 x float> %abs
+}
+
+define <2 x double> @fabd_2d_from_fsub_fabs(<2 x double>* %A, <2 x double>* %B) nounwind {
+;CHECK-LABEL: fabd_2d_from_fsub_fabs:
+;CHECK: fabd.2d
+        %tmp1 = load <2 x double>, <2 x double>* %A
+        %tmp2 = load <2 x double>, <2 x double>* %B
+        %sub = fsub <2 x double> %tmp1, %tmp2
+        %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sub)
+        ret <2 x double> %abs
+}
+
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>) nounwind readnone
+declare <4 x float> @llvm.fabs.v4f32(<4 x float>) nounwind readnone
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>) nounwind readnone
+
 define <8 x i8> @sabd_8b(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: sabd_8b:
 ;CHECK: sabd.8b
@@ -828,6 +862,25 @@ define double @fabdd(double %a, double %b) nounwind {
 
 declare double @llvm.aarch64.sisd.fabd.f64(double, double) nounwind readnone
 declare float @llvm.aarch64.sisd.fabd.f32(float, float) nounwind readnone
+
+define float @fabds_from_fsub_fabs(float %a, float %b) nounwind {
+; CHECK-LABEL: fabds_from_fsub_fabs:
+; CHECK: fabd s0, s0, s1
+  %sub = fsub float %a, %b
+  %abs = tail call float @llvm.fabs.f32(float %sub)
+  ret float %abs
+}
+
+define double @fabdd_from_fsub_fabs(double %a, double %b) nounwind {
+; CHECK-LABEL: fabdd_from_fsub_fabs:
+; CHECK: fabd d0, d0, d1
+  %sub = fsub double %a, %b
+  %abs = tail call double @llvm.fabs.f64(double %sub)
+  ret double %abs
+}
+
+declare float @llvm.fabs.f32(float) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone
 
 define <2 x i64> @uabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: uabdl_from_extract_dup:

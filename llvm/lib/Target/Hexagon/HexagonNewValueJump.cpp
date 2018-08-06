@@ -16,7 +16,7 @@
 
 // The basic approach looks for sequence of predicated jump, compare instruciton
 // that genereates the predicate and, the feeder to the predicate. Once it finds
-// all, it collapses compare and jump instruction into a new valu jump
+// all, it collapses compare and jump instruction into a new value jump
 // intstructions.
 //
 //===----------------------------------------------------------------------===//
@@ -24,6 +24,7 @@
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
+#include "HexagonSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -95,7 +96,7 @@ namespace {
     const HexagonInstrInfo *QII;
     const HexagonRegisterInfo *QRI;
 
-    /// \brief A handle to the branch probability pass.
+    /// A handle to the branch probability pass.
     const MachineBranchProbabilityInfo *MBPI;
 
     bool isNewValueJumpCandidate(const MachineInstr &MI) const;
@@ -142,8 +143,24 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   if (QII->isSolo(*II))
     return false;
 
-  // Make sure there there is no 'def' or 'use' of any of the uses of
-  // feeder insn between it's definition, this MI and jump, jmpInst
+  if (QII->isFloat(*II))
+    return false;
+
+  // Make sure that the (unique) def operand is a register from IntRegs.
+  bool HadDef = false;
+  for (const MachineOperand &Op : II->operands()) {
+    if (!Op.isReg() || !Op.isDef())
+      continue;
+    if (HadDef)
+      return false;
+    HadDef = true;
+    if (!Hexagon::IntRegsRegClass.contains(Op.getReg()))
+      return false;
+  }
+  assert(HadDef);
+
+  // Make sure there is no 'def' or 'use' of any of the uses of
+  // feeder insn between its definition, this MI and jump, jmpInst
   // skipping compare, cmpInst.
   // Here's the example.
   //    r21=memub(r22+r24<<#0)
@@ -270,8 +287,8 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
     if (cmpReg1 == cmpOp2)
       return false;
 
-    // Make sure that that second register is not from COPY
-    // At machine code level, we don't need this, but if we decide
+    // Make sure that the second register is not from COPY
+    // at machine code level, we don't need this, but if we decide
     // to move new value jump prior to RA, we would be needing this.
     MachineRegisterInfo &MRI = MF.getRegInfo();
     if (secondReg && !TargetRegisterInfo::isPhysicalRegister(cmpOp2)) {
@@ -285,7 +302,7 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
   // and satisfy the following conditions.
   ++II;
   for (MachineBasicBlock::iterator localII = II; localII != end; ++localII) {
-    if (localII->isDebugValue())
+    if (localII->isDebugInstr())
       continue;
 
     // Check 1.
@@ -431,8 +448,8 @@ bool HexagonNewValueJump::isNewValueJumpCandidate(
 }
 
 bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Hexagon New Value Jump **********\n"
-               << "********** Function: " << MF.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "********** Hexagon New Value Jump **********\n"
+                    << "********** Function: " << MF.getName() << "\n");
 
   if (skipFunction(MF.getFunction()))
     return false;
@@ -445,9 +462,9 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
       MF.getSubtarget().getRegisterInfo());
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
 
-  if (DisableNewValueJumps) {
+  if (DisableNewValueJumps ||
+      !MF.getSubtarget<HexagonSubtarget>().useNewValueJumps())
     return false;
-  }
 
   int nvjCount = DbgNVJCount;
   int nvjGenerated = 0;
@@ -457,9 +474,10 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
        MBBb != MBBe; ++MBBb) {
     MachineBasicBlock *MBB = &*MBBb;
 
-    DEBUG(dbgs() << "** dumping bb ** " << MBB->getNumber() << "\n");
-    DEBUG(MBB->dump());
-    DEBUG(dbgs() << "\n" << "********** dumping instr bottom up **********\n");
+    LLVM_DEBUG(dbgs() << "** dumping bb ** " << MBB->getNumber() << "\n");
+    LLVM_DEBUG(MBB->dump());
+    LLVM_DEBUG(dbgs() << "\n"
+                      << "********** dumping instr bottom up **********\n");
     bool foundJump    = false;
     bool foundCompare = false;
     bool invertPredicate = false;
@@ -477,14 +495,14 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator MII = MBB->end(), E = MBB->begin();
          MII != E;) {
       MachineInstr &MI = *--MII;
-      if (MI.isDebugValue()) {
+      if (MI.isDebugInstr()) {
         continue;
       }
 
       if ((nvjCount == 0) || (nvjCount > -1 && nvjCount <= nvjGenerated))
         break;
 
-      DEBUG(dbgs() << "Instr: "; MI.dump(); dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "Instr: "; MI.dump(); dbgs() << "\n");
 
       if (!foundJump && (MI.getOpcode() == Hexagon::J2_jumpt ||
                          MI.getOpcode() == Hexagon::J2_jumptpt ||
@@ -505,7 +523,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         // operands, the following check on the kill flag would suffice.
         // if(!jmpInstr->getOperand(0).isKill()) break;
 
-        // This predicate register is live out out of BB
+        // This predicate register is live out of BB
         // this would only work if we can actually use Live
         // variable analysis on phy regs - but LLVM does not
         // provide LV analysis on phys regs.

@@ -391,11 +391,29 @@ entry:
   ret void
 }
 
+define void @test_vst1q_lane0_s16(i16* %a, <8 x i16> %b) {
+; CHECK-LABEL: test_vst1q_lane0_s16:
+; CHECK: str {{h[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <8 x i16> %b, i32 0
+  store i16 %0, i16* %a, align 2
+  ret void
+}
+
 define void @test_vst1q_lane_s32(i32* %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vst1q_lane_s32:
 ; CHECK: st1 { {{v[0-9]+}}.s }[{{[0-9]+}}], [x0]
 entry:
   %0 = extractelement <4 x i32> %b, i32 3
+  store i32 %0, i32* %a, align 4
+  ret void
+}
+
+define void @test_vst1q_lane0_s32(i32* %a, <4 x i32> %b) {
+; CHECK-LABEL: test_vst1q_lane0_s32:
+; CHECK: str {{s[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <4 x i32> %b, i32 0
   store i32 %0, i32* %a, align 4
   ret void
 }
@@ -409,6 +427,15 @@ entry:
   ret void
 }
 
+define void @test_vst1q_lane0_s64(i64* %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vst1q_lane0_s64:
+; CHECK: str {{d[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <2 x i64> %b, i32 0
+  store i64 %0, i64* %a, align 8
+  ret void
+}
+
 define void @test_vst1q_lane_f32(float* %a, <4 x float> %b) {
 ; CHECK-LABEL: test_vst1q_lane_f32:
 ; CHECK: st1 { {{v[0-9]+}}.s }[{{[0-9]+}}], [x0]
@@ -418,11 +445,29 @@ entry:
   ret void
 }
 
+define void @test_vst1q_lane0_f32(float* %a, <4 x float> %b) {
+; CHECK-LABEL: test_vst1q_lane0_f32:
+; CHECK: str {{s[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <4 x float> %b, i32 0
+  store float %0, float* %a, align 4
+  ret void
+}
+
 define void @test_vst1q_lane_f64(double* %a, <2 x double> %b) {
 ; CHECK-LABEL: test_vst1q_lane_f64:
 ; CHECK: st1 { {{v[0-9]+}}.d }[{{[0-9]+}}], [x0]
 entry:
   %0 = extractelement <2 x double> %b, i32 1
+  store double %0, double* %a, align 8
+  ret void
+}
+
+define void @test_vst1q_lane0_f64(double* %a, <2 x double> %b) {
+; CHECK-LABEL: test_vst1q_lane0_f64:
+; CHECK: str {{d[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <2 x double> %b, i32 0
   store double %0, double* %a, align 8
   ret void
 }
@@ -445,6 +490,15 @@ entry:
   ret void
 }
 
+define void @test_vst1_lane0_s16(i16* %a, <4 x i16> %b) {
+; CHECK-LABEL: test_vst1_lane0_s16:
+; CHECK: str {{h[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <4 x i16> %b, i32 0
+  store i16 %0, i16* %a, align 2
+  ret void
+}
+
 define void @test_vst1_lane_s32(i32* %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vst1_lane_s32:
 ; CHECK: st1 { {{v[0-9]+}}.s }[{{[0-9]+}}], [x0]
@@ -454,9 +508,18 @@ entry:
   ret void
 }
 
+define void @test_vst1_lane0_s32(i32* %a, <2 x i32> %b) {
+; CHECK-LABEL: test_vst1_lane0_s32:
+; CHECK: str {{s[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <2 x i32> %b, i32 0
+  store i32 %0, i32* %a, align 4
+  ret void
+}
+
 define void @test_vst1_lane_s64(i64* %a, <1 x i64> %b) {
 ; CHECK-LABEL: test_vst1_lane_s64:
-; CHECK: st1 { {{v[0-9]+}}.d }[{{[0-9]+}}], [x0]
+; CHECK: str {{d[0-9]+}}, [x0]
 entry:
   %0 = extractelement <1 x i64> %b, i32 0
   store i64 %0, i64* %a, align 8
@@ -468,6 +531,15 @@ define void @test_vst1_lane_f32(float* %a, <2 x float> %b) {
 ; CHECK: st1 { {{v[0-9]+}}.s }[{{[0-9]+}}], [x0]
 entry:
   %0 = extractelement <2 x float> %b, i32 1
+  store float %0, float* %a, align 4
+  ret void
+}
+
+define void @test_vst1_lane0_f32(float* %a, <2 x float> %b) {
+; CHECK-LABEL: test_vst1_lane0_f32:
+; CHECK: str {{s[0-9]+}}, [x0]
+entry:
+  %0 = extractelement <2 x float> %b, i32 0
   store float %0, float* %a, align 4
   ret void
 }

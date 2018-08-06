@@ -429,7 +429,7 @@ public:
     // don't care what code widths are used inside of it.
     ReadVBR(bitc::CodeLenWidth);
     SkipToFourByteBoundary();
-    unsigned NumFourBytes = Read(bitc::BlockSizeWidth);
+    size_t NumFourBytes = Read(bitc::BlockSizeWidth);
 
     // Check that the block wasn't partially defined, and that the offset isn't
     // bogus.

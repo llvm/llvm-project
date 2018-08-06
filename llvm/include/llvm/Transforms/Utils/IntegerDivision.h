@@ -29,7 +29,7 @@ namespace llvm {
   /// e.g. when more information about the operands are known. Implements both
   /// 32bit and 64bit scalar division.
   ///
-  /// @brief Replace Rem with generated code.
+  /// Replace Rem with generated code.
   bool expandRemainder(BinaryOperator *Rem);
 
   /// Generate code to divide two integers, replacing Div with the generated
@@ -38,7 +38,7 @@ namespace llvm {
   /// when more information about the operands are known. Implements both
   /// 32bit and 64bit scalar division.
   ///
-  /// @brief Replace Div with generated code.
+  /// Replace Div with generated code.
   bool expandDivision(BinaryOperator* Div);
 
   /// Generate code to calculate the remainder of two integers, replacing Rem
@@ -46,26 +46,26 @@ namespace llvm {
   /// makes it useful for targets with little or no support for less than
   /// 32 bit arithmetic.
   ///
-  /// @brief Replace Rem with generated code.
+  /// Replace Rem with generated code.
   bool expandRemainderUpTo32Bits(BinaryOperator *Rem);
 
   /// Generate code to calculate the remainder of two integers, replacing Rem
   /// with the generated code. Uses ExpandReminder with a 64bit Rem.
   ///
-  /// @brief Replace Rem with generated code.
+  /// Replace Rem with generated code.
   bool expandRemainderUpTo64Bits(BinaryOperator *Rem);
 
   /// Generate code to divide two integers, replacing Div with the generated
   /// code. Uses ExpandDivision with a 32bit Div which makes it useful for
   /// targets with little or no support for less than 32 bit arithmetic.
   ///
-  /// @brief Replace Rem with generated code.
+  /// Replace Rem with generated code.
   bool expandDivisionUpTo32Bits(BinaryOperator *Div);
 
   /// Generate code to divide two integers, replacing Div with the generated
   /// code. Uses ExpandDivision with a 64bit Div.
   ///
-  /// @brief Replace Rem with generated code.
+  /// Replace Rem with generated code.
   bool expandDivisionUpTo64Bits(BinaryOperator *Div);
 
 } // End llvm namespace

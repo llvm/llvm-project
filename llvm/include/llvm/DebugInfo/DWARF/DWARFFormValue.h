@@ -20,37 +20,9 @@
 
 namespace llvm {
 
+class DWARFContext;
 class DWARFUnit;
 class raw_ostream;
-
-/// A helper struct for DWARFFormValue methods, providing information that
-/// allows it to know the byte size of DW_FORM values that vary in size
-/// depending on the DWARF version, address byte size, or DWARF32/DWARF64.
-struct DWARFFormParams {
-  uint16_t Version;
-  uint8_t AddrSize;
-  dwarf::DwarfFormat Format;
-
-  /// The definition of the size of form DW_FORM_ref_addr depends on the
-  /// version. In DWARF v2 it's the size of an address; after that, it's the
-  /// size of a reference.
-  uint8_t getRefAddrByteSize() const {
-    if (Version == 2)
-      return AddrSize;
-    return getDwarfOffsetByteSize();
-  }
-
-  /// The size of a reference is determined by the DWARF 32/64-bit format.
-  uint8_t getDwarfOffsetByteSize() const {
-    switch (Format) {
-    case dwarf::DwarfFormat::DWARF32:
-      return 4;
-    case dwarf::DwarfFormat::DWARF64:
-      return 8;
-    }
-    llvm_unreachable("Invalid Format value");
-  }
-};
 
 class DWARFFormValue {
 public:
@@ -83,7 +55,7 @@ private:
   dwarf::Form Form;             /// Form for this value.
   ValueType Value;              /// Contains all data for the form.
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
-
+  const DWARFContext *C = nullptr; /// Context for extract time.
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
 
@@ -106,10 +78,17 @@ public:
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
   /// in \p FormParams is needed to interpret some forms. The optional
-  /// \p Unit allows extracting information if the form refers to other
-  /// sections (e.g., .debug_str).
+  /// \p Context and \p Unit allows extracting information if the form refers
+  /// to other sections (e.g., .debug_str).
   bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    DWARFFormParams FormParams, const DWARFUnit *U = nullptr);
+                    dwarf::FormParams FormParams,
+                    const DWARFContext *Context = nullptr,
+                    const DWARFUnit *Unit = nullptr);
+
+  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+                    dwarf::FormParams FormParams, const DWARFUnit *U) {
+    return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
+  }
 
   bool isInlinedCStr() const {
     return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;
@@ -127,19 +106,6 @@ public:
   Optional<uint64_t> getAsCStringOffset() const;
   Optional<uint64_t> getAsReferenceUVal() const;
 
-  /// Get the fixed byte size for a given form.
-  ///
-  /// If the form has a fixed byte size, then an Optional with a value will be
-  /// returned. If the form is always encoded using a variable length storage
-  /// format (ULEB or SLEB numbers or blocks) then None will be returned.
-  ///
-  /// \param Form DWARF form to get the fixed byte size for.
-  /// \param FormParams DWARF parameters to help interpret forms.
-  /// \returns Optional<uint8_t> value with the fixed byte size or None if
-  /// \p Form doesn't have a fixed byte size.
-  static Optional<uint8_t> getFixedByteSize(dwarf::Form Form,
-                                            const DWARFFormParams FormParams);
-
   /// Skip a form's value in \p DebugInfoData at the offset specified by
   /// \p OffsetPtr.
   ///
@@ -150,7 +116,7 @@ public:
   /// \param Params DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
   bool skipValue(DataExtractor DebugInfoData, uint32_t *OffsetPtr,
-                 const DWARFFormParams Params) const {
+                 const dwarf::FormParams Params) const {
     return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
   }
 
@@ -165,7 +131,8 @@ public:
   /// \param FormParams DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
   static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
-                        uint32_t *OffsetPtr, const DWARFFormParams FormParams);
+                        uint32_t *OffsetPtr,
+                        const dwarf::FormParams FormParams);
 
 private:
   void dumpString(raw_ostream &OS) const;

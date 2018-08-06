@@ -67,18 +67,15 @@ bool TargetSubtargetInfo::useAA() const {
   return false;
 }
 
-static std::string createSchedInfoStr(unsigned Latency,
-                                     Optional<double> RThroughput) {
+static std::string createSchedInfoStr(unsigned Latency, double RThroughput) {
   static const char *SchedPrefix = " sched: [";
   std::string Comment;
   raw_string_ostream CS(Comment);
-  if (Latency > 0 && RThroughput.hasValue())
-    CS << SchedPrefix << Latency << format(":%2.2f", RThroughput.getValue())
+  if (RThroughput != 0.0)
+    CS << SchedPrefix << Latency << format(":%2.2f", RThroughput)
        << "]";
-  else if (Latency > 0)
+  else
     CS << SchedPrefix << Latency << ":?]";
-  else if (RThroughput.hasValue())
-    CS << SchedPrefix << "?:" << RThroughput.getValue() << "]";
   CS.flush();
   return Comment;
 }
@@ -90,9 +87,9 @@ std::string TargetSubtargetInfo::getSchedInfoStr(const MachineInstr &MI) const {
   // We don't cache TSchedModel because it depends on TargetInstrInfo
   // that could be changed during the compilation
   TargetSchedModel TSchedModel;
-  TSchedModel.init(getSchedModel(), this, getInstrInfo());
+  TSchedModel.init(this);
   unsigned Latency = TSchedModel.computeInstrLatency(&MI);
-  Optional<double> RThroughput = TSchedModel.computeInstrRThroughput(&MI);
+  double RThroughput = TSchedModel.computeReciprocalThroughput(&MI);
   return createSchedInfoStr(Latency, RThroughput);
 }
 
@@ -101,17 +98,19 @@ std::string TargetSubtargetInfo::getSchedInfoStr(MCInst const &MCI) const {
   // We don't cache TSchedModel because it depends on TargetInstrInfo
   // that could be changed during the compilation
   TargetSchedModel TSchedModel;
-  TSchedModel.init(getSchedModel(), this, getInstrInfo());
+  TSchedModel.init(this);
   unsigned Latency;
   if (TSchedModel.hasInstrSchedModel())
-    Latency = TSchedModel.computeInstrLatency(MCI.getOpcode());
+    Latency = TSchedModel.computeInstrLatency(MCI);
   else if (TSchedModel.hasInstrItineraries()) {
     auto *ItinData = TSchedModel.getInstrItineraries();
     Latency = ItinData->getStageLatency(
         getInstrInfo()->get(MCI.getOpcode()).getSchedClass());
   } else
     return std::string();
-  Optional<double> RThroughput =
-      TSchedModel.computeInstrRThroughput(MCI.getOpcode());
+  double RThroughput = TSchedModel.computeReciprocalThroughput(MCI);
   return createSchedInfoStr(Latency, RThroughput);
+}
+
+void TargetSubtargetInfo::mirFileLoaded(MachineFunction &MF) const {
 }

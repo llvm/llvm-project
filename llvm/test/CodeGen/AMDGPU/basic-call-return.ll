@@ -13,7 +13,7 @@ define amdgpu_kernel void @test_call_void_func_void() {
 }
 
 define void @void_func_void_clobber_s40_s41() #2 {
-  call void asm sideeffect "", "~{SGPR40_SGPR41}"() #0
+  call void asm sideeffect "", "~{s[40:41]}"() #0
   ret void
 }
 

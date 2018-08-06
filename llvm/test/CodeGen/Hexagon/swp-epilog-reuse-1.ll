@@ -4,7 +4,7 @@
 ; Test that the pipeliner reuses an existing Phi when generating the epilog
 ; block. In this case, the original loops has a Phi whose operand is another
 ; Phi. When the loop is pipelined, the Phi that generates the operand value
-; is used in two stages. This means the the Phi for the second stage can
+; is used in two stages. This means the Phi for the second stage can
 ; be reused. The bug causes an assert due to an invalid virtual register error
 ; in the live variable analysis.
 

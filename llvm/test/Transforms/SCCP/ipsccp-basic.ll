@@ -1,4 +1,5 @@
 ; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -enable-debugify -ipsccp -debugify-quiet -disable-output
 
 ;;======================== test1
 
@@ -246,13 +247,14 @@ define i64 @test11a() {
 ; CHECK: ret i64 0
 }
 
-define void @test11b() {
+define i64 @test11b() {
   %call1 = call i64 @test11a()
   %call2 = call i64 @llvm.ctpop.i64(i64 %call1)
-  ret void
-; CHECK-LABEL: define void @test11b
+  ret i64 %call2
+; CHECK-LABEL: define i64 @test11b
 ; CHECK: %[[call1:.*]] = call i64 @test11a()
-; CHECK: %[[call2:.*]] = call i64 @llvm.ctpop.i64(i64 0)
+; CHECK-NOT: call i64 @llvm.ctpop.i64
+; CHECK-NEXT: ret i64 0
 }
 
 declare i64 @llvm.ctpop.i64(i64)

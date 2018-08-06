@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=sparc-linux-gnu < %s -show-mc-encoding | FileCheck %s
+; RUN: llc -mtriple=sparc-linux-gnu < %s -show-mc-encoding -verify-machineinstrs | FileCheck %s
 
 define void @test1() {
   tail call void @llvm.trap()
@@ -9,3 +9,13 @@ define void @test1() {
 }
 
 declare void @llvm.trap()
+
+; CHECK-LABEL: testdebugtrap:
+; CHECK: ta 1 ! encoding: [0x91,0xd0,0x20,0x01]
+define void @testdebugtrap() {
+entry:
+  call void @llvm.debugtrap()
+  ret void
+}
+
+declare void @llvm.debugtrap()

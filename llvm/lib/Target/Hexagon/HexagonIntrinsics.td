@@ -807,7 +807,6 @@ def : T_QII_pat<C2_muxii, int_hexagon_C2_muxii, s32_0ImmPred, s8_0ImmPred>;
 // Shift halfword
 def : T_R_pat<A2_aslh, int_hexagon_A2_aslh>;
 def : T_R_pat<A2_asrh, int_hexagon_A2_asrh>;
-def : T_R_pat<A2_asrh, int_hexagon_SI_to_SXTHI_asrh>;
 
 // Sign/zero extend
 def : T_R_pat<A2_sxth, int_hexagon_A2_sxth>;
@@ -1353,11 +1352,11 @@ class T_stb_pat <InstHexagon MI, Intrinsic IntID, PatLeaf Val>
   : Pat<(IntID I32:$Rs, Val:$Rt, I32:$Ru),
         (MI I32:$Rs, I32:$Ru, Val:$Rt)>;
 
-def : T_stb_pat <S2_storerh_pbr, int_hexagon_brev_sth,   I32>;
-def : T_stb_pat <S2_storerb_pbr, int_hexagon_brev_stb,   I32>;
-def : T_stb_pat <S2_storeri_pbr, int_hexagon_brev_stw,   I32>;
-def : T_stb_pat <S2_storerf_pbr, int_hexagon_brev_sthhi, I32>;
-def : T_stb_pat <S2_storerd_pbr, int_hexagon_brev_std,   I64>;
+def : T_stb_pat <S2_storerh_pbr, int_hexagon_S2_storerh_pbr, I32>;
+def : T_stb_pat <S2_storerb_pbr, int_hexagon_S2_storerb_pbr, I32>;
+def : T_stb_pat <S2_storeri_pbr, int_hexagon_S2_storeri_pbr, I32>;
+def : T_stb_pat <S2_storerf_pbr, int_hexagon_S2_storerf_pbr, I32>;
+def : T_stb_pat <S2_storerd_pbr, int_hexagon_S2_storerd_pbr, I64>;
 
 class T_stc_pat <InstHexagon MI, Intrinsic IntID, PatLeaf Imm, PatLeaf Val>
   : Pat<(IntID I32:$Rs, Val:$Rt, I32:$Ru, Imm:$s),

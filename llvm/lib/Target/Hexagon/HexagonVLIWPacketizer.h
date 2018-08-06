@@ -59,7 +59,7 @@ class HexagonPacketizerList : public VLIWPacketizerList {
   bool PacketStalls = false;
 
 protected:
-  /// \brief A handle to the branch probability pass.
+  /// A handle to the branch probability pass.
   const MachineBranchProbabilityInfo *MBPI;
   const MachineLoopInfo *MLI;
 

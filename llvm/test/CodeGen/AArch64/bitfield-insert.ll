@@ -137,7 +137,7 @@ define void @test_32bit_complexmask(i32 *%existing, i32 *%new) {
   ret void
 }
 
-; Neither mask is is a contiguous set of 1s. BFI can't be used
+; Neither mask is a contiguous set of 1s. BFI can't be used
 define void @test_32bit_badmask(i32 *%existing, i32 *%new) {
 ; CHECK-LABEL: test_32bit_badmask:
 ; CHECK-NOT: bfi

@@ -20,6 +20,16 @@ define void @truncStore.v4i32(<4 x i32> %a, <4 x i16>* %result) {
   ret void
 }
 
+define void @truncStore.v4i8(<4 x i32> %a, <4 x i8>* %result) {
+; CHECK-LABEL: truncStore.v4i8:
+; CHECK:      xtn [[TMP:(v[0-9]+)]].4h, v{{[0-9]+}}.4s
+; CHECK-NEXT: xtn [[TMP2:(v[0-9]+)]].8b, [[TMP]].8h
+; CHECK-NEXT: str s{{[0-9]+}}, [x{{[0-9]+}}]
+  %b = trunc <4 x i32> %a to <4 x i8>
+  store <4 x i8> %b, <4 x i8>* %result
+  ret void
+}
+
 define void @truncStore.v8i16(<8 x i16> %a, <8 x i8>* %result) {
 ; CHECK-LABEL: truncStore.v8i16:
 ; CHECK: xtn v{{[0-9]+}}.8b, v{{[0-9]+}}.8h

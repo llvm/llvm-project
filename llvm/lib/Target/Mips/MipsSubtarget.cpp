@@ -16,6 +16,9 @@
 #include "MipsMachineFunction.h"
 #include "MipsRegisterInfo.h"
 #include "MipsTargetMachine.h"
+#include "MipsCallLowering.h"
+#include "MipsLegalizerInfo.h"
+#include "MipsRegisterBankInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
@@ -57,6 +60,12 @@ static cl::opt<bool>
     GPOpt("mgpopt", cl::Hidden,
           cl::desc("Enable gp-relative addressing of mips small data items"));
 
+bool MipsSubtarget::DspWarningPrinted = false;
+bool MipsSubtarget::MSAWarningPrinted = false;
+bool MipsSubtarget::VirtWarningPrinted = false;
+bool MipsSubtarget::CRCWarningPrinted = false;
+bool MipsSubtarget::GINVWarningPrinted = false;
+
 void MipsSubtarget::anchor() {}
 
 MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
@@ -71,8 +80,9 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       InMips16HardFloat(Mips16HardFloat), InMicroMipsMode(false), HasDSP(false),
       HasDSPR2(false), HasDSPR3(false), AllowMixed16_32(Mixed16_32 | Mips_Os16),
       Os16(Mips_Os16), HasMSA(false), UseTCCInDIV(false), HasSym32(false),
-      HasEVA(false), DisableMadd4(false), HasMT(false),
-      UseIndirectJumpsHazard(false), StackAlignOverride(StackAlignOverride),
+      HasEVA(false), DisableMadd4(false), HasMT(false), HasCRC(false),
+      HasVirt(false), HasGINV(false), UseIndirectJumpsHazard(false),
+      StackAlignOverride(StackAlignOverride),
       TM(TM), TargetTriple(TT), TSInfo(),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
@@ -108,6 +118,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   if (hasMips64r6() && InMicroMipsMode)
     report_fatal_error("microMIPS64R6 is not supported", false);
 
+  if (!isABI_O32() && InMicroMipsMode)
+    report_fatal_error("microMIPS64 is not supported.", false);
 
   if (UseIndirectJumpsHazard) {
     if (InMicroMipsMode)
@@ -139,6 +151,59 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
            << "\n";
     UseSmallSection = false;
   }
+
+  if (hasDSPR2() && !DspWarningPrinted) {
+    if (hasMips64() && !hasMips64r2()) {
+      errs() << "warning: the 'dspr2' ASE requires MIPS64 revision 2 or "
+             << "greater\n";
+      DspWarningPrinted = true;
+    } else if (hasMips32() && !hasMips32r2()) {
+      errs() << "warning: the 'dspr2' ASE requires MIPS32 revision 2 or "
+             << "greater\n";
+      DspWarningPrinted = true;
+    }
+  } else if (hasDSP() && !DspWarningPrinted) {
+    if (hasMips64() && !hasMips64r2()) {
+      errs() << "warning: the 'dsp' ASE requires MIPS64 revision 2 or "
+             << "greater\n";
+      DspWarningPrinted = true;
+    } else if (hasMips32() && !hasMips32r2()) {
+      errs() << "warning: the 'dsp' ASE requires MIPS32 revision 2 or "
+             << "greater\n";
+      DspWarningPrinted = true;
+    }
+  }
+
+  StringRef ArchName = hasMips64() ? "MIPS64" : "MIPS32";
+
+  if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
+    errs() << "warning: the 'msa' ASE requires " << ArchName
+           << " revision 5 or greater\n";
+    MSAWarningPrinted = true;
+  }
+  if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
+    errs() << "warning: the 'virt' ASE requires " << ArchName
+           << " revision 5 or greater\n";
+    VirtWarningPrinted = true;
+  }
+  if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
+    errs() << "warning: the 'crc' ASE requires " << ArchName
+           << " revision 6 or greater\n";
+    CRCWarningPrinted = true;
+  }
+  if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
+    errs() << "warning: the 'ginv' ASE requires " << ArchName
+           << " revision 6 or greater\n";
+    GINVWarningPrinted = true;
+  }
+
+  CallLoweringInfo.reset(new MipsCallLowering(*getTargetLowering()));
+  Legalizer.reset(new MipsLegalizerInfo(*this));
+
+  auto *RBI = new MipsRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createMipsInstructionSelector(
+      *static_cast<const MipsTargetMachine *>(&TM), *this, *RBI));
 }
 
 bool MipsSubtarget::isPositionIndependent() const {
@@ -184,7 +249,8 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 }
 
 bool MipsSubtarget::useConstantIslands() {
-  DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands << "\n");
+  LLVM_DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands
+                    << "\n");
   return Mips16ConstantIslands;
 }
 
@@ -196,3 +262,19 @@ bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
 const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
+
+const CallLowering *MipsSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+const LegalizerInfo *MipsSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *MipsSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}
+
+const InstructionSelector *MipsSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}

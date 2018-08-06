@@ -43,6 +43,7 @@ public:
   }
 
   StringRef val() const { return StringRef(P, Size); }
+  const char *data() const { return P; }
   uint32_t size() const { return Size; }
   uint32_t hash() const { return Hash; }
 };

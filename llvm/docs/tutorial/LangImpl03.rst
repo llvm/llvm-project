@@ -261,7 +261,7 @@ Function Code Generation
 Code generation for prototypes and functions must handle a number of
 details, which make their code less beautiful than expression code
 generation, but allows us to illustrate some important points. First,
-lets talk about code generation for prototypes: they are used both for
+let's talk about code generation for prototypes: they are used both for
 function bodies and external function declarations. The code starts
 with:
 

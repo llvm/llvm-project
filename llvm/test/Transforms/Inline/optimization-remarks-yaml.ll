@@ -20,10 +20,10 @@
 ; NewPM:
 ; RUN: opt < %s -S -passes=inline -pass-remarks-missed=inline \
 ; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 15 \
-; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s -check-prefix=CHECK_NEW
-; RUN: test ! -s %t
+; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ; RUN: opt < %s -S -passes=inline -pass-remarks-with-hotness -pass-remarks-output=%t
-; RUN: test ! -s %t
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ;
 ; Verify that remarks that don't meet the hotness threshold are not output.
 ; RUN: opt < %s -S -passes=inline -pass-remarks-missed=inline \
@@ -79,9 +79,6 @@
 ; No remarks should be output, since none meet the threshold.
 ; THRESHOLD-NOT: remark
 
-; NewPM does not output this kind of "missed" remark.
-; CHECK_NEW-NOT: remark
-
 ; ModuleID = '/tmp/s.c'
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -111,7 +108,7 @@ declare i32 @"\01bar"(...)
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0 (trunk 281293) (llvm/trunk 281290)"}
-!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: true, unit: !0, variables: !2)
+!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 5, column: 10, scope: !7)
 !10 = !DILocation(line: 5, column: 18, scope: !11)

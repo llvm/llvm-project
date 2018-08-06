@@ -82,7 +82,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{i32 1, !"PIC Level", i32 2}
 !15 = !{!"clang version 3.9.0 (https://github.com/llvm-mirror/clang 8f258397c5afd7a708bd95770c718e81d08fb11a) (https://github.com/llvm-mirror/llvm 18481855bdfa1b4a424f81be8525db002671348d)"}
-!16 = distinct !DISubprogram(name: "fn1", scope: !3, file: !3, line: 5, type: !17, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !19)
+!16 = distinct !DISubprogram(name: "fn1", scope: !3, file: !3, line: 5, type: !17, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !19)
 !17 = !DISubroutineType(types: !18)
 !18 = !{null, !9}
 !19 = !{!20, !21, !22}
@@ -98,7 +98,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf
 !29 = !DIExpression(DW_OP_LLVM_fragment, 32, 16)
 !30 = !DILocation(line: 8, column: 9, scope: !16)
 !31 = !DILocation(line: 9, column: 1, scope: !16)
-!32 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 11, type: !33, isLocal: false, isDefinition: true, scopeLine: 11, isOptimized: true, unit: !2, variables: !4)
+!32 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 11, type: !33, isLocal: false, isDefinition: true, scopeLine: 11, isOptimized: true, unit: !2, retainedNodes: !4)
 !33 = !DISubroutineType(types: !34)
 !34 = !{!11}
 !35 = !DILocation(line: 11, column: 14, scope: !32)

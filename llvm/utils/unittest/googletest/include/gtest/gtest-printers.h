@@ -102,6 +102,7 @@
 #include <vector>
 #include "gtest/internal/gtest-port.h"
 #include "gtest/internal/gtest-internal.h"
+#include "gtest/internal/custom/raw-ostream.h"
 
 #if GTEST_HAS_STD_TUPLE_
 # include <tuple>
@@ -246,7 +247,7 @@ void DefaultPrintNonContainerTo(const T& value, ::std::ostream* os) {
   // impossible to define #1 (e.g. when foo is ::std, defining
   // anything in it is undefined behavior unless you are a compiler
   // vendor.).
-  *os << value;
+  *os << ::llvm_gtest::printable(value);
 }
 
 }  // namespace testing_internal

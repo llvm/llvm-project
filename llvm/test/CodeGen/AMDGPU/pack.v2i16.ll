@@ -8,9 +8,9 @@
 ; GFX9: s_load_dword [[VAL1:s[0-9]+]]
 ; GFX9: s_pack_ll_b32_b16 [[PACKED:s[0-9]+]], [[VAL0]], [[VAL1]]
 ; GFX9: ; use [[PACKED]]
-define amdgpu_kernel void @s_pack_v2i16(i32 addrspace(2)* %in0, i32 addrspace(2)* %in1) #0 {
-  %val0 = load volatile i32, i32 addrspace(2)* %in0
-  %val1 = load volatile i32, i32 addrspace(2)* %in1
+define amdgpu_kernel void @s_pack_v2i16(i32 addrspace(4)* %in0, i32 addrspace(4)* %in1) #0 {
+  %val0 = load volatile i32, i32 addrspace(4)* %in0
+  %val1 = load volatile i32, i32 addrspace(4)* %in1
   %lo = trunc i32 %val0 to i16
   %hi = trunc i32 %val1 to i16
   %vec.0 = insertelement <2 x i16> undef, i16 %lo, i32 0
@@ -25,8 +25,8 @@ define amdgpu_kernel void @s_pack_v2i16(i32 addrspace(2)* %in0, i32 addrspace(2)
 ; GFX9: s_load_dword [[VAL1:s[0-9]+]]
 ; GFX9: s_pack_ll_b32_b16 [[PACKED:s[0-9]+]], 0x1c8, [[VAL1]]
 ; GFX9: ; use [[PACKED]]
-define amdgpu_kernel void @s_pack_v2i16_imm_lo(i32 addrspace(2)* %in1) #0 {
-  %val1 = load i32, i32 addrspace(2)* %in1
+define amdgpu_kernel void @s_pack_v2i16_imm_lo(i32 addrspace(4)* %in1) #0 {
+  %val1 = load i32, i32 addrspace(4)* %in1
   %hi = trunc i32 %val1 to i16
   %vec.0 = insertelement <2 x i16> undef, i16 456, i32 0
   %vec.1 = insertelement <2 x i16> %vec.0, i16 %hi, i32 1
@@ -40,8 +40,8 @@ define amdgpu_kernel void @s_pack_v2i16_imm_lo(i32 addrspace(2)* %in1) #0 {
 ; GFX9: s_load_dword [[VAL0:s[0-9]+]]
 ; GFX9: s_pack_ll_b32_b16 [[PACKED:s[0-9]+]], [[VAL0]], 0x1c8
 ; GFX9: ; use [[PACKED]]
-define amdgpu_kernel void @s_pack_v2i16_imm_hi(i32 addrspace(2)* %in0) #0 {
-  %val0 = load i32, i32 addrspace(2)* %in0
+define amdgpu_kernel void @s_pack_v2i16_imm_hi(i32 addrspace(4)* %in0) #0 {
+  %val0 = load i32, i32 addrspace(4)* %in0
   %lo = trunc i32 %val0 to i16
   %vec.0 = insertelement <2 x i16> undef, i16 %lo, i32 0
   %vec.1 = insertelement <2 x i16> %vec.0, i16 456, i32 1

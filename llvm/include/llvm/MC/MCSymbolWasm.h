@@ -15,15 +15,17 @@
 namespace llvm {
 
 class MCSymbolWasm : public MCSymbol {
-private:
-  bool IsFunction = false;
+  wasm::WasmSymbolType Type = wasm::WASM_SYMBOL_TYPE_DATA;
   bool IsWeak = false;
   bool IsHidden = false;
+  bool IsComdat = false;
   std::string ModuleName;
   SmallVector<wasm::ValType, 1> Returns;
   SmallVector<wasm::ValType, 4> Params;
+  wasm::WasmGlobalType GlobalType;
   bool ParamsSet = false;
   bool ReturnsSet = false;
+  bool GlobalTypeSet = false;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -40,8 +42,12 @@ public:
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 
-  bool isFunction() const { return IsFunction; }
-  void setIsFunction(bool isFunc) { IsFunction = isFunc; }
+  bool isFunction() const { return Type == wasm::WASM_SYMBOL_TYPE_FUNCTION; }
+  bool isData() const { return Type == wasm::WASM_SYMBOL_TYPE_DATA; }
+  bool isGlobal() const { return Type == wasm::WASM_SYMBOL_TYPE_GLOBAL; }
+  bool isSection() const { return Type == wasm::WASM_SYMBOL_TYPE_SECTION; }
+  wasm::WasmSymbolType getType() const { return Type; }
+  void setType(wasm::WasmSymbolType type) { Type = type; }
 
   bool isWeak() const { return IsWeak; }
   void setWeak(bool isWeak) { IsWeak = isWeak; }
@@ -49,7 +55,11 @@ public:
   bool isHidden() const { return IsHidden; }
   void setHidden(bool isHidden) { IsHidden = isHidden; }
 
+  bool isComdat() const { return IsComdat; }
+  void setComdat(bool isComdat) { IsComdat = isComdat; }
+
   const StringRef getModuleName() const { return ModuleName; }
+  void setModuleName(StringRef Name) { ModuleName = Name; }
 
   const SmallVector<wasm::ValType, 1> &getReturns() const {
     assert(ReturnsSet);
@@ -69,6 +79,16 @@ public:
   void setParams(SmallVectorImpl<wasm::ValType> &&Pars) {
     ParamsSet = true;
     Params = std::move(Pars);
+  }
+
+  const wasm::WasmGlobalType &getGlobalType() const {
+    assert(GlobalTypeSet);
+    return GlobalType;
+  }
+
+  void setGlobalType(wasm::WasmGlobalType GT) {
+    GlobalTypeSet = true;
+    GlobalType = GT;
   }
 };
 

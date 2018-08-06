@@ -1,7 +1,7 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2                        -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=SSE2
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                         -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=AVX1
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2                        -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=SSE2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                         -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=AVX1
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
 
 --- |
   define <16 x i8> @test_add_v16i8(<16 x i8> %arg1, <16 x i8> %arg2) {
@@ -58,13 +58,13 @@ registers:
 # AVX512BWVL:          %2:vr128x = VPADDBZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
-    %0(<16 x s8>) = COPY %xmm0
-    %1(<16 x s8>) = COPY %xmm1
+    %0(<16 x s8>) = COPY $xmm0
+    %1(<16 x s8>) = COPY $xmm1
     %2(<16 x s8>) = G_ADD %0, %1
-    %xmm0 = COPY %2(<16 x s8>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(<16 x s8>)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -100,13 +100,13 @@ registers:
 # AVX512BWVL:          %2:vr128x = VPADDWZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
-    %0(<8 x s16>) = COPY %xmm0
-    %1(<8 x s16>) = COPY %xmm1
+    %0(<8 x s16>) = COPY $xmm0
+    %1(<8 x s16>) = COPY $xmm1
     %2(<8 x s16>) = G_ADD %0, %1
-    %xmm0 = COPY %2(<8 x s16>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(<8 x s16>)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -142,13 +142,13 @@ registers:
 # AVX512BWVL:          %2:vr128x = VPADDDZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
-    %0(<4 x s32>) = COPY %xmm0
-    %1(<4 x s32>) = COPY %xmm1
+    %0(<4 x s32>) = COPY $xmm0
+    %1(<4 x s32>) = COPY $xmm1
     %2(<4 x s32>) = G_ADD %0, %1
-    %xmm0 = COPY %2(<4 x s32>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -184,12 +184,12 @@ registers:
 # AVX512BWVL:          %2:vr128x = VPADDQZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
-    %0(<2 x s64>) = COPY %xmm0
-    %1(<2 x s64>) = COPY %xmm1
+    %0(<2 x s64>) = COPY $xmm0
+    %1(<2 x s64>) = COPY $xmm1
     %2(<2 x s64>) = G_ADD %0, %1
-    %xmm0 = COPY %2(<2 x s64>)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(<2 x s64>)
+    RET 0, implicit $xmm0
 
 ...

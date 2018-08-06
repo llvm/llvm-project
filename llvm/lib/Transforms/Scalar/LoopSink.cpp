@@ -42,6 +42,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -49,7 +50,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -200,17 +200,19 @@ static bool sinkInstruction(Loop &L, Instruction &I,
   SmallVector<BasicBlock *, 2> SortedBBsToSinkInto;
   SortedBBsToSinkInto.insert(SortedBBsToSinkInto.begin(), BBsToSinkInto.begin(),
                              BBsToSinkInto.end());
-  std::sort(SortedBBsToSinkInto.begin(), SortedBBsToSinkInto.end(),
-            [&](BasicBlock *A, BasicBlock *B) {
-              return *LoopBlockNumber.find(A) < *LoopBlockNumber.find(B);
-            });
+  llvm::sort(SortedBBsToSinkInto.begin(), SortedBBsToSinkInto.end(),
+             [&](BasicBlock *A, BasicBlock *B) {
+               return LoopBlockNumber.find(A)->second <
+                      LoopBlockNumber.find(B)->second;
+             });
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
   // FIXME: Optimize the efficiency for cloned value replacement. The current
   //        implementation is O(SortedBBsToSinkInto.size() * I.num_uses()).
-  for (BasicBlock *N : SortedBBsToSinkInto) {
-    if (N == MoveBB)
-      continue;
+  for (BasicBlock *N : makeArrayRef(SortedBBsToSinkInto).drop_front(1)) {
+    assert(LoopBlockNumber.find(N)->second >
+               LoopBlockNumber.find(MoveBB)->second &&
+           "BBs not sorted!");
     // Clone I and replace its uses.
     Instruction *IC = I.clone();
     IC->setName(I.getName());
@@ -224,11 +226,11 @@ static bool sinkInstruction(Loop &L, Instruction &I,
     }
     // Replaces uses of I with IC in blocks dominated by N
     replaceDominatedUsesWith(&I, IC, DT, N);
-    DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
+                      << '\n');
     NumLoopSunkCloned++;
   }
-  DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
   NumLoopSunk++;
   I.moveBefore(&*MoveBB->getFirstInsertionPt());
 

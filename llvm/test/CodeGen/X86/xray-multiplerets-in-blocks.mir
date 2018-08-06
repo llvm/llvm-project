@@ -1,4 +1,4 @@
-# RUN: llc -run-pass xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+# RUN: llc -verify-machineinstrs -run-pass xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
 #
 # Make sure we can handle multiple ret instructions in a single basic block for
 # XRay.
@@ -16,10 +16,10 @@
 name: foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '%edi'}
+  - { reg: '$edi'}
 body:            |
   bb.0:
-    liveins: %edi
+    liveins: $edi
     ; CHECK: PATCHABLE_FUNCTION_ENTER
     RETQ
     ; CHECK-NEXT: PATCHABLE_RET

@@ -51,13 +51,13 @@ public:
   DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
     : Data(Data), IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
 
-  /// \brief Get the data pointed to by this extractor.
+  /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }
-  /// \brief Get the endianness for this extractor.
+  /// Get the endianness for this extractor.
   bool isLittleEndian() const { return IsLittleEndian; }
-  /// \brief Get the address size for this extractor.
+  /// Get the address size for this extractor.
   uint8_t getAddressSize() const { return AddressSize; }
-  /// \brief Set the address size for this extractor.
+  /// Set the address size for this extractor.
   void setAddressSize(uint8_t Size) { AddressSize = Size; }
 
   /// Extract a C string from \a *offset_ptr.

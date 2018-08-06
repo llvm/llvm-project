@@ -1,14 +1,23 @@
+# Needed by LLVM's CMake checks because this file defines multiple targets.
+set(LLVM_OPTIONAL_SOURCES ExportedFuncs.cpp PipSqueak.cpp)
+
 set(LLVM_LINK_COMPONENTS Support)
 
-add_library(DynamicLibraryLib STATIC ExportedFuncs.cxx)
+add_library(DynamicLibraryLib STATIC
+  ExportedFuncs.cpp
+  )
 set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "Tests")
 
-add_llvm_unittest(DynamicLibraryTests DynamicLibraryTest.cpp)
+add_llvm_unittest(DynamicLibraryTests
+  DynamicLibraryTest.cpp
+  )
 target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
 export_executable_symbols(DynamicLibraryTests)
 
 function(dynlib_add_module NAME)
-  add_library(${NAME} SHARED PipSqueak.cxx)
+  add_library(${NAME} SHARED
+    PipSqueak.cpp
+    )
   set_target_properties(${NAME} PROPERTIES FOLDER "Tests")
 
   set_output_directory(${NAME}
@@ -18,7 +27,7 @@ function(dynlib_add_module NAME)
 
   set_target_properties(${NAME}
     PROPERTIES PREFIX ""
-    SUFFIX ".so"
+    SUFFIX ${LTDL_SHLIB_EXT}
     )
 
   add_dependencies(DynamicLibraryTests ${NAME})

@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
@@ -587,7 +588,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   for (auto I = Defs.begin(); I != Defs.end(); ) {
     LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                            Pos.getDeadSlot());
-    // If the the def is all that is live after the instruction, then in case
+    // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     unsigned RegUnit = I->RegUnit;
     if (TargetRegisterInfo::isVirtualRegister(RegUnit) &&
@@ -635,7 +636,7 @@ void PressureDiffs::init(unsigned N) {
   }
   Max = Size;
   free(PDiffArray);
-  PDiffArray = reinterpret_cast<PressureDiff*>(calloc(N, sizeof(PressureDiff)));
+  PDiffArray = static_cast<PressureDiff*>(safe_calloc(N, sizeof(PressureDiff)));
 }
 
 void PressureDiffs::addInstruction(unsigned Idx,
@@ -747,7 +748,7 @@ void RegPressureTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
 /// instruction independent of liveness.
 void RegPressureTracker::recede(const RegisterOperands &RegOpers,
                                 SmallVectorImpl<RegisterMaskPair> *LiveUses) {
-  assert(!CurrPos->isDebugValue());
+  assert(!CurrPos->isDebugInstr());
 
   // Boost pressure for all dead defs together.
   bumpDeadDefs(RegOpers.DeadDefs);
@@ -1018,7 +1019,7 @@ static void computeMaxPressureDelta(ArrayRef<unsigned> OldMaxPressureVec,
 /// This is intended for speculative queries. It leaves pressure inconsistent
 /// with the current position, so must be restored by the caller.
 void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
-  assert(!MI->isDebugValue() && "Expect a nondebug instruction.");
+  assert(!MI->isDebugInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
@@ -1259,7 +1260,7 @@ LaneBitmask RegPressureTracker::getLiveThroughAt(unsigned RegUnit,
 /// This is intended for speculative queries. It leaves pressure inconsistent
 /// with the current position, so must be restored by the caller.
 void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
-  assert(!MI->isDebugValue() && "Expect a nondebug instruction.");
+  assert(!MI->isDebugInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
   if (RequireIntervals)

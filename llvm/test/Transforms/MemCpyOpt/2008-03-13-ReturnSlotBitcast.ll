@@ -13,10 +13,10 @@ entry:
   call void @g(%a* %a_var)
   %a_i8 = bitcast %a* %a_var to i8*
   %b_i8 = bitcast %b* %b_var to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %b_i8, i8* %a_i8, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %b_i8, i8* %a_i8, i32 4, i1 false)
   %tmp1 = getelementptr %b, %b* %b_var, i32 0, i32 0
   %tmp2 = load float, float* %tmp1
   ret float %tmp2
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

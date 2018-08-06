@@ -44,7 +44,7 @@ declare %s* @getstruct() nounwind
 
 ; CHECK: @main
 ; Check that the loop preheader contains no address computation.
-; CHECK: %end_of_chain
+; CHECK: %while.cond.i.i
 ; CHECK-NOT: add{{.*}}lsl
 ; CHECK: ldr{{.*}}lsl #2
 ; CHECK: ldr{{.*}}lsl #2

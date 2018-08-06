@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Computations in WWM can overwrite values in inactive channels for
+/// Computations in WWM can overwrite values in inactive channels for
 /// variables that the register allocator thinks are dead. This pass adds fake
 /// uses of those variables to WWM instructions to make sure that they aren't
 /// overwritten.
@@ -55,6 +55,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -184,7 +185,7 @@ bool SIFixWWMLiveness::runOnMachineFunction(MachineFunction &MF) {
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   TRI = &TII->getRegisterInfo();

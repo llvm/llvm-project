@@ -47,6 +47,19 @@ struct GraphTraits {
   // static nodes_iterator nodes_end  (GraphType *G)
   //    nodes_iterator/begin/end - Allow iteration over all nodes in the graph
 
+  // typedef EdgeRef           - Type of Edge token in the graph, which should
+  //                             be cheap to copy.
+  // typedef ChildEdgeIteratorType - Type used to iterate over children edges in
+  //                             graph, dereference to a EdgeRef.
+
+  // static ChildEdgeIteratorType child_edge_begin(NodeRef)
+  // static ChildEdgeIteratorType child_edge_end(NodeRef)
+  //     Return iterators that point to the beginning and ending of the
+  //     edge list for the given callgraph node.
+  //
+  // static NodeRef edge_dest(EdgeRef)
+  //     Return the destination node of an edge.
+
   // static unsigned       size       (GraphType *G)
   //    Return total number of nodes in the graph
 
@@ -109,6 +122,13 @@ iterator_range<typename GraphTraits<Inverse<GraphType>>::ChildIteratorType>
 inverse_children(const typename GraphTraits<GraphType>::NodeRef &G) {
   return make_range(GraphTraits<Inverse<GraphType>>::child_begin(G),
                     GraphTraits<Inverse<GraphType>>::child_end(G));
+}
+
+template <class GraphType>
+iterator_range<typename GraphTraits<GraphType>::ChildEdgeIteratorType>
+children_edges(const typename GraphTraits<GraphType>::NodeRef &G) {
+  return make_range(GraphTraits<GraphType>::child_edge_begin(G),
+                    GraphTraits<GraphType>::child_edge_end(G));
 }
 
 } // end namespace llvm

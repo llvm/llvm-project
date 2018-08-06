@@ -9,10 +9,10 @@
 ...
 ---
 # Completely invalid code, but it checks that intrinsics round-trip properly.
-# CHECK: %x0 = COPY intrinsic(@llvm.returnaddress)
+# CHECK: G_INTRINSIC intrinsic(@llvm.returnaddress)
 name:            use_intrin
 body: |
   bb.0:
-    %x0 = COPY intrinsic(@llvm.returnaddress)
+    %0:_(s64) = G_INTRINSIC intrinsic(@llvm.returnaddress)
     RET_ReallyLR
 ...

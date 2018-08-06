@@ -17,7 +17,7 @@ define signext i8 @foo_cmp1(i8 signext %a, i8 signext %b) #0 {
   %.0 = phi i8 [ %3, %2 ], [ %5, %4 ]
   ret i8 %.0
 ; CHECK-LABEL:foo_cmp1:
-; CHECK: if r2 s>= r1
+; CHECK: if r0 s>= r1
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -37,7 +37,7 @@ define signext i8 @foo_cmp2(i8 signext %a, i8 signext %b) #0 {
   %.0 = phi i8 [ %3, %2 ], [ %5, %4 ]
   ret i8 %.0
 ; CHECK-LABEL:foo_cmp2:
-; CHECK: if r2 s> r1
+; CHECK: if r0 s> r1
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -57,7 +57,7 @@ define signext i8 @foo_cmp3(i8 signext %a, i8 signext %b) #0 {
   %.0 = phi i8 [ %3, %2 ], [ %5, %4 ]
   ret i8 %.0
 ; CHECK-LABEL:foo_cmp3:
-; CHECK: if r1 s>= r2
+; CHECK: if r1 s>= r0
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -77,7 +77,7 @@ define signext i8 @foo_cmp4(i8 signext %a, i8 signext %b) #0 {
   %.0 = phi i8 [ %3, %2 ], [ %5, %4 ]
   ret i8 %.0
 ; CHECK-LABEL:foo_cmp4:
-; CHECK: if r1 s> r2
+; CHECK: if r1 s> r0
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -86,9 +86,9 @@ define signext i8 @min(i8 signext %a, i8 signext %b) #0 {
   %a.b = select i1 %1, i8 %a, i8 %b
   ret i8 %a.b
 ; CHECK-LABEL:min:
-; CHECK: if r2 s> r1
-; CHECK: r1 = r2
 ; CHECK: r0 = r1
+; CHECK: if r2 s> r0
+; CHECK: r0 = r2
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -97,7 +97,7 @@ define zeroext i8 @minu(i8 zeroext %a, i8 zeroext %b) #0 {
   %a.b = select i1 %1, i8 %a, i8 %b
   ret i8 %a.b
 ; CHECK-LABEL:minu:
-; CHECK: if r3 > r1
+; CHECK: if r{{[0-9]+}} {{<|>}} r{{[0-9]+}}
 }
 
 ; Function Attrs: nounwind readnone uwtable
@@ -106,7 +106,7 @@ define signext i8 @max(i8 signext %a, i8 signext %b) #0 {
   %a.b = select i1 %1, i8 %a, i8 %b
   ret i8 %a.b
 ; CHECK-LABEL:max:
-; CHECK: if r1 s> r2
+; CHECK: if r0 s> r2
 }
 
 ; Function Attrs: nounwind readnone uwtable

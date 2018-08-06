@@ -20,6 +20,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -103,36 +104,61 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      bool RelaxAll) {
-  return createAArch64ELFStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                                  RelaxAll);
+  return createAArch64ELFStreamer(Ctx, std::move(TAB), std::move(OW),
+                                  std::move(Emitter), RelaxAll);
 }
 
 static MCStreamer *createMachOStreamer(MCContext &Ctx,
                                        std::unique_ptr<MCAsmBackend> &&TAB,
-                                       raw_pwrite_stream &OS,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
                                        std::unique_ptr<MCCodeEmitter> &&Emitter,
                                        bool RelaxAll,
                                        bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                             RelaxAll, DWARFMustBeAtTheEnd,
+  return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter), RelaxAll, DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
 }
 
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
                       bool IncrementalLinkerCompatible) {
-  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), OS,
+  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
                                       std::move(Emitter), RelaxAll,
                                       IncrementalLinkerCompatible);
 }
 
+namespace {
+
+class AArch64MCInstrAnalysis : public MCInstrAnalysis {
+public:
+  AArch64MCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    // Search for a PC-relative argument.
+    // This will handle instructions like bcc (where the first argument is the
+    // condition code) and cbz (where it is a register).
+    const auto &Desc = Info->get(Inst.getOpcode());
+    for (unsigned i = 0, e = Inst.getNumOperands(); i != e; i++) {
+      if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_PCREL) {
+        int64_t Imm = Inst.getOperand(i).getImm() * 4;
+        Target = Addr + Imm;
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
 static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
-  return new MCInstrAnalysis(Info);
+  return new AArch64MCInstrAnalysis(Info);
 }
 
 // Force static initialization.

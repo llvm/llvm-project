@@ -637,7 +637,8 @@ public:
     if (hasRetAttr(Attribute::NonNull))
       return true;
     else if (getDereferenceableBytes(AttributeList::ReturnIndex) > 0 &&
-             getType()->getPointerAddressSpace() == 0)
+             !NullPointerIsDefined(getCaller(),
+                                   getType()->getPointerAddressSpace()))
       return true;
 
     return false;

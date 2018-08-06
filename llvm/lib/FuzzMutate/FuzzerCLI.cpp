@@ -18,6 +18,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Verifier.h"
 
 using namespace llvm;
 
@@ -82,8 +83,38 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
   SmallVector<StringRef, 4> Opts;
   NameAndArgs.second.split(Opts, '-');
   for (StringRef Opt : Opts) {
-    if (Opt.startswith("instcombine")) {
+    if (Opt == "instcombine") {
       Args.push_back("-passes=instcombine");
+    } else if (Opt == "earlycse") {
+      Args.push_back("-passes=early-cse");
+    } else if (Opt == "simplifycfg") {
+      Args.push_back("-passes=simplify-cfg");
+    } else if (Opt == "gvn") {
+      Args.push_back("-passes=gvn");
+    } else if (Opt == "sccp") {
+      Args.push_back("-passes=sccp");
+    
+    } else if (Opt == "loop_predication") {
+      Args.push_back("-passes=loop-predication");
+    } else if (Opt == "guard_widening") {
+      Args.push_back("-passes=guard-widening");
+    } else if (Opt == "loop_rotate") {
+      Args.push_back("-passes=loop(rotate)");
+    } else if (Opt == "loop_unswitch") {
+      Args.push_back("-passes=loop(unswitch)");
+    } else if (Opt == "loop_unroll") {
+      Args.push_back("-passes=unroll");
+    } else if (Opt == "loop_vectorize") {
+      Args.push_back("-passes=loop-vectorize");
+    } else if (Opt == "licm") {
+      Args.push_back("-passes=licm");
+    } else if (Opt == "indvars") {
+      Args.push_back("-passes=indvars");
+    } else if (Opt == "strength_reduce") {
+      Args.push_back("-passes=strength-reduce");
+    } else if (Opt == "irce") {
+      Args.push_back("-passes=irce");
+      
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {
@@ -160,10 +191,19 @@ size_t llvm::writeModule(const Module &M, uint8_t *Dest, size_t MaxSize) {
   std::string Buf;
   {
     raw_string_ostream OS(Buf);
-    WriteBitcodeToFile(&M, OS);
+    WriteBitcodeToFile(M, OS);
   }
   if (Buf.size() > MaxSize)
       return 0;
   memcpy(Dest, Buf.data(), Buf.size());
   return Buf.size();
+}
+
+std::unique_ptr<Module> llvm::parseAndVerify(const uint8_t *Data, size_t Size,
+                                             LLVMContext &Context) {
+  auto M = parseModule(Data, Size, Context);
+  if (!M || verifyModule(*M, &errs()))
+    return nullptr;
+  
+  return M;
 }

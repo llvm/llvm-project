@@ -1,7 +1,7 @@
 REQUIRES: libxml2
-UNSUPPORTED: windows
+UNSUPPORTED: system-windows
 
 RUN: not llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest \
 RUN:   %p/Inputs/conflicting.manifest /out:%t 2>&1 >/dev/null | FileCheck %s
 
-CHECK: llvm-mt error: conflicting attributes for requestedExecutionLevel
+CHECK: llvm-mt: error: conflicting attributes for requestedExecutionLevel

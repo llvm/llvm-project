@@ -86,15 +86,3 @@ define void @f7(i64 %src, i64 %index, i16 %a) {
   ret void
 }
 
-; Check that volatile stores do not use STRVH, which might access the
-; storage multple times.
-define void @f8(i16 *%dst, i16 %a) {
-; CHECK-LABEL: f8:
-; CHECK: lrvr [[REG:%r[0-5]]], %r3
-; CHECK: srl [[REG]], 16
-; CHECK: sth [[REG]], 0(%r2)
-; CHECK: br %r14
-  %swapped = call i16 @llvm.bswap.i16(i16 %a)
-  store volatile i16 %swapped, i16 *%dst
-  ret void
-}

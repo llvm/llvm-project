@@ -46,9 +46,9 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ;
 ; AVX512VPOPCNTDQ-LABEL: testv4i64:
 ; AVX512VPOPCNTDQ:       # %bb.0:
-; AVX512VPOPCNTDQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512VPOPCNTDQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQVL-LABEL: testv4i64:
@@ -139,9 +139,9 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ;
 ; AVX512VPOPCNTDQ-LABEL: testv8i32:
 ; AVX512VPOPCNTDQ:       # %bb.0:
-; AVX512VPOPCNTDQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
-; AVX512VPOPCNTDQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQVL-LABEL: testv8i32:
@@ -246,9 +246,9 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ;
 ; BITALG_NOVLX-LABEL: testv16i16:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: testv16i16:
@@ -318,9 +318,9 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ;
 ; BITALG_NOVLX-LABEL: testv32i8:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: testv32i8:

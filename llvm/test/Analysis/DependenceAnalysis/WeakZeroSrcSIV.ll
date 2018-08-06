@@ -5,6 +5,33 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.6.0"
 
 
+;;  for (int i = 0; i < N; i++) {
+;;    A[0] = 1;
+;;    A[i] = 2;
+
+define void @dstzero(i32* nocapture %A, i32 %N) {
+entry:
+  %cmp6 = icmp sgt i32 %N, 0
+  br i1 %cmp6, label %for.body, label %for.cond.cleanup
+
+; CHECK: da analyze - consistent output [S]!
+; CHECK: da analyze - output [p=>|<]!
+; CHECK: da analyze - none!
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  store i32 0, i32* %A, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %A, i32 %i.07
+  store i32 1, i32* %arrayidx1, align 4
+  %add = add nuw nsw i32 %i.07, 1
+  %exitcond = icmp eq i32 %add, %N
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+}
+
+
 ;;  for (long unsigned i = 0; i < 30; i++) {
 ;;    A[10] = i;
 ;;    *B++ = A[2*i + 10];
@@ -14,7 +41,7 @@ entry:
   br label %for.body
 
 ; CHECK: da analyze - consistent output [S]!
-; CHECK: da analyze - flow [p<=|<]!
+; CHECK: da analyze - flow [p=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -51,7 +78,7 @@ entry:
   br i1 %cmp1, label %for.end, label %for.body.preheader
 
 ; CHECK: da analyze - consistent output [S]!
-; CHECK: da analyze - flow [p<=|<]!
+; CHECK: da analyze - flow [p=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -128,7 +155,7 @@ entry:
   br label %for.body
 
 ; CHECK: da analyze - consistent output [S]!
-; CHECK: da analyze - flow [=>p|<]!
+; CHECK: da analyze - flow [<=p|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!

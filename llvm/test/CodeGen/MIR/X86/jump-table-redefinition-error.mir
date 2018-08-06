@@ -42,35 +42,35 @@ body: |
   bb.0.entry:
     successors: %bb.2.def, %bb.1.entry
 
-    %eax = MOV32rr %edi, implicit-def %rax
-    CMP32ri8 %edi, 3, implicit-def %eflags
-    JA_1 %bb.2.def, implicit %eflags
+    $eax = MOV32rr $edi, implicit-def $rax
+    CMP32ri8 $edi, 3, implicit-def $eflags
+    JA_1 %bb.2.def, implicit $eflags
 
   bb.1.entry:
     successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
 
-    %rcx = LEA64r %rip, 1, _, %jump-table.0, _
-    %rax = MOVSX64rm32 %rcx, 4, %rax, 0, _
-    %rax = ADD64rr %rax, %rcx, implicit-def %eflags
-    JMP64r %rax
+    $rcx = LEA64r $rip, 1, _, %jump-table.0, _
+    $rax = MOVSX64rm32 $rcx, 4, $rax, 0, _
+    $rax = ADD64rr $rax, $rcx, implicit-def $eflags
+    JMP64r $rax
 
   bb.2.def:
-    %eax = MOV32r0 implicit-def %eflags
-    RETQ %eax
+    $eax = MOV32r0 implicit-def $eflags
+    RETQ $eax
 
   bb.3.lbl1:
-    %eax = MOV32ri 1
-    RETQ %eax
+    $eax = MOV32ri 1
+    RETQ $eax
 
   bb.4.lbl2:
-    %eax = MOV32ri 2
-    RETQ %eax
+    $eax = MOV32ri 2
+    RETQ $eax
 
   bb.5.lbl3:
-    %eax = MOV32ri 4
-    RETQ %eax
+    $eax = MOV32ri 4
+    RETQ $eax
 
   bb.6.lbl4:
-    %eax = MOV32ri 8
-    RETQ %eax
+    $eax = MOV32ri 8
+    RETQ $eax
 ...

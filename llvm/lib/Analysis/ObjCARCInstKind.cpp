@@ -209,6 +209,7 @@ static bool isInertIntrinsic(unsigned ID) {
   // Don't let dbg info affect our results.
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
+  case Intrinsic::dbg_label:
     // Short cut: Some intrinsics obviously don't use ObjC pointers.
     return true;
   default:
@@ -233,7 +234,7 @@ static bool isUseOnlyIntrinsic(unsigned ID) {
   }
 }
 
-/// \brief Determine what kind of construct V is.
+/// Determine what kind of construct V is.
 ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
     // Any instruction other than bitcast and gep with a pointer operand have a
@@ -331,7 +332,7 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
   return ARCInstKind::None;
 }
 
-/// \brief Test if the given class is a kind of user.
+/// Test if the given class is a kind of user.
 bool llvm::objcarc::IsUser(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::User:
@@ -365,7 +366,7 @@ bool llvm::objcarc::IsUser(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class is objc_retain or equivalent.
+/// Test if the given class is objc_retain or equivalent.
 bool llvm::objcarc::IsRetain(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
@@ -401,7 +402,7 @@ bool llvm::objcarc::IsRetain(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class is objc_autorelease or equivalent.
+/// Test if the given class is objc_autorelease or equivalent.
 bool llvm::objcarc::IsAutorelease(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Autorelease:
@@ -435,7 +436,7 @@ bool llvm::objcarc::IsAutorelease(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class represents instructions which return their
+/// Test if the given class represents instructions which return their
 /// argument verbatim.
 bool llvm::objcarc::IsForwarding(ARCInstKind Class) {
   switch (Class) {
@@ -470,7 +471,7 @@ bool llvm::objcarc::IsForwarding(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class represents instructions which do nothing if
+/// Test if the given class represents instructions which do nothing if
 /// passed a null pointer.
 bool llvm::objcarc::IsNoopOnNull(ARCInstKind Class) {
   switch (Class) {
@@ -505,7 +506,7 @@ bool llvm::objcarc::IsNoopOnNull(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class represents instructions which are always safe
+/// Test if the given class represents instructions which are always safe
 /// to mark with the "tail" keyword.
 bool llvm::objcarc::IsAlwaysTail(ARCInstKind Class) {
   // ARCInstKind::RetainBlock may be given a stack argument.
@@ -541,7 +542,7 @@ bool llvm::objcarc::IsAlwaysTail(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class represents instructions which are never safe
+/// Test if the given class represents instructions which are never safe
 /// to mark with the "tail" keyword.
 bool llvm::objcarc::IsNeverTail(ARCInstKind Class) {
   /// It is never safe to tail call objc_autorelease since by tail calling
@@ -580,7 +581,7 @@ bool llvm::objcarc::IsNeverTail(ARCInstKind Class) {
   llvm_unreachable("covered switch isn't covered?");
 }
 
-/// \brief Test if the given class represents instructions which are always safe
+/// Test if the given class represents instructions which are always safe
 /// to mark with the nounwind attribute.
 bool llvm::objcarc::IsNoThrow(ARCInstKind Class) {
   // objc_retainBlock is not nounwind because it calls user copy constructors

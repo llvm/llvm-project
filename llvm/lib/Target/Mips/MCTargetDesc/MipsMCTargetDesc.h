@@ -23,7 +23,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -49,8 +49,8 @@ MCAsmBackend *createMipsAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCRegisterInfo &MRI,
                                    const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter>
-createMipsELFObjectWriter(raw_pwrite_stream &OS, const Triple &TT, bool IsN32);
+std::unique_ptr<MCObjectTargetWriter>
+createMipsELFObjectWriter(const Triple &TT, bool IsN32);
 
 namespace MIPS_MC {
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);

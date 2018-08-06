@@ -1,12 +1,13 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; This test just checks that the compiler doesn't crash.
 
 ; FUNC-LABEL: {{^}}v32i8_to_v8i32:
-define amdgpu_ps float @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
+define amdgpu_ps float @v32i8_to_v8i32(<32 x i8> addrspace(4)* inreg) #0 {
 entry:
-  %1 = load <32 x i8>, <32 x i8> addrspace(2)* %0
+  %1 = load <32 x i8>, <32 x i8> addrspace(4)* %0
   %2 = bitcast <32 x i8> %1 to <8 x i32>
   %3 = extractelement <8 x i32> %2, i32 1
   %4 = icmp ne i32 %3, 0
@@ -124,5 +125,165 @@ if:
 end:
   %phi = phi <2 x i64> [zeroinitializer, %entry], [%cast, %if]
   store <2 x i64> %phi, <2 x i64> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4i16_to_f64:
+define amdgpu_kernel void @v4i16_to_f64(double addrspace(1)* %out, <4 x i16> addrspace(1)* %in) nounwind {
+  %load = load <4 x i16>, <4 x i16> addrspace(1)* %in, align 4
+  %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
+  %bc = bitcast <4 x i16> %add.v4i16 to double
+  %fadd.bitcast = fadd double %bc, 1.0
+  store double %fadd.bitcast, double addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4f16_to_f64:
+define amdgpu_kernel void @v4f16_to_f64(double addrspace(1)* %out, <4 x half> addrspace(1)* %in) nounwind {
+  %load = load <4 x half>, <4 x half> addrspace(1)* %in, align 4
+  %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
+  %bc = bitcast <4 x half> %add.v4half to double
+  %fadd.bitcast = fadd double %bc, 1.0
+  store double %fadd.bitcast, double addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}f64_to_v4f16:
+define amdgpu_kernel void @f64_to_v4f16(<4 x half> addrspace(1)* %out, double addrspace(1)* %in) nounwind {
+  %load = load double, double addrspace(1)* %in, align 4
+  %fadd32 = fadd double %load, 1.0
+  %bc = bitcast double %fadd32 to <4 x half>
+  %add.bitcast = fadd <4 x half> %bc, <half 2.0, half 2.0, half 2.0, half 2.0>
+  store <4 x half> %add.bitcast, <4 x half> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}f64_to_v4i16:
+define amdgpu_kernel void @f64_to_v4i16(<4 x i16> addrspace(1)* %out, double addrspace(1)* %in) nounwind {
+  %load = load double, double addrspace(1)* %in, align 4
+  %fadd32 = fadd double %load, 1.0
+  %bc = bitcast double %fadd32 to <4 x i16>
+  %add.bitcast = add <4 x i16> %bc, <i16 2, i16 2, i16 2, i16 2>
+  store <4 x i16> %add.bitcast, <4 x i16> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4i16_to_i64:
+define amdgpu_kernel void @v4i16_to_i64(i64 addrspace(1)* %out, <4 x i16> addrspace(1)* %in) nounwind {
+  %load = load <4 x i16>, <4 x i16> addrspace(1)* %in, align 4
+  %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
+  %bc = bitcast <4 x i16> %add.v4i16 to i64
+  %add.bitcast = add i64 %bc, 1
+  store i64 %add.bitcast, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4f16_to_i64:
+define amdgpu_kernel void @v4f16_to_i64(i64 addrspace(1)* %out, <4 x half> addrspace(1)* %in) nounwind {
+  %load = load <4 x half>, <4 x half> addrspace(1)* %in, align 4
+  %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
+  %bc = bitcast <4 x half> %add.v4half to i64
+  %add.bitcast = add i64 %bc, 1
+  store i64 %add.bitcast, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_i64_to_v4i16:
+define amdgpu_kernel void @bitcast_i64_to_v4i16(<4 x i16> addrspace(1)* %out, i64 addrspace(1)* %in) {
+  %val = load i64, i64 addrspace(1)* %in, align 8
+  %add = add i64 %val, 4
+  %bc = bitcast i64 %add to <4 x i16>
+  %add.v4i16 = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
+  store <4 x i16> %add.v4i16, <4 x i16> addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_i64_to_v4f16:
+define amdgpu_kernel void @bitcast_i64_to_v4f16(<4 x half> addrspace(1)* %out, i64 addrspace(1)* %in) {
+  %val = load i64, i64 addrspace(1)* %in, align 8
+  %add = add i64 %val, 4
+  %bc = bitcast i64 %add to <4 x half>
+  %add.v4i16 = fadd <4 x half> %bc, <half 1.0, half 2.0, half 4.0, half 8.0>
+  store <4 x half> %add.v4i16, <4 x half> addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4i16_to_v2f32:
+define amdgpu_kernel void @v4i16_to_v2f32(<2 x float> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) nounwind {
+  %load = load <4 x i16>, <4 x i16> addrspace(1)* %in, align 4
+  %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
+  %bc = bitcast <4 x i16> %add.v4i16 to <2 x float>
+  %fadd.bitcast = fadd <2 x float> %bc, <float 1.0, float 1.0>
+  store <2 x float> %fadd.bitcast, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4f16_to_v2f32:
+define amdgpu_kernel void @v4f16_to_v2f32(<2 x float> addrspace(1)* %out, <4 x half> addrspace(1)* %in) nounwind {
+  %load = load <4 x half>, <4 x half> addrspace(1)* %in, align 4
+  %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
+  %bc = bitcast <4 x half> %add.v4half to <2 x float>
+  %fadd.bitcast = fadd <2 x float> %bc, <float 1.0, float 1.0>
+  store <2 x float> %fadd.bitcast, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v2f32_to_v4i16:
+define amdgpu_kernel void @v2f32_to_v4i16(<4 x i16> addrspace(1)* %out, <2 x float> addrspace(1)* %in) nounwind {
+  %load = load <2 x float>, <2 x float> addrspace(1)* %in, align 4
+  %add.v2f32 = fadd <2 x float> %load, <float 2.0, float 4.0>
+  %bc = bitcast <2 x float> %add.v2f32 to <4 x i16>
+  %add.bitcast = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
+  store <4 x i16> %add.bitcast, <4 x i16> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v2f32_to_v4f16:
+define amdgpu_kernel void @v2f32_to_v4f16(<4 x half> addrspace(1)* %out, <2 x float> addrspace(1)* %in) nounwind {
+  %load = load <2 x float>, <2 x float> addrspace(1)* %in, align 4
+  %add.v2f32 = fadd <2 x float> %load, <float 2.0, float 4.0>
+  %bc = bitcast <2 x float> %add.v2f32 to <4 x half>
+  %add.bitcast = fadd <4 x half> %bc, <half 1.0, half 2.0, half 4.0, half 8.0>
+  store <4 x half> %add.bitcast, <4 x half> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4i16_to_v2i32:
+define amdgpu_kernel void @v4i16_to_v2i32(<2 x i32> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) nounwind {
+  %load = load <4 x i16>, <4 x i16> addrspace(1)* %in, align 4
+  %add.v4i16 = add <4 x i16> %load, <i16 4, i16 4, i16 4, i16 4>
+  %bc = bitcast <4 x i16> %add.v4i16 to <2 x i32>
+  %add.bitcast = add <2 x i32> %bc, <i32 1, i32 1>
+  store <2 x i32> %add.bitcast, <2 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v4f16_to_v2i32:
+define amdgpu_kernel void @v4f16_to_v2i32(<2 x i32> addrspace(1)* %out, <4 x half> addrspace(1)* %in) nounwind {
+  %load = load <4 x half>, <4 x half> addrspace(1)* %in, align 4
+  %add.v4half = fadd <4 x half> %load, <half 4.0, half 4.0, half 4.0, half 4.0>
+  %bc = bitcast <4 x half> %add.v4half to <2 x i32>
+  %add.bitcast = add <2 x i32> %bc, <i32 1, i32 1>
+  store <2 x i32> %add.bitcast, <2 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v2i32_to_v4i16:
+define amdgpu_kernel void @v2i32_to_v4i16(<4 x i16> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) nounwind {
+  %load = load <2 x i32>, <2 x i32> addrspace(1)* %in, align 4
+  %add.v2i32 = add <2 x i32> %load, <i32 2, i32 4>
+  %bc = bitcast <2 x i32> %add.v2i32 to <4 x i16>
+  %add.bitcast = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
+  store <4 x i16> %add.bitcast, <4 x i16> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v2i32_to_v4f16:
+define amdgpu_kernel void @v2i32_to_v4f16(<4 x half> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) nounwind {
+  %load = load <2 x i32>, <2 x i32> addrspace(1)* %in, align 4
+  %add.v2i32 = add <2 x i32> %load, <i32 2, i32 4>
+  %bc = bitcast <2 x i32> %add.v2i32 to <4 x half>
+  %add.bitcast = fadd <4 x half> %bc, <half 1.0, half 2.0, half 4.0, half 8.0>
+  store <4 x half> %add.bitcast, <4 x half> addrspace(1)* %out
   ret void
 }

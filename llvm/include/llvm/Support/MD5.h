@@ -81,20 +81,20 @@ public:
 
   MD5();
 
-  /// \brief Updates the hash for the byte stream provided.
+  /// Updates the hash for the byte stream provided.
   void update(ArrayRef<uint8_t> Data);
 
-  /// \brief Updates the hash for the StringRef provided.
+  /// Updates the hash for the StringRef provided.
   void update(StringRef Str);
 
-  /// \brief Finishes off the hash and puts the result in result.
+  /// Finishes off the hash and puts the result in result.
   void final(MD5Result &Result);
 
-  /// \brief Translates the bytes in \p Res to a hex string that is
+  /// Translates the bytes in \p Res to a hex string that is
   /// deposited into \p Str. The result will be of length 32.
   static void stringifyResult(MD5Result &Result, SmallString<32> &Str);
 
-  /// \brief Computes the hash for a given bytes.
+  /// Computes the hash for a given bytes.
   static std::array<uint8_t, 16> hash(ArrayRef<uint8_t> Data);
 
 private:

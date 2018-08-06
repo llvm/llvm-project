@@ -83,6 +83,7 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK: callq return_i1
 ; CHECK-NEXT: .Ltmp5:
 ; CHECK-NEXT: popq %rcx
+; CHECK-NEXT: .cfi_def_cfa_offset 8
 ; CHECK-NEXT: retq
 entry:
   %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %a)
@@ -139,6 +140,25 @@ right:
   ret i1 true
 }
 
+%struct2 = type { i64, i64, i64 }
+
+declare void @consume_attributes(i32, i8* nest, i32, %struct2* byval)
+
+define void @test_attributes(%struct2* byval %s) gc "statepoint-example" {
+entry:
+; CHECK-LABEL: test_attributes
+; Check that arguments with attributes are lowered correctly.
+; We call a function that has a nest argument and a byval argument.
+; CHECK: movl $42, %edi
+; CHECK: xorl %r10d, %r10d
+; CHECK: movl $17, %esi
+; CHECK: pushq
+; CHECK: pushq
+; CHECK: pushq
+; CHECK: callq consume_attributes
+  %statepoint_token = call token (i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64 0, i32 0, void (i32, i8*, i32, %struct2*)* @consume_attributes, i32 4, i32 0, i32 42, i8* nest null, i32 17, %struct2* byval %s, i32 0, i32 0)
+  ret void
+}
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare i1 @llvm.experimental.gc.result.i1(token)
@@ -156,5 +176,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_structf(i64, i32, %struct ()*
 declare %struct @llvm.experimental.gc.result.struct(token)
 
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32varargf(i64, i32, void (i32, ...)*, i32, i32, ...)
+
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32p0i8i32p0s_struct2sf(i64, i32, void (i32, i8*, i32, %struct2*)*, i32, i32, ...)
 
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)

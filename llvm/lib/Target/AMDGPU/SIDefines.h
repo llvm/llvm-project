@@ -85,7 +85,10 @@ enum : uint64_t {
   ClampHi = UINT64_C(1) << 48,
 
   // Is a packed VOP3P instruction.
-  IsPacked = UINT64_C(1) << 49
+  IsPacked = UINT64_C(1) << 49,
+
+  // Is a D16 buffer instruction.
+  D16Buf = UINT64_C(1) << 50
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -137,13 +140,19 @@ namespace AMDGPU {
     OPERAND_INPUT_MODS,
 
     // Operand for SDWA instructions
-    OPERAND_SDWA_SRC,
     OPERAND_SDWA_VOPC_DST,
 
     /// Operand with 32-bit immediate that uses the constant bus.
     OPERAND_KIMM32,
     OPERAND_KIMM16
   };
+}
+
+namespace SIStackID {
+enum StackTypes : uint8_t {
+  SCRATCH = 0,
+  SGPR_SPILL = 1
+};
 }
 
 // Input operand modifiers bit-masks
@@ -273,8 +282,9 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_GPR_ALLOC = 5,
   ID_LDS_ALLOC = 6,
   ID_IB_STS = 7,
-  ID_SYMBOLIC_LAST_ = 8,
   ID_MEM_BASES = 15,
+  ID_SYMBOLIC_FIRST_GFX9_ = ID_MEM_BASES,
+  ID_SYMBOLIC_LAST_ = 16,
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
@@ -375,6 +385,44 @@ enum SDWA9EncValues{
 };
 
 } // namespace SDWA
+
+namespace DPP {
+
+enum DppCtrl {
+  QUAD_PERM_FIRST   = 0,
+  QUAD_PERM_LAST    = 0xFF,
+  DPP_UNUSED1       = 0x100,
+  ROW_SHL0          = 0x100,
+  ROW_SHL_FIRST     = 0x101,
+  ROW_SHL_LAST      = 0x10F,
+  DPP_UNUSED2       = 0x110,
+  ROW_SHR0          = 0x110,
+  ROW_SHR_FIRST     = 0x111,
+  ROW_SHR_LAST      = 0x11F,
+  DPP_UNUSED3       = 0x120,
+  ROW_ROR0          = 0x120,
+  ROW_ROR_FIRST     = 0x121,
+  ROW_ROR_LAST      = 0x12F,
+  WAVE_SHL1         = 0x130,
+  DPP_UNUSED4_FIRST = 0x131,
+  DPP_UNUSED4_LAST  = 0x133,
+  WAVE_ROL1         = 0x134,
+  DPP_UNUSED5_FIRST = 0x135,
+  DPP_UNUSED5_LAST  = 0x137,
+  WAVE_SHR1         = 0x138,
+  DPP_UNUSED6_FIRST = 0x139,
+  DPP_UNUSED6_LAST  = 0x13B,
+  WAVE_ROR1         = 0x13C,
+  DPP_UNUSED7_FIRST = 0x13D,
+  DPP_UNUSED7_LAST  = 0x13F,
+  ROW_MIRROR        = 0x140,
+  ROW_HALF_MIRROR   = 0x141,
+  BCAST15           = 0x142,
+  BCAST31           = 0x143,
+  DPP_LAST          = BCAST31
+};
+
+} // namespace DPP
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

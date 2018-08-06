@@ -80,7 +80,7 @@ static bool isDereferenceableAndAlignedPointer(
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
     const Value *Base = GEP->getPointerOperand();
 
-    APInt Offset(DL.getPointerTypeSizeInBits(GEP->getType()), 0);
+    APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
     if (!GEP->accumulateConstantOffset(DL, Offset) || Offset.isNegative() ||
         !Offset.urem(APInt(Offset.getBitWidth(), Align)).isMinValue())
       return false;
@@ -108,8 +108,8 @@ static bool isDereferenceableAndAlignedPointer(
                                               DL, CtxI, DT, Visited);
 
   if (auto CS = ImmutableCallSite(V))
-    if (const Value *RV = CS.getReturnedArgOperand())
-      return isDereferenceableAndAlignedPointer(RV, Align, Size, DL, CtxI, DT,
+    if (auto *RP = getArgumentAliasingToReturnedPointer(CS))
+      return isDereferenceableAndAlignedPointer(RP, Align, Size, DL, CtxI, DT,
                                                 Visited);
 
   // If we don't know, assume the worst.
@@ -146,7 +146,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(
-      V, Align, APInt(DL.getTypeSizeInBits(VTy), DL.getTypeStoreSize(Ty)), DL,
+      V, Align, APInt(DL.getIndexTypeSizeInBits(VTy), DL.getTypeStoreSize(Ty)), DL,
       CtxI, DT, Visited);
 }
 
@@ -156,7 +156,7 @@ bool llvm::isDereferenceablePointer(const Value *V, const DataLayout &DL,
   return isDereferenceableAndAlignedPointer(V, 1, DL, CtxI, DT);
 }
 
-/// \brief Test if A and B will obviously have the same value.
+/// Test if A and B will obviously have the same value.
 ///
 /// This includes recognizing that %t0 and %t1 will have the same
 /// value in code like this:
@@ -187,7 +187,7 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   return false;
 }
 
-/// \brief Check if executing a load of this pointer value cannot trap.
+/// Check if executing a load of this pointer value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
 /// analysis and returns true if it is safe to load immediately before ScanFrom.

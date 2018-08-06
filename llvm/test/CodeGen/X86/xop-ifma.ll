@@ -81,8 +81,8 @@ define <4 x i64> @test_mulx_v4i32_add_v4i64(<4 x i32> %a0, <4 x i32> %a1, <4 x i
 ;
 ; XOP-AVX2-LABEL: test_mulx_v4i32_add_v4i64:
 ; XOP-AVX2:       # %bb.0:
-; XOP-AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
-; XOP-AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; XOP-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; XOP-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; XOP-AVX2-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
 ; XOP-AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; XOP-AVX2-NEXT:    retq

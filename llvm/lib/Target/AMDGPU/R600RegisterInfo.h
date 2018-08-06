@@ -8,20 +8,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Interface definition for R600RegisterInfo
+/// Interface definition for R600RegisterInfo
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 
-#include "AMDGPURegisterInfo.h"
+#define GET_REGINFO_HEADER
+#include "R600GenRegisterInfo.inc"
 
 namespace llvm {
 
-class AMDGPUSubtarget;
-
-struct R600RegisterInfo final : public AMDGPURegisterInfo {
+struct R600RegisterInfo final : public R600GenRegisterInfo {
   RegClassWeight RCW;
 
   R600RegisterInfo();
@@ -30,12 +29,12 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
-  /// \brief get the HW encoding for a register's channel.
+  /// get the HW encoding for a register's channel.
   unsigned getHWRegChan(unsigned reg) const;
 
   unsigned getHWRegIndex(unsigned Reg) const;
 
-  /// \brief get the register class of the specified type to use in the
+  /// get the register class of the specified type to use in the
   /// CFGStructurizer
   const TargetRegisterClass *getCFGStructurizerRegClass(MVT VT) const;
 
@@ -49,6 +48,8 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
+
+  void reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const;
 };
 
 } // End namespace llvm

@@ -71,7 +71,7 @@ define x86_stdcallcc void @test5(%struct.sixteen* byval nocapture readonly align
   %1 = getelementptr inbounds [16 x i8], [16 x i8]* %d.sroa.0, i32 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 16, i8* %1)
   %2 = getelementptr inbounds %struct.sixteen, %struct.sixteen* %s, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 16, i32 1, i1 true)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 16, i1 true)
   call void @llvm.lifetime.end.p0i8(i64 16, i8* %1)
   ret void
 ; CHECK-LABEL: test5:
@@ -84,7 +84,7 @@ define x86_stdcallcc void @test5(%struct.sixteen* byval nocapture readonly align
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) argmemonly nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) argmemonly nounwind
 
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind
 

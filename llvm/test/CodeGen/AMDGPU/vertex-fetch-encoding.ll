@@ -36,11 +36,11 @@ define amdgpu_kernel void @vtx_fetch32_id3(i32 addrspace(1)* %out, i32 addrspace
 ; EG: VTX_READ_32 T[[GPR:[0-9]]].X, T[[GPR]].X, 0, #2 ; encoding: [0x40,0x02,0x0[[GPR]],0x10,0x0[[GPR]],0xf0,0x5f,0x13,0x00,0x00,0x08,0x00
 ; CM: VTX_READ_32 T[[GPR:[0-9]]].X, T[[GPR]].X, 0, #2 ; encoding: [0x40,0x02,0x0[[GPR]],0x00,0x0[[GPR]],0xf0,0x5f,0x13,0x00,0x00,0x00,0x00
 
-@t = internal addrspace(2) constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+@t = internal addrspace(4) constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 
 define amdgpu_kernel void @vtx_fetch32_id2(i32 addrspace(1)* %out, i32 %in) {
-  %a = getelementptr inbounds [4 x i32], [4 x i32] addrspace(2)* @t, i32 0, i32 %in
-  %v = load i32, i32 addrspace(2)* %a
+  %a = getelementptr inbounds [4 x i32], [4 x i32] addrspace(4)* @t, i32 0, i32 %in
+  %v = load i32, i32 addrspace(4)* %a
   store i32 %v, i32 addrspace(1)* %out
   ret void
 }

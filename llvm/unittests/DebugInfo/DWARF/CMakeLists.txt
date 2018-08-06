@@ -8,14 +8,12 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-set(DebugInfoSources
-  DwarfGenerator.cpp
-  DWARFDebugInfoTest.cpp
-  DWARFFormValueTest.cpp
-  )
-
 add_llvm_unittest(DebugInfoDWARFTests
-  ${DebugInfoSources}
+  DwarfGenerator.cpp
+  DwarfUtils.cpp
+  DWARFDebugInfoTest.cpp
+  DWARFDebugLineTest.cpp
+  DWARFFormValueTest.cpp
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)

@@ -19,8 +19,8 @@ define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %esi, %edi
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl $14, %edi
-; X64-NEXT:    jae .LBB0_1
+; X64-NEXT:    testl $16384, %edi # imm = 0x4000
+; X64-NEXT:    je .LBB0_1
 ; X64-NEXT:  # %bb.2: # %bb1
 ; X64-NEXT:    jmp bar # TAILCALL
 ; X64-NEXT:  .LBB0_1: # %bb

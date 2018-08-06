@@ -79,7 +79,7 @@ viewing this example, it may be helpful to view it in terms of clobbers. The
 operands of a given ``MemoryAccess`` are all (potential) clobbers of said
 MemoryAccess, and the value produced by a ``MemoryAccess`` can act as a clobber
 for other ``MemoryAccess``\ es. Another useful way of looking at it is in
-terms of heap versions.  In that view, operands of of a given
+terms of heap versions.  In that view, operands of a given
 ``MemoryAccess`` are the version of the heap before the operation, and
 if the access produces a value, the value is the new version of the heap
 after the operation.

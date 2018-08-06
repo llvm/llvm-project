@@ -15,10 +15,10 @@ bb:
 	%t2 = ashr i64 %t1, 7
 ; CHECK: %t2 = ashr i64 %t1, 7
 ; CHECK-NEXT: sext i57 {0,+,199}<%bb> to i64
-; CHECK-SAME: Exits: (sext i57 (199 * (trunc i64 (-1 + (2780916192016515319 * %n)) to i57)) to i64)
+; CHECK-SAME: Exits: (sext i57 (-199 + (trunc i64 %n to i57)) to i64)
 ; CHECK: %s2 = ashr i64 %s1, 5
 ; CHECK-NEXT: sext i59 {0,+,199}<%bb> to i64
-; CHECK-SAME: Exits: (sext i59 (199 * (trunc i64 (-1 + (2780916192016515319 * %n)) to i59)) to i64)
+; CHECK-SAME: Exits: (sext i59 (-199 + (trunc i64 %n to i59)) to i64)
 	%s1 = shl i64 %i.01, 5
 	%s2 = ashr i64 %s1, 5
 	%t3 = getelementptr i64, i64* %x, i64 %i.01

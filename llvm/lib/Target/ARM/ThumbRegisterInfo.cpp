@@ -475,7 +475,7 @@ bool ThumbRegisterInfo::saveScavengerRegister(
   // before that instead and adjust the UseMI.
   bool done = false;
   for (MachineBasicBlock::iterator II = I; !done && II != UseMI ; ++II) {
-    if (II->isDebugValue())
+    if (II->isDebugInstr())
       continue;
     // If this instruction affects R12, adjust our restore point.
     for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
@@ -517,25 +517,13 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned VReg = 0;
   const ARMBaseInstrInfo &TII = *STI.getInstrInfo();
-  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   DebugLoc dl = MI.getDebugLoc();
   MachineInstrBuilder MIB(*MBB.getParent(), &MI);
 
-  unsigned FrameReg = ARM::SP;
+  unsigned FrameReg;
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-               MF.getFrameInfo().getStackSize() + SPAdj;
-
-  if (MF.getFrameInfo().hasVarSizedObjects()) {
-    assert(SPAdj == 0 && STI.getFrameLowering()->hasFP(MF) && "Unexpected");
-    // There are alloca()'s in this function, must reference off the frame
-    // pointer or base pointer instead.
-    if (!hasBasePointer(MF)) {
-      FrameReg = getFrameRegister(MF);
-      Offset -= AFI->getFramePtrSpillOffset();
-    } else
-      FrameReg = BasePtr;
-  }
+  const ARMFrameLowering *TFI = getFrameLowering(MF);
+  int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);
 
   // PEI::scavengeFrameVirtualRegs() cannot accurately track SPAdj because the
   // call frame setup/destroy instructions have already been eliminated.  That
@@ -560,7 +548,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   // Modify MI as necessary to handle as much of 'Offset' as possible
-  assert(AFI->isThumbFunction() &&
+  assert(MF.getInfo<ARMFunctionInfo>()->isThumbFunction() &&
          "This eliminateFrameIndex only supports Thumb1!");
   if (rewriteFrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;

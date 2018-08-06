@@ -24,10 +24,10 @@ define amdgpu_kernel void @select_f16(
     half addrspace(1)* %c,
     half addrspace(1)* %d) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
-  %c.val = load half, half addrspace(1)* %c
-  %d.val = load half, half addrspace(1)* %d
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
+  %c.val = load volatile half, half addrspace(1)* %c
+  %d.val = load volatile half, half addrspace(1)* %d
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half %c.val, half %d.val
   store half %r.val, half addrspace(1)* %r
@@ -54,9 +54,9 @@ define amdgpu_kernel void @select_f16_imm_a(
     half addrspace(1)* %c,
     half addrspace(1)* %d) {
 entry:
-  %b.val = load half, half addrspace(1)* %b
-  %c.val = load half, half addrspace(1)* %c
-  %d.val = load half, half addrspace(1)* %d
+  %b.val = load volatile half, half addrspace(1)* %b
+  %c.val = load volatile half, half addrspace(1)* %c
+  %d.val = load volatile half, half addrspace(1)* %d
   %fcmp = fcmp olt half 0xH3800, %b.val
   %r.val = select i1 %fcmp, half %c.val, half %d.val
   store half %r.val, half addrspace(1)* %r
@@ -84,9 +84,9 @@ define amdgpu_kernel void @select_f16_imm_b(
     half addrspace(1)* %c,
     half addrspace(1)* %d) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %c.val = load half, half addrspace(1)* %c
-  %d.val = load half, half addrspace(1)* %d
+  %a.val = load volatile half, half addrspace(1)* %a
+  %c.val = load volatile half, half addrspace(1)* %c
+  %d.val = load volatile half, half addrspace(1)* %d
   %fcmp = fcmp olt half %a.val, 0xH3800
   %r.val = select i1 %fcmp, half %c.val, half %d.val
   store half %r.val, half addrspace(1)* %r
@@ -115,9 +115,9 @@ define amdgpu_kernel void @select_f16_imm_c(
     half addrspace(1)* %b,
     half addrspace(1)* %d) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
-  %d.val = load half, half addrspace(1)* %d
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
+  %d.val = load volatile half, half addrspace(1)* %d
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half 0xH3800, half %d.val
   store half %r.val, half addrspace(1)* %r
@@ -145,9 +145,9 @@ define amdgpu_kernel void @select_f16_imm_d(
     half addrspace(1)* %b,
     half addrspace(1)* %c) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
-  %c.val = load half, half addrspace(1)* %c
+  %a.val = load volatile half, half addrspace(1)* %a
+  %b.val = load volatile half, half addrspace(1)* %b
+  %c.val = load volatile half, half addrspace(1)* %c
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half %c.val, half 0xH3800
   store half %r.val, half addrspace(1)* %r
@@ -197,9 +197,9 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 
-; SI: v_cmp_lt_f32_e32 vcc, 0.5
-; SI: v_cndmask_b32_e32
 ; SI: v_cmp_gt_f32_e32
+; SI: v_cndmask_b32_e32
+  ; SI: v_cmp_lt_f32_e32 vcc, 0.5
 ; SI: v_cndmask_b32_e32
 
 ; VI: v_cmp_lt_f16_e32
@@ -233,9 +233,9 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 
-; SI: v_cmp_gt_f32_e32 vcc, 0.5
-; SI: v_cndmask_b32_e32
 ; SI: v_cmp_lt_f32_e32
+; SI: v_cndmask_b32_e32
+; SI: v_cmp_gt_f32_e32 vcc, 0.5
 ; SI: v_cndmask_b32_e32
 
 ; VI: v_cmp_gt_f16_e32
@@ -272,7 +272,7 @@ entry:
 ; SI: v_cmp_nlt_f32_e32
 ; SI: v_cndmask_b32_e32
 ; SI: v_cmp_nlt_f32_e32
-; SI: v_cndmask_b32_e32
+; SI-DAG: v_cndmask_b32_e32
 
 ; VI: v_cmp_nlt_f16_e32
 ; VI: v_cndmask_b32_e32
@@ -280,8 +280,8 @@ entry:
 ; VI: v_cmp_nlt_f16_e32
 ; VI: v_cndmask_b32_e32
 
-; SI:  v_cvt_f16_f32_e32
-; SI:  v_cvt_f16_f32_e32
+; SI-DAG: v_cvt_f16_f32_e32
+; SI: v_cvt_f16_f32_e32
 ; GCN: s_endpgm
 define amdgpu_kernel void @select_v2f16_imm_c(
     <2 x half> addrspace(1)* %r,

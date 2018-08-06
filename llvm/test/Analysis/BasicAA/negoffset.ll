@@ -61,8 +61,8 @@ define void @struct() {
 ; CHECK-DAG:  MayAlias:     i32* %a2.0, i32* %r2.1i
 ; CHECK-DAG:  NoAlias:      i32* %a1, i32* %r2.0
 ; CHECK-DAG:  NoAlias:      i32* %a1, i32* %r2.1
-; CHECK-DAG:  NoAlias:      i32* %a1, i32* %r2.i
-; CHECK-DAG:  NoAlias:      i32* %a1, i32* %r2.1i
+; CHECK-DAG:  MayAlias:     i32* %a1, i32* %r2.i
+; CHECK-DAG:  MayAlias:     i32* %a1, i32* %r2.1i
 %complex = type { i32, i32, [4 x i32] }
 define void @complex1(i32 %i) {
   %alloca = alloca %complex
@@ -79,9 +79,9 @@ define void @complex1(i32 %i) {
 }
 
 ; CHECK-LABEL: Function: complex2:
-; CHECK-DAG: NoAlias: i32* %alloca, i32* %p120
-; CHECK-DAG: NoAlias: i32* %alloca, i32* %pi20
-; CHECK-DAG: NoAlias: i32* %alloca, i32* %pij1
+; CHECK-DAG: NoAlias:  i32* %alloca, i32* %p120
+; CHECK-DAG: MayAlias: i32* %alloca, i32* %pi20
+; CHECK-DAG: MayAlias: i32* %alloca, i32* %pij1
 ; CHECK-DAG: MayAlias: i32* %a3, i32* %pij1
 %inner = type { i32, i32 }
 %outer = type { i32, i32, [10 x %inner] }
@@ -96,3 +96,24 @@ define void @complex2(i32 %i, i32 %j) {
   ret void
 }
 
+; CHECK-LABEL: Function: pointer_offset:
+; CHECK-DAG: MayAlias: i32** %add.ptr, i32** %p1
+; CHECK-DAG: MayAlias: i32** %add.ptr, i32** %q2
+%struct.X = type { i32*, i32* }
+define i32 @pointer_offset(i32 signext %i, i32 signext %j, i32 zeroext %off) {
+entry:
+  %i.addr = alloca i32
+  %j.addr = alloca i32
+  %x = alloca %struct.X
+  store i32 %i, i32* %i.addr
+  store i32 %j, i32* %j.addr
+  %0 = bitcast %struct.X* %x to i8*
+  %p1 = getelementptr inbounds %struct.X, %struct.X* %x, i32 0, i32 0
+  store i32* %i.addr, i32** %p1
+  %q2 = getelementptr inbounds %struct.X, %struct.X* %x, i32 0, i32 1
+  store i32* %j.addr, i32** %q2
+  %add.ptr = getelementptr inbounds i32*, i32** %q2, i32 %off
+  %1 = load i32*, i32** %add.ptr
+  %2 = load i32, i32* %1
+  ret i32 %2
+}

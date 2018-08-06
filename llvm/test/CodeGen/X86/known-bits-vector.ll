@@ -24,10 +24,9 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_uitofp:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
+; X32-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -35,10 +34,9 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: knownbits_mask_extract_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
+; X64-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X64-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 65535, i64 -1>
   %2 = extractelement <2 x i64> %1, i32 0
@@ -51,7 +49,7 @@ define <4 x float> @knownbits_insert_uitofp(<4 x i32> %a0, i16 %a1, i16 %a2) nou
 ; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vpinsrd $0, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vmovd %ecx, %xmm0
 ; X32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
@@ -61,7 +59,7 @@ define <4 x float> @knownbits_insert_uitofp(<4 x i32> %a0, i16 %a1, i16 %a2) nou
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    movzwl %si, %ecx
-; X64-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
@@ -651,9 +649,7 @@ define <4 x float> @knownbits_lshr_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    vmovaps 8(%ebp), %xmm3
-; X32-NEXT:    vpsrld $1, %xmm2, %xmm4
 ; X32-NEXT:    vpsrld $5, %xmm2, %xmm2
-; X32-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm4[2,3],xmm2[4,5],xmm4[6,7]
 ; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm3, %xmm3
 ; X32-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
@@ -665,9 +661,7 @@ define <4 x float> @knownbits_lshr_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x
 ;
 ; X64-LABEL: knownbits_lshr_and_select_shuffle_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrld $1, %xmm2, %xmm4
 ; X64-NEXT:    vpsrld $5, %xmm2, %xmm2
-; X64-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm4[2,3],xmm2[4,5],xmm4[6,7]
 ; X64-NEXT:    vandps {{.*}}(%rip), %xmm3, %xmm3
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0

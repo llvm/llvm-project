@@ -97,6 +97,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -121,7 +122,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <iterator>
@@ -140,7 +140,7 @@ namespace {
 
 using ValueToAddrSpaceMapTy = DenseMap<const Value *, unsigned>;
 
-/// \brief InferAddressSpaces
+/// InferAddressSpaces
 class InferAddressSpaces : public FunctionPass {
   /// Target specific address space which uses of should be replaced if
   /// possible.
@@ -260,7 +260,10 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:{
+  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax: {
     const ConstantInt *IsVolatile = dyn_cast<ConstantInt>(II->getArgOperand(4));
     if (!IsVolatile || !IsVolatile->isZero())
       return false;
@@ -289,6 +292,9 @@ void InferAddressSpaces::collectRewritableIntrinsicOperands(
   case Intrinsic::objectsize:
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
@@ -647,13 +653,13 @@ void InferAddressSpaces::inferAddressSpaces(
 
     // Tries to update the address space of the stack top according to the
     // address spaces of its operands.
-    DEBUG(dbgs() << "Updating the address space of\n  " << *V << '\n');
+    LLVM_DEBUG(dbgs() << "Updating the address space of\n  " << *V << '\n');
     Optional<unsigned> NewAS = updateAddressSpace(*V, *InferredAddrSpace);
     if (!NewAS.hasValue())
       continue;
     // If any updates are made, grabs its users to the worklist because
     // their address spaces can also be possibly updated.
-    DEBUG(dbgs() << "  to " << NewAS.getValue() << '\n');
+    LLVM_DEBUG(dbgs() << "  to " << NewAS.getValue() << '\n');
     (*InferredAddrSpace)[V] = NewAS.getValue();
 
     for (Value *User : V->users()) {
@@ -779,7 +785,7 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
 
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
     B.CreateMemSet(NewV, MSI->getValue(),
-                   MSI->getLength(), MSI->getAlignment(),
+                   MSI->getLength(), MSI->getDestAlignment(),
                    false, // isVolatile
                    TBAA, ScopeMD, NoAliasMD);
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
@@ -795,14 +801,16 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
 
     if (isa<MemCpyInst>(MTI)) {
       MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
-      B.CreateMemCpy(Dest, Src, MTI->getLength(),
-                     MTI->getAlignment(),
+      B.CreateMemCpy(Dest, MTI->getDestAlignment(),
+                     Src, MTI->getSourceAlignment(),
+                     MTI->getLength(),
                      false, // isVolatile
                      TBAA, TBAAStruct, ScopeMD, NoAliasMD);
     } else {
       assert(isa<MemMoveInst>(MTI));
-      B.CreateMemMove(Dest, Src, MTI->getLength(),
-                      MTI->getAlignment(),
+      B.CreateMemMove(Dest, MTI->getDestAlignment(),
+                      Src, MTI->getSourceAlignment(),
+                      MTI->getLength(),
                       false, // isVolatile
                       TBAA, ScopeMD, NoAliasMD);
     }
@@ -893,15 +901,15 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
     if (NewV == nullptr)
       continue;
 
-    DEBUG(dbgs() << "Replacing the uses of " << *V
-                 << "\n  with\n  " << *NewV << '\n');
+    LLVM_DEBUG(dbgs() << "Replacing the uses of " << *V << "\n  with\n  "
+                      << *NewV << '\n');
 
     if (Constant *C = dyn_cast<Constant>(V)) {
       Constant *Replace = ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
                                                          C->getType());
       if (C != Replace) {
-        DEBUG(dbgs() << "Inserting replacement const cast: "
-              << Replace << ": " << *Replace << '\n');
+        LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
+                          << ": " << *Replace << '\n');
         C->replaceAllUsesWith(Replace);
         V = Replace;
       }

@@ -335,7 +335,7 @@ struct RoundUpToPowerOfTwo {
   enum { Val = RoundUpToPowerOfTwoH<N, (N&(N-1)) == 0>::Val };
 };
 
-/// \brief A templated base class for \c SmallPtrSet which provides the
+/// A templated base class for \c SmallPtrSet which provides the
 /// typesafe interface that is common across all small sizes.
 ///
 /// This is particularly useful for passing around between interface boundaries

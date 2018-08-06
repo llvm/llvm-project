@@ -456,6 +456,9 @@ def register_library(library):
     library.LLVMInitializeInstCombine.argtypes = [PassRegistry]
     library.LLVMInitializeInstCombine.restype = None
 
+    library.LLVMInitializeAggressiveInstCombiner.argtypes = [PassRegistry]
+    library.LLVMInitializeAggressiveInstCombiner.restype = None
+
     library.LLVMInitializeIPO.argtypes = [PassRegistry]
     library.LLVMInitializeIPO.restype = None
 

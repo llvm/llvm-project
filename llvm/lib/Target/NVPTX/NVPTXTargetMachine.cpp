@@ -52,6 +52,12 @@ static cl::opt<bool> DisableRequireStructuredCFG(
              "unexpected regressions happen."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> UseShortPointersOpt(
+    "nvptx-short-ptr",
+    cl::desc(
+        "Use 32-bit pointers for accessing const/local/shared address spaces."),
+    cl::init(false), cl::Hidden);
+
 namespace llvm {
 
 void initializeNVVMIntrRangePass(PassRegistry&);
@@ -83,11 +89,13 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAggrCopiesPass(PR);
 }
 
-static std::string computeDataLayout(bool is64Bit) {
+static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
   std::string Ret = "e";
 
   if (!is64Bit)
     Ret += "-p:32:32";
+  else if (UseShortPointers)
+    Ret += "-p3:32:32-p4:32:32-p5:32:32";
 
   Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
 
@@ -108,9 +116,11 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOpt::Level OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : LLVMTargetMachine(T, computeDataLayout(is64bit), TT, CPU, FS, Options,
-                        Reloc::PIC_, getEffectiveCodeModel(CM), OL),
-      is64bit(is64bit), TLOF(llvm::make_unique<NVPTXTargetObjectFile>()),
+    : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
+                        CPU, FS, Options, Reloc::PIC_,
+                        getEffectiveCodeModel(CM), OL),
+      is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
+      TLOF(llvm::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
   if (TT.getOS() == Triple::NVCL)
     drvInterface = NVPTX::NVCL;
@@ -238,9 +248,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&TailDuplicateID);
   disablePass(&StackMapLivenessID);
   disablePass(&LiveDebugValuesID);
+  disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
+  disablePass(&ShrinkWrapID);
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering
@@ -333,7 +345,7 @@ void NVPTXPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   addPass(&StackSlotColoringID);
 
   // FIXME: Needs physical registers
-  //addPass(&PostRAMachineLICMID);
+  //addPass(&MachineLICMID);
 
   printAndVerify("After StackSlotColoring");
 }
@@ -368,7 +380,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   if (addILPOpts())
     printAndVerify("After ILP optimizations");
 
-  addPass(&MachineLICMID);
+  addPass(&EarlyMachineLICMID);
   addPass(&MachineCSEID);
 
   addPass(&MachineSinkingID);

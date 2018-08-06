@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 class MipsEVAInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
-                    PredicateControl, StdArch {
+                    StdArch {
   let DecoderNamespace = "Mips";
   let EncodingPredicates = [HasStdEnc];
 }

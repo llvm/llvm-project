@@ -58,9 +58,9 @@ define <2 x double> @sitofp_2i64_to_2f64(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_2i64_to_2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -96,7 +96,7 @@ define <2 x double> @sitofp_4i32_to_2f64(<4 x i32> %a) {
 ; AVX-LABEL: sitofp_4i32_to_2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %cvt = sitofp <4 x i32> %a to <4 x double>
@@ -134,7 +134,7 @@ define <2 x double> @sitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -142,7 +142,7 @@ define <2 x double> @sitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -150,7 +150,7 @@ define <2 x double> @sitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = sitofp <8 x i16> %a to <8 x double>
@@ -190,7 +190,7 @@ define <2 x double> @sitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -198,7 +198,7 @@ define <2 x double> @sitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm0
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -206,7 +206,7 @@ define <2 x double> @sitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = sitofp <16 x i8> %a to <16 x double>
@@ -301,9 +301,9 @@ define <4 x double> @sitofp_4i64_to_4f64(<4 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_4i64_to_4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: sitofp_4i64_to_4f64:
@@ -377,7 +377,7 @@ define <4 x double> @sitofp_8i16_to_4f64(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = sitofp <8 x i16> %a to <8 x double>
   %shuf = shufflevector <8 x double> %cvt, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -432,7 +432,7 @@ define <4 x double> @sitofp_16i8_to_4f64(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = sitofp <16 x i8> %a to <16 x double>
   %shuf = shufflevector <16 x double> %cvt, <16 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -492,9 +492,9 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_2i64_to_2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -531,9 +531,9 @@ define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX512F-LABEL: uitofp_2i32_to_2f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -544,9 +544,9 @@ define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_2i32_to_2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -580,7 +580,7 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX1-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -594,37 +594,37 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: uitofp_4i32_to_2f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_4i32_to_2f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: uitofp_4i32_to_2f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i32_to_2f64:
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VLDQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512VLDQ-NEXT:    vzeroupper
 ; AVX512VLDQ-NEXT:    retq
   %cvt = uitofp <4 x i32> %a to <4 x double>
@@ -662,7 +662,7 @@ define <2 x double> @uitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -670,7 +670,7 @@ define <2 x double> @uitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -678,7 +678,7 @@ define <2 x double> @uitofp_8i16_to_2f64(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = uitofp <8 x i16> %a to <8 x double>
@@ -718,7 +718,7 @@ define <2 x double> @uitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -726,7 +726,7 @@ define <2 x double> @uitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -734,7 +734,7 @@ define <2 x double> @uitofp_16i8_to_2f64(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = uitofp <16 x i8> %a to <16 x double>
@@ -823,9 +823,9 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i64_to_4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i64_to_4f64:
@@ -844,18 +844,17 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
-; SSE-NEXT:    mulpd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
-; SSE-NEXT:    addpd %xmm5, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm4
+; SSE-NEXT:    mulpd %xmm2, %xmm4
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm3
+; SSE-NEXT:    cvtdq2pd %xmm3, %xmm1
+; SSE-NEXT:    addpd %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_4i32_to_4f64:
@@ -883,9 +882,9 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ;
 ; AVX512F-LABEL: uitofp_4i32_to_4f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_4i32_to_4f64:
@@ -895,9 +894,9 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i32_to_4f64:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i32_to_4f64:
@@ -956,7 +955,7 @@ define <4 x double> @uitofp_8i16_to_4f64(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = uitofp <8 x i16> %a to <8 x double>
   %shuf = shufflevector <8 x double> %cvt, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1013,7 +1012,7 @@ define <4 x double> @uitofp_16i8_to_4f64(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = uitofp <16 x i8> %a to <16 x double>
   %shuf = shufflevector <16 x double> %cvt, <16 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1072,9 +1071,9 @@ define <4 x float> @sitofp_2i64_to_4f32(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_2i64_to_4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -1131,7 +1130,7 @@ define <4 x float> @sitofp_2i64_to_4f32_zero(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_2i64_to_4f32_zero:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
 ; AVX512DQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512DQ-NEXT:    vzeroupper
@@ -1197,15 +1196,15 @@ define <4 x float> @sitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_4i64_to_4f32_undef:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: sitofp_4i64_to_4f32_undef:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; AVX512VLDQ-NEXT:    vzeroupper
 ; AVX512VLDQ-NEXT:    retq
@@ -1261,7 +1260,7 @@ define <4 x float> @sitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1269,7 +1268,7 @@ define <4 x float> @sitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1277,7 +1276,7 @@ define <4 x float> @sitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = sitofp <8 x i16> %a to <8 x float>
@@ -1320,7 +1319,7 @@ define <4 x float> @sitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX1-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1328,7 +1327,7 @@ define <4 x float> @sitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm0
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1336,7 +1335,7 @@ define <4 x float> @sitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = sitofp <16 x i8> %a to <16 x float>
@@ -1436,9 +1435,9 @@ define <4 x float> @sitofp_4i64_to_4f32(<4 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_4i64_to_4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -1576,7 +1575,7 @@ define <8 x float> @sitofp_16i8_to_8f32(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = sitofp <16 x i8> %a to <16 x float>
   %shuf = shufflevector <16 x float> %cvt, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1591,7 +1590,7 @@ define <4 x float> @uitofp_2i64_to_4f32(<2 x i64> %a) {
 ; SSE-LABEL: uitofp_2i64_to_4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    testq %rax, %rax
 ; SSE-NEXT:    js .LBB39_1
 ; SSE-NEXT:  # %bb.2:
@@ -1691,9 +1690,9 @@ define <4 x float> @uitofp_2i64_to_4f32(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_2i64_to_4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -1800,7 +1799,7 @@ define <4 x float> @uitofp_2i64_to_2f32(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_2i64_to_2f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
 ; AVX512DQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512DQ-NEXT:    vzeroupper
@@ -1819,7 +1818,7 @@ define <4 x float> @uitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ; SSE-LABEL: uitofp_4i64_to_4f32_undef:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    testq %rax, %rax
 ; SSE-NEXT:    js .LBB41_1
 ; SSE-NEXT:  # %bb.2:
@@ -1927,15 +1926,15 @@ define <4 x float> @uitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i64_to_4f32_undef:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i64_to_4f32_undef:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLDQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
 ; AVX512VLDQ-NEXT:    vzeroupper
 ; AVX512VLDQ-NEXT:    retq
@@ -1979,9 +1978,9 @@ define <4 x float> @uitofp_4i32_to_4f32(<4 x i32> %a) {
 ;
 ; AVX512F-LABEL: uitofp_4i32_to_4f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1992,9 +1991,9 @@ define <4 x float> @uitofp_4i32_to_4f32(<4 x i32> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i32_to_4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2039,7 +2038,7 @@ define <4 x float> @uitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -2047,7 +2046,7 @@ define <4 x float> @uitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2055,7 +2054,7 @@ define <4 x float> @uitofp_8i16_to_4f32(<8 x i16> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = uitofp <8 x i16> %a to <8 x float>
@@ -2098,7 +2097,7 @@ define <4 x float> @uitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -2106,7 +2105,7 @@ define <4 x float> @uitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2114,7 +2113,7 @@ define <4 x float> @uitofp_16i8_to_4f32(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cvt = uitofp <16 x i8> %a to <16 x float>
@@ -2361,9 +2360,9 @@ define <4 x float> @uitofp_4i64_to_4f32(<4 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i64_to_4f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2425,9 +2424,9 @@ define <8 x float> @uitofp_8i32_to_8f32(<8 x i32> %a) {
 ;
 ; AVX512F-LABEL: uitofp_8i32_to_8f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_8i32_to_8f32:
@@ -2437,9 +2436,9 @@ define <8 x float> @uitofp_8i32_to_8f32(<8 x i32> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_8i32_to_8f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_8i32_to_8f32:
@@ -2556,7 +2555,7 @@ define <8 x float> @uitofp_16i8_to_8f32(<16 x i8> %a) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
   %cvt = uitofp <16 x i8> %a to <16 x float>
   %shuf = shufflevector <16 x float> %cvt, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -2614,7 +2613,7 @@ define <2 x double> @sitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2778,7 +2777,7 @@ define <4 x double> @sitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: sitofp_load_4i64_to_4f64:
@@ -2910,7 +2909,7 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2927,7 +2926,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; SSE-LABEL: uitofp_load_2i32_to_2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,0,0,0,0]
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm0
@@ -2940,7 +2939,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; VEX:       # %bb.0:
 ; VEX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; VEX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3,4,5,6,7]
 ; VEX-NEXT:    vcvtdq2pd %xmm1, %xmm1
 ; VEX-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; VEX-NEXT:    vcvtdq2pd %xmm0, %xmm0
@@ -2952,7 +2951,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -2965,7 +2964,7 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -3108,7 +3107,7 @@ define <4 x double> @uitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_load_4i64_to_4f64:
@@ -3129,18 +3128,17 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
-; SSE-NEXT:    mulpd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
-; SSE-NEXT:    addpd %xmm5, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm4
+; SSE-NEXT:    mulpd %xmm2, %xmm4
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm3
+; SSE-NEXT:    cvtdq2pd %xmm3, %xmm1
+; SSE-NEXT:    addpd %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_load_4i32_to_4f64:
@@ -3172,7 +3170,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_load_4i32_to_4f64:
@@ -3184,7 +3182,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_load_4i32_to_4f64:
@@ -3342,7 +3340,7 @@ define <4 x float> @sitofp_load_4i64_to_4f32(<4 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -3933,7 +3931,7 @@ define <4 x float> @uitofp_load_4i64_to_4f32(<4 x i64> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512DQ-NEXT:    vcvtuqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -3986,7 +3984,7 @@ define <4 x float> @uitofp_load_4i32_to_4f32(<4 x i32> *%a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -3999,7 +3997,7 @@ define <4 x float> @uitofp_load_4i32_to_4f32(<4 x i32> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -4212,7 +4210,7 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX1-NEXT:    testq %rax, %rax
 ; AVX1-NEXT:    js .LBB80_4
 ; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm3
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm4
 ; AVX1-NEXT:    jmp .LBB80_6
 ; AVX1-NEXT:  .LBB80_4:
 ; AVX1-NEXT:    movq %rax, %rcx
@@ -4220,22 +4218,22 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    orq %rcx, %rax
 ; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm3
-; AVX1-NEXT:    vaddss %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vaddss %xmm3, %xmm3, %xmm4
 ; AVX1-NEXT:  .LBB80_6:
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
 ; AVX1-NEXT:    vmovq %xmm2, %rax
 ; AVX1-NEXT:    testq %rax, %rax
 ; AVX1-NEXT:    js .LBB80_7
 ; AVX1-NEXT:  # %bb.8:
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm4, %xmm4
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm3
 ; AVX1-NEXT:    jmp .LBB80_9
 ; AVX1-NEXT:  .LBB80_7:
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shrq %rcx
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm4, %xmm4
-; AVX1-NEXT:    vaddss %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm3
+; AVX1-NEXT:    vaddss %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:  .LBB80_9:
 ; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX1-NEXT:    testq %rax, %rax
@@ -4265,29 +4263,29 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm5
 ; AVX1-NEXT:    vaddss %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:  .LBB80_15:
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[2,3]
 ; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    testq %rax, %rax
 ; AVX1-NEXT:    js .LBB80_16
 ; AVX1-NEXT:  # %bb.17:
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm3
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm4
 ; AVX1-NEXT:    jmp .LBB80_18
 ; AVX1-NEXT:  .LBB80_16:
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shrq %rcx
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm3
-; AVX1-NEXT:    vaddss %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm4
+; AVX1-NEXT:    vaddss %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:  .LBB80_18:
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0],xmm1[3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vmovq %xmm4, %rax
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vmovq %xmm3, %rax
 ; AVX1-NEXT:    testq %rax, %rax
 ; AVX1-NEXT:    js .LBB80_19
 ; AVX1-NEXT:  # %bb.20:
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm5
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm0
 ; AVX1-NEXT:    jmp .LBB80_21
 ; AVX1-NEXT:  .LBB80_19:
 ; AVX1-NEXT:    movq %rax, %rcx
@@ -4295,25 +4293,25 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    orq %rcx, %rax
 ; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm0
-; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm5
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:  .LBB80_21:
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm0[0],xmm4[3]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm2[0]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0,1],xmm5[0],xmm3[3]
-; AVX1-NEXT:    vpextrq $1, %xmm4, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rax
 ; AVX1-NEXT:    testq %rax, %rax
 ; AVX1-NEXT:    js .LBB80_22
 ; AVX1-NEXT:  # %bb.23:
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm2
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm1
 ; AVX1-NEXT:    jmp .LBB80_24
 ; AVX1-NEXT:  .LBB80_22:
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    shrq %rcx
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm2
-; AVX1-NEXT:    vaddss %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm1
+; AVX1-NEXT:    vaddss %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:  .LBB80_24:
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0,1,2],xmm1[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -4339,7 +4337,7 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX2-NEXT:    testq %rax, %rax
 ; AVX2-NEXT:    js .LBB80_4
 ; AVX2-NEXT:  # %bb.5:
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm3
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm4
 ; AVX2-NEXT:    jmp .LBB80_6
 ; AVX2-NEXT:  .LBB80_4:
 ; AVX2-NEXT:    movq %rax, %rcx
@@ -4347,22 +4345,22 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    orq %rcx, %rax
 ; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm3
-; AVX2-NEXT:    vaddss %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vaddss %xmm3, %xmm3, %xmm4
 ; AVX2-NEXT:  .LBB80_6:
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm2
 ; AVX2-NEXT:    vmovq %xmm2, %rax
 ; AVX2-NEXT:    testq %rax, %rax
 ; AVX2-NEXT:    js .LBB80_7
 ; AVX2-NEXT:  # %bb.8:
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm4, %xmm4
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm3
 ; AVX2-NEXT:    jmp .LBB80_9
 ; AVX2-NEXT:  .LBB80_7:
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shrq %rcx
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    orq %rcx, %rax
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm4, %xmm4
-; AVX2-NEXT:    vaddss %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm3
+; AVX2-NEXT:    vaddss %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB80_9:
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX2-NEXT:    testq %rax, %rax
@@ -4392,29 +4390,29 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm5, %xmm5
 ; AVX2-NEXT:    vaddss %xmm5, %xmm5, %xmm5
 ; AVX2-NEXT:  .LBB80_15:
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[2,3]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[2,3]
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    testq %rax, %rax
 ; AVX2-NEXT:    js .LBB80_16
 ; AVX2-NEXT:  # %bb.17:
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm3
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm4
 ; AVX2-NEXT:    jmp .LBB80_18
 ; AVX2-NEXT:  .LBB80_16:
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shrq %rcx
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    orq %rcx, %rax
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm3
-; AVX2-NEXT:    vaddss %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm4
+; AVX2-NEXT:    vaddss %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:  .LBB80_18:
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm4[0],xmm1[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[2,3]
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; AVX2-NEXT:    vmovq %xmm4, %rax
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX2-NEXT:    vmovq %xmm3, %rax
 ; AVX2-NEXT:    testq %rax, %rax
 ; AVX2-NEXT:    js .LBB80_19
 ; AVX2-NEXT:  # %bb.20:
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm5
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm0
 ; AVX2-NEXT:    jmp .LBB80_21
 ; AVX2-NEXT:  .LBB80_19:
 ; AVX2-NEXT:    movq %rax, %rcx
@@ -4422,25 +4420,25 @@ define <8 x float> @uitofp_load_8i64_to_8f32(<8 x i64> *%a) {
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    orq %rcx, %rax
 ; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm0
-; AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm5
+; AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:  .LBB80_21:
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm0[0],xmm4[3]
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm2[0]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0,1],xmm5[0],xmm3[3]
-; AVX2-NEXT:    vpextrq $1, %xmm4, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rax
 ; AVX2-NEXT:    testq %rax, %rax
 ; AVX2-NEXT:    js .LBB80_22
 ; AVX2-NEXT:  # %bb.23:
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm2
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm1
 ; AVX2-NEXT:    jmp .LBB80_24
 ; AVX2-NEXT:  .LBB80_22:
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shrq %rcx
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    orq %rcx, %rax
-; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm2
-; AVX2-NEXT:    vaddss %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vcvtsi2ssq %rax, %xmm6, %xmm1
+; AVX2-NEXT:    vaddss %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:  .LBB80_24:
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm4[0,1,2],xmm1[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -4575,7 +4573,7 @@ define <8 x float> @uitofp_load_8i32_to_8f32(<8 x i32> *%a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_load_8i32_to_8f32:
@@ -4587,7 +4585,7 @@ define <8 x float> @uitofp_load_8i32_to_8f32(<8 x i32> *%a) {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_load_8i32_to_8f32:

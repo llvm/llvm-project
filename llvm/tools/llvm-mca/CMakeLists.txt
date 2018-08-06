@@ -1,0 +1,42 @@
+set(LLVM_LINK_COMPONENTS
+  AllTargetsAsmPrinters
+  AllTargetsAsmParsers
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  AllTargetsInfos
+  MC
+  MCParser
+  Support
+  )
+
+add_llvm_tool(llvm-mca
+  CodeRegion.cpp
+  Context.cpp
+  DispatchStage.cpp
+  DispatchStatistics.cpp
+  ExecuteStage.cpp
+  FetchStage.cpp
+  HWEventListener.cpp
+  HardwareUnit.cpp
+  InstrBuilder.cpp
+  Instruction.cpp
+  InstructionInfoView.cpp
+  InstructionTables.cpp
+  LSUnit.cpp
+  llvm-mca.cpp
+  Pipeline.cpp
+  PipelinePrinter.cpp
+  RegisterFile.cpp
+  RegisterFileStatistics.cpp
+  ResourcePressureView.cpp
+  RetireControlUnit.cpp
+  RetireControlUnitStatistics.cpp
+  RetireStage.cpp
+  Scheduler.cpp
+  SchedulerStatistics.cpp
+  Stage.cpp
+  Support.cpp
+  SummaryView.cpp
+  TimelineView.cpp
+  View.cpp
+  )

@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -20,49 +20,6 @@ namespace llvm {
 
 struct BaseAddress;
 class raw_ostream;
-
-struct DWARFAddressRange {
-  uint64_t LowPC;
-  uint64_t HighPC;
-  uint64_t SectionIndex;
-
-  DWARFAddressRange() = default;
-
-  /// Used for unit testing.
-  DWARFAddressRange(uint64_t LowPC, uint64_t HighPC, uint64_t SectionIndex = 0)
-      : LowPC(LowPC), HighPC(HighPC), SectionIndex(SectionIndex) {}
-
-  /// Returns true if LowPC is smaller or equal to HighPC. This accounts for
-  /// dead-stripped ranges.
-  bool valid() const { return LowPC <= HighPC; }
-
-  /// Returns true if [LowPC, HighPC) intersects with [RHS.LowPC, RHS.HighPC).
-  bool intersects(const DWARFAddressRange &RHS) const {
-    // Empty ranges can't intersect.
-    if (LowPC == HighPC || RHS.LowPC == RHS.HighPC)
-      return false;
-    return (LowPC < RHS.HighPC) && (HighPC > RHS.LowPC);
-  }
-
-  /// Returns true if [LowPC, HighPC) fully contains [RHS.LowPC, RHS.HighPC).
-  bool contains(const DWARFAddressRange &RHS) const {
-    if (LowPC <= RHS.LowPC && RHS.LowPC <= HighPC)
-      return LowPC <= RHS.HighPC && RHS.HighPC <= HighPC;
-    return false;
-  }
-
-  void dump(raw_ostream &OS, uint32_t AddressSize) const;
-};
-
-static inline bool operator<(const DWARFAddressRange &LHS,
-                             const DWARFAddressRange &RHS) {
-  return std::tie(LHS.LowPC, LHS.HighPC) < std::tie(RHS.LowPC, RHS.HighPC);
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
-
-/// DWARFAddressRangesVector - represents a set of absolute address ranges.
-using DWARFAddressRangesVector = std::vector<DWARFAddressRange>;
 
 class DWARFDebugRangeList {
 public:
@@ -114,7 +71,7 @@ public:
 
   void clear();
   void dump(raw_ostream &OS) const;
-  bool extract(const DWARFDataExtractor &data, uint32_t *offset_ptr);
+  Error extract(const DWARFDataExtractor &data, uint32_t *offset_ptr);
   const std::vector<RangeListEntry> &getEntries() { return Entries; }
 
   /// getAbsoluteRanges - Returns absolute address ranges defined by this range

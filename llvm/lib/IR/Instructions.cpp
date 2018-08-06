@@ -45,6 +45,22 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
+//                            AllocaInst Class
+//===----------------------------------------------------------------------===//
+
+Optional<uint64_t>
+AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
+  uint64_t Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+  if (isArrayAllocation()) {
+    auto C = dyn_cast<ConstantInt>(getArraySize());
+    if (!C)
+      return None;
+    Size *= C->getZExtValue();
+  }
+  return Size;
+}
+
+//===----------------------------------------------------------------------===//
 //                            CallSite Class
 //===----------------------------------------------------------------------===//
 
@@ -319,31 +335,32 @@ void CallInst::init(Value *Func, const Twine &NameStr) {
   setName(NameStr);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name,
-                   Instruction *InsertBefore)
-  : Instruction(cast<FunctionType>(cast<PointerType>(Func->getType())
-                                   ->getElementType())->getReturnType(),
-                Instruction::Call,
-                OperandTraits<CallInst>::op_end(this) - 1,
-                1, InsertBefore) {
+CallInst::CallInst(Value *Func, const Twine &Name, Instruction *InsertBefore)
+    : CallBase<CallInst>(
+          cast<FunctionType>(
+              cast<PointerType>(Func->getType())->getElementType())
+              ->getReturnType(),
+          Instruction::Call,
+          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1,
+          InsertBefore) {
   init(Func, Name);
 }
 
-CallInst::CallInst(Value *Func, const Twine &Name,
-                   BasicBlock *InsertAtEnd)
-  : Instruction(cast<FunctionType>(cast<PointerType>(Func->getType())
-                                   ->getElementType())->getReturnType(),
-                Instruction::Call,
-                OperandTraits<CallInst>::op_end(this) - 1,
-                1, InsertAtEnd) {
+CallInst::CallInst(Value *Func, const Twine &Name, BasicBlock *InsertAtEnd)
+    : CallBase<CallInst>(
+          cast<FunctionType>(
+              cast<PointerType>(Func->getType())->getElementType())
+              ->getReturnType(),
+          Instruction::Call,
+          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1, InsertAtEnd) {
   init(Func, Name);
 }
 
 CallInst::CallInst(const CallInst &CI)
-    : Instruction(CI.getType(), Instruction::Call,
-                  OperandTraits<CallInst>::op_end(this) - CI.getNumOperands(),
-                  CI.getNumOperands()),
-      Attrs(CI.Attrs), FTy(CI.FTy) {
+    : CallBase<CallInst>(CI.Attrs, CI.FTy, CI.getType(), Instruction::Call,
+                         OperandTraits<CallBase<CallInst>>::op_end(this) -
+                             CI.getNumOperands(),
+                         CI.getNumOperands()) {
   setTailCallKind(CI.getTailCallKind());
   setCallingConv(CI.getCallingConv());
 
@@ -367,125 +384,14 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
-Value *CallInst::getReturnedArgOperand() const {
-  unsigned Index;
 
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
-    return getArgOperand(Index - AttributeList::FirstArgIndex);
-  if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
-        Index)
-      return getArgOperand(Index - AttributeList::FirstArgIndex);
 
-  return nullptr;
-}
 
-void CallInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::addAttribute(unsigned i, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Attr);
-  setAttributes(PAL);
-}
 
-void CallInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::addParamAttr(unsigned ArgNo, Attribute Attr) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Attr);
-  setAttributes(PAL);
-}
 
-void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
 
-void CallInst::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::removeParamAttr(unsigned ArgNo, StringRef Kind) {
-  assert(ArgNo < getNumArgOperands() && "Out of bounds");
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void CallInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-void CallInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-bool CallInst::hasRetAttr(Attribute::AttrKind Kind) const {
-  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
-    return true;
-
-  // Look at the callee, if available.
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
-  return false;
-}
-
-bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < getNumArgOperands() && "Param index out of bounds!");
-
-  if (Attrs.hasParamAttribute(i, Kind))
-    return true;
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(i, Kind);
-  return false;
-}
-
-bool CallInst::dataOperandHasImpliedAttr(unsigned i,
-                                         Attribute::AttrKind Kind) const {
-  // There are getNumOperands() - 1 data operands.  The last operand is the
-  // callee.
-  assert(i < getNumOperands() && "Data operand index out of bounds!");
-
-  // The attribute A can either be directly specified, if the operand in
-  // question is a call argument; or be indirectly implied by the kind of its
-  // containing operand bundle, if the operand is a bundle operand.
-
-  if (i == AttributeList::ReturnIndex)
-    return hasRetAttr(Kind);
-
-  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
-  // indices.
-  if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i - 1, Kind);
-
-  assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
-         "Must be either a call argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, Kind);
-}
 
 /// IsConstantOne - Return true only if val is constant int 1
 static bool IsConstantOne(Value *val) {
@@ -721,11 +627,10 @@ void InvokeInst::init(FunctionType *FTy, Value *Fn, BasicBlock *IfNormal,
 }
 
 InvokeInst::InvokeInst(const InvokeInst &II)
-    : TerminatorInst(II.getType(), Instruction::Invoke,
-                     OperandTraits<InvokeInst>::op_end(this) -
-                         II.getNumOperands(),
-                     II.getNumOperands()),
-      Attrs(II.Attrs), FTy(II.FTy) {
+    : CallBase<InvokeInst>(II.Attrs, II.FTy, II.getType(), Instruction::Invoke,
+                           OperandTraits<CallBase<InvokeInst>>::op_end(this) -
+                               II.getNumOperands(),
+                           II.getNumOperands()) {
   setCallingConv(II.getCallingConv());
   std::copy(II.op_begin(), II.op_end(), op_begin());
   std::copy(II.bundle_op_info_begin(), II.bundle_op_info_end(),
@@ -747,109 +652,6 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   return NewII;
 }
 
-Value *InvokeInst::getReturnedArgOperand() const {
-  unsigned Index;
-
-  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
-    return getArgOperand(Index - AttributeList::FirstArgIndex);
-  if (const Function *F = getCalledFunction())
-    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
-        Index)
-      return getArgOperand(Index - AttributeList::FirstArgIndex);
-
-  return nullptr;
-}
-
-bool InvokeInst::hasRetAttr(Attribute::AttrKind Kind) const {
-  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
-    return true;
-
-  // Look at the callee, if available.
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
-  return false;
-}
-
-bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
-  assert(i < getNumArgOperands() && "Param index out of bounds!");
-
-  if (Attrs.hasParamAttribute(i, Kind))
-    return true;
-  if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(i, Kind);
-  return false;
-}
-
-bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
-                                           Attribute::AttrKind Kind) const {
-  // There are getNumOperands() - 3 data operands.  The last three operands are
-  // the callee and the two successor basic blocks.
-  assert(i < (getNumOperands() - 2) && "Data operand index out of bounds!");
-
-  // The attribute A can either be directly specified, if the operand in
-  // question is an invoke argument; or be indirectly implied by the kind of its
-  // containing operand bundle, if the operand is a bundle operand.
-
-  if (i == AttributeList::ReturnIndex)
-    return hasRetAttr(Kind);
-
-  // FIXME: Avoid these i - 1 calculations and update the API to use zero-based
-  // indices.
-  if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i - 1, Kind);
-
-  assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
-         "Must be either an invoke argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, Kind);
-}
-
-void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addAttribute(unsigned i, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Attr);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
-void InvokeInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
@@ -1872,7 +1674,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   return false;
 }
 
-int ShuffleVectorInst::getMaskValue(Constant *Mask, unsigned i) {
+int ShuffleVectorInst::getMaskValue(const Constant *Mask, unsigned i) {
   assert(i < Mask->getType()->getVectorNumElements() && "Index out of range");
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask))
     return CDS->getElementAsInteger(i);
@@ -1882,7 +1684,7 @@ int ShuffleVectorInst::getMaskValue(Constant *Mask, unsigned i) {
   return cast<ConstantInt>(C)->getZExtValue();
 }
 
-void ShuffleVectorInst::getShuffleMask(Constant *Mask,
+void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
                                        SmallVectorImpl<int> &Result) {
   unsigned NumElts = Mask->getType()->getVectorNumElements();
   
@@ -1897,6 +1699,108 @@ void ShuffleVectorInst::getShuffleMask(Constant *Mask,
                      cast<ConstantInt>(C)->getZExtValue());
   }
 }
+
+bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
+  assert(!Mask.empty() && "Shuffle mask must contain elements");
+  bool UsesLHS = false;
+  bool UsesRHS = false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    assert(Mask[i] >= 0 && Mask[i] < (NumElts * 2) &&
+           "Out-of-bounds shuffle mask element");
+    UsesLHS |= (Mask[i] < NumElts);
+    UsesRHS |= (Mask[i] >= NumElts);
+    if (UsesLHS && UsesRHS)
+      return false;
+  }
+  assert((UsesLHS ^ UsesRHS) && "Should have selected from exactly 1 source");
+  return true;
+}
+
+bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != i && Mask[i] != (NumElts + i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != (NumElts - 1 - i) && Mask[i] != (NumElts + NumElts - 1 - i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isZeroEltSplatMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != 0 && Mask[i] != NumElts)
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isSelectMask(ArrayRef<int> Mask) {
+  // Select is differentiated from identity. It requires using both sources.
+  if (isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != i && Mask[i] != (NumElts + i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
+  // Example masks that will return true:
+  // v1 = <a, b, c, d>
+  // v2 = <e, f, g, h>
+  // trn1 = shufflevector v1, v2 <0, 4, 2, 6> = <a, e, c, g>
+  // trn2 = shufflevector v1, v2 <1, 5, 3, 7> = <b, f, d, h>
+
+  // 1. The number of elements in the mask must be a power-of-2 and at least 2.
+  int NumElts = Mask.size();
+  if (NumElts < 2 || !isPowerOf2_32(NumElts))
+    return false;
+
+  // 2. The first element of the mask must be either a 0 or a 1.
+  if (Mask[0] != 0 && Mask[0] != 1)
+    return false;
+
+  // 3. The difference between the first 2 elements must be equal to the
+  // number of elements in the mask.
+  if ((Mask[1] - Mask[0]) != NumElts)
+    return false;
+
+  // 4. The difference between consecutive even-numbered and odd-numbered
+  // elements must be equal to 2.
+  for (int i = 2; i < NumElts; ++i) {
+    int MaskEltVal = Mask[i];
+    if (MaskEltVal == -1)
+      return false;
+    int MaskEltPrevVal = Mask[i - 2];
+    if (MaskEltVal - MaskEltPrevVal != 2)
+      return false;
+  }
+  return true;
+}
+
 
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class
@@ -2295,7 +2199,7 @@ bool CastInst::isLosslessCast() const {
 /// # bitcast i32* %x to i8*
 /// # bitcast <2 x i32> %x to <4 x i16> 
 /// # ptrtoint i32* %x to i32     ; on 32-bit plaforms only
-/// @brief Determine if the described cast is a no-op.
+/// Determine if the described cast is a no-op.
 bool CastInst::isNoopCast(Instruction::CastOps Opcode,
                           Type *SrcTy,
                           Type *DestTy,
@@ -2387,7 +2291,7 @@ unsigned CastInst::isEliminableCastPair(
     { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // UIToFP         +- firstOp
     { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // SIToFP         |
     { 99,99,99, 0, 0,99,99, 0, 0,99,99, 4, 0}, // FPTrunc        |
-    { 99,99,99, 2, 2,99,99,10, 2,99,99, 4, 0}, // FPExt          |
+    { 99,99,99, 2, 2,99,99, 8, 2,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99, 7, 3, 0}, // PtrToInt       |
     { 99,99,99,99,99,99,99,99,99,11,99,15, 0}, // IntToPtr       |
     {  5, 5, 5, 6, 6, 5, 5, 6, 6,16, 5, 1,14}, // BitCast        |
@@ -2481,12 +2385,6 @@ unsigned CastInst::isEliminableCastPair(
     case 9:
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
-    case 10:
-      // fpext followed by ftrunc is allowed if the bit size returned to is
-      // the same as the original, in which case its just a bitcast
-      if (SrcTy == DstTy)
-        return Instruction::BitCast;
-      return 0; // If the types are not the same we can't eliminate it.
     case 11: {
       // inttoptr, ptrtoint -> bitcast if SrcSize<=PtrSize and SrcSize==DstSize
       if (!MidIntPtrTy)
@@ -2669,7 +2567,7 @@ CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
   return CreatePointerBitCastOrAddrSpaceCast(S, Ty, Name, InsertAtEnd);
 }
 
-/// @brief Create a BitCast or a PtrToInt cast instruction
+/// Create a BitCast or a PtrToInt cast instruction
 CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty,
                                       const Twine &Name,
                                       Instruction *InsertBefore) {
@@ -3437,6 +3335,29 @@ ICmpInst::Predicate ICmpInst::getUnsignedPredicate(Predicate pred) {
   }
 }
 
+CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
+  switch (pred) {
+    default: llvm_unreachable("Unknown or unsupported cmp predicate!");
+    case ICMP_SGT: return ICMP_SGE;
+    case ICMP_SLT: return ICMP_SLE;
+    case ICMP_SGE: return ICMP_SGT;
+    case ICMP_SLE: return ICMP_SLT;
+    case ICMP_UGT: return ICMP_UGE;
+    case ICMP_ULT: return ICMP_ULE;
+    case ICMP_UGE: return ICMP_UGT;
+    case ICMP_ULE: return ICMP_ULT;
+
+    case FCMP_OGT: return FCMP_OGE;
+    case FCMP_OLT: return FCMP_OLE;
+    case FCMP_OGE: return FCMP_OGT;
+    case FCMP_OLE: return FCMP_OLT;
+    case FCMP_UGT: return FCMP_UGE;
+    case FCMP_ULT: return FCMP_ULE;
+    case FCMP_UGE: return FCMP_UGT;
+    case FCMP_ULE: return FCMP_ULT;
+  }
+}
+
 CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
   switch (pred) {
     default: llvm_unreachable("Unknown cmp predicate!");
@@ -3464,6 +3385,20 @@ CmpInst::Predicate CmpInst::getSwappedPredicate(Predicate pred) {
     case FCMP_ULT: return FCMP_UGT;
     case FCMP_UGE: return FCMP_ULE;
     case FCMP_ULE: return FCMP_UGE;
+  }
+}
+
+CmpInst::Predicate CmpInst::getNonStrictPredicate(Predicate pred) {
+  switch (pred) {
+  case ICMP_SGT: return ICMP_SGE;
+  case ICMP_SLT: return ICMP_SLE;
+  case ICMP_UGT: return ICMP_UGE;
+  case ICMP_ULT: return ICMP_ULE;
+  case FCMP_OGT: return FCMP_OGE;
+  case FCMP_OLT: return FCMP_OLE;
+  case FCMP_UGT: return FCMP_UGE;
+  case FCMP_ULT: return FCMP_ULE;
+  default: return pred;
   }
 }
 

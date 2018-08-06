@@ -5,10 +5,11 @@ tablegen(LLVM SystemZGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM SystemZGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM SystemZGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM SystemZGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM SystemZGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SystemZGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM SystemZGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SystemZGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM SystemZGenSubtargetInfo.inc -gen-subtarget)
+
 add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
@@ -39,5 +40,5 @@ add_llvm_target(SystemZCodeGen
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(InstPrinter)
-add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)

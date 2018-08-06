@@ -369,3 +369,42 @@ end:
   %z4 = phi i32 [ %z3, %no2 ], [ 3, %yes2 ]
   ret i32 %z4
 }
+
+; This test has an outer if over the two triangles. This requires creating a new BB to hold the store.
+define void @test_outer_if(i32* %p, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_outer_if(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X3:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    br i1 [[X3]], label [[END:%.*]], label [[CONTINUE:%.*]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[X1:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X2]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X1]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[END]]
+; CHECK:         [[NOT_X2:%.*]] = xor i1 [[X2]], true
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[NOT_X2]] to i32
+; CHECK-NEXT:    store i32 [[SPEC_SELECT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x3 = icmp eq i32 %c, 0
+  br i1 %x3, label %end, label %continue
+continue:
+  %x1 = icmp eq i32 %a, 0
+  br i1 %x1, label %fallthrough, label %yes1
+yes1:
+  store i32 0, i32* %p
+  br label %fallthrough
+  fallthrough:
+  %x2 = icmp eq i32 %b, 0
+  br i1 %x2, label %end, label %yes2
+yes2:
+  store i32 1, i32* %p
+  br label %end
+end:
+  ret void
+}
+

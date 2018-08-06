@@ -1,5 +1,5 @@
-; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS %s
+; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK -check-prefix=CHECK-ORIGINS %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -200,11 +200,11 @@ entry:
 ; memset
 define void @MemSet(i8* nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemSet
 ; CHECK: call i8* @__msan_memset
@@ -214,11 +214,11 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; memcpy
 define void @MemCpy(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemCpy
 ; CHECK: call i8* @__msan_memcpy
@@ -228,11 +228,11 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, 
 ; memmove is lowered to a call
 define void @MemMove(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemMove
 ; CHECK: call i8* @__msan_memmove
@@ -417,6 +417,21 @@ entry:
 ; CHECK-NOT: icmp
 ; CHECK: ret i32
 
+; Check that fdiv, unlike udiv, simply propagates shadow.
+
+define float @FDiv(float %a, float %b) nounwind uwtable readnone sanitize_memory {
+entry:
+  %c = fdiv float %a, %b
+  ret float %c
+}
+
+; CHECK-LABEL: @FDiv
+; CHECK: %[[SA:.*]] = load i32,{{.*}}@__msan_param_tls
+; CHECK: %[[SB:.*]] = load i32,{{.*}}@__msan_param_tls
+; CHECK: %[[SC:.*]] = or i32 %[[SB]], %[[SA]]
+; CHECK: = fdiv float
+; CHECK: store i32 %[[SC]], i32* {{.*}}@__msan_retval_tls
+; CHECK: ret float
 
 ; Check that we propagate shadow for x<0, x>=0, etc (i.e. sign bit tests)
 
@@ -676,7 +691,7 @@ define void @VACopy(i8* %p1, i8* %p2) nounwind uwtable sanitize_memory {
 }
 
 ; CHECK-LABEL: @VACopy
-; CHECK: call void @llvm.memset.p0i8.i64({{.*}}, i8 0, i64 24, i32 8, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64({{.*}}, i8 0, i64 24, i1 false)
 ; CHECK: ret void
 
 
@@ -757,7 +772,7 @@ entry:
 declare i32 @NoSanitizeMemoryAllocaHelper(i32* %p)
 
 ; CHECK-LABEL: @NoSanitizeMemoryAlloca
-; CHECK: call void @llvm.memset.p0i8.i64(i8* {{.*}}, i8 0, i64 4, i32 4, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 0, i64 4, i1 false)
 ; CHECK: call i32 @NoSanitizeMemoryAllocaHelper(i32*
 ; CHECK: ret i32
 
@@ -876,7 +891,7 @@ entry:
   %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
   %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
   %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %0, i64 16, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
   call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval align 8 %agg.tmp2)
   ret void
 }

@@ -22,7 +22,7 @@ entry:
   %c = alloca [1 x i32], align 4
   store i32 0, i32* %retval, align 4
   %0 = bitcast [1 x i32]* %c to i8*
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 4, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 4, i1 false)
   store i32 1, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @a, i64 0, i64 2), align 4
   store i32 0, i32* @b, align 4
   br label %for.cond
@@ -59,7 +59,7 @@ if.end:                                           ; preds = %for.end
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind argmemonly
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind argmemonly
 
 ; Function Attrs: noreturn nounwind
 declare void @abort() noreturn nounwind

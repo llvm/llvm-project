@@ -32,7 +32,7 @@ namespace llvm {
                visit##CLASS_TO_VISIT(static_cast<CLASS_TO_VISIT&>(I))
 
 
-/// @brief Base class for instruction visitors
+/// Base class for instruction visitors
 ///
 /// Instruction visitors are used when you want to perform different actions
 /// for different kinds of instructions without having to use lots of casts
@@ -213,6 +213,7 @@ public:
   // Handle the special instrinsic instruction classes.
   RetTy visitDbgDeclareInst(DbgDeclareInst &I)    { DELEGATE(DbgInfoIntrinsic);}
   RetTy visitDbgValueInst(DbgValueInst &I)        { DELEGATE(DbgInfoIntrinsic);}
+  RetTy visitDbgLabelInst(DbgLabelInst &I)        { DELEGATE(DbgInfoIntrinsic);}
   RetTy visitDbgInfoIntrinsic(DbgInfoIntrinsic &I) { DELEGATE(IntrinsicInst); }
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemCpyInst(MemCpyInst &I)            { DELEGATE(MemTransferInst); }
@@ -272,6 +273,7 @@ private:
       default:                     DELEGATE(IntrinsicInst);
       case Intrinsic::dbg_declare: DELEGATE(DbgDeclareInst);
       case Intrinsic::dbg_value:   DELEGATE(DbgValueInst);
+      case Intrinsic::dbg_label:   DELEGATE(DbgLabelInst);
       case Intrinsic::memcpy:      DELEGATE(MemCpyInst);
       case Intrinsic::memmove:     DELEGATE(MemMoveInst);
       case Intrinsic::memset:      DELEGATE(MemSetInst);

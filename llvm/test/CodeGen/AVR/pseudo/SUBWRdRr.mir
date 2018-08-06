@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_subwrdrr
 
-    ; CHECK:      %r14 = SUBRdRr %r14, %r20, implicit-def %sreg
-    ; CHECK-NEXT: %r15 = SBCRdRr %r15, %r21, implicit-def %sreg, implicit killed %sreg
+    ; CHECK:      $r14 = SUBRdRr $r14, $r20, implicit-def $sreg
+    ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r21, implicit-def $sreg, implicit killed $sreg
 
-    %r15r14 = SUBWRdRr %r15r14, %r21r20, implicit-def %sreg
+    $r15r14 = SUBWRdRr $r15r14, $r21r20, implicit-def $sreg
 ...

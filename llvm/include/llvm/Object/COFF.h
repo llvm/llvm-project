@@ -16,9 +16,9 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/CVDebugRecord.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryByteStream.h"
@@ -452,11 +452,12 @@ struct coff_section {
     if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
       return 1;
 
-    // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
+    // Bit [20:24] contains section alignment. 0 means use a default alignment
+    // of 16.
     uint32_t Shift = (Characteristics >> 20) & 0xF;
     if (Shift > 0)
       return 1U << (Shift - 1);
-    return 1;
+    return 16;
   }
 };
 
@@ -927,6 +928,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
+  Expected<uint64_t> getStartAddress() const override;
   SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
 
   import_directory_iterator import_directory_begin() const;
@@ -963,6 +965,8 @@ public:
   std::error_code getDataDirectory(uint32_t index,
                                    const data_directory *&Res) const;
   std::error_code getSection(int32_t index, const coff_section *&Res) const;
+  std::error_code getSection(StringRef SectionName,
+                             const coff_section *&Res) const;
 
   template <typename coff_symbol_type>
   std::error_code getSymbol(uint32_t Index,
@@ -1012,8 +1016,7 @@ public:
     llvm_unreachable("null symbol table pointer!");
   }
 
-  iterator_range<const coff_relocation *>
-  getRelocations(const coff_section *Sec) const;
+  ArrayRef<coff_relocation> getRelocations(const coff_section *Sec) const;
 
   std::error_code getSectionName(const coff_section *Sec, StringRef &Res) const;
   uint64_t getSectionSize(const coff_section *Sec) const;

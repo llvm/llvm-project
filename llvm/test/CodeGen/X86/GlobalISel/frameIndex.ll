@@ -18,6 +18,7 @@ define i32* @allocai32() {
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    popl %ecx
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X32ABI-LABEL: allocai32:

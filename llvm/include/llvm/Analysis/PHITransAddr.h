@@ -43,7 +43,7 @@ class PHITransAddr {
   /// TLI - The target library info if known, otherwise null.
   const TargetLibraryInfo *TLI;
 
-  /// A cache of @llvm.assume calls used by SimplifyInstruction.
+  /// A cache of \@llvm.assume calls used by SimplifyInstruction.
   AssumptionCache *AC;
 
   /// InstInputs - The inputs for our symbolic address.

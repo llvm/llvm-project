@@ -14,7 +14,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -93,6 +93,6 @@ bool Process::AreCoreFilesPrevented() {
 #ifdef LLVM_ON_UNIX
 #include "Unix/Process.inc"
 #endif
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #include "Windows/Process.inc"
 #endif

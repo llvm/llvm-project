@@ -331,7 +331,7 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     bool CantAnalyze = false;
 
     // Skip over DEBUG values and predicated nonterminators.
-    while (I->isDebugValue() || !I->isTerminator()) {
+    while (I->isDebugInstr() || !I->isTerminator()) {
       if (I == MBB.begin())
         return false;
       --I;
@@ -935,6 +935,25 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Mov->addRegisterKilled(SrcReg, TRI);
 }
 
+bool ARMBaseInstrInfo::isCopyInstr(const MachineInstr &MI,
+                                   const MachineOperand *&Src,
+                                   const MachineOperand *&Dest) const {
+  // VMOVRRD is also a copy instruction but it requires
+  // special way of handling. It is more complex copy version
+  // and since that we are not considering it. For recognition
+  // of such instruction isExtractSubregLike MI interface fuction
+  // could be used.
+  // VORRq is considered as a move only if two inputs are
+  // the same register.
+  if (!MI.isMoveReg() ||
+      (MI.getOpcode() == ARM::VORRq &&
+       MI.getOperand(1).getReg() != MI.getOperand(2).getReg()))
+    return false;
+  Dest = &MI.getOperand(0);
+  Src = &MI.getOperand(1);
+  return true;
+}
+
 const MachineInstrBuilder &
 ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
                           unsigned SubIdx, unsigned State,
@@ -963,6 +982,17 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MFI.getObjectSize(FI), Align);
 
   switch (TRI->getSpillSize(*RC)) {
+    case 2:
+      if (ARM::HPRRegClass.hasSubClassEq(RC)) {
+        BuildMI(MBB, I, DL, get(ARM::VSTRH))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addMemOperand(MMO)
+            .add(predOps(ARMCC::AL));
+      } else
+        llvm_unreachable("Unknown reg class!");
+      break;
     case 4:
       if (ARM::GPRRegClass.hasSubClassEq(RC)) {
         BuildMI(MBB, I, DL, get(ARM::STRi12))
@@ -1161,6 +1191,16 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MFI.getObjectSize(FI), Align);
 
   switch (TRI->getSpillSize(*RC)) {
+  case 2:
+    if (ARM::HPRRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, I, DL, get(ARM::VLDRH), DestReg)
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO)
+          .add(predOps(ARMCC::AL));
+    } else
+      llvm_unreachable("Unknown reg class!");
+    break;
   case 4:
     if (ARM::GPRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::LDRi12), DestReg)
@@ -1168,7 +1208,6 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
           .addImm(0)
           .addMemOperand(MMO)
           .add(predOps(ARMCC::AL));
-
     } else if (ARM::SPRRegClass.hasSubClassEq(RC)) {
       BuildMI(MBB, I, DL, get(ARM::VLDRS), DestReg)
           .addFrameIndex(FI)
@@ -1321,7 +1360,13 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     }
     break;
   case ARM::VLD1q64:
+  case ARM::VLD1d8TPseudo:
+  case ARM::VLD1d16TPseudo:
+  case ARM::VLD1d32TPseudo:
   case ARM::VLD1d64TPseudo:
+  case ARM::VLD1d8QPseudo:
+  case ARM::VLD1d16QPseudo:
+  case ARM::VLD1d32QPseudo:
   case ARM::VLD1d64QPseudo:
     if (MI.getOperand(1).isFI() && MI.getOperand(0).getSubReg() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -1345,7 +1390,7 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return MI.mayLoad() && hasLoadFromStackSlot(MI, Dummy, FrameIndex);
 }
 
-/// \brief Expands MEMCPY to either LDMIA/STMIA or LDMIA_UPD/STMID_UPD
+/// Expands MEMCPY to either LDMIA/STMIA or LDMIA_UPD/STMID_UPD
 /// depending on whether the result is used.
 void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   bool isThumb1 = Subtarget.isThumb1Only();
@@ -1358,7 +1403,6 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   MachineInstrBuilder LDM, STM;
   if (isThumb1 || !MI->getOperand(1).isDead()) {
     MachineOperand LDWb(MI->getOperand(1));
-    LDWb.setIsRenamable(false);
     LDM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2LDMIA_UPD
                                                  : isThumb1 ? ARM::tLDMIA_UPD
                                                             : ARM::LDMIA_UPD))
@@ -1369,7 +1413,6 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
 
   if (isThumb1 || !MI->getOperand(0).isDead()) {
     MachineOperand STWb(MI->getOperand(0));
-    STWb.setIsRenamable(false);
     STM = BuildMI(*BB, MI, dl, TII->get(isThumb2 ? ARM::t2STMIA_UPD
                                                  : isThumb1 ? ARM::tSTMIA_UPD
                                                             : ARM::STMIA_UPD))
@@ -1379,11 +1422,9 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   }
 
   MachineOperand LDBase(MI->getOperand(3));
-  LDBase.setIsRenamable(false);
   LDM.add(LDBase).add(predOps(ARMCC::AL));
 
   MachineOperand STBase(MI->getOperand(2));
-  STBase.setIsRenamable(false);
   STM.add(STBase).add(predOps(ARMCC::AL));
 
   // Sort the scratch registers into ascending order.
@@ -1391,12 +1432,12 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   SmallVector<unsigned, 6> ScratchRegs;
   for(unsigned I = 5; I < MI->getNumOperands(); ++I)
     ScratchRegs.push_back(MI->getOperand(I).getReg());
-  std::sort(ScratchRegs.begin(), ScratchRegs.end(),
-            [&TRI](const unsigned &Reg1,
-                   const unsigned &Reg2) -> bool {
-              return TRI.getEncodingValue(Reg1) <
-                     TRI.getEncodingValue(Reg2);
-            });
+  llvm::sort(ScratchRegs.begin(), ScratchRegs.end(),
+             [&TRI](const unsigned &Reg1,
+                    const unsigned &Reg2) -> bool {
+               return TRI.getEncodingValue(Reg1) <
+                      TRI.getEncodingValue(Reg2);
+             });
 
   for (const auto &Reg : ScratchRegs) {
     LDM.addReg(Reg, RegState::Define);
@@ -1453,7 +1494,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return false;
 
   // All clear, widen the COPY.
-  DEBUG(dbgs() << "widening:    " << MI);
+  LLVM_DEBUG(dbgs() << "widening:    " << MI);
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
 
   // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
@@ -1482,7 +1523,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.addRegisterKilled(SrcRegS, TRI, true);
   }
 
-  DEBUG(dbgs() << "replaced by: " << MI);
+  LLVM_DEBUG(dbgs() << "replaced by: " << MI);
   return true;
 }
 
@@ -1659,7 +1700,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     }
 
     for (unsigned i = 3, e = MI0.getNumOperands(); i != e; ++i) {
-      // %12 = PICLDR %11, 0, pred:14, pred:%noreg
+      // %12 = PICLDR %11, 0, 14, %noreg
       const MachineOperand &MO0 = MI0.getOperand(i);
       const MachineOperand &MO1 = MI1.getOperand(i);
       if (!MO0.isIdenticalTo(MO1))
@@ -1799,7 +1840,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // considered a scheduling hazard, which is wrong. It should be the actual
   // instruction preceding the dbg_value instruction(s), just like it is
   // when debug info is not present.
-  if (MI.isDebugValue())
+  if (MI.isDebugInstr())
     return false;
 
   // Terminators and labels can't be scheduled around.
@@ -1813,8 +1854,8 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // to the t2IT instruction. The added compile time and complexity does not
   // seem worth it.
   MachineBasicBlock::const_iterator I = MI;
-  // Make sure to skip any dbg_value instructions
-  while (++I != MBB->end() && I->isDebugValue())
+  // Make sure to skip any debug instructions
+  while (++I != MBB->end() && I->isDebugInstr())
     ;
   if (I != MBB->end() && I->getOpcode() == ARM::t2IT)
     return true;
@@ -2277,9 +2318,9 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
        --CurRegEnc) {
     unsigned CurReg = RegClass->getRegister(CurRegEnc);
     if (!IsPop) {
-      // Pushing any register is completely harmless, mark the
-      // register involved as undef since we don't care about it in
-      // the slightest.
+      // Pushing any register is completely harmless, mark the register involved
+      // as undef since we don't care about its value and must not restore it
+      // during stack unwinding.
       RegList.push_back(MachineOperand::CreateReg(CurReg, false, false,
                                                   false, false, true));
       --RegsNeeded;
@@ -2409,6 +2450,14 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       NumBits = 8;
       Scale = 4;
       break;
+    case ARMII::AddrMode5FP16:
+      ImmIdx = FrameRegIdx+1;
+      InstrOffs = ARM_AM::getAM5Offset(MI.getOperand(ImmIdx).getImm());
+      if (ARM_AM::getAM5Op(MI.getOperand(ImmIdx).getImm()) == ARM_AM::sub)
+        InstrOffs *= -1;
+      NumBits = 8;
+      Scale = 2;
+      break;
     default:
       llvm_unreachable("Unsupported addressing mode!");
     }
@@ -2534,14 +2583,28 @@ inline static ARMCC::CondCodes getSwappedCondition(ARMCC::CondCodes CC) {
   }
 }
 
+/// getCmpToAddCondition - assume the flags are set by CMP(a,b), return
+/// the condition code if we modify the instructions such that flags are
+/// set by ADD(a,b,X).
+inline static ARMCC::CondCodes getCmpToAddCondition(ARMCC::CondCodes CC) {
+  switch (CC) {
+  default: return ARMCC::AL;
+  case ARMCC::HS: return ARMCC::LO;
+  case ARMCC::LO: return ARMCC::HS;
+  case ARMCC::VS: return ARMCC::VS;
+  case ARMCC::VC: return ARMCC::VC;
+  }
+}
+
 /// isRedundantFlagInstr - check whether the first instruction, whose only
 /// purpose is to update flags, can be made redundant.
 /// CMPrr can be made redundant by SUBrr if the operands are the same.
 /// CMPri can be made redundant by SUBri if the operands are the same.
+/// CMPrr(r0, r1) can be made redundant by ADDr[ri](r0, r1, X).
 /// This function can be extended later on.
-inline static bool isRedundantFlagInstr(MachineInstr *CmpI, unsigned SrcReg,
-                                        unsigned SrcReg2, int ImmValue,
-                                        MachineInstr *OI) {
+inline static bool isRedundantFlagInstr(const MachineInstr *CmpI,
+                                        unsigned SrcReg, unsigned SrcReg2,
+                                        int ImmValue, const MachineInstr *OI) {
   if ((CmpI->getOpcode() == ARM::CMPrr ||
        CmpI->getOpcode() == ARM::t2CMPrr) &&
       (OI->getOpcode() == ARM::SUBrr ||
@@ -2558,6 +2621,14 @@ inline static bool isRedundantFlagInstr(MachineInstr *CmpI, unsigned SrcReg,
        OI->getOpcode() == ARM::t2SUBri) &&
       OI->getOperand(1).getReg() == SrcReg &&
       OI->getOperand(2).getImm() == ImmValue)
+    return true;
+
+  if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
+      (OI->getOpcode() == ARM::ADDrr || OI->getOpcode() == ARM::t2ADDrr ||
+       OI->getOpcode() == ARM::ADDri || OI->getOpcode() == ARM::t2ADDri) &&
+      OI->getOperand(0).isReg() && OI->getOperand(1).isReg() &&
+      OI->getOperand(0).getReg() == SrcReg &&
+      OI->getOperand(1).getReg() == SrcReg2)
     return true;
   return false;
 }
@@ -2661,17 +2732,18 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   if (I == B) return false;
 
   // There are two possible candidates which can be changed to set CPSR:
-  // One is MI, the other is a SUB instruction.
-  // For CMPrr(r1,r2), we are looking for SUB(r1,r2) or SUB(r2,r1).
+  // One is MI, the other is a SUB or ADD instruction.
+  // For CMPrr(r1,r2), we are looking for SUB(r1,r2), SUB(r2,r1), or
+  // ADDr[ri](r1, r2, X).
   // For CMPri(r1, CmpValue), we are looking for SUBri(r1, CmpValue).
-  MachineInstr *Sub = nullptr;
+  MachineInstr *SubAdd = nullptr;
   if (SrcReg2 != 0)
     // MI is not a candidate for CMPrr.
     MI = nullptr;
   else if (MI->getParent() != CmpInstr.getParent() || CmpValue != 0) {
     // Conservatively refuse to convert an instruction which isn't in the same
     // BB as the comparison.
-    // For CMPri w/ CmpValue != 0, a Sub may still be a candidate.
+    // For CMPri w/ CmpValue != 0, a SubAdd may still be a candidate.
     // Thus we cannot return here.
     if (CmpInstr.getOpcode() == ARM::CMPri ||
         CmpInstr.getOpcode() == ARM::t2CMPri)
@@ -2716,11 +2788,20 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   }
 
   // Check that CPSR isn't set between the comparison instruction and the one we
-  // want to change. At the same time, search for Sub.
+  // want to change. At the same time, search for SubAdd.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  --I;
-  for (; I != E; --I) {
-    const MachineInstr &Instr = *I;
+  do {
+    const MachineInstr &Instr = *--I;
+
+    // Check whether CmpInstr can be made redundant by the current instruction.
+    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &Instr)) {
+      SubAdd = &*I;
+      break;
+    }
+
+    // Allow E (which was initially MI) to be SubAdd but do not search before E.
+    if (I == E)
+      break;
 
     if (Instr.modifiesRegister(ARM::CPSR, TRI) ||
         Instr.readsRegister(ARM::CPSR, TRI))
@@ -2728,23 +2809,14 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
       // change. We can't do this transformation.
       return false;
 
-    // Check whether CmpInstr can be made redundant by the current instruction.
-    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &*I)) {
-      Sub = &*I;
-      break;
-    }
-
-    if (I == B)
-      // The 'and' is below the comparison instruction.
-      return false;
-  }
+  } while (I != B);
 
   // Return false if no candidates exist.
-  if (!MI && !Sub)
+  if (!MI && !SubAdd)
     return false;
 
   // The single candidate is called MI.
-  if (!MI) MI = Sub;
+  if (!MI) MI = SubAdd;
 
   // We can't use a predicated instruction - it doesn't always write the flags.
   if (isPredicated(*MI))
@@ -2802,25 +2874,31 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
         break;
       }
 
-      if (Sub) {
-        ARMCC::CondCodes NewCC = getSwappedCondition(CC);
-        if (NewCC == ARMCC::AL)
-          return false;
+      if (SubAdd) {
         // If we have SUB(r1, r2) and CMP(r2, r1), the condition code based
         // on CMP needs to be updated to be based on SUB.
+        // If we have ADD(r1, r2, X) and CMP(r1, r2), the condition code also
+        // needs to be modified.
         // Push the condition code operands to OperandsToUpdate.
         // If it is safe to remove CmpInstr, the condition code of these
         // operands will be modified.
-        if (SrcReg2 != 0 && Sub->getOperand(1).getReg() == SrcReg2 &&
-            Sub->getOperand(2).getReg() == SrcReg) {
+        unsigned Opc = SubAdd->getOpcode();
+        bool IsSub = Opc == ARM::SUBrr || Opc == ARM::t2SUBrr ||
+                     Opc == ARM::SUBri || Opc == ARM::t2SUBri;
+        if (!IsSub || (SrcReg2 != 0 && SubAdd->getOperand(1).getReg() == SrcReg2 &&
+                       SubAdd->getOperand(2).getReg() == SrcReg)) {
           // VSel doesn't support condition code update.
           if (IsInstrVSel)
+            return false;
+          // Ensure we can swap the condition.
+          ARMCC::CondCodes NewCC = (IsSub ? getSwappedCondition(CC) : getCmpToAddCondition(CC));
+          if (NewCC == ARMCC::AL)
             return false;
           OperandsToUpdate.push_back(
               std::make_pair(&((*I).getOperand(IO - 1)), NewCC));
         }
       } else {
-        // No Sub, so this is x = <op> y, z; cmp x, 0.
+        // No SubAdd, so this is x = <op> y, z; cmp x, 0.
         switch (CC) {
         case ARMCC::EQ: // Z
         case ARMCC::NE: // Z
@@ -2871,6 +2949,23 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
     OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
 
+  return true;
+}
+
+bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
+  // Do not sink MI if it might be used to optimize a redundant compare.
+  // We heuristically only look at the instruction immediately following MI to
+  // avoid potentially searching the entire basic block.
+  if (isPredicated(MI))
+    return true;
+  MachineBasicBlock::const_iterator Next = &MI;
+  ++Next;
+  unsigned SrcReg, SrcReg2;
+  int CmpMask, CmpValue;
+  if (Next != MI.getParent()->end() &&
+      analyzeCompare(*Next, SrcReg, SrcReg2, CmpMask, CmpValue) &&
+      isRedundantFlagInstr(&*Next, SrcReg, SrcReg2, CmpValue, &MI))
+    return false;
   return true;
 }
 
@@ -3467,8 +3562,8 @@ bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
 }
 unsigned
 ARMBaseInstrInfo::getLDMVariableDefsSize(const MachineInstr &MI) const {
-  // ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops
-  // (outs GPR:$wb), (ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops)
+  // ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops
+  // (outs GPR:$wb), (ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops)
   return MI.getNumOperands() + 1 - MI.getDesc().getNumOperands();
 }
 
@@ -4142,8 +4237,12 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD3d8Pseudo:
     case ARM::VLD3d16Pseudo:
     case ARM::VLD3d32Pseudo:
+    case ARM::VLD1d8TPseudo:
+    case ARM::VLD1d16TPseudo:
+    case ARM::VLD1d32TPseudo:
     case ARM::VLD1d64TPseudo:
     case ARM::VLD1d64TPseudoWB_fixed:
+    case ARM::VLD1d64TPseudoWB_register:
     case ARM::VLD3d8Pseudo_UPD:
     case ARM::VLD3d16Pseudo_UPD:
     case ARM::VLD3d32Pseudo_UPD:
@@ -4159,8 +4258,28 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD4d8Pseudo:
     case ARM::VLD4d16Pseudo:
     case ARM::VLD4d32Pseudo:
+    case ARM::VLD1d8QPseudo:
+    case ARM::VLD1d16QPseudo:
+    case ARM::VLD1d32QPseudo:
     case ARM::VLD1d64QPseudo:
     case ARM::VLD1d64QPseudoWB_fixed:
+    case ARM::VLD1d64QPseudoWB_register:
+    case ARM::VLD1q8HighQPseudo:
+    case ARM::VLD1q8LowQPseudo_UPD:
+    case ARM::VLD1q8HighTPseudo:
+    case ARM::VLD1q8LowTPseudo_UPD:
+    case ARM::VLD1q16HighQPseudo:
+    case ARM::VLD1q16LowQPseudo_UPD:
+    case ARM::VLD1q16HighTPseudo:
+    case ARM::VLD1q16LowTPseudo_UPD:
+    case ARM::VLD1q32HighQPseudo:
+    case ARM::VLD1q32LowQPseudo_UPD:
+    case ARM::VLD1q32HighTPseudo:
+    case ARM::VLD1q32LowTPseudo_UPD:
+    case ARM::VLD1q64HighQPseudo:
+    case ARM::VLD1q64LowQPseudo_UPD:
+    case ARM::VLD1q64HighTPseudo:
+    case ARM::VLD1q64LowTPseudo_UPD:
     case ARM::VLD4d8Pseudo_UPD:
     case ARM::VLD4d16Pseudo_UPD:
     case ARM::VLD4d32Pseudo_UPD:
@@ -4191,12 +4310,30 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD2DUPd8wb_register:
     case ARM::VLD2DUPd16wb_register:
     case ARM::VLD2DUPd32wb_register:
+    case ARM::VLD2DUPq8EvenPseudo:
+    case ARM::VLD2DUPq8OddPseudo:
+    case ARM::VLD2DUPq16EvenPseudo:
+    case ARM::VLD2DUPq16OddPseudo:
+    case ARM::VLD2DUPq32EvenPseudo:
+    case ARM::VLD2DUPq32OddPseudo:
+    case ARM::VLD3DUPq8EvenPseudo:
+    case ARM::VLD3DUPq8OddPseudo:
+    case ARM::VLD3DUPq16EvenPseudo:
+    case ARM::VLD3DUPq16OddPseudo:
+    case ARM::VLD3DUPq32EvenPseudo:
+    case ARM::VLD3DUPq32OddPseudo:
     case ARM::VLD4DUPd8Pseudo:
     case ARM::VLD4DUPd16Pseudo:
     case ARM::VLD4DUPd32Pseudo:
     case ARM::VLD4DUPd8Pseudo_UPD:
     case ARM::VLD4DUPd16Pseudo_UPD:
     case ARM::VLD4DUPd32Pseudo_UPD:
+    case ARM::VLD4DUPq8EvenPseudo:
+    case ARM::VLD4DUPq8OddPseudo:
+    case ARM::VLD4DUPq16EvenPseudo:
+    case ARM::VLD4DUPq16OddPseudo:
+    case ARM::VLD4DUPq32EvenPseudo:
+    case ARM::VLD4DUPq32OddPseudo:
     case ARM::VLD1LNq8Pseudo:
     case ARM::VLD1LNq16Pseudo:
     case ARM::VLD1LNq32Pseudo:

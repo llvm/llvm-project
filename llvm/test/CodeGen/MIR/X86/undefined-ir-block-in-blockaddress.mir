@@ -21,9 +21,9 @@ body: |
   bb.0.entry:
     successors: %bb.1.block
     ; CHECK: [[@LINE+1]]:51: use of undefined IR block '%ir-block."block "'
-    %rax = LEA64r %rip, 1, _, blockaddress(@test, %ir-block."block "), _
-    MOV64mr %rip, 1, _, @addr, _, killed %rax
-    JMP64m %rip, 1, _, @addr, _
+    $rax = LEA64r $rip, 1, _, blockaddress(@test, %ir-block."block "), _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
 
   bb.1.block (address-taken):
     RETQ

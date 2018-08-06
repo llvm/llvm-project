@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief Common declarations for yaml2obj
+/// Common declarations for yaml2obj
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_OBJECTYAML_DWARFEMITTER_H
@@ -39,11 +39,12 @@ void EmitDebugInfo(raw_ostream &OS, const Data &DI);
 void EmitDebugLine(raw_ostream &OS, const Data &DI);
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-EmitDebugSections(StringRef YAMLString,
+EmitDebugSections(StringRef YAMLString, bool ApplyFixups = false,
                   bool IsLittleEndian = sys::IsLittleEndianHost);
+StringMap<std::unique_ptr<MemoryBuffer>>
+EmitDebugSections(llvm::DWARFYAML::Data &DI, bool ApplyFixups);
 
 } // end namespace DWARFYAML
-
 } // end namespace llvm
 
 #endif // LLVM_OBJECTYAML_DWARFEMITTER_H

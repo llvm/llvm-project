@@ -1,0 +1,28 @@
+// Test that the input originally is included.
+STRINGTABLE {
+  1 "a"
+}
+#line 2 "cpp-source.rc"
+// Content from a rc file (potentially the source file itself) is included.
+STRINGTABLE {
+  2 "b"
+}
+// Test a preprocessing directive that starts with leading whitespace.
+  #line 1 "\\some\\path\\header.h"
+// Content from .h files is ignored.
+typedef int Foo;
+#line 123 "\\some\\path\\header.h"
+void someFunc(void);
+// Check GNU style line markers.
+# 4 "cpp-source.rc" 1
+STRINGTABLE {
+  3 "c"
+}
+	# 1 "other/header.h" 1
+typedef int Bar;
+# 10 "cpp-source.rc" 2
+// Test that other preprocessor directives are ignored.
+#pragma foo
+STRINGTABLE {
+  4 "d"
+}

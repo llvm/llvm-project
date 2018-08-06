@@ -5,7 +5,7 @@
 ; FUNC-LABEL: {{^}}udiv24_i8:
 ; SI: v_cvt_f32_ubyte
 ; SI: v_cvt_f32_ubyte
-; SI: v_rcp_f32
+; SI: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -24,7 +24,7 @@ define amdgpu_kernel void @udiv24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in
 ; FUNC-LABEL: {{^}}udiv24_i16:
 ; SI: v_cvt_f32_u32
 ; SI: v_cvt_f32_u32
-; SI: v_rcp_f32
+; SI: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -43,7 +43,7 @@ define amdgpu_kernel void @udiv24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* 
 ; FUNC-LABEL: {{^}}udiv23_i32:
 ; SI: v_cvt_f32_u32
 ; SI-DAG: v_cvt_f32_u32
-; SI-DAG: v_rcp_f32
+; SI-DAG: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -177,7 +177,7 @@ define amdgpu_kernel void @test_no_udiv24_i32_2(i32 addrspace(1)* %out, i32 addr
 ; FUNC-LABEL: {{^}}urem24_i8:
 ; SI: v_cvt_f32_ubyte
 ; SI: v_cvt_f32_ubyte
-; SI: v_rcp_f32
+; SI: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -196,7 +196,7 @@ define amdgpu_kernel void @urem24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in
 ; FUNC-LABEL: {{^}}urem24_i16:
 ; SI: v_cvt_f32_u32
 ; SI: v_cvt_f32_u32
-; SI: v_rcp_f32
+; SI: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -289,7 +289,7 @@ define amdgpu_kernel void @test_no_urem24_i32_2(i32 addrspace(1)* %out, i32 addr
 }
 
 ; FUNC-LABEL: {{^}}test_udiv24_u16_u23_i32:
-; SI-DAG: v_rcp_f32
+; SI-DAG: v_rcp_iflag_f32
 ; SI-DAG: s_mov_b32 [[MASK:s[0-9]+]], 0x7fffff{{$}}
 ; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
 
@@ -308,7 +308,7 @@ define amdgpu_kernel void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 a
 }
 
 ; FUNC-LABEL: {{^}}test_udiv24_u23_u16_i32:
-; SI-DAG: v_rcp_f32
+; SI-DAG: v_rcp_iflag_f32
 ; SI-DAG: s_mov_b32 [[MASK:s[0-9]+]], 0x7fffff{{$}}
 ; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
 

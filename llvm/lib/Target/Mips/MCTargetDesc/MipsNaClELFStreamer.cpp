@@ -25,6 +25,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -43,9 +44,10 @@ const unsigned LoadStoreStackMaskReg = Mips::T7;
 class MipsNaClELFStreamer : public MipsELFStreamer {
 public:
   MipsNaClELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> OW,
                       std::unique_ptr<MCCodeEmitter> Emitter)
-      : MipsELFStreamer(Context, std::move(TAB), OS, std::move(Emitter)) {}
+      : MipsELFStreamer(Context, std::move(TAB), std::move(OW),
+                        std::move(Emitter)) {}
 
   ~MipsNaClELFStreamer() override = default;
 
@@ -260,11 +262,11 @@ bool baseRegNeedsLoadStoreMask(unsigned Reg) {
 
 MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context,
                                          std::unique_ptr<MCAsmBackend> TAB,
-                                         raw_pwrite_stream &OS,
+                                         std::unique_ptr<MCObjectWriter> OW,
                                          std::unique_ptr<MCCodeEmitter> Emitter,
                                          bool RelaxAll) {
-  MipsNaClELFStreamer *S =
-      new MipsNaClELFStreamer(Context, std::move(TAB), OS, std::move(Emitter));
+  MipsNaClELFStreamer *S = new MipsNaClELFStreamer(
+      Context, std::move(TAB), std::move(OW), std::move(Emitter));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
 

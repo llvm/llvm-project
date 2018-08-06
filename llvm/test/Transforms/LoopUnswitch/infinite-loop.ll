@@ -16,7 +16,7 @@
 ; CHECK-NEXT: br i1 %a, label %entry.split, label %abort0.split
 
 ; CHECK: entry.split:
-; CHECK-NEXT: br i1 %b, label %entry.split.split, label %abort1.split
+; CHECK-NEXT: br i1 %b, label %for.body, label %abort1.split
 
 ; CHECK: for.body:
 ; CHECK-NEXT: br label %for.body

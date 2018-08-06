@@ -1,4 +1,4 @@
-RUN: env RC_DEBUG_OPTIONS=1 llvm-dsymutil -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck %s
+RUN: env RC_DEBUG_OPTIONS=1 dsymutil -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck %s
 
 CHECK: .debug_info contents:
 CHECK:  Compile Unit:

@@ -55,9 +55,6 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
        << "  DispatchID: " << FI.second.DispatchID
        << "  FlatScratchInit: " << FI.second.FlatScratchInit
        << "  PrivateSegmentSize: " << FI.second.PrivateSegmentSize
-       << "  GridWorkgroupCountX: " << FI.second.GridWorkGroupCountX
-       << "  GridWorkgroupCountY: " << FI.second.GridWorkGroupCountY
-       << "  GridWorkgroupCountZ: " << FI.second.GridWorkGroupCountZ
        << "  WorkGroupIDX: " << FI.second.WorkGroupIDX
        << "  WorkGroupIDY: " << FI.second.WorkGroupIDY
        << "  WorkGroupIDZ: " << FI.second.WorkGroupIDZ

@@ -7,7 +7,7 @@ declare <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float>, <4 x float>, <4 x floa
 define <4 x float> @test_x86_fmadd_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_baa_ss:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovaps (%rcx), %xmm0
+; FMA4-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; FMA4-NEXT:    vfmaddss %xmm0, (%rdx), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %b, <4 x float> %a, <4 x float> %a) nounwind
@@ -17,7 +17,7 @@ define <4 x float> @test_x86_fmadd_baa_ss(<4 x float> %a, <4 x float> %b) #0 {
 define <4 x float> @test_x86_fmadd_aba_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_aba_ss:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovaps (%rcx), %xmm0
+; FMA4-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; FMA4-NEXT:    vfmaddss %xmm0, (%rdx), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %a, <4 x float> %b, <4 x float> %a) nounwind
@@ -27,7 +27,7 @@ define <4 x float> @test_x86_fmadd_aba_ss(<4 x float> %a, <4 x float> %b) #0 {
 define <4 x float> @test_x86_fmadd_bba_ss(<4 x float> %a, <4 x float> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_bba_ss:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovaps (%rdx), %xmm0
+; FMA4-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; FMA4-NEXT:    vfmaddss (%rcx), %xmm0, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <4 x float> @llvm.x86.fma4.vfmadd.ss(<4 x float> %b, <4 x float> %b, <4 x float> %a) nounwind
@@ -100,7 +100,7 @@ declare <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double>, <2 x double>, <2 x d
 define <2 x double> @test_x86_fmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_baa_sd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovapd (%rcx), %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; FMA4-NEXT:    vfmaddsd %xmm0, (%rdx), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %b, <2 x double> %a, <2 x double> %a) nounwind
@@ -110,7 +110,7 @@ define <2 x double> @test_x86_fmadd_baa_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_aba_sd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovapd (%rcx), %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; FMA4-NEXT:    vfmaddsd %xmm0, (%rdx), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %a) nounwind
@@ -120,7 +120,7 @@ define <2 x double> @test_x86_fmadd_aba_sd(<2 x double> %a, <2 x double> %b) #0 
 define <2 x double> @test_x86_fmadd_bba_sd(<2 x double> %a, <2 x double> %b) #0 {
 ; FMA4-LABEL: test_x86_fmadd_bba_sd:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovapd (%rdx), %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; FMA4-NEXT:    vfmaddsd (%rcx), %xmm0, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
   %res = call <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double> %b, <2 x double> %b, <2 x double> %a) nounwind

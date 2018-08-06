@@ -4,9 +4,28 @@
 
 define void @st1lane_16b(<16 x i8> %A, i8* %D) {
 ; CHECK-LABEL: st1lane_16b
-; CHECK: st1.b
+; CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i8, i8* %D, i64 1
   %tmp = extractelement <16 x i8> %A, i32 1
-  store i8 %tmp, i8* %D
+  store i8 %tmp, i8* %ptr
+  ret void
+}
+
+define void @st1lane0_16b(<16 x i8> %A, i8* %D) {
+; CHECK-LABEL: st1lane0_16b
+; CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
+  %ptr = getelementptr i8, i8* %D, i64 1
+  %tmp = extractelement <16 x i8> %A, i32 0
+  store i8 %tmp, i8* %ptr
+  ret void
+}
+
+define void @st1lane0u_16b(<16 x i8> %A, i8* %D) {
+; CHECK-LABEL: st1lane0u_16b
+; CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
+  %ptr = getelementptr i8, i8* %D, i64 -1
+  %tmp = extractelement <16 x i8> %A, i32 0
+  store i8 %tmp, i8* %ptr
   ret void
 }
 
@@ -32,9 +51,28 @@ define void @st1lane0_ro_16b(<16 x i8> %A, i8* %D, i64 %offset) {
 
 define void @st1lane_8h(<8 x i16> %A, i16* %D) {
 ; CHECK-LABEL: st1lane_8h
-; CHECK: st1.h
+; CHECK: st1.h { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i16, i16* %D, i64 1
   %tmp = extractelement <8 x i16> %A, i32 1
-  store i16 %tmp, i16* %D
+  store i16 %tmp, i16* %ptr
+  ret void
+}
+
+define void @st1lane0_8h(<8 x i16> %A, i16* %D) {
+; CHECK-LABEL: st1lane0_8h
+; CHECK: str h0, [x0, #2]
+  %ptr = getelementptr i16, i16* %D, i64 1
+  %tmp = extractelement <8 x i16> %A, i32 0
+  store i16 %tmp, i16* %ptr
+  ret void
+}
+
+define void @st1lane0u_8h(<8 x i16> %A, i16* %D) {
+; CHECK-LABEL: st1lane0u_8h
+; CHECK: stur h0, [x0, #-2]
+  %ptr = getelementptr i16, i16* %D, i64 -1
+  %tmp = extractelement <8 x i16> %A, i32 0
+  store i16 %tmp, i16* %ptr
   ret void
 }
 
@@ -59,9 +97,28 @@ define void @st1lane0_ro_8h(<8 x i16> %A, i16* %D, i64 %offset) {
 
 define void @st1lane_4s(<4 x i32> %A, i32* %D) {
 ; CHECK-LABEL: st1lane_4s
-; CHECK: st1.s
+; CHECK: st1.s { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i32, i32* %D, i64 1
   %tmp = extractelement <4 x i32> %A, i32 1
-  store i32 %tmp, i32* %D
+  store i32 %tmp, i32* %ptr
+  ret void
+}
+
+define void @st1lane0_4s(<4 x i32> %A, i32* %D) {
+; CHECK-LABEL: st1lane0_4s
+; CHECK: str s0, [x0, #4]
+  %ptr = getelementptr i32, i32* %D, i64 1
+  %tmp = extractelement <4 x i32> %A, i32 0
+  store i32 %tmp, i32* %ptr
+  ret void
+}
+
+define void @st1lane0u_4s(<4 x i32> %A, i32* %D) {
+; CHECK-LABEL: st1lane0u_4s
+; CHECK: stur s0, [x0, #-4]
+  %ptr = getelementptr i32, i32* %D, i64 -1
+  %tmp = extractelement <4 x i32> %A, i32 0
+  store i32 %tmp, i32* %ptr
   ret void
 }
 
@@ -86,9 +143,28 @@ define void @st1lane0_ro_4s(<4 x i32> %A, i32* %D, i64 %offset) {
 
 define void @st1lane_4s_float(<4 x float> %A, float* %D) {
 ; CHECK-LABEL: st1lane_4s_float
-; CHECK: st1.s
+; CHECK: st1.s { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr float, float* %D, i64 1
   %tmp = extractelement <4 x float> %A, i32 1
-  store float %tmp, float* %D
+  store float %tmp, float* %ptr
+  ret void
+}
+
+define void @st1lane0_4s_float(<4 x float> %A, float* %D) {
+; CHECK-LABEL: st1lane0_4s_float
+; CHECK: str s0, [x0, #4]
+  %ptr = getelementptr float, float* %D, i64 1
+  %tmp = extractelement <4 x float> %A, i32 0
+  store float %tmp, float* %ptr
+  ret void
+}
+
+define void @st1lane0u_4s_float(<4 x float> %A, float* %D) {
+; CHECK-LABEL: st1lane0u_4s_float
+; CHECK: stur s0, [x0, #-4]
+  %ptr = getelementptr float, float* %D, i64 -1
+  %tmp = extractelement <4 x float> %A, i32 0
+  store float %tmp, float* %ptr
   ret void
 }
 
@@ -113,9 +189,28 @@ define void @st1lane0_ro_4s_float(<4 x float> %A, float* %D, i64 %offset) {
 
 define void @st1lane_2d(<2 x i64> %A, i64* %D) {
 ; CHECK-LABEL: st1lane_2d
-; CHECK: st1.d
+; CHECK: st1.d { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i64, i64* %D, i64 1
   %tmp = extractelement <2 x i64> %A, i32 1
-  store i64 %tmp, i64* %D
+  store i64 %tmp, i64* %ptr
+  ret void
+}
+
+define void @st1lane0_2d(<2 x i64> %A, i64* %D) {
+; CHECK-LABEL: st1lane0_2d
+; CHECK: str d0, [x0, #8]
+  %ptr = getelementptr i64, i64* %D, i64 1
+  %tmp = extractelement <2 x i64> %A, i32 0
+  store i64 %tmp, i64* %ptr
+  ret void
+}
+
+define void @st1lane0u_2d(<2 x i64> %A, i64* %D) {
+; CHECK-LABEL: st1lane0u_2d
+; CHECK: stur d0, [x0, #-8]
+  %ptr = getelementptr i64, i64* %D, i64 -1
+  %tmp = extractelement <2 x i64> %A, i32 0
+  store i64 %tmp, i64* %ptr
   ret void
 }
 
@@ -140,9 +235,28 @@ define void @st1lane0_ro_2d(<2 x i64> %A, i64* %D, i64 %offset) {
 
 define void @st1lane_2d_double(<2 x double> %A, double* %D) {
 ; CHECK-LABEL: st1lane_2d_double
-; CHECK: st1.d
+; CHECK: st1.d { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr double, double* %D, i64 1
   %tmp = extractelement <2 x double> %A, i32 1
-  store double %tmp, double* %D
+  store double %tmp, double* %ptr
+  ret void
+}
+
+define void @st1lane0_2d_double(<2 x double> %A, double* %D) {
+; CHECK-LABEL: st1lane0_2d_double
+; CHECK: str d0, [x0, #8]
+  %ptr = getelementptr double, double* %D, i64 1
+  %tmp = extractelement <2 x double> %A, i32 0
+  store double %tmp, double* %ptr
+  ret void
+}
+
+define void @st1lane0u_2d_double(<2 x double> %A, double* %D) {
+; CHECK-LABEL: st1lane0u_2d_double
+; CHECK: stur d0, [x0, #-8]
+  %ptr = getelementptr double, double* %D, i64 -1
+  %tmp = extractelement <2 x double> %A, i32 0
+  store double %tmp, double* %ptr
   ret void
 }
 
@@ -167,9 +281,10 @@ define void @st1lane0_ro_2d_double(<2 x double> %A, double* %D, i64 %offset) {
 
 define void @st1lane_8b(<8 x i8> %A, i8* %D) {
 ; CHECK-LABEL: st1lane_8b
-; CHECK: st1.b
+; CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i8, i8* %D, i64 1
   %tmp = extractelement <8 x i8> %A, i32 1
-  store i8 %tmp, i8* %D
+  store i8 %tmp, i8* %ptr
   ret void
 }
 
@@ -195,9 +310,28 @@ define void @st1lane0_ro_8b(<8 x i8> %A, i8* %D, i64 %offset) {
 
 define void @st1lane_4h(<4 x i16> %A, i16* %D) {
 ; CHECK-LABEL: st1lane_4h
-; CHECK: st1.h
+; CHECK: st1.h { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i16, i16* %D, i64 1
   %tmp = extractelement <4 x i16> %A, i32 1
-  store i16 %tmp, i16* %D
+  store i16 %tmp, i16* %ptr
+  ret void
+}
+
+define void @st1lane0_4h(<4 x i16> %A, i16* %D) {
+; CHECK-LABEL: st1lane0_4h
+; CHECK: str h0, [x0, #2]
+  %ptr = getelementptr i16, i16* %D, i64 1
+  %tmp = extractelement <4 x i16> %A, i32 0
+  store i16 %tmp, i16* %ptr
+  ret void
+}
+
+define void @st1lane0u_4h(<4 x i16> %A, i16* %D) {
+; CHECK-LABEL: st1lane0u_4h
+; CHECK: stur h0, [x0, #-2]
+  %ptr = getelementptr i16, i16* %D, i64 -1
+  %tmp = extractelement <4 x i16> %A, i32 0
+  store i16 %tmp, i16* %ptr
   ret void
 }
 
@@ -222,9 +356,28 @@ define void @st1lane0_ro_4h(<4 x i16> %A, i16* %D, i64 %offset) {
 
 define void @st1lane_2s(<2 x i32> %A, i32* %D) {
 ; CHECK-LABEL: st1lane_2s
-; CHECK: st1.s
+; CHECK: st1.s { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr i32, i32* %D, i64 1
   %tmp = extractelement <2 x i32> %A, i32 1
-  store i32 %tmp, i32* %D
+  store i32 %tmp, i32* %ptr
+  ret void
+}
+
+define void @st1lane0_2s(<2 x i32> %A, i32* %D) {
+; CHECK-LABEL: st1lane0_2s
+; CHECK: str s0, [x0, #4]
+  %ptr = getelementptr i32, i32* %D, i64 1
+  %tmp = extractelement <2 x i32> %A, i32 0
+  store i32 %tmp, i32* %ptr
+  ret void
+}
+
+define void @st1lane0u_2s(<2 x i32> %A, i32* %D) {
+; CHECK-LABEL: st1lane0u_2s
+; CHECK: stur s0, [x0, #-4]
+  %ptr = getelementptr i32, i32* %D, i64 -1
+  %tmp = extractelement <2 x i32> %A, i32 0
+  store i32 %tmp, i32* %ptr
   ret void
 }
 
@@ -249,9 +402,28 @@ define void @st1lane0_ro_2s(<2 x i32> %A, i32* %D, i64 %offset) {
 
 define void @st1lane_2s_float(<2 x float> %A, float* %D) {
 ; CHECK-LABEL: st1lane_2s_float
-; CHECK: st1.s
+; CHECK: st1.s { v0 }[1], [x{{[0-9]+}}]
+  %ptr = getelementptr float, float* %D, i64 1
   %tmp = extractelement <2 x float> %A, i32 1
-  store float %tmp, float* %D
+  store float %tmp, float* %ptr
+  ret void
+}
+
+define void @st1lane0_2s_float(<2 x float> %A, float* %D) {
+; CHECK-LABEL: st1lane0_2s_float
+; CHECK: str s0, [x0, #4]
+  %ptr = getelementptr float, float* %D, i64 1
+  %tmp = extractelement <2 x float> %A, i32 0
+  store float %tmp, float* %ptr
+  ret void
+}
+
+define void @st1lane0u_2s_float(<2 x float> %A, float* %D) {
+; CHECK-LABEL: st1lane0u_2s_float
+; CHECK: stur s0, [x0, #-4]
+  %ptr = getelementptr float, float* %D, i64 -1
+  %tmp = extractelement <2 x float> %A, i32 0
+  store float %tmp, float* %ptr
   ret void
 }
 
@@ -271,6 +443,60 @@ define void @st1lane0_ro_2s_float(<2 x float> %A, float* %D, i64 %offset) {
   %ptr = getelementptr float, float* %D, i64 %offset
   %tmp = extractelement <2 x float> %A, i32 0
   store float %tmp, float* %ptr
+  ret void
+}
+
+define void @st1lane0_1d(<1 x i64> %A, i64* %D) {
+; CHECK-LABEL: st1lane0_1d
+; CHECK: str d0, [x0, #8]
+  %ptr = getelementptr i64, i64* %D, i64 1
+  %tmp = extractelement <1 x i64> %A, i32 0
+  store i64 %tmp, i64* %ptr
+  ret void
+}
+
+define void @st1lane0u_1d(<1 x i64> %A, i64* %D) {
+; CHECK-LABEL: st1lane0u_1d
+; CHECK: stur d0, [x0, #-8]
+  %ptr = getelementptr i64, i64* %D, i64 -1
+  %tmp = extractelement <1 x i64> %A, i32 0
+  store i64 %tmp, i64* %ptr
+  ret void
+}
+
+define void @st1lane0_ro_1d(<1 x i64> %A, i64* %D, i64 %offset) {
+; CHECK-LABEL: st1lane0_ro_1d
+; CHECK: str d0, [x0, x1, lsl #3]
+  %ptr = getelementptr i64, i64* %D, i64 %offset
+  %tmp = extractelement <1 x i64> %A, i32 0
+  store i64 %tmp, i64* %ptr
+  ret void
+}
+
+define void @st1lane0_1d_double(<1 x double> %A, double* %D) {
+; CHECK-LABEL: st1lane0_1d_double
+; CHECK: str d0, [x0, #8]
+  %ptr = getelementptr double, double* %D, i64 1
+  %tmp = extractelement <1 x double> %A, i32 0
+  store double %tmp, double* %ptr
+  ret void
+}
+
+define void @st1lane0u_1d_double(<1 x double> %A, double* %D) {
+; CHECK-LABEL: st1lane0u_1d_double
+; CHECK: stur d0, [x0, #-8]
+  %ptr = getelementptr double, double* %D, i64 -1
+  %tmp = extractelement <1 x double> %A, i32 0
+  store double %tmp, double* %ptr
+  ret void
+}
+
+define void @st1lane0_ro_1d_double(<1 x double> %A, double* %D, i64 %offset) {
+; CHECK-LABEL: st1lane0_ro_1d_double
+; CHECK: str d0, [x0, x1, lsl #3]
+  %ptr = getelementptr double, double* %D, i64 %offset
+  %tmp = extractelement <1 x double> %A, i32 0
+  store double %tmp, double* %ptr
   ret void
 }
 

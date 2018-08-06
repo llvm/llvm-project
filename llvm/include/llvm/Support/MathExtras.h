@@ -23,22 +23,30 @@
 #include <limits>
 #include <type_traits>
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
-
 #ifdef __ANDROID_NDK__
 #include <android/api-level.h>
 #endif
 
+#ifdef _MSC_VER
+// Declare these intrinsics manually rather including intrin.h. It's very
+// expensive, and MathExtras.h is popular.
+// #include <intrin.h>
+extern "C" {
+unsigned char _BitScanForward(unsigned long *_Index, unsigned long _Mask);
+unsigned char _BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask);
+unsigned char _BitScanReverse(unsigned long *_Index, unsigned long _Mask);
+unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
+}
+#endif
+
 namespace llvm {
-/// \brief The behavior an operation has on an input of 0.
+/// The behavior an operation has on an input of 0.
 enum ZeroBehavior {
-  /// \brief The returned value is undefined.
+  /// The returned value is undefined.
   ZB_Undefined,
-  /// \brief The returned value is numeric_limits<T>::max()
+  /// The returned value is numeric_limits<T>::max()
   ZB_Max,
-  /// \brief The returned value is numeric_limits<T>::digits
+  /// The returned value is numeric_limits<T>::digits
   ZB_Width
 };
 
@@ -101,7 +109,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 #endif
 } // namespace detail
 
-/// \brief Count number of 0's from the least significant bit to the most
+/// Count number of 0's from the least significant bit to the most
 ///   stopping at the first 1.
 ///
 /// Only unsigned integral types are allowed.
@@ -170,7 +178,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 #endif
 } // namespace detail
 
-/// \brief Count number of 0's from the most significant bit to the least
+/// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
 ///
 /// Only unsigned integral types are allowed.
@@ -185,7 +193,7 @@ std::size_t countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
   return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
 
-/// \brief Get the index of the first set bit starting from the least
+/// Get the index of the first set bit starting from the least
 ///   significant bit.
 ///
 /// Only unsigned integral types are allowed.
@@ -199,7 +207,7 @@ template <typename T> T findFirstSet(T Val, ZeroBehavior ZB = ZB_Max) {
   return countTrailingZeros(Val, ZB_Undefined);
 }
 
-/// \brief Create a bitmask with the N right-most bits set to 1, and all other
+/// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
 template <typename T> T maskTrailingOnes(unsigned N) {
   static_assert(std::is_unsigned<T>::value, "Invalid type!");
@@ -208,25 +216,25 @@ template <typename T> T maskTrailingOnes(unsigned N) {
   return N == 0 ? 0 : (T(-1) >> (Bits - N));
 }
 
-/// \brief Create a bitmask with the N left-most bits set to 1, and all other
+/// Create a bitmask with the N left-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
 template <typename T> T maskLeadingOnes(unsigned N) {
   return ~maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
-/// \brief Create a bitmask with the N right-most bits set to 0, and all other
+/// Create a bitmask with the N right-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
 template <typename T> T maskTrailingZeros(unsigned N) {
   return maskLeadingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
-/// \brief Create a bitmask with the N left-most bits set to 0, and all other
+/// Create a bitmask with the N left-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
 template <typename T> T maskLeadingZeros(unsigned N) {
   return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
-/// \brief Get the index of the last set bit starting from the least
+/// Get the index of the last set bit starting from the least
 ///   significant bit.
 ///
 /// Only unsigned integral types are allowed.
@@ -243,7 +251,7 @@ template <typename T> T findLastSet(T Val, ZeroBehavior ZB = ZB_Max) {
          (std::numeric_limits<T>::digits - 1);
 }
 
-/// \brief Macro compressed bit reversal table for 256 bits.
+/// Macro compressed bit reversal table for 256 bits.
 ///
 /// http://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
 static const unsigned char BitReverseTable256[256] = {
@@ -256,7 +264,7 @@ static const unsigned char BitReverseTable256[256] = {
 #undef R6
 };
 
-/// \brief Reverse the bits in \p Val.
+/// Reverse the bits in \p Val.
 template <typename T>
 T reverseBits(T Val) {
   unsigned char in[sizeof(Val)];
@@ -442,7 +450,7 @@ inline uint64_t ByteSwap_64(uint64_t Value) {
   return sys::SwapByteOrder_64(Value);
 }
 
-/// \brief Count the number of ones from the most significant bit to the first
+/// Count the number of ones from the most significant bit to the first
 /// zero bit.
 ///
 /// Ex. countLeadingOnes(0xFF0FFF00) == 8.
@@ -455,10 +463,10 @@ std::size_t countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return countLeadingZeros(~Value, ZB);
+  return countLeadingZeros<T>(~Value, ZB);
 }
 
-/// \brief Count the number of ones from the least significant bit to the first
+/// Count the number of ones from the least significant bit to the first
 /// zero bit.
 ///
 /// Ex. countTrailingOnes(0x00FF00FF) == 8.
@@ -471,7 +479,7 @@ std::size_t countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return countTrailingZeros(~Value, ZB);
+  return countTrailingZeros<T>(~Value, ZB);
 }
 
 namespace detail {
@@ -505,7 +513,7 @@ template <typename T> struct PopulationCounter<T, 8> {
 };
 } // namespace detail
 
-/// \brief Count the number of set bits in a value.
+/// Count the number of set bits in a value.
 /// Ex. countPopulation(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T>
@@ -608,7 +616,7 @@ constexpr inline uint64_t MinAlign(uint64_t A, uint64_t B) {
   return (A | B) & (1 + ~(A | B));
 }
 
-/// \brief Aligns \c Addr to \c Alignment bytes, rounding up.
+/// Aligns \c Addr to \c Alignment bytes, rounding up.
 ///
 /// Alignment should be a power of two.  This method rounds up, so
 /// alignAddr(7, 4) == 8 and alignAddr(8, 4) == 8.
@@ -621,7 +629,7 @@ inline uintptr_t alignAddr(const void *Addr, size_t Alignment) {
   return (((uintptr_t)Addr + Alignment - 1) & ~(uintptr_t)(Alignment - 1));
 }
 
-/// \brief Returns the necessary adjustment for aligning \c Ptr to \c Alignment
+/// Returns the necessary adjustment for aligning \c Ptr to \c Alignment
 /// bytes, rounding up.
 inline size_t alignmentAdjustment(const void *Ptr, size_t Alignment) {
   return alignAddr(Ptr, Alignment) - (uintptr_t)Ptr;

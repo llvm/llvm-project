@@ -131,10 +131,10 @@ func.exit:                         ; preds = %if.then.i, %if.else.i, %if.end.5.i
   store { <2 x float>, float } %.fca.1.insert.i, { <2 x float>, float }* %tmp, align 8
   %2 = bitcast { <2 x float>, float }* %tmp to i8*
   %3 = bitcast %struct.FVector* %ref.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %3, i8* %2, i64 12, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %3, i8* align 4 %2, i64 12, i1 false)
   %4 = bitcast %struct.FVector* %v to i8*
   %5 = bitcast %struct.FVector* %ref.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 12, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %4, i8* align 4 %5, i64 12, i1 false)
   %6 = bitcast %struct.FVector* %v to i8*
   call void @llvm.lifetime.end.p0i8(i64 12, i8* %6) nounwind
   ret i32 0
@@ -142,6 +142,6 @@ func.exit:                         ; preds = %if.then.i, %if.else.i, %if.end.5.i
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) argmemonly nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) argmemonly nounwind
 
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind

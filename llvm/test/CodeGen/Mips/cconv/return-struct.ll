@@ -1,14 +1,14 @@
-; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32,O32-BE %s
-; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32,O32-LE %s
+; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32,O32-BE %s
+; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32,O32-LE %s
 
 ; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 ; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32,N32-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32,N32-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32,N32-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32,N32-LE %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64,N64-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64,N64-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64,N64-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64,N64-LE %s
 
 ; Test struct returns for all ABI's and byte orders.
 
@@ -18,7 +18,7 @@
 @struct_6xi32 = global {[6 x i32]} zeroinitializer
 @struct_128xi16 = global {[128 x i16]} zeroinitializer
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 
 define inreg {i8} @ret_struct_i8() nounwind {
 entry:
@@ -50,7 +50,7 @@ define inreg {i16} @ret_struct_i16() nounwind {
 entry:
         %retval = alloca {i8,i8}, align 1
         %0 = bitcast {i8,i8}* %retval to i8*
-        call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* getelementptr inbounds ({i8,i8}, {i8,i8}* @struct_2byte, i32 0, i32 0), i64 2, i32 1, i1 false)
+        call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* getelementptr inbounds ({i8,i8}, {i8,i8}* @struct_2byte, i32 0, i32 0), i64 2, i1 false)
         %1 = bitcast {i8,i8}* %retval to {i16}*
         %2 = load volatile {i16}, {i16}* %1
         ret {i16} %2
@@ -144,7 +144,7 @@ entry:
 define void @ret_struct_128xi16({[128 x i16]}* sret %returnval) {
 entry:
         %0 = bitcast {[128 x i16]}* %returnval to i8*
-        call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast ({[128 x i16]}* @struct_128xi16 to i8*), i64 256, i32 2, i1 false)
+        call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 %0, i8* align 2 bitcast ({[128 x i16]}* @struct_128xi16 to i8*), i64 256, i1 false)
         ret void
 }
 

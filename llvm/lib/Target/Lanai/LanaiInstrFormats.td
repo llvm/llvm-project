@@ -482,7 +482,7 @@ class InstSLI<dag outs, dag ins, string asmstr, list<dag> pattern>
 //             Memory(ea) <- (least significant half-word of Rr)
 //        If `YS' = 10  (bYte     load):  Rr <- Memory(ea)
 //        If `YS' = 00  (halfword load):  Rr <- Memory(ea)
-//             [Note: here ea is determined as in the the RM instruction. ]
+//             [Note: here ea is determined as in the RM instruction. ]
 //        If `SE' = 01 then the value is zEro extended
 //             before being loaded into Rd.
 //        If `SE' = 00 then the value is sign extended

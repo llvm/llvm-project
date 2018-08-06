@@ -30,8 +30,8 @@ define amdgpu_kernel void @test_copysign_f16(
   half addrspace(1)* %arg_mag,
   half addrspace(1)* %arg_sign) {
 entry:
-  %mag = load half, half addrspace(1)* %arg_mag
-  %sign = load half, half addrspace(1)* %arg_sign
+  %mag = load volatile half, half addrspace(1)* %arg_mag
+  %sign = load volatile half, half addrspace(1)* %arg_sign
   %out = call half @llvm.copysign.f16(half %mag, half %sign)
   store half %out, half addrspace(1)* %arg_out
   ret void

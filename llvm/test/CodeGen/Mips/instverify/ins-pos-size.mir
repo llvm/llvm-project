@@ -18,8 +18,8 @@ registers:
   - { id: 2, class: gpr32, preferred-register: '' }
   - { id: 3, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '%a0', virtual-reg: '%0' }
-  - { reg: '%a1', virtual-reg: '%1' }
+  - { reg: '$a0', virtual-reg: '%0' }
+  - { reg: '$a1', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -42,13 +42,13 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: %a0, %a1
+    liveins: $a0, $a1
 
-    %1 = COPY %a1
-    %0 = COPY %a0
+    %1 = COPY $a1
+    %0 = COPY $a0
     %2 = ANDi %1, 15
     %3 = INS killed %2, 17, 17, %0
-    %v0 = COPY %3
-    RetRA implicit %v0
+    $v0 = COPY %3
+    RetRA implicit $v0
 
 ...

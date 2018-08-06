@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Pass.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -56,7 +57,7 @@ PassManagerType ModulePass::getPotentialPassManagerType() const {
 }
 
 bool ModulePass::skipModule(Module &M) const {
-  return !M.getContext().getOptBisect().shouldRunPass(this, M);
+  return !M.getContext().getOptPassGate().shouldRunPass(this, M);
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -155,12 +156,12 @@ PassManagerType FunctionPass::getPotentialPassManagerType() const {
 }
 
 bool FunctionPass::skipFunction(const Function &F) const {
-  if (!F.getContext().getOptBisect().shouldRunPass(this, F))
+  if (!F.getContext().getOptPassGate().shouldRunPass(this, F))
     return true;
 
   if (F.hasFnAttribute(Attribute::OptimizeNone)) {
-    DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' on function "
-                 << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' on function "
+                      << F.getName() << "\n");
     return true;
   }
   return false;
@@ -189,13 +190,13 @@ bool BasicBlockPass::skipBasicBlock(const BasicBlock &BB) const {
   const Function *F = BB.getParent();
   if (!F)
     return false;
-  if (!F->getContext().getOptBisect().shouldRunPass(this, BB))
+  if (!F->getContext().getOptPassGate().shouldRunPass(this, BB))
     return true;
   if (F->hasFnAttribute(Attribute::OptimizeNone)) {
     // Report this only once per function.
     if (&BB == &F->getEntryBlock())
-      DEBUG(dbgs() << "Skipping pass '" << getPassName()
-            << "' on function " << F->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName()
+                        << "' on function " << F->getName() << "\n");
     return true;
   }
   return false;

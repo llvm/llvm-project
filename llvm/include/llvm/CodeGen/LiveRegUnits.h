@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_LIVEREGUNITS_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -40,6 +41,36 @@ public:
     init(TRI);
   }
 
+  /// For a machine instruction \p MI, adds all register units used in
+  /// \p UsedRegUnits and defined or clobbered in \p ModifiedRegUnits. This is
+  /// useful when walking over a range of instructions to track registers
+  /// used or defined seperately.
+  static void accumulateUsedDefed(const MachineInstr &MI,
+                                  LiveRegUnits &ModifiedRegUnits,
+                                  LiveRegUnits &UsedRegUnits,
+                                  const TargetRegisterInfo *TRI) {
+    for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
+      if (O->isRegMask())
+        ModifiedRegUnits.addRegsInMask(O->getRegMask());
+      if (!O->isReg())
+        continue;
+      unsigned Reg = O->getReg();
+      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+        continue;
+      if (O->isDef()) {
+        // Some architectures (e.g. AArch64 XZR/WZR) have registers that are
+        // constant and may be used as destinations to indicate the generated
+        // value is discarded. No need to track such case as a def.
+        if (!TRI->isConstantPhysReg(Reg))
+          ModifiedRegUnits.addReg(Reg);
+      } else {
+        assert(O->isUse() && "Reg operand not a def and not a use");
+        UsedRegUnits.addReg(Reg);
+      }
+    }
+    return;
+  }
+
   /// Initialize and clear the set.
   void init(const TargetRegisterInfo &TRI) {
     this->TRI = &TRI;
@@ -59,7 +90,7 @@ public:
       Units.set(*Unit);
   }
 
-  /// \brief Adds register units covered by physical register \p Reg that are
+  /// Adds register units covered by physical register \p Reg that are
   /// part of the lanemask \p Mask.
   void addRegMasked(unsigned Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {

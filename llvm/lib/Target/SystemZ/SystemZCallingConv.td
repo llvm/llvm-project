@@ -120,3 +120,12 @@ def CSR_SystemZ : CalleeSavedRegs<(add (sequence "R%dD", 6, 15),
 
 // R9 is used to return SwiftError; remove it from CSR.
 def CSR_SystemZ_SwiftError : CalleeSavedRegs<(sub CSR_SystemZ, R9D)>;
+
+// "All registers" as used by the AnyReg calling convention.
+// Note that registers 0 and 1 are still defined as intra-call scratch
+// registers that may be clobbered e.g. by PLT stubs.
+def CSR_SystemZ_AllRegs : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
+                                               (sequence "F%dD", 0, 15))>;
+def CSR_SystemZ_AllRegs_Vector : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
+                                                      (sequence "V%d", 0, 31))>;
+

@@ -2,6 +2,7 @@
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=4 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=8 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
 ; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m3        -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM3 < %t
 
 declare void @ext(i32)
 
@@ -41,7 +42,8 @@ entry:
 ; CHECKM1-NEXT: %jump-table.0:
 ; CHECKM1-SAME: %jump-table.1
 ; CHECKM1-NOT: %jump-table.2:
-; CHEC-NEXT: Function Live Ins:
+; CHECKM3-NEXT: %jump-table.0:
+; CHECKM3-NOT: %jump-table.1:
 
 bb1: tail call void @ext(i32 0) br label %return
 bb2: tail call void @ext(i32 2) br label %return
@@ -78,10 +80,15 @@ entry:
 ; CHECK-LABEL: function jt2:
 ; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
+; CHECK0-NOT: %jump-table.1
 ; CHECK4-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECK4-NOT: %jump-table.1
 ; CHECK8-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECK8-NOT: %jump-table.1
 ; CHECKM1-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
-; CHEC-NEXT: Function Live Ins:
+; CHECKM1-NOT: %jump-table.1
+; CHECKM3-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
+; CHECKM3-NOT: %jump-table.1
 
 bb1: tail call void @ext(i32 1) br label %return
 bb2: tail call void @ext(i32 2) br label %return

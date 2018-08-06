@@ -9,8 +9,7 @@
 %Vs4Int8 = type <{ i8 }>
 %swift.type = type { i64 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly,
-i64, i32, i1) #8
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #8
 
 @_swift_slowAlloc = external global i8* (i64, i64)*
 
@@ -26,7 +25,7 @@ entry:
   %3 = bitcast i8* %1 to %V*
   %4 = bitcast %V* %3 to i8*
   %5 = bitcast %V* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 40, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %5, i64 40, i1 false)
   %6 = bitcast %V* %3 to %swift.opaque*
   ret %swift.opaque* %6
 }

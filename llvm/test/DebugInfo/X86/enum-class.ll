@@ -13,13 +13,13 @@ source_filename = "test/DebugInfo/X86/enum-class.ll"
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
-!3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "A", file: !2, line: 1, baseType: !4, size: 32, align: 32, elements: !5)
+!3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "A", file: !2, line: 1, baseType: !4, size: 32, flags: DIFlagFixedEnum, align: 32, elements: !5)
 !4 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !5 = !{!6}
 !6 = !DIEnumerator(name: "A1", value: 1)
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression()) ; [ DW_TAG_enumerator ]
 !8 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 5, type: !9, isLocal: false, isDefinition: true)
-!9 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "B", file: !2, line: 2, baseType: !10, size: 64, align: 64, elements: !11)
+!9 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "B", file: !2, line: 2, baseType: !10, size: 64, flags: DIFlagFixedEnum, align: 64, elements: !11)
 !10 = !DIBasicType(name: "long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
 !11 = !{!12}
 !12 = !DIEnumerator(name: "B1", value: 1) ; [ DW_TAG_enumerator ]
@@ -44,6 +44,6 @@ source_filename = "test/DebugInfo/X86/enum-class.ll"
 ; CHECK: DW_AT_enum_class [DW_FORM_flag_present] (true)
 ; CHECK: DW_AT_name [DW_FORM_strp]          ( .debug_str[{{.*}}] = "B")
 
-; CHECK: DW_TAG_enumeration_type [6]
+; CHECK: DW_TAG_enumeration_type
 ; CHECK-NOT: DW_AT_enum_class
 ; CHECK: DW_AT_name [DW_FORM_strp]      ( .debug_str[{{.*}}] = "C")

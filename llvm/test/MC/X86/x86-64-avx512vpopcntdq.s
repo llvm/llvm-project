@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+avx512vpopcntdq --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vpopcntq   %zmm25, %zmm20  
 // CHECK: encoding: [0x62,0x82,0xfd,0x48,0x55,0xe1]

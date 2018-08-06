@@ -38,8 +38,8 @@ declare i32 @external_i32_func_i32(i32) #0
 
 ; Structs
 declare void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare void @external_void_func_byval_struct_i8_i32({ i8, i32 }* byval) #0
-declare void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 }* sret, { i8, i32 }* byval) #0
+declare void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
+declare void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
 
 declare void @external_void_func_v16i8(<16 x i8>) #0
 
@@ -345,7 +345,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
-  %ptr = load <8 x i32> addrspace(1)*, <8 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <8 x i32> addrspace(1)*, <8 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <8 x i32>, <8 x i32> addrspace(1)* %ptr
   call void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -359,7 +359,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
-  %ptr = load <16 x i32> addrspace(1)*, <16 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <16 x i32> addrspace(1)*, <16 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <16 x i32>, <16 x i32> addrspace(1)* %ptr
   call void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -377,7 +377,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
-  %ptr = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
   %val = load <32 x i32>, <32 x i32> addrspace(1)* %ptr
   call void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -405,7 +405,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
-  %ptr0 = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(2)* undef
+  %ptr0 = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
   %val0 = load <32 x i32>, <32 x i32> addrspace(1)* %ptr0
   %val1 = load i32, i32 addrspace(1)* undef
   call void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
@@ -430,7 +430,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(i32 addrspace(1)*
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
-  %ptr0 = load { i8, i32 } addrspace(1)*, { i8, i32 } addrspace(1)* addrspace(2)* undef
+  %ptr0 = load { i8, i32 } addrspace(1)*, { i8, i32 } addrspace(1)* addrspace(4)* undef
   %val = load { i8, i32 }, { i8, i32 } addrspace(1)* %ptr0
   call void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -465,18 +465,18 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GCN-NEXT: s_swappc_b64
 ; GCN-NOT: [[SP]]
 define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0 {
-  %val = alloca { i8, i32 }, align 4
-  %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %val, i32 0, i32 0
-  %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %val, i32 0, i32 1
-  store i8 3, i8* %gep0
-  store i32 8, i32* %gep1
-  call void @external_void_func_byval_struct_i8_i32({ i8, i32 }* %val)
+  %val = alloca { i8, i32 }, align 4, addrspace(5)
+  %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %val, i32 0, i32 0
+  %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %val, i32 0, i32 1
+  store i8 3, i8 addrspace(5)* %gep0
+  store i32 8, i32 addrspace(5)* %gep1
+  call void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %val)
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
-; MESA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x600{{$}}
-; HSA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x600{{$}}
+; MESA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x800{{$}}
+; HSA-DAG: s_add_u32 [[SP:s[0-9]+]], [[FP_REG:s[0-9]+]], 0x800{{$}}
 
 ; GCN-DAG: v_mov_b32_e32 [[VAL0:v[0-9]+]], 3
 ; GCN-DAG: v_mov_b32_e32 [[VAL1:v[0-9]+]], 8
@@ -497,17 +497,17 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GCN: buffer_store_byte [[LOAD_OUT_VAL0]], off
 ; GCN: buffer_store_dword [[LOAD_OUT_VAL1]], off
 define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(i32) #0 {
-  %in.val = alloca { i8, i32 }, align 4
-  %out.val = alloca { i8, i32 }, align 4
-  %in.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %in.val, i32 0, i32 0
-  %in.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %in.val, i32 0, i32 1
-  store i8 3, i8* %in.gep0
-  store i32 8, i32* %in.gep1
-  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 }* %out.val, { i8, i32 }* %in.val)
-  %out.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %out.val, i32 0, i32 0
-  %out.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %out.val, i32 0, i32 1
-  %out.val0 = load i8, i8* %out.gep0
-  %out.val1 = load i32, i32* %out.gep1
+  %in.val = alloca { i8, i32 }, align 4, addrspace(5)
+  %out.val = alloca { i8, i32 }, align 4, addrspace(5)
+  %in.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %in.val, i32 0, i32 0
+  %in.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %in.val, i32 0, i32 1
+  store i8 3, i8 addrspace(5)* %in.gep0
+  store i32 8, i32 addrspace(5)* %in.gep1
+  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %out.val, { i8, i32 } addrspace(5)* %in.val)
+  %out.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 0
+  %out.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 1
+  %out.val0 = load i8, i8 addrspace(5)* %out.gep0
+  %out.val1 = load i32, i32 addrspace(5)* %out.gep1
 
   store volatile i8 %out.val0, i8 addrspace(1)* undef
   store volatile i32 %out.val1, i32 addrspace(1)* undef
@@ -516,7 +516,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_v16i8:
 define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
-  %ptr = load <16 x i8> addrspace(1)*, <16 x i8> addrspace(1)* addrspace(2)* undef
+  %ptr = load <16 x i8> addrspace(1)*, <16 x i8> addrspace(1)* addrspace(4)* undef
   %val = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   call void @external_void_func_v16i8(<16 x i8> %val)
   ret void

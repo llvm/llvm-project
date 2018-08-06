@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -march=r600 -mcpu=cypress -verify-machineinstrs < %s | llvm-readobj -relocations -symbols | FileCheck %s
 
-@arr = internal unnamed_addr addrspace(2) constant [4 x i32] [i32 4, i32 5, i32 6, i32 7], align 4
+@arr = internal unnamed_addr addrspace(4) constant [4 x i32] [i32 4, i32 5, i32 6, i32 7], align 4
 
 ; CHECK: Relocations [
 ; CHECK: Section (3) .rel.text {
@@ -19,8 +19,8 @@
 ; CHECK: }
 define amdgpu_kernel void @test_constant_array_fixup(i32 addrspace(1)* nocapture %out, i32 %idx) #0 {
 entry:
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32] addrspace(2)* @arr, i32 0, i32 %idx
-  %val = load i32, i32 addrspace(2)* %arrayidx
+  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32] addrspace(4)* @arr, i32 0, i32 %idx
+  %val = load i32, i32 addrspace(4)* %arrayidx
   store i32 %val, i32 addrspace(1)* %out, align 4
   ret void
 }

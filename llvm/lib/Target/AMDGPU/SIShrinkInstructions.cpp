@@ -10,9 +10,9 @@
 //
 
 #include "AMDGPU.h"
-#include "AMDGPUMCInstLower.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -92,13 +92,15 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
       case AMDGPU::V_ADDC_U32_e64:
       case AMDGPU::V_SUBB_U32_e64:
-        if (TII->getNamedOperand(MI, AMDGPU::OpName::src1)->isImm())
+      case AMDGPU::V_SUBBREV_U32_e64:
+        if (!isVGPR(TII->getNamedOperand(MI, AMDGPU::OpName::src1), TRI, MRI))
           return false;
         // Additional verification is needed for sdst/src2.
         return true;
 
       case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
         if (!isVGPR(Src2, TRI, MRI) ||
             TII->hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;
@@ -124,7 +126,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
          !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
 }
 
-/// \brief This function checks \p MI for operands defined by a move immediate
+/// This function checks \p MI for operands defined by a move immediate
 /// instruction and then folds the literal constant into the instruction if it
 /// can. This function assumes that \p MI is a VOP1, VOP2, or VOPC instructions.
 static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
@@ -290,7 +292,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
@@ -442,7 +444,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
           //
           // So, instead of forcing the instruction to write to VCC, we provide
-          // a hint to the register allocator to use VCC and then we we will run
+          // a hint to the register allocator to use VCC and then we will run
           // this pass again after RA and shrink it if it outputs to VCC.
           MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, AMDGPU::VCC);
           continue;
@@ -493,7 +495,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // We can shrink this instruction
-      DEBUG(dbgs() << "Shrinking " << MI);
+      LLVM_DEBUG(dbgs() << "Shrinking " << MI);
 
       MachineInstrBuilder Inst32 =
           BuildMI(MBB, I, MI.getDebugLoc(), TII->get(Op32));
@@ -537,9 +539,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       MI.eraseFromParent();
       foldImmediates(*Inst32, TII, MRI);
 
-      DEBUG(dbgs() << "e32 MI = " << *Inst32 << '\n');
-
-
+      LLVM_DEBUG(dbgs() << "e32 MI = " << *Inst32 << '\n');
     }
   }
   return false;

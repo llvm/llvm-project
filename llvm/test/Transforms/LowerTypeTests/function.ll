@@ -24,7 +24,7 @@ target datalayout = "e-p:64:64"
 ; ARM: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
 ; THUMB: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
 
-; NATIVE: define internal void @f.cfi()
+; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
 define void @f() !type !0 {
   ret void
@@ -48,10 +48,10 @@ define i1 @foo(i8* %p) {
   ret i1 %x
 }
 
-; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
-; X86-WIN32:   define private void @[[JT]]() section ".text.cfi" align 8 {
-; ARM:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
-; THUMB: define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
+; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] align 8 {
+; X86-WIN32:   define private void @[[JT]]() #[[ATTR:.*]] align 8 {
+; ARM:   define private void @[[JT]]() #[[ATTR:.*]] align 4 {
+; THUMB: define private void @[[JT]]() #[[ATTR:.*]] align 4 {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3
@@ -70,9 +70,10 @@ define i1 @foo(i8* %p) {
 
 ; NATIVE-SAME: "s,s"(void ()* @f.cfi, void ()* @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { {{.*}}naked
-; ARM: attributes #[[ATTR]] = { {{.*}}naked
-; THUMB: attributes #[[ATTR]] = { {{.*}}naked{{.*}}"target-cpu"="cortex-a8"
+; X86-LINUX: attributes #[[ATTR]] = { naked nounwind }
+; X86-WIN32: attributes #[[ATTR]] = { nounwind }
+; ARM: attributes #[[ATTR]] = { naked nounwind
+; THUMB: attributes #[[ATTR]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

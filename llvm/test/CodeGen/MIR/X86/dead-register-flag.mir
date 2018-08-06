@@ -18,7 +18,7 @@ name:            foo
 body: |
   ; CHECK: bb.0.body:
   bb.0.body:
-    ; CHECK: %eax = IMUL32rri8 %edi, 11, implicit-def dead %eflags
-    %eax = IMUL32rri8 %edi, 11, implicit-def dead %eflags
-    RETQ %eax
+    ; CHECK: $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    RETQ $eax
 ...

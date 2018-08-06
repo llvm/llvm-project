@@ -45,7 +45,7 @@ frameInfo:
   stackProtector:  '%stack.0.StackGuardSlot'
 fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16,
-      callee-saved-register: '%rbx' }
+      callee-saved-register: '$rbx' }
 stack:
   - { id: 0, name: StackGuardSlot, offset: -24, size: 8, alignment: 8 }
   - { id: 1, name: test, offset: -40, size: 8, alignment: 8 }
@@ -53,27 +53,27 @@ stack:
 body: |
   bb.0.entry:
     successors: %bb.1.entry, %bb.2.entry
-    liveins: %rbx, %rbx
+    liveins: $rbx, $rbx
 
-    frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    %rsp = frame-setup SUB64ri8 %rsp, 32, implicit-def dead %eflags
-    %rbx = LOAD_STACK_GUARD :: (invariant load 8 from @__stack_chk_guard)
-    MOV64mr %rsp, 1, _, 24, _, %rbx
-    %rsi = LEA64r %rsp, 1, _, 19, _
-    MOV64mr %rsp, 1, _, 8, _, %rsi
-    %rdi = LEA64r %rip, 1, _, @.str, _
-    dead %eax = MOV32r0 implicit-def dead %eflags, implicit-def %al
-    CALL64pcrel32 @printf, csr_64, implicit %rsp, implicit %rdi, implicit %rsi, implicit %al, implicit-def %rsp, implicit-def %eax
-    CMP64rm killed %rbx, %rsp, 1, _, 24, _, implicit-def %eflags
-    JNE_1 %bb.2.entry, implicit %eflags
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = LOAD_STACK_GUARD :: (invariant load 8 from @__stack_chk_guard)
+    MOV64mr $rsp, 1, _, 24, _, $rbx
+    $rsi = LEA64r $rsp, 1, _, 19, _
+    MOV64mr $rsp, 1, _, 8, _, $rsi
+    $rdi = LEA64r $rip, 1, _, @.str, _
+    dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
+    CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $al, implicit-def $rsp, implicit-def $eax
+    CMP64rm killed $rbx, $rsp, 1, _, 24, _, implicit-def $eflags
+    JNE_1 %bb.2.entry, implicit $eflags
 
   bb.1.entry:
-    liveins: %eax
+    liveins: $eax
 
-    %rsp = ADD64ri8 %rsp, 32, implicit-def dead %eflags
-    %rbx = POP64r implicit-def %rsp, implicit %rsp
-    RETQ %eax
+    $rsp = ADD64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
 
   bb.2.entry:
-    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp
 ...

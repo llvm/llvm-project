@@ -52,23 +52,23 @@ declare i8* @__cxa_begin_catch(i8*)
 
 declare void @__cxa_end_catch()
 
+; CHECK: g3:
 ; CHECK: _MergedGlobals:
 @g1 = internal global i32 1
 @g2 = internal global i32 2
 
 ; Make sure that the complete variable fits within the range of the maximum
 ; offset.  Having the starting offset in range is not sufficient.
-; When this works properly, @g3 is placed in a separate chunk of merged globals.
-; CHECK: _MergedGlobals.1:
+; When this works properly, @g3 is not merged.
 @g3 = internal global [30 x i32] [ i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10 ], align 4
 
 ; Global variables that can be placed in BSS should be kept together in a
 ; separate pool of merged globals.
-; CHECK: _MergedGlobals.2
+; CHECK: _MergedGlobals.1
 @g4 = internal global i32 0
 @g5 = internal global i32 0
 
 ; Global variables that are constant can be merged together
-; CHECK: _MergedGlobals.3
+; CHECK: _MergedGlobals.2
 @g6 = internal constant [12 x i32] zeroinitializer, align 4
 @g7 = internal constant [12 x i32] zeroinitializer, align 4

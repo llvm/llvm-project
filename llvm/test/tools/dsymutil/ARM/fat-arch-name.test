@@ -1,5 +1,5 @@
 # REQUIRES: object-emission
-# RUN: llvm-dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o %t.dSYM -verbose 2>&1 | FileCheck %s
+# RUN: dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o /dev/null -verbose 2>&1 | FileCheck %s
 
 # We detect thumb triples from the binaries, because those are the only ones
 # that are guaranteed to be able to generate a Target instance (for example

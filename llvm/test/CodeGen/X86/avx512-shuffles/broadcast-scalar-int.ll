@@ -13,8 +13,7 @@ define <16 x i8> @test_i8_to_16(i8 %s) {
 define <16 x i8> @test_masked_i8_to_16_mask0(i8 %s, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -27,8 +26,7 @@ define <16 x i8> @test_masked_i8_to_16_mask0(i8 %s, <16 x i8> %default, <16 x i8
 define <16 x i8> @test_masked_z_i8_to_16_mask0(i8 %s, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -40,8 +38,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mask0(i8 %s, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mask1(i8 %s, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -54,8 +51,7 @@ define <16 x i8> @test_masked_i8_to_16_mask1(i8 %s, <16 x i8> %default, <16 x i8
 define <16 x i8> @test_masked_z_i8_to_16_mask1(i8 %s, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -67,8 +63,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mask1(i8 %s, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mask2(i8 %s, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -81,8 +76,7 @@ define <16 x i8> @test_masked_i8_to_16_mask2(i8 %s, <16 x i8> %default, <16 x i8
 define <16 x i8> @test_masked_z_i8_to_16_mask2(i8 %s, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -94,8 +88,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mask2(i8 %s, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mask3(i8 %s, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -108,8 +101,7 @@ define <16 x i8> @test_masked_i8_to_16_mask3(i8 %s, <16 x i8> %default, <16 x i8
 define <16 x i8> @test_masked_z_i8_to_16_mask3(i8 %s, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -130,8 +122,7 @@ define <32 x i8> @test_i8_to_32(i8 %s) {
 define <32 x i8> @test_masked_i8_to_32_mask0(i8 %s, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -144,8 +135,7 @@ define <32 x i8> @test_masked_i8_to_32_mask0(i8 %s, <32 x i8> %default, <32 x i8
 define <32 x i8> @test_masked_z_i8_to_32_mask0(i8 %s, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -157,8 +147,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mask0(i8 %s, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mask1(i8 %s, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -171,8 +160,7 @@ define <32 x i8> @test_masked_i8_to_32_mask1(i8 %s, <32 x i8> %default, <32 x i8
 define <32 x i8> @test_masked_z_i8_to_32_mask1(i8 %s, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -184,8 +172,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mask1(i8 %s, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mask2(i8 %s, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -198,8 +185,7 @@ define <32 x i8> @test_masked_i8_to_32_mask2(i8 %s, <32 x i8> %default, <32 x i8
 define <32 x i8> @test_masked_z_i8_to_32_mask2(i8 %s, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -211,8 +197,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mask2(i8 %s, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mask3(i8 %s, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -225,8 +210,7 @@ define <32 x i8> @test_masked_i8_to_32_mask3(i8 %s, <32 x i8> %default, <32 x i8
 define <32 x i8> @test_masked_z_i8_to_32_mask3(i8 %s, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -247,8 +231,7 @@ define <64 x i8> @test_i8_to_64(i8 %s) {
 define <64 x i8> @test_masked_i8_to_64_mask0(i8 %s, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -261,8 +244,7 @@ define <64 x i8> @test_masked_i8_to_64_mask0(i8 %s, <64 x i8> %default, <64 x i8
 define <64 x i8> @test_masked_z_i8_to_64_mask0(i8 %s, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -274,8 +256,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mask0(i8 %s, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mask1(i8 %s, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -288,8 +269,7 @@ define <64 x i8> @test_masked_i8_to_64_mask1(i8 %s, <64 x i8> %default, <64 x i8
 define <64 x i8> @test_masked_z_i8_to_64_mask1(i8 %s, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -301,8 +281,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mask1(i8 %s, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mask2(i8 %s, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -315,8 +294,7 @@ define <64 x i8> @test_masked_i8_to_64_mask2(i8 %s, <64 x i8> %default, <64 x i8
 define <64 x i8> @test_masked_z_i8_to_64_mask2(i8 %s, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -328,8 +306,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mask2(i8 %s, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mask3(i8 %s, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -342,8 +319,7 @@ define <64 x i8> @test_masked_i8_to_64_mask3(i8 %s, <64 x i8> %default, <64 x i8
 define <64 x i8> @test_masked_z_i8_to_64_mask3(i8 %s, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i8> undef, i8 %s, i32 0
@@ -364,8 +340,7 @@ define <8 x i16> @test_i16_to_8(i16 %s) {
 define <8 x i16> @test_masked_i16_to_8_mask0(i16 %s, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -378,8 +353,7 @@ define <8 x i16> @test_masked_i16_to_8_mask0(i16 %s, <8 x i16> %default, <8 x i1
 define <8 x i16> @test_masked_z_i16_to_8_mask0(i16 %s, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -391,8 +365,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mask0(i16 %s, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mask1(i16 %s, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -405,8 +378,7 @@ define <8 x i16> @test_masked_i16_to_8_mask1(i16 %s, <8 x i16> %default, <8 x i1
 define <8 x i16> @test_masked_z_i16_to_8_mask1(i16 %s, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -418,8 +390,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mask1(i16 %s, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mask2(i16 %s, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -432,8 +403,7 @@ define <8 x i16> @test_masked_i16_to_8_mask2(i16 %s, <8 x i16> %default, <8 x i1
 define <8 x i16> @test_masked_z_i16_to_8_mask2(i16 %s, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -445,8 +415,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mask2(i16 %s, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mask3(i16 %s, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -459,8 +428,7 @@ define <8 x i16> @test_masked_i16_to_8_mask3(i16 %s, <8 x i16> %default, <8 x i1
 define <8 x i16> @test_masked_z_i16_to_8_mask3(i16 %s, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -481,8 +449,7 @@ define <16 x i16> @test_i16_to_16(i16 %s) {
 define <16 x i16> @test_masked_i16_to_16_mask0(i16 %s, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -495,8 +462,7 @@ define <16 x i16> @test_masked_i16_to_16_mask0(i16 %s, <16 x i16> %default, <16 
 define <16 x i16> @test_masked_z_i16_to_16_mask0(i16 %s, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -508,8 +474,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mask0(i16 %s, <16 x i16> %mask) {
 define <16 x i16> @test_masked_i16_to_16_mask1(i16 %s, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -522,8 +487,7 @@ define <16 x i16> @test_masked_i16_to_16_mask1(i16 %s, <16 x i16> %default, <16 
 define <16 x i16> @test_masked_z_i16_to_16_mask1(i16 %s, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -535,8 +499,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mask1(i16 %s, <16 x i16> %mask) {
 define <16 x i16> @test_masked_i16_to_16_mask2(i16 %s, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -549,8 +512,7 @@ define <16 x i16> @test_masked_i16_to_16_mask2(i16 %s, <16 x i16> %default, <16 
 define <16 x i16> @test_masked_z_i16_to_16_mask2(i16 %s, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -562,8 +524,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mask2(i16 %s, <16 x i16> %mask) {
 define <16 x i16> @test_masked_i16_to_16_mask3(i16 %s, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -576,8 +537,7 @@ define <16 x i16> @test_masked_i16_to_16_mask3(i16 %s, <16 x i16> %default, <16 
 define <16 x i16> @test_masked_z_i16_to_16_mask3(i16 %s, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -598,8 +558,7 @@ define <32 x i16> @test_i16_to_32(i16 %s) {
 define <32 x i16> @test_masked_i16_to_32_mask0(i16 %s, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -612,8 +571,7 @@ define <32 x i16> @test_masked_i16_to_32_mask0(i16 %s, <32 x i16> %default, <32 
 define <32 x i16> @test_masked_z_i16_to_32_mask0(i16 %s, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -625,8 +583,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mask0(i16 %s, <32 x i16> %mask) {
 define <32 x i16> @test_masked_i16_to_32_mask1(i16 %s, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -639,8 +596,7 @@ define <32 x i16> @test_masked_i16_to_32_mask1(i16 %s, <32 x i16> %default, <32 
 define <32 x i16> @test_masked_z_i16_to_32_mask1(i16 %s, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -652,8 +608,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mask1(i16 %s, <32 x i16> %mask) {
 define <32 x i16> @test_masked_i16_to_32_mask2(i16 %s, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -666,8 +621,7 @@ define <32 x i16> @test_masked_i16_to_32_mask2(i16 %s, <32 x i16> %default, <32 
 define <32 x i16> @test_masked_z_i16_to_32_mask2(i16 %s, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -679,8 +633,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mask2(i16 %s, <32 x i16> %mask) {
 define <32 x i16> @test_masked_i16_to_32_mask3(i16 %s, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -693,8 +646,7 @@ define <32 x i16> @test_masked_i16_to_32_mask3(i16 %s, <32 x i16> %default, <32 
 define <32 x i16> @test_masked_z_i16_to_32_mask3(i16 %s, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i16> undef, i16 %s, i32 0
@@ -715,8 +667,7 @@ define <4 x i32> @test_i32_to_4(i32 %s) {
 define <4 x i32> @test_masked_i32_to_4_mask0(i32 %s, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -729,8 +680,7 @@ define <4 x i32> @test_masked_i32_to_4_mask0(i32 %s, <4 x i32> %default, <4 x i3
 define <4 x i32> @test_masked_z_i32_to_4_mask0(i32 %s, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -742,8 +692,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mask0(i32 %s, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mask1(i32 %s, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -756,8 +705,7 @@ define <4 x i32> @test_masked_i32_to_4_mask1(i32 %s, <4 x i32> %default, <4 x i3
 define <4 x i32> @test_masked_z_i32_to_4_mask1(i32 %s, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -769,8 +717,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mask1(i32 %s, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mask2(i32 %s, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -783,8 +730,7 @@ define <4 x i32> @test_masked_i32_to_4_mask2(i32 %s, <4 x i32> %default, <4 x i3
 define <4 x i32> @test_masked_z_i32_to_4_mask2(i32 %s, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -796,8 +742,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mask2(i32 %s, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mask3(i32 %s, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -810,8 +755,7 @@ define <4 x i32> @test_masked_i32_to_4_mask3(i32 %s, <4 x i32> %default, <4 x i3
 define <4 x i32> @test_masked_z_i32_to_4_mask3(i32 %s, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -832,8 +776,7 @@ define <8 x i32> @test_i32_to_8(i32 %s) {
 define <8 x i32> @test_masked_i32_to_8_mask0(i32 %s, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -846,8 +789,7 @@ define <8 x i32> @test_masked_i32_to_8_mask0(i32 %s, <8 x i32> %default, <8 x i3
 define <8 x i32> @test_masked_z_i32_to_8_mask0(i32 %s, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -859,8 +801,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mask0(i32 %s, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mask1(i32 %s, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -873,8 +814,7 @@ define <8 x i32> @test_masked_i32_to_8_mask1(i32 %s, <8 x i32> %default, <8 x i3
 define <8 x i32> @test_masked_z_i32_to_8_mask1(i32 %s, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -886,8 +826,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mask1(i32 %s, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mask2(i32 %s, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -900,8 +839,7 @@ define <8 x i32> @test_masked_i32_to_8_mask2(i32 %s, <8 x i32> %default, <8 x i3
 define <8 x i32> @test_masked_z_i32_to_8_mask2(i32 %s, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -913,8 +851,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mask2(i32 %s, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mask3(i32 %s, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -927,8 +864,7 @@ define <8 x i32> @test_masked_i32_to_8_mask3(i32 %s, <8 x i32> %default, <8 x i3
 define <8 x i32> @test_masked_z_i32_to_8_mask3(i32 %s, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -949,8 +885,7 @@ define <16 x i32> @test_i32_to_16(i32 %s) {
 define <16 x i32> @test_masked_i32_to_16_mask0(i32 %s, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -963,8 +898,7 @@ define <16 x i32> @test_masked_i32_to_16_mask0(i32 %s, <16 x i32> %default, <16 
 define <16 x i32> @test_masked_z_i32_to_16_mask0(i32 %s, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -976,8 +910,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mask0(i32 %s, <16 x i32> %mask) {
 define <16 x i32> @test_masked_i32_to_16_mask1(i32 %s, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -990,8 +923,7 @@ define <16 x i32> @test_masked_i32_to_16_mask1(i32 %s, <16 x i32> %default, <16 
 define <16 x i32> @test_masked_z_i32_to_16_mask1(i32 %s, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -1003,8 +935,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mask1(i32 %s, <16 x i32> %mask) {
 define <16 x i32> @test_masked_i32_to_16_mask2(i32 %s, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -1017,8 +948,7 @@ define <16 x i32> @test_masked_i32_to_16_mask2(i32 %s, <16 x i32> %default, <16 
 define <16 x i32> @test_masked_z_i32_to_16_mask2(i32 %s, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -1030,8 +960,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mask2(i32 %s, <16 x i32> %mask) {
 define <16 x i32> @test_masked_i32_to_16_mask3(i32 %s, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -1044,8 +973,7 @@ define <16 x i32> @test_masked_i32_to_16_mask3(i32 %s, <16 x i32> %default, <16 
 define <16 x i32> @test_masked_z_i32_to_16_mask3(i32 %s, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i32> undef, i32 %s, i32 0
@@ -1066,8 +994,7 @@ define <2 x i64> @test_i64_to_2(i64 %s) {
 define <2 x i64> @test_masked_i64_to_2_mask0(i64 %s, <2 x i64> %default, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_2_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1080,8 +1007,7 @@ define <2 x i64> @test_masked_i64_to_2_mask0(i64 %s, <2 x i64> %default, <2 x i6
 define <2 x i64> @test_masked_z_i64_to_2_mask0(i64 %s, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_2_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1093,8 +1019,7 @@ define <2 x i64> @test_masked_z_i64_to_2_mask0(i64 %s, <2 x i64> %mask) {
 define <2 x i64> @test_masked_i64_to_2_mask1(i64 %s, <2 x i64> %default, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_2_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1107,8 +1032,7 @@ define <2 x i64> @test_masked_i64_to_2_mask1(i64 %s, <2 x i64> %default, <2 x i6
 define <2 x i64> @test_masked_z_i64_to_2_mask1(i64 %s, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_2_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1129,8 +1053,7 @@ define <4 x i64> @test_i64_to_4(i64 %s) {
 define <4 x i64> @test_masked_i64_to_4_mask0(i64 %s, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1143,8 +1066,7 @@ define <4 x i64> @test_masked_i64_to_4_mask0(i64 %s, <4 x i64> %default, <4 x i6
 define <4 x i64> @test_masked_z_i64_to_4_mask0(i64 %s, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1156,8 +1078,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mask0(i64 %s, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mask1(i64 %s, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1170,8 +1091,7 @@ define <4 x i64> @test_masked_i64_to_4_mask1(i64 %s, <4 x i64> %default, <4 x i6
 define <4 x i64> @test_masked_z_i64_to_4_mask1(i64 %s, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1183,8 +1103,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mask1(i64 %s, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mask2(i64 %s, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1197,8 +1116,7 @@ define <4 x i64> @test_masked_i64_to_4_mask2(i64 %s, <4 x i64> %default, <4 x i6
 define <4 x i64> @test_masked_z_i64_to_4_mask2(i64 %s, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1210,8 +1128,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mask2(i64 %s, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mask3(i64 %s, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1224,8 +1141,7 @@ define <4 x i64> @test_masked_i64_to_4_mask3(i64 %s, <4 x i64> %default, <4 x i6
 define <4 x i64> @test_masked_z_i64_to_4_mask3(i64 %s, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1246,8 +1162,7 @@ define <8 x i64> @test_i64_to_8(i64 %s) {
 define <8 x i64> @test_masked_i64_to_8_mask0(i64 %s, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1260,8 +1175,7 @@ define <8 x i64> @test_masked_i64_to_8_mask0(i64 %s, <8 x i64> %default, <8 x i6
 define <8 x i64> @test_masked_z_i64_to_8_mask0(i64 %s, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1273,8 +1187,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mask0(i64 %s, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mask1(i64 %s, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1287,8 +1200,7 @@ define <8 x i64> @test_masked_i64_to_8_mask1(i64 %s, <8 x i64> %default, <8 x i6
 define <8 x i64> @test_masked_z_i64_to_8_mask1(i64 %s, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1300,8 +1212,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mask1(i64 %s, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mask2(i64 %s, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1314,8 +1225,7 @@ define <8 x i64> @test_masked_i64_to_8_mask2(i64 %s, <8 x i64> %default, <8 x i6
 define <8 x i64> @test_masked_z_i64_to_8_mask2(i64 %s, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1327,8 +1237,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mask2(i64 %s, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mask3(i64 %s, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1341,8 +1250,7 @@ define <8 x i64> @test_masked_i64_to_8_mask3(i64 %s, <8 x i64> %default, <8 x i6
 define <8 x i64> @test_masked_z_i64_to_8_mask3(i64 %s, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = insertelement <2 x i64> undef, i64 %s, i32 0
@@ -1364,8 +1272,7 @@ define <16 x i8> @test_i8_to_16_mem(i8* %p) {
 define <16 x i8> @test_masked_i8_to_16_mem_mask0(i8* %p, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1379,8 +1286,7 @@ define <16 x i8> @test_masked_i8_to_16_mem_mask0(i8* %p, <16 x i8> %default, <16
 define <16 x i8> @test_masked_z_i8_to_16_mem_mask0(i8* %p, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1393,8 +1299,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mem_mask0(i8* %p, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mem_mask1(i8* %p, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1408,8 +1313,7 @@ define <16 x i8> @test_masked_i8_to_16_mem_mask1(i8* %p, <16 x i8> %default, <16
 define <16 x i8> @test_masked_z_i8_to_16_mem_mask1(i8* %p, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1422,8 +1326,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mem_mask1(i8* %p, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mem_mask2(i8* %p, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1437,8 +1340,7 @@ define <16 x i8> @test_masked_i8_to_16_mem_mask2(i8* %p, <16 x i8> %default, <16
 define <16 x i8> @test_masked_z_i8_to_16_mem_mask2(i8* %p, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1451,8 +1353,7 @@ define <16 x i8> @test_masked_z_i8_to_16_mem_mask2(i8* %p, <16 x i8> %mask) {
 define <16 x i8> @test_masked_i8_to_16_mem_mask3(i8* %p, <16 x i8> %default, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmb %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1466,8 +1367,7 @@ define <16 x i8> @test_masked_i8_to_16_mem_mask3(i8* %p, <16 x i8> %default, <16
 define <16 x i8> @test_masked_z_i8_to_16_mem_mask3(i8* %p, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1490,8 +1390,7 @@ define <32 x i8> @test_i8_to_32_mem(i8* %p) {
 define <32 x i8> @test_masked_i8_to_32_mem_mask0(i8* %p, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1505,8 +1404,7 @@ define <32 x i8> @test_masked_i8_to_32_mem_mask0(i8* %p, <32 x i8> %default, <32
 define <32 x i8> @test_masked_z_i8_to_32_mem_mask0(i8* %p, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1519,8 +1417,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mem_mask0(i8* %p, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mem_mask1(i8* %p, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1534,8 +1431,7 @@ define <32 x i8> @test_masked_i8_to_32_mem_mask1(i8* %p, <32 x i8> %default, <32
 define <32 x i8> @test_masked_z_i8_to_32_mem_mask1(i8* %p, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1548,8 +1444,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mem_mask1(i8* %p, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mem_mask2(i8* %p, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1563,8 +1458,7 @@ define <32 x i8> @test_masked_i8_to_32_mem_mask2(i8* %p, <32 x i8> %default, <32
 define <32 x i8> @test_masked_z_i8_to_32_mem_mask2(i8* %p, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1577,8 +1471,7 @@ define <32 x i8> @test_masked_z_i8_to_32_mem_mask2(i8* %p, <32 x i8> %mask) {
 define <32 x i8> @test_masked_i8_to_32_mem_mask3(i8* %p, <32 x i8> %default, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_32_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1592,8 +1485,7 @@ define <32 x i8> @test_masked_i8_to_32_mem_mask3(i8* %p, <32 x i8> %default, <32
 define <32 x i8> @test_masked_z_i8_to_32_mem_mask3(i8* %p, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_32_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmb %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1616,8 +1508,7 @@ define <64 x i8> @test_i8_to_64_mem(i8* %p) {
 define <64 x i8> @test_masked_i8_to_64_mem_mask0(i8* %p, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1631,8 +1522,7 @@ define <64 x i8> @test_masked_i8_to_64_mem_mask0(i8* %p, <64 x i8> %default, <64
 define <64 x i8> @test_masked_z_i8_to_64_mem_mask0(i8* %p, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1645,8 +1535,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mem_mask0(i8* %p, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mem_mask1(i8* %p, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1660,8 +1549,7 @@ define <64 x i8> @test_masked_i8_to_64_mem_mask1(i8* %p, <64 x i8> %default, <64
 define <64 x i8> @test_masked_z_i8_to_64_mem_mask1(i8* %p, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1674,8 +1562,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mem_mask1(i8* %p, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mem_mask2(i8* %p, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1689,8 +1576,7 @@ define <64 x i8> @test_masked_i8_to_64_mem_mask2(i8* %p, <64 x i8> %default, <64
 define <64 x i8> @test_masked_z_i8_to_64_mem_mask2(i8* %p, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1703,8 +1589,7 @@ define <64 x i8> @test_masked_z_i8_to_64_mem_mask2(i8* %p, <64 x i8> %mask) {
 define <64 x i8> @test_masked_i8_to_64_mem_mask3(i8* %p, <64 x i8> %default, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_i8_to_64_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1718,8 +1603,7 @@ define <64 x i8> @test_masked_i8_to_64_mem_mask3(i8* %p, <64 x i8> %default, <64
 define <64 x i8> @test_masked_z_i8_to_64_mem_mask3(i8* %p, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_i8_to_64_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastb (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i8, i8* %p
@@ -1742,8 +1626,7 @@ define <8 x i16> @test_i16_to_8_mem(i16* %p) {
 define <8 x i16> @test_masked_i16_to_8_mem_mask0(i16* %p, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1757,8 +1640,7 @@ define <8 x i16> @test_masked_i16_to_8_mem_mask0(i16* %p, <8 x i16> %default, <8
 define <8 x i16> @test_masked_z_i16_to_8_mem_mask0(i16* %p, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1771,8 +1653,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mem_mask0(i16* %p, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mem_mask1(i16* %p, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1786,8 +1667,7 @@ define <8 x i16> @test_masked_i16_to_8_mem_mask1(i16* %p, <8 x i16> %default, <8
 define <8 x i16> @test_masked_z_i16_to_8_mem_mask1(i16* %p, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1800,8 +1680,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mem_mask1(i16* %p, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mem_mask2(i16* %p, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1815,8 +1694,7 @@ define <8 x i16> @test_masked_i16_to_8_mem_mask2(i16* %p, <8 x i16> %default, <8
 define <8 x i16> @test_masked_z_i16_to_8_mem_mask2(i16* %p, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1829,8 +1707,7 @@ define <8 x i16> @test_masked_z_i16_to_8_mem_mask2(i16* %p, <8 x i16> %mask) {
 define <8 x i16> @test_masked_i16_to_8_mem_mask3(i16* %p, <8 x i16> %default, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1844,8 +1721,7 @@ define <8 x i16> @test_masked_i16_to_8_mem_mask3(i16* %p, <8 x i16> %default, <8
 define <8 x i16> @test_masked_z_i16_to_8_mem_mask3(i16* %p, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1868,8 +1744,7 @@ define <16 x i16> @test_i16_to_16_mem(i16* %p) {
 define <16 x i16> @test_masked_i16_to_16_mem_mask0(i16* %p, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1883,8 +1758,7 @@ define <16 x i16> @test_masked_i16_to_16_mem_mask0(i16* %p, <16 x i16> %default,
 define <16 x i16> @test_masked_z_i16_to_16_mem_mask0(i16* %p, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1897,8 +1771,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mem_mask0(i16* %p, <16 x i16> %mask) 
 define <16 x i16> @test_masked_i16_to_16_mem_mask1(i16* %p, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1912,8 +1785,7 @@ define <16 x i16> @test_masked_i16_to_16_mem_mask1(i16* %p, <16 x i16> %default,
 define <16 x i16> @test_masked_z_i16_to_16_mem_mask1(i16* %p, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1926,8 +1798,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mem_mask1(i16* %p, <16 x i16> %mask) 
 define <16 x i16> @test_masked_i16_to_16_mem_mask2(i16* %p, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1941,8 +1812,7 @@ define <16 x i16> @test_masked_i16_to_16_mem_mask2(i16* %p, <16 x i16> %default,
 define <16 x i16> @test_masked_z_i16_to_16_mem_mask2(i16* %p, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1955,8 +1825,7 @@ define <16 x i16> @test_masked_z_i16_to_16_mem_mask2(i16* %p, <16 x i16> %mask) 
 define <16 x i16> @test_masked_i16_to_16_mem_mask3(i16* %p, <16 x i16> %default, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmw %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1970,8 +1839,7 @@ define <16 x i16> @test_masked_i16_to_16_mem_mask3(i16* %p, <16 x i16> %default,
 define <16 x i16> @test_masked_z_i16_to_16_mem_mask3(i16* %p, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmw %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -1994,8 +1862,7 @@ define <32 x i16> @test_i16_to_32_mem(i16* %p) {
 define <32 x i16> @test_masked_i16_to_32_mem_mask0(i16* %p, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2009,8 +1876,7 @@ define <32 x i16> @test_masked_i16_to_32_mem_mask0(i16* %p, <32 x i16> %default,
 define <32 x i16> @test_masked_z_i16_to_32_mem_mask0(i16* %p, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2023,8 +1889,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mem_mask0(i16* %p, <32 x i16> %mask) 
 define <32 x i16> @test_masked_i16_to_32_mem_mask1(i16* %p, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2038,8 +1903,7 @@ define <32 x i16> @test_masked_i16_to_32_mem_mask1(i16* %p, <32 x i16> %default,
 define <32 x i16> @test_masked_z_i16_to_32_mem_mask1(i16* %p, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2052,8 +1916,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mem_mask1(i16* %p, <32 x i16> %mask) 
 define <32 x i16> @test_masked_i16_to_32_mem_mask2(i16* %p, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2067,8 +1930,7 @@ define <32 x i16> @test_masked_i16_to_32_mem_mask2(i16* %p, <32 x i16> %default,
 define <32 x i16> @test_masked_z_i16_to_32_mem_mask2(i16* %p, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2081,8 +1943,7 @@ define <32 x i16> @test_masked_z_i16_to_32_mem_mask2(i16* %p, <32 x i16> %mask) 
 define <32 x i16> @test_masked_i16_to_32_mem_mask3(i16* %p, <32 x i16> %default, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_i16_to_32_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2096,8 +1957,7 @@ define <32 x i16> @test_masked_i16_to_32_mem_mask3(i16* %p, <32 x i16> %default,
 define <32 x i16> @test_masked_z_i16_to_32_mem_mask3(i16* %p, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_i16_to_32_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i16, i16* %p
@@ -2120,8 +1980,7 @@ define <4 x i32> @test_i32_to_4_mem(i32* %p) {
 define <4 x i32> @test_masked_i32_to_4_mem_mask0(i32* %p, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2135,8 +1994,7 @@ define <4 x i32> @test_masked_i32_to_4_mem_mask0(i32* %p, <4 x i32> %default, <4
 define <4 x i32> @test_masked_z_i32_to_4_mem_mask0(i32* %p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2149,8 +2007,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mem_mask0(i32* %p, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mem_mask1(i32* %p, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2164,8 +2021,7 @@ define <4 x i32> @test_masked_i32_to_4_mem_mask1(i32* %p, <4 x i32> %default, <4
 define <4 x i32> @test_masked_z_i32_to_4_mem_mask1(i32* %p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2178,8 +2034,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mem_mask1(i32* %p, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mem_mask2(i32* %p, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2193,8 +2048,7 @@ define <4 x i32> @test_masked_i32_to_4_mem_mask2(i32* %p, <4 x i32> %default, <4
 define <4 x i32> @test_masked_z_i32_to_4_mem_mask2(i32* %p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2207,8 +2061,7 @@ define <4 x i32> @test_masked_z_i32_to_4_mem_mask2(i32* %p, <4 x i32> %mask) {
 define <4 x i32> @test_masked_i32_to_4_mem_mask3(i32* %p, <4 x i32> %default, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2222,8 +2075,7 @@ define <4 x i32> @test_masked_i32_to_4_mem_mask3(i32* %p, <4 x i32> %default, <4
 define <4 x i32> @test_masked_z_i32_to_4_mem_mask3(i32* %p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2246,8 +2098,7 @@ define <8 x i32> @test_i32_to_8_mem(i32* %p) {
 define <8 x i32> @test_masked_i32_to_8_mem_mask0(i32* %p, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2261,8 +2112,7 @@ define <8 x i32> @test_masked_i32_to_8_mem_mask0(i32* %p, <8 x i32> %default, <8
 define <8 x i32> @test_masked_z_i32_to_8_mem_mask0(i32* %p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2275,8 +2125,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mem_mask0(i32* %p, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mem_mask1(i32* %p, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2290,8 +2139,7 @@ define <8 x i32> @test_masked_i32_to_8_mem_mask1(i32* %p, <8 x i32> %default, <8
 define <8 x i32> @test_masked_z_i32_to_8_mem_mask1(i32* %p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2304,8 +2152,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mem_mask1(i32* %p, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mem_mask2(i32* %p, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2319,8 +2166,7 @@ define <8 x i32> @test_masked_i32_to_8_mem_mask2(i32* %p, <8 x i32> %default, <8
 define <8 x i32> @test_masked_z_i32_to_8_mem_mask2(i32* %p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2333,8 +2179,7 @@ define <8 x i32> @test_masked_z_i32_to_8_mem_mask2(i32* %p, <8 x i32> %mask) {
 define <8 x i32> @test_masked_i32_to_8_mem_mask3(i32* %p, <8 x i32> %default, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2348,8 +2193,7 @@ define <8 x i32> @test_masked_i32_to_8_mem_mask3(i32* %p, <8 x i32> %default, <8
 define <8 x i32> @test_masked_z_i32_to_8_mem_mask3(i32* %p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2372,8 +2216,7 @@ define <16 x i32> @test_i32_to_16_mem(i32* %p) {
 define <16 x i32> @test_masked_i32_to_16_mem_mask0(i32* %p, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2387,8 +2230,7 @@ define <16 x i32> @test_masked_i32_to_16_mem_mask0(i32* %p, <16 x i32> %default,
 define <16 x i32> @test_masked_z_i32_to_16_mem_mask0(i32* %p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2401,8 +2243,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mem_mask0(i32* %p, <16 x i32> %mask) 
 define <16 x i32> @test_masked_i32_to_16_mem_mask1(i32* %p, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2416,8 +2257,7 @@ define <16 x i32> @test_masked_i32_to_16_mem_mask1(i32* %p, <16 x i32> %default,
 define <16 x i32> @test_masked_z_i32_to_16_mem_mask1(i32* %p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2430,8 +2270,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mem_mask1(i32* %p, <16 x i32> %mask) 
 define <16 x i32> @test_masked_i32_to_16_mem_mask2(i32* %p, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2445,8 +2284,7 @@ define <16 x i32> @test_masked_i32_to_16_mem_mask2(i32* %p, <16 x i32> %default,
 define <16 x i32> @test_masked_z_i32_to_16_mem_mask2(i32* %p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2459,8 +2297,7 @@ define <16 x i32> @test_masked_z_i32_to_16_mem_mask2(i32* %p, <16 x i32> %mask) 
 define <16 x i32> @test_masked_i32_to_16_mem_mask3(i32* %p, <16 x i32> %default, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_i32_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2474,8 +2311,7 @@ define <16 x i32> @test_masked_i32_to_16_mem_mask3(i32* %p, <16 x i32> %default,
 define <16 x i32> @test_masked_z_i32_to_16_mem_mask3(i32* %p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_i32_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i32, i32* %p
@@ -2498,8 +2334,7 @@ define <2 x i64> @test_i64_to_2_mem(i64* %p) {
 define <2 x i64> @test_masked_i64_to_2_mem_mask0(i64* %p, <2 x i64> %default, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_2_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2513,8 +2348,7 @@ define <2 x i64> @test_masked_i64_to_2_mem_mask0(i64* %p, <2 x i64> %default, <2
 define <2 x i64> @test_masked_z_i64_to_2_mem_mask0(i64* %p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_2_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2527,8 +2361,7 @@ define <2 x i64> @test_masked_z_i64_to_2_mem_mask0(i64* %p, <2 x i64> %mask) {
 define <2 x i64> @test_masked_i64_to_2_mem_mask1(i64* %p, <2 x i64> %default, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_2_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
+; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2542,8 +2375,7 @@ define <2 x i64> @test_masked_i64_to_2_mem_mask1(i64* %p, <2 x i64> %default, <2
 define <2 x i64> @test_masked_z_i64_to_2_mem_mask1(i64* %p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_2_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2566,8 +2398,7 @@ define <4 x i64> @test_i64_to_4_mem(i64* %p) {
 define <4 x i64> @test_masked_i64_to_4_mem_mask0(i64* %p, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2581,8 +2412,7 @@ define <4 x i64> @test_masked_i64_to_4_mem_mask0(i64* %p, <4 x i64> %default, <4
 define <4 x i64> @test_masked_z_i64_to_4_mem_mask0(i64* %p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2595,8 +2425,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mem_mask0(i64* %p, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mem_mask1(i64* %p, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2610,8 +2439,7 @@ define <4 x i64> @test_masked_i64_to_4_mem_mask1(i64* %p, <4 x i64> %default, <4
 define <4 x i64> @test_masked_z_i64_to_4_mem_mask1(i64* %p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2624,8 +2452,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mem_mask1(i64* %p, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mem_mask2(i64* %p, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2639,8 +2466,7 @@ define <4 x i64> @test_masked_i64_to_4_mem_mask2(i64* %p, <4 x i64> %default, <4
 define <4 x i64> @test_masked_z_i64_to_4_mem_mask2(i64* %p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2653,8 +2479,7 @@ define <4 x i64> @test_masked_z_i64_to_4_mem_mask2(i64* %p, <4 x i64> %mask) {
 define <4 x i64> @test_masked_i64_to_4_mem_mask3(i64* %p, <4 x i64> %default, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1
+; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2668,8 +2493,7 @@ define <4 x i64> @test_masked_i64_to_4_mem_mask3(i64* %p, <4 x i64> %default, <4
 define <4 x i64> @test_masked_z_i64_to_4_mem_mask3(i64* %p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1
+; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2692,8 +2516,7 @@ define <8 x i64> @test_i64_to_8_mem(i64* %p) {
 define <8 x i64> @test_masked_i64_to_8_mem_mask0(i64* %p, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2707,8 +2530,7 @@ define <8 x i64> @test_masked_i64_to_8_mem_mask0(i64* %p, <8 x i64> %default, <8
 define <8 x i64> @test_masked_z_i64_to_8_mem_mask0(i64* %p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2721,8 +2543,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mem_mask0(i64* %p, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mem_mask1(i64* %p, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2736,8 +2557,7 @@ define <8 x i64> @test_masked_i64_to_8_mem_mask1(i64* %p, <8 x i64> %default, <8
 define <8 x i64> @test_masked_z_i64_to_8_mem_mask1(i64* %p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2750,8 +2570,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mem_mask1(i64* %p, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mem_mask2(i64* %p, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2765,8 +2584,7 @@ define <8 x i64> @test_masked_i64_to_8_mem_mask2(i64* %p, <8 x i64> %default, <8
 define <8 x i64> @test_masked_z_i64_to_8_mem_mask2(i64* %p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2779,8 +2597,7 @@ define <8 x i64> @test_masked_z_i64_to_8_mem_mask2(i64* %p, <8 x i64> %mask) {
 define <8 x i64> @test_masked_i64_to_8_mem_mask3(i64* %p, <8 x i64> %default, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_i64_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p
@@ -2794,8 +2611,7 @@ define <8 x i64> @test_masked_i64_to_8_mem_mask3(i64* %p, <8 x i64> %default, <8
 define <8 x i64> @test_masked_z_i64_to_8_mem_mask3(i64* %p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_i64_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastq (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %s = load i64, i64* %p

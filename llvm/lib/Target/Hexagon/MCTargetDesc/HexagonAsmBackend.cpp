@@ -51,7 +51,7 @@ class HexagonAsmBackend : public MCAsmBackend {
     SmallVector<MCFixup, 4> Fixups;
     SmallString<256> Code;
     raw_svector_ostream VecOS(Code);
-    E.encodeInstruction(HMB, VecOS, Fixups, RF.getSubtargetInfo());
+    E.encodeInstruction(HMB, VecOS, Fixups, *RF.getSubtargetInfo());
 
     // Update the fragment.
     RF.setInst(HMB);
@@ -61,13 +61,14 @@ class HexagonAsmBackend : public MCAsmBackend {
 
 public:
   HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
-      StringRef CPU) :
-      OSABI(OSABI), CPU(CPU), MCII(T.createMCInstrInfo()),
-      RelaxTarget(new MCInst *), Extender(nullptr) {}
+                    StringRef CPU)
+      : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU),
+        MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
+        Extender(nullptr) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createHexagonELFObjectWriter(OS, OSABI, CPU);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createHexagonELFObjectWriter(OSABI, CPU);
   }
 
   void setExtender(MCContext &Context) const {
@@ -413,7 +414,8 @@ public:
   /// fixup kind as appropriate.
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsResolved) const override {
+                  uint64_t FixupValue, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.
@@ -510,17 +512,15 @@ public:
         break;
     }
 
-    DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "(" <<
-          (unsigned)Kind << ")\n");
-    DEBUG(uint32_t OldData = 0;
-          for (unsigned i = 0; i < NumBytes; i++)
-            OldData |= (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-          dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) <<
-            ": AValue=0x"; dbgs().write_hex(FixupValue) <<
-            ": Offset=" << Offset <<
-            ": Size=" << Data.size() <<
-            ": OInst=0x"; dbgs().write_hex(OldData) <<
-            ": Reloc=0x"; dbgs().write_hex(Reloc););
+    LLVM_DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "("
+                      << (unsigned)Kind << ")\n");
+    LLVM_DEBUG(
+        uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
+                              (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+        dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
+        dbgs().write_hex(FixupValue)
+        << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
+        dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
 
     // For each byte of the fragment that the fixup touches, mask in the
     // bits from the fixup value. The Value has been "split up" into the
@@ -530,10 +530,10 @@ public:
       InstAddr[i] |= uint8_t(Reloc >> (i * 8)) & 0xff;     // Apply new reloc
     }
 
-    DEBUG(uint32_t NewData = 0;
-          for (unsigned i = 0; i < NumBytes; i++)
-            NewData |= (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-          dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
+    LLVM_DEBUG(uint32_t NewData = 0;
+               for (unsigned i = 0; i < NumBytes; i++) NewData |=
+               (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+               dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
   }
 
   bool isInstRelaxable(MCInst const &HMI) const {
@@ -562,7 +562,8 @@ public:
   /// relaxation.
   ///
   /// \param Inst - The instruction to test.
-  bool mayNeedRelaxation(MCInst const &Inst) const override {
+  bool mayNeedRelaxation(MCInst const &Inst,
+                         const MCSubtargetInfo &STI) const override {
     return true;
   }
 
@@ -571,7 +572,8 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
                                     const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout) const override {
+                                    const MCAsmLayout &Layout,
+                                    const bool WasForced) const override {
     MCInst const &MCB = DF->getInst();
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
@@ -682,17 +684,17 @@ public:
     assert(Update && "Didn't find relaxation target");
   }
 
-  bool writeNopData(uint64_t Count,
-                    MCObjectWriter * OW) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
     static const uint32_t Nopcode  = 0x7f000000, // Hard-coded NOP.
                           ParseIn  = 0x00004000, // In packet parse-bits.
                           ParseEnd = 0x0000c000; // End of packet parse-bits.
 
     while(Count % HEXAGON_INSTR_SIZE) {
-      DEBUG(dbgs() << "Alignment not a multiple of the instruction size:" <<
-          Count % HEXAGON_INSTR_SIZE << "/" << HEXAGON_INSTR_SIZE << "\n");
+      LLVM_DEBUG(dbgs() << "Alignment not a multiple of the instruction size:"
+                        << Count % HEXAGON_INSTR_SIZE << "/"
+                        << HEXAGON_INSTR_SIZE << "\n");
       --Count;
-      OW->write8(0);
+      OS << '\0';
     }
 
     while(Count) {
@@ -700,7 +702,7 @@ public:
       // Close the packet whenever a multiple of the maximum packet size remains
       uint32_t ParseBits = (Count % (HEXAGON_PACKET_SIZE * HEXAGON_INSTR_SIZE))?
                            ParseIn: ParseEnd;
-      OW->write32(Nopcode | ParseBits);
+      support::endian::write<uint32_t>(OS, Nopcode | ParseBits, Endian);
     }
     return true;
   }
@@ -736,7 +738,7 @@ public:
                 Inst.addOperand(MCOperand::createInst(Nop));
                 Size -= 4;
                 if (!HexagonMCChecker(
-                         Context, *MCII, RF.getSubtargetInfo(), Inst,
+                         Context, *MCII, *RF.getSubtargetInfo(), Inst,
                          *Context.getRegisterInfo(), false)
                          .check()) {
                   Inst.erase(Inst.end() - 1);
@@ -744,7 +746,7 @@ public:
                 }
               }
               bool Error = HexagonMCShuffle(Context, true, *MCII,
-                                            RF.getSubtargetInfo(), Inst);
+                                            *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);

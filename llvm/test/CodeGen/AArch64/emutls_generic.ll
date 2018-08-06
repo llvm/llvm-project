@@ -9,6 +9,18 @@
 ; RUN: llc < %s -emulated-tls -mtriple=aarch64-apple-darwin -O3 \
 ; RUN:     | FileCheck -check-prefix=DARWIN %s
 
+; RUN: llc < %s -mtriple=aarch64-linux-android -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=ARM_64 %s
+; RUN: llc < %s -mtriple=aarch64-linux-android -relocation-model=pic -O3 \
+; RUN:     | FileCheck -check-prefix=ARM_64 %s
+; RUN: llc < %s -mtriple=aarch64-linux-android -O3 \
+; RUN:     | FileCheck -check-prefix=ARM_64 %s
+; aarch64-windows-gnu needs explicit -emulated-tls
+; RUN: llc < %s -mtriple=aarch64-apple-darwin -O3 \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
+
+; NoEMU-NOT: __emutls
+
 ; Make sure that TLS symbols are emitted in expected order.
 
 @external_x = external thread_local global i32, align 8

@@ -41,13 +41,13 @@ define i32 @unused() !dbg !18 {
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !11 = !{!"clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)"}
-!12 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 4, type: !13, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !15)
+!12 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 4, type: !13, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !15)
 !13 = !DISubroutineType(types: !14)
 !14 = !{!8, !8}
 !15 = !{!16}
 !16 = !DILocalVariable(name: "x", arg: 1, scope: !12, file: !3, line: 4, type: !8)
 !17 = !DILocation(line: 4, column: 13, scope: !12)
-!18 = distinct !DISubprogram(name: "unused", scope: !3, file: !3, line: 8, type: !19, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, unit: !2, variables: !4)
+!18 = distinct !DISubprogram(name: "unused", scope: !3, file: !3, line: 8, type: !19, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, unit: !2, retainedNodes: !4)
 !19 = !DISubroutineType(types: !20)
 !20 = !{!8}
 !21 = !DILocation(line: 9, column: 3, scope: !18)

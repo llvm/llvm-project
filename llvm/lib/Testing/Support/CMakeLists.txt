@@ -8,6 +8,9 @@ add_llvm_library(LLVMTestingSupport
   
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Testing/Support
+
+  LINK_COMPONENTS
+  Support
   )
 
 include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)

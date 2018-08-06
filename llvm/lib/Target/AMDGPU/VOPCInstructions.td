@@ -30,8 +30,8 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   let Inst{31-25} = 0x3e; // encoding
 
   // VOPC disallows dst_sel and dst_unused as they have no effect on destination
-  let Inst{42-40} = SDWA.DWORD;
-  let Inst{44-43} = SDWA.UNUSED_PRESERVE;
+  let Inst{42-40} = 0;
+  let Inst{44-43} = 0;
 }
 
 class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
@@ -106,6 +106,7 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :

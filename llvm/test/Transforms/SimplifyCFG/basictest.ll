@@ -126,7 +126,7 @@ declare i8 @test6g(i8*)
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !7, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !4)
 !4 = !{}
 !5 = !DILocation(line: 23, scope: !6)
-!6 = distinct !DISubprogram(name: "foo", scope: !3, file: !7, line: 1, type: !DISubroutineType(types: !4), isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !4)
+!6 = distinct !DISubprogram(name: "foo", scope: !3, file: !7, line: 1, type: !DISubroutineType(types: !4), isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !3, retainedNodes: !4)
 !7 = !DIFile(filename: "foo.c", directory: "/")
 !8 = !{i32 2, !"Dwarf Version", i32 2}
 !9 = !{i32 2, !"Debug Info Version", i32 3}

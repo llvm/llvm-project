@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -disassemble %s -mcpu cortex-a8 -triple thumbv7 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V7
+# RUN: not llvm-mc -disassemble %s -mcpu cortex-a15 -triple thumbv7 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V7
 # RUN: not llvm-mc -disassemble %s -mcpu cortex-a53 -triple thumbv8 2>&1 | FileCheck %s
 
 # This file is checking Thumbv7 encodings which are globally invalid, usually due
@@ -379,3 +379,18 @@
 [0x63 0xeb 0x2d 0x46]
 # CHECK-V7: warning: potentially undefined instruction encoding
 # CHECK-V7-NEXT: [0x63 0xeb 0x2d 0x46]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for MSR/MRS (banked register)
+#------------------------------------------------------------------------------
+# These have a banked register encoding of 0b111111, which is unallocated.
+
+# msr <invalid>, r0
+[0x90,0xf3,0x30,0x8f]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x90,0xf3,0x30,0x8f]
+
+# mrs r0, <invalid>
+[0xff,0xf3,0x30,0x80]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xff,0xf3,0x30,0x80]

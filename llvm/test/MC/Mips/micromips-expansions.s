@@ -55,3 +55,21 @@
 
     lw  $t2, 655483($a0)
     sw  $t2, 123456($t1)
+
+    lh  $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lh      $4, -32768($4)
+
+    lh  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lh      $4, 4($4)
+
+    lhu  $4, 0x8000
+# CHECK-LE: lui     $4, 1
+# CHECK-LE: lhu     $4, -32768($4)
+
+    lhu  $4, 0x20004($3)
+# CHECK-LE: lui     $4, 2
+# CHECK-LE: addu    $4, $4, $3
+# CHECK-LE: lhu     $4, 4($4)

@@ -35,6 +35,7 @@
 
 #include "Unix.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/config.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -85,6 +86,7 @@ using InterruptFunctionType = void (*)();
 static std::atomic<InterruptFunctionType> InterruptFunction =
     ATOMIC_VAR_INIT(nullptr);
 
+namespace {
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
@@ -193,6 +195,7 @@ struct FilesToRemoveCleanup {
       delete Head;
   }
 };
+} // namespace
 
 static StringRef Argv0;
 
@@ -248,7 +251,7 @@ static void CreateSigAltStack() {
     return;
 
   stack_t AltStack = {};
-  AltStack.ss_sp = reinterpret_cast<char *>(malloc(AltStackSize));
+  AltStack.ss_sp = static_cast<char *>(safe_malloc(AltStackSize));
   NewAltStackPointer = AltStack.ss_sp; // Save to avoid reporting a leak.
   AltStack.ss_size = AltStackSize;
   if (sigaltstack(&AltStack, &OldAltStack) != 0)

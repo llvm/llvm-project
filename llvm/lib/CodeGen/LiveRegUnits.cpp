@@ -46,7 +46,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
-      if (!O->isDef())
+      if (!O->isDef() || O->isDebug())
         continue;
       unsigned Reg = O->getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(Reg))
@@ -58,7 +58,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
 
   // Add uses to the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (!O->isReg() || !O->readsReg())
+    if (!O->isReg() || !O->readsReg() || O->isDebug())
       continue;
     unsigned Reg = O->getReg();
     if (!TargetRegisterInfo::isPhysicalRegister(Reg))

@@ -63,8 +63,10 @@ extern template void DeleteEdge<BBPostDomTree>(BBPostDomTree &DT,
 extern template void ApplyUpdates<BBDomTree>(BBDomTree &DT, BBUpdates);
 extern template void ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBUpdates);
 
-extern template bool Verify<BBDomTree>(const BBDomTree &DT);
-extern template bool Verify<BBPostDomTree>(const BBPostDomTree &DT);
+extern template bool Verify<BBDomTree>(const BBDomTree &DT,
+                                       BBDomTree::VerificationLevel VL);
+extern template bool Verify<BBPostDomTree>(const BBPostDomTree &DT,
+                                           BBPostDomTree::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
@@ -119,7 +121,7 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
   }
 };
 
-/// \brief Concrete subclass of DominatorTreeBase that is used to compute a
+/// Concrete subclass of DominatorTreeBase that is used to compute a
 /// normal dominator tree.
 ///
 /// Definition: A block is said to be forward statically reachable if there is
@@ -148,19 +150,10 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &);
 
-  /// \brief Returns *false* if the other dominator tree matches this dominator
-  /// tree.
-  inline bool compare(const DominatorTree &Other) const {
-    const DomTreeNode *R = getRootNode();
-    const DomTreeNode *OtherR = Other.getRootNode();
-    return !R || !OtherR || R->getBlock() != OtherR->getBlock() ||
-           Base::compare(Other);
-  }
-
   // Ensure base-class overloads are visible.
   using Base::dominates;
 
-  /// \brief Return true if Def dominates a use in User.
+  /// Return true if Def dominates a use in User.
   ///
   /// This performs the special checks necessary if Def and User are in the same
   /// basic block. Note that Def doesn't dominate a use in Def itself!
@@ -178,14 +171,8 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   // Ensure base class overloads are visible.
   using Base::isReachableFromEntry;
 
-  /// \brief Provide an overload for a Use.
+  /// Provide an overload for a Use.
   bool isReachableFromEntry(const Use &U) const;
-
-  /// \brief Verify the correctness of the domtree by re-computing it.
-  ///
-  /// This should only be used for debugging as it aborts the program if the
-  /// verification fails.
-  void verifyDomTree() const;
 
   // Pop up a GraphViz/gv window with the Dominator Tree rendered using `dot`.
   void viewGraph(const Twine &Name, const Twine &Title);
@@ -234,20 +221,20 @@ template <> struct GraphTraits<DominatorTree*>
   }
 };
 
-/// \brief Analysis pass which computes a \c DominatorTree.
+/// Analysis pass which computes a \c DominatorTree.
 class DominatorTreeAnalysis : public AnalysisInfoMixin<DominatorTreeAnalysis> {
   friend AnalysisInfoMixin<DominatorTreeAnalysis>;
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result typedef for this analysis pass.
+  /// Provide the result typedef for this analysis pass.
   using Result = DominatorTree;
 
-  /// \brief Run the analysis pass over a function and produce a dominator tree.
+  /// Run the analysis pass over a function and produce a dominator tree.
   DominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
-/// \brief Printer pass for the \c DominatorTree.
+/// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
     : public PassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
@@ -258,12 +245,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for the \c DominatorTree.
+/// Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Legacy analysis pass which computes a \c DominatorTree.
+/// Legacy analysis pass which computes a \c DominatorTree.
 class DominatorTreeWrapperPass : public FunctionPass {
   DominatorTree DT;
 
@@ -288,6 +275,93 @@ public:
   void releaseMemory() override { DT.releaseMemory(); }
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
+};
+
+//===-------------------------------------
+/// Class to defer updates to a DominatorTree.
+///
+/// Definition: Applying updates to every edge insertion and deletion is
+/// expensive and not necessary. When one needs the DominatorTree for analysis
+/// they can request a flush() to perform a larger batch update. This has the
+/// advantage of the DominatorTree inspecting the set of updates to find
+/// duplicates or unnecessary subtree updates.
+///
+/// The scope of DeferredDominance operates at a Function level.
+///
+/// It is not necessary for the user to scrub the updates for duplicates or
+/// updates that point to the same block (Delete, BB_A, BB_A). Performance
+/// can be gained if the caller attempts to batch updates before submitting
+/// to applyUpdates(ArrayRef) in cases where duplicate edge requests will
+/// occur.
+///
+/// It is required for the state of the LLVM IR to be applied *before*
+/// submitting updates. The update routines must analyze the current state
+/// between a pair of (From, To) basic blocks to determine if the update
+/// needs to be queued.
+/// Example (good):
+///     TerminatorInstructionBB->removeFromParent();
+///     DDT->deleteEdge(BB, Successor);
+/// Example (bad):
+///     DDT->deleteEdge(BB, Successor);
+///     TerminatorInstructionBB->removeFromParent();
+class DeferredDominance {
+public:
+  DeferredDominance(DominatorTree &DT_) : DT(DT_) {}
+
+  /// Queues multiple updates and discards duplicates.
+  void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates);
+
+  /// Helper method for a single edge insertion. It's almost always
+  /// better to batch updates and call applyUpdates to quickly remove duplicate
+  /// edges. This is best used when there is only a single insertion needed to
+  /// update Dominators.
+  void insertEdge(BasicBlock *From, BasicBlock *To);
+
+  /// Helper method for a single edge deletion. It's almost always better
+  /// to batch updates and call applyUpdates to quickly remove duplicate edges.
+  /// This is best used when there is only a single deletion needed to update
+  /// Dominators.
+  void deleteEdge(BasicBlock *From, BasicBlock *To);
+
+  /// Delays the deletion of a basic block until a flush() event.
+  void deleteBB(BasicBlock *DelBB);
+
+  /// Returns true if DelBB is awaiting deletion at a flush() event.
+  bool pendingDeletedBB(BasicBlock *DelBB);
+
+  /// Returns true if pending DT updates are queued for a flush() event.
+  bool pending();
+
+  /// Flushes all pending updates and block deletions. Returns a
+  /// correct DominatorTree reference to be used by the caller for analysis.
+  DominatorTree &flush();
+
+  /// Drops all internal state and forces a (slow) recalculation of the
+  /// DominatorTree based on the current state of the LLVM IR in F. This should
+  /// only be used in corner cases such as the Entry block of F being deleted.
+  void recalculate(Function &F);
+
+  /// Debug method to help view the state of pending updates.
+  LLVM_DUMP_METHOD void dump() const;
+
+private:
+  DominatorTree &DT;
+  SmallVector<DominatorTree::UpdateType, 16> PendUpdates;
+  SmallPtrSet<BasicBlock *, 8> DeletedBBs;
+
+  /// Apply an update (Kind, From, To) to the internal queued updates. The
+  /// update is only added when determined to be necessary. Checks for
+  /// self-domination, unnecessary updates, duplicate requests, and balanced
+  /// pairs of requests are all performed. Returns true if the update is
+  /// queued and false if it is discarded.
+  bool applyUpdate(DominatorTree::UpdateKind Kind, BasicBlock *From,
+                   BasicBlock *To);
+
+  /// Performs all pending basic block deletions. We have to defer the deletion
+  /// of these blocks until after the DominatorTree updates are applied. The
+  /// internal workings of the DominatorTree code expect every update's From
+  /// and To blocks to exist and to be a member of the same Function.
+  bool flushDelBB();
 };
 
 } // end namespace llvm

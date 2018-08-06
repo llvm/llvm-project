@@ -3,7 +3,7 @@
 ; Test that the "returned" attribute is optimized effectively.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
+target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: _Z3foov:
 ; CHECK-NEXT: .result   i32{{$}}

@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_H
 #define LLVM_TRANSFORMS_IPO_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <functional>
 #include <vector>
 
@@ -43,10 +44,6 @@ ModulePass *createStripSymbolsPass(bool OnlyDebugInfo = false);
 // Only debugging information is not stripped.
 //
 ModulePass *createStripNonDebugSymbolsPass();
-
-/// This function returns a new pass that downgrades the debug info in the
-/// module to line tables only.
-ModulePass *createStripNonLineTableDebugInfoPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -179,10 +176,13 @@ Pass *createLoopExtractorPass();
 ///
 Pass *createSingleLoopExtractorPass();
 
-/// createBlockExtractorPass - This pass extracts all blocks (except those
-/// specified in the argument list) from the functions in the module.
+/// createBlockExtractorPass - This pass extracts all the specified blocks
+/// from the functions in the module.
 ///
 ModulePass *createBlockExtractorPass();
+ModulePass *
+createBlockExtractorPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
+                         bool EraseFunctions);
 
 /// createStripDeadPrototypesPass - This pass removes any function declarations
 /// (prototypes) that are not used.
@@ -207,11 +207,6 @@ ModulePass *createMergeFunctionsPass();
 ModulePass *createPartialInliningPass();
 
 //===----------------------------------------------------------------------===//
-// createMetaRenamerPass - Rename everything with metasyntatic names.
-//
-ModulePass *createMetaRenamerPass();
-
-//===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.
 ModulePass *createBarrierNoopPass();
@@ -227,7 +222,7 @@ enum class PassSummaryAction {
   Export, ///< Export information to summary.
 };
 
-/// \brief This pass lowers type metadata and the llvm.type.test intrinsic to
+/// This pass lowers type metadata and the llvm.type.test intrinsic to
 /// bitsets.
 ///
 /// The behavior depends on the summary arguments:
@@ -240,10 +235,10 @@ enum class PassSummaryAction {
 ModulePass *createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
                                      const ModuleSummaryIndex *ImportSummary);
 
-/// \brief This pass export CFI checks for use by external modules.
+/// This pass export CFI checks for use by external modules.
 ModulePass *createCrossDSOCFIPass();
 
-/// \brief This pass implements whole-program devirtualization using type
+/// This pass implements whole-program devirtualization using type
 /// metadata.
 ///
 /// The behavior depends on the summary arguments:

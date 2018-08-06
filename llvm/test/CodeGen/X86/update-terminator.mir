@@ -48,29 +48,29 @@ body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1(50), %bb.3(50)
 
-    JNE_1 %bb.1, implicit %eflags
+    JNE_1 %bb.1, implicit $eflags
     JMP_1 %bb.3
   bb.1:
     successors: %bb.2(100)
 
-    CALL64pcrel32 @dummy1, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy1, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy1, csr_64, implicit %rsp, implicit-def %rsp
-    JNE_1 %bb.2, implicit %eflags
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    JNE_1 %bb.2, implicit $eflags
 
   bb.2:
     successors: %bb.4(100)
 
-    CALL64pcrel32 @dummy2, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy2, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy2, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
     JMP_1 %bb.4
 
   bb.3:
     successors: %bb.2(100)
-    CALL64pcrel32 @dummy3, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy3, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 @dummy3, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
     JMP_1 %bb.2
 
   bb.4:

@@ -9,6 +9,7 @@
 
 #include "llvm/IR/DebugLoc.h"
 #include "LLVMContextImpl.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 using namespace llvm;
 
@@ -99,19 +100,7 @@ DebugLoc DebugLoc::appendInlinedAt(DebugLoc DL, DILocation *InlinedAt,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void DebugLoc::dump() const {
-  if (!Loc)
-    return;
-
-  dbgs() << getLine();
-  if (getCol() != 0)
-    dbgs() << ',' << getCol();
-  if (DebugLoc InlinedAtDL = DebugLoc(getInlinedAt())) {
-    dbgs() << " @ ";
-    InlinedAtDL.dump();
-  } else
-    dbgs() << "\n";
-}
+LLVM_DUMP_METHOD void DebugLoc::dump() const { print(dbgs()); }
 #endif
 
 void DebugLoc::print(raw_ostream &OS) const {

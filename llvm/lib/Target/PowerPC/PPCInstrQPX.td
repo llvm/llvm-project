@@ -502,14 +502,14 @@ let Uses = [RM] in {
 
   // Load indexed instructions
   let mayLoad = 1 in {
-    def QVLFDX : XForm_1<31, 583,
-                        (outs qfrc:$FRT), (ins memrr:$src),
-                        "qvlfdx $FRT, $src", IIC_LdStLFD,
-                        [(set v4f64:$FRT, (load xoaddr:$src))]>;
+    def QVLFDX : XForm_1_memOp<31, 583,
+                              (outs qfrc:$FRT), (ins memrr:$src),
+                              "qvlfdx $FRT, $src", IIC_LdStLFD,
+                              [(set v4f64:$FRT, (load xoaddr:$src))]>;
     let isCodeGenOnly = 1 in
-    def QVLFDXb : XForm_1<31, 583,
-                        (outs qbrc:$FRT), (ins memrr:$src),
-                        "qvlfdx $FRT, $src", IIC_LdStLFD, []>;
+    def QVLFDXb : XForm_1_memOp<31, 583,
+                                (outs qbrc:$FRT), (ins memrr:$src),
+                                "qvlfdx $FRT, $src", IIC_LdStLFD, []>;
 
     let RC = 1 in
     def QVLFDXA : XForm_1<31, 583,
@@ -527,10 +527,10 @@ let Uses = [RM] in {
                         (outs qfrc:$FRT), (ins memrr:$src),
                         "qvlfduxa $FRT, $src", IIC_LdStLFD, []>;
 
-    def QVLFSX : XForm_1<31, 519,
-                        (outs qfrc:$FRT), (ins memrr:$src),
-                        "qvlfsx $FRT, $src", IIC_LdStLFD,
-                        [(set v4f64:$FRT, (extloadv4f32 xoaddr:$src))]>;
+    def QVLFSX : XForm_1_memOp<31, 519,
+                              (outs qfrc:$FRT), (ins memrr:$src),
+                              "qvlfsx $FRT, $src", IIC_LdStLFD,
+                              [(set v4f64:$FRT, (extloadv4f32 xoaddr:$src))]>;
 
     let isCodeGenOnly = 1 in
     def QVLFSXb : XForm_1<31, 519,
@@ -538,10 +538,10 @@ let Uses = [RM] in {
                         "qvlfsx $FRT, $src", IIC_LdStLFD,
                         [(set v4i1:$FRT, (PPCqvlfsb xoaddr:$src))]>;
     let isCodeGenOnly = 1 in
-    def QVLFSXs : XForm_1<31, 519,
-                        (outs qsrc:$FRT), (ins memrr:$src),
-                        "qvlfsx $FRT, $src", IIC_LdStLFD,
-                        [(set v4f32:$FRT, (load xoaddr:$src))]>;
+    def QVLFSXs : XForm_1_memOp<31, 519,
+                                (outs qsrc:$FRT), (ins memrr:$src),
+                                "qvlfsx $FRT, $src", IIC_LdStLFD,
+                                [(set v4f32:$FRT, (load xoaddr:$src))]>;
 
     let RC = 1 in
     def QVLFSXA : XForm_1<31, 519,
@@ -634,12 +634,12 @@ let Uses = [RM] in {
 
   // Store indexed instructions
   let mayStore = 1 in {
-    def QVSTFDX : XForm_8<31, 711,
+    def QVSTFDX : XForm_8_memOp<31, 711,
                         (outs), (ins qfrc:$FRT, memrr:$dst),
                         "qvstfdx $FRT, $dst", IIC_LdStSTFD,
                         [(store qfrc:$FRT, xoaddr:$dst)]>;
     let isCodeGenOnly = 1 in
-    def QVSTFDXb : XForm_8<31, 711,
+    def QVSTFDXb : XForm_8_memOp<31, 711,
                         (outs), (ins qbrc:$FRT, memrr:$dst),
                         "qvstfdx $FRT, $dst", IIC_LdStSTFD, []>;
 
@@ -675,12 +675,12 @@ let Uses = [RM] in {
                         (outs), (ins qfrc:$FRT, memrr:$dst),
                         "qvstfduxia $FRT, $dst", IIC_LdStSTFD, []>;
 
-    def QVSTFSX : XForm_8<31, 647,
+    def QVSTFSX : XForm_8_memOp<31, 647,
                         (outs), (ins qfrc:$FRT, memrr:$dst),
                         "qvstfsx $FRT, $dst", IIC_LdStSTFD,
                         [(truncstorev4f32 qfrc:$FRT, xoaddr:$dst)]>;
     let isCodeGenOnly = 1 in
-    def QVSTFSXs : XForm_8<31, 647,
+    def QVSTFSXs : XForm_8_memOp<31, 647,
                          (outs), (ins qsrc:$FRT, memrr:$dst),
                          "qvstfsx $FRT, $dst", IIC_LdStSTFD,
                          [(store qsrc:$FRT, xoaddr:$dst)]>;

@@ -8,11 +8,11 @@ name: test
 body: |
   bb.0:
     successors: %bb.1(4), %bb.2(1)
-    JE_1 %bb.2, implicit undef %eflags
+    JE_1 %bb.2, implicit undef $eflags
 
   bb.1:
     NOOP
 
   bb.2:
-    RETQ undef %eax
+    RETQ undef $eax
 ...

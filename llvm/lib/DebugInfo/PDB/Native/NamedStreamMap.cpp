@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -26,127 +27,101 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-// FIXME: This shouldn't be necessary, but if we insert the strings in any
-// other order, cvdump cannot read the generated name map.  This suggests that
-// we may be using the wrong hash function.  A closer inspection of the cvdump
-// source code may reveal something, but for now this at least makes us work,
-// even if only by accident.
-static constexpr const char *OrderedStreamNames[] = {"/LinkInfo", "/names",
-                                                     "/src/headerblock"};
+NamedStreamMapTraits::NamedStreamMapTraits(NamedStreamMap &NS) : NS(&NS) {}
 
-NamedStreamMap::NamedStreamMap() = default;
+uint16_t NamedStreamMapTraits::hashLookupKey(StringRef S) const {
+  // In the reference implementation, this uses
+  // HASH Hasher<ULONG*, USHORT*>::hashPbCb(PB pb, size_t cb, ULONG ulMod).
+  // Here, the type HASH is a typedef of unsigned short.
+  // ** It is not a bug that we truncate the result of hashStringV1, in fact
+  //    it is a bug if we do not! **
+  return static_cast<uint16_t>(hashStringV1(S));
+}
+
+StringRef NamedStreamMapTraits::storageKeyToLookupKey(uint32_t Offset) const {
+  return NS->getString(Offset);
+}
+
+uint32_t NamedStreamMapTraits::lookupKeyToStorageKey(StringRef S) {
+  return NS->appendStringData(S);
+}
+
+NamedStreamMap::NamedStreamMap()
+    : HashTraits(*this), OffsetIndexMap(1, HashTraits) {}
 
 Error NamedStreamMap::load(BinaryStreamReader &Stream) {
-  Mapping.clear();
-  FinalizedHashTable.clear();
-  FinalizedInfo.reset();
-
   uint32_t StringBufferSize;
   if (auto EC = Stream.readInteger(StringBufferSize))
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Expected string buffer size"));
 
-  BinaryStreamRef StringsBuffer;
-  if (auto EC = Stream.readStreamRef(StringsBuffer, StringBufferSize))
+  StringRef Buffer;
+  if (auto EC = Stream.readFixedString(Buffer, StringBufferSize))
     return EC;
+  NamesBuffer.assign(Buffer.begin(), Buffer.end());
 
-  HashTable OffsetIndexMap;
-  if (auto EC = OffsetIndexMap.load(Stream))
-    return EC;
-
-  uint32_t NameOffset;
-  uint32_t NameIndex;
-  for (const auto &Entry : OffsetIndexMap) {
-    std::tie(NameOffset, NameIndex) = Entry;
-
-    // Compute the offset of the start of the string relative to the stream.
-    BinaryStreamReader NameReader(StringsBuffer);
-    NameReader.setOffset(NameOffset);
-    // Pump out our c-string from the stream.
-    StringRef Str;
-    if (auto EC = NameReader.readCString(Str))
-      return joinErrors(std::move(EC),
-                        make_error<RawError>(raw_error_code::corrupt_file,
-                                             "Expected name map name"));
-
-    // Add this to a string-map from name to stream number.
-    Mapping.insert({Str, NameIndex});
-  }
-
-  return Error::success();
+  return OffsetIndexMap.load(Stream);
 }
 
 Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
-  assert(FinalizedInfo.hasValue());
-
   // The first field is the number of bytes of string data.
-  if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes))
+  if (auto EC = Writer.writeInteger<uint32_t>(NamesBuffer.size()))
     return EC;
 
-  for (const auto &Name : OrderedStreamNames) {
-    auto Item = Mapping.find(Name);
-    if (Item == Mapping.end())
-      continue;
-    if (auto EC = Writer.writeCString(Item->getKey()))
-      return EC;
-  }
+  // Then the actual string data.
+  StringRef Data(NamesBuffer.data(), NamesBuffer.size());
+  if (auto EC = Writer.writeFixedString(Data))
+    return EC;
 
   // And finally the Offset Index map.
-  if (auto EC = FinalizedHashTable.commit(Writer))
+  if (auto EC = OffsetIndexMap.commit(Writer))
     return EC;
 
   return Error::success();
 }
 
-uint32_t NamedStreamMap::finalize() {
-  if (FinalizedInfo.hasValue())
-    return FinalizedInfo->SerializedLength;
-
-  // Build the finalized hash table.
-  FinalizedHashTable.clear();
-  FinalizedInfo.emplace();
-
-  for (const auto &Name : OrderedStreamNames) {
-    auto Item = Mapping.find(Name);
-    if (Item == Mapping.end())
-      continue;
-    FinalizedHashTable.set(FinalizedInfo->StringDataBytes, Item->getValue());
-    FinalizedInfo->StringDataBytes += Item->getKeyLength() + 1;
-  }
-
-  // Number of bytes of string data.
-  FinalizedInfo->SerializedLength += sizeof(support::ulittle32_t);
-  // Followed by that many actual bytes of string data.
-  FinalizedInfo->SerializedLength += FinalizedInfo->StringDataBytes;
-  // Followed by the mapping from Offset to Index.
-  FinalizedInfo->SerializedLength +=
-      FinalizedHashTable.calculateSerializedLength();
-  return FinalizedInfo->SerializedLength;
+uint32_t NamedStreamMap::calculateSerializedLength() const {
+  return sizeof(uint32_t)                              // String data size
+         + NamesBuffer.size()                          // String data
+         + OffsetIndexMap.calculateSerializedLength(); // Offset Index Map
 }
 
-iterator_range<StringMapConstIterator<uint32_t>>
-NamedStreamMap::entries() const {
-  return make_range<StringMapConstIterator<uint32_t>>(Mapping.begin(),
-                                                      Mapping.end());
+uint32_t NamedStreamMap::size() const { return OffsetIndexMap.size(); }
+
+StringRef NamedStreamMap::getString(uint32_t Offset) const {
+  assert(NamesBuffer.size() > Offset);
+  return StringRef(NamesBuffer.data() + Offset);
 }
 
-uint32_t NamedStreamMap::size() const { return Mapping.size(); }
+uint32_t NamedStreamMap::hashString(uint32_t Offset) const {
+  return hashStringV1(getString(Offset));
+}
 
 bool NamedStreamMap::get(StringRef Stream, uint32_t &StreamNo) const {
-  auto Iter = Mapping.find(Stream);
-  if (Iter == Mapping.end())
+  auto Iter = OffsetIndexMap.find_as(Stream);
+  if (Iter == OffsetIndexMap.end())
     return false;
-  StreamNo = Iter->second;
+  StreamNo = (*Iter).second;
   return true;
 }
 
-void NamedStreamMap::set(StringRef Stream, uint32_t StreamNo) {
-  FinalizedInfo.reset();
-  Mapping[Stream] = StreamNo;
+StringMap<uint32_t> NamedStreamMap::entries() const {
+  StringMap<uint32_t> Result;
+  for (const auto &Entry : OffsetIndexMap) {
+    StringRef Stream(NamesBuffer.data() + Entry.first);
+    Result.try_emplace(Stream, Entry.second);
+  }
+  return Result;
 }
 
-void NamedStreamMap::remove(StringRef Stream) {
-  FinalizedInfo.reset();
-  Mapping.erase(Stream);
+uint32_t NamedStreamMap::appendStringData(StringRef S) {
+  uint32_t Offset = NamesBuffer.size();
+  NamesBuffer.insert(NamesBuffer.end(), S.begin(), S.end());
+  NamesBuffer.push_back('\0');
+  return Offset;
+}
+
+void NamedStreamMap::set(StringRef Stream, uint32_t StreamNo) {
+  OffsetIndexMap.set_as(Stream, support::ulittle32_t(StreamNo));
 }

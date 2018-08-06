@@ -29,4 +29,21 @@ TEST(ScopeExitTest, Basic) {
   EXPECT_TRUE(Called);
 }
 
+TEST(ScopeExitTest, Release) {
+  int Count = 0;
+  auto Increment = [&] { ++Count; };
+  {
+    auto G = make_scope_exit(Increment);
+    auto H = std::move(G);
+    auto I = std::move(G);
+    EXPECT_EQ(0, Count);
+  }
+  EXPECT_EQ(1, Count);
+  {
+    auto G = make_scope_exit(Increment);
+    G.release();
+  }
+  EXPECT_EQ(1, Count);
+}
+
 } // end anonymous namespace

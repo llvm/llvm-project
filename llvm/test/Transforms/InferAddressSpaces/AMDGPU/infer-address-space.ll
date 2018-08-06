@@ -30,29 +30,29 @@
 ; CHECK: ret void
 define amdgpu_kernel void @load_store_lds_f32(i32 %i, float %v) #0 {
 bb:
-  %tmp = load float, float addrspace(4)* addrspacecast (float addrspace(3)* @scalar to float addrspace(4)*), align 4
+  %tmp = load float, float* addrspacecast (float addrspace(3)* @scalar to float*), align 4
   call void @use(float %tmp)
-  store float %v, float addrspace(4)* addrspacecast (float addrspace(3)* @scalar to float addrspace(4)*), align 4
+  store float %v, float* addrspacecast (float addrspace(3)* @scalar to float*), align 4
   call void @llvm.amdgcn.s.barrier()
-  %tmp1 = addrspacecast float addrspace(3)* @scalar to float addrspace(4)*
-  %tmp2 = load float, float addrspace(4)* %tmp1, align 4
+  %tmp1 = addrspacecast float addrspace(3)* @scalar to float*
+  %tmp2 = load float, float* %tmp1, align 4
   call void @use(float %tmp2)
-  store float %v, float addrspace(4)* %tmp1, align 4
+  store float %v, float* %tmp1, align 4
   call void @llvm.amdgcn.s.barrier()
-  %tmp3 = load float, float addrspace(4)* getelementptr inbounds ([10 x float], [10 x float] addrspace(4)* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*), i32 0, i32 5), align 4
+  %tmp3 = load float, float* getelementptr inbounds ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5), align 4
   call void @use(float %tmp3)
-  store float %v, float addrspace(4)* getelementptr inbounds ([10 x float], [10 x float] addrspace(4)* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*), i32 0, i32 5), align 4
+  store float %v, float* getelementptr inbounds ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5), align 4
   call void @llvm.amdgcn.s.barrier()
-  %tmp4 = getelementptr inbounds [10 x float], [10 x float] addrspace(4)* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*), i32 0, i32 5
-  %tmp5 = load float, float addrspace(4)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds [10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i32 0, i32 5
+  %tmp5 = load float, float* %tmp4, align 4
   call void @use(float %tmp5)
-  store float %v, float addrspace(4)* %tmp4, align 4
+  store float %v, float* %tmp4, align 4
   call void @llvm.amdgcn.s.barrier()
-  %tmp6 = addrspacecast [10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*
-  %tmp7 = getelementptr inbounds [10 x float], [10 x float] addrspace(4)* %tmp6, i32 0, i32 %i
-  %tmp8 = load float, float addrspace(4)* %tmp7, align 4
+  %tmp6 = addrspacecast [10 x float] addrspace(3)* @array to [10 x float]*
+  %tmp7 = getelementptr inbounds [10 x float], [10 x float]* %tmp6, i32 0, i32 %i
+  %tmp8 = load float, float* %tmp7, align 4
   call void @use(float %tmp8)
-  store float %v, float addrspace(4)* %tmp7, align 4
+  store float %v, float* %tmp7, align 4
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
@@ -61,7 +61,7 @@ bb:
 ; CHECK: %tmp = load i32, i32 addrspace(3)* bitcast (float addrspace(3)* @scalar to i32 addrspace(3)*), align 4
 define i32 @constexpr_load_int_from_float_lds() #0 {
 bb:
-  %tmp = load i32, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* bitcast (float addrspace(3)* @scalar to i32 addrspace(3)*) to i32 addrspace(4)*), align 4
+  %tmp = load i32, i32* addrspacecast (i32 addrspace(3)* bitcast (float addrspace(3)* @scalar to i32 addrspace(3)*) to i32*), align 4
   ret i32 %tmp
 }
 
@@ -73,18 +73,18 @@ bb:
 ; CHECK: ret i32 %tmp4
 define i32 @load_int_from_global_float(float addrspace(1)* %input, i32 %i, i32 %j) #0 {
 bb:
-  %tmp = addrspacecast float addrspace(1)* %input to float addrspace(4)*
-  %tmp1 = getelementptr float, float addrspace(4)* %tmp, i32 %i
-  %tmp2 = getelementptr float, float addrspace(4)* %tmp1, i32 %j
-  %tmp3 = bitcast float addrspace(4)* %tmp2 to i32 addrspace(4)*
-  %tmp4 = load i32, i32 addrspace(4)* %tmp3
+  %tmp = addrspacecast float addrspace(1)* %input to float*
+  %tmp1 = getelementptr float, float* %tmp, i32 %i
+  %tmp2 = getelementptr float, float* %tmp1, i32 %j
+  %tmp3 = bitcast float* %tmp2 to i32*
+  %tmp4 = load i32, i32* %tmp3
   ret i32 %tmp4
 }
 
 ; CHECK-LABEL: @nested_const_expr(
 ; CHECK: store i32 1, i32 addrspace(3)* bitcast (float addrspace(3)* getelementptr inbounds ([10 x float], [10 x float] addrspace(3)* @array, i64 0, i64 1) to i32 addrspace(3)*), align 4
 define amdgpu_kernel void @nested_const_expr() #0 {
-  store i32 1, i32 addrspace(4)* bitcast (float addrspace(4)* getelementptr ([10 x float], [10 x float] addrspace(4)* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float] addrspace(4)*), i64 0, i64 1) to i32 addrspace(4)*), align 4
+  store i32 1, i32* bitcast (float* getelementptr ([10 x float], [10 x float]* addrspacecast ([10 x float] addrspace(3)* @array to [10 x float]*), i64 0, i64 1) to i32*), align 4
   ret void
 }
 
@@ -95,10 +95,10 @@ define amdgpu_kernel void @nested_const_expr() #0 {
 ; CHECK-NEXT: ret void
 define amdgpu_kernel void @rauw(float addrspace(1)* %input) #0 {
 bb:
-  %generic_input = addrspacecast float addrspace(1)* %input to float addrspace(4)*
-  %addr = getelementptr float, float addrspace(4)* %generic_input, i64 10
-  %v = load float, float addrspace(4)* %addr
-  store float %v, float addrspace(4)* %addr
+  %generic_input = addrspacecast float addrspace(1)* %input to float*
+  %addr = getelementptr float, float* %generic_input, i64 10
+  %v = load float, float* %addr
+  store float %v, float* %addr
   ret void
 }
 
@@ -119,27 +119,27 @@ bb:
 ; CHECK: br i1 %exit_cond, label %exit, label %loop
 define amdgpu_kernel void @loop() #0 {
 entry:
-  %p = addrspacecast [10 x float] addrspace(3)* @array to float addrspace(4)*
-  %end = getelementptr float, float addrspace(4)* %p, i64 10
+  %p = addrspacecast [10 x float] addrspace(3)* @array to float*
+  %end = getelementptr float, float* %p, i64 10
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
-  %i = phi float addrspace(4)* [ %p, %entry ], [ %i2, %loop ]
-  %v = load float, float addrspace(4)* %i
+  %i = phi float* [ %p, %entry ], [ %i2, %loop ]
+  %v = load float, float* %i
   call void @use(float %v)
-  %i2 = getelementptr float, float addrspace(4)* %i, i64 1
-  %exit_cond = icmp eq float addrspace(4)* %i2, %end
+  %i2 = getelementptr float, float* %i, i64 1
+  %exit_cond = icmp eq float* %i2, %end
   br i1 %exit_cond, label %exit, label %loop
 
 exit:                                             ; preds = %loop
   ret void
 }
 
-@generic_end = external addrspace(1) global float addrspace(4)*
+@generic_end = external addrspace(1) global float*
 
 ; CHECK-LABEL: @loop_with_generic_bound(
 ; CHECK: %p = bitcast [10 x float] addrspace(3)* @array to float addrspace(3)*
-; CHECK: %end = load float addrspace(4)*, float addrspace(4)* addrspace(1)* @generic_end
+; CHECK: %end = load float*, float* addrspace(1)* @generic_end
 ; CHECK: br label %loop
 
 ; CHECK: loop:
@@ -147,21 +147,21 @@ exit:                                             ; preds = %loop
 ; CHECK: %v = load float, float addrspace(3)* %i
 ; CHECK: call void @use(float %v)
 ; CHECK: %i2 = getelementptr float, float addrspace(3)* %i, i64 1
-; CHECK: %0 = addrspacecast float addrspace(3)* %i2 to float addrspace(4)*
-; CHECK: %exit_cond = icmp eq float addrspace(4)* %0, %end
+; CHECK: %0 = addrspacecast float addrspace(3)* %i2 to float*
+; CHECK: %exit_cond = icmp eq float* %0, %end
 ; CHECK: br i1 %exit_cond, label %exit, label %loop
 define amdgpu_kernel void @loop_with_generic_bound() #0 {
 entry:
-  %p = addrspacecast [10 x float] addrspace(3)* @array to float addrspace(4)*
-  %end = load float addrspace(4)*, float addrspace(4)* addrspace(1)* @generic_end
+  %p = addrspacecast [10 x float] addrspace(3)* @array to float*
+  %end = load float*, float* addrspace(1)* @generic_end
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
-  %i = phi float addrspace(4)* [ %p, %entry ], [ %i2, %loop ]
-  %v = load float, float addrspace(4)* %i
+  %i = phi float* [ %p, %entry ], [ %i2, %loop ]
+  %v = load float, float* %i
   call void @use(float %v)
-  %i2 = getelementptr float, float addrspace(4)* %i, i64 1
-  %exit_cond = icmp eq float addrspace(4)* %i2, %end
+  %i2 = getelementptr float, float* %i, i64 1
+  %exit_cond = icmp eq float* %i2, %end
   br i1 %exit_cond, label %exit, label %loop
 
 exit:                                             ; preds = %loop

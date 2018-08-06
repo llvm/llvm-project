@@ -20,7 +20,7 @@
 
 ; RUN: llc -march=mips -mcpu=mips32r6 -mattr=micromips -filetype=obj < %s -o - | llvm-objdump -no-show-raw-insn -arch mips -mcpu=mips32r6 -mattr=micromips -d - | FileCheck --check-prefix=MM32R6 %s
 
-; Test the the callee-saved registers are callee-saved as specified by section
+; Test the callee-saved registers are callee-saved as specified by section
 ; 2 of the MIPSpro N32 Handbook and section 3 of the SYSV ABI spec.
 
 define void @fpu_clobber() nounwind {

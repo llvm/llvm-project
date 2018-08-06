@@ -51,6 +51,11 @@ public:
   /// Splits a 16-bit `DREGS` register into the lo/hi register pair.
   /// \param Reg A 16-bit register to split.
   void splitReg(unsigned Reg, unsigned &LoReg, unsigned &HiReg) const;
+
+  bool trackLivenessAfterRegAlloc(const MachineFunction &) const override {
+    return true;
+  }
+
 };
 
 } // end namespace llvm

@@ -421,7 +421,7 @@ let hasSideEffects = 1, mayStore = 1 in {
     def FLUSHW : F3_1<0b10, 0b101011, (outs), (ins),
                       "flushw",
                       [(flushw)]>, Requires<[HasV9]>;
-  let rd = 0, rs1 = 1, simm13 = 3 in
+  let rd = 8, rs1 = 0, simm13 = 3 in
     def TA3 : F3_2<0b10, 0b111010, (outs), (ins),
                    "ta 3",
                    [(flushw)]>;
@@ -1008,6 +1008,9 @@ let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [Ha
 
 let isBarrier = 1, isTerminator = 1, rd = 0b01000, rs1 = 0, simm13 = 5 in
   def TA5 : F3_2<0b10, 0b111010, (outs), (ins), "ta 5", [(trap)]>;
+
+let hasSideEffects = 1, rd = 0b01000, rs1 = 0, simm13 = 1 in
+  def TA1 : F3_2<0b10, 0b111010, (outs), (ins), "ta 1", [(debugtrap)]>;
 
 // Section B.28 - Read State Register Instructions
 let rs2 = 0 in
@@ -1599,6 +1602,9 @@ let Predicates = [HasV9] in {
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
 
+// Zero immediate.
+def : Pat<(i32 0),
+          (ORrr (i32 G0), (i32 G0))>;
 // Small immediates.
 def : Pat<(i32 simm13:$val),
           (ORri (i32 G0), imm:$val)>;

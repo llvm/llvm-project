@@ -1,13 +1,9 @@
-; RUN: opt < %s -separate-const-offset-from-gep -reassociate-geps-verify-no-dead-code -S | FileCheck %s
+; RUN: opt < %s -mtriple=nvptx64-nvidia-cuda -separate-const-offset-from-gep \
+; RUN:       -reassociate-geps-verify-no-dead-code -S | FileCheck %s
 
 ; Several unit tests for -separate-const-offset-from-gep. The transformation
 ; heavily relies on TargetTransformInfo, so we put these tests under
 ; target-specific folders.
-
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-; target triple is necessary; otherwise TargetTransformInfo rejects any
-; addressing mode.
-target triple = "nvptx64-unknown-unknown"
 
 %struct.S = type { float, double }
 
@@ -271,9 +267,34 @@ entry:
 ; CHECK-NOT: add
   %ptr2 = getelementptr inbounds %struct0, %struct0* %ptr, i64 0, i32 3, i64 %arrayidx, i32 1
 ; CHECK: [[PTR:%[a-zA-Z0-9]+]] = getelementptr %struct0, %struct0* %ptr, i64 0, i32 3, i64 %idx, i32 1
-; CHECK: [[PTR1:%[a-zA-Z0-9]+]] = bitcast %struct2* [[PTR]] to i8*
-; CHECK: getelementptr inbounds i8, i8* [[PTR1]], i64 -64
-; CHECK: bitcast
+; CHECK: getelementptr inbounds %struct2, %struct2* [[PTR]], i64 -3
+  ret %struct2* %ptr2
+; CHECK-NEXT: ret
+}
+
+; Check that we can see through explicit trunc() instruction.
+define %struct2* @trunk_explicit(%struct0* %ptr, i64 %idx) {
+; CHECK-LABEL: @trunk_explicit(
+entry:
+  %idx0 = trunc i64 1 to i32
+  %ptr2 = getelementptr inbounds %struct0, %struct0* %ptr, i32 %idx0, i32 3, i64 %idx, i32 1
+; CHECK-NOT: trunc
+; CHECK: [[PTR:%[a-zA-Z0-9]+]] = getelementptr %struct0, %struct0* %ptr, i64 0, i32 3, i64 %idx, i32 1
+; CHECK: getelementptr inbounds %struct2, %struct2* %0, i64 151
+  ret %struct2* %ptr2
+; CHECK-NEXT: ret
+}
+
+; Check that we can deal with trunc inserted by
+; canonicalizeArrayIndicesToPointerSize() if size of an index is larger than
+; that of the pointer.
+define %struct2* @trunk_long_idx(%struct0* %ptr, i64 %idx) {
+; CHECK-LABEL: @trunk_long_idx(
+entry:
+  %ptr2 = getelementptr inbounds %struct0, %struct0* %ptr, i65 1, i32 3, i64 %idx, i32 1
+; CHECK-NOT: trunc
+; CHECK: [[PTR:%[a-zA-Z0-9]+]] = getelementptr %struct0, %struct0* %ptr, i64 0, i32 3, i64 %idx, i32 1
+; CHECK: getelementptr inbounds %struct2, %struct2* %0, i64 151
   ret %struct2* %ptr2
 ; CHECK-NEXT: ret
 }

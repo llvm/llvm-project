@@ -30,7 +30,7 @@ entry:
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 %struct.tree_common = type { i8*, i8*, i32 }
 
 ; CHECK-LABEL: test_zero
@@ -41,7 +41,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 define void @test_zero(%struct.tree_common* %t, i32 %code, i8* %type) {
 entry:
   %0 = bitcast %struct.tree_common* %t to i8*
-  tail call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 24, i32 8, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 24, i1 false)
   %code1 = getelementptr inbounds %struct.tree_common, %struct.tree_common* %t, i64 0, i32 2
   store i32 %code, i32* %code1, align 8
   %type2 = getelementptr inbounds %struct.tree_common, %struct.tree_common* %t, i64 0, i32 1

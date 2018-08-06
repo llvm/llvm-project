@@ -11,7 +11,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "gtest/gtest.h"
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
 #include <windows.h>
@@ -61,7 +61,7 @@ TEST(CrashRecoveryTest, Cleanup) {
   EXPECT_EQ(1, GlobalInt);
 }
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
 static void raiseIt() {
   RaiseException(123, EXCEPTION_NONCONTINUABLE, 0, NULL);
 }

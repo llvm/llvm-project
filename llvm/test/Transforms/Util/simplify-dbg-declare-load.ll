@@ -42,7 +42,7 @@ attributes #1 = { sspreq }
 
 !0 = !{i32 1, !"Debug Info Version", i32 3}
 !1 = !DILocalVariable(name: "cp", scope: !2, file: !3, line: 106, type: !12)
-!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, unit: !18, variables: !11)
+!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, unit: !18, retainedNodes: !11)
 !3 = !DIFile(filename: "grisu/fastshortest.jl", directory: ".")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7}

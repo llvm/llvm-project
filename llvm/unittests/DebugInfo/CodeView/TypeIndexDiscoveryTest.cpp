@@ -580,3 +580,24 @@ TEST_F(TypeIndexIteratorTest, CallerSym) {
   checkTypeReferences(2, TypeIndex(7), TypeIndex(8), TypeIndex(9));
 }
 
+TEST_F(TypeIndexIteratorTest, Precomp) {
+  PrecompRecord P(TypeRecordKind::Precomp);
+  P.StartTypeIndex = TypeIndex::FirstNonSimpleIndex;
+  P.TypesCount = 100;
+  P.Signature = 0x12345678;
+  P.PrecompFilePath = "C:/precomp.obj";
+
+  EndPrecompRecord EP(TypeRecordKind::EndPrecomp);
+  EP.Signature = P.Signature;
+
+  writeTypeRecords(P, EP);
+  checkTypeReferences(0);
+}
+
+// This is a test for getEncodedIntegerLength()
+TEST_F(TypeIndexIteratorTest, VariableSizeIntegers) {
+  BaseClassRecord BaseClass1(MemberAccess::Public, TypeIndex(47), (uint64_t)-1);
+  BaseClassRecord BaseClass2(MemberAccess::Public, TypeIndex(48), 1);
+  writeFieldList(BaseClass1, BaseClass2);
+  checkTypeReferences(0, TypeIndex(47), TypeIndex(48));
+}

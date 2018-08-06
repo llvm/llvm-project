@@ -29,11 +29,11 @@ def HasDSPR3 : Predicate<"Subtarget->hasDSPR3()">,
                AssemblerPredicate<"FeatureDSPR3">;
 
 class ISA_DSPR2 {
-  list<Predicate> InsnPredicates = [HasDSPR2];
+  list<Predicate> ASEPredicate = [HasDSPR2];
 }
 
 class ISA_DSPR3 {
-  list<Predicate> InsnPredicates = [HasDSPR3];
+  list<Predicate> ASEPredicate = [HasDSPR3];
 }
 
 // Fields.
@@ -45,8 +45,8 @@ def SPECIAL3_OPCODE : Field6<0b011111>;
 def REGIMM_OPCODE : Field6<0b000001>;
 
 class DSPInst<string opstr = "">
-    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>, PredicateControl {
-  let InsnPredicates = [HasDSP];
+    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
+  let ASEPredicate = [HasDSP];
   string BaseOpcode = opstr;
   string Arch = "dsp";
 }
@@ -54,12 +54,12 @@ class DSPInst<string opstr = "">
 class PseudoDSP<dag outs, dag ins, list<dag> pattern,
                 InstrItinClass itin = IIPseudo>
     : MipsPseudo<outs, ins, pattern, itin> {
-  let InsnPredicates = [HasDSP];
+  let ASEPredicate = [HasDSP];
 }
 
 class DSPInstAlias<string Asm, dag Result, bit Emit = 0b1>
     : InstAlias<Asm, Result, Emit>, PredicateControl {
-  let InsnPredicates = [HasDSP];
+  let ASEPredicate = [HasDSP];
 }
 
 // ADDU.QB sub-class format.

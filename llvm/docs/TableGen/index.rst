@@ -76,11 +76,14 @@ example, to get a list of all of the definitions that subclass a particular type
   ADD16rr, ADD32mi, ADD32mi8, ADD32mr, ADD32ri, ADD32ri8, ADD32rm, ADD32rr,
   ADD64mi32, ADD64mi8, ADD64mr, ADD64ri32, ...
 
-The default backend prints out all of the records.
+The default backend prints out all of the records. There is also a general
+backend which outputs all the records as a JSON data structure, enabled using
+the `-dump-json` option.
 
 If you plan to use TableGen, you will most likely have to write a `backend`_
 that extracts the information specific to what you need and formats it in the
-appropriate way.
+appropriate way. You can do this by extending TableGen itself in C++, or by
+writing a script in any language that can consume the JSON output.
 
 Example
 -------
@@ -171,13 +174,6 @@ factor out the common features that instructions of its class share.  A key
 feature of TableGen is that it allows the end-user to define the abstractions
 they prefer to use when describing their information.
 
-Each ``def`` record has a special entry called "NAME".  This is the name of the
-record ("``ADD32rr``" above).  In the general case ``def`` names can be formed
-from various kinds of string processing expressions and ``NAME`` resolves to the
-final value obtained after resolving all of those expressions.  The user may
-refer to ``NAME`` anywhere she desires to use the ultimate name of the ``def``.
-``NAME`` should not be defined anywhere else in user code to avoid conflicts.
-
 Syntax
 ======
 
@@ -224,7 +220,7 @@ definitions of a particular class, such as "Instruction".
 
  class ProcNoItin<string Name, list<SubtargetFeature> Features>
        : Processor<Name, NoItineraries, Features>;
-  
+
 Here, the class ProcNoItin, receiving parameters `Name` of type `string` and
 a list of target features is specializing the class Processor by passing the
 arguments down as well as hard-coding NoItineraries.

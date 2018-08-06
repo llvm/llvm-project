@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+vpclmulqdq --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
 // CHECK: vpclmulqdq $17, %ymm3, %ymm2, %ymm1
 // CHECK: encoding: [0xc4,0xe3,0x6d,0x44,0xcb,0x11]

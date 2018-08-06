@@ -84,7 +84,7 @@ public:
     this->MemMgr = std::move(MemMgr);
   }
 
-  void setResolver(std::shared_ptr<JITSymbolResolver> Resolver) {
+  void setResolver(std::shared_ptr<LegacyJITSymbolResolver> Resolver) {
     this->Resolver = std::move(Resolver);
   }
 
@@ -145,7 +145,7 @@ public:
 
 private:
   std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr;
-  std::shared_ptr<JITSymbolResolver> Resolver;
+  std::shared_ptr<LegacyJITSymbolResolver> Resolver;
 };
 }
 
