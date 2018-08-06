@@ -348,7 +348,7 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         break;
       }
       if (demangled_name) {
-        m_demangled.SetCStringWithMangledCounterpart(demangled_name, m_mangled);
+        m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
         free(demangled_name);
       }
     } else if (mangling_scheme == eManglingSchemeNone &&
