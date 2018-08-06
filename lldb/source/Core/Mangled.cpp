@@ -282,7 +282,7 @@ const ConstString &
 Mangled::GetDemangledName(lldb::LanguageType language) const {
   // Check to make sure we have a valid mangled name and that we haven't
   // already decoded our mangled name.
-  if (m_mangled && !m_demangled) {
+  if (m_mangled && m_demangled.IsNull()) {
     // We need to generate and cache the demangled name.
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "Mangled::GetDemangledName (m_mangled = %s)",
@@ -370,7 +370,7 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
                       mangled_name);
       }
     }
-    if (!m_demangled) {
+    if (m_demangled.IsNull()) {
       // Set the demangled string to the empty string to indicate we tried to
       // parse it once and failed.
       m_demangled.SetCString("");
