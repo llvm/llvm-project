@@ -25,8 +25,7 @@ MATH_MANGLE(hypot)(half x, half y)
     half ret = (half)BUILTIN_SQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
-              BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) ?
+        ret = BUILTIN_ISINF_F16(x) | BUILTIN_ISINF_F16(y) ?
               AS_HALF((ushort)PINFBITPATT_HP16) : ret;
     }
 

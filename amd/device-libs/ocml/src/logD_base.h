@@ -27,8 +27,8 @@ MATH_MANGLE(log)(double a)
     double2 x = div(m - 1.0, add(m, 1.0));
     double2 s = sqr(x);
     double t = s.hi;
-    double p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
-               MATH_MAD(t, MATH_MAD(t, 
+    double p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
+               MATH_MAD(t, MATH_MAD(t,
                    0x1.3ab76bf559e2bp-3, 0x1.385386b47b09ap-3), 0x1.7474dd7f4df2ep-3), 0x1.c71c016291751p-3),
                    0x1.249249b27acf1p-2), 0x1.99999998ef7b6p-2), 0x1.5555555555780p-1);
     double2 r = add(ldx(x,1), mul(mul(x,s), p));
@@ -45,7 +45,7 @@ MATH_MANGLE(log)(double a)
     double ret = r.hi;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F64(a, CLASS_PINF|CLASS_NINF) ? a : ret;
+        ret = BUILTIN_ISINF_F64(a) ? a : ret;
         ret = a < 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
         ret = a == 0.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
     }

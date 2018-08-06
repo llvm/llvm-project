@@ -12,8 +12,8 @@ MATH_MANGLE2(modf)(half2 x, __private half2 *iptr)
 {
     half2 tx = BUILTIN_TRUNC_2F16(x);
     half2 ret = x - tx;
-    ret.lo = BUILTIN_CLASS_F16(x.lo, CLASS_PINF|CLASS_NINF) ? 0.0h : ret.lo;
-    ret.hi = BUILTIN_CLASS_F16(x.hi, CLASS_PINF|CLASS_NINF) ? 0.0h : ret.hi;
+    ret.lo = BUILTIN_ISINF_F16(x.lo) ? 0.0h : ret.lo;
+    ret.hi = BUILTIN_ISINF_F16(x.hi) ? 0.0h : ret.hi;
     *iptr = tx;
     return BUILTIN_COPYSIGN_2F16(ret, x);
 }
@@ -23,7 +23,7 @@ MATH_MANGLE(modf)(half x, __private half *iptr)
 {
     half tx = BUILTIN_TRUNC_F16(x);
     half ret = x - tx;
-    ret = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) ? 0.0h : ret;
+    ret = BUILTIN_ISINF_F16(x) ? 0.0h : ret;
     *iptr = tx;
     return BUILTIN_COPYSIGN_F16(ret, x);
 }

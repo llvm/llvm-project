@@ -35,8 +35,8 @@ MATH_MANGLE(atan2pi)(half y, half x)
     if (!FINITE_ONLY_OPT()) {
         // x and y are +- Inf
         at = x < 0.0h ? 0.75h : 0.25h;
-        a = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) &
-            BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) ?
+        a = BUILTIN_ISINF_F16(x) &
+            BUILTIN_ISINF_F16(y) ?
             at : a;
 
         // x or y is NaN

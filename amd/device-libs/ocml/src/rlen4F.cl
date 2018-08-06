@@ -39,10 +39,10 @@ MATH_MANGLE(rlen4)(float x, float y, float z, float w)
     float ret = BUILTIN_FLDEXP_F32(BUILTIN_RSQRT_F32(MATH_MAD(a, a, MATH_MAD(b, b, MATH_MAD(c, c, d*d)))), -e);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_CLASS_F32(x, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F32(y, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F32(z, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F32(w, CLASS_PINF|CLASS_NINF)) ? 0.0f : ret;
+        ret = (BUILTIN_ISINF_F32(x) |
+               BUILTIN_ISINF_F32(y) |
+               BUILTIN_ISINF_F32(z) |
+               BUILTIN_ISINF_F32(w)) ? 0.0f : ret;
     }
 
     return ret;

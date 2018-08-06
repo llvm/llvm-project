@@ -28,8 +28,7 @@ MATH_MANGLE(rhypot)(double x, double y)
         ret = BUILTIN_ISNAN_F64(x) |
               BUILTIN_ISNAN_F64(y) ?  AS_DOUBLE(QNANBITPATT_DP64) : ret;
 
-        ret = BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_PINF) |
-              BUILTIN_CLASS_F64(y, CLASS_NINF|CLASS_PINF) ?  0.0 : ret;
+        ret = BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y) ?  0.0 : ret;
     }
 
     return ret;

@@ -40,9 +40,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
     if (!FINITE_ONLY_OPT()) {
         // x and y are +- Inf
         at = x < 0.0f ? 0.75f : 0.25f;
-        a = BUILTIN_CLASS_F32(x, CLASS_PINF|CLASS_NINF) &
-            BUILTIN_CLASS_F32(y, CLASS_PINF|CLASS_NINF) ?
-            at : a;
+        a = BUILTIN_ISINF_F32(x) & BUILTIN_ISINF_F32(y) ? at : a;
 
         // x or y is NaN
         a = BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y) ?

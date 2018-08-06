@@ -20,10 +20,10 @@ MATH_MANGLE(len4)(half x, half y, half z, half w)
     half ret = (half)BUILTIN_SQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F16(z, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F16(w, CLASS_PINF|CLASS_NINF)) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+        ret = (BUILTIN_ISINF_F16(x) |
+               BUILTIN_ISINF_F16(y) |
+               BUILTIN_ISINF_F16(z) |
+               BUILTIN_ISINF_F16(w)) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
     }
 
     return ret;

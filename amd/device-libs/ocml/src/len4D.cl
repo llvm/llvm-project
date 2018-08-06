@@ -42,10 +42,10 @@ MATH_MANGLE(len4)(double x, double y, double z, double w)
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y) |
                BUILTIN_ISNAN_F64(z) | BUILTIN_ISNAN_F64(w)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
-        ret = (BUILTIN_CLASS_F64(x, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(y, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(z, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(w, CLASS_PINF|CLASS_NINF)) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = (BUILTIN_ISINF_F64(x) |
+               BUILTIN_ISINF_F64(y) |
+               BUILTIN_ISINF_F64(z) |
+               BUILTIN_ISINF_F64(w)) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
     }
 
     return ret;

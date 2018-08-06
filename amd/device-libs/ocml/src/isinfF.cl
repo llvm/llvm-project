@@ -10,5 +10,5 @@
 CONSTATTR int
 MATH_MANGLE(isinf)(float x)
 {
-    return BUILTIN_CLASS_F32(x, CLASS_PINF|CLASS_NINF);
+    return BUILTIN_ISINF_F32(x);
 }

@@ -41,9 +41,9 @@ MATH_MANGLE(rlen3)(double x, double y, double z)
                BUILTIN_ISNAN_F64(y) |
                BUILTIN_ISNAN_F64(z)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
 
-        ret = (BUILTIN_CLASS_F64(x, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(y, CLASS_PINF|CLASS_NINF) |
-               BUILTIN_CLASS_F64(z, CLASS_PINF|CLASS_NINF)) ? 0.0 : ret;
+        ret = (BUILTIN_ISINF_F64(x) |
+               BUILTIN_ISINF_F64(y) |
+               BUILTIN_ISINF_F64(z)) ? 0.0 : ret;
     }
 
     return ret;
