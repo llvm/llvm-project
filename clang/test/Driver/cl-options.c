@@ -429,6 +429,7 @@
 // RUN:     /H \
 // RUN:     /homeparams \
 // RUN:     /hotpatch \
+// RUN:     /JMC \
 // RUN:     /kernel \
 // RUN:     /LN \
 // RUN:     /MP \

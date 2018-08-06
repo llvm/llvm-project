@@ -16,3 +16,20 @@ using namespace lldb_private;
 TEST(ConstStringTest, format_provider) {
   EXPECT_EQ("foo", llvm::formatv("{0}", ConstString("foo")).str());
 }
+
+TEST(ConstStringTest, MangledCounterpart) {
+  ConstString foo("foo");
+  ConstString counterpart;
+  EXPECT_FALSE(foo.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("", counterpart.GetStringRef());
+
+  ConstString bar;
+  bar.SetStringWithMangledCounterpart("bar", foo);
+  EXPECT_EQ("bar", bar.GetStringRef());
+
+  EXPECT_TRUE(bar.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("foo", counterpart.GetStringRef());
+
+  EXPECT_TRUE(foo.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("bar", counterpart.GetStringRef());
+}

@@ -373,15 +373,14 @@ public:
   /// them.
   ///
   /// @param[in] demangled
-  ///     The demangled C string to correlate with the \a mangled
-  ///     name.
+  ///     The demangled string to correlate with the \a mangled name.
   ///
   /// @param[in] mangled
   ///     The already uniqued mangled ConstString to correlate the
   ///     soon to be uniqued version of \a demangled.
   //------------------------------------------------------------------
-  void SetCStringWithMangledCounterpart(const char *demangled,
-                                        const ConstString &mangled);
+  void SetStringWithMangledCounterpart(llvm::StringRef demangled,
+                                       const ConstString &mangled);
 
   //------------------------------------------------------------------
   /// Retrieve the mangled or demangled counterpart for a mangled or demangled
