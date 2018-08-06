@@ -1244,7 +1244,7 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// alloc size of the value when doing the comparison. E.g. an i1 value will be
 /// identified as covering an n-bit fragment, if the store size of i1 is at
 /// least n bits.
-static bool valueCoversEntireFragment(Type *ValTy, DbgInfoIntrinsic *DII) {
+static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   uint64_t ValueSize = DL.getTypeAllocSizeInBits(ValTy);
   if (auto FragmentSize = DII->getFragmentSizeInBits())
@@ -1262,7 +1262,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgInfoIntrinsic *DII) {
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            StoreInst *SI, DIBuilder &Builder) {
   assert(DII->isAddressOfVariable());
   auto *DIVar = DII->getVariable();
@@ -1319,7 +1319,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            LoadInst *LI, DIBuilder &Builder) {
   auto *DIVar = DII->getVariable();
   auto *DIExpr = DII->getExpression();
@@ -1348,7 +1348,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            PHINode *APN, DIBuilder &Builder) {
   auto *DIVar = DII->getVariable();
   auto *DIExpr = DII->getExpression();
@@ -1450,7 +1450,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their dbg.values.
   ValueToValueMapTy DbgValueMap;
   for (auto &I : *BB) {
-    if (auto DbgII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+    if (auto DbgII = dyn_cast<DbgVariableIntrinsic>(&I)) {
       if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
         DbgValueMap.insert({Loc, DbgII});
     }
@@ -1471,7 +1471,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
     for (auto VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
-        auto *DbgII = cast<DbgInfoIntrinsic>(V->second);
+        auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
         Instruction *NewDbgII = DbgII->clone();
         NewDbgII->setOperand(0, PhiMAV);
         auto InsertionPt = Parent->getFirstInsertionPt();
@@ -1485,7 +1485,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
-TinyPtrVector<DbgInfoIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
+TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
@@ -1497,9 +1497,9 @@ TinyPtrVector<DbgInfoIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
   if (!MDV)
     return {};
 
-  TinyPtrVector<DbgInfoIntrinsic *> Declares;
+  TinyPtrVector<DbgVariableIntrinsic *> Declares;
   for (User *U : MDV->users()) {
-    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(U))
+    if (auto *DII = dyn_cast<DbgVariableIntrinsic>(U))
       if (DII->isAddressOfVariable())
         Declares.push_back(DII);
   }
@@ -1519,7 +1519,7 @@ void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
           DbgValues.push_back(DVI);
 }
 
-void llvm::findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgUsers,
+void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
                         Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
@@ -1528,7 +1528,7 @@ void llvm::findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgUsers,
   if (auto *L = LocalAsMetadata::getIfExists(V))
     if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L))
       for (User *U : MDV->users())
-        if (DbgInfoIntrinsic *DII = dyn_cast<DbgInfoIntrinsic>(U))
+        if (DbgVariableIntrinsic *DII = dyn_cast<DbgVariableIntrinsic>(U))
           DbgUsers.push_back(DII);
 }
 
@@ -1536,7 +1536,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              Instruction *InsertBefore, DIBuilder &Builder,
                              bool DerefBefore, int Offset, bool DerefAfter) {
   auto DbgAddrs = FindDbgAddrUses(Address);
-  for (DbgInfoIntrinsic *DII : DbgAddrs) {
+  for (DbgVariableIntrinsic *DII : DbgAddrs) {
     DebugLoc Loc = DII->getDebugLoc();
     auto *DIVar = DII->getVariable();
     auto *DIExpr = DII->getExpression();
@@ -1604,7 +1604,7 @@ static MetadataAsValue *wrapValueInMetadata(LLVMContext &C, Value *V) {
 }
 
 bool llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);
   if (DbgUsers.empty())
     return false;
@@ -1614,7 +1614,7 @@ bool llvm::salvageDebugInfo(Instruction &I) {
   auto &Ctx = I.getContext();
   auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
-  auto doSalvage = [&](DbgInfoIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
+  auto doSalvage = [&](DbgVariableIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
     auto *DIExpr = DII->getExpression();
     if (!Ops.empty()) {
       // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
@@ -1628,13 +1628,13 @@ bool llvm::salvageDebugInfo(Instruction &I) {
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
   };
 
-  auto applyOffset = [&](DbgInfoIntrinsic *DII, uint64_t Offset) {
+  auto applyOffset = [&](DbgVariableIntrinsic *DII, uint64_t Offset) {
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
     doSalvage(DII, Ops);
   };
 
-  auto applyOps = [&](DbgInfoIntrinsic *DII,
+  auto applyOps = [&](DbgVariableIntrinsic *DII,
                       std::initializer_list<uint64_t> Opcodes) {
     SmallVector<uint64_t, 8> Ops(Opcodes);
     doSalvage(DII, Ops);
@@ -1733,16 +1733,16 @@ using DbgValReplacement = Optional<DIExpression *>;
 /// changes are made.
 static bool rewriteDebugUsers(
     Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
-    function_ref<DbgValReplacement(DbgInfoIntrinsic &DII)> RewriteExpr) {
+    function_ref<DbgValReplacement(DbgVariableIntrinsic &DII)> RewriteExpr) {
   // Find debug users of From.
-  SmallVector<DbgInfoIntrinsic *, 1> Users;
+  SmallVector<DbgVariableIntrinsic *, 1> Users;
   findDbgUsers(Users, &From);
   if (Users.empty())
     return false;
 
   // Prevent use-before-def of To.
   bool Changed = false;
-  SmallPtrSet<DbgInfoIntrinsic *, 1> DeleteOrSalvage;
+  SmallPtrSet<DbgVariableIntrinsic *, 1> DeleteOrSalvage;
   if (isa<Instruction>(&To)) {
     bool DomPointAfterFrom = From.getNextNonDebugInstruction() == &DomPoint;
 
@@ -1831,7 +1831,7 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   Type *FromTy = From.getType();
   Type *ToTy = To.getType();
 
-  auto Identity = [&](DbgInfoIntrinsic &DII) -> DbgValReplacement {
+  auto Identity = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
     return DII.getExpression();
   };
 
@@ -1855,7 +1855,7 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
 
     // The width of the result has shrunk. Use sign/zero extension to describe
     // the source variable's high bits.
-    auto SignOrZeroExt = [&](DbgInfoIntrinsic &DII) -> DbgValReplacement {
+    auto SignOrZeroExt = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
       DILocalVariable *Var = DII.getVariable();
 
       // Without knowing signedness, sign/zero extension isn't possible.
