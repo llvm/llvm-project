@@ -2745,6 +2745,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
       break;
     // sqrt(-0.0) = -0.0, no other negative results are possible.
     case Intrinsic::sqrt:
+    case Intrinsic::canonicalize:
       return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
     // fabs(x) != -0.0
     case Intrinsic::fabs:

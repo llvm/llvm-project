@@ -226,6 +226,53 @@ define float @nofold_fadd_x_0(float %a) {
   ret float %no_zero
 }
 
+; CHECK-LABEL: @fold_fadd_nsz_x_0(
+; CHECK-NEXT: ret float %a
+define float @fold_fadd_nsz_x_0(float %a) {
+  %add = fadd nsz float %a, 0.0
+  ret float %add
+}
+
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_nsz_src_x_0
+; CHECK-NEXT: %nsz = fmul nsz float %a, %b
+; CHECK-NEXT: ret float %nsz
+define float @fold_fadd_cannot_be_neg0_nsz_src_x_0(float %a, float %b) {
+  %nsz = fmul nsz float %a, %b
+  %add = fadd float %nsz, 0.0
+  ret float %add
+}
+
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_fabs_src_x_0(
+; CHECK-NEXT: @llvm.fabs.f32
+; CHECK-NEXT: ret float %fabs
+define float @fold_fadd_cannot_be_neg0_fabs_src_x_0(float %a) {
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %add = fadd float %fabs, 0.0
+  ret float %add
+}
+
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(
+; CHECK-NEXT: fmul
+; CHECK-NEXT: call float @llvm.sqrt.f32
+; CHECK-NEXT: ret float %sqrt
+define float @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(float %a, float %b) {
+  %nsz = fmul nsz float %a, %b
+  %sqrt = call float @llvm.sqrt.f32(float %nsz)
+  %add = fadd float %sqrt, 0.0
+  ret float %add
+}
+
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(
+; CHECK-NEXT: fmul nsz
+; CHECK-NEXT: call float @llvm.canonicalize.f32(
+; CHECK-NEXT: ret float %canon
+define float @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(float %a, float %b) {
+  %nsz = fmul nsz float %a, %b
+  %canon = call float @llvm.canonicalize.f32(float %nsz)
+  %add = fadd float %canon, 0.0
+  ret float %add
+}
+
 ; fdiv nsz nnan 0, X ==> 0
 ; 0 / X -> 0
 
@@ -396,3 +443,6 @@ define double @sqrt_squared_not_fast_enough3(double %f) {
   ret double %mul
 }
 
+declare float @llvm.fabs.f32(float)
+declare float @llvm.sqrt.f32(float)
+declare float @llvm.canonicalize.f32(float)

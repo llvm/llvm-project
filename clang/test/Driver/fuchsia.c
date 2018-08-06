@@ -1,10 +1,10 @@
 // RUN: %clang %s -### -no-canonical-prefixes --target=x86_64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clang %s -### -no-canonical-prefixes --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
 // CHECK: "--mrelax-relocations"
@@ -31,22 +31,22 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
-// RUN: %clang %s -### --target=x86_64-fuchsia -rtlib=libgcc 2>&1 \
+// RUN: %clang %s -### --target=x86_64-fuchsia -rtlib=libgcc -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
 // CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
 
-// RUN: %clang %s -### --target=x86_64-fuchsia -static 2>&1 \
+// RUN: %clang %s -### --target=x86_64-fuchsia -static -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC: "-Bstatic"
 // CHECK-STATIC: "-Bdynamic"
 // CHECK-STATIC: "-lc"
 
-// RUN: %clang %s -### --target=x86_64-fuchsia -shared 2>&1 \
+// RUN: %clang %s -### --target=x86_64-fuchsia -shared -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SHARED
 // CHECK-SHARED-NOT: "-pie"
 // CHECK-SHARED: "-shared"
 
-// RUN: %clang %s -### --target=x86_64-fuchsia -r 2>&1 \
+// RUN: %clang %s -### --target=x86_64-fuchsia -r -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE-NOT: "-pie"
 // CHECK-RELOCATABLE-NOT: "--build-id"
@@ -55,6 +55,7 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
 // CHECK-SAFESTACK-NOT: "{{.*[/\\]}}libclang_rt.safestack.a"
@@ -63,6 +64,7 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=address 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-X86
 // CHECK-ASAN-X86: "-fsanitize=address"
 // CHECK-ASAN-X86: "-fsanitize-address-globals-dead-stripping"
@@ -73,6 +75,7 @@
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=address 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-AARCH64
 // CHECK-ASAN-AARCH64: "-fsanitize=address"
 // CHECK-ASAN-AARCH64: "-fsanitize-address-globals-dead-stripping"
@@ -83,6 +86,7 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=address -fPIC -shared 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-SHARED
 // CHECK-ASAN-SHARED: "-fsanitize=address"
 // CHECK-ASAN-SHARED: "-fsanitize-address-globals-dead-stripping"
@@ -92,6 +96,7 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-X86
 // CHECK-FUZZER-X86: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
 // CHECK-FUZZER-X86: "{{.*[/\\]}}libclang_rt.fuzzer.a"
@@ -99,6 +104,7 @@
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-AARCH64
 // CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
 // CHECK-FUZZER-AARCH64: "{{.*[/\\]}}libclang_rt.fuzzer.a"
@@ -106,6 +112,7 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-X86
 // CHECK-SCUDO-X86: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-X86: "-pie"
@@ -114,6 +121,7 @@
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
 // CHECK-SCUDO-AARCH64: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
@@ -122,18 +130,21 @@
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-SHARED: "{{.*[/\\]}}libclang_rt.scudo.so"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -O3 -flto -mcpu=cortex-a53 2>&1 \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-LTO
 // CHECK-LTO: "-plugin-opt=mcpu=cortex-a53"
 // CHECK-LTO: "-plugin-opt=O3"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -flto=thin -flto-jobs=8 2>&1 \
+// RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-THINLTO
 // CHECK-THINLTO: "-plugin-opt=mcpu=x86-64"
 // CHECK-THINLTO: "-plugin-opt=thinlto"

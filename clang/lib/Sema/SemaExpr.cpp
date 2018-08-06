@@ -26,6 +26,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -3363,16 +3364,14 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 
     bool isSigned = !Literal.isUnsigned;
     unsigned scale = Context.getFixedPointScale(Ty);
-    unsigned ibits = Context.getFixedPointIBits(Ty);
     unsigned bit_width = Context.getTypeInfo(Ty).Width;
 
     llvm::APInt Val(bit_width, 0, isSigned);
     bool Overflowed = Literal.GetFixedPointValue(Val, scale);
+    bool ValIsZero = Val.isNullValue() && !Overflowed;
 
-    // Do not use bit_width since some types may have padding like _Fract or
-    // unsigned _Accums if PaddingOnUnsignedFixedPoint is set.
-    auto MaxVal = llvm::APInt::getMaxValue(ibits + scale).zextOrSelf(bit_width);
-    if (Literal.isFract && Val == MaxVal + 1)
+    auto MaxVal = Context.getFixedPointMax(Ty).getValue();
+    if (Literal.isFract && Val == MaxVal + 1 && !ValIsZero)
       // Clause 6.4.4 - The value of a constant shall be in the range of
       // representable values for its type, with exception for constants of a
       // fract type with a value of exactly 1; such a constant shall denote

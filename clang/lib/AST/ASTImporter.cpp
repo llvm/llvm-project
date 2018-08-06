@@ -1147,15 +1147,21 @@ bool ASTNodeImporter::ImportDeclParts(NamedDecl *D, DeclContext *&DC,
   FunctionDecl *FunDecl;
   if (isa<RecordDecl>(D) && (FunDecl = dyn_cast<FunctionDecl>(OrigDC)) &&
       FunDecl->hasBody()) {
-    SourceRange RecR = D->getSourceRange();
-    SourceRange BodyR = FunDecl->getBody()->getSourceRange();
-    // If RecordDecl is not in Body (it is a param), we bail out.
-    if (RecR.isValid() && BodyR.isValid() &&
-        (RecR.getBegin() < BodyR.getBegin() ||
-         BodyR.getEnd() < RecR.getEnd())) {
-      Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
-          << D->getDeclKindName();
-      return true;
+    auto getLeafPointeeType = [](const Type *T) {
+      while (T->isPointerType() || T->isArrayType()) {
+        T = T->getPointeeOrArrayElementType();
+      }
+      return T;
+    };
+    for (const ParmVarDecl *P : FunDecl->parameters()) {
+      const Type *LeafT =
+          getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
+      auto *RT = dyn_cast<RecordType>(LeafT);
+      if (RT && RT->getDecl() == D) {
+        Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
+            << D->getDeclKindName();
+        return true;
+      }
     }
   }
 
