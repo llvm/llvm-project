@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
-
+// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases > %t
+// RUN: FileCheck --check-prefix=NOOPT1 --input-file=%t %s
+// RUN: FileCheck --check-prefix=NOOPT2 --input-file=%t %s
+// RUN: FileCheck --check-prefix=NOOPT3 --input-file=%t %s
 // RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
@@ -11,15 +13,22 @@
 // RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck --check-prefix=COFF %s
 
 namespace test1 {
-// Test that we produce the apropriate comdats when creating aliases to
+// Test that we produce the appropriate comdats when creating aliases to
 // weak_odr constructors and destructors.
 
-// CHECK1: @_ZN5test16foobarIvEC1Ev = weak_odr alias void {{.*}} @_ZN5test16foobarIvEC2Ev
-// CHECK1: @_ZN5test16foobarIvED1Ev = weak_odr alias void (%"struct.test1::foobar"*), void (%"struct.test1::foobar"*)* @_ZN5test16foobarIvED2Ev
+// CHECK1: @_ZN5test16foobarIvEC1Ev = weak_odr unnamed_addr alias void {{.*}} @_ZN5test16foobarIvEC2Ev
+// CHECK1: @_ZN5test16foobarIvED1Ev = weak_odr unnamed_addr alias void (%"struct.test1::foobar"*), void (%"struct.test1::foobar"*)* @_ZN5test16foobarIvED2Ev
 // CHECK1: define weak_odr void @_ZN5test16foobarIvEC2Ev({{.*}} comdat($_ZN5test16foobarIvEC5Ev)
 // CHECK1: define weak_odr void @_ZN5test16foobarIvED2Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
 // CHECK1: define weak_odr void @_ZN5test16foobarIvED0Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
 // CHECK1-NOT: comdat
+
+// This should happen regardless of the opt level.
+// NOOPT1: @_ZN5test16foobarIvEC1Ev = weak_odr unnamed_addr alias void {{.*}} @_ZN5test16foobarIvEC2Ev
+// NOOPT1: @_ZN5test16foobarIvED1Ev = weak_odr unnamed_addr alias void (%"struct.test1::foobar"*), void (%"struct.test1::foobar"*)* @_ZN5test16foobarIvED2Ev
+// NOOPT1: define weak_odr void @_ZN5test16foobarIvEC2Ev({{.*}} comdat($_ZN5test16foobarIvEC5Ev)
+// NOOPT1: define weak_odr void @_ZN5test16foobarIvED2Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
+// NOOPT1: define weak_odr void @_ZN5test16foobarIvED0Ev({{.*}} comdat($_ZN5test16foobarIvED5Ev)
 
 // COFF doesn't support comdats with arbitrary names (C5/D5).
 // COFF: define weak_odr {{.*}} void @_ZN5test16foobarIvEC2Ev({{.*}} comdat align
@@ -37,12 +46,17 @@ template struct foobar<void>;
 }
 
 namespace test2 {
-// test that when the destrucor is linkonce_odr we just replace every use of
+// test that when the destructor is linkonce_odr we just replace every use of
 // C1 with C2.
 
 // CHECK1: define internal void @__cxx_global_var_init()
 // CHECK1: call void @_ZN5test26foobarIvEC2Ev
 // CHECK1: define linkonce_odr void @_ZN5test26foobarIvEC2Ev({{.*}} comdat align
+
+// At -O0, we should still emit the complete constructor.
+// NOOPT1: define internal void @__cxx_global_var_init()
+// NOOPT1: call void @_ZN5test26foobarIvEC1Ev
+// NOOPT1: define linkonce_odr void @_ZN5test26foobarIvEC1Ev({{.*}} comdat align
 void g();
 template <typename T> struct foobar {
   foobar() { g(); }
@@ -57,6 +71,11 @@ namespace test3 {
 // CHECK1: define internal void @__cxx_global_var_init.1()
 // CHECK1: call i32 @__cxa_atexit{{.*}}_ZN5test312_GLOBAL__N_11AD2Ev
 // CHECK1: define internal void @_ZN5test312_GLOBAL__N_11AD2Ev(
+
+// We can use an alias for internal symbols at -O0.
+// NOOPT2: _ZN5test312_GLOBAL__N_11BD1Ev = internal unnamed_addr alias void {{.*}} @_ZN5test312_GLOBAL__N_11BD2Ev
+// NOOPT2: define internal void @__cxx_global_var_init.1()
+// NOOPT2: call i32 @__cxa_atexit{{.*}}_ZN5test312_GLOBAL__N_11BD1Ev
 namespace {
 struct A {
   ~A() {}
@@ -77,11 +96,12 @@ namespace test4 {
   // CHECK1: call i32 @__cxa_atexit{{.*}}_ZN5test41AD2Ev
   // CHECK1: define linkonce_odr void @_ZN5test41AD2Ev({{.*}} comdat align
 
-  // test that we don't do this optimization at -O0 so that the debugger can
-  // see both destructors.
-  // NOOPT: define internal void @__cxx_global_var_init.2()
-  // NOOPT: call i32 @__cxa_atexit{{.*}}@_ZN5test41BD2Ev
-  // NOOPT: define linkonce_odr void @_ZN5test41BD2Ev({{.*}} comdat align
+  // Test that we don't do this optimization at -O0 and call the complete
+  // destructor for B instead. This enables the debugger to see both
+  // destructors.
+  // NOOPT2: define internal void @__cxx_global_var_init.2()
+  // NOOPT2: call i32 @__cxa_atexit{{.*}}@_ZN5test41BD1Ev
+  // NOOPT2: define linkonce_odr void @_ZN5test41BD1Ev({{.*}} comdat align
   struct A {
     virtual ~A() {}
   };
@@ -129,6 +149,11 @@ namespace test7 {
   // out if we should).
   // pr17875.
   // CHECK3: define void @_ZN5test71BD2Ev
+
+  // At -O0, we should emit both destructors, the complete can be an alias to
+  // the base one.
+  // NOOPT3: @_ZN5test71BD1Ev = unnamed_addr alias void {{.*}} @_ZN5test71BD2Ev
+  // NOOPT3: define void @_ZN5test71BD2Ev
   template <typename> struct A {
     ~A() {}
   };
@@ -141,7 +166,7 @@ namespace test7 {
 
 namespace test8 {
   // Test that we replace ~zed with ~bar which is an alias to ~foo.
-  // CHECK4: @_ZN5test83barD2Ev = alias {{.*}} @_ZN5test83fooD2Ev
+  // CHECK4: @_ZN5test83barD2Ev = unnamed_addr alias {{.*}} @_ZN5test83fooD2Ev
   // CHECK4: define internal void @__cxx_global_var_init.5()
   // CHECK4: call i32 @__cxa_atexit({{.*}}@_ZN5test83barD2Ev
   struct foo {
@@ -232,8 +257,8 @@ struct foo : public bar {
   ~foo();
 };
 foo::~foo() {}
-// CHECK6: @_ZN6test113fooD2Ev = alias {{.*}} @_ZN6test113barD2Ev
-// CHECK6: @_ZN6test113fooD1Ev = alias {{.*}} @_ZN6test113fooD2Ev
+// CHECK6: @_ZN6test113fooD2Ev = unnamed_addr alias {{.*}} @_ZN6test113barD2Ev
+// CHECK6: @_ZN6test113fooD1Ev = unnamed_addr alias {{.*}} @_ZN6test113fooD2Ev
 }
 
 namespace test12 {
@@ -243,6 +268,6 @@ struct foo {
 };
 
 template class foo<1>;
-// CHECK6: @_ZN6test123fooILi1EED1Ev = weak_odr alias {{.*}} @_ZN6test123fooILi1EED2Ev
+// CHECK6: @_ZN6test123fooILi1EED1Ev = weak_odr unnamed_addr alias {{.*}} @_ZN6test123fooILi1EED2Ev
 // CHECK6: define weak_odr void @_ZN6test123fooILi1EED2Ev({{.*}}) {{.*}} comdat($_ZN6test123fooILi1EED5Ev)
 }

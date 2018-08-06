@@ -180,7 +180,7 @@ int main() {
 // CHECK: [[DST_A2_ADDR:%.+]] = load i8*, i8** [[DST_A2_ADDR_REF]],
 // CHECK: [[SRC_A2_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[SRC_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
 // CHECK: [[SRC_A2_ADDR:%.+]] = load i8*, i8** [[SRC_A2_ADDR_REF]],
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[DST_A2_ADDR]], i8* [[SRC_A2_ADDR]], i{{[0-9]+}} 2, i{{[0-9]+}} 1, i1 false)
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align 1 [[DST_A2_ADDR]], i8* align 1 [[SRC_A2_ADDR]], i{{[0-9]+}} 2, i1 false)
 // CHECK: [[DST_TC2_ADDR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[DST_ADDR]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
 // CHECK: [[DST_TC2_ADDR_VOID_PTR:%.+]] = load i8*, i8** [[DST_TC2_ADDR_REF]],
 // CHECK: [[DST_TC2_ADDR:%.+]] = bitcast i8* [[DST_TC2_ADDR_VOID_PTR]] to [[TEST_CLASS_TY]]*
@@ -221,7 +221,7 @@ struct St {
 };
 
 void array_func(int n, int a[n], St s[2]) {
-// ARRAY: call void @__kmpc_copyprivate(%ident_t* @{{.+}}, i32 %{{.+}}, i64 16, i8* %{{.+}}, void (i8*, i8*)* [[CPY:@.+]], i32 %{{.+}})
+// ARRAY: call void @__kmpc_copyprivate(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i64 16, i8* %{{.+}}, void (i8*, i8*)* [[CPY:@.+]], i32 %{{.+}})
 #pragma omp single copyprivate(a, s)
   ;
 }

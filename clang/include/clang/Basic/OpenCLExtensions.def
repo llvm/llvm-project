@@ -53,6 +53,9 @@ OPENCLEXT_INTERNAL(cl_khr_icd, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_gl_event, 110, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_d3d10_sharing, 110, ~0U)
 
+// EMBEDDED_PROFILE
+OPENCLEXT_INTERNAL(cles_khr_int64, 110, ~0U)
+
 // OpenCL 1.2.
 OPENCLEXT_INTERNAL(cl_khr_context_abort, 120, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_d3d11_sharing, 120, ~0U)

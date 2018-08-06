@@ -1,5 +1,7 @@
 template<typename T>
-struct X0;
+struct X0 {
+  T getValue(T arg) { return arg; }
+};
 
 template<int I>
 struct X1;
@@ -26,6 +28,7 @@ extern X0<float> *x0r;
 template<>
 struct X0<char> {
   int member;
+  char getValue(char ch) { return static_cast<char>(member); }
 };
 
 template<>

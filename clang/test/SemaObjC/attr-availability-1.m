@@ -25,10 +25,10 @@
 // rdar://11475360
 @interface B : A
 - (void)method; // NOTE: we expect 'method' to *not* inherit availability.
-- (void)overridden __attribute__((availability(macosx,introduced=10_4))); // expected-warning{{overriding method introduced after overridden method on macOS (10_4 vs. 10_3)}}
+- (void)overridden __attribute__((availability(macosx,introduced=10_4))); // expected-warning{{overriding method introduced after overridden method on macOS (10.4 vs. 10.3)}}
 - (void)overridden2 __attribute__((availability(macosx,introduced=10_2)));
 - (void)overridden3 __attribute__((availability(macosx,deprecated=10_4)));
-- (void)overridden4 __attribute__((availability(macosx,deprecated=10_2))); // expected-warning{{overriding method deprecated before overridden method on macOS (10_3 vs. 10_2)}}
+- (void)overridden4 __attribute__((availability(macosx,deprecated=10_2))); // expected-warning{{overriding method deprecated before overridden method on macOS (10.3 vs. 10.2)}}
 - (void)overridden5 __attribute__((availability(macosx,introduced=10_3)));
 - (void)overridden6 __attribute__((availability(macosx,unavailable))); // expected-warning{{overriding method cannot be unavailable on macOS when its overridden method is available}}
 @end

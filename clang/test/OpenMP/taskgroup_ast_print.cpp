@@ -74,7 +74,7 @@ int main (int argc, char **argv) {
 // CHECK: static int a;
 #pragma omp taskgroup
   a=2;
-// CHECK-NEXT: #pragma omp taskgroup
+// CHECK-NEXT: #pragma omp taskgroup{{$}}
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: ++a;
   ++a;

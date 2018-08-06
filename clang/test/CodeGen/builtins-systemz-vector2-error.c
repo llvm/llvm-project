@@ -28,34 +28,34 @@ volatile unsigned int len;
 int cc;
 
 void test_integer(void) {
-  __builtin_s390_vmslg(vul, vul, vuc, -1);   // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vmslg(vul, vul, vuc, 16);   // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vmslg(vul, vul, vuc, -1);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vmslg(vul, vul, vuc, 16);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vmslg(vul, vul, vuc, len);  // expected-error {{must be a constant integer}}
 }
 
 void test_float(void) {
-  __builtin_s390_vfmaxdb(vd, vd, -1);        // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfmaxdb(vd, vd, 16);        // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfmaxdb(vd, vd, -1);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfmaxdb(vd, vd, 16);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfmaxdb(vd, vd, len);       // expected-error {{must be a constant integer}}
-  __builtin_s390_vfmindb(vd, vd, -1);        // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfmindb(vd, vd, 16);        // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfmindb(vd, vd, -1);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfmindb(vd, vd, 16);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfmindb(vd, vd, len);       // expected-error {{must be a constant integer}}
 
-  __builtin_s390_vftcisb(vf, -1, &cc);       // expected-error {{argument should be a value from 0 to 4095}}
-  __builtin_s390_vftcisb(vf, 4096, &cc);     // expected-error {{argument should be a value from 0 to 4095}}
+  __builtin_s390_vftcisb(vf, -1, &cc);       // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vftcisb(vf, 4096, &cc);     // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vftcisb(vf, len, &cc);      // expected-error {{must be a constant integer}}
 
-  __builtin_s390_vfisb(vf, -1, 0);           // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfisb(vf, 16, 0);           // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfisb(vf, -1, 0);           // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfisb(vf, 16, 0);           // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfisb(vf, len, 0);          // expected-error {{must be a constant integer}}
-  __builtin_s390_vfisb(vf, 0, -1);           // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfisb(vf, 0, 16);           // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfisb(vf, 0, -1);           // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfisb(vf, 0, 16);           // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfisb(vf, 0, len);          // expected-error {{must be a constant integer}}
 
-  __builtin_s390_vfmaxsb(vf, vf, -1);        // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfmaxsb(vf, vf, 16);        // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfmaxsb(vf, vf, -1);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfmaxsb(vf, vf, 16);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfmaxsb(vf, vf, len);       // expected-error {{must be a constant integer}}
-  __builtin_s390_vfminsb(vf, vf, -1);        // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_s390_vfminsb(vf, vf, 16);        // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_s390_vfminsb(vf, vf, -1);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_s390_vfminsb(vf, vf, 16);        // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_s390_vfminsb(vf, vf, len);       // expected-error {{must be a constant integer}}
 }

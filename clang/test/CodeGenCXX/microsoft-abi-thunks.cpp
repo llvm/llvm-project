@@ -10,7 +10,7 @@ struct A {
   virtual ~A();
   virtual void public_f();
   // Make sure we don't emit unneeded thunks:
-  // XMANGLING-NOT: @"\01?public_f@A@@QAEXXZ"
+  // XMANGLING-NOT: @"?public_f@A@@QAEXXZ"
  protected:
   virtual void protected_f();
  private:
@@ -31,45 +31,45 @@ struct C : A, B {
   C();
 
   virtual ~C();
-  // MANGLING-DAG: declare {{.*}} @"\01??1C@@UAE@XZ"({{.*}})
-  // MANGLING-DAG: define {{.*}} @"\01??_GC@@UAEPAXI@Z"({{.*}})
-  // MANGLING-DAG: define {{.*}} @"\01??_EC@@W3AEPAXI@Z"({{.*}}) {{.*}} comdat
-  // MANGLING-X64-DAG: declare {{.*}} @"\01??1C@@UEAA@XZ"({{.*}})
-  // MANGLING-X64-DAG: define {{.*}} @"\01??_GC@@UEAAPEAXI@Z"({{.*}})
-  // MANGLING-X64-DAG: define {{.*}} @"\01??_EC@@W7EAAPEAXI@Z"({{.*}}) {{.*}} comdat
+  // MANGLING-DAG: declare {{.*}} @"??1C@@UAE@XZ"({{.*}})
+  // MANGLING-DAG: define {{.*}} @"??_GC@@UAEPAXI@Z"({{.*}})
+  // MANGLING-DAG: define {{.*}} @"??_EC@@W3AEPAXI@Z"({{.*}}) {{.*}} comdat
+  // MANGLING-X64-DAG: declare {{.*}} @"??1C@@UEAA@XZ"({{.*}})
+  // MANGLING-X64-DAG: define {{.*}} @"??_GC@@UEAAPEAXI@Z"({{.*}})
+  // MANGLING-X64-DAG: define {{.*}} @"??_EC@@W7EAAPEAXI@Z"({{.*}}) {{.*}} comdat
 
   // Overrides public_f() of two subobjects with distinct vfptrs, thus needs a thunk.
   virtual void public_f();
-  // MANGLING-DAG: @"\01?public_f@C@@UAEXXZ"
-  // MANGLING-DAG: @"\01?public_f@C@@W3AEXXZ"
-  // MANGLING-X64-DAG: @"\01?public_f@C@@UEAAXXZ"
-  // MANGLING-X64-DAG: @"\01?public_f@C@@W7EAAXXZ"
+  // MANGLING-DAG: @"?public_f@C@@UAEXXZ"
+  // MANGLING-DAG: @"?public_f@C@@W3AEXXZ"
+  // MANGLING-X64-DAG: @"?public_f@C@@UEAAXXZ"
+  // MANGLING-X64-DAG: @"?public_f@C@@W7EAAXXZ"
  protected:
   virtual void protected_f();
-  // MANGLING-DAG: @"\01?protected_f@C@@MAEXXZ"
-  // MANGLING-DAG: @"\01?protected_f@C@@O3AEXXZ"
-  // MANGLING-X64-DAG: @"\01?protected_f@C@@MEAAXXZ"
-  // MANGLING-X64-DAG: @"\01?protected_f@C@@O7EAAXXZ"
+  // MANGLING-DAG: @"?protected_f@C@@MAEXXZ"
+  // MANGLING-DAG: @"?protected_f@C@@O3AEXXZ"
+  // MANGLING-X64-DAG: @"?protected_f@C@@MEAAXXZ"
+  // MANGLING-X64-DAG: @"?protected_f@C@@O7EAAXXZ"
 
  private:
   virtual void private_f();
-  // MANGLING-DAG: @"\01?private_f@C@@EAEXXZ"
-  // MANGLING-DAG: @"\01?private_f@C@@G3AEXXZ"
-  // MANGLING-X64-DAG: @"\01?private_f@C@@EEAAXXZ"
-  // MANGLING-X64-DAG: @"\01?private_f@C@@G7EAAXXZ"
+  // MANGLING-DAG: @"?private_f@C@@EAEXXZ"
+  // MANGLING-DAG: @"?private_f@C@@G3AEXXZ"
+  // MANGLING-X64-DAG: @"?private_f@C@@EEAAXXZ"
+  // MANGLING-X64-DAG: @"?private_f@C@@G7EAAXXZ"
 };
 
 C::C() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define linkonce_odr x86_thiscallcc i8* @"\01??_EC@@W3AEPAXI@Z"(%struct.C* %this, i32 %should_call_delete) {{.*}} comdat
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* %this, i32 %should_call_delete) {{.*}} comdat
 // CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
 // FIXME: should actually call _EC, not _GC.
-// CODEGEN:   call x86_thiscallcc i8* @"\01??_GC@@UAEPAXI@Z"
+// CODEGEN:   call x86_thiscallcc i8* @"??_GC@@UAEPAXI@Z"
 // CODEGEN: ret
 
-// CODEGEN-LABEL: define linkonce_odr x86_thiscallcc void @"\01?public_f@C@@W3AEXXZ"(%struct.C*
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?public_f@C@@W3AEXXZ"(%struct.C*
 // CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
-// CODEGEN:   call x86_thiscallcc void @"\01?public_f@C@@UAEXXZ"(%struct.C*
+// CODEGEN:   call x86_thiscallcc void @"?public_f@C@@UAEXXZ"(%struct.C*
 // CODEGEN: ret
 
 void zoo(C* obj) {
@@ -83,16 +83,16 @@ struct D {
 struct E : D {
   E();
   virtual C* goo();
-  // MANGLING-DAG: @"\01?goo@E@@UAEPAUC@@XZ"
-  // MANGLING-DAG: @"\01?goo@E@@QAEPAUB@@XZ"
-  // MANGLING-X64-DAG: @"\01?goo@E@@UEAAPEAUC@@XZ"
-  // MANGLING-X64-DAG: @"\01?goo@E@@QEAAPEAUB@@XZ"
+  // MANGLING-DAG: @"?goo@E@@UAEPAUC@@XZ"
+  // MANGLING-DAG: @"?goo@E@@QAEPAUB@@XZ"
+  // MANGLING-X64-DAG: @"?goo@E@@UEAAPEAUC@@XZ"
+  // MANGLING-X64-DAG: @"?goo@E@@QEAAPEAUB@@XZ"
 };
 
 E::E() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr x86_thiscallcc %struct.C* @"\01?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN:   call x86_thiscallcc %struct.C* @"\01?goo@E@@UAEPAUC@@XZ"
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc %struct.C* @"?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN:   call x86_thiscallcc %struct.C* @"?goo@E@@UAEPAUC@@XZ"
 // CODEGEN:   getelementptr inbounds i8, i8* {{.*}}, i32 4
 // CODEGEN: ret
 
@@ -107,12 +107,12 @@ struct G : C { };
 
 struct H : E {
   virtual G* goo();
-  // MANGLING-DAG: @"\01?goo@H@@UAEPAUG@@XZ"
-  // MANGLING-DAG: @"\01?goo@H@@QAEPAUB@@XZ"
-  // MANGLING-DAG: @"\01?goo@H@@QAEPAUC@@XZ"
-  // MANGLING-X64-DAG: @"\01?goo@H@@UEAAPEAUG@@XZ"
-  // MANGLING-X64-DAG: @"\01?goo@H@@QEAAPEAUB@@XZ"
-  // MANGLING-X64-DAG: @"\01?goo@H@@QEAAPEAUC@@XZ"
+  // MANGLING-DAG: @"?goo@H@@UAEPAUG@@XZ"
+  // MANGLING-DAG: @"?goo@H@@QAEPAUB@@XZ"
+  // MANGLING-DAG: @"?goo@H@@QAEPAUC@@XZ"
+  // MANGLING-X64-DAG: @"?goo@H@@UEAAPEAUG@@XZ"
+  // MANGLING-X64-DAG: @"?goo@H@@QEAAPEAUB@@XZ"
+  // MANGLING-X64-DAG: @"?goo@H@@QEAAPEAUC@@XZ"
 };
 
 H h;
@@ -124,8 +124,8 @@ struct I : D {
 
 I::I() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr x86_thiscallcc %struct.{{[BF]}}* @"\01?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc %struct.F* @"\01?goo@I@@UAEPAUF@@XZ"
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc %struct.{{[BF]}}* @"?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc %struct.F* @"?goo@I@@UAEPAUF@@XZ"
 // CODEGEN: %[[ORIG_RET_i8:.*]] = bitcast %struct.F* %[[ORIG_RET]] to i8*
 // CODEGEN: %[[VBPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[ORIG_RET_i8]], i32 4
 // CODEGEN: %[[VBPTR:.*]] = bitcast i8* %[[VBPTR_i8]] to i32**
@@ -160,5 +160,5 @@ struct E : D {
 E::E() {}
 E e;
 // Class with internal linkage has internal linkage thunks.
-// CODEGEN: define internal x86_thiscallcc %struct.C* @"\01?goo@E@?A@@QAEPAUB@@XZ"
+// CODEGEN: define internal x86_thiscallcc %struct.C* @"?goo@E@?A@@QAEPAUB@@XZ"
 }

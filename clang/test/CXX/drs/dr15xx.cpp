@@ -112,9 +112,9 @@ namespace dr1512 { // dr1512: 4
 #endif
   }
 
-  template<typename T> struct Wrap { operator T(); };
-  void test_overload() {
 #if __cplusplus >= 201103L
+  template<typename T> struct Wrap { operator T(); }; // expected-note 4{{converted to type 'nullptr_t'}} expected-note 4{{converted to type 'int *'}}
+  void test_overload() {
     using nullptr_t = decltype(nullptr);
     void(Wrap<nullptr_t>() == Wrap<nullptr_t>());
     void(Wrap<nullptr_t>() != Wrap<nullptr_t>());
@@ -123,16 +123,16 @@ namespace dr1512 { // dr1512: 4
     void(Wrap<nullptr_t>() <= Wrap<nullptr_t>()); // expected-error {{invalid operands}}
     void(Wrap<nullptr_t>() >= Wrap<nullptr_t>()); // expected-error {{invalid operands}}
 
-    // The wording change fails to actually disallow this. This is valid
-    // via the builtin operator<(int*, int*) etc.
+    // Under dr1213, this is ill-formed: we select the builtin operator<(int*, int*)
+    // but then only convert as far as 'nullptr_t', which we then can't convert to 'int*'.
     void(Wrap<nullptr_t>() == Wrap<int*>());
     void(Wrap<nullptr_t>() != Wrap<int*>());
-    void(Wrap<nullptr_t>() < Wrap<int*>());
-    void(Wrap<nullptr_t>() > Wrap<int*>());
-    void(Wrap<nullptr_t>() <= Wrap<int*>());
-    void(Wrap<nullptr_t>() >= Wrap<int*>());
-#endif
+    void(Wrap<nullptr_t>() < Wrap<int*>()); // expected-error {{invalid operands to binary expression ('Wrap<nullptr_t>' and 'Wrap<int *>')}}
+    void(Wrap<nullptr_t>() > Wrap<int*>()); // expected-error {{invalid operands}}
+    void(Wrap<nullptr_t>() <= Wrap<int*>()); // expected-error {{invalid operands}}
+    void(Wrap<nullptr_t>() >= Wrap<int*>()); // expected-error {{invalid operands}}
   }
+#endif
 }
 
 namespace dr1518 { // dr1518: 4
@@ -356,6 +356,19 @@ auto DR1579_lambda_invalid = []() -> GenericMoveOnly<char> {
   return mo; // expected-error{{invokes a deleted function}}
 };
 } // end namespace dr1579
+
+namespace dr1584 {
+  // Deducing function types from cv-qualified types
+  template<typename T> void f(const T *); // expected-note {{candidate template ignored}}
+  template<typename T> void g(T *, const T * = 0);
+  template<typename T> void h(T *) { T::error; } // expected-error {{no members}}
+  template<typename T> void h(const T *);
+  void i() {
+    f(&i); // expected-error {{no matching function}}
+    g(&i);
+    h(&i); // expected-note {{here}}
+  }
+}
 
 namespace dr1589 {   // dr1589: 3.7 c++11
   // Ambiguous ranking of list-initialization sequences

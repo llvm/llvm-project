@@ -188,12 +188,12 @@ struct YA {
 	__declspec(align(32)) char : 1;
 };
 // CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct YA (empty)
+// CHECK-NEXT:    0 | struct YA
 // CHECK-NEXT:0:0-0 |   char
 // CHECK-NEXT:      | [sizeof=32, align=32
 // CHECK-NEXT:      |  nvsize=32, nvalign=32]
 // CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct YA (empty)
+// CHECK-X64-NEXT:    0 | struct YA
 // CHECK-X64-NEXT:0:0-0 |   char
 // CHECK-X64-NEXT:      | [sizeof=32, align=32
 // CHECK-X64-NEXT:      |  nvsize=32, nvalign=32]
@@ -206,14 +206,14 @@ struct YB {
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:    0 | struct YB
 // CHECK-NEXT:    0 |   char a
-// CHECK-NEXT:    1 |   struct YA b (empty)
+// CHECK-NEXT:    1 |   struct YA b
 // CHECK-NEXT:1:0-0 |     char
 // CHECK-NEXT:      | [sizeof=33, align=1
 // CHECK-NEXT:      |  nvsize=33, nvalign=1]
 // CHECK-X64: *** Dumping AST Record Layout
 // CHECK-X64-NEXT:    0 | struct YB
 // CHECK-X64-NEXT:    0 |   char a
-// CHECK-X64-NEXT:    1 |   struct YA b (empty)
+// CHECK-X64-NEXT:    1 |   struct YA b
 // CHECK-X64-NEXT:1:0-0 |     char
 // CHECK-X64-NEXT:      | [sizeof=33, align=1
 // CHECK-X64-NEXT:      |  nvsize=33, nvalign=1]
@@ -223,12 +223,12 @@ struct YC {
 	__declspec(align(32)) char : 1;
 };
 // CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct YC (empty)
+// CHECK-NEXT:    0 | struct YC
 // CHECK-NEXT:0:0-0 |   char
 // CHECK-NEXT:      | [sizeof=32, align=32
 // CHECK-NEXT:      |  nvsize=32, nvalign=32]
 // CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct YC (empty)
+// CHECK-X64-NEXT:    0 | struct YC
 // CHECK-X64-NEXT:    0:0-0 |   char
 // CHECK-X64-NEXT:      | [sizeof=8, align=32
 // CHECK-X64-NEXT:      |  nvsize=8, nvalign=32]
@@ -241,14 +241,14 @@ struct YD {
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:    0 | struct YD
 // CHECK-NEXT:    0 |   char a
-// CHECK-NEXT:    1 |   struct YC b (empty)
+// CHECK-NEXT:    1 |   struct YC b
 // CHECK-NEXT:1:0-0 |     char
 // CHECK-NEXT:      | [sizeof=33, align=1
 // CHECK-NEXT:      |  nvsize=33, nvalign=1]
 // CHECK-X64: *** Dumping AST Record Layout
 // CHECK-X64-NEXT:    0 | struct YD
 // CHECK-X64-NEXT:    0 |   char a
-// CHECK-X64-NEXT:    1 |   struct YC b (empty)
+// CHECK-X64-NEXT:    1 |   struct YC b
 // CHECK-X64-NEXT:1:0-0 |     char
 // CHECK-X64-NEXT:      | [sizeof=9, align=1
 // CHECK-X64-NEXT:      |  nvsize=9, nvalign=1]
@@ -258,12 +258,12 @@ struct YE {
 	__declspec(align(32)) char : 1;
 };
 // CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct YE (empty)
+// CHECK-NEXT:    0 | struct YE
 // CHECK-NEXT:    0:0-0 |   char
 // CHECK-NEXT:      | [sizeof=4, align=32
 // CHECK-NEXT:      |  nvsize=4, nvalign=32]
 // CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct YE (empty)
+// CHECK-X64-NEXT:    0 | struct YE
 // CHECK-X64-NEXT:    0:0-0 |   char
 // CHECK-X64-NEXT:      | [sizeof=4, align=32
 // CHECK-X64-NEXT:      |  nvsize=4, nvalign=32]
@@ -276,14 +276,14 @@ struct YF {
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:    0 | struct YF
 // CHECK-NEXT:    0 |   char a
-// CHECK-NEXT:    1 |   struct YE b (empty)
+// CHECK-NEXT:    1 |   struct YE b
 // CHECK-NEXT:1:0-0 |     char
 // CHECK-NEXT:      | [sizeof=5, align=1
 // CHECK-NEXT:      |  nvsize=5, nvalign=1]
 // CHECK-X64: *** Dumping AST Record Layout
 // CHECK-X64-NEXT:    0 | struct YF
 // CHECK-X64-NEXT:    0 |   char a
-// CHECK-X64-NEXT:    1 |   struct YE b (empty)
+// CHECK-X64-NEXT:    1 |   struct YE b
 // CHECK-X64-NEXT:1:0-0 |     char
 // CHECK-X64-NEXT:      | [sizeof=5, align=1
 // CHECK-X64-NEXT:      |  nvsize=5, nvalign=1]

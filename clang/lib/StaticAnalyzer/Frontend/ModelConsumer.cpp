@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements an ASTConsumer for consuming model files.
+/// This file implements an ASTConsumer for consuming model files.
 ///
 /// This ASTConsumer handles the AST of a parsed model file. All top level
 /// function definitions will be collected from that model file for later

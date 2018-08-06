@@ -29,7 +29,7 @@
 // RUN:   -fcuda-is-device -menable-unsafe-fp-math -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 
-// Wrap everything in extern "C" so we don't ahve to worry about name mangling
+// Wrap everything in extern "C" so we don't have to worry about name mangling
 // in the IR.
 extern "C" {
 #ifdef LIB

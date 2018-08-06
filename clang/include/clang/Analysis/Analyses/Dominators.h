@@ -37,7 +37,7 @@ namespace clang {
 
 using DomTreeNode = llvm::DomTreeNodeBase<CFGBlock>;
 
-/// \brief Concrete subclass of DominatorTreeBase for Clang
+/// Concrete subclass of DominatorTreeBase for Clang
 /// This class implements the dominators tree functionality given a Clang CFG.
 ///
 class DominatorTree : public ManagedAnalysis {
@@ -54,18 +54,18 @@ public:
 
   llvm::DomTreeBase<CFGBlock>& getBase() { return *DT; }
 
-  /// \brief This method returns the root CFGBlock of the dominators tree.
+  /// This method returns the root CFGBlock of the dominators tree.
   CFGBlock *getRoot() const {
     return DT->getRoot();
   }
 
-  /// \brief This method returns the root DomTreeNode, which is the wrapper
+  /// This method returns the root DomTreeNode, which is the wrapper
   /// for CFGBlock.
   DomTreeNode *getRootNode() const {
     return DT->getRootNode();
   }
 
-  /// \brief This method compares two dominator trees.
+  /// This method compares two dominator trees.
   /// The method returns false if the other dominator tree matches this
   /// dominator tree, otherwise returns true.
   bool compare(DominatorTree &Other) const {
@@ -81,14 +81,14 @@ public:
     return false;
   }
 
-  /// \brief This method builds the dominator tree for a given CFG
+  /// This method builds the dominator tree for a given CFG
   /// The CFG information is passed via AnalysisDeclContext
   void buildDominatorTree(AnalysisDeclContext &AC) {
     cfg = AC.getCFG();
     DT->recalculate(*cfg);
   }
 
-  /// \brief This method dumps immediate dominators for each block,
+  /// This method dumps immediate dominators for each block,
   /// mainly used for debug purposes.
   void dump() {
     llvm::errs() << "Immediate dominance tree (Node#,IDom#):\n";
@@ -104,20 +104,20 @@ public:
     }
   }
 
-  /// \brief This method tests if one CFGBlock dominates the other.
+  /// This method tests if one CFGBlock dominates the other.
   /// The method return true if A dominates B, false otherwise.
   /// Note a block always dominates itself.
   bool dominates(const CFGBlock *A, const CFGBlock *B) const {
     return DT->dominates(A, B);
   }
 
-  /// \brief This method tests if one CFGBlock properly dominates the other.
+  /// This method tests if one CFGBlock properly dominates the other.
   /// The method return true if A properly dominates B, false otherwise.
   bool properlyDominates(const CFGBlock *A, const CFGBlock *B) const {
     return DT->properlyDominates(A, B);
   }
 
-  /// \brief This method finds the nearest common dominator CFG block
+  /// This method finds the nearest common dominator CFG block
   /// for CFG block A and B. If there is no such block then return NULL.
   CFGBlock *findNearestCommonDominator(CFGBlock *A, CFGBlock *B) {
     return DT->findNearestCommonDominator(A, B);
@@ -128,24 +128,24 @@ public:
     return DT->findNearestCommonDominator(A, B);
   }
 
-  /// \brief This method is used to update the dominator
+  /// This method is used to update the dominator
   /// tree information when a node's immediate dominator changes.
   void changeImmediateDominator(CFGBlock *N, CFGBlock *NewIDom) {
     DT->changeImmediateDominator(N, NewIDom);
   }
 
-  /// \brief This method tests if the given CFGBlock can be reachable from root.
+  /// This method tests if the given CFGBlock can be reachable from root.
   /// Returns true if reachable, false otherwise.
   bool isReachableFromEntry(const CFGBlock *A) {
     return DT->isReachableFromEntry(A);
   }
 
-  /// \brief This method releases the memory held by the dominator tree.
+  /// This method releases the memory held by the dominator tree.
   virtual void releaseMemory() {
     DT->releaseMemory();
   }
 
-  /// \brief This method converts the dominator tree to human readable form.
+  /// This method converts the dominator tree to human readable form.
   virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
     DT->print(OS);
   }

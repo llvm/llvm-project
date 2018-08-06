@@ -38,7 +38,7 @@ extern "C" {
 typedef void * CXCompilationDatabase;
 
 /**
- * \brief Contains the results of a search in the compilation database
+ * Contains the results of a search in the compilation database
  *
  * When searching for the compile command for a file, the compilation db can
  * return several commands, as the file may have been compiled with
@@ -49,28 +49,28 @@ typedef void * CXCompilationDatabase;
 typedef void * CXCompileCommands;
 
 /**
- * \brief Represents the command line invocation to compile a specific file.
+ * Represents the command line invocation to compile a specific file.
  */
 typedef void * CXCompileCommand;
 
 /**
- * \brief Error codes for Compilation Database
+ * Error codes for Compilation Database
  */
 typedef enum  {
   /*
-   * \brief No error occurred
+   * No error occurred
    */
   CXCompilationDatabase_NoError = 0,
 
   /*
-   * \brief Database can not be loaded
+   * Database can not be loaded
    */
   CXCompilationDatabase_CanNotLoadDatabase = 1
 
 } CXCompilationDatabase_Error;
 
 /**
- * \brief Creates a compilation database from the database found in directory
+ * Creates a compilation database from the database found in directory
  * buildDir. For example, CMake can output a compile_commands.json which can
  * be used to build the database.
  *
@@ -81,13 +81,13 @@ clang_CompilationDatabase_fromDirectory(const char *BuildDir,
                                         CXCompilationDatabase_Error *ErrorCode);
 
 /**
- * \brief Free the given compilation database
+ * Free the given compilation database
  */
 CINDEX_LINKAGE void
 clang_CompilationDatabase_dispose(CXCompilationDatabase);
 
 /**
- * \brief Find the compile commands used for a file. The compile commands
+ * Find the compile commands used for a file. The compile commands
  * must be freed by \c clang_CompileCommands_dispose.
  */
 CINDEX_LINKAGE CXCompileCommands
@@ -95,24 +95,24 @@ clang_CompilationDatabase_getCompileCommands(CXCompilationDatabase,
                                              const char *CompleteFileName);
 
 /**
- * \brief Get all the compile commands in the given compilation database.
+ * Get all the compile commands in the given compilation database.
  */
 CINDEX_LINKAGE CXCompileCommands
 clang_CompilationDatabase_getAllCompileCommands(CXCompilationDatabase);
 
 /**
- * \brief Free the given CompileCommands
+ * Free the given CompileCommands
  */
 CINDEX_LINKAGE void clang_CompileCommands_dispose(CXCompileCommands);
 
 /**
- * \brief Get the number of CompileCommand we have for a file
+ * Get the number of CompileCommand we have for a file
  */
 CINDEX_LINKAGE unsigned
 clang_CompileCommands_getSize(CXCompileCommands);
 
 /**
- * \brief Get the I'th CompileCommand for a file
+ * Get the I'th CompileCommand for a file
  *
  * Note : 0 <= i < clang_CompileCommands_getSize(CXCompileCommands)
  */
@@ -120,26 +120,26 @@ CINDEX_LINKAGE CXCompileCommand
 clang_CompileCommands_getCommand(CXCompileCommands, unsigned I);
 
 /**
- * \brief Get the working directory where the CompileCommand was executed from
+ * Get the working directory where the CompileCommand was executed from
  */
 CINDEX_LINKAGE CXString
 clang_CompileCommand_getDirectory(CXCompileCommand);
 
 /**
- * \brief Get the filename associated with the CompileCommand.
+ * Get the filename associated with the CompileCommand.
  */
 CINDEX_LINKAGE CXString
 clang_CompileCommand_getFilename(CXCompileCommand);
 
 /**
- * \brief Get the number of arguments in the compiler invocation.
+ * Get the number of arguments in the compiler invocation.
  *
  */
 CINDEX_LINKAGE unsigned
 clang_CompileCommand_getNumArgs(CXCompileCommand);
 
 /**
- * \brief Get the I'th argument value in the compiler invocations
+ * Get the I'th argument value in the compiler invocations
  *
  * Invariant :
  *  - argument 0 is the compiler executable
@@ -148,19 +148,19 @@ CINDEX_LINKAGE CXString
 clang_CompileCommand_getArg(CXCompileCommand, unsigned I);
 
 /**
- * \brief Get the number of source mappings for the compiler invocation.
+ * Get the number of source mappings for the compiler invocation.
  */
 CINDEX_LINKAGE unsigned
 clang_CompileCommand_getNumMappedSources(CXCompileCommand);
 
 /**
- * \brief Get the I'th mapped source path for the compiler invocation.
+ * Get the I'th mapped source path for the compiler invocation.
  */
 CINDEX_LINKAGE CXString
 clang_CompileCommand_getMappedSourcePath(CXCompileCommand, unsigned I);
 
 /**
- * \brief Get the I'th mapped source content for the compiler invocation.
+ * Get the I'th mapped source content for the compiler invocation.
  */
 CINDEX_LINKAGE CXString
 clang_CompileCommand_getMappedSourceContent(CXCompileCommand, unsigned I);

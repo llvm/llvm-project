@@ -16,6 +16,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
@@ -405,11 +406,15 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
     return XL.isBeforeInTranslationUnitThan(YL);
-  const FileEntry *XFE = SM.getFileEntryForID(XL.getFileID());
-  const FileEntry *YFE = SM.getFileEntryForID(YL.getFileID());
+  const FileEntry *XFE = SM.getFileEntryForID(XL.getSpellingLoc().getFileID());
+  const FileEntry *YFE = SM.getFileEntryForID(YL.getSpellingLoc().getFileID());
   if (!XFE || !YFE)
     return XFE && !YFE;
-  return XFE->getName() < YFE->getName();
+  int NameCmp = XFE->getName().compare(YFE->getName());
+  if (NameCmp != 0)
+    return NameCmp == -1;
+  // Last resort: Compare raw file IDs that are possibly expansions.
+  return XL.getFileID() < YL.getFileID();
 }
 
 static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
@@ -1000,11 +1005,49 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
         CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
 }
 
+static void describeTemplateParameters(raw_ostream &Out,
+                                       const ArrayRef<TemplateArgument> TAList,
+                                       const LangOptions &LO,
+                                       StringRef Prefix = StringRef(),
+                                       StringRef Postfix = StringRef());
+
+static void describeTemplateParameter(raw_ostream &Out,
+                                      const TemplateArgument &TArg,
+                                      const LangOptions &LO) {
+
+  if (TArg.getKind() == TemplateArgument::ArgKind::Pack) {
+    describeTemplateParameters(Out, TArg.getPackAsArray(), LO);
+  } else {
+    TArg.print(PrintingPolicy(LO), Out);
+  }
+}
+
+static void describeTemplateParameters(raw_ostream &Out,
+                                       const ArrayRef<TemplateArgument> TAList,
+                                       const LangOptions &LO,
+                                       StringRef Prefix, StringRef Postfix) {
+  if (TAList.empty())
+    return;
+
+  Out << Prefix;
+  for (int I = 0, Last = TAList.size() - 1; I != Last; ++I) {
+    describeTemplateParameter(Out, TAList[I], LO);
+    Out << ", ";
+  }
+  describeTemplateParameter(Out, TAList[TAList.size() - 1], LO);
+  Out << Postfix;
+}
+
 static void describeClass(raw_ostream &Out, const CXXRecordDecl *D,
                           StringRef Prefix = StringRef()) {
   if (!D->getIdentifier())
     return;
-  Out << Prefix << '\'' << *D << '\'';
+  Out << Prefix << '\'' << *D;
+  if (const auto T = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    describeTemplateParameters(Out, T->getTemplateArgs().asArray(),
+                               D->getASTContext().getLangOpts(), "<", ">");
+
+  Out << '\'';
 }
 
 static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
@@ -1062,7 +1105,16 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
     return true;
   }
 
-  Out << Prefix << '\'' << cast<NamedDecl>(*D) << '\'';
+  Out << Prefix << '\'' << cast<NamedDecl>(*D);
+
+  // Adding template parameters.
+  if (const auto FD = dyn_cast<FunctionDecl>(D))
+    if (const TemplateArgumentList *TAList =
+                                    FD->getTemplateSpecializationArgs())
+      describeTemplateParameters(Out, TAList->asArray(),
+                                 FD->getASTContext().getLangOpts(), "<", ">");
+
+  Out << '\'';
   return true;
 }
 
@@ -1272,4 +1324,85 @@ std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
      << " parameter";
 
   return os.str();
+}
+
+LLVM_DUMP_METHOD void PathPieces::dump() const {
+  unsigned index = 0;
+  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+    llvm::errs() << "[" << index++ << "]  ";
+    (*I)->dump();
+    llvm::errs() << "\n";
+  }
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticCallPiece::dump() const {
+  llvm::errs() << "CALL\n--------------\n";
+
+  if (const Stmt *SLoc = getLocation().getStmtOrNull())
+    SLoc->dump();
+  else if (const auto *ND = dyn_cast_or_null<NamedDecl>(getCallee()))
+    llvm::errs() << *ND << "\n";
+  else
+    getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticEventPiece::dump() const {
+  llvm::errs() << "EVENT\n--------------\n";
+  llvm::errs() << getString() << "\n";
+  llvm::errs() << " ---- at ----\n";
+  getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticControlFlowPiece::dump() const {
+  llvm::errs() << "CONTROL\n--------------\n";
+  getStartLocation().dump();
+  llvm::errs() << " ---- to ----\n";
+  getEndLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticMacroPiece::dump() const {
+  llvm::errs() << "MACRO\n--------------\n";
+  // FIXME: Print which macro is being invoked.
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticNotePiece::dump() const {
+  llvm::errs() << "NOTE\n--------------\n";
+  llvm::errs() << getString() << "\n";
+  llvm::errs() << " ---- at ----\n";
+  getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticLocation::dump() const {
+  if (!isValid()) {
+    llvm::errs() << "<INVALID>\n";
+    return;
+  }
+
+  switch (K) {
+  case RangeK:
+    // FIXME: actually print the range.
+    llvm::errs() << "<range>\n";
+    break;
+  case SingleLocK:
+    asLocation().dump();
+    llvm::errs() << "\n";
+    break;
+  case StmtK:
+    if (S)
+      S->dump();
+    else
+      llvm::errs() << "<NULL STMT>\n";
+    break;
+  case DeclK:
+    if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
+      llvm::errs() << *ND << "\n";
+    else if (isa<BlockDecl>(D))
+      // FIXME: Make this nicer.
+      llvm::errs() << "<block>\n";
+    else if (D)
+      llvm::errs() << "<unknown decl>\n";
+    else
+      llvm::errs() << "<NULL DECL>\n";
+    break;
+  }
 }

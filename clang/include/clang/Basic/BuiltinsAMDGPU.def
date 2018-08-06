@@ -21,9 +21,9 @@
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*2", "nc")
-BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*2", "nc")
-BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*2", "nc")
+BUILTIN(__builtin_amdgcn_dispatch_ptr, "Uc*4", "nc")
+BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*4", "nc")
+BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*4", "nc")
 
 BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")
@@ -93,6 +93,9 @@ BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_readfirstlane, "ii", "nc")
 BUILTIN(__builtin_amdgcn_readlane, "iii", "nc")
 BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_ds_faddf, "ff*fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_fminf, "ff*fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*fIiIiIb", "n")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.
@@ -116,6 +119,18 @@ TARGET_BUILTIN(__builtin_amdgcn_mov_dpp, "iiIiIiIiIb", "nc", "dpp")
 //===----------------------------------------------------------------------===//
 
 TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
+
+//===----------------------------------------------------------------------===//
+// Deep learning builtins.
+//===----------------------------------------------------------------------===//
+
+TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hf", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot4, "UiUiUiUi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSi", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUi", "nc", "dl-insts")
 
 //===----------------------------------------------------------------------===//
 // Special builtins.

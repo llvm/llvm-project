@@ -180,6 +180,13 @@ will need to:
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
 
+Silencing Unsigned Integer Overflow
+===================================
+To silence reports from unsigned integer overflow, you can set
+``UBSAN_OPTIONS=silence_unsigned_overflow=1``.  This feature, combined with
+``-fsanitize-recover=unsigned-integer-overflow``, is particularly useful for
+providing fuzzing signal without blowing up logs.
+
 Issue Suppression
 =================
 

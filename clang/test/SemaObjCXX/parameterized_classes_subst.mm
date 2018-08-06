@@ -419,7 +419,7 @@ struct DependentTemplate {
 };
 
 struct NSMutableDictionaryBuilder {
-  typedef NSMutableDictionary apply;
+  typedef NSMutableDictionary apply; // expected-note 2{{declared as a non-template here}}
 };
 
 typedef DependentTemplate<NSMutableDictionaryBuilder>::type DependentTemplateFail1; // expected-note{{in instantiation of template class}}

@@ -19,8 +19,8 @@ inline int f() {
 }
 int x = f();
 
-// CHECK: define linkonce_odr i32 @"\01?f@@YAHXZ"()
-// CHECK: define internal i32 @"\01?filt$0@0@f@@"({{.*}})
+// CHECK: define linkonce_odr dso_local i32 @"?f@@YAHXZ"()
+// CHECK: define internal i32 @"?filt$0@0@f@@"({{.*}})
 
 #else
 

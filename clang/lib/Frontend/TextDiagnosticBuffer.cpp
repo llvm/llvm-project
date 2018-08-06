@@ -1,4 +1,4 @@
-//===--- TextDiagnosticBuffer.cpp - Buffer Text Diagnostics ---------------===//
+//===- TextDiagnosticBuffer.cpp - Buffer Text Diagnostics -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+
 using namespace clang;
 
 /// HandleDiagnostic - Store the errors, warnings, and notes that are
 /// reported.
-///
 void TextDiagnosticBuffer::HandleDiagnostic(DiagnosticsEngine::Level Level,
                                             const Diagnostic &Info) {
   // Default implementation (Warnings/errors count).
@@ -50,25 +52,24 @@ void TextDiagnosticBuffer::HandleDiagnostic(DiagnosticsEngine::Level Level,
 }
 
 void TextDiagnosticBuffer::FlushDiagnostics(DiagnosticsEngine &Diags) const {
-  for (auto it = All.begin(), ie = All.end(); it != ie; ++it) {
-    auto Diag = Diags.Report(Diags.getCustomDiagID(it->first, "%0"));
-    switch (it->first) {
+  for (const auto &I : All) {
+    auto Diag = Diags.Report(Diags.getCustomDiagID(I.first, "%0"));
+    switch (I.first) {
     default: llvm_unreachable(
                            "Diagnostic not handled during diagnostic flushing!");
     case DiagnosticsEngine::Note:
-      Diag << Notes[it->second].second;
+      Diag << Notes[I.second].second;
       break;
     case DiagnosticsEngine::Warning:
-      Diag << Warnings[it->second].second;
+      Diag << Warnings[I.second].second;
       break;
     case DiagnosticsEngine::Remark:
-      Diag << Remarks[it->second].second;
+      Diag << Remarks[I.second].second;
       break;
     case DiagnosticsEngine::Error:
     case DiagnosticsEngine::Fatal:
-      Diag << Errors[it->second].second;
+      Diag << Errors[I.second].second;
       break;
     }
   }
 }
-

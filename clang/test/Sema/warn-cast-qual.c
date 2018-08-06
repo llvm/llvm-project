@@ -4,11 +4,15 @@
 #include <stdint.h>
 
 void foo() {
-  const char * const ptr = 0;
-  const char * const *ptrptr = 0;
+  const char *const ptr = 0;
+  const char *const *ptrptr = 0;
+  char *const *ptrcptr = 0;
+  char **ptrptr2 = 0;
   char *y = (char *)ptr;	// expected-warning {{cast from 'const char *' to 'char *' drops const qualifier}}
-  char **y1 = (char **)ptrptr;	// expected-warning {{cast from 'const char *const' to 'char *' drops const qualifier}}
+  char **y1 = (char **)ptrptr;	// expected-warning {{cast from 'const char *const *' to 'char **' drops const qualifier}}
   const char **y2 = (const char **)ptrptr;	// expected-warning {{cast from 'const char *const *' to 'const char **' drops const qualifier}}
+  char *const *y3 = (char *const *)ptrptr;	// expected-warning {{cast from 'const char *const' to 'char *const' drops const qualifier}}
+  const char **y4 = (const char **)ptrcptr;	// expected-warning {{cast from 'char *const *' to 'const char **' drops const qualifier}}
 
   char *z = (char *)(uintptr_t)(const void *)ptr;	// no warning
   char *z1 = (char *)(const void *)ptr;	// expected-warning {{cast from 'const void *' to 'char *' drops const qualifier}}

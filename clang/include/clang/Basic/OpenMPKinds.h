@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines some OpenMP-specific enums and functions.
+/// Defines some OpenMP-specific enums and functions.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace clang {
 
-/// \brief OpenMP directives.
+/// OpenMP directives.
 enum OpenMPDirectiveKind {
 #define OPENMP_DIRECTIVE(Name) \
   OMPD_##Name,
@@ -29,7 +29,7 @@ enum OpenMPDirectiveKind {
   OMPD_unknown
 };
 
-/// \brief OpenMP clauses.
+/// OpenMP clauses.
 enum OpenMPClauseKind {
 #define OPENMP_CLAUSE(Name, Class) \
   OMPC_##Name,
@@ -39,7 +39,7 @@ enum OpenMPClauseKind {
   OMPC_unknown
 };
 
-/// \brief OpenMP attributes for 'default' clause.
+/// OpenMP attributes for 'default' clause.
 enum OpenMPDefaultClauseKind {
 #define OPENMP_DEFAULT_KIND(Name) \
   OMPC_DEFAULT_##Name,
@@ -47,7 +47,7 @@ enum OpenMPDefaultClauseKind {
   OMPC_DEFAULT_unknown
 };
 
-/// \brief OpenMP attributes for 'proc_bind' clause.
+/// OpenMP attributes for 'proc_bind' clause.
 enum OpenMPProcBindClauseKind {
 #define OPENMP_PROC_BIND_KIND(Name) \
   OMPC_PROC_BIND_##Name,
@@ -55,7 +55,7 @@ enum OpenMPProcBindClauseKind {
   OMPC_PROC_BIND_unknown
 };
 
-/// \brief OpenMP attributes for 'schedule' clause.
+/// OpenMP attributes for 'schedule' clause.
 enum OpenMPScheduleClauseKind {
 #define OPENMP_SCHEDULE_KIND(Name) \
   OMPC_SCHEDULE_##Name,
@@ -63,7 +63,7 @@ enum OpenMPScheduleClauseKind {
   OMPC_SCHEDULE_unknown
 };
 
-/// \brief OpenMP modifiers for 'schedule' clause.
+/// OpenMP modifiers for 'schedule' clause.
 enum OpenMPScheduleClauseModifier {
   OMPC_SCHEDULE_MODIFIER_unknown = OMPC_SCHEDULE_unknown,
 #define OPENMP_SCHEDULE_MODIFIER(Name) \
@@ -72,7 +72,7 @@ enum OpenMPScheduleClauseModifier {
   OMPC_SCHEDULE_MODIFIER_last
 };
 
-/// \brief OpenMP attributes for 'depend' clause.
+/// OpenMP attributes for 'depend' clause.
 enum OpenMPDependClauseKind {
 #define OPENMP_DEPEND_KIND(Name) \
   OMPC_DEPEND_##Name,
@@ -80,7 +80,7 @@ enum OpenMPDependClauseKind {
   OMPC_DEPEND_unknown
 };
 
-/// \brief OpenMP attributes for 'linear' clause.
+/// OpenMP attributes for 'linear' clause.
 enum OpenMPLinearClauseKind {
 #define OPENMP_LINEAR_KIND(Name) \
   OMPC_LINEAR_##Name,
@@ -88,7 +88,7 @@ enum OpenMPLinearClauseKind {
   OMPC_LINEAR_unknown
 };
 
-/// \brief OpenMP mapping kind for 'map' clause.
+/// OpenMP mapping kind for 'map' clause.
 enum OpenMPMapClauseKind {
 #define OPENMP_MAP_KIND(Name) \
   OMPC_MAP_##Name,
@@ -96,14 +96,14 @@ enum OpenMPMapClauseKind {
   OMPC_MAP_unknown
 };
 
-/// \brief OpenMP attributes for 'dist_schedule' clause.
+/// OpenMP attributes for 'dist_schedule' clause.
 enum OpenMPDistScheduleClauseKind {
 #define OPENMP_DIST_SCHEDULE_KIND(Name) OMPC_DIST_SCHEDULE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_DIST_SCHEDULE_unknown
 };
 
-/// \brief OpenMP attributes for 'defaultmap' clause.
+/// OpenMP attributes for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseKind {
 #define OPENMP_DEFAULTMAP_KIND(Name) \
   OMPC_DEFAULTMAP_##Name,
@@ -111,7 +111,7 @@ enum OpenMPDefaultmapClauseKind {
   OMPC_DEFAULTMAP_unknown
 };
 
-/// \brief OpenMP modifiers for 'defaultmap' clause.
+/// OpenMP modifiers for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseModifier {
   OMPC_DEFAULTMAP_MODIFIER_unknown = OMPC_DEFAULTMAP_unknown,
 #define OPENMP_DEFAULTMAP_MODIFIER(Name) \
@@ -139,39 +139,39 @@ const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
 bool isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
                                  OpenMPClauseKind CKind);
 
-/// \brief Checks if the specified directive is a directive with an associated
+/// Checks if the specified directive is a directive with an associated
 /// loop construct.
 /// \param DKind Specified directive.
 /// \return true - the directive is a loop-associated directive like 'omp simd'
 /// or 'omp for' directive, otherwise - false.
 bool isOpenMPLoopDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a worksharing directive.
+/// Checks if the specified directive is a worksharing directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a worksharing directive like 'omp for',
 /// otherwise - false.
 bool isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a taskloop directive.
+/// Checks if the specified directive is a taskloop directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a worksharing directive like 'omp taskloop',
 /// otherwise - false.
 bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a parallel-kind directive.
+/// Checks if the specified directive is a parallel-kind directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a parallel-like directive like 'omp
 /// parallel', otherwise - false.
 bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a target code offload directive.
+/// Checks if the specified directive is a target code offload directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a target code offload directive like
 /// 'omp target', 'omp target parallel', 'omp target xxx'
 /// otherwise - false.
 bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a target data offload directive.
+/// Checks if the specified directive is a target data offload directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a target data offload directive like
 /// 'omp target data', 'omp target update', 'omp target enter data',
@@ -193,13 +193,13 @@ bool isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind);
 /// \return true - the directive is a teams-like directive, otherwise - false.
 bool isOpenMPTeamsDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a simd directive.
+/// Checks if the specified directive is a simd directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a simd directive like 'omp simd',
 /// otherwise - false.
 bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a distribute directive.
+/// Checks if the specified directive is a distribute directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a distribute-directive like 'omp
 /// distribute',
@@ -214,13 +214,13 @@ bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPNestingDistributeDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified clause is one of private clauses like
+/// Checks if the specified clause is one of private clauses like
 /// 'private', 'firstprivate', 'reduction' etc..
 /// \param Kind Clause kind.
 /// \return true - the clause is a private clause, otherwise - false.
 bool isOpenMPPrivate(OpenMPClauseKind Kind);
 
-/// \brief Checks if the specified clause is one of threadprivate clauses like
+/// Checks if the specified clause is one of threadprivate clauses like
 /// 'threadprivate', 'copyin' or 'copyprivate'.
 /// \param Kind Clause kind.
 /// \return true - the clause is a threadprivate clause, otherwise - false.

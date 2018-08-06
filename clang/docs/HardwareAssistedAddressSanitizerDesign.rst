@@ -7,8 +7,6 @@ This page is a design document for
 a tool similar to :doc:`AddressSanitizer`,
 but based on partial hardware assistance.
 
-The document is a draft, suggestions are welcome.
-
 
 Introduction
 ============
@@ -30,14 +28,15 @@ accuracy guarantees.
 
 Algorithm
 =========
-* Every heap/stack/global memory object is forcibly aligned by `N` bytes
-  (`N` is e.g. 16 or 64). We call `N` the **granularity** of tagging.
-* For every such object a random `K`-bit tag `T` is chosen (`K` is e.g. 4 or 8)
+* Every heap/stack/global memory object is forcibly aligned by `TG` bytes
+  (`TG` is e.g. 16 or 64). We call `TG` the **tagging granularity**.
+* For every such object a random `TS`-bit tag `T` is chosen (`TS`, or tag size, is e.g. 4 or 8)
 * The pointer to the object is tagged with `T`.
-* The memory for the object is also tagged with `T`
-  (using a `N=>1` shadow memory)
+* The memory for the object is also tagged with `T` (using a `TG=>1` shadow memory)
 * Every load and store is instrumented to read the memory tag and compare it
   with the pointer tag, exception is raised on tag mismatch.
+
+For a more detailed discussion of this approach see https://arxiv.org/pdf/1802.09517.pdf
 
 Instrumentation
 ===============
@@ -53,17 +52,16 @@ verifies the tags. Currently, the following sequence is used:
   // int foo(int *a) { return *a; }
   // clang -O2 --target=aarch64-linux -fsanitize=hwaddress -c load.c
   foo:
-       0:	08 dc 44 d3 	ubfx	x8, x0, #4, #52  // shadow address
-       4:	08 01 40 39 	ldrb	w8, [x8]         // load shadow
-       8:	09 fc 78 d3 	lsr	x9, x0, #56      // address tag
-       c:	3f 01 08 6b 	cmp	w9, w8           // compare tags
-      10:	61 00 00 54 	b.ne	#12              // jump on mismatch
-      14:	00 00 40 b9 	ldr	w0, [x0]         // original load
-      18:	c0 03 5f d6 	ret             
-      1c:	40 20 40 d4 	hlt	#0x102           // halt
-      20:	00 00 40 b9 	ldr	w0, [x0]         // original load
-      24:	c0 03 5f d6 	ret
-
+       0:	08 00 00 90 	adrp	x8, 0 <__hwasan_shadow>
+       4:	08 01 40 f9 	ldr	x8, [x8]         // shadow base (to be resolved by the loader)
+       8:	09 dc 44 d3 	ubfx	x9, x0, #4, #52  // shadow offset
+       c:	28 69 68 38 	ldrb	w8, [x9, x8]     // load shadow tag
+      10:	09 fc 78 d3 	lsr	x9, x0, #56      // extract address tag
+      14:	3f 01 08 6b 	cmp	w9, w8           // compare tags
+      18:	61 00 00 54 	b.ne	24               // jump on mismatch
+      1c:	00 00 40 b9 	ldr	w0, [x0]         // original load
+      20:	c0 03 5f d6 	ret
+      24:	40 20 21 d4 	brk	#0x902           // trap
 
 Alternatively, memory accesses are prefixed with a function call.
 
@@ -71,17 +69,24 @@ Heap
 ----
 
 Tagging the heap memory/pointers is done by `malloc`.
-This can be based on any malloc that forces all objects to be N-aligned.
+This can be based on any malloc that forces all objects to be TG-aligned.
 `free` tags the memory with a different tag.
 
 Stack
 -----
 
-Special compiler instrumentation is required to align the local variables
-by N, tag the memory and the pointers.
+Stack frames are instrumented by aligning all non-promotable allocas
+by `TG` and tagging stack memory in function prologue and epilogue.
+
+Tags for different allocas in one function are **not** generated
+independently; doing that in a function with `M` allocas would require
+maintaining `M` live stack pointers, significantly increasing register
+pressure. Instead we generate a single base tag value in the prologue,
+and build the tag for alloca number `M` as `ReTag(BaseTag, M)`, where
+ReTag can be as simple as exclusive-or with constant `M`.
+
 Stack instrumentation is expected to be a major source of overhead,
 but could be optional.
-TODO: details.
 
 Globals
 -------
@@ -126,15 +131,25 @@ HWASAN:
     https://www.kernel.org/doc/Documentation/arm64/tagged-pointers.txt).
   * **Does not require redzones to detect buffer overflows**,
     but the buffer overflow detection is probabilistic, with roughly
-    `(2**K-1)/(2**K)` probability of catching a bug.
+    `(2**TS-1)/(2**TS)` probability of catching a bug.
   * **Does not require quarantine to detect heap-use-after-free,
     or stack-use-after-return**.
     The detection is similarly probabilistic.
 
 The memory overhead of HWASAN is expected to be much smaller
 than that of AddressSanitizer:
-`1/N` extra memory for the shadow
-and some overhead due to `N`-aligning all objects.
+`1/TG` extra memory for the shadow
+and some overhead due to `TG`-aligning all objects.
+
+Supported architectures
+=======================
+HWASAN relies on `Address Tagging`_ which is only available on AArch64.
+For other 64-bit architectures it is possible to remove the address tags
+before every load and store by compiler instrumentation, but this variant
+will have limited deployability since not all of the code is
+typically instrumented.
+
+The HWASAN's approach is not applicable to 32-bit architectures.
 
 
 Related Work

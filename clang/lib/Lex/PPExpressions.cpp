@@ -363,7 +363,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
       NumBits = TI.getChar16Width();
     else if (Literal.isUTF32())
       NumBits = TI.getChar32Width();
-    else
+    else // char or char8_t
       NumBits = TI.getCharWidth();
 
     // Set the width.

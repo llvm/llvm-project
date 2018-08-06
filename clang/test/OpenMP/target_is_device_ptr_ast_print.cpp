@@ -54,7 +54,7 @@ struct SA {
 // CHECK-NEXT: int aa[10];
 // CHECK-NEXT: arr &raa = this->aa;
 // CHECK-NEXT: func(
-// CHECK-NEXT: #pragma omp target is_device_ptr(this->k)
+// CHECK-NEXT: #pragma omp target is_device_ptr(this->k){{$}}
 // CHECK-NEXT: {
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target is_device_ptr(this->z)

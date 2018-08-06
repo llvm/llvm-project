@@ -21,7 +21,7 @@ T tmain(T argc) {
 #pragma omp taskgroup task_reduction(+: d)
 #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+:g) in_reduction(+: d)
   // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
-  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g) in_reduction(+: d){{$}}
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

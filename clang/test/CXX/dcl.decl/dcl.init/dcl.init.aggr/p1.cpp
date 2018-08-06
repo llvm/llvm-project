@@ -111,6 +111,11 @@ struct NonAggr6 { // expected-note 3 {{candidate constructor}}
 };
 NonAggr6 na6 = { 42 }; // expected-error {{no matching constructor for initialization of 'NonAggr6'}}
 
+struct NonAggr7 : NonAggr6 { // expected-note 3 {{candidate constructor}}
+  int n;
+};
+NonAggr7 na7 = {{}, 42}; // expected-error {{no matching constructor for initialization of 'NonAggr7'}}
+
 struct DefaultedAggr {
   int n;
 

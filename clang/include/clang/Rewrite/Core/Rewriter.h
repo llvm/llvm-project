@@ -1,4 +1,4 @@
-//===--- Rewriter.h - Code rewriting interface ------------------*- C++ -*-===//
+//===- Rewriter.h - Code rewriting interface --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,52 +15,55 @@
 #ifndef LLVM_CLANG_REWRITE_CORE_REWRITER_H
 #define LLVM_CLANG_REWRITE_CORE_REWRITER_H
 
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Rewrite/Core/RewriteBuffer.h"
-#include <cstring>
+#include "llvm/ADT/StringRef.h"
 #include <map>
 #include <string>
 
 namespace clang {
-  class LangOptions;
-  class SourceManager;
+
+class LangOptions;
+class SourceManager;
 
 /// Rewriter - This is the main interface to the rewrite buffers.  Its primary
 /// job is to dispatch high-level requests to the low-level RewriteBuffers that
 /// are involved.
 class Rewriter {
-  SourceManager *SourceMgr;
-  const LangOptions *LangOpts;
+  SourceManager *SourceMgr = nullptr;
+  const LangOptions *LangOpts = nullptr;
   std::map<FileID, RewriteBuffer> RewriteBuffers;
+
 public:
   struct RewriteOptions {
-    /// \brief Given a source range, true to include previous inserts at the
+    /// Given a source range, true to include previous inserts at the
     /// beginning of the range as part of the range itself (true by default).
-    bool IncludeInsertsAtBeginOfRange;
-    /// \brief Given a source range, true to include previous inserts at the
-    /// end of the range as part of the range itself (true by default).
-    bool IncludeInsertsAtEndOfRange;
-    /// \brief If true and removing some text leaves a blank line
-    /// also remove the empty line (false by default).
-    bool RemoveLineIfEmpty;
+    bool IncludeInsertsAtBeginOfRange = true;
 
-    RewriteOptions()
-      : IncludeInsertsAtBeginOfRange(true),
-        IncludeInsertsAtEndOfRange(true),
-        RemoveLineIfEmpty(false) { }
+    /// Given a source range, true to include previous inserts at the
+    /// end of the range as part of the range itself (true by default).
+    bool IncludeInsertsAtEndOfRange = true;
+
+    /// If true and removing some text leaves a blank line
+    /// also remove the empty line (false by default).
+    bool RemoveLineIfEmpty = false;
+
+    RewriteOptions() {}
   };
 
-  typedef std::map<FileID, RewriteBuffer>::iterator buffer_iterator;
-  typedef std::map<FileID, RewriteBuffer>::const_iterator const_buffer_iterator;
+  using buffer_iterator = std::map<FileID, RewriteBuffer>::iterator;
+  using const_buffer_iterator = std::map<FileID, RewriteBuffer>::const_iterator;
 
+  explicit Rewriter() = default;
   explicit Rewriter(SourceManager &SM, const LangOptions &LO)
-    : SourceMgr(&SM), LangOpts(&LO) {}
-  explicit Rewriter() : SourceMgr(nullptr), LangOpts(nullptr) {}
+      : SourceMgr(&SM), LangOpts(&LO) {}
 
   void setSourceMgr(SourceManager &SM, const LangOptions &LO) {
     SourceMgr = &SM;
     LangOpts = &LO;
   }
+
   SourceManager &getSourceMgr() const { return *SourceMgr; }
   const LangOptions &getLangOpts() const { return *LangOpts; }
 
@@ -82,7 +85,6 @@ public:
   /// in different buffers, this returns an empty string.
   ///
   /// Note that this method is not particularly efficient.
-  ///
   std::string getRewrittenText(SourceRange Range) const;
 
   /// InsertText - Insert the specified string at the specified location in the
@@ -103,7 +105,7 @@ public:
     return InsertText(Loc, Str);
   }
 
-  /// \brief Insert the specified string after the token in the
+  /// Insert the specified string after the token in the
   /// specified location.
   bool InsertTextAfterToken(SourceLocation Loc, StringRef Str);
 
@@ -120,13 +122,13 @@ public:
   bool RemoveText(SourceLocation Start, unsigned Length,
                   RewriteOptions opts = RewriteOptions());
 
-  /// \brief Remove the specified text region.
+  /// Remove the specified text region.
   bool RemoveText(CharSourceRange range,
                   RewriteOptions opts = RewriteOptions()) {
     return RemoveText(range.getBegin(), getRangeSize(range, opts), opts);
   }
 
-  /// \brief Remove the specified text region.
+  /// Remove the specified text region.
   bool RemoveText(SourceRange range, RewriteOptions opts = RewriteOptions()) {
     return RemoveText(range.getBegin(), getRangeSize(range, opts), opts);
   }
@@ -149,7 +151,7 @@ public:
   /// operation.
   bool ReplaceText(SourceRange range, SourceRange replacementRange);
 
-  /// \brief Increase indentation for the lines between the given source range.
+  /// Increase indentation for the lines between the given source range.
   /// To determine what the indentation should be, 'parentIndent' is used
   /// that should be at a source location with an indentation one degree
   /// lower than the given range.
@@ -190,6 +192,6 @@ private:
   unsigned getLocationOffsetAndFileID(SourceLocation Loc, FileID &FID) const;
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_REWRITE_CORE_REWRITER_H

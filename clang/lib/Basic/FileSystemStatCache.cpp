@@ -1,4 +1,4 @@
-//===--- FileSystemStatCache.cpp - Caching for 'stat' calls ---------------===//
+//===- FileSystemStatCache.cpp - Caching for 'stat' calls -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,11 +13,14 @@
 
 #include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/Chrono.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Path.h"
+#include <utility>
 
 using namespace clang;
 
-void FileSystemStatCache::anchor() { }
+void FileSystemStatCache::anchor() {}
 
 static void copyStatusToFileData(const vfs::Status &Status,
                                  FileData &Data) {

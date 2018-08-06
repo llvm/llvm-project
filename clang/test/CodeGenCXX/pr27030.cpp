@@ -5,7 +5,7 @@ extern "C" {
 extern int B::*a;
 void test1() { (int A::*)(a); }
 }
-// CHECK-LABEL: define void @test1(
+// CHECK-LABEL: define dso_local void @test1(
 // CHECK: %[[load:.*]]       = load i32, i32* @a
 // CHECK: %[[memptr_cmp:.*]] = icmp ne i32 %[[load]], -1
 // CHECK: br i1 %[[memptr_cmp]]

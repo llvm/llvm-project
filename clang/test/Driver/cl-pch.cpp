@@ -7,6 +7,7 @@
 // 1. Build .pch file.
 // CHECK-YC: cc1
 // CHECK-YC: -emit-pch
+// CHECK-YC: -building-pch-with-obj
 // CHECK-YC: -o
 // CHECK-YC: pchfile.pch
 // CHECK-YC: -x
@@ -14,6 +15,7 @@
 // 2. Use .pch file.
 // CHECK-YC: cc1
 // CHECK-YC: -emit-obj
+// CHECK-YC: -building-pch-with-obj
 // CHECK-YC: -include-pch
 // CHECK-YC: pchfile.pch
 
@@ -24,11 +26,13 @@
 // 1. Build .pch file.
 // CHECK-YCO: cc1
 // CHECK-YCO: -emit-pch
+// CHECK-YCO: -building-pch-with-obj
 // CHECK-YCO: -o
 // CHECK-YCO: pchfile.pch
 // 2. Use .pch file.
 // CHECK-YCO: cc1
 // CHECK-YCO: -emit-obj
+// CHECK-YCO: -building-pch-with-obj
 // CHECK-YCO: -include-pch
 // CHECK-YCO: pchfile.pch
 // CHECK-YCO: -o
@@ -46,6 +50,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-YU %s
 // Use .pch file, but don't build it.
 // CHECK-YU-NOT: -emit-pch
+// CHECK-YU-NOT: -building-pch-with-obj
 // CHECK-YU: cc1
 // CHECK-YU: -emit-obj
 // CHECK-YU: -include-pch
@@ -63,6 +68,7 @@
 // 1. Build .pch file.
 // CHECK-YC-YU: cc1
 // CHECK-YC-YU: -emit-pch
+// CHECK-YC-YU: -building-pch-with-obj
 // CHECK-YC-YU: -o
 // CHECK-YC-YU: pchfile.pch
 // 2. Use .pch file.
@@ -151,26 +157,37 @@
 // 1. Build .pch file: Includes foo1.h (but NOT foo3.h) and compiles foo2.h
 // CHECK-YCFIFIFI: cc1
 // CHECK-YCFIFIFI: -emit-pch
+// CHECK-YCFIFIFI: -pch-through-header=foo2.h
 // CHECK-YCFIFIFI: -include
 // CHECK-YCFIFIFI: foo1.h
-// CHECK-YCFIFIFI-NOT: foo2.h
-// CHECK-YCFIFIFI-NOT: foo3.h
+// CHECK-YCFIFIFI: -include
+// CHECK-YCFIFIFI: foo2.h
+// CHECK-YCFIFIFI: -include
+// CHECK-YCFIFIFI: foo3.h
 // CHECK-YCFIFIFI: -o
 // CHECK-YCFIFIFI: foo2.pch
 // CHECK-YCFIFIFI: -x
 // CHECK-YCFIFIFI: "c++-header"
-// CHECK-YCFIFIFI: foo2.h
+// CHECK-YCFIFIFI: cl-pch.cpp
 // 2. Use .pch file: Inlucdes foo2.pch and foo3.h
 // CHECK-YCFIFIFI: cc1
 // CHECK-YCFIFIFI: -emit-obj
-// CHECK-YCFIFIFI-NOT: foo1.h
-// CHECK-YCFIFIFI-NOT: foo2.h
 // CHECK-YCFIFIFI: -include-pch
 // CHECK-YCFIFIFI: foo2.pch
+// CHECK-YCFIFIFI: -pch-through-header=foo2.h
+// CHECK-YCFIFIFI: -include
+// CHECK-YCFIFIFI: foo1.h
+// CHECK-YCFIFIFI: -include
+// CHECK-YCFIFIFI: foo2.h
 // CHECK-YCFIFIFI: -include
 // CHECK-YCFIFIFI: foo3.h
+// CHECK-YCFIFIFI: -o
+// CHECK-YCFIFIFI: cl-pch.obj
+// CHECK-YCFIFIFI: -x
+// CHECK-YCFIFIFI: "c++"
+// CHECK-YCFIFIFI: cl-pch.cpp
 
-// /Yucfoo2.h /FIfoo1.h /FIfoo2.h /FIfoo3.h
+// /Yufoo2.h /FIfoo1.h /FIfoo2.h /FIfoo3.h
 // => foo1 foo2 filtered out, foo3 into main compilation
 // RUN: %clang_cl -Werror /Yufoo2.h /FIfoo1.h /FIfoo2.h /FIfoo3.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YUFIFIFI %s
@@ -178,38 +195,47 @@
 // CHECK-YUFIFIFI-NOT: -emit-pch
 // CHECK-YUFIFIFI: cc1
 // CHECK-YUFIFIFI: -emit-obj
-// CHECK-YUFIFIFI-NOT: foo1.h
-// CHECK-YUFIFIFI-NOT: foo2.h
 // CHECK-YUFIFIFI: -include-pch
 // CHECK-YUFIFIFI: foo2.pch
+// CHECK-YUFIFIFI: -pch-through-header=foo2.h
+// CHECK-YUFIFIFI: -include
+// CHECK-YUFIFIFI: foo1.h
+// CHECK-YUFIFIFI: -include
+// CHECK-YUFIFIFI: foo2.h
 // CHECK-YUFIFIFI: -include
 // CHECK-YUFIFIFI: foo3.h
 
-// FIXME: Implement support for /Ycfoo.h / /Yufoo.h without /FIfoo.h
+// Test /Ycfoo.h / /Yufoo.h without /FIfoo.h
 // RUN: %clang_cl -Werror /Ycfoo.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YC-NOFI %s
-// CHECK-YC-NOFI: error: support for '/Yc' without a corresponding /FI flag not implemented yet; flag ignored
+// 1. Precompile
+// CHECK-YC-NOFI: cc1
+// CHECK-YC-NOFI: -emit-pch
+// CHECK-YC-NOFI: -pch-through-header=foo.h
+// CHECK-YC-NOFI: -o
+// CHECK-YC-NOFI: foo.pch
+// CHECK-YC-NOFI: -x
+// CHECK-YC-NOFI: c++-header
+// CHECK-YC-NOFI: cl-pch.cpp
+// 2. Build PCH object
+// CHECK-YC-NOFI: cc1
+// CHECK-YC-NOFI: -emit-obj
+// CHECK-YC-NOFI: -include-pch
+// CHECK-YC-NOFI: foo.pch
+// CHECK-YC-NOFI: -pch-through-header=foo.h
+// CHECK-YC-NOFI: -x
+// CHECK-YC-NOFI: c++
+// CHECK-YC-NOFI: cl-pch.cpp
 // RUN: %clang_cl -Werror /Yufoo.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YU-NOFI %s
-// CHECK-YU-NOFI: error: support for '/Yu' without a corresponding /FI flag not implemented yet; flag ignored
-
-// /Yc and /FI relative to /I paths...
-// The rules are:
-// Yu/Yc and FI parameter must match exactly, else it's not found
-// Must match literally exactly: /FI./foo.h /Ycfoo.h does _not_ work.
-// However, the path can be relative to /I paths.
-// FIXME: Update the error messages below once /FI is no longer required, but
-// these test cases all should stay failures as they fail with cl.exe.
-
-// Check that ./ isn't canonicalized away.
-// RUN: %clang_cl -Werror /Ycpchfile.h /FI./pchfile.h /c -### -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-YC-I1 %s
-// CHECK-YC-I1: support for '/Yc' without a corresponding /FI flag not implemented yet; flag ignored
-
-// Check that ./ isn't canonicalized away.
-// RUN: %clang_cl -Werror /Yc./pchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-YC-I2 %s
-// CHECK-YC-I2: support for '/Yc' without a corresponding /FI flag not implemented yet; flag ignored
+// CHECK-YU-NOFI: cc1
+// CHECK-YU-NOFI: -emit-obj
+// CHECK-YU-NOFI: -include-pch
+// CHECK-YU-NOFI: foo.pch
+// CHECK-YU-NOFI: -pch-through-header=foo.h
+// CHECK-YU-NOFI: -x
+// CHECK-YU-NOFI: c++
+// CHECK-YU-NOFI: cl-pch.cpp
 
 // With an actual /I argument.
 // RUN: %clang_cl -Werror /Ifoo /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
@@ -226,20 +252,17 @@
 // CHECK-YC-I3: -include-pch
 // CHECK-YC-I3: pchfile.pch
 
-// Check that ./ isn't canonicalized away for /Yu either.
-// RUN: %clang_cl -Werror /Yupchfile.h /FI./pchfile.h /c -### -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-YU-I1 %s
-// CHECK-YU-I1: support for '/Yu' without a corresponding /FI flag not implemented yet; flag ignored
-
 // But /FIfoo/bar.h /Ycfoo\bar.h does work, as does /FIfOo.h /Ycfoo.H
-// FIXME: This part isn't implemented yet. The following two tests should not
-// show an error but do regular /Yu handling.
 // RUN: %clang_cl -Werror /YupchFILE.h /FI./pchfile.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YU-CASE %s
-// CHECK-YU-CASE: support for '/Yu' without a corresponding /FI flag not implemented yet; flag ignored
-// RUN: %clang_cl -Werror /Yu./pchfile.h /FI.\pchfile.h /c -### -- %s 2>&1 \
+// CHECK-YU-CASE: -pch-through-header=pchFILE.h
+// CHECK-YU-CASE: -include
+// CHECK-YU-CASE: "./pchfile.h"
+// RUN: %clang_cl -Werror /Yu./pchfile.h /FI.\\pchfile.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YU-SLASH %s
-// CHECK-YU-SLASH: support for '/Yu' without a corresponding /FI flag not implemented yet; flag ignored
+// CHECK-YU-SLASH: -pch-through-header=./pchfile.h
+// CHECK-YU-SLASH: -include
+// CHECK-YU-SLASH: ".{{[/\\]+}}pchfile.h"
 
 // cl.exe warns on multiple /Yc, /Yu, /Fp arguments, but clang-cl silently just
 // uses the last one.  This is true for e.g. /Fo too, so not warning on this

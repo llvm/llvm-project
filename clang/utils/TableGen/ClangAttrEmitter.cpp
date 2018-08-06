@@ -87,6 +87,8 @@ GetFlattenedSpellings(const Record &Attr) {
     } else if (Variety == "Clang") {
       Ret.emplace_back("GNU", Name, "", false);
       Ret.emplace_back("CXX11", Name, "clang", false);
+      if (Spelling->getValueAsBit("AllowInC"))
+        Ret.emplace_back("C2x", Name, "clang", false);
     } else
       Ret.push_back(FlattenedSpelling(*Spelling));
   }
@@ -102,6 +104,7 @@ static std::string ReadPCHRecord(StringRef type) {
     .Case("Expr *", "Record.readExpr()")
     .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
     .Case("StringRef", "Record.readString()")
+    .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
     .Default("Record.readInt()");
 }
 
@@ -120,6 +123,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
     .Case("Expr *", "AddStmt(" + std::string(name) + ");\n")
     .Case("IdentifierInfo *", "AddIdentifierRef(" + std::string(name) + ");\n")
     .Case("StringRef", "AddString(" + std::string(name) + ");\n")
+    .Case("ParamIdx", "push_back(" + std::string(name) + ".serialize());\n")
     .Default("push_back(" + std::string(name) + ");\n");
 }
 
@@ -229,6 +233,7 @@ namespace {
     virtual void writePCHReadArgs(raw_ostream &OS) const = 0;
     virtual void writePCHReadDecls(raw_ostream &OS) const = 0;
     virtual void writePCHWrite(raw_ostream &OS) const = 0;
+    virtual std::string getIsOmitted() const { return "false"; }
     virtual void writeValue(raw_ostream &OS) const = 0;
     virtual void writeDump(raw_ostream &OS) const = 0;
     virtual void writeDumpChildren(raw_ostream &OS) const {}
@@ -296,23 +301,29 @@ namespace {
                                            std::string(getUpperName()) + "()");
     }
 
+    std::string getIsOmitted() const override {
+      if (type == "IdentifierInfo *")
+        return "!get" + getUpperName().str() + "()";
+      if (type == "ParamIdx")
+        return "!get" + getUpperName().str() + "().isValid()";
+      return "false";
+    }
+
     void writeValue(raw_ostream &OS) const override {
-      if (type == "FunctionDecl *") {
+      if (type == "FunctionDecl *")
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
-      } else if (type == "IdentifierInfo *") {
-        OS << "\";\n";
-        if (isOptional())
-          OS << "    if (get" << getUpperName() << "()) ";
-        else
-          OS << "    ";
-        OS << "OS << get" << getUpperName() << "()->getName();\n";
-        OS << "    OS << \"";
-      } else if (type == "TypeSourceInfo *") {
+      else if (type == "IdentifierInfo *")
+        // Some non-optional (comma required) identifier arguments can be the
+        // empty string but are then recorded as a nullptr.
+        OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
+           << "()->getName() : \"\") << \"";
+      else if (type == "TypeSourceInfo *")
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
-      } else {
+      else if (type == "ParamIdx")
+        OS << "\" << get" << getUpperName() << "().getSourceIndex() << \"";
+      else
         OS << "\" << get" << getUpperName() << "() << \"";
-      }
     }
 
     void writeDump(raw_ostream &OS) const override {
@@ -320,9 +331,10 @@ namespace {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n"; 
       } else if (type == "IdentifierInfo *") {
-        if (isOptional())
-          OS << "    if (SA->get" << getUpperName() << "())\n  ";
-        OS << "    OS << \" \" << SA->get" << getUpperName()
+        // Some non-optional (comma required) identifier arguments can be the
+        // empty string but are then recorded as a nullptr.
+        OS << "    if (SA->get" << getUpperName() << "())\n"
+           << "      OS << \" \" << SA->get" << getUpperName()
            << "()->getName();\n";
       } else if (type == "TypeSourceInfo *") {
         OS << "    OS << \" \" << SA->get" << getUpperName()
@@ -332,6 +344,11 @@ namespace {
            << getUpperName() << "\";\n";
       } else if (type == "int" || type == "unsigned") {
         OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
+      } else if (type == "ParamIdx") {
+        if (isOptional())
+          OS << "    if (SA->get" << getUpperName() << "().isValid())\n  ";
+        OS << "    OS << \" \" << SA->get" << getUpperName()
+           << "().getSourceIndex();\n";
       } else {
         llvm_unreachable("Unknown SimpleArgument type!");
       }
@@ -574,12 +591,15 @@ namespace {
          << "Type());\n";
     }
 
+    std::string getIsOmitted() const override {
+      return "!is" + getLowerName().str() + "Expr || !" + getLowerName().str()
+             + "Expr";
+    }
+
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
-      // The aligned attribute argument expression is optional.
-      OS << "    if (is" << getLowerName() << "Expr && "
-         << getLowerName() << "Expr)\n";
-      OS << "      " << getLowerName() << "Expr->printPretty(OS, nullptr, Policy);\n";
+      OS << "    " << getLowerName()
+         << "Expr->printPretty(OS, nullptr, Policy);\n";
       OS << "    OS << \"";
     }
 
@@ -605,6 +625,10 @@ namespace {
     // Assumed to receive a parameter: raw_ostream OS.
     virtual void writeValueImpl(raw_ostream &OS) const {
       OS << "    OS << Val;\n";
+    }
+    // Assumed to receive a parameter: raw_ostream OS.
+    virtual void writeDumpImpl(raw_ostream &OS) const {
+      OS << "      OS << \" \" << Val;\n";
     }
 
   public:
@@ -732,7 +756,22 @@ namespace {
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (const auto &Val : SA->" << RangeName << "())\n";
-      OS << "      OS << \" \" << Val;\n";
+      writeDumpImpl(OS);
+    }
+  };
+
+  class VariadicParamIdxArgument : public VariadicArgument {
+  public:
+    VariadicParamIdxArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "ParamIdx") {}
+
+  public:
+    void writeValueImpl(raw_ostream &OS) const override {
+      OS << "    OS << Val.getSourceIndex();\n";
+    }
+
+    void writeDumpImpl(raw_ostream &OS) const override {
+      OS << "      OS << \" \" << Val.getSourceIndex();\n";
     }
   };
 
@@ -1261,6 +1300,10 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicEnumArgument>(Arg, Attr);
   else if (ArgName == "VariadicExprArgument")
     Ptr = llvm::make_unique<VariadicExprArgument>(Arg, Attr);
+  else if (ArgName == "VariadicParamIdxArgument")
+    Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
+  else if (ArgName == "ParamIdxArgument")
+    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "AttrArgument")
@@ -1394,7 +1437,7 @@ writePrettyPrintFunction(Record &R,
       "    OS << \"" << Prefix << Spelling;
 
     if (Variety == "Pragma") {
-      OS << " \";\n";
+      OS << "\";\n";
       OS << "    printPrettyPragma(OS, Policy);\n";
       OS << "    OS << \"\\n\";";
       OS << "    break;\n";
@@ -1402,33 +1445,83 @@ writePrettyPrintFunction(Record &R,
       continue;
     }
 
-    // Fake arguments aren't part of the parsed form and should not be
-    // pretty-printed.
-    bool hasNonFakeArgs = llvm::any_of(
-        Args, [](const std::unique_ptr<Argument> &A) { return !A->isFake(); });
-
-    // FIXME: always printing the parenthesis isn't the correct behavior for
-    // attributes which have optional arguments that were not provided. For
-    // instance: __attribute__((aligned)) will be pretty printed as
-    // __attribute__((aligned())). The logic should check whether there is only
-    // a single argument, and if it is optional, whether it has been provided.
-    if (hasNonFakeArgs)
-      OS << "(";
     if (Spelling == "availability") {
+      OS << "(";
       writeAvailabilityValue(OS);
+      OS << ")";
     } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
-        writeDeprecatedAttrValue(OS, Variety);
+      OS << "(";
+      writeDeprecatedAttrValue(OS, Variety);
+      OS << ")";
     } else {
-      unsigned index = 0;
-      for (const auto &arg : Args) {
-        if (arg->isFake()) continue;
-        if (index++) OS << ", ";
-        arg->writeValue(OS);
+      // To avoid printing parentheses around an empty argument list or
+      // printing spurious commas at the end of an argument list, we need to
+      // determine where the last provided non-fake argument is.
+      unsigned NonFakeArgs = 0;
+      unsigned TrailingOptArgs = 0;
+      bool FoundNonOptArg = false;
+      for (const auto &arg : llvm::reverse(Args)) {
+        if (arg->isFake())
+          continue;
+        ++NonFakeArgs;
+        if (FoundNonOptArg)
+          continue;
+        // FIXME: arg->getIsOmitted() == "false" means we haven't implemented
+        // any way to detect whether the argument was omitted.
+        if (!arg->isOptional() || arg->getIsOmitted() == "false") {
+          FoundNonOptArg = true;
+          continue;
+        }
+        if (!TrailingOptArgs++)
+          OS << "\";\n"
+             << "    unsigned TrailingOmittedArgs = 0;\n";
+        OS << "    if (" << arg->getIsOmitted() << ")\n"
+           << "      ++TrailingOmittedArgs;\n";
       }
+      if (TrailingOptArgs)
+        OS << "    OS << \"";
+      if (TrailingOptArgs < NonFakeArgs)
+        OS << "(";
+      else if (TrailingOptArgs)
+        OS << "\";\n"
+           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
+           << "       OS << \"(\";\n"
+           << "    OS << \"";
+      unsigned ArgIndex = 0;
+      for (const auto &arg : Args) {
+        if (arg->isFake())
+          continue;
+        if (ArgIndex) {
+          if (ArgIndex >= NonFakeArgs - TrailingOptArgs)
+            OS << "\";\n"
+               << "    if (" << ArgIndex << " < " << NonFakeArgs
+               << " - TrailingOmittedArgs)\n"
+               << "      OS << \", \";\n"
+               << "    OS << \"";
+          else
+            OS << ", ";
+        }
+        std::string IsOmitted = arg->getIsOmitted();
+        if (arg->isOptional() && IsOmitted != "false")
+          OS << "\";\n"
+             << "    if (!(" << IsOmitted << ")) {\n"
+             << "      OS << \"";
+        arg->writeValue(OS);
+        if (arg->isOptional() && IsOmitted != "false")
+          OS << "\";\n"
+             << "    }\n"
+             << "    OS << \"";
+        ++ArgIndex;
+      }
+      if (TrailingOptArgs < NonFakeArgs)
+        OS << ")";
+      else if (TrailingOptArgs)
+        OS << "\";\n"
+           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
+           << "       OS << \")\";\n"
+           << "    OS << \"";
     }
 
-    if (hasNonFakeArgs)
-      OS << ")";
     OS << Suffix + "\";\n";
 
     OS <<
@@ -1442,7 +1535,7 @@ writePrettyPrintFunction(Record &R,
   OS << "}\n\n";
 }
 
-/// \brief Return the index of a spelling in a spelling list.
+/// Return the index of a spelling in a spelling list.
 static unsigned
 getSpellingListIndex(const std::vector<FlattenedSpelling> &SpellingList,
                      const FlattenedSpelling &Spelling) {
@@ -1991,7 +2084,7 @@ static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
   }
 }
 
-/// \brief Emits the first-argument-is-type property for attributes.
+/// Emits the first-argument-is-type property for attributes.
 static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_TYPE_ARG_LIST)\n";
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2013,7 +2106,7 @@ static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // CLANG_ATTR_TYPE_ARG_LIST\n\n";
 }
 
-/// \brief Emits the parse-arguments-in-unevaluated-context property for
+/// Emits the parse-arguments-in-unevaluated-context property for
 /// attributes.
 static void emitClangAttrArgContextList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_ARG_CONTEXT_LIST)\n";
@@ -2091,10 +2184,14 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     ArrayRef<std::pair<Record *, SMRange>> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
+    bool Inheritable = false;
     for (const auto &Super : llvm::reverse(Supers)) {
       const Record *R = Super.first;
-      if (R->getName() != "TargetSpecificAttr" && SuperName.empty())
+      if (R->getName() != "TargetSpecificAttr" &&
+          R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName();
+      if (R->getName() == "InheritableAttr")
+        Inheritable = true;
     }
 
     OS << "class " << R.getName() << "Attr : public " << SuperName << " {\n";
@@ -2188,8 +2285,13 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 
       OS << "             )\n";
       OS << "    : " << SuperName << "(attr::" << R.getName() << ", R, SI, "
-         << ( R.getValueAsBit("LateParsed") ? "true" : "false" ) << ", "
-         << ( R.getValueAsBit("DuplicatesAllowedWhileMerging") ? "true" : "false" ) << ")\n";
+         << ( R.getValueAsBit("LateParsed") ? "true" : "false" );
+      if (Inheritable) {
+        OS << ", "
+           << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
+                                                              : "false");
+      }
+      OS << ")\n";
 
       for (auto const &ai : Args) {
         OS << "              , ";
@@ -3058,7 +3160,7 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
 }
 
 static void GenerateDefaultAppertainsTo(raw_ostream &OS) {
-  OS << "static bool defaultAppertainsTo(Sema &, const AttributeList &,";
+  OS << "static bool defaultAppertainsTo(Sema &, const ParsedAttr &,";
   OS << "const Decl *) {\n";
   OS << "  return true;\n";
   OS << "}\n\n";
@@ -3196,7 +3298,7 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // name of that check to the caller.
   std::string FnName = "check" + Attr.getName().str() + "AppertainsTo";
   std::stringstream SS;
-  SS << "static bool " << FnName << "(Sema &S, const AttributeList &Attr, ";
+  SS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr, ";
   SS << "const Decl *D) {\n";
   SS << "  if (";
   for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
@@ -3268,7 +3370,7 @@ emitAttributeMatchRules(PragmaClangAttributeSupport &PragmaAttributeSupport,
 
 static void GenerateDefaultLangOptRequirements(raw_ostream &OS) {
   OS << "static bool defaultDiagnoseLangOpts(Sema &, ";
-  OS << "const AttributeList &) {\n";
+  OS << "const ParsedAttr &) {\n";
   OS << "  return true;\n";
   OS << "}\n\n";
 }
@@ -3307,7 +3409,7 @@ static std::string GenerateLangOptRequirements(const Record &R,
   if (I != CustomLangOptsSet.end())
     return *I;
 
-  OS << "static bool " << FnName << "(Sema &S, const AttributeList &Attr) {\n";
+  OS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr) {\n";
   OS << "  if (" << Test << ")\n";
   OS << "    return true;\n\n";
   OS << "  S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) ";
@@ -3340,7 +3442,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
   // If there are other attributes which share the same parsed attribute kind,
   // such as target-specific attributes with a shared spelling, collapse the
   // duplicate architectures. This is required because a shared target-specific
-  // attribute has only one AttributeList::Kind enumeration value, but it
+  // attribute has only one ParsedAttr::Kind enumeration value, but it
   // applies to multiple target architectures. In order for the attribute to be
   // considered valid, all of its architectures need to be included.
   if (!Attr.isValueUnset("ParseKind")) {
@@ -3377,7 +3479,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
 
 static void GenerateDefaultSpellingIndexToSemanticSpelling(raw_ostream &OS) {
   OS << "static unsigned defaultSpellingIndexToSemanticSpelling("
-     << "const AttributeList &Attr) {\n";
+     << "const ParsedAttr &Attr) {\n";
   OS << "  return UINT_MAX;\n";
   OS << "}\n\n";
 }
@@ -3400,7 +3502,7 @@ static std::string GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
   std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
-  OS << "static unsigned " << Name << "(const AttributeList &Attr) {\n";
+  OS << "static unsigned " << Name << "(const ParsedAttr &Attr) {\n";
   OS << Enum;
   OS << "  unsigned Idx = Attr.getAttributeSpellingListIndex();\n";
   WriteSemanticSpellingSwitch("Idx", SemanticToSyntacticMap, OS);
@@ -3450,12 +3552,14 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     // the spellings are identical, and custom parsing rules match, etc.
 
     // We need to generate struct instances based off ParsedAttrInfo from
-    // AttributeList.cpp.
+    // ParsedAttr.cpp.
     SS << "  { ";
     emitArgInfo(*I->second, SS);
     SS << ", " << I->second->getValueAsBit("HasCustomParsing");
     SS << ", " << I->second->isSubClassOf("TargetSpecificAttr");
-    SS << ", " << I->second->isSubClassOf("TypeAttr");
+    SS << ", "
+       << (I->second->isSubClassOf("TypeAttr") ||
+           I->second->isSubClassOf("DeclOrTypeAttr"));
     SS << ", " << I->second->isSubClassOf("StmtAttr");
     SS << ", " << IsKnownToGCC(*I->second);
     SS << ", " << PragmaAttributeSupport.isAttributedSupported(*I->second);
@@ -3473,7 +3577,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     SS << "  // AT_" << I->first << "\n";
   }
 
-  OS << "static const ParsedAttrInfo AttrInfoMap[AttributeList::UnknownAttribute + 1] = {\n";
+  OS << "static const ParsedAttrInfo AttrInfoMap[ParsedAttr::UnknownAttribute "
+        "+ 1] = {\n";
   OS << SS.str();
   OS << "};\n\n";
 
@@ -3501,7 +3606,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       // specific attribute, or MSP430-specific attribute. Additionally, an
       // attribute can be spelled GNU<"dllexport"> and Declspec<"dllexport">
       // for the same semantic attribute. Ultimately, we need to map each of
-      // these to a single AttributeList::Kind value, but the StringMatcher
+      // these to a single ParsedAttr::Kind value, but the StringMatcher
       // class cannot handle duplicate match strings. So we generate a list of
       // string to match based on the syntax, and emit multiple string matchers
       // depending on the syntax used.
@@ -3548,34 +3653,34 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
           Spelling += RawSpelling;
 
         if (SemaHandler)
-          Matches->push_back(StringMatcher::StringPair(Spelling,
-                              "return AttributeList::AT_" + AttrName + ";"));
+          Matches->push_back(StringMatcher::StringPair(
+              Spelling, "return ParsedAttr::AT_" + AttrName + ";"));
         else
-          Matches->push_back(StringMatcher::StringPair(Spelling,
-                              "return AttributeList::IgnoredAttribute;"));
+          Matches->push_back(StringMatcher::StringPair(
+              Spelling, "return ParsedAttr::IgnoredAttribute;"));
       }
     }
   }
-  
-  OS << "static AttributeList::Kind getAttrKind(StringRef Name, ";
-  OS << "AttributeList::Syntax Syntax) {\n";
-  OS << "  if (AttributeList::AS_GNU == Syntax) {\n";
+
+  OS << "static ParsedAttr::Kind getAttrKind(StringRef Name, ";
+  OS << "ParsedAttr::Syntax Syntax) {\n";
+  OS << "  if (ParsedAttr::AS_GNU == Syntax) {\n";
   StringMatcher("Name", GNU, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Declspec == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Declspec == Syntax) {\n";
   StringMatcher("Name", Declspec, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Microsoft == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Microsoft == Syntax) {\n";
   StringMatcher("Name", Microsoft, OS).Emit();
-  OS << "  } else if (AttributeList::AS_CXX11 == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_CXX11 == Syntax) {\n";
   StringMatcher("Name", CXX11, OS).Emit();
-  OS << "  } else if (AttributeList::AS_C2x == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_C2x == Syntax) {\n";
   StringMatcher("Name", C2x, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Keyword == Syntax || ";
-  OS << "AttributeList::AS_ContextSensitiveKeyword == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Keyword == Syntax || ";
+  OS << "ParsedAttr::AS_ContextSensitiveKeyword == Syntax) {\n";
   StringMatcher("Name", Keywords, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Pragma == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
   OS << "  }\n";
-  OS << "  return AttributeList::UnknownAttribute;\n"
+  OS << "  return ParsedAttr::UnknownAttribute;\n"
      << "}\n";
 }
 
@@ -3781,8 +3886,8 @@ static void WriteDocumentation(RecordKeeper &Records,
     const Record &Deprecated = *Doc.Documentation->getValueAsDef("Deprecated");
     const StringRef Replacement = Deprecated.getValueAsString("Replacement");
     if (!Replacement.empty())
-      OS << "  This attribute has been superseded by ``"
-         << Replacement << "``.";
+      OS << "  This attribute has been superseded by ``" << Replacement
+         << "``.";
     OS << "\n\n";
   }
 
@@ -3835,9 +3940,9 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
   for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
 
-    std::sort(I.second.begin(), I.second.end(),
-              [](const DocumentationData &D1, const DocumentationData &D2) {
-                return D1.Heading < D2.Heading;
+    llvm::sort(I.second.begin(), I.second.end(),
+               [](const DocumentationData &D1, const DocumentationData &D2) {
+                 return D1.Heading < D2.Heading;
               });
 
     // Walk over each of the attributes in the category and write out their

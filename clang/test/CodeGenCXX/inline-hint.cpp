@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -finline-functions -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefix=CHECK --check-prefix=SUITABLE
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -finline-hint-functions -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefix=CHECK --check-prefix=HINTED
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -fno-inline -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefix=CHECK --check-prefix=NOINLINE
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -finline-functions -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=SUITABLE
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -finline-hint-functions -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=HINTED
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-linux -O2 -fno-inline -emit-llvm -disable-llvm-passes -o - | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=NOINLINE
 
 // Force non-trivial implicit constructors/destructors/operators for B by having explicit ones for A
 struct A {

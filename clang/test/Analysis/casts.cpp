@@ -21,3 +21,23 @@ void intAsBoolAsSwitchCondition(int c) {
       break;
   }
 }
+
+int *&castToIntPtrLValueRef(char *p) {
+  return (int *&)*(int *)p;
+}
+bool testCastToIntPtrLValueRef(char *p, int *s) {
+  return castToIntPtrLValueRef(p) != s; // no-crash
+}
+
+int *&&castToIntPtrRValueRef(char *p) {
+  return (int *&&)*(int *)p;
+}
+bool testCastToIntPtrRValueRef(char *p, int *s) {
+  return castToIntPtrRValueRef(p) != s; // no-crash
+}
+
+bool retrievePointerFromBoolean(int *p) {
+  bool q;
+  *reinterpret_cast<int **>(&q) = p;
+  return q;
+}

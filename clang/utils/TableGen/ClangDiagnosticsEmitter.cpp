@@ -14,12 +14,13 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -154,16 +155,7 @@ static bool beforeThanCompareGroups(const GroupInfo *LHS, const GroupInfo *RHS){
                            RHS->DiagsInGroup.front());
 }
 
-static SMRange findSuperClassRange(const Record *R, StringRef SuperName) {
-  ArrayRef<std::pair<Record *, SMRange>> Supers = R->getSuperClasses();
-  auto I = std::find_if(Supers.begin(), Supers.end(),
-                        [&](const std::pair<Record *, SMRange> &SuperPair) {
-                          return SuperPair.first->getName() == SuperName;
-                        });
-  return (I != Supers.end()) ? I->second : SMRange();
-}
-
-/// \brief Invert the 1-[0/1] mapping of diags to group into a one to many
+/// Invert the 1-[0/1] mapping of diags to group into a one to many
 /// mapping of groups to diags in the group.
 static void groupDiagnostics(const std::vector<Record*> &Diags,
                              const std::vector<Record*> &DiagGroups,
@@ -216,9 +208,9 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
                                               E = SortedGroups.end();
        I != E; ++I) {
     MutableArrayRef<const Record *> GroupDiags = (*I)->DiagsInGroup;
-    std::sort(GroupDiags.begin(), GroupDiags.end(), beforeThanCompare);
+    llvm::sort(GroupDiags.begin(), GroupDiags.end(), beforeThanCompare);
   }
-  std::sort(SortedGroups.begin(), SortedGroups.end(), beforeThanCompareGroups);
+  llvm::sort(SortedGroups.begin(), SortedGroups.end(), beforeThanCompareGroups);
 
   // Warn about the same group being used anonymously in multiple places.
   for (SmallVectorImpl<GroupInfo *>::const_iterator I = SortedGroups.begin(),
@@ -236,22 +228,10 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
         if (NextDiagGroup == (*I)->ExplicitDef)
           continue;
 
-        SMRange InGroupRange = findSuperClassRange(*DI, "InGroup");
-        SmallString<64> Replacement;
-        if (InGroupRange.isValid()) {
-          Replacement += "InGroup<";
-          Replacement += (*I)->ExplicitDef->getName();
-          Replacement += ">";
-        }
-        SMFixIt FixIt(InGroupRange, Replacement);
-
-        SrcMgr.PrintMessage(NextDiagGroup->getLoc().front(),
+        SrcMgr.PrintMessage((*DI)->getLoc().front(),
                             SourceMgr::DK_Error,
                             Twine("group '") + Name +
-                              "' is referred to anonymously",
-                            None,
-                            InGroupRange.isValid() ? FixIt
-                                                   : ArrayRef<SMFixIt>());
+                              "' is referred to anonymously");
         SrcMgr.PrintMessage((*I)->ExplicitDef->getLoc().front(),
                             SourceMgr::DK_Note, "group defined here");
       }
@@ -266,19 +246,14 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
       const Record *NextDiagGroup = GroupInit->getDef();
       std::string Name = NextDiagGroup->getValueAsString("GroupName");
 
-      SMRange InGroupRange = findSuperClassRange(*DI, "InGroup");
-      SrcMgr.PrintMessage(NextDiagGroup->getLoc().front(),
+      SrcMgr.PrintMessage((*DI)->getLoc().front(),
                           SourceMgr::DK_Error,
                           Twine("group '") + Name +
-                            "' is referred to anonymously",
-                          InGroupRange);
+                            "' is referred to anonymously");
 
       for (++DI; DI != DE; ++DI) {
-        GroupInit = cast<DefInit>((*DI)->getValueInit("Group"));
-        InGroupRange = findSuperClassRange(*DI, "InGroup");
-        SrcMgr.PrintMessage(GroupInit->getDef()->getLoc().front(),
-                            SourceMgr::DK_Note, "also referenced here",
-                            InGroupRange);
+        SrcMgr.PrintMessage((*DI)->getLoc().front(),
+                            SourceMgr::DK_Note, "also referenced here");
       }
     }
   }
@@ -467,6 +442,735 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
   }
 }
 
+namespace {
+enum PieceKind {
+  MultiPieceClass,
+  TextPieceClass,
+  PlaceholderPieceClass,
+  SelectPieceClass,
+  PluralPieceClass,
+  DiffPieceClass,
+  SubstitutionPieceClass,
+};
+
+enum ModifierType {
+  MT_Unknown,
+  MT_Placeholder,
+  MT_Select,
+  MT_Sub,
+  MT_Plural,
+  MT_Diff,
+  MT_Ordinal,
+  MT_S,
+  MT_Q,
+  MT_ObjCClass,
+  MT_ObjCInstance,
+};
+
+static StringRef getModifierName(ModifierType MT) {
+  switch (MT) {
+  case MT_Select:
+    return "select";
+  case MT_Sub:
+    return "sub";
+  case MT_Diff:
+    return "diff";
+  case MT_Plural:
+    return "plural";
+  case MT_Ordinal:
+    return "ordinal";
+  case MT_S:
+    return "s";
+  case MT_Q:
+    return "q";
+  case MT_Placeholder:
+    return "";
+  case MT_ObjCClass:
+    return "objcclass";
+  case MT_ObjCInstance:
+    return "objcinstance";
+  case MT_Unknown:
+    llvm_unreachable("invalid modifier type");
+  }
+  // Unhandled case
+  llvm_unreachable("invalid modifier type");
+}
+
+struct Piece {
+  // This type and its derived classes are move-only.
+  Piece(PieceKind Kind) : ClassKind(Kind) {}
+  Piece(Piece const &O) = delete;
+  Piece &operator=(Piece const &) = delete;
+  virtual ~Piece() {}
+
+  PieceKind getPieceClass() const { return ClassKind; }
+  static bool classof(const Piece *) { return true; }
+
+private:
+  PieceKind ClassKind;
+};
+
+struct MultiPiece : Piece {
+  MultiPiece() : Piece(MultiPieceClass) {}
+  MultiPiece(std::vector<Piece *> Pieces)
+      : Piece(MultiPieceClass), Pieces(std::move(Pieces)) {}
+
+  std::vector<Piece *> Pieces;
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == MultiPieceClass;
+  }
+};
+
+struct TextPiece : Piece {
+  StringRef Role;
+  std::string Text;
+  TextPiece(StringRef Text, StringRef Role = "")
+      : Piece(TextPieceClass), Role(Role), Text(Text.str()) {}
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == TextPieceClass;
+  }
+};
+
+struct PlaceholderPiece : Piece {
+  ModifierType Kind;
+  int Index;
+  PlaceholderPiece(ModifierType Kind, int Index)
+      : Piece(PlaceholderPieceClass), Kind(Kind), Index(Index) {}
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == PlaceholderPieceClass;
+  }
+};
+
+struct SelectPiece : Piece {
+protected:
+  SelectPiece(PieceKind Kind, ModifierType ModKind)
+      : Piece(Kind), ModKind(ModKind) {}
+
+public:
+  SelectPiece(ModifierType ModKind) : SelectPiece(SelectPieceClass, ModKind) {}
+
+  ModifierType ModKind;
+  std::vector<Piece *> Options;
+  int Index;
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == SelectPieceClass ||
+           P->getPieceClass() == PluralPieceClass;
+  }
+};
+
+struct PluralPiece : SelectPiece {
+  PluralPiece() : SelectPiece(PluralPieceClass, MT_Plural) {}
+
+  std::vector<Piece *> OptionPrefixes;
+  int Index;
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == PluralPieceClass;
+  }
+};
+
+struct DiffPiece : Piece {
+  DiffPiece() : Piece(DiffPieceClass) {}
+
+  Piece *Options[2] = {};
+  int Indexes[2] = {};
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == DiffPieceClass;
+  }
+};
+
+struct SubstitutionPiece : Piece {
+  SubstitutionPiece() : Piece(SubstitutionPieceClass) {}
+
+  std::string Name;
+  std::vector<int> Modifiers;
+
+  static bool classof(const Piece *P) {
+    return P->getPieceClass() == SubstitutionPieceClass;
+  }
+};
+
+/// Diagnostic text, parsed into pieces.
+
+
+struct DiagnosticTextBuilder {
+  DiagnosticTextBuilder(DiagnosticTextBuilder const &) = delete;
+  DiagnosticTextBuilder &operator=(DiagnosticTextBuilder const &) = delete;
+
+  DiagnosticTextBuilder(RecordKeeper &Records) {
+    // Build up the list of substitution records.
+    for (auto *S : Records.getAllDerivedDefinitions("TextSubstitution")) {
+      EvaluatingRecordGuard Guard(&EvaluatingRecord, S);
+      Substitutions.try_emplace(
+          S->getName(), DiagText(*this, S->getValueAsString("Substitution")));
+    }
+
+    // Check that no diagnostic definitions have the same name as a
+    // substitution.
+    for (Record *Diag : Records.getAllDerivedDefinitions("Diagnostic")) {
+      StringRef Name = Diag->getName();
+      if (Substitutions.count(Name))
+        llvm::PrintFatalError(
+            Diag->getLoc(),
+            "Diagnostic '" + Name +
+                "' has same name as TextSubstitution definition");
+    }
+  }
+
+  std::vector<std::string> buildForDocumentation(StringRef Role,
+                                                 const Record *R);
+  std::string buildForDefinition(const Record *R);
+
+  Piece *getSubstitution(SubstitutionPiece *S) const {
+    auto It = Substitutions.find(S->Name);
+    if (It == Substitutions.end())
+      PrintFatalError("Failed to find substitution with name: " + S->Name);
+    return It->second.Root;
+  }
+
+  LLVM_ATTRIBUTE_NORETURN void PrintFatalError(llvm::Twine const &Msg) const {
+    assert(EvaluatingRecord && "not evaluating a record?");
+    llvm::PrintFatalError(EvaluatingRecord->getLoc(), Msg);
+  }
+
+private:
+  struct DiagText {
+    DiagnosticTextBuilder &Builder;
+    std::vector<Piece *> AllocatedPieces;
+    Piece *Root = nullptr;
+
+    template <class T, class... Args> T *New(Args &&... args) {
+      static_assert(std::is_base_of<Piece, T>::value, "must be piece");
+      T *Mem = new T(std::forward<Args>(args)...);
+      AllocatedPieces.push_back(Mem);
+      return Mem;
+    }
+
+    DiagText(DiagnosticTextBuilder &Builder, StringRef Text)
+        : Builder(Builder), Root(parseDiagText(Text)) {}
+
+    Piece *parseDiagText(StringRef &Text, bool Nested = false);
+    int parseModifier(StringRef &) const;
+
+  public:
+    DiagText(DiagText &&O) noexcept
+        : Builder(O.Builder), AllocatedPieces(std::move(O.AllocatedPieces)),
+          Root(O.Root) {
+      O.Root = nullptr;
+    }
+
+    ~DiagText() {
+      for (Piece *P : AllocatedPieces)
+        delete P;
+    }
+  };
+
+private:
+  const Record *EvaluatingRecord = nullptr;
+  struct EvaluatingRecordGuard {
+    EvaluatingRecordGuard(const Record **Dest, const Record *New)
+        : Dest(Dest), Old(*Dest) {
+      *Dest = New;
+    }
+    ~EvaluatingRecordGuard() { *Dest = Old; }
+    const Record **Dest;
+    const Record *Old;
+  };
+
+  StringMap<DiagText> Substitutions;
+};
+
+template <class Derived> struct DiagTextVisitor {
+  using ModifierMappingsType = Optional<std::vector<int>>;
+
+private:
+  Derived &getDerived() { return static_cast<Derived &>(*this); }
+
+public:
+  std::vector<int>
+  getSubstitutionMappings(SubstitutionPiece *P,
+                          const ModifierMappingsType &Mappings) const {
+    std::vector<int> NewMappings;
+    for (int Idx : P->Modifiers)
+      NewMappings.push_back(mapIndex(Idx, Mappings));
+    return NewMappings;
+  }
+
+  struct SubstitutionContext {
+    SubstitutionContext(DiagTextVisitor &Visitor, SubstitutionPiece *P)
+        : Visitor(Visitor) {
+      Substitution = Visitor.Builder.getSubstitution(P);
+      OldMappings = std::move(Visitor.ModifierMappings);
+      std::vector<int> NewMappings =
+          Visitor.getSubstitutionMappings(P, OldMappings);
+      Visitor.ModifierMappings = std::move(NewMappings);
+    }
+
+    ~SubstitutionContext() {
+      Visitor.ModifierMappings = std::move(OldMappings);
+    }
+
+  private:
+    DiagTextVisitor &Visitor;
+    Optional<std::vector<int>> OldMappings;
+
+  public:
+    Piece *Substitution;
+  };
+
+public:
+  DiagTextVisitor(DiagnosticTextBuilder &Builder) : Builder(Builder) {}
+
+  void Visit(Piece *P) {
+    switch (P->getPieceClass()) {
+#define CASE(T)                                                                \
+  case T##PieceClass:                                                          \
+    return getDerived().Visit##T(static_cast<T##Piece *>(P))
+      CASE(Multi);
+      CASE(Text);
+      CASE(Placeholder);
+      CASE(Select);
+      CASE(Plural);
+      CASE(Diff);
+      CASE(Substitution);
+#undef CASE
+    }
+  }
+
+  void VisitSubstitution(SubstitutionPiece *P) {
+    SubstitutionContext Guard(*this, P);
+    Visit(Guard.Substitution);
+  }
+
+  int mapIndex(int Idx,
+                    ModifierMappingsType const &ModifierMappings) const {
+    if (!ModifierMappings)
+      return Idx;
+    if (ModifierMappings->size() <= static_cast<unsigned>(Idx))
+      Builder.PrintFatalError("Modifier value '" + std::to_string(Idx) +
+                              "' is not valid for this mapping (has " +
+                              std::to_string(ModifierMappings->size()) +
+                              " mappings)");
+    return (*ModifierMappings)[Idx];
+  }
+
+  int mapIndex(int Idx) const {
+    return mapIndex(Idx, ModifierMappings);
+  }
+
+protected:
+  DiagnosticTextBuilder &Builder;
+  ModifierMappingsType ModifierMappings;
+};
+
+void escapeRST(StringRef Str, std::string &Out) {
+  for (auto K : Str) {
+    if (StringRef("`*|_[]\\").count(K))
+      Out.push_back('\\');
+    Out.push_back(K);
+  }
+}
+
+template <typename It> void padToSameLength(It Begin, It End) {
+  size_t Width = 0;
+  for (It I = Begin; I != End; ++I)
+    Width = std::max(Width, I->size());
+  for (It I = Begin; I != End; ++I)
+    (*I) += std::string(Width - I->size(), ' ');
+}
+
+template <typename It> void makeTableRows(It Begin, It End) {
+  if (Begin == End)
+    return;
+  padToSameLength(Begin, End);
+  for (It I = Begin; I != End; ++I)
+    *I = "|" + *I + "|";
+}
+
+void makeRowSeparator(std::string &Str) {
+  for (char &K : Str)
+    K = (K == '|' ? '+' : '-');
+}
+
+struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
+  using BaseTy = DiagTextVisitor<DiagTextDocPrinter>;
+  DiagTextDocPrinter(DiagnosticTextBuilder &Builder,
+                     std::vector<std::string> &RST)
+      : BaseTy(Builder), RST(RST) {}
+
+  void gatherNodes(
+      Piece *OrigP, const ModifierMappingsType &CurrentMappings,
+      std::vector<std::pair<Piece *, ModifierMappingsType>> &Pieces) const {
+    if (auto *Sub = dyn_cast<SubstitutionPiece>(OrigP)) {
+      ModifierMappingsType NewMappings =
+          getSubstitutionMappings(Sub, CurrentMappings);
+      return gatherNodes(Builder.getSubstitution(Sub), NewMappings, Pieces);
+    }
+    if (auto *MD = dyn_cast<MultiPiece>(OrigP)) {
+      for (Piece *Node : MD->Pieces)
+        gatherNodes(Node, CurrentMappings, Pieces);
+      return;
+    }
+    Pieces.push_back(std::make_pair(OrigP, CurrentMappings));
+  }
+
+  void VisitMulti(MultiPiece *P) {
+    if (P->Pieces.empty()) {
+      RST.push_back("");
+      return;
+    }
+
+    if (P->Pieces.size() == 1)
+      return Visit(P->Pieces[0]);
+
+    // Flatten the list of nodes, replacing any substitution pieces with the
+    // recursively flattened substituted node.
+    std::vector<std::pair<Piece *, ModifierMappingsType>> Pieces;
+    gatherNodes(P, ModifierMappings, Pieces);
+
+    std::string EmptyLinePrefix;
+    size_t Start = RST.size();
+    bool HasMultipleLines = true;
+    for (const std::pair<Piece *, ModifierMappingsType> &NodePair : Pieces) {
+      std::vector<std::string> Lines;
+      DiagTextDocPrinter Visitor{Builder, Lines};
+      Visitor.ModifierMappings = NodePair.second;
+      Visitor.Visit(NodePair.first);
+
+      if (Lines.empty())
+        continue;
+
+      // We need a vertical separator if either this or the previous piece is a
+      // multi-line piece, or this is the last piece.
+      const char *Separator = (Lines.size() > 1 || HasMultipleLines) ? "|" : "";
+      HasMultipleLines = Lines.size() > 1;
+
+      if (Start + Lines.size() > RST.size())
+        RST.resize(Start + Lines.size(), EmptyLinePrefix);
+
+      padToSameLength(Lines.begin(), Lines.end());
+      for (size_t I = 0; I != Lines.size(); ++I)
+        RST[Start + I] += Separator + Lines[I];
+      std::string Empty(Lines[0].size(), ' ');
+      for (size_t I = Start + Lines.size(); I != RST.size(); ++I)
+        RST[I] += Separator + Empty;
+      EmptyLinePrefix += Separator + Empty;
+    }
+    for (size_t I = Start; I != RST.size(); ++I)
+      RST[I] += "|";
+    EmptyLinePrefix += "|";
+
+    makeRowSeparator(EmptyLinePrefix);
+    RST.insert(RST.begin() + Start, EmptyLinePrefix);
+    RST.insert(RST.end(), EmptyLinePrefix);
+  }
+
+  void VisitText(TextPiece *P) {
+    RST.push_back("");
+    auto &S = RST.back();
+
+    StringRef T = P->Text;
+    while (!T.empty() && T.front() == ' ') {
+      RST.back() += " |nbsp| ";
+      T = T.drop_front();
+    }
+
+    std::string Suffix;
+    while (!T.empty() && T.back() == ' ') {
+      Suffix += " |nbsp| ";
+      T = T.drop_back();
+    }
+
+    if (!T.empty()) {
+      S += ':';
+      S += P->Role;
+      S += ":`";
+      escapeRST(T, S);
+      S += '`';
+    }
+
+    S += Suffix;
+  }
+
+  void VisitPlaceholder(PlaceholderPiece *P) {
+    RST.push_back(std::string(":placeholder:`") +
+                  char('A' + mapIndex(P->Index)) + "`");
+  }
+
+  void VisitSelect(SelectPiece *P) {
+    std::vector<size_t> SeparatorIndexes;
+    SeparatorIndexes.push_back(RST.size());
+    RST.emplace_back();
+    for (auto *O : P->Options) {
+      Visit(O);
+      SeparatorIndexes.push_back(RST.size());
+      RST.emplace_back();
+    }
+
+    makeTableRows(RST.begin() + SeparatorIndexes.front(),
+                  RST.begin() + SeparatorIndexes.back() + 1);
+    for (size_t I : SeparatorIndexes)
+      makeRowSeparator(RST[I]);
+  }
+
+  void VisitPlural(PluralPiece *P) { VisitSelect(P); }
+
+  void VisitDiff(DiffPiece *P) { Visit(P->Options[1]); }
+
+  std::vector<std::string> &RST;
+};
+
+struct DiagTextPrinter : DiagTextVisitor<DiagTextPrinter> {
+public:
+  using BaseTy = DiagTextVisitor<DiagTextPrinter>;
+  DiagTextPrinter(DiagnosticTextBuilder &Builder, std::string &Result)
+      : BaseTy(Builder), Result(Result) {}
+
+  void VisitMulti(MultiPiece *P) {
+    for (auto *Child : P->Pieces)
+      Visit(Child);
+  }
+  void VisitText(TextPiece *P) { Result += P->Text; }
+  void VisitPlaceholder(PlaceholderPiece *P) {
+    Result += "%";
+    Result += getModifierName(P->Kind);
+    addInt(mapIndex(P->Index));
+  }
+  void VisitSelect(SelectPiece *P) {
+    Result += "%";
+    Result += getModifierName(P->ModKind);
+    if (P->ModKind == MT_Select) {
+      Result += "{";
+      for (auto *D : P->Options) {
+        Visit(D);
+        Result += '|';
+      }
+      if (!P->Options.empty())
+        Result.erase(--Result.end());
+      Result += '}';
+    }
+    addInt(mapIndex(P->Index));
+  }
+
+  void VisitPlural(PluralPiece *P) {
+    Result += "%plural{";
+    assert(P->Options.size() == P->OptionPrefixes.size());
+    for (unsigned I = 0, End = P->Options.size(); I < End; ++I) {
+      if (P->OptionPrefixes[I])
+        Visit(P->OptionPrefixes[I]);
+      Visit(P->Options[I]);
+      Result += "|";
+    }
+    if (!P->Options.empty())
+      Result.erase(--Result.end());
+    Result += '}';
+    addInt(mapIndex(P->Index));
+  }
+
+  void VisitDiff(DiffPiece *P) {
+    Result += "%diff{";
+    Visit(P->Options[0]);
+    Result += "|";
+    Visit(P->Options[1]);
+    Result += "}";
+    addInt(mapIndex(P->Indexes[0]));
+    Result += ",";
+    addInt(mapIndex(P->Indexes[1]));
+  }
+
+  void addInt(int Val) { Result += std::to_string(Val); }
+
+  std::string &Result;
+};
+
+int DiagnosticTextBuilder::DiagText::parseModifier(StringRef &Text) const {
+  if (Text.empty() || !isdigit(Text[0]))
+    Builder.PrintFatalError("expected modifier in diagnostic");
+  int Val = 0;
+  do {
+    Val *= 10;
+    Val += Text[0] - '0';
+    Text = Text.drop_front();
+  } while (!Text.empty() && isdigit(Text[0]));
+  return Val;
+}
+
+Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
+                                                      bool Nested) {
+  std::vector<Piece *> Parsed;
+
+  while (!Text.empty()) {
+    size_t End = (size_t)-2;
+    do
+      End = Nested ? Text.find_first_of("%|}", End + 2)
+                   : Text.find_first_of('%', End + 2);
+    while (End < Text.size() - 1 && Text[End] == '%' &&
+           (Text[End + 1] == '%' || Text[End + 1] == '|'));
+
+    if (End) {
+      Parsed.push_back(New<TextPiece>(Text.slice(0, End), "diagtext"));
+      Text = Text.slice(End, StringRef::npos);
+      if (Text.empty())
+        break;
+    }
+
+    if (Text[0] == '|' || Text[0] == '}')
+      break;
+
+    // Drop the '%'.
+    Text = Text.drop_front();
+
+    // Extract the (optional) modifier.
+    size_t ModLength = Text.find_first_of("0123456789{");
+    StringRef Modifier = Text.slice(0, ModLength);
+    Text = Text.slice(ModLength, StringRef::npos);
+    ModifierType ModType = llvm::StringSwitch<ModifierType>{Modifier}
+                               .Case("select", MT_Select)
+                               .Case("sub", MT_Sub)
+                               .Case("diff", MT_Diff)
+                               .Case("plural", MT_Plural)
+                               .Case("s", MT_S)
+                               .Case("ordinal", MT_Ordinal)
+                               .Case("q", MT_Q)
+                               .Case("objcclass", MT_ObjCClass)
+                               .Case("objcinstance", MT_ObjCInstance)
+                               .Case("", MT_Placeholder)
+                               .Default(MT_Unknown);
+
+    switch (ModType) {
+    case MT_Unknown:
+      Builder.PrintFatalError("Unknown modifier type: " + Modifier);
+    case MT_Select: {
+      SelectPiece *Select = New<SelectPiece>(MT_Select);
+      do {
+        Text = Text.drop_front(); // '{' or '|'
+        Select->Options.push_back(parseDiagText(Text, true));
+        assert(!Text.empty() && "malformed %select");
+      } while (Text.front() == '|');
+      // Drop the trailing '}'.
+      Text = Text.drop_front(1);
+      Select->Index = parseModifier(Text);
+      Parsed.push_back(Select);
+      continue;
+    }
+    case MT_Plural: {
+      PluralPiece *Plural = New<PluralPiece>();
+      do {
+        Text = Text.drop_front(); // '{' or '|'
+        size_t End = Text.find_first_of(":");
+        if (End == StringRef::npos)
+          Builder.PrintFatalError("expected ':' while parsing %plural");
+        ++End;
+        assert(!Text.empty());
+        Plural->OptionPrefixes.push_back(
+            New<TextPiece>(Text.slice(0, End), "diagtext"));
+        Text = Text.slice(End, StringRef::npos);
+        Plural->Options.push_back(parseDiagText(Text, true));
+        assert(!Text.empty() && "malformed %select");
+      } while (Text.front() == '|');
+      // Drop the trailing '}'.
+      Text = Text.drop_front(1);
+      Plural->Index = parseModifier(Text);
+      Parsed.push_back(Plural);
+      continue;
+    }
+    case MT_Sub: {
+      SubstitutionPiece *Sub = New<SubstitutionPiece>();
+      Text = Text.drop_front(); // '{'
+      size_t NameSize = Text.find_first_of('}');
+      assert(NameSize != size_t(-1) && "failed to find the end of the name");
+      assert(NameSize != 0 && "empty name?");
+      Sub->Name = Text.substr(0, NameSize).str();
+      Text = Text.drop_front(NameSize);
+      Text = Text.drop_front(); // '}'
+      if (!Text.empty()) {
+        while (true) {
+          if (!isdigit(Text[0]))
+            break;
+          Sub->Modifiers.push_back(parseModifier(Text));
+          if (Text.empty() || Text[0] != ',')
+            break;
+          Text = Text.drop_front(); // ','
+          assert(!Text.empty() && isdigit(Text[0]) &&
+                 "expected another modifier");
+        }
+      }
+      Parsed.push_back(Sub);
+      continue;
+    }
+    case MT_Diff: {
+      DiffPiece *Diff = New<DiffPiece>();
+      Text = Text.drop_front(); // '{'
+      Diff->Options[0] = parseDiagText(Text, true);
+      Text = Text.drop_front(); // '|'
+      Diff->Options[1] = parseDiagText(Text, true);
+
+      Text = Text.drop_front(); // '}'
+      Diff->Indexes[0] = parseModifier(Text);
+      Text = Text.drop_front(); // ','
+      Diff->Indexes[1] = parseModifier(Text);
+      Parsed.push_back(Diff);
+      continue;
+    }
+    case MT_S: {
+      SelectPiece *Select = New<SelectPiece>(ModType);
+      Select->Options.push_back(New<TextPiece>(""));
+      Select->Options.push_back(New<TextPiece>("s", "diagtext"));
+      Select->Index = parseModifier(Text);
+      Parsed.push_back(Select);
+      continue;
+    }
+    case MT_Q:
+    case MT_Placeholder:
+    case MT_ObjCClass:
+    case MT_ObjCInstance:
+    case MT_Ordinal: {
+      Parsed.push_back(New<PlaceholderPiece>(ModType, parseModifier(Text)));
+      continue;
+    }
+    }
+  }
+
+  return New<MultiPiece>(Parsed);
+}
+
+std::vector<std::string>
+DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
+                                             const Record *R) {
+  EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
+  StringRef Text = R->getValueAsString("Text");
+
+  DiagText D(*this, Text);
+  TextPiece *Prefix = D.New<TextPiece>(Severity, Severity);
+  Prefix->Text += ": ";
+  auto *MP = dyn_cast<MultiPiece>(D.Root);
+  if (!MP) {
+    MP = D.New<MultiPiece>();
+    MP->Pieces.push_back(D.Root);
+    D.Root = MP;
+  }
+  MP->Pieces.insert(MP->Pieces.begin(), Prefix);
+  std::vector<std::string> Result;
+  DiagTextDocPrinter{*this, Result}.Visit(D.Root);
+  return Result;
+}
+
+std::string DiagnosticTextBuilder::buildForDefinition(const Record *R) {
+  EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
+  StringRef Text = R->getValueAsString("Text");
+  DiagText D(*this, Text);
+  std::string Result;
+  DiagTextPrinter{*this, Result}.Visit(D.Root);
+  return Result;
+}
+
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // Warning Tables (.inc file) generation.
 //===----------------------------------------------------------------------===//
@@ -480,6 +1184,7 @@ static bool isRemark(const Record &Diag) {
   const std::string &ClsName = Diag.getValueAsDef("Class")->getName();
   return ClsName == "CLASS_REMARK";
 }
+
 
 /// ClangDiagsDefsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostics.
@@ -496,8 +1201,9 @@ void EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     OS << "#endif\n\n";
   }
 
-  const std::vector<Record*> &Diags =
-    Records.getAllDerivedDefinitions("Diagnostic");
+  DiagnosticTextBuilder DiagTextBuilder(Records);
+
+  std::vector<Record *> Diags = Records.getAllDerivedDefinitions("Diagnostic");
 
   std::vector<Record*> DiagGroups
     = Records.getAllDerivedDefinitions("DiagGroup");
@@ -546,7 +1252,7 @@ void EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
 
     // Description string.
     OS << ", \"";
-    OS.write_escaped(R.getValueAsString("Text")) << '"';
+    OS.write_escaped(DiagTextBuilder.buildForDefinition(&R)) << '"';
 
     // Warning associated with the diagnostic. This is stored as an index into
     // the alphabetically sorted warning table.
@@ -598,7 +1304,7 @@ static std::string getDiagCategoryEnum(llvm::StringRef name) {
   return enumName.str();
 }
 
-/// \brief Emit the array of diagnostic subgroups.
+/// Emit the array of diagnostic subgroups.
 ///
 /// The array of diagnostic subgroups contains for each group a list of its
 /// subgroups. The individual lists are separated by '-1'. Groups with no
@@ -645,7 +1351,7 @@ static void emitDiagSubGroups(std::map<std::string, GroupInfo> &DiagsInGroup,
   OS << "};\n\n";
 }
 
-/// \brief Emit the list of diagnostic arrays.
+/// Emit the list of diagnostic arrays.
 ///
 /// This data structure is a large array that contains itself arrays of varying
 /// size. Each array represents a list of diagnostics. The different arrays are
@@ -686,7 +1392,7 @@ static void emitDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
   OS << "};\n\n";
 }
 
-/// \brief Emit a list of group names.
+/// Emit a list of group names.
 ///
 /// This creates a long string which by itself contains a list of pascal style
 /// strings, which consist of a length byte directly followed by the string.
@@ -703,7 +1409,7 @@ static void emitDiagGroupNames(StringToOffsetTable &GroupNames,
   OS << "};\n\n";
 }
 
-/// \brief Emit diagnostic arrays and related data structures.
+/// Emit diagnostic arrays and related data structures.
 ///
 /// This creates the actual diagnostic array, an array of diagnostic subgroups
 /// and an array of subgroup names.
@@ -727,7 +1433,7 @@ static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
   OS << "#endif // GET_DIAG_ARRAYS\n\n";
 }
 
-/// \brief Emit diagnostic table.
+/// Emit diagnostic table.
 ///
 /// The table is sorted by the name of the diagnostic group. Each element
 /// consists of the name of the diagnostic group (given as offset in the
@@ -802,7 +1508,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
   OS << "#endif // GET_DIAG_TABLE\n\n";
 }
 
-/// \brief Emit the table of diagnostic categories.
+/// Emit the table of diagnostic categories.
 ///
 /// The table has the form of macro calls that have two parameters. The
 /// category's name as well as an enum that represents the category. The
@@ -889,9 +1595,10 @@ void EmitClangDiagsIndexName(RecordKeeper &Records, raw_ostream &OS) {
     Index.push_back(RecordIndexElement(R));
   }
 
-  std::sort(Index.begin(), Index.end(),
-            [](const RecordIndexElement &Lhs,
-               const RecordIndexElement &Rhs) { return Lhs.Name < Rhs.Name; });
+  llvm::sort(Index.begin(), Index.end(),
+             [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
+               return Lhs.Name < Rhs.Name;
+            });
 
   for (unsigned i = 0, e = Index.size(); i != e; ++i) {
     const RecordIndexElement &R = Index[i];
@@ -906,261 +1613,6 @@ void EmitClangDiagsIndexName(RecordKeeper &Records, raw_ostream &OS) {
 
 namespace docs {
 namespace {
-
-/// Diagnostic text, parsed into pieces.
-struct DiagText {
-  struct Piece {
-    // This type and its derived classes are move-only.
-    Piece() {}
-    Piece(Piece &&O) {}
-    Piece &operator=(Piece &&O) { return *this; }
-
-    virtual void print(std::vector<std::string> &RST) = 0;
-    virtual ~Piece() {}
-  };
-  struct TextPiece : Piece {
-    StringRef Role;
-    std::string Text;
-    void print(std::vector<std::string> &RST) override;
-  };
-  struct PlaceholderPiece : Piece {
-    int Index;
-    void print(std::vector<std::string> &RST) override;
-  };
-  struct SelectPiece : Piece {
-    SelectPiece() {}
-    SelectPiece(SelectPiece &&O) noexcept : Options(std::move(O.Options)) {}
-    std::vector<DiagText> Options;
-    void print(std::vector<std::string> &RST) override;
-  };
-
-  std::vector<std::unique_ptr<Piece>> Pieces;
-
-  DiagText();
-  DiagText(DiagText &&O) noexcept : Pieces(std::move(O.Pieces)) {}
-
-  DiagText(StringRef Text);
-  DiagText(StringRef Kind, StringRef Text);
-
-  template<typename P> void add(P Piece) {
-    Pieces.push_back(llvm::make_unique<P>(std::move(Piece)));
-  }
-  void print(std::vector<std::string> &RST);
-};
-
-DiagText parseDiagText(StringRef &Text, bool Nested = false) {
-  DiagText Parsed;
-
-  while (!Text.empty()) {
-    size_t End = (size_t)-2;
-    do
-      End = Nested ? Text.find_first_of("%|}", End + 2)
-                   : Text.find_first_of('%', End + 2);
-    while (End < Text.size() - 1 && Text[End] == '%' && Text[End + 1] == '%');
-
-    if (End) {
-      DiagText::TextPiece Piece;
-      Piece.Role = "diagtext";
-      Piece.Text = Text.slice(0, End);
-      Parsed.add(std::move(Piece));
-      Text = Text.slice(End, StringRef::npos);
-      if (Text.empty()) break;
-    }
-
-    if (Text[0] == '|' || Text[0] == '}')
-      break;
-
-    // Drop the '%'.
-    Text = Text.drop_front();
-
-    // Extract the (optional) modifier.
-    size_t ModLength = Text.find_first_of("0123456789{");
-    StringRef Modifier = Text.slice(0, ModLength);
-    Text = Text.slice(ModLength, StringRef::npos);
-
-    // FIXME: Handle %ordinal here.
-    if (Modifier == "select" || Modifier == "plural") {
-      DiagText::SelectPiece Select;
-      do {
-        Text = Text.drop_front();
-        if (Modifier == "plural")
-          while (Text[0] != ':')
-            Text = Text.drop_front();
-        Select.Options.push_back(parseDiagText(Text, true));
-        assert(!Text.empty() && "malformed %select");
-      } while (Text.front() == '|');
-      Parsed.add(std::move(Select));
-
-      // Drop the trailing '}n'.
-      Text = Text.drop_front(2);
-      continue;
-    }
-
-    // For %diff, just take the second alternative (tree diagnostic). It would
-    // be preferable to take the first one, and replace the $ with the suitable
-    // placeholders.
-    if (Modifier == "diff") {
-      Text = Text.drop_front(); // '{'
-      parseDiagText(Text, true);
-      Text = Text.drop_front(); // '|'
-
-      DiagText D = parseDiagText(Text, true);
-      for (auto &P : D.Pieces)
-        Parsed.Pieces.push_back(std::move(P));
-
-      Text = Text.drop_front(4); // '}n,m'
-      continue;
-    }
-
-    if (Modifier == "s") {
-      Text = Text.drop_front();
-      DiagText::SelectPiece Select;
-      Select.Options.push_back(DiagText(""));
-      Select.Options.push_back(DiagText("s"));
-      Parsed.add(std::move(Select));
-      continue;
-    }
-
-    assert(!Text.empty() && isdigit(Text[0]) && "malformed placeholder");
-    DiagText::PlaceholderPiece Placeholder;
-    Placeholder.Index = Text[0] - '0';
-    Parsed.add(std::move(Placeholder));
-    Text = Text.drop_front();
-    continue;
-  }
-  return Parsed;
-}
-
-DiagText::DiagText() {}
-
-DiagText::DiagText(StringRef Text) : DiagText(parseDiagText(Text, false)) {}
-
-DiagText::DiagText(StringRef Kind, StringRef Text) : DiagText(parseDiagText(Text, false)) {
-  TextPiece Prefix;
-  Prefix.Role = Kind;
-  Prefix.Text = Kind;
-  Prefix.Text += ": ";
-  Pieces.insert(Pieces.begin(),
-                llvm::make_unique<TextPiece>(std::move(Prefix)));
-}
-
-void escapeRST(StringRef Str, std::string &Out) {
-  for (auto K : Str) {
-    if (StringRef("`*|_[]\\").count(K))
-      Out.push_back('\\');
-    Out.push_back(K);
-  }
-}
-
-template<typename It> void padToSameLength(It Begin, It End) {
-  size_t Width = 0;
-  for (It I = Begin; I != End; ++I)
-    Width = std::max(Width, I->size());
-  for (It I = Begin; I != End; ++I)
-    (*I) += std::string(Width - I->size(), ' ');
-}
-
-template<typename It> void makeTableRows(It Begin, It End) {
-  if (Begin == End) return;
-  padToSameLength(Begin, End);
-  for (It I = Begin; I != End; ++I)
-    *I = "|" + *I + "|";
-}
-
-void makeRowSeparator(std::string &Str) {
-  for (char &K : Str)
-    K = (K == '|' ? '+' : '-');
-}
-
-void DiagText::print(std::vector<std::string> &RST) {
-  if (Pieces.empty()) {
-    RST.push_back("");
-    return;
-  }
-
-  if (Pieces.size() == 1)
-    return Pieces[0]->print(RST);
-
-  std::string EmptyLinePrefix;
-  size_t Start = RST.size();
-  bool HasMultipleLines = true;
-  for (auto &P : Pieces) {
-    std::vector<std::string> Lines;
-    P->print(Lines);
-    if (Lines.empty())
-      continue;
-
-    // We need a vertical separator if either this or the previous piece is a
-    // multi-line piece, or this is the last piece.
-    const char *Separator = (Lines.size() > 1 || HasMultipleLines) ? "|" : "";
-    HasMultipleLines = Lines.size() > 1;
-
-    if (Start + Lines.size() > RST.size())
-      RST.resize(Start + Lines.size(), EmptyLinePrefix);
-
-    padToSameLength(Lines.begin(), Lines.end());
-    for (size_t I = 0; I != Lines.size(); ++I)
-      RST[Start + I] += Separator + Lines[I];
-    std::string Empty(Lines[0].size(), ' ');
-    for (size_t I = Start + Lines.size(); I != RST.size(); ++I)
-      RST[I] += Separator + Empty;
-    EmptyLinePrefix += Separator + Empty;
-  }
-  for (size_t I = Start; I != RST.size(); ++I)
-    RST[I] += "|";
-  EmptyLinePrefix += "|";
-
-  makeRowSeparator(EmptyLinePrefix);
-  RST.insert(RST.begin() + Start, EmptyLinePrefix);
-  RST.insert(RST.end(), EmptyLinePrefix);
-}
-
-void DiagText::TextPiece::print(std::vector<std::string> &RST) {
-  RST.push_back("");
-  auto &S = RST.back();
-
-  StringRef T = Text;
-  while (!T.empty() && T.front() == ' ') {
-    RST.back() += " |nbsp| ";
-    T = T.drop_front();
-  }
-
-  std::string Suffix;
-  while (!T.empty() && T.back() == ' ') {
-    Suffix += " |nbsp| ";
-    T = T.drop_back();
-  }
-
-  if (!T.empty()) {
-    S += ':';
-    S += Role;
-    S += ":`";
-    escapeRST(T, S);
-    S += '`';
-  }
-  
-  S += Suffix;
-}
-
-void DiagText::PlaceholderPiece::print(std::vector<std::string> &RST) {
-  RST.push_back(std::string(":placeholder:`") + char('A' + Index) + "`");
-}
-
-void DiagText::SelectPiece::print(std::vector<std::string> &RST) {
-  std::vector<size_t> SeparatorIndexes;
-  SeparatorIndexes.push_back(RST.size());
-  RST.emplace_back();
-  for (auto &O : Options) {
-    O.print(RST);
-    SeparatorIndexes.push_back(RST.size());
-    RST.emplace_back();
-  }
-
-  makeTableRows(RST.begin() + SeparatorIndexes.front(),
-                RST.begin() + SeparatorIndexes.back() + 1);
-  for (size_t I : SeparatorIndexes)
-    makeRowSeparator(RST[I]);
-}
 
 bool isRemarkGroup(const Record *DiagGroup,
                    const std::map<std::string, GroupInfo> &DiagsInGroup) {
@@ -1206,12 +1658,13 @@ void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
   OS << Str << "\n" << std::string(Str.size(), Kind) << "\n";
 }
 
-void writeDiagnosticText(StringRef Role, StringRef Text, raw_ostream &OS) {
+void writeDiagnosticText(DiagnosticTextBuilder &Builder, const Record *R,
+                         StringRef Role, raw_ostream &OS) {
+  StringRef Text = R->getValueAsString("Text");
   if (Text == "%0")
     OS << "The text of this diagnostic is not controlled by Clang.\n\n";
   else {
-    std::vector<std::string> Out;
-    DiagText(Role, Text).print(Out);
+    std::vector<std::string> Out = Builder.buildForDocumentation(Role, R);
     for (auto &Line : Out)
       OS << Line << "\n";
     OS << "\n";
@@ -1234,11 +1687,14 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << Documentation->getValueAsString("Intro") << "\n";
 
+  DiagnosticTextBuilder Builder(Records);
+
   std::vector<Record*> Diags =
       Records.getAllDerivedDefinitions("Diagnostic");
+
   std::vector<Record*> DiagGroups =
       Records.getAllDerivedDefinitions("DiagGroup");
-  std::sort(DiagGroups.begin(), DiagGroups.end(), diagGroupBeforeByName);
+  llvm::sort(DiagGroups.begin(), DiagGroups.end(), diagGroupBeforeByName);
 
   DiagGroupParentMap DGParentMap(Records);
 
@@ -1257,10 +1713,10 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
                               DiagsInPedanticSet.end());
     RecordVec GroupsInPedantic(GroupsInPedanticSet.begin(),
                                GroupsInPedanticSet.end());
-    std::sort(DiagsInPedantic.begin(), DiagsInPedantic.end(),
-              beforeThanCompare);
-    std::sort(GroupsInPedantic.begin(), GroupsInPedantic.end(),
-              beforeThanCompare);
+    llvm::sort(DiagsInPedantic.begin(), DiagsInPedantic.end(),
+               beforeThanCompare);
+    llvm::sort(GroupsInPedantic.begin(), GroupsInPedantic.end(),
+               beforeThanCompare);
     PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
                                  DiagsInPedantic.begin(),
                                  DiagsInPedantic.end());
@@ -1309,7 +1765,7 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
         OS << "Also controls ";
 
       bool First = true;
-      std::sort(GroupInfo.SubGroups.begin(), GroupInfo.SubGroups.end());
+      llvm::sort(GroupInfo.SubGroups.begin(), GroupInfo.SubGroups.end());
       for (const auto &Name : GroupInfo.SubGroups) {
         if (!First) OS << ", ";
         OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
@@ -1325,7 +1781,8 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
         Severity[0] = tolower(Severity[0]);
         if (Severity == "ignored")
           Severity = IsRemarkGroup ? "remark" : "warning";
-        writeDiagnosticText(Severity, D->getValueAsString("Text"), OS);
+
+        writeDiagnosticText(Builder, D, Severity, OS);
       }
     }
 

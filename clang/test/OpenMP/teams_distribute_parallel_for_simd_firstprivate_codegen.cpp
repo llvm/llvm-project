@@ -1,25 +1,25 @@
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCHECK -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCHECK -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DCHECK -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
-// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix LAMBDA --check-prefix LAMBDA-64
-// RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++  -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix LAMBDA --check-prefix LAMBDA-64
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck %s --check-prefix LAMBDA --check-prefix LAMBDA-64
+// RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DLAMBDA -fopenmp -x c++  -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck %s --check-prefix LAMBDA --check-prefix LAMBDA-64
 
-// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++  -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -DLAMBDA -verify -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s -Wno-openmp-target
+// RUN: %clang_cc1 -DLAMBDA -fopenmp-simd -x c++  -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -Wno-openmp-target | FileCheck --check-prefix SIMD-ONLY1 %s
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
@@ -140,16 +140,6 @@ int main() {
     // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_TMP:%.+]] = alloca i32*,
     // skip loop vars
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: [[G_PRIV:%.+]] = alloca i{{[0-9]+}},
-    // LAMBDA: [[G1_PRIV:%.+]] = alloca i{{[0-9]+}},
-    // LAMBDA: [[G1_TMP_PRIV:%.+]] = alloca i{{[0-9]+}}*,
-    // LAMBDA: [[SIVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[G_ADDR]],
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[G1_ADDR]],
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[SIVAR_ADDR]],
@@ -159,10 +149,10 @@ int main() {
     // LAMBDA-DAG: store{{.+}} [[G1_CONV]], {{.+}} [[G1_TMP]],
 
     // use of private vars
-    // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G_PRIV]],
-    // LAMBDA-DAG: [[G1:%.+]] = load{{.+}}, {{.+}}* [[G1_TMP_PRIV]]
+    // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G_CONV]],
+    // LAMBDA-DAG: [[G1:%.+]] = load{{.+}}, {{.+}}* [[G1_TMP]]
     // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G1]],
-    // LAMBDA-DAG: store{{.+}} 2, {{.+}} [[SIVAR_PRIV]],
+    // LAMBDA-DAG: store{{.+}} 2, {{.+}} [[SIVAR_CONV]],
     // LAMBDA-DAG: [[G1_REF:%.+]] = load{{.+}}, {{.+}} [[G1_TMP]],
     // LAMBDA: call void [[INNER_LAMBDA:@.+]](
     // LAMBDA: call void @__kmpc_for_static_fini(
@@ -256,8 +246,8 @@ int main() {
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[SIVAR_ADDR]],
 
 // T_VAR and SIVAR
-// CHECK-DAG-64: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
-// CHECK-DAG-64: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
 
 // preparation vars
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
@@ -267,7 +257,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] =  bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]],
@@ -322,8 +312,8 @@ int main() {
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[SIVAR_ADDR]],
 
 // T_VAR and SIVAR
-// CHECK-DAG-64: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
-// CHECK-DAG-64: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_TVAR:%.+]] = bitcast i64* [[T_VAR_ADDR]] to i32*
+// CHECK-64-DAG: [[CONV_SIVAR:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
 
 // preparation vars
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
@@ -333,7 +323,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] =  bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]],
@@ -353,13 +343,13 @@ int main() {
 // CHECK-DAG: call void @{{.+}}({{.+}} [[AGG_TMP2]])
 
 // CHECK: call void @__kmpc_for_static_init_4(
-// CHECK-DAG-32: {{.+}} = {{.+}} [[T_VAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_TVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[T_VAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_TVAR]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VEC_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[S_ARR_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VAR_PRIV]]
-// CHECK-DAG-32: {{.+}} = {{.+}} [[SIVAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_SIVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[SIVAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_SIVAR]]
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
@@ -418,7 +408,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]],
@@ -479,7 +469,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]],
@@ -501,8 +491,8 @@ int main() {
 // CHECK-DAG: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[TMP]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
-// CHECK-DAG-32: {{.+}} = {{.+}} [[T_VAR_ADDR]]
-// CHECK-DAG-64: {{.+}} = {{.+}} [[CONV_TVAR]]
+// CHECK-32-DAG: {{.+}} = {{.+}} [[T_VAR_ADDR]]
+// CHECK-64-DAG: {{.+}} = {{.+}} [[CONV_TVAR]]
 // CHECK-DAG: {{.+}} = {{.+}} [[VEC_PRIV]]
 // CHECK-DAG: {{.+}} = {{.+}} [[TMP]]
 // CHECK-DAG: {{.+}} = {{.+}} [[S_ARR_PRIV]]

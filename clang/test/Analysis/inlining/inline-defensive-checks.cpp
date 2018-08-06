@@ -84,3 +84,20 @@ void testRefToField(Bar *b) {
   int &x = b->x; // no-warning
   x = 5;
 }
+
+namespace get_deref_expr_with_cleanups {
+struct S {
+~S();
+};
+S *conjure();
+// The argument won't be used, but it'll cause cleanups
+// to appear around the call site.
+S *get_conjured(S _) {
+  S *s = conjure();
+  if (s) {}
+  return s;
+}
+void test_conjured() {
+  S &s = *get_conjured(S()); // no-warning
+}
+} // namespace get_deref_expr_with_cleanups

@@ -17,7 +17,7 @@ CodeGenOptions::CodeGenOptions() {
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
 #include "clang/Frontend/CodeGenOptions.def"
 
-  RelocationModel = "pic";
+  RelocationModel = llvm::Reloc::PIC_;
   memcpy(CoverageVersion, "402*", 4);
 }
 

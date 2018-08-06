@@ -20,11 +20,6 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-bool tools::isMipsArch(llvm::Triple::ArchType Arch) {
-  return Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel ||
-         Arch == llvm::Triple::mips64 || Arch == llvm::Triple::mips64el;
-}
-
 // Get CPU and ABI names. They are not independent
 // so we have to calculate them together.
 void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
@@ -49,6 +44,13 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
   // MIPS3 is the default for mips64*-unknown-openbsd.
   if (Triple.getOS() == llvm::Triple::OpenBSD)
     DefMips64CPU = "mips3";
+
+  // MIPS2 is the default for mips(el)?-unknown-freebsd.
+  // MIPS3 is the default for mips64(el)?-unknown-freebsd.
+  if (Triple.getOS() == llvm::Triple::FreeBSD) {
+    DefMips32CPU = "mips2";
+    DefMips64CPU = "mips3";
+  }
 
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ,
                                options::OPT_mcpu_EQ))
@@ -106,11 +108,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
 
   if (ABIName.empty()) {
     // Deduce ABI name from the target triple.
-    if (Triple.getArch() == llvm::Triple::mips ||
-        Triple.getArch() == llvm::Triple::mipsel)
-      ABIName = "o32";
-    else
-      ABIName = "n64";
+    ABIName = Triple.isMIPS32() ? "o32" : "n64";
   }
 
   if (CPUName.empty()) {
@@ -214,6 +212,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // For case (a) we need to add +noabicalls for N64.
 
   bool IsN64 = ABIName == "64";
+  bool IsPIC = false;
   bool NonPIC = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
@@ -225,6 +224,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     NonPIC =
         (O.matches(options::OPT_fno_PIC) || O.matches(options::OPT_fno_pic) ||
          O.matches(options::OPT_fno_PIE) || O.matches(options::OPT_fno_pie));
+    IsPIC =
+        (O.matches(options::OPT_fPIC) || O.matches(options::OPT_fpic) ||
+         O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie));
   }
 
   bool UseAbiCalls = false;
@@ -234,9 +236,14 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   UseAbiCalls =
       !ABICallsArg || ABICallsArg->getOption().matches(options::OPT_mabicalls);
 
-  if (UseAbiCalls && IsN64 && NonPIC) {
-    D.Diag(diag::warn_drv_unsupported_abicalls);
-    UseAbiCalls = false;
+  if (IsN64 && NonPIC && (!ABICallsArg || UseAbiCalls)) {
+    D.Diag(diag::warn_drv_unsupported_pic_with_mabicalls)
+        << LastPICArg->getAsString(Args) << (!ABICallsArg ? 0 : 1);
+    NonPIC = false;
+  }
+
+  if (ABICallsArg && !UseAbiCalls && IsPIC) {
+    D.Diag(diag::err_drv_unsupported_noabicalls_pic);
   }
 
   if (!UseAbiCalls)
@@ -343,6 +350,12 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   AddTargetFeature(Args, Features, options::OPT_mno_madd4, options::OPT_mmadd4,
                    "nomadd4");
   AddTargetFeature(Args, Features, options::OPT_mmt, options::OPT_mno_mt, "mt");
+  AddTargetFeature(Args, Features, options::OPT_mcrc, options::OPT_mno_crc,
+                   "crc");
+  AddTargetFeature(Args, Features, options::OPT_mvirt, options::OPT_mno_virt,
+                   "virt");
+  AddTargetFeature(Args, Features, options::OPT_mginv, options::OPT_mno_ginv,
+                   "ginv");
 
   if (Arg *A = Args.getLastArg(options::OPT_mindirect_jump_EQ)) {
     StringRef Val = StringRef(A->getValue());

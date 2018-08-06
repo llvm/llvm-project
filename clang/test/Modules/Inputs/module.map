@@ -380,6 +380,11 @@ module TargetFeatures {
     module x86_32 { requires x86_32 }
     module x86_64 { requires x86_64 }
   }
+  module riscv {
+    requires riscv
+    module riscv32 { requires riscv32 }
+    module riscv64 { requires riscv64 }
+  }
 }
 
 module DebugSubmodules {

@@ -32,19 +32,18 @@ class VLASizeChecker : public Checker< check::PreStmt<DeclStmt> > {
   mutable std::unique_ptr<BugType> BT;
   enum VLASize_Kind { VLA_Garbage, VLA_Zero, VLA_Tainted, VLA_Negative };
 
-  void reportBug(VLASize_Kind Kind,
-                 const Expr *SizeE,
-                 ProgramStateRef State,
-                 CheckerContext &C) const;
+  void reportBug(VLASize_Kind Kind, const Expr *SizeE, ProgramStateRef State,
+                 CheckerContext &C,
+                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
+
 public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
 };
 } // end anonymous namespace
 
-void VLASizeChecker::reportBug(VLASize_Kind Kind,
-                               const Expr *SizeE,
-                               ProgramStateRef State,
-                               CheckerContext &C) const {
+void VLASizeChecker::reportBug(
+    VLASize_Kind Kind, const Expr *SizeE, ProgramStateRef State,
+    CheckerContext &C, std::unique_ptr<BugReporterVisitor> Visitor) const {
   // Generate an error node.
   ExplodedNode *N = C.generateErrorNode(State);
   if (!N)
@@ -73,6 +72,7 @@ void VLASizeChecker::reportBug(VLASize_Kind Kind,
   }
 
   auto report = llvm::make_unique<BugReport>(*BT, os.str(), N);
+  report->addVisitor(std::move(Visitor));
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackNullOrUndefValue(N, SizeE, *report);
   C.emitReport(std::move(report));
@@ -108,7 +108,8 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // Check if the size is tainted.
   if (state->isTainted(sizeV)) {
-    reportBug(VLA_Tainted, SE, nullptr, C);
+    reportBug(VLA_Tainted, SE, nullptr, C,
+              llvm::make_unique<TaintBugVisitor>(sizeV));
     return;
   }
 

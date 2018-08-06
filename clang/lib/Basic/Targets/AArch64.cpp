@@ -29,26 +29,27 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
   {#ID, TYPE, ATTRS, nullptr, LANG, nullptr},
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
 #include "clang/Basic/BuiltinsAArch64.def"
 };
 
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().getOS() == llvm::Triple::NetBSD ||
-      getTriple().getOS() == llvm::Triple::OpenBSD) {
-    // NetBSD apparently prefers consistency across ARM targets to
-    // consistency across 64-bit targets.
+  if (getTriple().getOS() == llvm::Triple::OpenBSD) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    if (!getTriple().isOSDarwin())
+    if (!getTriple().isOSDarwin() && getTriple().getOS() != llvm::Triple::NetBSD)
       WCharType = UnsignedInt;
 
     Int64Type = SignedLong;
     IntMaxType = SignedLong;
   }
 
+  // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
+  HasLegalHalfType = true;
 
   LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
   MaxVectorAlign = 128;
@@ -99,6 +100,11 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
   return isValidCPUName(Name);
+}
+
+void AArch64TargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::AArch64::fillValidCPUArchList(Values);
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
@@ -183,6 +189,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if ((FPU & NeonMode) && HasFullFP16)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+  if (HasFullFP16)
+   Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
+
+  if (HasDotProd)
+    Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
 
   switch (ArchKind) {
   default:
@@ -220,6 +231,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Crypto = 0;
   Unaligned = 1;
   HasFullFP16 = 0;
+  HasDotProd = 0;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -239,6 +251,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
     if (Feature == "+fullfp16")
       HasFullFP16 = 1;
+    if (Feature == "+dotprod")
+      HasDotProd = 1;
   }
 
   setDataLayout();

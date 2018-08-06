@@ -8,31 +8,31 @@ struct K {};
 
 struct __single_inheritance M;
 J<M> m;
-// CHECK-DAG: @"\01?m@@3U?$J@UM@@$0A@@@A"
+// CHECK-DAG: @"?m@@3U?$J@UM@@$0A@@@A"
 
 K<M> m2;
-// CHECK-DAG: @"\01?m2@@3U?$K@UM@@$0?0@@A"
+// CHECK-DAG: @"?m2@@3U?$K@UM@@$0?0@@A"
 
 struct __multiple_inheritance N;
 J<N> n;
-// CHECK-DAG: @"\01?n@@3U?$J@UN@@$HA@@@A"
+// CHECK-DAG: @"?n@@3U?$J@UN@@$HA@@@A"
 
 K<N> n2;
-// CHECK-DAG: @"\01?n2@@3U?$K@UN@@$0?0@@A"
+// CHECK-DAG: @"?n2@@3U?$K@UN@@$0?0@@A"
 
 struct __virtual_inheritance O;
 J<O> o;
-// CHECK-DAG: @"\01?o@@3U?$J@UO@@$IA@A@@@A"
+// CHECK-DAG: @"?o@@3U?$J@UO@@$IA@A@@@A"
 
 K<O> o2;
-// CHECK-DAG: @"\01?o2@@3U?$K@UO@@$FA@?0@@A"
+// CHECK-DAG: @"?o2@@3U?$K@UO@@$FA@?0@@A"
 
 struct P;
 J<P> p;
-// CHECK-DAG: @"\01?p@@3U?$J@UP@@$JA@A@?0@@A"
+// CHECK-DAG: @"?p@@3U?$J@UP@@$JA@A@?0@@A"
 
 K<P> p2;
-// CHECK-DAG: @"\01?p2@@3U?$K@UP@@$GA@A@?0@@A"
+// CHECK-DAG: @"?p2@@3U?$K@UP@@$GA@A@?0@@A"
 
 #pragma pointers_to_members(full_generality, virtual_inheritance)
 
@@ -57,4 +57,4 @@ template struct ClassTemplate<&MostGeneral::h>;
 
 // Test that we mangle in the vbptr offset, which is 12 here.
 //
-// CHECK: define weak_odr x86_thiscallcc %struct.ClassTemplate* @"\01??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"
+// CHECK: define weak_odr dso_local x86_thiscallcc %struct.ClassTemplate* @"??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"

@@ -2,11 +2,11 @@
 // REQUIRES: nvptx-registered-target
 
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -emit-llvm \
-// RUN:   -disable-llvm-passes -o - %s | FileCheck -check-prefix DEVICE %s
+// RUN:   -disable-llvm-passes -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix DEVICE %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm \
 // RUN:   -disable-llvm-passes -o - %s | \
-// RUN:  FileCheck -check-prefix HOST %s
+// RUN:  FileCheck -allow-deprecated-dag-overlap -check-prefix HOST %s
 
 #include "Inputs/cuda.h"
 

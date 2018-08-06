@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi2 -emit-llvm -o - | FileCheck %s --check-prefix=B32
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 unsigned int test_bzhi_u32(unsigned int __X, unsigned int __Y) {
   // CHECK: @llvm.x86.bmi.bzhi.32

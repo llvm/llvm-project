@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 %s -E | FileCheck --strict-whitespace --match-full-lines %s
 
 // In the following tests, note that the output is sensitive to the
-// whitespace *preceeding* the varargs argument, as well as to
+// whitespace *preceding* the varargs argument, as well as to
 // interior whitespace. AFAIK, this is the only case where whitespace
-// preceeding an argument matters, and might be considered a bug in
+// preceding an argument matters, and might be considered a bug in
 // GCC. Nevertheless, since this feature is a GCC extension in the
 // first place, we'll follow along.
 

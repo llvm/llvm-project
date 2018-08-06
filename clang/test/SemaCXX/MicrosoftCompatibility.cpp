@@ -239,6 +239,15 @@ enum ENUM2 {
 	ENUM2_c = 0x100000000 // expected-warning {{enumerator value is not representable in the underlying type 'int'}}
 };
 
+namespace NsEnumForwardDecl {
+  enum E *p; // expected-warning {{forward references to 'enum' types are a Microsoft extension}}
+  extern E e;
+}
+// Clang used to complain that NsEnumForwardDecl::E was undeclared below.
+NsEnumForwardDecl::E NsEnumForwardDecl_e;
+namespace NsEnumForwardDecl {
+  extern E e;
+}
 
 namespace PR11791 {
   template<class _Ty>

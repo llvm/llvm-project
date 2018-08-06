@@ -9,15 +9,15 @@
 
 #ifdef TEST_HTM
 void test_htm() {
-  __builtin_tbegin(4); // expected-error {{argument should be a value from 0 to 1}}
-  __builtin_tend(-1);  // expected-error {{argument should be a value from 0 to 1}}
-  __builtin_tsr(55);   // expected-error {{argument should be a value from 0 to 7}}
-  __builtin_tabortwc(-5, 2, 3); // expected-error {{argument should be a value from 0 to 31}} 
-  __builtin_tabortdc(55, 2, 3); // expected-error {{argument should be a value from 0 to 31}}
-  __builtin_tabortwci(-5, 2, 5); // expected-error {{argument should be a value from 0 to 31}}
-  __builtin_tabortwci(5, 2, 55); // expected-error {{argument should be a value from 0 to 31}}  
-  __builtin_tabortdci(-5, 2, 5); // expected-error {{argument should be a value from 0 to 31}}
-  __builtin_tabortdci(5, 2, 55); // expected-error {{argument should be a value from 0 to 31}}
+  __builtin_tbegin(4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tend(-1);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tsr(55);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tabortwc(-5, 2, 3); // expected-error-re {{argument value {{.*}} is outside the valid range}} 
+  __builtin_tabortdc(55, 2, 3); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tabortwci(-5, 2, 5); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tabortwci(5, 2, 55); // expected-error-re {{argument value {{.*}} is outside the valid range}}  
+  __builtin_tabortdci(-5, 2, 5); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_tabortdci(5, 2, 55); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 #endif
 
@@ -30,20 +30,20 @@ void test_htm() {
 vector unsigned int test_vshasigmaw_or(void)
 {
   vector unsigned int a = W_INIT
-  vector unsigned int b = __builtin_crypto_vshasigmaw(a, 2, 15);  // expected-error {{argument should be a value from 0 to 1}}
-  vector unsigned int c = __builtin_crypto_vshasigmaw(a, -1, 15); // expected-error {{argument should be a value from 0 to 1}}
-  vector unsigned int d = __builtin_crypto_vshasigmaw(a, 0, 85);  // expected-error {{argument should be a value from 0 to 15}}
-  vector unsigned int e = __builtin_crypto_vshasigmaw(a, 1, -15); // expected-error {{argument should be a value from 0 to 15}}
+  vector unsigned int b = __builtin_crypto_vshasigmaw(a, 2, 15);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned int c = __builtin_crypto_vshasigmaw(a, -1, 15); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned int d = __builtin_crypto_vshasigmaw(a, 0, 85);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned int e = __builtin_crypto_vshasigmaw(a, 1, -15); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   return __builtin_crypto_vshasigmaw(a, 1, 15);
 }
 
 vector unsigned long long test_vshasigmad_or(void)
 {
   vector unsigned long long a = D_INIT
-  vector unsigned long long b = __builtin_crypto_vshasigmad(a, 2, 15);  // expected-error {{argument should be a value from 0 to 1}}
-  vector unsigned long long c = __builtin_crypto_vshasigmad(a, -1, 15); // expected-error {{argument should be a value from 0 to 1}}
-  vector unsigned long long d = __builtin_crypto_vshasigmad(a, 0, 85);  // expected-error {{argument should be a value from 0 to 1}}
-  vector unsigned long long e = __builtin_crypto_vshasigmad(a, 1, -15); // expected-error {{argument should be a value from 0 to 1}}
+  vector unsigned long long b = __builtin_crypto_vshasigmad(a, 2, 15);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned long long c = __builtin_crypto_vshasigmad(a, -1, 15); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned long long d = __builtin_crypto_vshasigmad(a, 0, 85);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vector unsigned long long e = __builtin_crypto_vshasigmad(a, 1, -15); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   return __builtin_crypto_vshasigmad(a, 0, 15);
 }
 

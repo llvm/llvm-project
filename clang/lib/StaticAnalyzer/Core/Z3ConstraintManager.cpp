@@ -10,7 +10,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SimpleConstraintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
 
 #include "clang/Config/config.h"
 
@@ -681,12 +681,14 @@ public:
       Z3_get_numeral_uint64(Z3Context::ZC, AST,
                             reinterpret_cast<__uint64 *>(&Value[0]));
       if (Sort.getBitvectorSortSize() <= 64) {
-        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value[0]), true);
+        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value[0]),
+                           Int.isUnsigned());
       } else if (Sort.getBitvectorSortSize() == 128) {
         Z3Expr ASTHigh = Z3Expr(Z3_mk_extract(Z3Context::ZC, 127, 64, AST));
         Z3_get_numeral_uint64(Z3Context::ZC, AST,
                               reinterpret_cast<__uint64 *>(&Value[1]));
-        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value), true);
+        Int = llvm::APSInt(llvm::APInt(Int.getBitWidth(), Value),
+                           Int.isUnsigned());
       } else {
         assert(false && "Bitwidth not supported!");
         return false;
@@ -702,7 +704,7 @@ public:
           llvm::APInt(Int.getBitWidth(),
                       Z3_get_bool_value(Z3Context::ZC, AST) == Z3_L_TRUE ? 1
                                                                          : 0),
-          true);
+          Int.isUnsigned());
       return true;
     }
   }
@@ -880,6 +882,12 @@ public:
 
   /// Reset the solver and remove all constraints.
   void reset() { Z3_solver_reset(Z3Context::ZC, Solver); }
+
+  void print(raw_ostream &OS) const {
+    OS << Z3_solver_to_string(Z3Context::ZC, Solver);
+  }
+
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 }; // end class Z3Solver
 
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
@@ -887,16 +895,25 @@ void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
                            llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
 }
 
-class Z3ConstraintManager : public SimpleConstraintManager {
+class Z3ConstraintManager : public SMTConstraintManager {
   Z3Context Context;
   mutable Z3Solver Solver;
 
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB),
+      : SMTConstraintManager(SE, SB),
         Solver(Z3_mk_simple_solver(Z3Context::ZC)) {
     Z3_set_error_handler(Z3Context::ZC, Z3ErrorHandler);
   }
+  //===------------------------------------------------------------------===//
+  // Implementation for Refutation.
+  //===------------------------------------------------------------------===//
+
+  void addRangeConstraints(clang::ento::ConstraintRangeTy CR) override;
+
+  ConditionTruthVal isModelFeasible() override;
+
+  LLVM_DUMP_METHOD void dump() const override;
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
@@ -979,6 +996,11 @@ private:
                       BinaryOperator::Opcode Op, const Z3Expr &RHS,
                       QualType RTy, QualType *RetTy) const;
 
+  // Wrapper to generate Z3Expr from a range. If From == To, an equality will
+  // be created instead.
+  Z3Expr getZ3RangeExpr(SymbolRef Sym, const llvm::APSInt &From,
+                        const llvm::APSInt &To, bool InRange);
+
   //===------------------------------------------------------------------===//
   // Helper functions.
   //===------------------------------------------------------------------===//
@@ -986,6 +1008,9 @@ private:
   // Recover the QualType of an APSInt.
   // TODO: Refactor to put elsewhere
   QualType getAPSIntType(const llvm::APSInt &Int) const;
+
+  // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
+  std::pair<llvm::APSInt, QualType> fixAPSInt(const llvm::APSInt &Int) const;
 
   // Perform implicit type conversion on binary symbolic expressions.
   // May modify all input parameters.
@@ -1034,31 +1059,7 @@ ProgramStateRef Z3ConstraintManager::assumeSym(ProgramStateRef State,
 ProgramStateRef Z3ConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
-  QualType RetTy;
-  // The expression may be casted, so we cannot call getZ3DataExpr() directly
-  Z3Expr Exp = getZ3Expr(Sym, &RetTy);
-
-  assert((getAPSIntType(From) == getAPSIntType(To)) &&
-         "Range values have different types!");
-  QualType RTy = getAPSIntType(From);
-  bool isSignedTy = RetTy->isSignedIntegerOrEnumerationType();
-  Z3Expr FromExp = Z3Expr::fromAPSInt(From);
-  Z3Expr ToExp = Z3Expr::fromAPSInt(To);
-
-  // Construct single (in)equality
-  if (From == To)
-    return assumeZ3Expr(State, Sym,
-                        getZ3BinExpr(Exp, RetTy, InRange ? BO_EQ : BO_NE,
-                                     FromExp, RTy, nullptr));
-
-  // Construct two (in)equalities, and a logical and/or
-  Z3Expr LHS =
-      getZ3BinExpr(Exp, RetTy, InRange ? BO_GE : BO_LT, FromExp, RTy, nullptr);
-  Z3Expr RHS =
-      getZ3BinExpr(Exp, RetTy, InRange ? BO_LE : BO_GT, ToExp, RTy, nullptr);
-  return assumeZ3Expr(
-      State, Sym,
-      Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS, isSignedTy));
+  return assumeZ3Expr(State, Sym, getZ3RangeExpr(Sym, From, To, InRange));
 }
 
 ProgramStateRef Z3ConstraintManager::assumeSymUnsupported(ProgramStateRef State,
@@ -1076,40 +1077,39 @@ bool Z3ConstraintManager::canReasonAbout(SVal X) const {
     return true;
 
   const SymExpr *Sym = SymVal->getSymbol();
-  do {
-    QualType Ty = Sym->getType();
+  QualType Ty = Sym->getType();
 
-    // Complex types are not modeled
-    if (Ty->isComplexType() || Ty->isComplexIntegerType())
-      return false;
+  // Complex types are not modeled
+  if (Ty->isComplexType() || Ty->isComplexIntegerType())
+    return false;
 
-    // Non-IEEE 754 floating-point types are not modeled
-    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
-          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
-      return false;
+  // Non-IEEE 754 floating-point types are not modeled
+  if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+       (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
+        &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
+    return false;
 
-    if (isa<SymbolData>(Sym)) {
-      break;
-    } else if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
-      Sym = SC->getOperand();
-    } else if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
-      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
-        Sym = SIE->getLHS();
-      } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        Sym = ISE->getRHS();
-      } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
-        return canReasonAbout(nonloc::SymbolVal(SSM->getLHS())) &&
-               canReasonAbout(nonloc::SymbolVal(SSM->getRHS()));
-      } else {
-        llvm_unreachable("Unsupported binary expression to reason about!");
-      }
-    } else {
-      llvm_unreachable("Unsupported expression to reason about!");
-    }
-  } while (Sym);
+  if (isa<SymbolData>(Sym))
+    return true;
 
-  return true;
+  SValBuilder &SVB = getSValBuilder();
+
+  if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
+    return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
+
+  if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
+    if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
+
+    if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
+
+    if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
+             canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
+  }
+
+  llvm_unreachable("Unsupported expression to reason about!");
 }
 
 ConditionTruthVal Z3ConstraintManager::checkNull(ProgramStateRef State,
@@ -1145,8 +1145,8 @@ ConditionTruthVal Z3ConstraintManager::checkNull(ProgramStateRef State,
 
 const llvm::APSInt *Z3ConstraintManager::getSymVal(ProgramStateRef State,
                                                    SymbolRef Sym) const {
-  BasicValueFactory &BV = getBasicVals();
-  ASTContext &Ctx = BV.getContext();
+  BasicValueFactory &BVF = getBasicVals();
+  ASTContext &Ctx = BVF.getContext();
 
   if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
     QualType Ty = Sym->getType();
@@ -1180,7 +1180,7 @@ const llvm::APSInt *Z3ConstraintManager::getSymVal(ProgramStateRef State,
       return nullptr;
 
     // This is the only solution, store it
-    return &BV.getValue(Value);
+    return &BVF.getValue(Value);
   } else if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
     SymbolRef CastSym = SC->getOperand();
     QualType CastTy = SC->getType();
@@ -1191,7 +1191,7 @@ const llvm::APSInt *Z3ConstraintManager::getSymVal(ProgramStateRef State,
     const llvm::APSInt *Value;
     if (!(Value = getSymVal(State, CastSym)))
       return nullptr;
-    return &BV.Convert(SC->getType(), *Value);
+    return &BVF.Convert(SC->getType(), *Value);
   } else if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
     const llvm::APSInt *LHS, *RHS;
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
@@ -1211,11 +1211,13 @@ const llvm::APSInt *Z3ConstraintManager::getSymVal(ProgramStateRef State,
     if (!LHS || !RHS)
       return nullptr;
 
-    llvm::APSInt ConvertedLHS = *LHS, ConvertedRHS = *RHS;
-    QualType LTy = getAPSIntType(*LHS), RTy = getAPSIntType(*RHS);
+    llvm::APSInt ConvertedLHS, ConvertedRHS;
+    QualType LTy, RTy;
+    std::tie(ConvertedLHS, LTy) = fixAPSInt(*LHS);
+    std::tie(ConvertedRHS, RTy) = fixAPSInt(*RHS);
     doIntTypeConversion<llvm::APSInt, Z3ConstraintManager::castAPSInt>(
         ConvertedLHS, LTy, ConvertedRHS, RTy);
-    return BV.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
+    return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
   }
 
   llvm_unreachable("Unsupported expression to get symbol value!");
@@ -1233,6 +1235,36 @@ Z3ConstraintManager::removeDeadBindings(ProgramStateRef State,
   }
 
   return State->set<ConstraintZ3>(CZ);
+}
+
+void Z3ConstraintManager::addRangeConstraints(ConstraintRangeTy CR) {
+  for (const auto &I : CR) {
+    SymbolRef Sym = I.first;
+
+    Z3Expr Constraints = Z3Expr::fromBoolean(false);
+    for (const auto &Range : I.second) {
+      Z3Expr SymRange =
+          getZ3RangeExpr(Sym, Range.From(), Range.To(), /*InRange=*/true);
+
+      // FIXME: the last argument (isSigned) is not used when generating the
+      // or expression, as both arguments are booleans
+      Constraints =
+          Z3Expr::fromBinOp(Constraints, BO_LOr, SymRange, /*IsSigned=*/true);
+    }
+    Solver.addConstraint(Constraints);
+  }
+}
+
+clang::ento::ConditionTruthVal Z3ConstraintManager::isModelFeasible() {
+  if (Solver.check() == Z3_L_FALSE)
+    return false;
+
+  return ConditionTruthVal();
+}
+
+LLVM_DUMP_METHOD void Z3ConstraintManager::dump() const
+{
+  Solver.dump();
 }
 
 //===------------------------------------------------------------------===//
@@ -1342,13 +1374,15 @@ Z3Expr Z3ConstraintManager::getZ3SymBinExpr(const BinarySymExpr *BSE,
   BinaryOperator::Opcode Op = BSE->getOpcode();
 
   if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
-    RTy = getAPSIntType(SIE->getRHS());
     Z3Expr LHS = getZ3SymExpr(SIE->getLHS(), &LTy, hasComparison);
-    Z3Expr RHS = Z3Expr::fromAPSInt(SIE->getRHS());
+    llvm::APSInt NewRInt;
+    std::tie(NewRInt, RTy) = fixAPSInt(SIE->getRHS());
+    Z3Expr RHS = Z3Expr::fromAPSInt(NewRInt);
     return getZ3BinExpr(LHS, LTy, Op, RHS, RTy, RetTy);
   } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-    LTy = getAPSIntType(ISE->getLHS());
-    Z3Expr LHS = Z3Expr::fromAPSInt(ISE->getLHS());
+    llvm::APSInt NewLInt;
+    std::tie(NewLInt, LTy) = fixAPSInt(ISE->getLHS());
+    Z3Expr LHS = Z3Expr::fromAPSInt(NewLInt);
     Z3Expr RHS = getZ3SymExpr(ISE->getRHS(), &RTy, hasComparison);
     return getZ3BinExpr(LHS, LTy, Op, RHS, RTy, RetTy);
   } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
@@ -1381,9 +1415,8 @@ Z3Expr Z3ConstraintManager::getZ3BinExpr(const Z3Expr &LHS, QualType LTy,
 
     // If the two operands are pointers and the operation is a subtraction, the
     // result is of type ptrdiff_t, which is signed
-    if (LTy->isAnyPointerType() && LTy == RTy && Op == BO_Sub) {
-      ASTContext &Ctx = getBasicVals().getContext();
-      *RetTy = Ctx.getIntTypeForBitwidth(Ctx.getTypeSize(LTy), true);
+    if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub) {
+      *RetTy = getBasicVals().getContext().getPointerDiffType();
     }
   }
 
@@ -1391,6 +1424,41 @@ Z3Expr Z3ConstraintManager::getZ3BinExpr(const Z3Expr &LHS, QualType LTy,
              ? Z3Expr::fromFloatBinOp(NewLHS, Op, NewRHS)
              : Z3Expr::fromBinOp(NewLHS, Op, NewRHS,
                                  LTy->isSignedIntegerOrEnumerationType());
+}
+
+Z3Expr Z3ConstraintManager::getZ3RangeExpr(SymbolRef Sym,
+                                           const llvm::APSInt &From,
+                                           const llvm::APSInt &To,
+                                           bool InRange) {
+  // Convert lower bound
+  QualType FromTy;
+  llvm::APSInt NewFromInt;
+  std::tie(NewFromInt, FromTy) = fixAPSInt(From);
+  Z3Expr FromExp = Z3Expr::fromAPSInt(NewFromInt);
+
+  // Convert symbol
+  QualType SymTy;
+  Z3Expr Exp = getZ3Expr(Sym, &SymTy);
+
+  // Construct single (in)equality
+  if (From == To)
+    return getZ3BinExpr(Exp, SymTy, InRange ? BO_EQ : BO_NE, FromExp, FromTy,
+                        /*RetTy=*/nullptr);
+
+  QualType ToTy;
+  llvm::APSInt NewToInt;
+  std::tie(NewToInt, ToTy) = fixAPSInt(To);
+  Z3Expr ToExp = Z3Expr::fromAPSInt(NewToInt);
+  assert(FromTy == ToTy && "Range values have different types!");
+
+  // Construct two (in)equalities, and a logical and/or
+  Z3Expr LHS = getZ3BinExpr(Exp, SymTy, InRange ? BO_GE : BO_LT, FromExp,
+                            FromTy, /*RetTy=*/nullptr);
+  Z3Expr RHS = getZ3BinExpr(Exp, SymTy, InRange ? BO_LE : BO_GT, ToExp, ToTy,
+                            /*RetTy=*/nullptr);
+
+  return Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS,
+                           SymTy->isSignedIntegerOrEnumerationType());
 }
 
 //===------------------------------------------------------------------===//
@@ -1402,10 +1470,27 @@ QualType Z3ConstraintManager::getAPSIntType(const llvm::APSInt &Int) const {
   return Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
 }
 
+std::pair<llvm::APSInt, QualType>
+Z3ConstraintManager::fixAPSInt(const llvm::APSInt &Int) const {
+  llvm::APSInt NewInt;
+
+  // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
+  // but the former is not available in Clang. Instead, extend the APSInt
+  // directly.
+  if (Int.getBitWidth() == 1 && getAPSIntType(Int).isNull()) {
+    ASTContext &Ctx = getBasicVals().getContext();
+    NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
+  } else
+    NewInt = Int;
+
+  return std::make_pair(NewInt, getAPSIntType(NewInt));
+}
+
 void Z3ConstraintManager::doTypeConversion(Z3Expr &LHS, Z3Expr &RHS,
                                            QualType &LTy, QualType &RTy) const {
   ASTContext &Ctx = getBasicVals().getContext();
 
+  assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
   // Perform type conversion
   if (LTy->isIntegralOrEnumerationType() &&
       RTy->isIntegralOrEnumerationType()) {
@@ -1468,10 +1553,10 @@ template <typename T,
 void Z3ConstraintManager::doIntTypeConversion(T &LHS, QualType &LTy, T &RHS,
                                               QualType &RTy) const {
   ASTContext &Ctx = getBasicVals().getContext();
-
   uint64_t LBitWidth = Ctx.getTypeSize(LTy);
   uint64_t RBitWidth = Ctx.getTypeSize(RTy);
 
+  assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
   // Always perform integer promotion before checking type equality.
   // Otherwise, e.g. (bool) a + (bool) b could trigger a backend assertion
   if (LTy->isPromotableIntegerType()) {
@@ -1612,7 +1697,9 @@ ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
 #if CLANG_ANALYZER_WITH_Z3
   return llvm::make_unique<Z3ConstraintManager>(Eng, StMgr.getSValBuilder());
 #else
-  llvm::report_fatal_error("Clang was not compiled with Z3 support!", false);
+  llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
+                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
+                           false);
   return nullptr;
 #endif
 }

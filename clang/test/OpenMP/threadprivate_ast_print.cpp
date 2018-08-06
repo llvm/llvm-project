@@ -25,7 +25,7 @@ struct St1{
  static int b;
 // CHECK: static int b;
 #pragma omp threadprivate(b)
-// CHECK-NEXT: #pragma omp threadprivate(St1::b)
+// CHECK-NEXT: #pragma omp threadprivate(St1::b){{$}}
 } d;
 
 int a, b;

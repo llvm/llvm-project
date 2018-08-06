@@ -156,7 +156,7 @@ A policy string is a series of key-value pairs separated by ``:`` characters.
 Possible key-value pairs are:
 
 - ``cache_size=X%``: The maximum size for the cache directory is ``X`` percent
-  of the available space on the the disk. Set to 100 to indicate no limit,
+  of the available space on the disk. Set to 100 to indicate no limit,
   50 to indicate that the cache size will not be left over half the available
   disk space. A value over 100 is invalid. A value of 0 disables the percentage
   size-based pruning. The default is 75%.

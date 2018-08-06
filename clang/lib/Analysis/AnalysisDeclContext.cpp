@@ -71,7 +71,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addInitializers, bool addTemporaryDtors, bool addLifetime,
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
-    bool addRichCXXConstructors, CodeInjector *injector)
+    bool addRichCXXConstructors, bool markElidedCXXConstructors,
+    CodeInjector *injector)
     : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
@@ -84,6 +85,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
   cfgBuildOptions.AddStaticInitBranches = addStaticInitBranch;
   cfgBuildOptions.AddCXXNewAllocator = addCXXNewAllocator;
   cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;
+  cfgBuildOptions.MarkElidedCXXConstructors = markElidedCXXConstructors;
 }
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }
@@ -442,7 +444,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
 // LocationContext methods.
 //===----------------------------------------------------------------------===//
 
-const StackFrameContext *LocationContext::getCurrentStackFrame() const {
+const StackFrameContext *LocationContext::getStackFrame() const {
   const LocationContext *LC = this;
   while (LC) {
     if (const auto *SFC = dyn_cast<StackFrameContext>(LC))
@@ -453,7 +455,7 @@ const StackFrameContext *LocationContext::getCurrentStackFrame() const {
 }
 
 bool LocationContext::inTopFrame() const {
-  return getCurrentStackFrame()->inTopFrame();
+  return getStackFrame()->inTopFrame();
 }
 
 bool LocationContext::isParentOf(const LocationContext *LC) const {

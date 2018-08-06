@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::MacroBuilder utility class.
+/// Defines the clang::MacroBuilder utility class.
 ///
 //===----------------------------------------------------------------------===//
 

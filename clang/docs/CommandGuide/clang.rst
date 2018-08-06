@@ -98,9 +98,128 @@ Language Selection and Mode Options
 
  Treat subsequent input files as having type language.
 
-.. option:: -std=<language>
+.. option:: -std=<standard>
 
  Specify the language standard to compile for.
+
+ Supported values for the C language are:
+
+  | ``c89``
+  | ``c90``
+  | ``iso9899:1990``
+
+   ISO C 1990
+
+  | ``iso9899:199409``
+
+   ISO C 1990 with amendment 1
+
+  | ``gnu89``
+  | ``gnu90``
+
+   ISO C 1990 with GNU extensions
+
+  | ``c99``
+  | ``iso9899:1999``
+
+   ISO C 1999
+
+  | ``gnu99``
+
+   ISO C 1999 with GNU extensions
+
+  | ``c11``
+  | ``iso9899:2011``
+
+   ISO C 2011
+
+  | ``gnu11``
+
+   ISO C 2011 with GNU extensions
+
+  | ``c17``
+  | ``iso9899:2017``
+
+   ISO C 2017
+
+  | ``gnu17``
+
+   ISO C 2017 with GNU extensions
+
+ The default C language standard is ``gnu11``, except on PS4, where it is
+ ``gnu99``.
+
+ Supported values for the C++ language are:
+
+  | ``c++98``
+  | ``c++03``
+
+   ISO C++ 1998 with amendments
+
+  | ``gnu++98``
+  | ``gnu++03``
+
+   ISO C++ 1998 with amendments and GNU extensions
+
+  | ``c++11``
+
+   ISO C++ 2011 with amendments
+
+  | ``gnu++11``
+
+    ISO C++ 2011 with amendments and GNU extensions
+
+  | ``c++14``
+
+   ISO C++ 2014 with amendments
+
+  | ``gnu++14``
+
+   ISO C++ 2014 with amendments and GNU extensions
+
+  | ``c++17``
+
+   ISO C++ 2017 with amendments
+
+  | ``gnu++17``
+
+   ISO C++ 2017 with amendments and GNU extensions
+
+  | ``c++2a``
+
+   Working draft for ISO C++ 2020
+
+  | ``gnu++2a``
+
+   Working draft for ISO C++ 2020 with GNU extensions
+
+ The default C++ language standard is ``gnu++14``.
+
+ Supported values for the OpenCL language are:
+
+  | ``cl1.0``
+
+   OpenCL 1.0
+
+  | ``cl1.1``
+
+   OpenCL 1.1
+
+  | ``cl1.2``
+
+   OpenCL 1.2
+
+  | ``cl2.0``
+
+   OpenCL 2.0
+
+ The default OpenCL language standard is ``cl1.0``.
+
+ Supported values for the CUDA language are:
+
+  | ``cuda``
+
+   NVIDIA CUDA(tm)
 
 .. option:: -stdlib=<library>
 

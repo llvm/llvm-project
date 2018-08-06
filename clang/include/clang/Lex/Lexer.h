@@ -57,10 +57,10 @@ enum ConflictMarkerKind {
 /// PreprocessorOptions::PrecompiledPreambleBytes.
 /// The preamble includes the BOM, if any.
 struct PreambleBounds {
-  /// \brief Size of the preamble in bytes.
+  /// Size of the preamble in bytes.
   unsigned Size;
 
-  /// \brief Whether the preamble ends at the start of a new line.
+  /// Whether the preamble ends at the start of a new line.
   ///
   /// Used to inform the lexer as to whether it's starting at the beginning of
   /// a line after skipping the preamble.
@@ -265,7 +265,7 @@ public:
     return getSourceLocation(BufferPtr);
   }
 
-  /// \brief Return the current location in the buffer.
+  /// Return the current location in the buffer.
   const char *getBufferLocation() const { return BufferPtr; }
 
   /// Stringify - Convert the specified string into a C string by i) escaping
@@ -324,29 +324,39 @@ public:
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts);
 
-  /// \brief Relex the token at the specified location.
+  /// Relex the token at the specified location.
   /// \returns true if there was a failure, false on success.
   static bool getRawToken(SourceLocation Loc, Token &Result,
                           const SourceManager &SM,
                           const LangOptions &LangOpts,
                           bool IgnoreWhiteSpace = false);
 
-  /// \brief Given a location any where in a source buffer, find the location
+  /// Given a location any where in a source buffer, find the location
   /// that corresponds to the beginning of the token in which the original
   /// source location lands.
   static SourceLocation GetBeginningOfToken(SourceLocation Loc,
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts);
 
+  /// Get the physical length (including trigraphs and escaped newlines) of the
+  /// first \p Characters characters of the token starting at TokStart.
+  static unsigned getTokenPrefixLength(SourceLocation TokStart,
+                                       unsigned Characters,
+                                       const SourceManager &SM,
+                                       const LangOptions &LangOpts);
+
   /// AdvanceToTokenCharacter - If the current SourceLocation specifies a
   /// location at the start of a token, return a new location that specifies a
   /// character within the token.  This handles trigraphs and escaped newlines.
   static SourceLocation AdvanceToTokenCharacter(SourceLocation TokStart,
-                                                unsigned Character,
+                                                unsigned Characters,
                                                 const SourceManager &SM,
-                                                const LangOptions &LangOpts);
+                                                const LangOptions &LangOpts) {
+    return TokStart.getLocWithOffset(
+        getTokenPrefixLength(TokStart, Characters, SM, LangOpts));
+  }
 
-  /// \brief Computes the source location just past the end of the
+  /// Computes the source location just past the end of the
   /// token at this source location.
   ///
   /// This routine can be used to produce a source location that
@@ -365,7 +375,7 @@ public:
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts);
 
-  /// \brief Given a token range, produce a corresponding CharSourceRange that
+  /// Given a token range, produce a corresponding CharSourceRange that
   /// is not a token range. This allows the source range to be used by
   /// components that don't have access to the lexer and thus can't find the
   /// end of the range for themselves.
@@ -385,7 +395,7 @@ public:
                : Range;
   }
 
-  /// \brief Returns true if the given MacroID location points at the first
+  /// Returns true if the given MacroID location points at the first
   /// token of the macro expansion.
   ///
   /// \param MacroBegin If non-null and function returns true, it is set to
@@ -395,7 +405,7 @@ public:
                                         const LangOptions &LangOpts,
                                         SourceLocation *MacroBegin = nullptr);
 
-  /// \brief Returns true if the given MacroID location points at the last
+  /// Returns true if the given MacroID location points at the last
   /// token of the macro expansion.
   ///
   /// \param MacroEnd If non-null and function returns true, it is set to
@@ -405,7 +415,7 @@ public:
                                       const LangOptions &LangOpts,
                                       SourceLocation *MacroEnd = nullptr);
 
-  /// \brief Accepts a range and returns a character range with file locations.
+  /// Accepts a range and returns a character range with file locations.
   ///
   /// Returns a null range if a part of the range resides inside a macro
   /// expansion or the range does not reside on the same FileID.
@@ -435,13 +445,13 @@ public:
                                            const SourceManager &SM,
                                            const LangOptions &LangOpts);
 
-  /// \brief Returns a string for the source that the range encompasses.
+  /// Returns a string for the source that the range encompasses.
   static StringRef getSourceText(CharSourceRange Range,
                                  const SourceManager &SM,
                                  const LangOptions &LangOpts,
                                  bool *Invalid = nullptr);
 
-  /// \brief Retrieve the name of the immediate macro expansion.
+  /// Retrieve the name of the immediate macro expansion.
   ///
   /// This routine starts from a source location, and finds the name of the macro
   /// responsible for its immediate expansion. It looks through any intervening
@@ -452,7 +462,7 @@ public:
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
 
-  /// \brief Retrieve the name of the immediate macro expansion.
+  /// Retrieve the name of the immediate macro expansion.
   ///
   /// This routine starts from a source location, and finds the name of the
   /// macro responsible for its immediate expansion. It looks through any
@@ -472,7 +482,7 @@ public:
   static StringRef getImmediateMacroNameForDiagnostics(
       SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts);
 
-  /// \brief Compute the preamble of the given file.
+  /// Compute the preamble of the given file.
   ///
   /// The preamble of a file contains the initial comments, include directives,
   /// and other preprocessor directives that occur before the code in this
@@ -498,7 +508,7 @@ public:
                                        const SourceManager &SM,
                                        const LangOptions &LangOpts);
 
-  /// \brief Checks that the given token is the first token that occurs after
+  /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
   /// location immediately after the specified token. If the token is not found
   /// or the location is inside a macro, the returned source location will be
@@ -517,10 +527,10 @@ public:
   findNextTokenLocationAfterTokenAt(SourceLocation Loc, const SourceManager &SM,
                                     const LangOptions &LangOpts);
 
-  /// \brief Returns true if the given character could appear in an identifier.
+  /// Returns true if the given character could appear in an identifier.
   static bool isIdentifierBodyChar(char c, const LangOptions &LangOpts);
 
-  /// \brief Checks whether new line pointed by Str is preceded by escape
+  /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
@@ -726,7 +736,7 @@ private:
   ///         invalid.
   uint32_t tryReadUCN(const char *&CurPtr, const char *SlashLoc, Token *Tok);
 
-  /// \brief Try to consume a UCN as part of an identifier at the current
+  /// Try to consume a UCN as part of an identifier at the current
   /// location.
   /// \param CurPtr Initially points to the range of characters in the source
   ///               buffer containing the '\'. Updated to point past the end of
@@ -740,7 +750,7 @@ private:
   bool tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
                                Token &Result);
 
-  /// \brief Try to consume an identifier character encoded in UTF-8.
+  /// Try to consume an identifier character encoded in UTF-8.
   /// \param CurPtr Points to the start of the (potential) UTF-8 code unit
   ///        sequence. On success, updated to point past the end of it.
   /// \return \c true if a UTF-8 sequence mapping to an acceptable identifier

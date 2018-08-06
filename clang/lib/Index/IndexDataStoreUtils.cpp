@@ -382,6 +382,9 @@ uint64_t index::getIndexStoreRoles(SymbolRoleSet Roles) {
     case SymbolRole::Implicit:
       storeRoles |= INDEXSTORE_SYMBOL_ROLE_IMPLICIT;
       break;
+    case SymbolRole::Undefinition:
+      storeRoles |= INDEXSTORE_SYMBOL_ROLE_UNDEFINED;
+      break;
     case SymbolRole::RelationChildOf:
       storeRoles |= INDEXSTORE_SYMBOL_ROLE_REL_CHILDOF;
       break;

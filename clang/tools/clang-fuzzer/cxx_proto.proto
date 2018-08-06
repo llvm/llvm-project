@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file describes a subset of C++ as a protobuf.  It is used to
+/// This file describes a subset of C++ as a protobuf.  It is used to
 ///  more easily find interesting inputs for fuzzing Clang.
 ///
 //===----------------------------------------------------------------------===//

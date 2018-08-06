@@ -265,7 +265,8 @@ void ASTDeclWriter::Visit(Decl *D) {
   // abbreviation infrastructure requires that arrays are encoded last, so
   // we handle it here in the case of those classes derived from DeclaratorDecl
   if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
-    Record.AddTypeSourceInfo(DD->getTypeSourceInfo());
+    if (auto *TInfo = DD->getTypeSourceInfo())
+      Record.AddTypeLoc(TInfo->getTypeLoc());
   }
 
   // Handle FunctionDecl's body here and write it after all other Stmts/Exprs
@@ -513,6 +514,9 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
   Record.push_back(D->hasExtInfo());
   if (D->hasExtInfo())
     Record.AddQualifierInfo(*D->getExtInfo());
+  // The location information is deferred until the end of the record.
+  Record.AddTypeRef(D->getTypeSourceInfo() ? D->getTypeSourceInfo()->getType()
+                                           : QualType());
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
@@ -541,6 +545,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->IsConstexpr);
   Record.push_back(D->UsesSEHTry);
   Record.push_back(D->HasSkippedBody);
+  Record.push_back(D->IsMultiVersion);
   Record.push_back(D->IsLateTemplateParsed);
   Record.push_back(D->getLinkageInternal());
   Record.AddSourceLocation(D->getLocEnd());
@@ -921,6 +926,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     Record.push_back(D->isExceptionVariable());
     Record.push_back(D->isNRVOVariable());
     Record.push_back(D->isCXXForRangeDecl());
+    Record.push_back(D->isObjCForDecl());
     Record.push_back(D->isARCPseudoStrong());
     Record.push_back(D->isInline());
     Record.push_back(D->isInlineSpecified());
@@ -1201,6 +1207,7 @@ void ASTDeclWriter::VisitUsingShadowDecl(UsingShadowDecl *D) {
   VisitRedeclarable(D);
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getTargetDecl());
+  Record.push_back(D->getIdentifierNamespace());
   Record.AddDeclRef(D->UsingOrNextShadow);
   Record.AddDeclRef(Context.getInstantiatedFromUsingShadowDecl(D));
   Code = serialization::DECL_USING_SHADOW;
@@ -1634,7 +1641,7 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Code = serialization::DECL_STATIC_ASSERT;
 }
 
-/// \brief Emit the DeclContext part of a declaration context decl.
+/// Emit the DeclContext part of a declaration context decl.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   Record.AddOffset(Writer.WriteDeclContextLexicalBlock(Context, DC));
   Record.AddOffset(Writer.WriteDeclContextVisibleBlock(Context, DC));
@@ -1772,11 +1779,11 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclaratorDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // FieldDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isMutable
   Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
   // Type Source Info
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclFieldAbbrev = Stream.EmitAbbrev(std::move(Abv));
@@ -1805,6 +1812,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclaratorDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // FieldDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isMutable
   Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
@@ -1812,7 +1820,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getAccessControl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getSynthesize
   // Type Source Info
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclObjCIvarAbbrev = Stream.EmitAbbrev(std::move(Abv));
@@ -1948,6 +1955,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclaratorDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // SClass
   Abv->Add(BitCodeAbbrevOp(0));                       // TSCSpec
@@ -1964,7 +1972,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // HasInheritedDefaultArg
   Abv->Add(BitCodeAbbrevOp(0));                   // HasUninstantiatedDefaultArg
   // Type Source Info
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclParmVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
@@ -2024,6 +2031,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclaratorDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // SClass
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // TSCSpec
@@ -2032,6 +2040,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isExceptionVariable
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isNRVOVariable
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCXXForRangeDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
   Abv->Add(BitCodeAbbrevOp(0));                         // isInline
   Abv->Add(BitCodeAbbrevOp(0));                         // isInlineSpecified
@@ -2043,7 +2052,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // IsInitICE (local)
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
   // Type Source Info
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
@@ -2074,6 +2082,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclaratorDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // InnerLocStart
   Abv->Add(BitCodeAbbrevOp(0));                         // HasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TSIType
   // FunctionDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
@@ -2093,6 +2102,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Constexpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // UsesSEHTry
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // SkippedBody
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // MultiVersion
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // LateParsed
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LocEnd

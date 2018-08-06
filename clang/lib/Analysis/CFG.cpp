@@ -851,7 +851,7 @@ private:
       B->prependScopeEnd(VD, S, cfg->getBumpVectorContext());
   }
 
-  /// \brief Find a relational comparison with an expression evaluating to a
+  /// Find a relational comparison with an expression evaluating to a
   /// boolean and a constant other than 0 and 1.
   /// e.g. if ((x < y) == 10)
   TryResult checkIncorrectRelationalOperator(const BinaryOperator *B) {
@@ -964,7 +964,7 @@ private:
     }
   }
 
-  /// \brief Find a pair of comparison expressions with or without parentheses
+  /// Find a pair of comparison expressions with or without parentheses
   /// with a shared variable and constants and a logical operator between them
   /// that always evaluates to either true or false.
   /// e.g. if (x != 3 || x != 4)
@@ -1120,7 +1120,7 @@ private:
     return evaluateAsBooleanConditionNoCache(S);
   }
 
-  /// \brief Evaluate as boolean \param E without using the cache.
+  /// Evaluate as boolean \param E without using the cache.
   TryResult evaluateAsBooleanConditionNoCache(Expr *E) {
     if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(E)) {
       if (Bop->isLogicalOp()) {
@@ -1252,10 +1252,21 @@ void CFGBuilder::findConstructionContexts(
   if (!Child)
     return;
 
+  auto withExtraLayer = [this, Layer](Stmt *S) {
+    return ConstructionContextLayer::create(cfg->getBumpVectorContext(), S,
+                                            Layer);
+  };
+
   switch(Child->getStmtClass()) {
   case Stmt::CXXConstructExprClass:
   case Stmt::CXXTemporaryObjectExprClass: {
-    consumeConstructionContext(Layer, cast<CXXConstructExpr>(Child));
+    // Support pre-C++17 copy elision AST.
+    auto *CE = cast<CXXConstructExpr>(Child);
+    if (BuildOpts.MarkElidedCXXConstructors && CE->isElidable()) {
+      findConstructionContexts(withExtraLayer(CE), CE->getArg(0));
+    }
+
+    consumeConstructionContext(Layer, CE);
     break;
   }
   // FIXME: This, like the main visit, doesn't support CUDAKernelCallExpr.
@@ -1294,10 +1305,21 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::CXXBindTemporaryExprClass: {
     auto *BTE = cast<CXXBindTemporaryExpr>(Child);
-    findConstructionContexts(
-        ConstructionContextLayer::create(cfg->getBumpVectorContext(),
-                                         BTE, Layer),
-        BTE->getSubExpr());
+    findConstructionContexts(withExtraLayer(BTE), BTE->getSubExpr());
+    break;
+  }
+  case Stmt::MaterializeTemporaryExprClass: {
+    // Normally we don't want to search in MaterializeTemporaryExpr because
+    // it indicates the beginning of a temporary object construction context,
+    // so it shouldn't be found in the middle. However, if it is the beginning
+    // of an elidable copy or move construction context, we need to include it.
+    if (const auto *CE =
+            dyn_cast_or_null<CXXConstructExpr>(Layer->getTriggerStmt())) {
+      if (CE->isElidable()) {
+        auto *MTE = cast<MaterializeTemporaryExpr>(Child);
+        findConstructionContexts(withExtraLayer(MTE), MTE->GetTemporaryExpr());
+      }
+    }
     break;
   }
   case Stmt::ConditionalOperatorClass: {
@@ -1491,21 +1513,20 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   return Block;
 }
 
-/// \brief Retrieve the type of the temporary object whose lifetime was 
+/// Retrieve the type of the temporary object whose lifetime was 
 /// extended by a local reference with the given initializer.
-static QualType getReferenceInitTemporaryType(ASTContext &Context,
-                                              const Expr *Init,
+static QualType getReferenceInitTemporaryType(const Expr *Init,
                                               bool *FoundMTE = nullptr) {
   while (true) {
     // Skip parentheses.
     Init = Init->IgnoreParens();
-    
+
     // Skip through cleanups.
     if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(Init)) {
       Init = EWC->getSubExpr();
       continue;
     }
-    
+
     // Skip through the temporary-materialization expression.
     if (const MaterializeTemporaryExpr *MTE
           = dyn_cast<MaterializeTemporaryExpr>(Init)) {
@@ -1514,26 +1535,17 @@ static QualType getReferenceInitTemporaryType(ASTContext &Context,
         *FoundMTE = true;
       continue;
     }
-    
-    // Skip derived-to-base and no-op casts.
-    if (const CastExpr *CE = dyn_cast<CastExpr>(Init)) {
-      if ((CE->getCastKind() == CK_DerivedToBase ||
-           CE->getCastKind() == CK_UncheckedDerivedToBase ||
-           CE->getCastKind() == CK_NoOp) &&
-          Init->getType()->isRecordType()) {
-        Init = CE->getSubExpr();
-        continue;
-      }
+
+    // Skip sub-object accesses into rvalues.
+    SmallVector<const Expr *, 2> CommaLHSs;
+    SmallVector<SubobjectAdjustment, 2> Adjustments;
+    const Expr *SkippedInit =
+        Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+    if (SkippedInit != Init) {
+      Init = SkippedInit;
+      continue;
     }
-    
-    // Skip member accesses into rvalues.
-    if (const MemberExpr *ME = dyn_cast<MemberExpr>(Init)) {
-      if (!ME->isArrow() && ME->getBase()->isRValue()) {
-        Init = ME->getBase();
-        continue;
-      }
-    }
-    
+
     break;
   }
 
@@ -1682,7 +1694,7 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
     // anything built thus far: control won't flow out of this block.
     QualType Ty = (*I)->getType();
     if (Ty->isReferenceType()) {
-      Ty = getReferenceInitTemporaryType(*Context, (*I)->getInit());
+      Ty = getReferenceInitTemporaryType((*I)->getInit());
     }
     Ty = Context->getBaseElementType(Ty);
 
@@ -1795,7 +1807,7 @@ LocalScope* CFGBuilder::addLocalScopeForDeclStmt(DeclStmt *DS,
 bool CFGBuilder::hasTrivialDestructor(VarDecl *VD) {
   // Check for const references bound to temporary. Set type to pointee.
   QualType QT = VD->getType();
-  if (QT.getTypePtr()->isReferenceType()) {
+  if (QT->isReferenceType()) {
     // Attempt to determine whether this declaration lifetime-extends a
     // temporary.
     //
@@ -1805,12 +1817,16 @@ bool CFGBuilder::hasTrivialDestructor(VarDecl *VD) {
     // MaterializeTemporaryExpr instead.
 
     const Expr *Init = VD->getInit();
-    if (!Init)
+    if (!Init) {
+      // Probably an exception catch-by-reference variable.
+      // FIXME: It doesn't really mean that the object has a trivial destructor.
+      // Also are there other cases?
       return true;
+    }
 
-    // Lifetime-extending a temporary.
+    // Lifetime-extending a temporary?
     bool FoundMTE = false;
-    QT = getReferenceInitTemporaryType(*Context, Init, &FoundMTE);
+    QT = getReferenceInitTemporaryType(Init, &FoundMTE);
     if (!FoundMTE)
       return true;
   }
@@ -2350,7 +2366,7 @@ static bool CanThrow(Expr *E, ASTContext &Ctx) {
   if (FT) {
     if (const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(FT))
       if (!isUnresolvedExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->isNothrow(Ctx))
+          Proto->isNothrow())
         return false;
   }
   return true;
@@ -2390,7 +2406,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   bool OmitArguments = false;
 
   if (FunctionDecl *FD = C->getDirectCallee()) {
-    if (FD->isNoReturn())
+    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -4596,7 +4612,7 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       // temporary in an initializer expression.
       if (ty->isReferenceType()) {
         if (const Expr *Init = var->getInit()) {
-          ty = getReferenceInitTemporaryType(astContext, Init);
+          ty = getReferenceInitTemporaryType(Init);
         }
       }
 
@@ -4937,7 +4953,7 @@ static void print_initializer(raw_ostream &OS, StmtPrinterHelper &Helper,
 static void print_construction_context(raw_ostream &OS,
                                        StmtPrinterHelper &Helper,
                                        const ConstructionContext *CC) {
-  const Stmt *S1 = nullptr, *S2 = nullptr;
+  SmallVector<const Stmt *, 3> Stmts;
   switch (CC->getKind()) {
   case ConstructionContext::SimpleConstructorInitializerKind: {
     OS << ", ";
@@ -4950,52 +4966,56 @@ static void print_construction_context(raw_ostream &OS,
     const auto *CICC =
         cast<CXX17ElidedCopyConstructorInitializerConstructionContext>(CC);
     print_initializer(OS, Helper, CICC->getCXXCtorInitializer());
-    S2 = CICC->getCXXBindTemporaryExpr();
+    Stmts.push_back(CICC->getCXXBindTemporaryExpr());
     break;
   }
   case ConstructionContext::SimpleVariableKind: {
     const auto *SDSCC = cast<SimpleVariableConstructionContext>(CC);
-    S1 = SDSCC->getDeclStmt();
+    Stmts.push_back(SDSCC->getDeclStmt());
     break;
   }
   case ConstructionContext::CXX17ElidedCopyVariableKind: {
     const auto *CDSCC = cast<CXX17ElidedCopyVariableConstructionContext>(CC);
-    S1 = CDSCC->getDeclStmt();
-    S2 = CDSCC->getCXXBindTemporaryExpr();
+    Stmts.push_back(CDSCC->getDeclStmt());
+    Stmts.push_back(CDSCC->getCXXBindTemporaryExpr());
     break;
   }
   case ConstructionContext::NewAllocatedObjectKind: {
     const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
-    S1 = NECC->getCXXNewExpr();
+    Stmts.push_back(NECC->getCXXNewExpr());
     break;
   }
   case ConstructionContext::SimpleReturnedValueKind: {
     const auto *RSCC = cast<SimpleReturnedValueConstructionContext>(CC);
-    S1 = RSCC->getReturnStmt();
+    Stmts.push_back(RSCC->getReturnStmt());
     break;
   }
   case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
     const auto *RSCC =
         cast<CXX17ElidedCopyReturnedValueConstructionContext>(CC);
-    S1 = RSCC->getReturnStmt();
-    S2 = RSCC->getCXXBindTemporaryExpr();
+    Stmts.push_back(RSCC->getReturnStmt());
+    Stmts.push_back(RSCC->getCXXBindTemporaryExpr());
     break;
   }
-  case ConstructionContext::TemporaryObjectKind: {
-    const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
-    S1 = TOCC->getCXXBindTemporaryExpr();
-    S2 = TOCC->getMaterializedTemporaryExpr();
+  case ConstructionContext::SimpleTemporaryObjectKind: {
+    const auto *TOCC = cast<SimpleTemporaryObjectConstructionContext>(CC);
+    Stmts.push_back(TOCC->getCXXBindTemporaryExpr());
+    Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
+    break;
+  }
+  case ConstructionContext::ElidedTemporaryObjectKind: {
+    const auto *TOCC = cast<ElidedTemporaryObjectConstructionContext>(CC);
+    Stmts.push_back(TOCC->getCXXBindTemporaryExpr());
+    Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
+    Stmts.push_back(TOCC->getConstructorAfterElision());
     break;
   }
   }
-  if (S1) {
-    OS << ", ";
-    Helper.handledStmt(const_cast<Stmt *>(S1), OS);
-  }
-  if (S2) {
-    OS << ", ";
-    Helper.handledStmt(const_cast<Stmt *>(S2), OS);
-  }
+  for (auto I: Stmts)
+    if (I) {
+      OS << ", ";
+      Helper.handledStmt(const_cast<Stmt *>(I), OS);
+    }
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
@@ -5061,10 +5081,12 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const VarDecl *VD = DE->getVarDecl();
     Helper.handleDecl(VD, OS);
 
-    const Type* T = VD->getType().getTypePtr();
-    if (const ReferenceType* RT = T->getAs<ReferenceType>())
-      T = RT->getPointeeType().getTypePtr();
-    T = T->getBaseElementTypeUnsafe();
+    ASTContext &ACtx = VD->getASTContext();
+    QualType T = VD->getType();
+    if (T->isReferenceType())
+      T = getReferenceInitTemporaryType(VD->getInit(), nullptr);
+    if (const ArrayType *AT = ACtx.getAsArrayType(T))
+      T = ACtx.getBaseElementType(AT);
 
     OS << ".~" << T->getAsCXXRecordDecl()->getName().str() << "()";
     OS << " (Implicit destructor)\n";

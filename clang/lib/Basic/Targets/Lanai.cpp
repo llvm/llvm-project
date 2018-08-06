@@ -40,6 +40,10 @@ ArrayRef<TargetInfo::GCCRegAlias> LanaiTargetInfo::getGCCRegAliases() const {
 bool LanaiTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name).Case("v11", true).Default(false);
 }
+void LanaiTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("v11");
+}
 
 bool LanaiTargetInfo::setCPU(const std::string &Name) {
   CPU = llvm::StringSwitch<CPUKind>(Name).Case("v11", CK_V11).Default(CK_NONE);

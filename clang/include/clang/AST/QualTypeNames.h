@@ -63,7 +63,7 @@
 
 namespace clang {
 namespace TypeName {
-/// \brief Get the fully qualified name for a type. This includes full
+/// Get the fully qualified name for a type. This includes full
 /// qualification of all template parameters etc.
 ///
 /// \param[in] QT - the type for which the fully qualified name will be
@@ -72,9 +72,10 @@ namespace TypeName {
 /// \param[in] WithGlobalNsPrefix - If true, then the global namespace
 /// specifier "::" will be prepended to the fully qualified name.
 std::string getFullyQualifiedName(QualType QT, const ASTContext &Ctx,
+                                  const PrintingPolicy &Policy,
                                   bool WithGlobalNsPrefix = false);
 
-/// \brief Generates a QualType that can be used to name the same type
+/// Generates a QualType that can be used to name the same type
 /// if used at the end of the current translation unit. This ignores
 /// issues such as type shadowing.
 ///

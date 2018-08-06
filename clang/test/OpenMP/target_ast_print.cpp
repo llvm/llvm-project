@@ -46,7 +46,7 @@ T tmain(T argc, T *argv) {
 
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, a[20]
-// CHECK-NEXT: #pragma omp target
+// CHECK-NEXT: #pragma omp target{{$}}
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target if(target: argc > 0)
 // CHECK-NEXT: foo()

@@ -328,7 +328,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast {{.+}} [[VEC_PRIV]] to
 // CHECK-DAG: [[VEC_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VEC_ADDR_VAL]] to
-// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* [[VEC_PRIV_BCAST]], {{.+}}* [[VEC_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VEC_ADDR_BCAST]],
 
 // s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[S_ARR_ADDR]],
@@ -345,7 +345,7 @@ int main() {
 // CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[TMP_REF_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
 // CHECK-DAG: store {{.+}}* [[VAR_PRIV]], {{.+}}** [[TMP_PRIV]],
 
 // svar
@@ -421,7 +421,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast {{.+}} [[VEC_PRIV]] to
 // CHECK-DAG: [[VEC_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VEC_ADDR_VAL]] to
-// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* [[VEC_PRIV_BCAST]], {{.+}}* [[VEC_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VEC_ADDR_BCAST]],
 
 // s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[S_ARR_ADDR]],
@@ -438,7 +438,7 @@ int main() {
 // CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[VAR_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
 // CHECK-DAG: store {{.+}}* [[VAR_PRIV]], {{.+}}** [[TMP_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -510,7 +510,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast {{.+}} [[VEC_PRIV]] to
 // CHECK-DAG: [[VEC_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VEC_ADDR_VAL]] to
-// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* [[VEC_PRIV_BCAST]], {{.+}}* [[VEC_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VEC_ADDR_BCAST]],
 
 // s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[S_ARR_ADDR]],
@@ -527,7 +527,7 @@ int main() {
 // CHECK-DAG: [[TMP_REF:%.+]] = load {{.+}}*, {{.+}}* [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[TMP_REF_BCAST:%.+]] = bitcast {{.+}}* [[TMP_REF]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[TMP_REF_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_REF_BCAST]],
 // CHECK-DAG: store {{.+}}* [[VAR_PRIV]], {{.+}}** [[TMP_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -591,7 +591,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast {{.+}} [[VEC_PRIV]] to
 // CHECK-DAG: [[VEC_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VEC_ADDR_VAL]] to
-// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* [[VEC_PRIV_BCAST]], {{.+}}* [[VEC_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy{{.+}}({{.+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VEC_ADDR_BCAST]],
 
 // s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load {{.+}}*, {{.+}}** [[S_ARR_ADDR]],
@@ -608,7 +608,7 @@ int main() {
 // CHECK-DAG: [[VAR_ADDR_REF:%.+]] = load {{.+}}*, {{.+}}* [[VAR_ADDR]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast {{.+}}* [[VAR_PRIV]] to
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}}* [[VAR_ADDR_REF]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[VAR_ADDR_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[VAR_ADDR_BCAST]],
 // CHECK-DAG: store {{.+}}* [[VAR_PRIV]], {{.+}}** [[TMP_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(

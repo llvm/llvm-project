@@ -5,7 +5,7 @@
 
 void run1(int *List, int Length) {
   int i = 0;
-// CEHCK: #pragma loop vectorize(4)
+// CHECK: #pragma loop vectorize(4)
 // CHECK-NEXT: #pragma loop interleave(8)
 // CHECK-NEXT: #pragma loop vectorize(enable)
 // CHECK-NEXT: #pragma loop interleave(enable)

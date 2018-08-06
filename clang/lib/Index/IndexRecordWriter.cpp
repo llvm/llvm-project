@@ -320,6 +320,13 @@ IndexRecordWriter::endRecord(std::string &Error,
   OS.write(State.Buffer.data(), State.Buffer.size());
   OS.close();
 
+  if (OS.has_error()) {
+    llvm::raw_string_ostream Err(Error);
+    Err << "failed to write '" << TempPath << "': " << OS.error().message();
+    OS.clear_error();
+    return Result::Failure;
+  }
+
   // Atomically move the unique file into place.
   if (std::error_code EC =
           sys::fs::rename(TempPath.c_str(), State.RecordPath.c_str())) {

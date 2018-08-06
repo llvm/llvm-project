@@ -2,10 +2,10 @@
 
 // This code used to cause an assertion failure in EmitDelegateCallArg.
 
-// CHECK: define internal void @"\01?__invoke@<lambda_0>@?0??test@@YAXXZ@CA@UTrivial@@@Z"(
-// CHECK: call void @"\01??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(
+// CHECK: define internal void @"?__invoke@<lambda_0>@?0??test@@YAXXZ@CA@UTrivial@@@Z"(
+// CHECK: call void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(
 
-// CHECK: define internal void @"\01??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(
+// CHECK: define internal void @"??R<lambda_0>@?0??test@@YAXXZ@QEBA@UTrivial@@@Z"(
 
 struct Trivial {
   int x;

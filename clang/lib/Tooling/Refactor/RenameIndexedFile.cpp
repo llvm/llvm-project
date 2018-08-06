@@ -298,7 +298,7 @@ static void findTextualMatchesInComment(
                            LangOpts)
           .str();
   OldSymbolOccurrence::OccurrenceKind Kind =
-      RawComment(SM, CommentRange, /*Merged=*/false, /*ParseAllComments=*/false)
+      RawComment(SM, CommentRange, LangOpts.CommentOpts, /*Merged=*/false)
               .isDocumentation()
           ? OldSymbolOccurrence::MatchingDocComment
           : OldSymbolOccurrence::MatchingComment;

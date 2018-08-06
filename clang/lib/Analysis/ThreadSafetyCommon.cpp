@@ -86,7 +86,7 @@ static bool isCalleeArrow(const Expr *E) {
   return ME ? ME->isArrow() : false;
 }
 
-/// \brief Translate a clang expression in an attribute to a til::SExpr.
+/// Translate a clang expression in an attribute to a til::SExpr.
 /// Constructs the context from D, DeclExp, and SelfDecl.
 ///
 /// \param AttrExp The expression to translate.
@@ -146,7 +146,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return translateAttrExpr(AttrExp, &Ctx);
 }
 
-/// \brief Translate a clang expression in an attribute to a til::SExpr.
+/// Translate a clang expression in an attribute to a til::SExpr.
 // This assumes a CallingContext has already been created.
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                CallingContext *Ctx) {
@@ -817,7 +817,7 @@ void SExprBuilder::enterCFG(CFG *Cfg, const NamedDecl *D,
 }
 
 void SExprBuilder::enterCFGBlock(const CFGBlock *B) {
-  // Intialize TIL basic block and add it to the CFG.
+  // Initialize TIL basic block and add it to the CFG.
   CurrentBB = lookupBlock(B);
   CurrentBB->reservePredecessors(B->pred_size());
   Scfg->add(CurrentBB);
@@ -892,7 +892,7 @@ void SExprBuilder::exitCFGBlockBody(const CFGBlock *B) {
     til::BasicBlock *BB1 = *It ? lookupBlock(*It) : nullptr;
     ++It;
     til::BasicBlock *BB2 = *It ? lookupBlock(*It) : nullptr;
-    // FIXME: make sure these arent' critical edges.
+    // FIXME: make sure these aren't critical edges.
     auto *Tm = new (Arena) til::Branch(C, BB1, BB2);
     CurrentBB->setTerminator(Tm);
   }

@@ -94,7 +94,7 @@ def need_analyzer(args):
     When static analyzer run against project configure step, it should be
     silent and no need to run the analyzer or generate report.
 
-    To run `scan-build` against the configure step might be neccessary,
+    To run `scan-build` against the configure step might be necessary,
     when compiler wrappers are used. That's the moment when build setup
     check the compiler and capture the location for the build process. """
 
@@ -437,7 +437,7 @@ def run(opts):
     of the compilation database.
 
     This complex task is decomposed into smaller methods which are calling
-    each other in chain. If the analyzis is not possibe the given method
+    each other in chain. If the analyzis is not possible the given method
     just return and break the chain.
 
     The passed parameter is a python dictionary. Each method first check

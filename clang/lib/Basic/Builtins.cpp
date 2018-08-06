@@ -107,6 +107,22 @@ void Builtin::Context::forgetBuiltin(unsigned ID, IdentifierTable &Table) {
   Table.get(getRecord(ID).Name).setBuiltinID(0);
 }
 
+unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
+  const char *WidthPos = ::strchr(getRecord(ID).Attributes, 'V');
+  if (!WidthPos)
+    return 0;
+
+  ++WidthPos;
+  assert(*WidthPos == ':' &&
+         "Vector width specifier must be followed by a ':'");
+  ++WidthPos;
+
+  char *EndPos;
+  unsigned Width = ::strtol(WidthPos, &EndPos, 10);
+  assert(*EndPos == ':' && "Vector width specific must end with a ':'");
+  return Width;
+}
+
 bool Builtin::Context::isLike(unsigned ID, unsigned &FormatIdx,
                               bool &HasVAListArg, const char *Fmt) const {
   assert(Fmt && "Not passed a format string");
@@ -138,4 +154,11 @@ bool Builtin::Context::isPrintfLike(unsigned ID, unsigned &FormatIdx,
 bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
                                    bool &HasVAListArg) {
   return isLike(ID, FormatIdx, HasVAListArg, "sS");
+}
+
+bool Builtin::Context::canBeRedeclared(unsigned ID) const {
+  return ID == Builtin::NotBuiltin ||
+         ID == Builtin::BI__va_start ||
+         (!hasReferenceArgsOrResult(ID) &&
+          !hasCustomTypechecking(ID));
 }

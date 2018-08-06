@@ -23,8 +23,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -145,7 +145,7 @@ bool PTHLexer::LexEndOfFile(Token &Result) {
     ParsingPreprocessorDirective = false; // Done parsing the "line".
     return true;  // Have a token.
   }
-  
+
   assert(!LexingRawMode);
 
   // If we are in a #if directive, emit an error.
@@ -215,7 +215,7 @@ bool PTHLexer::SkipBlock() {
     // Compute the actual memory address of the '#' token data for this entry.
     HashEntryI = TokBuf + Offset;
 
-    // Optmization: "Sibling jumping".  #if...#else...#endif blocks can
+    // Optimization: "Sibling jumping".  #if...#else...#endif blocks can
     //  contain nested blocks.  In the side-table we can jump over these
     //  nested blocks instead of doing a linear search if the next "sibling"
     //  entry is not at a location greater than LastHashTokPtr.
@@ -336,7 +336,7 @@ public:
   using offset_type = unsigned;
 
   static hash_value_type ComputeHash(internal_key_type x) {
-    return llvm::HashString(x.second);
+    return llvm::djbHash(x.second);
   }
 
   static std::pair<unsigned, unsigned>
@@ -396,7 +396,7 @@ public:
   }
 
   static hash_value_type ComputeHash(const internal_key_type& a) {
-    return llvm::HashString(StringRef(a.first, a.second));
+    return llvm::djbHash(StringRef(a.first, a.second));
   }
 
   // This hopefully will just get inlined and removed by the optimizer.

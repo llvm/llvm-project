@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Contains implementation of BreakableToken class and classes derived
+/// Contains implementation of BreakableToken class and classes derived
 /// from it.
 ///
 //===----------------------------------------------------------------------===//
@@ -44,7 +44,8 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
   static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///", "//",
                                                     "//!"};
-  static const char *const KnownTextProtoPrefixes[] = {"//", "#"};
+  static const char *const KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
+                                                       "####"};
   ArrayRef<const char *> KnownPrefixes(KnownCStylePrefixes);
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
@@ -67,8 +68,9 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
                                              unsigned ColumnLimit,
                                              unsigned TabWidth,
                                              encoding::Encoding Encoding) {
-  DEBUG(llvm::dbgs() << "Comment split: \"" << Text << ", " << ColumnLimit
-                     << "\", Content start: " << ContentStartColumn << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text << ", " << ColumnLimit
+                          << "\", Content start: " << ContentStartColumn
+                          << "\n");
   if (ColumnLimit <= ContentStartColumn + 1)
     return BreakableToken::Split(StringRef::npos, 0);
 
@@ -89,9 +91,9 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
 
   // Do not split before a number followed by a dot: this would be interpreted
   // as a numbered list, which would prevent re-flowing in subsequent passes.
-  static llvm::Regex kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\.");
+  static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\.");
   if (SpaceOffset != StringRef::npos &&
-      kNumberedListRegexp.match(Text.substr(SpaceOffset).ltrim(Blanks)))
+      kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
     SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
 
   if (SpaceOffset == StringRef::npos ||
@@ -214,11 +216,11 @@ unsigned BreakableStringLiteral::getContentStartColumn(unsigned LineIndex,
 
 BreakableStringLiteral::BreakableStringLiteral(
     const FormatToken &Tok, unsigned StartColumn, StringRef Prefix,
-    StringRef Postfix, bool InPPDirective, encoding::Encoding Encoding,
-    const FormatStyle &Style)
+    StringRef Postfix, unsigned UnbreakableTailLength, bool InPPDirective,
+    encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableToken(Tok, InPPDirective, Encoding, Style),
       StartColumn(StartColumn), Prefix(Prefix), Postfix(Postfix),
-      UnbreakableTailLength(Tok.UnbreakableTailLength) {
+      UnbreakableTailLength(UnbreakableTailLength) {
   assert(Tok.TokenText.startswith(Prefix) && Tok.TokenText.endswith(Postfix));
   Line = Tok.TokenText.substr(
       Prefix.size(), Tok.TokenText.size() - Prefix.size() - Postfix.size());
@@ -284,10 +286,9 @@ static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
   // Lines starting with '@' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
-  static const SmallVector<StringRef, 8> kSpecialMeaningPrefixes = {
-      "@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "};
   bool hasSpecialMeaningPrefix = false;
-  for (StringRef Prefix : kSpecialMeaningPrefixes) {
+  for (StringRef Prefix :
+       {"@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
     if (Content.startswith(Prefix)) {
       hasSpecialMeaningPrefix = true;
       break;
@@ -297,9 +298,9 @@ static bool mayReflowContent(StringRef Content) {
   // Numbered lists may also start with a number followed by '.'
   // To avoid issues if a line starts with a number which is actually the end
   // of a previous line, we only consider numbers with up to 2 digits.
-  static llvm::Regex kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\. ");
+  static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\. ");
   hasSpecialMeaningPrefix =
-      hasSpecialMeaningPrefix || kNumberedListRegexp.match(Content);
+      hasSpecialMeaningPrefix || kNumberedListRegexp->match(Content);
 
   // Simple heuristic for what to reflow: content should contain at least two
   // characters and either the first or second character must be
@@ -425,7 +426,7 @@ BreakableBlockComment::BreakableBlockComment(
     }
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     llvm::dbgs() << "IndentAtLineBreak " << IndentAtLineBreak << "\n";
     llvm::dbgs() << "DelimitersOnNewline " << DelimitersOnNewline << "\n";
     for (size_t i = 0; i < Lines.size(); ++i) {
@@ -788,16 +789,47 @@ BreakableComment::Split BreakableLineCommentSection::getReflowSplit(
 
 void BreakableLineCommentSection::reflow(unsigned LineIndex,
                                          WhitespaceManager &Whitespaces) const {
-  // Reflow happens between tokens. Replace the whitespace between the
-  // tokens by the empty string.
-  Whitespaces.replaceWhitespace(
-      *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-      /*StartOfTokenColumn=*/StartColumn, /*InPPDirective=*/false);
+  if (LineIndex > 0 && Tokens[LineIndex] != Tokens[LineIndex - 1]) {
+    // Reflow happens between tokens. Replace the whitespace between the
+    // tokens by the empty string.
+    Whitespaces.replaceWhitespace(
+        *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
+        /*StartOfTokenColumn=*/StartColumn, /*InPPDirective=*/false);
+  } else if (LineIndex > 0) {
+    // In case we're reflowing after the '\' in:
+    //
+    //   // line comment \
+    //   // line 2
+    //
+    // the reflow happens inside the single comment token (it is a single line
+    // comment with an unescaped newline).
+    // Replace the whitespace between the '\' and '//' with the empty string.
+    //
+    // Offset points to after the '\' relative to start of the token.
+    unsigned Offset = Lines[LineIndex - 1].data() +
+                      Lines[LineIndex - 1].size() -
+                      tokenAt(LineIndex - 1).TokenText.data();
+    // WhitespaceLength is the number of chars between the '\' and the '//' on
+    // the next line.
+    unsigned WhitespaceLength =
+        Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data() - Offset;
+    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
+                                         Offset,
+                                         /*ReplaceChars=*/WhitespaceLength,
+                                         /*PreviousPostfix=*/"",
+                                         /*CurrentPrefix=*/"",
+                                         /*InPPDirective=*/false,
+                                         /*Newlines=*/0,
+                                         /*Spaces=*/0);
+
+  }
   // Replace the indent and prefix of the token with the reflow prefix.
+  unsigned Offset =
+      Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data();
   unsigned WhitespaceLength =
-      Content[LineIndex].data() - tokenAt(LineIndex).TokenText.data();
+      Content[LineIndex].data() - Lines[LineIndex].data();
   Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
-                                       /*Offset=*/0,
+                                       Offset,
                                        /*ReplaceChars=*/WhitespaceLength,
                                        /*PreviousPostfix=*/"",
                                        /*CurrentPrefix=*/ReflowPrefix,

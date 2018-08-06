@@ -160,6 +160,16 @@ TEST(ValueDecl, Matches) {
                       valueDecl(hasType(asString("void (void)")))));
 }
 
+TEST(FriendDecl, Matches) {
+  EXPECT_TRUE(matches("class Y { friend class X; };",
+                      friendDecl(hasType(asString("class X")))));
+  EXPECT_TRUE(matches("class Y { friend class X; };",
+                      friendDecl(hasType(recordDecl(hasName("X"))))));
+
+  EXPECT_TRUE(matches("class Y { friend void f(); };",
+                      functionDecl(hasName("f"), hasParent(friendDecl()))));
+}
+
 TEST(Enum, DoesNotMatchClasses) {
   EXPECT_TRUE(notMatches("class X {};", enumDecl(hasName("X"))));
 }
@@ -1450,6 +1460,10 @@ TEST(NNS, MatchesNestedNameSpecifierPrefixes) {
     "struct A { struct B { struct C {}; }; }; A::B::C c;",
     nestedNameSpecifierLoc(hasPrefix(
       specifiesTypeLoc(loc(qualType(asString("struct A"))))))));
+  EXPECT_TRUE(matches(
+    "namespace N { struct A { struct B { struct C {}; }; }; } N::A::B::C c;",
+    nestedNameSpecifierLoc(hasPrefix(
+      specifiesTypeLoc(loc(qualType(asString("struct N::A"))))))));
 }
 
 
@@ -1671,6 +1685,18 @@ TEST(ObjCStmtMatcher, ExceptionStmts) {
   EXPECT_TRUE(matchesObjC(
     ObjCString,
     objcFinallyStmt()));
+}
+
+TEST(ObjCAutoreleaseMatcher, AutoreleasePool) {
+  std::string ObjCString =
+    "void f() {"
+    "@autoreleasepool {"
+    "  int x = 1;"
+    "}"
+    "}";
+  EXPECT_TRUE(matchesObjC(ObjCString, autoreleasePoolStmt()));
+  std::string ObjCStringNoPool = "void f() { int x = 1; }";
+  EXPECT_FALSE(matchesObjC(ObjCStringNoPool, autoreleasePoolStmt()));
 }
 
 } // namespace ast_matchers

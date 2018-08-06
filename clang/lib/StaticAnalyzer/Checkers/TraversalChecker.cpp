@@ -30,7 +30,7 @@ class TraversalDumper : public Checker< check::BranchCondition,
 public:
   void checkBranchCondition(const Stmt *Condition, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 };
 }
 
@@ -56,7 +56,8 @@ void TraversalDumper::checkBeginFunction(CheckerContext &C) const {
   llvm::outs() << "--BEGIN FUNCTION--\n";
 }
 
-void TraversalDumper::checkEndFunction(CheckerContext &C) const {
+void TraversalDumper::checkEndFunction(const ReturnStmt *RS,
+                                       CheckerContext &C) const {
   llvm::outs() << "--END FUNCTION--\n";
 }
 

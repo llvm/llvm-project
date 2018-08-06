@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions
+// This file contains references to sections of the Coroutines TS, which can be
+// found at http://wg21.link/coroutines.
+
+// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions -Wunused-result
 
 void no_coroutine_traits_bad_arg_await() {
   co_await a; // expected-error {{include <experimental/coroutine>}}
@@ -157,7 +160,7 @@ struct coroutine_handle<void> {
 void yield() {
   co_yield 0;
   co_yield {"foo", 1, 2};
-  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}} expected-warning {{braces around scalar}}
+  co_yield {1e100}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{implicit conversion}} expected-warning {{braces around scalar}}
   co_yield {"foo", __LONG_LONG_MAX__}; // expected-error {{cannot be narrowed}} expected-note {{explicit cast}} expected-warning {{changes value}}
   co_yield {"foo"};
   co_yield "foo"; // expected-error {{no matching}}
@@ -319,6 +322,11 @@ void unevaluated() {
   sizeof(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
   typeid(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
 }
+
+// [expr.await]p2: "An await-expression shall not appear in a default argument."
+// FIXME: A better diagnostic would explicitly state that default arguments are
+// not allowed. A user may not understand that this is "outside a function."
+void default_argument(int arg = co_await 0) {} // expected-error {{'co_await' cannot be used outside a function}}
 
 constexpr auto constexpr_deduced_return_coroutine() {
   co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}}
@@ -510,8 +518,7 @@ coro<bad_promise_1> missing_get_return_object() { // expected-error {{no member 
 
 struct bad_promise_2 {
   coro<bad_promise_2> get_return_object();
-  // FIXME: We shouldn't offer a typo-correction here!
-  suspend_always final_suspend(); // expected-note {{here}}
+  suspend_always final_suspend();
   void unhandled_exception();
   void return_void();
 };
@@ -522,8 +529,7 @@ coro<bad_promise_2> missing_initial_suspend() { // expected-error {{no member na
 
 struct bad_promise_3 {
   coro<bad_promise_3> get_return_object();
-  // FIXME: We shouldn't offer a typo-correction here!
-  suspend_always initial_suspend(); // expected-note {{here}}
+  suspend_always initial_suspend();
   void unhandled_exception();
   void return_void();
 };
@@ -781,6 +787,46 @@ coro<T> dependent_uses_nothrow_new(T) {
 }
 template coro<good_promise_13> dependent_uses_nothrow_new(good_promise_13);
 
+struct good_promise_custom_new_operator {
+  coro<good_promise_custom_new_operator> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+  void *operator new(SizeT, double, float, int);
+};
+
+coro<good_promise_custom_new_operator>
+good_coroutine_calls_custom_new_operator(double, float, int) {
+  co_return;
+}
+
+struct coroutine_nonstatic_member_struct;
+
+struct good_promise_nonstatic_member_custom_new_operator {
+  coro<good_promise_nonstatic_member_custom_new_operator> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+  void *operator new(SizeT, coroutine_nonstatic_member_struct &, double);
+};
+
+struct good_promise_noexcept_custom_new_operator {
+  static coro<good_promise_noexcept_custom_new_operator> get_return_object_on_allocation_failure();
+  coro<good_promise_noexcept_custom_new_operator> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+  void *operator new(SizeT, double, float, int) noexcept;
+};
+
+coro<good_promise_noexcept_custom_new_operator>
+good_coroutine_calls_noexcept_custom_new_operator(double, float, int) {
+  co_return;
+}
+
 struct mismatch_gro_type_tag1 {};
 template<>
 struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
@@ -793,7 +839,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag1) { 
+extern "C" int f(mismatch_gro_type_tag1) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -810,7 +856,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag2) { 
+extern "C" int f(mismatch_gro_type_tag2) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -828,7 +874,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag3> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag3) { 
+extern "C" int f(mismatch_gro_type_tag3) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -847,7 +893,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag4> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag4) { 
+extern "C" int f(mismatch_gro_type_tag4) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'char *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -1171,4 +1217,155 @@ template CoroMemberTag DepTestType<int>::test_member_template(long, const char *
 
 template CoroMemberTag DepTestType<int>::test_static_template<void>(const char *volatile &, unsigned);
 
+struct bad_promise_deleted_constructor {
+  // expected-note@+1 {{'bad_promise_deleted_constructor' has been explicitly marked deleted here}}
+  bad_promise_deleted_constructor() = delete;
+  coro<bad_promise_deleted_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<bad_promise_deleted_constructor>
+bad_coroutine_calls_deleted_promise_constructor() {
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
+  co_return;
+}
+
+// Test that, when the promise type has a constructor whose signature matches
+// that of the coroutine function, that constructor is used. If no matching
+// constructor exists, the default constructor is used as a fallback. If no
+// matching constructors exist at all, an error is emitted. This is an
+// experimental feature that will be proposed for the Coroutines TS.
+
+struct good_promise_default_constructor {
+  good_promise_default_constructor(double, float, int);
+  good_promise_default_constructor() = default;
+  coro<good_promise_default_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<good_promise_default_constructor>
+good_coroutine_calls_default_constructor() {
+  co_return;
+}
+
+struct some_class;
+
+struct good_promise_custom_constructor {
+  good_promise_custom_constructor(some_class&, float, int);
+  good_promise_custom_constructor(double, float, int);
+  good_promise_custom_constructor() = delete;
+  coro<good_promise_custom_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<good_promise_custom_constructor>
+good_coroutine_calls_custom_constructor(double, float, int) {
+  co_return;
+}
+
+struct some_class {
+  coro<good_promise_custom_constructor>
+  good_coroutine_calls_custom_constructor(float, int) {
+    co_return;
+  }
+  coro<good_promise_custom_constructor>
+  static good_coroutine_calls_custom_constructor(double, float, int) {
+    co_return;
+  }
+};
+
+struct bad_promise_no_matching_constructor {
+  bad_promise_no_matching_constructor(int, int, int);
+  // expected-note@+1 2 {{'bad_promise_no_matching_constructor' has been explicitly marked deleted here}}
+  bad_promise_no_matching_constructor() = delete;
+  coro<bad_promise_no_matching_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<bad_promise_no_matching_constructor>
+bad_coroutine_calls_with_no_matching_constructor(int, int) {
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
+  co_return;
+}
+
+struct some_class2 {
+coro<bad_promise_no_matching_constructor>
+bad_coroutine_calls_with_no_matching_constructor(int, int, int) {
+  // expected-error@-1 {{call to deleted constructor}}
+  co_return;
+}
+};
+
 } // namespace CoroHandleMemberFunctionTest
+
+class awaitable_no_unused_warn {
+public:
+  using handle_type = std::experimental::coroutine_handle<>;
+  constexpr bool await_ready()  { return false; }
+  void await_suspend(handle_type) noexcept {}
+  int await_resume() { return 1; }
+};
+
+
+class awaitable_unused_warn {
+public:
+  using handle_type = std::experimental::coroutine_handle<>;
+  constexpr bool await_ready()  { return false; }
+  void await_suspend(handle_type) noexcept {}
+  [[nodiscard]]
+  int await_resume() { return 1; }
+};
+
+template <class Await>
+struct check_warning_promise {
+  coro<check_warning_promise> get_return_object();
+  Await initial_suspend();
+  Await final_suspend();
+  Await yield_value(int);
+  void return_void();
+  void unhandled_exception();
+};
+
+
+coro<check_warning_promise<awaitable_no_unused_warn>>
+test_no_unused_warning() {
+  co_await awaitable_no_unused_warn();
+  co_yield 42;
+}
+
+coro<check_warning_promise<awaitable_unused_warn>>
+test_unused_warning() {
+  co_await awaitable_unused_warn(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  co_yield 42; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+struct missing_await_ready {
+  void await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+struct missing_await_suspend {
+  bool await_ready();
+  void await_resume();
+};
+struct missing_await_resume {
+  bool await_ready();
+  void await_suspend(std::experimental::coroutine_handle<>);
+};
+
+void test_missing_awaitable_members() {
+  co_await missing_await_ready{}; // expected-error {{no member named 'await_ready' in 'missing_await_ready'}}
+  co_await missing_await_suspend{}; // expected-error {{no member named 'await_suspend' in 'missing_await_suspend'}}
+  co_await missing_await_resume{}; // expected-error {{no member named 'await_resume' in 'missing_await_resume'}}
+}

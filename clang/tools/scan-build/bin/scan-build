@@ -51,6 +51,7 @@ my %Options = (
   OutputDir => undef,        # Parent directory to store HTML files.
   HtmlTitle => basename($CurrentDir)." - scan-build results",
   IgnoreErrors => 0,         # Ignore build errors.
+  KeepCC => 0,               # Do not override CC and CXX make variables
   ViewResults => 0,          # View results when the build terminates.
   ExitStatusFoundBugs => 0,  # Exit status reflects whether bugs were found
   ShowDescription => 0,      # Display the description of the defect in the list
@@ -1012,7 +1013,7 @@ sub RunXcodebuild {
   }
   close(DETECT_XCODE);
 
-  # If --override-compiler is explicitely requested, resort to the old
+  # If --override-compiler is explicitly requested, resort to the old
   # behavior regardless of Xcode version.
   if ($Options{OverrideCompiler}) {
     $oldBehavior = 1;
@@ -1062,6 +1063,7 @@ sub RunXcodebuild {
 sub RunBuildCommand {
   my $Args = shift;
   my $IgnoreErrors = shift;
+  my $KeepCC = shift;
   my $Cmd = $Args->[0];
   my $CCAnalyzer = shift;
   my $CXXAnalyzer = shift;
@@ -1099,8 +1101,10 @@ sub RunBuildCommand {
     unshift @$Args, $CXXAnalyzer;
   }
   elsif ($Cmd eq "make" or $Cmd eq "gmake" or $Cmd eq "mingw32-make") {
-    AddIfNotPresent($Args, "CC=$CCAnalyzer");
-    AddIfNotPresent($Args, "CXX=$CXXAnalyzer");
+    if (!$KeepCC) {
+      AddIfNotPresent($Args, "CC=$CCAnalyzer");
+      AddIfNotPresent($Args, "CXX=$CXXAnalyzer");
+    }
     if ($IgnoreErrors) {
       AddIfNotPresent($Args,"-k");
       AddIfNotPresent($Args,"-i");
@@ -1157,6 +1161,12 @@ OPTIONS:
    Add a "keep on going" option to the specified build command. This option
    currently supports make and xcodebuild. This is a convenience option; one
    can specify this behavior directly using build options.
+
+ --keep-cc
+
+   Do not override CC and CXX make variables. Useful when running make in
+   autoconf-based (and similar) projects where configure can add extra flags
+   to those variables.
 
  --html-title [title]
  --html-title=[title]
@@ -1236,7 +1246,7 @@ ADVANCED OPTIONS:
 
  -maxloop <loop count>
 
-   Specifiy the number of times a block can be visited before giving up.
+   Specify the number of times a block can be visited before giving up.
    Default is 4. Increase for more comprehensive coverage at a cost of speed.
 
  -internal-stats
@@ -1529,6 +1539,12 @@ sub ProcessArgs {
     if ($arg eq "-k" or $arg eq "--keep-going") {
       shift @$Args;
       $Options{IgnoreErrors} = 1;
+      next;
+    }
+
+    if ($arg eq "--keep-cc") {
+      shift @$Args;
+      $Options{KeepCC} = 1;
       next;
     }
 
@@ -1838,8 +1854,8 @@ my %EnvVars = (
 );
 
 # Run the build.
-my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Cmd, $CmdCXX,
-                                \%EnvVars);
+my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Options{KeepCC},
+	                        $Cmd, $CmdCXX, \%EnvVars);
 
 if (defined $Options{OutputFormat}) {
   if ($Options{OutputFormat} =~ /plist/) {

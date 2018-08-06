@@ -10,9 +10,9 @@ __generic int * __generic_test(__generic int *arg) {
   return var;  
 }
 #ifndef CL20
-// expected-error@-5 {{OpenCL version 1.0 does not support the '__generic' type qualifier}}
-// expected-error@-6 {{OpenCL version 1.0 does not support the '__generic' type qualifier}}
-// expected-error@-6 {{OpenCL version 1.0 does not support the '__generic' type qualifier}}
+// expected-error@-5 {{OpenCL C version 1.0 does not support the '__generic' type qualifier}}
+// expected-error@-6 {{OpenCL C version 1.0 does not support the '__generic' type qualifier}}
+// expected-error@-6 {{OpenCL C version 1.0 does not support the '__generic' type qualifier}}
 #endif
 
 generic int * generic_test(generic int *arg) {
@@ -20,7 +20,7 @@ generic int * generic_test(generic int *arg) {
   return var;  
 }
 #ifndef CL20
-// expected-error@-5 {{OpenCL version 1.0 does not support the 'generic' type qualifier}}
-// expected-error@-6 {{OpenCL version 1.0 does not support the 'generic' type qualifier}}
-// expected-error@-6 {{OpenCL version 1.0 does not support the 'generic' type qualifier}}
+// expected-error@-5 {{OpenCL C version 1.0 does not support the 'generic' type qualifier}}
+// expected-error@-6 {{OpenCL C version 1.0 does not support the 'generic' type qualifier}}
+// expected-error@-6 {{OpenCL C version 1.0 does not support the 'generic' type qualifier}}
 #endif

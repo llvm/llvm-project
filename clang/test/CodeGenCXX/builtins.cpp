@@ -30,3 +30,19 @@ long y = __builtin_abs(-2l);
 extern const char char_memchr_arg[32];
 char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 // CHECK: call i8* @memchr(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i32 0, i32 0), i32 123, i64 32)
+
+int constexpr_overflow_result() {
+  constexpr int x = 1;
+  // CHECK: alloca i32
+  constexpr int y = 2;
+  // CHECK: alloca i32
+  int z;
+  // CHECK: [[Z:%.+]] = alloca i32
+
+  __builtin_sadd_overflow(x, y, &z);
+  return z;
+  // CHECK: [[RET_PTR:%.+]] = extractvalue { i32, i1 } %0, 0
+  // CHECK: store i32 [[RET_PTR]], i32* [[Z]]
+  // CHECK: [[RET_VAL:%.+]] = load i32, i32* [[Z]]
+  // CHECK: ret i32 [[RET_VAL]]
+}

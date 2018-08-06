@@ -69,6 +69,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned Crypto : 1;
   unsigned DSP : 1;
   unsigned Unaligned : 1;
+  unsigned DotProd : 1;
 
   enum {
     LDREX_B = (1 << 0), /// byte (8-bit)
@@ -122,6 +123,8 @@ public:
   bool hasFeature(StringRef Feature) const override;
 
   bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
   bool setCPU(const std::string &Name) override;
 
   bool setFPMath(StringRef Name) override;
@@ -152,6 +155,11 @@ public:
   validateConstraintModifier(StringRef Constraint, char Modifier, unsigned Size,
                              std::string &SuggestedModifier) const override;
   const char *getClobbers() const override;
+
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
+    return Expression;
+  }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 

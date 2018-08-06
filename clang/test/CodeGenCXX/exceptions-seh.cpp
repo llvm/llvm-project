@@ -21,28 +21,28 @@ extern "C" void use_cxx() {
 
 // Make sure we use __CxxFrameHandler3 for C++ EH.
 
-// CXXEH-LABEL: define void @use_cxx()
+// CXXEH-LABEL: define dso_local void @use_cxx()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CXXEH: call %struct.HasCleanup* @"\01??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: invoke void @might_throw()
 // CXXEH:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CXXEH: [[cont]]
-// CXXEH: call void @"\01??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: ret void
 //
 // CXXEH: [[lpad]]
 // CXXEH: cleanuppad
-// CXXEH: call void @"\01??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: cleanupret
 
-// NOCXX-LABEL: define void @use_cxx()
+// NOCXX-LABEL: define dso_local void @use_cxx()
 // NOCXX-NOT: invoke
-// NOCXX: call %struct.HasCleanup* @"\01??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: call void @might_throw()
 // NOCXX-NOT: invoke
-// NOCXX: call void @"\01??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// NOCXX: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: ret void
 
@@ -55,7 +55,7 @@ extern "C" void use_seh() {
 
 // Make sure we use __C_specific_handler for SEH.
 
-// CHECK-LABEL: define void @use_seh()
+// CHECK-LABEL: define dso_local void @use_seh()
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw() #[[NOINLINE:[0-9]+]]
 // CHECK:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
@@ -87,15 +87,15 @@ extern "C" void nested_finally() {
   }
 }
 
-// CHECK-LABEL: define void @nested_finally() #{{[0-9]+}}
+// CHECK-LABEL: define dso_local void @nested_finally() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
-// CHECK: call void @"\01?fin$0@0@nested_finally@@"(i8 1, i8* {{.*}})
+// CHECK: call void @"?fin$0@0@nested_finally@@"(i8 1, i8* {{.*}})
 
-// CHECK-LABEL: define internal void @"\01?fin$0@0@nested_finally@@"
+// CHECK-LABEL: define internal void @"?fin$0@0@nested_finally@@"
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
-// CHECK: call void @"\01?fin$1@0@nested_finally@@"(i8 1, i8* {{.*}})
+// CHECK: call void @"?fin$1@0@nested_finally@@"(i8 1, i8* {{.*}})
 
 void use_seh_in_lambda() {
   ([]() {
@@ -108,15 +108,15 @@ void use_seh_in_lambda() {
   might_throw();
 }
 
-// CXXEH-LABEL: define void @"\01?use_seh_in_lambda@@YAXXZ"()
+// CXXEH-LABEL: define dso_local void @"?use_seh_in_lambda@@YAXXZ"()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
 // CXXEH: cleanuppad
 
-// NOCXX-LABEL: define void @"\01?use_seh_in_lambda@@YAXXZ"()
+// NOCXX-LABEL: define dso_local void @"?use_seh_in_lambda@@YAXXZ"()
 // NOCXX-NOT: invoke
 // NOCXX: ret void
 
-// CHECK-LABEL: define internal void @"\01??R<lambda_0>@?0??use_seh_in_lambda@@YAXXZ@QEBA@XZ"(%class.anon* %this)
+// CHECK-LABEL: define internal void @"??R<lambda_0>@?0??use_seh_in_lambda@@YAXXZ@QEBA@XZ"(%class.anon* %this)
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw() #[[NOINLINE]]
 // CHECK: catchpad
@@ -139,28 +139,28 @@ void use_inline() {
   use_seh_in_inline_func();
 }
 
-// CHECK-LABEL: define linkonce_odr void @use_seh_in_inline_func() #{{[0-9]+}}
+// CHECK-LABEL: define linkonce_odr dso_local void @use_seh_in_inline_func() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
 //
-// CHECK: catchpad {{.*}} [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@use_seh_in_inline_func@@" to i8*)]
+// CHECK: catchpad {{.*}} [i8* bitcast (i32 (i8*, i8*)* @"?filt$0@0@use_seh_in_inline_func@@" to i8*)]
 //
 // CHECK: invoke void @might_throw()
 //
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 0, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 0, i8* %[[fp]])
 // CHECK: ret void
 //
 // CHECK: cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
+// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
 
-// CHECK-LABEL: define internal i32 @"\01?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}}
+// CHECK-LABEL: define internal i32 @"?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: icmp eq i32 %{{.*}}, 424242
 // CHECK: zext i1 %{{.*}} to i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define internal void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 %abnormal_termination, i8* %frame_pointer) #{{[0-9]+}}
+// CHECK-LABEL: define internal void @"?fin$0@0@use_seh_in_inline_func@@"(i8 %abnormal_termination, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: store i32 1234, i32* @my_unique_global
 
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }

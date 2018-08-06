@@ -3,6 +3,12 @@
 // RUN:     -fsanitize=cfi-vcall \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
+// Check that blacklist does not affect generated code.
+// RUN: echo "src:*" > %t-all.blacklist
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN:     -fsanitize=cfi-vcall -fsanitize-blacklist=%t-all.blacklist \
+// RUN:     -emit-llvm -o - %s | FileCheck %s
+
 void caller(void (*f)()) {
   f();
 }

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse-intrinsics-fast-isel.ll
 
@@ -59,7 +59,7 @@ __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
 __m256d test_mm256_blend_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_blend_pd
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-  return _mm256_blend_pd(A, B, 0x35);
+  return _mm256_blend_pd(A, B, 0x05);
 }
 
 __m256 test_mm256_blend_ps(__m256 A, __m256 B) {
@@ -212,28 +212,772 @@ __m256 test_mm_ceil_ps(__m256 x) {
   return _mm256_ceil_ps(x);
 }
 
-__m128d test_mm_cmp_pd(__m128d A, __m128d B) {
-  // CHECK-LABEL: test_mm_cmp_pd
-  // CHECK: call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 13)
-  return _mm_cmp_pd(A, B, _CMP_GE_OS);
+__m256d test_mm256_cmp_pd_eq_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: @test_mm256_cmp_pd_eq_oq
+  // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_EQ_OQ);
 }
 
-__m256d test_mm256_cmp_pd(__m256d A, __m256d B) {
-  // CHECK-LABEL: test_mm256_cmp_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 13)
-  return _mm256_cmp_pd(A, B, _CMP_GE_OS);
+__m256d test_mm256_cmp_pd_lt_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_lt_os
+  // CHECK: fcmp olt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_LT_OS);
 }
 
-__m128 test_mm_cmp_ps(__m128 A, __m128 B) {
-  // CHECK-LABEL: test_mm_cmp_ps
-  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 13)
-  return _mm_cmp_ps(A, B, _CMP_GE_OS);
+__m256d test_mm256_cmp_pd_le_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_le_os
+  // CHECK: fcmp ole <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_LE_OS);
 }
 
-__m256 test_mm256_cmp_ps(__m256d A, __m256d B) {
-  // CHECK-LABEL: test_mm256_cmp_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, i8 13)
-  return _mm256_cmp_ps(A, B, _CMP_GE_OS);
+__m256d test_mm256_cmp_pd_unord_q(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_unord_q
+  // CHECK: fcmp uno <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_UNORD_Q);
+}
+
+__m256d test_mm256_cmp_pd_neq_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_neq_uq
+  // CHECK: fcmp une <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NEQ_UQ);
+}
+
+__m256d test_mm256_cmp_pd_nlt_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nlt_us
+  // CHECK: fcmp uge <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NLT_US);
+}
+
+__m256d test_mm256_cmp_pd_nle_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nle_us
+  // CHECK: fcmp ugt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NLE_US);
+}
+
+__m256d test_mm256_cmp_pd_ord_q(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ord_q
+  // CHECK: fcmp ord <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_ORD_Q);
+}
+
+__m256d test_mm256_cmp_pd_eq_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_eq_uq
+  // CHECK: fcmp ueq <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_EQ_UQ);
+}
+
+__m256d test_mm256_cmp_pd_nge_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nge_us
+  // CHECK: fcmp ult <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NGE_US);
+}
+
+__m256d test_mm256_cmp_pd_ngt_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ngt_us
+  // CHECK: fcmp ule <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NGT_US);
+}
+
+__m256d test_mm256_cmp_pd_false_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_false_oq
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_FALSE_OQ);
+}
+
+__m256d test_mm256_cmp_pd_neq_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_neq_oq
+  // CHECK: fcmp one <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NEQ_OQ);
+}
+
+__m256d test_mm256_cmp_pd_ge_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ge_os
+  // CHECK: fcmp oge <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_GE_OS);
+}
+
+__m256d test_mm256_cmp_pd_gt_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_gt_os
+  // CHECK: fcmp ogt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_GT_OS);
+}
+
+__m256d test_mm256_cmp_pd_true_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_true_uq
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_TRUE_UQ);
+}
+
+__m256d test_mm256_cmp_pd_eq_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_eq_os
+  // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_EQ_OS);
+}
+
+__m256d test_mm256_cmp_pd_lt_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_lt_oq
+  // CHECK: fcmp olt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_LT_OQ);
+}
+
+__m256d test_mm256_cmp_pd_le_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_le_oq
+  // CHECK: fcmp ole <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_LE_OQ);
+}
+
+__m256d test_mm256_cmp_pd_unord_s(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_unord_s
+  // CHECK: fcmp uno <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_UNORD_S);
+}
+
+__m256d test_mm256_cmp_pd_neq_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_neq_us
+  // CHECK: fcmp une <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NEQ_US);
+}
+
+__m256d test_mm256_cmp_pd_nlt_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nlt_uq
+  // CHECK: fcmp uge <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NLT_UQ);
+}
+
+__m256d test_mm256_cmp_pd_nle_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nle_uq
+  // CHECK: fcmp ugt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NLE_UQ);
+}
+
+__m256d test_mm256_cmp_pd_ord_s(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ord_s
+  // CHECK: fcmp ord <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_ORD_S);
+}
+
+__m256d test_mm256_cmp_pd_eq_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_eq_us
+  // CHECK: fcmp ueq <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_EQ_US);
+}
+
+__m256d test_mm256_cmp_pd_nge_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_nge_uq
+  // CHECK: fcmp ult <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NGE_UQ);
+}
+
+__m256d test_mm256_cmp_pd_ngt_uq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ngt_uq
+  // CHECK: fcmp ule <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NGT_UQ);
+}
+
+__m256d test_mm256_cmp_pd_false_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_false_os
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_FALSE_OS);
+}
+
+__m256d test_mm256_cmp_pd_neq_os(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_neq_os
+  // CHECK: fcmp one <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_NEQ_OS);
+}
+
+__m256d test_mm256_cmp_pd_ge_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_ge_oq
+  // CHECK: fcmp oge <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_GE_OQ);
+}
+
+__m256d test_mm256_cmp_pd_gt_oq(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_gt_oq
+  // CHECK: fcmp ogt <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_GT_OQ);
+}
+
+__m256d test_mm256_cmp_pd_true_us(__m256d a, __m256d b) {
+  // CHECK-LABEL: test_mm256_cmp_pd_true_us
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
+  return _mm256_cmp_pd(a, b, _CMP_TRUE_US);
+}
+
+__m256 test_mm256_cmp_ps_eq_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: @test_mm256_cmp_ps_eq_oq
+  // CHECK: fcmp oeq <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);
+}
+
+__m256 test_mm256_cmp_ps_lt_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_lt_os
+  // CHECK: fcmp olt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_LT_OS);
+}
+
+__m256 test_mm256_cmp_ps_le_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_le_os
+  // CHECK: fcmp ole <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_LE_OS);
+}
+
+__m256 test_mm256_cmp_ps_unord_q(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_unord_q
+  // CHECK: fcmp uno <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_UNORD_Q);
+}
+
+__m256 test_mm256_cmp_ps_neq_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_neq_uq
+  // CHECK: fcmp une <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NEQ_UQ);
+}
+
+__m256 test_mm256_cmp_ps_nlt_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nlt_us
+  // CHECK: fcmp uge <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NLT_US);
+}
+
+__m256 test_mm256_cmp_ps_nle_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nle_us
+  // CHECK: fcmp ugt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NLE_US);
+}
+
+__m256 test_mm256_cmp_ps_ord_q(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ord_q
+  // CHECK: fcmp ord <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_ORD_Q);
+}
+
+__m256 test_mm256_cmp_ps_eq_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_eq_uq
+  // CHECK: fcmp ueq <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_EQ_UQ);
+}
+
+__m256 test_mm256_cmp_ps_nge_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nge_us
+  // CHECK: fcmp ult <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NGE_US);
+}
+
+__m256 test_mm256_cmp_ps_ngt_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ngt_us
+  // CHECK: fcmp ule <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NGT_US);
+}
+
+__m256 test_mm256_cmp_ps_false_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_false_oq
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_FALSE_OQ);
+}
+
+__m256 test_mm256_cmp_ps_neq_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_neq_oq
+  // CHECK: fcmp one <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NEQ_OQ);
+}
+
+__m256 test_mm256_cmp_ps_ge_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ge_os
+  // CHECK: fcmp oge <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_GE_OS);
+}
+
+__m256 test_mm256_cmp_ps_gt_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_gt_os
+  // CHECK: fcmp ogt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_GT_OS);
+}
+
+__m256 test_mm256_cmp_ps_true_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_true_uq
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_TRUE_UQ);
+}
+
+__m256 test_mm256_cmp_ps_eq_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_eq_os
+  // CHECK: fcmp oeq <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_EQ_OS);
+}
+
+__m256 test_mm256_cmp_ps_lt_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_lt_oq
+  // CHECK: fcmp olt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_LT_OQ);
+}
+
+__m256 test_mm256_cmp_ps_le_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_le_oq
+  // CHECK: fcmp ole <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_LE_OQ);
+}
+
+__m256 test_mm256_cmp_ps_unord_s(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_unord_s
+  // CHECK: fcmp uno <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_UNORD_S);
+}
+
+__m256 test_mm256_cmp_ps_neq_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_neq_us
+  // CHECK: fcmp une <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NEQ_US);
+}
+
+__m256 test_mm256_cmp_ps_nlt_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nlt_uq
+  // CHECK: fcmp uge <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NLT_UQ);
+}
+
+__m256 test_mm256_cmp_ps_nle_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nle_uq
+  // CHECK: fcmp ugt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NLE_UQ);
+}
+
+__m256 test_mm256_cmp_ps_ord_s(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ord_s
+  // CHECK: fcmp ord <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_ORD_S);
+}
+
+__m256 test_mm256_cmp_ps_eq_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_eq_us
+  // CHECK: fcmp ueq <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_EQ_US);
+}
+
+__m256 test_mm256_cmp_ps_nge_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_nge_uq
+  // CHECK: fcmp ult <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NGE_UQ);
+}
+
+__m256 test_mm256_cmp_ps_ngt_uq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ngt_uq
+  // CHECK: fcmp ule <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NGT_UQ);
+}
+
+__m256 test_mm256_cmp_ps_false_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_false_os
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_FALSE_OS);
+}
+
+__m256 test_mm256_cmp_ps_neq_os(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_neq_os
+  // CHECK: fcmp one <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_NEQ_OS);
+}
+
+__m256 test_mm256_cmp_ps_ge_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_ge_oq
+  // CHECK: fcmp oge <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_GE_OQ);
+}
+
+__m256 test_mm256_cmp_ps_gt_oq(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_gt_oq
+  // CHECK: fcmp ogt <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_GT_OQ);
+}
+
+__m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
+  // CHECK-LABEL: test_mm256_cmp_ps_true_us
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
+  return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
+}
+
+__m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: @test_mm_cmp_pd_eq_oq
+  // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
+}
+
+__m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_lt_os
+  // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LT_OS);
+}
+
+__m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_le_os
+  // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LE_OS);
+}
+
+__m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_unord_q
+  // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
+}
+
+__m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_neq_uq
+  // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
+}
+
+__m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nlt_us
+  // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLT_US);
+}
+
+__m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nle_us
+  // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLE_US);
+}
+
+__m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ord_q
+  // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_ORD_Q);
+}
+
+__m128d test_mm_cmp_pd_eq_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_eq_uq
+  // CHECK: fcmp ueq <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_EQ_UQ);
+}
+
+__m128d test_mm_cmp_pd_nge_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nge_us
+  // CHECK: fcmp ult <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NGE_US);
+}
+
+__m128d test_mm_cmp_pd_ngt_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ngt_us
+  // CHECK: fcmp ule <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NGT_US);
+}
+
+__m128d test_mm_cmp_pd_false_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_false_oq
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_FALSE_OQ);
+}
+
+__m128d test_mm_cmp_pd_neq_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_neq_oq
+  // CHECK: fcmp one <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NEQ_OQ);
+}
+
+__m128d test_mm_cmp_pd_ge_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ge_os
+  // CHECK: fcmp oge <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_GE_OS);
+}
+
+__m128d test_mm_cmp_pd_gt_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_gt_os
+  // CHECK: fcmp ogt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_GT_OS);
+}
+
+__m128d test_mm_cmp_pd_true_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_true_uq
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_TRUE_UQ);
+}
+
+__m128d test_mm_cmp_pd_eq_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_eq_os
+  // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_EQ_OS);
+}
+
+__m128d test_mm_cmp_pd_lt_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_lt_oq
+  // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LT_OQ);
+}
+
+__m128d test_mm_cmp_pd_le_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_le_oq
+  // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_LE_OQ);
+}
+
+__m128d test_mm_cmp_pd_unord_s(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_unord_s
+  // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_UNORD_S);
+}
+
+__m128d test_mm_cmp_pd_neq_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_neq_us
+  // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NEQ_US);
+}
+
+__m128d test_mm_cmp_pd_nlt_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nlt_uq
+  // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLT_UQ);
+}
+
+__m128d test_mm_cmp_pd_nle_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nle_uq
+  // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NLE_UQ);
+}
+
+__m128d test_mm_cmp_pd_ord_s(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ord_s
+  // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_ORD_S);
+}
+
+__m128d test_mm_cmp_pd_eq_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_eq_us
+  // CHECK: fcmp ueq <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_EQ_US);
+}
+
+__m128d test_mm_cmp_pd_nge_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_nge_uq
+  // CHECK: fcmp ult <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NGE_UQ);
+}
+
+__m128d test_mm_cmp_pd_ngt_uq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ngt_uq
+  // CHECK: fcmp ule <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NGT_UQ);
+}
+
+__m128d test_mm_cmp_pd_false_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_false_os
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_FALSE_OS);
+}
+
+__m128d test_mm_cmp_pd_neq_os(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_neq_os
+  // CHECK: fcmp one <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_NEQ_OS);
+}
+
+__m128d test_mm_cmp_pd_ge_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_ge_oq
+  // CHECK: fcmp oge <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_GE_OQ);
+}
+
+__m128d test_mm_cmp_pd_gt_oq(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_gt_oq
+  // CHECK: fcmp ogt <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_GT_OQ);
+}
+
+__m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_pd_true_us
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
+  return _mm_cmp_pd(a, b, _CMP_TRUE_US);
+}
+
+__m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: @test_mm_cmp_ps_eq_oq
+  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
+}
+
+__m128 test_mm_cmp_ps_lt_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_lt_os
+  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LT_OS);
+}
+
+__m128 test_mm_cmp_ps_le_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_le_os
+  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LE_OS);
+}
+
+__m128 test_mm_cmp_ps_unord_q(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_unord_q
+  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_UNORD_Q);
+}
+
+__m128 test_mm_cmp_ps_neq_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_uq
+  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_UQ);
+}
+
+__m128 test_mm_cmp_ps_nlt_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nlt_us
+  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLT_US);
+}
+
+__m128 test_mm_cmp_ps_nle_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nle_us
+  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLE_US);
+}
+
+__m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ord_q
+  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_ORD_Q);
+}
+
+__m128 test_mm_cmp_ps_eq_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_uq
+  // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_UQ);
+}
+
+__m128 test_mm_cmp_ps_nge_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nge_us
+  // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGE_US);
+}
+
+__m128 test_mm_cmp_ps_ngt_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ngt_us
+  // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGT_US);
+}
+
+__m128 test_mm_cmp_ps_false_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_false_oq
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_FALSE_OQ);
+}
+
+__m128 test_mm_cmp_ps_neq_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_oq
+  // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_OQ);
+}
+
+__m128 test_mm_cmp_ps_ge_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ge_os
+  // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GE_OS);
+}
+
+__m128 test_mm_cmp_ps_gt_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_gt_os
+  // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GT_OS);
+}
+
+__m128 test_mm_cmp_ps_true_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_true_uq
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
+}
+
+__m128 test_mm_cmp_ps_eq_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_os
+  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_OS);
+}
+
+__m128 test_mm_cmp_ps_lt_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_lt_oq
+  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LT_OQ);
+}
+
+__m128 test_mm_cmp_ps_le_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_le_oq
+  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LE_OQ);
+}
+
+__m128 test_mm_cmp_ps_unord_s(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_unord_s
+  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_UNORD_S);
+}
+
+__m128 test_mm_cmp_ps_neq_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_us
+  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_US);
+}
+
+__m128 test_mm_cmp_ps_nlt_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nlt_uq
+  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLT_UQ);
+}
+
+__m128 test_mm_cmp_ps_nle_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nle_uq
+  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLE_UQ);
+}
+
+__m128 test_mm_cmp_ps_ord_s(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ord_s
+  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_ORD_S);
+}
+
+__m128 test_mm_cmp_ps_eq_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_us
+  // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_US);
+}
+
+__m128 test_mm_cmp_ps_nge_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nge_uq
+  // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGE_UQ);
+}
+
+__m128 test_mm_cmp_ps_ngt_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ngt_uq
+  // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGT_UQ);
+}
+
+__m128 test_mm_cmp_ps_false_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_false_os
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_FALSE_OS);
+}
+
+__m128 test_mm_cmp_ps_neq_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_os
+  // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_OS);
+}
+
+__m128 test_mm_cmp_ps_ge_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ge_oq
+  // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GE_OQ);
+}
+
+__m128 test_mm_cmp_ps_gt_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_gt_oq
+  // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GT_OQ);
+}
+
+__m128 test_mm_cmp_ps_true_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_true_us
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_TRUE_US);
 }
 
 __m128d test_mm_cmp_sd(__m128d A, __m128d B) {
@@ -256,7 +1000,7 @@ __m256d test_mm256_cvtepi32_pd(__m128i A) {
 
 __m256 test_mm256_cvtepi32_ps(__m256i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %{{.*}})
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x float>
   return _mm256_cvtepi32_ps(A);
 }
 
@@ -316,49 +1060,45 @@ __m256 test_mm256_dp_ps(__m256 A, __m256 B) {
 
 int test_mm256_extract_epi8(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi8
-  // CHECK: and i32 %{{.*}}, 31
-  // CHECK: extractelement <32 x i8> %{{.*}}, i32 %{{.*}}
+  // CHECK: extractelement <32 x i8> %{{.*}}, {{i32|i64}} 31
   // CHECK: zext i8 %{{.*}} to i32
-  return _mm256_extract_epi8(A, 32);
+  return _mm256_extract_epi8(A, 31);
 }
 
 int test_mm256_extract_epi16(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi16
-  // CHECK: and i32 %{{.*}}, 15
-  // CHECK: extractelement <16 x i16> %{{.*}}, i32 %{{.*}}
+  // CHECK: extractelement <16 x i16> %{{.*}}, {{i32|i64}} 15
   // CHECK: zext i16 %{{.*}} to i32
-  return _mm256_extract_epi16(A, 16);
+  return _mm256_extract_epi16(A, 15);
 }
 
 int test_mm256_extract_epi32(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi32
-  // CHECK: and i32 %{{.*}}, 7
-  // CHECK: extractelement <8 x i32> %{{.*}}, i32 %{{.*}}
-  return _mm256_extract_epi32(A, 8);
+  // CHECK: extractelement <8 x i32> %{{.*}}, {{i32|i64}} 7
+  return _mm256_extract_epi32(A, 7);
 }
 
 long long test_mm256_extract_epi64(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi64
-  // CHECK: and i32 %{{.*}}, 3
-  // CHECK: extractelement <4 x i64> %{{.*}}, i32 %{{.*}}
-  return _mm256_extract_epi64(A, 5);
+  // CHECK: extractelement <4 x i64> %{{.*}}, {{i32|i64}} 3
+  return _mm256_extract_epi64(A, 3);
 }
 
 __m128d test_mm256_extractf128_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_extractf128_pd
-  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> undef, <2 x i32> <i32 2, i32 3>
   return _mm256_extractf128_pd(A, 1);
 }
 
 __m128 test_mm256_extractf128_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_extractf128_ps
-  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_ps(A, 1);
 }
 
 __m128i test_mm256_extractf128_si256(__m256i A) {
   // CHECK-LABEL: test_mm256_extractf128_si256
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_si256(A, 1);
 }
 
@@ -400,50 +1140,46 @@ __m256 test_mm256_hsub_ps(__m256 A, __m256 B) {
 
 __m256i test_mm256_insert_epi8(__m256i x, char b) {
   // CHECK-LABEL: test_mm256_insert_epi8
-  // CHECK: and i32 %{{.*}}, 31
-  // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 %{{.*}}
-  return _mm256_insert_epi8(x, b, 17);
+  // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, {{i32|i64}} 14
+  return _mm256_insert_epi8(x, b, 14);
 }
 
 __m256i test_mm256_insert_epi16(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi16
-  // CHECK: and i32 %{{.*}}, 15
-  // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, {{i32|i64}} 4
   return _mm256_insert_epi16(x, b, 4);
 }
 
 __m256i test_mm256_insert_epi32(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi32
-  // CHECK: and i32 %{{.*}}, 7
-  // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, {{i32|i64}} 5
   return _mm256_insert_epi32(x, b, 5);
 }
 
 __m256i test_mm256_insert_epi64(__m256i x, long long b) {
   // CHECK-LABEL: test_mm256_insert_epi64
-  // CHECK: and i32 %{{.*}}, 3
-  // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 2
   return _mm256_insert_epi64(x, b, 2);
 }
 
 __m256d test_mm256_insertf128_pd(__m256d A, __m128d B) {
   // CHECK-LABEL: test_mm256_insertf128_pd
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   return _mm256_insertf128_pd(A, B, 0);
 }
 
 __m256 test_mm256_insertf128_ps(__m256 A, __m128 B) {
   // CHECK-LABEL: test_mm256_insertf128_ps
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_insertf128_ps(A, B, 1);
 }
 
 __m256i test_mm256_insertf128_si256(__m256i A, __m128i B) {
   // CHECK-LABEL: test_mm256_insertf128_si256
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   return _mm256_insertf128_si256(A, B, 0);
 }
 
@@ -494,7 +1230,7 @@ __m256 test_mm256_loadu2_m128(float* A, float* B) {
   // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_loadu2_m128(A, B);
 }
@@ -504,7 +1240,7 @@ __m256d test_mm256_loadu2_m128d(double* A, double* B) {
   // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   return _mm256_loadu2_m128d(A, B);
 }
@@ -514,8 +1250,8 @@ __m256i test_mm256_loadu2_m128i(__m128i* A, __m128i* B) {
   // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_loadu2_m128i(A, B);
 }
 
@@ -647,32 +1383,32 @@ __m256 test_mm256_or_ps(__m256 A, __m256 B) {
 
 __m128d test_mm_permute_pd(__m128d A) {
   // CHECK-LABEL: test_mm_permute_pd
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   return _mm_permute_pd(A, 1);
 }
 
 __m256d test_mm256_permute_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_permute_pd
-  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> zeroinitializer, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   return _mm256_permute_pd(A, 5);
 }
 
 __m128 test_mm_permute_ps(__m128 A) {
   // CHECK-LABEL: test_mm_permute_ps
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   return _mm_permute_ps(A, 0x1b);
 }
 
 // Test case for PR12401
 __m128 test2_mm_permute_ps(__m128 a) {
   // CHECK-LABEL: test2_mm_permute_ps
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> zeroinitializer, <4 x i32> <i32 2, i32 1, i32 2, i32 3>
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 3>
   return _mm_permute_ps(a, 0xe6);
 }
 
 __m256 test_mm256_permute_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_permute_ps
-  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> zeroinitializer, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
   return _mm256_permute_ps(A, 0x1b);
 }
 
@@ -834,13 +1570,13 @@ __m256 test_mm256_set_m128(__m128 A, __m128 B) {
 
 __m256d test_mm256_set_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_set_m128d
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128d(A, B);
 }
 
 __m256i test_mm256_set_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_set_m128i
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128i(A, B);
 }
 
@@ -1060,13 +1796,13 @@ __m256 test_mm256_setr_m128(__m128 A, __m128 B) {
 
 __m256d test_mm256_setr_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_setr_m128d
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128d(A, B);
 }
 
 __m256i test_mm256_setr_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_setr_m128i
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128i(A, B);
 }
 
@@ -1124,13 +1860,13 @@ __m256 test_mm256_shuffle_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_sqrt_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_sqrt_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double> %{{.*}})
+  // CHECK: call <4 x double> @llvm.sqrt.v4f64(<4 x double> %{{.*}})
   return _mm256_sqrt_pd(A);
 }
 
 __m256 test_mm256_sqrt_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_sqrt_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %{{.*}})
+  // CHECK: call <8 x float> @llvm.sqrt.v8f32(<8 x float> %{{.*}})
   return _mm256_sqrt_ps(A);
 }
 
@@ -1177,7 +1913,7 @@ void test_mm256_storeu2_m128(float* A, float* B, __m256 C) {
   // CHECK-LABEL: test_mm256_storeu2_m128
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128(A, B, C);
 }
@@ -1186,7 +1922,7 @@ void test_mm256_storeu2_m128d(double* A, double* B, __m256d C) {
   // CHECK-LABEL: test_mm256_storeu2_m128d
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: store <2 x double> %{{.*}}, <2 x double>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> undef, <2 x i32> <i32 2, i32 3>
   // CHECK: store <2 x double> %{{.*}}, <2 x double>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128d(A, B, C);
 }
@@ -1195,7 +1931,7 @@ void test_mm256_storeu2_m128i(__m128i* A, __m128i* B, __m256i C) {
   // CHECK-LABEL: test_mm256_storeu2_m128i
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128i(A, B, C);
 }
@@ -1254,7 +1990,7 @@ int test_mm256_testc_ps(__m256 A, __m256 B) {
   return _mm256_testc_ps(A, B);
 }
 
-int test_mm256_testc_si256(__m256 A, __m256 B) {
+int test_mm256_testc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testc_si256
   // CHECK: call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testc_si256(A, B);
@@ -1284,7 +2020,7 @@ int test_mm256_testnzc_ps(__m256 A, __m256 B) {
   return _mm256_testnzc_ps(A, B);
 }
 
-int test_mm256_testnzc_si256(__m256 A, __m256 B) {
+int test_mm256_testnzc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testnzc_si256
   // CHECK: call i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testnzc_si256(A, B);
@@ -1314,7 +2050,7 @@ int test_mm256_testz_ps(__m256 A, __m256 B) {
   return _mm256_testz_ps(A, B);
 }
 
-int test_mm256_testz_si256(__m256 A, __m256 B) {
+int test_mm256_testz_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testz_si256
   // CHECK: call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testz_si256(A, B);
@@ -1409,69 +2145,21 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
 
 double test_mm256_cvtsd_f64(__m256d __a)
 {
- // CHECK-LABEL: @test_mm256_cvtsd_f64
- // CHECK: extractelement <4 x double> %{{.*}}, i32 0
- return _mm256_cvtsd_f64(__a);
+  // CHECK-LABEL: @test_mm256_cvtsd_f64
+  // CHECK: extractelement <4 x double> %{{.*}}, i32 0
+  return _mm256_cvtsd_f64(__a);
 }
 
 int test_mm256_cvtsi256_si32(__m256i __a)
 {
- // CHECK-LABEL: @test_mm256_cvtsi256_si32
- // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
- return _mm256_cvtsi256_si32(__a);
+  // CHECK-LABEL: @test_mm256_cvtsi256_si32
+  // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
+  return _mm256_cvtsi256_si32(__a);
 }
 
 float test_mm256_cvtss_f32(__m256 __a)
 {
- // CHECK-LABEL: @test_mm256_cvtss_f32
- // CHECK: extractelement <8 x float> %{{.*}}, i32 0
- return _mm256_cvtss_f32(__a);
-}
-
-__m256 test_mm256_cmp_ps_true(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_ps_true
- // CHECK: store <8 x float> <float 0xFFFFFFFFE0000000,
- return _mm256_cmp_ps(a, b, _CMP_TRUE_UQ);
-}
-
-__m256 test_mm256_cmp_pd_true(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_pd_true
- // CHECK: store <4 x double> <double 0xFFFFFFFFFFFFFFFF,
-  return _mm256_cmp_pd(a, b, _CMP_TRUE_UQ);
-}
-
-__m256 test_mm256_cmp_ps_false(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_ps_false
- // CHECK: store <8 x float> zeroinitializer, <8 x float>* %tmp, align 32
- return _mm256_cmp_ps(a, b, _CMP_FALSE_OQ);
-}
-
-__m256 test_mm256_cmp_pd_false(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_pd_false
- // CHECK: store <4 x double> zeroinitializer, <4 x double>* %tmp, align 32
-  return _mm256_cmp_pd(a, b, _CMP_FALSE_OQ);
-}
-
-__m256 test_mm256_cmp_ps_strue(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_ps_strue
- // CHECK: store <8 x float> <float 0xFFFFFFFFE0000000,
- return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
-}
-
-__m256 test_mm256_cmp_pd_strue(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_pd_strue
- // CHECK: store <4 x double> <double 0xFFFFFFFFFFFFFFFF,
-  return _mm256_cmp_pd(a, b, _CMP_TRUE_US);
-}
-
-__m256 test_mm256_cmp_ps_sfalse(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_ps_sfalse
- // CHECK: store <8 x float> zeroinitializer, <8 x float>* %tmp, align 32
- return _mm256_cmp_ps(a, b, _CMP_FALSE_OS);
-}
-
-__m256 test_mm256_cmp_pd_sfalse(__m256 a, __m256 b) {
- // CHECK-LABEL: @test_mm256_cmp_pd_sfalse
- // CHECK: store <4 x double> zeroinitializer, <4 x double>* %tmp, align 32
-  return _mm256_cmp_pd(a, b, _CMP_FALSE_OS);
+  // CHECK-LABEL: @test_mm256_cvtss_f32
+  // CHECK: extractelement <8 x float> %{{.*}}, i32 0
+  return _mm256_cvtss_f32(__a);
 }

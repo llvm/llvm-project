@@ -111,3 +111,29 @@ int e = d<int>;
 // CHECK-NOT: __cxa_guard_acquire(i64* @_ZGV1b)
 // CHECK: call i32 @_Z1fv
 // CHECK-NOT: __cxa_guard_release(i64* @_ZGV1b)
+
+namespace PR35599 {
+struct Marker1 {};
+struct Marker2 {};
+
+template <typename>
+struct Foo {
+  struct Bar { Bar(); };
+  inline static Bar bar;
+};
+
+void run() {
+  // All we want here are ODR uses. Anything that requires that the type is
+  // complete is uninteresting.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+  Foo<Marker1>::bar;
+#pragma clang diagnostic pop
+  static_cast<void>(Foo<Marker2>::bar);
+}
+
+// CHECK-LABEL: define {{.*}}global_var_init{{.*}}comdat
+// CHECK: call void @_ZN7PR355993FooINS_7Marker1EE3BarC1Ev
+// CHECK-LABEL: define {{.*}}global_var_init{{.*}}comdat
+// CHECK: call void @_ZN7PR355993FooINS_7Marker2EE3BarC1Ev
+}

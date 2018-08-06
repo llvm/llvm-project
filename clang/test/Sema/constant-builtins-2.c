@@ -5,24 +5,35 @@
 double       g0  = __builtin_huge_val();
 float        g1  = __builtin_huge_valf();
 long double  g2  = __builtin_huge_vall();
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g2_2 = __builtin_huge_valf128();
+#endif
 
 double       g3  = __builtin_inf();
 float        g4  = __builtin_inff();
 long double  g5  = __builtin_infl();
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g5_2 = __builtin_inff128();
+#endif
 
 double       g6  = __builtin_nan("");
 float        g7  = __builtin_nanf("");
 long double  g8  = __builtin_nanl("");
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g8_2 = __builtin_nanf128("");
+#endif
 
 // GCC constant folds these too (via native strtol):
 //double       g6_1  = __builtin_nan("1");
 //float        g7_1  = __builtin_nanf("1");
 //long double  g8_1  = __builtin_nanl("1");
 
-// APFloat doesn't have signalling NaN functions.
-//double       g9  = __builtin_nans("");
-//float        g10 = __builtin_nansf("");
-//long double  g11 = __builtin_nansl("");
+double       g9  = __builtin_nans("");
+float        g10 = __builtin_nansf("");
+long double  g11 = __builtin_nansl("");
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g11_2 = __builtin_nansf128("");
+#endif
 
 //int          g12 = __builtin_abs(-12);
 
@@ -32,10 +43,16 @@ double       g13_1 = __builtin_fabs(-__builtin_inf());
 float        g14 = __builtin_fabsf(-12.f);
 // GCC doesn't eat this one.
 //long double  g15 = __builtin_fabsfl(-12.0L);
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g15_2 = __builtin_fabsf128(-12.q);
+#endif
 
 float        g16 = __builtin_copysign(1.0, -1.0);
 double       g17 = __builtin_copysignf(1.0f, -1.0f);
 long double  g18 = __builtin_copysignl(1.0L, -1.0L);
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+__float128   g18_2 = __builtin_copysignf128(1.0q, -1.0q);
+#endif
 
 char classify_nan     [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nan(""))];
 char classify_snan    [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nans(""))];

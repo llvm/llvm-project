@@ -56,7 +56,7 @@ struct Y0 {
   template<typename U>
   static void f2(U);
 
-  void f3(int);
+  void f3(int); // expected-note 2{{declared as a non-template here}}
 
   static int f4(int);
   template<typename U>
@@ -85,10 +85,85 @@ struct Y0 {
   }
 };
 
+template<typename U> void Y0
+  ::template // expected-error {{expected unqualified-id}}
+    f1(U) {}
+
+// FIXME: error recovery is awful without this.
+    ;
+
+template<typename T>
+struct Y1 {
+  template<typename U>
+  void f1(U);
+
+  template<typename U>
+  static void f2(U);
+
+  void f3(int); // expected-note 4{{declared as a non-template here}}
+
+  static int f4(int);
+  template<typename U>
+  static void f4(U);
+
+  template<typename U>
+  void f() {
+    Y1::template f1<U>(0);
+    Y1::template f1(0);
+    this->template f1(0);
+
+    Y1::template f2<U>(0);
+    Y1::template f2(0);
+
+    Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+    Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+
+    int x;
+    x = Y1::f4(0);
+    x = Y1::f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+
+    x = this->f4(0);
+    x = this->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = this->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  }
+};
+
+void use_Y1(Y1<int> y1) { y1.f<int>(); } // expected-note {{in instantiation of}}
+
+template<typename T>
+struct Y2 : Y1<T> {
+  typedef ::Y1<T> Y1;
+
+  template<typename U>
+  void f(Y1 *p) {
+    Y1::template f1<U>(0);
+    Y1::template f1(0);
+    p->template f1(0);
+
+    Y1::template f2<U>(0);
+    Y1::template f2(0);
+
+    Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+    Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+
+    int x;
+    x = Y1::f4(0);
+    x = Y1::f4<int>(0); // expected-error {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+
+    x = p->f4(0);
+    x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{use 'template'}}
+    x = p->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  }
+};
+
+void use_Y2(Y2<int> y2) { y2.f<int>(0); } // expected-note {{in instantiation of}}
+
 struct A {
   template<int I>
   struct B {
-    static void b1();
+    static void b1(); // expected-note {{declared as a non-template here}}
   };
 };
 

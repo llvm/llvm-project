@@ -10,7 +10,7 @@ struct A {
 };
 
 
-// CHECK: !DIDerivedType(tag: DW_TAG_inheritance,{{.*}} baseType: ![[A]],{{.*}} flags: DIFlagPublic)
+// CHECK: !DIDerivedType(tag: DW_TAG_inheritance,{{.*}} baseType: ![[A]],{{.*}} flags: DIFlagPublic, extraData: i32 0)
 class B : public A {
 public:
   // CHECK-DAG: !DISubprogram(name: "pub",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagPublic | DIFlagPrototyped,

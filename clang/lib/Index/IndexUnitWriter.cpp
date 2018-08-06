@@ -367,6 +367,13 @@ bool IndexUnitWriter::write(std::string &Error) {
   OS.write(Buffer.data(), Buffer.size());
   OS.close();
 
+  if (OS.has_error()) {
+    llvm::raw_string_ostream Err(Error);
+    Err << "failed to write '" << TempPath << "': " << OS.error().message();
+    OS.clear_error();
+    return true;
+  }
+
   std::error_code EC = fs::rename(/*from=*/TempPath.c_str(), /*to=*/UnitPath.c_str());
   if (EC) {
     llvm::raw_string_ostream Err(Error);

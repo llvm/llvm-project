@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -emit-llvm -o - | FileCheck %s --check-prefix SSE
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -DAVX -target-feature +gfni -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -DAVX512 -target-feature +gfni -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX,AVX512
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +gfni -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - | FileCheck %s --check-prefixes SSE,AVX,AVX512
 
 #include <immintrin.h>
 
@@ -22,7 +22,7 @@ __m128i test_mm_gf2p8mul_epi8(__m128i A, __m128i B) {
   return _mm_gf2p8mul_epi8(A, B);
 }
 
-#if defined(AVX) || defined(AVX512)
+#ifdef __AVX__
 __m256i test_mm256_gf2p8affineinv_epi64_epi8(__m256i A, __m256i B) {
   // AVX-LABEL: @test_mm256_gf2p8affineinv_epi64_epi8
   // AVX: @llvm.x86.vgf2p8affineinvqb.256
@@ -40,9 +40,9 @@ __m256i test_mm256_gf2p8mul_epi8(__m256i A, __m256i B) {
   // AVX: @llvm.x86.vgf2p8mulb.256
   return _mm256_gf2p8mul_epi8(A, B);
 }
-#endif // AVX
+#endif // __AVX__
 
-#ifdef AVX512
+#ifdef __AVX512BW__
 __m512i test_mm512_gf2p8affineinv_epi64_epi8(__m512i A, __m512i B) {
   // AVX512-LABEL: @test_mm512_gf2p8affineinv_epi64_epi8
   // AVX512: @llvm.x86.vgf2p8affineinvqb.512
@@ -179,4 +179,4 @@ __m128i test_mm_mask_gf2p8mul_epi8(__m128i S, __mmask16 U, __m128i A, __m128i B)
   // AVX512: select <16 x i1> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i8> {{.*}}
   return _mm_mask_gf2p8mul_epi8(S, U, A, B);
 }
-#endif // AVX512
+#endif // __AVX512BW__

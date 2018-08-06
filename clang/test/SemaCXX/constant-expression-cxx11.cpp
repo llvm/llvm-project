@@ -528,7 +528,7 @@ constexpr int xs6 = p[3]; // expected-error {{constant expression}} expected-not
 constexpr int xs0 = p[-3]; // ok
 constexpr int xs_1 = p[-4]; // expected-error {{constant expression}} expected-note {{cannot refer to element -1}}
 
-constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }; // expected-note {{array 'zs' declared here}}
 static_assert(zs[0][0][0][0] == 1, "");
 static_assert(zs[1][1][1][1] == 16, "");
 static_assert(zs[0][0][0][2] == 3, ""); // expected-error {{constant expression}} expected-note {{read of dereferenced one-past-the-end pointer}}
@@ -536,7 +536,10 @@ static_assert((&zs[0][0][0][2])[-1] == 2, "");
 static_assert(**(**(zs + 1) + 1) == 11, "");
 static_assert(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][-1] + 1) == 11, ""); // expected-error {{constant expression}} expected-note {{cannot refer to element -1 of array of 2 elements in a constant expression}}
 static_assert(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2) == 11, "");
-constexpr int err_zs_1_2_0_0 = zs[1][2][0][0]; // expected-error {{constant expression}} expected-note {{cannot access array element of pointer past the end}}
+constexpr int err_zs_1_2_0_0 = zs[1][2][0][0]; // \
+expected-error {{constant expression}} \
+expected-note {{cannot access array element of pointer past the end}} \
+expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
 
 constexpr int fail(const int &p) {
   return (&p)[64]; // expected-note {{cannot refer to element 64 of array of 2 elements}}
@@ -1889,14 +1892,15 @@ namespace Lifetime {
   }
 
   constexpr int &get(int &&n) { return n; }
+  constexpr int &&get_rv(int &&n) { return static_cast<int&&>(n); }
   struct S {
-    int &&r; // expected-note 2{{declared here}}
+    int &&r;
     int &s;
     int t;
-    constexpr S() : r(0), s(get(0)), t(r) {} // expected-warning {{temporary}}
-    constexpr S(int) : r(0), s(get(0)), t(s) {} // expected-warning {{temporary}} expected-note {{read of object outside its lifetime}}
+    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // expected-note {{read of object outside its lifetime}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // expected-note {{read of object outside its lifetime}}
   };
-  constexpr int k1 = S().t; // ok, int is lifetime-extended to end of constructor
+  constexpr int k1 = S().t; // expected-error {{constant expression}} expected-note {{in call}}
   constexpr int k2 = S(0).t; // expected-error {{constant expression}} expected-note {{in call}}
 }
 

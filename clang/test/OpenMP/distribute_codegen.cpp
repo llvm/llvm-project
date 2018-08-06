@@ -38,10 +38,10 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: %ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC_0:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CHECK-DAG: [[DEF_LOC_DISTRIBUTE_0:@.+]] = private unnamed_addr constant %ident_t { i32 0, i32 2050, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC_0:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC_DISTRIBUTE_0:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-LABEL: define {{.*void}} @{{.*}}without_schedule_clause{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void without_schedule_clause(float *a, float *b, float *c, float *d) {
@@ -67,7 +67,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
 // CHECK-DAG:  store i32 0, i32* [[LAST]]
 // CHECK-DAG:  [[GBL_TID:%.+]] = load i32*, i32** [[TID_ADDR]]
 // CHECK-DAG:  [[GBL_TIDV:%.+]] = load i32, i32* [[GBL_TID]]
-// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 92, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 1)
+// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 92, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 1)
 // CHECK-DAG:  [[UBV0:%.+]] = load i32, i32* [[UB]]
 // CHECK-DAG:  [[USWITCH:%.+]] = icmp sgt i32 [[UBV0]], 4571423
 // CHECK:  br i1 [[USWITCH]], label %[[BBCT:.+]], label %[[BBCF:.+]]
@@ -101,7 +101,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
 // CHECK:  [[BBINNEND]]:
 // CHECK:  br label %[[LPEXIT:.+]]
 // CHECK:  [[LPEXIT]]:
-// CHECK:  call void @__kmpc_for_static_fini(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
+// CHECK:  call void @__kmpc_for_static_fini(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
 // CHECK:  ret void
 
 
@@ -129,7 +129,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // CHECK-DAG:  store i32 0, i32* [[LAST]]
 // CHECK-DAG:  [[GBL_TID:%.+]] = load i32*, i32** [[TID_ADDR]]
 // CHECK-DAG:  [[GBL_TIDV:%.+]] = load i32, i32* [[GBL_TID]]
-// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 92, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 1)
+// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 92, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 1)
 // CHECK-DAG:  [[UBV0:%.+]] = load i32, i32* [[UB]]
 // CHECK-DAG:  [[USWITCH:%.+]] = icmp sgt i32 [[UBV0]], 4571423
 // CHECK:  br i1 [[USWITCH]], label %[[BBCT:.+]], label %[[BBCF:.+]]
@@ -163,7 +163,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // CHECK:  [[BBINNEND]]:
 // CHECK:  br label %[[LPEXIT:.+]]
 // CHECK:  [[LPEXIT]]:
-// CHECK:  call void @__kmpc_for_static_fini(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
+// CHECK:  call void @__kmpc_for_static_fini(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
 // CHECK:  ret void
 
 
@@ -191,7 +191,7 @@ void static_chunked(float *a, float *b, float *c, float *d) {
 // CHECK-DAG:  store i32 0, i32* [[LAST]]
 // CHECK-DAG:  [[GBL_TID:%.+]] = load i32*, i32** [[TID_ADDR]]
 // CHECK-DAG:  [[GBL_TIDV:%.+]] = load i32, i32* [[GBL_TID]]
-// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 91, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 5)
+// CHECK:  call void @__kmpc_for_static_init_{{.+}}(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]], i32 91, i32* %.omp.is_last, i32* %.omp.lb, i32* %.omp.ub, i32* %.omp.stride, i32 1, i32 5)
 // CHECK-DAG:  [[UBV0:%.+]] = load i32, i32* [[UB]]
 // CHECK-DAG:  [[USWITCH:%.+]] = icmp ugt i32 [[UBV0]], 16908288
 // CHECK:  br i1 [[USWITCH]], label %[[BBCT:.+]], label %[[BBCF:.+]]
@@ -225,7 +225,7 @@ void static_chunked(float *a, float *b, float *c, float *d) {
 // CHECK:  [[BBINNEND]]:
 // CHECK:  br label %[[LPEXIT:.+]]
 // CHECK:  [[LPEXIT]]:
-// CHECK:  call void @__kmpc_for_static_fini(%ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
+// CHECK:  call void @__kmpc_for_static_fini(%struct.ident_t* [[DEF_LOC_DISTRIBUTE_0]], i32 [[GBL_TIDV]])
 // CHECK:  ret void
 
 // CHECK-LABEL: test_precond

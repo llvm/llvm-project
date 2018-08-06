@@ -1,4 +1,4 @@
-//===--- DiagnosticOptions.h ------------------------------------*- C++ -*-===//
+//===- DiagnosticOptions.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,14 +18,17 @@
 
 namespace clang {
 
-/// \brief Specifies which overload candidates to display when overload
+/// Specifies which overload candidates to display when overload
 /// resolution fails.
 enum OverloadsShown : unsigned {
-  Ovl_All,  ///< Show all overloads.
-  Ovl_Best  ///< Show just the "best" overload candidates.
+  /// Show all overloads.
+  Ovl_All,
+
+  /// Show just the "best" overload candidates.
+  Ovl_Best
 };
 
-/// \brief A bitmask representing the diagnostic levels used by
+/// A bitmask representing the diagnostic levels used by
 /// VerifyDiagnosticConsumer.
 enum class DiagnosticLevelMask : unsigned {
   None    = 0,
@@ -57,7 +60,7 @@ inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
 
 raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
 
-/// \brief Options for controlling the compiler diagnostics engine.
+/// Options for controlling the compiler diagnostics engine.
 class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
 public:
   enum TextDiagnosticFormat { Clang, MSVC, Vi };
@@ -86,10 +89,10 @@ protected:
 #include "clang/Basic/DiagnosticOptions.def"
 
 public:
-  /// \brief The file to log diagnostic output to.
+  /// The file to log diagnostic output to.
   std::string DiagnosticLogFile;
   
-  /// \brief The file to serialize diagnostics to (non-appending).
+  /// The file to serialize diagnostics to (non-appending).
   std::string DiagnosticSerializationFile;
 
   /// The list of -W... options used to alter the diagnostic mappings, with the
@@ -119,8 +122,8 @@ public:
   }
 };
 
-typedef DiagnosticOptions::TextDiagnosticFormat TextDiagnosticFormat;
+using TextDiagnosticFormat = DiagnosticOptions::TextDiagnosticFormat;
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_BASIC_DIAGNOSTICOPTIONS_H

@@ -20,7 +20,7 @@ using namespace clang;
 using namespace ento;
 using llvm::APSInt;
 
-/// \brief Optionally conjure and return a symbol for offset when processing
+/// Optionally conjure and return a symbol for offset when processing
 /// an expression \p Expression.
 /// If \p Other is a location, conjure a symbol for \p Symbol
 /// (offset) if it is unknown so that memory arithmetic always
@@ -257,6 +257,13 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
     ProgramStateRef state, const Expr* Ex, const LocationContext* LCtx,
     QualType T, QualType ExTy, const CastExpr* CastE, StmtNodeBuilder& Bldr,
     ExplodedNode* Pred) {
+  if (T->isLValueReferenceType()) {
+    assert(!CastE->getType()->isLValueReferenceType());
+    ExTy = getContext().getLValueReferenceType(ExTy);
+  } else if (T->isRValueReferenceType()) {
+    assert(!CastE->getType()->isRValueReferenceType());
+    ExTy = getContext().getRValueReferenceType(ExTy);
+  }
   // Delegate to SValBuilder to process.
   SVal OrigV = state->getSVal(Ex, LCtx);
   SVal V = svalBuilder.evalCast(OrigV, T, ExTy);
@@ -583,24 +590,12 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
       SVal InitVal = state->getSVal(InitEx, LC);
 
       assert(DS->isSingleDecl());
-      if (auto *CtorExpr = findDirectConstructorForCurrentCFGElement()) {
-        assert(InitEx->IgnoreImplicit() == CtorExpr);
-        (void)CtorExpr;
+      if (getObjectUnderConstruction(state, DS, LC)) {
+        state = finishObjectConstruction(state, DS, LC);
         // We constructed the object directly in the variable.
         // No need to bind anything.
         B.generateNode(DS, UpdatedN, state);
       } else {
-        // We bound the temp obj region to the CXXConstructExpr. Now recover
-        // the lazy compound value when the variable is not a reference.
-        if (AMgr.getLangOpts().CPlusPlus && VD->getType()->isRecordType() &&
-            !VD->getType()->isReferenceType()) {
-          if (Optional<loc::MemRegionVal> M =
-                  InitVal.getAs<loc::MemRegionVal>()) {
-            InitVal = state->getSVal(M->getRegion());
-            assert(InitVal.getAs<nonloc::LazyCompoundVal>());
-          }
-        }
-
         // Recover some path-sensitivity if a scalar value evaluated to
         // UnknownVal.
         if (InitVal.isUnknown()) {

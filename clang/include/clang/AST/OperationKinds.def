@@ -227,87 +227,87 @@ CAST_OPERATION(BlockPointerToObjCPointerCast)
 /// to a block pointer.  Block-to-block casts are bitcasts.
 CAST_OPERATION(AnyPointerToBlockPointerCast)
 
-/// \brief Converting between two Objective-C object types, which
+/// Converting between two Objective-C object types, which
 /// can occur when performing reference binding to an Objective-C
 /// object.
 CAST_OPERATION(ObjCObjectLValueCast)
 
-/// \brief A conversion of a floating point real to a floating point
+/// A conversion of a floating point real to a floating point
 /// complex of the original type.  Injects the value as the real
 /// component with a zero imaginary component.
 ///   float -> _Complex float
 CAST_OPERATION(FloatingRealToComplex)
 
-/// \brief Converts a floating point complex to floating point real
+/// Converts a floating point complex to floating point real
 /// of the source's element type.  Just discards the imaginary
 /// component.
 ///   _Complex long double -> long double
 CAST_OPERATION(FloatingComplexToReal)
 
-/// \brief Converts a floating point complex to bool by comparing
+/// Converts a floating point complex to bool by comparing
 /// against 0+0i.
 CAST_OPERATION(FloatingComplexToBoolean)
 
-/// \brief Converts between different floating point complex types.
+/// Converts between different floating point complex types.
 ///   _Complex float -> _Complex double
 CAST_OPERATION(FloatingComplexCast)
 
-/// \brief Converts from a floating complex to an integral complex.
+/// Converts from a floating complex to an integral complex.
 ///   _Complex float -> _Complex int
 CAST_OPERATION(FloatingComplexToIntegralComplex)
 
-/// \brief Converts from an integral real to an integral complex
+/// Converts from an integral real to an integral complex
 /// whose element type matches the source.  Injects the value as
 /// the real component with a zero imaginary component.
 ///   long -> _Complex long
 CAST_OPERATION(IntegralRealToComplex)
 
-/// \brief Converts an integral complex to an integral real of the
+/// Converts an integral complex to an integral real of the
 /// source's element type by discarding the imaginary component.
 ///   _Complex short -> short
 CAST_OPERATION(IntegralComplexToReal)
 
-/// \brief Converts an integral complex to bool by comparing against
+/// Converts an integral complex to bool by comparing against
 /// 0+0i.
 CAST_OPERATION(IntegralComplexToBoolean)
 
-/// \brief Converts between different integral complex types.
+/// Converts between different integral complex types.
 ///   _Complex char -> _Complex long long
 ///   _Complex unsigned int -> _Complex signed int
 CAST_OPERATION(IntegralComplexCast)
 
-/// \brief Converts from an integral complex to a floating complex.
+/// Converts from an integral complex to a floating complex.
 ///   _Complex unsigned -> _Complex float
 CAST_OPERATION(IntegralComplexToFloatingComplex)
 
-/// \brief [ARC] Produces a retainable object pointer so that it may
+/// [ARC] Produces a retainable object pointer so that it may
 /// be consumed, e.g. by being passed to a consuming parameter.
 /// Calls objc_retain.
 CAST_OPERATION(ARCProduceObject)
 
-/// \brief [ARC] Consumes a retainable object pointer that has just
+/// [ARC] Consumes a retainable object pointer that has just
 /// been produced, e.g. as the return value of a retaining call.
 /// Enters a cleanup to call objc_release at some indefinite time.
 CAST_OPERATION(ARCConsumeObject)
 
-/// \brief [ARC] Reclaim a retainable object pointer object that may
+/// [ARC] Reclaim a retainable object pointer object that may
 /// have been produced and autoreleased as part of a function return
 /// sequence.
 CAST_OPERATION(ARCReclaimReturnedObject)
 
-/// \brief [ARC] Causes a value of block type to be copied to the
+/// [ARC] Causes a value of block type to be copied to the
 /// heap, if it is not already there.  A number of other operations
 /// in ARC cause blocks to be copied; this is for cases where that
 /// would not otherwise be guaranteed, such as when casting to a
 /// non-block pointer type.
 CAST_OPERATION(ARCExtendBlockObject)
 
-/// \brief Converts from _Atomic(T) to T.
+/// Converts from _Atomic(T) to T.
 CAST_OPERATION(AtomicToNonAtomic)
-/// \brief Converts from T to _Atomic(T).
+/// Converts from T to _Atomic(T).
 CAST_OPERATION(NonAtomicToAtomic)
 
-/// \brief Causes a block literal to by copied to the heap and then 
+/// Causes a block literal to by copied to the heap and then 
 /// autoreleased.
 ///
 /// This particular cast kind is used for the conversion from a C++11

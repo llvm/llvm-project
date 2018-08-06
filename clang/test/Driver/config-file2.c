@@ -17,7 +17,7 @@
 //--- Invocation `clang --config x86_64-qqq2 -m32` loads `x86_64-qqq2.cfg` if `i386-qqq2.cfg` and `i386.cfg` do not exist.
 //
 // RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir= --config x86_64-qqq2 -m32 -c %s -### 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD2
-// note: target is overriden due to -m32
+// note: target is overridden due to -m32
 // CHECK-RELOAD2: Target: i386
 // CHECK-RELOAD2: Configuration file: {{.*}}Inputs{{.}}config{{.}}x86_64-qqq2.cfg
 
@@ -39,7 +39,7 @@
 //--- Invocation `clang --config x86_64-qqq2 -target i386` loads `x86_64-qqq2.cfg` if `i386-qqq2.cfg` and `i386.cfg` do not exist.
 //
 // RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir= --config x86_64-qqq2 -target i386 -c %s -### 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD5
-// note: target is overriden due to -target i386
+// note: target is overridden due to -target i386
 // CHECK-RELOAD5: Target: i386
 // CHECK-RELOAD5: Configuration file: {{.*}}Inputs{{.}}config{{.}}x86_64-qqq2.cfg
 

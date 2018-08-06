@@ -139,7 +139,7 @@ INSTANTIATE_TEST_CASE_P(
          "void f() { auto p = &ns::C::SBar<int>; }", "ns::C::SFoo",
          "ns::C::SBar"},
 
-        // These methods are not declared or overrided in the subclass B, we
+        // These methods are not declared or overridden in the subclass B, we
         // have to use the qualified name with parent class A to identify them.
         {"void f() { auto p = &ns::B::Foo; }",
          "void f() { auto p = &ns::B::Bar; }", "ns::A::Foo", "ns::B::Bar"},

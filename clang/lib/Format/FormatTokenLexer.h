@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file contains FormatTokenLexer, which tokenizes a source file
+/// This file contains FormatTokenLexer, which tokenizes a source file
 /// into a token stream suitable for ClangFormat.
 ///
 //===----------------------------------------------------------------------===//

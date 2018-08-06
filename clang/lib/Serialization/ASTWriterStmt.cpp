@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Implements serialization for Statements and Expressions.
+/// Implements serialization for Statements and Expressions.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -444,6 +444,13 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Code = serialization::EXPR_INTEGER_LITERAL;
 }
 
+void ASTStmtWriter::VisitFixedPointLiteral(FixedPointLiteral *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getLocation());
+  Record.AddAPInt(E->getValue());
+  Code = serialization::EXPR_INTEGER_LITERAL;
+}
+
 void ASTStmtWriter::VisitFloatingLiteral(FloatingLiteral *E) {
   VisitExpr(E);
   Record.push_back(E->getRawSemantics());
@@ -509,6 +516,7 @@ void ASTStmtWriter::VisitUnaryOperator(UnaryOperator *E) {
   Record.AddStmt(E->getSubExpr());
   Record.push_back(E->getOpcode()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(E->canOverflow());
   Code = serialization::EXPR_UNARY_OPERATOR;
 }
 
@@ -2676,7 +2684,7 @@ void ASTWriter::ClearSwitchCaseIDs() {
   SwitchCaseIDs.clear();
 }
 
-/// \brief Write the given substatement or subexpression to the
+/// Write the given substatement or subexpression to the
 /// bitstream.
 void ASTWriter::WriteSubStmt(Stmt *S) {
   RecordData Record;
@@ -2720,7 +2728,7 @@ void ASTWriter::WriteSubStmt(Stmt *S) {
   SubStmtEntries[S] = Offset;
 }
 
-/// \brief Flush all of the statements that have been added to the
+/// Flush all of the statements that have been added to the
 /// queue via AddStmt().
 void ASTRecordWriter::FlushStmts() {
   // We expect to be the only consumer of the two temporary statement maps,

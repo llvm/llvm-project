@@ -38,10 +38,12 @@ CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) o
 CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
+CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
 CODEGENOPT(CoverageExtraChecksum, 1, 0) ///< Whether we need a second checksum for functions in GCNO files.
 CODEGENOPT(CoverageNoFunctionNamesInData, 1, 0) ///< Do not include function names in GCDA files.
 CODEGENOPT(CoverageExitBlockBeforeBody, 1, 0) ///< Whether to emit the exit block before the body blocks in GCNO files.
 CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
+CODEGENOPT(RegisterGlobalDtorsWithAtExit, 1, 1) ///< Use atexit or __cxa_atexit to register global destructors.
 CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
                                      ///< aliases to base ctors when possible.
 CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
@@ -67,11 +69,13 @@ CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
                                      ///< Decl* various IR entities came from.
                                      ///< Only useful when running CodeGen as a
                                      ///< subroutine.
+CODEGENOPT(EmitVersionIdentMetadata , 1, 1) ///< Emit compiler version metadata.
 CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
 CODEGENOPT(EmitGcovNotes     , 1, 0) ///< Emit coverage "notes" files, aka GCNO.
 CODEGENOPT(EmitOpenCLArgMetadata , 1, 0) ///< Emit OpenCL kernel arg metadata.
-CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set when -femulated-tls is enabled.
-/// \brief Embed Bitcode mode (off/all/bitcode/marker).
+CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
+CODEGENOPT(ExplicitEmulatedTLS , 1, 0) ///< Set if -f[no-]emulated-tls is used.
+/// Embed Bitcode mode (off/all/bitcode/marker).
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
@@ -82,12 +86,19 @@ CODEGENOPT(InstrumentFunctionsAfterInlining , 1, 0) ///< Set when
                           ///< -finstrument-functions-after-inlining is enabled.
 CODEGENOPT(InstrumentFunctionEntryBare , 1, 0) ///< Set when
                                ///< -finstrument-function-entry-bare is enabled.
-
+CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
+                                      ///< set to full or return.
+CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
+                                      ///< set to full or branch.
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
+CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
 
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
+
+///< Set when -fxray-always-emit-typedevents is enabled.
+CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -99,7 +110,7 @@ CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions t
                                      ///< be generated.
 CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
-CODEGENOPT(EmitSummaryIndex, 1, 0)   ///< Set when -flto=thin is enabled on the
+CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
                           ///< program vtable opt).
@@ -119,14 +130,22 @@ CODEGENOPT(EnableSegmentedStacks , 1, 0) ///< Set when -fsplit-stack is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
 CODEGENOPT(NoSignedZeros     , 1, 0) ///< Allow ignoring the signedness of FP zero
+CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
 CODEGENOPT(Reassociate       , 1, 0) ///< Allow reassociation of FP math ops
 CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
 CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(FlushDenorm       , 1, 0) ///< Allow FP denorm numbers to be flushed to zero
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
+
+/// When false, this attempts to generate code as if the result of an
+/// overflowing conversion matches the overflowing behavior of a target's native
+/// float-to-int conversion instructions.
+CODEGENOPT(StrictFloatCastOverflow, 1, 1)
+
+CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
-/// \brief Method of Objective-C dispatch to use.
+/// Method of Objective-C dispatch to use.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
                                         ///< enabled.
@@ -134,9 +153,9 @@ CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer 
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
-/// \brief Choose profile instrumenation kind or no instrumentation.
+/// Choose profile instrumenation kind or no instrumentation.
 ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
-/// \brief Choose profile kind for PGO use compilation.
+/// Choose profile kind for PGO use compilation.
 ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
 CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
                                    ///< enable code coverage analysis.
@@ -153,6 +172,9 @@ CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
                                                 ///< in AddressSanitizer
+CODEGENOPT(SanitizeAddressPoisonClassMemberArrayNewCookie, 1,
+           0) ///< Enable poisoning operator new[] which is not a replaceable
+              ///< global allocation function in AddressSanitizer
 CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead stripping
                                                       ///< of globals in AddressSanitizer
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
@@ -217,6 +239,7 @@ VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack
                                             ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
                                                ///< probe size, even if 0.
+CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
                                   ///< in debug info.
 
@@ -306,6 +329,16 @@ CODEGENOPT(PreserveVec3Type, 1, 0)
 CODEGENOPT(GnuPubnames, 1, 0)
 
 CODEGENOPT(NoPLT, 1, 0)
+
+/// Whether to embed source in DWARF debug line section.
+CODEGENOPT(EmbedSource, 1, 0)
+
+/// Whether to emit all vtables
+CODEGENOPT(ForceEmitVTables, 1, 0)
+
+/// Whether to emit an address-significance table into the object file.
+CODEGENOPT(Addrsig, 1, 0)
+
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

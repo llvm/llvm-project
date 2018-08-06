@@ -283,8 +283,8 @@ void EHScopeStack::popNullFixups() {
 
 void CodeGenFunction::initFullExprCleanup() {
   // Create a variable to decide whether the cleanup needs to be run.
-  Address active = CreateTempAlloca(Builder.getInt1Ty(), CharUnits::One(),
-                                    "cleanup.cond");
+  Address active = CreateTempAllocaWithoutCast(
+      Builder.getInt1Ty(), CharUnits::One(), "cleanup.cond");
 
   // Initialize it to false at a site that's guaranteed to be run
   // before each evaluation.
@@ -624,7 +624,7 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
       si->eraseFromParent();
 
       // Destroy the load.
-      assert(condition->getOperand(0) == CGF.NormalCleanupDest);
+      assert(condition->getOperand(0) == CGF.NormalCleanupDest.getPointer());
       assert(condition->use_empty());
       condition->eraseFromParent();
     }
@@ -833,7 +833,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         if (NormalCleanupDestSlot->hasOneUse()) {
           NormalCleanupDestSlot->user_back()->eraseFromParent();
           NormalCleanupDestSlot->eraseFromParent();
-          NormalCleanupDest = nullptr;
+          NormalCleanupDest = Address::invalid();
         }
 
         llvm::BasicBlock *BranchAfter = Scope.getBranchAfterBlock(0);
@@ -971,14 +971,19 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
         CurrentFuncletPad);
     llvm::CleanupPadInst *CPI = nullptr;
-    if (!EHPersonality::get(*this).usesFuncletPads()) {
-      EHStack.pushTerminate();
-      PushedTerminate = true;
-    } else {
+
+    const EHPersonality &Personality = EHPersonality::get(*this);
+    if (Personality.usesFuncletPads()) {
       llvm::Value *ParentPad = CurrentFuncletPad;
       if (!ParentPad)
         ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
       CurrentFuncletPad = CPI = Builder.CreateCleanupPad(ParentPad);
+    }
+
+    // Non-MSVC personalities need to terminate when an EH cleanup throws.
+    if (!Personality.isMSVCPersonality()) {
+      EHStack.pushTerminate();
+      PushedTerminate = true;
     }
 
     // We only actually emit the cleanup code if the cleanup is either
@@ -1252,10 +1257,10 @@ void CodeGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
 }
 
 Address CodeGenFunction::getNormalCleanupDestSlot() {
-  if (!NormalCleanupDest)
+  if (!NormalCleanupDest.isValid())
     NormalCleanupDest =
-      CreateTempAlloca(Builder.getInt32Ty(), "cleanup.dest.slot");
-  return Address(NormalCleanupDest, CharUnits::fromQuantity(4));
+      CreateDefaultAlignTempAlloca(Builder.getInt32Ty(), "cleanup.dest.slot");
+  return NormalCleanupDest;
 }
 
 /// Emits all the code to cause the given temporary to be cleaned up.

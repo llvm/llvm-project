@@ -138,6 +138,8 @@ T foo() {
 #pragma omp ordered depend(source) depend(sink : i-0, j+sizeof(T)) // expected-error {{'depend(sink:vec)' clauses cannot be mixed with 'depend(source)' clause}}
     }
   }
+#pragma omp ordered depend(source) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
+#pragma omp ordered depend(sink:k) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
   return T();
 }
 

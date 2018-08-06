@@ -73,7 +73,7 @@ T tmain(T argc, T *argv) {
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T i, j, b, c, d, e, x[20];
 // CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target exit data map(from: i)
+// CHECK-NEXT: #pragma omp target exit data map(from: i){{$}}
 // CHECK-NEXT: #pragma omp target exit data map(from: i) if(target exit data: j > 0)
 // CHECK-NEXT: #pragma omp target exit data map(from: i) if(b)
 // CHECK-NEXT: #pragma omp target exit data map(from: c)

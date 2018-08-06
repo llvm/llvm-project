@@ -1,15 +1,9 @@
 // REQUIRES: crash-recovery, shell, system-darwin
 
-// This uses a headermap with this entry:
-//   Foo.h -> Foo/Foo.h
-
-// Copy out the headermap from test/Preprocessor/Inputs/headermap-rel and avoid
-// adding another binary format to the repository.
-
 // RUN: rm -rf %t
-// RUN: mkdir -p %t/m
-// RUN: cp -a %S/../Preprocessor/Inputs/headermap-rel %t/i
+// RUN: mkdir -p %t/m %t/i/Foo.framework/Headers
 // RUN: echo '// Foo.h' > %t/i/Foo.framework/Headers/Foo.h
+// RUN: %hmaptool write %S/../Preprocessor/Inputs/headermap-rel/foo.hmap.json %t/i/foo.hmap
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
 // RUN: %clang -fsyntax-only -fmodules -fmodules-cache-path=%t/m %s \

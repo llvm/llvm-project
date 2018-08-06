@@ -330,7 +330,7 @@ private:
     return false;    
   }
 
-  // \brief Returns true if all declarations in the @property have GC __weak.
+  // Returns true if all declarations in the @property have GC __weak.
   bool hasGCWeak(PropsTy &props, SourceLocation atLoc) const {
     if (!Pass.isGCMigration())
       return false;

@@ -1,4 +1,4 @@
-//===--- ExprClassification.cpp - Expression AST Node Implementation ------===//
+//===- ExprClassification.cpp - Expression AST Node Implementation --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,9 +19,10 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "llvm/Support/ErrorHandling.h"
+
 using namespace clang;
 
-typedef Expr::Classification Cl;
+using Cl = Expr::Classification;
 
 static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E);
 static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D);
@@ -160,6 +161,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::IntegerLiteralClass:
+  case Expr::FixedPointLiteralClass:
   case Expr::CharacterLiteralClass:
   case Expr::AddrLabelExprClass:
   case Expr::CXXDeleteExprClass:
@@ -348,14 +350,14 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
       
   case Expr::BinaryConditionalOperatorClass: {
     if (!Lang.CPlusPlus) return Cl::CL_PRValue;
-    const BinaryConditionalOperator *co = cast<BinaryConditionalOperator>(E);
+    const auto *co = cast<BinaryConditionalOperator>(E);
     return ClassifyConditional(Ctx, co->getTrueExpr(), co->getFalseExpr());
   }
 
   case Expr::ConditionalOperatorClass: {
     // Once again, only C++ is interesting.
     if (!Lang.CPlusPlus) return Cl::CL_PRValue;
-    const ConditionalOperator *co = cast<ConditionalOperator>(E);
+    const auto *co = cast<ConditionalOperator>(E);
     return ClassifyConditional(Ctx, co->getTrueExpr(), co->getFalseExpr());
   }
 
@@ -385,7 +387,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 
   case Expr::StmtExprClass: {
     const CompoundStmt *S = cast<StmtExpr>(E)->getSubStmt();
-    if (const Expr *LastExpr = dyn_cast_or_null<Expr>(S->body_back()))
+    if (const auto *LastExpr = dyn_cast_or_null<Expr>(S->body_back()))
       return ClassifyUnnamed(Ctx, LastExpr->getType());
     return Cl::CL_PRValue;
   }
@@ -434,8 +436,7 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
     return Cl::CL_MemberFunction;
 
   bool islvalue;
-  if (const NonTypeTemplateParmDecl *NTTParm =
-        dyn_cast<NonTypeTemplateParmDecl>(D))
+  if (const auto *NTTParm = dyn_cast<NonTypeTemplateParmDecl>(D))
     islvalue = NTTParm->getType()->isReferenceType();
   else
     islvalue = isa<VarDecl>(D) || isa<FieldDecl>(D) ||
@@ -461,7 +462,7 @@ static Cl::Kinds ClassifyUnnamed(ASTContext &Ctx, QualType T) {
   //   otherwise.
   if (T->isLValueReferenceType())
     return Cl::CL_LValue;
-  const RValueReferenceType *RV = T->getAs<RValueReferenceType>();
+  const auto *RV = T->getAs<RValueReferenceType>();
   if (!RV) // Could still be a class temporary, though.
     return ClassifyTemporary(T);
 
@@ -491,7 +492,7 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
   // C++ [expr.ref]p3: E1->E2 is converted to the equivalent form (*(E1)).E2.
   // C++ [expr.ref]p4: If E2 is declared to have type "reference to T", then
   //   E1.E2 is an lvalue.
-  if (ValueDecl *Value = dyn_cast<ValueDecl>(Member))
+  if (const auto *Value = dyn_cast<ValueDecl>(Member))
     if (Value->getType()->isReferenceType())
       return Cl::CL_LValue;
 
@@ -517,7 +518,7 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
   //      -- If it refers to a static member function [...], then E1.E2 is an
   //         lvalue; [...]
   //      -- Otherwise [...] E1.E2 is a prvalue.
-  if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Member))
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Member))
     return Method->isStatic() ? Cl::CL_LValue : Cl::CL_MemberFunction;
 
   //   -- If E2 is a member enumerator [...], the expression E1.E2 is a prvalue.
@@ -599,8 +600,7 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
   if (Kind == Cl::CL_PRValue) {
     // For the sake of better diagnostics, we want to specifically recognize
     // use of the GCC cast-as-lvalue extension.
-    if (const ExplicitCastExpr *CE =
-          dyn_cast<ExplicitCastExpr>(E->IgnoreParens())) {
+    if (const auto *CE = dyn_cast<ExplicitCastExpr>(E->IgnoreParens())) {
       if (CE->getSubExpr()->IgnoreParenImpCasts()->isLValue()) {
         Loc = CE->getExprLoc();
         return Cl::CM_LValueCast;
@@ -617,7 +617,7 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
 
   // Assignment to a property in ObjC is an implicit setter access. But a
   // setter might not exist.
-  if (const ObjCPropertyRefExpr *Expr = dyn_cast<ObjCPropertyRefExpr>(E)) {
+  if (const auto *Expr = dyn_cast<ObjCPropertyRefExpr>(E)) {
     if (Expr->isImplicitProperty() &&
         Expr->getImplicitPropertySetter() == nullptr)
       return Cl::CM_NoSetterProperty;

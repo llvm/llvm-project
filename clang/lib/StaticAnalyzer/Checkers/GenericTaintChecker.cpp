@@ -48,24 +48,24 @@ private:
       BT.reset(new BugType(this, "Use of Untrusted Data", "Untrusted Data"));
   }
 
-  /// \brief Catch taint related bugs. Check if tainted data is passed to a
+  /// Catch taint related bugs. Check if tainted data is passed to a
   /// system call etc.
   bool checkPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Add taint sources on a pre-visit.
+  /// Add taint sources on a pre-visit.
   void addSourcesPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Propagate taint generated at pre-visit.
+  /// Propagate taint generated at pre-visit.
   bool propagateFromPre(const CallExpr *CE, CheckerContext &C) const;
 
-  /// \brief Add taint sources on a post visit.
+  /// Add taint sources on a post visit.
   void addSourcesPost(const CallExpr *CE, CheckerContext &C) const;
 
   /// Check if the region the expression evaluates to is the standard input,
   /// and thus, is tainted.
   static bool isStdin(const Expr *E, CheckerContext &C);
 
-  /// \brief Given a pointer argument, return the value it points to.
+  /// Given a pointer argument, return the value it points to.
   static Optional<SVal> getPointedToSVal(CheckerContext &C, const Expr *Arg);
 
   /// Functions defining the attack surface.
@@ -100,26 +100,9 @@ private:
   bool generateReportIfTainted(const Expr *E, const char Msg[],
                                CheckerContext &C) const;
 
-  /// The bug visitor prints a diagnostic message at the location where a given
-  /// variable was tainted.
-  class TaintBugVisitor
-      : public BugReporterVisitorImpl<TaintBugVisitor> {
-  private:
-    const SVal V;
-
-  public:
-    TaintBugVisitor(const SVal V) : V(V) {}
-    void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
-
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
-  };
-
   typedef SmallVector<unsigned, 2> ArgVector;
 
-  /// \brief A struct used to specify taint propagation rules for a function.
+  /// A struct used to specify taint propagation rules for a function.
   ///
   /// If any of the possible taint source arguments is tainted, all of the
   /// destination arguments should also be tainted. Use InvalidArgIndex in the
@@ -183,7 +166,7 @@ private:
       return (V && State->isTainted(*V));
     }
 
-    /// \brief Pre-process a function which propagates taint according to the
+    /// Pre-process a function which propagates taint according to the
     /// taint rule.
     ProgramStateRef process(const CallExpr *CE, CheckerContext &C) const;
 
@@ -213,28 +196,6 @@ const char GenericTaintChecker::MsgTaintedBufferSize[] =
 /// ReturnValueIndex, or indexes of the pointer/reference argument, which
 /// points to data, which should be tainted on return.
 REGISTER_SET_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, unsigned)
-
-std::shared_ptr<PathDiagnosticPiece>
-GenericTaintChecker::TaintBugVisitor::VisitNode(const ExplodedNode *N,
-    const ExplodedNode *PrevN, BugReporterContext &BRC, BugReport &BR) {
-
-  // Find the ExplodedNode where the taint was first introduced
-  if (!N->getState()->isTainted(V) || PrevN->getState()->isTainted(V))
-    return nullptr;
-
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
-  if (!S)
-    return nullptr;
-
-  const LocationContext *NCtx = N->getLocationContext();
-  PathDiagnosticLocation L =
-      PathDiagnosticLocation::createBegin(S, BRC.getSourceManager(), NCtx);
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  return std::make_shared<PathDiagnosticEventPiece>(
-      L, "Taint originated here");
-}
 
 GenericTaintChecker::TaintPropagationRule
 GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(

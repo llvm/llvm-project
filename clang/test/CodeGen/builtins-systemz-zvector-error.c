@@ -560,6 +560,6 @@ void test_float(void) {
                            // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 31}}
 
   vbl = vec_fp_test_data_class(vd, idx, &cc);  // expected-error {{must be a constant integer}}
-  vbl = vec_fp_test_data_class(vd, -1, &cc);   // expected-error {{should be a value from 0 to 4095}}
-  vbl = vec_fp_test_data_class(vd, 4096, &cc); // expected-error {{should be a value from 0 to 4095}}
+  vbl = vec_fp_test_data_class(vd, -1, &cc);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vbl = vec_fp_test_data_class(vd, 4096, &cc); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

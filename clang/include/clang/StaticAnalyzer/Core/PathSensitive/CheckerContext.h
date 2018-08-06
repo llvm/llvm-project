@@ -111,17 +111,17 @@ public:
     return Eng.getStoreManager();
   }
   
-  /// \brief Returns the previous node in the exploded graph, which includes
+  /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
-  /// \brief Check if the checker changed the state of the execution; ex: added
+  /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
   bool isDifferent() { return Changed; }
 
-  /// \brief Returns the number of times the current block has been visited
+  /// Returns the number of times the current block has been visited
   /// along the analyzed path.
   unsigned blockCount() const {
     return NB.getContext().blockCount();
@@ -174,12 +174,12 @@ public:
     return Pred->getLocationContext()->getAnalysisDeclContext();
   }
 
-  /// \brief Get the blockID.
+  /// Get the blockID.
   unsigned getBlockID() const {
     return NB.getContext().getBlock()->getBlockID();
   }
 
-  /// \brief If the given node corresponds to a PostStore program point,
+  /// If the given node corresponds to a PostStore program point,
   /// retrieve the location region as it was uttered in the code.
   ///
   /// This utility can be useful for generating extensive diagnostics, for
@@ -191,19 +191,19 @@ public:
     return nullptr;
   }
 
-  /// \brief Get the value of arbitrary expressions at this point in the path.
+  /// Get the value of arbitrary expressions at this point in the path.
   SVal getSVal(const Stmt *S) const {
     return Pred->getSVal(S);
   }
 
-  /// \brief Returns true if the value of \p E is greater than or equal to \p
+  /// Returns true if the value of \p E is greater than or equal to \p
   /// Val under unsigned comparison
   bool isGreaterOrEqual(const Expr *E, unsigned long long Val);
 
   /// Returns true if the value of \p E is negative.
   bool isNegative(const Expr *E);
 
-  /// \brief Generates a new transition in the program state graph
+  /// Generates a new transition in the program state graph
   /// (ExplodedGraph). Uses the default CheckerContext predecessor node.
   ///
   /// @param State The state of the generated node. If not specified, the state
@@ -217,7 +217,7 @@ public:
     return addTransitionImpl(State ? State : getState(), false, nullptr, Tag);
   }
 
-  /// \brief Generates a new transition with the given predecessor.
+  /// Generates a new transition with the given predecessor.
   /// Allows checkers to generate a chain of nodes.
   ///
   /// @param State The state of the generated node.
@@ -230,7 +230,7 @@ public:
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
-  /// \brief Generate a sink node. Generating a sink stops exploration of the
+  /// Generate a sink node. Generating a sink stops exploration of the
   /// given path. To create a sink node for the purpose of reporting an error,
   /// checkers should use generateErrorNode() instead.
   ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
@@ -238,7 +238,7 @@ public:
     return addTransitionImpl(State ? State : getState(), true, Pred, Tag);
   }
 
-  /// \brief Generate a transition to a node that will be used to report
+  /// Generate a transition to a node that will be used to report
   /// an error. This node will be a sink. That is, it will stop exploration of
   /// the given path.
   ///
@@ -251,7 +251,7 @@ public:
                        (Tag ? Tag : Location.getTag()));
   }
 
-  /// \brief Generate a transition to a node that will be used to report
+  /// Generate a transition to a node that will be used to report
   /// an error. This node will not be a sink. That is, exploration will
   /// continue along this path.
   ///
@@ -264,23 +264,23 @@ public:
     return addTransition(State, (Tag ? Tag : Location.getTag()));
   }
 
-  /// \brief Emit the diagnostics report.
+  /// Emit the diagnostics report.
   void emitReport(std::unique_ptr<BugReport> R) {
     Changed = true;
     Eng.getBugReporter().emitReport(std::move(R));
   }
 
-  /// \brief Returns the word that should be used to refer to the declaration
+  /// Returns the word that should be used to refer to the declaration
   /// in the report.
   StringRef getDeclDescription(const Decl *D);
 
-  /// \brief Get the declaration of the called function (path-sensitive).
+  /// Get the declaration of the called function (path-sensitive).
   const FunctionDecl *getCalleeDecl(const CallExpr *CE) const;
 
-  /// \brief Get the name of the called function (path-sensitive).
+  /// Get the name of the called function (path-sensitive).
   StringRef getCalleeName(const FunctionDecl *FunDecl) const;
 
-  /// \brief Get the identifier of the called function (path-sensitive).
+  /// Get the identifier of the called function (path-sensitive).
   const IdentifierInfo *getCalleeIdentifier(const CallExpr *CE) const {
     const FunctionDecl *FunDecl = getCalleeDecl(CE);
     if (FunDecl)
@@ -289,13 +289,13 @@ public:
       return nullptr;
   }
 
-  /// \brief Get the name of the called function (path-sensitive).
+  /// Get the name of the called function (path-sensitive).
   StringRef getCalleeName(const CallExpr *CE) const {
     const FunctionDecl *FunDecl = getCalleeDecl(CE);
     return getCalleeName(FunDecl);
   }
 
-  /// \brief Returns true if the callee is an externally-visible function in the
+  /// Returns true if the callee is an externally-visible function in the
   /// top-level namespace, such as \c malloc.
   ///
   /// If a name is provided, the function must additionally match the given
@@ -308,7 +308,7 @@ public:
   static bool isCLibraryFunction(const FunctionDecl *FD,
                                  StringRef Name = StringRef());
 
-  /// \brief Depending on wither the location corresponds to a macro, return 
+  /// Depending on wither the location corresponds to a macro, return 
   /// either the macro name or the token spelling.
   ///
   /// This could be useful when checkers' logic depends on whether a function

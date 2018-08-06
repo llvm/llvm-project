@@ -61,3 +61,12 @@ namespace test3 {
     unsigned &t9 = (a->bitY += 3); // expected-error {{non-const reference cannot bind to bit-field 'bitY'}}
   }
 }
+
+namespace explicit_ctor {
+  struct A {};
+  struct B { // expected-note 2{{candidate}}
+    explicit B(const A&);
+  };
+  A a;
+  const B &b(a); // expected-error {{no viable conversion}}
+}

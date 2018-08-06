@@ -26,7 +26,7 @@ int main (int argc, char **argv) {
 }
 // CHECK-NEXT: #pragma omp sections
 // CHECK: {
-// CHECK: #pragma omp cancel sections
+// CHECK: #pragma omp cancel sections{{$}}
 // CHECK: }
 #pragma omp for
 for (int i = 0; i < argc; ++i) {

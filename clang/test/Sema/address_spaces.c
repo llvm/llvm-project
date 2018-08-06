@@ -14,6 +14,7 @@ void foo(_AS3 float *a,
 
   int _AS1 _AS2 *Y;   // expected-error {{multiple address spaces specified for type}}
   int *_AS1 _AS2 *Z;  // expected-error {{multiple address spaces specified for type}}
+  int *_AS1 _AS1 *M;  // expected-warning {{multiple identical address spaces specified for type}}
 
   _AS1 int local;     // expected-error {{automatic variable qualified with an address space}}
   _AS1 int array[5];  // expected-error {{automatic variable qualified with an address space}}

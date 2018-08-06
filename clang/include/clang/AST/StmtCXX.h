@@ -210,7 +210,7 @@ public:
   }
 };
 
-/// \brief Representation of a Microsoft __if_exists or __if_not_exists
+/// Representation of a Microsoft __if_exists or __if_not_exists
 /// statement with a dependent name.
 ///
 /// The __if_exists statement can be used to include a sequence of statements
@@ -257,25 +257,25 @@ public:
     QualifierLoc(QualifierLoc), NameInfo(NameInfo),
     SubStmt(reinterpret_cast<Stmt *>(SubStmt)) { }
 
-  /// \brief Retrieve the location of the __if_exists or __if_not_exists
+  /// Retrieve the location of the __if_exists or __if_not_exists
   /// keyword.
   SourceLocation getKeywordLoc() const { return KeywordLoc; }
 
-  /// \brief Determine whether this is an __if_exists statement.
+  /// Determine whether this is an __if_exists statement.
   bool isIfExists() const { return IsIfExists; }
 
-  /// \brief Determine whether this is an __if_exists statement.
+  /// Determine whether this is an __if_exists statement.
   bool isIfNotExists() const { return !IsIfExists; }
 
-  /// \brief Retrieve the nested-name-specifier that qualifies this name, if
+  /// Retrieve the nested-name-specifier that qualifies this name, if
   /// any.
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
-  /// \brief Retrieve the name of the entity we're testing for, along with
+  /// Retrieve the name of the entity we're testing for, along with
   /// location information
   DeclarationNameInfo getNameInfo() const { return NameInfo; }
 
-  /// \brief Retrieve the compound statement that will be included in the
+  /// Retrieve the compound statement that will be included in the
   /// program only if the existence of the symbol matches the initial keyword.
   CompoundStmt *getSubStmt() const {
     return reinterpret_cast<CompoundStmt *>(SubStmt);
@@ -293,7 +293,7 @@ public:
   }
 };
 
-/// \brief Represents the body of a coroutine. This wraps the normal function
+/// Represents the body of a coroutine. This wraps the normal function
 /// body and holds the additional semantic context required to set up and tear
 /// down the coroutine frame.
 class CoroutineBodyStmt final
@@ -355,7 +355,7 @@ public:
     return getPromiseDecl()->getType()->isDependentType();
   }
 
-  /// \brief Retrieve the body of the coroutine as written. This will be either
+  /// Retrieve the body of the coroutine as written. This will be either
   /// a CompoundStmt or a TryStmt.
   Stmt *getBody() const {
     return getStoredStmts()[SubStmt::Body];
@@ -418,7 +418,7 @@ public:
   }
 };
 
-/// \brief Represents a 'co_return' statement in the C++ Coroutines TS.
+/// Represents a 'co_return' statement in the C++ Coroutines TS.
 ///
 /// This statament models the initialization of the coroutine promise
 /// (encapsulating the eventual notional return value) from an expression
@@ -451,11 +451,11 @@ public:
 
   SourceLocation getKeywordLoc() const { return CoreturnLoc; }
 
-  /// \brief Retrieve the operand of the 'co_return' statement. Will be nullptr
+  /// Retrieve the operand of the 'co_return' statement. Will be nullptr
   /// if none was specified.
   Expr *getOperand() const { return static_cast<Expr*>(SubStmts[Operand]); }
 
-  /// \brief Retrieve the promise call that results from this 'co_return'
+  /// Retrieve the promise call that results from this 'co_return'
   /// statement. Will be nullptr if either the coroutine has not yet been
   /// finalized or the coroutine has no eventual return type.
   Expr *getPromiseCall() const {

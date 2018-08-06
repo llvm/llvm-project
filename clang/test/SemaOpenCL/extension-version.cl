@@ -131,6 +131,15 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_d3d10_sharing: enable
 
+#if (__OPENCL_C_VERSION__ >= 110)
+#ifndef cles_khr_int64
+#error "Missing cles_khr_int64 define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cles_khr_int64' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cles_khr_int64: enable
+
 #if (__OPENCL_C_VERSION__ >= 120)
 #ifndef cl_khr_context_abort
 #error "Missing cl_context_abort define"

@@ -14,10 +14,10 @@ void foo() {}
 
 // CHECK: template <typename T, int N> int tmain(T argc, char **argv)
 // CHECK: static int a;
-// CHECK-NEXT: #pragma omp critical
+// CHECK-NEXT: #pragma omp critical{{$}}
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: ++a;
-// CHECK-NEXT: #pragma omp critical (the_name) hint(N)
+// CHECK-NEXT: #pragma omp critical (the_name) hint(N){{$}}
 // CHECK-NEXT: foo();
 // CHECK-NEXT: return N;
 // CHECK: template<> int tmain<int, 4>(int argc, char **argv)

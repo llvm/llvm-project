@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides an action to rename every symbol at a point.
+/// Provides an action to rename every symbol at a point.
 ///
 //===----------------------------------------------------------------------===//
 

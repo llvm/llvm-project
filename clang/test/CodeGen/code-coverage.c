@@ -2,7 +2,16 @@
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-no-function-names-in-data %s -o - | FileCheck %s --check-prefix WITHOUTNAMES
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -dwarf-column-info -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
-// <rdar://problem/12843084>
+// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -femit-coverage-data %s 2>&1 | FileCheck --check-prefix=NEWPM %s
+// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -femit-coverage-data -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
+
+// NEWPM-NOT: Running pass
+// NEWPM: Running pass: GCOVProfilerPass
+
+// NEWPM-O3-NOT: Running pass
+// NEWPM-O3: Running pass: ForceFunctionAttrsPass
+// NEWPM-O3: Running pass: GCOVProfilerPass
+
 
 int test1(int a) {
   switch (a % 2) {
@@ -14,17 +23,25 @@ int test1(int a) {
   return a;
 }
 
+int test2(int b) {
+  return b * 2;
+}
+
+// Inside function emission data structure, check that
+// -coverage-no-function-names-in-data uses null as the function name.
+// CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant
+// CHECK-SAME: { i32 {{[0-9]+}}, i8* getelementptr inbounds ({{[^,]*}}, {{[^,]*}}* @
+// CHECK-SAME: { i32 {{[0-9]+}}, i8* getelementptr inbounds ({{[^,]*}}, {{[^,]*}}* @
+// WITHOUTNAMES: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant
+// WITHOUTNAMES-NOT: getelementptr inbounds ({{.*}}@
+// WITHOUTNAMES-SAME: zeroinitializer,
+// WITHOUTNAMES-NOT: getelementptr inbounds ({{.*}}@
+// WITHOUTNAMES-SAME: { i32 {{[0-9]+}}, i8* null,
+
 // Check that the noredzone flag is set on the generated functions.
 
 // CHECK: void @__llvm_gcov_indirect_counter_increment(i32* %{{.*}}, i64** %{{.*}}) unnamed_addr [[NRZ:#[0-9]+]]
-
-// Inside llvm_gcov_writeout, check that -coverage-no-function-names-in-data
-// passes null as the function name.
 // CHECK: void @__llvm_gcov_writeout() unnamed_addr [[NRZ]]
-// CHECK: call void @llvm_gcda_emit_function({{.*}}, i8* getelementptr {{.*}}, {{.*}})
-// WITHOUTNAMES: void @__llvm_gcov_writeout() unnamed_addr
-// WITHOUTNAMES: call void @llvm_gcda_emit_function({{.*}}, i8* null, {{.*}})
-
 // CHECK: void @__llvm_gcov_flush() unnamed_addr [[NRZ]]
 // CHECK: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
 

@@ -381,7 +381,7 @@ void RecursiveCloneTypeIIHashConstraint::constrain(
     for (unsigned i = 0; i < StmtsByHash.size() - 1; ++i) {
       const auto Current = StmtsByHash[i];
 
-      // It's likely that we just found an sequence of StmtSequences that
+      // It's likely that we just found a sequence of StmtSequences that
       // represent a CloneGroup, so we create a new group and start checking and
       // adding the StmtSequences in this sequence.
       CloneDetector::CloneGroup NewGroup;

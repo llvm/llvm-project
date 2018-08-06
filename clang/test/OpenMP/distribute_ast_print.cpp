@@ -87,7 +87,7 @@ T tmain(T argc) {
   static T a;
 // CHECK: static T a;
 #pragma omp distribute
-// CHECK-NEXT: #pragma omp distribute
+// CHECK-NEXT: #pragma omp distribute{{$}}
   for (int i=0; i < 2; ++i)a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;

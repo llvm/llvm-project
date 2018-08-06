@@ -1021,6 +1021,30 @@ constexpr bool evalNested() {
 static_assert(evalNested(), "");
 } // namespace PR19741
 
+namespace Mutable {
+  struct A { mutable int n; }; // expected-note 2{{here}}
+  constexpr int k = A{123}.n; // ok
+  static_assert(k == 123, "");
+
+  struct Q { A &&a; int b = a.n; };
+  constexpr Q q = { A{456} }; // expected-note {{temporary}}
+  static_assert(q.b == 456, "");
+  static_assert(q.a.n == 456, ""); // expected-error {{constant expression}} expected-note {{outside the expression that created the temporary}}
+
+  constexpr A a = {123};
+  constexpr int m = a.n; // expected-error {{constant expression}} expected-note {{mutable}}
+
+  constexpr Q r = { static_cast<A&&>(const_cast<A&>(a)) }; // expected-error {{constant expression}} expected-note@-8 {{mutable}}
+
+  struct B {
+    mutable int n; // expected-note {{here}}
+    int m;
+    constexpr B() : n(1), m(n) {} // ok
+  };
+  constexpr B b;
+  constexpr int p = b.n; // expected-error {{constant expression}} expected-note {{mutable}}
+}
+
 namespace IndirectFields {
 
 // Reference indirect field.

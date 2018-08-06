@@ -166,7 +166,7 @@ bool CallEvent::isGlobalCFunction(StringRef FunctionName) const {
   return CheckerContext::isCLibraryFunction(FD, FunctionName);
 }
 
-/// \brief Returns true if a type is a pointer-to-const or reference-to-const
+/// Returns true if a type is a pointer-to-const or reference-to-const
 /// with no further indirection.
 static bool isPointerToConst(QualType Ty) {
   QualType PointeeTy = Ty->getPointeeType();
@@ -389,23 +389,24 @@ ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
 
 RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   const FunctionDecl *FD = getDecl();
+  if (!FD)
+    return {};
+
   // Note that the AnalysisDeclContext will have the FunctionDecl with
   // the definition (if one exists).
-  if (FD) {
-    AnalysisDeclContext *AD =
-      getLocationContext()->getAnalysisDeclContext()->
-      getManager()->getContext(FD);
-    bool IsAutosynthesized;
-    Stmt* Body = AD->getBody(IsAutosynthesized);
-    DEBUG({
-        if (IsAutosynthesized)
-          llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
-                       << "\n";
-    });
-    if (Body) {
-      const Decl* Decl = AD->getDecl();
-      return RuntimeDefinition(Decl);
-    }
+  AnalysisDeclContext *AD =
+    getLocationContext()->getAnalysisDeclContext()->
+    getManager()->getContext(FD);
+  bool IsAutosynthesized;
+  Stmt* Body = AD->getBody(IsAutosynthesized);
+  LLVM_DEBUG({
+    if (IsAutosynthesized)
+      llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
+                   << "\n";
+  });
+  if (Body) {
+    const Decl* Decl = AD->getDecl();
+    return RuntimeDefinition(Decl);
   }
 
   SubEngine *Engine = getState()->getStateManager().getOwningEngine();
@@ -413,7 +414,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
 
   // Try to get CTU definition only if CTUDir is provided.
   if (!Opts.naiveCTUEnabled())
-    return RuntimeDefinition();
+    return {};
 
   cross_tu::CrossTranslationUnitContext &CTUCtx =
       *Engine->getCrossTranslationUnitContext();
@@ -533,9 +534,14 @@ void CXXInstanceCall::getExtraInvalidatedValues(
     // Get the record decl for the class of 'This'. D->getParent() may return a
     // base class decl, rather than the class of the instance which needs to be
     // checked for mutable fields.
+    // TODO: We might as well look at the dynamic type of the object.
     const Expr *Ex = getCXXThisExpr()->ignoreParenBaseCasts();
-    const CXXRecordDecl *ParentRecord = Ex->getType()->getAsCXXRecordDecl();
-    if (!ParentRecord || ParentRecord->hasMutableFields())
+    QualType T = Ex->getType();
+    if (T->isPointerType()) // Arrow or implicit-this syntax?
+      T = T->getPointeeType();
+    const CXXRecordDecl *ParentRecord = T->getAsCXXRecordDecl();
+    assert(ParentRecord);
+    if (ParentRecord->hasMutableFields())
       return;
     // Preserve CXXThis.
     const MemRegion *ThisRegion = ThisVal.getAsRegion();
@@ -1215,7 +1221,7 @@ CallEventRef<>
 CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
                             ProgramStateRef State) {
   const LocationContext *ParentCtx = CalleeCtx->getParent();
-  const LocationContext *CallerCtx = ParentCtx->getCurrentStackFrame();
+  const LocationContext *CallerCtx = ParentCtx->getStackFrame();
   assert(CallerCtx && "This should not be used for top-level stack frames");
 
   const Stmt *CallSite = CalleeCtx->getCallSite();
@@ -1249,7 +1255,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   // destructors, though this could change in the future.
   const CFGBlock *B = CalleeCtx->getCallSiteBlock();
   CFGElement E = (*B)[CalleeCtx->getIndex()];
-  assert(E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>() &&
+  assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
          "All other CFG elements should have exprs");
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -1261,7 +1267,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   if (Optional<CFGAutomaticObjDtor> AutoDtor = E.getAs<CFGAutomaticObjDtor>())
     Trigger = AutoDtor->getTriggerStmt();
   else if (Optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
-    Trigger = cast<Stmt>(DeleteDtor->getDeleteExpr());
+    Trigger = DeleteDtor->getDeleteExpr();
   else
     Trigger = Dtor->getBody();
 

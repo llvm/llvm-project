@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares Format APIs to be used internally by the
+/// This file declares Format APIs to be used internally by the
 /// formatting library implementation.
 ///
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@ namespace clang {
 namespace format {
 namespace internal {
 
-/// \brief Reformats the given \p Ranges in the code fragment \p Code.
+/// Reformats the given \p Ranges in the code fragment \p Code.
 ///
 /// A fragment of code could conceptually be surrounded by other code that might
 /// constrain how that fragment is laid out.

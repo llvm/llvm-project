@@ -34,7 +34,7 @@ class Decl;
 class DeclContext;
 class Stmt;
 
-/// \brief The AST-based call graph.
+/// The AST-based call graph.
 ///
 /// The call graph extends itself with the given declarations by implementing
 /// the recursive AST visitor, which constructs the graph by visiting the given
@@ -55,7 +55,7 @@ public:
   CallGraph();
   ~CallGraph();
 
-  /// \brief Populate the call graph with the functions in the given
+  /// Populate the call graph with the functions in the given
   /// declaration.
   ///
   /// Recursively walks the declaration to find all the dependent Decls as well.
@@ -63,13 +63,13 @@ public:
     TraverseDecl(D);
   }
 
-  /// \brief Determine if a declaration should be included in the graph.
+  /// Determine if a declaration should be included in the graph.
   static bool includeInGraph(const Decl *D);
 
-  /// \brief Lookup the node for the given declaration.
+  /// Lookup the node for the given declaration.
   CallGraphNode *getNode(const Decl *) const;
 
-  /// \brief Lookup the node for the given declaration. If none found, insert
+  /// Lookup the node for the given declaration. If none found, insert
   /// one into the graph.
   CallGraphNode *getOrInsertNode(Decl *);
 
@@ -83,7 +83,7 @@ public:
   const_iterator begin() const { return FunctionMap.begin(); }
   const_iterator end()   const { return FunctionMap.end();   }
 
-  /// \brief Get the number of nodes in the graph.
+  /// Get the number of nodes in the graph.
   unsigned size() const { return FunctionMap.size(); }
 
   /// \ brief Get the virtual root of the graph, all the functions available
@@ -133,10 +133,10 @@ public:
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
 private:
-  /// \brief Add the given declaration to the call graph.
+  /// Add the given declaration to the call graph.
   void addNodeForDecl(Decl *D, bool IsGlobal);
 
-  /// \brief Allocate a new node in the graph.
+  /// Allocate a new node in the graph.
   CallGraphNode *allocateNewNode(Decl *);
 };
 
@@ -145,10 +145,10 @@ public:
   using CallRecord = CallGraphNode *;
 
 private:
-  /// \brief The function/method declaration.
+  /// The function/method declaration.
   Decl *FD;
 
-  /// \brief The list of functions called from this node.
+  /// The list of functions called from this node.
   SmallVector<CallRecord, 5> CalledFunctions;
 
 public:

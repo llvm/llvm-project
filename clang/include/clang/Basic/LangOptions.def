@@ -106,6 +106,7 @@ LANGOPT(LineComment       , 1, 0, "'//' comments")
 LANGOPT(Bool              , 1, 0, "bool, true, and false keywords")
 LANGOPT(Half              , 1, 0, "half keyword")
 LANGOPT(WChar             , 1, CPlusPlus, "wchar_t keyword")
+LANGOPT(Char8             , 1, 0, "char8_t keyword")
 LANGOPT(DeclSpecKeyword   , 1, 0, "__declspec keyword")
 BENIGN_LANGOPT(DollarIdents   , 1, 1, "'$' in identifiers")
 BENIGN_LANGOPT(AsmPreprocessor, 1, 0, "preprocessor in asm mode")
@@ -153,6 +154,7 @@ COMPATIBLE_LANGOPT(ModulesTS  , 1, 0, "C++ Modules TS")
 BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 2, CMK_None,
                     "compiling a module interface")
 BENIGN_LANGOPT(CompilingPCH, 1, 0, "building a pch")
+BENIGN_LANGOPT(BuildingPCHWithObjectFile, 1, 0, "building a pch which has a corresponding object file")
 COMPATIBLE_LANGOPT(ModulesDeclUse    , 1, 0, "require declaration of module uses")
 BENIGN_LANGOPT(ModulesSearchAll  , 1, 1, "searching even non-imported modules to find unresolved references")
 COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "requiring declaration of module uses and all headers to be in modules")
@@ -189,15 +191,20 @@ ENUM_LANGOPT(DefaultCallingConv, DefaultCallingConvention, 3, DCC_None, "default
 LANGOPT(ShortEnums        , 1, 0, "short enum types")
 
 LANGOPT(OpenCL            , 1, 0, "OpenCL")
-LANGOPT(OpenCLVersion     , 32, 0, "OpenCL version")
+LANGOPT(OpenCLVersion     , 32, 0, "OpenCL C version")
+LANGOPT(OpenCLCPlusPlus   , 1, 0, "OpenCL C++")
+LANGOPT(OpenCLCPlusPlusVersion     , 32, 0, "OpenCL C++ version")
 LANGOPT(NativeHalfType    , 1, 0, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, "Native half args and returns")
 LANGOPT(HalfArgsAndReturns, 1, 0, "half args and returns")
 LANGOPT(CUDA              , 1, 0, "CUDA")
+LANGOPT(HIP               , 1, 0, "HIP")
 LANGOPT(OpenMP            , 32, 0, "OpenMP support and version of OpenMP (31, 40 or 45)")
 LANGOPT(OpenMPSimd        , 1, 0, "Use SIMD only OpenMP support.")
 LANGOPT(OpenMPUseTLS      , 1, 0, "Use TLS for threadprivates or runtime calls")
 LANGOPT(OpenMPIsDevice    , 1, 0, "Generate code only for OpenMP target device")
+LANGOPT(OpenMPCUDAMode    , 1, 0, "Generate code for OpenMP pragmas in SIMT/SPMD mode")
+LANGOPT(OpenMPHostCXXExceptions    , 1, 0, "C++ exceptions handling in the host code.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")
@@ -205,6 +212,7 @@ LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA d
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr functions as __host__ __device__")
 LANGOPT(CUDADeviceFlushDenormalsToZero, 1, 0, "flushing denormals to zero")
 LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
+LANGOPT(CUDARelocatableDeviceCode, 1, 0, "generate relocatable device code")
 
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")
@@ -227,7 +235,7 @@ BENIGN_LANGOPT(DebuggerObjCLiteral , 1, 0, "debugger Objective-C literals and su
 BENIGN_LANGOPT(SpellChecking , 1, 1, "spell-checking")
 LANGOPT(SinglePrecisionConstants , 1, 0, "treating double-precision floating point constants as single precision constants")
 LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
-/// \brief FP_CONTRACT mode (on/off/fast).
+/// FP_CONTRACT mode (on/off/fast).
 ENUM_LANGOPT(DefaultFPContractMode, FPContractModeKind, 2, FPC_Off, "FP contraction type")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, "bit-field type alignment")
 LANGOPT(HexagonQdsp6Compat , 1, 0, "hexagon-qdsp6 backward compatibility")
@@ -235,11 +243,16 @@ LANGOPT(ObjCAutoRefCount , 1, 0, "Objective-C automated reference counting")
 LANGOPT(ObjCWeakRuntime     , 1, 0, "__weak support in the ARC runtime")
 LANGOPT(ObjCWeak            , 1, 0, "Objective-C __weak in ARC and MRC files")
 LANGOPT(ObjCSubscriptingLegacyRuntime         , 1, 0, "Subscripting support in legacy ObjectiveC runtime")
+LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
 LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
 BENIGN_LANGOPT(DelayedTemplateParsing , 1, 0, "delayed template parsing")
 LANGOPT(BlocksRuntimeOptional , 1, 0, "optional blocks runtime")
+LANGOPT(
+    CompleteMemberPointers, 1, 0,
+    "Require member pointer base types to be complete at the point where the "
+    "type's inheritance model would be determined under the Microsoft ABI")
 
 ENUM_LANGOPT(GC, GCMode, 2, NonGC, "Objective-C Garbage Collection mode")
 ENUM_LANGOPT(ValueVisibilityMode, Visibility, 3, DefaultVisibility,
@@ -271,7 +284,6 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 LANGOPT(APINotes, 1, 0, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, "use external API notes")
-LANGOPT(NeededByPCHOrCompilationUsesPCH, 1, 0, "compilation involves pch")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "
@@ -281,6 +293,11 @@ LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
 LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,
         "controls whether to always emit intrinsic calls to "
         "__xray_customevent(...) builtin.")
+LANGOPT(XRayAlwaysEmitTypedEvents, 1, 0,
+        "controls whether to always emit intrinsic calls to "
+        "__xray_typedevent(...) builtin.")
+
+LANGOPT(ForceEmitVTables, 1, 0, "whether to emit all vtables")
 
 BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
                "allow editor placeholders in source")
@@ -288,6 +305,12 @@ BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
 ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
              "version of Clang that we should attempt to be ABI-compatible "
              "with")
+
+COMPATIBLE_VALUE_LANGOPT(FunctionAlignment, 5, 0, "Default alignment for functions")
+
+LANGOPT(FixedPoint, 1, 0, "fixed point types")
+LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
+        "unsigned fixed point types having one extra padding bit")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
@@ -298,4 +321,3 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
 #undef VALUE_LANGOPT
 #undef COMPATIBLE_VALUE_LANGOPT
 #undef BENIGN_VALUE_LANGOPT
-

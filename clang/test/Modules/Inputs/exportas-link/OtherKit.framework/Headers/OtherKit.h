@@ -1,3 +1,4 @@
+// Umbrella header for OtherKit.
 #import <SomeKitCore/SomeKitCore.h>
 
 #ifdef F

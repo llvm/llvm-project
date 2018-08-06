@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +f16c -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 float test_cvtsh_ss(unsigned short a) {
   // CHECK-LABEL: test_cvtsh_ss

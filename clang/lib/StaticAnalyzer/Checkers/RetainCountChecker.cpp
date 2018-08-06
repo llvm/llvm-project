@@ -555,7 +555,7 @@ public:
   }
 
   const RetainSummary *find(IdentifierInfo* II, Selector S) {
-    // FIXME: Class method lookup.  Right now we dont' have a good way
+    // FIXME: Class method lookup.  Right now we don't have a good way
     // of going between IdentifierInfo* and the class hierarchy.
     MapTy::iterator I = M.find(ObjCSummaryKey(II, S));
 
@@ -883,21 +883,22 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
 //===----------------------------------------------------------------------===//
 
 static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Retain");
+  return FName.startswith_lower("retain") || FName.endswith_lower("retain");
 }
 
 static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Release");
+  return FName.startswith_lower("release") || FName.endswith_lower("release");
 }
 
 static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.endswith("Autorelease");
+  return FName.startswith_lower("autorelease") ||
+         FName.endswith_lower("autorelease");
 }
 
 static bool isMakeCollectable(const FunctionDecl *FD, StringRef FName) {
   // FIXME: Remove FunctionDecl parameter.
   // FIXME: Is it really okay if MakeCollectable isn't a suffix?
-  return FName.find("MakeCollectable") != StringRef::npos;
+  return FName.find_lower("MakeCollectable") != StringRef::npos;
 }
 
 static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
@@ -1787,8 +1788,7 @@ namespace {
   //===---------===//
   // Bug Reports.  //
   //===---------===//
-
-  class CFRefReportVisitor : public BugReporterVisitorImpl<CFRefReportVisitor> {
+  class CFRefReportVisitor : public BugReporterVisitor {
   protected:
     SymbolRef Sym;
     const SummaryLogTy &SummaryLog;
@@ -1809,7 +1809,7 @@ namespace {
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
-    std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+    std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
                                                     BugReport &BR) override;
   };
@@ -1820,18 +1820,9 @@ namespace {
                            const SummaryLogTy &log)
        : CFRefReportVisitor(sym, GCEnabled, log) {}
 
-    std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+    std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
                                                     BugReport &BR) override;
-
-    std::unique_ptr<BugReporterVisitor> clone() const override {
-      // The curiously-recurring template pattern only works for one level of
-      // subclassing. Rather than make a new template base for
-      // CFRefReportVisitor, we simply override clone() to do the right thing.
-      // This could be trouble someday if BugReporterVisitorImpl is ever
-      // used for something else besides a convenient implementation of clone().
-      return llvm::make_unique<CFRefLeakReportVisitor>(*this);
-    }
   };
 
   class CFRefReport : public BugReport {
@@ -1977,8 +1968,8 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
     if (isa<ObjCIvarRefExpr>(S) &&
-        isSynthesizedAccessor(LCtx->getCurrentStackFrame())) {
-      S = LCtx->getCurrentStackFrame()->getCallSite();
+        isSynthesizedAccessor(LCtx->getStackFrame())) {
+      S = LCtx->getStackFrame()->getCallSite();
     }
 
     if (isa<ObjCArrayLiteral>(S)) {
@@ -2306,7 +2297,7 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
       const VarRegion *VR = R->getBaseRegion()->getAs<VarRegion>();
       // Do not show local variables belonging to a function other than
       // where the error is reported.
-      if (!VR || VR->getStackFrame() == LeakContext->getCurrentStackFrame())
+      if (!VR || VR->getStackFrame() == LeakContext->getStackFrame())
         FirstBinding = R;
     }
 
@@ -2364,14 +2355,14 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
                         InterestingMethodContext);
 }
 
-std::unique_ptr<PathDiagnosticPiece>
+std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::getEndPath(BugReporterContext &BRC,
                                const ExplodedNode *EndN, BugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
-std::unique_ptr<PathDiagnosticPiece>
+std::shared_ptr<PathDiagnosticPiece>
 CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
                                    const ExplodedNode *EndN, BugReport &BR) {
 
@@ -2458,7 +2449,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
     os << " is not referenced later in this execution path and has a retain "
           "count of +" << RV->getCount();
 
-  return llvm::make_unique<PathDiagnosticEventPiece>(L, os.str());
+  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
 void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
@@ -2752,7 +2743,7 @@ public:
 
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 
   ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
                                RefVal V, ArgEffect E, RefVal::Kind &hasErr,
@@ -4000,7 +3991,8 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
   Ctx.addTransition(state);
 }
 
-void RetainCountChecker::checkEndFunction(CheckerContext &Ctx) const {
+void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
+                                          CheckerContext &Ctx) const {
   ProgramStateRef state = Ctx.getState();
   RefBindingsTy B = state->get<RefBindings>();
   ExplodedNode *Pred = Ctx.getPredecessor();

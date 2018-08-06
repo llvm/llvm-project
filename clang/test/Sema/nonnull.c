@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // rdar://9584012
+//
+// Verify All warnings are still issued with the option -fno-delete-null-pointer-checks
+// if nullptr is passed to function with nonnull attribute.
+// RUN: %clang_cc1 -fsyntax-only -fno-delete-null-pointer-checks -verify %s
 
 typedef struct {
 	char *str;

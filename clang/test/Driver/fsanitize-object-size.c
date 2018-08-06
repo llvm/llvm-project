@@ -2,8 +2,9 @@
 //
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size %s -O0 -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=null,object-size %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-OSIZE
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-OSIZE-NO-WARNING
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=null,object-size %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
+// RUN: %clang -target x86_64-linux-gnu -Werror -fsanitize=null,object-size %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE-NO-WARNING
 
 // Check that the object size check is enabled at other optimization levels.
 //

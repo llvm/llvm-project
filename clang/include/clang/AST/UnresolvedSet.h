@@ -57,7 +57,7 @@ public:
   NamedDecl *operator->() const { return **this; }
 };
 
-/// \brief A set of unresolved declarations.
+/// A set of unresolved declarations.
 class UnresolvedSetImpl {
   using DeclsTy = SmallVectorImpl<DeclAccessPair>;
 
@@ -140,7 +140,7 @@ private:
   }
 };
 
-/// \brief A set of unresolved declarations.
+/// A set of unresolved declarations.
 template <unsigned InlineCapacity> class UnresolvedSet :
     public UnresolvedSetImpl {
   SmallVector<DeclAccessPair, InlineCapacity> Decls;

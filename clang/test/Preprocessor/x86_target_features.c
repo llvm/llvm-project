@@ -376,9 +376,9 @@
 
 // ADX: #define __ADX__ 1
 
-// RUN: %clang -target i386-unknown-unknown -mshstk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CETSS %s
+// RUN: %clang -target i386-unknown-unknown -mshstk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=SHSTK %s
 
-// CETSS: #define __SHSTK__ 1
+// SHSTK: #define __SHSTK__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdseed -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDSEED %s
 
@@ -436,3 +436,6 @@
 // VPCLMULQDQNOPCLMUL-NOT: #define __PCLMUL__ 1
 // VPCLMULQDQNOPCLMUL-NOT: #define __VPCLMULQDQ__ 1
 
+// RUN: %clang -target i386-unknown-unknown -march=atom -mrdpid -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDPID %s
+
+// RDPID: #define __RDPID__ 1

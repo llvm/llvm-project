@@ -69,7 +69,7 @@ void test_4(int x, int y) {
   static int stat;
   clang_analyzer_explain(x + 1); // expected-warning-re{{{{^\(argument 'x'\) \+ 1$}}}}
   clang_analyzer_explain(1 + y); // expected-warning-re{{{{^\(argument 'y'\) \+ 1$}}}}
-  clang_analyzer_explain(x + y); // expected-warning-re{{{{^unknown value$}}}}
+  clang_analyzer_explain(x + y); // expected-warning-re{{{{^\(argument 'x'\) \+ \(argument 'y'\)$}}}}
   clang_analyzer_explain(z); // expected-warning-re{{{{^undefined value$}}}}
   clang_analyzer_explain(&z); // expected-warning-re{{{{^pointer to local variable 'z'$}}}}
   clang_analyzer_explain(stat); // expected-warning-re{{{{^signed 32-bit integer '0'$}}}}

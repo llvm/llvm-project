@@ -1714,7 +1714,7 @@ Stmt *RewriteModernObjC::RewriteObjCForCollectionStmt(ObjCForCollectionStmt *S,
   else {
     DeclRefExpr *DR = cast<DeclRefExpr>(S->getElement());
     elementName = DR->getDecl()->getName();
-    ValueDecl *VD = cast<ValueDecl>(DR->getDecl());
+    ValueDecl *VD = DR->getDecl();
     if (VD->getType()->isObjCQualifiedIdType() ||
         VD->getType()->isObjCQualifiedInterfaceType())
       // Simply use 'id' for all qualified types.
@@ -2590,7 +2590,7 @@ Stmt *RewriteModernObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   Expr *Unop = new (Context) UnaryOperator(DRE, UO_AddrOf,
                                  Context->getPointerType(DRE->getType()),
                                            VK_RValue, OK_Ordinary,
-                                           SourceLocation());
+                                           SourceLocation(), false);
   // cast to NSConstantString *
   CastExpr *cast = NoTypeInfoCStyleCastExpr(Context, Exp->getType(),
                                             CK_CPointerToObjCPointerCast, Unop);
@@ -3295,7 +3295,7 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                              VK_RValue, OK_Ordinary,
-                                             SourceLocation());
+                                             SourceLocation(), false);
       SuperRep = NoTypeInfoCStyleCastExpr(Context,
                                           Context->getPointerType(superType),
                                           CK_BitCast, SuperRep);
@@ -3313,7 +3313,7 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                              VK_RValue, OK_Ordinary,
-                                             SourceLocation());
+                                             SourceLocation(), false);
     }
     MsgExprs.push_back(SuperRep);
     break;
@@ -3389,7 +3389,7 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                VK_RValue, OK_Ordinary,
-                               SourceLocation());
+                               SourceLocation(), false);
       SuperRep = NoTypeInfoCStyleCastExpr(Context,
                                Context->getPointerType(superType),
                                CK_BitCast, SuperRep);
@@ -4720,7 +4720,7 @@ Stmt *RewriteModernObjC::RewriteLocalVariableExternalStorage(DeclRefExpr *DRE) {
       return DRE;
   Expr *Exp = new (Context) UnaryOperator(DRE, UO_Deref, DRE->getType(),
                                           VK_LValue, OK_Ordinary,
-                                          DRE->getLocation());
+                                          DRE->getLocation(), false);
   // Need parens to enforce precedence.
   ParenExpr *PE = new (Context) ParenExpr(SourceLocation(), SourceLocation(), 
                                           Exp);
@@ -5314,7 +5314,7 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
                                 UO_AddrOf,
                                 Context->getPointerType(Context->VoidPtrTy), 
                                 VK_RValue, OK_Ordinary,
-                                SourceLocation());
+                                SourceLocation(), false);
   InitExprs.push_back(DescRefExpr); 
   
   // Add initializers for any closure decl refs.
@@ -5332,7 +5332,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
           QualType QT = (*I)->getType();
           QT = Context->getPointerType(QT);
           Exp = new (Context) UnaryOperator(Exp, UO_AddrOf, QT, VK_RValue,
-                                            OK_Ordinary, SourceLocation());
+                                            OK_Ordinary, SourceLocation(),
+                                            false);
         }
       } else if (isTopLevelBlockPointerType((*I)->getType())) {
         FD = SynthBlockInitFunctionDecl((*I)->getName());
@@ -5348,7 +5349,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
           QualType QT = (*I)->getType();
           QT = Context->getPointerType(QT);
           Exp = new (Context) UnaryOperator(Exp, UO_AddrOf, QT, VK_RValue,
-                                            OK_Ordinary, SourceLocation());
+                                            OK_Ordinary, SourceLocation(),
+                                            false);
         }
         
       }
@@ -5388,7 +5390,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
       if (!isNestedCapturedVar)
           Exp = new (Context) UnaryOperator(Exp, UO_AddrOf,
                                      Context->getPointerType(Exp->getType()),
-                                     VK_RValue, OK_Ordinary, SourceLocation());
+                                     VK_RValue, OK_Ordinary, SourceLocation(),
+                                     false);
       Exp = NoTypeInfoCStyleCastExpr(Context, castT, CK_BitCast, Exp);
       InitExprs.push_back(Exp);
     }
@@ -5414,7 +5417,7 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
   
   NewRep = new (Context) UnaryOperator(NewRep, UO_AddrOf,
                              Context->getPointerType(NewRep->getType()),
-                             VK_RValue, OK_Ordinary, SourceLocation());
+                             VK_RValue, OK_Ordinary, SourceLocation(), false);
   NewRep = NoTypeInfoCStyleCastExpr(Context, FType, CK_BitCast,
                                     NewRep);
   // Put Paren around the call.
@@ -6744,9 +6747,9 @@ static void Write_IvarOffsetVar(RewriteModernObjC &RewriteObj,
    if (Ivar->getAccessControl() == ObjCIvarDecl::Private ||
        Ivar->getAccessControl() == ObjCIvarDecl::Package ||
        Class->getVisibility() == HiddenVisibility)
-     Visibility shoud be: HiddenVisibility;
+     Visibility should be: HiddenVisibility;
    else
-     Visibility shoud be: DefaultVisibility;
+     Visibility should be: DefaultVisibility;
   */
   
   Result += "\n";
@@ -7558,7 +7561,7 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
       
       Expr *Exp = new (Context) UnaryOperator(castExpr, UO_Deref, IvarT,
                                               VK_LValue, OK_Ordinary,
-                                              SourceLocation());
+                                              SourceLocation(), false);
       PE = new (Context) ParenExpr(OldRange.getBegin(),
                                    OldRange.getEnd(),
                                    Exp);

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides an action to find all relevant USRs at a point.
+/// Provides an action to find all relevant USRs at a point.
 ///
 //===----------------------------------------------------------------------===//
 

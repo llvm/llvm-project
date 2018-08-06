@@ -17,6 +17,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -464,7 +465,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                            /*ShowDepth=*/false);
   }
 
-  if (DepOpts.PrintShowIncludes) {
+  if (DepOpts.ShowIncludesDest != ShowIncludesDestination::None) {
     AttachHeaderIncludeGen(*PP, DepOpts,
                            /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
@@ -875,36 +876,7 @@ bool CompilerInstance::InitializeSourceManager(
 
   // Figure out where to get and map in the main file.
   if (InputFile != "-") {
-    const FileEntry *File;
-    if (Opts.FindPchSource.empty()) {
-      File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
-    } else {
-      // When building a pch file in clang-cl mode, the .h file is built as if
-      // it was included by a cc file.  Since the driver doesn't know about
-      // all include search directories, the frontend must search the input
-      // file through HeaderSearch here, as if it had been included by the
-      // cc file at Opts.FindPchSource.
-      const FileEntry *FindFile = FileMgr.getFile(Opts.FindPchSource);
-      if (!FindFile) {
-        Diags.Report(diag::err_fe_error_reading) << Opts.FindPchSource;
-        return false;
-      }
-      const DirectoryLookup *UnusedCurDir;
-      SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 16>
-          Includers;
-      Includers.push_back(std::make_pair(FindFile, FindFile->getDir()));
-      File = HS->LookupFile(InputFile, SourceLocation(), /*isAngled=*/false,
-                            /*FromDir=*/nullptr,
-                            /*CurDir=*/UnusedCurDir, Includers,
-                            /*SearchPath=*/nullptr,
-                            /*RelativePath=*/nullptr,
-                            /*RequestingModule=*/nullptr,
-                            /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
-                            /*SkipCache=*/true);
-      // Also add the header to /showIncludes output.
-      if (File)
-        DepOpts.ShowIncludesPretendHeader = File->getName();
-    }
+    const FileEntry *File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
     if (!File) {
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;
@@ -1065,7 +1037,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   return !getDiagnostics().getClient()->getNumErrors();
 }
 
-/// \brief Determine the appropriate source input kind based on language
+/// Determine the appropriate source input kind based on language
 /// options.
 static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
   if (LangOpts.OpenCL)
@@ -1077,7 +1049,7 @@ static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
   return LangOpts.CPlusPlus ? InputKind::CXX : InputKind::C;
 }
 
-/// \brief Compile a module file for the given module, using the options 
+/// Compile a module file for the given module, using the options 
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
 static bool
@@ -1193,7 +1165,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  const unsigned ThreadStackSize = 8 << 20;
   llvm::CrashRecoveryContext CRC;
   CRC.RunSafelyOnThread(
       [&]() {
@@ -1206,7 +1177,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
         }
         Instance.ExecuteAction(*Action);
       },
-      ThreadStackSize);
+      DesiredStackSize);
 
   PostBuildStep(Instance);
 
@@ -1236,7 +1207,7 @@ static const FileEntry *getPublicModuleMap(const FileEntry *File,
   return FileMgr.getFile(PublicFilename);
 }
 
-/// \brief Compile a module file for the given module, using the options 
+/// Compile a module file for the given module, using the options 
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
 static bool compileModuleImpl(CompilerInstance &ImportingInstance,
@@ -1355,7 +1326,7 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
         // case of timeout, build it ourselves.
         Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
             << Module->Name;
-        // Clear the lock file so that future invokations can make progress.
+        // Clear the lock file so that future invocations can make progress.
         Locked.unsafeRemoveLockFile();
         continue;
       }
@@ -1385,7 +1356,7 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
   }
 }
 
-/// \brief Diagnose differences between the current definition of the given
+/// Diagnose differences between the current definition of the given
 /// configuration macro and the definition provided on the command line.
 static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
                              Module *Mod, SourceLocation ImportLoc) {
@@ -1443,13 +1414,13 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   }
 }
 
-/// \brief Write a new timestamp file with the given path.
+/// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;
   llvm::raw_fd_ostream Out(TimestampFile.str(), EC, llvm::sys::fs::F_None);
 }
 
-/// \brief Prune the module cache of modules that haven't been accessed in
+/// Prune the module cache of modules that haven't been accessed in
 /// a long time.
 static void pruneModuleCache(const HeaderSearchOptions &HSOpts) {
   struct stat StatBuf;
@@ -1637,15 +1608,22 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   if (!ModuleManager)
     createModuleManager();
 
+  // If -Wmodule-file-config-mismatch is mapped as an error or worse, allow the
+  // ASTReader to diagnose it, since it can produce better errors that we can.
+  bool ConfigMismatchIsRecoverable =
+      getDiagnostics().getDiagnosticLevel(diag::warn_module_config_mismatch,
+                                          SourceLocation())
+        <= DiagnosticsEngine::Warning;
+
   auto Listener = llvm::make_unique<ReadModuleNames>(*this);
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*ModuleManager,
                                                    std::move(Listener));
 
   // Try to load the module file.
-  switch (ModuleManager->ReadAST(FileName, serialization::MK_ExplicitModule,
-                                 SourceLocation(),
-                                 ASTReader::ARR_ConfigurationMismatch)) {
+  switch (ModuleManager->ReadAST(
+      FileName, serialization::MK_ExplicitModule, SourceLocation(),
+      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
   case ASTReader::Success:
     // We successfully loaded the module file; remember the set of provided
     // modules so that we don't try to load implicit modules for them.
@@ -1710,8 +1688,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     // Retrieve the cached top-level module.
     Module = Known->second;    
   } else if (ModuleName == getLangOpts().CurrentModule) {
-    // This is the module we're building. 
-    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+    // This is the module we're building.
+    Module = PP->getHeaderSearchInfo().lookupModule(
+        ModuleName, /*AllowSearch*/ true,
+        /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
     /// FIXME: perhaps we should (a) look for a module using the module name
     //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
     //if (Module == nullptr) {
@@ -1723,7 +1703,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
   } else {
     // Search for a module with the given name.
-    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+    Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
+                                                    !IsInclusionDirective);
     HeaderSearchOptions &HSOpts =
         PP->getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -1800,7 +1781,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                                    ImportLoc, ARRFlags)) {
     case ASTReader::Success: {
       if (Source != ModuleCache && !Module) {
-        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
+                                                        !IsInclusionDirective);
         if (!Module || !Module->getASTFile() ||
             FileMgr->getFile(ModuleFileName) != Module->getASTFile()) {
           // Error out if Module does not refer to the file in the prebuilt
@@ -1931,7 +1913,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
             PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
         PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
-        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule))
+        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, true,
+                                                   !IsInclusionDirective))
           Sub =
               loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
         if (Sub) {

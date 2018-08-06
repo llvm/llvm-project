@@ -483,7 +483,7 @@ void TokenLexer::ExpandFunctionArguments() {
       bool VaArgsPseudoPaste = false;
       // If this is the GNU ", ## __VA_ARGS__" extension, and we just learned
       // that __VA_ARGS__ expands to multiple tokens, avoid a pasting error when
-      // the expander trys to paste ',' with the first token of the __VA_ARGS__
+      // the expander tries to paste ',' with the first token of the __VA_ARGS__
       // expansion.
       if (NonEmptyPasteBefore && ResultToks.size() >= 2 &&
           ResultToks[ResultToks.size()-2].is(tok::comma) &&
@@ -574,7 +574,7 @@ void TokenLexer::ExpandFunctionArguments() {
   }
 }
 
-/// \brief Checks if two tokens form wide string literal.
+/// Checks if two tokens form wide string literal.
 static bool isWideStringLiteralFromMacro(const Token &FirstTok,
                                          const Token &SecondTok) {
   return FirstTok.is(tok::identifier) &&
@@ -865,9 +865,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     EndLoc = getExpansionLocForMacroDefLoc(EndLoc);
   FileID MacroFID = SM.getFileID(MacroExpansionStart);
   while (SM.getFileID(StartLoc) != MacroFID)
-    StartLoc = SM.getImmediateExpansionRange(StartLoc).first;
+    StartLoc = SM.getImmediateExpansionRange(StartLoc).getBegin();
   while (SM.getFileID(EndLoc) != MacroFID)
-    EndLoc = SM.getImmediateExpansionRange(EndLoc).second;
+    EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
     
   LHSTok.setLocation(SM.createExpansionLoc(LHSTok.getLocation(), StartLoc, EndLoc,
                                         LHSTok.getLength()));
@@ -918,7 +918,7 @@ void TokenLexer::HandleMicrosoftCommentPaste(Token &Tok, SourceLocation OpLoc) {
   PP.HandleMicrosoftCommentPaste(Tok);
 }
 
-/// \brief If \arg loc is a file ID and points inside the current macro
+/// If \arg loc is a file ID and points inside the current macro
 /// definition, returns the appropriate source location pointing at the
 /// macro expansion source location entry, otherwise it returns an invalid
 /// SourceLocation.
@@ -937,7 +937,7 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
   return MacroExpansionStart.getLocWithOffset(relativeOffset);
 }
 
-/// \brief Finds the tokens that are consecutive (from the same FileID)
+/// Finds the tokens that are consecutive (from the same FileID)
 /// creates a single SLocEntry, and assigns SourceLocations to each token that
 /// point to that SLocEntry. e.g for
 ///   assert(foo == bar);
@@ -1007,7 +1007,7 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
   }
 }
 
-/// \brief Creates SLocEntries and updates the locations of macro argument
+/// Creates SLocEntries and updates the locations of macro argument
 /// tokens to their new expanded locations.
 ///
 /// \param ArgIdSpellLoc the location of the macro argument id inside the macro

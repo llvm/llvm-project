@@ -15,7 +15,7 @@
 
 namespace clang {
 
-/// \brief Carries a Clang diagnostic in an llvm::Error.
+/// Carries a Clang diagnostic in an llvm::Error.
 ///
 /// Users should emit the stored diagnostic using the DiagnosticsEngine.
 class DiagnosticError : public llvm::ErrorInfo<DiagnosticError> {

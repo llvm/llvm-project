@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -debug-info-kind=limited -std=c++11 -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=limited -std=c++11 -S -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap %s
 // PR19864
 extern int v[2];
 int a = 0, b = 0;

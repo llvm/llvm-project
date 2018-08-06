@@ -103,7 +103,7 @@ void func(Strong *);
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 24
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %[[V4]], i8 0, i64 8, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @__default_constructor_8_s16(i8** %[[DST:.*]])
@@ -114,7 +114,7 @@ void func(Strong *);
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 16
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %[[V4]], i8 0, i64 8, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @__destructor_8_s16_s24(i8** %[[DST:.*]])
@@ -192,7 +192,7 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
 // CHECK: %[[V2:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V3:.*]] = bitcast i8** %[[V1]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %[[V2]], i8* %[[V3]], i64 16, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[V2]], i8* align 8 %[[V3]], i64 16, i1 false)
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V5:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 16
 // CHECK: %[[V6:.*]] = bitcast i8* %[[V5]] to i8**
@@ -475,7 +475,7 @@ void test_variable_length_array(int n) {
 }
 
 // CHECK: define linkonce_odr hidden void @__default_constructor_8_AB8s8n4_s8_AE(
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %{{.*}}, i8 0, i64 32, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %{{.*}}, i8 0, i64 32, i1 false)
 void test_constructor_destructor_IDArray(void) {
   IDArray t;
 }
@@ -509,8 +509,8 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 // CHECK: store i16 %[[V4]], i16* %{{.*}}, align 8
 // CHECK: %[[V21:.*]] = load i32, i32* %{{.*}}, align 8
 // CHECK: store i32 %[[V21]], i32* %{{.*}}, align 8
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 12, i32 8, i1 false)
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 9, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 9, i1 false)
 // CHECK: %[[V54:.*]] = bitcast i8** %[[V0:.*]] to %[[STRUCT_BITFIELD1]]*
 // CHECK: %[[I5:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], %[[STRUCT_BITFIELD1]]* %[[V54]], i32 0, i32 8
 // CHECK: %[[V55:.*]] = bitcast i8** %[[V1:.*]] to %[[STRUCT_BITFIELD1]]*

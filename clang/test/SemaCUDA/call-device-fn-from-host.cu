@@ -83,3 +83,10 @@ template <typename T>
 __host__ __device__ void fn_ptr_template() {
   auto* ptr = &device_fn;  // Not an error because the template isn't instantiated.
 }
+
+// Launching a kernel from a host function does not result in code generation
+// for it, so calling HD function which calls a D function should not trigger
+// errors.
+static __host__ __device__ void hd_func() { device_fn(); }
+__global__ void kernel() { hd_func(); }
+void host_func(void) { kernel<<<1, 1>>>(); }

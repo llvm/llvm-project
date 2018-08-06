@@ -146,7 +146,7 @@ documentation <LibTooling.html>`_.
       static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
       // A help message for this specific tool can be added afterwards.
-      static cl::extrahelp MoreHelp("\nMore help text...");
+      static cl::extrahelp MoreHelp("\nMore help text...\n");
 
       int main(int argc, const char **argv) {
         CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);

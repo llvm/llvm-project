@@ -36,17 +36,17 @@ void f(void) {
   // CHECK: %[[V2:.*]] = alloca <4 x i32>, align 16
 
   // CHECK: %[[v0:.*]] = bitcast [6 x [6 x float]]* %A to i8*
-  // CHECK: call void @llvm.memset.p0i8.i32(i8* %[[v0]], i8 0, i32 144, i32 4, i1 false)
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* align 4 %[[v0]], i8 0, i32 144, i1 false)
   // CHECK: %[[v1:.*]] = bitcast i8* %[[v0]] to [6 x [6 x float]]*
-  // CHECK: %[[v2:.*]] = getelementptr [6 x [6 x float]], [6 x [6 x float]]* %[[v1]], i32 0, i32 0
-  // CHECK: %[[v3:.*]] = getelementptr [6 x float], [6 x float]* %[[v2]], i32 0, i32 0
-  // CHECK: store float 1.000000e+00, float* %[[v3]]
-  // CHECK: %[[v4:.*]] = getelementptr [6 x float], [6 x float]* %[[v2]], i32 0, i32 1
-  // CHECK: store float 2.000000e+00, float* %[[v4]]
+  // CHECK: %[[v2:.*]] = getelementptr inbounds [6 x [6 x float]], [6 x [6 x float]]* %[[v1]], i32 0, i32 0
+  // CHECK: %[[v3:.*]] = getelementptr inbounds [6 x float], [6 x float]* %[[v2]], i32 0, i32 0
+  // CHECK: store float 1.000000e+00, float* %[[v3]], align 4
+  // CHECK: %[[v4:.*]] = getelementptr inbounds [6 x float], [6 x float]* %[[v2]], i32 0, i32 1
+  // CHECK: store float 2.000000e+00, float* %[[v4]], align 4
   float A[6][6]  = {1.0f, 2.0f};
 
   // CHECK: %[[v5:.*]] = bitcast %struct.StrucTy* %S to i8*
-  // CHECK: call void @llvm.memcpy.p0i8.p2i8.i32(i8* %[[v5]], i8 addrspace(2)* bitcast (%struct.StrucTy addrspace(2)* @f.S to i8 addrspace(2)*), i32 12, i32 4, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p2i8.i32(i8* align 4 %[[v5]], i8 addrspace(2)* align 4 bitcast (%struct.StrucTy addrspace(2)* @f.S to i8 addrspace(2)*), i32 12, i1 false)
   StrucTy S = {1, 2};
 
   // CHECK: store <2 x i32> <i32 1, i32 2>, <2 x i32>* %[[compoundliteral1]], align 8

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Defines the PreprocessorLexer interface.
+/// Defines the PreprocessorLexer interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,21 +39,21 @@ protected:
   /// The SourceManager FileID corresponding to the file being lexed.
   const FileID FID;
 
-  /// \brief Number of SLocEntries before lexing the file.
+  /// Number of SLocEntries before lexing the file.
   unsigned InitialNumSLocEntries = 0;
 
   //===--------------------------------------------------------------------===//
   // Context-specific lexing flags set by the preprocessor.
   //===--------------------------------------------------------------------===//
 
-  /// \brief True when parsing \#XXX; turns '\\n' into a tok::eod token.
+  /// True when parsing \#XXX; turns '\\n' into a tok::eod token.
   bool ParsingPreprocessorDirective = false;
 
-  /// \brief True after \#include; turns \<xx> into a tok::angle_string_literal
+  /// True after \#include; turns \<xx> into a tok::angle_string_literal
   /// token.
   bool ParsingFilename = false;
 
-  /// \brief True if in raw mode.
+  /// True if in raw mode.
   ///
   /// Raw mode disables interpretation of tokens and is a far faster mode to
   /// lex in than non-raw-mode.  This flag:
@@ -68,11 +68,11 @@ protected:
   /// Note that in raw mode that the PP pointer may be null.
   bool LexingRawMode = false;
 
-  /// \brief A state machine that detects the \#ifndef-wrapping a file
+  /// A state machine that detects the \#ifndef-wrapping a file
   /// idiom for the multiple-include optimization.
   MultipleIncludeOpt MIOpt;
 
-  /// \brief Information about the set of \#if/\#ifdef/\#ifndef blocks
+  /// Information about the set of \#if/\#ifdef/\#ifndef blocks
   /// we are currently in.
   SmallVector<PPConditionalInfo, 4> ConditionalStack;
 
@@ -82,7 +82,7 @@ protected:
 
   virtual void IndirectLex(Token& Result) = 0;
 
-  /// \brief Return the source location for the next observable location.
+  /// Return the source location for the next observable location.
   virtual SourceLocation getSourceLocation() = 0;
 
   //===--------------------------------------------------------------------===//
@@ -114,7 +114,7 @@ protected:
     return false;
   }
 
-  /// \brief Return the top of the conditional stack.
+  /// Return the top of the conditional stack.
   /// \pre This requires that there be a conditional active.
   PPConditionalInfo &peekConditionalLevel() {
     assert(!ConditionalStack.empty() && "No conditionals active!");
@@ -130,23 +130,23 @@ public:
   //===--------------------------------------------------------------------===//
   // Misc. lexing methods.
 
-  /// \brief After the preprocessor has parsed a \#include, lex and
+  /// After the preprocessor has parsed a \#include, lex and
   /// (potentially) macro expand the filename.
   ///
   /// If the sequence parsed is not lexically legal, emit a diagnostic and
   /// return a result EOD token.
   void LexIncludeFilename(Token &Result);
 
-  /// \brief Inform the lexer whether or not we are currently lexing a
+  /// Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.
   void setParsingPreprocessorDirective(bool f) {
     ParsingPreprocessorDirective = f;
   }
 
-  /// \brief Return true if this lexer is in raw mode or not.
+  /// Return true if this lexer is in raw mode or not.
   bool isLexingRawMode() const { return LexingRawMode; }
 
-  /// \brief Return the preprocessor object for this lexer.
+  /// Return the preprocessor object for this lexer.
   Preprocessor *getPP() const { return PP; }
 
   FileID getFileID() const {
@@ -155,7 +155,7 @@ public:
     return FID;
   }
 
-  /// \brief Number of SLocEntries before lexing the file.
+  /// Number of SLocEntries before lexing the file.
   unsigned getInitialNumSLocEntries() const {
     return InitialNumSLocEntries;
   }
@@ -164,7 +164,7 @@ public:
   /// getFileID(), this only works for lexers with attached preprocessors.
   const FileEntry *getFileEntry() const;
 
-  /// \brief Iterator that traverses the current stack of preprocessor
+  /// Iterator that traverses the current stack of preprocessor
   /// conditional directives (\#if/\#ifdef/\#ifndef).
   using conditional_iterator =
       SmallVectorImpl<PPConditionalInfo>::const_iterator;

@@ -1,4 +1,4 @@
-//===--- SerializedDiagnosticReader.cpp - Reads diagnostics ---------------===//
+//===- SerializedDiagnosticReader.cpp - Reads diagnostics -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,11 +9,22 @@
 
 #include "clang/Frontend/SerializedDiagnosticReader.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <cstdint>
+#include <system_error>
 
 using namespace clang;
-using namespace clang::serialized_diags;
+using namespace serialized_diags;
 
 std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   // Open the diagnostics file.
@@ -44,13 +55,12 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
 
     std::error_code EC;
     switch (Stream.ReadSubBlockID()) {
-    case llvm::bitc::BLOCKINFO_BLOCK_ID: {
+    case llvm::bitc::BLOCKINFO_BLOCK_ID:
       BlockInfo = Stream.ReadBlockInfoBlock();
       if (!BlockInfo)
         return SDError::MalformedBlockInfoBlock;
       Stream.setBlockInfo(&*BlockInfo);
       continue;
-    }
     case BLOCK_META:
       if ((EC = readMetaBlock(Stream)))
         return EC;
@@ -65,7 +75,7 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
       continue;
     }
   }
-  return std::error_code();
+  return {};
 }
 
 enum class SerializedDiagnosticReader::Cursor {
@@ -132,7 +142,7 @@ SerializedDiagnosticReader::readMetaBlock(llvm::BitstreamCursor &Stream) {
     case Cursor::BlockEnd:
       if (!VersionChecked)
         return SDError::MissingVersion;
-      return std::error_code();
+      return {};
     }
 
     SmallVector<uint64_t, 1> Record;
@@ -176,7 +186,7 @@ SerializedDiagnosticReader::readDiagnosticBlock(llvm::BitstreamCursor &Stream) {
     case Cursor::BlockEnd:
       if ((EC = visitEndOfDiagnostic()))
         return EC;
-      return std::error_code();
+      return {};
     case Cursor::Record:
       break;
     }
@@ -253,12 +263,14 @@ SerializedDiagnosticReader::readDiagnosticBlock(llvm::BitstreamCursor &Stream) {
 }
 
 namespace {
+
 class SDErrorCategoryType final : public std::error_category {
   const char *name() const noexcept override {
     return "clang.serialized_diags";
   }
+
   std::string message(int IE) const override {
-    SDError E = static_cast<SDError>(IE);
+    auto E = static_cast<SDError>(IE);
     switch (E) {
     case SDError::CouldNotLoad:
       return "Failed to open diagnostics file";
@@ -290,7 +302,8 @@ class SDErrorCategoryType final : public std::error_category {
     llvm_unreachable("Unknown error type!");
   }
 };
-}
+
+} // namespace
 
 static llvm::ManagedStatic<SDErrorCategoryType> ErrorCategory;
 const std::error_category &clang::serialized_diags::SDErrorCategory() {

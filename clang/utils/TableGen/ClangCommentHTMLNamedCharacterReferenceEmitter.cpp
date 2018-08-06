@@ -22,7 +22,7 @@
 
 using namespace llvm;
 
-/// \brief Convert a code point to the corresponding UTF-8 sequence represented
+/// Convert a code point to the corresponding UTF-8 sequence represented
 /// as a C string literal.
 ///
 /// \returns true on success.

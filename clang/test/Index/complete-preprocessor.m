@@ -13,7 +13,7 @@
 
 FOO(in,t) value;
 
-// RUN: c-index-test -code-completion-at=%s:4:2 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:4:3 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: NotImplemented:{TypedText define}{HorizontalSpace  }{Placeholder macro} (40)
 // CHECK-CC1-NEXT: NotImplemented:{TypedText define}{HorizontalSpace  }{Placeholder macro}{LeftParen (}{Placeholder args}{RightParen )} (40)
 // CHECK-CC1-NEXT: NotImplemented:{TypedText error}{HorizontalSpace  }{Placeholder message} (40)
@@ -55,8 +55,8 @@ FOO(in,t) value;
 // RUN: c-index-test -code-completion-at=%s:9:8 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // CHECK-CC3: macro definition:{TypedText BAR} (40)
 // CHECK-CC3: macro definition:{TypedText FOO} (40)
-// RUN: c-index-test -code-completion-at=%s:11:12 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // RUN: c-index-test -code-completion-at=%s:11:13 %s | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: c-index-test -code-completion-at=%s:11:14 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // RUN: c-index-test -code-completion-at=%s:11:5 %s | FileCheck -check-prefix=CHECK-CC4 %s
 // CHECK-CC4: macro definition:{TypedText BAR} (70)
 // CHECK-CC4: macro definition:{TypedText FOO}{LeftParen (}{Placeholder a}{Comma , }{Placeholder b}{RightParen )} (70)

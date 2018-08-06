@@ -159,6 +159,8 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL20
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-fast-relaxed-math \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FRM
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=c++ \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CLCPP10
 // CHECK-CL10: #define CL_VERSION_1_0 100
 // CHECK-CL10: #define CL_VERSION_1_1 110
 // CHECK-CL10: #define CL_VERSION_1_2 120
@@ -184,6 +186,10 @@
 // CHECK-CL20: #define __OPENCL_C_VERSION__ 200
 // CHECK-CL20-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CLCPP10: #define __CL_CPP_VERSION_1_0__ 100
+// CHECK-CLCPP10: #define __OPENCL_CPP_VERSION__ 100
+// CHECK-CLCPP10-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CLCPP10-NOT: #define __ENDIAN_LITTLE__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl \
 // RUN:   | FileCheck %s --check-prefix=MSCOPE
@@ -271,3 +277,18 @@
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spir-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIR
 // CHECK-SPIR: #define __IMAGE_SUPPORT__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP
+// CHECK-HIP-NOT: #define __CUDA_ARCH__
+// CHECK-HIP: #define __HIPCC__ 1
+// CHECK-HIP-NOT: #define __HIP_DEVICE_COMPILE__ 1
+// CHECK-HIP: #define __HIP__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN:   -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV
+// CHECK-HIP-DEV-NOT: #define __CUDA_ARCH__
+// CHECK-HIP-DEV: #define __HIPCC__ 1
+// CHECK-HIP-DEV: #define __HIP_DEVICE_COMPILE__ 1
+// CHECK-HIP-DEV: #define __HIP__ 1

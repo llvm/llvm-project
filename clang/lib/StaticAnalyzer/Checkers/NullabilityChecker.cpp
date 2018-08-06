@@ -128,8 +128,7 @@ public:
   DefaultBool NeedTracking;
 
 private:
-  class NullabilityBugVisitor
-      : public BugReporterVisitorImpl<NullabilityBugVisitor> {
+  class NullabilityBugVisitor : public BugReporterVisitor {
   public:
     NullabilityBugVisitor(const MemRegion *M) : Region(M) {}
 
@@ -251,7 +250,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(NullabilityMap, const MemRegion *,
 // initial direct violation has been discovered, and (3) warning after a direct
 // violation that has been implicitly or explicitly suppressed (for
 // example, with a cast of NULL to _Nonnull). In essence, once an invariant
-// violation is detected on a path, this checker will be esentially turned off
+// violation is detected on a path, this checker will be essentially turned off
 // for the rest of the analysis
 //
 // The analyzer takes this approach (rather than generating a sink node) to

@@ -205,7 +205,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   // "#pragma pack(pop, identifier, n) is undefined"
   if (Action & Sema::PSK_Pop) {
     if (Alignment && !SlotLabel.empty())
-      Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifer_and_alignment);
+      Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifier_and_alignment);
     if (PackStack.Stack.empty())
       Diag(PragmaLoc, diag::warn_pragma_pop_failed) << "pack" << "stack empty";
   }
@@ -330,7 +330,7 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
         Stack.erase(std::prev(I.base()), Stack.end());
       }
     } else if (!Stack.empty()) {
-      // We don't have a label, just pop the last entry.
+      // We do not have a label, just pop the last entry.
       CurrentValue = Stack.back().Value;
       CurrentPragmaLocation = Stack.back().PragmaLocation;
       Stack.pop_back();
@@ -389,7 +389,7 @@ bool Sema::UnifySection(StringRef SectionName,
   return false;
 }
 
-/// \brief Called on well formed \#pragma bss_seg().
+/// Called on well formed \#pragma bss_seg().
 void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
                             PragmaMsStackAction Action,
                             llvm::StringRef StackSlotLabel,
@@ -410,7 +410,7 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
   Stack->Act(PragmaLocation, Action, StackSlotLabel, SegmentName);
 }
 
-/// \brief Called on well formed \#pragma bss_seg().
+/// Called on well formed \#pragma bss_seg().
 void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
                                 int SectionFlags, StringLiteral *SegmentName) {
   UnifySection(SegmentName->getString(), SectionFlags, PragmaLocation);
@@ -520,7 +520,7 @@ attrMatcherRuleListToString(ArrayRef<attr::SubjectMatchRule> Rules) {
 
 } // end anonymous namespace
 
-void Sema::ActOnPragmaAttributePush(AttributeList &Attribute,
+void Sema::ActOnPragmaAttributePush(ParsedAttr &Attribute,
                                     SourceLocation PragmaLoc,
                                     attr::ParsedSubjectMatchRuleSet Rules) {
   SmallVector<attr::SubjectMatchRule, 4> SubjectMatchRules;
@@ -645,7 +645,7 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
   for (auto &Entry : PragmaAttributeStack) {
-    const AttributeList *Attribute = Entry.Attribute;
+    ParsedAttr *Attribute = Entry.Attribute;
     assert(Attribute && "Expected an attribute");
 
     // Ensure that the attribute can be applied to the given declaration.
@@ -659,9 +659,10 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
     if (!Applies)
       continue;
     Entry.IsUsed = true;
-    assert(!Attribute->getNext() && "Expected just one attribute");
     PragmaAttributeCurrentTargetDecl = D;
-    ProcessDeclAttributeList(S, D, Attribute);
+    ParsedAttributesView Attrs;
+    Attrs.addAtStart(Attribute);
+    ProcessDeclAttributeList(S, D, Attrs);
     PragmaAttributeCurrentTargetDecl = nullptr;
   }
 }

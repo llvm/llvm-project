@@ -178,7 +178,7 @@ namespace OverloadedMemberFunctionPointer {
   void func1() {}
 
   template<class T>
-  void func2(void(*fn)()) {} // expected-note 2 {{candidate function not viable: no overload of 'func}}
+  void func2(void(*fn)()) {} // expected-note 2 {{candidate function template not viable: no overload of 'func}}
 
   class C {
   private:

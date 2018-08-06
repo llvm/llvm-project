@@ -1,7 +1,27 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+
+#if __cplusplus < 201103L
+// expected-error@+1 {{variadic macro}}
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+#endif
+
+#if __cplusplus >= 201103L
+namespace std {
+  typedef decltype(sizeof(int)) size_t;
+
+  template<typename E> class initializer_list {
+    const E *begin;
+    size_t size;
+
+  public:
+    initializer_list();
+  };
+} // std
+#endif
 
 namespace dr1611 { // dr1611: dup 1658
   struct A { A(int); };
@@ -218,4 +238,128 @@ namespace dr1658 { // dr1658: 5
   }
 
   // assignment case is superseded by dr2180
+}
+
+namespace dr1672 { // dr1672: 7
+  struct Empty {};
+  struct A : Empty {};
+  struct B { Empty e; };
+  struct C : A { B b; int n; };
+  struct D : A { int n; B b; };
+
+  static_assert(!__is_standard_layout(C), "");
+  static_assert(__is_standard_layout(D), "");
+
+  struct E { B b; int n; };
+  struct F { int n; B b; };
+  union G { B b; int n; };
+  union H { int n; B b; };
+
+  struct X {};
+  template<typename T> struct Y : X, A { T t; };
+
+  static_assert(!__is_standard_layout(Y<E>), "");
+  static_assert(__is_standard_layout(Y<F>), "");
+  static_assert(!__is_standard_layout(Y<G>), "");
+  static_assert(!__is_standard_layout(Y<H>), "");
+  static_assert(!__is_standard_layout(Y<X>), "");
+}
+
+namespace dr1687 { // dr1687: 7
+  template<typename T> struct To {
+    operator T(); // expected-note 2{{first operand was implicitly converted to type 'int *'}}
+    // expected-note@-1 {{second operand was implicitly converted to type 'double'}}
+#if __cplusplus > 201703L
+    // expected-note@-3 2{{operand was implicitly converted to type 'dr1687::E}}
+#endif
+  };
+
+  int *a = To<int*>() + 100.0; // expected-error {{invalid operands to binary expression ('To<int *>' and 'double')}}
+  int *b = To<int*>() + To<double>(); // expected-error {{invalid operands to binary expression ('To<int *>' and 'To<double>')}}
+
+#if __cplusplus > 201703L
+  enum E1 {};
+  enum E2 {};
+  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<dr1687::E1>' and 'To<dr1687::E2>')}}
+#endif
+}
+
+namespace dr1696 { // dr1696: 7
+  namespace std_examples {
+#if __cplusplus >= 201402L
+    extern struct A a;
+    struct A {
+      const A &x = { A{a, a} };
+      const A &y = { A{} }; // expected-error {{default member initializer for 'y' needed within definition of enclosing class 'A' outside of member functions}} expected-note {{here}}
+    };
+    A a{a, a};
+#endif
+  }
+
+  struct A { A(); ~A(); };
+#if __cplusplus >= 201103L
+  struct B {
+    A &&a; // expected-note {{declared here}}
+    B() : a{} {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the constructed object}}
+  } b;
+#endif
+
+  struct C {
+    C();
+    const A &a; // expected-note {{declared here}}
+  };
+  C::C() : a(A()) {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the constructed object}}
+
+#if __cplusplus >= 201103L
+  // This is OK in C++14 onwards, per DR1815, though we don't support that yet:
+  //   D1 d1 = {};
+  // is equivalent to
+  //   D1 d1 = {A()};
+  // ... which lifetime-extends the A temporary.
+  struct D1 {
+    const A &a = A();
+#if __cplusplus < 201402L
+    // expected-error@-2 {{binds to a temporary}}
+    // expected-note@-4 {{here}}
+#else
+    // expected-warning-re@-5 {{sorry, lifetime extension {{.*}} not supported}}
+#endif
+  };
+  D1 d1 = {}; // expected-note {{here}}
+
+  struct D2 {
+    const A &a = A(); // expected-error {{binds to a temporary}}
+    D2() {} // expected-note {{used here}}
+  };
+
+  struct D3 { // expected-note {{used here}}
+    const A &a = A(); // expected-error {{binds to a temporary}}
+  };
+  D3 d3; // expected-note {{first required here}}
+
+  struct haslist1 {
+    std::initializer_list<int> il; // expected-note {{'std::initializer_list' member}}
+    haslist1(int i) : il{i, 2, 3} {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+  };
+
+  struct haslist2 {
+    std::initializer_list<int> il; // expected-note {{'std::initializer_list' member}}
+    haslist2();
+  };
+  haslist2::haslist2() : il{1, 2} {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+
+  struct haslist3 {
+    std::initializer_list<int> il = {1, 2, 3};
+  };
+
+  struct haslist4 { // expected-note {{in default member initializer}}
+    std::initializer_list<int> il = {1, 2, 3}; // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+  };
+  haslist4 hl4; // expected-note {{in implicit default constructor}}
+
+  struct haslist5 {
+    std::initializer_list<int> il = {1, 2, 3}; // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+    haslist5() {} // expected-note {{in default member initializer}}
+  };
+#endif
 }

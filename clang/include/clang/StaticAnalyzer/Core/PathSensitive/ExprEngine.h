@@ -106,11 +106,6 @@ public:
     bool IsTemporaryCtorOrDtor = false;
 
     /// This call is a constructor for a temporary that is lifetime-extended
-    /// by binding a smaller object within it to a reference, for example
-    /// 'const int &x = C().x;'.
-    bool IsTemporaryLifetimeExtendedViaSubobject = false;
-
-    /// This call is a constructor for a temporary that is lifetime-extended
     /// by binding it to a reference-type field within an aggregate,
     /// for example 'A { const C &c; }; A a = { C() };'
     bool IsTemporaryLifetimeExtendedViaAggregate = false;
@@ -228,7 +223,7 @@ public:
   ExplodedGraph &getGraph() { return G; }
   const ExplodedGraph &getGraph() const { return G; }
 
-  /// \brief Run the analyzer's garbage collection - remove dead symbols and
+  /// Run the analyzer's garbage collection - remove dead symbols and
   /// bindings from the state.
   ///
   /// Checkers can participate in this process with two callbacks:
@@ -542,7 +537,7 @@ public:
   void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src, 
                          const Expr *Ex);
   
-  std::pair<const ProgramPointTag *, const ProgramPointTag *>
+  static std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();
 
   SVal evalMinus(SVal X) {
@@ -642,7 +637,7 @@ public:
     return (*currBldrCtx->getBlock())[currStmtIdx];
   }
 
-  /// \brief Create a new state in which the call return value is binded to the
+  /// Create a new state in which the call return value is binded to the
   /// call origin expression.
   ProgramStateRef bindReturnValue(const CallEvent &Call,
                                   const LocationContext *LCtx,
@@ -653,7 +648,7 @@ public:
   void evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                 const CallEvent &Call);
 
-  /// \brief Default implementation of call evaluation.
+  /// Default implementation of call evaluation.
   void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
                        const CallEvent &Call,
                        const EvalCallOptions &CallOpts = {});
@@ -687,7 +682,7 @@ private:
     CIP_DisallowedAlways
   };
 
-  /// \brief See if a particular call should be inlined, by only looking
+  /// See if a particular call should be inlined, by only looking
   /// at the call event and the current state of analysis.
   CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
                                      const ExplodedNode *Pred,
@@ -702,12 +697,12 @@ private:
   bool inlineCall(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                   ExplodedNode *Pred, ProgramStateRef State);
 
-  /// \brief Conservatively evaluate call by invalidating regions and binding
+  /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.
   void conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                             ExplodedNode *Pred, ProgramStateRef State);
 
-  /// \brief Either inline or process the call conservatively (or both), based
+  /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.
   void BifurcateCall(const MemRegion *BifurReg,
                      const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
@@ -749,70 +744,67 @@ private:
   /// constructing into an existing region.
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
 
-  /// For a given constructor, look forward in the current CFG block to
-  /// determine the region into which an object will be constructed by \p CE.
-  /// When the lookahead fails, a temporary region is returned, and the
+  /// Update the program state with all the path-sensitive information
+  /// that's necessary to perform construction of an object with a given
+  /// syntactic construction context. If the construction context is unavailable
+  /// or unusable for any reason, a dummy temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
-  const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred,
-                                                 const ConstructionContext *CC,
-                                                 EvalCallOptions &CallOpts);
+  /// Returns the updated program state and the new object's this-region.
+  std::pair<ProgramStateRef, SVal> prepareForObjectConstruction(
+      const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
+      const ConstructionContext *CC, EvalCallOptions &CallOpts);
 
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addInitializedTemporary(
-      ProgramStateRef State, const CXXBindTemporaryExpr *BTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
+  /// Store the location of a C++ object corresponding to a statement
+  /// until the statement is actually encountered. For example, if a DeclStmt
+  /// has CXXConstructExpr as its initializer, the object would be considered
+  /// to be "under construction" between CXXConstructExpr and DeclStmt.
+  /// This allows, among other things, to keep bindings to variable's fields
+  /// made within the constructor alive until its declaration actually
+  /// goes into scope.
+  static ProgramStateRef addObjectUnderConstruction(
+      ProgramStateRef State,
+      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+      const LocationContext *LC, SVal V);
 
-  /// Check if all initialized temporary regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
-  static bool areInitializedTemporariesClear(ProgramStateRef State,
-                                             const LocationContext *FromLC,
-                                             const LocationContext *ToLC);
+  /// Mark the object sa fully constructed, cleaning up the state trait
+  /// that tracks objects under construction.
+  static ProgramStateRef finishObjectConstruction(
+      ProgramStateRef State,
+      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+      const LocationContext *LC);
 
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addTemporaryMaterialization(
-      ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
+  /// If the given statement corresponds to an object under construction,
+  /// being part of its construciton context, retrieve that object's location.
+  static Optional<SVal> getObjectUnderConstruction(
+      ProgramStateRef State,
+      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+      const LocationContext *LC);
 
-  /// Check if all temporary materialization regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
-  static bool areTemporaryMaterializationsClear(ProgramStateRef State,
-                                                const LocationContext *FromLC,
-                                                const LocationContext *ToLC);
+  /// If the given expression corresponds to a temporary that was used for
+  /// passing into an elidable copy/move constructor and that constructor
+  /// was actually elided, track that we also need to elide the destructor.
+  static ProgramStateRef elideDestructor(ProgramStateRef State,
+                                         const CXXBindTemporaryExpr *BTE,
+                                         const LocationContext *LC);
 
-  /// Adds an initialized temporary and/or a materialization, whichever is
-  /// necessary, by looking at the whole construction context. Handles
-  /// function return values, which need the construction context of the parent
-  /// stack frame, automagically.
-  ProgramStateRef addAllNecessaryTemporaryInfo(
-      ProgramStateRef State, const ConstructionContext *CC,
-      const LocationContext *LC, const MemRegion *R);
-
-  /// Store the region returned by operator new() so that the constructor
-  /// that follows it knew what location to initialize. The value should be
-  /// cleared once the respective CXXNewExpr CFGStmt element is processed.
+  /// Stop tracking the destructor that corresponds to an elided constructor.
   static ProgramStateRef
-  setCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                          const LocationContext *CallerLC, SVal V);
+  cleanupElidedDestructor(ProgramStateRef State,
+                          const CXXBindTemporaryExpr *BTE,
+                          const LocationContext *LC);
 
-  /// Retrieve the location returned by the current operator new().
-  static SVal
-  getCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                          const LocationContext *CallerLC);
+  /// Returns true if the given expression corresponds to a temporary that
+  /// was constructed for passing into an elidable copy/move constructor
+  /// and that constructor was actually elided.
+  static bool isDestructorElided(ProgramStateRef State,
+                                 const CXXBindTemporaryExpr *BTE,
+                                 const LocationContext *LC);
 
-  /// Clear the location returned by the respective operator new(). This needs
-  /// to be done as soon as CXXNewExpr CFG block is evaluated.
-  static ProgramStateRef
-  clearCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                            const LocationContext *CallerLC);
-
-  /// Check if all allocator values are clear for the given context range
-  /// (including FromLC, not including ToLC). This is useful for assertions.
-  static bool areCXXNewAllocatorValuesClear(ProgramStateRef State,
+  /// Check if all objects under construction have been fully constructed
+  /// for the given context range (including FromLC, not including ToLC).
+  /// This is useful for assertions. Also checks if elided destructors
+  /// were cleaned up.
+  static bool areAllObjectsFullyConstructed(ProgramStateRef State,
                                             const LocationContext *FromLC,
                                             const LocationContext *ToLC);
 };

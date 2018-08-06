@@ -9,12 +9,13 @@ elseif(LLVM_USE_SANITIZE_COVERAGE)
   unset(DUMMY_MAIN)
 endif()
 
-# Hack to bypass LLVM's cmake sources check and allow multiple libraries and
-# executables from this directory.
+# Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES
   ClangFuzzer.cpp
   DummyClangFuzzer.cpp
   ExampleClangProtoFuzzer.cpp
+  ExampleClangLoopProtoFuzzer.cpp
+  ExampleClangLLVMProtoFuzzer.cpp
   )
 
 if(CLANG_ENABLE_PROTO_FUZZER)
@@ -25,10 +26,19 @@ if(CLANG_ENABLE_PROTO_FUZZER)
   include_directories(${PROTOBUF_INCLUDE_DIRS})
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS cxx_proto.proto)
+  protobuf_generate_cpp(LOOP_PROTO_SRCS LOOP_PROTO_HDRS cxx_loop_proto.proto)
   set(LLVM_OPTIONAL_SOURCES ${LLVM_OPTIONAL_SOURCES} ${PROTO_SRCS})
   add_clang_library(clangCXXProto
     ${PROTO_SRCS}
     ${PROTO_HDRS}
+
+    LINK_LIBS
+    ${PROTOBUF_LIBRARIES}
+    )
+
+  add_clang_library(clangCXXLoopProto
+    ${LOOP_PROTO_SRCS}
+    ${LOOP_PROTO_HDRS}
 
     LINK_LIBS
     ${PROTOBUF_LIBRARIES}
@@ -41,24 +51,63 @@ if(CLANG_ENABLE_PROTO_FUZZER)
   # Build the protobuf->C++ translation library and driver.
   add_clang_subdirectory(proto-to-cxx)
 
+  # Build the protobuf->LLVM IR translation library and driver.
+  add_clang_subdirectory(proto-to-llvm)
+  
+  # Build the fuzzer initialization library.
+  add_clang_subdirectory(fuzzer-initialize)
+
   # Build the protobuf fuzzer
   add_clang_executable(clang-proto-fuzzer
     ${DUMMY_MAIN}
     ExampleClangProtoFuzzer.cpp
     )
 
-  target_link_libraries(clang-proto-fuzzer
-    PRIVATE
+  # Build the loop protobuf fuzzer
+  add_clang_executable(clang-loop-proto-fuzzer
+    ${DUMMY_MAIN}
+    ExampleClangLoopProtoFuzzer.cpp
+    )
+
+  # Build the llvm protobuf fuzzer
+  add_clang_executable(clang-llvm-proto-fuzzer
+    ${DUMMY_MAIN}
+    ExampleClangLLVMProtoFuzzer.cpp
+    )
+
+  set(COMMON_PROTO_FUZZ_LIBRARIES
     ${ProtobufMutator_LIBRARIES}
     ${PROTOBUF_LIBRARIES}
     ${LLVM_LIB_FUZZING_ENGINE}
-    clangCXXProto
+    clangFuzzerInitialize
+    )
+
+  target_link_libraries(clang-proto-fuzzer
+    PRIVATE
+    ${COMMON_PROTO_FUZZ_LIBRARIES}
     clangHandleCXX
+    clangCXXProto
     clangProtoToCXX
     )
+  target_link_libraries(clang-loop-proto-fuzzer
+    PRIVATE
+    ${COMMON_PROTO_FUZZ_LIBRARIES}
+    clangHandleCXX
+    clangCXXLoopProto
+    clangLoopProtoToCXX
+    )
+  target_link_libraries(clang-llvm-proto-fuzzer
+    PRIVATE
+    ${COMMON_PROTO_FUZZ_LIBRARIES}
+    clangHandleLLVM
+    clangCXXLoopProto
+    clangLoopProtoToLLVM
+    )
+
 endif()
 
 add_clang_subdirectory(handle-cxx)
+add_clang_subdirectory(handle-llvm)
 
 add_clang_executable(clang-fuzzer
   EXCLUDE_FROM_ALL

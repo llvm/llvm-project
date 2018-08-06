@@ -10,8 +10,8 @@
 // RUN:   -mno-global-merge
 // RUN: FileCheck --check-prefix=CHECK-NONE < %t %s
 
-// CHECK-NGM-ARM: "-backend-option" "-arm-global-merge=false"
-// CHECK-NGM-AARCH64: "-backend-option" "-aarch64-enable-global-merge=false"
+// CHECK-NGM-ARM: "-mllvm" "-arm-global-merge=false"
+// CHECK-NGM-AARCH64: "-mllvm" "-aarch64-enable-global-merge=false"
 
 // RUN: %clang -target armv7-unknown-unknown -### -fsyntax-only %s 2> %t \
 // RUN:   -mglobal-merge
@@ -25,8 +25,8 @@
 // RUN:   -mglobal-merge
 // RUN: FileCheck --check-prefix=CHECK-NONE < %t %s
 
-// CHECK-GM-ARM: "-backend-option" "-arm-global-merge=true"
-// CHECK-GM-AARCH64: "-backend-option" "-aarch64-enable-global-merge=true"
+// CHECK-GM-ARM: "-mllvm" "-arm-global-merge=true"
+// CHECK-GM-AARCH64: "-mllvm" "-aarch64-enable-global-merge=true"
 
 // RUN: %clang -target armv7-unknown-unknown -### -fsyntax-only %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NONE < %t %s

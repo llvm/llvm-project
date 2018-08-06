@@ -12,12 +12,12 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/AttributeList.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 
 namespace clang {
 
-/// \brief Loop optimization hint for loop and unroll pragmas.
+/// Loop optimization hint for loop and unroll pragmas.
 struct LoopHint {
   // Source range of the directive.
   SourceRange Range;

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -O2 < %s | FileCheck %s
-// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -Os < %s | FileCheck %s
-// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -Oz < %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -O2 < %s | FileCheck -allow-deprecated-dag-overlap  %s
+// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -Os < %s | FileCheck -allow-deprecated-dag-overlap  %s
+// RUN: %clang_cc1 -I %S/Inputs -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-llvm -Oz < %s | FileCheck -allow-deprecated-dag-overlap  %s
 
 #pragma clang optimize off
 

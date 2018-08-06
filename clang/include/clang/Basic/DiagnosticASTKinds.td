@@ -273,6 +273,8 @@ def note_odr_objc_synthesize_ivar_here : Note<
   "property is synthesized to ivar %0 here">;
 
 // Importing C++ ASTs
+def note_odr_friend : Note<"friend declared here">;
+def note_odr_missing_friend : Note<"no corresponding friend here">;
 def err_odr_different_num_template_parameters : Error<
   "template parameter lists have a different number of parameters (%0 vs %1)">;
 def note_odr_template_parameter_list : Note<

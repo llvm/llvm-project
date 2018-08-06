@@ -219,14 +219,14 @@ public:
     MakeUninit();
   }
 
-  /// \brief Returns whether the object performed allocations.
+  /// Returns whether the object performed allocations.
   ///
   /// If APValues are constructed via placement new, \c needsCleanup()
   /// indicates whether the destructor must be called in order to correctly
   /// free all allocated memory.
   bool needsCleanup() const;
 
-  /// \brief Swaps the contents of this and the given APValue.
+  /// Swaps the contents of this and the given APValue.
   void swap(APValue &RHS);
 
   ValueKind getKind() const { return Kind; }

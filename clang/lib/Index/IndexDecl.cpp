@@ -43,7 +43,7 @@ public:
     return true;
   }
 
-  /// \brief Returns true if the given method has been defined explicitly by the
+  /// Returns true if the given method has been defined explicitly by the
   /// user.
   static bool hasUserDefined(const ObjCMethodDecl *D,
                              const ObjCImplDecl *Container) {
@@ -726,7 +726,7 @@ bool IndexingContext::indexDecl(const Decl *D) {
   if (D->isImplicit() && shouldIgnoreIfImplicit(D))
     return true;
 
-  if (isTemplateImplicitInstantiation(D))
+  if (isTemplateImplicitInstantiation(D) && !shouldIndexImplicitInstantiation())
     return true;
 
   IndexingDeclVisitor Visitor(*this);

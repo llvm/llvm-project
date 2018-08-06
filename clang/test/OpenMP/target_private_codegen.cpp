@@ -45,28 +45,28 @@ int foo(int n) {
   {
   }
 
-  // TCHECK:  define void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}()
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT: store {{.+}}, {{.+}} [[A]],
-  // TCHECK:  ret void  
+  // TCHECK:  ret void
 
 #pragma omp target private(a)
   {
     a = 1;
   }
 
-  // TCHECK:  define void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}()
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} 1, i{{[0-9]+}}* [[A]],
   // TCHECK:  ret void
-  
-  #pragma omp target private(a, aa)
+
+#pragma omp target private(a, aa)
   {
     a = 1;
     aa = 1;
   }
 
-  // TCHECK:  define void @__omp_offloading_{{.+}}()
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}()
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[A2:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} 1, i{{[0-9]+}}* [[A]],
@@ -85,7 +85,7 @@ int foo(int n) {
   }
   // make sure that private variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i{{[0-9]+}} [[VLA3:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i{{[0-9]+}} [[VLA3:%.+]])
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR4:%.+]] = alloca i{{[0-9]+}},
@@ -112,7 +112,7 @@ int foo(int n) {
   // b[2] = 1.0
   // TCHECK:  [[B_GEP:%.+]] = getelementptr inbounds [10 x float], [10 x float]* [[B]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
   // TCHECK:  store float 1.0{{.*}}, float* [[B_GEP]],
-  
+
   // bn[3] = 1.0
   // TCHECK:  [[BN_GEP:%.+]] = getelementptr inbounds float, float* [[VLA5]], i{{[0-9]+}} 3
   // TCHECK:  store float 1.0{{.*}}, float* [[BN_GEP]],
@@ -131,7 +131,7 @@ int foo(int n) {
   // d.X = 1
   // [[X_FIELD:%.+]] = getelementptr inbounds [[TT]] [[TT]]* [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // store i{{[0-9]+}} 1, i{{[0-9]+}}* [[X_FIELD]],
-  
+
   // d.Y = 1
   // [[Y_FIELD:%.+]] = getelementptr inbounds [[TT]] [[TT]]* [[D]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
   // store i{{[0-9]+}} 1, i{{[0-9]+}}* [[Y_FIELD]],
@@ -179,7 +179,7 @@ int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define void @__omp_offloading_{{.+}}()
+// TCHECK: define weak void @__omp_offloading_{{.+}}()
 // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A2:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3:%.+]] = alloca i{{[0-9]+}},
@@ -207,7 +207,7 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]])
+  // TCHECK: define weak void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]])
   // TCHECK: [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
@@ -261,7 +261,7 @@ int bar(int n){
 }
 
 // template
-// TCHECK: define void @__omp_offloading_{{.+}}()
+// TCHECK: define weak void @__omp_offloading_{{.+}}()
 // TCHECK: [[A:%.+]] = alloca i{{[0-9]+}},
 // TCHECK: [[A2:%.+]] = alloca i{{[0-9]+}},
 // TCHECK: [[B:%.+]] = alloca [10 x i{{[0-9]+}}],

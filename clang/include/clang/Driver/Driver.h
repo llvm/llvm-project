@@ -202,8 +202,8 @@ public:
   unsigned CCGenDiagnostics : 1;
 
 private:
-  /// Default target triple.
-  std::string DefaultTargetTriple;
+  /// Raw target triple.
+  std::string TargetTriple;
 
   /// Name to use when invoking gcc/g++.
   std::string CCCGenericGCCName;
@@ -243,7 +243,7 @@ private:
   std::list<std::string> TempFiles;
   std::list<std::string> ResultFiles;
 
-  /// \brief Cache of all the ToolChains in use by the driver.
+  /// Cache of all the ToolChains in use by the driver.
   ///
   /// This maps from the string representation of a triple to a ToolChain
   /// created targeting that triple. The driver owns all the ToolChain objects
@@ -267,7 +267,7 @@ private:
   void generatePrefixedToolNames(StringRef Tool, const ToolChain &TC,
                                  SmallVectorImpl<std::string> &Names) const;
 
-  /// \brief Find the appropriate .crash diagonostic file for the child crash
+  /// Find the appropriate .crash diagonostic file for the child crash
   /// under this driver and copy it out to a temporary destination with the
   /// other reproducer related files (.sh, .cache, etc). If not found, suggest a
   /// directory for the user to look at.
@@ -282,7 +282,7 @@ private:
                               SmallString<128> &CrashDiagDir);
 
 public:
-  Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
+  Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags,
          IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
 
@@ -309,12 +309,14 @@ public:
   const std::string &getTitle() { return DriverTitle; }
   void setTitle(std::string Value) { DriverTitle = std::move(Value); }
 
-  /// \brief Get the path to the main clang executable.
+  std::string getTargetTriple() const { return TargetTriple; }
+
+  /// Get the path to the main clang executable.
   const char *getClangProgramPath() const {
     return ClangExecutable.c_str();
   }
 
-  /// \brief Get the path to where the clang executable was installed.
+  /// Get the path to where the clang executable was installed.
   const char *getInstalledDir() const {
     if (!InstalledDir.empty())
       return InstalledDir.c_str();
@@ -450,9 +452,9 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
-  /// handleAutocompletions - Handle --autocomplete by searching and printing
+  /// HandleAutocompletions - Handle --autocomplete by searching and printing
   /// possible flags, descriptions, and its arguments.
-  void handleAutocompletions(StringRef PassedFlags) const;
+  void HandleAutocompletions(StringRef PassedFlags) const;
 
   /// HandleImmediateArgs - Handle any arguments which should be
   /// treated before building actions or binding tools.
@@ -464,8 +466,10 @@ public:
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
   /// like -fsyntax-only or --analyze.
-  Action *ConstructPhaseAction(Compilation &C, const llvm::opt::ArgList &Args,
-                               phases::ID Phase, Action *Input) const;
+  Action *ConstructPhaseAction(
+      Compilation &C, const llvm::opt::ArgList &Args, phases::ID Phase,
+      Action *Input,
+      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
@@ -538,7 +542,7 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
-  /// \brief Retrieves a ToolChain for a particular \p Target triple.
+  /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
   /// on-demand.
@@ -547,7 +551,7 @@ private:
 
   /// @}
 
-  /// \brief Get bitmasks for which option flags to include and exclude based on
+  /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
   std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks() const;
 

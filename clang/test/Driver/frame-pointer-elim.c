@@ -17,6 +17,15 @@
 // RUN:   FileCheck --check-prefix=CLOUDABI %s
 // CLOUDABI-NOT: "-momit-leaf-frame-pointer"
 
+// NetBSD follows the same rules as Linux.
+// RUN: %clang -### -target x86_64-unknown-netbsd -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=NETBSD-OPT %s
+// NETBSD-OPT: "-momit-leaf-frame-pointer"
+
+// RUN: %clang -### -target x86_64-unknown-netbsd -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=NETBSD %s
+// NETBSD-NOT: "-momit-leaf-frame-pointer"
+
 // Darwin disables omitting the leaf frame pointer even under optimization
 // unless the command lines are given.
 // RUN: %clang -### -target i386-apple-darwin -S %s 2>&1 | \

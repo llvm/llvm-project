@@ -5,7 +5,7 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
-// RUN: cp -a %S/Inputs/crash-recovery/Frameworks %t/i/
+// RUN: cp -R %S/Inputs/crash-recovery/Frameworks %t/i/
 // RUN: mkdir -p %t/i/Frameworks/A.framework/Frameworks
 // RUN: ln -s ../../B.framework %t/i/Frameworks/A.framework/Frameworks/B.framework
 

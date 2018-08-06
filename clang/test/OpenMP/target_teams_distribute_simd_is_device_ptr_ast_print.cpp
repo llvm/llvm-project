@@ -60,7 +60,7 @@ struct SA {
 // CHECK-NEXT: int aa[10];
 // CHECK-NEXT: arr &raa = this->aa;
 // CHECK-NEXT: func(
-// CHECK-NEXT: #pragma omp target teams distribute simd is_device_ptr(this->k)
+// CHECK-NEXT: #pragma omp target teams distribute simd is_device_ptr(this->k){{$}}
 // CHECK-NEXT: for (int i = 0; i < 100; i++)
 // CHECK-NEXT: ;
 // CHECK-NEXT: #pragma omp target teams distribute simd is_device_ptr(this->z)

@@ -990,7 +990,7 @@ struct DeclInfo {
   
   /// CurrentDecl is the declaration with which the FullComment is associated.
   ///
-  /// It can be different from \c CommentDecl.  It happens when we we decide
+  /// It can be different from \c CommentDecl.  It happens when we decide
   /// that the comment originally attached to \c CommentDecl is fine for
   /// \c CurrentDecl too (for example, for a redeclaration or an overrider of
   /// \c CommentDecl).

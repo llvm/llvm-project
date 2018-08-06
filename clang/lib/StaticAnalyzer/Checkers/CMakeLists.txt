@@ -27,6 +27,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   CloneChecker.cpp
   ConversionChecker.cpp
   CXXSelfAssignmentChecker.cpp
+  DanglingInternalBufferChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DeleteWithNonVirtualDtorChecker.cpp
@@ -91,6 +92,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UndefResultChecker.cpp
   UndefinedArraySubscriptChecker.cpp
   UndefinedAssignmentChecker.cpp
+  UninitializedObjectChecker.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
   VforkChecker.cpp

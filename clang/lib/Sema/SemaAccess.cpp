@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Specifiers.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
@@ -1712,7 +1713,7 @@ Sema::AccessResult Sema::CheckAllocationAccess(SourceLocation OpLoc,
   return CheckAccess(*this, OpLoc, Entity);
 }
 
-/// \brief Checks access to a member.
+/// Checks access to a member.
 Sema::AccessResult Sema::CheckMemberAccess(SourceLocation UseLoc,
                                            CXXRecordDecl *NamingClass,
                                            DeclAccessPair Found) {
@@ -1856,29 +1857,31 @@ void Sema::CheckLookupAccess(const LookupResult &R) {
   }
 }
 
-/// Checks access to Decl from the given class. The check will take access
+/// Checks access to Target from the given class. The check will take access
 /// specifiers into account, but no member access expressions and such.
 ///
-/// \param Decl the declaration to check if it can be accessed
+/// \param Target the declaration to check if it can be accessed
 /// \param Ctx the class/context from which to start the search
-/// \return true if the Decl is accessible from the Class, false otherwise.
-bool Sema::IsSimplyAccessible(NamedDecl *Decl, DeclContext *Ctx) {
+/// \return true if the Target is accessible from the Class, false otherwise.
+bool Sema::IsSimplyAccessible(NamedDecl *Target, DeclContext *Ctx) {
   if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx)) {
-    if (!Decl->isCXXClassMember())
+    if (!Target->isCXXClassMember())
       return true;
 
+    if (Target->getAccess() == AS_public)
+      return true;
     QualType qType = Class->getTypeForDecl()->getCanonicalTypeInternal();
+    // The unprivileged access is AS_none as we don't know how the member was
+    // accessed, which is described by the access in DeclAccessPair.
+    // `IsAccessible` will examine the actual access of Target (i.e.
+    // Decl->getAccess()) when calculating the access.
     AccessTarget Entity(Context, AccessedEntity::Member, Class,
-                        DeclAccessPair::make(Decl, Decl->getAccess()),
-                        qType);
-    if (Entity.getAccess() == AS_public)
-      return true;
-
+                        DeclAccessPair::make(Target, AS_none), qType);
     EffectiveContext EC(CurContext);
     return ::IsAccessible(*this, EC, Entity) != ::AR_inaccessible;
   }
-  
-  if (ObjCIvarDecl *Ivar = dyn_cast<ObjCIvarDecl>(Decl)) {
+
+  if (ObjCIvarDecl *Ivar = dyn_cast<ObjCIvarDecl>(Target)) {
     // @public and @package ivars are always accessible.
     if (Ivar->getCanonicalAccessControl() == ObjCIvarDecl::Public ||
         Ivar->getCanonicalAccessControl() == ObjCIvarDecl::Package)

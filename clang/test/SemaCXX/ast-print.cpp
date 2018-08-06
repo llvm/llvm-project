@@ -214,10 +214,13 @@ namespace {
 struct [[gnu::visibility("hidden")]] S;
 }
 
-// CHECK: struct CXXFunctionalCastExprPrint fce = CXXFunctionalCastExprPrint{};
+// CHECK:      struct CXXFunctionalCastExprPrint {
+// CHECK-NEXT: } fce = CXXFunctionalCastExprPrint{};
 struct CXXFunctionalCastExprPrint {} fce = CXXFunctionalCastExprPrint{};
 
-// CHECK: struct CXXTemporaryObjectExprPrint toe = CXXTemporaryObjectExprPrint{};
+// CHECK:      struct CXXTemporaryObjectExprPrint {
+// CHECK-NEXT:   CXXTemporaryObjectExprPrint();
+// CHECK-NEXT: } toe = CXXTemporaryObjectExprPrint{};
 struct CXXTemporaryObjectExprPrint { CXXTemporaryObjectExprPrint(); } toe = CXXTemporaryObjectExprPrint{};
 
 namespace PR24872 {

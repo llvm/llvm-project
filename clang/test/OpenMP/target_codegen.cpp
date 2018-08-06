@@ -49,38 +49,38 @@
 // CHECK-DAG: $[[REGFN:\.omp_offloading\..+]] = comdat
 
 // We have 8 target regions, but only 7 that actually will generate offloading
-// code, only 6 will have mapped arguments, and only 4 have all-constant map
-// sizes.
+// code and have mapped arguments, and only 5 have all-constant map sizes.
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 0, i[[SZ]] 4]
-// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 288]
+// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
 // CHECK-DAG: [[SIZET2:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ]] 2]
-// CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i64] [i64 288]
+// CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i64] [i64 800]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2]
-// CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
-// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i64] [i64 288, i64 547, i64 288, i64 547, i64 547, i64 288, i64 288, i64 547, i64 547]
+// CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
+// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i64] [i64 800, i64 547, i64 288, i64 547, i64 547, i64 288, i64 288, i64 547, i64 547]
 // CHECK-DAG: [[SIZET5:@.+]] = private unnamed_addr constant [3 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 288, i64 288, i64 547]
+// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 547]
 // CHECK-DAG: [[SIZET6:@.+]] = private unnamed_addr constant [4 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 1, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i64] [i64 288, i64 288, i64 288, i64 547]
-// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [5 x i64] [i64 547, i64 288, i64 288, i64 288, i64 547]
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
-// CHECK-DAG: @{{.*}} = private constant i8 0
+// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i64] [i64 800, i64 800, i64 800, i64 547]
+// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 800, i64 288, i64 288, i64 547]
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
 
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = constant [[ENTTY]]
-// TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]
-// TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 // Check if offloading descriptor is created.
 // CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
@@ -91,7 +91,7 @@
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 
 // Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* bitcast (void (i8*)* @[[REGFN]] to void ()*), i8* bitcast (void (i8*)* @[[REGFN]] to i8*) }]
+// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
 
 
 template<typename tx, typename ty>
@@ -115,7 +115,9 @@ int foo(int n) {
   static long *plocal;
 
   // CHECK:       [[ADD:%.+]] = add nsw i32
-  // CHECK:       [[DEVICE:%.+]] = sext i32 [[ADD]] to i64
+  // CHECK:       store i32 [[ADD]], i32* [[DEVICE_CAP:%.+]],
+  // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
+  // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
   // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i[[SZ]]* null, i64* null)
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
@@ -128,7 +130,9 @@ int foo(int n) {
   }
 
   // CHECK-DAG:   [[ADD:%.+]] = add nsw i32
-  // CHECK-DAG:   [[DEVICE:%.+]] = sext i32 [[ADD]] to i64
+  // CHECK-DAG:   store i32 [[ADD]], i32* [[DEVICE_CAP:%.+]],
+  // CHECK-DAG:   [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
+  // CHECK-DAG:   [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
   // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_nowait(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%[^,]+]], i32 0, i32 0
@@ -234,13 +238,13 @@ int foo(int n) {
   // CHECK-32:       store i32 [[A_VAL]], i32* [[A_CADDR:%.+]],
   // CHECK-32:       [[A_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[A_CADDR]],
 
+  // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
+  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[IFELSE:[^,]+]]
+  // CHECK:       [[TRY]]
   // CHECK:       [[BNSIZE:%.+]] = mul nuw i[[SZ]] [[VLA0:%.+]], 4
   // CHECK:       [[CNELEMSIZE2:%.+]] = mul nuw i[[SZ]] 5, [[VLA1:%.+]]
   // CHECK:       [[CNSIZE:%.+]] = mul nuw i[[SZ]] [[CNELEMSIZE2]], 8
 
-  // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
-  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[IFELSE:[^,]+]]
-  // CHECK:       [[TRY]]
   // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 9, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i64* getelementptr inbounds ([9 x i64], [9 x i64]* [[MAPT4]], i32 0, i32 0))
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[P:%[^,]+]], i32 0, i32 0
@@ -507,67 +511,77 @@ int bar(int n){
 // CHECK-64:       store i32 %{{.+}}, i32* [[B_ADDR]],
 // CHECK-64:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_CADDR]],
 
+// CHECK-32:       store i32 %{{.+}}, i32* %__vla_expr
 // CHECK-32:       store i32 %{{.+}}, i32* [[B_ADDR:%.+]],
 // CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_ADDR]],
-
-// We capture 2 VLA sizes in this target region
-// CHECK:       [[CELEMSIZE2:%.+]] = mul nuw i[[SZ]] 2, [[VLA0:%.+]]
-// CHECK:       [[CSIZE:%.+]] = mul nuw i[[SZ]] [[CELEMSIZE2]], 2
 
 // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
 // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[IFELSE:[^,]+]]
 // CHECK:       [[TRY]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT7]], i32 0, i32 0))
-// CHECK-DAG:   [[BPR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP:%.+]], i32 0, i32 0
-// CHECK-DAG:   [[PR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P:%.+]], i32 0, i32 0
-// CHECK-DAG:   [[SR]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S:%.+]], i32 0, i32 0
-// CHECK-DAG:   [[SADDR0:%.+]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX0:0]]
-// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 0, i32 [[IDX0]]
-// CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 0, i32 [[IDX0]]
-// CHECK-DAG:   [[SADDR1:%.+]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX1:1]]
-// CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 0, i32 [[IDX1]]
-// CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 0, i32 [[IDX1]]
-// CHECK-DAG:   [[SADDR2:%.+]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX2:2]]
-// CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 0, i32 [[IDX2]]
-// CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 0, i32 [[IDX2]]
-// CHECK-DAG:   [[SADDR3:%.+]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX3:3]]
-// CHECK-DAG:   [[BPADDR3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 0, i32 [[IDX3]]
-// CHECK-DAG:   [[PADDR3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 0, i32 [[IDX3]]
-// CHECK-DAG:   [[SADDR4:%.+]] = getelementptr inbounds [5 x i[[SZ]]], [5 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX4:4]]
-// CHECK-DAG:   [[BPADDR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP]], i32 0, i32 [[IDX4]]
-// CHECK-DAG:   [[PADDR4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P]], i32 0, i32 [[IDX4]]
+// We capture 2 VLA sizes in this target region
+// CHECK:       [[CELEMSIZE2:%.+]] = mul nuw i[[SZ]] 2, [[VLA0:%.+]]
+// CHECK:       [[CSIZE:%.+]] = mul nuw i[[SZ]] [[CELEMSIZE2]], 2
+
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 6, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i64* getelementptr inbounds ([6 x i64], [6 x i64]* [[MAPT7]], i32 0, i32 0))
+// CHECK-DAG:   [[BPR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP:%.+]], i32 0, i32 0
+// CHECK-DAG:   [[PR]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P:%.+]], i32 0, i32 0
+// CHECK-DAG:   [[SR]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S:%.+]], i32 0, i32 0
+// CHECK-DAG:   [[SADDR0:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX0:0]]
+// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX0]]
+// CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX0]]
+// CHECK-DAG:   [[SADDR1:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX1:1]]
+// CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX1]]
+// CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX1]]
+// CHECK-DAG:   [[SADDR2:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX2:2]]
+// CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX2]]
+// CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX2]]
+// CHECK-DAG:   [[SADDR3:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX3:3]]
+// CHECK-DAG:   [[BPADDR3:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX3]]
+// CHECK-DAG:   [[PADDR3:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX3]]
+// CHECK-DAG:   [[SADDR4:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX4:4]]
+// CHECK-DAG:   [[BPADDR4:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX4]]
+// CHECK-DAG:   [[PADDR4:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX4]]
+// CHECK-DAG:   [[SADDR5:%.+]] = getelementptr inbounds [6 x i[[SZ]]], [6 x i[[SZ]]]* [[S]], i32 0, i32 [[IDX5:5]]
+// CHECK-DAG:   [[BPADDR5:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BP]], i32 0, i32 [[IDX5]]
+// CHECK-DAG:   [[PADDR5:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[P]], i32 0, i32 [[IDX5]]
 
 // The names below are not necessarily consistent with the names used for the
 // addresses above as some are repeated.
+// CHECK-DAG:   [[CBPADDR5:%.+]] = bitcast i8** [[BPADDR5]] to i16**
+// CHECK-DAG:   [[CPADDR5:%.+]] = bitcast i8** [[PADDR5]] to i16**
+// CHECK-DAG:   store i16* %{{.+}}, i16** [[CBPADDR5]]
+// CHECK-DAG:   store i16* %{{.+}}, i16** [[CPADDR5]]
+// CHECK-DAG:   store i[[SZ]] [[CSIZE]], i[[SZ]]* [[SADDR5]]
+
+// CHECK-DAG:   [[CBPADDR4:%.+]] = bitcast i8** [[BPADDR4]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR4:%.+]] = bitcast i8** [[PADDR4]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CBPADDR4]]
+// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CPADDR4]]
+// CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* [[SADDR4]]
+
 // CHECK-DAG:   [[CBPADDR3:%.+]] = bitcast i8** [[BPADDR3]] to i[[SZ]]*
 // CHECK-DAG:   [[CPADDR3:%.+]] = bitcast i8** [[PADDR3]] to i[[SZ]]*
-// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CBPADDR3]]
-// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CPADDR3]]
+// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CBPADDR3]]
+// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CPADDR3]]
 // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* [[SADDR3]]
 
 // CHECK-DAG:   [[CBPADDR2:%.+]] = bitcast i8** [[BPADDR2]] to i[[SZ]]*
 // CHECK-DAG:   [[CPADDR2:%.+]] = bitcast i8** [[PADDR2]] to i[[SZ]]*
-// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CBPADDR2]]
-// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CPADDR2]]
-// CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* [[SADDR2]]
-
-// CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to i[[SZ]]*
-// CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
-// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CBPADDR1]]
-// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CPADDR1]]
-// CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* [[SADDR1]]
+// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CBPADDR2]]
+// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CPADDR2]]
+// CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* [[SADDR2]]
 
 // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S1]]**
 // CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to double**
-// CHECK-DAG:   store [[S1]]* %{{.+}}, [[S1]]** [[CBPADDR0]]
-// CHECK-DAG:   store double* %{{.+}}, double** [[CPADDR0]]
-// CHECK-DAG:   store i[[SZ]] 8, i[[SZ]]* [[SADDR0]]
+// CHECK-DAG:   store [[S1]]* [[THIS:%.+]], [[S1]]** [[CBPADDR0]]
+// CHECK-DAG:   store double* [[A:%.+]], double** [[CPADDR0]]
+// CHECK-DAG:   store i[[SZ]] %{{.+}}, i[[SZ]]* [[SADDR0]]
 
-// CHECK-DAG:   [[CBPADDR4:%.+]] = bitcast i8** [[BPADDR4]] to i16**
-// CHECK-DAG:   [[CPADDR4:%.+]] = bitcast i8** [[PADDR4]] to i16**
-// CHECK-DAG:   store i16* %{{.+}}, i16** [[CBPADDR4]]
-// CHECK-DAG:   store i16* %{{.+}}, i16** [[CPADDR4]]
-// CHECK-DAG:   store i[[SZ]] [[CSIZE]], i[[SZ]]* [[SADDR4]]
+// CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to [[S1]]**
+// CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to double**
+// CHECK-DAG:   store [[S1]]* [[THIS]], [[S1]]** [[CBPADDR1]]
+// CHECK-DAG:   store double* [[A]], double** [[CPADDR1]]
+// CHECK-DAG:   store i[[SZ]] 8, i[[SZ]]* [[SADDR1]]
 
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
@@ -745,4 +759,10 @@ int bar(int n){
 // CHECK-32-DAG:   load i32, i32* [[LOCAL_A]]
 // CHECK-DAG:   load i16, i16* [[REF_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
+
+void bar () {
+#define pragma_target _Pragma("omp target")
+pragma_target
+{}
+}
 #endif

@@ -50,7 +50,7 @@ class NumericLiteralParser {
 
   unsigned radix;
 
-  bool saw_exponent, saw_period, saw_ud_suffix;
+  bool saw_exponent, saw_period, saw_ud_suffix, saw_fixed_point_suffix;
 
   SmallString<32> UDSuffixBuf;
 
@@ -69,11 +69,16 @@ public:
   bool isFloat128 : 1;      // 1.0q
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
+  bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
+  bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
+
+  bool isFixedPointLiteral() const { return saw_fixed_point_suffix; }
+
   bool isIntegerLiteral() const {
-    return !saw_period && !saw_exponent;
+    return !saw_period && !saw_exponent && !isFixedPointLiteral();
   }
   bool isFloatingLiteral() const {
-    return saw_period || saw_exponent;
+    return (saw_period || saw_exponent) && !isFixedPointLiteral();
   }
 
   bool hasUDSuffix() const {
@@ -105,6 +110,12 @@ public:
   /// literal exactly, and false otherwise.
   llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result);
 
+  /// GetFixedPointValue - Convert this numeric literal value into a
+  /// scaled integer that represents this value. Returns true if an overflow
+  /// occurred when calculating the integral part of the scaled integer or
+  /// calculating the digit sequence of the exponent.
+  bool GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale);
+
 private:
 
   void ParseNumberStartingWithZero(SourceLocation TokLoc);
@@ -112,7 +123,7 @@ private:
 
   static bool isDigitSeparator(char C) { return C == '\''; }
 
-  /// \brief Determine whether the sequence of characters [Start, End) contains
+  /// Determine whether the sequence of characters [Start, End) contains
   /// any real digits (not digit separators).
   bool containsDigits(const char *Start, const char *End) {
     return Start != End && (Start + 1 != End || !isDigitSeparator(Start[0]));
@@ -120,7 +131,7 @@ private:
 
   enum CheckSeparatorKind { CSK_BeforeDigits, CSK_AfterDigits };
 
-  /// \brief Ensure that we don't have a digit separator here.
+  /// Ensure that we don't have a digit separator here.
   void checkSeparator(SourceLocation TokLoc, const char *Pos,
                       CheckSeparatorKind IsAfterDigits);
 

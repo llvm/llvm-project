@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-arc -x objective-c %s.result
-// RUN: cp %s %t
+// RUN: cat %s > %t
 // RUN: %clang_cc1 -arcmt-modify -fsyntax-only -fobjc-arc -x objective-c %t
 // RUN: diff %t %s.result
 // RUN: rm %t

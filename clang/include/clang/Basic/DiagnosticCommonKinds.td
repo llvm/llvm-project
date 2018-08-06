@@ -94,12 +94,9 @@ def remark_module_lock_failure : Remark<
   "could not acquire lock file for module '%0': %1">, InGroup<ModuleBuild>;
 def remark_module_lock_timeout : Remark<
   "timed out waiting to acquire lock file for module '%0'">, InGroup<ModuleBuild>;
-def err_module_shadowed : Error<
-  "import of shadowed module '%0'">;
-def err_module_lock_failure : Error<
-  "could not acquire lock file for module '%0': %1">, DefaultFatal;
-def err_module_lock_timeout : Error<
-  "timed out waiting to acquire lock file for module '%0'">, DefaultFatal;
+def err_module_shadowed : Error<"import of shadowed module '%0'">, DefaultFatal;
+def err_module_build_shadowed_submodule : Error<
+  "build a shadowed submodule '%0'">, DefaultFatal;
 def err_module_cycle : Error<"cyclic dependency in module '%0': %1">, 
   DefaultFatal;
 def err_module_prebuilt : Error<
@@ -171,6 +168,10 @@ def ext_clang_enable_if : Extension<"'enable_if' is a clang extension">,
                           InGroup<GccCompat>;
 def ext_clang_diagnose_if : Extension<"'diagnose_if' is a clang extension">,
                             InGroup<GccCompat>;
+def err_too_large_for_fixed_point : Error<
+  "this value is too large for this fixed point type">;
+def err_fixed_point_not_enabled : Error<"compile with "
+  "'-ffixed-point' to enable fixed point types">;
 
 // SEH
 def err_seh_expected_handler : Error<
@@ -191,6 +192,7 @@ def note_invalid_subexpr_in_const_expr : Note<
 def err_target_unknown_triple : Error<
   "unknown target triple '%0', please use -triple or -arch">;
 def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
+def note_valid_options : Note<"valid target CPU values are: %0">;
 def err_target_unsupported_cpu_for_micromips : Error<
   "micromips is not supported for target CPU '%0'">;
 def err_target_unknown_abi : Error<"unknown target ABI '%0'">;
@@ -206,6 +208,10 @@ def err_target_unsupported_execute_only : Error<
   "execute only is not supported for the %0 sub-architecture">;
 def err_opt_not_valid_with_opt : Error<
   "option '%0' cannot be specified with '%1'">;
+def err_opt_not_valid_without_opt : Error<
+  "option '%0' cannot be specified without '%1'">;
+def err_opt_not_valid_on_target : Error<
+  "option '%0' cannot be specified on this target">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -244,6 +250,10 @@ def warn_apinotes_private_case : NonportablePrivateAPINotesPath,
   InGroup<DiagGroup<"nonportable-private-apinotes-path">>;
 def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath, 
   DefaultIgnore, InGroup<DiagGroup<"nonportable-private-system-apinotes-path">>;
+
+// OpenCL C++.
+def err_openclcxx_not_supported : Error<
+  "'%0' is not supported in OpenCL C++">;
 
 // OpenMP
 def err_omp_more_one_clause : Error<

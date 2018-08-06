@@ -83,7 +83,7 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") || Lib == "ucrtbase")
+    if (StringRef(Lib).startswith("msvcr") || StringRef(Lib).startswith("ucrt"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -201,6 +201,14 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-Bdynamic");
   }
 
+  bool HasWindowsApp = false;
+  for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
+    if (Lib == "windowsapp") {
+      HasWindowsApp = true;
+      break;
+    }
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib)) {
     if (!Args.hasArg(options::OPT_nodefaultlibs)) {
       if (Args.hasArg(options::OPT_static))
@@ -223,15 +231,19 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_pthread))
         CmdArgs.push_back("-lpthread");
 
-      // add system libraries
-      if (Args.hasArg(options::OPT_mwindows)) {
-        CmdArgs.push_back("-lgdi32");
-        CmdArgs.push_back("-lcomdlg32");
+      if (!HasWindowsApp) {
+        // Add system libraries. If linking to libwindowsapp.a, that import
+        // library replaces all these and we shouldn't accidentally try to
+        // link to the normal desktop mode dlls.
+        if (Args.hasArg(options::OPT_mwindows)) {
+          CmdArgs.push_back("-lgdi32");
+          CmdArgs.push_back("-lcomdlg32");
+        }
+        CmdArgs.push_back("-ladvapi32");
+        CmdArgs.push_back("-lshell32");
+        CmdArgs.push_back("-luser32");
+        CmdArgs.push_back("-lkernel32");
       }
-      CmdArgs.push_back("-ladvapi32");
-      CmdArgs.push_back("-lshell32");
-      CmdArgs.push_back("-luser32");
-      CmdArgs.push_back("-lkernel32");
 
       if (Args.hasArg(options::OPT_static))
         CmdArgs.push_back("--end-group");
@@ -275,7 +287,8 @@ void toolchains::MinGW::findGccLibDir() {
   Archs.emplace_back(getTriple().getArchName());
   Archs[0] += "-w64-mingw32";
   Archs.emplace_back("mingw32");
-  Arch = Archs[0].str();
+  if (Arch.empty())
+    Arch = Archs[0].str();
   // lib: Arch Linux, Ubuntu, Windows
   // lib64: openSUSE Linux
   for (StringRef CandidateLib : {"lib", "lib64"}) {
@@ -302,6 +315,23 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
+llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
+  llvm::SmallVector<llvm::SmallString<32>, 2> Subdirs;
+  Subdirs.emplace_back(getTriple().str());
+  Subdirs.emplace_back(getTriple().getArchName());
+  Subdirs[1] += "-w64-mingw32";
+  StringRef ClangRoot =
+      llvm::sys::path::parent_path(getDriver().getInstalledDir());
+  StringRef Sep = llvm::sys::path::get_separator();
+  for (StringRef CandidateSubdir : Subdirs) {
+    if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
+      Arch = CandidateSubdir;
+      return (ClangRoot + Sep + CandidateSubdir).str();
+    }
+  }
+  return make_error_code(std::errc::no_such_file_or_directory);
+}
+
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
@@ -309,6 +339,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
 
   if (getDriver().SysRoot.size())
     Base = getDriver().SysRoot;
+  // Look for <clang-bin>/../<triplet>; if found, use <clang-bin>/.. as the
+  // base as it could still be a base for a gcc setup with libgcc.
+  else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot())
+    Base = llvm::sys::path::parent_path(TargetSubdir.get());
   else if (llvm::ErrorOr<std::string> GPPName = findGcc())
     Base = llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get()));
@@ -453,11 +487,14 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  StringRef Slash = llvm::sys::path::get_separator();
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx:
+    addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
+                                              Slash + "c++" + Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
-                     Base + "include" + llvm::sys::path::get_separator() +
-                         "c++" + llvm::sys::path::get_separator() + "v1");
+                     Base + "include" + Slash + "c++" + Slash + "v1");
     break;
 
   case ToolChain::CST_Libstdcxx:
@@ -472,7 +509,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
-      CppIncludeBase += llvm::sys::path::get_separator();
+      CppIncludeBase += Slash;
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
     }

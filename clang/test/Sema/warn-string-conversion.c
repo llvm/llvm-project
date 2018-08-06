@@ -12,7 +12,7 @@ void assert_error();
 #define assert2(expr) \
   ((expr) ? do_nothing() : assert_error())
 
-// Expection for common assert form.
+// Exception for common assert form.
 void test1() {
   assert1(0 && "foo");
   assert1("foo" && 0);

@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c++2a -verify %s -Wdeprecated
 
 // This test does two things.
 // Deleting the copy constructor ensures that an [=, this] capture doesn't copy the object.
@@ -11,5 +10,14 @@ class A {
   void func() {
     auto L = [=, this]() -> int { return i; };
     L();
+  }
+};
+
+struct B {
+  int i;
+  void f() {
+    (void) [=] { // expected-note {{add an explicit capture of 'this'}}
+      return i; // expected-warning {{implicit capture of 'this' with a capture default of '=' is deprecated}}
+    };
   }
 };

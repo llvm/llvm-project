@@ -10,6 +10,7 @@
 // CHECK-NEXT: note: use 'cl1.1' for 'OpenCL 1.1' standard
 // CHECK-NEXT: note: use 'cl1.2' for 'OpenCL 1.2' standard
 // CHECK-NEXT: note: use 'cl2.0' for 'OpenCL 2.0' standard
+// CHECK-NEXT: note: use 'c++' for 'OpenCL C++ 1.0' standard
 
 // Make sure that no other output is present.
 // CHECK-NOT: {{^.+$}}

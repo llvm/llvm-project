@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -analyzer-config cfg-temporary-dtors=true -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -

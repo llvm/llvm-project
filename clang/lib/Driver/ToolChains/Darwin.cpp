@@ -175,7 +175,7 @@ bool darwin::Linker::NeedsTempPath(const InputInfoList &Inputs) const {
   return false;
 }
 
-/// \brief Pass -no_deduplicate to ld64 under certain conditions:
+/// Pass -no_deduplicate to ld64 under certain conditions:
 ///
 /// - Either -O0 or -O1 is explicitly specified
 /// - No -O option is specified *and* this is a compile+link (implicit -O0)
@@ -409,7 +409,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_Mach);
 }
 
-/// \brief Determine whether we are linking the ObjC runtime.
+/// Determine whether we are linking the ObjC runtime.
 static bool isObjCRuntimeLinked(const ArgList &Args) {
   if (isObjCAutoRefCount(Args)) {
     Args.ClaimAllArgs(options::OPT_fobjc_link_runtime);
@@ -456,7 +456,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
 
-  // For LTO, pass the name of the optimization record file.
+  // For LTO, pass the name of the optimization record file and other
+  // opt-remarks flags.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
@@ -471,6 +472,26 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (getLastProfileUseArg(Args)) {
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-lto-pass-remarks-with-hotness");
+
+      if (const Arg *A =
+              Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
+        CmdArgs.push_back("-mllvm");
+        std::string Opt =
+            std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
+        CmdArgs.push_back(Args.MakeArgString(Opt));
+      }
+    }
+  }
+
+  // Propagate the -moutline flag to the linker in LTO.
+  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
+    if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-machine-outliner");
+
+      // Outline from linkonceodr functions by default in LTO.
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-linkonceodr-outlining");
     }
   }
 
@@ -1014,7 +1035,6 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
   if (hasExportSymbolDirective(Args)) {
-    addExportedSymbol(CmdArgs, "_VPMergeHook");
     addExportedSymbol(CmdArgs, "___llvm_profile_filename");
     addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
     addExportedSymbol(CmdArgs, "_lprofCurFilename");

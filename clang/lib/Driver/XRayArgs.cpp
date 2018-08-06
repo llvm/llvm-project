@@ -27,6 +27,7 @@ namespace {
 constexpr char XRayInstrumentOption[] = "-fxray-instrument";
 constexpr char XRayInstructionThresholdOption[] =
     "-fxray-instruction-threshold=";
+constexpr const char *const XRaySupportedModes[] = {"xray-fdr", "xray-basic"};
 } // namespace
 
 XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
@@ -34,7 +35,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   const llvm::Triple &Triple = TC.getTriple();
   if (Args.hasFlag(options::OPT_fxray_instrument,
                    options::OPT_fnoxray_instrument, false)) {
-    if (Triple.getOS() == llvm::Triple::Linux)
+    if (Triple.getOS() == llvm::Triple::Linux) {
       switch (Triple.getArch()) {
       case llvm::Triple::x86_64:
       case llvm::Triple::arm:
@@ -49,9 +50,17 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         D.Diag(diag::err_drv_clang_unsupported)
             << (std::string(XRayInstrumentOption) + " on " + Triple.str());
       }
-    else
+    } else if (Triple.getOS() == llvm::Triple::FreeBSD ||
+               Triple.getOS() == llvm::Triple::OpenBSD ||
+               Triple.getOS() == llvm::Triple::NetBSD) {
+      if (Triple.getArch() != llvm::Triple::x86_64) {
+        D.Diag(diag::err_drv_clang_unsupported)
+            << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      }
+    } else {
       D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on non-Linux target OS");
+          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+    }
     XRayInstrument = true;
     if (const Arg *A =
             Args.getLastArg(options::OPT_fxray_instruction_threshold_,
@@ -68,6 +77,44 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     if (Args.hasFlag(options::OPT_fxray_always_emit_customevents,
                      options::OPT_fnoxray_always_emit_customevents, false))
       XRayAlwaysEmitCustomEvents = true;
+
+    if (Args.hasFlag(options::OPT_fxray_always_emit_typedevents,
+                     options::OPT_fnoxray_always_emit_typedevents, false))
+      XRayAlwaysEmitTypedEvents = true;
+
+    if (!Args.hasFlag(options::OPT_fxray_link_deps,
+                      options::OPT_fnoxray_link_deps, true))
+      XRayRT = false;
+
+    auto Bundles =
+        Args.getAllArgValues(options::OPT_fxray_instrumentation_bundle);
+    if (Bundles.empty())
+      InstrumentationBundle.Mask = XRayInstrKind::All;
+    else
+      for (const auto &B : Bundles) {
+        llvm::SmallVector<StringRef, 2> BundleParts;
+        llvm::SplitString(B, BundleParts, ",");
+        for (const auto &P : BundleParts) {
+          // TODO: Automate the generation of the string case table.
+          auto Valid = llvm::StringSwitch<bool>(P)
+                           .Cases("none", "all", "function", "custom", true)
+                           .Default(false);
+
+          if (!Valid) {
+            D.Diag(clang::diag::err_drv_invalid_value)
+                << "-fxray-instrumentation-bundle=" << P;
+            continue;
+          }
+
+          auto Mask = parseXRayInstrValue(P);
+          if (Mask == XRayInstrKind::None) {
+            InstrumentationBundle.clear();
+            break;
+          }
+
+          InstrumentationBundle.Mask |= Mask;
+        }
+      }
 
     // Validate the always/never attribute files. We also make sure that they
     // are treated as actual dependencies.
@@ -88,6 +135,37 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       } else
         D.Diag(clang::diag::err_drv_no_such_file) << Filename;
     }
+
+    for (const auto &Filename :
+         Args.getAllArgValues(options::OPT_fxray_attr_list)) {
+      if (llvm::sys::fs::exists(Filename)) {
+        AttrListFiles.push_back(Filename);
+        ExtraDeps.push_back(Filename);
+      } else
+        D.Diag(clang::diag::err_drv_no_such_file) << Filename;
+    }
+
+    // Get the list of modes we want to support.
+    auto SpecifiedModes = Args.getAllArgValues(options::OPT_fxray_modes);
+    if (SpecifiedModes.empty())
+      llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+    else
+      for (const auto &Arg : SpecifiedModes) {
+        // Parse CSV values for -fxray-modes=...
+        llvm::SmallVector<StringRef, 2> ModeParts;
+        llvm::SplitString(Arg, ModeParts, ",");
+        for (const auto &M : ModeParts)
+          if (M == "none")
+            Modes.clear();
+          else if (M == "all")
+            llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+          else
+            Modes.push_back(M);
+      }
+
+    // Then we want to sort and unique the modes we've collected.
+    llvm::sort(Modes.begin(), Modes.end());
+    Modes.erase(std::unique(Modes.begin(), Modes.end()), Modes.end());
   }
 }
 
@@ -100,6 +178,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
 
   if (XRayAlwaysEmitCustomEvents)
     CmdArgs.push_back("-fxray-always-emit-customevents");
+
+  if (XRayAlwaysEmitTypedEvents)
+    CmdArgs.push_back("-fxray-always-emit-typedevents");
 
   CmdArgs.push_back(Args.MakeArgString(Twine(XRayInstructionThresholdOption) +
                                        Twine(InstructionThreshold)));
@@ -116,9 +197,21 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(NeverInstrumentOpt));
   }
 
+  for (const auto &AttrFile : AttrListFiles) {
+    SmallString<64> AttrListFileOpt("-fxray-attr-list=");
+    AttrListFileOpt += AttrFile;
+    CmdArgs.push_back(Args.MakeArgString(AttrListFileOpt));
+  }
+
   for (const auto &Dep : ExtraDeps) {
     SmallString<64> ExtraDepOpt("-fdepfile-entry=");
     ExtraDepOpt += Dep;
     CmdArgs.push_back(Args.MakeArgString(ExtraDepOpt));
+  }
+
+  for (const auto &Mode : Modes) {
+    SmallString<64> ModeOpt("-fxray-modes=");
+    ModeOpt += Mode;
+    CmdArgs.push_back(Args.MakeArgString(ModeOpt));
   }
 }

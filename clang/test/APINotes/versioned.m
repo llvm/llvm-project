@@ -10,6 +10,10 @@
 // RUN: %clang_cc1 -ast-print %t/ModulesCache/Versioned/VersionedKit.pcm | FileCheck -check-prefix=CHECK-VERSIONED %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/Versioned -fdisable-module-hash -fapinotes-modules  -fapinotes-swift-version=3 -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter 'DUMP' | FileCheck -check-prefix=CHECK-DUMP -check-prefix=CHECK-VERSIONED-DUMP %s
 
+// REQUIRES: rdar40296113
+// This test relies on -ast-print including implicit attributes, but it no
+// longer does that as of https://reviews.llvm.org/D46894.
+
 #import <VersionedKit/VersionedKit.h>
 
 // CHECK-UNVERSIONED: void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));

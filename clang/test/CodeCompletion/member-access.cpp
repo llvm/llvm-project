@@ -16,6 +16,8 @@ struct Base3 : Base1, Base2 {
 };
 
 struct Derived : Base3 {
+  template <typename T> Derived(T);
+  Derived(int);
   int member4;
   int memfun3(int);
 };
@@ -48,7 +50,7 @@ struct Bar {
   }
 };
 
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:29:6 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:31:6 %s -o - | FileCheck -check-prefix=CHECK-CC1 --implicit-check-not="Derived : Derived(" %s
   // CHECK-CC1: Base1 : Base1::
   // CHECK-CC1: member1 : [#int#][#Base1::#]member1
   // CHECK-CC1: member1 : [#int#][#Base2::#]member1
@@ -62,10 +64,10 @@ struct Bar {
   // CHECK-CC1: memfun3 : [#int#]memfun3(<#int#>)
 
 // Make sure this doesn't crash
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:36:7 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:38:7 %s -verify
 
 // Make sure this also doesn't crash
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:47:14 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:49:14 %s
 
 
 template<typename T>
@@ -100,8 +102,8 @@ void completeDependentMembers(TemplateClass<T, S> &object,
 // CHECK-CC2: overload1 : [#void#]overload1(<#const T &#>)
 // CHECK-CC2: overload1 : [#void#]overload1(<#const S &#>)
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:92:10 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:93:12 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:94:10 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:95:12 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
 }
 
 
@@ -118,8 +120,8 @@ void completeDependentSpecializedMembers(TemplateClass<int, double> &object,
 // CHECK-CC3: overload1 : [#void#]overload1(<#const int &#>)
 // CHECK-CC3: overload1 : [#void#]overload1(<#const double &#>)
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:110:10 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:111:12 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:112:10 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:113:12 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
 }
 
 template <typename T>
@@ -133,17 +135,17 @@ public:
 // CHECK-CC4: BaseTemplate : BaseTemplate::
 // CHECK-CC4: baseTemplateField : [#int#]baseTemplateField
 // CHECK-CC4: baseTemplateFunction : [#int#]baseTemplateFunction()
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:132:8 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:134:8 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
     o2.baseTemplateField;
 // CHECK-CC5: BaseTemplate : BaseTemplate::
 // CHECK-CC5: baseTemplateField : [#T#]baseTemplateField
 // CHECK-CC5: baseTemplateFunction : [#T#]baseTemplateFunction()
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:137:8 %s -o - | FileCheck -check-prefix=CHECK-CC5 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:139:8 %s -o - | FileCheck -check-prefix=CHECK-CC5 %s
     this->o1;
 // CHECK-CC6: [#void#]function()
 // CHECK-CC6: o1 : [#BaseTemplate<int>#]o1
 // CHECK-CC6: o2 : [#BaseTemplate<T>#]o2
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:142:11 %s -o - | FileCheck -check-prefix=CHECK-CC6 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:144:11 %s -o - | FileCheck -check-prefix=CHECK-CC6 %s
   }
 
   static void staticFn(T &obj);
@@ -160,7 +162,51 @@ void dependentColonColonCompletion() {
 // CHECK-CC7: o2 : [#BaseTemplate<T>#]o2
 // CHECK-CC7: staticFn : [#void#]staticFn(<#T &obj#>)
 // CHECK-CC7: Template : Template
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:156:16 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:158:16 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
   typename Template<T>::Nested m;
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:164:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:166:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
 }
+
+class Proxy2 {
+public:
+  Derived *operator->() const;
+  int member5;
+};
+
+void test2(const Proxy2 &p) {
+  p->
+}
+
+void test3(const Proxy2 &p) {
+  p.
+}
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:177:6 %s -o - | FileCheck -check-prefix=CHECK-CC8 --implicit-check-not="Derived : Derived(" %s
+// CHECK-CC8: Base1 : Base1::
+// CHECK-CC8: member1 : [#int#][#Base1::#]member1
+// CHECK-CC8: member1 : [#int#][#Base2::#]member1
+// CHECK-CC8: member2 : [#float#][#Base1::#]member2
+// CHECK-CC8: member3 : [#double#][#Base2::#]member3
+// CHECK-CC8: member4 : [#int#]member4
+// CHECK-CC8: member5 : [#int#]member5 (requires fix-it: {177:4-177:6} to ".")
+// CHECK-CC8: memfun1 : [#void#][#Base3::#]memfun1(<#float#>)
+// CHECK-CC8: memfun1 : [#void#][#Base3::#]memfun1(<#double#>)[# const#]
+// CHECK-CC8: memfun1 (Hidden) : [#void#]Base2::memfun1(<#int#>)
+// CHECK-CC8: memfun2 : [#void#][#Base3::#]memfun2(<#int#>)
+// CHECK-CC8: memfun3 : [#int#]memfun3(<#int#>)
+// CHECK-CC8: operator-> : [#Derived *#]operator->()[# const#] (requires fix-it: {177:4-177:6} to ".")
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:181:6 %s -o - | FileCheck -check-prefix=CHECK-CC9 --implicit-check-not="Derived : Derived(" %s
+// CHECK-CC9: Base1 : Base1::
+// CHECK-CC9: member1 : [#int#][#Base1::#]member1 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member1 : [#int#][#Base2::#]member1 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member2 : [#float#][#Base1::#]member2 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member3 : [#double#][#Base2::#]member3 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member4 : [#int#]member4 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member5 : [#int#]member5
+// CHECK-CC9: memfun1 : [#void#][#Base3::#]memfun1(<#float#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun1 : [#void#][#Base3::#]memfun1(<#double#>)[# const#] (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun1 (Hidden) : [#void#]Base2::memfun1(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun2 : [#void#][#Base3::#]memfun2(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun3 : [#int#]memfun3(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: operator-> : [#Derived *#]operator->()[# const#]

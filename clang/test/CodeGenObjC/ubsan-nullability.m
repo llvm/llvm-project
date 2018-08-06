@@ -1,6 +1,6 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
-// RUN: %clang_cc1 -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
+// RUN: %clang_cc1 -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fblocks -fobjc-arc -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
 
 // CHECK: [[NONNULL_RV_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 100, i32 6
 // CHECK: [[NONNULL_ARG_LOC:@.*]] = private unnamed_addr global {{.*}} i32 204, i32 15 {{.*}} i32 190, i32 23
@@ -177,6 +177,37 @@ void call_A(A *a, int *p) {
 
 void dont_crash(int *_Nonnull p, ...) {}
 
+@protocol NSObject
+- (id)init;
+@end
+@interface NSObject <NSObject> {}
+@end
+
+#pragma clang assume_nonnull begin
+
+/// Create a "NSObject * _Nonnull" instance.
+NSObject *get_nonnull_error() {
+  // Use nil for convenience. The actual object doesn't matter.
+  return (NSObject *)NULL;
+}
+
+NSObject *_Nullable no_null_return_value_diagnostic(int flag) {
+// CHECK-LABEL: define internal {{.*}}no_null_return_value_diagnostic{{i?}}_block_invoke
+// CHECK-NOT: @__ubsan_handle_nullability_return
+  NSObject *_Nullable (^foo)() = ^() {
+    if (flag) {
+      // Clang should not infer a nonnull return value for this block when this
+      // call is present.
+      return get_nonnull_error();
+    } else {
+      return (NSObject *)NULL;
+    }
+  };
+  return foo();
+}
+
+#pragma clang assume_nonnull end
+
 int main() {
   nonnull_retval1(INULL);
   nonnull_retval2(INNULL, INNULL, INULL, (int *_Nullable)NULL, 0, 0, 0, 0);
@@ -188,5 +219,7 @@ int main() {
   nonnull_init2(INULL);
   call_A((A *)NULL, INULL);
   dont_crash(INNULL, NULL);
+  no_null_return_value_diagnostic(0);
+  no_null_return_value_diagnostic(1);
   return 0;
 }

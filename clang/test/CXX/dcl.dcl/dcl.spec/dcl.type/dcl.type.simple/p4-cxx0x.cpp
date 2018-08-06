@@ -12,13 +12,18 @@ struct is_same<T, T> {
 
 const int&& foo();
 int i;
-struct A { double x; };
+struct A {
+  double x;
+  static int y;
+};
 const A* a = new A();
 
 static_assert(is_same<decltype(foo()), const int&&>::value, "");
 static_assert(is_same<decltype(i), int>::value, "");
 static_assert(is_same<decltype(a->x), double>::value, "");
 static_assert(is_same<decltype((a->x)), const double&>::value, "");
+static_assert(is_same<decltype(a->y), int>::value, "");
+static_assert(is_same<decltype((a->y)), int&>::value, "");
 static_assert(is_same<decltype(static_cast<int&&>(i)), int&&>::value, "");
 
 int f0(int); // expected-note{{possible target}}

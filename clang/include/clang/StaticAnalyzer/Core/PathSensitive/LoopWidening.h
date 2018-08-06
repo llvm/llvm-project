@@ -22,7 +22,7 @@
 namespace clang {
 namespace ento {
 
-/// \brief Get the states that result from widening the loop.
+/// Get the states that result from widening the loop.
 ///
 /// Widen the loop by invalidating anything that might be modified
 /// by the loop body in any iteration.

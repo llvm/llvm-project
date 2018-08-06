@@ -161,3 +161,10 @@ class Outer1 {
     template <typename T> struct X;
     template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'X<T>' without definition}}
 };
+
+namespace RefPack {
+  template<const int &...N> struct A { template<typename ...T> void f(T (&...t)[N]); };
+  constexpr int k = 10;
+  int arr[10];
+  void g() { A<k>().f(arr); }
+}

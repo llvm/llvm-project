@@ -21,7 +21,7 @@ namespace tooling {
 /// A name of a symbol.
 ///
 /// Symbol's name can be composed of multiple strings. For example, Objective-C
-/// methods can contain multiple argument lables:
+/// methods can contain multiple argument labels:
 ///
 /// \code
 /// - (void) myMethodNamePiece: (int)x anotherNamePieces:(int)y;

@@ -108,7 +108,11 @@ void testBitwiseRules(unsigned int a, int b) {
   clang_analyzer_eval((b | -2) == 0); // expected-warning{{FALSE}}
   clang_analyzer_eval((b | 10) == 0); // expected-warning{{FALSE}}
   clang_analyzer_eval((b | 0) == 0); // expected-warning{{UNKNOWN}}
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval((b | -2) >= 0); // expected-warning{{FALSE}}
+#else
   clang_analyzer_eval((b | -2) >= 0); // expected-warning{{UNKNOWN}}
+#endif
 
   // Check that dynamically computed constants also work.
   int constant = 1 << 3;

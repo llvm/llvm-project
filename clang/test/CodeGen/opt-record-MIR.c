@@ -21,8 +21,9 @@ void foo(float *p, int i) {
 // YAML: --- !Missed
 // YAML: Pass:            regalloc
 // YAML: Name:            LoopSpillReload
-// YAML: DebugLoc:        { File: {{.*}},
-// YAML:                    Line: 10, Column: 11 }
+// YAML: DebugLoc:        { File: {{[^,]+}},
+// YAML:                    Line: 10,
+// YAML:                    Column: 11 }
 // YAML: Function:        foo
 // YAML: Args:
 // YAML:   - NumSpills:       '{{.}}'

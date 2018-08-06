@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Stmt.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
-#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
@@ -55,7 +56,7 @@ static StmtClassNameTable &getStmtInfoTableEntry(Stmt::StmtClass E) {
   if (Initialized)
     return StmtClassInfo[E];
 
-  // Intialize the table on the first use.
+  // Initialize the table on the first use.
   Initialized = true;
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT) \
@@ -127,7 +128,7 @@ Stmt *Stmt::IgnoreImplicit() {
   return s;
 }
 
-/// \brief Skip no-op (attributed, compound) container stmts and skip captured
+/// Skip no-op (attributed, compound) container stmts and skip captured
 /// stmt at the top, if \a IgnoreCaptured is true.
 Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
   Stmt *S = this;
@@ -147,18 +148,18 @@ Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
   return S;
 }
 
-/// \brief Strip off all label-like statements.
+/// Strip off all label-like statements.
 ///
 /// This will strip off label statements, case statements, attributed
 /// statements and default statements recursively.
 const Stmt *Stmt::stripLabelLikeStatements() const {
   const Stmt *S = this;
   while (true) {
-    if (const LabelStmt *LS = dyn_cast<LabelStmt>(S))
+    if (const auto *LS = dyn_cast<LabelStmt>(S))
       S = LS->getSubStmt();
-    else if (const SwitchCase *SC = dyn_cast<SwitchCase>(S))
+    else if (const auto *SC = dyn_cast<SwitchCase>(S))
       S = SC->getSubStmt();
-    else if (const AttributedStmt *AS = dyn_cast<AttributedStmt>(S))
+    else if (const auto *AS = dyn_cast<AttributedStmt>(S))
       S = AS->getSubStmt();
     else
       return S;
@@ -173,14 +174,14 @@ namespace {
   // These silly little functions have to be static inline to suppress
   // unused warnings, and they have to be defined to suppress other
   // warnings.
-  static inline good is_good(good) { return good(); }
+  static good is_good(good) { return good(); }
 
   typedef Stmt::child_range children_t();
   template <class T> good implements_children(children_t T::*) {
     return good();
   }
   LLVM_ATTRIBUTE_UNUSED
-  static inline bad implements_children(children_t Stmt::*) {
+  static bad implements_children(children_t Stmt::*) {
     return bad();
   }
 
@@ -189,7 +190,7 @@ namespace {
     return good();
   }
   LLVM_ATTRIBUTE_UNUSED
-  static inline bad implements_getLocStart(getLocStart_t Stmt::*) {
+  static bad implements_getLocStart(getLocStart_t Stmt::*) {
     return bad();
   }
 
@@ -198,7 +199,7 @@ namespace {
     return good();
   }
   LLVM_ATTRIBUTE_UNUSED
-  static inline bad implements_getLocEnd(getLocEnd_t Stmt::*) {
+  static bad implements_getLocEnd(getLocEnd_t Stmt::*) {
     return bad();
   }
 
@@ -351,49 +352,49 @@ AttributedStmt *AttributedStmt::CreateEmpty(const ASTContext &C,
 }
 
 std::string AsmStmt::generateAsmString(const ASTContext &C) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->generateAsmString(C);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->generateAsmString(C);
   llvm_unreachable("unknown asm statement kind!");
 }
 
 StringRef AsmStmt::getOutputConstraint(unsigned i) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getOutputConstraint(i);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->getOutputConstraint(i);
   llvm_unreachable("unknown asm statement kind!");
 }
 
 const Expr *AsmStmt::getOutputExpr(unsigned i) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getOutputExpr(i);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->getOutputExpr(i);
   llvm_unreachable("unknown asm statement kind!");
 }
 
 StringRef AsmStmt::getInputConstraint(unsigned i) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getInputConstraint(i);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->getInputConstraint(i);
   llvm_unreachable("unknown asm statement kind!");
 }
 
 const Expr *AsmStmt::getInputExpr(unsigned i) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getInputExpr(i);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->getInputExpr(i);
   llvm_unreachable("unknown asm statement kind!");
 }
 
 StringRef AsmStmt::getClobber(unsigned i) const {
-  if (const GCCAsmStmt *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getClobber(i);
-  if (const MSAsmStmt *msAsmStmt = dyn_cast<MSAsmStmt>(this))
+  if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
     return msAsmStmt->getClobber(i);
   llvm_unreachable("unknown asm statement kind!");
 }
@@ -681,14 +682,14 @@ std::string GCCAsmStmt::generateAsmString(const ASTContext &C) const {
   AnalyzeAsmString(Pieces, C, DiagOffs);
 
   std::string AsmString;
-  for (unsigned i = 0, e = Pieces.size(); i != e; ++i) {
-    if (Pieces[i].isString())
-      AsmString += Pieces[i].getString();
-    else if (Pieces[i].getModifier() == '\0')
-      AsmString += '$' + llvm::utostr(Pieces[i].getOperandNo());
+  for (const auto &Piece : Pieces) {
+    if (Piece.isString())
+      AsmString += Piece.getString();
+    else if (Piece.getModifier() == '\0')
+      AsmString += '$' + llvm::utostr(Piece.getOperandNo());
     else
-      AsmString += "${" + llvm::utostr(Pieces[i].getOperandNo()) + ':' +
-                   Pieces[i].getModifier() + '}';
+      AsmString += "${" + llvm::utostr(Piece.getOperandNo()) + ':' +
+                   Piece.getModifier() + '}';
   }
   return AsmString;
 }
@@ -804,7 +805,7 @@ VarDecl *IfStmt::getConditionVariable() const {
   if (!SubExprs[VAR])
     return nullptr;
 
-  DeclStmt *DS = cast<DeclStmt>(SubExprs[VAR]);
+  auto *DS = cast<DeclStmt>(SubExprs[VAR]);
   return cast<VarDecl>(DS->getSingleDecl());
 }
 
@@ -839,7 +840,7 @@ VarDecl *ForStmt::getConditionVariable() const {
   if (!SubExprs[CONDVAR])
     return nullptr;
 
-  DeclStmt *DS = cast<DeclStmt>(SubExprs[CONDVAR]);
+  auto *DS = cast<DeclStmt>(SubExprs[CONDVAR]);
   return cast<VarDecl>(DS->getSingleDecl());
 }
 
@@ -867,7 +868,7 @@ VarDecl *SwitchStmt::getConditionVariable() const {
   if (!SubExprs[VAR])
     return nullptr;
 
-  DeclStmt *DS = cast<DeclStmt>(SubExprs[VAR]);
+  auto *DS = cast<DeclStmt>(SubExprs[VAR]);
   return cast<VarDecl>(DS->getSingleDecl());
 }
 
@@ -901,7 +902,7 @@ VarDecl *WhileStmt::getConditionVariable() const {
   if (!SubExprs[VAR])
     return nullptr;
 
-  DeclStmt *DS = cast<DeclStmt>(SubExprs[VAR]);
+  auto *DS = cast<DeclStmt>(SubExprs[VAR]);
   return cast<VarDecl>(DS->getSingleDecl());
 }
 
@@ -918,8 +919,7 @@ void WhileStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
 
 // IndirectGotoStmt
 LabelDecl *IndirectGotoStmt::getConstantTarget() {
-  if (AddrLabelExpr *E =
-        dyn_cast<AddrLabelExpr>(getTarget()->IgnoreParenImpCasts()))
+  if (auto *E = dyn_cast<AddrLabelExpr>(getTarget()->IgnoreParenImpCasts()))
     return E->getLabel();
   return nullptr;
 }
@@ -1105,18 +1105,18 @@ const CapturedDecl *CapturedStmt::getCapturedDecl() const {
   return CapDeclAndKind.getPointer();
 }
 
-/// \brief Set the outlined function declaration.
+/// Set the outlined function declaration.
 void CapturedStmt::setCapturedDecl(CapturedDecl *D) {
   assert(D && "null CapturedDecl");
   CapDeclAndKind.setPointer(D);
 }
 
-/// \brief Retrieve the captured region kind.
+/// Retrieve the captured region kind.
 CapturedRegionKind CapturedStmt::getCapturedRegionKind() const {
   return CapDeclAndKind.getInt();
 }
 
-/// \brief Set the captured region kind.
+/// Set the captured region kind.
 void CapturedStmt::setCapturedRegionKind(CapturedRegionKind Kind) {
   CapDeclAndKind.setInt(Kind);
 }

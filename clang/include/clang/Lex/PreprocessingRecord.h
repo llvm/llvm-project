@@ -39,11 +39,11 @@ class PreprocessingRecord;
 
 } // namespace clang
 
-/// \brief Allocates memory within a Clang preprocessing record.
+/// Allocates memory within a Clang preprocessing record.
 void *operator new(size_t bytes, clang::PreprocessingRecord &PR,
                    unsigned alignment = 8) noexcept;
 
-/// \brief Frees memory allocated in a Clang preprocessing record.
+/// Frees memory allocated in a Clang preprocessing record.
 void operator delete(void *ptr, clang::PreprocessingRecord &PR,
                      unsigned) noexcept;
 
@@ -55,25 +55,25 @@ class MacroInfo;
 class SourceManager;
 class Token;
 
-  /// \brief Base class that describes a preprocessed entity, which may be a
+  /// Base class that describes a preprocessed entity, which may be a
   /// preprocessor directive or macro expansion.
   class PreprocessedEntity {
   public:
-    /// \brief The kind of preprocessed entity an object describes.
+    /// The kind of preprocessed entity an object describes.
     enum EntityKind {
-      /// \brief Indicates a problem trying to load the preprocessed entity.
+      /// Indicates a problem trying to load the preprocessed entity.
       InvalidKind,
 
-      /// \brief A macro expansion.
+      /// A macro expansion.
       MacroExpansionKind,
       
       /// \defgroup Preprocessing directives
       /// @{
       
-      /// \brief A macro definition.
+      /// A macro definition.
       MacroDefinitionKind,
       
-      /// \brief An inclusion directive, such as \c \#include, \c
+      /// An inclusion directive, such as \c \#include, \c
       /// \#import, or \c \#include_next.
       InclusionDirectiveKind,
 
@@ -84,10 +84,10 @@ class Token;
     };
 
   private:
-    /// \brief The kind of preprocessed entity that this object describes.
+    /// The kind of preprocessed entity that this object describes.
     EntityKind Kind;
     
-    /// \brief The source range that covers this preprocessed entity.
+    /// The source range that covers this preprocessed entity.
     SourceRange Range;
     
   protected:
@@ -97,14 +97,14 @@ class Token;
         : Kind(Kind), Range(Range) {}
 
   public:
-    /// \brief Retrieve the kind of preprocessed entity stored in this object.
+    /// Retrieve the kind of preprocessed entity stored in this object.
     EntityKind getKind() const { return Kind; }
     
-    /// \brief Retrieve the source range that covers this entire preprocessed 
+    /// Retrieve the source range that covers this entire preprocessed 
     /// entity.
     SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
-    /// \brief Returns true if there was a problem loading the preprocessed
+    /// Returns true if there was a problem loading the preprocessed
     /// entity.
     bool isInvalid() const { return Kind == InvalidKind; }
 
@@ -131,7 +131,7 @@ class Token;
     void operator delete(void *data) noexcept;
   };
   
-  /// \brief Records the presence of a preprocessor directive.
+  /// Records the presence of a preprocessor directive.
   class PreprocessingDirective : public PreprocessedEntity {
   public:
     PreprocessingDirective(EntityKind Kind, SourceRange Range) 
@@ -144,9 +144,9 @@ class Token;
     }
   };
 
-  /// \brief Record the location of a macro definition.
+  /// Record the location of a macro definition.
   class MacroDefinitionRecord : public PreprocessingDirective {
-    /// \brief The name of the macro being defined.
+    /// The name of the macro being defined.
     const IdentifierInfo *Name;
 
   public:
@@ -154,10 +154,10 @@ class Token;
                                    SourceRange Range)
         : PreprocessingDirective(MacroDefinitionKind, Range), Name(Name) {}
 
-    /// \brief Retrieve the name of the macro being defined.
+    /// Retrieve the name of the macro being defined.
     const IdentifierInfo *getName() const { return Name; }
 
-    /// \brief Retrieve the location of the macro name in the definition.
+    /// Retrieve the location of the macro name in the definition.
     SourceLocation getLocation() const { return getSourceRange().getBegin(); }
     
     // Implement isa/cast/dyncast/etc.
@@ -166,9 +166,9 @@ class Token;
     }
   };
   
-  /// \brief Records the location of a macro expansion.
+  /// Records the location of a macro expansion.
   class MacroExpansion : public PreprocessedEntity {
-    /// \brief The definition of this macro or the name of the macro if it is
+    /// The definition of this macro or the name of the macro if it is
     /// a builtin macro.
     llvm::PointerUnion<IdentifierInfo *, MacroDefinitionRecord *> NameOrDef;
 
@@ -181,17 +181,17 @@ class Token;
         : PreprocessedEntity(MacroExpansionKind, Range), NameOrDef(Definition) {
     }
 
-    /// \brief True if it is a builtin macro.
+    /// True if it is a builtin macro.
     bool isBuiltinMacro() const { return NameOrDef.is<IdentifierInfo *>(); }
 
-    /// \brief The name of the macro being expanded.
+    /// The name of the macro being expanded.
     const IdentifierInfo *getName() const {
       if (MacroDefinitionRecord *Def = getDefinition())
         return Def->getName();
       return NameOrDef.get<IdentifierInfo *>();
     }
 
-    /// \brief The definition of the macro being expanded. May return null if
+    /// The definition of the macro being expanded. May return null if
     /// this is a builtin macro.
     MacroDefinitionRecord *getDefinition() const {
       return NameOrDef.dyn_cast<MacroDefinitionRecord *>();
@@ -203,45 +203,45 @@ class Token;
     }
   };
 
-  /// \brief Record the location of an inclusion directive, such as an
+  /// Record the location of an inclusion directive, such as an
   /// \c \#include or \c \#import statement.
   class InclusionDirective : public PreprocessingDirective {
   public:
-    /// \brief The kind of inclusion directives known to the
+    /// The kind of inclusion directives known to the
     /// preprocessor.
     enum InclusionKind {
-      /// \brief An \c \#include directive.
+      /// An \c \#include directive.
       Include,
 
-      /// \brief An Objective-C \c \#import directive.
+      /// An Objective-C \c \#import directive.
       Import,
 
-      /// \brief A GNU \c \#include_next directive.
+      /// A GNU \c \#include_next directive.
       IncludeNext,
 
-      /// \brief A Clang \c \#__include_macros directive.
+      /// A Clang \c \#__include_macros directive.
       IncludeMacros
     };
 
   private:
-    /// \brief The name of the file that was included, as written in
+    /// The name of the file that was included, as written in
     /// the source.
     StringRef FileName;
 
-    /// \brief Whether the file name was in quotation marks; otherwise, it was
+    /// Whether the file name was in quotation marks; otherwise, it was
     /// in angle brackets.
     unsigned InQuotes : 1;
 
-    /// \brief The kind of inclusion directive we have.
+    /// The kind of inclusion directive we have.
     ///
     /// This is a value of type InclusionKind.
     unsigned Kind : 2;
 
-    /// \brief Whether the inclusion directive was automatically turned into
+    /// Whether the inclusion directive was automatically turned into
     /// a module import.
     unsigned ImportedModule : 1;
 
-    /// \brief The file that was included.
+    /// The file that was included.
     const FileEntry *File;
 
   public:
@@ -250,21 +250,21 @@ class Token;
                        bool InQuotes, bool ImportedModule,
                        const FileEntry *File, SourceRange Range);
     
-    /// \brief Determine what kind of inclusion directive this is.
+    /// Determine what kind of inclusion directive this is.
     InclusionKind getKind() const { return static_cast<InclusionKind>(Kind); }
     
-    /// \brief Retrieve the included file name as it was written in the source.
+    /// Retrieve the included file name as it was written in the source.
     StringRef getFileName() const { return FileName; }
     
-    /// \brief Determine whether the included file name was written in quotes;
+    /// Determine whether the included file name was written in quotes;
     /// otherwise, it was written in angle brackets.
     bool wasInQuotes() const { return InQuotes; }
 
-    /// \brief Determine whether the inclusion directive was automatically
+    /// Determine whether the inclusion directive was automatically
     /// turned into a module import.
     bool importedModule() const { return ImportedModule; }
     
-    /// \brief Retrieve the file entry for the actual file that was included
+    /// Retrieve the file entry for the actual file that was included
     /// by this directive.
     const FileEntry *getFile() const { return File; }
         
@@ -274,55 +274,60 @@ class Token;
     }
   };
   
-  /// \brief An abstract class that should be subclassed by any external source
+  /// An abstract class that should be subclassed by any external source
   /// of preprocessing record entries.
   class ExternalPreprocessingRecordSource {
   public:
     virtual ~ExternalPreprocessingRecordSource();
     
-    /// \brief Read a preallocated preprocessed entity from the external source.
+    /// Read a preallocated preprocessed entity from the external source.
     ///
     /// \returns null if an error occurred that prevented the preprocessed
     /// entity from being loaded.
     virtual PreprocessedEntity *ReadPreprocessedEntity(unsigned Index) = 0;
 
-    /// \brief Returns a pair of [Begin, End) indices of preallocated
+    /// Returns a pair of [Begin, End) indices of preallocated
     /// preprocessed entities that \p Range encompasses.
     virtual std::pair<unsigned, unsigned>
         findPreprocessedEntitiesInRange(SourceRange Range) = 0;
 
-    /// \brief Optionally returns true or false if the preallocated preprocessed
+    /// Optionally returns true or false if the preallocated preprocessed
     /// entity with index \p Index came from file \p FID.
     virtual Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
                                                         FileID FID) {
       return None;
     }
+
+    /// Read a preallocated skipped range from the external source.
+    virtual SourceRange ReadSkippedRange(unsigned Index) = 0;
   };
   
-  /// \brief A record of the steps taken while preprocessing a source file,
+  /// A record of the steps taken while preprocessing a source file,
   /// including the various preprocessing directives processed, macros 
   /// expanded, etc.
   class PreprocessingRecord : public PPCallbacks {
     SourceManager &SourceMgr;
     
-    /// \brief Allocator used to store preprocessing objects.
+    /// Allocator used to store preprocessing objects.
     llvm::BumpPtrAllocator BumpAlloc;
 
-    /// \brief The set of preprocessed entities in this record, in order they
+    /// The set of preprocessed entities in this record, in order they
     /// were seen.
     std::vector<PreprocessedEntity *> PreprocessedEntities;
     
-    /// \brief The set of preprocessed entities in this record that have been
+    /// The set of preprocessed entities in this record that have been
     /// loaded from external sources.
     ///
     /// The entries in this vector are loaded lazily from the external source,
     /// and are referenced by the iterator using negative indices.
     std::vector<PreprocessedEntity *> LoadedPreprocessedEntities;
 
-    /// \brief The set of ranges that were skipped by the preprocessor,
+    /// The set of ranges that were skipped by the preprocessor,
     std::vector<SourceRange> SkippedRanges;
 
-    /// \brief Global (loaded or local) ID for a preprocessed entity.
+    bool SkippedRangesAllLoaded = true;
+
+    /// Global (loaded or local) ID for a preprocessed entity.
     /// Negative values are used to indicate preprocessed entities
     /// loaded from the external source while non-negative values are used to
     /// indicate preprocessed entities introduced by the current preprocessor.
@@ -346,50 +351,60 @@ class Token;
       return isLoaded ? PPEntityID(-int(Index)-1) : PPEntityID(Index+1);
     }
 
-    /// \brief Mapping from MacroInfo structures to their definitions.
+    /// Mapping from MacroInfo structures to their definitions.
     llvm::DenseMap<const MacroInfo *, MacroDefinitionRecord *> MacroDefinitions;
 
-    /// \brief External source of preprocessed entities.
+    /// External source of preprocessed entities.
     ExternalPreprocessingRecordSource *ExternalSource = nullptr;
 
-    /// \brief Retrieve the preprocessed entity at the given ID.
+    /// Retrieve the preprocessed entity at the given ID.
     PreprocessedEntity *getPreprocessedEntity(PPEntityID PPID);
 
-    /// \brief Retrieve the loaded preprocessed entity at the given index.
+    /// Retrieve the loaded preprocessed entity at the given index.
     PreprocessedEntity *getLoadedPreprocessedEntity(unsigned Index);
     
-    /// \brief Determine the number of preprocessed entities that were
+    /// Determine the number of preprocessed entities that were
     /// loaded (or can be loaded) from an external source.
     unsigned getNumLoadedPreprocessedEntities() const {
       return LoadedPreprocessedEntities.size();
     }
 
-    /// \brief Returns a pair of [Begin, End) indices of local preprocessed
+    /// Returns a pair of [Begin, End) indices of local preprocessed
     /// entities that \p Range encompasses.
     std::pair<unsigned, unsigned>
       findLocalPreprocessedEntitiesInRange(SourceRange Range) const;
     unsigned findBeginLocalPreprocessedEntity(SourceLocation Loc) const;
     unsigned findEndLocalPreprocessedEntity(SourceLocation Loc) const;
 
-    /// \brief Allocate space for a new set of loaded preprocessed entities.
+    /// Allocate space for a new set of loaded preprocessed entities.
     ///
     /// \returns The index into the set of loaded preprocessed entities, which
     /// corresponds to the first newly-allocated entity.
     unsigned allocateLoadedEntities(unsigned NumEntities);
 
-    /// \brief Register a new macro definition.
+    /// Allocate space for a new set of loaded preprocessed skipped
+    /// ranges.
+    ///
+    /// \returns The index into the set of loaded preprocessed ranges, which
+    /// corresponds to the first newly-allocated range.
+    unsigned allocateSkippedRanges(unsigned NumRanges);
+
+    /// Ensures that all external skipped ranges have been loaded.
+    void ensureSkippedRangesLoaded();
+
+    /// Register a new macro definition.
     void RegisterMacroDefinition(MacroInfo *Macro, MacroDefinitionRecord *Def);
 
   public:
-    /// \brief Construct a new preprocessing record.
+    /// Construct a new preprocessing record.
     explicit PreprocessingRecord(SourceManager &SM);
 
-    /// \brief Allocate memory in the preprocessing record.
+    /// Allocate memory in the preprocessing record.
     void *Allocate(unsigned Size, unsigned Align = 8) {
       return BumpAlloc.Allocate(Size, Align);
     }
     
-    /// \brief Deallocate memory in the preprocessing record.
+    /// Deallocate memory in the preprocessing record.
     void Deallocate(void *Ptr) {}
 
     size_t getTotalMemory() const;
@@ -436,27 +451,27 @@ class Token;
       PreprocessedEntity *operator->() const { return **this; }
     };
 
-    /// \brief Begin iterator for all preprocessed entities.
+    /// Begin iterator for all preprocessed entities.
     iterator begin() {
       return iterator(this, -(int)LoadedPreprocessedEntities.size());
     }
 
-    /// \brief End iterator for all preprocessed entities.
+    /// End iterator for all preprocessed entities.
     iterator end() {
       return iterator(this, PreprocessedEntities.size());
     }
 
-    /// \brief Begin iterator for local, non-loaded, preprocessed entities.
+    /// Begin iterator for local, non-loaded, preprocessed entities.
     iterator local_begin() {
       return iterator(this, 0);
     }
 
-    /// \brief End iterator for local, non-loaded, preprocessed entities.
+    /// End iterator for local, non-loaded, preprocessed entities.
     iterator local_end() {
       return iterator(this, PreprocessedEntities.size());
     }
 
-    /// \brief iterator range for the given range of loaded
+    /// iterator range for the given range of loaded
     /// preprocessed entities.
     llvm::iterator_range<iterator> getIteratorsForLoadedRange(unsigned start,
                                                               unsigned count) {
@@ -467,14 +482,14 @@ class Token;
           iterator(this, int(end) - LoadedPreprocessedEntities.size()));
     }
 
-    /// \brief Returns a range of preprocessed entities that source range \p R
+    /// Returns a range of preprocessed entities that source range \p R
     /// encompasses.
     ///
     /// \param R the range to look for preprocessed entities.
     llvm::iterator_range<iterator>
     getPreprocessedEntitiesInRange(SourceRange R);
 
-    /// \brief Returns true if the preprocessed entity that \p PPEI iterator
+    /// Returns true if the preprocessed entity that \p PPEI iterator
     /// points to is coming from the file \p FID.
     ///
     /// Can be used to avoid implicit deserializations of preallocated
@@ -483,23 +498,24 @@ class Token;
     /// \see getPreprocessedEntitiesInRange.
     bool isEntityInFileID(iterator PPEI, FileID FID);
 
-    /// \brief Add a new preprocessed entity to this record.
+    /// Add a new preprocessed entity to this record.
     PPEntityID addPreprocessedEntity(PreprocessedEntity *Entity);
 
-    /// \brief Set the external source for preprocessed entities.
+    /// Set the external source for preprocessed entities.
     void SetExternalSource(ExternalPreprocessingRecordSource &Source);
 
-    /// \brief Retrieve the external source for preprocessed entities.
+    /// Retrieve the external source for preprocessed entities.
     ExternalPreprocessingRecordSource *getExternalSource() const {
       return ExternalSource;
     }
 
-    /// \brief Retrieve the macro definition that corresponds to the given
+    /// Retrieve the macro definition that corresponds to the given
     /// \c MacroInfo.
     MacroDefinitionRecord *findMacroDefinition(const MacroInfo *MI);
 
-    /// \brief Retrieve all ranges that got skipped while preprocessing.
-    const std::vector<SourceRange> &getSkippedRanges() const {
+    /// Retrieve all ranges that got skipped while preprocessing.
+    const std::vector<SourceRange> &getSkippedRanges() {
+      ensureSkippedRangesLoaded();
       return SkippedRanges;
     }
         
@@ -516,14 +532,14 @@ class Token;
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
                             const FileEntry *File, StringRef SearchPath,
-                            StringRef RelativePath,
-                            const Module *Imported) override;
+                            StringRef RelativePath, const Module *Imported,
+                            SrcMgr::CharacteristicKind FileType) override;
     void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override;
     void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
                 const MacroDefinition &MD) override;
 
-    /// \brief Hook called whenever the 'defined' operator is seen.
+    /// Hook called whenever the 'defined' operator is seen.
     void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
                  SourceRange Range) override;
 
@@ -533,7 +549,7 @@ class Token;
     void addMacroExpansion(const Token &Id, const MacroInfo *MI,
                            SourceRange Range);
 
-    /// \brief Cached result of the last \see getPreprocessedEntitiesInRange
+    /// Cached result of the last \see getPreprocessedEntitiesInRange
     /// query.
     struct {
       SourceRange Range;

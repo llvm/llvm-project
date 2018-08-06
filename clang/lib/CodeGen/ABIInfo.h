@@ -53,12 +53,9 @@ namespace swiftcall {
     CodeGen::CodeGenTypes &CGT;
   protected:
     llvm::CallingConv::ID RuntimeCC;
-    llvm::CallingConv::ID BuiltinCC;
   public:
     ABIInfo(CodeGen::CodeGenTypes &cgt)
-      : CGT(cgt),
-        RuntimeCC(llvm::CallingConv::C),
-        BuiltinCC(llvm::CallingConv::C) {}
+        : CGT(cgt), RuntimeCC(llvm::CallingConv::C) {}
 
     virtual ~ABIInfo();
 
@@ -75,11 +72,6 @@ namespace swiftcall {
     /// functions.
     llvm::CallingConv::ID getRuntimeCC() const {
       return RuntimeCC;
-    }
-
-    /// Return the calling convention to use for compiler builtins
-    llvm::CallingConv::ID getBuiltinCC() const {
-      return BuiltinCC;
     }
 
     virtual void computeInfo(CodeGen::CGFunctionInfo &FI) const = 0;
@@ -107,8 +99,6 @@ namespace swiftcall {
 
     virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
                                                    uint64_t Members) const;
-
-    virtual bool shouldSignExtUnsignedType(QualType Ty) const;
 
     bool isHomogeneousAggregate(QualType Ty, const Type *&Base,
                                 uint64_t &Members) const;

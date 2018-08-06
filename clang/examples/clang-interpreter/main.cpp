@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -18,7 +18,12 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -26,7 +31,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
+#include "llvm/Target/TargetMachine.h"
+
 using namespace clang;
 using namespace clang::driver;
 
@@ -35,51 +41,80 @@ using namespace clang::driver;
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string GetExecutablePath(const char *Argv0) {
-  // This just needs to be some symbol in the binary; C++ doesn't
-  // allow taking the address of ::main however.
-  void *MainAddr = (void*) (intptr_t) GetExecutablePath;
+std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-static llvm::ExecutionEngine *
-createExecutionEngine(std::unique_ptr<llvm::Module> M, std::string *ErrorStr) {
-  return llvm::EngineBuilder(std::move(M))
-      .setEngineKind(llvm::EngineKind::Either)
-      .setErrorStr(ErrorStr)
-      .create();
-}
+namespace llvm {
+namespace orc {
 
-static int Execute(std::unique_ptr<llvm::Module> Mod, char *const *envp) {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
+class SimpleJIT {
+private:
+  ExecutionSession ES;
+  std::shared_ptr<SymbolResolver> Resolver;
+  std::unique_ptr<TargetMachine> TM;
+  const DataLayout DL;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
-  llvm::Module &M = *Mod;
-  std::string Error;
-  std::unique_ptr<llvm::ExecutionEngine> EE(
-      createExecutionEngine(std::move(Mod), &Error));
-  if (!EE) {
-    llvm::errs() << "unable to make execution engine: " << Error << "\n";
-    return 255;
+public:
+  SimpleJIT()
+      : Resolver(createLegacyLookupResolver(
+            ES,
+            [this](const std::string &Name) -> JITSymbol {
+              if (auto Sym = CompileLayer.findSymbol(Name, false))
+                return Sym;
+              else if (auto Err = Sym.takeError())
+                return std::move(Err);
+              if (auto SymAddr =
+                      RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+                return JITSymbol(SymAddr, JITSymbolFlags::Exported);
+              return nullptr;
+            },
+            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
+        TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer(ES,
+                    [this](VModuleKey) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<SectionMemoryManager>(), Resolver};
+                    }),
+        CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
-  llvm::Function *EntryFn = M.getFunction("main");
-  if (!EntryFn) {
-    llvm::errs() << "'main' function not found in module.\n";
-    return 255;
+  const TargetMachine &getTargetMachine() const { return *TM; }
+
+  VModuleKey addModule(std::unique_ptr<Module> M) {
+    // Add the module to the JIT with a new VModuleKey.
+    auto K = ES.allocateVModule();
+    cantFail(CompileLayer.addModule(K, std::move(M)));
+    return K;
   }
 
-  // FIXME: Support passing arguments.
-  std::vector<std::string> Args;
-  Args.push_back(M.getModuleIdentifier());
+  JITSymbol findSymbol(const StringRef &Name) {
+    std::string MangledName;
+    raw_string_ostream MangledNameStream(MangledName);
+    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
+    return CompileLayer.findSymbol(MangledNameStream.str(), true);
+  }
 
-  EE->finalizeObject();
-  return EE->runFunctionAsMain(EntryFn, Args, envp);
-}
+  JITTargetAddress getSymbolAddress(const StringRef &Name) {
+    return cantFail(findSymbol(Name).getAddress());
+  }
 
-int main(int argc, const char **argv, char * const *envp) {
+  void removeModule(VModuleKey K) {
+    cantFail(CompileLayer.removeModule(K));
+  }
+};
+
+} // end namespace orc
+} // end namespace llvm
+
+int main(int argc, const char **argv) {
+  // This just needs to be some symbol in the binary; C++ doesn't
+  // allow taking the address of ::main however.
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
-  std::string Path = GetExecutablePath(argv[0]);
+  std::string Path = GetExecutablePath(argv[0], MainAddr);
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticPrinter *DiagClient =
     new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -87,11 +122,14 @@ int main(int argc, const char **argv, char * const *envp) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
 
-  // Use ELF on windows for now.
-  std::string TripleStr = llvm::sys::getProcessTriple();
+  const std::string TripleStr = llvm::sys::getProcessTriple();
   llvm::Triple T(TripleStr);
+
+  // Use ELF on Windows-32 and MingW for now.
+#ifndef CLANG_INTERPRETER_COFF_FORMAT
   if (T.isOSBinFormatCOFF())
     T.setObjectFormat(llvm::Triple::ELF);
+#endif
 
   Driver TheDriver(Path, T.str(), Diags);
   TheDriver.setTitle("clang interpreter");
@@ -163,12 +201,21 @@ int main(int argc, const char **argv, char * const *envp) {
   if (!Clang.ExecuteAction(*Act))
     return 1;
 
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+
   int Res = 255;
-  if (std::unique_ptr<llvm::Module> Module = Act->takeModule())
-    Res = Execute(std::move(Module), envp);
+  std::unique_ptr<llvm::Module> Module = Act->takeModule();
+
+  if (Module) {
+    llvm::orc::SimpleJIT J;
+    auto H = J.addModule(std::move(Module));
+    auto Main = (int(*)(...))J.getSymbolAddress("main");
+    Res = Main();
+    J.removeModule(H);
+  }
 
   // Shutdown.
-
   llvm::llvm_shutdown();
 
   return Res;

@@ -24,6 +24,7 @@ StringRef getRefactoringActionTypeName(RefactoringActionType Action) {
     return Spelling;
 #include "clang/Tooling/Refactor/RefactoringActions.def"
   }
+  llvm_unreachable("unexpected RefactoringActionType value");
 }
 
 } // end namespace tooling

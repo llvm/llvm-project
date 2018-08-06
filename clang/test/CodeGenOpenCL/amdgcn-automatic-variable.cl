@@ -62,7 +62,7 @@ void func2(void) {
 // CHECK-LABEL: define void @func3()
 // CHECK: %a = alloca [16 x [1 x float]], align 4, addrspace(5)
 // CHECK: %[[CAST:.+]] = bitcast [16 x [1 x float]] addrspace(5)* %a to i8 addrspace(5)*
-// CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* %[[CAST]], i8 0, i64 64, i32 4, i1 false)
+// CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* align 4 %[[CAST]], i8 0, i64 64, i1 false)
 void func3(void) {
   float a[16][1] = {{0.}};
 }

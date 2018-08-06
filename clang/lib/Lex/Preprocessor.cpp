@@ -85,12 +85,14 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
     : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
-      FileMgr(Headers.getFileMgr()), SourceMgr(SM),
-      PCMCache(PCMCache), ScratchBuf(new ScratchBuffer(SourceMgr)),
-      HeaderInfo(Headers), TheModuleLoader(TheModuleLoader),
-      ExternalSource(nullptr), Identifiers(opts, IILookup),
-      PragmaHandlers(new PragmaNamespace(StringRef())), TUKind(TUKind),
-      SkipMainFilePreamble(0, true),
+      FileMgr(Headers.getFileMgr()), SourceMgr(SM), PCMCache(PCMCache),
+      ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
+      TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
+      // As the language options may have not been loaded yet (when
+      // deserializing an ASTUnit), adding keywords to the identifier table is
+      // deferred to Preprocessor::Initialize().
+      Identifiers(IILookup), PragmaHandlers(new PragmaNamespace(StringRef())),
+      TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
   
@@ -147,6 +149,11 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
     Ident_AbnormalTermination = nullptr;
   }
 
+  // If using a PCH with a through header, start skipping tokens.
+  if (!this->PPOpts->PCHThroughHeader.empty() &&
+      !this->PPOpts->ImplicitPCHInclude.empty())
+    SkippingUntilPCHThroughHeader = true;
+
   if (this->PPOpts->GeneratePreamble)
     PreambleConditionalStack.startRecording();
 }
@@ -190,6 +197,9 @@ void Preprocessor::Initialize(const TargetInfo &Target,
   // Initialize information about built-ins.
   BuiltinInfo.InitializeTarget(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
+
+  // Populate the identifier table with info about keywords for the current language.
+  Identifiers.AddKeywords(LangOpts);
 }
 
 void Preprocessor::InitializeForModelFile() {
@@ -328,7 +338,7 @@ Preprocessor::macro_end(bool IncludeExternalMacros) const {
   return CurSubmoduleState->Macros.end();
 }
 
-/// \brief Compares macro tokens with a specified token value sequence.
+/// Compares macro tokens with a specified token value sequence.
 static bool MacroDefinitionEquals(const MacroInfo *MI,
                                   ArrayRef<TokenValue> Tokens) {
   return Tokens.size() == MI->getNumTokens() &&
@@ -482,6 +492,22 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
     Tok.setLiteralData(DestPtr);
 }
 
+SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
+  auto &SM = getSourceManager();
+  SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SpellingLoc);
+  bool Invalid = false;
+  StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return SourceLocation();
+
+  // FIXME: We could consider re-using spelling for tokens we see repeatedly.
+  const char *DestPtr;
+  SourceLocation Spelling =
+      ScratchBuf->getToken(Buffer.data() + LocInfo.second, Length, DestPtr);
+  return SM.createTokenSplitLoc(Spelling, Loc, Loc.getLocWithOffset(Length));
+}
+
 Module *Preprocessor::getCurrentModule() {
   if (!getLangOpts().isCompilingModule())
     return nullptr;
@@ -530,6 +556,72 @@ void Preprocessor::EnterMainSourceFile() {
 
   // Start parsing the predefines.
   EnterSourceFile(FID, nullptr, SourceLocation());
+
+  if (!PPOpts->PCHThroughHeader.empty()) {
+    // Lookup and save the FileID for the through header. If it isn't found
+    // in the search path, it's a fatal error.
+    const DirectoryLookup *CurDir;
+    const FileEntry *File = LookupFile(
+        SourceLocation(), PPOpts->PCHThroughHeader,
+        /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr, CurDir,
+        /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
+        /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr);
+    if (!File) {
+      Diag(SourceLocation(), diag::err_pp_through_header_not_found)
+          << PPOpts->PCHThroughHeader;
+      return;
+    }
+    setPCHThroughHeaderFileID(
+        SourceMgr.createFileID(File, SourceLocation(), SrcMgr::C_User));
+  }
+
+  // Skip tokens from the Predefines and if needed the main file.
+  if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader)
+    SkipTokensUntilPCHThroughHeader();
+}
+
+void Preprocessor::setPCHThroughHeaderFileID(FileID FID) {
+  assert(PCHThroughHeaderFileID.isInvalid() &&
+         "PCHThroughHeaderFileID already set!");
+  PCHThroughHeaderFileID = FID;
+}
+
+bool Preprocessor::isPCHThroughHeader(const FileEntry *FE) {
+  assert(PCHThroughHeaderFileID.isValid() &&
+         "Invalid PCH through header FileID");
+  return FE == SourceMgr.getFileEntryForID(PCHThroughHeaderFileID);
+}
+
+bool Preprocessor::creatingPCHWithThroughHeader() {
+  return TUKind == TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+         PCHThroughHeaderFileID.isValid();
+}
+
+bool Preprocessor::usingPCHWithThroughHeader() {
+  return TUKind != TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+         PCHThroughHeaderFileID.isValid();
+}
+
+/// Skip tokens until after the #include of the through header.
+/// Tokens in the predefines file and the main file may be skipped. If the end
+/// of the predefines file is reached, skipping continues into the main file.
+/// If the end of the main file is reached, it's a fatal error.
+void Preprocessor::SkipTokensUntilPCHThroughHeader() {
+  bool ReachedMainFileEOF = false;
+  Token Tok;
+  while (true) {
+    bool InPredefines = (CurLexer->getFileID() == getPredefinesFileID());
+    CurLexer->Lex(Tok);
+    if (Tok.is(tok::eof) && !InPredefines) {
+      ReachedMainFileEOF = true;
+      break;
+    }
+    if (!SkippingUntilPCHThroughHeader)
+      break;
+  }
+  if (ReachedMainFileEOF)
+    Diag(SourceLocation(), diag::err_pp_through_header_not_seen)
+        << PPOpts->PCHThroughHeader << 1;
 }
 
 void Preprocessor::replayPreambleConditionalStack() {
@@ -624,7 +716,7 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
     Diag(Identifier,it->second) << Identifier.getIdentifierInfo();
 }
 
-/// \brief Returns a diagnostic message kind for reporting a future keyword as
+/// Returns a diagnostic message kind for reporting a future keyword as
 /// appropriate for the identifier and specified language.
 static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
                                           const LangOptions &LangOpts) {
@@ -773,13 +865,18 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
-  if (Result.is(tok::code_completion))
+  if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
+    // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
+    // Set IdenfitierInfo to null to avoid confusing code that handles both
+    // identifiers and completion tokens.
+    Result.setIdentifierInfo(nullptr);
+  }
 
   LastTokenWasAt = Result.is(tok::at);
 }
 
-/// \brief Lex a token following the 'import' contextual keyword.
+/// Lex a token following the 'import' contextual keyword.
 ///
 void Preprocessor::LexAfterModuleImport(Token &Result) {
   // Figure out what kind of lexer we actually have.

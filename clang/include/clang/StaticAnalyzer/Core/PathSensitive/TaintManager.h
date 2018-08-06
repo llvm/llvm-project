@@ -1,4 +1,4 @@
-//== TaintManager.h - Managing taint --------------------------- -*- C++ -*--=//
+//===- TaintManager.h - Managing taint --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTMANAGER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTMANAGER_H
 
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/TaintTag.h"
 #include "llvm/ADT/ImmutableMap.h"
 
@@ -29,28 +29,37 @@ namespace ento {
 // FIXME: This does not use the nice trait macros because it must be accessible
 // from multiple translation units.
 struct TaintMap {};
-typedef llvm::ImmutableMap<SymbolRef, TaintTagType> TaintMapImpl;
+
+using TaintMapImpl = llvm::ImmutableMap<SymbolRef, TaintTagType>;
+
 template<> struct ProgramStateTrait<TaintMap>
     :  public ProgramStatePartialTrait<TaintMapImpl> {
-  static void *GDMIndex() { static int index = 0; return &index; }
+  static void *GDMIndex() {
+    static int index = 0;
+    return &index;
+  }
 };
 
 /// The GDM component mapping derived symbols' parent symbols to their
 /// underlying regions. This is used to efficiently check whether a symbol is
 /// tainted when it represents a sub-region of a tainted symbol.
 struct DerivedSymTaint {};
-typedef llvm::ImmutableMap<SymbolRef, TaintedSubRegions> DerivedSymTaintImpl;
+
+using DerivedSymTaintImpl = llvm::ImmutableMap<SymbolRef, TaintedSubRegions>;
+
 template<> struct ProgramStateTrait<DerivedSymTaint>
     :  public ProgramStatePartialTrait<DerivedSymTaintImpl> {
-  static void *GDMIndex() { static int index; return &index; }
+  static void *GDMIndex() {
+    static int index;
+    return &index;
+  }
 };
 
 class TaintManager {
-
-  TaintManager() {}
+  TaintManager() = default;
 };
 
-}
-}
+} // namespace ento
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTMANAGER_H

@@ -294,6 +294,39 @@ void Lexer::lexCommentText(Token &T) {
   assert(CommentState == LCS_InsideBCPLComment ||
          CommentState == LCS_InsideCComment);
 
+  // Handles lexing non-command text, i.e. text and newline.
+  auto HandleNonCommandToken = [&]() -> void {
+    assert(State == LS_Normal);
+
+    const char *TokenPtr = BufferPtr;
+    assert(TokenPtr < CommentEnd);
+    switch (*TokenPtr) {
+      case '\n':
+      case '\r':
+          TokenPtr = skipNewline(TokenPtr, CommentEnd);
+          formTokenWithChars(T, TokenPtr, tok::newline);
+
+          if (CommentState == LCS_InsideCComment)
+            skipLineStartingDecorations();
+          return;
+
+      default: {
+          StringRef TokStartSymbols = ParseCommands ? "\n\r\\@&<" : "\n\r";
+          size_t End = StringRef(TokenPtr, CommentEnd - TokenPtr)
+                           .find_first_of(TokStartSymbols);
+          if (End != StringRef::npos)
+            TokenPtr += End;
+          else
+            TokenPtr = CommentEnd;
+          formTextToken(T, TokenPtr);
+          return;
+      }
+    }
+  };
+
+  if (!ParseCommands)
+    return HandleNonCommandToken();
+
   switch (State) {
   case LS_Normal:
     break;
@@ -315,136 +348,116 @@ void Lexer::lexCommentText(Token &T) {
   }
 
   assert(State == LS_Normal);
-
   const char *TokenPtr = BufferPtr;
   assert(TokenPtr < CommentEnd);
-  while (TokenPtr != CommentEnd) {
-    switch(*TokenPtr) {
-      case '\\':
-      case '@': {
-        // Commands that start with a backslash and commands that start with
-        // 'at' have equivalent semantics.  But we keep information about the
-        // exact syntax in AST for comments.
-        tok::TokenKind CommandKind =
-            (*TokenPtr == '@') ? tok::at_command : tok::backslash_command;
-        TokenPtr++;
-        if (TokenPtr == CommentEnd) {
-          formTextToken(T, TokenPtr);
-          return;
-        }
-        char C = *TokenPtr;
-        switch (C) {
-        default:
-          break;
-
-        case '\\': case '@': case '&': case '$':
-        case '#':  case '<': case '>': case '%':
-        case '\"': case '.': case ':':
-          // This is one of \\ \@ \& \$ etc escape sequences.
-          TokenPtr++;
-          if (C == ':' && TokenPtr != CommentEnd && *TokenPtr == ':') {
-            // This is the \:: escape sequence.
-            TokenPtr++;
-          }
-          StringRef UnescapedText(BufferPtr + 1, TokenPtr - (BufferPtr + 1));
-          formTokenWithChars(T, TokenPtr, tok::text);
-          T.setText(UnescapedText);
-          return;
-        }
-
-        // Don't make zero-length commands.
-        if (!isCommandNameStartCharacter(*TokenPtr)) {
-          formTextToken(T, TokenPtr);
-          return;
-        }
-
-        TokenPtr = skipCommandName(TokenPtr, CommentEnd);
-        unsigned Length = TokenPtr - (BufferPtr + 1);
-
-        // Hardcoded support for lexing LaTeX formula commands
-        // \f$ \f[ \f] \f{ \f} as a single command.
-        if (Length == 1 && TokenPtr[-1] == 'f' && TokenPtr != CommentEnd) {
-          C = *TokenPtr;
-          if (C == '$' || C == '[' || C == ']' || C == '{' || C == '}') {
-            TokenPtr++;
-            Length++;
-          }
-        }
-
-        StringRef CommandName(BufferPtr + 1, Length);
-
-        const CommandInfo *Info = Traits.getCommandInfoOrNULL(CommandName);
-        if (!Info) {
-          if ((Info = Traits.getTypoCorrectCommandInfo(CommandName))) {
-            StringRef CorrectedName = Info->Name;
-            SourceLocation Loc = getSourceLocation(BufferPtr);
-            SourceLocation EndLoc = getSourceLocation(TokenPtr);
-            SourceRange FullRange = SourceRange(Loc, EndLoc);
-            SourceRange CommandRange(Loc.getLocWithOffset(1), EndLoc);
-            Diag(Loc, diag::warn_correct_comment_command_name)
-              << FullRange << CommandName << CorrectedName
-              << FixItHint::CreateReplacement(CommandRange, CorrectedName);
-          } else {
-            formTokenWithChars(T, TokenPtr, tok::unknown_command);
-            T.setUnknownCommandName(CommandName);
-            Diag(T.getLocation(), diag::warn_unknown_comment_command_name)
-                << SourceRange(T.getLocation(), T.getEndLocation());
-            return;
-          }
-        }
-        if (Info->IsVerbatimBlockCommand) {
-          setupAndLexVerbatimBlock(T, TokenPtr, *BufferPtr, Info);
-          return;
-        }
-        if (Info->IsVerbatimLineCommand) {
-          setupAndLexVerbatimLine(T, TokenPtr, Info);
-          return;
-        }
-        formTokenWithChars(T, TokenPtr, CommandKind);
-        T.setCommandID(Info->getID());
-        return;
-      }
-
-      case '&':
-        lexHTMLCharacterReference(T);
-        return;
-
-      case '<': {
-        TokenPtr++;
-        if (TokenPtr == CommentEnd) {
-          formTextToken(T, TokenPtr);
-          return;
-        }
-        const char C = *TokenPtr;
-        if (isHTMLIdentifierStartingCharacter(C))
-          setupAndLexHTMLStartTag(T);
-        else if (C == '/')
-          setupAndLexHTMLEndTag(T);
-        else
-          formTextToken(T, TokenPtr);
-        return;
-      }
-
-      case '\n':
-      case '\r':
-        TokenPtr = skipNewline(TokenPtr, CommentEnd);
-        formTokenWithChars(T, TokenPtr, tok::newline);
-
-        if (CommentState == LCS_InsideCComment)
-          skipLineStartingDecorations();
-        return;
-
-      default: {
-        size_t End = StringRef(TokenPtr, CommentEnd - TokenPtr).
-                         find_first_of("\n\r\\@&<");
-        if (End != StringRef::npos)
-          TokenPtr += End;
-        else
-          TokenPtr = CommentEnd;
+  switch(*TokenPtr) {
+    case '\\':
+    case '@': {
+      // Commands that start with a backslash and commands that start with
+      // 'at' have equivalent semantics.  But we keep information about the
+      // exact syntax in AST for comments.
+      tok::TokenKind CommandKind =
+          (*TokenPtr == '@') ? tok::at_command : tok::backslash_command;
+      TokenPtr++;
+      if (TokenPtr == CommentEnd) {
         formTextToken(T, TokenPtr);
         return;
       }
+      char C = *TokenPtr;
+      switch (C) {
+      default:
+        break;
+
+      case '\\': case '@': case '&': case '$':
+      case '#':  case '<': case '>': case '%':
+      case '\"': case '.': case ':':
+        // This is one of \\ \@ \& \$ etc escape sequences.
+        TokenPtr++;
+        if (C == ':' && TokenPtr != CommentEnd && *TokenPtr == ':') {
+          // This is the \:: escape sequence.
+          TokenPtr++;
+        }
+        StringRef UnescapedText(BufferPtr + 1, TokenPtr - (BufferPtr + 1));
+        formTokenWithChars(T, TokenPtr, tok::text);
+        T.setText(UnescapedText);
+        return;
+      }
+
+      // Don't make zero-length commands.
+      if (!isCommandNameStartCharacter(*TokenPtr)) {
+        formTextToken(T, TokenPtr);
+        return;
+      }
+
+      TokenPtr = skipCommandName(TokenPtr, CommentEnd);
+      unsigned Length = TokenPtr - (BufferPtr + 1);
+
+      // Hardcoded support for lexing LaTeX formula commands
+      // \f$ \f[ \f] \f{ \f} as a single command.
+      if (Length == 1 && TokenPtr[-1] == 'f' && TokenPtr != CommentEnd) {
+        C = *TokenPtr;
+        if (C == '$' || C == '[' || C == ']' || C == '{' || C == '}') {
+          TokenPtr++;
+          Length++;
+        }
+      }
+
+      StringRef CommandName(BufferPtr + 1, Length);
+
+      const CommandInfo *Info = Traits.getCommandInfoOrNULL(CommandName);
+      if (!Info) {
+        if ((Info = Traits.getTypoCorrectCommandInfo(CommandName))) {
+          StringRef CorrectedName = Info->Name;
+          SourceLocation Loc = getSourceLocation(BufferPtr);
+          SourceLocation EndLoc = getSourceLocation(TokenPtr);
+          SourceRange FullRange = SourceRange(Loc, EndLoc);
+          SourceRange CommandRange(Loc.getLocWithOffset(1), EndLoc);
+          Diag(Loc, diag::warn_correct_comment_command_name)
+            << FullRange << CommandName << CorrectedName
+            << FixItHint::CreateReplacement(CommandRange, CorrectedName);
+        } else {
+          formTokenWithChars(T, TokenPtr, tok::unknown_command);
+          T.setUnknownCommandName(CommandName);
+          Diag(T.getLocation(), diag::warn_unknown_comment_command_name)
+              << SourceRange(T.getLocation(), T.getEndLocation());
+          return;
+        }
+      }
+      if (Info->IsVerbatimBlockCommand) {
+        setupAndLexVerbatimBlock(T, TokenPtr, *BufferPtr, Info);
+        return;
+      }
+      if (Info->IsVerbatimLineCommand) {
+        setupAndLexVerbatimLine(T, TokenPtr, Info);
+        return;
+      }
+      formTokenWithChars(T, TokenPtr, CommandKind);
+      T.setCommandID(Info->getID());
+      return;
     }
+
+    case '&':
+      lexHTMLCharacterReference(T);
+      return;
+
+    case '<': {
+      TokenPtr++;
+      if (TokenPtr == CommentEnd) {
+        formTextToken(T, TokenPtr);
+        return;
+      }
+      const char C = *TokenPtr;
+      if (isHTMLIdentifierStartingCharacter(C))
+        setupAndLexHTMLStartTag(T);
+      else if (C == '/')
+        setupAndLexHTMLEndTag(T);
+      else
+        formTextToken(T, TokenPtr);
+      return;
+    }
+
+    default:
+      return HandleNonCommandToken();
   }
 }
 
@@ -727,14 +740,13 @@ void Lexer::lexHTMLEndTag(Token &T) {
 }
 
 Lexer::Lexer(llvm::BumpPtrAllocator &Allocator, DiagnosticsEngine &Diags,
-             const CommandTraits &Traits,
-             SourceLocation FileLoc,
-             const char *BufferStart, const char *BufferEnd):
-    Allocator(Allocator), Diags(Diags), Traits(Traits),
-    BufferStart(BufferStart), BufferEnd(BufferEnd),
-    FileLoc(FileLoc), BufferPtr(BufferStart),
-    CommentState(LCS_BeforeComment), State(LS_Normal) {
-}
+             const CommandTraits &Traits, SourceLocation FileLoc,
+             const char *BufferStart, const char *BufferEnd,
+             bool ParseCommands)
+    : Allocator(Allocator), Diags(Diags), Traits(Traits),
+      BufferStart(BufferStart), BufferEnd(BufferEnd), FileLoc(FileLoc),
+      BufferPtr(BufferStart), CommentState(LCS_BeforeComment), State(LS_Normal),
+      ParseCommands(ParseCommands) {}
 
 void Lexer::lex(Token &T) {
 again:

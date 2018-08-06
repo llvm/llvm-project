@@ -647,7 +647,7 @@ namespace testArraySubscriptIndex {
 
 namespace crash_has_include {
 int has_include(int); // expected-note {{'has_include' declared here}}
-// expected-error@+1 {{__has_include must be used within a preprocessing directive}}
+// expected-error@+1 {{'__has_include' must be used within a preprocessing directive}}
 int foo = __has_include(42); // expected-error {{use of undeclared identifier '__has_include'; did you mean 'has_include'?}}
 }
 

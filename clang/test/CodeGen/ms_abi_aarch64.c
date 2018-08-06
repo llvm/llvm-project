@@ -5,7 +5,7 @@ void __attribute__((ms_abi)) f1(void);
 void f2(void);
 void f3(void) {
   // LINUX-LABEL: define void @f3()
-  // WIN64-LABEL: define void @f3()
+  // WIN64-LABEL: define dso_local void @f3()
   f1();
   // LINUX: call win64cc void @f1()
   // WIN64: call void @f1()
@@ -15,13 +15,13 @@ void f3(void) {
 }
 // LINUX: declare win64cc void @f1()
 // LINUX: declare void @f2()
-// WIN64: declare void @f1()
-// WIN64: declare void @f2()
+// WIN64: declare dso_local void @f1()
+// WIN64: declare dso_local void @f2()
 
 // Win64 ABI varargs
 void __attribute__((ms_abi)) f4(int a, ...) {
   // LINUX-LABEL: define win64cc void @f4
-  // WIN64-LABEL: define void @f4
+  // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);
   // LINUX: %[[AP:.*]] = alloca i8*
@@ -50,7 +50,7 @@ void __attribute__((ms_abi)) f4(int a, ...) {
 
 // Let's verify that normal va_lists work right on Win64, too.
 void f5(int a, ...) {
-  // WIN64-LABEL: define void @f5
+  // WIN64-LABEL: define dso_local void @f5
   __builtin_va_list ap;
   __builtin_va_start(ap, a);
   // WIN64: %[[AP:.*]] = alloca i8*

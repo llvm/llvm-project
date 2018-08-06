@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
     for (q = &buf[0]; q <= buf + 7; q++)
       foo();
   // CHECK: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp for
+  // CHECK-NEXT: #pragma omp for{{$}}
   // CHECK-NEXT: for (p = buf; p < &buf[8]; p++)
   // CHECK-NEXT: for (q = &buf[0]; q <= buf + 7; q++)
   // CHECK-NEXT: foo();

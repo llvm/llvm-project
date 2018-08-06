@@ -8,7 +8,7 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t %t/sysroot
-// RUN: cp -a %S/Inputs/crash-recovery/usr %t/i/
+// RUN: cp -R %S/Inputs/crash-recovery/usr %t/i/
 // RUN: rm -f %t/i/usr/include/pthread_impl.h
 // RUN: ln -s pthread/pthread_impl.h %t/i/usr/include/pthread_impl.h
 

@@ -138,7 +138,7 @@ void testNewDeleteNoWarn() {
 // unix.Malloc does not know about operators new/delete.
 void testDeleteMallocked() {
   int *x = (int *)malloc(sizeof(int));
-  delete x; // FIXME: Shoud detect pointer escape and keep silent after 'delete' is modeled properly.
+  delete x; // FIXME: Should detect pointer escape and keep silent after 'delete' is modeled properly.
 } // expected-warning{{Potential leak of memory pointed to by 'x'}}
 
 void testDeleteOpAfterFree() {

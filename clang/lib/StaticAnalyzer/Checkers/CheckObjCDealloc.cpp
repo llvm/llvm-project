@@ -126,7 +126,7 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &Ctx) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &Ctx) const;
 
 private:
   void diagnoseMissingReleases(CheckerContext &C) const;
@@ -398,7 +398,7 @@ void ObjCDeallocChecker::checkPostObjCMessage(
 /// Check for missing releases even when -dealloc does not call
 /// '[super dealloc]'.
 void ObjCDeallocChecker::checkEndFunction(
-    CheckerContext &C) const {
+    const ReturnStmt *RS, CheckerContext &C) const {
   diagnoseMissingReleases(C);
 }
 

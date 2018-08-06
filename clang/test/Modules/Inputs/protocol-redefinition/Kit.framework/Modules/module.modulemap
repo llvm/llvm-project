@@ -1,0 +1,4 @@
+framework module Kit {
+  header "Kit.h"
+  export *
+}

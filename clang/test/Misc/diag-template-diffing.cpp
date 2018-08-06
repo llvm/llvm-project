@@ -1265,7 +1265,7 @@ void test() {
   foo<BoolT<true>>(X);
 }
 // CHECK-ELIDE-NOTREE: no matching function for call to 'foo'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'BoolT<false>' to 'BoolT<true>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function template not viable: no known conversion from 'BoolT<false>' to 'BoolT<true>' for 1st argument
 }
 
 namespace DifferentIntegralTypes {
@@ -1401,7 +1401,7 @@ void run() {
   f(1, integral_constant<bool, true>{});
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'f'
-// CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'integral_constant<[...], true>' to 'integral_constant<[...], false>' for 2nd argument
+// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'integral_constant<[...], true>' to 'integral_constant<[...], false>' for 2nd argument
 }
 
 namespace ZeroArgs {
@@ -1454,7 +1454,7 @@ void run() {
   D<X::X1>(VectorType<X::X2>());
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'D'
-// CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
+// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
 }
 
 namespace TypeAlias2 {

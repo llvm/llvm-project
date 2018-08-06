@@ -57,15 +57,21 @@ config.substitutions.append(('%PATH%', config.environment['PATH']))
 tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
-    'c-index-test', 'clang-check', 'clang-diff', 'clang-format', 'opt',
+    'c-index-test', 'clang-check', 'clang-diff', 'clang-format', 'clang-tblgen',
+    'opt',
     ToolSubst('%clang_func_map', command=FindTool(
         'clang-func-mapping'), unresolved='ignore'),
 ]
 
 if config.clang_examples:
+    config.available_features.add('examples')
     tools.append('clang-interpreter')
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
+
+config.substitutions.append(
+    ('%hmaptool', "'%s' %s" % (config.python_executable,
+                             os.path.join(config.llvm_tools_dir, 'hmaptool'))))
 
 # Plugins (loadable modules)
 # TODO: This should be supplied by Makefile or autoconf.

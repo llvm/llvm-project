@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file  %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 struct S {

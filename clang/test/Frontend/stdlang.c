@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -x cl -cl-std=cl1.1 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl1.2 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=cl2.0 -DOPENCL %s
+// RUN: %clang_cc1 -x cl -cl-std=c++ -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=CL -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 -DOPENCL %s
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 -DOPENCL %s

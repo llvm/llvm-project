@@ -157,7 +157,7 @@ void test0(A *x) {
   // CHECK:         call {{.*}} @objc_msgSend_stret to
   // CHECK-NEXT:    br label
   // CHECK:         [[T0:%.*]] = bitcast [[POINT_T]]* [[POINT]] to i8*
-  // CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 48, i32 4, i1 false)
+  // CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[T0]], i8 0, i64 48, i1 false)
   // CHECK-NEXT:    br label
 
   // CHECK-NF:      [[X:%.*]] = alloca [[A]]*
@@ -169,7 +169,7 @@ void test0(A *x) {
   // CHECK-NF:      call {{.*}} @objc_msgSend_stret to
   // CHECK-NF-NEXT: br label
   // CHECK-NF:      [[T0:%.*]] = bitcast [[POINT_T]]* [[POINT]] to i8*
-  // CHECK-NF-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 48, i32 4, i1 false)
+  // CHECK-NF-NEXT: call void @llvm.memset.p0i8.i64(i8* align 4 [[T0]], i8 0, i64 48, i1 false)
   // CHECK-NF-NEXT: br label
   MyPoint point = [x returnAPoint];
 }

@@ -316,7 +316,7 @@ Check for assigning uninitialized values.</div></div></td>
 <div class="example"><pre>
 void test() {
   int x;
-  x |= 1; // warn: left expression is unitialized
+  x |= 1; // warn: left expression is uninitialized
 }
 </pre></div></div></td></tr>
 
@@ -1168,6 +1168,40 @@ setregid</div></div></div></td>
 <div class="example"><pre>
 void test() {
   setuid(1); // warn
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+security.insecureAPI.bcmp</span><span class="lang">
+(C)</span><div class="descr">
+Warn on uses of the <code>bcmp</code> function.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test() {
+  bcmp(ptr0, ptr1, n); // warn
+}
+</pre></div></div></td></tr>
+
+<tr><td><div class="namedescr expandable"><span class="name">
+security.insecureAPI.bcopy</span><span class="lang">
+(C)</span><div class="descr">
+Warn on uses of the <code>bcopy</code> function.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test() {
+  bcopy(src, dst, n); // warn
+}
+</pre></div></div></td></tr>
+
+<tr><td><div class="namedescr expandable"><span class="name">
+security.insecureAPI.bzero</span><span class="lang">
+(C)</span><div class="descr">
+Warn on uses of the <code>bzero</code> function.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test() {
+  bzero(ptr, n); // warn
 }
 </pre></div></div></td></tr>
 

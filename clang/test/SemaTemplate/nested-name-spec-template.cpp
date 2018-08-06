@@ -49,7 +49,7 @@ namespace N {
     struct X;
   };
 
-  struct B;
+  struct B; // expected-note{{declared as a non-template here}}
 }
 
 struct ::N::A<int>::X {
@@ -131,7 +131,7 @@ namespace PR9226 {
 
   template<typename T, typename U>
   struct Y {
-    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'X::f'}}
+    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'X::template f'}}
   };
 
   Y<X, int> yxi; // expected-note{{in instantiation of template class 'PR9226::Y<PR9226::X, int>' requested here}}
@@ -144,7 +144,7 @@ namespace PR9449 {
   template <typename T>
   void f() {
     int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}} \
-    // expected-error{{following the 'template' keyword}}
+    // expected-error{{no member named 'n'}}
   }
 
   template void f<int>(); // expected-note{{in instantiation of}}

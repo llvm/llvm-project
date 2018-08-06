@@ -708,5 +708,8 @@ public:
 };
 S8 s8(0);
 
+// TERM_DEBUG-NOT: line: 0,
+// TERM_DEBUG: distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_simd_codegen.cpp",
+
 #endif // HEADER
 

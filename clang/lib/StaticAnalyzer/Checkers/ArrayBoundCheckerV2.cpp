@@ -33,8 +33,8 @@ class ArrayBoundCheckerV2 :
 
   enum OOB_Kind { OOB_Precedes, OOB_Excedes, OOB_Tainted };
 
-  void reportOOB(CheckerContext &C, ProgramStateRef errorState,
-                 OOB_Kind kind) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef errorState, OOB_Kind kind,
+                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
 
 public:
   void checkLocation(SVal l, bool isLoad, const Stmt*S,
@@ -125,7 +125,6 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   // have some flexibility in defining the base region, we can achieve
   // various levels of conservatism in our buffer overflow checking.
   ProgramStateRef state = checkerContext.getState();
-  ProgramStateRef originalState = state;
 
   SValBuilder &svalBuilder = checkerContext.getSValBuilder();
   const RegionRawOffsetV2 &rawOffset =
@@ -205,8 +204,10 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
 
     // If we are under constrained and the index variables are tainted, report.
     if (state_exceedsUpperBound && state_withinUpperBound) {
-      if (state->isTainted(rawOffset.getByteOffset())) {
-        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted);
+      SVal ByteOffset = rawOffset.getByteOffset();
+      if (state->isTainted(ByteOffset)) {
+        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted,
+                  llvm::make_unique<TaintBugVisitor>(ByteOffset));
         return;
       }
     } else if (state_exceedsUpperBound) {
@@ -222,13 +223,12 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   }
   while (false);
 
-  if (state != originalState)
-    checkerContext.addTransition(state);
+  checkerContext.addTransition(state);
 }
 
-void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
-                                    ProgramStateRef errorState,
-                                    OOB_Kind kind) const {
+void ArrayBoundCheckerV2::reportOOB(
+    CheckerContext &checkerContext, ProgramStateRef errorState, OOB_Kind kind,
+    std::unique_ptr<BugReporterVisitor> Visitor) const {
 
   ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
   if (!errorNode)
@@ -255,8 +255,9 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
     break;
   }
 
-  checkerContext.emitReport(
-      llvm::make_unique<BugReport>(*BT, os.str(), errorNode));
+  auto BR = llvm::make_unique<BugReport>(*BT, os.str(), errorNode);
+  BR->addVisitor(std::move(Visitor));
+  checkerContext.emitReport(std::move(BR));
 }
 
 #ifndef NDEBUG

@@ -334,8 +334,19 @@ bool ARMTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
 
+  std::string ArchFeature;
   std::vector<StringRef> TargetFeatures;
   llvm::ARM::ArchKind Arch = llvm::ARM::parseArch(getTriple().getArchName());
+
+  // Map the base architecture to an appropriate target feature, so we don't
+  // rely on the target triple.
+  llvm::ARM::ArchKind CPUArch = llvm::ARM::parseCPUArch(CPU);
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    CPUArch = Arch;
+  if (CPUArch != llvm::ARM::ArchKind::INVALID) {
+    ArchFeature = ("+" + llvm::ARM::getArchName(CPUArch)).str();
+    TargetFeatures.push_back(ArchFeature);
+  }
 
   // get default FPU features
   unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
@@ -379,6 +390,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Unaligned = 1;
   SoftFloat = SoftFloatABI = false;
   HWDiv = 0;
+  DotProd = 0;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "+fp-only-sp".
@@ -419,6 +431,10 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       Unaligned = 0;
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
+    } else if (Feature == "+fullfp16") {
+      HasLegalHalfType = true;
+    } else if (Feature == "+dotprod") {
+      DotProd = true;
     }
   }
   HW_FP &= ~HW_FP_remove;
@@ -476,6 +492,10 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
 bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
   return Name == "generic" ||
          llvm::ARM::parseCPUArch(Name) != llvm::ARM::ArchKind::INVALID;
+}
+
+void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  llvm::ARM::fillValidCPUArchList(Values);
 }
 
 bool ARMTargetInfo::setCPU(const std::string &Name) {
@@ -705,6 +725,18 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
+
+  // Armv8.2-A FP16 vector intrinsic
+  if ((FPU & NeonFPU) && HasLegalHalfType)
+    Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+
+  // Armv8.2-A FP16 scalar intrinsics
+  if (HasLegalHalfType)
+    Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
+
+  // Armv8.2-A dot product intrinsics
+  if (DotProd)
+    Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
 
   switch (ArchKind) {
   default:
@@ -956,6 +988,8 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
     return CCCR_OK;
   default:
     return CCCR_Warning;

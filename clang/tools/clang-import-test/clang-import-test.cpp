@@ -50,9 +50,10 @@ static llvm::cl::opt<bool>
     Direct("direct", llvm::cl::Optional,
            llvm::cl::desc("Use the parsed declarations without indirection"));
 
-static llvm::cl::opt<bool>
-    UseOrigins("use-origins", llvm::cl::Optional,
-           llvm::cl::desc("Use DeclContext origin information for more accurate lookups"));  
+static llvm::cl::opt<bool> UseOrigins(
+    "use-origins", llvm::cl::Optional,
+    llvm::cl::desc(
+        "Use DeclContext origin information for more accurate lookups"));
 
 static llvm::cl::list<std::string>
     ClangArgs("Xcc", llvm::cl::ZeroOrMore,
@@ -225,7 +226,7 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
       CI.getDiagnostics(), ModuleName, CI.getHeaderSearchOpts(),
       CI.getPreprocessorOpts(), CI.getCodeGenOpts(), LLVMCtx));
 }
-} // end namespace
+} // namespace init_convenience
 
 namespace {
 
@@ -244,7 +245,7 @@ struct CIAndOrigins {
   ASTContext &getASTContext() { return CI->getASTContext(); }
   FileManager &getFileManager() { return CI->getFileManager(); }
   const OriginMap &getOriginMap() {
-    static const OriginMap EmptyOriginMap;
+    static const OriginMap EmptyOriginMap{};
     if (ExternalASTSource *Source = CI->getASTContext().getExternalSource())
       return static_cast<ExternalASTMerger *>(Source)->GetOrigins();
     return EmptyOriginMap;
@@ -261,8 +262,8 @@ void AddExternalSource(CIAndOrigins &CI,
       {CI.getASTContext(), CI.getFileManager()});
   llvm::SmallVector<ExternalASTMerger::ImporterSource, 3> Sources;
   for (CIAndOrigins &Import : Imports)
-    Sources.push_back(
-        {Import.getASTContext(), Import.getFileManager(), Import.getOriginMap()});
+    Sources.push_back({Import.getASTContext(), Import.getFileManager(),
+                       Import.getOriginMap()});
   auto ES = llvm::make_unique<ExternalASTMerger>(Target, Sources);
   CI.getASTContext().setExternalSource(ES.release());
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage();
@@ -312,7 +313,8 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   auto &CG = *static_cast<CodeGenerator *>(ASTConsumers.back().get());
 
   if (ShouldDumpAST)
-    ASTConsumers.push_back(CreateASTDumper("", true, false, false));
+    ASTConsumers.push_back(CreateASTDumper(nullptr /*Dump to stdout.*/,
+                                           "", true, false, false));
 
   CI.getDiagnosticClient().BeginSourceFile(
       CI.getCompilerInstance().getLangOpts(),
@@ -334,8 +336,8 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
 void Forget(CIAndOrigins &CI, llvm::MutableArrayRef<CIAndOrigins> Imports) {
   llvm::SmallVector<ExternalASTMerger::ImporterSource, 3> Sources;
   for (CIAndOrigins &Import : Imports)
-    Sources.push_back(
-        {Import.getASTContext(), Import.getFileManager(), Import.getOriginMap()});
+    Sources.push_back({Import.getASTContext(), Import.getFileManager(),
+                       Import.getOriginMap()});
   ExternalASTSource *Source = CI.CI->getASTContext().getExternalSource();
   auto *Merger = static_cast<ExternalASTMerger *>(Source);
   Merger->RemoveSources(Sources);

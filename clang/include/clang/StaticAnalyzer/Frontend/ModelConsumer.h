@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file implements clang::ento::ModelConsumer which is an
+/// This file implements clang::ento::ModelConsumer which is an
 /// ASTConsumer for model files.
 ///
 //===----------------------------------------------------------------------===//
@@ -25,7 +25,7 @@ class Stmt;
 
 namespace ento {
 
-/// \brief ASTConsumer to consume model files' AST.
+/// ASTConsumer to consume model files' AST.
 ///
 /// This consumer collects the bodies of function definitions into a StringMap
 /// from a model file.

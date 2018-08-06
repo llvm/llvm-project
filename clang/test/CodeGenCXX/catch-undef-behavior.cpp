@@ -206,7 +206,7 @@ void bad_downcast_pointer(S *p) {
   // CHECK: %[[NONNULL:.*]] = icmp ne {{.*}}, null
   // CHECK: br i1 %[[NONNULL]],
 
-  // A null poiner access is guarded without -fsanitize=null.
+  // A null pointer access is guarded without -fsanitize=null.
   // DOWNCAST-NULL: %[[NONNULL:.*]] = icmp ne {{.*}}, null
   // DOWNCAST-NULL: br i1 %[[NONNULL]],
 
@@ -371,7 +371,7 @@ class C : public A, public B // align=16
 void downcast_pointer(B *b) {
   (void) static_cast<C*>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastPointer, ...)
-  // CHECK: [[SUB:%[.a-z0-9]*]] = getelementptr i8, i8* {{.*}}, i64 -16
+  // CHECK: [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, i8* {{.*}}, i64 -16
   // CHECK-NEXT: [[C:%.+]] = bitcast i8* [[SUB]] to %class.C*
   // null check goes here
   // CHECK: [[FROM_PHI:%.+]] = phi %class.C* [ [[C]], {{.*}} ], {{.*}}
@@ -388,7 +388,7 @@ void downcast_pointer(B *b) {
 void downcast_reference(B &b) {
   (void) static_cast<C&>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastReference, ...)
-  // CHECK:      [[SUB:%[.a-z0-9]*]] = getelementptr i8, i8* {{.*}}, i64 -16
+  // CHECK:      [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, i8* {{.*}}, i64 -16
   // CHECK-NEXT: [[C:%.+]] = bitcast i8* [[SUB]] to %class.C*
   // Objectsize check goes here
   // CHECK:      [[C_INT:%.+]] = ptrtoint %class.C* [[C]] to i64

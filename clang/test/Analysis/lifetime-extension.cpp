@@ -46,10 +46,18 @@ void f() {
   const int &y = A().j[1]; // no-crash
   const int &z = (A().j[1], A().j[0]); // no-crash
 
-  // FIXME: All of these should be TRUE, but constructors aren't inlined.
-  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(y == 3); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(z == 2); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(x == 1);
+  clang_analyzer_eval(y == 3);
+  clang_analyzer_eval(z == 2);
+#ifdef TEMPORARIES
+  // expected-warning@-4{{TRUE}}
+  // expected-warning@-4{{TRUE}}
+  // expected-warning@-4{{TRUE}}
+#else
+  // expected-warning@-8{{UNKNOWN}}
+  // expected-warning@-8{{UNKNOWN}}
+  // expected-warning@-8{{UNKNOWN}}
+#endif
 }
 } // end namespace pr19539_crash_on_destroying_an_integer
 
@@ -89,13 +97,10 @@ void f1() {
 
 void f2() {
   C *after, *before;
-  C c = C(1, &after, &before);
-  clang_analyzer_eval(after == before);
-#ifdef TEMPORARIES
-  // expected-warning@-2{{TRUE}}
-#else
-  // expected-warning@-4{{UNKNOWN}}
-#endif
+  {
+    C c = C(1, &after, &before);
+  }
+  clang_analyzer_eval(after == before); // expected-warning{{TRUE}}
 }
 
 void f3(bool coin) {
@@ -121,6 +126,7 @@ void f4(bool coin) {
   // operator. Ideally also add support for the binary conditional operator in
   // C++. Because for now it calls the constructor for the condition twice.
   if (coin) {
+    // FIXME: Should not warn.
     clang_analyzer_eval(after == before);
 #ifdef TEMPORARIES
   // expected-warning@-2{{The left operand of '==' is a garbage value}}
@@ -128,13 +134,12 @@ void f4(bool coin) {
   // expected-warning@-4{{UNKNOWN}}
 #endif
   } else {
+    // FIXME: Should be TRUE.
     clang_analyzer_eval(after == before);
 #ifdef TEMPORARIES
-    // Seems to work at the moment, but also seems accidental.
-    // Feel free to break.
-  // expected-warning@-4{{TRUE}}
+  // expected-warning@-2{{FALSE}}
 #else
-  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-4{{UNKNOWN}}
 #endif
   }
 }
@@ -144,8 +149,12 @@ void f5() {
   {
     const bool &x = C(true, &after, &before).x; // no-crash
   }
-  // FIXME: Should be TRUE. Should not warn about garbage value.
-  clang_analyzer_eval(after == before); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(after == before);
+#ifdef TEMPORARIES
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
 }
 
 struct A { // A is an aggregate.
@@ -264,23 +273,10 @@ void f1() {
   {
     C c = C(v);
   }
-  // 0. Create the original temporary and lifetime-extend it into variable 'c'
-  //    construction argument.
-  // 1. Construct variable 'c' (elidable copy/move).
-  // 2. Destroy the temporary.
-  // 3. Destroy variable 'c'.
-  clang_analyzer_eval(v.len == 4);
-  clang_analyzer_eval(v.buf[0] == v.buf[2]);
-  clang_analyzer_eval(v.buf[1] == v.buf[3]);
-#ifdef TEMPORARIES
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
-#else
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
-#endif
+  // 0. Construct variable 'c' (copy/move elided).
+  // 1. Destroy variable 'c'.
+  clang_analyzer_eval(v.len == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] == v.buf[1]); // expected-warning{{TRUE}}
 }
 
 void f2() {
@@ -288,22 +284,17 @@ void f2() {
   {
     const C &c = C::make(v);
   }
-  // 0. Construct the original temporary within make(),
-  // 1. Construct the return value of make() (elidable copy/move) and
-  //    lifetime-extend it via reference 'c',
-  // 2. Destroy the temporary within make(),
-  // 3. Destroy the temporary lifetime-extended by 'c'.
-  clang_analyzer_eval(v.len == 4);
-  clang_analyzer_eval(v.buf[0] == v.buf[2]);
-  clang_analyzer_eval(v.buf[1] == v.buf[3]);
+  // 0. Construct the return value of make() (copy/move elided) and
+  //    lifetime-extend it directly via reference 'c',
+  // 1. Destroy the temporary lifetime-extended by 'c'.
+  clang_analyzer_eval(v.len == 2);
+  clang_analyzer_eval(v.buf[0] == v.buf[1]);
 #ifdef TEMPORARIES
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
 #else
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
 #endif
 }
 
@@ -312,22 +303,17 @@ void f3() {
   {
     C &&c = C::make(v);
   }
-  // 0. Construct the original temporary within make(),
-  // 1. Construct the return value of make() (elidable copy/move) and
-  //    lifetime-extend it via reference 'c',
-  // 2. Destroy the temporary within make(),
-  // 3. Destroy the temporary lifetime-extended by 'c'.
-  clang_analyzer_eval(v.len == 4);
-  clang_analyzer_eval(v.buf[0] == v.buf[2]);
-  clang_analyzer_eval(v.buf[1] == v.buf[3]);
+  // 0. Construct the return value of make() (copy/move elided) and
+  //    lifetime-extend it directly via reference 'c',
+  // 1. Destroy the temporary lifetime-extended by 'c'.
+  clang_analyzer_eval(v.len == 2);
+  clang_analyzer_eval(v.buf[0] == v.buf[1]);
 #ifdef TEMPORARIES
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
-  // expected-warning@-4{{TRUE}}
+  // expected-warning@-3{{TRUE}}
+  // expected-warning@-3{{TRUE}}
 #else
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
-  // expected-warning@-8{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
+  // expected-warning@-6{{UNKNOWN}}
 #endif
 }
 
@@ -340,34 +326,9 @@ void f4() {
   {
     C c = doubleMake(v);
   }
-  // 0. Construct the original temporary within make(),
-  // 1. Construct the return value of make() (elidable copy/move) and
-  //    lifetime-extend it into the return value constructor argument within
-  //    doubleMake(),
-  // 2. Destroy the temporary within make(),
-  // 3. Construct the return value of doubleMake() (elidable copy/move) and
-  //    lifetime-extend it into the variable 'c' constructor argument,
-  // 4. Destroy the return value of make(),
-  // 5. Construct variable 'c' (elidable copy/move),
-  // 6. Destroy the return value of doubleMake(),
-  // 7. Destroy variable 'c'.
-  clang_analyzer_eval(v.len == 8);
-  clang_analyzer_eval(v.buf[0] == v.buf[2]);
-  clang_analyzer_eval(v.buf[1] == v.buf[4]);
-  clang_analyzer_eval(v.buf[3] == v.buf[6]);
-  clang_analyzer_eval(v.buf[5] == v.buf[7]);
-#ifdef TEMPORARIES
-  // expected-warning@-6{{TRUE}}
-  // expected-warning@-6{{TRUE}}
-  // expected-warning@-6{{TRUE}}
-  // expected-warning@-6{{TRUE}}
-  // expected-warning@-6{{TRUE}}
-#else
-  // expected-warning@-12{{UNKNOWN}}
-  // expected-warning@-12{{UNKNOWN}}
-  // expected-warning@-12{{UNKNOWN}}
-  // expected-warning@-12{{UNKNOWN}}
-  // expected-warning@-12{{UNKNOWN}}
-#endif
+  // 0. Construct variable 'c' (all copies/moves elided),
+  // 1. Destroy variable 'c'.
+  clang_analyzer_eval(v.len == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] == v.buf[1]); // expected-warning{{TRUE}}
 }
 } // end namespace maintain_address_of_copies

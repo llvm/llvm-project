@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Methods for determining the USR of a symbol at a location in source
+/// Methods for determining the USR of a symbol at a location in source
 /// code.
 ///
 //===----------------------------------------------------------------------===//

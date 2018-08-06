@@ -3,9 +3,9 @@
 // RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++11 %s -emit-llvm -S -o - | FileCheck %s
 // PR14471
 
-// CHECK: @_ZN1C1aE = global i32 4, align 4, !dbg [[A:![0-9]+]]
-// CHECK: @_ZN1C1bE = global i32 2, align 4, !dbg [[B:![0-9]+]]
-// CHECK: @_ZN1C1cE = global i32 1, align 4, !dbg [[C:![0-9]+]]
+// CHECK: @_ZN1C1aE = dso_local global i32 4, align 4, !dbg [[A:![0-9]+]]
+// CHECK: @_ZN1C1bE = dso_local global i32 2, align 4, !dbg [[B:![0-9]+]]
+// CHECK: @_ZN1C1cE = dso_local global i32 1, align 4, !dbg [[C:![0-9]+]]
 
 enum X {
   Y

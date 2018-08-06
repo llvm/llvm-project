@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - %s | FileCheck %s -check-prefix=PLAIN
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - -fsanitize=address %s | FileCheck %s -check-prefix=ASAN
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - -fsanitize=address -fsanitize-address-poison-class-member-array-new-cookie %s | FileCheck %s -check-prefix=ASAN-POISON-ALL-NEW-ARRAY
 
 typedef __typeof__(sizeof(0)) size_t;
 namespace std {
@@ -8,6 +9,7 @@ namespace std {
 }
 void *operator new[](size_t, const std::nothrow_t &) throw();
 void *operator new[](size_t, char *);
+void *operator new[](size_t, int, int);
 
 struct C {
   int x;
@@ -53,3 +55,10 @@ C *CallPlacementNew() {
 }
 // ASAN-LABEL: CallPlacementNew
 // ASAN-NOT: __asan_poison_cxx_array_cookie
+
+C *CallNewWithArgs() {
+// ASAN-LABEL: CallNewWithArgs
+// ASAN-NOT: call void @__asan_poison_cxx_array_cookie
+// ASAN-POISON-ALL-NEW-ARRAY: call void @__asan_poison_cxx_array_cookie
+  return new (123, 456) C[20];
+}

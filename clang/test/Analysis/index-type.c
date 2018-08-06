@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -verify %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -DM32 -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -Wno-implicit-function-declaration -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -Wno-implicit-function-declaration -DM32 -verify %s
 // expected-no-diagnostics
 
 #define UINT_MAX (~0u)
@@ -34,6 +34,25 @@ void testIndexTooBig64() {
   char *ptr = arr + BIG_INDEX;
   ptr += 2;  // don't overflow 64-bit index
   *ptr = 42; // no-warning
+}
+
+#define SIZE 4294967296
+
+static unsigned size;
+static void * addr;
+static unsigned buf[SIZE];
+
+void testOutOfBounds() {
+  // Not out of bounds.
+  buf[SIZE-1] = 1; // no-warning
+}
+
+void testOutOfBoundsCopy1() {
+  memcpy(buf, addr, size); // no-warning
+}
+
+void testOutOfBoundsCopy2() {
+  memcpy(addr, buf, size); // no-warning
 }
 
 #endif

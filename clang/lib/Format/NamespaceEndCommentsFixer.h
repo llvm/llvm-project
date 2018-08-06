@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares NamespaceEndCommentsFixer, a TokenAnalyzer that
+/// This file declares NamespaceEndCommentsFixer, a TokenAnalyzer that
 /// fixes namespace end comments.
 ///
 //===----------------------------------------------------------------------===//
@@ -20,6 +20,16 @@
 
 namespace clang {
 namespace format {
+
+// Finds the namespace token corresponding to a closing namespace `}`, if that
+// is to be formatted.
+// If \p Line contains the closing `}` of a namespace, is affected and is not in
+// a preprocessor directive, the result will be the matching namespace token.
+// Otherwise returns null.
+// \p AnnotatedLines is the sequence of lines from which \p Line is a member of.
+const FormatToken *
+getNamespaceToken(const AnnotatedLine *Line,
+                  const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines);
 
 class NamespaceEndCommentsFixer : public TokenAnalyzer {
 public:

@@ -17,7 +17,7 @@ float32x2_t test2(uint32x2_t x) {
 float32x2_t test3(uint32x2_t x) {
   // FIXME: The "incompatible result type" error is due to pr10112 and should be
   // removed when that is fixed.
-  return vcvt_n_f32_u32(x, 0); // expected-error {{argument should be a value from 1 to 32}}
+  return vcvt_n_f32_u32(x, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 typedef signed int vSInt32 __attribute__((__vector_size__(16)));

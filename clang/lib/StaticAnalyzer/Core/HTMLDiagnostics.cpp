@@ -238,10 +238,8 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                    << "-" << i << ".html";
           llvm::sys::path::append(Model, Directory,
                                   filename.str());
-          EC = llvm::sys::fs::openFileForWrite(Model,
-                                               FD,
-                                               llvm::sys::fs::F_RW |
-                                               llvm::sys::fs::F_Excl);
+          EC = llvm::sys::fs::openFileForReadWrite(
+              Model, FD, llvm::sys::fs::CD_CreateNew, llvm::sys::fs::OF_None);
           if (EC && EC != llvm::errc::file_exists) {
               llvm::errs() << "warning: could not create file '" << Model
                            << "': " << EC.message() << '\n';
@@ -321,7 +319,9 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
     return {};
 
   // Add CSS, header, and footer.
-  const FileEntry* Entry = SMgr.getFileEntryForID(FileIDs[0]);
+  FileID FID =
+      path.back()->getLocation().asLocation().getExpansionLoc().getFileID();
+  const FileEntry* Entry = SMgr.getFileEntryForID(FID);
   FinalizeHTML(D, R, SMgr, path, FileIDs[0], Entry, declName);
 
   std::string file;

@@ -34,5 +34,5 @@ template<typename T> template<typename U> struct A<T>::B {
   // a type, and then complain about the rest of the tokens, and then complain
   // that we didn't get a function declaration.
   friend A<U>::C<T> f7(); // expected-error {{use 'template' keyword to treat 'C' as a dependent template name}} expected-error 3{{}}
-  friend A<U>::template C<T> f8(); // expected-error 3{{}}
+  friend A<U>::template C<T> f8(); // expected-error 4{{}}
 };

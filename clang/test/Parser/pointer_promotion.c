@@ -12,6 +12,6 @@ void test() {
   if (cp < fp) {} // expected-warning {{comparison of distinct pointer types ('char *' and 'struct foo *')}}
   if (fp < bp) {} // expected-warning {{comparison of distinct pointer types ('struct foo *' and 'struct bar *')}}
   if (ip < 7) {} // expected-warning {{comparison between pointer and integer ('int *' and 'int')}}
-  if (sint < ip) {} // expected-warning {{comparison between pointer and integer ('int' and 'int *')}}
+  if (sint < ip) {} // expected-warning {{comparison between pointer and integer ('short' and 'int *')}}
   if (ip == cp) {} // expected-warning {{comparison of distinct pointer types ('int *' and 'char *')}}
 }

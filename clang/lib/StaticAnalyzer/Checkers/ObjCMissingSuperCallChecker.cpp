@@ -81,7 +81,7 @@ private:
 
 }
 
-/// \brief Determine whether the given class has a superclass that we want
+/// Determine whether the given class has a superclass that we want
 /// to check. The name of the found superclass is stored in SuperclassName.
 ///
 /// \param D The declaration to check for superclasses.

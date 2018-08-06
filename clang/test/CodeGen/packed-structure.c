@@ -29,7 +29,7 @@ int s0_load_x(struct s0 *a) { return a->x; }
 // CHECK-FUNCTIONS: ret i32 [[s0_load_y]]
 int s0_load_y(struct s0 *a) { return a->y; }
 // CHECK-FUNCTIONS-LABEL: define void @s0_copy
-// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i32 4, i1 false)
+// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 {{.*}}, i8* align 4 {{.*}}, i64 8, i1 false)
 void s0_copy(struct s0 *a, struct s0 *b) { *b = *a; }
 
 //
@@ -55,7 +55,7 @@ int s1_load_x(struct s1 *a) { return a->x; }
 // CHECK-FUNCTIONS: ret i32 [[s1_load_y]]
 int s1_load_y(struct s1 *a) { return a->y; }
 // CHECK-FUNCTIONS-LABEL: define void @s1_copy
-// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i32 1, i1 false)
+// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i1 false)
 void s1_copy(struct s1 *a, struct s1 *b) { *b = *a; }
 
 //
@@ -83,7 +83,7 @@ int s2_load_x(struct s2 *a) { return a->x; }
 // CHECK-FUNCTIONS: ret i32 [[s2_load_y]]
 int s2_load_y(struct s2 *a) { return a->y; }
 // CHECK-FUNCTIONS-LABEL: define void @s2_copy
-// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i32 2, i1 false)
+// CHECK-FUNCTIONS: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 {{.*}}, i8* align 2 {{.*}}, i64 8, i1 false)
 void s2_copy(struct s2 *a, struct s2 *b) { *b = *a; }
 
 struct __attribute__((packed, aligned)) s3 {

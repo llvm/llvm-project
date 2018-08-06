@@ -1,5 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -DI386 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -DI386 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin12 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin12 -analyzer-checker=core,debug.ExprInspection -fobjc-arc -analyzer-config c++-inlining=constructors -Wno-null-dereference -std=c++11 -verify -DTEST_INLINABLE_ALLOCATORS %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -638,12 +640,15 @@ namespace ZeroInitialization {
 
   class Empty {
   public:
-    Empty();
+    static int glob;
+    Empty(); // No body.
+    Empty(int x); // Body below.
   };
 
   class PairContainer : public Empty {
-    raw_pair p;
   public:
+    raw_pair p;
+    int q;
     PairContainer() : Empty(), p() {
       // This previously caused a crash because the empty base class looked
       // like an initialization of 'p'.
@@ -651,7 +656,51 @@ namespace ZeroInitialization {
     PairContainer(int) : Empty(), p() {
       // Test inlining something else here.
     }
+    PairContainer(double): Empty(1), p() {
+      clang_analyzer_eval(p.p1 == 0); // expected-warning{{TRUE}}
+      clang_analyzer_eval(p.p2 == 0); // expected-warning{{TRUE}}
+
+      clang_analyzer_eval(q == 1); // expected-warning{{TRUE}}
+
+      // This one's indeed UNKNOWN. Definitely not TRUE.
+      clang_analyzer_eval(p.p2 == glob); // expected-warning{{UNKNOWN}}
+    }
   };
+
+  Empty::Empty(int x) {
+    static_cast<PairContainer *>(this)->p.p1 = x;
+    static_cast<PairContainer *>(this)->q = x;
+    // Our static member will store the old garbage values of fields that aren't
+    // yet initialized. It's not certainly garbage though (i.e. the constructor
+    // could have been called on an initialized piece of memory), so no
+    // uninitialized value warning here, and it should be a symbol, not
+    // undefined value, for later comparison.
+    glob = static_cast<PairContainer *>(this)->p.p2;
+  }
+
+	class Empty2 {
+	public:
+		static int glob_p1, glob_p2;
+		Empty2(); // Body below.
+	};
+
+	class PairDoubleEmptyContainer: public Empty, public Empty2 {
+	public:
+    raw_pair p;
+		PairDoubleEmptyContainer(): Empty(), Empty2(), p() {
+      clang_analyzer_eval(p.p1 == 0); // expected-warning{{TRUE}}
+      clang_analyzer_eval(p.p2 == 0); // expected-warning{{TRUE}}
+
+      // This is indeed UNKNOWN.
+      clang_analyzer_eval(p.p1 == glob_p1); // expected-warning{{UNKNOWN}}
+      clang_analyzer_eval(p.p2 == glob_p2); // expected-warning{{UNKNOWN}}
+		}
+	};
+
+	Empty2::Empty2() {
+    glob_p1 = static_cast<PairDoubleEmptyContainer *>(this)->p.p1;
+    glob_p2 = static_cast<PairDoubleEmptyContainer *>(this)->p.p2;
+	}
 
   class PairContainerContainer {
     int padding;
@@ -747,5 +796,69 @@ void test() {
   D d2;
   d2 = d1;
   clang_analyzer_eval(d2.x == 1); // expected-warning{{TRUE}}
+}
+}
+
+namespace vbase_zero_init {
+class A {
+  virtual void foo();
+};
+
+class B {
+  virtual void bar();
+public:
+  static int glob_y, glob_z, glob_w;
+  int x;
+  B(); // Body below.
+};
+
+class C : virtual public A {
+public:
+  int y;
+};
+
+class D : public B, public C {
+public:
+  // 'z', unlike 'w', resides in an area that would have been within padding of
+  // base class 'C' if it wasn't part of 'D', but only on 64-bit systems.
+  int z, w;
+  // Initialization order: A(), B(), C().
+  D() : A(), C() {
+    clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+#ifdef I386
+    clang_analyzer_eval(z == 3); // expected-warning{{TRUE}}
+#else
+    // FIXME: Should be TRUE. Initialized in B().
+    clang_analyzer_eval(z == 3); // expected-warning{{UNKNOWN}}
+#endif
+    clang_analyzer_eval(w == 4); // expected-warning{{TRUE}}
+
+    // FIXME: Should be UNKNOWN. Changed in B() since glob_y was assigned.
+    clang_analyzer_eval(y == glob_y); // expected-warning{{TRUE}}
+
+#ifdef I386
+    clang_analyzer_eval(z == glob_z); // expected-warning{{UNKNOWN}}
+#else
+    // FIXME: Should be UNKNOWN. Changed in B() since glob_z was assigned.
+    clang_analyzer_eval(z == glob_z); // expected-warning{{TRUE}}
+#endif
+
+    clang_analyzer_eval(w == glob_w); // expected-warning{{UNKNOWN}}
+  } // no-crash
+};
+
+B::B() : x(1) {
+  // Our static members will store the old garbage values of fields that aren't
+  // yet initialized. These aren't certainly garbage though (i.e. the
+  // constructor could have been called on an initialized piece of memory),
+  // so no uninitialized value warning here, and these should be symbols, not
+  // undefined values, for later comparison.
+  glob_y = static_cast<D *>(this)->y;
+  glob_z = static_cast<D *>(this)->z;
+  glob_w = static_cast<D *>(this)->w;
+  static_cast<D *>(this)->y = 2;
+  static_cast<D *>(this)->z = 3;
+  static_cast<D *>(this)->w = 4;
 }
 }

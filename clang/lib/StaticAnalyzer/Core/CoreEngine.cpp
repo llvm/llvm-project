@@ -256,7 +256,7 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
   const LocationContext *LC = Pred->getLocationContext();
   unsigned BlockId = L.getBlock()->getBlockID();
   BlockCounter Counter = WList->getBlockCounter();
-  Counter = BCounterFactory.IncrementCount(Counter, LC->getCurrentStackFrame(),
+  Counter = BCounterFactory.IncrementCount(Counter, LC->getStackFrame(),
                                            BlockId);
   WList->setBlockCounter(Counter);
 

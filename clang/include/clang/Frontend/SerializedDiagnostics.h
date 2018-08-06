@@ -16,11 +16,11 @@ namespace clang {
 namespace serialized_diags {
 
 enum BlockIDs {
-  /// \brief A top-level block which represents any meta data associated
+  /// A top-level block which represents any meta data associated
   /// with the diagostics, including versioning of the format.
   BLOCK_META = llvm::bitc::FIRST_APPLICATION_BLOCKID,
 
-  /// \brief The this block acts as a container for all the information
+  /// The this block acts as a container for all the information
   /// for a specific diagnostic.
   BLOCK_DIAG
 };
@@ -37,7 +37,7 @@ enum RecordIDs {
   RECORD_LAST = RECORD_FIXIT
 };
 
-/// \brief A stable version of DiagnosticIDs::Level.
+/// A stable version of DiagnosticIDs::Level.
 ///
 /// Do not change the order of values in this enum, and please increment the
 /// serialized diagnostics version number when you add to it.
@@ -50,7 +50,7 @@ enum Level {
   Remark
 };
 
-/// \brief The serialized diagnostics version number.
+/// The serialized diagnostics version number.
 enum { VersionNumber = 2 };
 
 } // end serialized_diags namespace

@@ -11,6 +11,8 @@ let Component = "Driver" in {
 
 def err_drv_no_such_file : Error<"no such file or directory: '%0'">;
 def err_drv_unsupported_opt : Error<"unsupported option '%0'">;
+def err_drv_unsupported_opt_with_suggestion
+  : Error<"unsupported option '%0', did you mean '%1'?">;
 def err_drv_unsupported_opt_for_target : Error<
   "unsupported option '%0' for target '%1'">;
 def err_drv_unsupported_option_argument : Error<
@@ -22,6 +24,10 @@ def err_drv_unknown_stdin_type_clang_cl : Error<
 def err_drv_unknown_language : Error<"language not recognized: '%0'">;
 def err_drv_invalid_arch_name : Error<
   "invalid arch name '%0'">;
+def err_drv_invalid_riscv_arch_name : Error<
+  "invalid arch name '%0', %1">;
+def err_drv_invalid_riscv_ext_arch_name : Error<
+  "invalid arch name '%0', %1 '%2'">;
 def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
 def err_drv_no_cuda_installation : Error<
   "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
@@ -34,7 +40,8 @@ def err_drv_cuda_version_unsupported : Error<
   "but installation at %3 is %4.  Use --cuda-path to specify a different CUDA "
   "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
-def err_drv_cuda_nvptx_host : Error<"unsupported use of NVPTX for host compilation.">;
+def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
+def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -135,8 +142,13 @@ def err_arch_unsupported_isa
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
 def err_drv_unknown_argument : Error<"unknown argument: '%0'">;
+def err_drv_unknown_argument_with_suggestion
+  : Error<"unknown argument '%0', did you mean '%1'?">;
 def warn_drv_unknown_argument_clang_cl : Warning<
   "unknown argument ignored in clang-cl: '%0'">,
+  InGroup<UnknownArgument>;
+def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
+  "unknown argument ignored in clang-cl '%0' (did you mean '%1'?)">,
   InGroup<UnknownArgument>;
 
 def warn_drv_ycyu_no_arg_clang_cl : Warning<
@@ -181,6 +193,8 @@ def err_drv_mg_requires_m_or_mm : Error<
   "option '-MG' requires '-M' or '-MM'">;
 def err_drv_unknown_objc_runtime : Error<
   "unknown or ill-formed Objective-C runtime '%0'">;
+def err_drv_gnustep_objc_runtime_incompatible_binary : Error<
+  "GNUstep Objective-C runtime version %0 incompatible with target binary format">;
 def err_drv_emit_llvm_link : Error<
    "-emit-llvm cannot be used when linking">;
 def err_drv_optimization_remark_pattern : Error<
@@ -195,6 +209,9 @@ def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  InGroup<OpenMPTarget>;
+def warn_drv_omp_offload_target_missingbcruntime : Warning<
+  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.">,
   InGroup<OpenMPTarget>;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
@@ -251,15 +268,12 @@ def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%
   InGroup<DiagGroup<"incompatible-sysroot">>;
 def warn_debug_compression_unavailable : Warning<"cannot compress debug sections (zlib not installed)">,
   InGroup<DiagGroup<"debug-compression-unavailable">>;
-def warn_drv_enabling_rtti_with_exceptions : Warning<
-  "implicitly enabling rtti for exception handling">,
-  InGroup<DiagGroup<"rtti-for-exceptions">>;
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
   InGroup<AutoDisableVptrSanitizer>;
 def warn_drv_object_size_disabled_O0 : Warning<
   "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
-  InGroup<InvalidCommandLineArgument>;
+  InGroup<InvalidCommandLineArgument>, DefaultWarnNoWerror;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -278,6 +292,9 @@ def err_analyzer_config_multiple_values : Error<
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
+def warn_drv_vectorize_needs_hvx : Warning<
+  "auto-vectorization requires HVX, use -mhvx to enable it">,
+  InGroup<OptionIgnored>;
 
 def err_drv_modules_validate_once_requires_timestamp : Error<
   "option '-fmodules-validate-once-per-build-session' requires "
@@ -322,10 +339,12 @@ def warn_drv_unsupported_longcalls : Warning<
   "ignoring '-mlong-calls' option as it is not currently supported with "
   "%select{|the implicit usage of }0-mabicalls">,
   InGroup<OptionIgnored>;
-def warn_drv_unsupported_abicalls : Warning<
-  "ignoring '-mabicalls' option as it cannot be used with "
-  "non position-independent code and the N64 ABI">,
+def warn_drv_unsupported_pic_with_mabicalls : Warning<
+  "ignoring '%0' option as it cannot be used with "
+  "%select{implicit usage of|}1 -mabicalls and the N64 ABI">,
   InGroup<OptionIgnored>;
+def err_drv_unsupported_noabicalls_pic : Error<
+  "position-independent code requires ‘-mabicalls’">;
 def err_drv_unsupported_indirect_jump_opt : Error<
   "'-mindirect-jump=%0' is unsupported with the '%1' architecture">;
 def err_drv_unknown_indirect_jump_opt : Error<
@@ -366,4 +385,8 @@ def warn_drv_experimental_isel_incomplete : Warning<
 def warn_drv_experimental_isel_incomplete_opt : Warning<
   "-fexperimental-isel support is incomplete for this architecture at the current optimization level">,
   InGroup<ExperimentalISel>;
+
+def warn_drv_moutline_unsupported_opt : Warning<
+  "The '%0' architecture does not support -moutline; flag ignored">,
+  InGroup<OptionIgnored>;
 }

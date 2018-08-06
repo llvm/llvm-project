@@ -28,7 +28,7 @@ enum DebugInfoKind {
                        /// forward decls for types that could be
                        /// replaced with forward decls in the source
                        /// code. For dynamic C++ classes type info
-                       /// is only emitted int the module that
+                       /// is only emitted into the module that
                        /// contains the classe's vtable.
   FullDebugInfo        /// Generate complete debug info.
 };

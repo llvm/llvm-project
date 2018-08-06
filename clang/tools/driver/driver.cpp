@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Driver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
@@ -26,7 +26,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -34,9 +33,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -320,26 +318,17 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
     return cc1gen_reproducer_main(argv.slice(2), argv[0], GetExecutablePathVP);
 
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'\n";
+  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
+               << "Valid tools include '-cc1' and '-cc1as'.\n";
   return 1;
 }
 
 int main(int argc_, const char **argv_) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv_[0]);
-  llvm::PrettyStackTraceProgram X(argc_, argv_);
-  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
+  llvm::InitLLVM X(argc_, argv_);
+  SmallVector<const char *, 256> argv(argv_, argv_ + argc_);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
-
-  SmallVector<const char *, 256> argv;
-  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
-  std::error_code EC = llvm::sys::Process::GetArgumentVector(
-      argv, llvm::makeArrayRef(argv_, argc_), ArgAllocator);
-  if (EC) {
-    llvm::errs() << "error: couldn't get arguments: " << EC.message() << '\n';
-    return 1;
-  }
 
   llvm::InitializeAllTargets();
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(argv[0]);
@@ -499,7 +488,7 @@ int main(int argc_, const char **argv_) {
       // On Windows, abort will return an exit code of 3.  In these cases,
       // generate additional diagnostic information if possible.
       bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
       DiagnoseCrash |= CommandRes == 3;
 #endif
       if (DiagnoseCrash) {
@@ -515,7 +504,7 @@ int main(int argc_, const char **argv_) {
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
 
-#ifdef LLVM_ON_WIN32
+#ifdef _WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.
   // Once abnormal termiation was caught, negative status should not be
   // propagated.

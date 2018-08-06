@@ -13,10 +13,10 @@ int f1() {
           __builtin_object_size(&a, 3));
 }
 int f2() {
-  return __builtin_object_size(&a, -1); // expected-error {{argument should be a value from 0 to 3}}
+  return __builtin_object_size(&a, -1); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
 }
 int f3() {
-  return __builtin_object_size(&a, 4); // expected-error {{argument should be a value from 0 to 3}}
+  return __builtin_object_size(&a, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
 
@@ -41,7 +41,7 @@ void f5(void)
   char buf[10];
   memset((void *)0x100000000ULL, 0, 0x1000);
   memcpy((char *)NULL + 0x10000, buf, 0x10);
-  memcpy1((char *)NULL + 0x10000, buf, 0x10); // expected-error {{argument should be a value from 0 to 3}}
+  memcpy1((char *)NULL + 0x10000, buf, 0x10); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
 // rdar://18431336

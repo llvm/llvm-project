@@ -41,7 +41,7 @@ template <typename T> __device__ HDType overload_hd(T a);
 __device__ HDType overload_hd(int a); // OK.
 
 // Verify that target attributes are taken into account when we
-// explicitly specialize or instantiate function tempaltes.
+// explicitly specialize or instantiate function templates.
 template <> __host__ HType overload_hd(int a);
 // expected-error@-1 {{no function template matches function template specialization 'overload_hd'}}
 template __host__ HType overload_hd(long a);

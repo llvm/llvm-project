@@ -129,7 +129,7 @@ public:
   template<typename TypeLocType>
   bool HandleTemplateSpecializationTypeLoc(TypeLocType TL) {
     if (const auto *T = TL.getTypePtr()) {
-      if (IndexCtx.shouldIndexImplicitTemplateInsts()) {
+      if (IndexCtx.shouldIndexImplicitInstantiation()) {
         if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
           IndexCtx.handleReference(RD, TL.getTemplateNameLoc(),
                                    Parent, ParentDC, SymbolRoleSet(), Relations);

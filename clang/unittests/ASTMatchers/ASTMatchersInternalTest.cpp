@@ -189,7 +189,7 @@ TEST(IsInlineMatcher, IsInline) {
 
 // FIXME: Figure out how to specify paths so the following tests pass on
 // Windows.
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
 
 TEST(Matcher, IsExpansionInMainFileMatcher) {
   EXPECT_TRUE(matches("class X {};",
@@ -234,7 +234,7 @@ TEST(Matcher, IsExpansionInFileMatching) {
       "-isystem/", M));
 }
 
-#endif // LLVM_ON_WIN32
+#endif // _WIN32
 
 } // end namespace ast_matchers
 } // end namespace clang

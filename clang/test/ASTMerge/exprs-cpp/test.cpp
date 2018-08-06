@@ -30,6 +30,8 @@ static_assert(ExpressionTrait == false);
 static_assert(ArrayRank == 2);
 static_assert(ArrayExtent == 20);
 
+static_assert(testLambdaAdd(3) == 6);
+
 void testImport(int *x, const S1 &cs1, S1 &s1) {
   testNewThrowDelete();
   testArrayElement(nullptr, 12);
@@ -44,4 +46,5 @@ void testImport(int *x, const S1 &cs1, S1 &s1) {
   testDefaultArg();
   testDefaultArgExpr();
   useTemplateType();
+  TestLambdaTemplate<int>(1, 2).testLambda(3);
 }

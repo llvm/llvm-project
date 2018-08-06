@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
 
 int b(char* x);
 
@@ -202,5 +203,6 @@ void test8(int a[static 3]) { }
 // CHECK: define void @test8(i32* dereferenceable(12) %a)
 
 void test9(int n, int a[static n]) { }
-// CHECK: define void @test9(i32 %n, i32* nonnull %a)
+// NULL-INVALID: define void @test9(i32 %n, i32* nonnull %a)
+// NULL-VALID: define void @test9(i32 %n, i32* %a)
 

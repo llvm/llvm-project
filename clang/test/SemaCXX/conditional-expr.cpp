@@ -149,7 +149,7 @@ void test()
   i1 = i1 ? i1 : I();
   I i2(i1 ? I() : J());
   I i3(i1 ? J() : I());
-  // "the type [it] woud have if E2 were converted to an rvalue"
+  // "the type [it] would have if E2 were converted to an rvalue"
   vfn pfn = i1 ? F() : test;
   pfn = i1 ? test : F();
   (void)(i1 ? A() : B()); // expected-error {{conversion from 'B' to 'A' is ambiguous}}

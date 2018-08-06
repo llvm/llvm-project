@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -29,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/APSInt.h"
@@ -119,7 +121,7 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
 
   if (T->isNullPtrType())
     return makeZeroVal(T);
-  
+
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -328,12 +330,19 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   case Stmt::CXXNullPtrLiteralExprClass:
     return makeNull();
 
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXFunctionalCastExprClass:
+  case Stmt::CXXConstCastExprClass:
+  case Stmt::CXXReinterpretCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
   case Stmt::ImplicitCastExprClass: {
     const auto *CE = cast<CastExpr>(E);
     switch (CE->getCastKind()) {
     default:
       break;
     case CK_ArrayToPointerDecay:
+    case CK_IntegralToPointer:
+    case CK_NoOp:
     case CK_BitCast: {
       const Expr *SE = CE->getSubExpr();
       Optional<SVal> Val = getConstantVal(SE);
@@ -370,14 +379,14 @@ SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
                                    BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
-  if (!State->isTainted(RHS) && !State->isTainted(LHS))
-    return UnknownVal();
-
   const SymExpr *symLHS = LHS.getAsSymExpr();
   const SymExpr *symRHS = RHS.getAsSymExpr();
+
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
-  const unsigned MaxComp = 10000; // 100000 28X
+  const unsigned MaxComp = StateMgr.getOwningEngine()
+                               ->getAnalysisManager()
+                               .options.getMaxSymbolComplexity();
 
   if (symLHS && symRHS &&
       (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
@@ -448,7 +457,7 @@ DefinedOrUnknownSVal SValBuilder::evalEQ(ProgramStateRef state,
 /// Assumes the input types are canonical.
 static bool shouldBeModeledWithNoOp(ASTContext &Context, QualType ToTy,
                                                          QualType FromTy) {
-  while (Context.UnwrapSimilarPointerTypes(ToTy, FromTy)) {
+  while (Context.UnwrapSimilarTypes(ToTy, FromTy)) {
     Qualifiers Quals1, Quals2;
     ToTy = Context.getUnqualifiedArrayType(ToTy, Quals1);
     FromTy = Context.getUnqualifiedArrayType(FromTy, Quals2);
@@ -463,6 +472,10 @@ static bool shouldBeModeledWithNoOp(ASTContext &Context, QualType ToTy,
 
   // If we are casting to void, the 'From' value can be used to represent the
   // 'To' value.
+  //
+  // FIXME: Doing this after unwrapping the types doesn't make any sense. A
+  // cast from 'int**' to 'void**' is not special in the way that a cast from
+  // 'int*' to 'void*' is.
   if (ToTy->isVoidType())
     return true;
 

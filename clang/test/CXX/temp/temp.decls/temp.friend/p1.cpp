@@ -359,3 +359,31 @@ namespace PR10913 {
   template void f2<int>(X<int> *);
   template void f2<float>(X<int> *); // expected-note{{in instantiation of function template specialization 'PR10913::f2<float, int>' requested here}}
 }
+
+namespace test16 {
+template <class T> struct foo {}; // expected-note{{candidate ignored: not a function template}}
+template <class T> class A {
+  friend void foo<T>(); // expected-error{{no candidate function template was found for dependent friend function template specialization}}
+};
+}
+
+namespace test17 {
+namespace ns {
+template <class T> void foo() {} // expected-note{{candidate ignored: not a member of the enclosing namespace; did you mean to explicitly qualify the specialization?}}
+}
+using ns::foo;
+template <class T> struct A {
+  friend void foo<T>() {} // expected-error{{no candidate function template was found for dependent friend function template specialization}}
+};
+}
+
+namespace test18 {
+namespace ns1 { template <class T> struct foo {}; } // expected-note{{candidate ignored: not a function template}}
+namespace ns2 { void foo() {} } // expected-note{{candidate ignored: not a function template}}
+using ns1::foo;
+using ns2::foo;
+
+template <class T> class A {
+  friend void foo<T>() {} // expected-error{{no candidate function template was found for dependent friend function template specialization}}
+};
+}

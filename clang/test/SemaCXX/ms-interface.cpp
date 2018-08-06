@@ -47,7 +47,7 @@ __interface I4 : I1, I2 {
   void fn2() final;
 };
 
-// expected-error@+1 {{interface type cannot inherit from non-public 'interface I1'}}
+// expected-error@+1 {{interface type cannot inherit from non-public interface 'I1'}}
 __interface I5 : private I1 {
 };
 
@@ -65,12 +65,12 @@ static_assert(!__is_interface_class(C), "oops");
 static_assert(!__is_interface_class(I), "oops");
 static_assert(!__is_interface_class(U), "oops");
 
-// expected-error@55 {{interface type cannot inherit from 'struct S'}}
+// expected-error@55 {{interface type cannot inherit from struct 'S'}}
 // expected-note@+1 {{in instantiation of template class 'I6<S>' requested here}}
 struct S1 : I6<S> {
 };
 
-// expected-error@55 {{interface type cannot inherit from 'class C'}}
+// expected-error@55 {{interface type cannot inherit from class 'C'}}
 // expected-note@+1 {{in instantiation of template class 'I6<C>' requested here}}
 class C1 : I6<C> {
 };

@@ -21,10 +21,6 @@
 // RUN: %clang -target armv7m-eabi -x assembler -mexecute-only %s -c -### 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-NO-EXECUTE-ONLY -check-prefix CHECK-NO-EXECUTE-ONLY-ASM
 
-//
-// CHECK-NO-EXECUTE-ONLY-NOT: "-backend-option" "-arm-execute-only"
-// CHECK-EXECUTE-ONLY: "-backend-option" "-arm-execute-only"
-
 // CHECK-EXECUTE-ONLY-NOT-SUPPORTED: error: execute only is not supported for the thumbv6m sub-architecture
 // CHECK-EXECUTE-ONLY-NO-MOVT: error: option '-mexecute-only' cannot be specified with '-mno-movt'
 // CHECK-EXECUTE-ONLY-LONG-CALLS: error: option '-mexecute-only' cannot be specified with '-mlong-calls'

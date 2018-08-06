@@ -23,6 +23,8 @@ namespace PS4cpu {
 void addProfileRTArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
+void addSanitizerArgs(const ToolChain &TC, llvm::opt::ArgStringList &CmdArgs);
+
 class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
 public:
   Assemble(const ToolChain &TC)
@@ -61,7 +63,9 @@ public:
          const llvm::opt::ArgList &Args);
 
   // No support for finding a C++ standard library yet.
-  std::string findLibCxxIncludePath() const override { return ""; }
+  void addLibCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override {}
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override {}

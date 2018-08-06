@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t > /dev/null 2>&1
+// RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=plist -o %t > /dev/null 2>&1
 // RUN: FileCheck -input-file %t %s
 
 static inline bug(int *p) {
@@ -78,40 +78,6 @@ void test_bug_2() {
 // CHECK-NEXT:           <dict>
 // CHECK-NEXT:            <key>line</key><integer>15</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:          </array>
-// CHECK-NEXT:        </dict>
-// CHECK-NEXT:       </array>
-// CHECK-NEXT:     </dict>
-// CHECK-NEXT:     <dict>
-// CHECK-NEXT:      <key>kind</key><string>control</string>
-// CHECK-NEXT:      <key>edges</key>
-// CHECK-NEXT:       <array>
-// CHECK-NEXT:        <dict>
-// CHECK-NEXT:         <key>start</key>
-// CHECK-NEXT:          <array>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>3</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>5</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:          </array>
-// CHECK-NEXT:         <key>end</key>
-// CHECK-NEXT:          <array>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>15</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:          </array>

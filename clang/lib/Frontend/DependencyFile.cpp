@@ -63,7 +63,8 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported) override {
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName, /*FromModule*/false,
                                      /*IsSystem*/false, /*IsModuleFile*/false,
@@ -161,8 +162,8 @@ class DFGImpl : public PPCallbacks {
   bool AddMissingHeaderDeps;
   bool SeenMissingHeader;
   bool IncludeModuleFiles;
-  bool SkipUnusedModuleMaps;
   DependencyOutputFormat OutputFormat;
+  unsigned InputFileIndex;
 
 private:
   bool FileMatchesDepCriteria(const char *Filename,
@@ -177,10 +178,11 @@ public:
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps),
       SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
-      SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
-      OutputFormat(Opts.OutputFormat) {
+      OutputFormat(Opts.OutputFormat),
+      InputFileIndex(0) {
     for (const auto &ExtraDep : Opts.ExtraDeps) {
-      AddFilename(ExtraDep);
+      if (AddFilename(ExtraDep))
+        ++InputFileIndex;
     }
   }
 
@@ -195,16 +197,16 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported) override;
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override {
     OutputDependencyFile();
   }
 
-  void AddFilename(StringRef Filename);
+  bool AddFilename(StringRef Filename);
   bool includeSystemHeaders() const { return IncludeSystemHeaders; }
   bool includeModuleFiles() const { return IncludeModuleFiles; }
-  bool skipUnusedModuleMaps() const { return SkipUnusedModuleMaps; }
 };
 
 class DFGMMCallback : public ModuleMapCallbacks {
@@ -213,15 +215,7 @@ public:
   DFGMMCallback(DFGImpl &Parent) : Parent(Parent) {}
   void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
                          bool IsSystem) override {
-    if (Parent.skipUnusedModuleMaps())
-      return;
     if (!IsSystem || Parent.includeSystemHeaders())
-      Parent.AddFilename(Entry.getName());
-  }
-  void moduleMapFoundForModule(const FileEntry &Entry, const Module *M,
-                               bool IsSystem) override {
-    if (Parent.skipUnusedModuleMaps() &&
-        (!IsSystem || Parent.includeSystemHeaders()))
       Parent.AddFilename(Entry.getName());
   }
 };
@@ -324,7 +318,8 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const FileEntry *File,
                                  StringRef SearchPath,
                                  StringRef RelativePath,
-                                 const Module *Imported) {
+                                 const Module *Imported, 
+                                 SrcMgr::CharacteristicKind FileType) {
   if (!File) {
     if (AddMissingHeaderDeps)
       AddFilename(FileName);
@@ -333,9 +328,12 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
   }
 }
 
-void DFGImpl::AddFilename(StringRef Filename) {
-  if (FilesSet.insert(Filename).second)
+bool DFGImpl::AddFilename(StringRef Filename) {
+  if (FilesSet.insert(Filename).second) {
     Files.push_back(Filename);
+    return true;
+  }
+  return false;
 }
 
 /// Print the filename, with escaping or quoting that accommodates the three
@@ -471,8 +469,10 @@ void DFGImpl::OutputDependencyFile() {
 
   // Create phony targets if requested.
   if (PhonyTarget && !Files.empty()) {
-    // Skip the first entry, this is always the input file itself.
-    for (auto I = Files.begin() + 1, E = Files.end(); I != E; ++I) {
+    unsigned Index = 0;
+    for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
+      if (Index++ == InputFileIndex)
+        continue;
       OS << '\n';
       PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";

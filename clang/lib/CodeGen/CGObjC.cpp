@@ -259,7 +259,7 @@ llvm::Value *CodeGenFunction::EmitObjCProtocolExpr(const ObjCProtocolExpr *E) {
   return CGM.getObjCRuntime().GenerateProtocolRef(*this, E->getProtocol());
 }
 
-/// \brief Adjust the type of an Objective-C object that doesn't match up due
+/// Adjust the type of an Objective-C object that doesn't match up due
 /// to type erasure at various points, e.g., related result types or the use
 /// of parameterized classes.
 static RValue AdjustObjCObjectType(CodeGenFunction &CGF, QualType ExpT,
@@ -803,7 +803,7 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
   Kind = Native;
 }
 
-/// \brief Generate an Objective-C property getter function.
+/// Generate an Objective-C property getter function.
 ///
 /// The given Decl must be an ObjCImplementationDecl. \@synthesize
 /// is illegal within a category.
@@ -1008,12 +1008,14 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
                          /*init*/ true);
       return;
     }
-    case TEK_Aggregate:
+    case TEK_Aggregate: {
       // The return value slot is guaranteed to not be aliased, but
       // that's not necessarily the same as "on the stack", so
       // we still potentially need objc_memmove_collectable.
-      EmitAggregateCopy(ReturnValue, LV.getAddress(), ivarType);
+      EmitAggregateCopy(/* Dest= */ MakeAddrLValue(ReturnValue, ivarType),
+                        /* Src= */ LV, ivarType, overlapForReturnValue());
       return;
+    }
     case TEK_Scalar: {
       llvm::Value *value;
       if (propType->isReferenceType()) {
@@ -1334,7 +1336,7 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
   EmitStmt(&assign);
 }
 
-/// \brief Generate an Objective-C property setter function.
+/// Generate an Objective-C property setter function.
 ///
 /// The given Decl must be an ObjCImplementationDecl. \@synthesize
 /// is illegal within a category.
@@ -1438,7 +1440,8 @@ void CodeGenFunction::GenerateObjCCtorDtorMethod(ObjCImplementationDecl *IMP,
       EmitAggExpr(IvarInit->getInit(),
                   AggValueSlot::forLValue(LV, AggValueSlot::IsDestructed,
                                           AggValueSlot::DoesNotNeedGCBarriers,
-                                          AggValueSlot::IsNotAliased));
+                                          AggValueSlot::IsNotAliased,
+                                          AggValueSlot::DoesNotOverlap));
     }
     // constructor returns 'self'.
     CodeGenTypes &Types = CGM.getTypes();
@@ -1814,22 +1817,6 @@ void CodeGenFunction::EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values) {
 }
 
 
-static bool IsForwarding(StringRef Name) {
-  return llvm::StringSwitch<bool>(Name)
-      .Cases("objc_autoreleaseReturnValue",             // ARCInstKind::AutoreleaseRV
-             "objc_autorelease",                        // ARCInstKind::Autorelease
-             "objc_retainAutoreleaseReturnValue",       // ARCInstKind::FusedRetainAutoreleaseRV
-             "objc_retainAutoreleasedReturnValue",      // ARCInstKind::RetainRV
-             "objc_retainAutorelease",                  // ARCInstKind::FusedRetainAutorelease
-             "objc_retainedObject",                     // ARCInstKind::NoopCast
-             "objc_retain",                             // ARCInstKind::Retain
-             "objc_unretainedObject",                   // ARCInstKind::NoopCast
-             "objc_unretainedPointer",                  // ARCInstKind::NoopCast
-             "objc_unsafeClaimAutoreleasedReturnValue", // ARCInstKind::ClaimRV
-             true)
-      .Default(false);
-}
-
 static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
                                                 llvm::FunctionType *FTy,
                                                 StringRef Name) {
@@ -1847,9 +1834,6 @@ static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
       // performance.
       F->addFnAttr(llvm::Attribute::NonLazyBind);
     }
-
-    if (IsForwarding(Name))
-      F->arg_begin()->addAttr(llvm::Attribute::Returned);
   }
 
   return RTF;
@@ -2052,7 +2036,7 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
 
   // Call the marker asm if we made one, which we do only at -O0.
   if (marker)
-    CGF.Builder.CreateCall(marker);
+    CGF.Builder.CreateCall(marker, None, CGF.getBundlesForFunclet(marker));
 }
 
 /// Retain the given object which is the result of a function call.
@@ -3276,19 +3260,19 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
                            "__assign_helper_atomic_property_",
                            &CGM.getModule());
 
-  CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   StartFunction(FD, C.VoidTy, Fn, FI, args);
   
   DeclRefExpr DstExpr(&DstDecl, false, DestTy,
                       VK_RValue, SourceLocation());
   UnaryOperator DST(&DstExpr, UO_Deref, DestTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   DeclRefExpr SrcExpr(&SrcDecl, false, SrcTy,
                       VK_RValue, SourceLocation());
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   Expr *Args[2] = { &DST, &SRC };
   CallExpr *CalleeExp = cast<CallExpr>(PID->getSetterCXXAssignment());
@@ -3357,8 +3341,8 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   llvm::Function *Fn =
   llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
                          "__copy_helper_atomic_property_", &CGM.getModule());
-  
-  CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
+
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   StartFunction(FD, C.VoidTy, Fn, FI, args);
   
@@ -3366,7 +3350,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                       VK_RValue, SourceLocation());
   
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   CXXConstructExpr *CXXConstExpr = 
     cast<CXXConstructExpr>(PID->getGetterCXXConstructor());
@@ -3399,7 +3383,8 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                                     Qualifiers(),
                                     AggValueSlot::IsDestructed,
                                     AggValueSlot::DoesNotNeedGCBarriers,
-                                    AggValueSlot::IsNotAliased));
+                                    AggValueSlot::IsNotAliased,
+                                    AggValueSlot::DoesNotOverlap));
   
   FinishFunction();
   HelperFn = llvm::ConstantExpr::getBitCast(Fn, VoidPtrTy);

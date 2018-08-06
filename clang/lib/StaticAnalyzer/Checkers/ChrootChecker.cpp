@@ -132,7 +132,7 @@ void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
   if (!II_chdir)
     II_chdir = &Ctx.Idents.get("chdir");
 
-  // Ingnore chroot and chdir.
+  // Ignore chroot and chdir.
   if (FD->getIdentifier() == II_chroot || FD->getIdentifier() == II_chdir)
     return;
 

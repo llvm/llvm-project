@@ -123,8 +123,7 @@ namespace dr305 { // dr305: no
     template<typename T> using T2 = T;
   };
   void k(Z *z) {
-    // FIXME: This diagnostic is terrible.
-    z->~T1<int>(); // expected-error {{'T1' following the 'template' keyword does not refer to a template}} expected-error +{{}}
+    z->~T1<int>(); // expected-error {{no member named 'T1' in 'dr305::Z'}} expected-error +{{}}
     z->~T2<int>(); // expected-error {{no member named '~int'}}
     z->~T2<Z>();
   }
@@ -352,6 +351,79 @@ namespace dr329 { // dr329: 3.5
 
   void test() {
     h(a); // expected-note {{instantiation}}
+  }
+}
+
+namespace dr330 { // dr330: 7
+  // Conversions between P and Q will be allowed by P0388.
+  typedef int *(*P)[3];
+  typedef const int *const (*Q)[3];
+  typedef const int *Qinner[3];
+  typedef Qinner const *Q2; // same as Q, but 'const' written outside the array type
+  typedef const int *const (*R)[4];
+  typedef const int *const (*S)[];
+  typedef const int *(*T)[];
+  void f(P p, Q q, Q2 q2, R r, S s, T t) {
+    q = p; // ok
+    q2 = p; // ok
+    r = p; // expected-error {{incompatible}}
+    s = p; // expected-error {{incompatible}} (for now)
+    t = p; // expected-error {{incompatible}}
+    s = q; // expected-error {{incompatible}}
+    s = q2; // expected-error {{incompatible}}
+    s = t; // ok, adding const
+    t = s; // expected-error {{incompatible}}
+    (void) const_cast<P>(q);
+    (void) const_cast<P>(q2);
+    (void) const_cast<Q>(p);
+    (void) const_cast<Q2>(p);
+    (void) const_cast<S>(p); // expected-error {{not allowed}} (for now)
+    (void) const_cast<P>(s); // expected-error {{not allowed}} (for now)
+    (void) const_cast<S>(q); // expected-error {{not allowed}}
+    (void) const_cast<S>(q2); // expected-error {{not allowed}}
+    (void) const_cast<Q>(s); // expected-error {{not allowed}}
+    (void) const_cast<Q2>(s); // expected-error {{not allowed}}
+    (void) const_cast<T>(s);
+    (void) const_cast<S>(t);
+    (void) const_cast<T>(q); // expected-error {{not allowed}}
+    (void) const_cast<Q>(t); // expected-error {{not allowed}}
+
+    (void) reinterpret_cast<P>(q); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<P>(q2); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<Q>(p);
+    (void) reinterpret_cast<Q2>(p);
+    (void) reinterpret_cast<S>(p);
+    (void) reinterpret_cast<P>(s); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<S>(q);
+    (void) reinterpret_cast<S>(q2);
+    (void) reinterpret_cast<Q>(s);
+    (void) reinterpret_cast<Q2>(s);
+    (void) reinterpret_cast<T>(s); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<S>(t);
+    (void) reinterpret_cast<T>(q); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<Q>(t);
+  }
+
+  namespace swift_17882 {
+    typedef const char P[72];
+    typedef int *Q;
+    void f(P &pr, P *pp) {
+      (void) reinterpret_cast<const Q&>(pr);
+      (void) reinterpret_cast<const Q*>(pp);
+    }
+
+    struct X {};
+    typedef const volatile int A[1][2][3];
+    typedef int *const X::*volatile *B1;
+    typedef int *const X::*         *B2;
+    typedef int *X::*      volatile *B3;
+    typedef volatile int *(*const B4)[4];
+    void f(A *a) {
+      (void) reinterpret_cast<B1*>(a);
+      (void) reinterpret_cast<B2*>(a); // expected-error {{casts away qualifiers}}
+      (void) reinterpret_cast<B3*>(a); // expected-error {{casts away qualifiers}}
+      (void) reinterpret_cast<B4*>(a);
+    }
   }
 }
 
@@ -906,6 +978,25 @@ namespace dr372 { // dr372: no
       };
     };
   }
+
+  // FIXME: This is valid: deriving from A gives D access to A::B
+  namespace std_example {
+    class A {
+    protected:
+      struct B {}; // expected-note {{here}}
+    };
+    struct D : A::B, A {}; // expected-error {{protected}}
+  }
+
+  // FIXME: This is valid: deriving from A::B gives access to A::B!
+  namespace badwolf {
+    class A {
+    protected:
+      struct B; // expected-note {{here}}
+    };
+    struct A::B : A {};
+    struct C : A::B {}; // expected-error {{protected}}
+  }
 }
 
 namespace dr373 { // dr373: 5
@@ -925,7 +1016,7 @@ namespace dr373 { // dr373: 5
   using namespace A::B; // expected-error {{expected namespace name}}
 }
 
-namespace dr374 { // dr374: yes c++11
+namespace dr374 { // dr374: yes
   namespace N {
     template<typename T> void f();
     template<typename T> struct A { void f(); };
@@ -933,11 +1024,6 @@ namespace dr374 { // dr374: yes c++11
   template<> void N::f<char>() {}
   template<> void N::A<char>::f() {}
   template<> struct N::A<int> {};
-#if __cplusplus < 201103L
-  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
-  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
-  // expected-error@-4 {{extension}} expected-note@-8 {{here}}
-#endif
 }
 
 // dr375: dup 345

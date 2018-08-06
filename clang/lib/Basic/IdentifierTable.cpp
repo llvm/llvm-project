@@ -65,7 +65,7 @@ IdentifierInfoLookup::~IdentifierInfoLookup() = default;
 
 namespace {
 
-/// \brief A simple identifier lookup iterator that represents an
+/// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
 class EmptyLookupIterator : public IdentifierIterator
 {
@@ -79,16 +79,16 @@ IdentifierIterator *IdentifierInfoLookup::getIdentifiers() {
   return new EmptyLookupIterator();
 }
 
+IdentifierTable::IdentifierTable(IdentifierInfoLookup *ExternalLookup)
+    : HashTable(8192), // Start with space for 8K identifiers.
+      ExternalLookup(ExternalLookup) {}
+
 IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
-                                 IdentifierInfoLookup* externalLookup)
-  : HashTable(8192), // Start with space for 8K identifiers.
-    ExternalLookup(externalLookup) {
+                                 IdentifierInfoLookup *ExternalLookup)
+    : IdentifierTable(ExternalLookup) {
   // Populate the identifier table with info about keywords for the current
   // language.
   AddKeywords(LangOpts);
-
-  // Add the '_experimental_modules_import' contextual keyword.
-  get("import").setModulesImport(true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,25 +108,27 @@ namespace {
     KEYALTIVEC = 0x40,
     KEYNOCXX = 0x80,
     KEYBORLAND = 0x100,
-    KEYOPENCL = 0x200,
+    KEYOPENCLC = 0x200,
     KEYC11 = 0x400,
     KEYARC = 0x800,
     KEYNOMS18 = 0x01000,
     KEYNOOPENCL = 0x02000,
     WCHARSUPPORT = 0x04000,
     HALFSUPPORT = 0x08000,
-    KEYCONCEPTS = 0x10000,
-    KEYOBJC2    = 0x20000,
-    KEYZVECTOR  = 0x40000,
-    KEYCOROUTINES = 0x80000,
-    KEYMODULES = 0x100000,
-    KEYCXX2A = 0x200000,
+    CHAR8SUPPORT = 0x10000,
+    KEYCONCEPTS = 0x20000,
+    KEYOBJC2    = 0x40000,
+    KEYZVECTOR  = 0x80000,
+    KEYCOROUTINES = 0x100000,
+    KEYMODULES = 0x200000,
+    KEYCXX2A = 0x400000,
+    KEYOPENCLCXX = 0x800000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX2A,
-    KEYALL = (0x3fffff & ~KEYNOMS18 &
+    KEYALL = (0xffffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
-  /// \brief How a keyword is treated in the selected standard.
+  /// How a keyword is treated in the selected standard.
   enum KeywordStatus {
     KS_Disabled,    // Disabled
     KS_Extension,   // Is an extension
@@ -136,7 +138,7 @@ namespace {
 
 } // namespace
 
-/// \brief Translates flags as specified in TokenKinds.def into keyword status
+/// Translates flags as specified in TokenKinds.def into keyword status
 /// in the given language standard.
 static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
                                       unsigned Flags) {
@@ -151,8 +153,11 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.Bool && (Flags & BOOLSUPPORT)) return KS_Enabled;
   if (LangOpts.Half && (Flags & HALFSUPPORT)) return KS_Enabled;
   if (LangOpts.WChar && (Flags & WCHARSUPPORT)) return KS_Enabled;
+  if (LangOpts.Char8 && (Flags & CHAR8SUPPORT)) return KS_Enabled;
   if (LangOpts.AltiVec && (Flags & KEYALTIVEC)) return KS_Enabled;
-  if (LangOpts.OpenCL && (Flags & KEYOPENCL)) return KS_Enabled;
+  if (LangOpts.OpenCL && !LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLC))
+    return KS_Enabled;
+  if (LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLCXX)) return KS_Enabled;
   if (!LangOpts.CPlusPlus && (Flags & KEYNOCXX)) return KS_Enabled;
   if (LangOpts.C11 && (Flags & KEYC11)) return KS_Enabled;
   // We treat bridge casts as objective-C keywords so we can warn on them
@@ -237,9 +242,12 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 
   if (LangOpts.DeclSpecKeyword)
     AddKeyword("__declspec", tok::kw___declspec, KEYALL, LangOpts, *this);
+
+  // Add the '_experimental_modules_import' contextual keyword.
+  get("import").setModulesImport(true);
 }
 
-/// \brief Checks if the specified token kind represents a keyword in the
+/// Checks if the specified token kind represents a keyword in the
 /// specified language.
 /// \returns Status of the keyword in the language.
 static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
@@ -252,7 +260,7 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
   }
 }
 
-/// \brief Returns true if the identifier represents a keyword in the
+/// Returns true if the identifier represents a keyword in the
 /// specified language.
 bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
@@ -264,7 +272,7 @@ bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   }
 }
 
-/// \brief Returns true if the identifier represents a C++ keyword in the
+/// Returns true if the identifier represents a C++ keyword in the
 /// specified language.
 bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))
@@ -496,6 +504,8 @@ void Selector::print(llvm::raw_ostream &OS) const {
   OS << getAsString();
 }
 
+LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
+
 /// Interpreting the given string using the normal CamelCase
 /// conventions, determine whether the given string starts with the
 /// given "word", which is assumed to end in a lowercase letter.
@@ -635,6 +645,12 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
   IdentifierInfo *SetterName =
     &Idents.get(constructSetterName(Name->getName()));
   return SelTable.getUnarySelector(SetterName);
+}
+
+std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
+  StringRef Name = Sel.getNameForSlot(0);
+  assert(Name.startswith("set") && "invalid setter name");
+  return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 
 size_t SelectorTable::getTotalMemory() const {

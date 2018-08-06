@@ -16,11 +16,11 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Module.h"
-#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VersionTuple.h"
 #include <memory>
 #include <string>
 
@@ -57,7 +57,7 @@ class APINotesManager {
   bool ImplicitAPINotes;
 
   /// The Swift version to use when interpreting versioned API notes.
-  VersionTuple SwiftVersion;
+  llvm::VersionTuple SwiftVersion;
 
   /// API notes readers for the current module.
   ///
@@ -111,7 +111,7 @@ public:
   ~APINotesManager();
 
   /// Set the Swift version to use when filtering API notes.
-  void setSwiftVersion(VersionTuple swiftVersion) {
+  void setSwiftVersion(llvm::VersionTuple swiftVersion) {
     SwiftVersion = swiftVersion;
   }
 

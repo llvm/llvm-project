@@ -87,9 +87,10 @@ namespace {
                 << DC->getPrimaryContext() << "\n";
         } else
           Out << "Not a DeclContext\n";
-      } else if (OutputKind == Print)
-        D->print(Out, /*Indentation=*/0, /*PrintInstantiation=*/true);
-      else if (OutputKind != None)
+      } else if (OutputKind == Print) {
+        PrintingPolicy Policy(D->getASTContext().getLangOpts());
+        D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
+      } else if (OutputKind != None)
         D->dump(Out, OutputKind == DumpFull);
     }
 
@@ -138,12 +139,14 @@ clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
                                        FilterString);
 }
 
-std::unique_ptr<ASTConsumer> clang::CreateASTDumper(StringRef FilterString,
-                                                    bool DumpDecls,
-                                                    bool Deserialize,
-                                                    bool DumpLookups) {
+std::unique_ptr<ASTConsumer>
+clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out,
+                       StringRef FilterString,
+                       bool DumpDecls,
+                       bool Deserialize,
+                       bool DumpLookups) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
-  return llvm::make_unique<ASTPrinter>(nullptr,
+  return llvm::make_unique<ASTPrinter>(std::move(Out),
                                        Deserialize ? ASTPrinter::DumpFull :
                                        DumpDecls ? ASTPrinter::Dump :
                                        ASTPrinter::None,

@@ -1,4 +1,4 @@
-//===--- RewriteRope.cpp - Rope specialized for rewriter --------*- C++ -*-===//
+//===- RewriteRope.cpp - Rope specialized for rewriter --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,11 @@
 
 #include "clang/Rewrite/Core/RewriteRope.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <cassert>
+#include <cstring>
+
 using namespace clang;
 
 /// RewriteRope is a "strong" string class, designed to make insertions and
@@ -59,12 +63,12 @@ using namespace clang;
 ///     RopePieceBTreeInterior - An interior node in the B+ Tree, which manages
 ///          up to '2*WidthFactor' other nodes in the tree.
 
+namespace {
 
 //===----------------------------------------------------------------------===//
 // RopePieceBTreeNode Class
 //===----------------------------------------------------------------------===//
 
-namespace {
   /// RopePieceBTreeNode - Common base class of RopePieceBTreeLeaf and
   /// RopePieceBTreeInterior.  This provides some 'virtual' dispatching methods
   /// and a flag that determines which subclass the instance is.  Also
@@ -82,13 +86,13 @@ namespace {
 
     /// Size - This is the number of bytes of file this node (including any
     /// potential children) covers.
-    unsigned Size;
+    unsigned Size = 0;
 
     /// IsLeaf - True if this is an instance of RopePieceBTreeLeaf, false if it
     /// is an instance of RopePieceBTreeInterior.
     bool IsLeaf;
 
-    RopePieceBTreeNode(bool isLeaf) : Size(0), IsLeaf(isLeaf) {}
+    RopePieceBTreeNode(bool isLeaf) : IsLeaf(isLeaf) {}
     ~RopePieceBTreeNode() = default;
 
   public:
@@ -116,15 +120,12 @@ namespace {
     /// erase - Remove NumBytes from this node at the specified offset.  We are
     /// guaranteed that there is a split at Offset.
     void erase(unsigned Offset, unsigned NumBytes);
-
   };
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // RopePieceBTreeLeaf Class
 //===----------------------------------------------------------------------===//
 
-namespace {
   /// RopePieceBTreeLeaf - Directly manages up to '2*WidthFactor' RopePiece
   /// nodes.  This directly represents a chunk of the string with those
   /// RopePieces contatenated.  Since this is a B+Tree, all values (in this case
@@ -135,18 +136,19 @@ namespace {
   class RopePieceBTreeLeaf : public RopePieceBTreeNode {
     /// NumPieces - This holds the number of rope pieces currently active in the
     /// Pieces array.
-    unsigned char NumPieces;
+    unsigned char NumPieces = 0;
 
     /// Pieces - This tracks the file chunks currently in this leaf.
-    ///
     RopePiece Pieces[2*WidthFactor];
 
     /// NextLeaf - This is a pointer to the next leaf in the tree, allowing
     /// efficient in-order forward iteration of the tree without traversal.
-    RopePieceBTreeLeaf **PrevLeaf, *NextLeaf;
+    RopePieceBTreeLeaf **PrevLeaf = nullptr;
+    RopePieceBTreeLeaf *NextLeaf = nullptr;
+
   public:
-    RopePieceBTreeLeaf() : RopePieceBTreeNode(true), NumPieces(0),
-                           PrevLeaf(nullptr), NextLeaf(nullptr) {}
+    RopePieceBTreeLeaf() : RopePieceBTreeNode(true) {}
+
     ~RopePieceBTreeLeaf() {
       if (PrevLeaf || NextLeaf)
         removeFromLeafInOrder();
@@ -170,6 +172,7 @@ namespace {
     }
 
     const RopePieceBTreeLeaf *getNextLeafInOrder() const { return NextLeaf; }
+
     void insertAfterLeafInOrder(RopePieceBTreeLeaf *Node) {
       assert(!PrevLeaf && !NextLeaf && "Already in ordering");
 
@@ -214,16 +217,16 @@ namespace {
     /// node is returned and must be inserted into a parent.
     RopePieceBTreeNode *insert(unsigned Offset, const RopePiece &R);
 
-
     /// erase - Remove NumBytes from this node at the specified offset.  We are
     /// guaranteed that there is a split at Offset.
     void erase(unsigned Offset, unsigned NumBytes);
 
-    static inline bool classof(const RopePieceBTreeNode *N) {
+    static bool classof(const RopePieceBTreeNode *N) {
       return N->isLeaf();
     }
   };
-} // end anonymous namespace
+
+} // namespace
 
 /// split - Split the range containing the specified offset so that we are
 /// guaranteed that there is a place to do an insertion at the specified
@@ -265,7 +268,6 @@ RopePieceBTreeNode *RopePieceBTreeLeaf::split(unsigned Offset) {
 
   return insert(Offset, Tail);
 }
-
 
 /// insert - Insert the specified RopePiece into this tree node at the
 /// specified offset.  The offset is relative, so "0" is the start of the node.
@@ -388,18 +390,21 @@ void RopePieceBTreeLeaf::erase(unsigned Offset, unsigned NumBytes) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
   /// RopePieceBTreeInterior - This represents an interior node in the B+Tree,
   /// which holds up to 2*WidthFactor pointers to child nodes.
   class RopePieceBTreeInterior : public RopePieceBTreeNode {
     /// NumChildren - This holds the number of children currently active in the
     /// Children array.
-    unsigned char NumChildren;
+    unsigned char NumChildren = 0;
+
     RopePieceBTreeNode *Children[2*WidthFactor];
+
   public:
-    RopePieceBTreeInterior() : RopePieceBTreeNode(false), NumChildren(0) {}
+    RopePieceBTreeInterior() : RopePieceBTreeNode(false) {}
 
     RopePieceBTreeInterior(RopePieceBTreeNode *LHS, RopePieceBTreeNode *RHS)
-    : RopePieceBTreeNode(false) {
+        : RopePieceBTreeNode(false) {
       Children[0] = LHS;
       Children[1] = RHS;
       NumChildren = 2;
@@ -414,10 +419,12 @@ namespace {
     bool isFull() const { return NumChildren == 2*WidthFactor; }
 
     unsigned getNumChildren() const { return NumChildren; }
+
     const RopePieceBTreeNode *getChild(unsigned i) const {
       assert(i < NumChildren && "invalid child #");
       return Children[i];
     }
+
     RopePieceBTreeNode *getChild(unsigned i) {
       assert(i < NumChildren && "invalid child #");
       return Children[i];
@@ -431,7 +438,6 @@ namespace {
         Size += getChild(i)->size();
     }
 
-
     /// split - Split the range containing the specified offset so that we are
     /// guaranteed that there is a place to do an insertion at the specified
     /// offset.  The offset is relative, so "0" is the start of the node.
@@ -439,7 +445,6 @@ namespace {
     /// If there is no space in this subtree for the extra piece, the extra tree
     /// node is returned and must be inserted into a parent.
     RopePieceBTreeNode *split(unsigned Offset);
-
 
     /// insert - Insert the specified ropepiece into this tree node at the
     /// specified offset.  The offset is relative, so "0" is the start of the
@@ -457,11 +462,12 @@ namespace {
     /// guaranteed that there is a split at Offset.
     void erase(unsigned Offset, unsigned NumBytes);
 
-    static inline bool classof(const RopePieceBTreeNode *N) {
+    static bool classof(const RopePieceBTreeNode *N) {
       return !N->isLeaf();
     }
   };
-} // end anonymous namespace
+
+} // namespace
 
 /// split - Split the range containing the specified offset so that we are
 /// guaranteed that there is a place to do an insertion at the specified
@@ -613,7 +619,7 @@ void RopePieceBTreeInterior::erase(unsigned Offset, unsigned NumBytes) {
 //===----------------------------------------------------------------------===//
 
 void RopePieceBTreeNode::Destroy() {
-  if (RopePieceBTreeLeaf *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
+  if (auto *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
     delete Leaf;
   else
     delete cast<RopePieceBTreeInterior>(this);
@@ -627,7 +633,7 @@ void RopePieceBTreeNode::Destroy() {
 /// node is returned and must be inserted into a parent.
 RopePieceBTreeNode *RopePieceBTreeNode::split(unsigned Offset) {
   assert(Offset <= size() && "Invalid offset to split!");
-  if (RopePieceBTreeLeaf *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
+  if (auto *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
     return Leaf->split(Offset);
   return cast<RopePieceBTreeInterior>(this)->split(Offset);
 }
@@ -641,7 +647,7 @@ RopePieceBTreeNode *RopePieceBTreeNode::split(unsigned Offset) {
 RopePieceBTreeNode *RopePieceBTreeNode::insert(unsigned Offset,
                                                const RopePiece &R) {
   assert(Offset <= size() && "Invalid offset to insert!");
-  if (RopePieceBTreeLeaf *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
+  if (auto *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
     return Leaf->insert(Offset, R);
   return cast<RopePieceBTreeInterior>(this)->insert(Offset, R);
 }
@@ -650,11 +656,10 @@ RopePieceBTreeNode *RopePieceBTreeNode::insert(unsigned Offset,
 /// guaranteed that there is a split at Offset.
 void RopePieceBTreeNode::erase(unsigned Offset, unsigned NumBytes) {
   assert(Offset+NumBytes <= size() && "Invalid offset to erase!");
-  if (RopePieceBTreeLeaf *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
+  if (auto *Leaf = dyn_cast<RopePieceBTreeLeaf>(this))
     return Leaf->erase(Offset, NumBytes);
   return cast<RopePieceBTreeInterior>(this)->erase(Offset, NumBytes);
 }
-
 
 //===----------------------------------------------------------------------===//
 // RopePieceBTreeIterator Implementation
@@ -666,10 +671,10 @@ static const RopePieceBTreeLeaf *getCN(const void *P) {
 
 // begin iterator.
 RopePieceBTreeIterator::RopePieceBTreeIterator(const void *n) {
-  const RopePieceBTreeNode *N = static_cast<const RopePieceBTreeNode*>(n);
+  const auto *N = static_cast<const RopePieceBTreeNode *>(n);
 
   // Walk down the left side of the tree until we get to a leaf.
-  while (const RopePieceBTreeInterior *IN = dyn_cast<RopePieceBTreeInterior>(N))
+  while (const auto *IN = dyn_cast<RopePieceBTreeInterior>(N))
     N = IN->getChild(0);
 
   // We must have at least one leaf.
@@ -717,10 +722,12 @@ static RopePieceBTreeNode *getRoot(void *P) {
 RopePieceBTree::RopePieceBTree() {
   Root = new RopePieceBTreeLeaf();
 }
+
 RopePieceBTree::RopePieceBTree(const RopePieceBTree &RHS) {
   assert(RHS.empty() && "Can't copy non-empty tree yet");
   Root = new RopePieceBTreeLeaf();
 }
+
 RopePieceBTree::~RopePieceBTree() {
   getRoot(Root)->Destroy();
 }
@@ -730,7 +737,7 @@ unsigned RopePieceBTree::size() const {
 }
 
 void RopePieceBTree::clear() {
-  if (RopePieceBTreeLeaf *Leaf = dyn_cast<RopePieceBTreeLeaf>(getRoot(Root)))
+  if (auto *Leaf = dyn_cast<RopePieceBTreeLeaf>(getRoot(Root)))
     Leaf->clear();
   else {
     getRoot(Root)->Destroy();
@@ -780,8 +787,7 @@ RopePiece RewriteRope::MakeRopeString(const char *Start, const char *End) {
   // just allocate a new rope piece for it alone.
   if (Len > AllocChunkSize) {
     unsigned Size = End-Start+sizeof(RopeRefCountString)-1;
-    RopeRefCountString *Res =
-      reinterpret_cast<RopeRefCountString *>(new char[Size]);
+    auto *Res = reinterpret_cast<RopeRefCountString *>(new char[Size]);
     Res->RefCount = 0;
     memcpy(Res->Data, Start, End-Start);
     return RopePiece(Res, 0, End-Start);
@@ -791,8 +797,7 @@ RopePiece RewriteRope::MakeRopeString(const char *Start, const char *End) {
   // Make a new chunk and share it with later allocations.
 
   unsigned AllocSize = offsetof(RopeRefCountString, Data) + AllocChunkSize;
-  RopeRefCountString *Res =
-      reinterpret_cast<RopeRefCountString *>(new char[AllocSize]);
+  auto *Res = reinterpret_cast<RopeRefCountString *>(new char[AllocSize]);
   Res->RefCount = 0;
   memcpy(Res->Data, Start, Len);
   AllocBuffer = Res;
@@ -800,5 +805,3 @@ RopePiece RewriteRope::MakeRopeString(const char *Start, const char *End) {
 
   return RopePiece(AllocBuffer, 0, Len);
 }
-
-

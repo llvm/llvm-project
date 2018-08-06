@@ -42,7 +42,7 @@ void testDict() {
 // RUN: c-index-test -index-file -target x86_64-apple-macosx10.7 %s | FileCheck %s
 
 // CHECK:      [indexEntityReference]: kind: variable | name: idx | USR: c:@idx | lang: C | cursor: DeclRefExpr=idx:22:5 | loc: 27:9
-// CHECK-NEXT: [indexEntityReference]: kind: variable | name: p | USR: c:@p | lang: C | cursor: DeclRefExpr=p:23:4 | loc: 27:16 | <parent>:: kind: function | name: testArray | USR: c:@F@testArray | lang: C | container: [testArray:25:4] | refkind: direct
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: p | USR: c:@p | lang: C | cursor: DeclRefExpr=p:23:4 | loc: 27:16 | <parent>:: kind: function | name: testArray | USR: c:@F@testArray | lang: C | container: [testArray:25:4] | refkind: direct | role: ref
 // CHECK-NEXT: [indexEntityReference]: kind: objc-instance-method | name: setObject:atIndexedSubscript:
 // CHECK-NEXT: [indexEntityReference]: kind: objc-class | name: NSArray
 // CHECK-NEXT: [indexEntityReference]: kind: objc-class-method | name: arrayWithObjects:count: 

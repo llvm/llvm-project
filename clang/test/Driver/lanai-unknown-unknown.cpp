@@ -11,25 +11,25 @@ typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 extern "C" {
 
-// CHECK: @align_c = global i32 1
+// CHECK: @align_c = dso_local global i32 1
 int align_c = __alignof(char);
 
-// CHECK: @align_s = global i32 2
+// CHECK: @align_s = dso_local global i32 2
 int align_s = __alignof(short);
 
-// CHECK: @align_i = global i32 4
+// CHECK: @align_i = dso_local global i32 4
 int align_i = __alignof(int);
 
-// CHECK: @align_l = global i32 4
+// CHECK: @align_l = dso_local global i32 4
 int align_l = __alignof(long);
 
-// CHECK: @align_ll = global i32 8
+// CHECK: @align_ll = dso_local global i32 8
 int align_ll = __alignof(long long);
 
-// CHECK: @align_p = global i32 4
+// CHECK: @align_p = dso_local global i32 4
 int align_p = __alignof(void*);
 
-// CHECK: @align_vl = global i32 4
+// CHECK: @align_vl = dso_local global i32 4
 int align_vl = __alignof(va_list);
 
 // Check types

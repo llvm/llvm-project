@@ -1075,7 +1075,7 @@ location.
 Building a relocatable precompiled header requires two additional
 arguments. First, pass the ``--relocatable-pch`` flag to indicate that
 the resulting PCH file should be relocatable. Second, pass
-`-isysroot /path/to/build`, which makes all includes for your library
+``-isysroot /path/to/build``, which makes all includes for your library
 relative to the build directory. For example:
 
 .. code-block:: console
@@ -1085,9 +1085,9 @@ relative to the build directory. For example:
 When loading the relocatable PCH file, the various headers used in the
 PCH file are found from the system header root. For example, ``mylib.h``
 can be found in ``/usr/include/mylib.h``. If the headers are installed
-in some other system root, the `-isysroot` option can be used provide
+in some other system root, the ``-isysroot`` option can be used provide
 a different system root from which the headers will be based. For
-example, `-isysroot /Developer/SDKs/MacOSX10.4u.sdk` will look for
+example, ``-isysroot /Developer/SDKs/MacOSX10.4u.sdk`` will look for
 ``mylib.h`` in ``/Developer/SDKs/MacOSX10.4u.sdk/usr/include/mylib.h``.
 
 Relocatable precompiled headers are intended to be used in a limited
@@ -1255,11 +1255,25 @@ are listed below.
    flushed-to-zero number is preserved in the sign of 0, denormals are
    flushed to positive zero, respectively.
 
+.. option:: -f[no-]strict-float-cast-overflow
+
+   When a floating-point value is not representable in a destination integer 
+   type, the code has undefined behavior according to the language standard.
+   By default, Clang will not guarantee any particular result in that case.
+   With the 'no-strict' option, Clang attempts to match the overflowing behavior
+   of the target's native float-to-int conversion instructions.
+
 .. option:: -fwhole-program-vtables
 
    Enable whole-program vtable optimizations, such as single-implementation
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
+
+.. option:: -fforce-emit-vtables
+
+   In order to improve devirtualization, forces emitting of vtables even in
+   modules where it isn't necessary. It causes more inline virtual functions
+   to be emitted.
 
 .. option:: -fno-assume-sane-operator-new
 
@@ -1368,6 +1382,15 @@ are listed below.
         // value of -fmax-type-align.
       }
 
+.. option:: -faddrsig, -fno-addrsig
+
+   Controls whether Clang emits an address-significance table into the object
+   file. Address-significance tables allow linkers to implement `safe ICF
+   <https://research.google.com/pubs/archive/36912.pdf>`_ without the false
+   positives that can result from other implementation techniques such as
+   relocation scanning. Address-significance tables are enabled by default
+   on ELF targets when using the integrated assembler. This flag currently
+   only has an effect on ELF targets.
 
 Profile Guided Optimization
 ---------------------------
@@ -1375,7 +1398,8 @@ Profile Guided Optimization
 Profile information enables better optimization. For example, knowing that a
 branch is taken very frequently helps the compiler make better decisions when
 ordering basic blocks. Knowing that a function ``foo`` is called more
-frequently than another function ``bar`` helps the inliner.
+frequently than another function ``bar`` helps the inliner. Optimization
+levels ``-O2`` and above are recommended for use of profile guided optimization.
 
 Clang supports profile guided optimization with two different kinds of
 profiling. A sampling profiler can generate a profile with very low runtime
@@ -1726,11 +1750,11 @@ profile creation and use.
 .. option:: -fprofile-generate[=<dirname>]
 
   The ``-fprofile-generate`` and ``-fprofile-generate=`` flags will use
-  an alterantive instrumentation method for profile generation. When
+  an alternative instrumentation method for profile generation. When
   given a directory name, it generates the profile file
   ``default_%m.profraw`` in the directory named ``dirname`` if specified.
   If ``dirname`` does not exist, it will be created at runtime. ``%m`` specifier
-  will be substibuted with a unique id documented in step 2 above. In other words,
+  will be substituted with a unique id documented in step 2 above. In other words,
   with ``-fprofile-generate[=<dirname>]`` option, the "raw" profile data automatic
   merging is turned on by default, so there will no longer any risk of profile
   clobbering from different running processes.  For example,
@@ -1854,6 +1878,27 @@ features. You can "tune" the debug info for one of several different debuggers.
   must come first.)
 
 
+Controlling LLVM IR Output
+--------------------------
+
+Controlling Value Names in LLVM IR
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Emitting value names in LLVM IR increases the size and verbosity of the IR.
+By default, value names are only emitted in assertion-enabled builds of Clang.
+However, when reading IR it can be useful to re-enable the emission of value
+names to improve readability.
+
+.. option:: -fdiscard-value-names
+
+  Discard value names when generating LLVM IR.
+
+.. option:: -fno-discard-value-names
+
+  Do not discard value names when generating LLVM IR. This option can be used
+  to re-enable names for release builds of Clang.
+
+
 Comment Parsing Options
 -----------------------
 
@@ -1909,8 +1954,8 @@ Differences between various standard modes
 ------------------------------------------
 
 clang supports the -std option, which changes what language mode clang
-uses. The supported modes for C are c89, gnu89, c94, c99, gnu99, c11,
-gnu11, and various aliases for those modes. If no -std option is
+uses. The supported modes for C are c89, gnu89, c99, gnu99, c11, gnu11,
+c17, gnu17, and various aliases for those modes. If no -std option is
 specified, clang defaults to gnu11 mode. Many C99 and C11 features are
 supported in earlier modes as a conforming extension, with a warning. Use
 ``-pedantic-errors`` to request an error if a feature from a later standard
@@ -1957,8 +2002,9 @@ Differences between ``*99`` and ``*11`` modes:
 -  Warnings for use of C11 features are disabled.
 -  ``__STDC_VERSION__`` is defined to ``201112L`` rather than ``199901L``.
 
-c94 mode is identical to c89 mode except that digraphs are enabled in
-c94 mode (FIXME: And ``__STDC_VERSION__`` should be defined!).
+Differences between ``*11`` and ``*17`` modes:
+
+-  ``__STDC_VERSION__`` is defined to ``201710L`` rather than ``201112L``.
 
 GCC extensions not implemented yet
 ----------------------------------
@@ -2079,10 +2125,15 @@ Controlling implementation limits
   Sets the limit for recursive constexpr function invocations to N.  The
   default is 512.
 
+.. option:: -fconstexpr-steps=N
+
+  Sets the limit for the number of full-expressions evaluated in a single
+  constant expression evaluation.  The default is 1048576.
+
 .. option:: -ftemplate-depth=N
 
   Sets the limit for recursively nested template instantiations to N.  The
-  default is 256.
+  default is 1024.
 
 .. option:: -foperator-arrow-depth=N
 
@@ -2157,7 +2208,7 @@ to the target, for example:
    .. code-block:: console
 
      $ clang -target nvptx64-unknown-unknown test.cl
-     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 Compiling to bitcode can be done as follows:
 
@@ -2265,7 +2316,7 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
    .. code-block:: console
 
-     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+     $ clang -target amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
 
 - For Nvidia architectures:
 
@@ -2662,10 +2713,37 @@ compatibility with the Visual C++ compiler, cl.exe.
 To enable clang-cl to find system headers, libraries, and the linker when run
 from the command-line, it should be executed inside a Visual Studio Native Tools
 Command Prompt or a regular Command Prompt where the environment has been set
-up using e.g. `vcvars32.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
+up using e.g. `vcvarsall.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
 
-clang-cl can also be used from inside Visual Studio by using an LLVM Platform
-Toolset.
+clang-cl can also be used from inside Visual Studio by selecting the LLVM
+Platform Toolset. The toolset is installed by the LLVM installer, which can be
+downloaded from the `LLVM release <http://releases.llvm.org/download.html>`_ or
+`snapshot build <http://llvm.org/builds/>`_ web pages. To use the toolset,
+select a project in Solution Explorer, open its Property Page (Alt+F7), and in
+the "General" section of "Configuration Properties" change "Platform Toolset"
+to e.g. LLVM-vs2014.
+
+To use the toolset with MSBuild directly, invoke it with e.g.
+``/p:PlatformToolset=LLVM-vs2014``. This allows trying out the clang-cl
+toolchain without modifying your project files.
+
+It's also possible to point MSBuild at clang-cl without changing toolset by
+passing ``/p:CLToolPath=c:\llvm\bin /p:CLToolExe=clang-cl.exe``.
+
+When using CMake and the Visual Studio generators, the toolset can be set with the ``-T`` flag:
+
+  ::
+
+    cmake -G"Visual Studio 15 2017" -T LLVM-vs2014 ..
+
+When using CMake with the Ninja generator, set the ``CMAKE_C_COMPILER`` and
+``CMAKE_CXX_COMPILER`` variables to clang-cl:
+
+  ::
+
+    cmake -GNinja -DCMAKE_C_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe"
+        -DCMAKE_CXX_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe" ..
+
 
 Command-Line Options
 --------------------

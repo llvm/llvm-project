@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Implements # directive processing for the Preprocessor.
+/// Implements # directive processing for the Preprocessor.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -78,7 +78,7 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
   return new (BP) VisibilityMacroDirective(Loc, isPublic);
 }
 
-/// \brief Read and discard all tokens remaining on the current line until
+/// Read and discard all tokens remaining on the current line until
 /// the tok::eod token is found.
 void Preprocessor::DiscardUntilEndOfDirective() {
   Token Tmp;
@@ -88,14 +88,14 @@ void Preprocessor::DiscardUntilEndOfDirective() {
   } while (Tmp.isNot(tok::eod));
 }
 
-/// \brief Enumerates possible cases of #define/#undef a reserved identifier.
+/// Enumerates possible cases of #define/#undef a reserved identifier.
 enum MacroDiag {
   MD_NoWarn,        //> Not a reserved identifier
   MD_KeywordDef,    //> Macro hides keyword, enabled by default
   MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
 };
 
-/// \brief Checks if the specified identifier is reserved in the specified
+/// Checks if the specified identifier is reserved in the specified
 /// language.
 /// This function does not check if the identifier is a keyword.
 static bool isReservedId(StringRef Text, const LangOptions &Lang) {
@@ -296,7 +296,7 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   return false;
 }
 
-/// \brief Lex and validate a macro name, which occurs after a
+/// Lex and validate a macro name, which occurs after a
 /// \#define or \#undef.
 ///
 /// This sets the token kind to eod and discards the rest of the macro line if
@@ -328,7 +328,7 @@ void Preprocessor::ReadMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   }
 }
 
-/// \brief Ensure that the next token is a tok::eod token.
+/// Ensure that the next token is a tok::eod token.
 ///
 /// If not, emit a diagnostic and consume up until the eod.  If EnableMacros is
 /// true, then we consider macros that expand to zero tokens as being ok.
@@ -577,7 +577,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  if (Callbacks)
+  // The last skipped range isn't actually skipped yet if it's truncated
+  // by the end of the preamble; we'll resume parsing after the preamble.
+  if (Callbacks && (Tok.isNot(tok::eof) || !isRecordingPreamble()))
     Callbacks->SourceRangeSkipped(
         SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
@@ -885,6 +887,22 @@ private:
   bool save;
 };
 
+/// Process a directive while looking for the through header.
+/// Only #include (to check if it is the through header) and #define (to warn
+/// about macros that don't match the PCH) are handled. All other directives
+/// are completely discarded.
+void Preprocessor::HandleSkippedThroughHeaderDirective(Token &Result,
+                                                       SourceLocation HashLoc) {
+  if (const IdentifierInfo *II = Result.getIdentifierInfo()) {
+    if (II->getPPKeywordID() == tok::pp_include)
+      return HandleIncludeDirective(HashLoc, Result);
+    if (II->getPPKeywordID() == tok::pp_define)
+      return HandleDefineDirective(Result,
+                                   /*ImmediatelyAfterHeaderGuard=*/false);
+  }
+  DiscardUntilEndOfDirective();
+}
+
 /// HandleDirective - This callback is invoked when the lexer sees a # token
 /// at the start of a line.  This consumes the directive, modifies the
 /// lexer/preprocessor state, and advances the lexer(s) so that the next token
@@ -945,6 +963,9 @@ void Preprocessor::HandleDirective(Token &Result) {
   // Temporarily enable macro expansion if set so
   // and reset to previous state when returning from this function.
   ResetMacroExpansionHelper helper(this);
+
+  if (SkippingUntilPCHThroughHeader)
+    return HandleSkippedThroughHeaderDirective(Result, SavedHash.getLocation());
 
   switch (Result.getKind()) {
   case tok::eod:
@@ -1126,7 +1147,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
   return false;
 }
 
-/// \brief Handle a \#line directive: C99 6.10.4.
+/// Handle a \#line directive: C99 6.10.4.
 ///
 /// The two acceptable forms are:
 /// \verbatim
@@ -1362,7 +1383,7 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
   // Read the rest of the line raw.  We do this because we don't want macros
   // to be expanded and we don't require that the tokens be valid preprocessing
   // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
-  // collapse multiple consequtive white space between tokens, but this isn't
+  // collapse multiple consecutive white space between tokens, but this isn't
   // specified by the standard.
   SmallString<128> Message;
   CurLexer->ReadToEndOfLine(&Message);
@@ -1412,7 +1433,7 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
   }
 }
 
-/// \brief Handle a #public directive.
+/// Handle a #public directive.
 void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
   Token MacroNameTok;
   ReadMacroName(MacroNameTok, MU_Undef);
@@ -1439,7 +1460,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
                                 MacroNameTok.getLocation(), /*IsPublic=*/true));
 }
 
-/// \brief Handle a #private directive.
+/// Handle a #private directive.
 void Preprocessor::HandleMacroPrivateDirective() {
   Token MacroNameTok;
   ReadMacroName(MacroNameTok, MU_Undef);
@@ -1515,7 +1536,7 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   return isAngled;
 }
 
-// \brief Handle cases where the \#include name is expanded from a macro
+// Handle cases where the \#include name is expanded from a macro
 // as multiple tokens, which need to be glued together.
 //
 // This occurs for code like:
@@ -1576,7 +1597,7 @@ bool Preprocessor::ConcatenateIncludeName(SmallString<128> &FilenameBuffer,
   return true;
 }
 
-/// \brief Push a token onto the token stream containing an annotation.
+/// Push a token onto the token stream containing an annotation.
 void Preprocessor::EnterAnnotationToken(SourceRange Range,
                                         tok::TokenKind Kind,
                                         void *AnnotationVal) {
@@ -1591,7 +1612,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   EnterTokenStream(std::move(Tok), 1, true);
 }
 
-/// \brief Produce a diagnostic informing the user that a #include or similar
+/// Produce a diagnostic informing the user that a #include or similar
 /// was implicitly treated as a module import.
 static void diagnoseAutoModuleImport(
     Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
@@ -1804,7 +1825,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   SmallString<128> NormalizedPath;
   if (LangOpts.MSVCCompat) {
     NormalizedPath = Filename.str();
-#ifndef LLVM_ON_WIN32
+#ifndef _WIN32
     llvm::sys::path::native(NormalizedPath);
 #endif
   }
@@ -1858,6 +1879,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         Diag(FilenameTok, diag::err_pp_file_not_found) << Filename
                                                        << FilenameRange;
     }
+  }
+
+  if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
+    if (isPCHThroughHeader(File))
+      SkippingUntilPCHThroughHeader = false;
+    return;
   }
 
   // Should we enter the source file? Set to false if either the source file is
@@ -1966,7 +1993,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         HashLoc, IncludeTok,
         LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
         FilenameRange, File, SearchPath, RelativePath,
-        ShouldEnter ? nullptr : SuggestedModule.getModule());
+        ShouldEnter ? nullptr : SuggestedModule.getModule(), FileCharacter);
     if (SkipHeader && !SuggestedModule.getModule())
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
@@ -2041,7 +2068,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // If the filename string was the result of macro expansions, set the include
   // position on the file where it will be included and after the expansions.
   if (IncludePos.isMacroID())
-    IncludePos = SourceMgr.getExpansionRange(IncludePos).second;
+    IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
   FileID FID = SourceMgr.createFileID(File, IncludePos, FileCharacter);
   assert(FID.isValid() && "Expected valid file ID");
 
@@ -2051,6 +2078,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Determine if we're switching to building a new submodule, and which one.
   if (auto *M = SuggestedModule.getModule()) {
+    if (M->getTopLevelModule()->ShadowingModule) {
+      // We are building a submodule that belongs to a shadowed module. This
+      // means we find header files in the shadowed module.
+      Diag(M->DefinitionLoc, diag::err_module_build_shadowed_submodule)
+        << M->getFullModuleName();
+      Diag(M->getTopLevelModule()->ShadowingModule->DefinitionLoc,
+           diag::note_previous_definition);
+      return;
+    }
     // When building a pch, -fmodule-name tells the compiler to textually
     // include headers in the specified module. We are not building the
     // specified module.
@@ -2576,7 +2612,15 @@ void Preprocessor::HandleDefineDirective(
     }
   }
 
-  
+  // When skipping just warn about macros that do not match.
+  if (SkippingUntilPCHThroughHeader) {
+    const MacroInfo *OtherMI = getMacroInfo(MacroNameTok.getIdentifierInfo());
+    if (!OtherMI || !MI->isIdenticalTo(*OtherMI, *this,
+                             /*Syntactic=*/LangOpts.MicrosoftExt))
+      Diag(MI->getDefinitionLoc(), diag::warn_pp_macro_def_mismatch_with_pch)
+          << MacroNameTok.getIdentifierInfo();
+    return;
+  }
 
   // Finally, if this identifier already had a macro defined for it, verify that
   // the macro bodies are identical, and issue diagnostics if they are not.

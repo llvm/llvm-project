@@ -1,6 +1,7 @@
 // Verifies that parameters are copied with move constructors
 // Verifies that parameter copies are destroyed
 // Vefifies that parameter copies are used in the body of the coroutine
+// Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
 // RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
 
 namespace std::experimental {
@@ -68,12 +69,12 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: store i32 %val, i32* %[[ValAddr:.+]]
 
   // CHECK: call i8* @llvm.coro.begin(
-  // CHECK-NEXT: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* dereferenceable(4) %[[MoParam]])
+  // CHECK: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* %[[MoCopy]], %struct.MoveOnly* dereferenceable(4) %[[MoParam]])
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(%struct.MoveAndCopy* %[[McCopy]], %struct.MoveAndCopy* dereferenceable(4) %[[McParam]]) #
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
-  // CHECK: %[[IntParam:.+]] = load i32, i32* %val.addr
+  // CHECK: %[[IntParam:.+]] = load i32, i32* %val1
   // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, %struct.MoveOnly* %[[MoCopy]], i32 0, i32 0
   // CHECK: %[[MoVal:.+]] = load i32, i32* %[[MoGep]]
   // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, %struct.MoveAndCopy* %[[McCopy]], i32 0, i32 0
@@ -126,4 +127,57 @@ struct B {
 
 void call_dependent_params() {
   dependent_params(A{}, B{}, B{});
+}
+
+// Test that, when the promise type has a constructor whose signature matches
+// that of the coroutine function, that constructor is used. This is an
+// experimental feature that will be proposed for the Coroutines TS.
+
+struct promise_matching_constructor {};
+
+template<>
+struct std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double> {
+  struct promise_type {
+    promise_type(promise_matching_constructor, int, float, double) {}
+    promise_type() = delete;
+    void get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception() {}
+  };
+};
+
+// CHECK-LABEL: void @_Z38coroutine_matching_promise_constructor28promise_matching_constructorifd(i32, float, double)
+void coroutine_matching_promise_constructor(promise_matching_constructor, int, float, double) {
+  // CHECK: %[[INT:.+]] = load i32, i32* %5, align 4
+  // CHECK: %[[FLOAT:.+]] = load float, float* %6, align 4
+  // CHECK: %[[DOUBLE:.+]] = load double, double* %7, align 8
+  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJv28promise_matching_constructorifdEE12promise_typeC1ES1_ifd(%"struct.std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double>::promise_type"* %__promise, i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
+  co_return;
+}
+
+struct some_class;
+
+struct method {};
+
+template <typename... Args> struct std::experimental::coroutine_traits<method, Args...> {
+  struct promise_type {
+    promise_type(some_class&, float);
+    method get_return_object();
+    suspend_always initial_suspend();
+    suspend_always final_suspend();
+    void return_void();
+    void unhandled_exception();
+  };
+};
+
+struct some_class {
+  method good_coroutine_calls_custom_constructor(float);
+};
+
+// CHECK-LABEL: define void @_ZN10some_class39good_coroutine_calls_custom_constructorEf(%struct.some_class*
+method some_class::good_coroutine_calls_custom_constructor(float) {
+  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES3_f(%"struct.std::experimental::coroutine_traits<method, some_class &, float>::promise_type"* %__promise, %struct.some_class* dereferenceable(1) %{{.+}}, float
+  co_return;
 }

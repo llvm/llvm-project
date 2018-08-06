@@ -158,7 +158,7 @@ public:
     } else {
       LocIdentifier LocId = std::make_pair(
           BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getCurrentStackFrame());
+          N->getLocationContext()->getStackFrame());
       auto InsertInfo = Reachable.insert(LocId);
 
       if (InsertInfo.second) {
@@ -190,6 +190,7 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
   return llvm::make_unique<UnexploredFirstStack>();
 }
 
+namespace {
 class UnexploredFirstPriorityQueue : public WorkList {
   using BlockID = unsigned;
   using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
@@ -233,7 +234,7 @@ public:
     if (auto BE = N->getLocation().getAs<BlockEntrance>()) {
       LocIdentifier LocId = std::make_pair(
           BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getCurrentStackFrame());
+          N->getLocationContext()->getStackFrame());
       NumVisited = NumReached[LocId]++;
     }
 
@@ -246,6 +247,7 @@ public:
     return U.first;
   }
 };
+} // namespace
 
 std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityQueue() {
   return llvm::make_unique<UnexploredFirstPriorityQueue>();

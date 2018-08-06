@@ -107,7 +107,10 @@ public:
     INITIALIZER_BEGIN = SimpleConstructorInitializerKind,
     INITIALIZER_END = CXX17ElidedCopyConstructorInitializerKind,
     NewAllocatedObjectKind,
-    TemporaryObjectKind,
+    SimpleTemporaryObjectKind,
+    ElidedTemporaryObjectKind,
+    TEMPORARY_BEGIN = SimpleTemporaryObjectKind,
+    TEMPORARY_END = ElidedTemporaryObjectKind,
     SimpleReturnedValueKind,
     CXX17ElidedCopyReturnedValueKind,
     RETURNED_VALUE_BEGIN = SimpleReturnedValueKind,
@@ -305,16 +308,15 @@ class TemporaryObjectConstructionContext : public ConstructionContext {
   const CXXBindTemporaryExpr *BTE;
   const MaterializeTemporaryExpr *MTE;
 
-  friend class ConstructionContext; // Allows to create<>() itself.
-
+protected:
   explicit TemporaryObjectConstructionContext(
-      const CXXBindTemporaryExpr *BTE, const MaterializeTemporaryExpr *MTE)
-      : ConstructionContext(ConstructionContext::TemporaryObjectKind),
-        BTE(BTE), MTE(MTE) {
+      ConstructionContext::Kind K, const CXXBindTemporaryExpr *BTE,
+      const MaterializeTemporaryExpr *MTE)
+      : ConstructionContext(K), BTE(BTE), MTE(MTE) {
     // Both BTE and MTE can be null here, all combinations possible.
     // Even though for now at least one should be non-null, we simply haven't
-    // implemented this case yet (this would be a temporary in the middle of
-    // nowhere that doesn't have a non-trivial destructor).
+    // implemented the other case yet (this would be a temporary in the middle
+    // of nowhere that doesn't have a non-trivial destructor).
   }
 
 public:
@@ -334,7 +336,67 @@ public:
   }
 
   static bool classof(const ConstructionContext *CC) {
-    return CC->getKind() == TemporaryObjectKind;
+    return CC->getKind() >= TEMPORARY_BEGIN && CC->getKind() <= TEMPORARY_END;
+  }
+};
+
+/// Represents a temporary object that is not constructed for the purpose of
+/// being immediately copied/moved by an elidable copy/move-constructor.
+/// This includes temporary objects "in the middle of nowhere" like T(123) and
+/// lifetime-extended temporaries.
+class SimpleTemporaryObjectConstructionContext
+    : public TemporaryObjectConstructionContext {
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit SimpleTemporaryObjectConstructionContext(
+      const CXXBindTemporaryExpr *BTE, const MaterializeTemporaryExpr *MTE)
+      : TemporaryObjectConstructionContext(
+            ConstructionContext::SimpleTemporaryObjectKind, BTE, MTE) {}
+
+public:
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == SimpleTemporaryObjectKind;
+  }
+};
+
+/// Represents a temporary object that is constructed for the sole purpose
+/// of being immediately copied by an elidable copy/move constructor.
+/// For example, T t = T(123); includes a temporary T(123) that is immediately
+/// copied to variable t. In such cases the elidable copy can (but not
+/// necessarily should) be omitted ("elided") accodring to the rules of the
+/// language; the constructor would then construct variable t directly.
+/// This construction context contains information of the elidable constructor
+/// and its respective construction context.
+class ElidedTemporaryObjectConstructionContext
+    : public TemporaryObjectConstructionContext {
+  const CXXConstructExpr *ElidedCE;
+  const ConstructionContext *ElidedCC;
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit ElidedTemporaryObjectConstructionContext(
+      const CXXBindTemporaryExpr *BTE, const MaterializeTemporaryExpr *MTE,
+      const CXXConstructExpr *ElidedCE, const ConstructionContext *ElidedCC)
+      : TemporaryObjectConstructionContext(
+            ConstructionContext::ElidedTemporaryObjectKind, BTE, MTE),
+        ElidedCE(ElidedCE), ElidedCC(ElidedCC) {
+    // Elided constructor and its context should be either both specified
+    // or both unspecified. In the former case, the constructor must be
+    // elidable.
+    assert(ElidedCE && ElidedCE->isElidable() && ElidedCC);
+  }
+
+public:
+  const CXXConstructExpr *getConstructorAfterElision() const {
+    return ElidedCE;
+  }
+
+  const ConstructionContext *getConstructionContextAfterElision() const {
+    return ElidedCC;
+  }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == ElidedTemporaryObjectKind;
   }
 };
 

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines the structure of a YAML document for serializing
+/// This file defines the structure of a YAML document for serializing
 /// diagnostics.
 ///
 //===----------------------------------------------------------------------===//
@@ -27,7 +27,7 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<clang::tooling::Diagnostic> {
-  /// \brief Helper to (de)serialize a Diagnostic since we don't have direct
+  /// Helper to (de)serialize a Diagnostic since we don't have direct
   /// access to its data members.
   class NormalizedDiagnostic {
   public:
@@ -80,7 +80,7 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
   }
 };
 
-/// \brief Specialized MappingTraits to describe how a
+/// Specialized MappingTraits to describe how a
 /// TranslationUnitDiagnostics is (de)serialized.
 template <> struct MappingTraits<clang::tooling::TranslationUnitDiagnostics> {
   static void mapping(IO &Io, clang::tooling::TranslationUnitDiagnostics &Doc) {

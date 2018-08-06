@@ -27,7 +27,8 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            bool IsBlacklisted) {
   if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
                                            SanitizerKind::KernelAddress |
-                                           SanitizerKind::HWAddress))
+                                           SanitizerKind::HWAddress |
+                                           SanitizerKind::KernelHWAddress))
     return;
   IsDynInit &= !CGM.isInSanitizerBlacklist(GV, Loc, Ty, "init");
   IsBlacklisted |= CGM.isInSanitizerBlacklist(GV, Loc, Ty);
@@ -60,7 +61,8 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            const VarDecl &D, bool IsDynInit) {
   if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
                                            SanitizerKind::KernelAddress |
-                                           SanitizerKind::HWAddress))
+                                           SanitizerKind::HWAddress |
+                                           SanitizerKind::KernelHWAddress))
     return;
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
@@ -79,7 +81,8 @@ void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   // instrumentation.
   if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
                                           SanitizerKind::KernelAddress |
-                                          SanitizerKind::HWAddress))
+                                          SanitizerKind::HWAddress |
+                                          SanitizerKind::KernelHWAddress))
     reportGlobalToASan(GV, SourceLocation(), "", QualType(), false, true);
 }
 

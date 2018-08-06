@@ -28,3 +28,11 @@ namespace rdar9623945 {
     }
   };
 }
+
+namespace PR38077 {
+  template <class T> void bar() {} // expected-note {{possible target for call}}
+
+  int run() {
+    decltype(bar)::does_not_exist; // expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  }
+}

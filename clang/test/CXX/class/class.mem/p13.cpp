@@ -67,3 +67,50 @@ struct X4 { // expected-note{{previous}}
     };
   };
 };
+
+// This includes such things inherited from base classes.
+struct B {
+  static int D0;
+  int Da() {};
+  enum D1 {};
+  struct D1a;
+  typedef int D2;
+  using D2a = int;
+  template<typename T> struct D2b;
+  template<typename T> void D2c();
+  template<typename T> static int D2d;
+  template<typename T> using D2e = int;
+  union { int D4; };
+  int Dtemplate;
+  int Dtemplate_with_ctors;
+};
+struct B2 { int Dtemplate(); };
+
+struct D0 : B { using B::D0; }; // expected-error {{member 'D0' has the same name as its class}}
+struct Da : B { using B::Da; }; // expected-error {{member 'Da' has the same name as its class}}
+struct D1 : B { using B::D1; }; // expected-error {{member 'D1' has the same name as its class}}
+struct D1a : B { using B::D1a; }; // expected-error {{member 'D1a' has the same name as its class}}
+struct D2 : B { using B::D2; }; // expected-error {{member 'D2' has the same name as its class}}
+struct D2a : B { using B::D2a; }; // expected-error {{member 'D2a' has the same name as its class}}
+struct D2b : B { using B::D2b; }; // expected-error {{member 'D2b' has the same name as its class}}
+struct D2c : B { using B::D2c; }; // expected-error {{member 'D2c' has the same name as its class}}
+struct D2d : B { using B::D2d; }; // expected-error {{member 'D2d' has the same name as its class}}
+struct D2e : B { using B::D2e; }; // expected-error {{member 'D2e' has the same name as its class}}
+struct D4 : B { using B::D4; }; // expected-error {{member 'D4' has the same name as its class}}
+
+template<typename B> struct Dtemplate : B {
+  using B::Dtemplate; // expected-error {{member 'Dtemplate' has the same name as its class}}
+};
+Dtemplate<B> ok;
+Dtemplate<B2> error; // expected-note {{in instantiation of}}
+
+template<typename B> struct Dtemplate_with_ctors : B {
+  Dtemplate_with_ctors();
+  using B::Dtemplate_with_ctors; // expected-error {{member 'Dtemplate_with_ctors' has the same name as its class}}
+};
+
+template<typename B> struct CtorDtorName : B {
+  using B::CtorDtorName; // expected-error {{member 'CtorDtorName' has the same name as its class}}
+  CtorDtorName();
+  ~CtorDtorName(); // expected-error {{expected the class name after '~' to name a destructor}}
+};

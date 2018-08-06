@@ -38,7 +38,7 @@ namespace LLVM.ClangFormat
         private string style = "file";
         private bool formatOnSave = false;
         private string formatOnSaveFileExtensions =
-            ".c;.cpp;.cxx;.cc;.tli;.tlh;.h;.hh;.hpp;.hxx;.hh;.inl" +
+            ".c;.cpp;.cxx;.cc;.tli;.tlh;.h;.hh;.hpp;.hxx;.hh;.inl;" +
             ".java;.js;.ts;.m;.mm;.proto;.protodevel;.td";
 
         public OptionPageGrid Clone()

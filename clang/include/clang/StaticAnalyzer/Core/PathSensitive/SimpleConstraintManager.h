@@ -75,6 +75,7 @@ protected:
   // Internal implementation.
   //===------------------------------------------------------------------===//
 
+  SValBuilder &getSValBuilder() const { return SVB; }
   BasicValueFactory &getBasicVals() const { return SVB.getBasicValueFactory(); }
   SymbolManager &getSymbolManager() const { return SVB.getSymbolManager(); }
 
@@ -85,8 +86,8 @@ private:
                             bool Assumption);
 };
 
-} // end GR namespace
+} // end namespace ento
 
-} // end clang namespace
+} // end namespace clang
 
 #endif

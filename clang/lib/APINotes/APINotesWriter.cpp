@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -270,7 +271,7 @@ namespace {
     using offset_type = unsigned;
 
     hash_value_type ComputeHash(key_type_ref key) {
-      return llvm::HashString(key);
+      return llvm::djbHash(key);
     }
 
     std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
@@ -278,7 +279,7 @@ namespace {
                                                     data_type_ref data) {
       uint32_t keyLength = key.size();
       uint32_t dataLength = sizeof(uint32_t);
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
       return { keyLength, dataLength };
@@ -290,7 +291,7 @@ namespace {
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
                   unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(data);
     }
   };
@@ -312,7 +313,7 @@ void APINotesWriter::Implementation::writeIdentifierBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -330,7 +331,7 @@ namespace {
   /// Emit a serialized representation of the common entity information.
   static void emitCommonEntityInfo(raw_ostream &out,
                                    const CommonEntityInfo &info) {
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
     uint8_t payload = 0;
     if (auto swiftPrivate = info.isSwiftPrivate()) {
       payload |= 0x01;
@@ -360,7 +361,7 @@ namespace {
   /// Emit a serialized representation of the common type information.
   static void emitCommonTypeInfo(raw_ostream &out, const CommonTypeInfo &info) {
     emitCommonEntityInfo(out, info);
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
     if (auto swiftBridge = info.getSwiftBridge()) {
       writer.write<uint16_t>(swiftBridge->size() + 1);
       out.write(swiftBridge->c_str(), swiftBridge->size());
@@ -394,21 +395,21 @@ namespace {
                                                     data_type_ref data) {
       uint32_t keyLength = sizeof(uint32_t) + 1;
       uint32_t dataLength = sizeof(uint32_t);
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
       return { keyLength, dataLength };
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(key.first);
       writer.write<uint8_t>(key.second);
     }
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
                   unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(data);
     }
   };
@@ -427,7 +428,7 @@ namespace {
 
   /// Emit a serialized representation of a version tuple.
   void emitVersionTuple(raw_ostream &out, const VersionTuple &version) {
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
 
     // First byte contains the number of components beyond the 'major'
     // component.
@@ -436,7 +437,6 @@ namespace {
     else if (version.getSubminor()) descriptor = 2;
     else if (version.getMinor()) descriptor = 1;
     else descriptor = 0;
-    assert(!version.usesUnderscores() && "Not a serializable version");
     writer.write<uint8_t>(descriptor);
 
     // Write the components.
@@ -485,7 +485,7 @@ namespace {
       assert(left.first != right.first && "two entries for the same version");
       return left.first < right.first;
     });
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
     writer.write<uint16_t>(infoArray.size());
     for (const auto &element : infoArray) {
       emitVersionTuple(out, element.first);
@@ -513,7 +513,7 @@ namespace {
 
     out.write(reinterpret_cast<const char *>(bytes), 2);
 
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
     writer.write<uint16_t>(info.getType().size());
     out.write(info.getType().data(), info.getType().size());
   }
@@ -551,7 +551,7 @@ namespace {
           return asDerived().getUnversionedInfoSize(unversionedInfo);
       });
 
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
       return { keyLength, dataLength };
@@ -578,7 +578,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(key);
     }
 
@@ -617,7 +617,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(std::get<0>(key));
       writer.write<uint32_t>(std::get<1>(key));
       writer.write<uint8_t>(std::get<2>(key));
@@ -656,7 +656,7 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
 
       llvm::raw_svector_ostream blobStream(hashTableBlob);
       // Make sure that no bucket is at offset 0
-      endian::Writer<little>(blobStream).write<uint32_t>(0);
+      endian::write<uint32_t>(blobStream, 0, little);
       tableOffset = generator.Emit(blobStream);
     }
 
@@ -675,7 +675,7 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
 
       llvm::raw_svector_ostream blobStream(hashTableBlob);
       // Make sure that no bucket is at offset 0
-      endian::Writer<little>(blobStream).write<uint32_t>(0);
+      endian::write<uint32_t>(blobStream, 0, little);
       tableOffset = generator.Emit(blobStream);
     }
 
@@ -700,7 +700,7 @@ void APINotesWriter::Implementation::writeObjCPropertyBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -716,7 +716,7 @@ namespace {
   static void emitParamInfo(raw_ostream &out, const ParamInfo &info) {
     emitVariableInfo(out, info);
 
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
 
     uint8_t payload = 0;
     if (auto noescape = info.isNoEscape()) {
@@ -747,7 +747,7 @@ namespace {
   static void emitFunctionInfo(raw_ostream &out, const FunctionInfo &info) {
     emitCommonEntityInfo(out, info);
 
-    endian::Writer<little> writer(out);
+    endian::Writer writer(out, little);
 
     uint8_t payload = 0;
     payload |= info.NullabilityAudited;
@@ -781,7 +781,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(std::get<0>(key));
       writer.write<uint32_t>(std::get<1>(key));
       writer.write<uint8_t>(std::get<2>(key));
@@ -795,7 +795,7 @@ namespace {
       uint8_t payload = 0;
       payload = (payload << 1) | info.DesignatedInit;
       payload = (payload << 1) | info.Required;
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint8_t>(payload);
 
       emitFunctionInfo(out, info);
@@ -820,7 +820,7 @@ void APINotesWriter::Implementation::writeObjCMethodBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -849,14 +849,14 @@ namespace {
       uint32_t keyLength = sizeof(uint16_t) 
                          + sizeof(uint32_t) * key.Identifiers.size();
       uint32_t dataLength = sizeof(uint32_t);
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
       return { keyLength, dataLength };
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint16_t>(key.NumPieces);
       for (auto piece : key.Identifiers) {
         writer.write<uint32_t>(piece);
@@ -865,7 +865,7 @@ namespace {
 
     void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
                   unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(data);
     }
   };
@@ -887,7 +887,7 @@ void APINotesWriter::Implementation::writeObjCSelectorBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -907,7 +907,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(key);
     }
 
@@ -938,7 +938,7 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -958,7 +958,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(key);
     }
 
@@ -990,7 +990,7 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -1010,7 +1010,7 @@ namespace {
     }
 
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<uint32_t>(key);
     }
 
@@ -1040,7 +1040,7 @@ void APINotesWriter::Implementation::writeEnumConstantBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -1059,7 +1059,7 @@ namespace {
       return sizeof(IdentifierID);
     }
     void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
       writer.write<IdentifierID>(key);
     }
 
@@ -1081,7 +1081,7 @@ namespace {
     }
 
     void emitUnversionedInfo(raw_ostream &out, const TagInfo &info) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
 
       uint8_t payload = 0;
       if (auto enumExtensibility = info.EnumExtensibility) {
@@ -1119,7 +1119,7 @@ void APINotesWriter::Implementation::writeTagBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 
@@ -1138,7 +1138,7 @@ namespace {
     }
 
     void emitUnversionedInfo(raw_ostream &out, const TypedefInfo &info) {
-      endian::Writer<little> writer(out);
+      endian::Writer writer(out, little);
 
       uint8_t payload = 0;
       if (auto swiftWrapper = info.SwiftWrapper) {
@@ -1169,7 +1169,7 @@ void APINotesWriter::Implementation::writeTypedefBlock(
 
     llvm::raw_svector_ostream blobStream(hashTableBlob);
     // Make sure that no bucket is at offset 0
-    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    endian::write<uint32_t>(blobStream, 0, little);
     tableOffset = generator.Emit(blobStream);
   }
 

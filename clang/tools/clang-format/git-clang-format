@@ -79,6 +79,7 @@ def main():
       'm',  # ObjC
       'mm',  # ObjC++
       'cc', 'cp', 'cpp', 'c++', 'cxx', 'hpp',  # C++
+      'cu',  # CUDA
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
       'java',  # Java

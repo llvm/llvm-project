@@ -983,7 +983,7 @@ vector bool int test86(void) {
 }
 vector bool long long test87(void) {
 // CHECK-BE: @llvm.ppc.vsx.xvtstdcdp(<2 x double> {{.+}}, i32 127)
-// CHECK-BE_NEXT: ret <2 x i64
+// CHECK-BE-NEXT: ret <2 x i64>
 // CHECK: @llvm.ppc.vsx.xvtstdcdp(<2 x double> {{.+}}, i32 127)
 // CHECK-NEXT: ret <2 x i64>
   return vec_test_data_class(vda, __VEC_CLASS_FP_NOT_NORMAL);

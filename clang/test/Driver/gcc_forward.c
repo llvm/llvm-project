@@ -34,3 +34,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ASM %s
 // CHECK-ASM: as
 // CHECK-ASM-NOT: "-g"
+
+// Check that we're not forwarding -mno-unaligned-access.
+// RUN: %clang -target aarch64-none-elf -mno-unaligned-access %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
+// CHECK-ARM: gcc{{[^"]*}}"
+// CHECK-ARM-NOT: -mno-unaligned-access

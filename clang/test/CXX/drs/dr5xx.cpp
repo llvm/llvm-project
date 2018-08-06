@@ -74,7 +74,7 @@ namespace dr512 { // dr512: yes
   };
   union U { A a; };
 #if __cplusplus < 201103L
-  // expected-error@-2 {{has a non-trivial constructor}}
+  // expected-error@-2 {{has a non-trivial default constructor}}
   // expected-note@-6 {{no default constructor}}
   // expected-note@-6 {{suppressed by user-declared constructor}}
 #endif

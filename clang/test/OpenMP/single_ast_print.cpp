@@ -20,7 +20,7 @@ struct SS {
 #pragma omp parallel firstprivate(a, b, c)
 #pragma omp single copyprivate(a, this->b, (this)->c)
 // CHECK: #pragma omp parallel firstprivate(this->a,this->b,this->c)
-// CHECK-NEXT: #pragma omp single copyprivate(this->a,this->b,this->c)
+// CHECK-NEXT: #pragma omp single copyprivate(this->a,this->b,this->c){{$}}
     ++this->a, --b, (this)->c /= 1;
   }
 };

@@ -68,12 +68,12 @@ __attribute__((pointer_with_type_tag(ident1,1,2)));
 void TestBool(void *, int)
 __attribute__((pointer_with_type_tag(bool1,1,2)));
 // CHECK: FunctionDecl{{.*}}TestBool
-// CHECK:   ArgumentWithTypeTagAttr{{.*}}pointer_with_type_tag bool1 0 1 IsPointer
+// CHECK:   ArgumentWithTypeTagAttr{{.*}}pointer_with_type_tag bool1 1 2 IsPointer
 
 void TestUnsigned(void *, int)
 __attribute__((pointer_with_type_tag(unsigned1,1,2)));
 // CHECK: FunctionDecl{{.*}}TestUnsigned
-// CHECK:   ArgumentWithTypeTagAttr{{.*}} pointer_with_type_tag unsigned1 0 1
+// CHECK:   ArgumentWithTypeTagAttr{{.*}} pointer_with_type_tag unsigned1 1 2
 
 void TestInt(void) __attribute__((constructor(123)));
 // CHECK:      FunctionDecl{{.*}}TestInt

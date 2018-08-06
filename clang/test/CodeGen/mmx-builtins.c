@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 __m64 test_mm_abs_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi8

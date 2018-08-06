@@ -11,12 +11,6 @@
 // CHECKHVX162: "-target-feature" "+hvxv62"
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
-// RUN:  -mhvx-double 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
-
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
-// RUN:  -mhvx-double 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
-
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
 // RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
@@ -34,26 +28,14 @@
 // RUN:  | FileCheck -check-prefix=CHECKHVX3 %s
 // CHECKHVX3-NOT: "-target-feature" "+hvx
 
-// -mhvx-double is deprecated.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx-double \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-DEPRECATED %s
-// CHECK-DEPRECATED: warning: argument '-mhvx-double' is deprecated, use '-mhvx-length=128B' instead [-Wdeprecated]
-
-// -mno-hvx-double is deprecated.
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx-double \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NODEPRECATED %s
-// CHECK-NODEPRECATED: warning: argument '-mno-hvx-double' is deprecated, use '-mno-hvx' instead [-Wdeprecated]
-
-// No hvx target feature must be added if -mno-hvx/-mno-hvx-double occurs last
+// No hvx target feature must be added if -mno-hvx occurs last
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mno-hvx-double \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
 // CHECK-NOHVX-NOT: "-target-feature" "+hvx
 
-// Hvx target feature should be added if -mno-hvx doesnot occur last
+// Hvx target feature should be added if -mno-hvx doesn't occur last
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx -mhvx\
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXFEAT %s
 // CHECK-HVXFEAT: "-target-feature" "+hvxv62"
@@ -95,8 +77,6 @@
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx-length=64B \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-ERROR %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx-length=128B \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-ERROR %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx-double \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-ERROR %s
 // CHECK-HVXLENGTH-ERROR: error: -mhvx-length is not supported without a -mhvx/-mhvx= flag
 

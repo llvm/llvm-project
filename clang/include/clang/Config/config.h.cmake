@@ -11,6 +11,12 @@
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}"
 
+/* Default C/ObjC standard to use. */
+#cmakedefine CLANG_DEFAULT_STD_C LangStandard::lang_${CLANG_DEFAULT_STD_C}
+
+/* Default C++/ObjC++ standard to use. */
+#cmakedefine CLANG_DEFAULT_STD_CXX LangStandard::lang_${CLANG_DEFAULT_STD_CXX}
+
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
 
@@ -65,6 +71,9 @@
 
 /* enable x86 relax relocations by default */
 #cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
+
+/* Enable the experimental new pass manager by default */
+#cmakedefine01 ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
 
 /* Enable each functionality of modules */
 #cmakedefine01 CLANG_ENABLE_ARCMT

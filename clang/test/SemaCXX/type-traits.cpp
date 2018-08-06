@@ -262,6 +262,7 @@ void is_pod()
 typedef Empty EmptyAr[10];
 struct Bit0 { int : 0; };
 struct Bit0Cons { int : 0; Bit0Cons(); };
+struct AnonBitOnly { int : 3; };
 struct BitOnly { int x : 3; };
 struct DerivesVirt : virtual POD {};
 
@@ -287,6 +288,7 @@ void is_empty()
   { int arr[F(__is_empty(EmptyAr))]; }
   { int arr[F(__is_empty(HasRef))]; }
   { int arr[F(__is_empty(HasVirt))]; }
+  { int arr[F(__is_empty(AnonBitOnly))]; }
   { int arr[F(__is_empty(BitOnly))]; }
   { int arr[F(__is_empty(void))]; }
   { int arr[F(__is_empty(IntArNB))]; }
@@ -1353,6 +1355,59 @@ void is_standard_layout()
   int t43[F(__is_standard_layout(AnIncompleteType[1]))]; // expected-error {{incomplete type}}
   int t44[F(__is_standard_layout(void))];
   int t45[F(__is_standard_layout(const volatile void))];
+
+  struct HasAnonEmptyBitfield { int : 0; };
+  struct HasAnonBitfield { int : 4; };
+  struct DerivesFromBitfield : HasAnonBitfield {};
+  struct DerivesFromBitfieldWithBitfield : HasAnonBitfield { int : 5; };
+  struct DerivesFromBitfieldTwice : DerivesFromBitfield, HasAnonEmptyBitfield {};
+
+  int t50[T(__is_standard_layout(HasAnonEmptyBitfield))];
+  int t51[T(__is_standard_layout(HasAnonBitfield))];
+  int t52[T(__is_standard_layout(DerivesFromBitfield))];
+  int t53[F(__is_standard_layout(DerivesFromBitfieldWithBitfield))];
+  int t54[F(__is_standard_layout(DerivesFromBitfieldTwice))];
+
+  struct Empty {};
+  struct HasEmptyBase : Empty {};
+  struct HoldsEmptyBase { Empty e; };
+  struct HasRepeatedEmptyBase : Empty, HasEmptyBase {}; // expected-warning {{inaccessible}}
+  struct HasEmptyBaseAsMember : Empty { Empty e; };
+  struct HasEmptyBaseAsSubobjectOfMember1 : Empty { HoldsEmptyBase e; };
+  struct HasEmptyBaseAsSubobjectOfMember2 : Empty { HasEmptyBase e; };
+  struct HasEmptyBaseAsSubobjectOfMember3 : Empty { HoldsEmptyBase e[2]; };
+  struct HasEmptyIndirectBaseAsMember : HasEmptyBase { Empty e; };
+  struct HasEmptyIndirectBaseAsSecondMember : HasEmptyBase { int n; Empty e; };
+  struct HasEmptyIndirectBaseAfterBitfield : HasEmptyBase { int : 4; Empty e; };
+
+  int t60[T(__is_standard_layout(Empty))];
+  int t61[T(__is_standard_layout(HasEmptyBase))];
+  int t62[F(__is_standard_layout(HasRepeatedEmptyBase))];
+  int t63[F(__is_standard_layout(HasEmptyBaseAsMember))];
+  int t64[F(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember1))];
+  int t65[T(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember2))]; // FIXME: standard bug?
+  int t66[F(__is_standard_layout(HasEmptyBaseAsSubobjectOfMember3))];
+  int t67[F(__is_standard_layout(HasEmptyIndirectBaseAsMember))];
+  int t68[T(__is_standard_layout(HasEmptyIndirectBaseAsSecondMember))];
+  int t69[F(__is_standard_layout(HasEmptyIndirectBaseAfterBitfield))]; // FIXME: standard bug?
+
+  struct StructWithEmptyFields {
+    int n;
+    HoldsEmptyBase e[3];
+  };
+  union UnionWithEmptyFields {
+    int n;
+    HoldsEmptyBase e[3];
+  };
+  struct HasEmptyIndirectBaseAsSecondStructMember : HasEmptyBase {
+    StructWithEmptyFields u;
+  };
+  struct HasEmptyIndirectBaseAsSecondUnionMember : HasEmptyBase {
+    UnionWithEmptyFields u;
+  };
+
+  int t70[T(__is_standard_layout(HasEmptyIndirectBaseAsSecondStructMember))];
+  int t71[F(__is_standard_layout(HasEmptyIndirectBaseAsSecondUnionMember))];
 }
 
 void is_signed()
@@ -2225,6 +2280,7 @@ void constructible_checks() {
 
   // PR25513
   { int arr[F(__is_constructible(int(int)))]; }
+  { int arr[T(__is_constructible(int const &, long))]; }
 
   { int arr[T(__is_constructible(ACompleteType))]; }
   { int arr[T(__is_nothrow_constructible(ACompleteType))]; }
@@ -2273,6 +2329,47 @@ void is_trivially_constructible_test() {
   { int arr[F(__is_trivially_constructible(AnIncompleteType[1]))]; } // expected-error {{incomplete type}}
   { int arr[F(__is_trivially_constructible(void))]; }
   { int arr[F(__is_trivially_constructible(const volatile void))]; }
+}
+
+template <class T, class RefType = T &>
+struct ConvertsToRef {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
+void reference_binds_to_temporary_checks() {
+  { int arr[F((__reference_binds_to_temporary(int &, int &)))]; }
+  { int arr[F((__reference_binds_to_temporary(int &, int &&)))]; }
+
+  { int arr[F((__reference_binds_to_temporary(int const &, int &)))]; }
+  { int arr[F((__reference_binds_to_temporary(int const &, int const &)))]; }
+  { int arr[F((__reference_binds_to_temporary(int const &, int &&)))]; }
+
+  { int arr[F((__reference_binds_to_temporary(int &, long &)))]; } // doesn't construct
+  { int arr[T((__reference_binds_to_temporary(int const &, long &)))]; }
+  { int arr[T((__reference_binds_to_temporary(int const &, long &&)))]; }
+  { int arr[T((__reference_binds_to_temporary(int &&, long &)))]; }
+
+  using LRef = ConvertsToRef<int, int &>;
+  using RRef = ConvertsToRef<int, int &&>;
+  using CLRef = ConvertsToRef<int, const int &>;
+  using LongRef = ConvertsToRef<long, long &>;
+  { int arr[T((__is_constructible(int &, LRef)))]; }
+  { int arr[F((__reference_binds_to_temporary(int &, LRef)))]; }
+
+  { int arr[T((__is_constructible(int &&, RRef)))]; }
+  { int arr[F((__reference_binds_to_temporary(int &&, RRef)))]; }
+
+  { int arr[T((__is_constructible(int const &, CLRef)))]; }
+  { int arr[F((__reference_binds_to_temporary(int &&, CLRef)))]; }
+
+  { int arr[T((__is_constructible(int const &, LongRef)))]; }
+  { int arr[T((__reference_binds_to_temporary(int const &, LongRef)))]; }
+
+  // Test that it doesn't accept non-reference types as input.
+  { int arr[F((__reference_binds_to_temporary(int, long)))]; }
+
+  { int arr[T((__reference_binds_to_temporary(const int &, long)))]; }
 }
 
 void array_rank() {
@@ -2440,7 +2537,7 @@ struct VirtuallyInheritsFromNoPadding : virtual NoPadding {
   int d;
 };
 
-static_assert(!has_unique_object_representations<VirtuallyInheritsFromNoPadding>::value, "No virtual inheritence");
+static_assert(!has_unique_object_representations<VirtuallyInheritsFromNoPadding>::value, "No virtual inheritance");
 
 struct Padding {
   char a;

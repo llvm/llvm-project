@@ -434,7 +434,7 @@ void test51(struct test51_s *s, __builtin_va_list argList) {
 // CHECK-NEXT: [[CASTED_VALUE_ADDR:%.*]] = bitcast i8* [[VALUE_ADDR]] to [[STRUCT_TEST51]]
 // CHECK-NEXT: [[CASTED_TMP_ADDR:%.*]] = bitcast [[STRUCT_TEST51]]* [[TMP_ADDR]] to i8*
 // CHECK-NEXT: [[RECASTED_VALUE_ADDR:%.*]] = bitcast [[STRUCT_TEST51]]* [[CASTED_VALUE_ADDR]] to i8*
-// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[CASTED_TMP_ADDR]], i8* [[RECASTED_VALUE_ADDR]], i64 16, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[CASTED_TMP_ADDR]], i8* align 8 [[RECASTED_VALUE_ADDR]], i64 16, i1 false)
 // CHECK-NEXT: add i32 {{.*}}, 16
 // CHECK-NEXT: store i32 {{.*}}, i32* {{.*}}
 // CHECK-NEXT: br label

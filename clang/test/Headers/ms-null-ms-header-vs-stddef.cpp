@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -triple i386-mingw32 %s
 
 // Something in MSVC's headers (pulled in e.g. by <crtdefs.h>) defines __null
-// to something, mimick that.
+// to something, mimic that.
 #define __null
 
 #include <stddef.h>

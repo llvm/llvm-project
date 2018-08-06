@@ -323,7 +323,7 @@ class CXXNameMangler {
                        AdditionalAbiTags->end());
       }
 
-      std::sort(TagList.begin(), TagList.end());
+      llvm::sort(TagList.begin(), TagList.end());
       TagList.erase(std::unique(TagList.begin(), TagList.end()), TagList.end());
 
       writeSortedUniqueAbiTags(Out, TagList);
@@ -339,7 +339,7 @@ class CXXNameMangler {
     }
 
     const AbiTagList &getSortedUniqueUsedAbiTags() {
-      std::sort(UsedAbiTags.begin(), UsedAbiTags.end());
+      llvm::sort(UsedAbiTags.begin(), UsedAbiTags.end());
       UsedAbiTags.erase(std::unique(UsedAbiTags.begin(), UsedAbiTags.end()),
                         UsedAbiTags.end());
       return UsedAbiTags;
@@ -539,7 +539,9 @@ private:
   void mangleBareFunctionType(const FunctionProtoType *T, bool MangleReturnType,
                               const FunctionDecl *FD = nullptr);
   void mangleNeonVectorType(const VectorType *T);
+  void mangleNeonVectorType(const DependentVectorType *T);
   void mangleAArch64NeonVectorType(const VectorType *T);
+  void mangleAArch64NeonVectorType(const DependentVectorType *T);
 
   void mangleIntegerLiteral(QualType T, const llvm::APSInt &Value);
   void mangleMemberExprBase(const Expr *base, bool isArrow);
@@ -588,6 +590,18 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 
     // "main" is not mangled.
     if (FD->isMain())
+      return false;
+
+    // The Windows ABI expects that we would never mangle "typical"
+    // user-defined entry points regardless of visibility or freestanding-ness.
+    //
+    // N.B. This is distinct from asking about "main".  "main" has a lot of
+    // special rules associated with it in the standard while these
+    // user-defined entry points are outside of the purview of the standard.
+    // For example, there can be only one definition for "main" in a standards
+    // compliant program; however nothing forbids the existence of wmain and
+    // WinMain in the same translation unit.
+    if (FD->isMSVCRTEntryPoint())
       return false;
 
     // C++ functions and those whose names are not a simple identifier need
@@ -1324,8 +1338,7 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
 
     if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
       // We must have an anonymous union or struct declaration.
-      const RecordDecl *RD =
-        cast<RecordDecl>(VD->getType()->getAs<RecordType>()->getDecl());
+      const RecordDecl *RD = VD->getType()->getAs<RecordType>()->getDecl();
 
       // Itanium C++ ABI 5.1.2:
       //
@@ -1931,6 +1944,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::VariableArray:
   case Type::DependentSizedArray:
   case Type::DependentAddressSpace:
+  case Type::DependentVector:
   case Type::DependentSizedExtVector:
   case Type::Vector:
   case Type::ExtVector:
@@ -2330,7 +2344,8 @@ void CXXNameMangler::mangleObjCMethodName(const ObjCMethodDecl *MD) {
   Context.mangleObjCMethodName(MD, Out);
 }
 
-static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty) {
+static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
+                                ASTContext &Ctx) {
   if (Quals)
     return true;
   if (Ty->isSpecificBuiltinType(BuiltinType::ObjCSel))
@@ -2339,7 +2354,11 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty) {
     return true;
   if (Ty->isBuiltinType())
     return false;
-
+  // Through to Clang 6.0, we accidentally treated undeduced auto types as
+  // substitution candidates.
+  if (Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver6 &&
+      isa<AutoType>(Ty))
+    return false;
   return true;
 }
 
@@ -2400,7 +2419,8 @@ void CXXNameMangler::mangleType(QualType T) {
   Qualifiers quals = split.Quals;
   const Type *ty = split.Ty;
 
-  bool isSubstitutable = isTypeSubstitutable(quals, ty);
+  bool isSubstitutable =
+    isTypeSubstitutable(quals, ty, Context.getASTContext());
   if (isSubstitutable && mangleSubstitution(T))
     return;
 
@@ -2520,6 +2540,9 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::WChar_U:
     Out << 'w';
     break;
+  case BuiltinType::Char8:
+    Out << "Du";
+    break;
   case BuiltinType::Char16:
     Out << "Ds";
     break;
@@ -2544,6 +2567,31 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Float16:
     Out << "DF16_";
     break;
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
+  case BuiltinType::ShortFract:
+  case BuiltinType::Fract:
+  case BuiltinType::LongFract:
+  case BuiltinType::UShortFract:
+  case BuiltinType::UFract:
+  case BuiltinType::ULongFract:
+  case BuiltinType::SatShortAccum:
+  case BuiltinType::SatAccum:
+  case BuiltinType::SatLongAccum:
+  case BuiltinType::SatUShortAccum:
+  case BuiltinType::SatUAccum:
+  case BuiltinType::SatULongAccum:
+  case BuiltinType::SatShortFract:
+  case BuiltinType::SatFract:
+  case BuiltinType::SatLongFract:
+  case BuiltinType::SatUShortFract:
+  case BuiltinType::SatUFract:
+  case BuiltinType::SatULongFract:
+    llvm_unreachable("Fixed point types are disabled for c++");
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -2689,12 +2737,12 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
   // e.g. "const" in "int (A::*)() const".
-  mangleQualifiers(Qualifiers::fromCVRMask(T->getTypeQuals()));
+  mangleQualifiers(Qualifiers::fromCVRUMask(T->getTypeQuals()));
 
   // Mangle instantiation-dependent exception-specification, if present,
   // per cxx-abi-dev proposal on 2016-10-11.
   if (T->hasInstantiationDependentExceptionSpec()) {
-    if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
+    if (isComputedNoexcept(T->getExceptionSpecType())) {
       Out << "DO";
       mangleExpression(T->getNoexceptExpr());
       Out << "E";
@@ -2705,7 +2753,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
         mangleType(ExceptTy);
       Out << "E";
     }
-  } else if (T->isNothrow(getASTContext())) {
+  } else if (T->isNothrow()) {
     Out << "Do";
   }
 
@@ -2967,6 +3015,14 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
   Out << BaseName << EltName;
 }
 
+void CXXNameMangler::mangleNeonVectorType(const DependentVectorType *T) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent neon vector type yet");
+  Diags.Report(T->getAttributeLoc(), DiagID);
+}
+
 static StringRef mangleAArch64VectorBase(const BuiltinType *EltType) {
   switch (EltType->getKind()) {
   case BuiltinType::SChar:
@@ -3034,6 +3090,13 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const VectorType *T) {
       ("__" + EltName + "x" + Twine(T->getNumElements()) + "_t").str();
   Out << TypeName.length() << TypeName;
 }
+void CXXNameMangler::mangleAArch64NeonVectorType(const DependentVectorType *T) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent neon vector type yet");
+  Diags.Report(T->getAttributeLoc(), DiagID);
+}
 
 // GNU extension: vector types
 // <type>                  ::= <vector-type>
@@ -3064,6 +3127,32 @@ void CXXNameMangler::mangleType(const VectorType *T) {
   else
     mangleType(T->getElementType());
 }
+
+void CXXNameMangler::mangleType(const DependentVectorType *T) {
+  if ((T->getVectorKind() == VectorType::NeonVector ||
+       T->getVectorKind() == VectorType::NeonPolyVector)) {
+    llvm::Triple Target = getASTContext().getTargetInfo().getTriple();
+    llvm::Triple::ArchType Arch =
+        getASTContext().getTargetInfo().getTriple().getArch();
+    if ((Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_be) &&
+        !Target.isOSDarwin())
+      mangleAArch64NeonVectorType(T);
+    else
+      mangleNeonVectorType(T);
+    return;
+  }
+
+  Out << "Dv";
+  mangleExpression(T->getSizeExpr());
+  Out << '_';
+  if (T->getVectorKind() == VectorType::AltiVecPixel)
+    Out << 'p';
+  else if (T->getVectorKind() == VectorType::AltiVecBool)
+    Out << 'b';
+  else
+    mangleType(T->getElementType());
+}
+
 void CXXNameMangler::mangleType(const ExtVectorType *T) {
   mangleType(static_cast<const VectorType*>(T));
 }
@@ -3251,14 +3340,13 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
 }
 
 void CXXNameMangler::mangleType(const AutoType *T) {
-  QualType D = T->getDeducedType();
-  // <builtin-type> ::= Da  # dependent auto
-  if (D.isNull()) {
-    assert(T->getKeyword() != AutoTypeKeyword::GNUAutoType &&
-           "shouldn't need to mangle __auto_type!");
-    Out << (T->isDecltypeAuto() ? "Dc" : "Da");
-  } else
-    mangleType(D);
+  assert(T->getDeducedType().isNull() &&
+         "Deduced AutoType shouldn't be handled here!");
+  assert(T->getKeyword() != AutoTypeKeyword::GNUAutoType &&
+         "shouldn't need to mangle __auto_type!");
+  // <builtin-type> ::= Da # auto
+  //                ::= Dc # decltype(auto)
+  Out << (T->isDecltypeAuto() ? "Dc" : "Da");
 }
 
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
@@ -3471,6 +3559,7 @@ recurse:
   case Expr::AsTypeExprClass:
   case Expr::PseudoObjectExprClass:
   case Expr::AtomicExprClass:
+  case Expr::FixedPointLiteralClass:
   {
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.

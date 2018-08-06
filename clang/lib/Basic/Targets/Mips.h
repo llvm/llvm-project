@@ -69,10 +69,7 @@ public:
         UseIndirectJumpHazard(false), HasFP64(false) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
 
-    setABI((getTriple().getArch() == llvm::Triple::mips ||
-            getTriple().getArch() == llvm::Triple::mipsel)
-               ? "o32"
-               : "n64");
+    setABI(getTriple().isMIPS32() ? "o32" : "n64");
 
     CPU = ABI == "o32" ? "mips32r2" : "mips64r2";
 
@@ -163,6 +160,7 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     CPU = Name;
@@ -391,7 +389,9 @@ public:
     return llvm::makeArrayRef(NewABIRegAliases);
   }
 
-  bool hasInt128Type() const override { return ABI == "n32" || ABI == "n64"; }
+  bool hasInt128Type() const override {
+    return (ABI == "n32" || ABI == "n64") || getTargetOpts().ForceEnableInt128;
+  }
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
 };

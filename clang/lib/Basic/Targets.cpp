@@ -29,6 +29,7 @@
 #include "Targets/OSTargets.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
+#include "Targets/RISCV.h"
 #include "Targets/SPIR.h"
 #include "Targets/Sparc.h"
 #include "Targets/SystemZ.h"
@@ -37,6 +38,7 @@
 #include "Targets/X86.h"
 #include "Targets/XCore.h"
 #include "clang/Basic/Diagnostic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 
 using namespace clang;
@@ -370,6 +372,17 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::r600:
     return new AMDGPUTargetInfo(Triple, Opts);
 
+  case llvm::Triple::riscv32:
+    // TODO: add cases for FreeBSD, NetBSD, RTEMS once tested.
+    if (os == llvm::Triple::Linux)
+      return new LinuxTargetInfo<RISCV32TargetInfo>(Triple, Opts);
+    return new RISCV32TargetInfo(Triple, Opts);
+  case llvm::Triple::riscv64:
+    // TODO: add cases for FreeBSD, NetBSD, RTEMS once tested.
+    if (os == llvm::Triple::Linux)
+      return new LinuxTargetInfo<RISCV64TargetInfo>(Triple, Opts);
+    return new RISCV64TargetInfo(Triple, Opts);
+
   case llvm::Triple::sparc:
     switch (os) {
     case llvm::Triple::Linux:
@@ -595,6 +608,10 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   // Set the target CPU if specified.
   if (!Opts->CPU.empty() && !Target->setCPU(Opts->CPU)) {
     Diags.Report(diag::err_target_unknown_cpu) << Opts->CPU;
+    SmallVector<StringRef, 32> ValidList;
+    Target->fillValidCPUList(ValidList);
+    if (!ValidList.empty())
+      Diags.Report(diag::note_valid_options) << llvm::join(ValidList, ", ");
     return nullptr;
   }
 
@@ -621,6 +638,9 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   Opts->Features.clear();
   for (const auto &F : Features)
     Opts->Features.push_back((F.getValue() ? "+" : "-") + F.getKey().str());
+  // Sort here, so we handle the features in a predictable order. (This matters
+  // when we're dealing with features that overlap.)
+  llvm::sort(Opts->Features.begin(), Opts->Features.end());
 
   if (!Target->handleTargetFeatures(Opts->Features, Diags))
     return nullptr;
@@ -631,6 +651,8 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   if (!Target->validateTarget(Diags))
     return nullptr;
+
+  Target->CheckFixedPointBits();
 
   return Target.release();
 }

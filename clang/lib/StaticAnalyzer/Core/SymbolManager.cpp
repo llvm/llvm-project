@@ -159,13 +159,6 @@ void SymExpr::symbol_iterator::expand() {
   llvm_unreachable("unhandled expansion case");
 }
 
-unsigned SymExpr::computeComplexity() const {
-  unsigned R = 0;
-  for (symbol_iterator I = symbol_begin(), E = symbol_end(); I != E; ++I)
-    R++;
-  return R;
-}
-
 const SymbolRegionValue*
 SymbolManager::getRegionValueSymbol(const TypedValueRegion* R) {
   llvm::FoldingSetNodeID profile;
@@ -542,7 +535,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
 
   if (!LCtx)
     return false;
-  const StackFrameContext *CurrentContext = LCtx->getCurrentStackFrame();
+  const StackFrameContext *CurrentContext = LCtx->getStackFrame();
 
   if (VarContext == CurrentContext) {
     // If no statement is provided, everything is live.

@@ -26,7 +26,7 @@ using namespace clang;
 // Visitor that collects unexpanded parameter packs
 //----------------------------------------------------------------------------
 
-/// \brief Retrieve the depth and index of a parameter pack.
+/// Retrieve the depth and index of a parameter pack.
 static std::pair<unsigned, unsigned> 
 getDepthAndIndex(NamedDecl *ND) {
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
@@ -40,7 +40,7 @@ getDepthAndIndex(NamedDecl *ND) {
 }
 
 namespace {
-  /// \brief A class that collects unexpanded parameter packs.
+  /// A class that collects unexpanded parameter packs.
   class CollectUnexpandedParameterPacksVisitor :
     public RecursiveASTVisitor<CollectUnexpandedParameterPacksVisitor> 
   {
@@ -83,14 +83,14 @@ namespace {
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
 
-    /// \brief Record occurrences of template type parameter packs.
+    /// Record occurrences of template type parameter packs.
     bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
       if (TL.getTypePtr()->isParameterPack())
         addUnexpanded(TL.getTypePtr(), TL.getNameLoc());
       return true;
     }
 
-    /// \brief Record occurrences of template type parameter packs
+    /// Record occurrences of template type parameter packs
     /// when we don't have proper source-location information for
     /// them.
     ///
@@ -102,7 +102,7 @@ namespace {
       return true;
     }
 
-    /// \brief Record occurrences of function and non-type template
+    /// Record occurrences of function and non-type template
     /// parameter packs in an expression.
     bool VisitDeclRefExpr(DeclRefExpr *E) {
       if (E->getDecl()->isParameterPack())
@@ -111,7 +111,7 @@ namespace {
       return true;
     }
     
-    /// \brief Record occurrences of template template parameter packs.
+    /// Record occurrences of template template parameter packs.
     bool TraverseTemplateName(TemplateName Template) {
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               Template.getAsTemplateDecl())) {
@@ -122,7 +122,7 @@ namespace {
       return inherited::TraverseTemplateName(Template);
     }
 
-    /// \brief Suppress traversal into Objective-C container literal
+    /// Suppress traversal into Objective-C container literal
     /// elements that are pack expansions.
     bool TraverseObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
       if (!E->containsUnexpandedParameterPack())
@@ -142,7 +142,7 @@ namespace {
     // Pruning the search for unexpanded parameter packs.
     //------------------------------------------------------------------------
 
-    /// \brief Suppress traversal into statements and expressions that
+    /// Suppress traversal into statements and expressions that
     /// do not contain unexpanded parameter packs.
     bool TraverseStmt(Stmt *S) { 
       Expr *E = dyn_cast_or_null<Expr>(S);
@@ -152,7 +152,7 @@ namespace {
       return true;
     }
 
-    /// \brief Suppress traversal into types that do not contain
+    /// Suppress traversal into types that do not contain
     /// unexpanded parameter packs.
     bool TraverseType(QualType T) {
       if ((!T.isNull() && T->containsUnexpandedParameterPack()) || InLambda)
@@ -161,7 +161,7 @@ namespace {
       return true;
     }
 
-    /// \brief Suppress traversal into types with location information
+    /// Suppress traversal into types with location information
     /// that do not contain unexpanded parameter packs.
     bool TraverseTypeLoc(TypeLoc TL) {
       if ((!TL.getType().isNull() && 
@@ -172,7 +172,7 @@ namespace {
       return true;
     }
 
-    /// \brief Suppress traversal of parameter packs.
+    /// Suppress traversal of parameter packs.
     bool TraverseDecl(Decl *D) { 
       // A function parameter pack is a pack expansion, so cannot contain
       // an unexpanded parameter pack. Likewise for a template parameter
@@ -183,7 +183,7 @@ namespace {
       return inherited::TraverseDecl(D);
     }
 
-    /// \brief Suppress traversal of pack-expanded attributes.
+    /// Suppress traversal of pack-expanded attributes.
     bool TraverseAttr(Attr *A) {
       if (A->isPackExpansion())
         return true;
@@ -191,7 +191,7 @@ namespace {
       return inherited::TraverseAttr(A);
     }
 
-    /// \brief Suppress traversal of pack expansion expressions and types.
+    /// Suppress traversal of pack expansion expressions and types.
     ///@{
     bool TraversePackExpansionType(PackExpansionType *T) { return true; }
     bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL) { return true; }
@@ -200,7 +200,7 @@ namespace {
 
     ///@}
 
-    /// \brief Suppress traversal of using-declaration pack expansion.
+    /// Suppress traversal of using-declaration pack expansion.
     bool TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
       if (D->isPackExpansion())
         return true;
@@ -208,7 +208,7 @@ namespace {
       return inherited::TraverseUnresolvedUsingValueDecl(D);
     }
 
-    /// \brief Suppress traversal of using-declaration pack expansion.
+    /// Suppress traversal of using-declaration pack expansion.
     bool TraverseUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D) {
       if (D->isPackExpansion())
         return true;
@@ -216,7 +216,7 @@ namespace {
       return inherited::TraverseUnresolvedUsingTypenameDecl(D);
     }
 
-    /// \brief Suppress traversal of template argument pack expansions.
+    /// Suppress traversal of template argument pack expansions.
     bool TraverseTemplateArgument(const TemplateArgument &Arg) {
       if (Arg.isPackExpansion())
         return true;
@@ -224,7 +224,7 @@ namespace {
       return inherited::TraverseTemplateArgument(Arg);
     }
 
-    /// \brief Suppress traversal of template argument pack expansions.
+    /// Suppress traversal of template argument pack expansions.
     bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
       if (ArgLoc.getArgument().isPackExpansion())
         return true;
@@ -232,7 +232,7 @@ namespace {
       return inherited::TraverseTemplateArgumentLoc(ArgLoc);
     }
 
-    /// \brief Suppress traversal of base specifier pack expansions.
+    /// Suppress traversal of base specifier pack expansions.
     bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
       if (Base.isPackExpansion())
         return true;
@@ -240,7 +240,7 @@ namespace {
       return inherited::TraverseCXXBaseSpecifier(Base);
     }
 
-    /// \brief Suppress traversal of mem-initializer pack expansions.
+    /// Suppress traversal of mem-initializer pack expansions.
     bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
       if (Init->isPackExpansion())
         return true;
@@ -248,7 +248,7 @@ namespace {
       return inherited::TraverseConstructorInitializer(Init);
     }
 
-    /// \brief Note whether we're traversing a lambda containing an unexpanded
+    /// Note whether we're traversing a lambda containing an unexpanded
     /// parameter pack. In this case, the unexpanded pack can occur anywhere,
     /// including all the places where we normally wouldn't look. Within a
     /// lambda, we don't propagate the 'contains unexpanded parameter pack' bit
@@ -284,7 +284,7 @@ namespace {
   };
 }
 
-/// \brief Determine whether it's possible for an unexpanded parameter pack to
+/// Determine whether it's possible for an unexpanded parameter pack to
 /// be valid in this location. This only happens when we're in a declaration
 /// that is nested within an expression that could be expanded, such as a
 /// lambda-expression within a function call.
@@ -298,7 +298,7 @@ bool Sema::isUnexpandedParameterPackPermitted() {
   return false;
 }
 
-/// \brief Diagnose all of the unexpanded parameter packs in the given
+/// Diagnose all of the unexpanded parameter packs in the given
 /// vector.
 bool
 Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
@@ -314,8 +314,18 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
   // later.
   SmallVector<UnexpandedParameterPack, 4> LambdaParamPackReferences;
   for (unsigned N = FunctionScopes.size(); N; --N) {
-    if (sema::LambdaScopeInfo *LSI =
-          dyn_cast<sema::LambdaScopeInfo>(FunctionScopes[N-1])) {
+    sema::FunctionScopeInfo *Func = FunctionScopes[N-1];
+    // We do not permit pack expansion that would duplicate a statement
+    // expression, not even within a lambda.
+    // FIXME: We could probably support this for statement expressions that do
+    // not contain labels, and for pack expansions that expand both the stmt
+    // expr and the enclosing lambda.
+    if (std::any_of(
+            Func->CompoundScopes.begin(), Func->CompoundScopes.end(),
+            [](sema::CompoundScopeInfo &CSI) { return CSI.IsStmtExpr; }))
+      break;
+
+    if (auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Func)) {
       if (N == FunctionScopes.size()) {
         for (auto &Param : Unexpanded) {
           auto *PD = dyn_cast_or_null<ParmVarDecl>(
@@ -636,7 +646,9 @@ bool Sema::CheckParameterPacksForExpansion(
   RetainExpansion = false;
   std::pair<IdentifierInfo *, SourceLocation> FirstPack;
   bool HaveFirstPack = false;
-  
+  Optional<unsigned> NumPartialExpansions;
+  SourceLocation PartiallySubstitutedPackLoc;
+
   for (ArrayRef<UnexpandedParameterPack>::iterator i = Unexpanded.begin(),
                                                  end = Unexpanded.end();
                                                   i != end; ++i) {
@@ -701,8 +713,13 @@ bool Sema::CheckParameterPacksForExpansion(
                     = CurrentInstantiationScope->getPartiallySubstitutedPack()){
         unsigned PartialDepth, PartialIndex;
         std::tie(PartialDepth, PartialIndex) = getDepthAndIndex(PartialPack);
-        if (PartialDepth == Depth && PartialIndex == Index)
+        if (PartialDepth == Depth && PartialIndex == Index) {
           RetainExpansion = true;
+          // We don't actually know the new pack size yet.
+          NumPartialExpansions = NewPackSize;
+          PartiallySubstitutedPackLoc = i->second;
+          continue;
+        }
       }
     }
     
@@ -730,6 +747,28 @@ bool Sema::CheckParameterPacksForExpansion(
           << SourceRange(i->second);
       return true;
     }
+  }
+
+  // If we're performing a partial expansion but we also have a full expansion,
+  // expand to the number of common arguments. For example, given:
+  //
+  //   template<typename ...T> struct A {
+  //     template<typename ...U> void f(pair<T, U>...);
+  //   };
+  //
+  // ... a call to 'A<int, int>().f<int>' should expand the pack once and
+  // retain an expansion.
+  if (NumPartialExpansions) {
+    if (NumExpansions && *NumExpansions < *NumPartialExpansions) {
+      NamedDecl *PartialPack =
+          CurrentInstantiationScope->getPartiallySubstitutedPack();
+      Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_partial)
+        << PartialPack << *NumPartialExpansions << *NumExpansions
+        << SourceRange(PartiallySubstitutedPackLoc);
+      return true;
+    }
+
+    NumExpansions = NumPartialExpansions;
   }
 
   return false;
@@ -812,6 +851,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_void:
   case TST_char:
   case TST_wchar:
+  case TST_char8:
   case TST_char16:
   case TST_char32:
   case TST_int:
@@ -819,6 +859,8 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_half:
   case TST_float:
   case TST_double:
+  case TST_Accum:
+  case TST_Fract:
   case TST_Float16:
   case TST_float128:
   case TST_bool:
@@ -871,7 +913,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
                   ->containsUnexpandedParameterPack())
             return true;
         }
-      } else if (Chunk.Fun.getExceptionSpecType() == EST_ComputedNoexcept &&
+      } else if (isComputedNoexcept(Chunk.Fun.getExceptionSpecType()) &&
                  Chunk.Fun.NoexceptExpr->containsUnexpandedParameterPack())
         return true;
 
@@ -906,7 +948,7 @@ class ParameterPackValidatorCCC : public CorrectionCandidateCallback {
 
 }
 
-/// \brief Called when an expression computing the size of a parameter pack
+/// Called when an expression computing the size of a parameter pack
 /// is parsed.
 ///
 /// \code

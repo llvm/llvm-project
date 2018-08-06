@@ -21,6 +21,8 @@ void test(int n) {
   // CHECK: define void {{.*test.*}}(i32 [[n:%.+]]) #
   // CHECK: [[n_addr:%.+]] = alloca
   // CHECK-NEXT: [[saved_stack:%.+]] = alloca
+  // CHECK-NEXT: [[vla_expr:%.+]] = alloca i64, align 8
+  // CHECK-NEXT: [[vla_expr1:%.+]] = alloca i64, align 8
   // CHECK-NEXT: [[sizeof_S:%.+]] = alloca
   // CHECK-NEXT: [[sizeof_array_t_0_0:%.+]] = alloca
   // CHECK-NEXT: [[sizeof_array_t_0:%.+]] = alloca
@@ -37,6 +39,8 @@ void test(int n) {
   // CHECK-NEXT: store i8* [[t4]], i8** [[saved_stack]]
   // CHECK-NEXT: [[t5:%.+]] = mul nuw i64 [[t1]], [[t3]]
   // CHECK-NEXT: [[vla:%.+]] = alloca [[struct_S]], i64 [[t5]]
+  // CHECK-NEXT: store i64 [[t1]], i64* [[vla_expr]]
+  // CHECK-NEXT: store i64 [[t3]], i64* [[vla_expr1]]
   // CHECK-NEXT: [[t6:%.+]] = mul nuw i64 [[t1]], [[t3]]
   // CHECK-NEXT: [[isempty:%.+]] = icmp eq i64 [[t6]], 0
   // CHECK-NEXT: br i1 [[isempty]], label %[[arrayctor_cont:.+]], label %[[new_ctorloop:.+]]

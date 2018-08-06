@@ -7,7 +7,7 @@
 // REQUIRES: shell
 // RUN: rm -rf %t %t-cache %t.pch
 // RUN: mkdir -p %t/SomeFramework.framework/Modules
-// RUN: cp %S/Inputs/some_frame_module.map %t/SomeFramework.framework/Modules/module.modulemap
+// RUN: cat %S/Inputs/some_frame_module.map > %t/SomeFramework.framework/Modules/module.modulemap
 // RUN: sed -e "s:INPUT_DIR:%S/Inputs:g" -e "s:OUT_DIR:%t:g" %S/Inputs/vfsoverlay.yaml > %t.yaml
 
 // Build

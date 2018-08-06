@@ -25,7 +25,7 @@ namespace ento {
 
 class MemRegion;
 
-/// \brief Symbolic value. These values used to capture symbolic execution of
+/// Symbolic value. These values used to capture symbolic execution of
 /// the program.
 class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
@@ -49,6 +49,8 @@ protected:
     return !T.isNull() && !T->isVoidType();
   }
 
+  mutable unsigned Complexity = 0;
+
 public:
   virtual ~SymExpr() = default;
 
@@ -61,7 +63,7 @@ public:
   virtual QualType getType() const = 0;
   virtual void Profile(llvm::FoldingSetNodeID &profile) = 0;
 
-  /// \brief Iterator over symbols that the current symbol depends on.
+  /// Iterator over symbols that the current symbol depends on.
   ///
   /// For SymbolData, it's the symbol itself; for expressions, it's the
   /// expression symbol and all the operands in it. Note, SymbolDerived is
@@ -85,9 +87,9 @@ public:
   symbol_iterator symbol_begin() const { return symbol_iterator(this); }
   static symbol_iterator symbol_end() { return symbol_iterator(); }
 
-  unsigned computeComplexity() const;
+  virtual unsigned computeComplexity() const = 0;
 
-  /// \brief Find the region from which this symbol originates.
+  /// Find the region from which this symbol originates.
   ///
   /// Whenever the symbol was constructed to denote an unknown value of
   /// a certain memory region, return this region. This method
@@ -110,7 +112,7 @@ using SymbolRef = const SymExpr *;
 using SymbolRefSmallVectorTy = SmallVector<SymbolRef, 2>;
 using SymbolID = unsigned;
 
-/// \brief A symbol representing data which can be stored in a memory location
+/// A symbol representing data which can be stored in a memory location
 /// (region).
 class SymbolData : public SymExpr {
   const SymbolID Sym;
@@ -126,6 +128,10 @@ public:
   ~SymbolData() override = default;
 
   SymbolID getSymbolID() const { return Sym; }
+
+  unsigned computeComplexity() const override {
+    return 1;
+  };
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {

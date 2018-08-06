@@ -15,3 +15,4 @@ Basic Commands
    :maxdepth: 1
 
    clang
+   diagtool

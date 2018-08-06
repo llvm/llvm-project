@@ -38,7 +38,7 @@ namespace ento {
 class BasicValueFactory;
 class StoreManager;
 
-///\brief A symbol representing the value stored at a MemRegion.
+///A symbol representing the value stored at a MemRegion.
 class SymbolRegionValue : public SymbolData {
   const TypedValueRegion *R;
 
@@ -251,7 +251,7 @@ public:
   }
 };
 
-/// \brief Represents a cast expression.
+/// Represents a cast expression.
 class SymbolCast : public SymExpr {
   const SymExpr *Operand;
 
@@ -268,6 +268,12 @@ public:
     assert(isValidTypeForSymbol(From));
     // FIXME: GenericTaintChecker creates symbols of void type.
     // Otherwise, 'To' should also be a valid type.
+  }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + Operand->computeComplexity();
+    return Complexity;
   }
 
   QualType getType() const override { return ToTy; }
@@ -294,7 +300,7 @@ public:
   }
 };
 
-/// \brief Represents a symbolic expression involving a binary operator 
+/// Represents a symbolic expression involving a binary operator 
 class BinarySymExpr : public SymExpr {
   BinaryOperator::Opcode Op;
   QualType T;
@@ -320,7 +326,7 @@ public:
   }
 };
 
-/// \brief Represents a symbolic expression like 'x' + 3.
+/// Represents a symbolic expression like 'x' + 3.
 class SymIntExpr : public BinarySymExpr {
   const SymExpr *LHS;
   const llvm::APSInt& RHS;
@@ -336,6 +342,12 @@ public:
 
   const SymExpr *getLHS() const { return LHS; }
   const llvm::APSInt &getRHS() const { return RHS; }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + LHS->computeComplexity();
+    return Complexity;
+  }
 
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                       BinaryOperator::Opcode op, const llvm::APSInt& rhs,
@@ -357,7 +369,7 @@ public:
   }
 };
 
-/// \brief Represents a symbolic expression like 3 - 'x'.
+/// Represents a symbolic expression like 3 - 'x'.
 class IntSymExpr : public BinarySymExpr {
   const llvm::APSInt& LHS;
   const SymExpr *RHS;
@@ -373,6 +385,12 @@ public:
 
   const SymExpr *getRHS() const { return RHS; }
   const llvm::APSInt &getLHS() const { return LHS; }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + RHS->computeComplexity();
+    return Complexity;
+  }
 
   static void Profile(llvm::FoldingSetNodeID& ID, const llvm::APSInt& lhs,
                       BinaryOperator::Opcode op, const SymExpr *rhs,
@@ -394,7 +412,7 @@ public:
   }
 };
 
-/// \brief Represents a symbolic expression like 'x' + 'y'.
+/// Represents a symbolic expression like 'x' + 'y'.
 class SymSymExpr : public BinarySymExpr {
   const SymExpr *LHS;
   const SymExpr *RHS;
@@ -411,6 +429,12 @@ public:
   const SymExpr *getRHS() const { return RHS; }
 
   void dumpToStream(raw_ostream &os) const override;
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = RHS->computeComplexity() + LHS->computeComplexity();
+    return Complexity;
+  }
 
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                     BinaryOperator::Opcode op, const SymExpr *rhs, QualType t) {
@@ -454,7 +478,7 @@ public:
 
   static bool canSymbolicate(QualType T);
 
-  /// \brief Make a unique symbol for MemRegion R according to its kind.
+  /// Make a unique symbol for MemRegion R according to its kind.
   const SymbolRegionValue* getRegionValueSymbol(const TypedValueRegion* R);
 
   const SymbolConjured* conjureSymbol(const Stmt *E,
@@ -475,7 +499,7 @@ public:
 
   const SymbolExtent *getExtentSymbol(const SubRegion *R);
 
-  /// \brief Creates a metadata symbol associated with a specific region.
+  /// Creates a metadata symbol associated with a specific region.
   ///
   /// VisitCount can be used to differentiate regions corresponding to
   /// different loop iterations, thus, making the symbol path-dependent.
@@ -507,7 +531,7 @@ public:
     return SE->getType();
   }
 
-  /// \brief Add artificial symbol dependency.
+  /// Add artificial symbol dependency.
   ///
   /// The dependent symbol should stay alive as long as the primary is alive.
   void addSymbolDependency(const SymbolRef Primary, const SymbolRef Dependent);
@@ -518,7 +542,7 @@ public:
   BasicValueFactory &getBasicVals() { return BV; }
 };
 
-/// \brief A class responsible for cleaning up unused symbols.
+/// A class responsible for cleaning up unused symbols.
 class SymbolReaper {
   enum SymbolStatus {
     NotProcessed,
@@ -542,7 +566,7 @@ class SymbolReaper {
   llvm::DenseMap<const MemRegion *, unsigned> includedRegionCache;
 
 public:
-  /// \brief Construct a reaper object, which removes everything which is not
+  /// Construct a reaper object, which removes everything which is not
   /// live before we execute statement s in the given location context.
   ///
   /// If the statement is NULL, everything is this and parent contexts is
@@ -560,14 +584,14 @@ public:
   bool isLive(const Stmt *ExprVal, const LocationContext *LCtx) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
 
-  /// \brief Unconditionally marks a symbol as live.
+  /// Unconditionally marks a symbol as live.
   ///
   /// This should never be
   /// used by checkers, only by the state infrastructure such as the store and
   /// environment. Checkers should instead use metadata symbols and markInUse.
   void markLive(SymbolRef sym);
 
-  /// \brief Marks a symbol as important to a checker.
+  /// Marks a symbol as important to a checker.
   ///
   /// For metadata symbols,
   /// this will keep the symbol alive as long as its associated region is also
@@ -576,7 +600,7 @@ public:
   /// symbol marking has occurred, i.e. in the MarkLiveSymbols callback.
   void markInUse(SymbolRef sym);
 
-  /// \brief If a symbol is known to be live, marks the symbol as live.
+  /// If a symbol is known to be live, marks the symbol as live.
   ///
   ///  Otherwise, if the symbol cannot be proven live, it is marked as dead.
   ///  Returns true if the symbol is dead, false if live.
@@ -596,7 +620,7 @@ public:
   region_iterator region_begin() const { return RegionRoots.begin(); }
   region_iterator region_end() const { return RegionRoots.end(); }
 
-  /// \brief Returns whether or not a symbol has been confirmed dead.
+  /// Returns whether or not a symbol has been confirmed dead.
   ///
   /// This should only be called once all marking of dead symbols has completed.
   /// (For checkers, this means only in the evalDeadSymbols callback.)
@@ -607,7 +631,7 @@ public:
   void markLive(const MemRegion *region);
   void markElementIndicesLive(const MemRegion *region);
   
-  /// \brief Set to the value of the symbolic store after
+  /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
   void setReapedStore(StoreRef st) { reapedStore = st; }
 
@@ -625,7 +649,7 @@ public:
   SymbolVisitor(const SymbolVisitor &) = default;
   SymbolVisitor(SymbolVisitor &&) {}
 
-  /// \brief A visitor method invoked by ProgramStateManager::scanReachableSymbols.
+  /// A visitor method invoked by ProgramStateManager::scanReachableSymbols.
   ///
   /// The method returns \c true if symbols should continue be scanned and \c
   /// false otherwise.

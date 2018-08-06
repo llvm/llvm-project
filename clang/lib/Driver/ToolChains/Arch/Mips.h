@@ -21,8 +21,6 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-bool isMipsArch(llvm::Triple::ArchType Arch);
-
 namespace mips {
 typedef enum { Legacy = 1, Std2008 = 2 } IEEE754Standard;
 

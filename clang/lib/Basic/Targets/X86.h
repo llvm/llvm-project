@@ -81,7 +81,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasSHA = false;
   bool HasMPX = false;
   bool HasSHSTK = false;
-  bool HasIBT = false;
   bool HasSGX = false;
   bool HasCX16 = false;
   bool HasFXSR = false;
@@ -91,16 +90,26 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasXSAVES = false;
   bool HasMWAITX = false;
   bool HasCLZERO = false;
+  bool HasCLDEMOTE = false;
+  bool HasPCONFIG = false;
   bool HasPKU = false;
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
   bool HasPREFETCHWT1 = false;
+  bool HasRDPID = false;
   bool HasRetpoline = false;
   bool HasRetpolineExternalThunk = false;
   bool HasLAHFSAHF = false;
+  bool HasWBNOINVD = false;
+  bool HasWAITPKG = false;
+  bool HasMOVDIRI = false;
+  bool HasMOVDIR64B = false;
+  bool HasPTWRITE = false;
+  bool HasINVPCID = false;
 
-  /// \brief Enumeration of all of the X86 CPUs supported by Clang.
+protected:
+  /// Enumeration of all of the X86 CPUs supported by Clang.
   ///
   /// Each enumeration represents a particular CPU supported by Clang. These
   /// loosely correspond to the options passed to '-march' or '-mtune' flags.
@@ -113,6 +122,8 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool checkCPUKind(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef CPU) const;
+
+  std::string getCPUKindCanonicalName(CPUKind Kind) const;
 
   enum FPMathKind { FP_Default, FP_SSE, FP_387 } FPMath = FP_Default;
 
@@ -159,6 +170,17 @@ public:
 
   bool validateInputSize(StringRef Constraint, unsigned Size) const override;
 
+  virtual bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    return true;
+  };
+
+  virtual bool
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
+    return true;
+  };
+
+
   virtual bool validateOperandSize(StringRef Constraint, unsigned Size) const;
 
   std::string convertConstraint(const char *&Constraint) const override;
@@ -166,8 +188,8 @@ public:
     return "~{dirflag},~{fpsr},~{flags}";
   }
 
-  StringRef getConstraintRegister(const StringRef &Constraint,
-                                  const StringRef &Expression) const override {
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
     StringRef::iterator I, E;
     for (I = Constraint.begin(), E = Constraint.end(); I != E; ++I) {
       if (isalpha(*I))
@@ -255,9 +277,16 @@ public:
     return checkCPUKind(getCPUKind(Name));
   }
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
   bool setCPU(const std::string &Name) override {
     return checkCPUKind(CPU = getCPUKind(Name));
   }
+
+  bool supportsMultiVersioning() const override {
+    return getTriple().isOSBinFormatELF();
+  }
+  unsigned multiVersionSortPriority(StringRef Name) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -313,9 +342,11 @@ public:
          (1 << TargetInfo::LongDouble));
 
     // x86-32 has atomics up to 8 bytes
-    // FIXME: Check that we actually have cmpxchg8b before setting
-    // MaxAtomicInlineWidth. (cmpxchg8b is an i586 instruction.)
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    CPUKind Kind = getCPUKind(Opts.CPU);
+    if (Kind >= CK_i586 || Kind == CK_Generic)
+      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    else if (Kind >= CK_i486)
+      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

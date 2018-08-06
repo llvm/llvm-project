@@ -209,7 +209,7 @@ TEST(struct_misaligned_1)
 // CHECK-LABEL: define swiftcc i64 @return_struct_misaligned_1()
 // CHECK:  [[RET:%.*]] = alloca [[STRUCT:%.*]], align 1
 // CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RET]] to i8*
-// CHECK:  call void @llvm.memset{{.*}}(i8* [[CAST]], i8 0, i64 5
+// CHECK:  call void @llvm.memset{{.*}}(i8* align 1 [[CAST]], i8 0, i64 5
 // CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 1
@@ -258,7 +258,7 @@ TEST(union_het_fp)
 // CHECK-LABEL: define swiftcc i64 @return_union_het_fp()
 // CHECK:  [[RET:%.*]] = alloca [[UNION:%.*]], align 8
 // CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RET]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* [[CAST]]
+// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 8 [[CAST]]
 // CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 8
@@ -1018,3 +1018,12 @@ typedef union {
 TEST(union_hom_fp_partial2)
 // X86-64-LABEL: take_union_hom_fp_partial2(i64, float)
 // ARM64-LABEL: take_union_hom_fp_partial2(i64, float)
+
+// At one point, we emitted lifetime.ends without a matching lifetime.start for
+// CoerceAndExpanded args. Since we're not performing optimizations, neither
+// intrinsic should be emitted.
+// CHECK-LABEL: define void @no_lifetime_markers
+void no_lifetime_markers() {
+  // CHECK-NOT: call void @llvm.lifetime.
+  take_int5(return_int5());
+}

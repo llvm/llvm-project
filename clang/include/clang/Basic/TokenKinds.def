@@ -249,8 +249,10 @@ PUNCTUATOR(caretcaret,            "^^")
 //   KEYMS    - This is a keyword if Microsoft extensions are enabled
 //   KEYNOMS18 - This is a keyword that must never be enabled under
 //               MSVC <= v18.
-//   KEYOPENCL  - This is a keyword in OpenCL
-//   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL
+//   KEYOPENCLC   - This is a keyword in OpenCL C
+//   KEYOPENCLCXX - This is a keyword in OpenCL C++
+//   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL C
+//                  nor in OpenCL C++.
 //   KEYALTIVEC - This is a keyword in AltiVec
 //   KEYZVECTOR - This is a keyword for the System z vector extensions,
 //                which are heavily based on AltiVec
@@ -260,6 +262,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
+//   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
 //
 KEYWORD(auto                        , KEYALL)
 KEYWORD(break                       , KEYALL)
@@ -380,8 +383,16 @@ KEYWORD(co_yield                    , KEYCOROUTINES)
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
+// C++ char8_t proposal
+KEYWORD(char8_t                     , CHAR8SUPPORT)
+
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
+
+// ISO/IEC JTC1 SC22 WG14 N1169 Extension
+KEYWORD(_Accum                      , KEYNOCXX)
+KEYWORD(_Fract                      , KEYNOCXX)
+KEYWORD(_Sat                        , KEYNOCXX)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
@@ -463,6 +474,7 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 TYPE_TRAIT_N(__is_trivially_constructible, IsTriviallyConstructible, KEYCXX)
 TYPE_TRAIT_1(__is_trivially_copyable, IsTriviallyCopyable, KEYCXX)
 TYPE_TRAIT_2(__is_trivially_assignable, IsTriviallyAssignable, KEYCXX)
+TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
 KEYWORD(__underlying_type           , KEYCXX)
 
 // Embarcadero Expression Traits
@@ -520,36 +532,36 @@ KEYWORD(__unaligned                 , KEYMS)
 KEYWORD(__super                     , KEYMS)
 
 // OpenCL address space qualifiers
-KEYWORD(__global                    , KEYOPENCL)
-KEYWORD(__local                     , KEYOPENCL)
-KEYWORD(__constant                  , KEYOPENCL)
-KEYWORD(__private                   , KEYOPENCL)
-KEYWORD(__generic                   , KEYOPENCL)
-ALIAS("global", __global            , KEYOPENCL)
-ALIAS("local", __local              , KEYOPENCL)
-ALIAS("constant", __constant        , KEYOPENCL)
-ALIAS("private", __private          , KEYOPENCL)
-ALIAS("generic", __generic          , KEYOPENCL)
+KEYWORD(__global                    , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__local                     , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__constant                  , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__private                   , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__generic                   , KEYOPENCLC | KEYOPENCLCXX)
+ALIAS("global", __global            , KEYOPENCLC)
+ALIAS("local", __local              , KEYOPENCLC)
+ALIAS("constant", __constant        , KEYOPENCLC)
+ALIAS("private", __private          , KEYOPENCLC)
+ALIAS("generic", __generic          , KEYOPENCLC)
 // OpenCL function qualifiers
-KEYWORD(__kernel                    , KEYOPENCL)
-ALIAS("kernel", __kernel            , KEYOPENCL)
+KEYWORD(__kernel                    , KEYOPENCLC | KEYOPENCLCXX)
+ALIAS("kernel", __kernel            , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL access qualifiers
-KEYWORD(__read_only                 , KEYOPENCL)
-KEYWORD(__write_only                , KEYOPENCL)
-KEYWORD(__read_write                , KEYOPENCL)
-ALIAS("read_only", __read_only      , KEYOPENCL)
-ALIAS("write_only", __write_only    , KEYOPENCL)
-ALIAS("read_write", __read_write    , KEYOPENCL)
+KEYWORD(__read_only                 , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__write_only                , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__read_write                , KEYOPENCLC | KEYOPENCLCXX)
+ALIAS("read_only", __read_only      , KEYOPENCLC | KEYOPENCLCXX)
+ALIAS("write_only", __write_only    , KEYOPENCLC | KEYOPENCLCXX)
+ALIAS("read_write", __read_write    , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL builtins
-KEYWORD(__builtin_astype            , KEYOPENCL)
-KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
-#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCL)
+KEYWORD(__builtin_astype            , KEYOPENCLC)
+KEYWORD(vec_step                    , KEYOPENCLC | KEYALTIVEC | KEYZVECTOR)
+#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC)
 #include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
 
-KEYWORD(pipe                        , KEYOPENCL)
+KEYWORD(pipe                        , KEYOPENCLC)
 
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)

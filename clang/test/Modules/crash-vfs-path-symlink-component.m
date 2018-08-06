@@ -8,7 +8,7 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t %t/sysroot
-// RUN: cp -a %S/Inputs/crash-recovery/usr %t/i/
+// RUN: cp -R %S/Inputs/crash-recovery/usr %t/i/
 // RUN: ln -s include/tcl-private %t/i/usr/x
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
