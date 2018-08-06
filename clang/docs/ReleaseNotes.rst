@@ -284,7 +284,8 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+- The new `MmapWriteExec` checker had been introduced to detect attempts to map pages
+both writable and executable.
 
 ...
 

@@ -144,6 +144,12 @@ For more information on leak detector in AddressSanitizer, see
 and can be enabled using ``ASAN_OPTIONS=detect_leaks=1`` on OS X;
 however, it is not yet supported on other platforms.
 
+Writable/Executable paging detection
+------------------------------------
+
+The W^X detection is disabled by default and can be enabled using
+``ASAN_OPTIONS=detect_write_exec=1``.
+
 Issue Suppression
 =================
 

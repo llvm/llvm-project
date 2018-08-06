@@ -165,6 +165,13 @@ to:
 #. Set environment variable `MSAN_OPTIONS=poison_in_dtor=1` before running
    the program.
 
+Writable/Executable paging detection
+====================================
+
+You can eable writable-executable page detection in MemorySanitizer by
+setting the environment variable `MSAN_OPTIONS=detect_write_exec=1` before
+running the program.
+
 Handling external code
 ======================
 
