@@ -14,11 +14,13 @@
 #ifndef LLVM_CLANG_AST_DECLARATIONNAME_H
 #define LLVM_CLANG_AST_DECLARATIONNAME_H
 
+#include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -39,9 +41,7 @@ class IdentifierInfo;
 class MultiKeywordSelector;
 enum OverloadedOperatorKind : int;
 struct PrintingPolicy;
-class QualType;
 class TemplateDecl;
-class Type;
 class TypeSourceInfo;
 class UsingDirectiveDecl;
 
@@ -343,33 +343,113 @@ inline bool operator>=(DeclarationName LHS, DeclarationName RHS) {
   return DeclarationName::compare(LHS, RHS) >= 0;
 }
 
+/// CXXSpecialName - Records the type associated with one of the
+/// "special" kinds of declaration names in C++, e.g., constructors,
+/// destructors, and conversion functions.
+class CXXSpecialName : public DeclarationNameExtra,
+                       public llvm::FoldingSetNode {
+public:
+  /// Type - The type associated with this declaration name.
+  QualType Type;
+
+  /// FETokenInfo - Extra information associated with this declaration
+  /// name that can be used by the front end. All bits are really needed
+  /// so it is not possible to stash something in the low order bits.
+  void *FETokenInfo;
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    ID.AddInteger(ExtraKindOrNumArgs);
+    ID.AddPointer(Type.getAsOpaquePtr());
+  }
+};
+
+/// Contains extra information for the name of a C++ deduction guide.
+class CXXDeductionGuideNameExtra : public DeclarationNameExtra,
+                                   public llvm::FoldingSetNode {
+public:
+  /// The template named by the deduction guide.
+  TemplateDecl *Template;
+
+  /// FETokenInfo - Extra information associated with this operator
+  /// name that can be used by the front end. All bits are really needed
+  /// so it is not possible to stash something in the low order bits.
+  void *FETokenInfo;
+
+  void Profile(llvm::FoldingSetNodeID &ID) { ID.AddPointer(Template); }
+};
+
+/// CXXOperatorIdName - Contains extra information for the name of an
+/// overloaded operator in C++, such as "operator+.
+class CXXOperatorIdName : public DeclarationNameExtra {
+public:
+  /// FETokenInfo - Extra information associated with this operator
+  /// name that can be used by the front end. All bits are really needed
+  /// so it is not possible to stash something in the low order bits.
+  void *FETokenInfo;
+};
+
+/// CXXLiteralOperatorName - Contains the actual identifier that makes up the
+/// name.
+///
+/// This identifier is stored here rather than directly in DeclarationName so as
+/// to allow Objective-C selectors, which are about a million times more common,
+/// to consume minimal memory.
+class CXXLiteralOperatorIdName : public DeclarationNameExtra,
+                                 public llvm::FoldingSetNode {
+public:
+  IdentifierInfo *ID;
+
+  /// FETokenInfo - Extra information associated with this operator
+  /// name that can be used by the front end. All bits are really needed
+  /// so it is not possible to stash something in the low order bits.
+  void *FETokenInfo;
+
+  void Profile(llvm::FoldingSetNodeID &FSID) { FSID.AddPointer(ID); }
+};
+
 /// DeclarationNameTable - Used to store and retrieve DeclarationName
 /// instances for the various kinds of declaration names, e.g., normal
 /// identifiers, C++ constructor names, etc. This class contains
 /// uniqued versions of each of the C++ special names, which can be
-/// retrieved using its member functions (e.g.,
-/// getCXXConstructorName).
+/// retrieved using its member functions (e.g., getCXXConstructorName).
 class DeclarationNameTable {
+  /// Used to allocate elements in the FoldingSets and
+  /// in the array of CXXOperatorIdName below.
   const ASTContext &Ctx;
 
-  // Actually a FoldingSet<CXXSpecialName> *
-  void *CXXSpecialNamesImpl;
+  /// Manage the uniqued CXXSpecialName, which contain extra information
+  /// for the "special" kinds of declaration names in C++ such as constructors,
+  /// destructors and conversion functions. getCXXConstructorName,
+  /// getCXXDestructorName, getCXXConversionFunctionName, and getCXXSpecialName
+  /// can be used to obtain a DeclarationName from the corresponding type.
+  llvm::FoldingSet<CXXSpecialName> CXXSpecialNames;
 
-  // Operator names
+  /// Manage the uniqued CXXOperatorIdName, which contain extra information
+  /// for the name of overloaded C++ operators. getCXXOperatorName
+  /// can be used to obtain a DeclarationName from the operator kind.
+  /// This points to the first element of an array of NUM_OVERLOADED_OPERATORS
+  /// CXXOperatorIdName which is constructed by DeclarationNameTable.
   CXXOperatorIdName *CXXOperatorNames;
 
-  // Actually a CXXOperatorIdName*
-  void *CXXLiteralOperatorNames;
+  /// Manage the uniqued CXXLiteralOperatorIdName, which contain extra
+  /// information for the name of C++ literal operators.
+  /// getCXXLiteralOperatorName can be used to obtain a DeclarationName
+  /// from the corresponding IdentifierInfo.
+  llvm::FoldingSet<CXXLiteralOperatorIdName> CXXLiteralOperatorNames;
 
-  // FoldingSet<CXXDeductionGuideNameExtra> *
-  void *CXXDeductionGuideNames;
+  /// Manage the uniqued CXXDeductionGuideNameExtra, which contain
+  /// extra information for the name of a C++ deduction guide.
+  /// getCXXDeductionGuideName can be used to obtain a DeclarationName
+  /// from the corresponding template declaration.
+  llvm::FoldingSet<CXXDeductionGuideNameExtra> CXXDeductionGuideNames;
 
 public:
   DeclarationNameTable(const ASTContext &C);
   DeclarationNameTable(const DeclarationNameTable &) = delete;
   DeclarationNameTable &operator=(const DeclarationNameTable &) = delete;
-
-  ~DeclarationNameTable();
+  DeclarationNameTable(DeclarationNameTable &&) = delete;
+  DeclarationNameTable &operator=(DeclarationNameTable &&) = delete;
+  ~DeclarationNameTable() = default;
 
   /// getIdentifier - Create a declaration name that is a simple
   /// identifier.

@@ -21,8 +21,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __FLOAT_H
-#define __FLOAT_H
+#ifndef __CLANG_FLOAT_H
+#define __CLANG_FLOAT_H
 
 /* If we're on MinGW, fall back to the system's float.h, which might have
  * additional definitions provided for Windows.
@@ -157,4 +157,4 @@
 #  define FLT16_TRUE_MIN    __FLT16_TRUE_MIN__
 #endif /* __STDC_WANT_IEC_60559_TYPES_EXT__ */
 
-#endif /* __FLOAT_H */
+#endif /* __CLANG_FLOAT_H */

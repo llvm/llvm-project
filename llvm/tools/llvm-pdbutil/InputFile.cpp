@@ -41,6 +41,10 @@ getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
 
   auto &Dbi = Err(File.getPDBDbiStream());
   const auto &Modules = Dbi.modules();
+  if (Index >= Modules.getModuleCount())
+    return make_error<RawError>(raw_error_code::index_out_of_bounds,
+                                "Invalid module index");
+
   auto Modi = Modules.getModuleDescriptor(Index);
 
   ModuleName = Modi.getModuleName();

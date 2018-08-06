@@ -367,10 +367,12 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   return false;
 }
 
+#ifndef NDEBUG
 static std::basic_ostream<char> &operator<<(std::basic_ostream<char> &R,
                                             const ore::NV &Arg) {
   return R << Arg.Val;
 }
+#endif
 
 template <class RemarkT>
 RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {

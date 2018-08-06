@@ -706,12 +706,6 @@ namespace std {
 #define _LIBCPP_TEMPLATE_VIS
 #define _LIBCPP_ENUM_VIS
 
-#if defined(_LIBCPP_COMPILER_MSVC)
-#  define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
-#else
-#  define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__ ((__always_inline__))
-#endif
-
 #endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #ifndef _LIBCPP_HIDDEN
@@ -805,16 +799,19 @@ namespace std {
 #  define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
 #endif
 
-// Just so we can migrate to _LIBCPP_HIDE_FROM_ABI gradually.
-#define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
-
-#ifndef _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
-#  if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#    define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__((__visibility__("default"), __always_inline__))
+#ifdef _LIBCPP_BUILDING_LIBRARY
+#  if _LIBCPP_ABI_VERSION > 1
+#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  else
-#    define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__((__always_inline__))
+#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 #  endif
+#else
+#  define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #endif
+
+// Just so we can migrate to the new macros gradually.
+#define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
+#define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 
 #ifndef _LIBCPP_PREFERRED_OVERLOAD
 #  if __has_attribute(__enable_if__)

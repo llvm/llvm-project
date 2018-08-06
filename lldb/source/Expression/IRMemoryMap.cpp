@@ -278,14 +278,10 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
   default:
     assert(0 && "We cannot reach this!");
   case eAllocationPolicyHostOnly:
-    m_data.SetByteSize(size);
-    memset(m_data.GetBytes(), 0, size);
-    break;
-  case eAllocationPolicyProcessOnly:
-    break;
   case eAllocationPolicyMirror:
     m_data.SetByteSize(size);
-    memset(m_data.GetBytes(), 0, size);
+    break;
+  case eAllocationPolicyProcessOnly:
     break;
   }
 }

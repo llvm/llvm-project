@@ -79,6 +79,7 @@ struct fltSemantics;
 
 namespace clang {
 
+class APFixedPoint;
 class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
@@ -92,6 +93,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
 class Expr;
+class FixedPointSemantics;
 class MangleContext;
 class MangleNumberingContext;
 class MaterializeTemporaryExpr;
@@ -1961,6 +1963,9 @@ public:
 
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
+  FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
+  APFixedPoint getFixedPointMax(QualType Ty) const;
+  APFixedPoint getFixedPointMin(QualType Ty) const;
 
   DeclarationNameInfo getNameForTemplate(TemplateName Name,
                                          SourceLocation NameLoc) const;

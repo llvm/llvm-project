@@ -965,12 +965,14 @@ static Value *valueHasFloatPrecision(Value *Val) {
 
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
-                               bool isBinary, bool doResultCheck = false) {
+                               bool isBinary, bool isPrecise = false) {
   if (!CI->getType()->isDoubleTy())
     return nullptr;
 
-  // Check if all the uses of the function are converted to float.
-  if (doResultCheck)
+  // If not all the uses of the function are converted to float, then bail out.
+  // This matters if the precision of the result is more important than the
+  // precision of the arguments.
+  if (isPrecise)
     for (User *U : CI->users()) {
       FPTruncInst *Cast = dyn_cast<FPTruncInst>(U);
       if (!Cast || !Cast->getType()->isFloatTy())
@@ -1022,14 +1024,14 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
 
 /// Shrink double -> float for unary functions.
 static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
-                                    bool doResultCheck = false) {
-  return optimizeDoubleFP(CI, B, false, doResultCheck);
+                                    bool isPrecise = false) {
+  return optimizeDoubleFP(CI, B, false, isPrecise);
 }
 
 /// Shrink double -> float for binary functions.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B,
-                                     bool doResultCheck = false) {
-  return optimizeDoubleFP(CI, B, true, doResultCheck);
+                                     bool isPrecise = false) {
+  return optimizeDoubleFP(CI, B, true, isPrecise);
 }
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
@@ -1150,13 +1152,15 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   Value *Shrunk = nullptr;
   bool Ignored;
 
-  if (UnsafeFPShrink &&
-      Name == TLI->getName(LibFunc_pow) && hasFloatVersion(Name))
-    Shrunk = optimizeUnaryDoubleFP(Pow, B, true);
-
   // Propagate the math semantics from the call to any created instructions.
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
+
+  // Shrink pow() to powf() if the arguments are single precision,
+  // unless the result is expected to be double precision.
+  if (UnsafeFPShrink &&
+      Name == TLI->getName(LibFunc_pow) && hasFloatVersion(Name))
+    Shrunk = optimizeBinaryDoubleFP(Pow, B, true);
 
   // Evaluate special cases related to the base.
 
@@ -1252,7 +1256,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     if (!ExpoA.isInteger() ||
         ExpoA.compare
             (APFloat(ExpoA.getSemantics(), 32.0)) == APFloat::cmpGreaterThan)
-      return nullptr;
+      return Shrunk;
 
     // We will memoize intermediate products of the Addition Chain.
     Value *InnerChain[33] = {nullptr};
@@ -1270,7 +1274,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     return FMul;
   }
 
-  return nullptr;
+  return Shrunk;
 }
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
