@@ -788,7 +788,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       // Discard any debug info related to the expressions that has changed (we
       // can leave debug infor related to the root, since the result of the
       // expression tree should be the same even after reassociation).
-      SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+      SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
       findDbgUsers(DbgUsers, ExpressionChanged);
       for (auto *DII : DbgUsers) {
         Value *Undef = UndefValue::get(ExpressionChanged->getType());

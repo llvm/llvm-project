@@ -1417,7 +1417,9 @@ LLVMTypeRef LLVMX86MMXType(void);
       macro(CallInst)                       \
         macro(IntrinsicInst)                \
           macro(DbgInfoIntrinsic)           \
-            macro(DbgDeclareInst)           \
+            macro(DbgVariableIntrinsic)     \
+              macro(DbgDeclareInst)         \
+            macro(DbgLabelInst)             \
           macro(MemIntrinsic)               \
             macro(MemCpyInst)               \
             macro(MemMoveInst)              \

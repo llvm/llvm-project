@@ -304,13 +304,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // Record all debug intrinsics preceding LoopEntryBranch to avoid duplication.
   using DbgIntrinsicHash =
       std::pair<std::pair<Value *, DILocalVariable *>, DIExpression *>;
-  auto makeHash = [](DbgInfoIntrinsic *D) -> DbgIntrinsicHash {
+  auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
     return {{D->getVariableLocation(), D->getVariable()}, D->getExpression()};
   };
   SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
   for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();
        I != E; ++I) {
-    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&*I))
+    if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&*I))
       DbgIntrinsics.insert(makeHash(DII));
     else
       break;
@@ -340,7 +340,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     // Avoid inserting the same intrinsic twice.
-    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(C))
+    if (auto *DII = dyn_cast<DbgVariableIntrinsic>(C))
       if (DbgIntrinsics.count(makeHash(DII))) {
         C->deleteValue();
         continue;

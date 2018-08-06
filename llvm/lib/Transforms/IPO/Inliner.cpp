@@ -388,11 +388,13 @@ RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   return R;
 }
 
+#ifndef NDEBUG
 static std::string inlineCostStr(const InlineCost &IC) {
   std::stringstream Remark;
   Remark << IC;
   return Remark.str();
 }
+#endif
 
 /// Return the cost only if the inliner should attempt to inline at the given
 /// CallSite. If we return the cost, we will emit an optimisation remark later

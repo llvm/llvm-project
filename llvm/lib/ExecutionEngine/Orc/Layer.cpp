@@ -9,7 +9,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace orc {
@@ -78,33 +77,20 @@ Error ObjectLayer::add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O) {
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
 BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L, VModuleKey K,
                                             std::unique_ptr<MemoryBuffer> O) {
-  auto &ES = L.getExecutionSession();
-  auto Obj = object::ObjectFile::createObjectFile(O->getMemBufferRef());
+  auto SymbolFlags =
+      getObjectSymbolFlags(L.getExecutionSession(), O->getMemBufferRef());
 
-  if (!Obj)
-    return Obj.takeError();
-
-  SymbolFlagsMap SymbolFlags;
-  for (auto &Sym : (*Obj)->symbols()) {
-    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
-         (Sym.getFlags() & object::BasicSymbolRef::SF_Exported)) {
-      auto InternedName =
-          ES.getSymbolStringPool().intern(cantFail(Sym.getName()));
-      auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
-      if (!SymFlags)
-        return SymFlags.takeError();
-      SymbolFlags[InternedName] = std::move(*SymFlags);
-    }
-  }
+  if (!SymbolFlags)
+    return SymbolFlags.takeError();
 
   return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
-      new BasicObjectLayerMaterializationUnit(std::move(SymbolFlags), L, K,
-                                              std::move(O)));
+      new BasicObjectLayerMaterializationUnit(L, K, std::move(O),
+                                              std::move(*SymbolFlags)));
 }
 
 BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
-    SymbolFlagsMap SymbolFlags, ObjectLayer &L, VModuleKey K,
-    std::unique_ptr<MemoryBuffer> O)
+    ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O,
+    SymbolFlagsMap SymbolFlags)
     : MaterializationUnit(std::move(SymbolFlags)), L(L), K(std::move(K)),
       O(std::move(O)) {}
 
@@ -117,6 +103,31 @@ void BasicObjectLayerMaterializationUnit::discard(const VSO &V,
                                                   SymbolStringPtr Name) {
   // FIXME: Support object file level discard. This could be done by building a
   //        filter to pass to the object layer along with the object itself.
+}
+
+Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
+                                              MemoryBufferRef ObjBuffer) {
+  auto Obj = object::ObjectFile::createObjectFile(ObjBuffer);
+
+  if (!Obj)
+    return Obj.takeError();
+
+  SymbolFlagsMap SymbolFlags;
+  for (auto &Sym : (*Obj)->symbols()) {
+    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
+        (Sym.getFlags() & object::BasicSymbolRef::SF_Exported)) {
+      auto Name = Sym.getName();
+      if (!Name)
+        return Name.takeError();
+      auto InternedName = ES.getSymbolStringPool().intern(*Name);
+      auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+      if (!SymFlags)
+        return SymFlags.takeError();
+      SymbolFlags[InternedName] = std::move(*SymFlags);
+    }
+  }
+
+  return SymbolFlags;
 }
 
 } // End namespace orc.

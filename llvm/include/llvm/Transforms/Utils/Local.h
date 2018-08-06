@@ -44,7 +44,7 @@ class AssumptionCache;
 class BasicBlock;
 class BranchInst;
 class CallInst;
-class DbgInfoIntrinsic;
+class DbgVariableIntrinsic;
 class DbgValueInst;
 class DIBuilder;
 class Function;
@@ -270,17 +270,17 @@ inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      LoadInst *LI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare or llvm.dbg.addr intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
+void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
@@ -294,13 +294,13 @@ void insertDebugValuesForPHIs(BasicBlock *BB,
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
-TinyPtrVector<DbgInfoIntrinsic *> FindDbgAddrUses(Value *V);
+TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
 
 /// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgInsts, Value *V);
+void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
 
 /// Replaces llvm.dbg.declare instruction when the address it
 /// describes is replaced with a new value. If Deref is true, an

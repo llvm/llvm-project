@@ -2144,7 +2144,7 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  TinyPtrVector<DbgInfoIntrinsic *> DIIs;
+  TinyPtrVector<DbgVariableIntrinsic *> DIIs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
     DIIs = FindDbgAddrUses(&MI);
@@ -2934,7 +2934,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def.
-  SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, I);
   for (auto *DII : DbgUsers) {
     if (DII->getParent() == SrcBlock) {
