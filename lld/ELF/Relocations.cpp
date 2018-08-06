@@ -466,7 +466,7 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
   SmallSet<SharedSymbol *, 4> Ret;
   for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
-        S.st_value != SS.Value)
+        S.getType() == STT_TLS || S.st_value != SS.Value)
       continue;
     StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);

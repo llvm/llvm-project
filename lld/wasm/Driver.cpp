@@ -484,6 +484,17 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_undefined))
     handleUndefined(Arg->getValue());
 
+  // Handle the `--export <sym>` options
+  // This works like --undefined but also exports the symbol if its found
+  for (auto *Arg : Args.filtered(OPT_export)) {
+    Symbol *Sym = handleUndefined(Arg->getValue());
+    if (Sym && Sym->isDefined())
+      Sym->ForceExport = true;
+    else if (!Config->AllowUndefined)
+      error(Twine("symbol exported via --export not found: ") +
+            Arg->getValue());
+  }
+
   if (!Config->Relocatable) {
     // Add synthetic dummies for weak undefined functions.
     handleWeakUndefines();
@@ -502,16 +513,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (errorCount())
     return;
-
-  // Handle --export.
-  for (auto *Arg : Args.filtered(OPT_export)) {
-    StringRef Name = Arg->getValue();
-    Symbol *Sym = Symtab->find(Name);
-    if (Sym && Sym->isDefined())
-      Sym->ForceExport = true;
-    else if (!Config->AllowUndefined)
-      error("symbol exported via --export not found: " + Name);
-  }
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.

@@ -312,6 +312,14 @@ public:
     }
   }
 
+  /// In the event this target uses the same number of fractional bits for its
+  /// unsigned types as it does with its signed counterparts, there will be
+  /// exactly one bit of padding.
+  /// Return true if unsigned fixed point types have padding for this target.
+  bool doUnsignedFixedPointTypesHavePadding() const {
+    return PaddingOnUnsignedFixedPoint;
+  }
+
   /// Return the width (in bits) of the specified integer type enum.
   ///
   /// For example, SignedInt -> getIntWidth().

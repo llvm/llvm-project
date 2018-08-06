@@ -9698,8 +9698,7 @@ bool FixedPointExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
         SmallString<64> S;
         FixedPointValueToString(S, Value,
-                                Info.Ctx.getTypeInfo(E->getType()).Width,
-                                /*Radix=*/10);
+                                Info.Ctx.getTypeInfo(E->getType()).Width);
         Info.CCEDiag(E, diag::note_constexpr_overflow) << S << E->getType();
         if (Info.noteUndefinedBehavior()) return false;
       }

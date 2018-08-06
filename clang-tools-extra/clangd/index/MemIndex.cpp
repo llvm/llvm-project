@@ -87,5 +87,11 @@ std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
   return std::move(MemIdx);
 }
 
+void MemIndex::findOccurrences(
+    const OccurrencesRequest &Req,
+    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
+  log("findOccurrences is not implemented.");
+}
+
 } // namespace clangd
 } // namespace clang
