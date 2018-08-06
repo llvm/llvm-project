@@ -31,9 +31,13 @@ public:
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
-  virtual void
+  void
   lookup(const LookupRequest &Req,
          llvm::function_ref<void(const Symbol &)> Callback) const override;
+
+  void findOccurrences(const OccurrencesRequest &Req,
+                       llvm::function_ref<void(const SymbolOccurrence &)>
+                           Callback) const override;
 
 private:
   std::shared_ptr<std::vector<const Symbol *>> Symbols;

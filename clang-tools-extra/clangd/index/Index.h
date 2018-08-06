@@ -287,6 +287,40 @@ private:
   std::vector<Symbol> Symbols;  // Sorted by SymbolID to allow lookup.
 };
 
+// Describes the kind of a symbol occurrence.
+//
+// This is a bitfield which can be combined from different kinds.
+enum class SymbolOccurrenceKind : uint8_t {
+  Unknown = 0,
+  Declaration = static_cast<uint8_t>(index::SymbolRole::Declaration),
+  Definition = static_cast<uint8_t>(index::SymbolRole::Definition),
+  Reference = static_cast<uint8_t>(index::SymbolRole::Reference),
+};
+inline SymbolOccurrenceKind operator|(SymbolOccurrenceKind L,
+                                      SymbolOccurrenceKind R) {
+  return static_cast<SymbolOccurrenceKind>(static_cast<uint8_t>(L) |
+                                           static_cast<uint8_t>(R));
+}
+inline SymbolOccurrenceKind &operator|=(SymbolOccurrenceKind &L,
+                                        SymbolOccurrenceKind R) {
+  return L = L | R;
+}
+inline SymbolOccurrenceKind operator&(SymbolOccurrenceKind A,
+                                      SymbolOccurrenceKind B) {
+  return static_cast<SymbolOccurrenceKind>(static_cast<uint8_t>(A) &
+                                           static_cast<uint8_t>(B));
+}
+
+// Represents a symbol occurrence in the source file. It could be a
+// declaration/definition/reference occurrence.
+//
+// WARNING: Location does not own the underlying data - Copies are shallow.
+struct SymbolOccurrence {
+  // The location of the occurrence.
+  SymbolLocation Location;
+  SymbolOccurrenceKind Kind = SymbolOccurrenceKind::Unknown;
+};
+
 struct FuzzyFindRequest {
   /// \brief A query string for the fuzzy find. This is matched against symbols'
   /// un-qualified identifiers and should not contain qualifiers like "::".
@@ -312,6 +346,11 @@ struct LookupRequest {
   llvm::DenseSet<SymbolID> IDs;
 };
 
+struct OccurrencesRequest {
+  llvm::DenseSet<SymbolID> IDs;
+  SymbolOccurrenceKind Filter;
+};
+
 /// \brief Interface for symbol indexes that can be used for searching or
 /// matching symbols among a set of symbols based on names or unique IDs.
 class SymbolIndex {
@@ -334,8 +373,15 @@ public:
   lookup(const LookupRequest &Req,
          llvm::function_ref<void(const Symbol &)> Callback) const = 0;
 
-  // FIXME: add interfaces for more index use cases:
-  //  - getAllOccurrences(SymbolID);
+  /// CrossReference finds all symbol occurrences (e.g. references,
+  /// declarations, definitions) and applies \p Callback on each result.
+  ///
+  /// Resutls are returned in arbitrary order.
+  ///
+  /// The returned result must be deep-copied if it's used outside Callback.
+  virtual void findOccurrences(
+      const OccurrencesRequest &Req,
+      llvm::function_ref<void(const SymbolOccurrence &)> Callback) const = 0;
 };
 
 } // namespace clangd

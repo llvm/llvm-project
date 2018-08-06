@@ -7,6 +7,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "Merge.h"
+#include "../Logger.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 namespace clang {
@@ -72,6 +73,12 @@ class MergedIndex : public SymbolIndex {
     for (const auto &ID : RemainingIDs)
       if (const Symbol *Sym = B.find(ID))
         Callback(*Sym);
+  }
+
+  void findOccurrences(const OccurrencesRequest &Req,
+                       llvm::function_ref<void(const SymbolOccurrence &)>
+                           Callback) const override {
+    log("findOccurrences is not implemented.");
   }
 
 private:
