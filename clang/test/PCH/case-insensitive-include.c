@@ -13,7 +13,7 @@
 // RUN: touch -r %t-dir/case-insensitive-include.h %t.copy
 // RUN: mv %t.copy %t-dir/case-insensitive-include.h
 
-// RUN: %clang_cc1 -fsyntax-only %s -include-pch %t.pch -I %t-dir -verify
+// RUN: %clang_cc1 -Wno-nonportable-include-path -fsyntax-only %s -include-pch %t.pch -I %t-dir -verify
 
 // expected-no-diagnostics
 
