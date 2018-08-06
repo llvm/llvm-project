@@ -4573,7 +4573,7 @@ Example HSA Source Code (-mattr=+code-object-v3)
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
-.. code-block:: nasm
+.. code-block:: none
 
   .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
 

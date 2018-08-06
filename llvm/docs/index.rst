@@ -79,6 +79,7 @@ representation.
    yaml2obj
    HowToSubmitABug
    SphinxQuickstartTemplate
+   MarkdownQuickstartTemplate
    Phabricator
    TestingGuide
    tutorial/index
@@ -292,6 +293,7 @@ For API clients and LLVM developers.
    XRayFDRFormat
    PDB/index
    CFIVerify
+   SpeculativeLoadHardening
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -424,6 +426,9 @@ For API clients and LLVM developers.
 
 :doc:`CFIVerify`
   A description of the verification tool for Control Flow Integrity.
+
+:doc:`SpeculativeLoadHardening`
+  A description of the Speculative Load Hardening mitigation for Spectre v1.
 
 Development Process Documentation
 =================================

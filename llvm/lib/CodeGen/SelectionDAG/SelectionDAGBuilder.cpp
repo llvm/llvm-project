@@ -5176,7 +5176,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
-    const DbgInfoIntrinsic &DI = cast<DbgInfoIntrinsic>(I);
+    const auto &DI = cast<DbgVariableIntrinsic>(I);
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);

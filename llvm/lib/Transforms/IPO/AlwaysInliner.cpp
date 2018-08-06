@@ -150,7 +150,7 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
   // declarations.
   if (Callee && !Callee->isDeclaration() &&
       CS.hasFnAttr(Attribute::AlwaysInline) && isInlineViable(*Callee))
-    return InlineCost::getAlways();
+    return InlineCost::getAlways("always inliner");
 
-  return InlineCost::getNever();
+  return InlineCost::getNever("always inliner");
 }
