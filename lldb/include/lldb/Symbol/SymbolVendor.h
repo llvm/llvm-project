@@ -22,14 +22,13 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-// The symbol vendor class is designed to abstract the process of
-// searching for debug information for a given module. Platforms can
-// subclass this class and provide extra ways to find debug information.
-// Examples would be a subclass that would allow for locating a stand
-// alone debug file, parsing debug maps, or runtime data in the object
-// files. A symbol vendor can use multiple sources (SymbolFile
-// objects) to provide the information and only parse as deep as needed
-// in order to provide the information that is requested.
+// The symbol vendor class is designed to abstract the process of searching for
+// debug information for a given module. Platforms can subclass this class and
+// provide extra ways to find debug information. Examples would be a subclass
+// that would allow for locating a stand alone debug file, parsing debug maps,
+// or runtime data in the object files. A symbol vendor can use multiple
+// sources (SymbolFile objects) to provide the information and only parse as
+// deep as needed in order to provide the information that is requested.
 //----------------------------------------------------------------------
 class SymbolVendor : public ModuleChild, public PluginInterface {
 public:
@@ -82,11 +81,11 @@ public:
 
   virtual size_t FindGlobalVariables(const ConstString &name,
                                      const CompilerDeclContext *parent_decl_ctx,
-                                     bool append, size_t max_matches,
+                                     size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindGlobalVariables(const RegularExpression &regex,
-                                     bool append, size_t max_matches,
+                                     size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindFunctions(const ConstString &name,

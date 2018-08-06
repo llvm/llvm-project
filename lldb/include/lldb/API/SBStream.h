@@ -26,13 +26,12 @@ public:
 
   bool IsValid() const;
 
-  // If this stream is not redirected to a file, it will maintain a local
-  // cache for the stream data which can be accessed using this accessor.
+  // If this stream is not redirected to a file, it will maintain a local cache
+  // for the stream data which can be accessed using this accessor.
   const char *GetData();
 
-  // If this stream is not redirected to a file, it will maintain a local
-  // cache for the stream output whose length can be accessed using this
-  // accessor.
+  // If this stream is not redirected to a file, it will maintain a local cache
+  // for the stream output whose length can be accessed using this accessor.
   size_t GetSize();
 
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
@@ -44,8 +43,8 @@ public:
   void RedirectToFileDescriptor(int fd, bool transfer_fh_ownership);
 
   // If the stream is redirected to a file, forget about the file and if
-  // ownership of the file was transferred to this object, close the file.
-  // If the stream is backed by a local cache, clear this cache.
+  // ownership of the file was transferred to this object, close the file. If
+  // the stream is backed by a local cache, clear this cache.
   void Clear();
 
 protected:

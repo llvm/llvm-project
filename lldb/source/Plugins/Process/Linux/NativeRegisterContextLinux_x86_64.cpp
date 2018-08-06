@@ -329,9 +329,9 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
     break;
   }
 
-  // Initialize m_iovec to point to the buffer and buffer size
-  // using the conventions of Berkeley style UIO structures, as required
-  // by PTRACE extensions.
+  // Initialize m_iovec to point to the buffer and buffer size using the
+  // conventions of Berkeley style UIO structures, as required by PTRACE
+  // extensions.
   m_iovec.iov_base = &m_fpr;
   m_iovec.iov_len = sizeof(m_fpr);
 
@@ -420,14 +420,14 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
     error = ReadRegisterRaw(full_reg, reg_value);
 
     if (error.Success()) {
-      // If our read was not aligned (for ah,bh,ch,dh), shift our returned value
-      // one byte to the right.
+      // If our read was not aligned (for ah,bh,ch,dh), shift our returned
+      // value one byte to the right.
       if (is_subreg && (reg_info->byte_offset & 0x1))
         reg_value.SetUInt64(reg_value.GetAsUInt64() >> 8);
 
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (reg_value.GetByteSize() > reg_info->byte_size)
         reg_value.SetType(reg_info);
     }
@@ -448,7 +448,8 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
         reg_value.SetBytes(m_fpr.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
                            reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
-        // Concatenate ymm using the register halves in xmm.bytes and ymmh.bytes
+        // Concatenate ymm using the register halves in xmm.bytes and
+        // ymmh.bytes
         if (CopyXSTATEtoYMM(reg, byte_order))
           reg_value.SetBytes(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
                              reg_info->byte_size, byte_order);
@@ -492,8 +493,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   // Byte offsets of all registers are calculated wrt 'UserArea' structure.
   // However, ReadFPR() reads fpu registers {using ptrace(PTRACE_GETFPREGS,..)}
   // and stores them in 'm_fpr' (of type FPR structure). To extract values of
-  // fpu
-  // registers, m_fpr should be read at byte offsets calculated wrt to FPR
+  // fpu registers, m_fpr should be read at byte offsets calculated wrt to FPR
   // structure.
 
   // Since, FPR structure is also one of the member of UserArea structure.
@@ -599,11 +599,10 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
       // Get pointer to m_fpr.fxsave variable and set the data to it.
 
       // Byte offsets of all registers are calculated wrt 'UserArea' structure.
-      // However, WriteFPR() takes m_fpr (of type FPR structure) and writes only
-      // fpu
-      // registers using ptrace(PTRACE_SETFPREGS,..) API. Hence fpu registers
-      // should
-      // be written in m_fpr at byte offsets calculated wrt FPR structure.
+      // However, WriteFPR() takes m_fpr (of type FPR structure) and writes
+      // only fpu registers using ptrace(PTRACE_SETFPREGS,..) API. Hence fpu
+      // registers should be written in m_fpr at byte offsets calculated wrt
+      // FPR structure.
 
       // Since, FPR structure is also one of the member of UserArea structure.
       // byte_offset(fpu wrt FPR) = byte_offset(fpu wrt UserArea) -
@@ -1093,8 +1092,7 @@ Status NativeRegisterContextLinux_x86_64::SetHardwareWatchpointWithIndex(
   if (error.Fail())
     return error;
 
-  // for watchpoints 0, 1, 2, or 3, respectively,
-  // set bits 1, 3, 5, or 7
+  // for watchpoints 0, 1, 2, or 3, respectively, set bits 1, 3, 5, or 7
   uint64_t enable_bit = 1 << (2 * wp_index);
 
   // set bits 16-17, 20-21, 24-25, or 28-29
@@ -1132,8 +1130,8 @@ bool NativeRegisterContextLinux_x86_64::ClearHardwareWatchpoint(
 
   RegisterValue reg_value;
 
-  // for watchpoints 0, 1, 2, or 3, respectively,
-  // clear bits 0, 1, 2, or 3 of the debug status register (DR6)
+  // for watchpoints 0, 1, 2, or 3, respectively, clear bits 0, 1, 2, or 3 of
+  // the debug status register (DR6)
   Status error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
   if (error.Fail())
     return false;
@@ -1143,9 +1141,9 @@ bool NativeRegisterContextLinux_x86_64::ClearHardwareWatchpoint(
   if (error.Fail())
     return false;
 
-  // for watchpoints 0, 1, 2, or 3, respectively,
-  // clear bits {0-1,16-19}, {2-3,20-23}, {4-5,24-27}, or {6-7,28-31}
-  // of the debug control register (DR7)
+  // for watchpoints 0, 1, 2, or 3, respectively, clear bits {0-1,16-19},
+  // {2-3,20-23}, {4-5,24-27}, or {6-7,28-31} of the debug control register
+  // (DR7)
   error = ReadRegisterRaw(m_reg_info.first_dr + 7, reg_value);
   if (error.Fail())
     return false;

@@ -31,8 +31,8 @@ class ClangExpressionParser;
 
 //----------------------------------------------------------------------
 /// @class ClangFunctionCaller ClangFunctionCaller.h
-/// "lldb/Expression/ClangFunctionCaller.h"
-/// @brief Encapsulates a function that can be called.
+/// "lldb/Expression/ClangFunctionCaller.h" Encapsulates a function that can
+/// be called.
 ///
 /// A given ClangFunctionCaller object can handle a single function signature.
 /// Once constructed, it can set up any number of concurrent calls to
@@ -56,8 +56,8 @@ class ClangExpressionParser;
 /// If you need to call the function on the thread plan stack, you can also
 /// call InsertFunction() followed by GetThreadPlanToCallFunction().
 ///
-/// Any of the methods that take arg_addr_ptr or arg_addr_ref can be passed
-/// a pointer set to LLDB_INVALID_ADDRESS and new structure will be allocated
+/// Any of the methods that take arg_addr_ptr or arg_addr_ref can be passed a
+/// pointer set to LLDB_INVALID_ADDRESS and new structure will be allocated
 /// and its address returned in that variable.
 ///
 /// Any of the methods that take arg_addr_ptr can be passed NULL, and the
@@ -79,8 +79,8 @@ class ClangFunctionCaller : public FunctionCaller {
     ClangExpressionDeclMap *DeclMap() override { return NULL; }
 
     //------------------------------------------------------------------
-    /// Return the object that the parser should allow to access ASTs.
-    /// May be NULL if the ASTs do not need to be transformed.
+    /// Return the object that the parser should allow to access ASTs. May be
+    /// NULL if the ASTs do not need to be transformed.
     ///
     /// @param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send

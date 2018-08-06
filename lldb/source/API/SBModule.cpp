@@ -145,7 +145,7 @@ const uint8_t *SBModule::GetUUIDBytes() const {
   const uint8_t *uuid_bytes = NULL;
   ModuleSP module_sp(GetSP());
   if (module_sp)
-    uuid_bytes = (const uint8_t *)module_sp->GetUUID().GetBytes();
+    uuid_bytes = module_sp->GetUUID().GetBytes().data();
 
   if (log) {
     if (uuid_bytes) {
@@ -166,11 +166,10 @@ const char *SBModule::GetUUIDString() const {
   const char *uuid_cstr = NULL;
   ModuleSP module_sp(GetSP());
   if (module_sp) {
-    // We are going to return a "const char *" value through the public
-    // API, so we need to constify it so it gets added permanently the
-    // string pool and then we don't need to worry about the lifetime of the
-    // string as it will never go away once it has been put into the ConstString
-    // string pool
+    // We are going to return a "const char *" value through the public API, so
+    // we need to constify it so it gets added permanently the string pool and
+    // then we don't need to worry about the lifetime of the string as it will
+    // never go away once it has been put into the ConstString string pool
     uuid_cstr = ConstString(module_sp->GetUUID().GetAsString()).GetCString();
   }
 
@@ -253,6 +252,17 @@ SBCompileUnit SBModule::GetCompileUnitAtIndex(uint32_t index) {
     sb_cu.reset(cu_sp.get());
   }
   return sb_cu;
+}
+
+SBSymbolContextList
+SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
+  SBSymbolContextList sb_sc_list;
+  const ModuleSP module_sp(GetSP());
+  if (sb_file_spec.IsValid() && module_sp) {
+    const bool append = true;
+    module_sp->FindCompileUnits(*sb_file_spec, append, *sb_sc_list);
+  }
+  return sb_sc_list;
 }
 
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
@@ -369,7 +379,7 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
   if (name && module_sp) {
     VariableList variable_list;
     const uint32_t match_count = module_sp->FindGlobalVariables(
-        ConstString(name), NULL, false, max_matches, variable_list);
+        ConstString(name), NULL, max_matches, variable_list);
 
     if (match_count > 0) {
       for (uint32_t i = 0; i < match_count; ++i) {
@@ -516,9 +526,9 @@ const char *SBModule::GetTriple() {
   ModuleSP module_sp(GetSP());
   if (module_sp) {
     std::string triple(module_sp->GetArchitecture().GetTriple().str());
-    // Unique the string so we don't run into ownership issues since
-    // the const strings put the string into the string pool once and
-    // the strings never comes out
+    // Unique the string so we don't run into ownership issues since the const
+    // strings put the string into the string pool once and the strings never
+    // comes out
     ConstString const_triple(triple.c_str());
     return const_triple.GetCString();
   }
@@ -533,16 +543,29 @@ uint32_t SBModule::GetAddressByteSize() {
 }
 
 uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
-  ModuleSP module_sp(GetSP());
-  if (module_sp)
-    return module_sp->GetVersion(versions, num_versions);
-  else {
-    if (versions && num_versions) {
-      for (uint32_t i = 0; i < num_versions; ++i)
-        versions[i] = UINT32_MAX;
-    }
-    return 0;
-  }
+  llvm::VersionTuple version;
+  if (ModuleSP module_sp = GetSP())
+    version = module_sp->GetVersion();
+  uint32_t result = 0;
+  if (!version.empty())
+    ++result;
+  if (version.getMinor())
+    ++result;
+  if(version.getSubminor())
+    ++result;
+
+  if (!versions)
+    return result;
+
+  if (num_versions > 0)
+    versions[0] = version.empty() ? UINT32_MAX : version.getMajor();
+  if (num_versions > 1)
+    versions[1] = version.getMinor().getValueOr(UINT32_MAX);
+  if (num_versions > 2)
+    versions[2] = version.getSubminor().getValueOr(UINT32_MAX);
+  for (uint32_t i = 3; i < num_versions; ++i)
+    versions[i] = UINT32_MAX;
+  return result;
 }
 
 lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {

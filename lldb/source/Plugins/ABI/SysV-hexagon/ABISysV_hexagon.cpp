@@ -1214,8 +1214,8 @@ ValueObjectSP ABISysV_hexagon::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-// called when we are on the first instruction of a new function
-// for hexagon the return address is in RA (R31)
+// called when we are on the first instruction of a new function for hexagon
+// the return address is in RA (R31)
 bool ABISysV_hexagon::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindGeneric);

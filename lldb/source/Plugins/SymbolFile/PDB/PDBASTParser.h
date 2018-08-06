@@ -19,20 +19,20 @@ class CharUnits;
 class CXXRecordDecl;
 class FieldDecl;
 class RecordDecl;
-}
+} // namespace clang
 
 namespace lldb_private {
 class ClangASTContext;
 class CompilerType;
-}
+} // namespace lldb_private
 
 namespace llvm {
 namespace pdb {
 class PDBSymbol;
 class PDBSymbolData;
 class PDBSymbolTypeBuiltin;
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 class PDBASTParser {
 public:
@@ -49,4 +49,4 @@ private:
   lldb_private::ClangASTImporter m_ast_importer;
 };
 
-#endif // SymbolFileDWARF_DWARFASTParserClang_h_
+#endif // LLDB_PLUGINS_SYMBOLFILE_PDB_PDBASTPARSER_H

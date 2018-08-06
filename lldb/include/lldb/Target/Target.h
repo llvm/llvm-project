@@ -32,7 +32,6 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
@@ -45,6 +44,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
@@ -113,9 +113,6 @@ public:
 
   const char *GetDisassemblyFlavor() const;
 
-  //    void
-  //    SetDisassemblyFlavor(const char *flavor);
-
   InlineStrategy GetInlineStrategy() const;
 
   llvm::StringRef GetArg0() const;
@@ -126,9 +123,8 @@ public:
 
   void SetRunArguments(const Args &args);
 
-  size_t GetEnvironmentAsArgs(Args &env) const;
-
-  void SetEnvironmentFromArgs(const Args &env);
+  Environment GetEnvironment() const;
+  void SetEnvironment(Environment env);
 
   bool GetSkipPrologue() const;
 
@@ -256,8 +252,8 @@ class EvaluateExpressionOptions {
 public:
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
-// with zeros.
-// Confirmed that MSVC is *not* zero-initializing, it's just a bogus warning.
+// with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
+// bogus warning.
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4268)
@@ -382,8 +378,7 @@ public:
   }
 
   // Allows the expression contents to be remapped to point to the specified
-  // file and line
-  // using #line directives.
+  // file and line using #line directives.
   void SetPoundLine(const char *path, uint32_t line) const {
     if (path && path[0]) {
       m_pound_line_file = path;
@@ -436,8 +431,8 @@ private:
                                       // each expression type (normal, expr,
                                       // function, etc)
   void *m_cancel_callback_baton = nullptr;
-  // If m_pound_line_file is not empty and m_pound_line_line is non-zero,
-  // use #line %u "%s" before the expression content to remap where the source
+  // If m_pound_line_file is not empty and m_pound_line_line is non-zero, use
+  // #line %u "%s" before the expression content to remap where the source
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line;
@@ -525,9 +520,6 @@ public:
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
-  //    void
-  //    UpdateInstanceName ();
-
   lldb::ModuleSP GetSharedModule(const ModuleSpec &module_spec,
                                  Status *error_ptr = nullptr);
 
@@ -598,9 +590,8 @@ public:
                                       LazyBool move_to_nearest_code);
 
   // Use this to create breakpoint that matches regex against the source lines
-  // in files given in source_file_list:
-  // If function_names is non-empty, also filter by function after the matches
-  // are made.
+  // in files given in source_file_list: If function_names is non-empty, also
+  // filter by function after the matches are made.
   lldb::BreakpointSP CreateSourceRegexBreakpoint(
       const FileSpecList *containingModules,
       const FileSpecList *source_file_list,
@@ -624,8 +615,8 @@ public:
 
   // Use this to create a function breakpoint by regexp in
   // containingModule/containingSourceFiles, or all modules if it is nullptr
-  // When "skip_prologue is set to eLazyBoolCalculate, we use the current target
-  // setting, else we use the values passed in
+  // When "skip_prologue is set to eLazyBoolCalculate, we use the current
+  // target setting, else we use the values passed in
   lldb::BreakpointSP CreateFuncRegexBreakpoint(
       const FileSpecList *containingModules,
       const FileSpecList *containingSourceFiles, RegularExpression &func_regexp,
@@ -633,10 +624,10 @@ public:
       bool internal, bool request_hardware);
 
   // Use this to create a function breakpoint by name in containingModule, or
-  // all modules if it is nullptr
-  // When "skip_prologue is set to eLazyBoolCalculate, we use the current target
-  // setting, else we use the values passed in.
-  // func_name_type_mask is or'ed values from the FunctionNameType enum.
+  // all modules if it is nullptr When "skip_prologue is set to
+  // eLazyBoolCalculate, we use the current target setting, else we use the
+  // values passed in. func_name_type_mask is or'ed values from the
+  // FunctionNameType enum.
   lldb::BreakpointSP CreateBreakpoint(const FileSpecList *containingModules,
                                       const FileSpecList *containingSourceFiles,
                                       const char *func_name,
@@ -653,11 +644,10 @@ public:
                             Status *additional_args_error = nullptr);
 
   // This is the same as the func_name breakpoint except that you can specify a
-  // vector of names.  This is cheaper
-  // than a regular expression breakpoint in the case where you just want to set
-  // a breakpoint on a set of names
-  // you already know.
-  // func_name_type_mask is or'ed values from the FunctionNameType enum.
+  // vector of names.  This is cheaper than a regular expression breakpoint in
+  // the case where you just want to set a breakpoint on a set of names you
+  // already know. func_name_type_mask is or'ed values from the
+  // FunctionNameType enum.
   lldb::BreakpointSP
   CreateBreakpoint(const FileSpecList *containingModules,
                    const FileSpecList *containingSourceFiles,
@@ -776,14 +766,14 @@ public:
   /// Take \a load_addr and potentially add any address bits that are
   /// needed to make the address callable. For ARM this can set bit
   /// zero (if it already isn't) if \a load_addr is a thumb function.
-  /// If \a addr_class is set to eAddressClassInvalid, then the address
+  /// If \a addr_class is set to AddressClass::eInvalid, then the address
   /// adjustment will always happen. If it is set to an address class
   /// that doesn't have code in it, LLDB_INVALID_ADDRESS will be
   /// returned.
   //------------------------------------------------------------------
   lldb::addr_t GetCallableLoadAddress(
       lldb::addr_t load_addr,
-      lldb::AddressClass addr_class = lldb::eAddressClassInvalid) const;
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
   //------------------------------------------------------------------
   /// Get \a load_addr as an opcode for this target.
@@ -792,22 +782,20 @@ public:
   /// needed to make the address point to an opcode. For ARM this can
   /// clear bit zero (if it already isn't) if \a load_addr is a
   /// thumb function and load_addr is in code.
-  /// If \a addr_class is set to eAddressClassInvalid, then the address
+  /// If \a addr_class is set to AddressClass::eInvalid, then the address
   /// adjustment will always happen. If it is set to an address class
   /// that doesn't have code in it, LLDB_INVALID_ADDRESS will be
   /// returned.
   //------------------------------------------------------------------
   lldb::addr_t GetOpcodeLoadAddress(
       lldb::addr_t load_addr,
-      lldb::AddressClass addr_class = lldb::eAddressClassInvalid) const;
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
-  // Get load_addr as breakable load address for this target.
-  // Take a addr and check if for any reason there is a better address than this
-  // to put a breakpoint on.
-  // If there is then return that address.
-  // For MIPS, if instruction at addr is a delay slot instruction then this
-  // method will find the address of its
-  // previous instruction and return that address.
+  // Get load_addr as breakable load address for this target. Take a addr and
+  // check if for any reason there is a better address than this to put a
+  // breakpoint on. If there is then return that address. For MIPS, if
+  // instruction at addr is a delay slot instruction then this method will find
+  // the address of its previous instruction and return that address.
   lldb::addr_t GetBreakableLoadAddress(lldb::addr_t addr);
 
   void ModulesDidLoad(ModuleList &module_list);
@@ -984,7 +972,7 @@ public:
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
-  Architecture *GetArchitecturePlugin() { return m_arch.GetPlugin(); }
+  Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
   Debugger &GetDebugger() { return m_debugger; }
 
@@ -992,12 +980,12 @@ public:
                                  Status &error);
 
   // Reading memory through the target allows us to skip going to the process
-  // for reading memory if possible and it allows us to try and read from
-  // any constant sections in our object files on disk. If you always want
-  // live program memory, read straight from the process. If you possibly
-  // want to read from const sections in object files, read from the target.
-  // This version of ReadMemory will try and read memory from the process
-  // if the process is alive. The order is:
+  // for reading memory if possible and it allows us to try and read from any
+  // constant sections in our object files on disk. If you always want live
+  // program memory, read straight from the process. If you possibly want to
+  // read from const sections in object files, read from the target. This
+  // version of ReadMemory will try and read memory from the process if the
+  // process is alive. The order is:
   // 1 - if (prefer_file_cache == true) then read from object file cache
   // 2 - if there is a valid process, try and read from its memory
   // 3 - if (prefer_file_cache == false) then read from object file cache
@@ -1027,13 +1015,6 @@ public:
   SectionLoadList &GetSectionLoadList() {
     return m_section_load_history.GetCurrentSectionLoadList();
   }
-
-  //    const SectionLoadList&
-  //    GetSectionLoadList() const
-  //    {
-  //        return const_cast<SectionLoadHistory
-  //        *>(&m_section_load_history)->GetCurrentSectionLoadList();
-  //    }
 
   static Target *GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                        const SymbolContext *sc_ptr);
@@ -1100,9 +1081,8 @@ public:
 
   const TypeSystemMap &GetTypeSystemMap();
 
-  // Creates a UserExpression for the given language, the rest of the parameters
-  // have the
-  // same meaning as for the UserExpression constructor.
+  // Creates a UserExpression for the given language, the rest of the
+  // parameters have the same meaning as for the UserExpression constructor.
   // Returns a new-ed object which the caller owns.
 
   UserExpression *GetUserExpressionForLanguage(
@@ -1111,10 +1091,9 @@ public:
       Expression::ResultType desired_type,
       const EvaluateExpressionOptions &options, Status &error);
 
-  // Creates a FunctionCaller for the given language, the rest of the parameters
-  // have the
-  // same meaning as for the FunctionCaller constructor.  Since a FunctionCaller
-  // can't be
+  // Creates a FunctionCaller for the given language, the rest of the
+  // parameters have the same meaning as for the FunctionCaller constructor.
+  // Since a FunctionCaller can't be
   // IR Interpreted, it makes no sense to call this with an
   // ExecutionContextScope that lacks
   // a Process.
@@ -1127,8 +1106,7 @@ public:
                                                const char *name, Status &error);
 
   // Creates a UtilityFunction for the given language, the rest of the
-  // parameters have the
-  // same meaning as for the UtilityFunction constructor.
+  // parameters have the same meaning as for the UtilityFunction constructor.
   // Returns a new-ed object which the caller owns.
 
   UtilityFunction *GetUtilityFunctionForLanguage(const char *expr,
@@ -1181,8 +1159,8 @@ private:
 public:
   
   //----------------------------------------------------------------------
-  // Install any files through the platform that need be to installed
-  // prior to launching or attaching.
+  // Install any files through the platform that need be to installed prior to
+  // launching or attaching.
   //----------------------------------------------------------------------
   Status Install(ProcessLaunchInfo *launch_info);
 
@@ -1207,10 +1185,10 @@ public:
   void ClearAllLoadedSections();
 
   // Since expressions results can persist beyond the lifetime of a process,
-  // and the const expression results are available after a process is gone,
-  // we provide a way for expressions to be evaluated from the Target itself.
-  // If an expression is going to be run, then it should have a frame filled
-  // in in th execution context.
+  // and the const expression results are available after a process is gone, we
+  // provide a way for expressions to be evaluated from the Target itself. If
+  // an expression is going to be run, then it should have a frame filled in in
+  // th execution context.
   lldb::ExpressionResults EvaluateExpression(
       llvm::StringRef expression, ExecutionContextScope *exe_scope,
       lldb::ValueObjectSP &result_valobj_sp,
@@ -1277,17 +1255,15 @@ public:
     bool m_active;
 
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
-    // and fill it with commands,
-    // and SetSpecifier to set the specifier shared pointer (can be null, that
-    // will match anything.)
+    // and fill it with commands, and SetSpecifier to set the specifier shared
+    // pointer (can be null, that will match anything.)
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
     friend class Target;
   };
   typedef std::shared_ptr<StopHook> StopHookSP;
 
-  // Add an empty stop hook to the Target's stop hook list, and returns a shared
-  // pointer to it in new_hook.
-  // Returns the id of the new hook.
+  // Add an empty stop hook to the Target's stop hook list, and returns a
+  // shared pointer to it in new_hook. Returns the id of the new hook.
   StopHookSP CreateStopHook();
 
   void RunStopHooks();
@@ -1302,9 +1278,6 @@ public:
 
   bool GetSuppressStopHooks() { return m_suppress_stop_hooks; }
 
-  //    StopHookSP &
-  //    GetStopHookByIndex (size_t index);
-  //
   bool RemoveStopHookByID(lldb::user_id_t uid);
 
   void RemoveAllStopHooks();
@@ -1413,9 +1386,9 @@ protected:
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;
   lldb::WatchpointSP m_last_created_watchpoint;
-  // We want to tightly control the process destruction process so
-  // we can correctly tear down everything that we need to, so the only
-  // class that knows about the process lifespan is this target class.
+  // We want to tightly control the process destruction process so we can
+  // correctly tear down everything that we need to, so the only class that
+  // knows about the process lifespan is this target class.
   lldb::ProcessSP m_process_sp;
   lldb::SearchFilterSP m_search_filter_sp;
   PathMappingList m_image_search_paths;

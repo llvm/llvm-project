@@ -6,7 +6,7 @@
 // RUN: %lldb --repl --repl-language c++ 2>&1 | FileCheck %s --check-prefix=CPP
 // CPP: error: couldn't find a REPL for c++
 
-// RUN: %lldb --repl --repl-language patatino 2>&1 | FileCheck %s \
+// RUN: not %lldb --repl --repl-language patatino 2>&1 | FileCheck %s \
 // RUN:  --check-prefix=INVALID
 // INVALID: error: Unrecognized language name: "patatino"
 

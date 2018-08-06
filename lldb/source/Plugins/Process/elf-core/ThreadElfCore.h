@@ -146,8 +146,6 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
-  void ClearStackFrames() override;
-
   static bool ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
 
   const char *GetName() override {

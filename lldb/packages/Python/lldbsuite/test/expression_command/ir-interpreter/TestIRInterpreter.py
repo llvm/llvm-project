@@ -17,6 +17,7 @@ from lldbsuite.test import lldbutil
 class IRInterpreterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -85,3 +86,10 @@ class IRInterpreterTestCase(TestBase):
                 jit_result,
                 "While evaluating " +
                 expression)
+
+    def test_type_conversions(self):
+        target = self.dbg.GetDummyTarget()
+        short_val = target.EvaluateExpression("(short)-1")
+        self.assertEqual(short_val.GetValueAsSigned(), -1)
+        long_val = target.EvaluateExpression("(long) "+ short_val.GetName())
+        self.assertEqual(long_val.GetValueAsSigned(), -1)

@@ -45,8 +45,8 @@ Status OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
                                           ExecutionContext *execution_context) {
   Status error;
   if (m_option_definition.option_has_arg == OptionParser::eNoArgument) {
-    // Not argument, toggle the default value and mark the option as having been
-    // set
+    // Not argument, toggle the default value and mark the option as having
+    // been set
     m_value.SetCurrentValue(!m_value.GetDefaultValue());
     m_value.SetOptionWasSet();
   } else {

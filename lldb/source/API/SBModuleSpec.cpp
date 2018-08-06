@@ -70,9 +70,9 @@ void SBModuleSpec::SetObjectName(const char *name) {
 
 const char *SBModuleSpec::GetTriple() {
   std::string triple(m_opaque_ap->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since
-  // the const strings put the string into the string pool once and
-  // the strings never comes out
+  // Unique the string so we don't run into ownership issues since the const
+  // strings put the string into the string pool once and the strings never
+  // comes out
   ConstString const_triple(triple.c_str());
   return const_triple.GetCString();
 }
@@ -82,15 +82,16 @@ void SBModuleSpec::SetTriple(const char *triple) {
 }
 
 const uint8_t *SBModuleSpec::GetUUIDBytes() {
-  return (const uint8_t *)m_opaque_ap->GetUUID().GetBytes();
+  return m_opaque_ap->GetUUID().GetBytes().data();
 }
 
 size_t SBModuleSpec::GetUUIDLength() {
-  return m_opaque_ap->GetUUID().GetByteSize();
+  return m_opaque_ap->GetUUID().GetBytes().size();
 }
 
 bool SBModuleSpec::SetUUIDBytes(const uint8_t *uuid, size_t uuid_len) {
-  return m_opaque_ap->GetUUID().SetBytes(uuid, uuid_len);
+  m_opaque_ap->GetUUID() = UUID::fromOptionalData(uuid, uuid_len);
+  return m_opaque_ap->GetUUID().IsValid();
 }
 
 bool SBModuleSpec::GetDescription(lldb::SBStream &description) {

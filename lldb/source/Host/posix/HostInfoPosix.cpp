@@ -7,15 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLDB_DISABLE_PYTHON)
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/Log.h"
 
-#include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Path.h"
@@ -103,8 +97,7 @@ const char *HostInfoPosix::LookupGroupName(uint32_t gid,
     }
   } else {
     // The threadsafe version isn't currently working for me on darwin, but the
-    // non-threadsafe version
-    // is, so I am calling it below.
+    // non-threadsafe version is, so I am calling it below.
     group_info_ptr = ::getgrgid(gid);
     if (group_info_ptr) {
       group_name.assign(group_info_ptr->gr_name);
@@ -132,8 +125,8 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
                                                  llvm::StringRef dir) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -141,8 +134,8 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
   llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
 
   // Most Posix systems (e.g. Linux/*BSD) will attempt to replace a */lib with
-  // */bin as the base directory for helper exe programs.  This will fail if the
-  // /lib and /bin directories are rooted in entirely different trees.
+  // */bin as the base directory for helper exe programs.  This will fail if
+  // the /lib and /bin directories are rooted in entirely different trees.
   if (log)
     log->Printf("HostInfoPosix::ComputePathRelativeToLibrary() attempting to "
                 "derive the %s path from this path: %s",
@@ -168,31 +161,17 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
 bool HostInfoPosix::ComputeSupportFileDirectory(FileSpec &file_spec) {
   FileSpec temp_file_spec;
 
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, temp_file_spec))
-    return false;
+  if (FileSpec temp_file_spec = GetShlibDir()) {
+    temp_file_spec.AppendPathComponent("lldb");
+    file_spec = temp_file_spec;
+    return true;
+  }
 
-  temp_file_spec.AppendPathComponent("lldb");
-
-  file_spec = temp_file_spec;
-
-  return true;
+  return false;
 }
 
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");
-}
-
-bool HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec) {
-  bool returnVal = ComputePathRelativeToLibrary(
-      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
-                  CLANG_VERSION_STRING)
-                     .str());
-  if (file_spec.Exists())
-    return returnVal;
-  return ComputePathRelativeToLibrary(
-      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/lldb/clang/" +
-                  CLANG_VERSION_STRING)
-                     .str());
 }
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -201,55 +180,13 @@ bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
   return true;
 }
 
-bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
-#ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-
-  char raw_path[PATH_MAX];
-  lldb_file_spec.GetPath(raw_path, sizeof(raw_path));
-
-#if defined(LLDB_PYTHON_RELATIVE_LIBDIR)
-  // Build the path by backing out of the lib dir, then building
-  // with whatever the real python interpreter uses.  (e.g. lib
-  // for most, lib64 on RHEL x86_64).
-  char python_path[PATH_MAX];
-  ::snprintf(python_path, sizeof(python_path), "%s/../%s", raw_path,
-             LLDB_PYTHON_RELATIVE_LIBDIR);
-
-  char final_path[PATH_MAX];
-  realpath(python_path, final_path);
-  file_spec.GetDirectory().SetCString(final_path);
-
-  return true;
-#else
-  llvm::SmallString<256> python_version_dir;
-  llvm::raw_svector_ostream os(python_version_dir);
-  os << "/python" << PY_MAJOR_VERSION << '.' << PY_MINOR_VERSION
-     << "/site-packages";
-
-  // We may get our string truncated. Should we protect this with an assert?
-  ::strncat(raw_path, python_version_dir.c_str(),
-            sizeof(raw_path) - strlen(raw_path) - 1);
-
-  file_spec.GetDirectory().SetCString(raw_path);
-  return true;
-#endif
-#else
-  return false;
-#endif
-}
-
 bool HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-
-  lldb_file_spec.AppendPathComponent("swift");
-
-  file_spec = lldb_file_spec;
-  return true;
+  if (FileSpec lldb_file_spec = GetShlibDir()) {
+    lldb_file_spec.AppendPathComponent("swift");
+    file_spec = lldb_file_spec;
+    return true;
+  }
+  return false;
 }
 
 bool HostInfoPosix::GetEnvironmentVar(const std::string &var_name,

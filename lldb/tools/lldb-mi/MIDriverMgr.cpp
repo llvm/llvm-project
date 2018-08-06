@@ -640,6 +640,7 @@ CMIUtilString CMIDriverMgr::GetHelpOnCmdLineArgOptions() const {
       MIRSRC(IDE_MI_APP_ARG_VERSION), MIRSRC(IDE_MI_APP_ARG_VERSION_LONG),
       MIRSRC(IDE_MI_APP_ARG_INTERPRETER), MIRSRC(IDE_MI_APP_ARG_SOURCE),
       MIRSRC(IDE_MI_APP_ARG_EXECUTEABLE),
+      MIRSRC(IDE_MI_APP_ARG_SYNCHRONOUS),
       CMIUtilString::Format(
           MIRSRC(IDE_MI_APP_ARG_APP_LOG),
           CMICmnLogMediumFile::Instance().GetFileName().c_str()),

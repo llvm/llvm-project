@@ -39,9 +39,8 @@ public:
   void Clear() { m_packet.clear(); }
 
   // Beware, this might not be NULL terminated as you can expect from
-  // StringString as there may be random bits in the llvm::SmallVector. If
-  // you are using this class to create a C string, be sure the call PutChar
-  // ('\0')
+  // StringString as there may be random bits in the llvm::SmallVector. If you
+  // are using this class to create a C string, be sure the call PutChar ('\0')
   // after you have created your string, or use StreamString.
   const char *GetData() const { return m_packet.data(); }
 

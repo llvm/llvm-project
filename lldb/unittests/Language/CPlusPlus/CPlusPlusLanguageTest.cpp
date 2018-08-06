@@ -6,9 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "gtest/gtest.h"
-
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using namespace lldb_private;
 
@@ -160,4 +160,27 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "selector:otherField:", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "abc::", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "f<A<B><C>>", context, basename));
+}
+
+static std::set<std::string> FindAlternate(llvm::StringRef Name) {
+  std::set<ConstString> Results;
+  uint32_t Count = CPlusPlusLanguage::FindAlternateFunctionManglings(
+      ConstString(Name), Results);
+  EXPECT_EQ(Count, Results.size());
+  std::set<std::string> Strings;
+  for (ConstString Str : Results)
+    Strings.insert(Str.GetStringRef());
+  return Strings;
+}
+
+TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
+  using namespace testing;
+
+  EXPECT_THAT(FindAlternate("_ZN1A1fEv"),
+              UnorderedElementsAre("_ZNK1A1fEv", "_ZLN1A1fEv"));
+  EXPECT_THAT(FindAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
+  EXPECT_THAT(FindAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
+  EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
 }

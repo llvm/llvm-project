@@ -28,8 +28,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // System includes - They have to be included after framework includes because
-// they define some
-// macros which collide with variable names in other modules
+// they define some macros which collide with variable names in other modules
 #include <sys/socket.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
@@ -207,14 +206,14 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     error = ReadRegisterRaw(full_reg, reg_value);
 
     if (error.Success()) {
-      // If our read was not aligned (for ah,bh,ch,dh), shift our returned value
-      // one byte to the right.
+      // If our read was not aligned (for ah,bh,ch,dh), shift our returned
+      // value one byte to the right.
       if (is_subreg && (reg_info->byte_offset & 0x1))
         reg_value.SetUInt64(reg_value.GetAsUInt64() >> 8);
 
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (reg_value.GetByteSize() > reg_info->byte_size)
         reg_value.SetType(reg_info);
     }
@@ -562,8 +561,8 @@ uint32_t NativeRegisterContextLinux_arm64::SetHardwareWatchpoint(
   uint32_t control_value = 0, wp_index = 0;
   lldb::addr_t real_addr = addr;
 
-  // Check if we are setting watchpoint other than read/write/access
-  // Also update watchpoint flag to match AArch64 write-read bit configuration.
+  // Check if we are setting watchpoint other than read/write/access Also
+  // update watchpoint flag to match AArch64 write-read bit configuration.
   switch (watch_flags) {
   case 1:
     watch_flags = 2;
@@ -581,9 +580,9 @@ uint32_t NativeRegisterContextLinux_arm64::SetHardwareWatchpoint(
   if (size != 1 && size != 2 && size != 4 && size != 8)
     return LLDB_INVALID_INDEX32;
 
-  // Check 8-byte alignment for hardware watchpoint target address.
-  // Below is a hack to recalculate address and size in order to
-  // make sure we can watch non 8-byte alligned addresses as well.
+  // Check 8-byte alignment for hardware watchpoint target address. Below is a
+  // hack to recalculate address and size in order to make sure we can watch
+  // non 8-byte alligned addresses as well.
   if (addr & 0x07) {
     uint8_t watch_mask = (addr & 0x07) + size;
 

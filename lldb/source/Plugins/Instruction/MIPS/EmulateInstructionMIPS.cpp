@@ -1015,7 +1015,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
   m_use_alt_disaasm = false;
 
   if (EmulateInstruction::SetInstruction(insn_opcode, inst_addr, target)) {
-    if (inst_addr.GetAddressClass() == eAddressClassCodeAlternateISA) {
+    if (inst_addr.GetAddressClass() == AddressClass::eCodeAlternateISA) {
       Status error;
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
 
@@ -1044,7 +1044,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
       return true;
     } else {
       /*
-       * If the address class is not eAddressClassCodeAlternateISA then
+       * If the address class is not AddressClass::eCodeAlternateISA then
        * the function is not microMIPS. In this case instruction size is
        * always 4 bytes.
       */
@@ -1208,13 +1208,10 @@ bool EmulateInstructionMIPS::Emulate_ADDiu(llvm::MCInst &insn) {
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  // If immediate value is greater then 2^16 - 1 then clang generate
-  // LUI, ADDIU, SUBU instructions in prolog.
-  // Example
-  // lui    $1, 0x2
-  // addiu $1, $1, -0x5920
-  // subu  $sp, $sp, $1
-  // In this case, ADDIU dst and src will be same and not equal to sp
+  // If immediate value is greater then 2^16 - 1 then clang generate LUI,
+  // ADDIU, SUBU instructions in prolog. Example lui    $1, 0x2 addiu $1, $1,
+  // -0x5920 subu  $sp, $sp, $1 In this case, ADDIU dst and src will be same
+  // and not equal to sp
   if (dst == src) {
     Context context;
 
@@ -1551,8 +1548,8 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   address = address + imm5;
 
   // We use bad_vaddr_context to store base address which is used by H/W
-  // watchpoint
-  // Set the bad_vaddr register with base address used in the instruction
+  // watchpoint Set the bad_vaddr register with base address used in the
+  // instruction
   bad_vaddr_context.type = eContextInvalid;
   WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
                         address);
@@ -1688,8 +1685,8 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
   base_address = base_address + imm5;
 
   // We use bad_vaddr_context to store base address which is used by H/W
-  // watchpoint
-  // Set the bad_vaddr register with base address used in the instruction
+  // watchpoint Set the bad_vaddr register with base address used in the
+  // instruction
   bad_vaddr_context.type = eContextInvalid;
   WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
                         base_address);

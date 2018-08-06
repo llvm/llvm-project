@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
+#include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
   class StringRef;
@@ -26,36 +27,49 @@ namespace lldb_private {
 
 class UUID {
 public:
-  // Most UUIDs are 16 bytes, but some Linux build-ids (SHA1) are 20.
-  typedef uint8_t ValueType[20];
+  UUID() = default;
 
-  //------------------------------------------------------------------
-  // Constructors and Destructors
-  //------------------------------------------------------------------
-  UUID();
-  UUID(const UUID &rhs);
-  UUID(const void *uuid_bytes, uint32_t num_uuid_bytes);
+  /// Creates a UUID from the data pointed to by the bytes argument. No special
+  /// significance is attached to any of the values.
+  static UUID fromData(const void *bytes, uint32_t num_bytes) {
+    if (bytes)
+      return fromData({reinterpret_cast<const uint8_t *>(bytes), num_bytes});
+    return UUID();
+  }
 
-  ~UUID();
+  /// Creates a uuid from the data pointed to by the bytes argument. No special
+  /// significance is attached to any of the values.
+  static UUID fromData(llvm::ArrayRef<uint8_t> bytes) { return UUID(bytes); }
 
-  const UUID &operator=(const UUID &rhs);
+  /// Creates a UUID from the data pointed to by the bytes argument. Data
+  /// consisting purely of zero bytes is treated as an invalid UUID.
+  static UUID fromOptionalData(const void *bytes, uint32_t num_bytes) {
+    if (bytes)
+      return fromOptionalData(
+          {reinterpret_cast<const uint8_t *>(bytes), num_bytes});
+    return UUID();
+  }
 
-  void Clear();
+  /// Creates a UUID from the data pointed to by the bytes argument. Data
+  /// consisting purely of zero bytes is treated as an invalid UUID.
+  static UUID fromOptionalData(llvm::ArrayRef<uint8_t> bytes) {
+    if (llvm::all_of(bytes, [](uint8_t b) { return b == 0; }))
+      return UUID();
+    return UUID(bytes);
+  }
+
+  void Clear() { m_bytes.clear(); }
 
   void Dump(Stream *s) const;
 
-  const void *GetBytes() const;
+  llvm::ArrayRef<uint8_t> GetBytes() const { return m_bytes; }
 
-  size_t GetByteSize() const;
+  explicit operator bool() const { return IsValid(); }
+  bool IsValid() const { return !m_bytes.empty(); }
 
-  bool IsValid() const;
-
-  bool SetBytes(const void *uuid_bytes, uint32_t num_uuid_bytes = 16);
-
-  std::string GetAsString(const char *separator = nullptr) const;
+  std::string GetAsString(llvm::StringRef separator = "-") const;
 
   size_t SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes = 16);
-  size_t SetFromCString(const char *c_str, uint32_t num_uuid_bytes = 16);
 
   // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"
   // This is used for auto completion where a partial UUID might have been
@@ -77,25 +91,34 @@ public:
   ///     The original string, with all decoded bytes removed.
   //------------------------------------------------------------------
   static llvm::StringRef
-  DecodeUUIDBytesFromString(llvm::StringRef str, ValueType &uuid_bytes,
-                            uint32_t &bytes_decoded,
+  DecodeUUIDBytesFromString(llvm::StringRef str,
+                            llvm::SmallVectorImpl<uint8_t> &uuid_bytes,
                             uint32_t num_uuid_bytes = 16);
 
-protected:
-  //------------------------------------------------------------------
-  // Classes that inherit from UUID can see and modify these
-  //------------------------------------------------------------------
-  uint32_t m_num_uuid_bytes; // Should be 16 or 20
-  ValueType m_uuid;
+private:
+  UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes.begin(), bytes.end()) {}
+
+  // GNU ld generates 20-byte build-ids. Size chosen to avoid heap allocations
+  // for this case.
+  llvm::SmallVector<uint8_t, 20> m_bytes;
+
+  friend bool operator==(const UUID &LHS, const UUID &RHS) {
+    return LHS.m_bytes == RHS.m_bytes;
+  }
+  friend bool operator!=(const UUID &LHS, const UUID &RHS) {
+    return !(LHS == RHS);
+  }
+  friend bool operator<(const UUID &LHS, const UUID &RHS) {
+    return LHS.m_bytes < RHS.m_bytes;
+  }
+  friend bool operator<=(const UUID &LHS, const UUID &RHS) {
+    return !(RHS < LHS);
+  }
+  friend bool operator>(const UUID &LHS, const UUID &RHS) { return RHS < LHS; }
+  friend bool operator>=(const UUID &LHS, const UUID &RHS) {
+    return !(LHS < RHS);
+  }
 };
-
-bool operator==(const UUID &lhs, const UUID &rhs);
-bool operator!=(const UUID &lhs, const UUID &rhs);
-bool operator<(const UUID &lhs, const UUID &rhs);
-bool operator<=(const UUID &lhs, const UUID &rhs);
-bool operator>(const UUID &lhs, const UUID &rhs);
-bool operator>=(const UUID &lhs, const UUID &rhs);
-
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_UUID_H

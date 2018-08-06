@@ -17,6 +17,7 @@
 # FRAMEWORK_INCLUDES (Darwin only) :=
 # CFLAGS_EXTRAS :=
 # LD_EXTRAS :=
+# SWIFTFLAGS_EXTRAS :=
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 #
@@ -36,13 +37,13 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #
-# uname on Windows gives "windows32", but most environments standardize
-# on "Windows_NT", so we'll make it consistent here.  When running
-# tests from Visual Studio, the environment variable isn't inherited
-# all the way down to the process spawned for make.
+# uname on Windows gives "windows32" or "server version windows32", but most
+# environments standardize on "Windows_NT", so we'll make it consistent here.
+# When running tests from Visual Studio, the environment variable isn't
+# inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
 HOST_OS = $(shell uname -s)
-ifeq "$(HOST_OS)" "windows32"
+ifneq (,$(findstring windows32,$(HOST_OS)))
 	HOST_OS = Windows_NT
 endif
 ifeq "$(OS)" ""
@@ -61,8 +62,10 @@ ifneq "$(TRIPLE)" ""
 	triple_os_and_version =$(shell echo $(word 3, $(triple_space)) | sed 's/\([a-z]*\)\(.*\)/\1 \2/')
 	TRIPLE_OS =$(word 1, $(triple_os_and_version))
 	TRIPLE_VERSION =$(word 2, $(triple_os_and_version))
+	TRIPLE_SWIFTFLAGS :=-target $(TRIPLE)
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
+		    # Provide a reasonable SDKROOT if not specified.
 		    ifeq "$(SDKROOT)" ""
 				# Set SDKROOT if it wasn't set
 				ifneq (,$(findstring arm,$(ARCH)))
@@ -79,6 +82,8 @@ ifneq "$(TRIPLE)" ""
 					TRIPLE_SWIFTFLAGS :=-target $(TRIPLE) -sdk "$(SDKROOT)"
 					ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
 				endif
+				# Add in the SDKROOT to the swift flags.
+				TRIPLE_SWIFTFLAGS +=-sdk "$(SDKROOT)"
 			endif
 		endif
 		ifeq "$(TRIPLE_OS)" "watchos"
@@ -281,6 +286,7 @@ endif
 CFLAGS += -I$(SRCDIR) -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
+SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
@@ -301,7 +307,7 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
-CXXFLAGS += -std=c++11 $(CFLAGS)
+CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)

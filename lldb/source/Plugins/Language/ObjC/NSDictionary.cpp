@@ -397,6 +397,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static const ConstString g_DictionaryMImmutable("__NSDictionaryM_Immutable");
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
   static const ConstString g_Dictionary0("__NSDictionary0");
+  static const ConstString g_DictionaryCF("__NSCFDictionary");
 
   if (class_name.IsEmpty())
     return false;
@@ -408,7 +409,8 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     if (error.Fail())
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy ||
+             class_name == g_DictionaryCF) {
     AppleObjCRuntime *apple_runtime =
     llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -427,16 +429,6 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   } else if (class_name == g_Dictionary0) {
     value = 0;
   }
-  /*else if (!strcmp(class_name,"__NSCFDictionary"))
-   {
-   Status error;
-   value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
-   20 : 12), 4, 0, error);
-   if (error.Fail())
-   return false;
-   if (is_64bit)
-   value &= ~0x0f1f000000000000UL;
-   }*/
   else {
     auto &map(NSDictionary_Additionals::GetAdditionalSummaries());
     for (auto &candidate : map) {
@@ -677,11 +669,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     GetIndexOfChildWithName(const ConstString &name) {
   static const ConstString g_zero("[0]");
-
-  if (name == g_zero)
-    return 0;
-
-  return UINT32_MAX;
+  return name == g_zero ? 0 : UINT32_MAX;
 }
 
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::

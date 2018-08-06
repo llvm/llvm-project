@@ -36,8 +36,8 @@ bool lldb_private::VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt,
   }
 
   if (size_t(length) >= buf.size()) {
-    // The error formatted string didn't fit into our buffer, resize it
-    // to the exact needed size, and retry
+    // The error formatted string didn't fit into our buffer, resize it to the
+    // exact needed size, and retry
     buf.resize(length + 1);
     length = ::vsnprintf(buf.data(), buf.size(), fmt, copy_args);
     if (length < 0) {

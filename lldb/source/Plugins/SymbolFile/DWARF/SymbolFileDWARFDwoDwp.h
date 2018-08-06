@@ -20,7 +20,7 @@
 class SymbolFileDWARFDwoDwp : public SymbolFileDWARFDwo {
 public:
   SymbolFileDWARFDwoDwp(SymbolFileDWARFDwp *dwp_symfile,
-                        lldb::ObjectFileSP objfile, DWARFCompileUnit *dwarf_cu,
+                        lldb::ObjectFileSP objfile, DWARFUnit *dwarf_cu,
                         uint64_t dwo_id);
 
 protected:

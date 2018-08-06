@@ -59,8 +59,8 @@ Watchpoint::~Watchpoint() = default;
 // This function is used when "baton" doesn't need to be freed
 void Watchpoint::SetCallback(WatchpointHitCallback callback, void *baton,
                              bool is_synchronous) {
-  // The default "Baton" class will keep a copy of "baton" and won't free
-  // or delete it when it goes goes out of scope.
+  // The default "Baton" class will keep a copy of "baton" and won't free or
+  // delete it when it goes goes out of scope.
   m_options.SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                         is_synchronous);
 
@@ -103,8 +103,8 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
   Address watch_address(GetLoadAddress());
   if (!m_type.IsValid()) {
     // Don't know how to report new & old values, since we couldn't make a
-    // scalar type for this watchpoint.
-    // This works around an assert in ValueObjectMemory::Create.
+    // scalar type for this watchpoint. This works around an assert in
+    // ValueObjectMemory::Create.
     // FIXME: This should not happen, but if it does in some case we care about,
     // we can go grab the value raw and print it as unsigned.
     return false;
@@ -217,11 +217,9 @@ void Watchpoint::DumpWithLevel(Stream *s,
 bool Watchpoint::IsEnabled() const { return m_enabled; }
 
 // Within StopInfo.cpp, we purposely turn on the ephemeral mode right before
-// temporarily disable the watchpoint
-// in order to perform possible watchpoint actions without triggering further
-// watchpoint events.
-// After the temporary disabled watchpoint is enabled, we then turn off the
-// ephemeral mode.
+// temporarily disable the watchpoint in order to perform possible watchpoint
+// actions without triggering further watchpoint events. After the temporary
+// disabled watchpoint is enabled, we then turn off the ephemeral mode.
 
 void Watchpoint::TurnOnEphemeralMode() { m_is_ephemeral = true; }
 

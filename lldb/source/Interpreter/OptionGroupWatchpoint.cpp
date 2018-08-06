@@ -14,7 +14,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -65,7 +65,7 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
   switch (short_option) {
   case 'w': {
     WatchType tmp_watch_type;
-    tmp_watch_type = (WatchType)Args::StringToOptionEnum(
+    tmp_watch_type = (WatchType)OptionArgParser::ToOptionEnum(
         option_arg, g_option_table[option_idx].enum_values, 0, error);
     if (error.Success()) {
       watch_type = tmp_watch_type;
@@ -74,7 +74,7 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
     break;
   }
   case 's':
-    watch_size = (uint32_t)Args::StringToOptionEnum(
+    watch_size = (uint32_t)OptionArgParser::ToOptionEnum(
         option_arg, g_option_table[option_idx].enum_values, 0, error);
     break;
 

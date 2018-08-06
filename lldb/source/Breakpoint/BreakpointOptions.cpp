@@ -425,10 +425,9 @@ void BreakpointOptions::SetCallback(BreakpointHitCallback callback,
                                     const lldb::BatonSP &callback_baton_sp,
                                     bool callback_is_synchronous) {
   // FIXME: This seems unsafe.  If BatonSP actually *is* a CommandBaton, but
-  // in a shared_ptr<Baton> instead of a shared_ptr<CommandBaton>, then we
-  // will set m_baton_is_command_baton to false, which is incorrect.
-  // One possible solution is to make the base Baton class provide a method
-  // such as:
+  // in a shared_ptr<Baton> instead of a shared_ptr<CommandBaton>, then we will
+  // set m_baton_is_command_baton to false, which is incorrect. One possible
+  // solution is to make the base Baton class provide a method such as:
   //     virtual StringRef getBatonId() const { return ""; }
   // and have CommandBaton override this to return something unique, and then
   // check for it here.  Another option might be to make Baton using the llvm
@@ -554,8 +553,7 @@ void BreakpointOptions::SetThreadSpec(
 void BreakpointOptions::GetDescription(Stream *s,
                                        lldb::DescriptionLevel level) const {
   // Figure out if there are any options not at their default value, and only
-  // print
-  // anything if there are:
+  // print anything if there are:
 
   if (m_ignore_count != 0 || !m_enabled || m_one_shot || m_auto_continue ||
       (GetThreadSpecNoCreate() != nullptr &&
@@ -660,8 +658,7 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
       CommandReturnObject result;
       Debugger &debugger = target->GetDebugger();
       // Rig up the results secondary output stream to the debugger's, so the
-      // output will come out synchronously
-      // if the debugger is set up that way.
+      // output will come out synchronously if the debugger is set up that way.
 
       StreamSP output_stream(debugger.GetAsyncOutputStream());
       StreamSP error_stream(debugger.GetAsyncErrorStream());

@@ -18,7 +18,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class LineEntry LineEntry.h "lldb/Symbol/LineEntry.h"
-/// @brief A line table entry class.
+/// A line table entry class.
 //----------------------------------------------------------------------
 struct LineEntry {
   //------------------------------------------------------------------
@@ -44,8 +44,8 @@ struct LineEntry {
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -79,8 +79,8 @@ struct LineEntry {
                       Target *target, bool show_address_only) const;
 
   //------------------------------------------------------------------
-  /// Dumps information specific to a process that stops at this
-  /// line entry to the supplied stream \a s.
+  /// Dumps information specific to a process that stops at this line entry to
+  /// the supplied stream \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -123,25 +123,25 @@ struct LineEntry {
   static int Compare(const LineEntry &lhs, const LineEntry &rhs);
 
   //------------------------------------------------------------------
-  /// Give the range for this LineEntry + any additional LineEntries for
-  /// this same source line that are contiguous.
+  /// Give the range for this LineEntry + any additional LineEntries for this
+  /// same source line that are contiguous.
   ///
   /// A compiler may emit multiple line entries for a single source line,
-  /// e.g. to indicate subexpressions at different columns.  This method
-  /// will get the AddressRange for all of the LineEntries for this source
-  /// line that are contiguous.
+  /// e.g. to indicate subexpressions at different columns.  This method will
+  /// get the AddressRange for all of the LineEntries for this source line
+  /// that are contiguous.
   //
-  /// Line entries with a line number of 0 are treated specially - these
-  /// are compiler-generated line table entries that the user did not
-  /// write in their source code, and we want to skip past in the debugger.
-  /// If this LineEntry is for line 32, and the following LineEntry is for
-  /// line 0, we will extend the range to include the AddressRange of the
-  /// line 0 LineEntry (and it will include the range of the following
-  /// LineEntries that match either 32 or 0.)
+  /// Line entries with a line number of 0 are treated specially - these are
+  /// compiler-generated line table entries that the user did not write in
+  /// their source code, and we want to skip past in the debugger. If this
+  /// LineEntry is for line 32, and the following LineEntry is for line 0, we
+  /// will extend the range to include the AddressRange of the line 0
+  /// LineEntry (and it will include the range of the following LineEntries
+  /// that match either 32 or 0.)
   ///
-  /// If the initial LineEntry this method is called on is a line #0, only
-  /// the range of contiuous LineEntries with line #0 will be included in
-  /// the complete range.
+  /// If the initial LineEntry this method is called on is a line #0, only the
+  /// range of contiuous LineEntries with line #0 will be included in the
+  /// complete range.
   ///
   /// @return
   ///     The contiguous AddressRange for this source line.

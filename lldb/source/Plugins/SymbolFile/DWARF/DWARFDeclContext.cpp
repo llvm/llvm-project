@@ -67,8 +67,8 @@ bool DWARFDeclContext::operator==(const DWARFDeclContext &rhs) const {
   // First compare the tags before we do expensive name compares
   for (pos = begin, rhs_pos = rhs_begin; pos != end; ++pos, ++rhs_pos) {
     if (pos->tag != rhs_pos->tag) {
-      // Check for DW_TAG_structure_type and DW_TAG_class_type as they are often
-      // used interchangeably in GCC
+      // Check for DW_TAG_structure_type and DW_TAG_class_type as they are
+      // often used interchangeably in GCC
       if (pos->tag == DW_TAG_structure_type &&
           rhs_pos->tag == DW_TAG_class_type)
         continue;

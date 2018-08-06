@@ -17,7 +17,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Pipe PipeWindows.h "lldb/Host/windows/PipeWindows.h"
-/// @brief A windows-based implementation of Pipe, a class that abtracts
+/// A windows-based implementation of Pipe, a class that abtracts
 ///        unix style pipes.
 ///
 /// A class that abstracts the LLDB core from host pipe functionality.

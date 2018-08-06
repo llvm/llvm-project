@@ -1,6 +1,18 @@
 void func() {
 
-#ifndef __mips__
+#ifdef __powerpc64__
+  __asm__ (
+    "mflr 0;"
+    "std 0,16(1);"
+    "addi 1,1,-24;"
+    "mr 31,1;"
+    ".cfi_def_cfa_offset 24;"
+    "addi 0,0,0;"
+    "addi 1,1,24;"
+    "ld 0,16(1);"
+    ".cfi_def_cfa_offset 0;"
+  );
+#elif !defined __mips__
 	__asm__ (
 		"pushq $0x10;"
 		".cfi_def_cfa_offset 16;"

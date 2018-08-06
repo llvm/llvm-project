@@ -27,9 +27,8 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointOptions BreakpointOptions.h
-/// "lldb/Breakpoint/BreakpointOptions.h"
-/// @brief Class that manages the options on a breakpoint or breakpoint
-/// location.
+/// "lldb/Breakpoint/BreakpointOptions.h" Class that manages the options on a
+/// breakpoint or breakpoint location.
 //----------------------------------------------------------------------
 
 class BreakpointOptions {
@@ -106,9 +105,8 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// This constructor allows you to specify all the breakpoint options
-  /// except the callback.  That one is more complicated, and better
-  /// to do by hand.
+  /// This constructor allows you to specify all the breakpoint options except
+  /// the callback.  That one is more complicated, and better to do by hand.
   ///
   /// @param[in] condition
   ///    The expression which if it evaluates to \b true if we are to stop
@@ -125,8 +123,8 @@ public:
                     bool auto_continue = false);
 
   //------------------------------------------------------------------
-  /// Breakpoints make options with all flags set.  Locations and Names make options
-  /// with no flags set.
+  /// Breakpoints make options with all flags set.  Locations and Names make
+  /// options with no flags set.
   //------------------------------------------------------------------
   BreakpointOptions(bool all_flags_set);
   BreakpointOptions(const BreakpointOptions &rhs);
@@ -156,18 +154,16 @@ public:
   // Callbacks
   //
   // Breakpoint callbacks come in two forms, synchronous and asynchronous.
-  // Synchronous callbacks will get
-  // run before any of the thread plans are consulted, and if they return false
-  // the target will continue
-  // "under the radar" of the thread plans.  There are a couple of restrictions
-  // to synchronous callbacks:
-  // 1) They should NOT resume the target themselves.  Just return false if you
-  // want the target to restart.
-  // 2) Breakpoints with synchronous callbacks can't have conditions (or rather,
-  // they can have them, but they
-  //    won't do anything.  Ditto with ignore counts, etc...  You are supposed
-  //    to control that all through the
-  //    callback.
+  // Synchronous callbacks will get run before any of the thread plans are
+  // consulted, and if they return false the target will continue "under the
+  // radar" of the thread plans.  There are a couple of restrictions to
+  // synchronous callbacks:
+  // 1) They should NOT resume the target themselves.
+  //     Just return false if you want the target to restart.
+  // 2) Breakpoints with synchronous callbacks can't have conditions
+  //    (or rather, they can have them, but they won't do anything.
+  //    Ditto with ignore counts, etc...  You are supposed to control that all
+  //    through the callback.
   // Asynchronous callbacks get run as part of the "ShouldStop" logic in the
   // thread plan.  The logic there is:
   //   a) If the breakpoint is thread specific and not for this thread, continue
@@ -181,12 +177,10 @@ public:
   //   b) If the ignore count says we shouldn't stop, then ditto.
   //   c) If the condition says we shouldn't stop, then ditto.
   //   d) Otherwise, the callback will get run, and if it returns true we will
-  //   stop, and if false we won't.
+  //      stop, and if false we won't.
   //  The asynchronous callback can run the target itself, but at present that
-  //  should be the last action the
-  //  callback does.  We will relax this condition at some point, but it will
-  //  take a bit of plumbing to get
-  //  that to work.
+  //  should be the last action the callback does.  We will relax this condition
+  //  at some point, but it will take a bit of plumbing to get that to work.
   //
   //------------------------------------------------------------------
 
@@ -227,8 +221,8 @@ public:
   //------------------------------------------------------------------
   void ClearCallback();
 
-  // The rest of these functions are meant to be used only within the breakpoint
-  // handling mechanism.
+  // The rest of these functions are meant to be used only within the
+  // breakpoint handling mechanism.
 
   //------------------------------------------------------------------
   /// Use this function to invoke the callback for a specific stop.
@@ -367,8 +361,7 @@ public:
 
   //------------------------------------------------------------------
   /// Return the current thread spec for this option. This will return nullptr
-  /// if the no thread
-  /// specifications have been set for this Option yet.
+  /// if the no thread specifications have been set for this Option yet.
   /// @return
   ///     The thread specification pointer for this option, or nullptr if none
   ///     has
@@ -377,8 +370,8 @@ public:
   const ThreadSpec *GetThreadSpecNoCreate() const;
 
   //------------------------------------------------------------------
-  /// Returns a pointer to the ThreadSpec for this option, creating it.
-  /// if it hasn't been created already.   This API is used for setting the
+  /// Returns a pointer to the ThreadSpec for this option, creating it. if it
+  /// hasn't been created already.   This API is used for setting the
   /// ThreadSpec items for this option.
   //------------------------------------------------------------------
   ThreadSpec *GetThreadSpec();
@@ -400,8 +393,8 @@ public:
                            lldb::user_id_t break_loc_id);
 
   //------------------------------------------------------------------
-  /// Set a callback based on BreakpointOptions::CommandData.
-  /// @param[in] cmd_data
+  /// Set a callback based on BreakpointOptions::CommandData. @param[in]
+  /// cmd_data
   ///     A UP holding the new'ed CommandData object.
   ///     The breakpoint will take ownership of pointer held by this object.
   //------------------------------------------------------------------

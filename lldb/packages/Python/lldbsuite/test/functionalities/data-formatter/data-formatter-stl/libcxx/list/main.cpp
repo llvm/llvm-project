@@ -1,10 +1,6 @@
 #include <string>
-#ifdef _LIBCPP_INLINE_VISIBILITY
-#undef _LIBCPP_INLINE_VISIBILITY
-#endif
-#define _LIBCPP_INLINE_VISIBILITY
 #include <list>
-
+#include <stdio.h>
 
 typedef std::list<int> int_list;
 typedef std::list<std::string> string_list;
@@ -13,7 +9,8 @@ int main()
 {
     int_list numbers_list;
     
-    (numbers_list.push_back(0x12345678)); // Set break point at this line.
+    printf("// Set break point at this line.");
+    (numbers_list.push_back(0x12345678));
     (numbers_list.push_back(0x11223344));
     (numbers_list.push_back(0xBEEFFEED));
     (numbers_list.push_back(0x00ABBA00));
@@ -32,12 +29,15 @@ int main()
     (text_list.push_back(std::string("is")));
     (text_list.push_back(std::string("smart")));
     
-    (text_list.push_back(std::string("!!!"))); // Set second break point at this line.
+    printf("// Set second break point at this line.");
+    (text_list.push_back(std::string("!!!"))); 
     
     std::list<int> countingList = {3141, 3142, 3142,3142,3142, 3142, 3142, 3141};
     countingList.sort();
-    countingList.unique(); // Set third break point at this line.
-    countingList.size(); // Set fourth break point at this line.
+    printf("// Set third break point at this line.");
+    countingList.unique();
+    printf("// Set fourth break point at this line.");
+    countingList.size();
 
     return 0;
 }

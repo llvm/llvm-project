@@ -143,8 +143,7 @@ void WatchpointOptions::GetCallbackDescription(
 void WatchpointOptions::GetDescription(Stream *s,
                                        lldb::DescriptionLevel level) const {
   // Figure out if there are any options not at their default value, and only
-  // print
-  // anything if there are:
+  // print anything if there are:
 
   if ((GetThreadSpecNoCreate() != nullptr &&
        GetThreadSpecNoCreate()->HasSpecification())) {

@@ -62,9 +62,8 @@ AddressResolverName::~AddressResolverName() = default;
 // FIXME: Right now we look at the module level, and call the module's
 // "FindFunctions".
 // Greg says he will add function tables, maybe at the CompileUnit level to
-// accelerate function
-// lookup.  At that point, we should switch the depth to CompileUnit, and look
-// in these tables.
+// accelerate function lookup.  At that point, we should switch the depth to
+// CompileUnit, and look in these tables.
 
 Searcher::CallbackReturn
 AddressResolverName::SearchCallback(SearchFilter &filter,

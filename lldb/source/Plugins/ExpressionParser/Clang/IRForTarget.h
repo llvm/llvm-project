@@ -47,12 +47,11 @@ class IRMemoryMap;
 
 //----------------------------------------------------------------------
 /// @class IRForTarget IRForTarget.h "lldb/Expression/IRForTarget.h"
-/// @brief Transforms the IR for a function to run in the target
+/// Transforms the IR for a function to run in the target
 ///
-/// Once an expression has been parsed and converted to IR, it can run
-/// in two contexts: interpreted by LLDB as a DWARF location expression,
-/// or compiled by the JIT and inserted into the target process for
-/// execution.
+/// Once an expression has been parsed and converted to IR, it can run in two
+/// contexts: interpreted by LLDB as a DWARF location expression, or compiled
+/// by the JIT and inserted into the target process for execution.
 ///
 /// IRForTarget makes the second possible, by applying a series of
 /// transformations to the IR which make it relocatable.  These
@@ -126,8 +125,7 @@ public:
   //------------------------------------------------------------------
   /// Interface stub
   ///
-  /// Implementation of the llvm::ModulePass::assignPassManager()
-  /// function.
+  /// Implementation of the llvm::ModulePass::assignPassManager() function.
   //------------------------------------------------------------------
   void assignPassManager(llvm::PMStack &pass_mgr_stack,
                          llvm::PassManagerType pass_mgr_type =
@@ -179,8 +177,8 @@ private:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Get the address of a function, and a location to put the complete
-  /// Value of the function if one is available.
+  /// Get the address of a function, and a location to put the complete Value
+  /// of the function if one is available.
   ///
   /// @param[in] function
   ///     The function to find the location of.
@@ -204,13 +202,13 @@ private:
 
   //------------------------------------------------------------------
   /// A function-level pass to take the generated global value
-  /// $__lldb_expr_result and make it into a persistent variable.
-  /// Also see ASTResultSynthesizer.
+  /// $__lldb_expr_result and make it into a persistent variable. Also see
+  /// ASTResultSynthesizer.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Find the NamedDecl corresponding to a Value.  This interface is
-  /// exposed for the IR interpreter.
+  /// Find the NamedDecl corresponding to a Value.  This interface is exposed
+  /// for the IR interpreter.
   ///
   /// @param[in] module
   ///     The module containing metadata to search
@@ -230,8 +228,8 @@ private:
 
   //------------------------------------------------------------------
   /// Set the constant result variable m_const_result to the provided
-  /// constant, assuming it can be evaluated.  The result variable
-  /// will be reset to NULL later if the expression has side effects.
+  /// constant, assuming it can be evaluated.  The result variable will be
+  /// reset to NULL later if the expression has side effects.
   ///
   /// @param[in] initializer
   ///     The constant initializer for the variable.
@@ -247,8 +245,8 @@ private:
                               lldb_private::TypeFromParser type);
 
   //------------------------------------------------------------------
-  /// If the IR represents a cast of a variable, set m_const_result
-  /// to the result of the cast.  The result variable will be reset to
+  /// If the IR represents a cast of a variable, set m_const_result to the
+  /// result of the cast.  The result variable will be reset to
   /// NULL latger if the expression has side effects.
   ///
   /// @param[in] type
@@ -301,10 +299,9 @@ private:
   /// rewrite them to use sel_registerName instead of statically allocated
   /// selectors.  The reason is that the selectors are created on the
   /// assumption that the Objective-C runtime will scan the appropriate
-  /// section and prepare them.  This doesn't happen when code is copied
-  /// into the target, though, and there's no easy way to induce the
-  /// runtime to scan them.  So instead we get our selectors from
-  /// sel_registerName.
+  /// section and prepare them.  This doesn't happen when code is copied into
+  /// the target, though, and there's no easy way to induce the runtime to
+  /// scan them.  So instead we get our selectors from sel_registerName.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -359,13 +356,12 @@ private:
 
   //------------------------------------------------------------------
   /// A basic block-level pass to find all newly-declared persistent
-  /// variables and register them with the ClangExprDeclMap.  This
-  /// allows them to be materialized and dematerialized like normal
-  /// external variables.  Before transformation, these persistent
-  /// variables look like normal locals, so they have an allocation.
-  /// This pass excises these allocations and makes references look
-  /// like external references where they will be resolved -- like all
-  /// other external references -- by ResolveExternals().
+  /// variables and register them with the ClangExprDeclMap.  This allows them
+  /// to be materialized and dematerialized like normal external variables.
+  /// Before transformation, these persistent variables look like normal
+  /// locals, so they have an allocation. This pass excises these allocations
+  /// and makes references look like external references where they will be
+  /// resolved -- like all other external references -- by ResolveExternals().
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -389,15 +385,14 @@ private:
 
   //------------------------------------------------------------------
   /// A function-level pass to find all external variables and functions
-  /// used in the IR.  Each found external variable is added to the
-  /// struct, and each external function is resolved in place, its call
-  /// replaced with a call to a function pointer whose value is the
-  /// address of the function in the target process.
+  /// used in the IR.  Each found external variable is added to the struct,
+  /// and each external function is resolved in place, its call replaced with
+  /// a call to a function pointer whose value is the address of the function
+  /// in the target process.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Write an initializer to a memory array of assumed sufficient
-  /// size.
+  /// Write an initializer to a memory array of assumed sufficient size.
   ///
   /// @param[in] data
   ///     A pointer to the data to write to.
@@ -504,8 +499,8 @@ private:
   //------------------------------------------------------------------
   /// A basic block-level pass to excise guard variables from the code.
   /// The result for the function is passed through Clang as a static
-  /// variable.  Static variables normally have guard variables to
-  /// ensure that they are only initialized once.
+  /// variable.  Static variables normally have guard variables to ensure that
+  /// they are only initialized once.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -529,9 +524,9 @@ private:
 
   //------------------------------------------------------------------
   /// A function-level pass to make all external variable references
-  /// point at the correct offsets from the void* passed into the
-  /// function.  ClangExpressionDeclMap::DoStructLayout() must be called
-  /// beforehand, so that the offsets are valid.
+  /// point at the correct offsets from the void* passed into the function.
+  /// ClangExpressionDeclMap::DoStructLayout() must be called beforehand, so
+  /// that the offsets are valid.
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
@@ -583,7 +578,8 @@ private:
 
   llvm::StoreInst *m_result_store; ///< If non-NULL, the store instruction that
                                    ///writes to the result variable.  If
-                                   /// m_has_side_effects is true, this is NULL.
+                                   /// m_has_side_effects is true, this is
+                                   /// NULL.
   bool m_result_is_pointer; ///< True if the function's result in the AST is a
                             ///pointer (see comments in
                             /// ASTResultSynthesizer::SynthesizeBodyResult)
@@ -594,18 +590,17 @@ private:
   /// location of the static allocation.
 
   //------------------------------------------------------------------
-  /// UnfoldConstant operates on a constant [Old] which has just been
-  /// replaced with a value [New].  We assume that new_value has
-  /// been properly placed early in the function, in front of the
-  /// first instruction in the entry basic block
-  /// [FirstEntryInstruction].
+  /// UnfoldConstant operates on a constant [Old] which has just been replaced
+  /// with a value [New].  We assume that new_value has been properly placed
+  /// early in the function, in front of the first instruction in the entry
+  /// basic block [FirstEntryInstruction].
   ///
-  /// UnfoldConstant reads through the uses of Old and replaces Old
-  /// in those uses with New.  Where those uses are constants, the
-  /// function generates new instructions to compute the result of the
-  /// new, non-constant expression and places them before
-  /// FirstEntryInstruction.  These instructions replace the constant
-  /// uses, so UnfoldConstant calls itself recursively for those.
+  /// UnfoldConstant reads through the uses of Old and replaces Old in those
+  /// uses with New.  Where those uses are constants, the function generates
+  /// new instructions to compute the result of the new, non-constant
+  /// expression and places them before FirstEntryInstruction.  These
+  /// instructions replace the constant uses, so UnfoldConstant calls itself
+  /// recursively for those.
   ///
   /// @param[in] llvm_function
   ///     The function currently being processed.
@@ -637,8 +632,8 @@ private:
                              lldb_private::Stream &error_stream);
 
   //------------------------------------------------------------------
-  /// Construct a reference to m_reloc_placeholder with a given type
-  /// and offset.  This typically happens after inserting data into
+  /// Construct a reference to m_reloc_placeholder with a given type and
+  /// offset.  This typically happens after inserting data into
   /// m_data_allocator.
   ///
   /// @param[in] type
@@ -653,8 +648,8 @@ private:
   llvm::Constant *BuildRelocation(llvm::Type *type, uint64_t offset);
 
   //------------------------------------------------------------------
-  /// Commit the allocation in m_data_allocator and use its final
-  /// location to replace m_reloc_placeholder.
+  /// Commit the allocation in m_data_allocator and use its final location to
+  /// replace m_reloc_placeholder.
   ///
   /// @param[in] module
   ///     The module that m_data_allocator resides in

@@ -524,7 +524,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     uint32_t limit_start_line = 0;
     uint32_t limit_end_line = 0;
     if (limit_file) {
-      limit_file_spec.SetFile(limit_file, false);
+      limit_file_spec.SetFile(limit_file, false, FileSpec::Style::native);
       limit_start_line = m_options.GetPoundLineLine();
       limit_end_line = limit_start_line +
                        std::count(m_expr_text.begin(), m_expr_text.end(), '\n');

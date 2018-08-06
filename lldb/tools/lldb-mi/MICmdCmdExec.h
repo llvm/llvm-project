@@ -33,8 +33,6 @@
 #pragma once
 
 // Third party headers:
-#include "lldb/API/SBCommandReturnObject.h"
-
 // In-house headers:
 #include "MICmdBase.h"
 
@@ -66,7 +64,6 @@ public:
 private:
   const CMIUtilString m_constStrArgStart; // StopAtEntry - run to first
                                           // instruction or main() if specified
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 //++
@@ -91,10 +88,6 @@ public:
   bool Acknowledge() override;
   // From CMICmnBase
   /* dtor */ ~CMICmdCmdExecContinue() override;
-
-  // Attributes:
-private:
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 //++
@@ -123,7 +116,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };
@@ -154,7 +146,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };
@@ -185,7 +176,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };
@@ -216,7 +206,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };
@@ -244,10 +233,6 @@ public:
   bool ParseArgs() override;
   // From CMICmnBase
   /* dtor */ ~CMICmdCmdExecFinish() override;
-
-  // Attributes:
-private:
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 // CODETAG_DEBUG_SESSION_RUNNING_PROG_RECEIVED_SIGINT_PAUSE_PROGRAM
@@ -276,10 +261,6 @@ public:
   bool Acknowledge() override;
   // From CMICmnBase
   /* dtor */ ~CMICmdCmdExecInterrupt() override;
-
-  // Attributes:
-private:
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 //++

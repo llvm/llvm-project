@@ -48,35 +48,8 @@ class TestCppIncompleteTypes(TestBase):
         # Get main source file
         src_file = "main.cpp"
         src_file_spec = lldb.SBFileSpec(src_file)
-        self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
-        # Get the path of the executable
-        exe_path = self.getBuildArtifact(exe)
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
-        # Break on main function
-        main_breakpoint = target.BreakpointCreateBySourceRegex(
-            "break here", src_file_spec)
-        self.assertTrue(
-            main_breakpoint.IsValid() and main_breakpoint.GetNumLocations() >= 1,
-            VALID_BREAKPOINT)
-
-        # Launch the process
-        args = None
-        env = None
-        process = target.LaunchSimple(
-            args, env, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
-            PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
-
+        (target, process, thread, main_breakpoint) = lldbutil.run_to_source_breakpoint(self, 
+                "break here", src_file_spec, exe_name = exe)
         # Get frame for current thread
         return thread.GetSelectedFrame()

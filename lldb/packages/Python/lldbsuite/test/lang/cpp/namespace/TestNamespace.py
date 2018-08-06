@@ -48,6 +48,7 @@ class NamespaceBreakpointTestCase(TestBase):
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto")
 
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_breakpoints_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
            (no namespaces)."""

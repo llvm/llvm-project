@@ -140,9 +140,9 @@ NativeRegisterContextLinux_mips64::NativeRegisterContextLinux_mips64(
     break;
   }
 
-  // Initialize m_iovec to point to the buffer and buffer size
-  // using the conventions of Berkeley style UIO structures, as required
-  // by PTRACE extensions.
+  // Initialize m_iovec to point to the buffer and buffer size using the
+  // conventions of Berkeley style UIO structures, as required by PTRACE
+  // extensions.
   m_iovec.iov_base = &m_msa;
   m_iovec.iov_len = sizeof(MSA_linux_mips);
 
@@ -337,7 +337,8 @@ lldb_private::Status NativeRegisterContextLinux_mips64::WriteRegister(
     uint8_t byte_size = reg_info->byte_size;
     lldbassert(reg_info->byte_offset < sizeof(UserArea));
 
-    // Initialise the FP and MSA buffers by reading all co-processor 1 registers
+    // Initialise the FP and MSA buffers by reading all co-processor 1
+    // registers
     ReadCP1();
 
     if (IsFPR(reg_index)) {

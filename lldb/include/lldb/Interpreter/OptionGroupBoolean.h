@@ -24,9 +24,9 @@ namespace lldb_private {
 
 class OptionGroupBoolean : public OptionGroup {
 public:
-  // When 'no_argument_toggle_default' is true, then setting the option
-  // value does NOT require an argument, it sets the boolean value to the
-  // inverse of the default value
+  // When 'no_argument_toggle_default' is true, then setting the option value
+  // does NOT require an argument, it sets the boolean value to the inverse of
+  // the default value
   OptionGroupBoolean(uint32_t usage_mask, bool required,
                      const char *long_option, int short_option,
                      const char *usage_text, bool default_value,

@@ -11,7 +11,6 @@
 #define liblldb_ValueObject_h_
 
 #include "lldb/Core/Value.h"
-#include "lldb/DataFormatters/DumpValueObjectOptions.h" // for DumpValueObj...
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h" // for TypeImpl
 #include "lldb/Target/ExecutionContext.h"
@@ -43,6 +42,9 @@
 #include <stdint.h> // for uint32_t
 namespace lldb_private {
 class Declaration;
+}
+namespace lldb_private {
+class DumpValueObjectOptions;
 }
 namespace lldb_private {
 class EvaluateExpressionOptions;
@@ -286,10 +288,10 @@ public:
       return m_exe_ctx_ref;
     }
 
-    // Set the EvaluationPoint to the values in exe_scope,
-    // Return true if the Evaluation Point changed.
-    // Since the ExecutionContextScope is always going to be valid currently,
-    // the Updated Context will also always be valid.
+    // Set the EvaluationPoint to the values in exe_scope, Return true if the
+    // Evaluation Point changed. Since the ExecutionContextScope is always
+    // going to be valid currently, the Updated Context will also always be
+    // valid.
 
     //        bool
     //        SetContext (ExecutionContextScope *exe_scope);
@@ -327,8 +329,7 @@ public:
 
     void SetInvalid() {
       // Use the stop id to mark us as invalid, leave the thread id and the
-      // stack id around for logging and
-      // history purposes.
+      // stack id around for logging and history purposes.
       m_mod_id.SetInvalid();
 
       // Can't update an invalid state.
@@ -466,17 +467,16 @@ public:
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
-  // Return the module associated with this value object in case the
-  // value is from an executable file and might have its data in
-  // sections of the file. This can be used for variables.
+  // Return the module associated with this value object in case the value is
+  // from an executable file and might have its data in sections of the file.
+  // This can be used for variables.
   virtual lldb::ModuleSP GetModule();
 
   ValueObject *GetRoot();
 
   // Given a ValueObject, loop over itself and its parent, and its parent's
-  // parent, ..
-  // until either the given callback returns false, or you end up at a null
-  // pointer
+  // parent, .. until either the given callback returns false, or you end up at
+  // a null pointer
   ValueObject *FollowParentChain(std::function<bool(ValueObject *)>);
 
   virtual bool GetDeclaration(Declaration &decl);
@@ -519,9 +519,9 @@ public:
 
   virtual bool ResolveValue(Scalar &scalar);
 
-  // return 'false' whenever you set the error, otherwise
-  // callers may assume true means everything is OK - this will
-  // break breakpoint conditions among potentially a few others
+  // return 'false' whenever you set the error, otherwise callers may assume
+  // true means everything is OK - this will break breakpoint conditions among
+  // potentially a few others
   virtual bool IsLogicalTrue(Status &error);
 
   virtual const char *GetLocationAsCString();
@@ -651,8 +651,8 @@ public:
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
                                               lldb::TypeSP &type_sp);
 
-  // The backing bits of this value object were updated, clear any
-  // descriptive string, so we know we have to refetch them
+  // The backing bits of this value object were updated, clear any descriptive
+  // string, so we know we have to refetch them
   virtual void ValueUpdated() {
     ClearUserVisibleData(eClearUserVisibleDataItemsValue |
                          eClearUserVisibleDataItemsSummary |
@@ -699,9 +699,8 @@ public:
 
   lldb::ValueObjectSP Persist();
 
-  // returns true if this is a char* or a char[]
-  // if it is a char* and check_pointer is true,
-  // it also checks that the pointer is valid
+  // returns true if this is a char* or a char[] if it is a char* and
+  // check_pointer is true, it also checks that the pointer is valid
   bool IsCStringContainer(bool check_pointer = false);
 
   std::pair<size_t, bool>
@@ -781,11 +780,9 @@ public:
   }
 
   // Use GetParent for display purposes, but if you want to tell the parent to
-  // update itself
-  // then use m_parent.  The ValueObjectDynamicValue's parent is not the correct
-  // parent for
-  // displaying, they are really siblings, so for display it needs to route
-  // through to its grandparent.
+  // update itself then use m_parent.  The ValueObjectDynamicValue's parent is
+  // not the correct parent for displaying, they are really siblings, so for
+  // display it needs to route through to its grandparent.
   virtual ValueObject *GetParent() { return m_parent; }
 
   virtual const ValueObject *GetParent() const { return m_parent; }
@@ -909,9 +906,9 @@ protected:
   ValueObjectManager *m_manager; // This object is managed by the root object
                                  // (any ValueObject that gets created
   // without a parent.)  The manager gets passed through all the generations of
-  // dependent objects, and will keep the whole cluster of objects alive as long
-  // as a shared pointer to any of them has been handed out.  Shared pointers to
-  // value objects must always be made with the GetSP method.
+  // dependent objects, and will keep the whole cluster of objects alive as
+  // long as a shared pointer to any of them has been handed out.  Shared
+  // pointers to value objects must always be made with the GetSP method.
 
   ChildrenManager m_children;
   std::map<ConstString, ValueObject *> m_synthetic_children;
@@ -959,21 +956,19 @@ protected:
   // Constructors and Destructors
   //------------------------------------------------------------------
 
-  // Use the no-argument constructor to make a constant variable object (with no
-  // ExecutionContextScope.)
+  // Use the no-argument constructor to make a constant variable object (with
+  // no ExecutionContextScope.)
 
   ValueObject();
 
   // Use this constructor to create a "root variable object".  The ValueObject
-  // will be locked to this context
-  // through-out its lifespan.
+  // will be locked to this context through-out its lifespan.
 
   ValueObject(ExecutionContextScope *exe_scope,
               AddressType child_ptr_or_ref_addr_type = eAddressTypeLoad);
 
   // Use this constructor to create a ValueObject owned by another ValueObject.
-  // It will inherit the ExecutionContext
-  // of its parent.
+  // It will inherit the ExecutionContext of its parent.
 
   ValueObject(ValueObject &parent);
 
@@ -995,8 +990,8 @@ protected:
 
   virtual void CalculateSyntheticValue(bool use_synthetic = true);
 
-  // Should only be called by ValueObject::GetChildAtIndex()
-  // Returns a ValueObject managed by this ValueObject's manager.
+  // Should only be called by ValueObject::GetChildAtIndex() Returns a
+  // ValueObject managed by this ValueObject's manager.
   virtual ValueObject *CreateChildAtIndex(size_t idx,
                                           bool synthetic_array_member,
                                           int32_t synthetic_index);
@@ -1053,8 +1048,9 @@ private:
 //------------------------------------------------------------------------------
 // A value object manager class that is seeded with the static variable value
 // and it vends the user facing value object. If the type is dynamic it can
-// vend the dynamic type. If this user type also has a synthetic type associated
-// with it, it will vend the synthetic type. The class watches the process' stop
+// vend the dynamic type. If this user type also has a synthetic type
+// associated with it, it will vend the synthetic type. The class watches the
+// process' stop
 // ID and will update the user type when needed.
 //------------------------------------------------------------------------------
 class ValueObjectManager {

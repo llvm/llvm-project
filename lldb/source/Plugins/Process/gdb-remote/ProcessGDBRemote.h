@@ -144,6 +144,9 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  Status
+  WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
+
   size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                        Status &error) override;
 
@@ -214,8 +217,7 @@ public:
   void PrefetchModuleSpecs(llvm::ArrayRef<FileSpec> module_file_specs,
                            const llvm::Triple &triple) override;
 
-  bool GetHostOSVersion(uint32_t &major, uint32_t &minor,
-                        uint32_t &update) override;
+  llvm::VersionTuple GetHostOSVersion() override;
 
   size_t LoadModules(LoadedModuleInfoList &module_list) override;
 
@@ -301,6 +303,11 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+
+  bool m_allow_flash_writes;
+  using FlashRangeVector = lldb_private::RangeVector<lldb::addr_t, size_t>;
+  using FlashRange = FlashRangeVector::Entry;
+  FlashRangeVector m_erased_flash_ranges;
 
   //----------------------------------------------------------------------
   // Accessors
@@ -407,6 +414,12 @@ protected:
                                      bool value_is_offset);
 
   Status UpdateAutomaticSignalFiltering() override;
+
+  Status FlashErase(lldb::addr_t addr, size_t size);
+
+  Status FlashDone();
+
+  bool HasErased(FlashRange range);
 
 private:
   //------------------------------------------------------------------

@@ -26,12 +26,8 @@ class ObjCModulesTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
     @skipUnlessDarwin
-    @unittest2.expectedFailure("rdar://20416388")
     @skipIf(macos_version=["<", "10.12"])
     def test_expr(self):
-        if not self.applies():
-            return
-
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

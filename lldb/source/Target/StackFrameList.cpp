@@ -51,8 +51,8 @@ StackFrameList::StackFrameList(Thread &thread,
 }
 
 StackFrameList::~StackFrameList() {
-  // Call clear since this takes a lock and clears the stack frame list
-  // in case another thread is currently using this stack frame list
+  // Call clear since this takes a lock and clears the stack frame list in case
+  // another thread is currently using this stack frame list
   Clear();
 }
 
@@ -95,13 +95,12 @@ void StackFrameList::ResetCurrentInlinedDepth() {
         log->Printf(
             "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
     } else {
-      // We only need to do something special about inlined blocks when we
-      // are at the beginning of an inlined function:
+      // We only need to do something special about inlined blocks when we are
+      // at the beginning of an inlined function:
       // FIXME: We probably also have to do something special if the PC is at
       // the END
       // of an inlined function, which coincides with the end of either its
-      // containing
-      // function or another inlined function.
+      // containing function or another inlined function.
 
       lldb::addr_t curr_pc = m_thread.GetRegisterContext()->GetPC();
       Block *block_ptr = m_frames[0]->GetFrameBlock();
@@ -114,19 +113,15 @@ void StackFrameList::ResetCurrentInlinedDepth() {
                                                  containing_range)) {
           if (pc_as_address == containing_range.GetBaseAddress()) {
             // If we got here because of a breakpoint hit, then set the inlined
-            // depth depending on where
-            // the breakpoint was set.
-            // If we got here because of a crash, then set the inlined depth to
-            // the deepest most block.
-            // Otherwise, we stopped here naturally as the result of a step, so
-            // set ourselves in the
-            // containing frame of the whole set of nested inlines, so the user
-            // can then "virtually"
-            // step into the frames one by one, or next over the whole mess.
-            // Note: We don't have to handle being somewhere in the middle of
-            // the stack here, since
-            // ResetCurrentInlinedDepth doesn't get called if there is a valid
-            // inlined depth set.
+            // depth depending on where the breakpoint was set. If we got here
+            // because of a crash, then set the inlined depth to the deepest
+            // most block. Otherwise, we stopped here naturally as the result
+            // of a step, so set ourselves in the containing frame of the whole
+            // set of nested inlines, so the user can then "virtually" step
+            // into the frames one by one, or next over the whole mess. Note:
+            // We don't have to handle being somewhere in the middle of the
+            // stack here, since ResetCurrentInlinedDepth doesn't get called if
+            // there is a valid inlined depth set.
             StopInfoSP stop_info_sp = m_thread.GetStopInfo();
             if (stop_info_sp) {
               switch (stop_info_sp->GetStopReason()) {
@@ -134,7 +129,8 @@ void StackFrameList::ResetCurrentInlinedDepth() {
               case eStopReasonException:
               case eStopReasonExec:
               case eStopReasonSignal:
-                // In all these cases we want to stop in the deepest most frame.
+                // In all these cases we want to stop in the deepest most
+                // frame.
                 m_current_inlined_pc = curr_pc;
                 m_current_inlined_depth = 0;
                 break;
@@ -142,17 +138,14 @@ void StackFrameList::ResetCurrentInlinedDepth() {
                 // FIXME: Figure out what this break point is doing, and set the
                 // inline depth
                 // appropriately.  Be careful to take into account breakpoints
-                // that implement
-                // step over prologue, since that should do the default
-                // calculation.
-                // For now, if the breakpoints corresponding to this hit are all
-                // internal,
+                // that implement step over prologue, since that should do the
+                // default calculation. For now, if the breakpoints
+                // corresponding to this hit are all internal,
                 // I set the stop location to the top of the inlined stack,
                 // since that will make
-                // things like stepping over prologues work right.  But if there
-                // are any non-internal
-                // breakpoints I do to the bottom of the stack, since that was
-                // the old behavior.
+                // things like stepping over prologues work right.  But if
+                // there are any non-internal breakpoints I do to the bottom of
+                // the stack, since that was the old behavior.
                 uint32_t bp_site_id = stop_info_sp->GetValue();
                 BreakpointSiteSP bp_site_sp(
                     m_thread.GetProcess()->GetBreakpointSiteList().FindByID(
@@ -177,10 +170,9 @@ void StackFrameList::ResetCurrentInlinedDepth() {
                 LLVM_FALLTHROUGH;
               default: {
                 // Otherwise, we should set ourselves at the container of the
-                // inlining, so that the
-                // user can descend into them.
-                // So first we check whether we have more than one inlined block
-                // sharing this PC:
+                // inlining, so that the user can descend into them. So first
+                // we check whether we have more than one inlined block sharing
+                // this PC:
                 int num_inlined_functions = 0;
 
                 for (Block *container_ptr = block_ptr->GetInlinedParent();
@@ -250,13 +242,11 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
 #if defined(DEBUG_STACK_FRAMES)
     StreamFile s(stdout, false);
 #endif
-    // If we are hiding some frames from the outside world, we need to add those
-    // onto the total count of
-    // frames to fetch.  However, we don't need to do that if end_idx is 0 since
-    // in that case we always
-    // get the first concrete frame and all the inlined frames below it...  And
-    // of course, if end_idx is
-    // UINT32_MAX that means get all, so just do that...
+    // If we are hiding some frames from the outside world, we need to add
+    // those onto the total count of frames to fetch.  However, we don't need
+    // to do that if end_idx is 0 since in that case we always get the first
+    // concrete frame and all the inlined frames below it...  And of course, if
+    // end_idx is UINT32_MAX that means get all, so just do that...
 
     uint32_t inlined_depth = 0;
     if (end_idx > 0 && end_idx != UINT32_MAX) {
@@ -273,17 +263,17 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
       lldb::addr_t pc = LLDB_INVALID_ADDRESS;
       lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
       if (idx == 0) {
-        // We might have already created frame zero, only create it
-        // if we need to
+        // We might have already created frame zero, only create it if we need
+        // to
         if (m_frames.empty()) {
           RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
           if (reg_ctx_sp) {
             const bool success =
                 unwinder && unwinder->GetFrameInfoAtIndex(idx, cfa, pc);
-            // There shouldn't be any way not to get the frame info for frame 0.
-            // But if the unwinder can't make one, lets make one by hand with
-            // the
+            // There shouldn't be any way not to get the frame info for frame
+            // 0. But if the unwinder can't make one, lets make one by hand
+            // with the
             // SP as the CFA and see if that gets any further.
             if (!success) {
               cfa = reg_ctx_sp->GetSP();
@@ -323,22 +313,20 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
       if (unwind_block) {
         Address curr_frame_address(unwind_frame_sp->GetFrameCodeAddress());
         TargetSP target_sp = m_thread.CalculateTarget();
-        // Be sure to adjust the frame address to match the address
-        // that was used to lookup the symbol context above. If we are
-        // in the first concrete frame, then we lookup using the current
-        // address, else we decrement the address by one to get the correct
-        // location.
+        // Be sure to adjust the frame address to match the address that was
+        // used to lookup the symbol context above. If we are in the first
+        // concrete frame, then we lookup using the current address, else we
+        // decrement the address by one to get the correct location.
         if (idx > 0) {
           if (curr_frame_address.GetOffset() == 0) {
             // If curr_frame_address points to the first address in a section
-            // then after
-            // adjustment it will point to an other section. In that case
-            // resolve the
-            // address again to the correct section plus offset form.
+            // then after adjustment it will point to an other section. In that
+            // case resolve the address again to the correct section plus
+            // offset form.
             addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(
-                target_sp.get(), eAddressClassCode);
+                target_sp.get(), AddressClass::eCode);
             curr_frame_address.SetOpcodeLoadAddress(
-                load_addr - 1, target_sp.get(), eAddressClassCode);
+                load_addr - 1, target_sp.get(), AddressClass::eCode);
           } else {
             curr_frame_address.Slide(-1);
           }
@@ -414,8 +402,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
           break;
 
         prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
-        // Now copy the fixed up previous frame into the current frames
-        // so the pointer doesn't change
+        // Now copy the fixed up previous frame into the current frames so the
+        // pointer doesn't change
         m_frames[curr_frame_idx] = prev_frame_sp;
 // curr_frame->UpdateCurrentFrameFromPreviousFrame (*prev_frame);
 
@@ -495,9 +483,8 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   if (frame_sp)
     return frame_sp;
 
-  // GetFramesUpTo will fill m_frames with as many frames as you asked for,
-  // if there are that many.  If there weren't then you asked for too many
-  // frames.
+  // GetFramesUpTo will fill m_frames with as many frames as you asked for, if
+  // there are that many.  If there weren't then you asked for too many frames.
   GetFramesUpTo(idx);
   if (idx < m_frames.size()) {
     if (m_show_inlined_frames) {
@@ -519,8 +506,8 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
           Function *function =
               frame_sp->GetSymbolContext(eSymbolContextFunction).function;
           if (function) {
-            // When we aren't showing inline functions we always use
-            // the top most function block as the scope.
+            // When we aren't showing inline functions we always use the top
+            // most function block as the scope.
             frame_sp->SetSymbolContextScope(&function->GetBlock(false));
           } else {
             // Set the symbol scope from the symbol regardless if it is nullptr
@@ -534,9 +521,8 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
     }
   } else if (original_idx == 0) {
     // There should ALWAYS be a frame at index 0.  If something went wrong with
-    // the CurrentInlinedDepth such that
-    // there weren't as many frames as we thought taking that into account, then
-    // reset the current inlined depth
+    // the CurrentInlinedDepth such that there weren't as many frames as we
+    // thought taking that into account, then reset the current inlined depth
     // and return the real zeroth frame.
     if (m_frames.empty()) {
       // Why do we have a thread with zero frames, that should not ever
@@ -554,11 +540,11 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
 StackFrameSP
 StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   // First try assuming the unwind index is the same as the frame index. The
-  // unwind index is always greater than or equal to the frame index, so it
-  // is a good place to start. If we have inlined frames we might have 5
-  // concrete frames (frame unwind indexes go from 0-4), but we might have 15
-  // frames after we make all the inlined frames. Most of the time the unwind
-  // frame index (or the concrete frame index) is the same as the frame index.
+  // unwind index is always greater than or equal to the frame index, so it is
+  // a good place to start. If we have inlined frames we might have 5 concrete
+  // frames (frame unwind indexes go from 0-4), but we might have 15 frames
+  // after we make all the inlined frames. Most of the time the unwind frame
+  // index (or the concrete frame index) is the same as the frame index.
   uint32_t frame_idx = unwind_idx;
   StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
   while (frame_sp) {
@@ -719,9 +705,9 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
 #if defined(DEBUG_STACK_FRAMES)
     s.PutCString("No previous frames, so use current frames...\n");
 #endif
-    // We either don't have any previous frames, or since we have more than
-    // one current frames it means we have all the frames and can safely
-    // replace our previous frames.
+    // We either don't have any previous frames, or since we have more than one
+    // current frames it means we have all the frames and can safely replace
+    // our previous frames.
     prev_sp.reset(curr_ap.release());
     return;
   }
@@ -733,8 +719,8 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
     s.PutCString(
         "We have more than one current frame, so use current frames...\n");
 #endif
-    // We have more than one current frames it means we have all the frames
-    // and can safely replace our previous frames.
+    // We have more than one current frames it means we have all the frames and
+    // can safely replace our previous frames.
     prev_sp.reset(curr_ap.release());
 
 #if defined(DEBUG_STACK_FRAMES)

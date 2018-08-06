@@ -154,16 +154,10 @@ public:
 
     switch (type_size) {
     case 1:
-      scalar = (uint8_t)u64value;
-      break;
     case 2:
-      scalar = (uint16_t)u64value;
-      break;
     case 4:
-      scalar = (uint32_t)u64value;
-      break;
     case 8:
-      scalar = (uint64_t)u64value;
+      scalar = llvm::APInt(type_size*8, u64value);
       break;
     default:
       return false;
@@ -1567,8 +1561,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      // Push all function arguments to the argument list that will
-      // be passed to the call function thread plan
+      // Push all function arguments to the argument list that will be passed
+      // to the call function thread plan
       for (int i = 0; i < numArgs; i++) {
         // Get details of this argument
         llvm::Value *arg_op = call_inst->getArgOperand(i);

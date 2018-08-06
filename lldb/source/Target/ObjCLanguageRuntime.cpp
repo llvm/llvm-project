@@ -23,6 +23,7 @@
 #include "lldb/Utility/Timer.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DJB.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,8 +46,7 @@ bool ObjCLanguageRuntime::AddClass(ObjCISA isa,
   if (isa != 0) {
     m_isa_to_descriptor[isa] = descriptor_sp;
     // class_name is assumed to be valid
-    m_hash_to_isa_map.insert(
-        std::make_pair(MappedHash::HashStringUsingDJB(class_name), isa));
+    m_hash_to_isa_map.insert(std::make_pair(llvm::djbHash(class_name), isa));
     return true;
   }
   return false;
@@ -170,8 +170,7 @@ ObjCLanguageRuntime::GetDescriptorIterator(const ConstString &name) {
     UpdateISAToDescriptorMap();
     if (m_hash_to_isa_map.empty()) {
       // No name hashes were provided, we need to just linearly power through
-      // the
-      // names and find a match
+      // the names and find a match
       for (ISAToDescriptorIterator pos = m_isa_to_descriptor.begin();
            pos != end; ++pos) {
         if (pos->second->GetClassName() == name)
@@ -180,8 +179,7 @@ ObjCLanguageRuntime::GetDescriptorIterator(const ConstString &name) {
     } else {
       // Name hashes were provided, so use them to efficiently lookup name to
       // isa/descriptor
-      const uint32_t name_hash =
-          MappedHash::HashStringUsingDJB(name.GetCString());
+      const uint32_t name_hash = llvm::djbHash(name.GetStringRef());
       std::pair<HashToISAIterator, HashToISAIterator> range =
           m_hash_to_isa_map.equal_range(name_hash);
       for (HashToISAIterator range_pos = range.first; range_pos != range.second;
@@ -240,9 +238,9 @@ ObjCLanguageRuntime::GetClassDescriptorFromClassName(
 ObjCLanguageRuntime::ClassDescriptorSP
 ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
   ClassDescriptorSP objc_class_sp;
-  // if we get an invalid VO (which might still happen when playing around
-  // with pointers returned by the expression parser, don't consider this
-  // a valid ObjC object)
+  // if we get an invalid VO (which might still happen when playing around with
+  // pointers returned by the expression parser, don't consider this a valid
+  // ObjC object)
   if (valobj.GetCompilerType().IsValid()) {
     addr_t isa_pointer = valobj.GetPointerValue();
     if (isa_pointer != LLDB_INVALID_ADDRESS) {

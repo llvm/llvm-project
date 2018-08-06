@@ -138,23 +138,20 @@ public:
                               lldb::SBCommandReturnObject result);
 
   // The pointer based interface is not useful in SWIG, since the cursor &
-  // last_char arguments are string pointers INTO current_line
-  // and you can't do that in a scripting language interface in general...
+  // last_char arguments are string pointers INTO current_line and you can't do
+  // that in a scripting language interface in general...
 
   // In either case, the way this works is that the you give it a line and
-  // cursor position in the line.  The function
-  // will return the number of completions.  The matches list will contain
-  // number_of_completions + 1 elements.  The first
-  // element is the common substring after the cursor position for all the
-  // matches.  The rest of the elements are the
-  // matches.  The first element is useful if you are emulating the common shell
-  // behavior where the tab completes
-  // to the string that is common among all the matches, then you should first
-  // check if the first element is non-empty,
+  // cursor position in the line.  The function will return the number of
+  // completions.  The matches list will contain number_of_completions + 1
+  // elements.  The first element is the common substring after the cursor
+  // position for all the matches.  The rest of the elements are the matches.
+  // The first element is useful if you are emulating the common shell behavior
+  // where the tab completes to the string that is common among all the
+  // matches, then you should first check if the first element is non-empty,
   // and if so just insert it and move the cursor to the end of the insertion.
-  // The next tab will return an empty
-  // common substring, and a list of choices (if any), at which point you should
-  // display the choices and let the user
+  // The next tab will return an empty common substring, and a list of choices
+  // (if any), at which point you should display the choices and let the user
   // type further to disambiguate.
 
   int HandleCompletion(const char *current_line, const char *cursor,
@@ -167,9 +164,9 @@ public:
 
   bool WasInterrupted() const;
 
-  // Catch commands before they execute by registering a callback that will
-  // get called when the command gets executed. This allows GUI or command
-  // line interfaces to intercept a command and stop it from happening
+  // Catch commands before they execute by registering a callback that will get
+  // called when the command gets executed. This allows GUI or command line
+  // interfaces to intercept a command and stop it from happening
   bool SetCommandOverrideCallback(const char *command_name,
                                   lldb::CommandOverrideCallback callback,
                                   void *baton);
@@ -209,6 +206,25 @@ public:
   bool GetPromptOnQuit();
 
   void SetPromptOnQuit(bool b);
+
+  //----------------------------------------------------------------------
+  /// Sets whether the command interpreter should allow custom exit codes
+  /// for the 'quit' command.
+  //----------------------------------------------------------------------
+  void AllowExitCodeOnQuit(bool allow);
+
+  //----------------------------------------------------------------------
+  /// Returns true if the user has called the 'quit' command with a custom exit
+  /// code.
+  //----------------------------------------------------------------------
+  bool HasCustomQuitExitCode();
+
+  //----------------------------------------------------------------------
+  /// Returns the exit code that the user has specified when running the
+  /// 'quit' command. Returns 0 if the user hasn't called 'quit' at all or
+  /// without a custom exit code.
+  //----------------------------------------------------------------------
+  int GetQuitStatus();
 
   //----------------------------------------------------------------------
   /// Resolve the command just as HandleCommand would, expanding abbreviations

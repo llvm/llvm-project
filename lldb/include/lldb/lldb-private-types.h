@@ -30,9 +30,8 @@ typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
 
 //----------------------------------------------------------------------
-// Every register is described in detail including its name, alternate
-// name (optional), encoding, size in bytes and the default display
-// format.
+// Every register is described in detail including its name, alternate name
+// (optional), encoding, size in bytes and the default display format.
 //----------------------------------------------------------------------
 struct RegisterInfo {
   const char *name;     // Name of this register, can't be NULL
@@ -41,28 +40,29 @@ struct RegisterInfo {
   uint32_t byte_offset; // The byte offset in the register context data where
                         // this register's value is found.
   // This is optional, and can be 0 if a particular RegisterContext does not
-  // need to
-  // address its registers by byte offset.
+  // need to address its registers by byte offset.
   lldb::Encoding encoding;                 // Encoding of the register bits
   lldb::Format format;                     // Default display format
   uint32_t kinds[lldb::kNumRegisterKinds]; // Holds all of the various register
                                            // numbers for all register kinds
   uint32_t *value_regs;                    // List of registers (terminated with
-                        // LLDB_INVALID_REGNUM).  If this value is not
-  // null, all registers in this list will be read first, at which point the
-  // value
-  // for this register will be valid.  For example, the value list for ah
-  // would be eax (x86) or rax (x64).
+                        // LLDB_INVALID_REGNUM).  If this value is not null,
+                        // all registers in this list will be read first, at
+                        // which point the value for this register will be
+                        // valid.  For example, the value list for ah would be
+                        // eax (x86) or rax (x64).
   uint32_t *invalidate_regs; // List of registers (terminated with
                              // LLDB_INVALID_REGNUM).  If this value is not
-  // null, all registers in this list will be invalidated when the value of this
-  // register changes.  For example, the invalidate list for eax would be rax
-  // ax, ah, and al.
+                             // null, all registers in this list will be
+                             // invalidated when the value of this register
+                             // changes.  For example, the invalidate list for
+                             // eax would be rax ax, ah, and al.
   const uint8_t *dynamic_size_dwarf_expr_bytes; // A DWARF expression that when
                                                 // evaluated gives
   // the byte size of this register.
   size_t dynamic_size_dwarf_len; // The length of the DWARF expression in bytes
-                                 // in the dynamic_size_dwarf_expr_bytes member.
+                                 // in the dynamic_size_dwarf_expr_bytes
+                                 // member.
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);
@@ -85,8 +85,8 @@ struct RegisterSet {
                              // values in this array are
   // *indices* (not register numbers) into a particular RegisterContext's
   // register array.  For example, if eax is defined at index 4 for a
-  // particular RegisterContext, eax would be included in this RegisterSet
-  // by adding the value 4.  Not by adding the value lldb_eax_i386.
+  // particular RegisterContext, eax would be included in this RegisterSet by
+  // adding the value 4.  Not by adding the value lldb_eax_i386.
 };
 
 struct OptionEnumValueElement {
@@ -112,7 +112,8 @@ struct OptionDefinition {
   int short_option;        // Single character for this option.
   int option_has_arg; // no_argument, required_argument or optional_argument
   OptionValidator *validator; // If non-NULL, option is valid iff
-                              // |validator->IsValid()|, otherwise always valid.
+                              // |validator->IsValid()|, otherwise always
+                              // valid.
   OptionEnumValueElement *enum_values; // If non-NULL an array of enum values.
   uint32_t completion_type; // Cookie the option class can use to do define the
                             // argument completion.

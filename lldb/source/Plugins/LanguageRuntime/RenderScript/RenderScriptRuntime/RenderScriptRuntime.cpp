@@ -26,7 +26,6 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -40,6 +39,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
@@ -312,7 +312,8 @@ bool GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 
   Status err;
 
-  // find offset to arguments on the stack (+16 to skip over a0-a3 shadow space)
+  // find offset to arguments on the stack (+16 to skip over a0-a3 shadow
+  // space)
   uint64_t sp = ctx.reg_ctx->GetSP() + 16;
 
   for (size_t i = 0; i < num_args; ++i) {
@@ -447,12 +448,11 @@ bool IsRenderScriptScriptModule(ModuleSP module) {
 }
 
 bool ParseCoordinate(llvm::StringRef coord_s, RSCoordinate &coord) {
-  // takes an argument of the form 'num[,num][,num]'.
-  // Where 'coord_s' is a comma separated 1,2 or 3-dimensional coordinate
-  // with the whitespace trimmed.
-  // Missing coordinates are defaulted to zero.
-  // If parsing of any elements fails the contents of &coord are undefined
-  // and `false` is returned, `true` otherwise
+  // takes an argument of the form 'num[,num][,num]'. Where 'coord_s' is a
+  // comma separated 1,2 or 3-dimensional coordinate with the whitespace
+  // trimmed. Missing coordinates are defaulted to zero. If parsing of any
+  // elements fails the contents of &coord are undefined and `false` is
+  // returned, `true` otherwise
 
   RegularExpression regex;
   RegularExpression::Match regex_match(3);
@@ -593,7 +593,7 @@ struct RenderScriptRuntime::Element {
   empirical_type<uint32_t> datum_size;  // Size of a single Element with padding
   empirical_type<uint32_t> padding;     // Number of padding bytes
   empirical_type<uint32_t>
-      array_size;        // Number of items in array, only needed for strucrs
+      array_size;        // Number of items in array, only needed for structs
   ConstString type_name; // Name of type, only needed for structs
 
   static const ConstString &
@@ -633,8 +633,9 @@ struct RenderScriptRuntime::AllocationDetails {
   // subelements, there may be more than one instance of the ElementHeader
   // struct. With this first instance being the root element, and the other
   // instances being the root's descendants. To identify which instances are an
-  // ElementHeader's children, each struct is immediately followed by a sequence
-  // of consecutive offsets to the start of its child structs. These offsets are
+  // ElementHeader's children, each struct is immediately followed by a
+  // sequence of consecutive offsets to the start of its child structs. These
+  // offsets are
   // 4 bytes in size, and the 0 offset signifies no more children.
   struct FileHeader {
     uint8_t ident[4];  // ASCII 'RSAD' identifying the file
@@ -653,8 +654,8 @@ struct RenderScriptRuntime::AllocationDetails {
   // Monotonically increasing from 1
   static uint32_t ID;
 
-  // Maps Allocation DataType enum and vector size to printable strings
-  // using mapping from RenderScript numerical types summary documentation
+  // Maps Allocation DataType enum and vector size to printable strings using
+  // mapping from RenderScript numerical types summary documentation
   static const char *RsDataTypeToString[][4];
 
   // Maps Allocation DataKind enum to printable strings
@@ -844,11 +845,10 @@ RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
                                            lldb_private::SymbolContext &context,
                                            Address *, bool) {
   // We need to have access to the list of reductions currently parsed, as
-  // reduce names don't actually exist as
-  // symbols in a module. They are only identifiable by parsing the .rs.info
-  // packet, or finding the expand symbol. We
-  // therefore need access to the list of parsed rs modules to properly resolve
-  // reduction names.
+  // reduce names don't actually exist as symbols in a module. They are only
+  // identifiable by parsing the .rs.info packet, or finding the expand symbol.
+  // We therefore need access to the list of parsed rs modules to properly
+  // resolve reduction names.
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   ModuleSP module = context.module_sp;
 
@@ -967,8 +967,8 @@ Searcher::CallbackReturn RSScriptGroupBreakpointResolver::SearchCallback(
         log->Printf("%s: Placed %sbreakpoint on %s", __FUNCTION__,
                     new_bp ? "new " : "", k.m_name.AsCString());
 
-      // exit after placing the first breakpoint if we do not intend to stop
-      // on all kernels making up this script group
+      // exit after placing the first breakpoint if we do not intend to stop on
+      // all kernels making up this script group
       if (!m_stop_on_all)
         break;
     }
@@ -1684,8 +1684,8 @@ void RenderScriptRuntime::FixupScriptDetails(RSModuleDescriptorSP rsmodule_sp) {
   const ModuleSP module = rsmodule_sp->m_module;
   const FileSpec &file = module->GetPlatformFileSpec();
 
-  // Iterate over all of the scripts that we currently know of.
-  // Note: We cant push or pop to m_scripts here or it may invalidate rs_script.
+  // Iterate over all of the scripts that we currently know of. Note: We cant
+  // push or pop to m_scripts here or it may invalidate rs_script.
   for (const auto &rs_script : m_scripts) {
     // Extract the expected .so file path for this script.
     std::string shared_lib;
@@ -1825,9 +1825,9 @@ const char *JITTemplate(ExpressionStrings e) {
 
        // rsaTypeGetNativeData(Context*, Type*, void* typeData, size) Pack the
        // data in the following way mHal.state.dimX; mHal.state.dimY;
-       // mHal.state.dimZ; mHal.state.lodCount; mHal.state.faces; mElement; into
-       // typeData Need to specify 32 or 64 bit for uint_t since this differs
-       // between devices
+       // mHal.state.dimZ; mHal.state.lodCount; mHal.state.faces; mElement;
+       // into typeData Need to specify 32 or 64 bit for uint_t since this
+       // differs between devices
        JIT_TEMPLATE_CONTEXT
        "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(ctxt"
        ", 0x%" PRIx64 ", data, 6); data[0]", // eExprTypeDimX
@@ -1882,10 +1882,10 @@ const char *JITTemplate(ExpressionStrings e) {
 }
 } // end of the anonymous namespace
 
-// JITs the RS runtime for the internal data pointer of an allocation. Is passed
-// x,y,z coordinates for the pointer to a specific element. Then sets the
-// data_ptr member in Allocation with the result. Returns true on success, false
-// otherwise
+// JITs the RS runtime for the internal data pointer of an allocation. Is
+// passed x,y,z coordinates for the pointer to a specific element. Then sets
+// the data_ptr member in Allocation with the result. Returns true on success,
+// false otherwise
 bool RenderScriptRuntime::JITDataPointer(AllocationDetails *alloc,
                                          StackFrame *frame_ptr, uint32_t x,
                                          uint32_t y, uint32_t z) {
@@ -1961,8 +1961,8 @@ bool RenderScriptRuntime::JITTypePointer(AllocationDetails *alloc,
 }
 
 // JITs the RS runtime for information about the dimensions and type of an
-// allocation Then sets dimension and element_ptr members in Allocation with the
-// result. Returns true on success, false otherwise
+// allocation Then sets dimension and element_ptr members in Allocation with
+// the result. Returns true on success, false otherwise
 bool RenderScriptRuntime::JITTypePacked(AllocationDetails *alloc,
                                         StackFrame *frame_ptr) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -2245,9 +2245,8 @@ bool RenderScriptRuntime::JITAllocationSize(AllocationDetails *alloc,
 }
 
 // JITs the RS runtime for information about the stride between rows in the
-// allocation. This is done to detect padding, since allocated memory is 16-byte
-// aligned.
-// Returns true on success, false otherwise
+// allocation. This is done to detect padding, since allocated memory is
+// 16-byte aligned. Returns true on success, false otherwise
 bool RenderScriptRuntime::JITAllocationStride(AllocationDetails *alloc,
                                               StackFrame *frame_ptr) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -2313,9 +2312,8 @@ bool RenderScriptRuntime::RefreshAllocation(AllocationDetails *alloc,
 }
 
 // Function attempts to set the type_name member of the paramaterised Element
-// object.
-// This string should be the name of the struct type the Element represents.
-// We need this string for pretty printing the Element to users.
+// object. This string should be the name of the struct type the Element
+// represents. We need this string for pretty printing the Element to users.
 void RenderScriptRuntime::FindStructTypeName(Element &elem,
                                              StackFrame *frame_ptr) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -2330,12 +2328,11 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
   VariableList var_list;
   for (auto module_sp : m_rsmodules)
     module_sp->m_module->FindGlobalVariables(
-        RegularExpression(llvm::StringRef(".")), true, UINT32_MAX, var_list);
+        RegularExpression(llvm::StringRef(".")), UINT32_MAX, var_list);
 
   // Iterate over all the global variables looking for one with a matching type
-  // to the Element.
-  // We make the assumption a match exists since there needs to be a global
-  // variable to reflect the struct type back into java host code.
+  // to the Element. We make the assumption a match exists since there needs to
+  // be a global variable to reflect the struct type back into java host code.
   for (uint32_t i = 0; i < var_list.GetSize(); ++i) {
     const VariableSP var_sp(var_list.GetVariableAtIndex(i));
     if (!var_sp)
@@ -2347,15 +2344,14 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
 
     // Find the number of variable fields.
     // If it has no fields, or more fields than our Element, then it can't be
-    // the struct we're looking for.
-    // Don't check for equality since RS can add extra struct members for
-    // padding.
+    // the struct we're looking for. Don't check for equality since RS can add
+    // extra struct members for padding.
     size_t num_children = valobj_sp->GetNumChildren();
     if (num_children > elem.children.size() || num_children == 0)
       continue;
 
-    // Iterate over children looking for members with matching field names.
-    // If all the field names match, this is likely the struct we want.
+    // Iterate over children looking for members with matching field names. If
+    // all the field names match, this is likely the struct we want.
     //   TODO: This could be made more robust by also checking children data
     //   sizes, or array size
     bool found = true;
@@ -2404,8 +2400,8 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
 }
 
 // Function sets the datum_size member of Element. Representing the size of a
-// single instance including padding.
-// Assumes the relevant allocation information has already been jitted.
+// single instance including padding. Assumes the relevant allocation
+// information has already been jitted.
 void RenderScriptRuntime::SetElementSize(Element &elem) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
   const Element::DataType type = *elem.type.get();
@@ -2446,9 +2442,9 @@ void RenderScriptRuntime::SetElementSize(Element &elem) {
                 data_size + padding);
 }
 
-// Given an allocation, this function copies the allocation contents from device
-// into a buffer on the heap.
-// Returning a shared pointer to the buffer containing the data.
+// Given an allocation, this function copies the allocation contents from
+// device into a buffer on the heap. Returning a shared pointer to the buffer
+// containing the data.
 std::shared_ptr<uint8_t>
 RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
                                        StackFrame *frame_ptr) {
@@ -2496,9 +2492,8 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
   return buffer;
 }
 
-// Function copies data from a binary file into an allocation.
-// There is a header at the start of the file, FileHeader, before the data
-// content itself.
+// Function copies data from a binary file into an allocation. There is a
+// header at the start of the file, FileHeader, before the data content itself.
 // Information from this header is used to display warnings to the user about
 // incompatibilities
 bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
@@ -2630,7 +2625,8 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
   // Calculate size of allocation data in file
   size_t size = data_sp->GetByteSize() - file_header->hdr_size;
 
-  // Check if the target allocation and file both have the same total data size.
+  // Check if the target allocation and file both have the same total data
+  // size.
   const uint32_t alloc_size = *alloc->size.get();
   if (alloc_size != size) {
     strm.Printf("Warning: Mismatched allocation sizes - file 0x%" PRIx64
@@ -2660,15 +2656,15 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
 
 // Function takes as parameters a byte buffer, which will eventually be written
 // to file as the element header, an offset into that buffer, and an Element
-// that will be saved into the buffer at the parametrised offset.
-// Return value is the new offset after writing the element into the buffer.
-// Elements are saved to the file as the ElementHeader struct followed by
-// offsets to the structs of all the element's children.
+// that will be saved into the buffer at the parametrised offset. Return value
+// is the new offset after writing the element into the buffer. Elements are
+// saved to the file as the ElementHeader struct followed by offsets to the
+// structs of all the element's children.
 size_t RenderScriptRuntime::PopulateElementHeaders(
     const std::shared_ptr<uint8_t> header_buffer, size_t offset,
     const Element &elem) {
-  // File struct for an element header with all the relevant details copied from
-  // elem. We assume members are valid already.
+  // File struct for an element header with all the relevant details copied
+  // from elem. We assume members are valid already.
   AllocationDetails::ElementHeader elem_header;
   elem_header.type = *elem.type.get();
   elem_header.kind = *elem.type_kind.get();
@@ -2678,9 +2674,8 @@ size_t RenderScriptRuntime::PopulateElementHeaders(
       elem.array_size.isValid() ? *elem.array_size.get() : 0;
   const size_t elem_header_size = sizeof(AllocationDetails::ElementHeader);
 
-  // Copy struct into buffer and advance offset
-  // We assume that header_buffer has been checked for nullptr before this
-  // method is called
+  // Copy struct into buffer and advance offset We assume that header_buffer
+  // has been checked for nullptr before this method is called
   memcpy(header_buffer.get() + offset, &elem_header, elem_header_size);
   offset += elem_header_size;
 
@@ -2721,8 +2716,8 @@ size_t RenderScriptRuntime::CalculateElementHeaderSize(const Element &elem) {
   return size;
 }
 
-// Function copies allocation contents into a binary file. This file can then be
-// loaded later into a different allocation. There is a header, FileHeader,
+// Function copies allocation contents into a binary file. This file can then
+// be loaded later into a different allocation. There is a header, FileHeader,
 // before the allocation data containing meta-data.
 bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
                                          const char *path,
@@ -2852,8 +2847,8 @@ bool RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp) {
   if (module_sp) {
     for (const auto &rs_module : m_rsmodules) {
       if (rs_module->m_module == module_sp) {
-        // Check if the user has enabled automatically breaking on
-        // all RS kernels.
+        // Check if the user has enabled automatically breaking on all RS
+        // kernels.
         if (m_breakAllKernels)
           BreakOnModuleKernels(rs_module);
 
@@ -2975,11 +2970,10 @@ bool RSModuleDescriptor::ParseExportReduceCount(llvm::StringRef *lines,
                                                 size_t n_lines) {
   // The list of reduction kernels in the `.rs.info` symbol is of the form
   // "signature - accumulatordatasize - reduction_name - initializer_name -
-  // accumulator_name - combiner_name -
-  // outconverter_name - halter_name"
-  // Where a function is not explicitly named by the user, or is not generated
-  // by the compiler, it is named "." so the
-  // dash separated list should always be 8 items long
+  // accumulator_name - combiner_name - outconverter_name - halter_name" Where
+  // a function is not explicitly named by the user, or is not generated by the
+  // compiler, it is named "." so the dash separated list should always be 8
+  // items long
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
   // Skip the exportReduceCount line
   ++lines;
@@ -3069,8 +3063,7 @@ bool RSModuleDescriptor::ParseExportVarCount(llvm::StringRef *lines,
 }
 
 // The .rs.info symbol in renderscript modules contains a string which needs to
-// be parsed.
-// The string is basic and is parsed on a line by line basis.
+// be parsed. The string is basic and is parsed on a line by line basis.
 bool RSModuleDescriptor::ParseRSInfo() {
   assert(m_module);
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
@@ -3137,8 +3130,8 @@ bool RSModuleDescriptor::ParseRSInfo() {
     const auto handler = rs_info_handler(key);
     if (handler == -1)
       continue;
-    // getAsInteger returns `true` on an error condition - we're only interested
-    // in numeric fields at the moment
+    // getAsInteger returns `true` on an error condition - we're only
+    // interested in numeric fields at the moment
     uint64_t n_lines;
     if (val.getAsInteger(10, n_lines)) {
       LLDB_LOGV(log, "Failed to parse non-numeric '.rs.info' section {0}",
@@ -3213,9 +3206,8 @@ void RenderScriptRuntime::DumpContexts(Stream &strm) const {
 
   std::map<addr_t, uint64_t> contextReferences;
 
-  // Iterate over all of the currently discovered scripts.
-  // Note: We cant push or pop from m_scripts inside this loop or it may
-  // invalidate script.
+  // Iterate over all of the currently discovered scripts. Note: We cant push
+  // or pop from m_scripts inside this loop or it may invalidate script.
   for (const auto &script : m_scripts) {
     if (!script->context.isValid())
       continue;
@@ -3393,15 +3385,15 @@ bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
         if ((type == Element::RS_TYPE_NONE) &&
             (alloc->element.children.size() > 0) &&
             (alloc->element.type_name != Element::GetFallbackStructName())) {
-          // Here we are dumping an Element of struct type.
-          // This is done using expression evaluation with the name of the
-          // struct type and pointer to element.
-          // Don't print the name of the resulting expression, since this will
-          // be '$[0-9]+'
+          // Here we are dumping an Element of struct type. This is done using
+          // expression evaluation with the name of the struct type and pointer
+          // to element. Don't print the name of the resulting expression,
+          // since this will be '$[0-9]+'
           DumpValueObjectOptions expr_options;
           expr_options.SetHideName(true);
 
-          // Setup expression as derefrencing a pointer cast to element address.
+          // Setup expression as dereferencing a pointer cast to element
+          // address.
           char expr_char_buffer[jit_max_expr_size];
           int written =
               snprintf(expr_char_buffer, jit_max_expr_size, "*(%s*) 0x%" PRIx64,
@@ -3435,9 +3427,9 @@ bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
   return true;
 }
 
-// Function recalculates all our cached information about allocations by jitting
-// the RS runtime regarding each allocation we know about. Returns true if all
-// allocations could be recomputed, false otherwise.
+// Function recalculates all our cached information about allocations by
+// jitting the RS runtime regarding each allocation we know about. Returns true
+// if all allocations could be recomputed, false otherwise.
 bool RenderScriptRuntime::RecomputeAllAllocations(Stream &strm,
                                                   StackFrame *frame_ptr) {
   bool success = true;
@@ -3601,8 +3593,8 @@ void RenderScriptRuntime::SetBreakAllKernels(bool do_break, TargetSP target) {
   }
 }
 
-// Given the name of a kernel this function creates a breakpoint using our
-// own breakpoint resolver, and returns the Breakpoint shared pointer.
+// Given the name of a kernel this function creates a breakpoint using our own
+// breakpoint resolver, and returns the Breakpoint shared pointer.
 BreakpointSP
 RenderScriptRuntime::CreateKernelBreakpoint(const ConstString &name) {
   Log *log(
@@ -3743,8 +3735,8 @@ bool RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord,
       log->Printf("%s - Found .expand function '%s'", __FUNCTION__,
                   func_name.GetCString());
 
-    // Get values for variables in .expand frame that tell us the current kernel
-    // invocation
+    // Get values for variables in .expand frame that tell us the current
+    // kernel invocation
     uint64_t x, y, z;
     bool found = GetFrameVarAsUnsigned(frame_sp, x_expr, x) &&
                  GetFrameVarAsUnsigned(frame_sp, y_expr, y) &&
@@ -3765,12 +3757,11 @@ bool RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord,
 
 // Callback when a kernel breakpoint hits and we're looking for a specific
 // coordinate. Baton parameter contains a pointer to the target coordinate we
-// want to break on.
-// Function then checks the .expand frame for the current coordinate and breaks
-// to user if it matches.
-// Parameter 'break_id' is the id of the Breakpoint which made the callback.
-// Parameter 'break_loc_id' is the id for the BreakpointLocation which was hit,
-// a single logical breakpoint can have multiple addresses.
+// want to break on. Function then checks the .expand frame for the current
+// coordinate and breaks to user if it matches. Parameter 'break_id' is the id
+// of the Breakpoint which made the callback. Parameter 'break_loc_id' is the
+// id for the BreakpointLocation which was hit, a single logical breakpoint can
+// have multiple addresses.
 bool RenderScriptRuntime::KernelBreakpointHit(void *baton,
                                               StoppointCallbackContext *ctx,
                                               user_id_t break_id,
@@ -3845,12 +3836,10 @@ void RenderScriptRuntime::SetConditional(BreakpointSP bp, Stream &messages,
   m_conditional_breaks[bp->GetID()] = std::unique_ptr<RSCoordinate>(baton);
 }
 
-// Tries to set a breakpoint on the start of a kernel, resolved using the kernel
-// name. Argument 'coords', represents a three dimensional coordinate which can
-// be
-// used to specify a single kernel instance to break on. If this is set then we
-// add a callback
-// to the breakpoint.
+// Tries to set a breakpoint on the start of a kernel, resolved using the
+// kernel name. Argument 'coords', represents a three dimensional coordinate
+// which can be used to specify a single kernel instance to break on. If this
+// is set then we add a callback to the breakpoint.
 bool RenderScriptRuntime::PlaceBreakpointOnKernel(TargetSP target,
                                                   Stream &messages,
                                                   const char *name,
@@ -4076,7 +4065,7 @@ void RSModuleDescriptor::Dump(Stream &strm) const {
 void RSGlobalDescriptor::Dump(Stream &strm) const {
   strm.Indent(m_name.AsCString());
   VariableList var_list;
-  m_module->m_module->FindGlobalVariables(m_name, nullptr, true, 1U, var_list);
+  m_module->m_module->FindGlobalVariables(m_name, nullptr, 1U, var_list);
   if (var_list.GetSize() == 1) {
     auto var = var_list.GetVariableAtIndex(0);
     auto type = var->GetType();
@@ -4270,8 +4259,8 @@ public:
       };
 
       // Matching a comma separated list of known words is fairly
-      // straightforward with PCRE, but we're
-      // using ERE, so we end up with a little ugliness...
+      // straightforward with PCRE, but we're using ERE, so we end up with a
+      // little ugliness...
       RegularExpression::Match match(/* max_matches */ 5);
       RegularExpression match_type_list(
           llvm::StringRef("^([[:alpha:]]+)(,[[:alpha:]]+){0,4}$"));
@@ -4661,7 +4650,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_outfile.SetFile(option_arg, true);
+        m_outfile.SetFile(option_arg, true, FileSpec::Style::native);
         if (m_outfile.Exists()) {
           m_outfile.Clear();
           err.SetErrorStringWithFormat("file already exists: '%s'",

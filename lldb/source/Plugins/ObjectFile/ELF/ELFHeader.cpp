@@ -140,13 +140,12 @@ bool ELFHeader::Parse(lldb_private::DataExtractor &data,
   if (data.GetU32(offset, &e_flags, 1) == NULL)
     return false;
 
-  // Read e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum and
-  // e_shstrndx.
+  // Read e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum and e_shstrndx.
   if (data.GetU16(offset, &e_ehsize, 6) == NULL)
     return false;
 
-  // Initialize e_phnum, e_shnum, and e_shstrndx with the values
-  // read from the header.
+  // Initialize e_phnum, e_shnum, and e_shstrndx with the values read from the
+  // header.
   e_phnum = e_phnum_hdr;
   e_shnum = e_shnum_hdr;
   e_shstrndx = e_shstrndx_hdr;

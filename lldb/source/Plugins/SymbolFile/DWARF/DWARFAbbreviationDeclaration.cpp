@@ -10,6 +10,7 @@
 #include "DWARFAbbreviationDeclaration.h"
 
 #include "lldb/Core/dwarf.h"
+#include "lldb/Utility/Stream.h"
 
 #include "DWARFFormValue.h"
 

@@ -32,6 +32,7 @@ class TestDataFormatterLibcxxQueue(TestBase):
             self.assertTrue(ch.IsValid())
             self.assertEqual(ch.GetValueAsSigned(), i+1)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android")
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::queue is displayed correctly"""

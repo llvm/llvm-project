@@ -34,10 +34,10 @@ public:
                              // contains the item in question
     eAtomTypeTag = 3u, // DW_TAG_xxx value, should be encoded as DW_FORM_data1
                        // (if no tags exceed 255) or DW_FORM_data2
-    eAtomTypeNameFlags = 4u,    // Flags from enum NameFlags
-    eAtomTypeTypeFlags = 5u,    // Flags from enum TypeFlags,
+    eAtomTypeNameFlags = 4u,   // Flags from enum NameFlags
+    eAtomTypeTypeFlags = 5u,   // Flags from enum TypeFlags,
     eAtomTypeQualNameHash = 6u, // A 32 bit hash of the full qualified name
-                                // (since all hash entries are basename only)
+                               // (since all hash entries are basename only)
     // For example a type like "std::vector<int>::iterator" would have a name of
     // "iterator"
     // and a 32 bit hash for "std::vector<int>::iterator" to allow us to not
@@ -139,17 +139,17 @@ public:
                                 const uint32_t die_offset_end,
                                 DIEInfoArray &die_info_array) const;
 
-    size_t FindByName(const char *name, DIEArray &die_offsets);
+    size_t FindByName(llvm::StringRef name, DIEArray &die_offsets);
 
-    size_t FindByNameAndTag(const char *name, const dw_tag_t tag,
+    size_t FindByNameAndTag(llvm::StringRef name, const dw_tag_t tag,
                             DIEArray &die_offsets);
 
-    size_t
-    FindByNameAndTagAndQualifiedNameHash(const char *name, const dw_tag_t tag,
-                                         const uint32_t qualified_name_hash,
-                                         DIEArray &die_offsets);
+    size_t FindByNameAndTagAndQualifiedNameHash(
+        llvm::StringRef name, const dw_tag_t tag,
+        const uint32_t qualified_name_hash, DIEArray &die_offsets);
 
-    size_t FindCompleteObjCClassByName(const char *name, DIEArray &die_offsets,
+    size_t FindCompleteObjCClassByName(llvm::StringRef name,
+                                       DIEArray &die_offsets,
                                        bool must_be_implementation);
 
   protected:
@@ -157,14 +157,14 @@ public:
         const lldb_private::RegularExpression &regex,
         lldb::offset_t *hash_data_offset_ptr, Pair &pair) const;
 
-    size_t FindByName(const char *name, DIEInfoArray &die_info_array);
+    size_t FindByName(llvm::StringRef name, DIEInfoArray &die_info_array);
 
-    Result GetHashDataForName(const char *name,
+    Result GetHashDataForName(llvm::StringRef name,
                               lldb::offset_t *hash_data_offset_ptr,
                               Pair &pair) const override;
 
-    const lldb_private::DWARFDataExtractor &m_data;
-    const lldb_private::DWARFDataExtractor &m_string_table;
+    lldb_private::DWARFDataExtractor m_data;
+    lldb_private::DWARFDataExtractor m_string_table;
     std::string m_name;
   };
 

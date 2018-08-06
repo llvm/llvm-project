@@ -97,15 +97,15 @@ ConnectionStatus Communication::Disconnect(Status *error_ptr) {
   lldb::ConnectionSP connection_sp(m_connection_sp);
   if (connection_sp) {
     ConnectionStatus status = connection_sp->Disconnect(error_ptr);
-    // We currently don't protect connection_sp with any mutex for
-    // multi-threaded environments. So lets not nuke our connection class
-    // without putting some multi-threaded protections in. We also probably
-    // don't want to pay for the overhead it might cause if every time we
-    // access the connection we have to take a lock.
+    // We currently don't protect connection_sp with any mutex for multi-
+    // threaded environments. So lets not nuke our connection class without
+    // putting some multi-threaded protections in. We also probably don't want
+    // to pay for the overhead it might cause if every time we access the
+    // connection we have to take a lock.
     //
-    // This unique pointer will cleanup after itself when this object goes away,
-    // so there is no need to currently have it destroy itself immediately
-    // upon disconnnect.
+    // This unique pointer will cleanup after itself when this object goes
+    // away, so there is no need to currently have it destroy itself
+    // immediately upon disconnect.
     // connection_sp.reset();
     return status;
   }
@@ -240,8 +240,8 @@ bool Communication::JoinReadThread(Status *error_ptr) {
 size_t Communication::GetCachedBytes(void *dst, size_t dst_len) {
   std::lock_guard<std::recursive_mutex> guard(m_bytes_mutex);
   if (!m_bytes.empty()) {
-    // If DST is nullptr and we have a thread, then return the number
-    // of bytes that are available so the caller can call again
+    // If DST is nullptr and we have a thread, then return the number of bytes
+    // that are available so the caller can call again
     if (dst == nullptr)
       return m_bytes.size();
 
@@ -337,8 +337,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
     case eConnectionStatusInterrupted: // Synchronization signal from
                                        // SynchronizeWithReadThread()
       // The connection returns eConnectionStatusInterrupted only when there is
-      // no
-      // input pending to be read, so we can signal that.
+      // no input pending to be read, so we can signal that.
       comm->BroadcastEvent(eBroadcastBitNoMorePendingInput);
       break;
     case eConnectionStatusNoConnection:   // No connection

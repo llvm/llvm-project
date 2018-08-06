@@ -20,9 +20,11 @@
 // Project includes
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
+#include "lldb/Interpreter/Options.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"
 
@@ -31,9 +33,8 @@ namespace lldb_private {
 // This function really deals with CommandObjectLists, but we didn't make a
 // CommandObjectList class, so I'm sticking it here.  But we really should have
 // such a class.  Anyway, it looks up the commands in the map that match the
-// partial
-// string cmd_str, inserts the matches into matches, and returns the number
-// added.
+// partial string cmd_str, inserts the matches into matches, and returns the
+// number added.
 
 template <typename ValueType>
 int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map,
@@ -137,8 +138,8 @@ public:
 
   void SetSyntax(llvm::StringRef str);
 
-  // override this to return true if you want to enable the user to delete
-  // the Command object from the Command dictionary (aliases have their own
+  // override this to return true if you want to enable the user to delete the
+  // Command object from the Command dictionary (aliases have their own
   // deletion scheme, so they do not need to care about this)
   virtual bool IsRemovable() const { return false; }
 
@@ -148,9 +149,9 @@ public:
 
   virtual bool IsAlias() { return false; }
 
-  // override this to return true if your command is somehow a "dash-dash"
-  // form of some other command (e.g. po is expr -O --); this is a powerful
-  // hint to the help system that one cannot pass options to this command
+  // override this to return true if your command is somehow a "dash-dash" form
+  // of some other command (e.g. po is expr -O --); this is a powerful hint to
+  // the help system that one cannot pass options to this command
   virtual bool IsDashDashCommand() { return false; }
 
   virtual lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
@@ -174,10 +175,9 @@ public:
 
   virtual void GenerateHelpText(Stream &result);
 
-  // this is needed in order to allow the SBCommand class to
-  // transparently try and load subcommands - it will fail on
-  // anything but a multiword command, but it avoids us doing
-  // type checkings and casts
+  // this is needed in order to allow the SBCommand class to transparently try
+  // and load subcommands - it will fail on anything but a multiword command,
+  // but it avoids us doing type checkings and casts
   virtual bool LoadSubCommand(llvm::StringRef cmd_name,
                               const lldb::CommandObjectSP &command_obj) {
     return false;
@@ -185,9 +185,9 @@ public:
 
   virtual bool WantsRawCommandString() = 0;
 
-  // By default, WantsCompletion = !WantsRawCommandString.
-  // Subclasses who want raw command string but desire, for example,
-  // argument completion should override this method to return true.
+  // By default, WantsCompletion = !WantsRawCommandString. Subclasses who want
+  // raw command string but desire, for example, argument completion should
+  // override this method to return true.
   virtual bool WantsCompletion() { return !WantsRawCommandString(); }
 
   virtual Options *GetOptions();
@@ -209,10 +209,10 @@ public:
   static const char *GetArgumentName(lldb::CommandArgumentType arg_type);
 
   // Generates a nicely formatted command args string for help command output.
-  // By default, all possible args are taken into account, for example,
-  // '<expr | variable-name>'.  This can be refined by passing a second arg
-  // specifying which option set(s) we are interested, which could then, for
-  // example, produce either '<expr>' or '<variable-name>'.
+  // By default, all possible args are taken into account, for example, '<expr
+  // | variable-name>'.  This can be refined by passing a second arg specifying
+  // which option set(s) we are interested, which could then, for example,
+  // produce either '<expr>' or '<variable-name>'.
   void GetFormattedCommandArguments(Stream &str,
                                     uint32_t opt_set_mask = LLDB_OPT_SET_ALL);
 
@@ -223,44 +223,13 @@ public:
   void SetCommandName(llvm::StringRef name);
 
   //------------------------------------------------------------------
-  /// The input array contains a parsed version of the line.  The insertion
-  /// point is given by cursor_index (the index in input of the word containing
-  /// the cursor) and cursor_char_position (the position of the cursor in that
-  /// word.)
   /// This default version handles calling option argument completions and then
-  /// calls
-  /// HandleArgumentCompletion if the cursor is on an argument, not an option.
-  /// Don't override this method, override HandleArgumentCompletion instead
-  /// unless
-  /// you have special reasons.
+  /// calls HandleArgumentCompletion if the cursor is on an argument, not an
+  /// option. Don't override this method, override HandleArgumentCompletion
+  /// instead unless you have special reasons.
   ///
-  /// @param[in] interpreter
-  ///    The command interpreter doing the completion.
-  ///
-  /// @param[in] input
-  ///    The command line parsed into words
-  ///
-  /// @param[in] cursor_index
-  ///     The index in \ainput of the word in which the cursor lies.
-  ///
-  /// @param[in] cursor_char_pos
-  ///     The character position of the cursor in its argument word.
-  ///
-  /// @param[in] match_start_point
-  /// @param[in] match_return_elements
-  ///     FIXME: Not yet implemented...  If there is a match that is expensive
-  ///     to compute, these are
-  ///     here to allow you to compute the completions in batches.  Start the
-  ///     completion from \amatch_start_point,
-  ///     and return \amatch_return_elements elements.
-  ///
-  /// @param[out] word_complete
-  ///     \btrue if this is a complete option value (a space will be inserted
-  ///     after the
-  ///     completion.)  \bfalse otherwise.
-  ///
-  /// @param[out] matches
-  ///     The array of matches returned.
+  /// @param[in/out] request
+  ///    The completion request that needs to be answered.
   ///
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
@@ -269,10 +238,7 @@ public:
   /// @return
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
-  virtual int HandleCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position, int match_start_point,
-                               int max_return_elements, bool &word_complete,
-                               StringList &matches);
+  virtual int HandleCompletion(CompletionRequest &request);
 
   //------------------------------------------------------------------
   /// The input array contains a parsed version of the line.  The insertion
@@ -280,36 +246,10 @@ public:
   /// the cursor) and cursor_char_position (the position of the cursor in that
   /// word.)
   /// We've constructed the map of options and their arguments as well if that
-  /// is
-  /// helpful for the completion.
+  /// is helpful for the completion.
   ///
-  /// @param[in] interpreter
-  ///    The command interpreter doing the completion.
-  ///
-  /// @param[in] input
-  ///    The command line parsed into words
-  ///
-  /// @param[in] cursor_index
-  ///     The index in \ainput of the word in which the cursor lies.
-  ///
-  /// @param[in] cursor_char_pos
-  ///     The character position of the cursor in its argument word.
-  ///
-  /// @param[in] opt_element_vector
-  ///     The results of the options parse of \a input.
-  ///
-  /// @param[in] match_start_point
-  /// @param[in] match_return_elements
-  ///     See CommandObject::HandleCompletions for a description of how these
-  ///     work.
-  ///
-  /// @param[out] word_complete
-  ///     \btrue if this is a complete option value (a space will be inserted
-  ///     after the
-  ///     completion.)  \bfalse otherwise.
-  ///
-  /// @param[out] matches
-  ///     The array of matches returned.
+  /// @param[in/out] request
+  ///    The completion request that needs to be answered.
   ///
   /// FIXME: This is the wrong return value, since we also need to make a
   /// distinction between
@@ -318,10 +258,9 @@ public:
   /// @return
   ///     The number of completions.
   //------------------------------------------------------------------
-  virtual int HandleArgumentCompletion(
-      Args &input, int &cursor_index, int &cursor_char_position,
-      OptionElementVector &opt_element_vector, int match_start_point,
-      int max_return_elements, bool &word_complete, StringList &matches) {
+  virtual int
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) {
     return 0;
   }
 
@@ -397,6 +336,10 @@ public:
                        CommandReturnObject &result) = 0;
 
 protected:
+  bool ParseOptionsAndNotify(Args &args, CommandReturnObject &result,
+                             OptionGroupOptions &group_options,
+                             ExecutionContext &exe_ctx);
+
   virtual const char *GetInvalidTargetDescription() {
     return "invalid target, create a target using the 'target create' command";
   }
@@ -414,18 +357,16 @@ protected:
   }
 
   // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target
-  // is present you want to prime the dummy target with entities that will be
-  // copied over to new targets.
+  // selected target, or if no target is present you want to prime the dummy
+  // target with entities that will be copied over to new targets.
   Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
   Target *GetDummyTarget();
 
-  // If a command needs to use the "current" thread, use this call.
-  // Command objects will have an ExecutionContext to use, and that may or may
-  // not have a thread in it.  If it
-  // does, you should use that by default, if not, then use the
-  // ExecutionContext's target's selected thread, etc...
-  // This call insulates you from the details of this calculation.
+  // If a command needs to use the "current" thread, use this call. Command
+  // objects will have an ExecutionContext to use, and that may or may not have
+  // a thread in it.  If it does, you should use that by default, if not, then
+  // use the ExecutionContext's target's selected thread, etc... This call
+  // insulates you from the details of this calculation.
   Thread *GetDefaultThread();
 
   //------------------------------------------------------------------
@@ -492,7 +433,8 @@ public:
   bool Execute(const char *args_string, CommandReturnObject &result) override;
 
 protected:
-  virtual bool DoExecute(const char *command, CommandReturnObject &result) = 0;
+  virtual bool DoExecute(llvm::StringRef command,
+                         CommandReturnObject &result) = 0;
 
   bool WantsRawCommandString() override { return true; }
 };

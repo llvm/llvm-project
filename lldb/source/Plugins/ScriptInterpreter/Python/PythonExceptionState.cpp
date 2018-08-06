@@ -30,9 +30,9 @@ PythonExceptionState::~PythonExceptionState() {
 }
 
 void PythonExceptionState::Acquire(bool restore_on_exit) {
-  // If a state is already acquired, the user needs to decide whether they
-  // want to discard or restore it.  Don't allow the potential silent
-  // loss of a valid state.
+  // If a state is already acquired, the user needs to decide whether they want
+  // to discard or restore it.  Don't allow the potential silent loss of a
+  // valid state.
   assert(!IsError());
 
   if (!HasErrorOccurred())
@@ -45,8 +45,7 @@ void PythonExceptionState::Acquire(bool restore_on_exit) {
   // PyErr_Fetch clears the error flag.
   assert(!HasErrorOccurred());
 
-  // Ownership of the objects returned by `PyErr_Fetch` is transferred
-  // to us.
+  // Ownership of the objects returned by `PyErr_Fetch` is transferred to us.
   m_type.Reset(PyRefType::Owned, py_type);
   m_value.Reset(PyRefType::Owned, py_value);
   m_traceback.Reset(PyRefType::Owned, py_traceback);
@@ -56,14 +55,14 @@ void PythonExceptionState::Acquire(bool restore_on_exit) {
 void PythonExceptionState::Restore() {
   if (m_type.IsValid()) {
     // The documentation for PyErr_Restore says "Do not pass a null type and
-    // non-null value or traceback.  So only restore if type was non-null
-    // to begin with.  In this case we're passing ownership back to Python
-    // so release them all.
+    // non-null value or traceback.  So only restore if type was non-null to
+    // begin with.  In this case we're passing ownership back to Python so
+    // release them all.
     PyErr_Restore(m_type.release(), m_value.release(), m_traceback.release());
   }
 
-  // After we restore, we should not hold onto the exception state.  Demand that
-  // it be re-acquired.
+  // After we restore, we should not hold onto the exception state.  Demand
+  // that it be re-acquired.
   Discard();
 }
 
@@ -100,10 +99,10 @@ std::string PythonExceptionState::Format() const {
   if (!IsError())
     return std::string();
 
-  // It's possible that ReadPythonBacktrace generated another exception.
-  // If this happens we have to clear the exception, because otherwise
-  // PyObject_Str() will assert below.  That's why we needed to do the
-  // save / restore at the beginning of this function.
+  // It's possible that ReadPythonBacktrace generated another exception. If
+  // this happens we have to clear the exception, because otherwise
+  // PyObject_Str() will assert below.  That's why we needed to do the save /
+  // restore at the beginning of this function.
   PythonExceptionState bt_error_state(false);
 
   std::string error_string;
@@ -114,8 +113,8 @@ std::string PythonExceptionState::Format() const {
     // If we were able to read the backtrace, just append it.
     error_stream << backtrace << "\n";
   } else {
-    // Otherwise, append some information about why we were unable to
-    // obtain the backtrace.
+    // Otherwise, append some information about why we were unable to obtain
+    // the backtrace.
     PythonString bt_error = bt_error_state.GetValue().Str();
     error_stream << "An error occurred while retrieving the backtrace: "
                  << bt_error.GetString() << "\n";

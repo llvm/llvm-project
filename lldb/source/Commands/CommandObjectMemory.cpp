@@ -24,9 +24,9 @@
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupOutputFile.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
@@ -40,6 +40,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
@@ -553,8 +554,8 @@ protected:
     lldb::addr_t addr;
     size_t total_byte_size = 0;
     if (argc == 0) {
-      // Use the last address and byte size and all options as they were
-      // if no options have been set
+      // Use the last address and byte size and all options as they were if no
+      // options have been set
       addr = m_next_addr;
       total_byte_size = m_prev_byte_size;
       clang_ast_type = m_prev_clang_ast_type;
@@ -573,8 +574,8 @@ protected:
 
     // TODO For non-8-bit byte addressable architectures this needs to be
     // revisited to fully support all lldb's range of formatting options.
-    // Furthermore code memory reads (for those architectures) will not
-    // be correctly formatted even w/o formatting options.
+    // Furthermore code memory reads (for those architectures) will not be
+    // correctly formatted even w/o formatting options.
     size_t item_byte_size =
         target->GetArchitecture().GetDataByteSize() > 1
             ? target->GetArchitecture().GetDataByteSize()
@@ -590,8 +591,8 @@ protected:
     }
 
     if (argc > 0)
-      addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                   LLDB_INVALID_ADDRESS, &error);
+      addr = OptionArgParser::ToAddress(&m_exe_ctx, command[0].ref,
+                                        LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid start address expression.");
@@ -601,7 +602,7 @@ protected:
     }
 
     if (argc == 2) {
-      lldb::addr_t end_addr = Args::StringToAddress(
+      lldb::addr_t end_addr = OptionArgParser::ToAddress(
           &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, nullptr);
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
@@ -843,16 +844,14 @@ protected:
       if (!m_format_options.GetCountValue().OptionWasSet() || item_count == 1) {
         // this turns requests such as
         // memory read -fc -s10 -c1 *charPtrPtr
-        // which make no sense (what is a char of size 10?)
-        // into a request for fetching 10 chars of size 1 from the same memory
-        // location
+        // which make no sense (what is a char of size 10?) into a request for
+        // fetching 10 chars of size 1 from the same memory location
         format = eFormatCharArray;
         item_count = item_byte_size;
         item_byte_size = 1;
       } else {
-        // here we passed a count, and it was not 1
-        // so we have a byte_size and a count
-        // we could well multiply those, but instead let's just fail
+        // here we passed a count, and it was not 1 so we have a byte_size and
+        // a count we could well multiply those, but instead let's just fail
         result.AppendErrorWithFormat(
             "reading memory as characters of size %" PRIu64 " is not supported",
             (uint64_t)item_byte_size);
@@ -1036,13 +1035,13 @@ protected:
     }
 
     Status error;
-    lldb::addr_t low_addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                                  LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t low_addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
     if (low_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid low address");
       return false;
     }
-    lldb::addr_t high_addr = Args::StringToAddress(
+    lldb::addr_t high_addr = OptionArgParser::ToAddress(
         &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, &error);
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
@@ -1210,7 +1209,7 @@ public:
 
       switch (short_option) {
       case 'i':
-        m_infile.SetFile(option_value, true);
+        m_infile.SetFile(option_value, true, FileSpec::Style::native);
         if (!m_infile.Exists()) {
           m_infile.Clear();
           error.SetErrorStringWithFormat("input file does not exist: '%s'",
@@ -1345,8 +1344,8 @@ protected:
     size_t item_byte_size = byte_size_value.GetCurrentValue();
 
     Status error;
-    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression\n");
@@ -1469,7 +1468,7 @@ protected:
         break;
       }
       case eFormatBoolean:
-        uval64 = Args::StringToBoolean(entry.ref, false, &success);
+        uval64 = OptionArgParser::ToBoolean(entry.ref, false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", entry.c_str());
@@ -1642,8 +1641,8 @@ protected:
     }
 
     Status error;
-    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
-                                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression");
@@ -1711,8 +1710,8 @@ protected:
       } else {
         if (command.GetArgumentCount() == 1) {
           auto load_addr_str = command[0].ref;
-          load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_str,
-                                            LLDB_INVALID_ADDRESS, &error);
+          load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
+                                                 LLDB_INVALID_ADDRESS, &error);
           if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
             result.AppendErrorWithFormat(
                 "invalid address argument \"%s\": %s\n", command[0].c_str(),

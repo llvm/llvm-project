@@ -42,7 +42,7 @@ class BreakpointHitCountTestCase(TestBase):
             "There should be a thread stopped due to breakpoint")
 
         frame0 = thread.GetFrameAtIndex(0)
-        self.assertEqual(frame0.GetFunctionName(), "a(int)");
+        self.assertTrue(frame0.GetFunctionName() == "a(int)" or frame0.GetFunctionName() == "int a(int)");
 
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)

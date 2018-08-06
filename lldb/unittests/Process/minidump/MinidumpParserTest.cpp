@@ -38,16 +38,32 @@ using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
-  void SetUpData(const char *minidump_filename,
-                 uint64_t load_size = UINT64_MAX) {
+  void SetUpData(const char *minidump_filename) {
     std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, -1, 0);
+    ASSERT_NE(BufferPtr, nullptr);
+    llvm::Optional<MinidumpParser> optional_parser =
+        MinidumpParser::Create(BufferPtr);
+    ASSERT_TRUE(optional_parser.hasValue());
+    parser.reset(new MinidumpParser(optional_parser.getValue()));
+    ASSERT_GT(parser->GetData().size(), 0UL);
+    auto result = parser->Initialize();
+    ASSERT_TRUE(result.Success()) << result.AsCString();
+  }
+
+  void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
+    std::string filename = GetInputFilePath(minidump_filename);
+    auto BufferPtr =
+        DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+    ASSERT_NE(BufferPtr, nullptr);
 
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);
     ASSERT_TRUE(optional_parser.hasValue());
     parser.reset(new MinidumpParser(optional_parser.getValue()));
     ASSERT_GT(parser->GetData().size(), 0UL);
+    auto result = parser->Initialize();
+    ASSERT_TRUE(result.Fail());
   }
 
   std::unique_ptr<MinidumpParser> parser;
@@ -68,12 +84,85 @@ TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   EXPECT_EQ(1232UL, context.size());
 }
 
-TEST_F(MinidumpParserTest, GetThreadsTruncatedFile) {
-  SetUpData("linux-x86_64.dmp", 200);
+TEST_F(MinidumpParserTest, GetThreadListNotPadded) {
+  // Verify that we can load a thread list that doesn't have 4 bytes of padding
+  // after the thread count.
+  SetUpData("thread-list-not-padded.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list;
-
+  
   thread_list = parser->GetThreads();
-  ASSERT_EQ(0UL, thread_list.size());
+  ASSERT_EQ(2UL, thread_list.size());
+  EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);
+  EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
+}
+
+TEST_F(MinidumpParserTest, GetThreadListPadded) {
+  // Verify that we can load a thread list that has 4 bytes of padding
+  // after the thread count as found in breakpad minidump files.
+  SetUpData("thread-list-padded.dmp");
+  auto thread_list = parser->GetThreads();
+  ASSERT_EQ(2UL, thread_list.size());
+  EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);
+  EXPECT_EQ(0x55667788UL, thread_list[1].thread_id);
+}
+
+TEST_F(MinidumpParserTest, GetModuleListNotPadded) {
+  // Verify that we can load a module list that doesn't have 4 bytes of padding
+  // after the module count.
+  SetUpData("module-list-not-padded.dmp");
+  auto module_list = parser->GetModuleList();
+  ASSERT_EQ(2UL, module_list.size());
+  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
+  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
+  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
+  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
+}
+
+TEST_F(MinidumpParserTest, GetModuleListPadded) {
+  // Verify that we can load a module list that has 4 bytes of padding
+  // after the module count as found in breakpad minidump files.
+  SetUpData("module-list-padded.dmp");
+  auto module_list = parser->GetModuleList();
+  ASSERT_EQ(2UL, module_list.size());
+  EXPECT_EQ(0x1000UL, module_list[0].base_of_image);
+  EXPECT_EQ(0x2000UL, module_list[0].size_of_image);
+  EXPECT_EQ(0x5000UL, module_list[1].base_of_image);
+  EXPECT_EQ(0x3000UL, module_list[1].size_of_image);
+}
+
+TEST_F(MinidumpParserTest, GetMemoryListNotPadded) {
+  // Verify that we can load a memory list that doesn't have 4 bytes of padding
+  // after the memory range count.
+  SetUpData("memory-list-not-padded.dmp");
+  auto mem = parser->FindMemoryRange(0x8000);
+  ASSERT_TRUE(mem.hasValue());
+  EXPECT_EQ((lldb::addr_t)0x8000, mem->start);
+  mem = parser->FindMemoryRange(0x8010);
+  ASSERT_TRUE(mem.hasValue());
+  EXPECT_EQ((lldb::addr_t)0x8010, mem->start);
+}
+
+TEST_F(MinidumpParserTest, GetMemoryListPadded) {
+  // Verify that we can load a memory list that has 4 bytes of padding
+  // after the memory range count as found in breakpad minidump files.
+  SetUpData("memory-list-padded.dmp");
+  auto mem = parser->FindMemoryRange(0x8000);
+  ASSERT_TRUE(mem.hasValue());
+  EXPECT_EQ((lldb::addr_t)0x8000, mem->start);
+  mem = parser->FindMemoryRange(0x8010);
+  ASSERT_TRUE(mem.hasValue());
+  EXPECT_EQ((lldb::addr_t)0x8010, mem->start);
+}
+
+TEST_F(MinidumpParserTest, TruncatedMinidumps) {
+  InvalidMinidump("linux-x86_64.dmp", 32);
+  InvalidMinidump("linux-x86_64.dmp", 100);
+  InvalidMinidump("linux-x86_64.dmp", 20 * 1024);
+}
+
+TEST_F(MinidumpParserTest, IllFormedMinidumps) {
+  InvalidMinidump("bad_duplicate_streams.dmp", -1);
+  InvalidMinidump("bad_overlapping_streams.dmp", -1);
 }
 
 TEST_F(MinidumpParserTest, GetArchitecture) {

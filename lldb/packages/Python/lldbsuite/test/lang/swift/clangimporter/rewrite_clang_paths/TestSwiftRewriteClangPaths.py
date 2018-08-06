@@ -45,7 +45,7 @@ class TestSwiftRewriteClangPaths(TestBase):
         return lst[0]
         
     def dotest(self, remap):
-        self.build(clean=True)
+        self.build()
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
 

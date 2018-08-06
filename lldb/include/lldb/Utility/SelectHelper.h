@@ -23,32 +23,31 @@ public:
   // Defaults to infinite wait for select unless you call SetTimeout()
   SelectHelper();
 
-  // Call SetTimeout() before calling SelectHelper::Select() to set the
-  // timeout based on the current time + the timeout. This allows multiple
-  // calls to SelectHelper::Select() without having to worry about the
-  // absolute timeout as this class manages to set the relative timeout
-  // correctly.
+  // Call SetTimeout() before calling SelectHelper::Select() to set the timeout
+  // based on the current time + the timeout. This allows multiple calls to
+  // SelectHelper::Select() without having to worry about the absolute timeout
+  // as this class manages to set the relative timeout correctly.
   void SetTimeout(const std::chrono::microseconds &timeout);
 
-  // Call the FDSet*() functions before calling SelectHelper::Select() to
-  // set the file descriptors that we will watch for when calling
-  // select. This will cause FD_SET() to be called prior to calling select
-  // using the "fd" provided.
+  // Call the FDSet*() functions before calling SelectHelper::Select() to set
+  // the file descriptors that we will watch for when calling select. This will
+  // cause FD_SET() to be called prior to calling select using the "fd"
+  // provided.
   void FDSetRead(lldb::socket_t fd);
   void FDSetWrite(lldb::socket_t fd);
   void FDSetError(lldb::socket_t fd);
 
-  // Call the FDIsSet*() functions after calling SelectHelper::Select()
-  // to check which file descriptors are ready for read/write/error. This
-  // will contain the result of FD_ISSET after calling select for a given
-  // file descriptor.
+  // Call the FDIsSet*() functions after calling SelectHelper::Select() to
+  // check which file descriptors are ready for read/write/error. This will
+  // contain the result of FD_ISSET after calling select for a given file
+  // descriptor.
   bool FDIsSetRead(lldb::socket_t fd) const;
   bool FDIsSetWrite(lldb::socket_t fd) const;
   bool FDIsSetError(lldb::socket_t fd) const;
 
-  // Call the system's select() to wait for descriptors using
-  // timeout provided in a call the SelectHelper::SetTimeout(),
-  // or infinite wait if no timeout was set.
+  // Call the system's select() to wait for descriptors using timeout provided
+  // in a call the SelectHelper::SetTimeout(), or infinite wait if no timeout
+  // was set.
   lldb_private::Status Select();
 
 protected:

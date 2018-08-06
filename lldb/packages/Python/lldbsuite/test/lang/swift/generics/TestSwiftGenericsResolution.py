@@ -34,15 +34,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     def genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(self, "//Break here")
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        lldbutil.run_to_source_breakpoint(self, "//Break here", lldb.SBFileSpec("main.swift"))
 
         self.expect(
             "frame variable -d run",

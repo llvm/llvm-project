@@ -24,7 +24,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -44,6 +43,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -342,8 +342,8 @@ protected:
           frame_idx += m_options.relative_frame_offset;
         else {
           if (frame_idx == 0) {
-            // If you are already at the bottom of the stack, then just warn and
-            // don't reset the frame.
+            // If you are already at the bottom of the stack, then just warn
+            // and don't reset the frame.
             result.AppendError("Already at the bottom of the stack.");
             result.SetStatus(eReturnStatusFailed);
             return false;
@@ -463,21 +463,14 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override {
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
-    auto completion_str = input[cursor_index].ref;
-    completion_str = completion_str.take_front(cursor_char_position);
-
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        completion_str, match_start_point, max_return_elements, nullptr,
-        word_complete, matches);
-    return matches.GetSize();
+        request, nullptr);
+    return request.GetMatches().GetSize();
   }
 
 protected:
@@ -504,16 +497,15 @@ protected:
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    // No need to check "frame" for validity as eCommandRequiresFrame ensures it
-    // is valid
+    // No need to check "frame" for validity as eCommandRequiresFrame ensures
+    // it is valid
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     Stream &s = result.GetOutputStream();
 
     // Be careful about the stack frame, if any summary formatter runs code, it
-    // might clear the StackFrameList
-    // for the thread.  So hold onto a shared pointer to the frame so it stays
-    // alive.
+    // might clear the StackFrameList for the thread.  So hold onto a shared
+    // pointer to the frame so it stays alive.
 
     VariableList *variable_list =
         frame->GetVariableList(m_option_variable.show_globals);
@@ -547,8 +539,8 @@ protected:
       if (!command.empty()) {
         VariableList regex_var_list;
 
-        // If we have any args to the variable command, we will make
-        // variable objects from them...
+        // If we have any args to the variable command, we will make variable
+        // objects from them...
         for (auto &entry : command) {
           if (m_option_variable.use_regex) {
             const size_t regex_start_index = regex_var_list.GetSize();
@@ -620,9 +612,6 @@ protected:
 
               if (!scope_string.empty())
                 s.PutCString(scope_string);
-
-              //                            if (format != eFormatDefault)
-              //                                valobj_sp->SetFormat (format);
               if (m_option_variable.show_decl && var_sp &&
                   var_sp->GetDeclaration().GetFile()) {
                 var_sp->GetDeclaration().DumpStopContext(&s, false);
@@ -680,14 +669,13 @@ protected:
             if (m_option_variable.show_scope)
               scope_string = GetScopeString(var_sp).str();
 
-            // Use the variable object code to make sure we are
-            // using the same APIs as the public API will be
-            // using...
+            // Use the variable object code to make sure we are using the same
+            // APIs as the public API will be using...
             valobj_sp = frame->GetValueObjectForFrameVariable(
                 var_sp, m_varobj_options.use_dynamic);
             if (valobj_sp) {
-              // When dumping all variables, don't print any variables
-              // that are not in scope to avoid extra unneeded output
+              // When dumping all variables, don't print any variables that are
+              // not in scope to avoid extra unneeded output
               if (valobj_sp->IsInScope()) {
                 if (!valobj_sp->GetTargetSP()
                          ->GetDisplayRuntimeSupportValues() &&

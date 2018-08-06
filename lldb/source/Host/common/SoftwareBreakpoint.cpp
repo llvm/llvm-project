@@ -17,9 +17,8 @@
 
 using namespace lldb_private;
 
-// -------------------------------------------------------------------
-// static members
-// -------------------------------------------------------------------
+// ------------------------------------------------------------------- static
+// members -------------------------------------------------------------------
 
 Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
     NativeProcessProtocol &process, lldb::addr_t addr, size_t size_hint,
@@ -34,8 +33,7 @@ Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
                   __FUNCTION__);
 
   // Ask the NativeProcessProtocol subclass to fill in the correct software
-  // breakpoint
-  // trap for the breakpoint site.
+  // breakpoint trap for the breakpoint site.
   size_t bp_opcode_size = 0;
   const uint8_t *bp_opcode_bytes = NULL;
   Status error = process.GetSoftwareBreakpointTrapOpcode(
@@ -98,9 +96,8 @@ Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
     log->Printf("SoftwareBreakpoint::%s addr = 0x%" PRIx64 " -- SUCCESS",
                 __FUNCTION__, addr);
 
-  // Set the breakpoint and verified it was written properly.  Now
-  // create a breakpoint remover that understands how to undo this
-  // breakpoint.
+  // Set the breakpoint and verified it was written properly.  Now create a
+  // breakpoint remover that understands how to undo this breakpoint.
   breakpoint_sp.reset(new SoftwareBreakpoint(process, addr, saved_opcode_bytes,
                                              bp_opcode_bytes, bp_opcode_size));
   return Status();
@@ -280,8 +277,8 @@ Status SoftwareBreakpoint::DoDisable() {
       // Make sure the breakpoint opcode exists at this address
       if (::memcmp(curr_break_op, m_trap_opcodes, m_opcode_size) == 0) {
         break_op_found = true;
-        // We found a valid breakpoint opcode at this address, now restore
-        // the saved opcode.
+        // We found a valid breakpoint opcode at this address, now restore the
+        // saved opcode.
         size_t bytes_written = 0;
         error = m_process.WriteMemory(m_addr, m_saved_opcodes, m_opcode_size,
                                       bytes_written);

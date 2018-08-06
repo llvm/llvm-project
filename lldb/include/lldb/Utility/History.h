@@ -28,7 +28,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class HistorySource History.h "lldb/Core/History.h"
-/// @brief A class that defines history events.
+/// A class that defines history events.
 //----------------------------------------------------------------------
 
 class HistorySource {
@@ -39,9 +39,9 @@ public:
 
   virtual ~HistorySource() {}
 
-  // Create a new history event. Subclasses should use any data or members
-  // in the subclass of this class to produce a history event and push it
-  // onto the end of the history stack.
+  // Create a new history event. Subclasses should use any data or members in
+  // the subclass of this class to produce a history event and push it onto the
+  // end of the history stack.
 
   virtual HistoryEvent CreateHistoryEvent() = 0;
 
@@ -72,11 +72,11 @@ private:
 
 //----------------------------------------------------------------------
 /// @class HistorySourceUInt History.h "lldb/Core/History.h"
-/// @brief A class that defines history events that are represented by
+/// A class that defines history events that are represented by
 /// unsigned integers.
 ///
-/// Any history event that is defined by a unique monotonically
-/// increasing unsigned integer
+/// Any history event that is defined by a unique monotonically increasing
+/// unsigned integer
 //----------------------------------------------------------------------
 
 class HistorySourceUInt : public HistorySource {
@@ -85,9 +85,9 @@ class HistorySourceUInt : public HistorySource {
 
   ~HistorySourceUInt() override {}
 
-  // Create a new history event. Subclasses should use any data or members
-  // in the subclass of this class to produce a history event and push it
-  // onto the end of the history stack.
+  // Create a new history event. Subclasses should use any data or members in
+  // the subclass of this class to produce a history event and push it onto the
+  // end of the history stack.
 
   HistoryEvent CreateHistoryEvent() override {
     ++m_curr_id;

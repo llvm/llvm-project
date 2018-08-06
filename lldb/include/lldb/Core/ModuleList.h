@@ -86,10 +86,10 @@ public:
 
 //----------------------------------------------------------------------
 /// @class ModuleList ModuleList.h "lldb/Core/ModuleList.h"
-/// @brief A collection class for Module objects.
+/// A collection class for Module objects.
 ///
-/// Modules in the module collection class are stored as reference
-/// counted shared pointers to Module objects.
+/// Modules in the module collection class are stored as reference counted
+/// shared pointers to Module objects.
 //----------------------------------------------------------------------
 class ModuleList {
 public:
@@ -117,8 +117,7 @@ public:
   //------------------------------------------------------------------
   /// Copy Constructor.
   ///
-  /// Creates a new module list object with a copy of the modules from
-  /// \a rhs.
+  /// Creates a new module list object with a copy of the modules from \a rhs.
   ///
   /// @param[in] rhs
   ///     Another module list object.
@@ -156,9 +155,9 @@ public:
   void Append(const lldb::ModuleSP &module_sp);
 
   //------------------------------------------------------------------
-  /// Append a module to the module list and remove any equivalent
-  /// modules. Equivalent modules are ones whose file, platform file
-  /// and architecture matches.
+  /// Append a module to the module list and remove any equivalent modules.
+  /// Equivalent modules are ones whose file, platform file and architecture
+  /// matches.
   ///
   /// Replaces the module to the collection.
   ///
@@ -179,27 +178,27 @@ public:
   //------------------------------------------------------------------
   /// Clear the object's state.
   ///
-  /// Clears the list of modules and releases a reference to each
-  /// module object and if the reference count goes to zero, the
-  /// module will be deleted.
+  /// Clears the list of modules and releases a reference to each module
+  /// object and if the reference count goes to zero, the module will be
+  /// deleted.
   //------------------------------------------------------------------
   void Clear();
 
   //------------------------------------------------------------------
   /// Clear the object's state.
   ///
-  /// Clears the list of modules and releases a reference to each
-  /// module object and if the reference count goes to zero, the
-  /// module will be deleted. Also release all memory that might be
-  /// held by any collection classes (like std::vector)
+  /// Clears the list of modules and releases a reference to each module
+  /// object and if the reference count goes to zero, the module will be
+  /// deleted. Also release all memory that might be held by any collection
+  /// classes (like std::vector)
   //------------------------------------------------------------------
   void Destroy();
 
   //------------------------------------------------------------------
   /// Dump the description of each module contained in this list.
   ///
-  /// Dump the description of each module contained in this list to
-  /// the supplied stream \a s.
+  /// Dump the description of each module contained in this list to the
+  /// supplied stream \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.
@@ -230,8 +229,8 @@ public:
 
   //------------------------------------------------------------------
   /// Get the module shared pointer for the module at index \a idx without
-  /// acquiring the ModuleList mutex.  This MUST already have been
-  /// acquired with ModuleList::GetMutex and locked for this call to be safe.
+  /// acquiring the ModuleList mutex.  This MUST already have been acquired
+  /// with ModuleList::GetMutex and locked for this call to be safe.
   ///
   /// @param[in] idx
   ///     An index into this module collection.
@@ -259,9 +258,9 @@ public:
   Module *GetModulePointerAtIndex(size_t idx) const;
 
   //------------------------------------------------------------------
-  /// Get the module pointer for the module at index \a idx without
-  /// acquiring the ModuleList mutex.  This MUST already have been
-  /// acquired with ModuleList::GetMutex and locked for this call to be safe.
+  /// Get the module pointer for the module at index \a idx without acquiring
+  /// the ModuleList mutex.  This MUST already have been acquired with
+  /// ModuleList::GetMutex and locked for this call to be safe.
   ///
   /// @param[in] idx
   ///     An index into this module collection.
@@ -277,8 +276,8 @@ public:
   //------------------------------------------------------------------
   /// Find compile units by partial or full path.
   ///
-  /// Finds all compile units that match \a path in all of the modules
-  /// and returns the results in \a sc_list.
+  /// Finds all compile units that match \a path in all of the modules and
+  /// returns the results in \a sc_list.
   ///
   /// @param[in] path
   ///     The name of the compile unit we are looking for.
@@ -325,24 +324,17 @@ public:
   ///     The name of the global or static variable we are looking
   ///     for.
   ///
-  /// @param[in] append
-  ///     If \b true, any matches will be appended to \a
-  ///     variable_list, else matches replace the contents of
-  ///     \a variable_list.
-  ///
   /// @param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
   /// @param[in] variable_list
-  ///     A list of variables that gets the matches appended to (if
-  ///     \a append it \b true), or replace (if \a append is \b false).
+  ///     A list of variables that gets the matches appended to.
   ///
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const ConstString &name, bool append,
-                             size_t max_matches,
+  size_t FindGlobalVariables(const ConstString &name, size_t max_matches,
                              VariableList &variable_list) const;
 
   //------------------------------------------------------------------
@@ -351,29 +343,21 @@ public:
   /// @param[in] regex
   ///     A regular expression to use when matching the name.
   ///
-  /// @param[in] append
-  ///     If \b true, any matches will be appended to \a
-  ///     variable_list, else matches replace the contents of
-  ///     \a variable_list.
-  ///
   /// @param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
   /// @param[in] variable_list
-  ///     A list of variables that gets the matches appended to (if
-  ///     \a append it \b true), or replace (if \a append is \b false).
+  ///     A list of variables that gets the matches appended to.
   ///
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const RegularExpression &regex, bool append,
-                             size_t max_matches,
+  size_t FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                              VariableList &variable_list) const;
 
   //------------------------------------------------------------------
-  /// Finds the first module whose file specification matches \a
-  /// file_spec.
+  /// Finds the first module whose file specification matches \a file_spec.
   ///
   /// @param[in] file_spec_ptr
   ///     A file specification object to match against the Module's
@@ -410,9 +394,9 @@ public:
   //------------------------------------------------------------------
   // Find a module by UUID
   //
-  // The UUID value for a module is extracted from the ObjectFile and
-  // is the MD5 checksum, or a smarter object file equivalent, so
-  // finding modules by UUID values is very efficient and accurate.
+  // The UUID value for a module is extracted from the ObjectFile and is the
+  // MD5 checksum, or a smarter object file equivalent, so finding modules by
+  // UUID values is very efficient and accurate.
   //------------------------------------------------------------------
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 

@@ -24,8 +24,7 @@ BreakpointSiteList::BreakpointSiteList() : m_mutex(), m_bp_site_list() {}
 BreakpointSiteList::~BreakpointSiteList() {}
 
 // Add breakpoint site to the list.  However, if the element already exists in
-// the
-// list, then we don't add it, and return LLDB_INVALID_BREAK_ID.
+// the list, then we don't add it, and return LLDB_INVALID_BREAK_ID.
 
 lldb::break_id_t BreakpointSiteList::Add(const BreakpointSiteSP &bp) {
   lldb::addr_t bp_site_load_addr = bp->GetLoadAddress();
@@ -45,8 +44,8 @@ bool BreakpointSiteList::ShouldStop(StoppointCallbackContext *context,
   BreakpointSiteSP site_sp(FindByID(site_id));
   if (site_sp) {
     // Let the BreakpointSite decide if it should stop here (could not have
-    // reached it's target hit count yet, or it could have a callback
-    // that decided it shouldn't stop (shared library loads/unloads).
+    // reached it's target hit count yet, or it could have a callback that
+    // decided it shouldn't stop (shared library loads/unloads).
     return site_sp->ShouldStop(context);
   }
   // We should stop here since this BreakpointSite isn't valid anymore or it
@@ -60,7 +59,8 @@ lldb::break_id_t BreakpointSiteList::FindIDByAddress(lldb::addr_t addr) {
     // PRIx64 " ) => %u", __FUNCTION__, (uint64_t)addr, bp->GetID());
     return bp.get()->GetID();
   }
-  // DBLogIf(PD_LOG_BREAKPOINTS, "BreakpointSiteList::%s ( addr = 0x%8.8" PRIx64
+  // DBLogIf(PD_LOG_BREAKPOINTS, "BreakpointSiteList::%s ( addr = 0x%8.8"
+  // PRIx64
   // " ) => NONE", __FUNCTION__, (uint64_t)addr);
   return LLDB_INVALID_BREAK_ID;
 }
@@ -185,10 +185,9 @@ bool BreakpointSiteList::FindInRange(lldb::addr_t lower_bound,
   if (lower == m_bp_site_list.end() || (*lower).first >= upper_bound)
     return false;
 
-  // This is one tricky bit.  The breakpoint might overlap the bottom end of the
-  // range.  So we grab the
-  // breakpoint prior to the lower bound, and check that that + its byte size
-  // isn't in our range.
+  // This is one tricky bit.  The breakpoint might overlap the bottom end of
+  // the range.  So we grab the breakpoint prior to the lower bound, and check
+  // that that + its byte size isn't in our range.
   if (lower != m_bp_site_list.begin()) {
     collection::const_iterator prev_pos = lower;
     prev_pos--;

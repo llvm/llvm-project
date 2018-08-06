@@ -138,8 +138,7 @@ bool SBThreadPlan::IsValid() {
 // plans...
 //
 // FIXME, you should only be able to queue thread plans from inside the methods
-// of a
-// Scripted Thread Plan.  Need a way to enforce that.
+// of a Scripted Thread Plan.  Need a way to enforce that.
 
 SBThreadPlan
 SBThreadPlan::QueueThreadPlanForStepOverRange(SBAddress &sb_start_address,

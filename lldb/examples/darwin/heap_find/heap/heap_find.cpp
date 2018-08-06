@@ -410,7 +410,7 @@ public:
       m_sort_type = eSortTypeBytes;
     }
     if (print && m_size > 0) {
-      puts("Objective C objects by total bytes:");
+      puts("Objective-C objects by total bytes:");
       puts("Total Bytes Class Name");
       puts("----------- "
            "-----------------------------------------------------------------");
@@ -427,7 +427,7 @@ public:
       m_sort_type = eSortTypeCount;
     }
     if (print && m_size > 0) {
-      puts("Objective C objects by total count:");
+      puts("Objective-C objects by total count:");
       puts("Count    Class Name");
       puts("-------- "
            "-----------------------------------------------------------------");

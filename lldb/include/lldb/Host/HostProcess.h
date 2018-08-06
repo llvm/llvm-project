@@ -15,17 +15,17 @@
 
 //----------------------------------------------------------------------
 /// @class HostInfo HostInfo.h "lldb/Host/HostProcess.h"
-/// @brief A class that represents a running process on the host machine.
+/// A class that represents a running process on the host machine.
 ///
 /// HostProcess allows querying and manipulation of processes running on the
-/// host machine.  It is not intended to be represent a process which is
-/// being debugged, although the native debug engine of a platform may likely
-/// back inferior processes by a HostProcess.
+/// host machine.  It is not intended to be represent a process which is being
+/// debugged, although the native debug engine of a platform may likely back
+/// inferior processes by a HostProcess.
 ///
 /// HostProcess is implemented using static polymorphism so that on any given
-/// platform, an instance of HostProcess will always be able to bind statically
-/// to the concrete Process implementation for that platform.  See HostInfo
-/// for more details.
+/// platform, an instance of HostProcess will always be able to bind
+/// statically to the concrete Process implementation for that platform.  See
+/// HostInfo for more details.
 ///
 //----------------------------------------------------------------------
 

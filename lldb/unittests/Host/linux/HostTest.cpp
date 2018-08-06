@@ -45,4 +45,8 @@ TEST_F(HostTest, GetProcessInfo) {
 
   ASSERT_TRUE(Info.GroupIDIsValid());
   EXPECT_EQ(getegid(), Info.GetGroupID());
+
+  EXPECT_TRUE(Info.GetArchitecture().IsValid());
+  EXPECT_EQ(HostInfo::GetArchitecture(HostInfo::eArchKindDefault),
+            Info.GetArchitecture());
 }

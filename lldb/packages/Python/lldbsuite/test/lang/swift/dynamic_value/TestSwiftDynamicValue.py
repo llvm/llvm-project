@@ -34,16 +34,7 @@ class SwiftDynamicValueTest(TestBase):
 
     def dynamic_val_commands(self):
         """Tests that dynamic values work correctly for Swift"""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(
-            self, "// Set a breakpoint here")
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        lldbutil.run_to_source_breakpoint(self, "// Set a breakpoint here", lldb.SBFileSpec("main.swift"))
 
         self.expect(
             "frame variable",

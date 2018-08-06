@@ -26,21 +26,16 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointLocationList BreakpointLocationList.h
-/// "lldb/Breakpoint/BreakpointLocationList.h"
-/// @brief This class is used by Breakpoint to manage a list of breakpoint
-/// locations,
-//  each breakpoint location in the list
-/// has a unique ID, and is unique by Address as well.
+/// "lldb/Breakpoint/BreakpointLocationList.h" This class is used by
+/// Breakpoint to manage a list of breakpoint locations, each breakpoint
+/// location in the list has a unique ID, and is unique by Address as well.
 //----------------------------------------------------------------------
-
 class BreakpointLocationList {
-  // Only Breakpoints can make the location list, or add elements to it.
-  // This is not just some random collection of locations.  Rather, the act of
-  // adding the location
-  // to this list sets its ID, and implicitly all the locations have the same
-  // breakpoint ID as
-  // well.  If you need a generic container for breakpoint locations, use
-  // BreakpointLocationCollection.
+  // Only Breakpoints can make the location list, or add elements to it. This
+  // is not just some random collection of locations.  Rather, the act of
+  // adding the location to this list sets its ID, and implicitly all the
+  // locations have the same breakpoint ID as well.  If you need a generic
+  // container for breakpoint locations, use BreakpointLocationCollection.
   friend class Breakpoint;
 
 public:
@@ -52,8 +47,8 @@ public:
   void Dump(Stream *s) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint location at address
-  /// \a addr - const version.
+  /// Returns a shared pointer to the breakpoint location at address \a addr -
+  /// const version.
   ///
   /// @param[in] addr
   ///     The address to look for.
@@ -65,8 +60,8 @@ public:
   const lldb::BreakpointLocationSP FindByAddress(const Address &addr) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint location with id
-  /// \a breakID, const version.
+  /// Returns a shared pointer to the breakpoint location with id \a breakID,
+  /// const version.
   ///
   /// @param[in] breakID
   ///     The breakpoint location ID to seek for.
@@ -78,8 +73,8 @@ public:
   lldb::BreakpointLocationSP FindByID(lldb::break_id_t breakID) const;
 
   //------------------------------------------------------------------
-  /// Returns the breakpoint location id to the breakpoint location
-  /// at address \a addr.
+  /// Returns the breakpoint location id to the breakpoint location at address
+  /// \a addr.
   ///
   /// @param[in] addr
   ///     The address to match.
@@ -90,9 +85,8 @@ public:
   lldb::break_id_t FindIDByAddress(const Address &addr);
 
   //------------------------------------------------------------------
-  /// Returns a breakpoint location list of the breakpoint locations
-  /// in the module \a module.  This list is allocated, and owned by
-  /// the caller.
+  /// Returns a breakpoint location list of the breakpoint locations in the
+  /// module \a module.  This list is allocated, and owned by the caller.
   ///
   /// @param[in] module
   ///     The module to seek in.
@@ -108,8 +102,7 @@ public:
                       BreakpointLocationCollection &bp_loc_list);
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint location with
-  /// index \a i.
+  /// Returns a shared pointer to the breakpoint location with index \a i.
   ///
   /// @param[in] i
   ///     The breakpoint location index to seek for.
@@ -121,8 +114,8 @@ public:
   lldb::BreakpointLocationSP GetByIndex(size_t i);
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint location with index
-  /// \a i, const version.
+  /// Returns a shared pointer to the breakpoint location with index \a i,
+  /// const version.
   ///
   /// @param[in] i
   ///     The breakpoint location index to seek for.
@@ -134,20 +127,20 @@ public:
   const lldb::BreakpointLocationSP GetByIndex(size_t i) const;
 
   //------------------------------------------------------------------
-  /// Removes all the locations in this list from their breakpoint site
-  /// owners list.
+  /// Removes all the locations in this list from their breakpoint site owners
+  /// list.
   //------------------------------------------------------------------
   void ClearAllBreakpointSites();
 
   //------------------------------------------------------------------
-  /// Tells all the breakpoint locations in this list to attempt to
-  /// resolve any possible breakpoint sites.
+  /// Tells all the breakpoint locations in this list to attempt to resolve
+  /// any possible breakpoint sites.
   //------------------------------------------------------------------
   void ResolveAllBreakpointSites();
 
   //------------------------------------------------------------------
-  /// Returns the number of breakpoint locations in this list with
-  /// resolved breakpoints.
+  /// Returns the number of breakpoint locations in this list with resolved
+  /// breakpoints.
   ///
   /// @result
   ///     Number of qualifying breakpoint locations.
@@ -163,8 +156,8 @@ public:
   uint32_t GetHitCount() const;
 
   //------------------------------------------------------------------
-  /// Enquires of the breakpoint location in this list with ID \a
-  /// breakID whether we should stop.
+  /// Enquires of the breakpoint location in this list with ID \a breakID
+  /// whether we should stop.
   ///
   /// @param[in] context
   ///     This contains the information about this stop.
@@ -186,8 +179,8 @@ public:
   size_t GetSize() const { return m_locations.size(); }
 
   //------------------------------------------------------------------
-  /// Print a description of the breakpoint locations in this list to
-  /// the stream \a s.
+  /// Print a description of the breakpoint locations in this list to the
+  /// stream \a s.
   ///
   /// @param[in] s
   ///     The stream to which to print the description.
@@ -204,9 +197,9 @@ protected:
   //------------------------------------------------------------------
   /// This is the standard constructor.
   ///
-  /// It creates an empty breakpoint location list. It is protected
-  /// here because only Breakpoints are allowed to create the
-  /// breakpoint location list.
+  /// It creates an empty breakpoint location list. It is protected here
+  /// because only Breakpoints are allowed to create the breakpoint location
+  /// list.
   //------------------------------------------------------------------
   BreakpointLocationList(Breakpoint &owner);
 

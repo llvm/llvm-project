@@ -89,10 +89,9 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   CommandObject *cmd_obj;
   const size_t argc = command.GetArgumentCount();
 
-  // 'help' doesn't take any arguments, other than command names.  If argc is 0,
-  // we show the user
-  // all commands (aliases and user commands if asked for).  Otherwise every
-  // argument must be the name of a command or a sub-command.
+  // 'help' doesn't take any arguments, other than command names.  If argc is
+  // 0, we show the user all commands (aliases and user commands if asked for).
+  // Otherwise every argument must be the name of a command or a sub-command.
   if (argc == 0) {
     uint32_t cmd_types = CommandInterpreter::eCommandTypesBuiltin;
     if (m_options.m_show_aliases)
@@ -210,34 +209,24 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   return result.Succeeded();
 }
 
-int CommandObjectHelp::HandleCompletion(Args &input, int &cursor_index,
-                                        int &cursor_char_position,
-                                        int match_start_point,
-                                        int max_return_elements,
-                                        bool &word_complete,
-                                        StringList &matches) {
+int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // Return the completions of the commands in the help system:
-  if (cursor_index == 0) {
-    return m_interpreter.HandleCompletionMatches(
-        input, cursor_index, cursor_char_position, match_start_point,
-        max_return_elements, word_complete, matches);
+  if (request.GetCursorIndex() == 0) {
+    return m_interpreter.HandleCompletionMatches(request);
   } else {
-    CommandObject *cmd_obj = m_interpreter.GetCommandObject(input[0].ref);
+    CommandObject *cmd_obj =
+        m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
 
     // The command that they are getting help on might be ambiguous, in which
-    // case we should complete that,
-    // otherwise complete with the command the user is getting help on...
+    // case we should complete that, otherwise complete with the command the
+    // user is getting help on...
 
     if (cmd_obj) {
-      input.Shift();
-      cursor_index--;
-      return cmd_obj->HandleCompletion(
-          input, cursor_index, cursor_char_position, match_start_point,
-          max_return_elements, word_complete, matches);
+      request.GetParsedLine().Shift();
+      request.SetCursorIndex(request.GetCursorIndex() - 1);
+      return cmd_obj->HandleCompletion(request);
     } else {
-      return m_interpreter.HandleCompletionMatches(
-          input, cursor_index, cursor_char_position, match_start_point,
-          max_return_elements, word_complete, matches);
+      return m_interpreter.HandleCompletionMatches(request);
     }
   }
 }

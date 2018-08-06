@@ -39,7 +39,7 @@ class StaticVariableTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        # global variables are no longer displayed with the "frame variable"
+        # Global variables are no longer displayed with the "frame variable"
         # command.
         self.expect(
             'target variable A::g_points',
@@ -63,7 +63,53 @@ class StaticVariableTestCase(TestBase):
         compiler=["clang"],
         compiler_version=["<", "3.9"],
         bugnumber='llvm.org/pr20550')
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    def test_with_run_command_complete(self):
+        """
+        Test that file and class static variables display correctly with
+        complete debug information.
+        """
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        # Global variables are no longer displayed with the "frame variable"
+        # command.
+        self.expect(
+            'target variable A::g_points',
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=[
+                '\(PointType \[[1-9]*\]\) A::g_points = {', '(x = 1, y = 2)',
+                '(x = 11, y = 22)'
+            ])
+
+        # Ensure that we take the context into account and only print
+        # A::g_points.
+        self.expect(
+            'target variable A::g_points',
+            VARIABLES_DISPLAYED_CORRECTLY,
+            matching=False,
+            patterns=['(x = 3, y = 4)', '(x = 33, y = 44)'])
+
+        # Finally, ensure that we print both points when not specifying a
+        # context.
+        self.expect(
+            'target variable g_points',
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(PointType [2]) g_points', '(x = 1, y = 2)',
+                '(x = 11, y = 22)', '(x = 3, y = 4)', '(x = 33, y = 44)'
+            ])
+
+    @expectedFailureAll(
+        compiler=["gcc"],
+        bugnumber="Compiler emits incomplete debug info")
+    @expectedFailureAll(
+        compiler=["clang"],
+        compiler_version=["<", "3.9"],
+        bugnumber='llvm.org/pr20550')
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_with_python_api(self):
         """Test Python APIs on file and class static variables."""
         self.build()

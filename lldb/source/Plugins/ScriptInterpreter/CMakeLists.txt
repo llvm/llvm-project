@@ -1,2 +1,4 @@
 add_subdirectory(None)
-add_subdirectory(Python)
+if (NOT LLDB_DISABLE_PYTHON)
+  add_subdirectory(Python)
+endif()

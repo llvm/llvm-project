@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/Log.h"
@@ -25,19 +26,6 @@ static constexpr Log::Category test_categories[] = {
 static constexpr uint32_t default_flags = FOO;
 
 static Log::Channel test_channel(test_categories, default_flags);
-
-struct LogChannelTest : public ::testing::Test {
-  void TearDown() override { Log::DisableAllLogChannels(); }
-
-  static void SetUpTestCase() {
-    Log::Register("chan", test_channel);
-  }
-
-  static void TearDownTestCase() {
-    Log::Unregister("chan");
-    llvm::llvm_shutdown();
-  }
-};
 
 // Wrap enable, disable and list functions to make them easier to test.
 static bool EnableChannel(std::shared_ptr<llvm::raw_ostream> stream_sp,
@@ -62,6 +50,63 @@ static bool ListCategories(llvm::StringRef channel, std::string &result) {
   result.clear();
   llvm::raw_string_ostream result_stream(result);
   return Log::ListChannelCategories(channel, result_stream);
+}
+
+namespace {
+// A test fixture which provides tests with a pre-registered channel.
+struct LogChannelTest : public ::testing::Test {
+  void TearDown() override { Log::DisableAllLogChannels(); }
+
+  static void SetUpTestCase() {
+    Log::Register("chan", test_channel);
+  }
+
+  static void TearDownTestCase() {
+    Log::Unregister("chan");
+    llvm::llvm_shutdown();
+  }
+};
+
+// A test fixture which provides tests with a pre-registered and pre-enabled
+// channel. Additionally, the messages written to that channel are captured and
+// made available via getMessage().
+class LogChannelEnabledTest : public LogChannelTest {
+  llvm::SmallString<0> m_messages;
+  std::shared_ptr<llvm::raw_svector_ostream> m_stream_sp =
+      std::make_shared<llvm::raw_svector_ostream>(m_messages);
+  Log *m_log;
+  size_t m_consumed_bytes = 0;
+
+protected:
+  std::shared_ptr<llvm::raw_ostream> getStream() { return m_stream_sp; }
+  Log *getLog() { return m_log; }
+  llvm::StringRef takeOutput();
+  llvm::StringRef logAndTakeOutput(llvm::StringRef Message);
+
+public:
+  void SetUp() override;
+};
+} // end anonymous namespace
+
+void LogChannelEnabledTest::SetUp() {
+  LogChannelTest::SetUp();
+
+  std::string error;
+  ASSERT_TRUE(EnableChannel(m_stream_sp, 0, "chan", {}, error));
+
+  m_log = test_channel.GetLogIfAll(FOO);
+  ASSERT_NE(nullptr, m_log);
+}
+
+llvm::StringRef LogChannelEnabledTest::takeOutput() {
+  llvm::StringRef result = m_stream_sp->str().drop_front(m_consumed_bytes);
+  m_consumed_bytes+= result.size();
+  return result;
+}
+
+llvm::StringRef LogChannelEnabledTest::logAndTakeOutput(llvm::StringRef Message) {
+  LLDB_LOG(m_log, "{0}", Message);
+  return takeOutput();
 }
 
 TEST(LogTest, LLDB_LOG_nullptr) {
@@ -165,116 +210,105 @@ TEST_F(LogChannelTest, List) {
   EXPECT_EQ("Invalid log channel 'chanchan'.\n", list);
 }
 
-static std::string GetLogString(uint32_t log_options, const char *format,
-                                int arg) {
-  std::string message;
-  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
-      new llvm::raw_string_ostream(message));
-  std::string error;
-  llvm::raw_string_ostream error_stream(error);
-  EXPECT_TRUE(
-      Log::EnableLogChannel(stream_sp, log_options, "chan", {}, error_stream));
-
-  Log *log = test_channel.GetLogIfAll(FOO);
-  EXPECT_NE(nullptr, log);
-
-  LLDB_LOG(log, format, arg);
-  EXPECT_TRUE(Log::DisableLogChannel("chan", {}, error_stream));
-
-  return stream_sp->str();
-}
-
-TEST_F(LogChannelTest, log_options) {
-  EXPECT_EQ("Hello World 47\n", GetLogString(0, "Hello World {0}", 47));
-  EXPECT_EQ("Hello World 47\n",
-            GetLogString(LLDB_LOG_OPTION_THREADSAFE, "Hello World {0}", 47));
+TEST_F(LogChannelEnabledTest, log_options) {
+  std::string Err;
+  EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
+  EXPECT_TRUE(EnableChannel(getStream(), LLDB_LOG_OPTION_THREADSAFE, "chan", {},
+                            Err));
+  EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
 
   {
-    std::string msg =
-        GetLogString(LLDB_LOG_OPTION_PREPEND_SEQUENCE, "Hello World {0}", 47);
+    EXPECT_TRUE(EnableChannel(getStream(), LLDB_LOG_OPTION_PREPEND_SEQUENCE,
+                              "chan", {}, Err));
+    llvm::StringRef Msg = logAndTakeOutput("Hello World");
     int seq_no;
-    EXPECT_EQ(1, sscanf(msg.c_str(), "%d Hello World 47", &seq_no));
+    EXPECT_EQ(1, sscanf(Msg.str().c_str(), "%d Hello World", &seq_no));
   }
 
-  EXPECT_EQ(
-      "LogTest.cpp:GetLogString                                     Hello "
-      "World 47\n",
-      GetLogString(LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "Hello World {0}", 47));
+  {
+    EXPECT_TRUE(EnableChannel(getStream(), LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION,
+                              "chan", {}, Err));
+    llvm::StringRef Msg = logAndTakeOutput("Hello World");
+    char File[12];
+    char Function[17];
+      
+    sscanf(Msg.str().c_str(), "%[^:]:%s                                 Hello World", File, Function);
+    EXPECT_STRCASEEQ("LogTest.cpp", File);
+    EXPECT_STREQ("logAndTakeOutput", Function);
+  }
 
-  EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World 47\n", ::getpid(),
+  EXPECT_TRUE(EnableChannel(
+      getStream(), LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD, "chan", {}, Err));
+  EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World\n", ::getpid(),
                           llvm::get_threadid())
                 .str(),
-            GetLogString(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD,
-                         "Hello World {0}", 47));
+            logAndTakeOutput("Hello World"));
 }
 
-TEST_F(LogChannelTest, LogThread) {
+TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
+  LLDB_LOG_ERROR(getLog(), llvm::Error::success(), "Foo failed: {0}");
+  ASSERT_EQ("", takeOutput());
+
+  LLDB_LOG_ERROR(getLog(),
+                 llvm::make_error<llvm::StringError>(
+                     "My Error", llvm::inconvertibleErrorCode()),
+                 "Foo failed: {0}");
+  ASSERT_EQ("Foo failed: My Error\n", takeOutput());
+
+  // Doesn't log, but doesn't assert either
+  LLDB_LOG_ERROR(nullptr,
+                 llvm::make_error<llvm::StringError>(
+                     "My Error", llvm::inconvertibleErrorCode()),
+                 "Foo failed: {0}");
+}
+
+TEST_F(LogChannelEnabledTest, LogThread) {
   // Test that we are able to concurrently write to a log channel and disable
   // it.
-  std::string message;
-  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
-      new llvm::raw_string_ostream(message));
   std::string err;
-  EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {}, err));
-
-  Log *log = test_channel.GetLogIfAll(FOO);
 
   // Start logging on one thread. Concurrently, try disabling the log channel.
-  std::thread log_thread([log] { LLDB_LOG(log, "Hello World"); });
+  std::thread log_thread([this] { LLDB_LOG(getLog(), "Hello World"); });
   EXPECT_TRUE(DisableChannel("chan", {}, err));
   log_thread.join();
 
   // The log thread either managed to write to the log in time, or it didn't. In
   // either case, we should not trip any undefined behavior (run the test under
   // TSAN to verify this).
-  EXPECT_TRUE(stream_sp->str() == "" || stream_sp->str() == "Hello World\n")
-      << "str(): " << stream_sp->str();
+  EXPECT_THAT(takeOutput(), testing::AnyOf("", "Hello World\n"));
 }
 
-TEST_F(LogChannelTest, LogVerboseThread) {
+TEST_F(LogChannelEnabledTest, LogVerboseThread) {
   // Test that we are able to concurrently check the verbose flag of a log
   // channel and enable it.
-  std::string message;
-  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
-      new llvm::raw_string_ostream(message));
   std::string err;
-  EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {}, err));
-
-  Log *log = test_channel.GetLogIfAll(FOO);
 
   // Start logging on one thread. Concurrently, try enabling the log channel
   // (with different log options).
-  std::thread log_thread([log] { LLDB_LOGV(log, "Hello World"); });
-  EXPECT_TRUE(EnableChannel(stream_sp, LLDB_LOG_OPTION_VERBOSE, "chan",
-                                    {}, err));
+  std::thread log_thread([this] { LLDB_LOGV(getLog(), "Hello World"); });
+  EXPECT_TRUE(
+      EnableChannel(getStream(), LLDB_LOG_OPTION_VERBOSE, "chan", {}, err));
   log_thread.join();
-  EXPECT_TRUE(DisableChannel("chan", {}, err));
 
   // The log thread either managed to write to the log, or it didn't. In either
   // case, we should not trip any undefined behavior (run the test under TSAN to
   // verify this).
-  EXPECT_TRUE(stream_sp->str() == "" || stream_sp->str() == "Hello World\n")
-      << "str(): " << stream_sp->str();
+  EXPECT_THAT(takeOutput(), testing::AnyOf("", "Hello World\n"));
 }
 
-TEST_F(LogChannelTest, LogGetLogThread) {
+TEST_F(LogChannelEnabledTest, LogGetLogThread) {
   // Test that we are able to concurrently get mask of a Log object and disable
   // it.
-  std::string message;
-  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
-      new llvm::raw_string_ostream(message));
   std::string err;
-  EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {}, err));
-  Log *log = test_channel.GetLogIfAll(FOO);
 
-  // Try fetching the log on one thread. Concurrently, try disabling the log
-  // channel.
+  // Try fetching the log mask on one thread. Concurrently, try disabling the
+  // log channel.
   uint32_t mask;
-  std::thread log_thread([log, &mask] { mask = log->GetMask().Get(); });
+  std::thread log_thread([this, &mask] { mask = getLog()->GetMask().Get(); });
   EXPECT_TRUE(DisableChannel("chan", {}, err));
   log_thread.join();
 
   // The mask should be either zero of "FOO". In either case, we should not trip
   // any undefined behavior (run the test under TSAN to verify this).
-  EXPECT_TRUE(mask == 0 || mask == FOO) << "mask: " << mask;
+  EXPECT_THAT(mask, testing::AnyOf(0, FOO));
 }

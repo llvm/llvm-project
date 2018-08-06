@@ -109,23 +109,23 @@ lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
   return OptionValueSP(new OptionValueEnumeration(*this));
 }
 
-size_t OptionValueEnumeration::AutoComplete(
-    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+size_t OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
+                                            CompletionRequest &request) {
+  request.SetWordComplete(false);
+  request.GetMatches().Clear();
 
   const uint32_t num_enumerators = m_enumerations.GetSize();
-  if (!s.empty()) {
+  if (!request.GetCursorArgumentPrefix().empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
       llvm::StringRef name = m_enumerations.GetCStringAtIndex(i).GetStringRef();
-      if (name.startswith(s))
-        matches.AppendString(name);
+      if (name.startswith(request.GetCursorArgumentPrefix()))
+        request.GetMatches().AppendString(name);
     }
   } else {
     // only suggest "true" or "false" by default
     for (size_t i = 0; i < num_enumerators; ++i)
-      matches.AppendString(m_enumerations.GetCStringAtIndex(i).GetStringRef());
+      request.GetMatches().AppendString(
+          m_enumerations.GetCStringAtIndex(i).GetStringRef());
   }
-  return matches.GetSize();
+  return request.GetMatches().GetSize();
 }

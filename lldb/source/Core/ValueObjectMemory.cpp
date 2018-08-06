@@ -165,21 +165,20 @@ bool ValueObjectMemory::UpdateValue() {
       llvm_unreachable("Unhandled expression result value kind...");
 
     case Value::eValueTypeScalar:
-      // The variable value is in the Scalar value inside the m_value.
-      // We can point our m_data right to it.
+      // The variable value is in the Scalar value inside the m_value. We can
+      // point our m_data right to it.
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
       break;
 
     case Value::eValueTypeFileAddress:
     case Value::eValueTypeLoadAddress:
     case Value::eValueTypeHostAddress:
-      // The DWARF expression result was an address in the inferior
-      // process. If this variable is an aggregate type, we just need
-      // the address as the main value as all child variable objects
-      // will rely upon this location and add an offset and then read
-      // their own values as needed. If this variable is a simple
-      // type, we read all data for it into m_data.
-      // Make sure this type has a value before we try and read it
+      // The DWARF expression result was an address in the inferior process. If
+      // this variable is an aggregate type, we just need the address as the
+      // main value as all child variable objects will rely upon this location
+      // and add an offset and then read their own values as needed. If this
+      // variable is a simple type, we read all data for it into m_data. Make
+      // sure this type has a value before we try and read it
 
       // If we have a file address, convert it to a load address if we can.
       if (value_type == Value::eValueTypeFileAddress &&
@@ -192,14 +191,14 @@ bool ValueObjectMemory::UpdateValue() {
       }
 
       if (!CanProvideValue()) {
-        // this value object represents an aggregate type whose
-        // children have values, but this object does not. So we
-        // say we are changed if our location has changed.
+        // this value object represents an aggregate type whose children have
+        // values, but this object does not. So we say we are changed if our
+        // location has changed.
         SetValueDidChange(value_type != old_value.GetValueType() ||
                           m_value.GetScalar() != old_value.GetScalar());
       } else {
-        // Copy the Value and set the context to use our Variable
-        // so it can extract read its value into m_data appropriately
+        // Copy the Value and set the context to use our Variable so it can
+        // extract read its value into m_data appropriately
         Value value(m_value);
         if (m_type_sp)
           value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());

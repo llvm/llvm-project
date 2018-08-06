@@ -84,9 +84,9 @@ Status TargetList::CreateTargetInternal(
   Status error;
   PlatformSP platform_sp;
 
-  // This is purposely left empty unless it is specified by triple_cstr.
-  // If not initialized via triple_cstr, then the currently selected platform
-  // will set the architecture correctly.
+  // This is purposely left empty unless it is specified by triple_cstr. If not
+  // initialized via triple_cstr, then the currently selected platform will set
+  // the architecture correctly.
   const ArchSpec arch(triple_str);
   if (!triple_str.empty()) {
     if (!arch.IsValid()) {
@@ -102,7 +102,7 @@ Status TargetList::CreateTargetInternal(
 
   CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
 
-  // let's see if there is already an existing plaform before we go creating
+  // let's see if there is already an existing platform before we go creating
   // another...
   platform_sp = debugger.GetPlatformList().GetSelectedPlatform();
 
@@ -120,11 +120,11 @@ Status TargetList::CreateTargetInternal(
   if (!user_exe_path.empty()) {
     ModuleSpecList module_specs;
     ModuleSpec module_spec;
-    module_spec.GetFileSpec().SetFile(user_exe_path, true);
+    module_spec.GetFileSpec().SetFile(user_exe_path, true,
+                                      FileSpec::Style::native);
 
     // Resolve the executable in case we are given a path to a application
-    // bundle
-    // like a .app bundle on MacOSX
+    // bundle like a .app bundle on MacOSX
     Host::ResolveExecutableInBundle(module_spec.GetFileSpec());
 
     lldb::offset_t file_offset = 0;
@@ -140,7 +140,8 @@ Status TargetList::CreateTargetInternal(
             if (platform_arch.IsCompatibleMatch(
                     matching_module_spec.GetArchitecture())) {
               // If the OS or vendor weren't specified, then adopt the module's
-              // architecture so that the platform matching can be more accurate
+              // architecture so that the platform matching can be more
+              // accurate
               if (!platform_arch.TripleOSWasSpecified() ||
                   !platform_arch.TripleVendorWasSpecified()) {
                 prefer_platform_arch = true;
@@ -194,7 +195,8 @@ Status TargetList::CreateTargetInternal(
                 }
               }
 
-              // Next check the host platform it if wasn't already checked above
+              // Next check the host platform it if wasn't already checked
+              // above
               if (host_platform_sp &&
                   (!platform_sp ||
                    host_platform_sp->GetName() != platform_sp->GetName())) {
@@ -231,7 +233,7 @@ Status TargetList::CreateTargetInternal(
           }
 
           if (platform_ptr) {
-            // All platforms for all modules in the exectuable match, so we can
+            // All platforms for all modules in the executable match, so we can
             // select this platform
             platform_sp = platforms.front();
           } else if (more_than_one_platforms == false) {
@@ -275,8 +277,7 @@ Status TargetList::CreateTargetInternal(
     }
   } else if (platform_arch.IsValid()) {
     // if "arch" isn't valid, yet "platform_arch" is, it means we have an
-    // executable file with
-    // a single architecture which should be used
+    // executable file with a single architecture which should be used
     ArchSpec fixed_platform_arch;
     if (!platform_sp->IsCompatibleArchitecture(platform_arch, false,
                                                &fixed_platform_arch)) {
@@ -367,16 +368,12 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       user_exe_path_is_bundle = true;
 
     if (file.IsRelative() && !user_exe_path.empty()) {
-      // Ignore paths that start with "./" and "../"
-      if (!user_exe_path.startswith("./") && !user_exe_path.startswith("../")) {
-        llvm::SmallString<64> cwd;
-        if (! llvm::sys::fs::current_path(cwd)) {
-          cwd += '/';
-          cwd += user_exe_path;
-          FileSpec cwd_file(cwd, false);
-          if (cwd_file.Exists())
-            file = cwd_file;
-        }
+      llvm::SmallString<64> cwd;
+      if (! llvm::sys::fs::current_path(cwd)) {
+        FileSpec cwd_file(cwd.c_str(), false);
+        cwd_file.AppendPathComponent(file);
+        if (cwd_file.Exists())
+          file = cwd_file;
       }
     }
 
@@ -410,8 +407,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
                                              sizeof(resolved_bundle_exe_path));
     }
   } else {
-    // No file was specified, just create an empty target with any arch
-    // if a valid arch was specified
+    // No file was specified, just create an empty target with any arch if a
+    // valid arch was specified
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
   }
 

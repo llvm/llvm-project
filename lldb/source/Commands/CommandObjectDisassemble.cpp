@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -101,14 +102,14 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 's': {
-    start_addr = Args::StringToAddress(execution_context, option_arg,
-                                       LLDB_INVALID_ADDRESS, &error);
+    start_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                            LLDB_INVALID_ADDRESS, &error);
     if (start_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
   case 'e': {
-    end_addr = Args::StringToAddress(execution_context, option_arg,
-                                     LLDB_INVALID_ADDRESS, &error);
+    end_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                          LLDB_INVALID_ADDRESS, &error);
     if (end_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
@@ -125,8 +126,8 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'l':
     frame_line = true;
-    // Disassemble the current source line kind of implies showing mixed
-    // source code context.
+    // Disassemble the current source line kind of implies showing mixed source
+    // code context.
     show_mixed = true;
     some_location_specified = true;
     break;
@@ -160,15 +161,14 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'A':
     if (execution_context) {
-      auto target_sp =
-          execution_context ? execution_context->GetTargetSP() : TargetSP();
-      auto platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
-      arch = Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
+      const auto &target_sp = execution_context->GetTargetSP();
+      auto platform_ptr = target_sp ? target_sp->GetPlatform().get() : nullptr;
+      arch = Platform::GetAugmentedArchSpec(platform_ptr, option_arg);
     }
     break;
 
   case 'a': {
-    symbol_containing_addr = Args::StringToAddress(
+    symbol_containing_addr = OptionArgParser::ToAddress(
         execution_context, option_arg, LLDB_INVALID_ADDRESS, &error);
     if (symbol_containing_addr != LLDB_INVALID_ADDRESS) {
       some_location_specified = true;
@@ -204,10 +204,9 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
       execution_context ? execution_context->GetTargetPtr() : nullptr;
 
   // This is a hack till we get the ability to specify features based on
-  // architecture.  For now GetDisassemblyFlavor
-  // is really only valid for x86 (and for the llvm assembler plugin, but I'm
-  // papering over that since that is the
-  // only disassembler plugin we have...
+  // architecture.  For now GetDisassemblyFlavor is really only valid for x86
+  // (and for the llvm assembler plugin, but I'm papering over that since that
+  // is the only disassembler plugin we have...
   if (target) {
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
@@ -374,8 +373,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       }
     }
 
-    // Did the "m_options.frame_line" find a valid range already? If so
-    // skip the rest...
+    // Did the "m_options.frame_line" find a valid range already? If so skip
+    // the rest...
     if (range.GetByteSize() == 0) {
       if (m_options.at_pc) {
         if (frame == nullptr) {

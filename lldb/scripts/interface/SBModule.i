@@ -179,6 +179,23 @@ public:
     lldb::SBCompileUnit
     GetCompileUnitAtIndex (uint32_t);
 
+    %feature("docstring", "
+    //------------------------------------------------------------------
+    /// Find compile units related to *this module and passed source
+    /// file.
+    ///
+    /// @param[in] sb_file_spec
+    ///     A lldb::SBFileSpec object that contains source file
+    ///     specification.
+    ///
+    /// @return
+    ///     A lldb::SBSymbolContextList that gets filled in with all of
+    ///     the symbol contexts for all the matches.
+    //------------------------------------------------------------------
+    ") FindCompileUnits;
+    lldb::SBSymbolContextList
+    FindCompileUnits (const lldb::SBFileSpec &sb_file_spec);
+
     size_t
     GetNumSymbols ();
     

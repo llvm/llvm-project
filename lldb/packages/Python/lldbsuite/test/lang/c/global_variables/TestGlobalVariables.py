@@ -22,6 +22,22 @@ class GlobalVariablesTestCase(TestBase):
         self.shlib_names = ["a"]
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64"], bugnumber="llvm.org/pr37301")
+    def test_without_process(self):
+        """Test that static initialized variables can be inspected without
+        process."""
+        self.build()
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+
+        self.assertTrue(target, VALID_TARGET)
+        self.expect("target variable g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['(int *)'])
+        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['42'])
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_c_global_variables(self):
         """Test 'frame variable --scope --no-args' which omits args and shows scopes."""
         self.build()
@@ -39,12 +55,6 @@ class GlobalVariablesTestCase(TestBase):
         environment = self.registerSharedLibrariesWithTarget(
             target, self.shlib_names)
 
-        # Test that static initialized variables can be inspected without process.
-        self.expect("target variable g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['(int *)'])
-        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['42'])
-
         # Now launch the process, and do not stop at entry point.
         process = target.LaunchSimple(
             None, environment, self.get_process_working_directory())
@@ -59,8 +69,14 @@ class GlobalVariablesTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 1'])
 
+        # Test that the statically initialized variable can also be
+        # inspected *with* a process.
+        self.expect("target variable g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['(int *)'])
+        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['42'])
+
         # Check that GLOBAL scopes are indicated for the variables.
-        self.runCmd("frame variable --show-types --scope --show-globals --no-args")
         self.expect(
             "frame variable --show-types --scope --show-globals --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -106,7 +122,3 @@ class GlobalVariablesTestCase(TestBase):
             matching=False,
             substrs=["can't be resolved"])
 
-        # Test that the statically initialized variable can also be
-        # inspected *with* a process.
-        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['42'])

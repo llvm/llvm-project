@@ -10,3 +10,4 @@ command script add tell_sync --function welcome.check_for_synchro --synchronicit
 command script add tell_async --function welcome.check_for_synchro --synchronicity async
 command script add tell_curr --function welcome.check_for_synchro --synchronicity curr
 command script add takes_exe_ctx --function welcome.takes_exe_ctx
+command script import decorated.py

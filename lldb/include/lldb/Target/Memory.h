@@ -120,8 +120,8 @@ protected:
 
 //----------------------------------------------------------------------
 // A class that can track allocated memory and give out allocated memory
-// without us having to make an allocate/deallocate call every time we
-// need some memory in a process that is being debugged.
+// without us having to make an allocate/deallocate call every time we need
+// some memory in a process that is being debugged.
 //----------------------------------------------------------------------
 class AllocatedMemoryCache {
 public:

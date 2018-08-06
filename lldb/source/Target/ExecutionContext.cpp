@@ -369,15 +369,14 @@ ExecutionContext &ExecutionContext::operator=(const ExecutionContext &rhs) {
 
 bool ExecutionContext::operator==(const ExecutionContext &rhs) const {
   // Check that the frame shared pointers match, or both are valid and their
-  // stack
-  // IDs match since sometimes we get new objects that represent the same
+  // stack IDs match since sometimes we get new objects that represent the same
   // frame within a thread.
   if ((m_frame_sp == rhs.m_frame_sp) ||
       (m_frame_sp && rhs.m_frame_sp &&
        m_frame_sp->GetStackID() == rhs.m_frame_sp->GetStackID())) {
-    // Check that the thread shared pointers match, or both are valid and
-    // their thread IDs match since sometimes we get new objects that
-    // represent the same thread within a process.
+    // Check that the thread shared pointers match, or both are valid and their
+    // thread IDs match since sometimes we get new objects that represent the
+    // same thread within a process.
     if ((m_thread_sp == rhs.m_thread_sp) ||
         (m_thread_sp && rhs.m_thread_sp &&
          m_thread_sp->GetID() == rhs.m_thread_sp->GetID())) {
@@ -596,9 +595,9 @@ lldb::ThreadSP ExecutionContextRef::GetThreadSP() const {
   lldb::ThreadSP thread_sp(m_thread_wp.lock());
 
   if (m_tid != LLDB_INVALID_THREAD_ID) {
-    // We check if the thread has been destroyed in cases where clients
-    // might still have shared pointer to a thread, but the thread is
-    // not valid anymore (not part of the process)
+    // We check if the thread has been destroyed in cases where clients might
+    // still have shared pointer to a thread, but the thread is not valid
+    // anymore (not part of the process)
     if (!thread_sp || !thread_sp->IsValid()) {
       lldb::ProcessSP process_sp(GetProcessSP());
       if (process_sp && process_sp->IsValid()) {
@@ -608,9 +607,8 @@ lldb::ThreadSP ExecutionContextRef::GetThreadSP() const {
     }
   }
 
-  // Check that we aren't about to return an invalid thread sp.  We might return
-  // a nullptr thread_sp,
-  // but don't return an invalid one.
+  // Check that we aren't about to return an invalid thread sp.  We might
+  // return a nullptr thread_sp, but don't return an invalid one.
 
   if (thread_sp && !thread_sp->IsValid())
     thread_sp.reset();

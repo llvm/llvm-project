@@ -170,9 +170,9 @@ int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
   if (a_byte_size > b_byte_size)
     return +1;
 
-  // Check for an end sequence entry mismatch after we have determined
-  // that the address values are equal. If one of the items is an end
-  // sequence, we don't care about the line, file, or column info.
+  // Check for an end sequence entry mismatch after we have determined that the
+  // address values are equal. If one of the items is an end sequence, we don't
+  // care about the line, file, or column info.
   if (a.is_terminal_entry > b.is_terminal_entry)
     return -1;
   if (a.is_terminal_entry < b.is_terminal_entry)
@@ -192,8 +192,8 @@ int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
 }
 
 AddressRange LineEntry::GetSameLineContiguousAddressRange() const {
-  // Add each LineEntry's range to complete_line_range until we find
-  // a different file / line number.
+  // Add each LineEntry's range to complete_line_range until we find a
+  // different file / line number.
   AddressRange complete_line_range = range;
 
   while (true) {
@@ -206,9 +206,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange() const {
     if (next_line_sc.line_entry.IsValid() &&
         next_line_sc.line_entry.range.GetByteSize() > 0 &&
         original_file == next_line_sc.line_entry.original_file) {
-      // Include any line 0 entries - they indicate that this is
-      // compiler-generated code
-      // that does not correspond to user source code.
+      // Include any line 0 entries - they indicate that this is compiler-
+      // generated code that does not correspond to user source code.
       if (next_line_sc.line_entry.line == 0) {
         complete_line_range.SetByteSize(
             complete_line_range.GetByteSize() +
@@ -217,10 +216,9 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange() const {
       }
 
       if (line == next_line_sc.line_entry.line) {
-        // next_line_sc is the same file & line as this LineEntry, so extend our
-        // AddressRange by its size and continue to see if there are more
-        // LineEntries
-        // that we can combine.
+        // next_line_sc is the same file & line as this LineEntry, so extend
+        // our AddressRange by its size and continue to see if there are more
+        // LineEntries that we can combine.
         complete_line_range.SetByteSize(
             complete_line_range.GetByteSize() +
             next_line_sc.line_entry.range.GetByteSize());

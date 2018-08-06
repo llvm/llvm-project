@@ -132,6 +132,10 @@ def no_entry: F<"no-entry">,
 def stack_first: F<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
 
+defm whole_archive: B<"whole-archive",
+    "Force load of all members in a static library",
+    "Do not force load of all members in a static library (default)">;
+
 // Aliases
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;

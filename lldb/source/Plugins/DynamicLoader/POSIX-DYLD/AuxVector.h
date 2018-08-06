@@ -22,12 +22,12 @@ class DataExtractor;
 }
 
 /// @class AuxVector
-/// @brief Represents a processes auxiliary vector.
+/// Represents a processes auxiliary vector.
 ///
 /// When a process is loaded on Linux a vector of values is placed onto the
-/// stack communicating operating system specific information.  On construction
-/// this class locates and parses this information and provides a simple
-/// read-only interface to the entries found.
+/// stack communicating operating system specific information.  On
+/// construction this class locates and parses this information and provides a
+/// simple read-only interface to the entries found.
 class AuxVector {
 
 public:
@@ -41,8 +41,9 @@ public:
   };
 
   /// Constants describing the type of entry.
-  /// On Linux, running "LD_SHOW_AUXV=1 ./executable" will spew AUX information.
-  /// Added AUXV prefix to avoid potential conflicts with system-defined macros
+  /// On Linux, running "LD_SHOW_AUXV=1 ./executable" will spew AUX
+  /// information. Added AUXV prefix to avoid potential conflicts with system-
+  /// defined macros
   enum EntryType {
     AUXV_AT_NULL = 0,            ///< End of auxv.
     AUXV_AT_IGNORE = 1,          ///< Ignore entry.

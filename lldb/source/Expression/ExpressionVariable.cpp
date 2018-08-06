@@ -75,8 +75,8 @@ void PersistentExpressionState::RegisterExecutionUnit(
        execution_unit_sp->GetJittedGlobalVariables()) {
     if (global_var.m_remote_addr != LLDB_INVALID_ADDRESS) {
       // Demangle the name before inserting it, so that lookups by the ConstStr
-      // of the demangled name
-      // will find the mangled one (needed for looking up metadata pointers.)
+      // of the demangled name will find the mangled one (needed for looking up
+      // metadata pointers.)
       Mangled mangler(global_var.m_name);
       mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;

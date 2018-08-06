@@ -48,7 +48,8 @@ FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
       m_function_return_type(return_type),
       m_wrapper_function_name("__lldb_caller_function"),
       m_wrapper_struct_name("__lldb_caller_struct"), m_wrapper_args_addrs(),
-      m_arg_values(arg_value_list), m_compiled(false), m_JITted(false) {
+      m_struct_valid(false), m_arg_values(arg_value_list), m_compiled(false),
+      m_JITted(false) {
   m_jit_process_wp = lldb::ProcessWP(exe_scope.CalculateProcess());
   // Can't make a FunctionCaller without a process.
   assert(m_jit_process_wp.lock());
@@ -313,9 +314,9 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     DiagnosticManager &diagnostic_manager, Value &results) {
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
 
-  // FunctionCaller::ExecuteFunction execution is always just to get the result.
-  // Do make sure we ignore
-  // breakpoints, unwind on error, and don't try to debug it.
+  // FunctionCaller::ExecuteFunction execution is always just to get the
+  // result. Do make sure we ignore breakpoints, unwind on error, and don't try
+  // to debug it.
   EvaluateExpressionOptions real_options = options;
   real_options.SetDebug(false);
   real_options.SetUnwindOnError(true);
@@ -350,9 +351,8 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     return lldb::eExpressionSetupError;
 
   // We need to make sure we record the fact that we are running an expression
-  // here
-  // otherwise this fact will fail to be recorded when fetching an Objective-C
-  // object description
+  // here otherwise this fact will fail to be recorded when fetching an
+  // Objective-C object description
   if (exe_ctx.GetProcessPtr())
     exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
 

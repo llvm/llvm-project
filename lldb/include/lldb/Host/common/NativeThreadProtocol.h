@@ -32,14 +32,6 @@ public:
 
   virtual NativeRegisterContext &GetRegisterContext() = 0;
 
-  virtual Status ReadRegister(uint32_t reg, RegisterValue &reg_value);
-
-  virtual Status WriteRegister(uint32_t reg, const RegisterValue &reg_value);
-
-  virtual Status SaveAllRegisters(lldb::DataBufferSP &data_sp);
-
-  virtual Status RestoreAllRegisters(lldb::DataBufferSP &data_sp);
-
   virtual bool GetStopReason(ThreadStopInfo &stop_info,
                              std::string &description) = 0;
 

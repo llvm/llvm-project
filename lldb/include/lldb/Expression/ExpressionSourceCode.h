@@ -52,9 +52,8 @@ public:
                                const EvaluateExpressionOptions &options,
                                std::string &expr_source_path);
   // Given a string returned by GetText, find the beginning and end of the body
-  // passed to CreateWrapped.
-  // Return true if the bounds could be found.  This will also work on text with
-  // FixItHints applied.
+  // passed to CreateWrapped. Return true if the bounds could be found.  This
+  // will also work on text with FixItHints applied.
   static bool GetOriginalBodyBounds(std::string transformed_text,
                                     lldb::LanguageType wrapping_language,
                                     size_t &start_loc, size_t &end_loc);

@@ -15,8 +15,8 @@
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
-// Have to include the other breakpoint resolver types here so the static create
-// from StructuredData can call them.
+// Have to include the other breakpoint resolver types here so the static
+// create from StructuredData can call them.
 #include "lldb/Breakpoint/BreakpointResolverAddress.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
@@ -212,8 +212,7 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
         sc_list.RemoveContextAtIndex(current_idx);
 
         // ResolveSymbolContext will always return a number that is >= the line
-        // number you pass in.
-        // So the smaller line number is always better.
+        // number you pass in. So the smaller line number is always better.
         if (sc.line_entry.line < closest_line_number)
           closest_line_number = sc.line_entry.line;
       } else
@@ -234,8 +233,7 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
     }
 
     // Next go through and see if there are line table entries that are
-    // contiguous, and if so keep only the
-    // first of the contiguous range:
+    // contiguous, and if so keep only the first of the contiguous range:
 
     current_idx = 0;
     std::map<Block *, lldb::addr_t> blocks_with_breakpoints;

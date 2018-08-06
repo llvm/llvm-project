@@ -10,6 +10,7 @@
 #ifndef liblldb_FormatEntity_h_
 #define liblldb_FormatEntity_h_
 
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h" // for FileSpec
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h" // for Format::eFormatDefault, Format
@@ -211,17 +212,15 @@ public:
                                     llvm::StringRef &variable_name,
                                     llvm::StringRef &variable_format);
 
-  static size_t AutoComplete(llvm::StringRef s, int match_start_point,
-                             int max_return_elements, bool &word_complete,
-                             StringList &matches);
+  static size_t AutoComplete(lldb_private::CompletionRequest &request);
 
   //----------------------------------------------------------------------
   // Format the current elements into the stream \a s.
   //
-  // The root element will be stripped off and the format str passed in
-  // will be either an empty string (print a description of this object),
-  // or contain a . separated series like a domain name that identifies
-  // further sub elements to display.
+  // The root element will be stripped off and the format str passed in will be
+  // either an empty string (print a description of this object), or contain a
+  // `.`-separated series like a domain name that identifies further
+  //  sub-elements to display.
   //----------------------------------------------------------------------
   static bool FormatFileSpec(const FileSpec &file, Stream &s,
                              llvm::StringRef elements,

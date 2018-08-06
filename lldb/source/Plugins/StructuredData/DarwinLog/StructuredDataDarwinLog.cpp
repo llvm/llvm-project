@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Property.h"
@@ -184,10 +185,10 @@ const char *const s_filter_attributes[] = {
     "message",        // message contents, fully expanded
     "subsystem"       // subsystem of the log message
 
-    // Consider impelmenting this action as it would be cheaper to filter.
-    // "message" requires always formatting the message, which is a waste
-    // of cycles if it ends up being rejected.
-    // "format",      // format string used to format message text
+    // Consider implementing this action as it would be cheaper to filter.
+    // "message" requires always formatting the message, which is a waste of
+    // cycles if it ends up being rejected. "format",      // format string
+    // used to format message text
 };
 
 static const ConstString &GetDarwinLogTypeName() {
@@ -238,11 +239,10 @@ public:
     // Indicate whether this is an accept or reject rule.
     dict_p->AddBooleanItem("accept", m_accept);
 
-    // Indicate which attribute of the message this filter references.
-    // This can drop into the rule-specific DoSerialization if we get
-    // to the point where not all FilterRule derived classes work on
-    // an attribute.  (e.g. logical and/or and other compound
-    // operations).
+    // Indicate which attribute of the message this filter references. This can
+    // drop into the rule-specific DoSerialization if we get to the point where
+    // not all FilterRule derived classes work on an attribute.  (e.g. logical
+    // and/or and other compound operations).
     dict_p->AddStringItem("attribute", s_filter_attributes[m_attribute_index]);
 
     // Indicate the type of the rule.
@@ -403,9 +403,9 @@ static void RegisterFilterOperations() {
 // -------------------------------------------------------------------------
 
 static OptionDefinition g_enable_option_table[] = {
-    // Source stream include/exclude options (the first-level filter).
-    // This one should be made as small as possible as everything that
-    // goes through here must be processed by the process monitor.
+    // Source stream include/exclude options (the first-level filter). This one
+    // should be made as small as possible as everything that goes through here
+    // must be processed by the process monitor.
     {LLDB_OPT_SET_ALL, false, "any-process", 'a', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
      "Specifies log messages from other related processes should be "
@@ -419,10 +419,10 @@ static OptionDefinition g_enable_option_table[] = {
      "Specifies info-level log messages should be included."},
     {LLDB_OPT_SET_ALL, false, "filter", 'f', OptionParser::eRequiredArgument,
      nullptr, nullptr, 0, eArgRawInput,
-     // There doesn't appear to be a great way for me to have these
-     // multi-line, formatted tables in help.  This looks mostly right
-     // but there are extra linefeeds added at seemingly random spots,
-     // and indentation isn't handled properly on those lines.
+     // There doesn't appear to be a great way for me to have these multi-line,
+     // formatted tables in help.  This looks mostly right but there are extra
+     // linefeeds added at seemingly random spots, and indentation isn't
+     // handled properly on those lines.
      "Appends a filter rule to the log message filter chain.  Multiple "
      "rules may be added by specifying this option multiple times, "
      "once per filter rule.  Filter rules are processed in the order "
@@ -488,11 +488,11 @@ static OptionDefinition g_enable_option_table[] = {
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "category", 'c', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
-     "Include the category in the the message header when displaying "
+     "Include the category in the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "activity-chain", 'C', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
-     "Include the activity parent-child chain in the the message header "
+     "Include the activity parent-child chain in the message header "
      "when displaying a log message.  The activity hierarchy is "
      "displayed as {grandparent-activity}:"
      "{parent-activity}:{activity}[:...]."},
@@ -544,7 +544,8 @@ public:
       break;
 
     case 'b':
-      m_broadcast_events = Args::StringToBoolean(option_arg, true, nullptr);
+      m_broadcast_events =
+          OptionArgParser::ToBoolean(option_arg, true, nullptr);
       break;
 
     case 'c':
@@ -560,7 +561,7 @@ public:
       break;
 
     case 'e':
-      m_echo_to_stderr = Args::StringToBoolean(option_arg, false, nullptr);
+      m_echo_to_stderr = OptionArgParser::ToBoolean(option_arg, false, nullptr);
       break;
 
     case 'f':
@@ -571,12 +572,12 @@ public:
       break;
 
     case 'l':
-      m_live_stream = Args::StringToBoolean(option_arg, false, nullptr);
+      m_live_stream = OptionArgParser::ToBoolean(option_arg, false, nullptr);
       break;
 
     case 'n':
       m_filter_fall_through_accepts =
-          Args::StringToBoolean(option_arg, true, nullptr);
+          OptionArgParser::ToBoolean(option_arg, true, nullptr);
       break;
 
     case 'r':
@@ -614,7 +615,7 @@ public:
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
     source_flags_sp->AddBooleanItem("debug-level", m_include_debug_level);
-    // The debug-level flag, if set, implies info-level.
+    // The debug-level flag, if set, implies info-level.
     source_flags_sp->AddBooleanItem("info-level", m_include_info_level ||
                                                       m_include_debug_level);
     source_flags_sp->AddBooleanItem("live-stream", m_live_stream);
@@ -784,12 +785,11 @@ protected:
     if (!source_name)
       return;
 
-    // Check if we're *not* using strict sources.  If not,
-    // then the user is going to get debug-level info
-    // anyways, probably not what they're expecting.
-    // Unfortunately we can only fix this by adding an
-    // env var, which would have had to have happened
-    // already.  Thus, a warning is the best we can do here.
+    // Check if we're *not* using strict sources.  If not, then the user is
+    // going to get debug-level info anyways, probably not what they're
+    // expecting. Unfortunately we can only fix this by adding an env var,
+    // which would have had to have happened already.  Thus, a warning is the
+    // best we can do here.
     StreamString stream;
     stream.Printf("darwin-log source settings specify to exclude "
                   "%s messages, but setting "
@@ -803,24 +803,22 @@ protected:
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    // First off, set the global sticky state of enable/disable
-    // based on this command execution.
+    // First off, set the global sticky state of enable/disable based on this
+    // command execution.
     s_is_explicitly_enabled = m_enable;
 
-    // Next, if this is an enable, save off the option data.
-    // We will need it later if a process hasn't been launched or
-    // attached yet.
+    // Next, if this is an enable, save off the option data. We will need it
+    // later if a process hasn't been launched or attached yet.
     if (m_enable) {
-      // Save off enabled configuration so we can apply these parsed
-      // options the next time an attach or launch occurs.
+      // Save off enabled configuration so we can apply these parsed options
+      // the next time an attach or launch occurs.
       DebuggerSP debugger_sp =
           GetCommandInterpreter().GetDebugger().shared_from_this();
       SetGlobalEnableOptions(debugger_sp, m_options_sp);
     }
 
-    // Now check if we have a running process.  If so, we should
-    // instruct the process monitor to enable/disable DarwinLog support
-    // now.
+    // Now check if we have a running process.  If so, we should instruct the
+    // process monitor to enable/disable DarwinLog support now.
     Target *target = GetSelectedOrDummyTarget();
     if (!target) {
       // No target, so there is nothing more to do right now.
@@ -831,14 +829,13 @@ protected:
     // Grab the active process.
     auto process_sp = target->GetProcessSP();
     if (!process_sp) {
-      // No active process, so there is nothing more to do right
-      // now.
+      // No active process, so there is nothing more to do right now.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return true;
     }
 
-    // If the process is no longer alive, we can't do this now.
-    // We'll catch it the next time the process is started up.
+    // If the process is no longer alive, we can't do this now. We'll catch it
+    // the next time the process is started up.
     if (!process_sp->IsAlive()) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return true;
@@ -857,19 +854,17 @@ protected:
         *static_cast<StructuredDataDarwinLog *>(plugin_sp.get());
 
     if (m_enable) {
-      // Hook up the breakpoint for the process that detects when
-      // libtrace has been sufficiently initialized to really start
-      // the os_log stream.  This is insurance to assure us that
-      // logging is really enabled.  Requesting that logging be
-      // enabled for a process before libtrace is initialized
-      // results in a scenario where no errors occur, but no logging
-      // is captured, either.  This step is to eliminate that
-      // possibility.
+      // Hook up the breakpoint for the process that detects when libtrace has
+      // been sufficiently initialized to really start the os_log stream.  This
+      // is insurance to assure us that logging is really enabled.  Requesting
+      // that logging be enabled for a process before libtrace is initialized
+      // results in a scenario where no errors occur, but no logging is
+      // captured, either.  This step is to eliminate that possibility.
       plugin.AddInitCompletionHook(*process_sp.get());
     }
 
-    // Send configuration to the feature by way of the process.
-    // Construct the options we will use.
+    // Send configuration to the feature by way of the process. Construct the
+    // options we will use.
     auto config_sp = m_options_sp->BuildConfigurationData(m_enable);
     const Status error =
         process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
@@ -882,8 +877,8 @@ protected:
       plugin.SetEnabled(false);
     } else {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      // Our configuration succeeeded, so we're enabled/disabled
-      // per whichever one this command is setup to do.
+      // Our configuration succeeded, so we're enabled/disabled per whichever
+      // one this command is setup to do.
       plugin.SetEnabled(m_enable);
     }
     return result.Succeeded();
@@ -914,8 +909,8 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     auto &stream = result.GetOutputStream();
 
-    // Figure out if we've got a process.  If so, we can tell if
-    // DarwinLog is available for that process.
+    // Figure out if we've got a process.  If so, we can tell if DarwinLog is
+    // available for that process.
     Target *target = GetSelectedOrDummyTarget();
     auto process_sp = target ? target->GetProcessSP() : ProcessSP();
     if (!target || !process_sp) {
@@ -1013,13 +1008,13 @@ public:
 };
 
 EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
-  // We are abusing the options data model here so that we can parse
-  // options without requiring the Debugger instance.
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  // We are abusing the options data model here so that we can parse options
+  // without requiring the Debugger instance.
 
-  // We have an empty execution context at this point.  We only want
-  // to parse options, and we don't need any context to do this here.
-  // In fact, we want to be able to parse the enable options before having
-  // any context.
+  // We have an empty execution context at this point.  We only want to parse
+  // options, and we don't need any context to do this here. In fact, we want
+  // to be able to parse the enable options before having any context.
   ExecutionContext exe_ctx;
 
   EnableOptionsSP options_sp(new EnableOptions());
@@ -1044,22 +1039,23 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
       options_property_sp->GetAsString()->GetCurrentValue();
   Args args(enable_options);
   if (args.GetArgumentCount() > 0) {
-    // Eliminate the initial '--' that would be required to set the
-    // settings that themselves include '-' and/or '--'.
+    // Eliminate the initial '--' that would be required to set the settings
+    // that themselves include '-' and/or '--'.
     const char *first_arg = args.GetArgumentAtIndex(0);
     if (first_arg && (strcmp(first_arg, "--") == 0))
       args.Shift();
   }
 
-  // ParseOptions calls getopt_long_only, which always skips the zero'th item in
-  // the array and starts at position 1,
-  // so we need to push a dummy value into position zero.
-  args.Unshift(llvm::StringRef("dummy_string"));
   bool require_validation = false;
-  error = args.ParseOptions(*options_sp.get(), &exe_ctx, PlatformSP(),
-                            require_validation);
-  if (!error.Success())
+  llvm::Expected<Args> args_or =
+      options_sp->Parse(args, &exe_ctx, PlatformSP(), require_validation);
+  if (!args_or) {
+    LLDB_LOG_ERROR(
+        log, args_or.takeError(),
+        "Parsing plugin.structured-data.darwin-log.auto-enable-options value "
+        "failed: {0}");
     return EnableOptionsSP();
+  }
 
   if (!options_sp->VerifyOptions(result))
     return EnableOptionsSP();
@@ -1168,9 +1164,9 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
     return;
   }
 
-  // Broadcast the structured data event if we have that enabled.
-  // This is the way that the outside world (all clients) get access
-  // to this data.  This plugin sets policy as to whether we do that.
+  // Broadcast the structured data event if we have that enabled. This is the
+  // way that the outside world (all clients) get access to this data.  This
+  // plugin sets policy as to whether we do that.
   DebuggerSP debugger_sp = process.GetTarget().GetDebugger().shared_from_this();
   auto options_sp = GetGlobalEnableOptions(debugger_sp);
   if (options_sp && options_sp->GetBroadcastEvents()) {
@@ -1180,8 +1176,8 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
     process.BroadcastStructuredData(object_sp, shared_from_this());
   }
 
-  // Later, hang on to a configurable amount of these and allow commands
-  // to inspect, including showing backtraces.
+  // Later, hang on to a configurable amount of these and allow commands to
+  // inspect, including showing backtraces.
 }
 
 static void SetErrorWithJSON(Status &error, const char *message,
@@ -1257,8 +1253,8 @@ Status StructuredDataDarwinLog::GetDescription(
           return false;
         }
 
-        // If we haven't already grabbed the first timestamp
-        // value, do that now.
+        // If we haven't already grabbed the first timestamp value, do that
+        // now.
         if (!m_recorded_first_timestamp) {
           uint64_t timestamp = 0;
           if (event->GetValueForKeyAsInteger("timestamp", timestamp)) {
@@ -1296,8 +1292,8 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
   // Check if we should enable the darwin log support on startup/attach.
   if (!GetGlobalProperties()->GetEnableOnStartup() &&
       !s_is_explicitly_enabled) {
-    // We're neither auto-enabled or explicitly enabled, so we shouldn't
-    // try to enable here.
+    // We're neither auto-enabled or explicitly enabled, so we shouldn't try to
+    // enable here.
     if (log)
       log->Printf("StructuredDataDarwinLog::%s not applicable, we're not "
                   "enabled (process uid %u)",
@@ -1317,9 +1313,9 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
     }
   }
 
-  // The logging support module name, specifies the name of
-  // the image name that must be loaded into the debugged process before
-  // we can try to enable logging.
+  // The logging support module name, specifies the name of the image name that
+  // must be loaded into the debugged process before we can try to enable
+  // logging.
   const char *logging_module_cstr =
       GetGlobalProperties()->GetLoggingModuleName();
   if (!logging_module_cstr || (logging_module_cstr[0] == 0)) {
@@ -1359,8 +1355,8 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
     return;
   }
 
-  // Time to enqueue the breakpoint so we can wait for logging support
-  // to be initialized before we try to tap the libtrace stream.
+  // Time to enqueue the breakpoint so we can wait for logging support to be
+  // initialized before we try to tap the libtrace stream.
   AddInitCompletionHook(process);
   if (log)
     log->Printf("StructuredDataDarwinLog::%s post-init hook breakpoint "
@@ -1368,13 +1364,13 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
                 __FUNCTION__, logging_module_name.AsCString(),
                 process.GetUniqueID());
 
-  // We need to try the enable here as well, which will succeed
-  // in the event that we're attaching to (rather than launching) the
-  // process and the process is already past initialization time.  In that
-  // case, the completion breakpoint will never get hit and therefore won't
-  // start that way.  It doesn't hurt much beyond a bit of bandwidth
-  // if we end up doing this twice.  It hurts much more if we don't get
-  // the logging enabled when the user expects it.
+  // We need to try the enable here as well, which will succeed in the event
+  // that we're attaching to (rather than launching) the process and the
+  // process is already past initialization time.  In that case, the completion
+  // breakpoint will never get hit and therefore won't start that way.  It
+  // doesn't hurt much beyond a bit of bandwidth if we end up doing this twice.
+  // It hurts much more if we don't get the logging enabled when the user
+  // expects it.
   EnableNow();
 }
 
@@ -1411,8 +1407,7 @@ StructuredDataDarwinLog::StructuredDataDarwinLog(const ProcessWP &process_wp)
 
 StructuredDataPluginSP
 StructuredDataDarwinLog::CreateInstance(Process &process) {
-  // Currently only Apple targets support the os_log/os_activity
-  // protocol.
+  // Currently only Apple targets support the os_log/os_activity protocol.
   if (process.GetTarget().GetArchitecture().GetTriple().getVendor() ==
       llvm::Triple::VendorType::Apple) {
     auto process_wp = ProcessWP(process.shared_from_this());
@@ -1459,20 +1454,20 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
                                                  Target *target) {
   Status error;
 
-  // If we're not debugging this launched process, there's nothing for us
-  // to do here.
+  // If we're not debugging this launched process, there's nothing for us to do
+  // here.
   if (!launch_info.GetFlags().AnySet(eLaunchFlagDebug))
     return error;
 
   // Darwin os_log() support automatically adds debug-level and info-level
   // messages when a debugger is attached to a process.  However, with
-  // integrated suppport for debugging built into the command-line LLDB,
-  // the user may specifically set to *not* include debug-level and info-level
-  // content.  When the user is using the integrated log support, we want
-  // to put the kabosh on that automatic adding of info and debug level.
-  // This is done by adding an environment variable to the process on launch.
-  // (This also means it is not possible to suppress this behavior if
-  // attaching to an already-running app).
+  // integrated support for debugging built into the command-line LLDB, the
+  // user may specifically set to *not* include debug-level and info-level
+  // content.  When the user is using the integrated log support, we want to
+  // put the kabosh on that automatic adding of info and debug level. This is
+  // done by adding an environment variable to the process on launch. (This
+  // also means it is not possible to suppress this behavior if attaching to an
+  // already-running app).
   // Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
 
   // If the target architecture is not one that supports DarwinLog, we have
@@ -1483,20 +1478,19 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     return error;
   }
 
-  // If DarwinLog is not enabled (either by explicit user command or via
-  // the auto-enable option), then we have nothing to do.
+  // If DarwinLog is not enabled (either by explicit user command or via the
+  // auto-enable option), then we have nothing to do.
   if (!GetGlobalProperties()->GetEnableOnStartup() &&
       !s_is_explicitly_enabled) {
     // Nothing to do, DarwinLog is not enabled.
     return error;
   }
 
-  // If we don't have parsed configuration info, that implies we have
-  // enable-on-startup set up, but we haven't yet attempted to run the
-  // enable command.
+  // If we don't have parsed configuration info, that implies we have enable-
+  // on-startup set up, but we haven't yet attempted to run the enable command.
   if (!target) {
-    // We really can't do this without a target.  We need to be able
-    // to get to the debugger to get the proper options to do this right.
+    // We really can't do this without a target.  We need to be able to get to
+    // the debugger to get the proper options to do this right.
     // TODO log.
     error.SetErrorString("requires a target to auto-enable DarwinLog.");
     return error;
@@ -1509,34 +1503,28 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     if (!options_sp || !error.Success())
       return error;
 
-    // We already parsed the options, save them now so we don't generate
-    // them again until the user runs the command manually.
+    // We already parsed the options, save them now so we don't generate them
+    // again until the user runs the command manually.
     SetGlobalEnableOptions(debugger_sp, options_sp);
   }
 
-  auto &env_vars = launch_info.GetEnvironmentEntries();
   if (!options_sp->GetEchoToStdErr()) {
-    // The user doesn't want to see os_log/NSLog messages echo to stderr.
-    // That mechanism is entirely separate from the DarwinLog support.
-    // By default we don't want to get it via stderr, because that would
-    // be in duplicate of the explicit log support here.
+    // The user doesn't want to see os_log/NSLog messages echo to stderr. That
+    // mechanism is entirely separate from the DarwinLog support. By default we
+    // don't want to get it via stderr, because that would be in duplicate of
+    // the explicit log support here.
 
     // Here we need to strip out any OS_ACTIVITY_DT_MODE setting to prevent
     // echoing of os_log()/NSLog() to stderr in the target program.
-    size_t argument_index;
-    if (env_vars.ContainsEnvironmentVariable(
-            llvm::StringRef("OS_ACTIVITY_DT_MODE"), &argument_index))
-      env_vars.DeleteArgumentAtIndex(argument_index);
+    launch_info.GetEnvironment().erase("OS_ACTIVITY_DT_MODE");
 
-    // We will also set the env var that tells any downstream launcher
-    // from adding OS_ACTIVITY_DT_MODE.
-    env_vars.AddOrReplaceEnvironmentVariable(
-        llvm::StringRef("IDE_DISABLED_OS_ACTIVITY_DT_MODE"),
-        llvm::StringRef("1"));
+    // We will also set the env var that tells any downstream launcher from
+    // adding OS_ACTIVITY_DT_MODE.
+    launch_info.GetEnvironment()["IDE_DISABLED_OS_ACTIVITY_DT_MODE"] = "1";
   }
 
-  // Set the OS_ACTIVITY_MODE env var appropriately to enable/disable
-  // debug and info level messages.
+  // Set the OS_ACTIVITY_MODE env var appropriately to enable/disable debug and
+  // info level messages.
   const char *env_var_value;
   if (options_sp->GetIncludeDebugLevel())
     env_var_value = "debug";
@@ -1545,10 +1533,7 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
   else
     env_var_value = "default";
 
-  if (env_var_value) {
-    launch_info.GetEnvironmentEntries().AddOrReplaceEnvironmentVariable(
-        llvm::StringRef("OS_ACTIVITY_MODE"), llvm::StringRef(env_var_value));
-  }
+  launch_info.GetEnvironment()["OS_ACTIVITY_MODE"] = env_var_value;
 
   return error;
 }
@@ -1558,8 +1543,8 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
     lldb::user_id_t break_loc_id) {
   // We hit the init function.  We now want to enqueue our new thread plan,
   // which will in turn enqueue a StepOut thread plan. When the StepOut
-  // finishes and control returns to our new thread plan, that is the time
-  // when we can execute our logic to enable the logging support.
+  // finishes and control returns to our new thread plan, that is the time when
+  // we can execute our logic to enable the logging support.
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
@@ -1618,8 +1603,8 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
                         process_uid);
           return;
         }
-        // Make sure we only call it once, just in case the
-        // thread plan hits the breakpoint twice.
+        // Make sure we only call it once, just in case the thread plan hits
+        // the breakpoint twice.
         if (!called_enable_method) {
           if (log)
             log->Printf("StructuredDataDarwinLog::post-init callback: "
@@ -1629,8 +1614,8 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
               ->EnableNow();
           called_enable_method = true;
         } else {
-          // Our breakpoint was hit more than once.  Unexpected but
-          // no harm done.  Log it.
+          // Our breakpoint was hit more than once.  Unexpected but no harm
+          // done.  Log it.
           if (log)
             log->Printf("StructuredDataDarwinLog::post-init callback: "
                         "skipping EnableNow(), already called by "
@@ -1687,8 +1672,8 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
     m_added_breakpoint = true;
   }
 
-  // Set a breakpoint for the process that will kick in when libtrace
-  // has finished its initialization.
+  // Set a breakpoint for the process that will kick in when libtrace has
+  // finished its initialization.
   Target &target = process.GetTarget();
 
   // Build up the module list.
@@ -1793,8 +1778,8 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
       if (header_count > 0)
         stream.PutChar(',');
 
-      // Display the activity chain, from parent-most to child-most
-      // activity, separated by a colon (:).
+      // Display the activity chain, from parent-most to child-most activity,
+      // separated by a colon (:).
       stream.PutCString("activity-chain=");
       stream.PutCString(activity_chain);
       ++header_count;
@@ -1836,8 +1821,8 @@ size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
   // Check the type of the event.
   ConstString event_type;
   if (!event.GetValueForKeyAsString("type", event_type)) {
-    // Hmm, we expected to get events that describe
-    // what they are.  Continue anyway.
+    // Hmm, we expected to get events that describe what they are.  Continue
+    // anyway.
     return 0;
   }
 
@@ -1885,10 +1870,10 @@ void StructuredDataDarwinLog::EnableNow() {
     log->Printf("StructuredDataDarwinLog::%s() call is for process uid %u",
                 __FUNCTION__, process_sp->GetUniqueID());
 
-  // If we have configuration data, we can directly enable it now.
-  // Otherwise, we need to run through the command interpreter to parse
-  // the auto-run options (which is the only way we get here without having
-  // already-parsed configuration data).
+  // If we have configuration data, we can directly enable it now. Otherwise,
+  // we need to run through the command interpreter to parse the auto-run
+  // options (which is the only way we get here without having already-parsed
+  // configuration data).
   DebuggerSP debugger_sp =
       process_sp->GetTarget().GetDebugger().shared_from_this();
   if (!debugger_sp) {
@@ -1901,8 +1886,8 @@ void StructuredDataDarwinLog::EnableNow() {
 
   auto options_sp = GetGlobalEnableOptions(debugger_sp);
   if (!options_sp) {
-    // We haven't run the enable command yet.  Just do that now, it'll
-    // take care of the rest.
+    // We haven't run the enable command yet.  Just do that now, it'll take
+    // care of the rest.
     auto &interpreter = debugger_sp->GetCommandInterpreter();
     const bool success = RunEnableCommand(interpreter);
     if (log) {
@@ -1925,8 +1910,8 @@ void StructuredDataDarwinLog::EnableNow() {
     return;
   }
 
-  // We've previously been enabled. We will re-enable now with the
-  // previously specified options.
+  // We've previously been enabled. We will re-enable now with the previously
+  // specified options.
   auto config_sp = options_sp->BuildConfigurationData(true);
   if (!config_sp) {
     if (log)

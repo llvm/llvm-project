@@ -23,6 +23,9 @@
 #ifdef TEST_BLOCK_CAPTURED_VARS
 #include <dispatch/dispatch.h>
 #endif
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 
 class a_class 
 {
@@ -82,9 +85,6 @@ typedef struct a_union_nonzero_tag {
   a_union_zero_t u;
 } a_union_nonzero_t;
 
-
-#include <stdint.h>
-#include <stdio.h>
 
 int 
 main (int argc, char const *argv[])

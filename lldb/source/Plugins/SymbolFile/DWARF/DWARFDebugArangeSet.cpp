@@ -46,19 +46,17 @@ void DWARFDebugArangeSet::Compact() {
   if (m_arange_descriptors.empty())
     return;
 
-  // Iterate through all arange descriptors and combine any ranges that
-  // overlap or have matching boundaries. The m_arange_descriptors are assumed
-  // to be in ascending order after being built by adding descriptors
-  // using the AddDescriptor method.
+  // Iterate through all arange descriptors and combine any ranges that overlap
+  // or have matching boundaries. The m_arange_descriptors are assumed to be in
+  // ascending order after being built by adding descriptors using the
+  // AddDescriptor method.
   uint32_t i = 0;
   while (i + 1 < m_arange_descriptors.size()) {
     if (m_arange_descriptors[i].end_address() >=
         m_arange_descriptors[i + 1].address) {
       // The current range ends at or exceeds the start of the next address
-      // range.
-      // Compute the max end address between the two and use that to make the
-      // new
-      // length.
+      // range. Compute the max end address between the two and use that to
+      // make the new length.
       const dw_addr_t max_end_addr =
           std::max(m_arange_descriptors[i].end_address(),
                    m_arange_descriptors[i + 1].end_address());
@@ -82,8 +80,8 @@ static bool DescriptorLessThan(const DWARFDebugArangeSet::Descriptor &range1,
 }
 
 //----------------------------------------------------------------------
-// Add a range descriptor and keep things sorted so we can easily
-// compact the ranges before being saved or used.
+// Add a range descriptor and keep things sorted so we can easily compact the
+// ranges before being saved or used.
 //----------------------------------------------------------------------
 void DWARFDebugArangeSet::AddDescriptor(
     const DWARFDebugArangeSet::Descriptor &range) {
@@ -103,15 +101,14 @@ void DWARFDebugArangeSet::AddDescriptor(
         // Non-contiguous entries, add this one before the found entry
         m_arange_descriptors.insert(pos, range);
       } else if (range_end_addr == pos->address) {
-        // The top end of 'range' is the lower end of the entry
-        // pointed to by 'pos'. We can combine range with the
-        // entry we found by setting the starting address and
-        // increasing the length since they don't overlap.
+        // The top end of 'range' is the lower end of the entry pointed to by
+        // 'pos'. We can combine range with the entry we found by setting the
+        // starting address and increasing the length since they don't overlap.
         pos->address = range.address;
         pos->length += range.length;
       } else {
-        // We can combine these two and make sure the largest end
-        // address is used to make end address.
+        // We can combine these two and make sure the largest end address is
+        // used to make end address.
         pos->address = range.address;
         pos->length = std::max(found_end_addr, range_end_addr) - pos->address;
       }
@@ -142,18 +139,18 @@ bool DWARFDebugArangeSet::Extract(const DWARFDataExtractor &data,
 
     // 7.20 Address Range Table
     //
-    // Each set of entries in the table of address ranges contained in
-    // the .debug_aranges section begins with a header consisting of: a
-    // 4-byte length containing the length of the set of entries for this
-    // compilation unit, not including the length field itself; a 2-byte
-    // version identifier containing the value 2 for DWARF Version 2; a
-    // 4-byte offset into the.debug_infosection; a 1-byte unsigned integer
-    // containing the size in bytes of an address (or the offset portion of
-    // an address for segmented addressing) on the target system; and a
-    // 1-byte unsigned integer containing the size in bytes of a segment
-    // descriptor on the target system. This header is followed by a series
-    // of tuples. Each tuple consists of an address and a length, each in
-    // the size appropriate for an address on the target architecture.
+    // Each set of entries in the table of address ranges contained in the
+    // .debug_aranges section begins with a header consisting of: a 4-byte
+    // length containing the length of the set of entries for this compilation
+    // unit, not including the length field itself; a 2-byte version identifier
+    // containing the value 2 for DWARF Version 2; a 4-byte offset into
+    // the.debug_infosection; a 1-byte unsigned integer containing the size in
+    // bytes of an address (or the offset portion of an address for segmented
+    // addressing) on the target system; and a 1-byte unsigned integer
+    // containing the size in bytes of a segment descriptor on the target
+    // system. This header is followed by a series of tuples. Each tuple
+    // consists of an address and a length, each in the size appropriate for an
+    // address on the target architecture.
     m_header.length = data.GetDWARFInitialLength(offset_ptr);
     m_header.version = data.GetU16(offset_ptr);
     m_header.cu_offset = data.GetDWARFOffset(offset_ptr);
@@ -195,8 +192,8 @@ bool DWARFDebugArangeSet::Extract(const DWARFDataExtractor &data,
           arangeDescriptor.length =
               data.GetMaxU64(offset_ptr, m_header.addr_size);
 
-          // Each set of tuples is terminated by a 0 for the address and 0
-          // for the length.
+          // Each set of tuples is terminated by a 0 for the address and 0 for
+          // the length.
           if (arangeDescriptor.address || arangeDescriptor.length)
             m_arange_descriptors.push_back(arangeDescriptor);
           else

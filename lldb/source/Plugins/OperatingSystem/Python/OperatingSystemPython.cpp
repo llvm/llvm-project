@@ -50,8 +50,8 @@ void OperatingSystemPython::Terminate() {
 
 OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
                                                        bool force) {
-  // Python OperatingSystem plug-ins must be requested by name, so force must be
-  // true
+  // Python OperatingSystem plug-ins must be requested by name, so force must
+  // be true
   FileSpec python_os_plugin_spec(process->GetPythonOSPluginPath());
   if (python_os_plugin_spec && python_os_plugin_spec.Exists()) {
     std::unique_ptr<OperatingSystemPython> os_ap(
@@ -186,8 +186,8 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
   const uint32_t num_cores = core_thread_list.GetSize(false);
 
   // Make a map so we can keep track of which cores were used from the
-  // core_thread list. Any real threads/cores that weren't used should
-  // later be put back into the "new_thread_list".
+  // core_thread list. Any real threads/cores that weren't used should later be
+  // put back into the "new_thread_list".
   std::vector<bool> core_used_map(num_cores, false);
   if (threads_list) {
     if (log) {
@@ -212,8 +212,7 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
 
   // Any real core threads that didn't end up backing a memory thread should
   // still be in the main thread list, and they should be inserted at the
-  // beginning
-  // of the list
+  // beginning of the list
   uint32_t insert_idx = 0;
   for (uint32_t core_idx = 0; core_idx < num_cores; ++core_idx) {
     if (core_used_map[core_idx] == false) {
@@ -254,8 +253,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
     // plug-in generated thread.
     if (!IsOperatingSystemPluginThread(thread_sp)) {
       // We have thread ID overlap between the protocol threads and the
-      // operating system threads, clear the thread so we create an
-      // operating system thread for this.
+      // operating system threads, clear the thread so we create an operating
+      // system thread for this.
       thread_sp.reset();
     }
   }
@@ -328,8 +327,8 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
     reg_ctx_sp.reset(new RegisterContextMemory(
         *thread, 0, *GetDynamicRegisterInfo(), reg_data_addr));
   } else {
-    // No register data address is provided, query the python plug-in to let
-    // it make up the data as it sees fit
+    // No register data address is provided, query the python plug-in to let it
+    // make up the data as it sees fit
     if (log)
       log->Printf("OperatingSystemPython::CreateRegisterContextForThread (tid "
                   "= 0x%" PRIx64 ", 0x%" PRIx64

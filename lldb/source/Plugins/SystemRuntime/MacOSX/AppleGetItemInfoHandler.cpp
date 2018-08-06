@@ -119,20 +119,18 @@ void AppleGetItemInfoHandler::Detach() {
 }
 
 // Compile our __lldb_backtrace_recording_get_item_info() function (from the
-// source above in g_get_item_info_function_code) if we don't find that function
-// in the inferior
-// already with USE_BUILTIN_FUNCTION defined.  (e.g. this would be the case for
-// testing.)
+// source above in g_get_item_info_function_code) if we don't find that
+// function in the inferior already with USE_BUILTIN_FUNCTION defined.  (e.g.
+// this would be the case for testing.)
 //
-// Insert the __lldb_backtrace_recording_get_item_info into the inferior process
-// if needed.
+// Insert the __lldb_backtrace_recording_get_item_info into the inferior
+// process if needed.
 //
 // Write the get_item_info_arglist into the inferior's memory space to prepare
 // for the call.
 //
 // Returns the address of the arguments written down in the inferior process,
-// which can be used to
-// make the function call.
+// which can be used to make the function call.
 
 lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
     Thread &thread, ValueList &get_item_info_arglist) {
@@ -146,7 +144,8 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
   {
     std::lock_guard<std::mutex> guard(m_get_item_info_function_mutex);
 
-    // First stage is to make the UtilityFunction to hold our injected function:
+    // First stage is to make the UtilityFunction to hold our injected
+    // function:
 
     if (!m_get_item_info_impl_code.get()) {
       if (g_get_item_info_function_code != NULL) {
@@ -209,10 +208,9 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
   diagnostics.Clear();
 
   // Now write down the argument values for this particular call.  This looks
-  // like it might be a race condition
-  // if other threads were calling into here, but actually it isn't because we
-  // allocate a new args structure for
-  // this call by passing args_addr = LLDB_INVALID_ADDRESS...
+  // like it might be a race condition if other threads were calling into here,
+  // but actually it isn't because we allocate a new args structure for this
+  // call by passing args_addr = LLDB_INVALID_ADDRESS...
 
   if (!get_item_info_caller->WriteFunctionArguments(
           exe_ctx, args_addr, get_item_info_arglist, diagnostics)) {
@@ -272,8 +270,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   //                                             uint64_t page_to_free_size)
 
   // Where the return_buffer argument points to a 24 byte region of memory
-  // already allocated by lldb in
-  // the inferior process.
+  // already allocated by lldb in the inferior process.
 
   CompilerType clang_void_ptr_type =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();

@@ -80,8 +80,8 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential()
 //
-// Append an abbreviation declaration with a sequential code for O(n)
-// lookups. Handy when creating an DWARFAbbreviationDeclarationSet.
+// Append an abbreviation declaration with a sequential code for O(n) lookups.
+// Handy when creating an DWARFAbbreviationDeclarationSet.
 //----------------------------------------------------------------------
 dw_uleb128_t DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(
     const DWARFAbbreviationDeclaration &abbrevDecl) {
@@ -115,9 +115,9 @@ void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
 //----------------------------------------------------------------------
 // Encode
 //
-// Encode the abbreviation table onto the end of the buffer provided
-// into a byte representation as would be found in a ".debug_abbrev"
-// debug information section.
+// Encode the abbreviation table onto the end of the buffer provided into a
+// byte representation as would be found in a ".debug_abbrev" debug information
+// section.
 //----------------------------------------------------------------------
 // void
 // DWARFAbbreviationDeclarationSet::Encode(BinaryStreamBuf& debug_abbrev_buf)

@@ -22,39 +22,36 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class DataBuffer DataBuffer.h "lldb/Core/DataBuffer.h"
-/// @brief A pure virtual protocol class for abstracted data buffers.
+/// A pure virtual protocol class for abstracted data buffers.
 ///
 /// DataBuffer is an abstract class that gets packaged into a shared pointer
-/// that can use to implement various ways to store data (on the heap,
-/// memory mapped, cached inferior memory). It gets used by DataExtractor
-/// so many DataExtractor objects can share the same data and sub-ranges
-/// of that shared data, and the last object that contains a reference
-/// to the shared data will free it.
+/// that can use to implement various ways to store data (on the heap, memory
+/// mapped, cached inferior memory). It gets used by DataExtractor so many
+/// DataExtractor objects can share the same data and sub-ranges of that
+/// shared data, and the last object that contains a reference to the shared
+/// data will free it.
 ///
 /// Subclasses can implement as many different constructors or member
-/// functions that allow data to be stored in the object's buffer prior
-/// to handing the shared data to clients that use these buffers.
+/// functions that allow data to be stored in the object's buffer prior to
+/// handing the shared data to clients that use these buffers.
 ///
-/// All subclasses must override all of the pure virtual functions as
-/// they are used by clients to access the data. Having a common
-/// interface allows different ways of storing data, yet using it in
-/// one common way.
+/// All subclasses must override all of the pure virtual functions as they are
+/// used by clients to access the data. Having a common interface allows
+/// different ways of storing data, yet using it in one common way.
 ///
-/// This class currently expects all data to be available without any
-/// extra calls being made, but we can modify it to optionally get
-/// data on demand with some extra function calls to load the data
-/// before it gets accessed.
+/// This class currently expects all data to be available without any extra
+/// calls being made, but we can modify it to optionally get data on demand
+/// with some extra function calls to load the data before it gets accessed.
 //----------------------------------------------------------------------
 class DataBuffer {
 public:
   //------------------------------------------------------------------
   /// Destructor
   ///
-  /// The destructor is virtual as other classes will inherit from
-  /// this class and be downcast to the DataBuffer pure virtual
-  /// interface. The virtual destructor ensures that destructing the
-  /// base class will destruct the class that inherited from it
-  /// correctly.
+  /// The destructor is virtual as other classes will inherit from this class
+  /// and be downcast to the DataBuffer pure virtual interface. The virtual
+  /// destructor ensures that destructing the base class will destruct the
+  /// class that inherited from it correctly.
   //------------------------------------------------------------------
   virtual ~DataBuffer() {}
 

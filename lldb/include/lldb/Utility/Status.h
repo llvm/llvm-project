@@ -28,30 +28,27 @@ class raw_ostream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Status Status.h "lldb/Utility/Status.h"
-/// @brief An error handling class.
+/// @class Status Status.h "lldb/Utility/Status.h" An error handling class.
 ///
 /// This class is designed to be able to hold any error code that can be
-/// encountered on a given platform. The errors are stored as a value
-/// of type Status::ValueType. This value should be large enough to hold
-/// any and all errors that the class supports. Each error has an
-/// associated type that is of type lldb::ErrorType. New types
-/// can be added to support new error types, and architecture specific
-/// types can be enabled. In the future we may wish to switch to a
-/// registration mechanism where new error types can be registered at
-/// runtime instead of a hard coded scheme.
+/// encountered on a given platform. The errors are stored as a value of type
+/// Status::ValueType. This value should be large enough to hold any and all
+/// errors that the class supports. Each error has an associated type that is
+/// of type lldb::ErrorType. New types can be added to support new error
+/// types, and architecture specific types can be enabled. In the future we
+/// may wish to switch to a registration mechanism where new error types can
+/// be registered at runtime instead of a hard coded scheme.
 ///
-/// All errors in this class also know how to generate a string
-/// representation of themselves for printing results and error codes.
-/// The string value will be fetched on demand and its string value will
-/// be cached until the error is cleared of the value of the error
-/// changes.
+/// All errors in this class also know how to generate a string representation
+/// of themselves for printing results and error codes. The string value will
+/// be fetched on demand and its string value will be cached until the error
+/// is cleared of the value of the error changes.
 //----------------------------------------------------------------------
 class Status {
 public:
   //------------------------------------------------------------------
-  /// Every error value that this object can contain needs to be able
-  /// to fit into ValueType.
+  /// Every error value that this object can contain needs to be able to fit
+  /// into ValueType.
   //------------------------------------------------------------------
   typedef uint32_t ValueType;
 
@@ -98,11 +95,10 @@ public:
   //------------------------------------------------------------------
   /// Get the error string associated with the current error.
   //
-  /// Gets the error value as a NULL terminated C string. The error
-  /// string will be fetched and cached on demand. The error string
-  /// will be retrieved from a callback that is appropriate for the
-  /// type of the error and will be cached until the error value is
-  /// changed or cleared.
+  /// Gets the error value as a NULL terminated C string. The error string
+  /// will be fetched and cached on demand. The error string will be retrieved
+  /// from a callback that is appropriate for the type of the error and will
+  /// be cached until the error value is changed or cleared.
   ///
   /// @return
   ///     The error as a NULL terminated C string value if the error
@@ -114,8 +110,8 @@ public:
   //------------------------------------------------------------------
   /// Clear the object state.
   ///
-  /// Reverts the state of this object to contain a generic success
-  /// value and frees any cached error string value.
+  /// Reverts the state of this object to contain a generic success value and
+  /// frees any cached error string value.
   //------------------------------------------------------------------
   void Clear();
 
@@ -147,8 +143,8 @@ public:
   //------------------------------------------------------------------
   /// Set accessor from a kern_return_t.
   ///
-  /// Set accesssor for the error value to \a err and the error type
-  /// to \c MachKernel.
+  /// Set accesssor for the error value to \a err and the error type to \c
+  /// MachKernel.
   ///
   /// @param[in] err
   ///     A mach error code.
@@ -163,8 +159,8 @@ public:
   //------------------------------------------------------------------
   /// Set accesssor with an error value and type.
   ///
-  /// Set accesssor for the error value to \a err and the error type
-  /// to \a type.
+  /// Set accesssor for the error value to \a err and the error type to \a
+  /// type.
   ///
   /// @param[in] err
   ///     A mach error code.
@@ -177,28 +173,28 @@ public:
   //------------------------------------------------------------------
   /// Set the current error to errno.
   ///
-  /// Update the error value to be \c errno and update the type to
-  /// be \c Status::POSIX.
+  /// Update the error value to be \c errno and update the type to be \c
+  /// Status::POSIX.
   //------------------------------------------------------------------
   void SetErrorToErrno();
 
   //------------------------------------------------------------------
   /// Set the current error to a generic error.
   ///
-  /// Update the error value to be \c LLDB_GENERIC_ERROR and update the
-  /// type to be \c Status::Generic.
+  /// Update the error value to be \c LLDB_GENERIC_ERROR and update the type
+  /// to be \c Status::Generic.
   //------------------------------------------------------------------
   void SetErrorToGenericError();
 
   //------------------------------------------------------------------
   /// Set the current error string to \a err_str.
   ///
-  /// Set accessor for the error string value for a generic errors,
-  /// or to supply additional details above and beyond the standard
-  /// error strings that the standard type callbacks typically
-  /// provide. This allows custom strings to be supplied as an
-  /// error explanation. The error string value will remain until the
-  /// error value is cleared or a new error value/type is assigned.
+  /// Set accessor for the error string value for a generic errors, or to
+  /// supply additional details above and beyond the standard error strings
+  /// that the standard type callbacks typically provide. This allows custom
+  /// strings to be supplied as an error explanation. The error string value
+  /// will remain until the error value is cleared or a new error value/type
+  /// is assigned.
   ///
   /// @param err_str
   ///     The new custom error string to copy and cache.
@@ -224,8 +220,8 @@ public:
   //------------------------------------------------------------------
   /// Test for success condition.
   ///
-  /// Returns true if the error code in this object is considered a
-  /// successful return value.
+  /// Returns true if the error code in this object is considered a successful
+  /// return value.
   ///
   /// @return
   ///     \b true if this object contains an value that describes
@@ -236,8 +232,8 @@ public:
   //------------------------------------------------------------------
   /// Test for a failure due to a generic interrupt.
   ///
-  /// Returns true if the error code in this object was caused by an interrupt.
-  /// At present only supports Posix EINTR.
+  /// Returns true if the error code in this object was caused by an
+  /// interrupt. At present only supports Posix EINTR.
   ///
   /// @return
   ///     \b true if this object contains an value that describes

@@ -17,18 +17,15 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class StoppointCallbackContext StoppointCallbackContext.h
-/// "lldb/Breakpoint/StoppointCallbackContext.h"
-/// @brief Class holds the information that a breakpoint callback needs to
-/// evaluate this stop.
+/// "lldb/Breakpoint/StoppointCallbackContext.h" Class holds the information
+/// that a breakpoint callback needs to evaluate this stop.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 /// General Outline:
 /// When we hit a breakpoint we need to package up whatever information is
-/// needed
-/// to evaluate breakpoint commands and conditions.  This class is the container
-/// of
-/// that information.
+/// needed to evaluate breakpoint commands and conditions.  This class is the
+/// container of that information.
 //----------------------------------------------------------------------
 
 class StoppointCallbackContext {

@@ -177,12 +177,11 @@ public:
 
 private:
   // the child here can be "real" (i.e. an actual child of the root) or
-  // synthetized from raw memory
-  // if the former, I need to store a plain pointer to it - or else a loop of
-  // references will cause this entire hierarchy of values to leak
-  // if the latter, then I need to store a SharedPointer to it - so that it only
-  // goes away when everyone else in the cluster goes away
-  // oh joy!
+  // synthetized from raw memory if the former, I need to store a plain pointer
+  // to it - or else a loop of references will cause this entire hierarchy of
+  // values to leak if the latter, then I need to store a SharedPointer to it -
+  // so that it only goes away when everyone else in the cluster goes away oh
+  // joy!
   ValueObject *m_child_ptr;
   ValueObjectSP m_child_sp;
 };

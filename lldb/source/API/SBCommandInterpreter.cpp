@@ -272,8 +272,8 @@ int SBCommandInterpreter::HandleCompletion(
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int num_completions = 0;
 
-  // Sanity check the arguments that are passed in:
-  // cursor & last_char have to be within the current_line.
+  // Sanity check the arguments that are passed in: cursor & last_char have to
+  // be within the current_line.
   if (current_line == nullptr || cursor == nullptr || last_char == nullptr)
     return 0;
 
@@ -377,6 +377,23 @@ bool SBCommandInterpreter::GetPromptOnQuit() {
 void SBCommandInterpreter::SetPromptOnQuit(bool b) {
   if (IsValid())
     m_opaque_ptr->SetPromptOnQuit(b);
+}
+
+void SBCommandInterpreter::AllowExitCodeOnQuit(bool allow) {
+  if (m_opaque_ptr)
+    m_opaque_ptr->AllowExitCodeOnQuit(allow);
+}
+
+bool SBCommandInterpreter::HasCustomQuitExitCode() {
+  bool exited = false;
+  if (m_opaque_ptr)
+    m_opaque_ptr->GetQuitExitCode(exited);
+  return exited;
+}
+
+int SBCommandInterpreter::GetQuitStatus() {
+  bool exited = false;
+  return (m_opaque_ptr ? m_opaque_ptr->GetQuitExitCode(exited) : 0);
 }
 
 void SBCommandInterpreter::ResolveCommand(const char *command_line,

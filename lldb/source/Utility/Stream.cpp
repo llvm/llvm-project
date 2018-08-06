@@ -41,14 +41,12 @@ ByteOrder Stream::SetByteOrder(ByteOrder byte_order) {
 }
 
 //------------------------------------------------------------------
-// Put an offset "uval" out to the stream using the printf format
-// in "format".
+// Put an offset "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 void Stream::Offset(uint32_t uval, const char *format) { Printf(format, uval); }
 
 //------------------------------------------------------------------
-// Put an SLEB128 "uval" out to the stream using the printf format
-// in "format".
+// Put an SLEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutSLEB128(int64_t sval) {
   size_t bytes_written = 0;
@@ -73,8 +71,7 @@ size_t Stream::PutSLEB128(int64_t sval) {
 }
 
 //------------------------------------------------------------------
-// Put an ULEB128 "uval" out to the stream using the printf format
-// in "format".
+// Put an ULEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutULEB128(uint64_t uval) {
   size_t bytes_written = 0;
@@ -109,16 +106,16 @@ size_t Stream::PutCString(llvm::StringRef str) {
 }
 
 //------------------------------------------------------------------
-// Print a double quoted NULL terminated C string to the stream
-// using the printf format in "format".
+// Print a double quoted NULL terminated C string to the stream using the
+// printf format in "format".
 //------------------------------------------------------------------
 void Stream::QuotedCString(const char *cstr, const char *format) {
   Printf(format, cstr);
 }
 
 //------------------------------------------------------------------
-// Put an address "addr" out to the stream with optional prefix
-// and suffix strings.
+// Put an address "addr" out to the stream with optional prefix and suffix
+// strings.
 //------------------------------------------------------------------
 void Stream::Address(uint64_t addr, uint32_t addr_size, const char *prefix,
                      const char *suffix) {
@@ -132,8 +129,8 @@ void Stream::Address(uint64_t addr, uint32_t addr_size, const char *prefix,
 }
 
 //------------------------------------------------------------------
-// Put an address range out to the stream with optional prefix
-// and suffix strings.
+// Put an address range out to the stream with optional prefix and suffix
+// strings.
 //------------------------------------------------------------------
 void Stream::AddressRange(uint64_t lo_addr, uint64_t hi_addr,
                           uint32_t addr_size, const char *prefix,
@@ -179,8 +176,8 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
 size_t Stream::EOL() { return PutChar('\n'); }
 
 //------------------------------------------------------------------
-// Indent the current line using the current indentation level and
-// print an optional string following the indentation spaces.
+// Indent the current line using the current indentation level and print an
+// optional string following the indentation spaces.
 //------------------------------------------------------------------
 size_t Stream::Indent(const char *s) {
   return Printf("%*.*s%s", m_indent_level, m_indent_level, "", s ? s : "");

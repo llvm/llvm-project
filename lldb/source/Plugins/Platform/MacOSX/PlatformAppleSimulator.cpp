@@ -84,8 +84,8 @@ lldb_private::Status PlatformAppleSimulator::LaunchProcess(
 
 void PlatformAppleSimulator::GetStatus(Stream &strm) {
 #if defined(__APPLE__)
-  // This will get called by subclasses, so just output status on the
-  // current simulator
+  // This will get called by subclasses, so just output status on the current
+  // simulator
   PlatformAppleSimulator::LoadCoreSimulator();
 
   CoreSimulatorSupport::DeviceSet devices =
@@ -183,8 +183,8 @@ lldb::ProcessSP PlatformAppleSimulator::DebugProcess(
   // Make sure we stop at the entry point
   launch_info.GetFlags().Set(eLaunchFlagDebug);
   // We always launch the process we are going to debug in a separate process
-  // group, since then we can handle ^C interrupts ourselves w/o having to worry
-  // about the target getting them as well.
+  // group, since then we can handle ^C interrupts ourselves w/o having to
+  // worry about the target getting them as well.
   launch_info.SetLaunchInSeparateProcessGroup(true);
 
   error = LaunchProcess(launch_info);
@@ -201,10 +201,10 @@ lldb::ProcessSP PlatformAppleSimulator::DebugProcess(
         // process if this happens.
         process_sp->SetShouldDetach(false);
 
-        // If we didn't have any file actions, the pseudo terminal might
-        // have been used where the slave side was given as the file to
-        // open for stdin/out/err after we have already opened the master
-        // so we can read/write stdin/out/err.
+        // If we didn't have any file actions, the pseudo terminal might have
+        // been used where the slave side was given as the file to open for
+        // stdin/out/err after we have already opened the master so we can
+        // read/write stdin/out/err.
         int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);

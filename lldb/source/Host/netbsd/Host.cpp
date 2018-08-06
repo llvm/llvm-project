@@ -25,10 +25,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Module.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -47,14 +45,7 @@ extern char **environ;
 using namespace lldb;
 using namespace lldb_private;
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = environ;
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                                  ProcessInstanceInfo &process_info) {
@@ -79,7 +70,8 @@ static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
   if (!cstr)
     return false;
 
-  process_info.GetExecutableFile().SetFile(cstr, false);
+  process_info.GetExecutableFile().SetFile(cstr, false,
+                                           FileSpec::Style::native);
 
   if (!(match_info_ptr == NULL ||
         NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
@@ -201,9 +193,8 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       continue;
 
     // Every thread is a process in NetBSD, but all the threads of a single
-    // process have the same pid. Do not store the process info in the
-    // result list if a process with given identifier is already registered
-    // there.
+    // process have the same pid. Do not store the process info in the result
+    // list if a process with given identifier is already registered there.
     if (proc_kinfo[i].p_nlwps > 1) {
       bool already_registered = false;
       for (size_t pi = 0; pi < process_infos.GetSize(); pi++) {

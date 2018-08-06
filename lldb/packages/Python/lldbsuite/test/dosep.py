@@ -477,20 +477,19 @@ def call_with_timeout(
     return process_driver.results
 
 
-def process_dir(root, files, dotest_argv, inferior_pid_events):
-    """Examine a directory for tests, and invoke any found within it."""
+def process_file(test_file, dotest_argv, inferior_pid_events):
+    """Run tests in the specified file in a subprocess and gather the results."""
     results = []
-    for (base_name, full_test_path) in files:
-        import __main__ as main
-        global dotest_options
-        if dotest_options.p and not re.search(dotest_options.p, base_name):
-            continue
+    base_name = os.path.basename(test_file)
 
+    import __main__ as main
+    global dotest_options
+    if not dotest_options.p or re.search(dotest_options.p, base_name):
         script_file = main.__file__
         command = ([sys.executable, script_file] +
                    dotest_argv +
                    ["-S", dotest_options.session_file_format] +
-                   ["--inferior", "-p", base_name, root])
+                   ["--inferior", "-p", base_name, os.path.dirname(test_file)])
 
         timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()
 
@@ -498,7 +497,7 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
                    getDefaultTimeout(dotest_options.lldb_platform_name))
 
         results.append(call_with_timeout(
-            command, timeout, base_name, inferior_pid_events, full_test_path))
+            command, timeout, base_name, inferior_pid_events, test_file))
 
     # result = (name, status, passes, failures, unexpected_successes)
     timed_out = [name for name, status, _, _, _ in results
@@ -542,7 +541,7 @@ def process_dir_worker_multiprocessing(
     while not job_queue.empty():
         try:
             job = job_queue.get(block=False)
-            result = process_dir(job[0], job[1], job[2],
+            result = process_file(job[0], job[1], job[2],
                                  inferior_pid_events)
             result_queue.put(result)
         except queue.Empty:
@@ -550,11 +549,11 @@ def process_dir_worker_multiprocessing(
             pass
 
 
-def process_dir_worker_multiprocessing_pool(args):
-    return process_dir(*args)
+def process_file_worker_multiprocessing_pool(args):
+    return process_file(*args)
 
 
-def process_dir_worker_threading(job_queue, result_queue, inferior_pid_events):
+def process_file_worker_threading(job_queue, result_queue, inferior_pid_events):
     """Worker thread main loop when in threading mode.
 
     This one supports the hand-rolled pooling support.
@@ -565,25 +564,24 @@ def process_dir_worker_threading(job_queue, result_queue, inferior_pid_events):
     while not job_queue.empty():
         try:
             job = job_queue.get(block=False)
-            result = process_dir(job[0], job[1], job[2],
-                                 inferior_pid_events)
+            result = process_file(job[0], job[1], inferior_pid_events)
             result_queue.put(result)
         except queue.Empty:
             # Fine, we're done.
             pass
 
 
-def process_dir_worker_threading_pool(args):
-    return process_dir(*args)
+def process_file_worker_threading_pool(args):
+    return process_file(*args)
 
 
-def process_dir_mapper_inprocess(args):
+def process_file_mapper_inprocess(args):
     """Map adapter for running the subprocess-based, non-threaded test runner.
 
     @param args the process work item tuple
     @return the test result tuple
     """
-    return process_dir(*args)
+    return process_file(*args)
 
 
 def collect_active_pids_from_pid_events(event_queue):
@@ -653,16 +651,12 @@ def kill_all_worker_threads(workers, inferior_pid_events):
         worker.join()
 
 
-def find_test_files_in_dir_tree(dir_root, found_func):
-    """Calls found_func for all the test files in the given dir hierarchy.
+def find_test_files_in_dir_tree(dir_root):
+    """Returns all the test files in the given dir hierarchy.
 
     @param dir_root the path to the directory to start scanning
     for test files.  All files in this directory and all its children
     directory trees will be searched.
-
-    @param found_func a callable object that will be passed
-    the parent directory (relative to dir_root) and the list of
-    test files from within that directory.
     """
     for root, _, files in os.walk(dir_root, topdown=False):
         def is_test_filename(test_dir, base_filename):
@@ -683,12 +677,9 @@ def find_test_files_in_dir_tree(dir_root, found_func):
             return (base_filename.startswith("Test") and
                     base_filename.endswith(".py"))
 
-        tests = [
-            (filename, os.path.join(root, filename))
-            for filename in files
-            if is_test_filename(root, filename)]
-        if tests:
-            found_func(root, tests)
+        for f in files:
+            if is_test_filename(root, f):
+                yield os.path.join(root, f)
 
 
 def initialize_global_vars_common(num_threads, test_work_items, session_dir,
@@ -696,7 +687,7 @@ def initialize_global_vars_common(num_threads, test_work_items, session_dir,
     global g_session_dir, g_runner_context, total_tests, test_counter
     global test_name_len
 
-    total_tests = sum([len(item[1]) for item in test_work_items])
+    total_tests = len(test_work_items)
     test_counter = multiprocessing.Value('i', 0)
     test_name_len = multiprocessing.Value('i', 0)
     g_session_dir = session_dir
@@ -956,7 +947,7 @@ def multiprocessing_test_runner(num_threads, test_work_items, session_dir,
     workers = []
     for _ in range(num_threads):
         worker = multiprocessing.Process(
-            target=process_dir_worker_multiprocessing,
+            target=process_file_worker_multiprocessing,
             args=(output_lock,
                   test_counter,
                   total_tests,
@@ -1052,7 +1043,7 @@ def multiprocessing_test_runner_pool(num_threads, test_work_items, session_dir,
 
     # Start the map operation (async mode).
     map_future = pool.map_async(
-        process_dir_worker_multiprocessing_pool, test_work_items)
+        process_file_worker_multiprocessing_pool, test_work_items)
     return map_async_run_loop(
         map_future, RUNNER_PROCESS_ASYNC_MAP, RESULTS_LISTENER_CHANNEL)
 
@@ -1099,7 +1090,7 @@ def threading_test_runner(num_threads, test_work_items, session_dir,
     workers = []
     for _ in range(num_threads):
         worker = threading.Thread(
-            target=process_dir_worker_threading,
+            target=process_file_worker_threading,
             args=(job_queue,
                   result_queue,
                   inferior_pid_events))
@@ -1136,7 +1127,7 @@ def threading_test_runner_pool(num_threads, test_work_items, session_dir,
 
     pool = multiprocessing.pool.ThreadPool(num_threads)
     map_future = pool.map_async(
-        process_dir_worker_threading_pool, test_work_items)
+        process_file_worker_threading_pool, test_work_items)
 
     return map_async_run_loop(
         map_future, RUNNER_PROCESS_ASYNC_MAP, RESULTS_LISTENER_CHANNEL)
@@ -1173,7 +1164,7 @@ def inprocess_exec_test_runner(test_work_items, session_dir, runner_context):
         socket_thread.start()
 
     # Do the work.
-    test_results = list(map(process_dir_mapper_inprocess, test_work_items))
+    test_results = list(map(process_file_mapper_inprocess, test_work_items))
 
     # If we have a listener channel, shut it down here.
     if RESULTS_LISTENER_CHANNEL is not None:
@@ -1190,7 +1181,7 @@ def inprocess_exec_test_runner(test_work_items, session_dir, runner_context):
 def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
     """Invokes the test runner on each test file specified by test_files.
 
-    @param test_files a list of (test_subdir, list_of_test_files_in_dir)
+    @param test_files a list of (test_file, full_path_to_test_file)
     @param num_workers the number of worker queues working on these test files
     @param test_runner_func the test runner configured to run the tests
 
@@ -1225,8 +1216,8 @@ def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
 
     # Build the test work items out of the (dir, file_list) entries passed in.
     test_work_items = []
-    for entry in test_files:
-        test_work_items.append((entry[0], entry[1], dotest_argv, None))
+    for test_file in test_files:
+        test_work_items.append((test_file, dotest_argv, None))
 
     # Convert test work items into test results using whatever
     # was provided as the test run function.
@@ -1545,31 +1536,15 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv, session_dir,
 
     # Sort rerun files into subdirectories.
     print("\nRerunning the following files:")
-    rerun_files_by_subdir = {}
+    rerun_files = []
     for test_filename in tests_for_rerun.keys():
         # Print the file we'll be rerunning
         test_relative_path = os.path.relpath(
             test_filename, lldbsuite.lldb_test_root)
         print("  {}".format(test_relative_path))
 
-        # Store test filenames by subdir.
-        test_dir = os.path.dirname(test_filename)
-        test_basename = os.path.basename(test_filename)
-        if test_dir in rerun_files_by_subdir:
-            rerun_files_by_subdir[test_dir].append(
-                (test_basename, test_filename))
-        else:
-            rerun_files_by_subdir[test_dir] = [(test_basename, test_filename)]
+        rerun_files.append(test_filename)
 
-    # Break rerun work up by subdirectory.  We do this since
-    # we have an invariant that states only one test file can
-    # be run at a time in any given subdirectory (related to
-    # rules around built inferior test program lifecycle).
-    rerun_work = []
-    for files_by_subdir in rerun_files_by_subdir.values():
-        rerun_work.append((test_subdir, files_by_subdir))
-
-    # Run the work with the serial runner.
     # Do not update legacy counts, I am getting rid of
     # them so no point adding complicated merge logic here.
     rerun_thread_count = 1
@@ -1588,7 +1563,7 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv, session_dir,
             "function named '{}'".format(rerun_runner_name))
 
     walk_and_invoke(
-        rerun_work,
+        rerun_files,
         dotest_argv,
         rerun_thread_count,
         rerun_runner_func)
@@ -1687,15 +1662,9 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
                 list(runner_strategies_by_name.keys())))
     test_runner_func = runner_strategies_by_name[test_runner_name]
 
-    # Collect the files on which we'll run the first test run phase.
-    test_files = []
-    find_test_files_in_dir_tree(
-        test_subdir, lambda tdir, tfiles: test_files.append(
-            (test_subdir, tfiles)))
-
     # Do the first test run phase.
     summary_results = walk_and_invoke(
-        test_files,
+        find_test_files_in_dir_tree(test_subdir),
         dotest_argv,
         num_threads,
         test_runner_func)
