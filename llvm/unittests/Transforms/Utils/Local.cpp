@@ -683,25 +683,25 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // Simulate i32* <-> i64* conversion.
   EXPECT_TRUE(replaceAllDbgUsesWith(D, C, C, DT));
 
-  SmallVector<DbgInfoIntrinsic *, 2> CDbgVals;
+  SmallVector<DbgVariableIntrinsic *, 2> CDbgVals;
   findDbgUsers(CDbgVals, &C);
   EXPECT_EQ(2U, CDbgVals.size());
-  EXPECT_TRUE(any_of(CDbgVals, [](DbgInfoIntrinsic *DII) {
+  EXPECT_TRUE(any_of(CDbgVals, [](DbgVariableIntrinsic *DII) {
     return isa<DbgAddrIntrinsic>(DII);
   }));
-  EXPECT_TRUE(any_of(CDbgVals, [](DbgInfoIntrinsic *DII) {
+  EXPECT_TRUE(any_of(CDbgVals, [](DbgVariableIntrinsic *DII) {
     return isa<DbgDeclareInst>(DII);
   }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
-  SmallVector<DbgInfoIntrinsic *, 2> DDbgVals;
+  SmallVector<DbgVariableIntrinsic *, 2> DDbgVals;
   findDbgUsers(DDbgVals, &D);
   EXPECT_EQ(2U, DDbgVals.size());
-  EXPECT_TRUE(any_of(DDbgVals, [](DbgInfoIntrinsic *DII) {
+  EXPECT_TRUE(any_of(DDbgVals, [](DbgVariableIntrinsic *DII) {
     return isa<DbgAddrIntrinsic>(DII);
   }));
-  EXPECT_TRUE(any_of(DDbgVals, [](DbgInfoIntrinsic *DII) {
+  EXPECT_TRUE(any_of(DDbgVals, [](DbgVariableIntrinsic *DII) {
     return isa<DbgDeclareInst>(DII);
   }));
 

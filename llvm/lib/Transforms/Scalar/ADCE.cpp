@@ -508,7 +508,7 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
       if (isLive(&I))
         continue;
 
-      if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         // Check if the scope of this variable location is alive.
         if (AliveScopes.count(DII->getDebugLoc()->getScope()))
           continue;
