@@ -27,30 +27,56 @@
 #define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 1
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #define LIBFUZZER_WINDOWS 0
 #elif __APPLE__
 #define LIBFUZZER_APPLE 1
 #define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #define LIBFUZZER_WINDOWS 0
 #elif __NetBSD__
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 1
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
+#define LIBFUZZER_WINDOWS 0
+#elif __FreeBSD__
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 0
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 1
+#define LIBFUZZER_OPENBSD 0
+#define LIBFUZZER_WINDOWS 0
+#elif __OpenBSD__
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 0
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 1
 #define LIBFUZZER_WINDOWS 0
 #elif _WIN32
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #define LIBFUZZER_WINDOWS 1
 #elif __Fuchsia__
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_FUCHSIA 1
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #define LIBFUZZER_WINDOWS 0
 #else
 #error "Support for your platform has not been implemented"
@@ -60,7 +86,9 @@
 #  define __has_attribute(x) 0
 #endif
 
-#define LIBFUZZER_POSIX (LIBFUZZER_APPLE || LIBFUZZER_LINUX || LIBFUZZER_NETBSD)
+#define LIBFUZZER_POSIX                                                        \
+  (LIBFUZZER_APPLE || LIBFUZZER_LINUX || LIBFUZZER_NETBSD ||                   \
+   LIBFUZZER_FREEBSD || LIBFUZZER_OPENBSD)
 
 #ifdef __x86_64
 #  if __has_attribute(target)
@@ -127,6 +155,11 @@ extern ExternalFunctions *EF;
 template<typename T>
   class fuzzer_allocator: public std::allocator<T> {
     public:
+      fuzzer_allocator() = default;
+
+      template<class U>
+      fuzzer_allocator(const fuzzer_allocator<U>&) {}
+
       template<class Other>
       struct rebind { typedef fuzzer_allocator<Other> other;  };
   };
@@ -143,12 +176,6 @@ typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
 
-struct ScopedDoingMyOwnMemOrStr {
-  ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr++; }
-  ~ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr--; }
-  static int DoingMyOwnMemOrStr;
-};
-
 inline uint8_t  Bswap(uint8_t x)  { return x; }
 inline uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
 inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
@@ -158,9 +185,7 @@ uint8_t *ExtraCountersBegin();
 uint8_t *ExtraCountersEnd();
 void ClearExtraCounters();
 
-uint64_t *ClangCountersBegin();
-uint64_t *ClangCountersEnd();
-void ClearClangCounters();
+extern bool RunningUserCallback;
 
 }  // namespace fuzzer
 

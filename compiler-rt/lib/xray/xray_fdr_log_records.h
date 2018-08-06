@@ -32,6 +32,8 @@ struct alignas(16) MetadataRecord {
     CustomEventMarker,
     CallArgument,
     BufferExtents,
+    TypedEventMarker,
+    Pid,
   };
 
   // Use 7 bits to identify this record type.

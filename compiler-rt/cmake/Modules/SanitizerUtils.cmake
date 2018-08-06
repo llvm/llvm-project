@@ -1,3 +1,5 @@
+include(CompilerRTUtils)
+
 set(SANITIZER_GEN_DYNAMIC_LIST
   ${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/scripts/gen_dynamic_list.py)
 
@@ -37,9 +39,9 @@ macro(add_sanitizer_rt_symbols name)
     add_custom_target(${target_name}-symbols ALL
       DEPENDS ${stamp}
       SOURCES ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA})
-
+    get_compiler_rt_install_dir(${arch} install_dir)
     install(FILES $<TARGET_FILE:${target_name}>.syms
-            DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR})
+            DESTINATION ${install_dir})
     if(ARG_PARENT_TARGET)
       add_dependencies(${ARG_PARENT_TARGET} ${target_name}-symbols)
     endif()
@@ -81,7 +83,7 @@ macro(add_sanitizer_rt_version_list name)
 endmacro()
 
 # Add target to check code style for sanitizer runtimes.
-if(CMAKE_HOST_UNIX)
+if(CMAKE_HOST_UNIX AND NOT OS_NAME MATCHES "OpenBSD")
   add_custom_target(SanitizerLintCheck
     COMMAND env LLVM_CHECKOUT=${LLVM_MAIN_SRC_DIR} SILENT=1 TMPDIR=
       PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
@@ -90,5 +92,9 @@ if(CMAKE_HOST_UNIX)
     DEPENDS ${SANITIZER_LINT_SCRIPT}
     COMMENT "Running lint check for sanitizer sources..."
     VERBATIM)
+else()
+  add_custom_target(SanitizerLintCheck
+    COMMAND echo "No lint check")
 endif()
-
+set_target_properties(SanitizerLintCheck
+  PROPERTIES FOLDER "Compiler-RT Misc")

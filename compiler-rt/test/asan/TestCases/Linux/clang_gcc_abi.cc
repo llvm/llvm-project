@@ -3,8 +3,7 @@
 // RUN: %clangxx_asan -O2 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: arm-target-arch, fast-unwinder-works
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: (arm-target-arch || armhf-target-arch), fast-unwinder-works
 
 #include <stdlib.h>
 

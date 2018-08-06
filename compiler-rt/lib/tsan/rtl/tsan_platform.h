@@ -355,9 +355,9 @@ struct Mapping47 {
 #define TSAN_RUNTIME_VMA 1
 #endif
 
-#elif SANITIZER_GO && !SANITIZER_WINDOWS
+#elif SANITIZER_GO && !SANITIZER_WINDOWS && defined(__x86_64__)
 
-/* Go on linux, darwin and freebsd
+/* Go on linux, darwin and freebsd on x86_64
 0000 0000 1000 - 0000 1000 0000: executable
 0000 1000 0000 - 00c0 0000 0000: -
 00c0 0000 0000 - 00e0 0000 0000: heap
@@ -405,6 +405,61 @@ struct Mapping {
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
+
+#elif SANITIZER_GO && defined(__powerpc64__)
+
+/* Only Mapping46 and Mapping47 are currently supported for powercp64 on Go. */
+
+/* Go on linux/powerpc64 (46-bit VMA)
+0000 0000 1000 - 0000 1000 0000: executable
+0000 1000 0000 - 00c0 0000 0000: -
+00c0 0000 0000 - 00e0 0000 0000: heap
+00e0 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 2380 0000 0000: shadow
+2380 0000 0000 - 2400 0000 0000: -
+2400 0000 0000 - 3400 0000 0000: metainfo (memory blocks and sync objects)
+3400 0000 0000 - 3600 0000 0000: -
+3600 0000 0000 - 3800 0000 0000: traces
+3800 0000 0000 - 4000 0000 0000: -
+*/
+
+struct Mapping46 {
+  static const uptr kMetaShadowBeg = 0x240000000000ull;
+  static const uptr kMetaShadowEnd = 0x340000000000ull;
+  static const uptr kTraceMemBeg   = 0x360000000000ull;
+  static const uptr kTraceMemEnd   = 0x380000000000ull;
+  static const uptr kShadowBeg     = 0x200000000000ull;
+  static const uptr kShadowEnd     = 0x238000000000ull;
+  static const uptr kAppMemBeg     = 0x000000001000ull;
+  static const uptr kAppMemEnd     = 0x00e000000000ull;
+};
+
+/* Go on linux/powerpc64 (47-bit VMA)
+0000 0000 1000 - 0000 1000 0000: executable
+0000 1000 0000 - 00c0 0000 0000: -
+00c0 0000 0000 - 00e0 0000 0000: heap
+00e0 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 3000 0000 0000: shadow
+3000 0000 0000 - 3000 0000 0000: -
+3000 0000 0000 - 4000 0000 0000: metainfo (memory blocks and sync objects)
+4000 0000 0000 - 6000 0000 0000: -
+6000 0000 0000 - 6200 0000 0000: traces
+6200 0000 0000 - 8000 0000 0000: -
+*/
+
+struct Mapping47 {
+  static const uptr kMetaShadowBeg = 0x300000000000ull;
+  static const uptr kMetaShadowEnd = 0x400000000000ull;
+  static const uptr kTraceMemBeg   = 0x600000000000ull;
+  static const uptr kTraceMemEnd   = 0x620000000000ull;
+  static const uptr kShadowBeg     = 0x200000000000ull;
+  static const uptr kShadowEnd     = 0x300000000000ull;
+  static const uptr kAppMemBeg     = 0x000000001000ull;
+  static const uptr kAppMemEnd     = 0x00e000000000ull;
+};
+
+// Indicates the runtime will define the memory regions at runtime.
+#define TSAN_RUNTIME_VMA 1
 
 #else
 # error "Unknown platform"
@@ -478,7 +533,9 @@ uptr MappingArchImpl(void) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return MappingImpl<Mapping44, Type>();
+#endif
     case 46: return MappingImpl<Mapping46, Type>();
     case 47: return MappingImpl<Mapping47, Type>();
   }
@@ -633,7 +690,9 @@ bool IsAppMem(uptr mem) {
   return false;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return IsAppMemImpl<Mapping44>(mem);
+#endif
     case 46: return IsAppMemImpl<Mapping46>(mem);
     case 47: return IsAppMemImpl<Mapping47>(mem);
   }
@@ -662,7 +721,9 @@ bool IsShadowMem(uptr mem) {
   return false;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return IsShadowMemImpl<Mapping44>(mem);
+#endif
     case 46: return IsShadowMemImpl<Mapping46>(mem);
     case 47: return IsShadowMemImpl<Mapping47>(mem);
   }
@@ -691,7 +752,9 @@ bool IsMetaMem(uptr mem) {
   return false;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return IsMetaMemImpl<Mapping44>(mem);
+#endif
     case 46: return IsMetaMemImpl<Mapping46>(mem);
     case 47: return IsMetaMemImpl<Mapping47>(mem);
   }
@@ -730,7 +793,9 @@ uptr MemToShadow(uptr x) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return MemToShadowImpl<Mapping44>(x);
+#endif
     case 46: return MemToShadowImpl<Mapping46>(x);
     case 47: return MemToShadowImpl<Mapping47>(x);
   }
@@ -771,7 +836,9 @@ u32 *MemToMeta(uptr x) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return MemToMetaImpl<Mapping44>(x);
+#endif
     case 46: return MemToMetaImpl<Mapping46>(x);
     case 47: return MemToMetaImpl<Mapping47>(x);
   }
@@ -825,7 +892,9 @@ uptr ShadowToMem(uptr s) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return ShadowToMemImpl<Mapping44>(s);
+#endif
     case 46: return ShadowToMemImpl<Mapping46>(s);
     case 47: return ShadowToMemImpl<Mapping47>(s);
   }
@@ -862,7 +931,9 @@ uptr GetThreadTrace(int tid) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return GetThreadTraceImpl<Mapping44>(tid);
+#endif
     case 46: return GetThreadTraceImpl<Mapping46>(tid);
     case 47: return GetThreadTraceImpl<Mapping47>(tid);
   }
@@ -894,7 +965,9 @@ uptr GetThreadTraceHeader(int tid) {
   return 0;
 #elif defined(__powerpc64__)
   switch (vmaSize) {
+#if !SANITIZER_GO
     case 44: return GetThreadTraceHeaderImpl<Mapping44>(tid);
+#endif
     case 46: return GetThreadTraceHeaderImpl<Mapping46>(tid);
     case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
   }

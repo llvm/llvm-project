@@ -12,7 +12,7 @@
 #include <string.h>
 
 const char *__llvm_profile_get_path_prefix();
-void __llvm_profile_set_filanem(const char*);
+void __llvm_profile_set_filename(const char*);
 
 int main(int argc, const char *argv[]) {
   int i;

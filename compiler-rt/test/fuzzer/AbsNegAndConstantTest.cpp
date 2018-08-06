@@ -14,7 +14,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   unsigned y;
   memcpy(&x, Data, sizeof(x));
   memcpy(&y, Data + sizeof(x), sizeof(y));
-  if (abs(x) < 0 && y == 0xbaddcafe) {
+  volatile int abs_x = abs(x);
+  if (abs_x < 0 && y == 0xbaddcafe) {
     printf("BINGO; Found the target, exiting; x = 0x%x y 0x%x\n", x, y);
     fflush(stdout);
     exit(1);

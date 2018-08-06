@@ -23,6 +23,13 @@ pthread_key_t PThreadKey;
 static atomic_uint32_t CurrentIndex;
 static ScudoTSD *TSDs;
 static u32 NumberOfTSDs;
+static u32 CoPrimes[SCUDO_SHARED_TSD_POOL_SIZE];
+static u32 NumberOfCoPrimes = 0;
+
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+__attribute__((tls_model("initial-exec")))
+THREADLOCAL ScudoTSD *CurrentTSD;
+#endif
 
 static void initOnce() {
   CHECK_EQ(pthread_key_create(&PThreadKey, NULL), 0);
@@ -31,13 +38,21 @@ static void initOnce() {
                      static_cast<u32>(SCUDO_SHARED_TSD_POOL_SIZE));
   TSDs = reinterpret_cast<ScudoTSD *>(
       MmapOrDie(sizeof(ScudoTSD) * NumberOfTSDs, "ScudoTSDs"));
-  for (u32 i = 0; i < NumberOfTSDs; i++)
-    TSDs[i].init(/*Shared=*/true);
+  for (u32 I = 0; I < NumberOfTSDs; I++) {
+    TSDs[I].init();
+    u32 A = I + 1;
+    u32 B = NumberOfTSDs;
+    while (B != 0) { const u32 T = A; A = B; B = T % B; }
+    if (A == 1)
+      CoPrimes[NumberOfCoPrimes++] = I + 1;
+  }
 }
 
 ALWAYS_INLINE void setCurrentTSD(ScudoTSD *TSD) {
 #if SANITIZER_ANDROID
   *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+#elif SANITIZER_LINUX
+  CurrentTSD = TSD;
 #else
   CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(TSD)), 0);
 #endif  // SANITIZER_ANDROID
@@ -50,34 +65,42 @@ void initThread(bool MinimalInit) {
   setCurrentTSD(&TSDs[Index % NumberOfTSDs]);
 }
 
-ScudoTSD *getTSDAndLockSlow() {
-  ScudoTSD *TSD;
+ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD) {
   if (NumberOfTSDs > 1) {
-    // Go through all the contexts and find the first unlocked one.
-    for (u32 i = 0; i < NumberOfTSDs; i++) {
-      TSD = &TSDs[i];
-      if (TSD->tryLock()) {
-        setCurrentTSD(TSD);
-        return TSD;
+    // Use the Precedence of the current TSD as our random seed. Since we are in
+    // the slow path, it means that tryLock failed, and as a result it's very
+    // likely that said Precedence is non-zero.
+    u32 RandState = static_cast<u32>(TSD->getPrecedence());
+    const u32 R = Rand(&RandState);
+    const u32 Inc = CoPrimes[R % NumberOfCoPrimes];
+    u32 Index = R % NumberOfTSDs;
+    uptr LowestPrecedence = UINTPTR_MAX;
+    ScudoTSD *CandidateTSD = nullptr;
+    // Go randomly through at most 4 contexts and find a candidate.
+    for (u32 I = 0; I < Min(4U, NumberOfTSDs); I++) {
+      if (TSDs[Index].tryLock()) {
+        setCurrentTSD(&TSDs[Index]);
+        return &TSDs[Index];
       }
-    }
-    // No luck, find the one with the lowest Precedence, and slow lock it.
-    u64 LowestPrecedence = UINT64_MAX;
-    for (u32 i = 0; i < NumberOfTSDs; i++) {
-      u64 Precedence = TSDs[i].getPrecedence();
-      if (Precedence && Precedence < LowestPrecedence) {
-        TSD = &TSDs[i];
+      const uptr Precedence = TSDs[Index].getPrecedence();
+      // A 0 precedence here means another thread just locked this TSD.
+      if (UNLIKELY(Precedence == 0))
+        continue;
+      if (Precedence < LowestPrecedence) {
+        CandidateTSD = &TSDs[Index];
         LowestPrecedence = Precedence;
       }
+      Index += Inc;
+      if (Index >= NumberOfTSDs)
+        Index -= NumberOfTSDs;
     }
-    if (LIKELY(LowestPrecedence != UINT64_MAX)) {
-      TSD->lock();
-      setCurrentTSD(TSD);
-      return TSD;
+    if (CandidateTSD) {
+      CandidateTSD->lock();
+      setCurrentTSD(CandidateTSD);
+      return CandidateTSD;
     }
   }
   // Last resort, stick with the current one.
-  TSD = getCurrentTSD();
   TSD->lock();
   return TSD;
 }

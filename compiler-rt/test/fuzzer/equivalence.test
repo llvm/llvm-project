@@ -1,4 +1,5 @@
-UNSUPPORTED: darwin
+REQUIRES: this-test-is-deprecated
+UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/EquivalenceATest.cpp -o %t-EquivalenceATest
 RUN: %cpp_compiler %S/EquivalenceBTest.cpp -o %t-EquivalenceBTest
 

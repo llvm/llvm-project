@@ -22,14 +22,6 @@ namespace __sanitizer {
 
 CommonFlags common_flags_dont_use;
 
-struct FlagDescription {
-  const char *name;
-  const char *description;
-  FlagDescription *next;
-};
-
-IntrusiveList<FlagDescription> flag_descriptions;
-
 void CommonFlags::SetDefaults() {
 #define COMMON_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "sanitizer_flags.inc"

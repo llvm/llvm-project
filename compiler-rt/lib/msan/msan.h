@@ -316,14 +316,6 @@ void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
 void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
                    void *context, bool request_fast_unwind);
 
-void ReportUMR(StackTrace *stack, u32 origin);
-void ReportExpectedUMRNotFound(StackTrace *stack);
-void ReportStats();
-void ReportAtExitStatistics();
-void DescribeMemoryRange(const void *x, uptr size);
-void ReportUMRInsideAddressRange(const char *what, const void *start, uptr size,
-                                 uptr offset);
-
 // Unpoison first n function arguments.
 void UnpoisonParam(uptr n);
 void UnpoisonThreadLocalState();
@@ -356,14 +348,23 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
                     common_flags()->fast_unwind_on_malloc);               \
   }
 
+#define GET_STORE_STACK_TRACE \
+  GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
+
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)              \
   BufferedStackTrace stack;                              \
   if (msan_inited)                                       \
   GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr, \
                 common_flags()->fast_unwind_on_fatal)
 
-#define GET_STORE_STACK_TRACE \
-  GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
+#define GET_FATAL_STACK_TRACE_HERE \
+  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
+
+#define PRINT_CURRENT_STACK_CHECK() \
+  {                                 \
+    GET_FATAL_STACK_TRACE_HERE;     \
+    stack.Print();                  \
+  }
 
 class ScopedThreadLocalStateBackup {
  public:

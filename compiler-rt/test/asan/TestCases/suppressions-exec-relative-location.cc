@@ -4,15 +4,15 @@
 
 // If the executable is started from a different location, we should still
 // find the suppression file located relative to the location of the executable.
-// RUN: rm -rf %T/suppressions-exec-relative-location
-// RUN: mkdir -p %T/suppressions-exec-relative-location
-// RUN: %clangxx_asan -O0 %s -o %T/suppressions-exec-relative-location/exec
+// RUN: rm -rf %t-dir
+// RUN: mkdir -p %t-dir
+// RUN: %clangxx_asan -O0 %s -o %t-dir/exec
 // RUN: echo "interceptor_via_fun:crash_function" > \
-// RUN:   %T/suppressions-exec-relative-location/supp.txt
+// RUN:   %t-dir/supp.txt
 // RUN: %env_asan_opts=suppressions='"supp.txt"' \
-// RUN:   %run %T/suppressions-exec-relative-location/exec 2>&1 | \
+// RUN:   %run %t-dir/exec 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-IGNORE %s
-// RUN: rm -rf %T/suppressions-exec-relative-location
+// RUN: rm -rf %t-dir
 
 // If the wrong absolute path is given, we don't try to construct
 // a relative path with it.

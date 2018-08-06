@@ -5,21 +5,35 @@ set(UBSAN_SOURCES
   ubsan_init.cc
   ubsan_flags.cc
   ubsan_handlers.cc
-  ubsan_value.cc
-  )
+  ubsan_monitor.cc
+  ubsan_value.cc)
 
 set(UBSAN_STANDALONE_SOURCES
   ubsan_diag_standalone.cc
   ubsan_init_standalone.cc
-  ubsan_signals_standalone.cc
-  )
+  ubsan_signals_standalone.cc)
 
 set(UBSAN_CXXABI_SOURCES
   ubsan_handlers_cxx.cc
   ubsan_type_hash.cc
   ubsan_type_hash_itanium.cc
-  ubsan_type_hash_win.cc
-  )
+  ubsan_type_hash_win.cc)
+
+set(UBSAN_HEADERS
+  ubsan_checks.inc
+  ubsan_diag.h
+  ubsan_flags.h
+  ubsan_flags.inc
+  ubsan_handlers.h
+  ubsan_handlers_cxx.h
+  ubsan_init.h
+  ubsan_interface.inc
+  ubsan_monitor.h
+  ubsan_platform.h
+  ubsan_signals_standalone.h
+  ubsan_type_hash.h
+  ubsan_value.h
+)
 
 include_directories(..)
 
@@ -55,6 +69,7 @@ if(APPLE)
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
     SOURCES ${UBSAN_COMMON_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
     CFLAGS ${UBSAN_CXXFLAGS})
 
   if(COMPILER_RT_HAS_UBSAN)
@@ -63,6 +78,7 @@ if(APPLE)
       OS ${SANITIZER_COMMON_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       SOURCES ${UBSAN_STANDALONE_SOURCES}
+      ADDITIONAL_HEADERS ${UBSAN_HEADERS}
       CFLAGS ${UBSAN_STANDALONE_CFLAGS})
 
     add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
@@ -76,6 +92,8 @@ if(APPLE)
                   RTUbsan_standalone
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
+                  RTSanitizerCommonCoverage
+                  RTSanitizerCommonSymbolizer
                   RTInterception
       LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
@@ -88,6 +106,8 @@ if(APPLE)
                   RTUbsan_standalone
                   RTSanitizerCommonNoHooks
                   RTSanitizerCommonLibcNoHooks
+                  RTSanitizerCommonCoverage
+                  RTSanitizerCommonSymbolizerNoHooks
                   RTInterception
       LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
@@ -97,7 +117,9 @@ else()
   # Common parts of UBSan runtime.
   add_compiler_rt_object_libraries(RTUbsan
     ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
-    SOURCES ${UBSAN_SOURCES} CFLAGS ${UBSAN_CFLAGS})
+    SOURCES ${UBSAN_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_CFLAGS})
 
   if(SANITIZER_CAN_USE_CXXABI)
     # C++-specific parts of UBSan runtime. Requires a C++ ABI library.
@@ -110,7 +132,9 @@ else()
 
   add_compiler_rt_object_libraries(RTUbsan_cxx
     ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
-    SOURCES ${UBSAN_CXX_SOURCES} CFLAGS ${UBSAN_CXXFLAGS})
+    SOURCES ${UBSAN_CXX_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_CXXFLAGS})
 
   if (WIN32)
     add_compiler_rt_object_libraries(UbsanWeakInterception
@@ -145,14 +169,19 @@ else()
     add_compiler_rt_object_libraries(RTUbsan_standalone
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       SOURCES ${UBSAN_STANDALONE_SOURCES}
+      ADDITIONAL_HEADERS ${UBSAN_HEADERS}
       CFLAGS ${UBSAN_STANDALONE_CFLAGS})
 
     # Standalone UBSan runtimes.
     add_compiler_rt_runtime(clang_rt.ubsan_standalone
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
+      SOURCES ubsan_init_standalone_preinit.cc
+      ADDITIONAL_HEADERS ${UBSAN_HEADERS}
       OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
+              RTSanitizerCommonCoverage
+              RTSanitizerCommonSymbolizer
               RTUbsan
               RTUbsan_standalone
               RTInterception
@@ -166,12 +195,14 @@ else()
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
-    if (UNIX)
+    if (FUCHSIA OR UNIX)
       add_compiler_rt_runtime(clang_rt.ubsan_standalone
         SHARED
         ARCHS ${UBSAN_SUPPORTED_ARCH}
         OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
+              RTSanitizerCommonCoverage
+              RTSanitizerCommonSymbolizer
               RTUbsan
               RTUbsan_cxx
               RTUbsan_standalone

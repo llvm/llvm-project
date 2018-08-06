@@ -1,0 +1,13 @@
+XFAIL: *
+
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-multiple-bbs-single-line.c
+RUN: test -f instrprof-gcov-multiple-bbs-single-line.gcno
+
+RUN: rm -f instrprof-gcov-multiple-bbs-single-line.gcda
+RUN: %run %t
+RUN: llvm-cov gcov -b -c instrprof-gcov-multiple-bbs-single-line.gcda
+RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-multiple-bbs-single-line.c.gcov %S/Inputs/instrprof-gcov-multiple-bbs-single-line.c.gcov
+RUN: rm instrprof-gcov-multiple-bbs-single-line.gcda

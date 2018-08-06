@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -O0 %s -o %t -mllvm -asan-detect-invalid-pointer-pair
 
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=1:halt_on_error=0 %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2:halt_on_error=0 %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <stdlib.h>
@@ -10,8 +10,12 @@ int foo(char *p, char *q) {
 }
 
 char global1[100] = {}, global2[100] = {};
+char __attribute__((used)) smallest_global[5] = {};
 char small_global[7] = {};
+char __attribute__((used)) little_global[10] = {};
+char __attribute__((used)) medium_global[4000] = {};
 char large_global[5000] = {};
+char __attribute__((used)) largest_global[6000] = {};
 
 int main() {
   // Heap allocated memory.

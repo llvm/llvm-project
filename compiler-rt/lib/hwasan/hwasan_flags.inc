@@ -27,3 +27,7 @@ HWASAN_FLAG(bool, atexit, false, "")
 // Test only flag to disable malloc/realloc/free memory tagging on startup.
 // Tagging can be reenabled with __hwasan_enable_allocator_tagging().
 HWASAN_FLAG(bool, disable_allocator_tagging, false, "")
+
+// If false, use simple increment of a thread local counter to generate new
+// tags.
+HWASAN_FLAG(bool, random_tags, true, "")

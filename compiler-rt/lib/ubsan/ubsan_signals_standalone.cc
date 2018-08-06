@@ -13,20 +13,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "ubsan_platform.h"
+#include "sanitizer_common/sanitizer_platform.h"
 #if CAN_SANITIZE_UB
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "ubsan_diag.h"
 #include "ubsan_init.h"
 
+// Interception of signals breaks too many things on Android.
+// * It requires that ubsan is the first dependency of the main executable for
+// the interceptors to work correctly. This complicates deployment, as it
+// prevents us from enabling ubsan on random platform modules independently.
+// * For this to work with ART VM, ubsan signal handler has to be set after the
+// debuggerd handler, but before the ART handler.
+// * Interceptors don't work at all when ubsan runtime is loaded late, ex. when
+// it is part of an APK that does not use wrap.sh method.
+#if SANITIZER_FUCHSIA || SANITIZER_ANDROID
+
+namespace __ubsan {
+void InitializeDeadlySignals() {}
+}
+
+#else
+
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 namespace __ubsan {
 
-#if SANITIZER_FUCHSIA
-void InitializeDeadlySignals() {}
-#else
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
   GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
@@ -46,8 +60,9 @@ void InitializeDeadlySignals() {
   InitializeSignalInterceptors();
   InstallDeadlySignalHandlers(&UBsanOnDeadlySignal);
 }
-#endif
 
 } // namespace __ubsan
+
+#endif
 
 #endif // CAN_SANITIZE_UB

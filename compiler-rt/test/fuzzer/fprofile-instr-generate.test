@@ -1,7 +1,0 @@
-# Test libFuzzer + -fprofile-instr-generate
-REQUIRES: linux
-RUN: %cpp_compiler %S/SimpleTest.cpp -fsanitize-coverage=0 -fprofile-instr-generate -o %t-SimpleTest-fprofile-instr-generate
-CHECK-NOT: INFO: Loaded 1 modules
-CHECK: INFO: {{.*}} Clang Coverage Counters
-CHECK: BINGO
-RUN: not %t-SimpleTest-fprofile-instr-generate -runs=1000000 -seed=1 -use_clang_coverage=1 2>&1 | FileCheck %s

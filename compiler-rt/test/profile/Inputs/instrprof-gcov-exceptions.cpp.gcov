@@ -1,0 +1,16 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-exceptions.cpp
+// CHECK-NEXT:        -:    0:Graph:instrprof-gcov-exceptions.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-gcov-exceptions.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:        -:    1:#include <string>
+// CHECK-NEXT:        -:    2:
+// CHECK-NEXT:        -:    3:void asd(std::string i) {
+// CHECK-NEXT:        2:    4:}
+// CHECK-NEXT:        -:    5:
+// CHECK-NEXT:        -:    6:int main(void)
+// CHECK-NEXT:        -:    7:{
+// CHECK-NEXT:        1:    8:  asd("22");
+// CHECK-NEXT:        -:    9:
+// CHECK-NEXT:        1:   10:  return 0;
+// CHECK-NEXT:        -:   11:}

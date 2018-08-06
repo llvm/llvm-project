@@ -17,6 +17,7 @@
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -70,15 +71,27 @@ static void RegisterDeallocation(void *p) {
   atomic_store(reinterpret_cast<atomic_uint8_t *>(m), 0, memory_order_relaxed);
 }
 
+static void *ReportAllocationSizeTooBig(uptr size, const StackTrace &stack) {
+  if (AllocatorMayReturnNull()) {
+    Report("WARNING: LeakSanitizer failed to allocate 0x%zx bytes\n", size);
+    return nullptr;
+  }
+  ReportAllocationSizeTooBig(size, kMaxAllowedMallocSize, &stack);
+}
+
 void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
                bool cleared) {
   if (size == 0)
     size = 1;
-  if (size > kMaxAllowedMallocSize) {
-    Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", size);
-    return Allocator::FailureHandler::OnBadRequest();
-  }
+  if (size > kMaxAllowedMallocSize)
+    return ReportAllocationSizeTooBig(size, stack);
   void *p = allocator.Allocate(GetAllocatorCache(), size, alignment);
+  if (UNLIKELY(!p)) {
+    SetAllocatorOutOfMemory();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportOutOfMemory(size, &stack);
+  }
   // Do not rely on the allocator to clear the memory (it's slow).
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
@@ -89,8 +102,11 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
 }
 
 static void *Calloc(uptr nmemb, uptr size, const StackTrace &stack) {
-  if (UNLIKELY(CheckForCallocOverflow(size, nmemb)))
-    return Allocator::FailureHandler::OnBadRequest();
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportCallocOverflow(nmemb, size, &stack);
+  }
   size *= nmemb;
   return Allocate(stack, size, 1, true);
 }
@@ -106,9 +122,8 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
                  uptr alignment) {
   RegisterDeallocation(p);
   if (new_size > kMaxAllowedMallocSize) {
-    Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", new_size);
     allocator.Deallocate(GetAllocatorCache(), p);
-    return Allocator::FailureHandler::OnBadRequest();
+    return ReportAllocationSizeTooBig(new_size, stack);
   }
   p = allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
   RegisterAllocation(stack, p, new_size);
@@ -126,10 +141,38 @@ uptr GetMallocUsableSize(const void *p) {
   return m->requested_size;
 }
 
+int lsan_posix_memalign(void **memptr, uptr alignment, uptr size,
+                        const StackTrace &stack) {
+  if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
+    if (AllocatorMayReturnNull())
+      return errno_EINVAL;
+    ReportInvalidPosixMemalignAlignment(alignment, &stack);
+  }
+  void *ptr = Allocate(stack, size, alignment, kAlwaysClearMemory);
+  if (UNLIKELY(!ptr))
+    // OOM error is already taken care of by Allocate.
+    return errno_ENOMEM;
+  CHECK(IsAligned((uptr)ptr, alignment));
+  *memptr = ptr;
+  return 0;
+}
+
+void *lsan_aligned_alloc(uptr alignment, uptr size, const StackTrace &stack) {
+  if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
+    errno = errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAlignedAllocAlignment(size, alignment, &stack);
+  }
+  return SetErrnoOnNull(Allocate(stack, size, alignment, kAlwaysClearMemory));
+}
+
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
-    return Allocator::FailureHandler::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAllocationAlignment(alignment, &stack);
   }
   return SetErrnoOnNull(Allocate(stack, size, alignment, kAlwaysClearMemory));
 }
@@ -153,6 +196,19 @@ void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
 void *lsan_valloc(uptr size, const StackTrace &stack) {
   return SetErrnoOnNull(
       Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory));
+}
+
+void *lsan_pvalloc(uptr size, const StackTrace &stack) {
+  uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportPvallocOverflow(size, &stack);
+  }
+  // pvalloc(0) should allocate one page.
+  size = size ? RoundUpTo(size, PageSize) : PageSize;
+  return SetErrnoOnNull(Allocate(stack, size, PageSize, kAlwaysClearMemory));
 }
 
 uptr lsan_mz_size(const void *p) {

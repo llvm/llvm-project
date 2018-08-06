@@ -15,6 +15,10 @@
 // XFAIL: tsan
 // XFAIL: msan
 // XFAIL: ubsan
+
+// https://github.com/google/sanitizers/issues/981
+// UNSUPPORTED: android-26
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -65,4 +69,4 @@ int main() {
 // CHECK_MAY_RETURN_0: allocating 128 times
 // CHECK_MAY_RETURN_0: Some of the malloc calls returned non-null: 128
 // CHECK_MAY_RETURN_0: allocating 256 times
-// CHECK_MAY_RETURN_0: allocator is terminating the process instead of returning
+// CHECK_MAY_RETURN_0: {{SUMMARY: .*Sanitizer: rss-limit-exceeded}}

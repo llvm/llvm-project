@@ -15,9 +15,10 @@
 #ifndef XRAY_BUFFER_QUEUE_H
 #define XRAY_BUFFER_QUEUE_H
 
-#include <cstddef>
 #include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include <cstddef>
 
 namespace __xray {
 
@@ -27,18 +28,17 @@ namespace __xray {
 /// the "flight data recorder" (FDR) mode to support ongoing XRay function call
 /// trace collection.
 class BufferQueue {
- public:
+public:
   struct alignas(64) BufferExtents {
-    __sanitizer::atomic_uint64_t Size;
+    atomic_uint64_t Size;
   };
 
   struct Buffer {
-    void *Buffer = nullptr;
+    void *Data = nullptr;
     size_t Size = 0;
-    BufferExtents* Extents;
+    BufferExtents *Extents;
   };
 
- private:
   struct BufferRep {
     // The managed buffer.
     Buffer Buff;
@@ -48,14 +48,72 @@ class BufferQueue {
     bool Used = false;
   };
 
+private:
+  // This models a ForwardIterator. |T| Must be either a `Buffer` or `const
+  // Buffer`. Note that we only advance to the "used" buffers, when
+  // incrementing, so that at dereference we're always at a valid point.
+  template <class T> class Iterator {
+  public:
+    BufferRep *Buffers = nullptr;
+    size_t Offset = 0;
+    size_t Max = 0;
+
+    Iterator &operator++() {
+      DCHECK_NE(Offset, Max);
+      do {
+        ++Offset;
+      } while (!Buffers[Offset].Used && Offset != Max);
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      Iterator C = *this;
+      ++(*this);
+      return C;
+    }
+
+    T &operator*() const { return Buffers[Offset].Buff; }
+
+    T *operator->() const { return &(Buffers[Offset].Buff); }
+
+    Iterator(BufferRep *Root, size_t O, size_t M)
+        : Buffers(Root), Offset(O), Max(M) {
+      // We want to advance to the first Offset where the 'Used' property is
+      // true, or to the end of the list/queue.
+      while (!Buffers[Offset].Used && Offset != Max) {
+        ++Offset;
+      }
+    }
+
+    Iterator() = default;
+    Iterator(const Iterator &) = default;
+    Iterator(Iterator &&) = default;
+    Iterator &operator=(const Iterator &) = default;
+    Iterator &operator=(Iterator &&) = default;
+    ~Iterator() = default;
+
+    template <class V>
+    friend bool operator==(const Iterator &L, const Iterator<V> &R) {
+      DCHECK_EQ(L.Max, R.Max);
+      return L.Buffers == R.Buffers && L.Offset == R.Offset;
+    }
+
+    template <class V>
+    friend bool operator!=(const Iterator &L, const Iterator<V> &R) {
+      return !(L == R);
+    }
+  };
+
   // Size of each individual Buffer.
   size_t BufferSize;
 
   BufferRep *Buffers;
+
+  // Amount of pre-allocated buffers.
   size_t BufferCount;
 
-  __sanitizer::SpinMutex Mutex;
-  __sanitizer::atomic_uint8_t Finalizing;
+  SpinMutex Mutex;
+  atomic_uint8_t Finalizing;
 
   // Pointers to buffers managed/owned by the BufferQueue.
   void **OwnedBuffers;
@@ -70,7 +128,7 @@ class BufferQueue {
   // Count of buffers that have been handed out through 'getBuffer'.
   size_t LiveBuffers;
 
- public:
+public:
   enum class ErrorCode : unsigned {
     Ok,
     NotEnoughMemory,
@@ -81,16 +139,16 @@ class BufferQueue {
 
   static const char *getErrorString(ErrorCode E) {
     switch (E) {
-      case ErrorCode::Ok:
-        return "(none)";
-      case ErrorCode::NotEnoughMemory:
-        return "no available buffers in the queue";
-      case ErrorCode::QueueFinalizing:
-        return "queue already finalizing";
-      case ErrorCode::UnrecognizedBuffer:
-        return "buffer being returned not owned by buffer queue";
-      case ErrorCode::AlreadyFinalized:
-        return "queue already finalized";
+    case ErrorCode::Ok:
+      return "(none)";
+    case ErrorCode::NotEnoughMemory:
+      return "no available buffers in the queue";
+    case ErrorCode::QueueFinalizing:
+      return "queue already finalizing";
+    case ErrorCode::UnrecognizedBuffer:
+      return "buffer being returned not owned by buffer queue";
+    case ErrorCode::AlreadyFinalized:
+      return "queue already finalized";
     }
     return "unknown error";
   }
@@ -122,8 +180,7 @@ class BufferQueue {
   ErrorCode releaseBuffer(Buffer &Buf);
 
   bool finalizing() const {
-    return __sanitizer::atomic_load(&Finalizing,
-                                    __sanitizer::memory_order_acquire);
+    return atomic_load(&Finalizing, memory_order_acquire);
   }
 
   /// Returns the configured size of the buffers in the buffer queue.
@@ -141,19 +198,29 @@ class BufferQueue {
   /// Applies the provided function F to each Buffer in the queue, only if the
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation).
-  template <class F>
-  void apply(F Fn) {
-    __sanitizer::SpinMutexLock G(&Mutex);
-    for (auto I = Buffers, E = Buffers + BufferCount; I != E; ++I) {
-      const auto &T = *I;
-      if (T.Used) Fn(T.Buff);
-    }
+  template <class F> void apply(F Fn) {
+    SpinMutexLock G(&Mutex);
+    for (auto I = begin(), E = end(); I != E; ++I)
+      Fn(*I);
+  }
+
+  using const_iterator = Iterator<const Buffer>;
+  using iterator = Iterator<Buffer>;
+
+  /// Provides iterator access to the raw Buffer instances.
+  iterator begin() const { return iterator(Buffers, 0, BufferCount); }
+  const_iterator cbegin() const {
+    return const_iterator(Buffers, 0, BufferCount);
+  }
+  iterator end() const { return iterator(Buffers, BufferCount, BufferCount); }
+  const_iterator cend() const {
+    return const_iterator(Buffers, BufferCount, BufferCount);
   }
 
   // Cleans up allocated buffers.
   ~BufferQueue();
 };
 
-}  // namespace __xray
+} // namespace __xray
 
-#endif  // XRAY_BUFFER_QUEUE_H
+#endif // XRAY_BUFFER_QUEUE_H

@@ -159,7 +159,6 @@ typedef struct user_fpregs elf_fpregset_t;
 # include <sys/procfs.h>
 #endif
 #include <sys/user.h>
-#include <sys/ustat.h>
 #include <linux/cyclades.h>
 #include <linux/if_eql.h>
 #include <linux/if_plip.h>
@@ -253,7 +252,19 @@ namespace __sanitizer {
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-  unsigned struct_ustat_sz = sizeof(struct ustat);
+  // Use pre-computed size of struct ustat to avoid <sys/ustat.h> which
+  // has been removed from glibc 2.28.
+#if defined(__aarch64__) || defined(__s390x__) || defined (__mips64) \
+  || defined(__powerpc64__) || defined(__arch64__) || defined(__sparcv9) \
+  || defined(__x86_64__)
+#define SIZEOF_STRUCT_USTAT 32
+#elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
+  || defined(__powerpc__) || defined(__s390__) || defined(__sparc__)
+#define SIZEOF_STRUCT_USTAT 20
+#else
+#error Unknown size of struct ustat
+#endif
+  unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -1025,6 +1036,12 @@ CHECK_TYPE_SIZE(cmsghdr);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
+
+#if SANITIZER_LINUX && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
+CHECK_TYPE_SIZE(mmsghdr);
+CHECK_SIZE_AND_OFFSET(mmsghdr, msg_hdr);
+CHECK_SIZE_AND_OFFSET(mmsghdr, msg_len);
+#endif
 
 COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
 CHECK_SIZE_AND_OFFSET(dirent, d_ino);

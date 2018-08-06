@@ -25,6 +25,11 @@
 #endif
 #endif
 
+#if defined(__sun__) && defined(__svr4__)
+using std::_setjmp;
+using std::_longjmp;
+#endif
+
 NOINLINE void *malloc_fff(size_t size) {
   void *res = malloc/**/(size); break_optimization(0); return res;}
 NOINLINE void *malloc_eee(size_t size) {

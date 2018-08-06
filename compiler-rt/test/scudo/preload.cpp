@@ -1,7 +1,8 @@
 // Test that the preloaded runtime works without linking the static library.
 
 // RUN: %clang %s -lstdc++ -o %t
-// RUN: env LD_PRELOAD=%shared_libscudo not %run %t 2>&1 | FileCheck %s
+// RUN: env LD_PRELOAD=%shared_libscudo    not %run %t 2>&1 | FileCheck %s
+// RUN: env LD_PRELOAD=%shared_minlibscudo not %run %t 2>&1 | FileCheck %s
 
 // This way of setting LD_PRELOAD does not work with Android test runner.
 // REQUIRES: !android

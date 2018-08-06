@@ -1,0 +1,41 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-shared-main-gcov-flush.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-shared-main-gcov-flush.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-shared-main-gcov-flush.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:        -:    1:extern void foo(int n);
+// CHECK-NEXT:        -:    2:extern void __gcov_flush(void);
+// CHECK-NEXT:        -:    3:
+// CHECK-NEXT:        -:    4:int bar1 = 0;
+// CHECK-NEXT:        -:    5:int bar2 = 1;
+// CHECK-NEXT:        -:    6:
+// CHECK-NEXT:        -:    7:void bar(int n) {
+// CHECK-NEXT:        3:    8:  if (n % 5 == 0)
+// CHECK-NEXT:        3:    9:    bar1++;
+// CHECK-NEXT:        -:   10:  else
+// CHECK-NEXT:    #####:   11:    bar2++;
+// CHECK-NEXT:        3:   12:}
+// CHECK-NEXT:        -:   13:
+// CHECK-NEXT:        -:   14:int main(int argc, char *argv[]) {
+// CHECK-NEXT:        -:   15:#ifdef SHARED_CALL_BEFORE_GCOV_FLUSH
+// CHECK-NEXT:        1:   16:  foo(1);
+// CHECK-NEXT:        -:   17:#endif
+// CHECK-NEXT:        -:   18:
+// CHECK-NEXT:        1:   19:  bar(5);
+// CHECK-NEXT:        -:   20:
+// CHECK-NEXT:        1:   21:  __gcov_flush();
+// CHECK-NEXT:        -:   22:
+// CHECK-NEXT:        1:   23:  bar(5);
+// CHECK-NEXT:        -:   24:
+// CHECK-NEXT:        -:   25:#ifdef SHARED_CALL_AFTER_GCOV_FLUSH
+// CHECK-NEXT:        -:   26:  foo(1);
+// CHECK-NEXT:        -:   27:#endif
+// CHECK-NEXT:        -:   28:
+// CHECK-NEXT:        -:   29:#ifdef EXIT_ABRUPTLY
+// CHECK-NEXT:        -:   30:  _exit(0);
+// CHECK-NEXT:        -:   31:#endif
+// CHECK-NEXT:        -:   32:
+// CHECK-NEXT:        1:   33:  bar(5);
+// CHECK-NEXT:        -:   34:
+// CHECK-NEXT:        1:   35:  return 0;
+// CHECK-NEXT:        -:   36:}

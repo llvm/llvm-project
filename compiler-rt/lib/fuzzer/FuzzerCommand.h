@@ -29,8 +29,7 @@ public:
   // is immutable, meaning this flag effectively marks the end of the mutable
   // argument list.
   static inline const char *ignoreRemainingArgs() {
-    static const char *kIgnoreRemaining = "-ignore_remaining_args=1";
-    return kIgnoreRemaining;
+    return "-ignore_remaining_args=1";
   }
 
   Command() : CombinedOutAndErr(false) {}

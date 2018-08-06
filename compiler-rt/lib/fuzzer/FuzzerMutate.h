@@ -27,7 +27,7 @@ public:
   void StartMutationSequence();
   /// Print the current sequence of mutations.
   void PrintMutationSequence();
-  /// Indicate that the current sequence of mutations was successfull.
+  /// Indicate that the current sequence of mutations was successful.
   void RecordSuccessfulMutationSequence();
   /// Mutates data by invoking user-provided mutator.
   size_t Mutate_Custom(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -70,6 +70,13 @@ public:
   /// Applies one of the configured mutations.
   /// Returns the new size of data which could be up to MaxSize.
   size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
+
+  /// Applies one of the configured mutations to the bytes of Data
+  /// that have '1' in Mask.
+  /// Mask.size() should be >= Size.
+  size_t MutateWithMask(uint8_t *Data, size_t Size, size_t MaxSize,
+                        const Vector<uint8_t> &Mask);
+
   /// Applies one of the default mutations. Provided as a service
   /// to mutation authors.
   size_t DefaultMutate(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -86,11 +93,16 @@ public:
 
   Random &GetRand() { return Rand; }
 
-private:
+  void PrintMutationStats();
 
+  void RecordUsefulMutations();
+
+ private:
   struct Mutator {
     size_t (MutationDispatcher::*Fn)(uint8_t *Data, size_t Size, size_t Max);
     const char *Name;
+    uint64_t UsefulCount;
+    uint64_t TotalCount;
   };
 
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
@@ -125,11 +137,11 @@ private:
   // recreated periodically.
   Dictionary TempAutoDictionary;
   // Persistent dictionary modified by the fuzzer, consists of
-  // entries that led to successfull discoveries in the past mutations.
+  // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  Vector<Mutator> CurrentMutatorSequence;
   Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  Vector<Mutator *> CurrentMutatorSequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
@@ -137,6 +149,7 @@ private:
 
   const InputCorpus *Corpus = nullptr;
   Vector<uint8_t> MutateInPlaceHere;
+  Vector<uint8_t> MutateWithMaskTemp;
   // CustomCrossOver needs its own buffer as a custom implementation may call
   // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.
   Vector<uint8_t> CustomCrossOverInPlaceHere;

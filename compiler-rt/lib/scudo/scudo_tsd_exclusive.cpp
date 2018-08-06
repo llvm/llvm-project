@@ -50,7 +50,7 @@ static void teardownThread(void *Ptr) {
 static void initOnce() {
   CHECK_EQ(pthread_key_create(&PThreadKey, teardownThread), 0);
   initScudo();
-  FallbackTSD.init(/*Shared=*/true);
+  FallbackTSD.init();
 }
 
 void initThread(bool MinimalInit) {
@@ -59,7 +59,7 @@ void initThread(bool MinimalInit) {
     return;
   CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(
       GetPthreadDestructorIterations())), 0);
-  TSD.init(/*Shared=*/false);
+  TSD.init();
   ScudoThreadState = ThreadInitialized;
 }
 

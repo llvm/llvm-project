@@ -181,6 +181,8 @@ enum CFITypeCheckKind : unsigned char {
   CFITCK_DerivedCast,
   CFITCK_UnrelatedCast,
   CFITCK_ICall,
+  CFITCK_NVMFCall,
+  CFITCK_VMFCall,
 };
 
 struct CFICheckFailData {

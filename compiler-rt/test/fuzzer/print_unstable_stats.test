@@ -1,0 +1,3 @@
+RUN: %cpp_compiler %S/PrintUnstableStatsTest.cpp -o %t-PrintUnstableStatsTest
+RUN: %run %t-PrintUnstableStatsTest -print_unstable_stats=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=LONG
+LONG: stat::stability_rate: 27.59

@@ -14,11 +14,12 @@
 #define SANITIZER_LINUX_H
 
 #include "sanitizer_platform.h"
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||                \
+    SANITIZER_OPENBSD || SANITIZER_SOLARIS
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform_limits_netbsd.h"
+#include "sanitizer_platform_limits_openbsd.h"
 #include "sanitizer_platform_limits_posix.h"
 #include "sanitizer_platform_limits_solaris.h"
 #include "sanitizer_posix.h"
@@ -73,23 +74,21 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 // This class reads thread IDs from /proc/<pid>/task using only syscalls.
 class ThreadLister {
  public:
-  explicit ThreadLister(int pid);
+  explicit ThreadLister(pid_t pid);
   ~ThreadLister();
-  // GetNextTID returns -1 if the list of threads is exhausted, or if there has
-  // been an error.
-  int GetNextTID();
-  void Reset();
-  bool error();
+  enum Result {
+    Error,
+    Incomplete,
+    Ok,
+  };
+  Result ListThreads(InternalMmapVector<tid_t> *threads);
 
  private:
-  bool GetDirectoryEntries();
+  bool IsAlive(int tid);
 
-  int pid_;
-  int descriptor_;
-  InternalScopedBuffer<char> buffer_;
-  bool error_;
-  struct linux_dirent* entry_;
-  int bytes_read_;
+  pid_t pid_;
+  int descriptor_ = -1;
+  InternalMmapVector<char> buffer_;
 };
 
 // Exposed for testing.
@@ -145,6 +144,5 @@ ALWAYS_INLINE uptr *get_android_tls_ptr() {
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+#endif
 #endif  // SANITIZER_LINUX_H

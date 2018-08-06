@@ -17,8 +17,9 @@
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "InstrProfData.inc"
 
-COMPILER_RT_WEAK void (*VPMergeHook)(ValueProfData *,
-                                     __llvm_profile_data *) = NULL;
+COMPILER_RT_VISIBILITY
+void (*VPMergeHook)(ValueProfData *, __llvm_profile_data *);
+
 COMPILER_RT_VISIBILITY
 uint64_t lprofGetLoadModuleSignature() {
   /* A very fast way to compute a module signature.  */

@@ -22,6 +22,8 @@ if(APPLE)
     $<TARGET_OBJECTS:RTInterception.osx>
     $<TARGET_OBJECTS:RTSanitizerCommon.osx>
     $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
+    $<TARGET_OBJECTS:RTSanitizerCommonCoverage.osx>
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>
     $<TARGET_OBJECTS:RTUbsan.osx>)
   set(TSAN_TEST_RUNTIME RTTsanTest)
   add_library(${TSAN_TEST_RUNTIME} STATIC ${TSAN_TEST_RUNTIME_OBJECTS})
@@ -32,6 +34,7 @@ if(APPLE)
   list(APPEND TSAN_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
 
   set(LINK_FLAGS "-lc++")
+  list(APPEND LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
   add_weak_symbols("ubsan" LINK_FLAGS)
   add_weak_symbols("sanitizer_common" LINK_FLAGS)
 else()

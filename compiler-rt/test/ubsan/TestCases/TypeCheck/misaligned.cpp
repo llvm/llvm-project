@@ -11,6 +11,8 @@
 
 // RUN: %clangxx -fsanitize=alignment -fno-sanitize-recover=alignment %s -O3 -o %t
 // RUN: not %run %t w1 2>&1 | FileCheck %s --check-prefix=CHECK-WILD
+// Compilation error make the test fails.
+// XFAIL: openbsd
 
 #include <new>
 

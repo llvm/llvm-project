@@ -222,8 +222,8 @@ uptr FindDynamicShadowStart() {
   uptr alignment = 8 * granularity;
   uptr left_padding = granularity;
   uptr space_size = kHighShadowEnd + left_padding;
-  uptr shadow_start =
-      FindAvailableMemoryRange(space_size, alignment, granularity, nullptr);
+  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
+                                               granularity, nullptr, nullptr);
   CHECK_NE((uptr)0, shadow_start);
   CHECK(IsAligned(shadow_start, alignment));
   return shadow_start;
@@ -264,11 +264,6 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
 
   // Determine the address of the page that is being accessed.
   uptr page = RoundDownTo(addr, page_size);
-
-  // Query the existing page.
-  MEMORY_BASIC_INFORMATION mem_info = {};
-  if (::VirtualQuery((LPVOID)page, &mem_info, sizeof(mem_info)) == 0)
-    return EXCEPTION_CONTINUE_SEARCH;
 
   // Commit the page.
   uptr result =

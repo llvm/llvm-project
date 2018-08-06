@@ -1,1 +1,1 @@
-void func2(int K) { if (K) {} }
+void func2(int K) {}

@@ -4,6 +4,8 @@
 // requires the compiler-rt runtime to be able to symbolize stack addresses.
 // REQUIRES: can-symbolize
 // UNSUPPORTED: android
+// Output differs on OpenBSD longer by displaying the values.
+// XFAIL: openbsd
 
 // Fails without any suppression.
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s

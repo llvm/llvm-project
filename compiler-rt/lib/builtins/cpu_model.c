@@ -416,9 +416,9 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = AMDFAM15H_BDVER3;
       break; // "bdver3"; 30h-3Fh: Steamroller
     }
-    if (Model >= 0x10 && Model <= 0x1f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || Model == 0x02) {
       *Subtype = AMDFAM15H_BDVER2;
-      break; // "bdver2"; 10h-1Fh: Piledriver
+      break; // "bdver2"; 02h, 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
       *Subtype = AMDFAM15H_BDVER1;

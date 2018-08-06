@@ -14,6 +14,7 @@
 #ifdef SANITIZER_DYNAMIC
 #include "sanitizer_common/sanitizer_win_weak_interception.h"
 #include "ubsan_flags.h"
+#include "ubsan_monitor.h"
 // Check if strong definitions for weak functions are present in the main
 // executable. If that is the case, override dll functions to point to strong
 // implementations.

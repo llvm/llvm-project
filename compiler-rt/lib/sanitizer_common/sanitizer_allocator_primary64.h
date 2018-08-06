@@ -72,14 +72,17 @@ class SizeClassAllocator64 {
   void Init(s32 release_to_os_interval_ms) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
-      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize, AllocatorName(),
-                                             kSpaceBeg));
+      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize,
+                                             PrimaryAllocatorName, kSpaceBeg));
     } else {
-      NonConstSpaceBeg = address_range.Init(TotalSpaceSize, AllocatorName());
+      NonConstSpaceBeg = address_range.Init(TotalSpaceSize,
+                                            PrimaryAllocatorName);
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
     MapWithCallbackOrDie(SpaceEnd(), AdditionalSize());
+    // Check that the RegionInfo array is aligned on the CacheLine size.
+    DCHECK_EQ(SpaceEnd() % kCacheLineSize, 0);
   }
 
   s32 ReleaseToOSIntervalMs() const {
@@ -115,8 +118,12 @@ class SizeClassAllocator64 {
     // Failure to allocate free array space while releasing memory is non
     // recoverable.
     if (UNLIKELY(!EnsureFreeArraySpace(region, region_beg,
-                                       new_num_freed_chunks)))
-      DieOnFailure::OnOOM();
+                                       new_num_freed_chunks))) {
+      Report("FATAL: Internal error: %s's allocator exhausted the free list "
+             "space for size class %zd (%zd bytes).\n", SanitizerToolName,
+             class_id, ClassIdToSize(class_id));
+      Die();
+    }
     for (uptr i = 0; i < n_chunks; i++)
       free_array[old_num_chunks + i] = chunks[i];
     region->num_freed_chunks = new_num_freed_chunks;
@@ -544,7 +551,6 @@ class SizeClassAllocator64 {
   friend class MemoryMapper;
 
   ReservedAddressRange address_range;
-  static const char *AllocatorName() { return "sanitizer_allocator"; }
 
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
   // FreeArray is the array of free-d chunks (stored as 4-byte offsets).
@@ -584,7 +590,7 @@ class SizeClassAllocator64 {
     u64 last_released_bytes;
   };
 
-  struct RegionInfo {
+  struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
     BlockingMutex mutex;
     uptr num_freed_chunks;  // Number of elements in the freearray.
     uptr mapped_free_array;  // Bytes mapped for freearray.
@@ -597,12 +603,11 @@ class SizeClassAllocator64 {
     Stats stats;
     ReleaseToOsInfo rtoi;
   };
-  COMPILER_CHECK(sizeof(RegionInfo) >= kCacheLineSize);
+  COMPILER_CHECK(sizeof(RegionInfo) % kCacheLineSize == 0);
 
   RegionInfo *GetRegionInfo(uptr class_id) const {
-    CHECK_LT(class_id, kNumClasses);
-    RegionInfo *regions =
-        reinterpret_cast<RegionInfo *>(SpaceBeg() + kSpaceSize);
+    DCHECK_LT(class_id, kNumClasses);
+    RegionInfo *regions = reinterpret_cast<RegionInfo *>(SpaceEnd());
     return &regions[class_id];
   }
 

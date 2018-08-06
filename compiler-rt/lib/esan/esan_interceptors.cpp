@@ -175,6 +175,15 @@ DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
   do {                                                                         \
   } while (false)
 
+#define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd,     \
+                                     off)                                      \
+  do {                                                                         \
+    if (!fixMmapAddr(&addr, sz, flags))                                        \
+      return (void *)-1;                                                       \
+    void *result = REAL(mmap)(addr, sz, prot, flags, fd, off);                 \
+    return (void *)checkMmapResult((uptr)result, sz);                          \
+  } while (false)
+
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 //===----------------------------------------------------------------------===//
@@ -232,6 +241,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
   } while (false)
 
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
+#include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 //===----------------------------------------------------------------------===//
 // Custom interceptors
@@ -306,57 +316,12 @@ INTERCEPTOR(int, unlink, char *path) {
   return REAL(unlink)(path);
 }
 
-INTERCEPTOR(int, puts, const char *s) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, puts, s);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, internal_strlen(s));
-  return REAL(puts)(s);
-}
-
 INTERCEPTOR(int, rmdir, char *path) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, rmdir, path);
   COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
   return REAL(rmdir)(path);
 }
-
-//===----------------------------------------------------------------------===//
-// Shadow-related interceptors
-//===----------------------------------------------------------------------===//
-
-// These are candidates for sharing with all sanitizers if shadow memory
-// support is also standardized.
-
-INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
-                 int fd, OFF_T off) {
-  if (UNLIKELY(REAL(mmap) == nullptr)) {
-    // With esan init during interceptor init and a static libc preventing
-    // our early-calloc from triggering, we can end up here before our
-    // REAL pointer is set up.
-    return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
-  }
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, mmap, addr, sz, prot, flags, fd, off);
-  if (!fixMmapAddr(&addr, sz, flags))
-    return (void *)-1;
-  void *result = REAL(mmap)(addr, sz, prot, flags, fd, off);
-  return (void *)checkMmapResult((uptr)result, sz);
-}
-
-#if SANITIZER_LINUX
-INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
-                 int fd, OFF64_T off) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, mmap64, addr, sz, prot, flags, fd, off);
-  if (!fixMmapAddr(&addr, sz, flags))
-    return (void *)-1;
-  void *result = REAL(mmap64)(addr, sz, prot, flags, fd, off);
-  return (void *)checkMmapResult((uptr)result, sz);
-}
-#define ESAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
-#else
-#define ESAN_MAYBE_INTERCEPT_MMAP64
-#endif
 
 //===----------------------------------------------------------------------===//
 // Signal-related interceptors
@@ -521,13 +486,7 @@ void initializeInterceptors() {
   INTERCEPT_FUNCTION(creat);
   ESAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(unlink);
-  INTERCEPT_FUNCTION(fread);
-  INTERCEPT_FUNCTION(fwrite);
-  INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(rmdir);
-
-  INTERCEPT_FUNCTION(mmap);
-  ESAN_MAYBE_INTERCEPT_MMAP64;
 
   ESAN_MAYBE_INTERCEPT_SIGNAL;
   ESAN_MAYBE_INTERCEPT_SIGACTION;

@@ -25,7 +25,7 @@ namespace __sanitizer {
 SuppressionContext::SuppressionContext(const char *suppression_types[],
                                        int suppression_types_num)
     : suppression_types_(suppression_types),
-      suppression_types_num_(suppression_types_num), suppressions_(1),
+      suppression_types_num_(suppression_types_num),
       can_parse_(true) {
   CHECK_LE(suppression_types_num_, kMaxSuppressionTypes);
   internal_memset(has_suppression_type_, 0, suppression_types_num_);

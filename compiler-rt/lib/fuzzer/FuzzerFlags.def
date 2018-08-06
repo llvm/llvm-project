@@ -17,7 +17,10 @@ FUZZER_FLAG_INT(runs, -1,
 FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
     "If 0, libFuzzer tries to guess a good value based on the corpus "
     "and reports it. ")
-FUZZER_FLAG_INT(experimental_len_control, 0, "experimental flag")
+FUZZER_FLAG_INT(len_control, 1000, "Try generating small inputs first, "
+  "then try larger inputs over time.  Specifies the rate at which the length "
+  "limit is increased (smaller == faster).  If 0, immediately try inputs with "
+  "size up to max_len.")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
@@ -42,7 +45,7 @@ FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "This flag can be used to minimize a corpus.")
 FUZZER_FLAG_STRING(merge_inner, "internal flag")
 FUZZER_FLAG_STRING(merge_control_file,
-                   "Specify a control file used for the merge proccess. "
+                   "Specify a control file used for the merge process. "
                    "If a merge process gets killed it tries to leave this file "
                    "in a state suitable for resuming the merge. "
                    "By default a temporary file will be used.")
@@ -107,6 +110,8 @@ FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
 FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
                                   " If 1, dump coverage information as a"
                                   " .sancov file at exit.")
+FUZZER_FLAG_INT(print_unstable_stats, 0, "Experimental."
+				  " If 1, print unstable statistics at exit.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
@@ -142,9 +147,12 @@ FUZZER_FLAG_STRING(exit_on_item, "Exit if an item with a given sha1 sum"
 FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
                 "after this one. Useful for fuzzers that need to do their own "
                 "argument parsing.")
+FUZZER_FLAG_STRING(focus_function, "Experimental. "
+     "Fuzzing will focus on inputs that trigger calls to this function")
 
-FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
-FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")
+FUZZER_DEPRECATED_FLAG(run_equivalence_server)
+FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
-FUZZER_FLAG_INT(use_clang_coverage, 0, "Experimental")
-FUZZER_FLAG_INT(use_feature_frequency, 0, "Experimental/internal")
+FUZZER_DEPRECATED_FLAG(use_clang_coverage)
+FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
+FUZZER_FLAG_INT(print_mutation_stats, 0, "Experimental")

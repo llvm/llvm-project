@@ -1,4 +1,5 @@
 REQUIRES: lsan
+
 RUN: %cpp_compiler %S/LeakTest.cpp -o %t-LeakTest
 RUN: %cpp_compiler %S/ThreadedLeakTest.cpp -o %t-ThreadedLeakTest
 RUN: %cpp_compiler %S/LeakTimeoutTest.cpp -o %t-LeakTimeoutTest

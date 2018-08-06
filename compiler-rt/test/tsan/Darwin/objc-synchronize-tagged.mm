@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc %macos_min_target_10_11
+// RUN: %clangxx_tsan %s -o %t -framework Foundation -fobjc-arc %darwin_min_target_with_full_runtime_arc_support
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>

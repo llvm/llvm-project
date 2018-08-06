@@ -1,0 +1,12 @@
+XFAIL: *
+
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-__gcov_flush-terminate.c
+RUN: test -f instrprof-gcov-__gcov_flush-terminate.gcno
+
+RUN: rm -f instrprof-gcov-__gcov_flush-terminate.gcda
+RUN: %expect_crash %run %t
+RUN: llvm-cov gcov instrprof-gcov-__gcov_flush-terminate.gcda
+RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-__gcov_flush-terminate.c.gcov %S/Inputs/instrprof-gcov-__gcov_flush-terminate.c.gcov

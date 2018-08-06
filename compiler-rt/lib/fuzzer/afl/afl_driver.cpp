@@ -69,20 +69,38 @@ statistics from the file. If that fails then the process will quit.
 #define LIBFUZZER_LINUX 1
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #elif __APPLE__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 1
 #define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
 #elif __NetBSD__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_NETBSD 1
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 0
+#elif __FreeBSD__
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 1
+#define LIBFUZZER_OPENBSD 0
+#elif __OpenBSD__
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_FREEBSD 0
+#define LIBFUZZER_OPENBSD 1
 #else
 #error "Support for your platform has not been implemented"
 #endif
 
 // Used to avoid repeating error checking boilerplate. If cond is false, a
-// fatal error has occured in the program. In this event print error_message
+// fatal error has occurred in the program. In this event print error_message
 // to stderr and abort(). Otherwise do nothing. Note that setting
 // AFL_DRIVER_STDERR_DUPLICATE_FILENAME may cause error_message to be appended
 // to the file as well, if the error occurs after the duplication is performed.
@@ -120,12 +138,24 @@ static const int kNumExtraStats = 2;
 static const char *kExtraStatsFormatString = "peak_rss_mb            : %u\n"
                                              "slowest_unit_time_sec  : %u\n";
 
+// Experimental feature to use afl_driver without AFL's deferred mode.
+// Needs to run before __afl_auto_init.
+__attribute__((constructor(0))) void __decide_deferred_forkserver(void) {
+  if (getenv("AFL_DRIVER_DONT_DEFER")) {
+    if (unsetenv("__AFL_DEFER_FORKSRV")) {
+      perror("Failed to unset __AFL_DEFER_FORKSRV");
+      abort();
+    }
+  }
+}
+
 // Copied from FuzzerUtil.cpp.
 size_t GetPeakRSSMb() {
   struct rusage usage;
   if (getrusage(RUSAGE_SELF, &usage))
     return 0;
-  if (LIBFUZZER_LINUX || LIBFUZZER_NETBSD) {
+  if (LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||
+      LIBFUZZER_OPENBSD) {
     // ru_maxrss is in KiB
     return usage.ru_maxrss >> 10;
   } else if (LIBFUZZER_APPLE) {
@@ -270,7 +300,7 @@ int ExecuteFilesOnyByOne(int argc, char **argv) {
     assert(in);
     LLVMFuzzerTestOneInput(reinterpret_cast<const uint8_t *>(bytes.data()),
                            bytes.size());
-    std::cout << "Execution successfull" << std::endl;
+    std::cout << "Execution successful" << std::endl;
   }
   return 0;
 }
@@ -296,7 +326,8 @@ int main(int argc, char **argv) {
   maybe_duplicate_stderr();
   maybe_initialize_extra_stats();
 
-  __afl_manual_init();
+  if (!getenv("AFL_DRIVER_DONT_DEFER"))
+    __afl_manual_init();
 
   int N = 1000;
   if (argc == 2 && argv[1][0] == '-')

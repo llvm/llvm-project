@@ -82,6 +82,10 @@ class Vector {
       return;
     }
     uptr old_size = Size();
+    if (size <= old_size) {
+      end_ = begin_ + size;
+      return;
+    }
     EnsureSize(size);
     if (old_size < size) {
       for (uptr i = old_size; i < size; i++)

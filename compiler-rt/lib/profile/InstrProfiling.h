@@ -106,6 +106,10 @@ void INSTR_PROF_VALUE_PROF_FUNC(
 #include "InstrProfData.inc"
     );
 
+void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
+                                            uint32_t CounterIndex,
+                                            uint64_t CounterValue);
+
 /*!
  * \brief Write instrumentation data to the current file.
  *
@@ -165,6 +169,14 @@ void __llvm_profile_initialize_file(void);
  * Side-effect: this API call will invoke malloc with dynamic memory allocation.
  */
 const char *__llvm_profile_get_path_prefix();
+
+/*!
+ * \brief Return filename (including path) of the profile data. Note that if the
+ * user calls __llvm_profile_set_filename later after invoking this interface,
+ * the actual file name may differ from what is returned here.
+ * Side-effect: this API call will invoke malloc with dynamic memory allocation.
+ */
+const char *__llvm_profile_get_filename();
 
 /*! \brief Get the magic token for the file format. */
 uint64_t __llvm_profile_get_magic(void);

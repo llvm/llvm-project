@@ -56,7 +56,7 @@ COMMON_FLAG(
     "Mention name of executable when reporting error and "
     "append executable name to logs (as in \"log_path.exe_name.pid\").")
 COMMON_FLAG(
-    bool, log_to_syslog, SANITIZER_ANDROID || SANITIZER_MAC,
+    bool, log_to_syslog, (bool)SANITIZER_ANDROID || (bool)SANITIZER_MAC,
     "Write all sanitizer output to syslog in addition to other means of "
     "logging.")
 COMMON_FLAG(
@@ -93,6 +93,8 @@ COMMON_FLAG(HandleSignalMode, handle_abort, kHandleSignalNo,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGABRT))
 COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGILL))
+COMMON_FLAG(HandleSignalMode, handle_sigtrap, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGTRAP))
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP
@@ -132,7 +134,8 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " This limit does not affect memory allocations other than"
             " malloc/new.")
 COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
-COMMON_FLAG(s32, allocator_release_to_os_interval_ms, 5000,
+COMMON_FLAG(s32, allocator_release_to_os_interval_ms,
+            ((bool)SANITIZER_FUCHSIA || (bool)SANITIZER_WINDOWS) ? -1 : 5000,
             "Only affects a 64-bit allocator. If set, tries to release unused "
             "memory to the OS, but not more often than this interval (in "
             "milliseconds). Negative values mean do not attempt to release "
@@ -222,7 +225,7 @@ COMMON_FLAG(bool, decorate_proc_maps, false, "If set, decorate sanitizer "
 COMMON_FLAG(int, exitcode, 1, "Override the program exit status if the tool "
                               "found an error")
 COMMON_FLAG(
-    bool, abort_on_error, SANITIZER_ANDROID || SANITIZER_MAC,
+    bool, abort_on_error, (bool)SANITIZER_ANDROID || (bool)SANITIZER_MAC,
     "If set, the tool calls abort() instead of _exit() after printing the "
     "error report.")
 COMMON_FLAG(bool, suppress_equal_pcs, true,
@@ -237,3 +240,6 @@ COMMON_FLAG(bool, dump_instruction_bytes, false,
 COMMON_FLAG(bool, dump_registers, true,
           "If true, dump values of CPU registers when SEGV happens. Only "
           "available on OS X for now.")
+COMMON_FLAG(bool, detect_write_exec, false,
+          "If true, triggers warning when writable-executable pages requests "
+          "are being made")

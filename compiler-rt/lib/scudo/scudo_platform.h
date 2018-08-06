@@ -43,13 +43,27 @@
 
 // Maximum number of TSDs that can be created for the Shared model.
 #ifndef SCUDO_SHARED_TSD_POOL_SIZE
-# define SCUDO_SHARED_TSD_POOL_SIZE 32U
+# if SANITIZER_ANDROID
+#  define SCUDO_SHARED_TSD_POOL_SIZE 2U
+# else
+#  define SCUDO_SHARED_TSD_POOL_SIZE 32U
+# endif  // SANITIZER_ANDROID
 #endif  // SCUDO_SHARED_TSD_POOL_SIZE
 
 // The following allows the public interface functions to be disabled.
 #ifndef SCUDO_CAN_USE_PUBLIC_INTERFACE
 # define SCUDO_CAN_USE_PUBLIC_INTERFACE 1
 #endif
+
+// Hooks in the allocation & deallocation paths can become a security concern if
+// implemented improperly, or if overwritten by an attacker. Use with caution.
+#ifndef SCUDO_CAN_USE_HOOKS
+# if SANITIZER_FUCHSIA
+#  define SCUDO_CAN_USE_HOOKS 1
+# else
+#  define SCUDO_CAN_USE_HOOKS 0
+# endif  // SANITIZER_FUCHSIA
+#endif  // SCUDO_CAN_USE_HOOKS
 
 namespace __scudo {
 

@@ -86,7 +86,7 @@ INLINE void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
     typename T::Type cur;
     for (;;) {
       cur = __sync_val_compare_and_swap(&a->val_dont_use, cmp, v);
-      if (cmp == v)
+      if (cur == cmp || cur == v)
         break;
       cmp = cur;
     }

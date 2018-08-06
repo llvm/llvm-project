@@ -3,8 +3,7 @@
 config.name_suffix = "@TSAN_TEST_CONFIG_SUFFIX@"
 config.tsan_lit_source_dir = "@TSAN_LIT_SOURCE_DIR@"
 config.has_libcxx = @TSAN_HAS_LIBCXX@
-config.ios = @TSAN_TEST_IOS_PYBOOL@
-config.iossim = @TSAN_TEST_IOSSIM_PYBOOL@
+config.apple_platform = "@TSAN_TEST_APPLE_PLATFORM@"
 config.target_cflags = "@TSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@TSAN_TEST_TARGET_ARCH@"
 

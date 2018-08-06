@@ -142,7 +142,8 @@ bool DTLSInDestruction(DTLS *dtls) {
 
 #else
 void DTLS_on_libc_memalign(void *ptr, uptr size) {}
-DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res) { return 0; }
+DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res,
+  unsigned long, unsigned long) { return 0; }
 DTLS *DTLS_Get() { return 0; }
 void DTLS_Destroy() {}
 bool DTLSInDestruction(DTLS *dtls) {

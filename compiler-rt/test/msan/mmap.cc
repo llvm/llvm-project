@@ -63,9 +63,13 @@ int main() {
   const size_t kMapSize = 0x1000000000ULL;
 #endif
   int success_count = 0;
+  int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+#if defined(MAP_NORESERVE)
+  flags |= MAP_NORESERVE;
+#endif
   while (true) {
     void *p = mmap(0, kMapSize, PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+                   flags, -1, 0);
     printf("%p\n", p);
     if (p == MAP_FAILED) {
       assert(errno == ENOMEM);

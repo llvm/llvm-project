@@ -152,7 +152,7 @@ uptr IsSuppressed(ReportType typ, const ReportLocation *loc, Suppression **sp) {
 }
 
 void PrintMatchedSuppressions() {
-  InternalMmapVector<Suppression *> matched(1);
+  InternalMmapVector<Suppression *> matched;
   CHECK(suppression_ctx);
   suppression_ctx->GetMatched(&matched);
   if (!matched.size())

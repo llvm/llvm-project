@@ -80,8 +80,7 @@ class TracePC {
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
-  void SetUseClangCoverage(bool UCC) { UseClangCoverage = UCC; }
-  void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
+  void SetUseValueProfileMask(uint32_t VPMask) { UseValueProfileMask = VPMask; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
   void SetPrintNewFuncs(size_t P) { NumPrintNewFuncs = P; }
   void UpdateObservedPCs();
@@ -93,8 +92,6 @@ class TracePC {
       memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
     ClearInlineCounters();
-    if (UseClangCoverage)
-      ClearClangCounters();
   }
 
   void ClearInlineCounters();
@@ -106,6 +103,10 @@ class TracePC {
 
   void PrintCoverage();
   void DumpCoverage();
+  void PrintUnstableStats();
+
+  template<class CallBack>
+  void IterateCoveredFunctions(CallBack CB);
 
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n, bool StopAtZero);
@@ -132,10 +133,22 @@ class TracePC {
       CB(PC);
   }
 
+  void SetFocusFunction(const std::string &FuncName);
+  bool ObservedFocusFunction();
+
+  void InitializeUnstableCounters();
+  void UpdateUnstableCounters();
+
 private:
+  // Value used to represent unstable edge.
+  static constexpr int16_t kUnstableCounter = -1;
+
+  // Uses 16-bit signed type to be able to accommodate any possible value from
+  // uint8_t counter and -1 constant as well.
+  int16_t UnstableCounters[kNumPCs];
+
   bool UseCounters = false;
-  bool UseValueProfile = false;
-  bool UseClangCoverage = false;
+  uint32_t UseValueProfileMask = false;
   bool DoPrintNewPCs = false;
   size_t NumPrintNewFuncs = 0;
 
@@ -164,6 +177,11 @@ private:
 
   Set<uintptr_t> ObservedPCs;
   Set<uintptr_t> ObservedFuncs;
+
+  template <class Callback>
+  void IterateInline8bitCounters(Callback CB) const;
+
+  std::pair<size_t, size_t> FocusFunction = {-1, -1};  // Module and PC IDs.
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack;
@@ -251,23 +269,11 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     }
   }
 
-  if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin()) {
-    auto P = ClangCountersBegin();
-    for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
-      if (auto Cnt = P[Idx]) {
-        if (UseCounters)
-          HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
-        else
-          HandleFeature(FirstFeature + Idx);
-      }
-    FirstFeature += NumClangCounters;
-  }
-
   ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), FirstFeature,
                      Handle8bitCounter);
   FirstFeature += (ExtraCountersEnd() - ExtraCountersBegin()) * 8;
 
-  if (UseValueProfile) {
+  if (UseValueProfileMask) {
     ValueProfileMap.ForEach([&](size_t Idx) {
       HandleFeature(FirstFeature + Idx);
     });

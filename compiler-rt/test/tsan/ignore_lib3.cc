@@ -1,6 +1,9 @@
-// RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -fno-sanitize=thread -shared -o %T/libignore_lib3.so
-// RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: %env_tsan_opts=suppressions='%s.supp' %deflake %run %t | FileCheck %s
+// RUN: rm -rf %t-dir
+// RUN: mkdir %t-dir
+
+// RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -fno-sanitize=thread -shared -o %t-dir/libignore_lib3.so
+// RUN: %clangxx_tsan -O1 %s -o %t-dir/executable
+// RUN: %env_tsan_opts=suppressions='%s.supp' %deflake %run %t-dir/executable | FileCheck %s
 
 // Tests that unloading of a library matched against called_from_lib suppression
 // causes program crash (this is not supported).

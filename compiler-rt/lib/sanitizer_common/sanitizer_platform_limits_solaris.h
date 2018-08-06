@@ -160,6 +160,18 @@ struct __sanitizer_group {
 
 typedef long __sanitizer_time_t;
 
+typedef long __sanitizer_suseconds_t;
+
+struct __sanitizer_timeval {
+  __sanitizer_time_t tv_sec;
+  __sanitizer_suseconds_t tv_usec;
+};
+
+struct __sanitizer_itimerval {
+  struct __sanitizer_timeval it_interval;
+  struct __sanitizer_timeval it_value;
+};
+
 struct __sanitizer_timeb {
   __sanitizer_time_t time;
   unsigned short millitm;

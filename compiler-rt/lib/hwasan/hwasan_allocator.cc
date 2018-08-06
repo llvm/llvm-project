@@ -1,4 +1,4 @@
-//===-- hwasan_allocator.cc --------------------------- ---------------------===//
+//===-- hwasan_allocator.cc ------------------------- ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,11 +15,13 @@
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "hwasan.h"
 #include "hwasan_allocator.h"
+#include "hwasan_mapping.h"
 #include "hwasan_thread.h"
 #include "hwasan_poisoning.h"
 
@@ -70,8 +72,8 @@ struct HwasanMapUnmapCallback {
   }
 };
 
-#if !defined(__aarch64__)
-#error unsupported platform
+#if !defined(__aarch64__) && !defined(__x86_64__)
+#error Unsupported platform
 #endif
 
 static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
@@ -100,6 +102,9 @@ static AllocatorCache fallback_allocator_cache;
 static SpinMutex fallback_mutex;
 static atomic_uint8_t hwasan_allocator_tagging_enabled;
 
+static const tag_t kFallbackAllocTag = 0xBB;
+static const tag_t kFallbackFreeTag = 0xBC;
+
 void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
@@ -123,9 +128,12 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
   size = RoundUpTo(size, kShadowAlignment);
 
   if (size > kMaxAllowedMallocSize) {
-    Report("WARNING: HWAddressSanitizer failed to allocate %p bytes\n",
-           (void *)size);
-    return Allocator::FailureHandler::OnBadRequest();
+    if (AllocatorMayReturnNull()) {
+      Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
+             size);
+      return nullptr;
+    }
+    ReportAllocationSizeTooBig(size, kMaxAllowedMallocSize, stack);
   }
   HwasanThread *t = GetCurrentThread();
   void *allocated;
@@ -137,6 +145,12 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
     AllocatorCache *cache = &fallback_allocator_cache;
     allocated = allocator.Allocate(cache, size, alignment);
   }
+  if (UNLIKELY(!allocated)) {
+    SetAllocatorOutOfMemory();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportOutOfMemory(size, stack);
+  }
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->state = CHUNK_ALLOCATED;
@@ -145,10 +159,11 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
   if (zeroise)
     internal_memset(allocated, 0, size);
 
-  void *user_ptr = (flags()->tag_in_malloc &&
-                    atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-                       ? (void *)TagMemoryAligned((uptr)allocated, size, 0xBB)
-                       : allocated;
+  void *user_ptr = allocated;
+  if (flags()->tag_in_malloc &&
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
+    user_ptr = (void *)TagMemoryAligned(
+        (uptr)user_ptr, size, t ? t->GenerateRandomTag() : kFallbackAllocTag);
 
   HWASAN_MALLOC_HOOK(user_ptr, size);
   return user_ptr;
@@ -166,10 +181,11 @@ void HwasanDeallocate(StackTrace *stack, void *user_ptr) {
   meta->free_context_id = StackDepotPut(*stack);
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
+  HwasanThread *t = GetCurrentThread();
   if (flags()->tag_in_free &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-    TagMemoryAligned((uptr)p, size, 0xBC);
-  HwasanThread *t = GetCurrentThread();
+    TagMemoryAligned((uptr)p, size,
+                     t ? t->GenerateRandomTag() : kFallbackFreeTag);
   if (t) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, p);
@@ -195,8 +211,12 @@ void *HwasanReallocate(StackTrace *stack, void *user_old_p, uptr new_size,
     meta->requested_size = new_size;
     if (!atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
       return user_old_p;
-    if (flags()->retag_in_realloc)
-      return (void *)TagMemoryAligned((uptr)old_p, new_size, 0xCC);
+    if (flags()->retag_in_realloc) {
+      HwasanThread *t = GetCurrentThread();
+      return (void *)TagMemoryAligned(
+          (uptr)old_p, new_size,
+          t ? t->GenerateRandomTag() : kFallbackAllocTag);
+    }
     if (new_size > old_size) {
       tag_t tag = GetTagFromPointer((uptr)user_old_p);
       TagMemoryAligned((uptr)old_p + old_size, new_size - old_size, tag);
@@ -210,6 +230,15 @@ void *HwasanReallocate(StackTrace *stack, void *user_old_p, uptr new_size,
     HwasanDeallocate(stack, old_p);
   }
   return new_p;
+}
+
+void *HwasanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportCallocOverflow(nmemb, size, stack);
+  }
+  return HwasanAllocate(stack, nmemb * size, sizeof(u64), true);
 }
 
 HwasanChunkView FindHeapChunkByAddress(uptr address) {
@@ -235,9 +264,7 @@ void *hwasan_malloc(uptr size, StackTrace *stack) {
 }
 
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack) {
-  if (UNLIKELY(CheckForCallocOverflow(size, nmemb)))
-    return SetErrnoOnNull(Allocator::FailureHandler::OnBadRequest());
-  return SetErrnoOnNull(HwasanAllocate(stack, nmemb * size, sizeof(u64), true));
+  return SetErrnoOnNull(HwasanCalloc(stack, nmemb, size));
 }
 
 void *hwasan_realloc(void *ptr, uptr size, StackTrace *stack) {
@@ -251,14 +278,17 @@ void *hwasan_realloc(void *ptr, uptr size, StackTrace *stack) {
 }
 
 void *hwasan_valloc(uptr size, StackTrace *stack) {
-  return SetErrnoOnNull(HwasanAllocate(stack, size, GetPageSizeCached(), false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, GetPageSizeCached(), false));
 }
 
 void *hwasan_pvalloc(uptr size, StackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
     errno = errno_ENOMEM;
-    return Allocator::FailureHandler::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportPvallocOverflow(size, stack);
   }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
@@ -268,7 +298,9 @@ void *hwasan_pvalloc(uptr size, StackTrace *stack) {
 void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
     errno = errno_EINVAL;
-    return Allocator::FailureHandler::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAlignedAllocAlignment(size, alignment, stack);
   }
   return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
 }
@@ -276,7 +308,9 @@ void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
 void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
-    return Allocator::FailureHandler::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAllocationAlignment(alignment, stack);
   }
   return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
 }
@@ -284,18 +318,20 @@ void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
 int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         StackTrace *stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
-    Allocator::FailureHandler::OnBadRequest();
-    return errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return errno_EINVAL;
+    ReportInvalidPosixMemalignAlignment(alignment, stack);
   }
   void *ptr = HwasanAllocate(stack, size, alignment, false);
   if (UNLIKELY(!ptr))
+    // OOM error is already taken care of by HwasanAllocate.
     return errno_ENOMEM;
   CHECK(IsAligned((uptr)ptr, alignment));
   *memptr = ptr;
   return 0;
 }
 
-} // namespace __hwasan
+}  // namespace __hwasan
 
 using namespace __hwasan;
 

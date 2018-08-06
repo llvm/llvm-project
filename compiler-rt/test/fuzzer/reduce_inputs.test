@@ -1,6 +1,5 @@
 # Test -reduce_inputs=1
 
-UNSUPPORTED: darwin
 RUN: rm -rf %t/C
 RUN: mkdir -p %t/C
 RUN: %cpp_compiler %S/ShrinkControlFlowSimpleTest.cpp -o %t-ShrinkControlFlowSimpleTest
@@ -13,5 +12,5 @@ RUN: %run %t-ShrinkControlFlowSimpleTest -runs=0 %t/C 2>&1 | FileCheck %s --chec
 COUNT: seed corpus: files: 4
 
 # a bit longer test
-RUN: %run %t-ShrinkControlFlowTest  -exit_on_item=0eb8e4ed029b774d80f2b66408203801cb982a60  -seed=1 -runs=1000000  2>&1 | FileCheck %s
+RUN: %run %t-ShrinkControlFlowTest  -exit_on_item=0eb8e4ed029b774d80f2b66408203801cb982a60  -seed=42 -runs=1000000  2>&1 | FileCheck %s
 

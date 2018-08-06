@@ -16,6 +16,7 @@
 #include "ubsan_diag.h"
 #include "ubsan_init.h"
 #include "ubsan_flags.h"
+#include "ubsan_monitor.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -339,6 +340,13 @@ Diag::~Diag() {
   ScopedReport::CheckLocked();
   Decorator Decor;
   InternalScopedString Buffer(1024);
+
+  // Prepare a report that a monitor process can inspect.
+  if (Level == DL_Error) {
+    RenderText(&Buffer, Message, Args);
+    UndefinedBehaviorReport UBR{ConvertTypeToString(ET), Loc, Buffer};
+    Buffer.clear();
+  }
 
   Buffer.append(Decor.Bold());
   RenderLocation(&Buffer, Loc);

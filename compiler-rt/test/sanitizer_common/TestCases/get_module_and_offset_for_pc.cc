@@ -1,5 +1,6 @@
-// RUN: %clangxx -DSHARED %s -shared -o %T/get_module_and_offset_for_pc.so -fPIC
-// RUN: %clangxx -DSO_DIR=\"%T\" -O0 %s -ldl -o %t
+// RUN: mkdir -p %t-dir
+// RUN: %clangxx -DSHARED %s -shared -o %t-dir/get_module_and_offset_for_pc.so -fPIC
+// RUN: %clangxx -DSO_DIR=\"%t-dir\" -O0 %s -ldl -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: i386-darwin

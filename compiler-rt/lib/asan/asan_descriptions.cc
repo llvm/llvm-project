@@ -20,23 +20,25 @@
 
 namespace __asan {
 
-// Return " (thread_name) " or an empty string if the name is empty.
-const char *ThreadNameWithParenthesis(AsanThreadContext *t, char buff[],
-                                      uptr buff_len) {
-  const char *name = t->name;
-  if (name[0] == '\0') return "";
-  buff[0] = 0;
-  internal_strncat(buff, " (", 3);
-  internal_strncat(buff, name, buff_len - 4);
-  internal_strncat(buff, ")", 2);
-  return buff;
+AsanThreadIdAndName::AsanThreadIdAndName(AsanThreadContext *t) {
+  Init(t->tid, t->name);
 }
 
-const char *ThreadNameWithParenthesis(u32 tid, char buff[], uptr buff_len) {
-  if (tid == kInvalidTid) return "";
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-  return ThreadNameWithParenthesis(t, buff, buff_len);
+AsanThreadIdAndName::AsanThreadIdAndName(u32 tid) {
+  if (tid == kInvalidTid) {
+    Init(tid, "");
+  } else {
+    asanThreadRegistry().CheckLocked();
+    AsanThreadContext *t = GetThreadContextByTidLocked(tid);
+    Init(tid, t->name);
+  }
+}
+
+void AsanThreadIdAndName::Init(u32 tid, const char *tname) {
+  int len = internal_snprintf(name, sizeof(name), "T%d", tid);
+  CHECK(((unsigned int)len) < sizeof(name));
+  if (tname[0] != '\0')
+    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", tname);
 }
 
 void DescribeThread(AsanThreadContext *context) {
@@ -47,18 +49,15 @@ void DescribeThread(AsanThreadContext *context) {
     return;
   }
   context->announced = true;
-  char tname[128];
   InternalScopedString str(1024);
-  str.append("Thread T%d%s", context->tid,
-             ThreadNameWithParenthesis(context->tid, tname, sizeof(tname)));
+  str.append("Thread %s", AsanThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
     str.append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
   }
-  str.append(
-      " created by T%d%s here:\n", context->parent_tid,
-      ThreadNameWithParenthesis(context->parent_tid, tname, sizeof(tname)));
+  str.append(" created by %s here:\n",
+             AsanThreadIdAndName(context->parent_tid).c_str());
   Printf("%s", str.data());
   StackDepotGet(context->stack_id).Print();
   // Recursively described parent thread if needed.
@@ -358,10 +357,9 @@ bool GlobalAddressDescription::PointsInsideTheSameVariable(
 
 void StackAddressDescription::Print() const {
   Decorator d;
-  char tname[128];
   Printf("%s", d.Location());
-  Printf("Address %p is located in stack of thread T%d%s", addr, tid,
-         ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("Address %p is located in stack of thread %s", addr,
+         AsanThreadIdAndName(tid).c_str());
 
   if (!frame_descr) {
     Printf("%s\n", d.Default());
@@ -380,7 +378,8 @@ void StackAddressDescription::Print() const {
   StackTrace alloca_stack(&frame_pc, 1);
   alloca_stack.Print();
 
-  InternalMmapVector<StackVarDescr> vars(16);
+  InternalMmapVector<StackVarDescr> vars;
+  vars.reserve(16);
   if (!ParseFrameDescription(frame_descr, &vars)) {
     Printf(
         "AddressSanitizer can't parse the stack frame "
@@ -402,7 +401,7 @@ void StackAddressDescription::Print() const {
   }
   Printf(
       "HINT: this may be a false positive if your program uses "
-      "some custom stack unwind mechanism or swapcontext\n");
+      "some custom stack unwind mechanism, swapcontext or vfork\n");
   if (SANITIZER_WINDOWS)
     Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
   else
@@ -418,26 +417,19 @@ void HeapAddressDescription::Print() const {
   AsanThreadContext *alloc_thread = GetThreadContextByTidLocked(alloc_tid);
   StackTrace alloc_stack = GetStackTraceFromId(alloc_stack_id);
 
-  char tname[128];
   Decorator d;
   AsanThreadContext *free_thread = nullptr;
   if (free_tid != kInvalidTid) {
     free_thread = GetThreadContextByTidLocked(free_tid);
-    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
-           free_thread->tid,
-           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
-           d.Default());
+    Printf("%sfreed by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(free_thread).c_str(), d.Default());
     StackTrace free_stack = GetStackTraceFromId(free_stack_id);
     free_stack.Print();
-    Printf("%spreviously allocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.Default());
+    Printf("%spreviously allocated by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   } else {
-    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.Default());
+    Printf("%sallocated by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   }
   alloc_stack.Print();
   DescribeThread(GetCurrentThread());

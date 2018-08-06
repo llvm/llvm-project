@@ -17,7 +17,10 @@
 # include <cpuid.h>
 #elif defined(__arm__) || defined(__aarch64__)
 # include "sanitizer_common/sanitizer_getauxval.h"
-# if SANITIZER_POSIX
+# if SANITIZER_FUCHSIA
+#  include <zircon/syscalls.h>
+#  include <zircon/features.h>
+# elif SANITIZER_POSIX
 #  include "sanitizer_common/sanitizer_posix.h"
 #  include <fcntl.h>
 # endif
@@ -38,12 +41,18 @@ extern int VSNPrintf(char *buff, int buff_length, const char *format,
 namespace __scudo {
 
 FORMAT(1, 2) void NORETURN dieWithMessage(const char *Format, ...) {
+  static const char ScudoError[] = "Scudo ERROR: ";
+  static constexpr uptr PrefixSize = sizeof(ScudoError) - 1;
   // Our messages are tiny, 256 characters is more than enough.
   char Message[256];
   va_list Args;
   va_start(Args, Format);
-  VSNPrintf(Message, sizeof(Message), Format, Args);
+  internal_memcpy(Message, ScudoError, PrefixSize);
+  VSNPrintf(Message + PrefixSize, sizeof(Message) - PrefixSize, Format, Args);
   va_end(Args);
+  LogMessageOnPrintf(Message);
+  if (common_flags()->abort_on_error)
+    SetAbortMessage(Message);
   RawWrite(Message);
   Die();
 }
@@ -107,9 +116,17 @@ INLINE bool areBionicGlobalsInitialized() {
 }
 
 bool hasHardwareCRC32() {
+#if SANITIZER_FUCHSIA
+  u32 HWCap;
+  zx_status_t Status = zx_system_get_features(ZX_FEATURE_KIND_CPU, &HWCap);
+  if (Status != ZX_OK || (HWCap & ZX_ARM64_FEATURE_ISA_CRC32) == 0)
+    return false;
+  return true;
+#else
   if (&getauxval && areBionicGlobalsInitialized())
     return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
   return hasHardwareCRC32ARMPosix();
+#endif  // SANITIZER_FUCHSIA
 }
 #else
 bool hasHardwareCRC32() { return false; }

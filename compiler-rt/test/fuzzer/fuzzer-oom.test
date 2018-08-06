@@ -1,3 +1,4 @@
+UNSUPPORTED: aarch64
 RUN: %cpp_compiler %S/OutOfMemoryTest.cpp -o %t-OutOfMemoryTest
 RUN: %cpp_compiler %S/OutOfMemorySingleLargeMallocTest.cpp -o %t-OutOfMemorySingleLargeMallocTest
 RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest

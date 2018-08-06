@@ -43,4 +43,9 @@ void VarSizeStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
     trace_buffer[cnt] = extra_top_pc;
 }
 
+void VarSizeStackTrace::ReverseOrder() {
+  for (u32 i = 0; i < (size >> 1); i++)
+    Swap(trace_buffer[i], trace_buffer[size - 1 - i]);
+}
+
 }  // namespace __tsan

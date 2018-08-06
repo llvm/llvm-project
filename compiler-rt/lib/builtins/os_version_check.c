@@ -16,8 +16,8 @@
 #ifdef __APPLE__
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <dispatch/dispatch.h>
 #include <TargetConditionals.h>
+#include <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,6 +28,26 @@
 static int32_t GlobalMajor, GlobalMinor, GlobalSubminor;
 static dispatch_once_t DispatchOnceCounter;
 
+typedef CFDataRef (*CFDataCreateWithBytesNoCopyFuncTy)(CFAllocatorRef,
+                                                       const UInt8 *, CFIndex,
+                                                       CFAllocatorRef);
+typedef CFPropertyListRef (*CFPropertyListCreateWithDataFuncTy)(
+    CFAllocatorRef, CFDataRef, CFOptionFlags, CFPropertyListFormat *,
+    CFErrorRef *);
+typedef CFPropertyListRef (*CFPropertyListCreateFromXMLDataFuncTy)(
+    CFAllocatorRef, CFDataRef, CFOptionFlags, CFStringRef *);
+typedef CFStringRef (*CFStringCreateWithCStringNoCopyFuncTy)(CFAllocatorRef,
+                                                             const char *,
+                                                             CFStringEncoding,
+                                                             CFAllocatorRef);
+typedef const void *(*CFDictionaryGetValueFuncTy)(CFDictionaryRef,
+                                                  const void *);
+typedef CFTypeID (*CFGetTypeIDFuncTy)(CFTypeRef);
+typedef CFTypeID (*CFStringGetTypeIDFuncTy)(void);
+typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
+                                            CFStringEncoding);
+typedef void (*CFReleaseFuncTy)(CFTypeRef);
+
 /* Find and parse the SystemVersion.plist file. */
 static void parseSystemVersionPList(void *Unused) {
   (void)Unused;
@@ -37,50 +57,49 @@ static void parseSystemVersionPList(void *Unused) {
     return;
   const CFAllocatorRef kCFAllocatorNull =
       *(const CFAllocatorRef *)NullAllocator;
-  typeof(CFDataCreateWithBytesNoCopy) *CFDataCreateWithBytesNoCopyFunc =
-      (typeof(CFDataCreateWithBytesNoCopy) *)dlsym(
-          RTLD_DEFAULT, "CFDataCreateWithBytesNoCopy");
+  CFDataCreateWithBytesNoCopyFuncTy CFDataCreateWithBytesNoCopyFunc =
+      (CFDataCreateWithBytesNoCopyFuncTy)dlsym(RTLD_DEFAULT,
+                                               "CFDataCreateWithBytesNoCopy");
   if (!CFDataCreateWithBytesNoCopyFunc)
     return;
-  typeof(CFPropertyListCreateWithData) *CFPropertyListCreateWithDataFunc =
-      (typeof(CFPropertyListCreateWithData) *)dlsym(
+  CFPropertyListCreateWithDataFuncTy CFPropertyListCreateWithDataFunc =
+      (CFPropertyListCreateWithDataFuncTy)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateWithData");
-  /* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
-   * will be NULL on earlier OS versions. */
+/* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
+ * will be NULL on earlier OS versions. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  typeof(CFPropertyListCreateFromXMLData) *CFPropertyListCreateFromXMLDataFunc =
-      (typeof(CFPropertyListCreateFromXMLData) *)dlsym(
+  CFPropertyListCreateFromXMLDataFuncTy CFPropertyListCreateFromXMLDataFunc =
+      (CFPropertyListCreateFromXMLDataFuncTy)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateFromXMLData");
 #pragma clang diagnostic pop
   /* CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
    * might be NULL in future OS versions. */
   if (!CFPropertyListCreateWithDataFunc && !CFPropertyListCreateFromXMLDataFunc)
     return;
-  typeof(CFStringCreateWithCStringNoCopy) *CFStringCreateWithCStringNoCopyFunc =
-      (typeof(CFStringCreateWithCStringNoCopy) *)dlsym(
+  CFStringCreateWithCStringNoCopyFuncTy CFStringCreateWithCStringNoCopyFunc =
+      (CFStringCreateWithCStringNoCopyFuncTy)dlsym(
           RTLD_DEFAULT, "CFStringCreateWithCStringNoCopy");
   if (!CFStringCreateWithCStringNoCopyFunc)
     return;
-  typeof(CFDictionaryGetValue) *CFDictionaryGetValueFunc =
-      (typeof(CFDictionaryGetValue) *)dlsym(RTLD_DEFAULT,
-                                            "CFDictionaryGetValue");
+  CFDictionaryGetValueFuncTy CFDictionaryGetValueFunc =
+      (CFDictionaryGetValueFuncTy)dlsym(RTLD_DEFAULT, "CFDictionaryGetValue");
   if (!CFDictionaryGetValueFunc)
     return;
-  typeof(CFGetTypeID) *CFGetTypeIDFunc =
-      (typeof(CFGetTypeID) *)dlsym(RTLD_DEFAULT, "CFGetTypeID");
+  CFGetTypeIDFuncTy CFGetTypeIDFunc =
+      (CFGetTypeIDFuncTy)dlsym(RTLD_DEFAULT, "CFGetTypeID");
   if (!CFGetTypeIDFunc)
     return;
-  typeof(CFStringGetTypeID) *CFStringGetTypeIDFunc =
-      (typeof(CFStringGetTypeID) *)dlsym(RTLD_DEFAULT, "CFStringGetTypeID");
+  CFStringGetTypeIDFuncTy CFStringGetTypeIDFunc =
+      (CFStringGetTypeIDFuncTy)dlsym(RTLD_DEFAULT, "CFStringGetTypeID");
   if (!CFStringGetTypeIDFunc)
     return;
-  typeof(CFStringGetCString) *CFStringGetCStringFunc =
-      (typeof(CFStringGetCString) *)dlsym(RTLD_DEFAULT, "CFStringGetCString");
+  CFStringGetCStringFuncTy CFStringGetCStringFunc =
+      (CFStringGetCStringFuncTy)dlsym(RTLD_DEFAULT, "CFStringGetCString");
   if (!CFStringGetCStringFunc)
     return;
-  typeof(CFRelease) *CFReleaseFunc =
-      (typeof(CFRelease) *)dlsym(RTLD_DEFAULT, "CFRelease");
+  CFReleaseFuncTy CFReleaseFunc =
+      (CFReleaseFuncTy)dlsym(RTLD_DEFAULT, "CFRelease");
   if (!CFReleaseFunc)
     return;
 
@@ -163,10 +182,14 @@ int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   /* Populate the global version variables, if they haven't already. */
   dispatch_once_f(&DispatchOnceCounter, NULL, parseSystemVersionPList);
 
-  if (Major < GlobalMajor) return 1;
-  if (Major > GlobalMajor) return 0;
-  if (Minor < GlobalMinor) return 1;
-  if (Minor > GlobalMinor) return 0;
+  if (Major < GlobalMajor)
+    return 1;
+  if (Major > GlobalMajor)
+    return 0;
+  if (Minor < GlobalMinor)
+    return 1;
+  if (Minor > GlobalMinor)
+    return 0;
   return Subminor <= GlobalSubminor;
 }
 
