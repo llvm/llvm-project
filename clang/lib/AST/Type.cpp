@@ -4032,17 +4032,26 @@ CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
 }
 
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
-                                    const llvm::APSInt &Val, unsigned Scale,
-                                    unsigned Radix) {
-  llvm::APSInt ScaleVal = llvm::APSInt::getUnsigned(1ULL << Scale);
-  llvm::APSInt IntPart = Val / ScaleVal;
-  llvm::APSInt FractPart = Val % ScaleVal;
-  llvm::APSInt RadixInt = llvm::APSInt::getUnsigned(Radix);
+                                    llvm::APSInt Val, unsigned Scale) {
+  if (Val.isSigned() && Val.isNegative() && Val != -Val) {
+    Val = -Val;
+    Str.push_back('-');
+  }
 
-  IntPart.toString(Str, Radix);
+  llvm::APSInt IntPart = Val >> Scale;
+
+  // Add 4 digits to hold the value after multiplying 10 (the radix)
+  unsigned Width = Val.getBitWidth() + 4;
+  llvm::APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
+  llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
+  llvm::APInt RadixInt = llvm::APInt(Width, 10);
+
+  IntPart.toString(Str, /*radix=*/10);
   Str.push_back('.');
   do {
-    (FractPart * RadixInt / ScaleVal).toString(Str, Radix);
-    FractPart = (FractPart * RadixInt) % ScaleVal;
-  } while (FractPart.getExtValue());
+    (FractPart * RadixInt)
+        .lshr(Scale)
+        .toString(Str, /*radix=*/10, Val.isSigned());
+    FractPart = (FractPart * RadixInt) & FractPartMask;
+  } while (FractPart != 0);
 }

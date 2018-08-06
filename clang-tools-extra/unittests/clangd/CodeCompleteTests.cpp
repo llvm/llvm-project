@@ -893,6 +893,10 @@ public:
   void lookup(const LookupRequest &,
               llvm::function_ref<void(const Symbol &)>) const override {}
 
+  void findOccurrences(const OccurrencesRequest &Req,
+                       llvm::function_ref<void(const SymbolOccurrence &)>
+                           Callback) const override {}
+
   const std::vector<FuzzyFindRequest> allRequests() const { return Requests; }
 
 private:

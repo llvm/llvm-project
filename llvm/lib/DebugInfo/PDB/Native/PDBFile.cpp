@@ -401,7 +401,9 @@ uint32_t PDBFile::getPointerSize() {
   return 4;
 }
 
-bool PDBFile::hasPDBDbiStream() const { return StreamDBI < getNumStreams(); }
+bool PDBFile::hasPDBDbiStream() const {
+  return StreamDBI < getNumStreams() && getStreamByteSize(StreamDBI) > 0;
+}
 
 bool PDBFile::hasPDBGlobalsStream() {
   auto DbiS = getPDBDbiStream();

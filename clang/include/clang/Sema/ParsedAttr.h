@@ -102,7 +102,7 @@ using ArgsVector = llvm::SmallVector<ArgsUnion, 12U>;
 /// 3: __attribute__(( format(printf, 1, 2) )). ParmName/Args/NumArgs all used.
 /// 4: __attribute__(( aligned(16) )). ParmName is unused, Args/Num used.
 ///
-class ParsedAttr { // TODO: This should really be called ParsedAttribute
+class ParsedAttr {
 public:
   /// The style used to specify an attribute.
   enum Syntax {

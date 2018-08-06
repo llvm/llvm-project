@@ -56,3 +56,8 @@
 // CHECK_MINGW_UBUNTU_POSIX_TREE: "{{.*}}/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.3-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
 // CHECK_MINGW_UBUNTU_POSIX_TREE: "{{.*}}/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.3-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_MINGW_UBUNTU_POSIX_TREE: "{{.*}}/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
+
+// RUN: %clang -target i686-windows-gnu -E -### %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_NO_UNICODE %s
+// RUN: %clang -target i686-windows-gnu -E -### %s -municode 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UNICODE %s
+// CHECK_MINGW_NO_UNICODE-NOT: "-DUNICODE"
+// CHECK_MINGW_UNICODE: "-DUNICODE"
