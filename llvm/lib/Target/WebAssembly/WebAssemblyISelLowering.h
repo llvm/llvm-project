@@ -44,6 +44,7 @@ class WebAssemblyTargetLowering final : public TargetLowering {
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
 
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
   FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
                            const TargetLibraryInfo *LibInfo) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;

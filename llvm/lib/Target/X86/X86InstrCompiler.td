@@ -1006,16 +1006,22 @@ def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
 // DAG Pattern Matching Rules
 //===----------------------------------------------------------------------===//
 
+def nonvolatile_store : PatFrag<(ops node:$val, node:$ptr),
+                                 (store node:$val, node:$ptr), [{
+  return !cast<StoreSDNode>(N)->isVolatile();
+}]>;
+
+
 // Use AND/OR to store 0/-1 in memory when optimizing for minsize. This saves
 // binary size compared to a regular MOV, but it introduces an unnecessary
 // load, so is not suitable for regular or optsize functions.
 let Predicates = [OptForMinSize] in {
-def : Pat<(store (i16 0), addr:$dst), (AND16mi8 addr:$dst, 0)>;
-def : Pat<(store (i32 0), addr:$dst), (AND32mi8 addr:$dst, 0)>;
-def : Pat<(store (i64 0), addr:$dst), (AND64mi8 addr:$dst, 0)>;
-def : Pat<(store (i16 -1), addr:$dst), (OR16mi8 addr:$dst, -1)>;
-def : Pat<(store (i32 -1), addr:$dst), (OR32mi8 addr:$dst, -1)>;
-def : Pat<(store (i64 -1), addr:$dst), (OR64mi8 addr:$dst, -1)>;
+def : Pat<(nonvolatile_store (i16 0), addr:$dst), (AND16mi8 addr:$dst, 0)>;
+def : Pat<(nonvolatile_store (i32 0), addr:$dst), (AND32mi8 addr:$dst, 0)>;
+def : Pat<(nonvolatile_store (i64 0), addr:$dst), (AND64mi8 addr:$dst, 0)>;
+def : Pat<(nonvolatile_store (i16 -1), addr:$dst), (OR16mi8 addr:$dst, -1)>;
+def : Pat<(nonvolatile_store (i32 -1), addr:$dst), (OR32mi8 addr:$dst, -1)>;
+def : Pat<(nonvolatile_store (i64 -1), addr:$dst), (OR64mi8 addr:$dst, -1)>;
 }
 
 // In kernel code model, we can get the address of a label

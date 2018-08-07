@@ -461,7 +461,9 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   Section.Content.writeAsBinary(OS);
   for (auto i = Section.Content.binary_size(); i < Section.Size; ++i)
     OS.write(0);
-  if (Section.Type == llvm::ELF::SHT_RELR)
+  if (Section.EntSize)
+    SHeader.sh_entsize = *Section.EntSize;
+  else if (Section.Type == llvm::ELF::SHT_RELR)
     SHeader.sh_entsize = sizeof(Elf_Relr);
   else if (Section.Type == llvm::ELF::SHT_DYNAMIC)
     SHeader.sh_entsize = sizeof(Elf_Dyn);

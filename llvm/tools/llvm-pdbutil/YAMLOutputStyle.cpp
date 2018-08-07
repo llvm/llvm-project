@@ -191,6 +191,9 @@ Error YAMLOutputStyle::dumpDbiStream() {
   if (!opts::pdb2yaml::DbiStream)
     return Error::success();
 
+  if (!File.hasPDBDbiStream())
+    return Error::success();
+
   auto DbiS = File.getPDBDbiStream();
   if (!DbiS)
     return DbiS.takeError();

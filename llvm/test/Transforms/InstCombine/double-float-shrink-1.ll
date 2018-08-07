@@ -344,11 +344,9 @@ define double @logb_test2(float %f)   {
   ret double %call
 }
 
-; FIXME: Miscompile - we dropped the 2nd argument!
-
 define float @pow_test1(float %f, float %g)   {
 ; CHECK-LABEL: @pow_test1(
-; CHECK-NEXT:    [[POWF:%.*]] = call fast float @powf(float [[F:%.*]])
+; CHECK-NEXT:    [[POWF:%.*]] = call fast float @powf(float %f, float %g)
 ; CHECK-NEXT:    ret float [[POWF]]
 ;
   %df = fpext float %f to double
@@ -358,14 +356,10 @@ define float @pow_test1(float %f, float %g)   {
   ret float %fr
 }
 
-; TODO: This should shrink?
-
 define double @pow_test2(float %f, float %g) {
 ; CHECK-LABEL: @pow_test2(
-; CHECK-NEXT:    [[DF:%.*]] = fpext float [[F:%.*]] to double
-; CHECK-NEXT:    [[DG:%.*]] = fpext float [[G:%.*]] to double
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @pow(double [[DF]], double [[DG]])
-; CHECK-NEXT:    ret double [[CALL]]
+; CHECK:         [[POW:%.*]] = call fast double @pow(double %df, double %dg)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %df = fpext float %f to double
   %dg = fpext float %g to double

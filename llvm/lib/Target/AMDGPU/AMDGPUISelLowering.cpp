@@ -4336,7 +4336,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     // one?
     return false;
   }
-  case AMDGPUISD::FMUL_LEGACY: {
+  case AMDGPUISD::FMUL_LEGACY:
+  case AMDGPUISD::CVT_PKRTZ_F16_F32: {
     if (SNaN)
       return true;
     return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
@@ -4369,7 +4370,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     // TODO: Need is known positive check.
     return false;
   }
-  case AMDGPUISD::LDEXP: {
+  case AMDGPUISD::LDEXP:
+  case AMDGPUISD::FRACT: {
     if (SNaN)
       return true;
     return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
@@ -4394,6 +4396,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
       return true;
 
     case Intrinsic::amdgcn_frexp_mant:
+      if (SNaN)
+        return true;
       return DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
     default:
       return false;

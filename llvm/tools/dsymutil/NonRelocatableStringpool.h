@@ -53,7 +53,9 @@ public:
 
   uint64_t getSize() { return CurrentEndOffset; }
 
-  std::vector<DwarfStringPoolEntryRef> getEntries() const;
+  /// Return the list of strings to be emitted. This does not contain the
+  /// strings which were added via internString only.
+  std::vector<DwarfStringPoolEntryRef> getEntriesForEmission() const;
 
 private:
   MapTy Strings;
