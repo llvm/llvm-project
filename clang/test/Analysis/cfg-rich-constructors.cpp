@@ -963,3 +963,35 @@ void testCopyElisionWhenCopyConstructorHasExtraArguments() {
   C c = C();
 }
 } // namespace copy_elision_with_extra_arguments
+
+
+namespace operators {
+class C {
+public:
+  C(int);
+  C &operator+(C Other);
+};
+
+// FIXME: Find construction context for the this-argument of the operator.
+// CHECK: void testOperators()
+// CHECK:        [B1]
+// CHECK-NEXT:     1: operator+
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class operators::C &(*)(class o
+// CHECK-NEXT:     3: 1
+// CHECK-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], class operators::C)
+// CHECK-NEXT:     5: operators::C([B1.4]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CHECK-NEXT:     6: [B1.5]
+// CHECK-NEXT:     7: 2
+// CXX11-ELIDE-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10], [B1.11], class operators::C)
+// CXX11-NOELIDE-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10], class operators::C)
+// CXX11-NEXT:     9: operators::C([B1.8]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CXX11-NEXT:    10: [B1.9]
+// CXX11-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12]+1, class operators::C)
+// CXX11-NEXT:    12: [B1.6] + [B1.11] (OperatorCall)
+// CXX17-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10]+1, class operators::C)
+// CXX17-NEXT:     9: operators::C([B1.8]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CXX17-NEXT:    10: [B1.6] + [B1.9] (OperatorCall)
+void testOperators() {
+  C(1) + C(2);
+}
+} // namespace operators

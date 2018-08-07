@@ -623,9 +623,16 @@ public:
 };
 
 class ArgumentConstructionContext : public ConstructionContext {
-  const Expr *CE; // The call of which the context is an argument.
-  unsigned Index; // Which argument we're constructing.
-  const CXXBindTemporaryExpr *BTE; // Whether the object needs to be destroyed.
+  // The call of which the context is an argument.
+  const Expr *CE;
+
+  // Which argument we're constructing. Note that when numbering between
+  // arguments and parameters is inconsistent (eg., operator calls),
+  // this is the index of the argument, not of the parameter.
+  unsigned Index;
+
+  // Whether the object needs to be destroyed.
+  const CXXBindTemporaryExpr *BTE;
 
   friend class ConstructionContext; // Allows to create<>() itself.
 
