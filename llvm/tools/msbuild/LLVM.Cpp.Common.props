@@ -37,8 +37,9 @@
 
   <!-- Find an installed LLVM and set up our paths. -->
   <PropertyGroup>
-    <LLVMInstallDir>$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\LLVM@LLVM)</LLVMInstallDir>
-    <LLVMInstallDir Condition="'$(LLVMInstallDir)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\LLVM@LLVM)</LLVMInstallDir>
+    <LLVMInstallDir>$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\LLVM\LLVM)</LLVMInstallDir>
+    <LLVMInstallDir Condition="'$(LLVMInstallDir)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\LLVM\LLVM)</LLVMInstallDir>
+    <LLVMInstallDir Condition="'$(LLVMInstallDir)' != ''">$(LLVMInstallDir)\</LLVMInstallDir>
     <ClangClExecutable>$(LLVMInstallDir)bin\clang-cl.exe</ClangClExecutable>
   </PropertyGroup>
 

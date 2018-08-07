@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"

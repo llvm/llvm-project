@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Scalar.h"
+#include "lldb/Utility/Scalar.h"
 
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -38,7 +38,7 @@ static Scalar::Type PromoteToMaxType(
     const Scalar *&promoted_rhs_ptr  // Pointer to the resulting possibly
                                      // promoted value of rhs (at most one of
                                      // lhs/rhs will get promoted)
-    ) {
+) {
   Scalar result;
   // Initialize the promoted values for both the right and left hand side
   // values to be the objects themselves. If no promotion is needed (both right

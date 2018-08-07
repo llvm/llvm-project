@@ -18,8 +18,8 @@
 
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/Core/State.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/State.h"
 
 // Project includes
 #include "FreeBSDThread.h"
@@ -42,7 +42,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
@@ -50,6 +49,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/State.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace lldb;

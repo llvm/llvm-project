@@ -399,21 +399,21 @@ static void set_invocation(CompilerInstance *Clang,
 /* Create an interface generator for the selected language and
  * then use it to generate the interface.
  */
-static void generate(MyASTConsumer &consumer)
+static void generate(MyASTConsumer &consumer, SourceManager &SM)
 {
 	generator *gen;
 
 	if (Language.compare("python") == 0) {
-		gen = new python_generator(consumer.exported_types,
+		gen = new python_generator(SM, consumer.exported_types,
 			consumer.exported_functions, consumer.functions);
 	} else if (Language.compare("cpp") == 0) {
-		gen = new cpp_generator(consumer.exported_types,
+		gen = new cpp_generator(SM, consumer.exported_types,
 			consumer.exported_functions, consumer.functions);
 	} else if (Language.compare("cpp-checked") == 0) {
-		gen = new cpp_generator(consumer.exported_types,
+		gen = new cpp_generator(SM, consumer.exported_types,
 			consumer.exported_functions, consumer.functions, true);
 	} else if (Language.compare("cpp-checked-conversion") == 0) {
-		gen = new cpp_conversion_generator(consumer.exported_types,
+		gen = new cpp_conversion_generator(SM, consumer.exported_types,
 			consumer.exported_functions, consumer.functions);
 	} else {
 		cerr << "Language '" << Language << "' not recognized." << endl
@@ -476,7 +476,7 @@ int main(int argc, char *argv[])
 	ParseAST(*sema);
 	Diags.getClient()->EndSourceFile();
 
-	generate(consumer);
+	generate(consumer, Clang->getSourceManager());
 
 	delete sema;
 	delete Clang;

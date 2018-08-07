@@ -514,10 +514,9 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     // Reproduce that behavior for now (there is corresponding code in
     // transferSymbol).
     OutFile << '\0';
-    std::vector<DwarfStringPoolEntryRef> Strings = NewStrings.getEntries();
+    std::vector<DwarfStringPoolEntryRef> Strings =
+        NewStrings.getEntriesForEmission();
     for (auto EntryRef : Strings) {
-      if (EntryRef.getIndex() == -1U)
-        break;
       OutFile.write(EntryRef.getString().data(),
                     EntryRef.getString().size() + 1);
     }

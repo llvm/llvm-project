@@ -25151,8 +25151,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   // VLX the vector should be widened to 512 bit
   unsigned NumEltsInWideVec = 512 / VT.getScalarSizeInBits();
   MVT WideDataVT = MVT::getVectorVT(ScalarVT, NumEltsInWideVec);
-  SDValue Src0 = N->getSrc0();
-  Src0 = ExtendToType(Src0, WideDataVT, DAG);
+  SDValue PassThru = ExtendToType(N->getPassThru(), WideDataVT, DAG);
 
   // Mask element has to be i1.
   assert(Mask.getSimpleValueType().getScalarType() == MVT::i1 &&
@@ -25162,7 +25161,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
 
   Mask = ExtendToType(Mask, WideMaskVT, DAG, true);
   SDValue NewLoad = DAG.getMaskedLoad(WideDataVT, dl, N->getChain(),
-                                      N->getBasePtr(), Mask, Src0,
+                                      N->getBasePtr(), Mask, PassThru,
                                       N->getMemoryVT(), N->getMemOperand(),
                                       N->getExtensionType(),
                                       N->isExpandingLoad());
@@ -25225,7 +25224,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
   SDValue Index = N->getIndex();
   SDValue Mask = N->getMask();
-  SDValue Src0 = N->getValue();
+  SDValue PassThru = N->getPassThru();
   MVT IndexVT = Index.getSimpleValueType();
   MVT MaskVT = Mask.getSimpleValueType();
 
@@ -25250,12 +25249,12 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(), NumElts);
     MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
 
-    Src0 = ExtendToType(Src0, VT, DAG);
+    PassThru = ExtendToType(PassThru, VT, DAG);
     Index = ExtendToType(Index, IndexVT, DAG);
     Mask = ExtendToType(Mask, MaskVT, DAG, true);
   }
 
-  SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index,
+  SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     N->getScale() };
   SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
       DAG.getVTList(VT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
@@ -25845,9 +25844,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         return;
       SDValue Mask = Gather->getMask();
       assert(Mask.getValueType() == MVT::v2i1 && "Unexpected mask type");
-      SDValue Src0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                                 Gather->getValue(),
-                                 DAG.getUNDEF(MVT::v2f32));
+      SDValue PassThru = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
+                                     Gather->getPassThru(),
+                                     DAG.getUNDEF(MVT::v2f32));
       if (!Subtarget.hasVLX()) {
         // We need to widen the mask, but the instruction will only use 2
         // of its elements. So we can use undef.
@@ -25855,8 +25854,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                            DAG.getUNDEF(MVT::v2i1));
         Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
       }
-      SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                        Index, Gather->getScale() };
+      SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
+                        Gather->getBasePtr(), Index, Gather->getScale() };
       SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
         DAG.getVTList(MVT::v4f32, Mask.getValueType(), MVT::Other), Ops, dl,
         Gather->getMemoryVT(), Gather->getMemOperand());
@@ -25869,9 +25868,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Index = Gather->getIndex();
       SDValue Mask = Gather->getMask();
       assert(Mask.getValueType() == MVT::v2i1 && "Unexpected mask type");
-      SDValue Src0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32,
-                                 Gather->getValue(),
-                                 DAG.getUNDEF(MVT::v2i32));
+      SDValue PassThru = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32,
+                                     Gather->getPassThru(),
+                                     DAG.getUNDEF(MVT::v2i32));
       // If the index is v2i64 we can use it directly.
       if (Index.getValueType() == MVT::v2i64 &&
           (Subtarget.hasVLX() || !Subtarget.hasAVX512())) {
@@ -25882,8 +25881,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                              DAG.getUNDEF(MVT::v2i1));
           Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
         }
-        SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                          Index, Gather->getScale() };
+        SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
+                          Gather->getBasePtr(), Index, Gather->getScale() };
         SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
           DAG.getVTList(MVT::v4i32, Mask.getValueType(), MVT::Other), Ops, dl,
           Gather->getMemoryVT(), Gather->getMemOperand());
@@ -25903,8 +25902,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                           DAG.getUNDEF(IndexVT));
       Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Mask,
                          DAG.getConstant(0, dl, MVT::v2i1));
-      SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                        Index, Gather->getScale() };
+      SDValue Ops[] = { Gather->getChain(), PassThru, Mask,
+                        Gather->getBasePtr(), Index, Gather->getScale() };
       SDValue Res = DAG.getMaskedGather(DAG.getVTList(MVT::v4i32, MVT::Other),
                                         Gather->getMemoryVT(), dl, Ops,
                                         Gather->getMemOperand());
@@ -35790,8 +35789,8 @@ reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
                   Alignment, ML->getMemOperand()->getFlags());
 
   // Insert the loaded element into the appropriate place in the vector.
-  SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, ML->getSrc0(),
-                               Load, VecIndex);
+  SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                               ML->getPassThru(), Load, VecIndex);
   return DCI.CombineTo(ML, Insert, Load.getValue(1), true);
 }
 
@@ -35814,7 +35813,8 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   if (LoadFirstElt && LoadLastElt) {
     SDValue VecLd = DAG.getLoad(VT, DL, ML->getChain(), ML->getBasePtr(),
                                 ML->getMemOperand());
-    SDValue Blend = DAG.getSelect(DL, VT, ML->getMask(), VecLd, ML->getSrc0());
+    SDValue Blend = DAG.getSelect(DL, VT, ML->getMask(), VecLd,
+                                  ML->getPassThru());
     return DCI.CombineTo(ML, Blend, VecLd.getValue(1), true);
   }
 
@@ -35824,7 +35824,7 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
 
   // Don't try this if the pass-through operand is already undefined. That would
   // cause an infinite loop because that's what we're about to create.
-  if (ML->getSrc0().isUndef())
+  if (ML->getPassThru().isUndef())
     return SDValue();
 
   // The new masked load has an undef pass-through operand. The select uses the
@@ -35833,7 +35833,8 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
                                     ML->getMask(), DAG.getUNDEF(VT),
                                     ML->getMemoryVT(), ML->getMemOperand(),
                                     ML->getExtensionType());
-  SDValue Blend = DAG.getSelect(DL, VT, ML->getMask(), NewML, ML->getSrc0());
+  SDValue Blend = DAG.getSelect(DL, VT, ML->getMask(), NewML,
+                                ML->getPassThru());
 
   return DCI.CombineTo(ML, Blend, NewML.getValue(1), true);
 }
@@ -35880,9 +35881,9 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
           LdVT.getScalarType(), NumElems*SizeRatio);
   assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
 
-  // Convert Src0 value.
-  SDValue WideSrc0 = DAG.getBitcast(WideVecVT, Mld->getSrc0());
-  if (!Mld->getSrc0().isUndef()) {
+  // Convert PassThru value.
+  SDValue WidePassThru = DAG.getBitcast(WideVecVT, Mld->getPassThru());
+  if (!Mld->getPassThru().isUndef()) {
     SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
     for (unsigned i = 0; i != NumElems; ++i)
       ShuffleVec[i] = i * SizeRatio;
@@ -35890,7 +35891,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
     // Can't shuffle using an illegal type.
     assert(DAG.getTargetLoweringInfo().isTypeLegal(WideVecVT) &&
            "WideVecVT should be legal");
-    WideSrc0 = DAG.getVectorShuffle(WideVecVT, dl, WideSrc0,
+    WidePassThru = DAG.getVectorShuffle(WideVecVT, dl, WidePassThru,
                                     DAG.getUNDEF(WideVecVT), ShuffleVec);
   }
 
@@ -35923,7 +35924,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   }
 
   SDValue WideLd = DAG.getMaskedLoad(WideVecVT, dl, Mld->getChain(),
-                                     Mld->getBasePtr(), NewMask, WideSrc0,
+                                     Mld->getBasePtr(), NewMask, WidePassThru,
                                      Mld->getMemoryVT(), Mld->getMemOperand(),
                                      ISD::NON_EXTLOAD);
   SDValue NewVec = getExtendInVec(X86ISD::VSEXT, dl, VT, WideLd, DAG);

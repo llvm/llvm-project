@@ -25,7 +25,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
@@ -70,6 +69,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/SelectHelper.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;

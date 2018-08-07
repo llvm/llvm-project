@@ -337,6 +337,7 @@ protected:
   bool IsGCN;
   bool GCN3Encoding;
   bool CIInsts;
+  bool VIInsts;
   bool GFX9Insts;
   bool SGPRInitBug;
   bool HasSMemRealTime;

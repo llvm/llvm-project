@@ -10,7 +10,6 @@
 #include "lldb/Symbol/CompilerType.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -20,6 +19,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 

@@ -7,31 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_RegisterValue_h
-#define lldb_RegisterValue_h
+#ifndef LLDB_UTILITY_REGISTERVALUE_H
+#define LLDB_UTILITY_REGISTERVALUE_H
 
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"    // for Status
 #include "lldb/lldb-enumerations.h" // for ByteOrder, Format
 #include "lldb/lldb-types.h"        // for offset_t
-
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h" // for StringRef
-
-#include <stdint.h> // for uint32_t, uint8_t, uint64_t, uin...
-#include <string.h>
+#include <cstdint>              // for uint32_t, uint8_t, uint64_t, uin...
+#include <cstring>
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 struct RegisterInfo;
-}
-namespace lldb_private {
 
 class RegisterValue {
 public:
@@ -276,4 +268,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_RegisterValue_h
+#endif // LLDB_UTILITY_REGISTERVALUE_H

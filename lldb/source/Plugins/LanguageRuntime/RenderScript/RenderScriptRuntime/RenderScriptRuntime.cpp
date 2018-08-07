@@ -20,7 +20,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -43,6 +42,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
 

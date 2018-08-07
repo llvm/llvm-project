@@ -3278,8 +3278,6 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
-
   // fold (udiv x, (1 << c)) -> x >>u c
   if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
       DAG.isKnownToBeAPowerOfTwo(N1)) {
@@ -3311,7 +3309,8 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
 
   // fold (udiv x, c) -> alternate
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (N1C && !TLI.isIntDivCheap(N->getValueType(0), Attr))
+  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+      !TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue Op = BuildUDIV(N))
       return Op;
 
@@ -3467,6 +3466,19 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // fold (mulhu x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
+
+  // fold (mulhu x, (1 << c)) -> x >> (bitwidth - c)
+  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+      DAG.isKnownToBeAPowerOfTwo(N1) && hasOperation(ISD::SRL, VT)) {
+    SDLoc DL(N);
+    unsigned NumEltBits = VT.getScalarSizeInBits();
+    SDValue LogBase2 = BuildLogBase2(N1, DL);
+    SDValue SRLAmt = DAG.getNode(
+        ISD::SUB, DL, VT, DAG.getConstant(NumEltBits, DL, VT), LogBase2);
+    EVT ShiftVT = getShiftAmountTy(N0.getValueType());
+    SDValue Trunc = DAG.getZExtOrTrunc(SRLAmt, DL, ShiftVT);
+    return DAG.getNode(ISD::SRL, DL, VT, N0, Trunc);
+  }
 
   // If the type twice as wide is legal, transform the mulhu to a wider multiply
   // plus a shift.
@@ -7525,9 +7537,9 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   SDValue MaskLo, MaskHi, Lo, Hi;
   std::tie(MaskLo, MaskHi) = SplitVSETCC(Mask.getNode(), DAG);
 
-  SDValue Src0 = MGT->getValue();
-  SDValue Src0Lo, Src0Hi;
-  std::tie(Src0Lo, Src0Hi) = DAG.SplitVector(Src0, DL);
+  SDValue PassThru = MGT->getPassThru();
+  SDValue PassThruLo, PassThruHi;
+  std::tie(PassThruLo, PassThruHi) = DAG.SplitVector(PassThru, DL);
 
   EVT LoVT, HiVT;
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
@@ -7550,11 +7562,11 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
                           MachineMemOperand::MOLoad,  LoMemVT.getStoreSize(),
                           Alignment, MGT->getAAInfo(), MGT->getRanges());
 
-  SDValue OpsLo[] = { Chain, Src0Lo, MaskLo, BasePtr, IndexLo, Scale };
+  SDValue OpsLo[] = { Chain, PassThruLo, MaskLo, BasePtr, IndexLo, Scale };
   Lo = DAG.getMaskedGather(DAG.getVTList(LoVT, MVT::Other), LoVT, DL, OpsLo,
                            MMO);
 
-  SDValue OpsHi[] = { Chain, Src0Hi, MaskHi, BasePtr, IndexHi, Scale };
+  SDValue OpsHi[] = { Chain, PassThruHi, MaskHi, BasePtr, IndexHi, Scale };
   Hi = DAG.getMaskedGather(DAG.getVTList(HiVT, MVT::Other), HiVT, DL, OpsHi,
                            MMO);
 
@@ -7599,9 +7611,9 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
     SDValue MaskLo, MaskHi, Lo, Hi;
     std::tie(MaskLo, MaskHi) = SplitVSETCC(Mask.getNode(), DAG);
 
-    SDValue Src0 = MLD->getSrc0();
-    SDValue Src0Lo, Src0Hi;
-    std::tie(Src0Lo, Src0Hi) = DAG.SplitVector(Src0, DL);
+    SDValue PassThru = MLD->getPassThru();
+    SDValue PassThruLo, PassThruHi;
+    std::tie(PassThruLo, PassThruHi) = DAG.SplitVector(PassThru, DL);
 
     EVT LoVT, HiVT;
     std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(MLD->getValueType(0));
@@ -7625,8 +7637,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
                          MachineMemOperand::MOLoad,  LoMemVT.getStoreSize(),
                          Alignment, MLD->getAAInfo(), MLD->getRanges());
 
-    Lo = DAG.getMaskedLoad(LoVT, DL, Chain, Ptr, MaskLo, Src0Lo, LoMemVT, MMO,
-                           ISD::NON_EXTLOAD, MLD->isExpandingLoad());
+    Lo = DAG.getMaskedLoad(LoVT, DL, Chain, Ptr, MaskLo, PassThruLo, LoMemVT,
+                           MMO, ISD::NON_EXTLOAD, MLD->isExpandingLoad());
 
     Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, DL, LoMemVT, DAG,
                                      MLD->isExpandingLoad());
@@ -7637,8 +7649,8 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
         MachineMemOperand::MOLoad, HiMemVT.getStoreSize(), SecondHalfAlignment,
         MLD->getAAInfo(), MLD->getRanges());
 
-    Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, Src0Hi, HiMemVT, MMO,
-                           ISD::NON_EXTLOAD, MLD->isExpandingLoad());
+    Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, PassThruHi, HiMemVT,
+                           MMO, ISD::NON_EXTLOAD, MLD->isExpandingLoad());
 
     AddToWorklist(Lo.getNode());
     AddToWorklist(Hi.getNode());
@@ -18099,21 +18111,14 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   if (DAG.getMachineFunction().getFunction().optForMinSize())
     return SDValue();
 
-  ConstantSDNode *C = isConstOrConstSplat(N->getOperand(1));
-  if (!C)
-    return SDValue();
-
-  // Avoid division by zero.
-  if (C->isNullValue())
-    return SDValue();
-
   SmallVector<SDNode *, 8> Built;
-  SDValue S =
-      TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, Built);
+  if (SDValue S = TLI.BuildUDIV(N, DAG, LegalOperations, Built)) {
+    for (SDNode *N : Built)
+      AddToWorklist(N);
+    return S;
+  }
 
-  for (SDNode *N : Built)
-    AddToWorklist(N);
-  return S;
+  return SDValue();
 }
 
 /// Determines the LogBase2 value for a non-null input value using the

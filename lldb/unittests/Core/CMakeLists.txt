@@ -5,7 +5,6 @@ add_lldb_unittest(LLDBCoreTests
   ListenerTest.cpp
   MangledTest.cpp
   ScalarTest.cpp
-  StateTest.cpp
   StreamCallbackTest.cpp
 
   LINK_LIBS

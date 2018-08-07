@@ -41,7 +41,6 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -53,6 +52,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"

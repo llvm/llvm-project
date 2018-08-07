@@ -1,4 +1,12 @@
-;RUN: opt < %s -codegenprepare -disable-output
+;RUN: opt < %s -codegenprepare -S | FileCheck %s
+
+;CHECK: define void @foo()
+;CHECK-NEXT: entry:
+;CHECK-NEXT:  ret void
+
+;CHECK: cond_next475:
+;CHECK-NEXT: br label %cond_next475
+
 
 define void @foo() {
 entry:

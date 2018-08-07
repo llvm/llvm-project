@@ -10,8 +10,7 @@
 #include "lldb/Core/ValueObjectRegister.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Scalar.h" // for Scalar
-#include "lldb/Core/Value.h"  // for Value, Value::ContextType:...
+#include "lldb/Core/Value.h" // for Value, Value::ContextType:...
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h" // for TypeSystem
 #include "lldb/Target/ExecutionContext.h"
@@ -20,6 +19,7 @@
 #include "lldb/Target/StackFrame.h" // for StackFrame
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/Scalar.h"        // for Scalar
 #include "lldb/Utility/Status.h"        // for Status
 #include "lldb/Utility/Stream.h"        // for Stream
 
