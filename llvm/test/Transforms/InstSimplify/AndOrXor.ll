@@ -967,12 +967,8 @@ define i32 @reversed_not(i32 %a) {
 
 define i64 @shl_or_and1(i32 %a, i1 %b) {
 ; CHECK-LABEL: @shl_or_and1(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1
-; CHECK-NEXT:    ret i64 [[TMP5]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %tmp1 = zext i32 %a to i64
   %tmp2 = zext i1 %b to i64
@@ -985,11 +981,8 @@ define i64 @shl_or_and1(i32 %a, i1 %b) {
 define i64 @shl_or_and2(i32 %a, i1 %b) {
 ; CHECK-LABEL: @shl_or_and2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4294967296
-; CHECK-NEXT:    ret i64 [[TMP5]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %tmp1 = zext i1 %b to i64
   %tmp2 = zext i32 %a to i64
@@ -999,15 +992,11 @@ define i64 @shl_or_and2(i32 %a, i1 %b) {
   ret i64 %tmp5
 }
 
-; concatinate two 32-bit integers and extract lower 32-bit
+; concatenate two 32-bit integers and extract lower 32-bit
 define i64 @shl_or_and3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_or_and3(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4294967295
-; CHECK-NEXT:    ret i64 [[TMP5]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %tmp1 = zext i32 %a to i64
   %tmp2 = zext i32 %b to i64
@@ -1017,15 +1006,12 @@ define i64 @shl_or_and3(i32 %a, i32 %b) {
   ret i64 %tmp5
 }
 
-; concatinate two 16-bit integers and extract higher 16-bit
+; concatenate two 16-bit integers and extract higher 16-bit
 define i32 @shl_or_and4(i16 %a, i16 %b) {
 ; CHECK-LABEL: @shl_or_and4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP1]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], -65536
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %tmp1 = zext i16 %a to i32
   %tmp2 = zext i16 %b to i32
@@ -1037,12 +1023,8 @@ define i32 @shl_or_and4(i16 %a, i16 %b) {
 
 define i128 @shl_or_and5(i64 %a, i1 %b) {
 ; CHECK-LABEL: @shl_or_and5(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[A:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[B:%.*]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i128 [[TMP1]], 64
-; CHECK-NEXT:    [[TMP4:%.*]] = or i128 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i128 [[TMP4]], 1
-; CHECK-NEXT:    ret i128 [[TMP5]]
+; CHECK-NEXT:    ret i128 [[TMP2]]
 ;
   %tmp1 = zext i64 %a to i128
   %tmp2 = zext i1 %b to i128
@@ -1108,12 +1090,8 @@ define i32 @shl_or_and8(i16 %a, i16 %b) {
 
 define <2 x i64> @shl_or_and1v(<2 x i32> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @shl_or_and1v(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP1]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP4]], <i64 1, i64 1>
-; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %tmp1 = zext <2 x i32> %a to <2 x i64>
   %tmp2 = zext <2 x i1> %b to <2 x i64>
@@ -1126,11 +1104,8 @@ define <2 x i64> @shl_or_and1v(<2 x i32> %a, <2 x i1> %b) {
 define <2 x i64> @shl_or_and2v(<2 x i32> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @shl_or_and2v(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i64> [[TMP1]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP4]], <i64 4294967296, i64 4294967296>
-; CHECK-NEXT:    ret <2 x i64> [[TMP5]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %tmp1 = zext <2 x i1> %b to <2 x i64>
   %tmp2 = zext <2 x i32> %a to <2 x i64>
