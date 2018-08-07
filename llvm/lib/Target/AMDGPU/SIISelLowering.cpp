@@ -6745,129 +6745,159 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   return AMDGPUTargetLowering::performRcpCombine(N, DCI);
 }
 
-static bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
-                            const GCNSubtarget *ST, unsigned MaxDepth=5) {
+bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
+                                       unsigned MaxDepth) const {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::FCANONICALIZE)
+    return true;
+
+  if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
+    auto F = CFP->getValueAPF();
+    if (F.isNaN() && F.isSignaling())
+      return false;
+    return !F.isDenormal() || denormalsEnabledForType(Op.getValueType());
+  }
+
   // If source is a result of another standard FP operation it is already in
   // canonical form.
+  if (MaxDepth == 0)
+    return false;
 
-  switch (Op.getOpcode()) {
-  default:
-    break;
-
+  switch (Opcode) {
   // These will flush denorms if required.
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
-  case ISD::FSQRT:
   case ISD::FCEIL:
   case ISD::FFLOOR:
   case ISD::FMA:
   case ISD::FMAD:
-
-  case ISD::FCANONICALIZE:
-    return true;
-
+  case ISD::FSQRT:
+  case ISD::FDIV:
+  case ISD::FREM:
   case ISD::FP_ROUND:
-    return Op.getValueType().getScalarType() != MVT::f16 ||
-           ST->hasFP16Denormals();
-
   case ISD::FP_EXTEND:
-    return Op.getOperand(0).getValueType().getScalarType() != MVT::f16 ||
-           ST->hasFP16Denormals();
+  case AMDGPUISD::FMUL_LEGACY:
+  case AMDGPUISD::FMAD_FTZ:
+  case AMDGPUISD::RCP:
+  case AMDGPUISD::RSQ:
+  case AMDGPUISD::RSQ_CLAMP:
+  case AMDGPUISD::RCP_LEGACY:
+  case AMDGPUISD::RSQ_LEGACY:
+  case AMDGPUISD::RCP_IFLAG:
+  case AMDGPUISD::TRIG_PREOP:
+  case AMDGPUISD::DIV_SCALE:
+  case AMDGPUISD::DIV_FMAS:
+  case AMDGPUISD::DIV_FIXUP:
+  case AMDGPUISD::FRACT:
+  case AMDGPUISD::LDEXP:
+  case AMDGPUISD::CVT_PKRTZ_F16_F32:
+    return true;
 
   // It can/will be lowered or combined as a bit operation.
   // Need to check their input recursively to handle.
   case ISD::FNEG:
   case ISD::FABS:
-    return (MaxDepth > 0) &&
-           isCanonicalized(DAG, Op.getOperand(0), ST, MaxDepth - 1);
+  case ISD::FCOPYSIGN:
+    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
 
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FSINCOS:
     return Op.getValueType().getScalarType() != MVT::f16;
 
-  // In pre-GFX9 targets V_MIN_F32 and others do not flush denorms.
-  // For such targets need to check their input recursively.
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN:
+  case AMDGPUISD::CLAMP:
+  case AMDGPUISD::FMED3:
+  case AMDGPUISD::FMAX3:
+  case AMDGPUISD::FMIN3: {
+    // FIXME: Shouldn't treat the generic operations different based these.
+    bool IsIEEEMode = Subtarget->enableIEEEBit(DAG.getMachineFunction());
+    if (IsIEEEMode) {
+      // snans will be quieted, so we only need to worry about denormals.
+      if (Subtarget->supportsMinMaxDenormModes() ||
+          denormalsEnabledForType(Op.getValueType()))
+        return true;
 
-    if (ST->supportsMinMaxDenormModes() &&
-        DAG.isKnownNeverNaN(Op.getOperand(0)) &&
-        DAG.isKnownNeverNaN(Op.getOperand(1)))
+      // Flushing may be required.
+      // In pre-GFX9 targets V_MIN_F32 and others do not flush denorms. For such
+      // targets need to check their input recursively.
+      return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
+             isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
+    }
+
+    if (Subtarget->supportsMinMaxDenormModes() ||
+        denormalsEnabledForType(Op.getValueType())) {
+      // Only quieting may be necessary.
+      return DAG.isKnownNeverSNaN(Op.getOperand(0)) &&
+             DAG.isKnownNeverSNaN(Op.getOperand(1));
+    }
+
+    // Flushing and quieting may be necessary
+    // With ieee_mode off, the nan is returned as-is, so if it is an sNaN it
+    // needs to be quieted.
+    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
+  }
+  case ISD::SELECT: {
+    return isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(2), MaxDepth - 1);
+  }
+  case ISD::BUILD_VECTOR: {
+    for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+      SDValue SrcOp = Op.getOperand(i);
+      if (!isCanonicalized(DAG, SrcOp, MaxDepth - 1))
+        return false;
+    }
+
+    return true;
+  }
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_SUBVECTOR: {
+    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+  }
+  case ISD::INSERT_VECTOR_ELT: {
+    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
+  }
+  case ISD::UNDEF:
+    // Could be anything.
+    return false;
+
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID
+      = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    // TODO: Handle more intrinsics
+    switch (IntrinsicID) {
+    case Intrinsic::amdgcn_cvt_pkrtz:
       return true;
-
-    return (MaxDepth > 0) &&
-           isCanonicalized(DAG, Op.getOperand(0), ST, MaxDepth - 1) &&
-           isCanonicalized(DAG, Op.getOperand(1), ST, MaxDepth - 1);
-
-  case ISD::ConstantFP: {
-    auto F = cast<ConstantFPSDNode>(Op)->getValueAPF();
-    return !F.isDenormal() && !(F.isNaN() && F.isSignaling());
+    default:
+      break;
+    }
   }
+  default:
+    return denormalsEnabledForType(Op.getValueType()) &&
+           DAG.isKnownNeverSNaN(Op);
   }
-  return false;
+
+  llvm_unreachable("invalid operation");
 }
 
 // Constant fold canonicalize.
-SDValue SITargetLowering::performFCanonicalizeCombine(
-  SDNode *N,
-  DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue N0 = N->getOperand(0);
 
-  // fcanonicalize undef -> qnan
-  if (N0.isUndef()) {
-    EVT VT = N->getValueType(0);
-    APFloat QNaN = APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT));
-    return DAG.getConstantFP(QNaN, SDLoc(N), VT);
-  }
-
-  ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0);
-  if (!CFP) {
-    SDValue N0 = N->getOperand(0);
-    EVT VT = N0.getValueType().getScalarType();
-    auto ST = getSubtarget();
-
-    if (((VT == MVT::f32 && ST->hasFP32Denormals()) ||
-         (VT == MVT::f64 && ST->hasFP64Denormals()) ||
-         (VT == MVT::f16 && ST->hasFP16Denormals())) &&
-        DAG.isKnownNeverNaN(N0))
-      return N0;
-
-    bool IsIEEEMode = Subtarget->enableIEEEBit(DAG.getMachineFunction());
-
-    if ((IsIEEEMode || DAG.isKnownNeverSNaN(N0)) &&
-        isCanonicalized(DAG, N0, ST))
-      return N0;
-
-    return SDValue();
-  }
-
-  const APFloat &C = CFP->getValueAPF();
-
+SDValue SITargetLowering::getCanonicalConstantFP(
+  SelectionDAG &DAG, const SDLoc &SL, EVT VT, const APFloat &C) const {
   // Flush denormals to 0 if not enabled.
-  if (C.isDenormal()) {
-    EVT VT = N->getValueType(0);
-    EVT SVT = VT.getScalarType();
-    if (SVT == MVT::f32 && !Subtarget->hasFP32Denormals())
-      return DAG.getConstantFP(0.0, SDLoc(N), VT);
-
-    if (SVT == MVT::f64 && !Subtarget->hasFP64Denormals())
-      return DAG.getConstantFP(0.0, SDLoc(N), VT);
-
-    if (SVT == MVT::f16 && !Subtarget->hasFP16Denormals())
-      return DAG.getConstantFP(0.0, SDLoc(N), VT);
-  }
+  if (C.isDenormal() && !denormalsEnabledForType(VT))
+    return DAG.getConstantFP(0.0, SL, VT);
 
   if (C.isNaN()) {
-    EVT VT = N->getValueType(0);
     APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
     if (C.isSignaling()) {
       // Quiet a signaling NaN.
-      return DAG.getConstantFP(CanonicalQNaN, SDLoc(N), VT);
+      // FIXME: Is this supposed to preserve payload bits?
+      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
     }
 
     // Make sure it is the canonical NaN bitpattern.
@@ -6875,10 +6905,68 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
     // TODO: Can we use -1 as the canonical NaN value since it's an inline
     // immediate?
     if (C.bitcastToAPInt() != CanonicalQNaN.bitcastToAPInt())
-      return DAG.getConstantFP(CanonicalQNaN, SDLoc(N), VT);
+      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
   }
 
-  return N0;
+  // Already canonical.
+  return DAG.getConstantFP(C, SL, VT);
+}
+
+static bool vectorEltWillFoldAway(SDValue Op) {
+  return Op.isUndef() || isa<ConstantFPSDNode>(Op);
+}
+
+SDValue SITargetLowering::performFCanonicalizeCombine(
+  SDNode *N,
+  DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fcanonicalize undef -> qnan
+  if (N0.isUndef()) {
+    APFloat QNaN = APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT));
+    return DAG.getConstantFP(QNaN, SDLoc(N), VT);
+  }
+
+  if (ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0)) {
+    EVT VT = N->getValueType(0);
+    return getCanonicalConstantFP(DAG, SDLoc(N), VT, CFP->getValueAPF());
+  }
+
+  // fcanonicalize (build_vector x, k) -> build_vector (fcanonicalize x),
+  //                                                   (fcanonicalize k)
+  //
+  // fcanonicalize (build_vector x, undef) -> build_vector (fcanonicalize x), 0
+
+  // TODO: This could be better with wider vectors that will be split to v2f16,
+  // and to consider uses since there aren't that many packed operations.
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16) {
+    SDLoc SL(N);
+    SDValue NewElts[2];
+    SDValue Lo = N0.getOperand(0);
+    SDValue Hi = N0.getOperand(1);
+    if (vectorEltWillFoldAway(Lo) || vectorEltWillFoldAway(Hi)) {
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Op = N0.getOperand(I);
+        EVT EltVT = Op.getValueType();
+        if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
+          NewElts[I] = getCanonicalConstantFP(DAG, SL, EltVT,
+                                              CFP->getValueAPF());
+        } else if (Op.isUndef()) {
+          // This would ordinarily be folded to a qNaN. Since this may be half
+          // of a packed operation, it may be cheaper to use a 0.
+          NewElts[I] = DAG.getConstantFP(0.0f, SL, EltVT);
+        } else {
+          NewElts[I] = DAG.getNode(ISD::FCANONICALIZE, SL, EltVT, Op);
+        }
+      }
+
+      return DAG.getBuildVector(VT, SL, NewElts);
+    }
+  }
+
+  return isCanonicalized(DAG, N0) ? N0 : SDValue();
 }
 
 static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
@@ -8461,4 +8549,17 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
       return true;
   }
   return false;
+}
+
+bool SITargetLowering::denormalsEnabledForType(EVT VT) const {
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f32:
+    return Subtarget->hasFP32Denormals();
+  case MVT::f64:
+    return Subtarget->hasFP64Denormals();
+  case MVT::f16:
+    return Subtarget->hasFP16Denormals();
+  default:
+    return false;
+  }
 }

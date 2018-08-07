@@ -190,10 +190,8 @@ void DwarfStreamer::emitDIE(DIE &Die) {
 /// Emit the debug_str section stored in \p Pool.
 void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrSection());
-  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntries();
+  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntriesForEmission();
   for (auto Entry : Entries) {
-    if (Entry.getIndex() == -1U)
-      break;
     // Emit the string itself.
     Asm->OutStreamer->EmitBytes(Entry.getString());
     // Emit a null terminator.

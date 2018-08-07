@@ -70,6 +70,9 @@ private:
   PDBFile &getPdb();
   object::COFFObjectFile &getObj();
 
+  void printStreamNotValidForObj();
+  void printStreamNotPresent(StringRef StreamName);
+
   Error dumpFileSummary();
   Error dumpStreamSummary();
   Error dumpSymbolStats();

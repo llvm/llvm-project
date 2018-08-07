@@ -588,6 +588,16 @@ bool isHoistableAndSinkableInst(Instruction &I) {
           isa<ExtractElementInst>(I) || isa<ShuffleVectorInst>(I) ||
           isa<ExtractValueInst>(I) || isa<InsertValueInst>(I));
 }
+/// Return true if all of the alias sets within this AST are known not to
+/// contain a Mod.
+bool isReadOnly(AliasSetTracker *CurAST) {
+  for (AliasSet &AS : *CurAST) {
+    if (!AS.isForwardingAliasSet() && AS.isMod()) {
+      return false;
+    }
+  }
+  return true;
+}
 }
 
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
@@ -663,16 +673,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
             return false;
         return true;
       }
+
       // If this call only reads from memory and there are no writes to memory
       // in the loop, we can hoist or sink the call as appropriate.
-      bool FoundMod = false;
-      for (AliasSet &AS : *CurAST) {
-        if (!AS.isForwardingAliasSet() && AS.isMod()) {
-          FoundMod = true;
-          break;
-        }
-      }
-      if (!FoundMod)
+      if (isReadOnly(CurAST))
         return true;
     }
 

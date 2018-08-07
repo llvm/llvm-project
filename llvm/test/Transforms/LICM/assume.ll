@@ -35,8 +35,10 @@ for.end104:
 
 define void @f_1(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @f_1(
+; CHECK-LABEL: entry:
 ; CHECK: %val = load i32, i32* %ptr
-; CHECK-NEXT:  br label %loop
+; CHECK-LABEL: loop:
+; CHECK: call void @llvm.assume(i1 %cond)
 
 entry:
   br label %loop

@@ -524,7 +524,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       Reg = R->getReg();
       DefMI = nullptr;
     } else {
-      Reg = getVR(Node->getOperand(0), VRBaseMap);
+      Reg = R ? R->getReg() : getVR(Node->getOperand(0), VRBaseMap);
       DefMI = MRI->getVRegDef(Reg);
     }
 

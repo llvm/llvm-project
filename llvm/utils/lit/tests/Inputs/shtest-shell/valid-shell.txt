@@ -2,13 +2,13 @@
 # Check force remove commands success whether the file does or doesn't exist.
 #
 # RUN: rm -f %t.write
-# RUN: "%{python}" %S/check_path.py file %t.write > %t.out
+# RUN: %{python} %S/check_path.py file %t.write > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-FILE < %t.out %s
 # RUN: echo "create a temp file" > %t.write
-# RUN: "%{python}" %S/check_path.py file %t.write > %t.out
+# RUN: %{python} %S/check_path.py file %t.write > %t.out
 # RUN: FileCheck --check-prefix=FILE-EXIST < %t.out %s
 # RUN: rm -f %t.write
-# RUN: "%{python}" %S/check_path.py file %t.write > %t.out
+# RUN: %{python} %S/check_path.py file %t.write > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-FILE < %t.out %s
 #
 # REMOVE-FILE: False
@@ -19,14 +19,14 @@
 #
 # Check the mkdir command with -p option.
 # RUN: rm -f -r %T/test
-# RUN: "%{python}" %S/check_path.py dir %T/test > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-PARENT-DIR < %t.out %s
 # RUN: mkdir -p %T/test
-# RUN: "%{python}" %S/check_path.py dir %T/test > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test > %t.out
 # RUN: FileCheck --check-prefix=MAKE-PARENT-DIR < %t.out %s
 # RUN: rm -f %T/test || true
 # RUN: rm -f -r %T/test
-# RUN: "%{python}" %S/check_path.py dir %T/test > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-PARENT-DIR < %t.out %s
 #
 # MAKE-PARENT-DIR: True
@@ -36,13 +36,13 @@
 #
 # RUN: rm -rf %T/test1
 # RUN: mkdir %T/test1
-# RUN: "%{python}" %S/check_path.py dir %T/test1 > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test1 > %t.out
 # RUN: FileCheck --check-prefix=MAKE-DIR < %t.out %s
 # RUN: cd %T/test1 && mkdir foo
-# RUN: "%{python}" %S/check_path.py dir %T/test1 > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test1 > %t.out
 # RUN: FileCheck --check-prefix=MAKE-DIR < %t.out %s
 # RUN: cd %T && rm -rf %T/test1
-# RUN: "%{python}" %S/check_path.py dir %T/test1 > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test1 > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-DIR < %t.out %s
 #
 # MAKE-DIR: True
@@ -52,16 +52,16 @@
 #
 # RUN: rm -rf %T/test
 # RUN: mkdir -p %T/test/test1 %T/test/test2
-# RUN: "%{python}" %S/check_path.py dir %T/test %T/test/test1 %T/test/test2 > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test %T/test/test1 %T/test/test2 > %t.out
 # RUN: FileCheck --check-prefix=DIRS-EXIST < %t.out %s
 # RUN: mkdir %T/test || true
 # RUN: echo "create a temp file" > %T/test/temp.write
 # RUN: echo "create a temp1 file" > %T/test/test1/temp1.write
 # RUN: echo "create a temp2 file" > %T/test/test2/temp2.write
-# RUN: "%{python}" %S/check_path.py file %T/test/temp.write %T/test/test1/temp1.write %T/test/test2/temp2.write> %t.out
+# RUN: %{python} %S/check_path.py file %T/test/temp.write %T/test/test1/temp1.write %T/test/test2/temp2.write> %t.out
 # RUN: FileCheck --check-prefix=FILES-EXIST < %t.out %s
 # RUN: rm -r -f %T/*
-# RUN: "%{python}" %S/check_path.py dir %T/test > %t.out
+# RUN: %{python} %S/check_path.py dir %T/test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-ALL < %t.out %s
 #
 # DIRS-EXIST: True
@@ -92,7 +92,7 @@
 # RUN: mkdir -p %T/testCat
 # RUN: echo "abcdefgh" > %T/testCat/temp.write
 # RUN: cat %T/testCat/temp.write > %T/testCat/tempcat.write
-# RUN: "%{python}" %S/check_path.py file %T/testCat/tempcat.write > %T/testCat/path.out
+# RUN: %{python} %S/check_path.py file %T/testCat/tempcat.write > %T/testCat/path.out
 # RUN: FileCheck --check-prefix=FILE-EXISTS < %T/testCat/path.out %s
 # RUN: FileCheck --check-prefix=CAT-OUTPUT < %T/testCat/tempcat.write %s
 # FILE-EXISTS: True
@@ -106,7 +106,7 @@
 # RUN: echo "efghijkl" > %T/testCat/temp2.write
 # RUN: echo "mnopqrst" > %T/testCat/temp3.write
 # RUN: cat %T/testCat/temp1.write %T/testCat/temp2.write %T/testCat/temp3.write > %T/testCat/tempmulticat.write
-# RUN: "%{python}" %S/check_path.py file %T/testCat/tempmulticat.write > %T/testCat/path.out
+# RUN: %{python} %S/check_path.py file %T/testCat/tempmulticat.write > %T/testCat/path.out
 # RUN: FileCheck --check-prefix=MULTI-FILE-EXISTS < %T/testCat/path.out %s
 # RUN: FileCheck --check-prefix=MULTI-CAT-OUTPUT < %T/testCat/tempmulticat.write %s
 # MULTI-FILE-EXISTS: True

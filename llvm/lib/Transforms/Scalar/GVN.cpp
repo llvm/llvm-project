@@ -1075,15 +1075,8 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // because if the index is out of bounds we should deoptimize rather than
   // access the array.
   // Check that there is no guard in this block above our instruction.
-  if (!IsSafeToSpeculativelyExecute) {
-    auto It = FirstImplicitControlFlowInsts.find(TmpBB);
-    if (It != FirstImplicitControlFlowInsts.end()) {
-      assert(It->second->getParent() == TmpBB &&
-             "Implicit control flow map broken?");
-      if (OI->dominates(It->second, LI))
-        return false;
-    }
-  }
+  if (!IsSafeToSpeculativelyExecute && ICF->isDominatedByICFIFromSameBlock(LI))
+    return false;
   while (TmpBB->getSinglePredecessor()) {
     TmpBB = TmpBB->getSinglePredecessor();
     if (TmpBB == LoadBB) // Infinite (unreachable) loop.
@@ -1100,8 +1093,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
       return false;
 
     // Check that there is no implicit control flow in a block above.
-    if (!IsSafeToSpeculativelyExecute &&
-        FirstImplicitControlFlowInsts.count(TmpBB))
+    if (!IsSafeToSpeculativelyExecute && ICF->hasICF(TmpBB))
       return false;
   }
 
@@ -2021,8 +2013,8 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   TLI = &RunTLI;
   VN.setAliasAnalysis(&RunAA);
   MD = RunMD;
-  OrderedInstructions OrderedInstrs(DT);
-  OI = &OrderedInstrs;
+  ImplicitControlFlowTracking ImplicitCFT(DT);
+  ICF = &ImplicitCFT;
   VN.setMemDep(MD);
   ORE = RunORE;
 
@@ -2106,8 +2098,7 @@ bool GVN::processBlock(BasicBlock *BB) {
     if (!AtStart)
       --BI;
 
-    bool InvalidateImplicitCF = false;
-    const Instruction *MaybeFirstICF = FirstImplicitControlFlowInsts.lookup(BB);
+    const Instruction *MaybeFirstICF = ICF->getFirstICFI(BB);
     for (auto *I : InstrsToErase) {
       assert(I->getParent() == BB && "Removing instruction from wrong block?");
       LLVM_DEBUG(dbgs() << "GVN removed: " << *I << '\n');
@@ -2116,17 +2107,14 @@ bool GVN::processBlock(BasicBlock *BB) {
       LLVM_DEBUG(verifyRemoved(I));
       if (MaybeFirstICF == I) {
         // We have erased the first ICF in block. The map needs to be updated.
-        InvalidateImplicitCF = true;
         // Do not keep dangling pointer on the erased instruction.
         MaybeFirstICF = nullptr;
       }
       I->eraseFromParent();
     }
 
-    OI->invalidateBlock(BB);
+    ICF->invalidateBlock(BB);
     InstrsToErase.clear();
-    if (InvalidateImplicitCF)
-      fillImplicitControlFlowInfo(BB);
 
     if (AtStart)
       BI = BB->begin();
@@ -2270,13 +2258,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
       // is always executed. An instruction with implicit control flow could
       // prevent us from doing it. If we cannot speculate the execution, then
       // PRE should be prohibited.
-      auto It = FirstImplicitControlFlowInsts.find(CurrentBlock);
-      if (It != FirstImplicitControlFlowInsts.end()) {
-        assert(It->second->getParent() == CurrentBlock &&
-               "Implicit control flow map broken?");
-        if (OI->dominates(It->second, CurInst))
-          return false;
-      }
+      if (ICF->isDominatedByICFIFromSameBlock(CurInst))
+        return false;
     }
 
     // Don't do PRE across indirect branch.
@@ -2337,14 +2320,10 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   if (MD)
     MD->removeInstruction(CurInst);
   LLVM_DEBUG(verifyRemoved(CurInst));
-  bool InvalidateImplicitCF =
-      FirstImplicitControlFlowInsts.lookup(CurInst->getParent()) == CurInst;
   // FIXME: Intended to be markInstructionForDeletion(CurInst), but it causes
   // some assertion failures.
-  OI->invalidateBlock(CurrentBlock);
+  ICF->invalidateBlock(CurrentBlock);
   CurInst->eraseFromParent();
-  if (InvalidateImplicitCF)
-    fillImplicitControlFlowInfo(CurrentBlock);
   ++NumGVNInstr;
 
   return true;
@@ -2413,8 +2392,6 @@ bool GVN::iterateOnFunction(Function &F) {
   ReversePostOrderTraversal<Function *> RPOT(&F);
 
   for (BasicBlock *BB : RPOT)
-    fillImplicitControlFlowInfo(BB);
-  for (BasicBlock *BB : RPOT)
     Changed |= processBlock(BB);
 
   return Changed;
@@ -2425,48 +2402,7 @@ void GVN::cleanupGlobalSets() {
   LeaderTable.clear();
   BlockRPONumber.clear();
   TableAllocator.Reset();
-  FirstImplicitControlFlowInsts.clear();
-}
-
-void
-GVN::fillImplicitControlFlowInfo(BasicBlock *BB) {
-  // Make sure that all marked instructions are actually deleted by this point,
-  // so that we don't need to care about omitting them.
-  assert(InstrsToErase.empty() && "Filling before removed all marked insns?");
-  auto MayNotTransferExecutionToSuccessor = [&](const Instruction *I) {
-    // If a block's instruction doesn't always pass the control to its successor
-    // instruction, mark the block as having implicit control flow. We use them
-    // to avoid wrong assumptions of sort "if A is executed and B post-dominates
-    // A, then B is also executed". This is not true is there is an implicit
-    // control flow instruction (e.g. a guard) between them.
-    //
-    // TODO: Currently, isGuaranteedToTransferExecutionToSuccessor returns false
-    // for volatile stores and loads because they can trap. The discussion on
-    // whether or not it is correct is still ongoing. We might want to get rid
-    // of this logic in the future. Anyways, trapping instructions shouldn't
-    // introduce implicit control flow, so we explicitly allow them here. This
-    // must be removed once isGuaranteedToTransferExecutionToSuccessor is fixed.
-    if (isGuaranteedToTransferExecutionToSuccessor(I))
-      return false;
-    if (isa<LoadInst>(I)) {
-      assert(cast<LoadInst>(I)->isVolatile() &&
-             "Non-volatile load should transfer execution to successor!");
-      return false;
-    }
-    if (isa<StoreInst>(I)) {
-      assert(cast<StoreInst>(I)->isVolatile() &&
-             "Non-volatile store should transfer execution to successor!");
-      return false;
-    }
-    return true;
-  };
-  FirstImplicitControlFlowInsts.erase(BB);
-
-  for (auto &I : *BB)
-    if (MayNotTransferExecutionToSuccessor(&I)) {
-      FirstImplicitControlFlowInsts[BB] = &I;
-      break;
-    }
+  ICF->clear();
 }
 
 /// Verify that the specified instruction does not occur in our

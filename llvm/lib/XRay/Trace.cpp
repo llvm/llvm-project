@@ -25,8 +25,14 @@ namespace {
 using XRayRecordStorage =
     std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
 
+// This is the number of bytes in the "body" of a MetadataRecord in FDR Mode.
+// This already excludes the first byte, which indicates the type of metadata
+// record it is.
+constexpr auto kFDRMetadataBodySize = 15;
+
 // Populates the FileHeader reference by reading the first 32 bytes of the file.
-Error readBinaryFormatHeader(StringRef Data, XRayFileHeader &FileHeader) {
+Error readBinaryFormatHeader(DataExtractor &HeaderExtractor,
+                             uint32_t &OffsetPtr, XRayFileHeader &FileHeader) {
   // FIXME: Maybe deduce whether the data is little or big-endian using some
   // magic bytes in the beginning of the file?
 
@@ -39,20 +45,48 @@ Error readBinaryFormatHeader(StringRef Data, XRayFileHeader &FileHeader) {
   //   (8)   uint64 : cycle frequency
   //   (16)  -      : padding
 
-  DataExtractor HeaderExtractor(Data, true, 8);
-  uint32_t OffsetPtr = 0;
+  auto PreReadOffset = OffsetPtr;
   FileHeader.Version = HeaderExtractor.getU16(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading version from file header at offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
   FileHeader.Type = HeaderExtractor.getU16(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading file type from file header at offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
   uint32_t Bitfield = HeaderExtractor.getU32(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading flag bits from file header at offset %d.", OffsetPtr);
+
   FileHeader.ConstantTSC = Bitfield & 1uL;
   FileHeader.NonstopTSC = Bitfield & 1uL << 1;
+  PreReadOffset = OffsetPtr;
   FileHeader.CycleFrequency = HeaderExtractor.getU64(&OffsetPtr);
-  std::memcpy(&FileHeader.FreeFormData, Data.bytes_begin() + OffsetPtr, 16);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading cycle frequency from file header at offset %d.",
+        OffsetPtr);
+
+  std::memcpy(&FileHeader.FreeFormData,
+              HeaderExtractor.getData().bytes_begin() + OffsetPtr, 16);
+
+  // Manually advance the offset pointer 16 bytes, after getting a raw memcpy
+  // from the underlying data.
+  OffsetPtr += 16;
   if (FileHeader.Version != 1 && FileHeader.Version != 2 &&
       FileHeader.Version != 3)
-    return make_error<StringError>(
-        Twine("Unsupported XRay file version: ") + Twine(FileHeader.Version),
-        std::make_error_code(std::errc::invalid_argument));
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unsupported XRay file version: %d at offset %d",
+                             FileHeader.Version, OffsetPtr);
   return Error::success();
 }
 
@@ -68,7 +102,9 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
         "Invalid-sized XRay data.",
         std::make_error_code(std::errc::invalid_argument));
 
-  if (auto E = readBinaryFormatHeader(Data, FileHeader))
+  DataExtractor Reader(Data, true, 8);
+  uint32_t OffsetPtr = 0;
+  if (auto E = readBinaryFormatHeader(Reader, OffsetPtr, FileHeader))
     return E;
 
   // Each record after the header will be 32 bytes, in the following format:
@@ -81,16 +117,38 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
   //   (4)   uint32 : thread id
   //   (4)   uint32 : process id
   //   (8)   -      : padding
-  for (auto S = Data.drop_front(32); !S.empty(); S = S.drop_front(32)) {
-    DataExtractor RecordExtractor(S, true, 8);
-    uint32_t OffsetPtr = 0;
-    switch (auto RecordType = RecordExtractor.getU16(&OffsetPtr)) {
+  while (Reader.isValidOffset(OffsetPtr)) {
+    if (!Reader.isValidOffsetForDataOfSize(OffsetPtr, 32))
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Not enough bytes to read a full record at offset %d.", OffsetPtr);
+    auto PreReadOffset = OffsetPtr;
+    auto RecordType = Reader.getU16(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading record type at offset %d.", OffsetPtr);
+
+    switch (RecordType) {
     case 0: { // Normal records.
       Records.emplace_back();
       auto &Record = Records.back();
       Record.RecordType = RecordType;
-      Record.CPU = RecordExtractor.getU8(&OffsetPtr);
-      auto Type = RecordExtractor.getU8(&OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      Record.CPU = Reader.getU8(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading CPU field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      auto Type = Reader.getU8(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading record type field at offset %d.", OffsetPtr);
+
       switch (Type) {
       case 0:
         Record.Type = RecordTypes::ENTER;
@@ -105,43 +163,96 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
         Record.Type = RecordTypes::ENTER_ARG;
         break;
       default:
-        return make_error<StringError>(
-            Twine("Unknown record type '") + Twine(int{Type}) + "'",
-            std::make_error_code(std::errc::executable_format_error));
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Unknown record type '%d' at offset %d.", Type, OffsetPtr);
       }
-      Record.FuncId = RecordExtractor.getSigned(&OffsetPtr, sizeof(int32_t));
-      Record.TSC = RecordExtractor.getU64(&OffsetPtr);
-      Record.TId = RecordExtractor.getU32(&OffsetPtr);
-      Record.PId = RecordExtractor.getU32(&OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      Record.FuncId = Reader.getSigned(&OffsetPtr, sizeof(int32_t));
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading function id field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      Record.TSC = Reader.getU64(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading TSC field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      Record.TId = Reader.getU32(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading thread id field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      Record.PId = Reader.getU32(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading process id at offset %d.", OffsetPtr);
+
       break;
     }
     case 1: { // Arg payload record.
       auto &Record = Records.back();
-      // Advance two bytes to avoid padding.
+
+      // We skip the next two bytes of the record, because we don't need the
+      // type and the CPU record for arg payloads.
       OffsetPtr += 2;
-      int32_t FuncId = RecordExtractor.getSigned(&OffsetPtr, sizeof(int32_t));
-      auto TId = RecordExtractor.getU32(&OffsetPtr);
-      auto PId = RecordExtractor.getU32(&OffsetPtr);
+      PreReadOffset = OffsetPtr;
+      int32_t FuncId = Reader.getSigned(&OffsetPtr, sizeof(int32_t));
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading function id field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      auto TId = Reader.getU32(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading thread id field at offset %d.", OffsetPtr);
+
+      PreReadOffset = OffsetPtr;
+      auto PId = Reader.getU32(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading process id field at offset %d.", OffsetPtr);
 
       // Make a check for versions above 3 for the Pid field
       if (Record.FuncId != FuncId || Record.TId != TId ||
           (FileHeader.Version >= 3 ? Record.PId != PId : false))
-        return make_error<StringError>(
-            Twine("Corrupted log, found arg payload following non-matching "
-                  "function + thread record. Record for function ") +
-                Twine(Record.FuncId) + " != " + Twine(FuncId) + "; offset: " +
-                Twine(S.data() - Data.data()),
-            std::make_error_code(std::errc::executable_format_error));
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Corrupted log, found arg payload following non-matching "
+            "function+thread record. Record for function %d != %d at offset "
+            "%d",
+            Record.FuncId, FuncId, OffsetPtr);
 
-      auto Arg = RecordExtractor.getU64(&OffsetPtr);
+      PreReadOffset = OffsetPtr;
+      auto Arg = Reader.getU64(&OffsetPtr);
+      if (OffsetPtr == PreReadOffset)
+        return createStringError(
+            std::make_error_code(std::errc::executable_format_error),
+            "Failed reading argument payload at offset %d.", OffsetPtr);
+
       Record.CallArgs.push_back(Arg);
       break;
     }
     default:
-      return make_error<StringError>(
-          Twine("Unknown record type == ") + Twine(RecordType),
-          std::make_error_code(std::errc::executable_format_error));
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Unknown record type '%d' at offset %d.", RecordType, OffsetPtr);
     }
+    // Advance the offset pointer enough bytes to align to 32-byte records for
+    // basic mode logs.
+    OffsetPtr += 8;
   }
   return Error::success();
 }
@@ -203,37 +314,50 @@ const char *fdrStateToTwine(const FDRState::Token &state) {
 }
 
 /// State transition when a NewBufferRecord is encountered.
-Error processFDRNewBufferRecord(FDRState &State, uint8_t RecordFirstByte,
-                                DataExtractor &RecordExtractor) {
-
+Error processFDRNewBufferRecord(FDRState &State, DataExtractor &RecordExtractor,
+                                uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF)
-    return make_error<StringError>(
-        Twine("Malformed log. Read New Buffer record kind out of sequence; "
-              "expected: ") +
-            fdrStateToTwine(State.Expects),
-        std::make_error_code(std::errc::executable_format_error));
-  uint32_t OffsetPtr = 1; // 1 byte into record.
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Malformed log: Read New Buffer record kind out of sequence; expected: "
+        "%s at offset %d.",
+        fdrStateToTwine(State.Expects), OffsetPtr);
+
+  auto PreReadOffset = OffsetPtr;
   State.ThreadId = RecordExtractor.getU16(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the thread id at offset %d.", OffsetPtr);
   State.Expects = FDRState::Token::WALLCLOCK_RECORD;
+
+  // Advance the offset pointer by enough bytes representing the remaining
+  // padding in a metadata record.
+  OffsetPtr += kFDRMetadataBodySize - 2;
+  assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
 
 /// State transition when an EndOfBufferRecord is encountered.
-Error processFDREndOfBufferRecord(FDRState &State, uint8_t RecordFirstByte,
-                                  DataExtractor &RecordExtractor) {
+Error processFDREndOfBufferRecord(FDRState &State, uint32_t &OffsetPtr) {
   if (State.Expects == FDRState::Token::NEW_BUFFER_RECORD_OR_EOF)
-    return make_error<StringError>(
-        Twine("Malformed log. Received EOB message without current buffer; "
-              "expected: ") +
-            fdrStateToTwine(State.Expects),
-        std::make_error_code(std::errc::executable_format_error));
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Malformed log: Received EOB message without current buffer; expected: "
+        "%s at offset %d.",
+        fdrStateToTwine(State.Expects), OffsetPtr);
+
   State.Expects = FDRState::Token::SCAN_TO_END_OF_THREAD_BUF;
+
+  // Advance the offset pointer by enough bytes representing the remaining
+  // padding in a metadata record.
+  OffsetPtr += kFDRMetadataBodySize;
   return Error::success();
 }
 
 /// State transition when a NewCPUIdRecord is encountered.
-Error processFDRNewCPUIdRecord(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor) {
+Error processFDRNewCPUIdRecord(FDRState &State, DataExtractor &RecordExtractor,
+                               uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::FUNCTION_SEQUENCE &&
       State.Expects != FDRState::Token::NEW_CPU_ID_RECORD)
     return make_error<StringError>(
@@ -241,30 +365,56 @@ Error processFDRNewCPUIdRecord(FDRState &State, uint8_t RecordFirstByte,
               "expected: ") +
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
-  uint32_t OffsetPtr = 1; // Read starting after the first byte.
+  auto BeginOffset = OffsetPtr;
+  auto PreReadOffset = OffsetPtr;
   State.CPUId = RecordExtractor.getU16(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the CPU field at offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
   State.BaseTSC = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the base TSC field at offset %d.", OffsetPtr);
+
   State.Expects = FDRState::Token::FUNCTION_SEQUENCE;
+
+  // Advance the offset pointer by a few bytes, to account for the padding in
+  // CPU ID metadata records that we've already advanced through.
+  OffsetPtr += kFDRMetadataBodySize - (OffsetPtr - BeginOffset);
+  assert(OffsetPtr - BeginOffset == kFDRMetadataBodySize);
   return Error::success();
 }
 
 /// State transition when a TSCWrapRecord (overflow detection) is encountered.
-Error processFDRTSCWrapRecord(FDRState &State, uint8_t RecordFirstByte,
-                              DataExtractor &RecordExtractor) {
+Error processFDRTSCWrapRecord(FDRState &State, DataExtractor &RecordExtractor,
+                              uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::FUNCTION_SEQUENCE)
     return make_error<StringError>(
         Twine("Malformed log. Read TSCWrap record kind out of sequence; "
               "expecting: ") +
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
-  uint32_t OffsetPtr = 1; // Read starting after the first byte.
+  auto PreReadOffset = OffsetPtr;
   State.BaseTSC = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the base TSC field at offset %d.", OffsetPtr);
+
+  // Advance the offset pointer by a few more bytes, accounting for the padding
+  // in the metadata record after reading the base TSC.
+  OffsetPtr += kFDRMetadataBodySize - 8;
+  assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
 
 /// State transition when a WallTimeMarkerRecord is encountered.
-Error processFDRWallTimeRecord(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor) {
+Error processFDRWallTimeRecord(FDRState &State, DataExtractor &RecordExtractor,
+                               uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::WALLCLOCK_RECORD)
     return make_error<StringError>(
         Twine("Malformed log. Read Wallclock record kind out of sequence; "
@@ -272,74 +422,135 @@ Error processFDRWallTimeRecord(FDRState &State, uint8_t RecordFirstByte,
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
 
+  // Read in the data from the walltime record.
+  auto PreReadOffset = OffsetPtr;
+  auto WallTime = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the walltime record at offset %d.", OffsetPtr);
+
   // TODO: Someday, reconcile the TSC ticks to wall clock time for presentation
   // purposes. For now, we're ignoring these records.
+  (void)WallTime;
   State.Expects = FDRState::Token::NEW_CPU_ID_RECORD;
+
+  // Advance the offset pointer by a few more bytes, accounting for the padding
+  // in the metadata record after reading in the walltime data.
+  OffsetPtr += kFDRMetadataBodySize - 8;
+  assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
 
 /// State transition when a PidRecord is encountered.
-Error processFDRPidRecord(FDRState &State, uint8_t RecordFirstByte,
-                          DataExtractor &RecordExtractor) {
-
+Error processFDRPidRecord(FDRState &State, DataExtractor &RecordExtractor,
+                          uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::PID_RECORD)
     return make_error<StringError>(
         Twine("Malformed log. Read Pid record kind out of sequence; "
               "expected: ") +
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
-
-  uint32_t OffsetPtr = 1; // Read starting after the first byte.
+  auto PreReadOffset = OffsetPtr;
   State.ProcessId = RecordExtractor.getU32(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the process ID at offset %d.", OffsetPtr);
   State.Expects = FDRState::Token::NEW_CPU_ID_RECORD;
+
+  // Advance the offset pointer by a few more bytes, accounting for the padding
+  // in the metadata record after reading in the PID.
+  OffsetPtr += kFDRMetadataBodySize - 4;
+  assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
 
 /// State transition when a CustomEventMarker is encountered.
-Error processCustomEventMarker(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor,
-                               size_t &RecordSize) {
+Error processCustomEventMarker(FDRState &State, DataExtractor &RecordExtractor,
+                               uint32_t &OffsetPtr) {
   // We can encounter a CustomEventMarker anywhere in the log, so we can handle
   // it regardless of the expectation. However, we do set the expectation to
   // read a set number of fixed bytes, as described in the metadata.
-  uint32_t OffsetPtr = 1; // Read after the first byte.
+  auto BeginOffset = OffsetPtr;
+  auto PreReadOffset = OffsetPtr;
   uint32_t DataSize = RecordExtractor.getU32(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading a custom event marker at offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
   uint64_t TSC = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading the TSC at offset %d.", OffsetPtr);
 
   // FIXME: Actually represent the record through the API. For now we only
   // skip through the data.
   (void)TSC;
-  RecordSize = 16 + DataSize;
+  // Advance the offset ptr by the size of the data associated with the custom
+  // event, as well as the padding associated with the remainder of the metadata
+  // record.
+  OffsetPtr += (kFDRMetadataBodySize - (OffsetPtr - BeginOffset)) + DataSize;
+  if (!RecordExtractor.isValidOffset(OffsetPtr))
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Reading custom event data moves past addressable trace data (starting "
+        "at offset %d, advancing to offset %d).",
+        BeginOffset, OffsetPtr);
   return Error::success();
 }
 
 /// State transition when an BufferExtents record is encountered.
-Error processBufferExtents(FDRState &State, uint8_t RecordFirstByte,
-                           DataExtractor &RecordExtractor) {
+Error processBufferExtents(FDRState &State, DataExtractor &RecordExtractor,
+                           uint32_t &OffsetPtr) {
   if (State.Expects != FDRState::Token::BUFFER_EXTENTS)
     return make_error<StringError>(
         Twine("Malformed log. Buffer Extents unexpected; expected: ") +
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
-  uint32_t OffsetPtr = 1; // Read after the first byte.
+
+  auto PreReadOffset = OffsetPtr;
   State.CurrentBufferSize = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed to read current buffer size at offset %d.", OffsetPtr);
+
   State.Expects = FDRState::Token::NEW_BUFFER_RECORD_OR_EOF;
+
+  // Advance the offset pointer by enough bytes accounting for the padding in a
+  // metadata record, after we read in the buffer extents.
+  OffsetPtr += kFDRMetadataBodySize - 8;
   return Error::success();
 }
 
 /// State transition when a CallArgumentRecord is encountered.
-Error processFDRCallArgumentRecord(FDRState &State, uint8_t RecordFirstByte,
+Error processFDRCallArgumentRecord(FDRState &State,
                                    DataExtractor &RecordExtractor,
-                                   std::vector<XRayRecord> &Records) {
-  uint32_t OffsetPtr = 1; // Read starting after the first byte.
+                                   std::vector<XRayRecord> &Records,
+                                   uint32_t &OffsetPtr) {
   auto &Enter = Records.back();
-
-  if (Enter.Type != RecordTypes::ENTER)
+  if (Enter.Type != RecordTypes::ENTER && Enter.Type != RecordTypes::ENTER_ARG)
     return make_error<StringError>(
         "CallArgument needs to be right after a function entry",
         std::make_error_code(std::errc::executable_format_error));
+
+  auto PreReadOffset = OffsetPtr;
+  auto Arg = RecordExtractor.getU64(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed to read argument record at offset %d.", OffsetPtr);
+
   Enter.Type = RecordTypes::ENTER_ARG;
-  Enter.CallArgs.emplace_back(RecordExtractor.getU64(&OffsetPtr));
+  Enter.CallArgs.emplace_back(Arg);
+
+  // Advance the offset pointer by enough bytes accounting for the padding in a
+  // metadata record, after reading the payload.
+  OffsetPtr += kFDRMetadataBodySize - 8;
   return Error::success();
 }
 
@@ -355,17 +566,15 @@ Error processFDRCallArgumentRecord(FDRState &State, uint8_t RecordFirstByte,
 ///
 /// In Version 3, FDR log now includes a pid metadata record after
 /// WallTimeMarker
-Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor,
-                               size_t &RecordSize,
+Error processFDRMetadataRecord(FDRState &State, DataExtractor &RecordExtractor,
+                               uint32_t &OffsetPtr,
                                std::vector<XRayRecord> &Records,
-                               uint16_t Version) {
-  // The remaining 7 bits are the RecordKind enum.
-  uint8_t RecordKind = RecordFirstByte >> 1;
-  switch (RecordKind) {
+                               uint16_t Version, uint8_t FirstByte) {
+  // The remaining 7 bits of the first byte are the RecordKind enum for each
+  // Metadata Record.
+  switch (FirstByte >> 1) {
   case 0: // NewBuffer
-    if (auto E =
-            processFDRNewBufferRecord(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processFDRNewBufferRecord(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   case 1: // EndOfBuffer
@@ -373,52 +582,46 @@ Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
       return make_error<StringError>(
           "Since Version 2 of FDR logging, we no longer support EOB records.",
           std::make_error_code(std::errc::executable_format_error));
-    if (auto E = processFDREndOfBufferRecord(State, RecordFirstByte,
-                                             RecordExtractor))
+    if (auto E = processFDREndOfBufferRecord(State, OffsetPtr))
       return E;
     break;
   case 2: // NewCPUId
-    if (auto E =
-            processFDRNewCPUIdRecord(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processFDRNewCPUIdRecord(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   case 3: // TSCWrap
-    if (auto E =
-            processFDRTSCWrapRecord(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processFDRTSCWrapRecord(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   case 4: // WallTimeMarker
-    if (auto E =
-            processFDRWallTimeRecord(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processFDRWallTimeRecord(State, RecordExtractor, OffsetPtr))
       return E;
     // In Version 3 and and above, a PidRecord is expected after WallTimeRecord
     if (Version >= 3)
       State.Expects = FDRState::Token::PID_RECORD;
     break;
   case 5: // CustomEventMarker
-    if (auto E = processCustomEventMarker(State, RecordFirstByte,
-                                          RecordExtractor, RecordSize))
+    if (auto E = processCustomEventMarker(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   case 6: // CallArgument
-    if (auto E = processFDRCallArgumentRecord(State, RecordFirstByte,
-                                              RecordExtractor, Records))
+    if (auto E = processFDRCallArgumentRecord(State, RecordExtractor, Records,
+                                              OffsetPtr))
       return E;
     break;
   case 7: // BufferExtents
-    if (auto E = processBufferExtents(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processBufferExtents(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   case 9: // Pid
-    if (auto E = processFDRPidRecord(State, RecordFirstByte, RecordExtractor))
+    if (auto E = processFDRPidRecord(State, RecordExtractor, OffsetPtr))
       return E;
     break;
   default:
-    // Widen the record type to uint16_t to prevent conversion to char.
-    return make_error<StringError>(
-        Twine("Illegal metadata record type: ")
-            .concat(Twine(static_cast<unsigned>(RecordKind))),
-        std::make_error_code(std::errc::executable_format_error));
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Illegal metadata record type: '%d' at offset %d.", FirstByte >> 1,
+        OffsetPtr);
   }
   return Error::success();
 }
@@ -430,8 +633,8 @@ Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
 /// The XRayRecord constructed includes information from the function record
 /// processed here as well as Thread ID and CPU ID formerly extracted into
 /// State.
-Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor,
+Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
+                               uint32_t &OffsetPtr, uint8_t FirstByte,
                                std::vector<XRayRecord> &Records) {
   switch (State.Expects) {
   case FDRState::Token::NEW_BUFFER_RECORD_OR_EOF:
@@ -455,41 +658,59 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
     auto &Record = Records.back();
     Record.RecordType = 0; // Record is type NORMAL.
     // Strip off record type bit and use the next three bits.
-    uint8_t RecordType = (RecordFirstByte >> 1) & 0x07;
-    switch (RecordType) {
-    case static_cast<uint8_t>(RecordTypes::ENTER):
+    auto T = (FirstByte >> 1) & 0x07;
+    switch (T) {
+    case static_cast<decltype(T)>(RecordTypes::ENTER):
       Record.Type = RecordTypes::ENTER;
       break;
-    case static_cast<uint8_t>(RecordTypes::EXIT):
+    case static_cast<decltype(T)>(RecordTypes::EXIT):
       Record.Type = RecordTypes::EXIT;
       break;
-    case static_cast<uint8_t>(RecordTypes::TAIL_EXIT):
+    case static_cast<decltype(T)>(RecordTypes::TAIL_EXIT):
       Record.Type = RecordTypes::TAIL_EXIT;
       break;
+    case static_cast<decltype(T)>(RecordTypes::ENTER_ARG):
+      Record.Type = RecordTypes::ENTER_ARG;
+      State.Expects = FDRState::Token::CALL_ARGUMENT;
+      break;
     default:
-      // Cast to an unsigned integer to not interpret the record type as a char.
-      return make_error<StringError>(
-          Twine("Illegal function record type: ")
-              .concat(Twine(static_cast<unsigned>(RecordType))),
-          std::make_error_code(std::errc::executable_format_error));
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Illegal function record type '%d' at offset %d.", T, OffsetPtr);
     }
     Record.CPU = State.CPUId;
     Record.TId = State.ThreadId;
     Record.PId = State.ProcessId;
-    // Back up to read first 32 bits, including the 4 we pulled RecordType
-    // and RecordKind out of. The remaining 28 are FunctionId.
-    uint32_t OffsetPtr = 0;
+
+    // Back up one byte to re-read the first byte, which is important for
+    // computing the function id for a record.
+    --OffsetPtr;
+
     // Despite function Id being a signed int on XRayRecord,
     // when it is written to an FDR format, the top bits are truncated,
     // so it is effectively an unsigned value. When we shift off the
     // top four bits, we want the shift to be logical, so we read as
     // uint32_t.
+    auto PreReadOffset = OffsetPtr;
     uint32_t FuncIdBitField = RecordExtractor.getU32(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading truncated function id field at offset %d.",
+          OffsetPtr);
+
     Record.FuncId = FuncIdBitField >> 4;
+
     // FunctionRecords have a 32 bit delta from the previous absolute TSC
     // or TSC delta. If this would overflow, we should read a TSCWrap record
     // with an absolute TSC reading.
+    PreReadOffset = OffsetPtr;
     uint64_t NewTSC = State.BaseTSC + RecordExtractor.getU32(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading TSC delta at offset %d.", OffsetPtr);
+
     State.BaseTSC = NewTSC;
     Record.TSC = NewTSC;
   }
@@ -546,15 +767,10 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
         "Not enough bytes for an XRay log.",
         std::make_error_code(std::errc::invalid_argument));
 
-  // For an FDR log, there are records sized 16 and 8 bytes.
-  // There actually may be no records if no non-trivial functions are
-  // instrumented.
-  if (Data.size() % 8 != 0)
-    return make_error<StringError>(
-        "Invalid-sized XRay data.",
-        std::make_error_code(std::errc::invalid_argument));
+  DataExtractor Reader(Data, true, 8);
+  uint32_t OffsetPtr = 0;
 
-  if (auto E = readBinaryFormatHeader(Data, FileHeader))
+  if (auto E = readBinaryFormatHeader(Reader, OffsetPtr, FileHeader))
     return E;
 
   uint64_t BufferSize = 0;
@@ -583,35 +799,29 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
 
   // RecordSize will tell the loop how far to seek ahead based on the record
   // type that we have just read.
-  size_t RecordSize = 0;
-  for (auto S = Data.drop_front(32); !S.empty(); S = S.drop_front(RecordSize)) {
-    DataExtractor RecordExtractor(S, true, 8);
-    uint32_t OffsetPtr = 0;
+  while (Reader.isValidOffset(OffsetPtr)) {
+    auto BeginOffset = OffsetPtr;
     if (State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF) {
-      RecordSize = State.CurrentBufferSize - State.CurrentBufferConsumed;
-      if (S.size() < RecordSize) {
-        return make_error<StringError>(
-            Twine("Incomplete thread buffer. Expected at least ") +
-                Twine(RecordSize) + " bytes but found " + Twine(S.size()),
-            make_error_code(std::errc::invalid_argument));
-      }
+      OffsetPtr += State.CurrentBufferSize - State.CurrentBufferConsumed;
       State.CurrentBufferConsumed = 0;
       State.Expects = FDRState::Token::NEW_BUFFER_RECORD_OR_EOF;
       continue;
     }
-    uint8_t BitField = RecordExtractor.getU8(&OffsetPtr);
+    auto PreReadOffset = OffsetPtr;
+    uint8_t BitField = Reader.getU8(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading first byte of record at offset %d.", OffsetPtr);
     bool isMetadataRecord = BitField & 0x01uL;
     bool isBufferExtents =
         (BitField >> 1) == 7; // BufferExtents record kind == 7
     if (isMetadataRecord) {
-      RecordSize = 16;
-      if (auto E =
-              processFDRMetadataRecord(State, BitField, RecordExtractor,
-                                       RecordSize, Records, FileHeader.Version))
+      if (auto E = processFDRMetadataRecord(State, Reader, OffsetPtr, Records,
+                                            FileHeader.Version, BitField))
         return E;
     } else { // Process Function Record
-      RecordSize = 8;
-      if (auto E = processFDRFunctionRecord(State, BitField, RecordExtractor,
+      if (auto E = processFDRFunctionRecord(State, Reader, OffsetPtr, BitField,
                                             Records))
         return E;
     }
@@ -619,8 +829,10 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
     // The BufferExtents record is technically not part of the buffer, so we
     // don't count the size of that record against the buffer's actual size.
     if (!isBufferExtents)
-      State.CurrentBufferConsumed += RecordSize;
+      State.CurrentBufferConsumed += OffsetPtr - BeginOffset;
+
     assert(State.CurrentBufferConsumed <= State.CurrentBufferSize);
+
     if ((FileHeader.Version == 2 || FileHeader.Version == 3) &&
         State.CurrentBufferSize == State.CurrentBufferConsumed) {
       // In Version 2 of the log, we don't need to scan to the end of the thread
@@ -757,9 +969,9 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
 
   if (Sort)
     std::stable_sort(T.Records.begin(), T.Records.end(),
-              [&](const XRayRecord &L, const XRayRecord &R) {
-                return L.TSC < R.TSC;
-              });
+                     [&](const XRayRecord &L, const XRayRecord &R) {
+                       return L.TSC < R.TSC;
+                     });
 
   return std::move(T);
 }
