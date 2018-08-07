@@ -85,6 +85,58 @@ define i1 @cmpxchg_i32_success(i32* %p, i32 %exp, i32 %new) {
   ret i1 %succ
 }
 
+; Unsupported instructions are expanded using cmpxchg with a loop.
+
+; CHECK-LABEL: nand_i32:
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i32 @nand_i32(i32* %p, i32 %v) {
+  %old = atomicrmw nand i32* %p, i32 %v seq_cst
+  ret i32 %old
+}
+
+; CHECK-LABEL: max_i32:
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i32 @max_i32(i32* %p, i32 %v) {
+  %old = atomicrmw max i32* %p, i32 %v seq_cst
+  ret i32 %old
+}
+
+; CHECK-LABEL: min_i32:
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i32 @min_i32(i32* %p, i32 %v) {
+  %old = atomicrmw min i32* %p, i32 %v seq_cst
+  ret i32 %old
+}
+
+; CHECK-LABEL: umax_i32:
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i32 @umax_i32(i32* %p, i32 %v) {
+  %old = atomicrmw umax i32* %p, i32 %v seq_cst
+  ret i32 %old
+}
+
+; CHECK-LABEL: umin_i32:
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i32 @umin_i32(i32* %p, i32 %v) {
+  %old = atomicrmw umin i32* %p, i32 %v seq_cst
+  ret i32 %old
+}
+
 ;===----------------------------------------------------------------------------
 ; Atomic read-modify-writes: 64-bit
 ;===----------------------------------------------------------------------------
@@ -162,6 +214,58 @@ define i1 @cmpxchg_i64_success(i64* %p, i64 %exp, i64 %new) {
   %pair = cmpxchg i64* %p, i64 %exp, i64 %new seq_cst seq_cst
   %succ = extractvalue { i64, i1 } %pair, 1
   ret i1 %succ
+}
+
+; Unsupported instructions are expanded using cmpxchg with a loop.
+
+; CHECK-LABEL: nand_i64:
+; CHECK: loop
+; CHECK: i64.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i64 @nand_i64(i64* %p, i64 %v) {
+  %old = atomicrmw nand i64* %p, i64 %v seq_cst
+  ret i64 %old
+}
+
+; CHECK-LABEL: max_i64:
+; CHECK: loop
+; CHECK: i64.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i64 @max_i64(i64* %p, i64 %v) {
+  %old = atomicrmw max i64* %p, i64 %v seq_cst
+  ret i64 %old
+}
+
+; CHECK-LABEL: min_i64:
+; CHECK: loop
+; CHECK: i64.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i64 @min_i64(i64* %p, i64 %v) {
+  %old = atomicrmw min i64* %p, i64 %v seq_cst
+  ret i64 %old
+}
+
+; CHECK-LABEL: umax_i64:
+; CHECK: loop
+; CHECK: i64.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i64 @umax_i64(i64* %p, i64 %v) {
+  %old = atomicrmw umax i64* %p, i64 %v seq_cst
+  ret i64 %old
+}
+
+; CHECK-LABEL: umin_i64:
+; CHECK: loop
+; CHECK: i64.atomic.rmw.cmpxchg
+; CHECK: br_if 0
+; CHECK: end_loop
+define i64 @umin_i64(i64* %p, i64 %v) {
+  %old = atomicrmw umin i64* %p, i64 %v seq_cst
+  ret i64 %old
 }
 
 ;===----------------------------------------------------------------------------
@@ -627,6 +731,76 @@ define i64 @cmpxchg_sext_i32_i64(i32* %p, i64 %exp, i64 %new) {
   ret i64 %e
 }
 
+; Unsupported instructions are expanded using cmpxchg with a loop.
+; Here we take a nand as an example.
+
+; nand
+
+; CHECK-LABEL: nand_sext_i8_i32:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw8_u.cmpxchg
+; CHECK: i32.extend8_s
+define i32 @nand_sext_i8_i32(i8* %p, i32 %v) {
+  %t = trunc i32 %v to i8
+  %old = atomicrmw nand i8* %p, i8 %t seq_cst
+  %e = sext i8 %old to i32
+  ret i32 %e
+}
+
+; CHECK-LABEL: nand_sext_i16_i32:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw16_u.cmpxchg
+; CHECK: i32.extend16_s
+define i32 @nand_sext_i16_i32(i16* %p, i32 %v) {
+  %t = trunc i32 %v to i16
+  %old = atomicrmw nand i16* %p, i16 %t seq_cst
+  %e = sext i16 %old to i32
+  ret i32 %e
+}
+
+; FIXME Currently this cannot make use of i64.atomic.rmw8_u.cmpxchg
+; CHECK-LABEL: nand_sext_i8_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw8_u.cmpxchg
+; CHECK: i64.extend_u/i32
+; CHECK: i64.extend8_s
+define i64 @nand_sext_i8_i64(i8* %p, i64 %v) {
+  %t = trunc i64 %v to i8
+  %old = atomicrmw nand i8* %p, i8 %t seq_cst
+  %e = sext i8 %old to i64
+  ret i64 %e
+}
+
+; FIXME Currently this cannot make use of i64.atomic.rmw16_u.cmpxchg
+; CHECK-LABEL: nand_sext_i16_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw16_u.cmpxchg
+; CHECK: i64.extend_u/i32
+; CHECK: i64.extend16_s
+define i64 @nand_sext_i16_i64(i16* %p, i64 %v) {
+  %t = trunc i64 %v to i16
+  %old = atomicrmw nand i16* %p, i16 %t seq_cst
+  %e = sext i16 %old to i64
+  ret i64 %e
+}
+
+; 32->64 sext rmw gets selected as i32.atomic.rmw.nand, i64_extend_s/i32
+; CHECK-LABEL: nand_sext_i32_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: i64.extend_s/i32
+define i64 @nand_sext_i32_i64(i32* %p, i64 %v) {
+  %t = trunc i64 %v to i32
+  %old = atomicrmw nand i32* %p, i32 %t seq_cst
+  %e = sext i32 %old to i64
+  ret i64 %e
+}
+
 ;===----------------------------------------------------------------------------
 ; Atomic truncating & zero-extending RMWs
 ;===----------------------------------------------------------------------------
@@ -1036,6 +1210,72 @@ define i64 @cmpxchg_zext_i32_i64(i32* %p, i64 %exp, i64 %new) {
   %new_t = trunc i64 %new to i32
   %pair = cmpxchg i32* %p, i32 %exp_t, i32 %new_t seq_cst seq_cst
   %old = extractvalue { i32, i1 } %pair, 0
+  %e = zext i32 %old to i64
+  ret i64 %e
+}
+
+; Unsupported instructions are expanded using cmpxchg with a loop.
+; Here we take a nand as an example.
+
+; nand
+
+; CHECK-LABEL: nand_zext_i8_i32:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw8_u.cmpxchg
+define i32 @nand_zext_i8_i32(i8* %p, i32 %v) {
+  %t = trunc i32 %v to i8
+  %old = atomicrmw nand i8* %p, i8 %t seq_cst
+  %e = zext i8 %old to i32
+  ret i32 %e
+}
+
+; CHECK-LABEL: nand_zext_i16_i32:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw16_u.cmpxchg
+define i32 @nand_zext_i16_i32(i16* %p, i32 %v) {
+  %t = trunc i32 %v to i16
+  %old = atomicrmw nand i16* %p, i16 %t seq_cst
+  %e = zext i16 %old to i32
+  ret i32 %e
+}
+
+; FIXME Currently this cannot make use of i64.atomic.rmw8_u.cmpxchg
+; CHECK-LABEL: nand_zext_i8_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw8_u.cmpxchg
+; CHECK: i64.extend_u/i32
+define i64 @nand_zext_i8_i64(i8* %p, i64 %v) {
+  %t = trunc i64 %v to i8
+  %old = atomicrmw nand i8* %p, i8 %t seq_cst
+  %e = zext i8 %old to i64
+  ret i64 %e
+}
+
+; FIXME Currently this cannot make use of i64.atomic.rmw16_u.cmpxchg
+; CHECK-LABEL: nand_zext_i16_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw16_u.cmpxchg
+; CHECK: i64.extend_u/i32
+define i64 @nand_zext_i16_i64(i16* %p, i64 %v) {
+  %t = trunc i64 %v to i16
+  %old = atomicrmw nand i16* %p, i16 %t seq_cst
+  %e = zext i16 %old to i64
+  ret i64 %e
+}
+
+; FIXME Currently this cannot make use of i64.atomic.rmw32_u.cmpxchg
+; CHECK-LABEL: nand_zext_i32_i64:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK: loop
+; CHECK: i32.atomic.rmw.cmpxchg
+; CHECK: i64.extend_u/i32
+define i64 @nand_zext_i32_i64(i32* %p, i64 %v) {
+  %t = trunc i64 %v to i32
+  %old = atomicrmw nand i32* %p, i32 %t seq_cst
   %e = zext i32 %old to i64
   ret i64 %e
 }

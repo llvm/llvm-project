@@ -183,7 +183,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (InBinary) {
+  if (Config->FormatBinary) {
     Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
@@ -999,7 +999,7 @@ static void setConfigs(opt::InputArgList &Args) {
 }
 
 // Returns a value of "-format" option.
-static bool getBinaryOption(StringRef S) {
+static bool isFormatBinary(StringRef S) {
   if (S == "binary")
     return true;
   if (S == "elf" || S == "default")
@@ -1041,7 +1041,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = true;
       break;
     case OPT_format:
-      InBinary = getBinaryOption(Arg->getValue());
+      Config->FormatBinary = isFormatBinary(Arg->getValue());
       break;
     case OPT_no_as_needed:
       Config->AsNeeded = false;

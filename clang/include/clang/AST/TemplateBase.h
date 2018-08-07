@@ -467,7 +467,7 @@ public:
       : Argument(Argument), LocInfo(E) {
 
     // Permit any kind of template argument that can be represented with an
-    // expression
+    // expression.
     assert(Argument.getKind() == TemplateArgument::NullPtr ||
            Argument.getKind() == TemplateArgument::Integral ||
            Argument.getKind() == TemplateArgument::Declaration ||

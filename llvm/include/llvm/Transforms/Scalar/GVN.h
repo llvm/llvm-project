@@ -28,7 +28,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
+#include "llvm/Transforms/Utils/ImplicitControlFlowTracking.h"
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -158,11 +158,8 @@ private:
   AssumptionCache *AC;
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE;
-  // Maps a block to the topmost instruction with implicit control flow in it.
-  DenseMap<const BasicBlock *, const Instruction *>
-      FirstImplicitControlFlowInsts;
+  ImplicitControlFlowTracking *ICF;
 
-  OrderedInstructions *OI;
   ValueTable VN;
 
   /// A mapping from value numbers to lists of Value*'s that

@@ -13,11 +13,11 @@ NORMAL-DAG: det4()
 NORMAL-DAG: ini0()
 NORMAL-DAG: ini1()
 NORMAL-DAG: ini2()
-NORMAL-DAG: t0()
+NORMAL-DAG: t0(int)
 NORMAL-DAG: t1()
-NORMAL-DAG: t2()
+NORMAL-DAG: t2(int, int)
 NORMAL-DAG: t3()
-NORMAL-DAG: t4()
+NORMAL-DAG: t4(int, int, int)
 
 ; MinUnstable
 RUN: %run %t-HandleUnstableTest -print_coverage=1 -handle_unstable=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=MIN
