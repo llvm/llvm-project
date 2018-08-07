@@ -6655,7 +6655,7 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
                                           VTs, VT, MMO);
   createOperands(N, Ops);
 
-  assert(N->getValue().getValueType() == N->getValueType(0) &&
+  assert(N->getPassThru().getValueType() == N->getValueType(0) &&
          "Incompatible type of the PassThru value in MaskedGatherSDNode");
   assert(N->getMask().getValueType().getVectorNumElements() ==
              N->getValueType(0).getVectorNumElements() &&

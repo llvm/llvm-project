@@ -14,10 +14,10 @@
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 // Project includes
-#include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -426,20 +426,23 @@ Symbol *LinkerDriver::addUndefined(StringRef Name) {
 // each of which corresponds to a user-defined "main" function. This function
 // infers an entry point from a user-defined "main" function.
 StringRef LinkerDriver::findDefaultEntry() {
-  // User-defined main functions and their corresponding entry points.
-  static const char *Entries[][2] = {
-      {"main", "mainCRTStartup"},
-      {"wmain", "wmainCRTStartup"},
-      {"WinMain", "WinMainCRTStartup"},
-      {"wWinMain", "wWinMainCRTStartup"},
-  };
-  for (auto E : Entries) {
-    // As a special case, if /nodefaultlib is given, we directly look for an
-    // entry point. This is because, if no default library is linked, users
-    // need to define an entry point instead of a "main".
-    if (findUnderscoreMangle(E[Config->NoDefaultLibAll]))
-      return mangle(E[1]);
+  assert(Config->Subsystem != IMAGE_SUBSYSTEM_UNKNOWN &&
+         "must handle /subsystem before calling this");
+
+  // As a special case, if /nodefaultlib is given, we directly look for an
+  // entry point. This is because, if no default library is linked, users
+  // need to define an entry point instead of a "main".
+  bool FindMain = !Config->NoDefaultLibAll;
+  if (Config->Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
+    if (findUnderscoreMangle(FindMain ? "WinMain" : "WinMainCRTStartup"))
+      return mangle("WinMainCRTStartup");
+    if (findUnderscoreMangle(FindMain ? "wWinMain" : "wWinMainCRTStartup"))
+      return mangle("wWinMainCRTStartup");
   }
+  if (findUnderscoreMangle(FindMain ? "main" : "mainCRTStartup"))
+    return mangle("mainCRTStartup");
+  if (findUnderscoreMangle(FindMain ? "wmain" : "wmainCRTStartup"))
+    return mangle("wmainCRTStartup");
   return "";
 }
 
@@ -1204,25 +1207,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     error("/dynamicbase:no is not compatible with " +
           machineToStr(Config->Machine));
 
-  // Handle /entry and /dll
-  if (auto *Arg = Args.getLastArg(OPT_entry)) {
-    Config->Entry = addUndefined(mangle(Arg->getValue()));
-  } else if (!Config->Entry && !Config->NoEntry) {
-    if (Args.hasArg(OPT_dll)) {
-      StringRef S = (Config->Machine == I386) ? "__DllMainCRTStartup@12"
-                                              : "_DllMainCRTStartup";
-      Config->Entry = addUndefined(S);
-    } else {
-      // Windows specific -- If entry point name is not given, we need to
-      // infer that from user-defined entry name.
-      StringRef S = findDefaultEntry();
-      if (S.empty())
-        fatal("entry point must be defined");
-      Config->Entry = addUndefined(S);
-      log("Entry name inferred: " + S);
-    }
-  }
-
   // Handle /export
   for (auto *Arg : Args.filtered(OPT_export)) {
     Export E = parseExport(Arg->getValue());
@@ -1246,6 +1230,34 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     fixupExports();
     createImportLibrary(/*AsLib=*/true);
     return;
+  }
+
+  // Windows specific -- if no /subsystem is given, we need to infer
+  // that from entry point name.  Must happen before /entry handling,
+  // and after the early return when just writing an import library.
+  if (Config->Subsystem == IMAGE_SUBSYSTEM_UNKNOWN) {
+    Config->Subsystem = inferSubsystem();
+    if (Config->Subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
+      fatal("subsystem must be defined");
+  }
+
+  // Handle /entry and /dll
+  if (auto *Arg = Args.getLastArg(OPT_entry)) {
+    Config->Entry = addUndefined(mangle(Arg->getValue()));
+  } else if (!Config->Entry && !Config->NoEntry) {
+    if (Args.hasArg(OPT_dll)) {
+      StringRef S = (Config->Machine == I386) ? "__DllMainCRTStartup@12"
+                                              : "_DllMainCRTStartup";
+      Config->Entry = addUndefined(S);
+    } else {
+      // Windows specific -- If entry point name is not given, we need to
+      // infer that from user-defined entry name.
+      StringRef S = findDefaultEntry();
+      if (S.empty())
+        fatal("entry point must be defined");
+      Config->Entry = addUndefined(S);
+      log("Entry name inferred: " + S);
+    }
   }
 
   // Handle /delayload
@@ -1352,14 +1364,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->reportRemainingUndefines();
   if (errorCount())
     return;
-
-  // Windows specific -- if no /subsystem is given, we need to infer
-  // that from entry point name.
-  if (Config->Subsystem == IMAGE_SUBSYSTEM_UNKNOWN) {
-    Config->Subsystem = inferSubsystem();
-    if (Config->Subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
-      fatal("subsystem must be defined");
-  }
 
   // Handle /safeseh.
   if (Args.hasFlag(OPT_safeseh, OPT_safeseh_no, false)) {

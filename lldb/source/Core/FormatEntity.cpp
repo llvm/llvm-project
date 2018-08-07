@@ -14,7 +14,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegisterValue.h" // for RegisterValue
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -45,9 +44,10 @@
 #include "lldb/Utility/ArchSpec.h"    // for ArchSpec
 #include "lldb/Utility/ConstString.h" // for ConstString, oper...
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"        // for Log
-#include "lldb/Utility/Logging.h"    // for GetLogIfAllCatego...
-#include "lldb/Utility/SharingPtr.h" // for SharingPtr
+#include "lldb/Utility/Log.h"           // for Log
+#include "lldb/Utility/Logging.h"       // for GetLogIfAllCatego...
+#include "lldb/Utility/RegisterValue.h" // for RegisterValue
+#include "lldb/Utility/SharingPtr.h"    // for SharingPtr
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"     // for StringList

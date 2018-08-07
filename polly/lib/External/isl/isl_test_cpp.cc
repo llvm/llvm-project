@@ -52,7 +52,7 @@ static void test_return_bool(isl::ctx ctx)
 	try {
 		null.is_empty();
 		die("no exception raised");
-	} catch (const isl::exception &e) {
+	} catch (const isl::exception_invalid &e) {
 		caught = true;
 	}
 
@@ -131,6 +131,8 @@ static void test_exception(isl::ctx ctx)
 
 	try {
 		auto umap = isl::union_map::from(mupa);
+	} catch (const isl::exception_unsupported &error) {
+		die("caught wrong exception");
 	} catch (const isl::exception &error) {
 		assert(strstr(error.what(), "without explicit domain"));
 		copy = error;

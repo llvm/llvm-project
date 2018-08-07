@@ -4,8 +4,6 @@ add_lldb_unittest(LLDBCoreTests
   EventTest.cpp
   ListenerTest.cpp
   MangledTest.cpp
-  ScalarTest.cpp
-  StateTest.cpp
   StreamCallbackTest.cpp
 
   LINK_LIBS
@@ -15,7 +13,6 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginObjectFileELF
     lldbPluginSymbolVendorELF
     lldbUtilityHelpers
-    LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )

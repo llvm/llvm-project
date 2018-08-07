@@ -581,6 +581,54 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
   verifyDebugValuesAreSalvaged();
 }
 
+TEST(Local, ChangeToUnreachable) {
+  LLVMContext Ctx;
+
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+    define internal void @foo() !dbg !6 {
+    entry:
+      ret void, !dbg !8
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.debugify = !{!3, !4}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "test.ll", directory: "/")
+    !2 = !{}
+    !3 = !{i32 1}
+    !4 = !{i32 0}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, isLocal: true, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !DILocation(line: 1, column: 1, scope: !6)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  Function &F = *cast<Function>(M->getNamedValue("foo"));
+
+  BasicBlock &BB = F.front();
+  Instruction &A = BB.front();
+  DebugLoc DLA = A.getDebugLoc();
+
+  ASSERT_TRUE(isa<ReturnInst>(&A));
+  // One instruction should be affected.
+  EXPECT_EQ(changeToUnreachable(&A, /*UseLLVMTrap*/false), 1U);
+
+  Instruction &B = BB.front();
+
+  // There should be an uncreachable instruction.
+  ASSERT_TRUE(isa<UnreachableInst>(&B));
+
+  DebugLoc DLB = B.getDebugLoc();
+  EXPECT_EQ(DLA, DLB);
+}
+
 TEST(Local, ReplaceAllDbgUsesWith) {
   using namespace llvm::dwarf;
 

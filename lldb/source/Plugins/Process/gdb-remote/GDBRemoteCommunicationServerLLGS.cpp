@@ -21,8 +21,6 @@
 #include <thread>
 
 // Other libraries and framework includes
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/File.h"
@@ -41,6 +39,8 @@
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/Triple.h"

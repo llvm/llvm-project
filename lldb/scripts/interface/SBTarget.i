@@ -373,6 +373,11 @@ public:
     lldb::SBFileSpec
     GetExecutable ();
 
+    void
+    AppendImageSearchPath (const char *from,
+                           const char *to,
+                           SBError &error);
+
     bool
     AddModule (lldb::SBModule &module);
 

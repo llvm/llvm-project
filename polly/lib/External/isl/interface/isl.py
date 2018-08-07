@@ -1754,7 +1754,7 @@ class union_map(object):
         exc_info = [None]
         fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
         def cb_func(cb_arg0, cb_arg1):
-            cb_arg0 = map(ctx=arg0.ctx, ptr=cb_arg0)
+            cb_arg0 = map(ctx=arg0.ctx, ptr=(cb_arg0))
             try:
                 arg1(cb_arg0)
             except:
@@ -2464,7 +2464,7 @@ class map(union_map):
         exc_info = [None]
         fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
         def cb_func(cb_arg0, cb_arg1):
-            cb_arg0 = basic_map(ctx=arg0.ctx, ptr=cb_arg0)
+            cb_arg0 = basic_map(ctx=arg0.ctx, ptr=(cb_arg0))
             try:
                 arg1(cb_arg0)
             except:
@@ -3241,7 +3241,7 @@ class union_set(object):
         exc_info = [None]
         fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
         def cb_func(cb_arg0, cb_arg1):
-            cb_arg0 = point(ctx=arg0.ctx, ptr=cb_arg0)
+            cb_arg0 = point(ctx=arg0.ctx, ptr=(cb_arg0))
             try:
                 arg1(cb_arg0)
             except:
@@ -3264,7 +3264,7 @@ class union_set(object):
         exc_info = [None]
         fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
         def cb_func(cb_arg0, cb_arg1):
-            cb_arg0 = set(ctx=arg0.ctx, ptr=cb_arg0)
+            cb_arg0 = set(ctx=arg0.ctx, ptr=(cb_arg0))
             try:
                 arg1(cb_arg0)
             except:
@@ -3657,7 +3657,7 @@ class set(union_set):
         exc_info = [None]
         fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
         def cb_func(cb_arg0, cb_arg1):
-            cb_arg0 = basic_set(ctx=arg0.ctx, ptr=cb_arg0)
+            cb_arg0 = basic_set(ctx=arg0.ctx, ptr=(cb_arg0))
             try:
                 arg1(cb_arg0)
             except:

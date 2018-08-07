@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/Scalar.h"        // for Scalar, operator!=
 #include "lldb/Utility/Status.h"        // for Status
 #include "lldb/lldb-types.h"            // for addr_t
 #include "llvm/Support/ErrorHandling.h" // for llvm_unreachable

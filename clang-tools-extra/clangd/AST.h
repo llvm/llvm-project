@@ -16,6 +16,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
+#include "index/Index.h"
 
 namespace clang {
 class SourceManager;
@@ -32,6 +33,9 @@ SourceLocation findNameLoc(const clang::Decl *D);
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
+
+/// Gets the symbol ID for a declaration, if possible.
+llvm::Optional<SymbolID> getSymbolID(const Decl *D);
 
 } // namespace clangd
 } // namespace clang

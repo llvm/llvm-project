@@ -2437,8 +2437,7 @@ void DwarfDebug::addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
-  DwarfStringPoolEntryRef Ref =
-      Holder.getStringPool().getEntry(*Asm, Name);
+  DwarfStringPoolEntryRef Ref = Holder.getStringPool().getEntry(*Asm, Name);
 
   switch (getAccelTableKind()) {
   case AccelTableKind::Apple:
