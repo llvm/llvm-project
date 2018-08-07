@@ -40,6 +40,12 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The Windows installer no longer includes a Visual Studio integration.
+  Instead, a new
+  `LLVM Compiler Toolchain Visual Studio extension <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`
+  is available on the Visual Studio Marketplace. The new integration includes
+  support for Visual Studio 2017.
+
 * Libraries have been renamed from 7.0 to 7. This change also impacts
   downstream libraries like lldb.
 
