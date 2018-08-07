@@ -267,15 +267,6 @@ def FeatureD16PreservesUnusedBits : SubtargetFeature<
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-// Some instructions do not support denormals despite this flag. Using
-// fp32 denormals also causes instructions to run at the double
-// precision rate for the device.
-def FeatureFP32Denormals : SubtargetFeature<"fp32-denormals",
-  "FP32Denormals",
-  "true",
-  "Enable single precision denormal handling"
->;
-
 // Denormal handling for fp64 and fp16 is controlled by the same
 // config register when fp16 supported.
 // TODO: Do we need a separate f16 setting when not legal?
