@@ -1,4 +1,4 @@
-# RUN: '%python' %p/Inputs/ungzip.py %p/Inputs/many-sections.o.gz > %t
+# RUN: %python %p/Inputs/ungzip.py %p/Inputs/many-sections.o.gz > %t
 # RUN: llvm-objcopy -R .text -R s0 -R s1 -R s2 -R s3 -R s4 -R s5 -R s6 %t %t2
 # RUN: llvm-readobj -sections %t2 | FileCheck --check-prefix=SECS %s
 

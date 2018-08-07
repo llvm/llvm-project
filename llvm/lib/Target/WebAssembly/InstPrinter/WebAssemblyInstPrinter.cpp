@@ -211,13 +211,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(
   case WebAssembly::ExprType::I64: O << "i64"; break;
   case WebAssembly::ExprType::F32: O << "f32"; break;
   case WebAssembly::ExprType::F64: O << "f64"; break;
-  case WebAssembly::ExprType::I8x16: O << "i8x16"; break;
-  case WebAssembly::ExprType::I16x8: O << "i16x8"; break;
-  case WebAssembly::ExprType::I32x4: O << "i32x4"; break;
-  case WebAssembly::ExprType::F32x4: O << "f32x4"; break;
-  case WebAssembly::ExprType::B8x16: O << "b8x16"; break;
-  case WebAssembly::ExprType::B16x8: O << "b16x8"; break;
-  case WebAssembly::ExprType::B32x4: O << "b32x4"; break;
+  case WebAssembly::ExprType::V128: O << "v128"; break;
   case WebAssembly::ExprType::ExceptRef: O << "except_ref"; break;
   }
 }

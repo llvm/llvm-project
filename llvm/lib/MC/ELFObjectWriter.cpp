@@ -1273,6 +1273,8 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   for (const MCSymbol *&Sym : AddrsigSyms) {
     if (const MCSymbol *R = Renames.lookup(cast<MCSymbolELF>(Sym)))
       Sym = R;
+    if (Sym->isInSection() && Sym->getName().startswith(".L"))
+      Sym = Sym->getSection().getBeginSymbol();
     Sym->setUsedInReloc();
   }
 }

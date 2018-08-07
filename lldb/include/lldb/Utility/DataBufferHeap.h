@@ -90,7 +90,8 @@ public:
   /// Set the number of bytes in the data buffer.
   ///
   /// Sets the number of bytes that this object should be able to contain.
-  /// This can be used prior to copying data into the buffer.
+  /// This can be used prior to copying data into the buffer. Note that this
+  /// zero-initializes up to \p byte_size bytes.
   ///
   /// @param[in] byte_size
   ///     The new size in bytes that this data buffer should attempt

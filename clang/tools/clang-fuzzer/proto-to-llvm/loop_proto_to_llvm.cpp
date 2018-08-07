@@ -53,7 +53,7 @@ std::string VarRefToString(std::ostream &os, const VarRef &x) {
     break;
   }
   std::string ptr_var = get_var();
-  os << ptr_var << " = getelementptr i32, i32* " << arr << ", i64 %ct\n";
+  os << ptr_var << " = getelementptr inbounds i32, i32* " << arr << ", i64 %ct\n";
   return ptr_var;
 }
 std::string RvalueToString(std::ostream &os, const Rvalue &x) {
@@ -122,21 +122,20 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
   return os;
 }
 std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {
-  return os << "define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {\n"
-            << "%i = alloca i64\n"
-            << "store i64 0, i64* %i\n"
-            << "br label %loop\n\n"
+  return os << "target triple = \"x86_64-unknown-linux-gnu\"\n"
+            << "define void @foo(i32* %a, i32* %b, i32* %c, i64 %s) {\n"
+            << "%1 = icmp sgt i64 %s, 0\n"
+            << "br i1 %1, label %start, label %end\n"
+            << "start:\n"
+            << "br label %loop\n"
+            << "end:\n"
+            << "ret void\n"
             << "loop:\n"
-            << "%ct = load i64, i64* %i\n"
-            << "%comp = icmp eq i64 %ct, %s\n"
-            << "br i1 %comp, label %endloop, label %body\n\n"
-            << "body:\n"
+            << " %ct   = phi i64 [ %ctnew, %loop ], [ 0, %start ]\n"
             << x.statements()
-            << "%z = add i64 1, %ct\n"
-            << "store i64 %z, i64* %i\n"
-            << "br label %loop\n\n"
-            << "endloop:\n"
-            << "ret void\n}\n";
+            << "%ctnew = add i64 %ct, 1\n"
+            << "%j = icmp eq i64 %ctnew, %s\n"
+            << "br i1 %j, label %end, label %loop\n}\n";
 }
 
 // ---------------------------------

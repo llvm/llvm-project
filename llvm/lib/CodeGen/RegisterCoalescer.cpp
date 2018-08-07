@@ -1407,7 +1407,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (ToBeUpdated.count(SrcReg))
     return true;
 
-  long NumCopyUses = 0;
+  unsigned NumCopyUses = 0;
   for (MachineOperand &UseMO : MRI->use_nodbg_operands(SrcReg)) {
     if (UseMO.getParent()->isCopyLike())
       NumCopyUses++;

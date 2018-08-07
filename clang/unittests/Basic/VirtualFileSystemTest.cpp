@@ -13,6 +13,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 #include <map>
@@ -150,6 +151,13 @@ public:
                   sys::fs::file_type::symlink_file, sys::fs::all_all);
     addEntry(Path, S);
   }
+};
+
+/// Replace back-slashes by front-slashes.
+std::string getPosixPath(std::string S) {
+  SmallString<128> Result;
+  llvm::sys::path::native(S, Result, llvm::sys::path::Style::posix);
+  return Result.str();
 };
 } // end anonymous namespace
 
@@ -782,7 +790,9 @@ TEST_F(InMemoryFileSystemTest, DirectoryIteration) {
 
   I = FS.dir_begin("/b", EC);
   ASSERT_FALSE(EC);
-  ASSERT_EQ("/b/c", I->getName());
+  // When on Windows, we end up with "/b\\c" as the name.  Convert to Posix
+  // path for the sake of the comparison.
+  ASSERT_EQ("/b/c", getPosixPath(I->getName()));
   I.increment(EC);
   ASSERT_FALSE(EC);
   ASSERT_EQ(vfs::directory_iterator(), I);
@@ -794,23 +804,19 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
 
   auto Stat = FS.status("/b/c");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
-  ASSERT_EQ("c", Stat->getName());
+  ASSERT_EQ("/b/c", Stat->getName());
   ASSERT_EQ("/b", *FS.getCurrentWorkingDirectory());
 
   Stat = FS.status("c");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
 
-  auto ReplaceBackslashes = [](std::string S) {
-    std::replace(S.begin(), S.end(), '\\', '/');
-    return S;
-  };
   NormalizedFS.setCurrentWorkingDirectory("/b/c");
   NormalizedFS.setCurrentWorkingDirectory(".");
-  ASSERT_EQ("/b/c", ReplaceBackslashes(
-                        NormalizedFS.getCurrentWorkingDirectory().get()));
+  ASSERT_EQ("/b/c",
+            getPosixPath(NormalizedFS.getCurrentWorkingDirectory().get()));
   NormalizedFS.setCurrentWorkingDirectory("..");
-  ASSERT_EQ("/b", ReplaceBackslashes(
-                      NormalizedFS.getCurrentWorkingDirectory().get()));
+  ASSERT_EQ("/b",
+            getPosixPath(NormalizedFS.getCurrentWorkingDirectory().get()));
 }
 
 #if !defined(_WIN32)
@@ -917,6 +923,39 @@ TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
   Stat = FS.status("/a/b");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isRegularFile());
+}
+
+// Test that the name returned by status() is in the same form as the path that
+// was requested (to match the behavior of RealFileSystem).
+TEST_F(InMemoryFileSystemTest, StatusName) {
+  NormalizedFS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"),
+                       /*User=*/None,
+                       /*Group=*/None, sys::fs::file_type::regular_file);
+  NormalizedFS.setCurrentWorkingDirectory("/a/b");
+
+  // Access using InMemoryFileSystem::status.
+  auto Stat = NormalizedFS.status("../b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n"
+                                << NormalizedFS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ("../b/c", Stat->getName());
+
+  // Access using InMemoryFileAdaptor::status.
+  auto File = NormalizedFS.openFileForRead("../b/c");
+  ASSERT_FALSE(File.getError()) << File.getError() << "\n"
+                                << NormalizedFS.toString();
+  Stat = (*File)->status();
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n"
+                                << NormalizedFS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ("../b/c", Stat->getName());
+
+  // Access using a directory iterator.
+  std::error_code EC;
+  clang::vfs::directory_iterator It = NormalizedFS.dir_begin("../b", EC);
+  // When on Windows, we end up with "../b\\c" as the name.  Convert to Posix
+  // path for the sake of the comparison.
+  ASSERT_EQ("../b/c", getPosixPath(It->getName()));
 }
 
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is

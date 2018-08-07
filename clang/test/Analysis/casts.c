@@ -182,3 +182,9 @@ void testLocNonLocSymbolRemainder(int a, int *b) {
     c += 1;
   }
 }
+
+void testSwitchWithSizeofs() {
+  switch (sizeof(char) == 1) { // expected-warning{{switch condition has boolean value}}
+  case sizeof(char):; // no-crash
+  }
+}

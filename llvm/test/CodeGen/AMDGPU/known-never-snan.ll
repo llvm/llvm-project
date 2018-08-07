@@ -535,8 +535,7 @@ define float @v_test_not_known_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_frexp_mant_f32_e32 v0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, 2.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %known.not.snan = call float @llvm.amdgcn.frexp.mant.f32(float %arg)
   %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
@@ -554,6 +553,44 @@ define float @v_test_known_not_frexp_mant_input_fmed3_r_i_i_f32(float %arg) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add = fadd float %arg, 1.0
   %known.not.snan = call float @llvm.amdgcn.frexp.mant.f32(float %add)
+  %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
+  %med = call float @llvm.minnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define float @v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32(float %a) #0 {
+; GCN-LABEL: v_test_known_not_snan_rcp_input_fmed3_r_i_i_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %known.not.snan = call float @llvm.amdgcn.rcp.f32(float %a)
+  %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
+  %med = call float @llvm.minnum.f32(float %max, float 4.0)
+  ret float %med
+}
+define float @v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32(float %a) #0 {
+; GCN-LABEL: v_test_known_not_snan_rsq_input_fmed3_r_i_i_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %known.not.snan = call float @llvm.amdgcn.rsq.f32(float %a)
+  %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
+  %med = call float @llvm.minnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define float @v_test_known_not_snan_fract_input_fmed3_r_i_i_f32(float %a) #0 {
+; GCN-LABEL: v_test_known_not_snan_fract_input_fmed3_r_i_i_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fract_f32_e32 v0, v0
+; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %known.not.snan = call float @llvm.amdgcn.fract.f32(float %a)
   %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
   ret float %med
@@ -592,6 +629,9 @@ declare float @llvm.amdgcn.ldexp.f32(float, i32) #1
 declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
 declare float @llvm.amdgcn.frexp.mant.f32(float) #1
+declare float @llvm.amdgcn.rcp.f32(float) #1
+declare float @llvm.amdgcn.rsq.f32(float) #1
+declare float @llvm.amdgcn.fract.f32(float) #1
 declare float @llvm.amdgcn.cubeid(float, float, float) #0
 
 attributes #0 = { nounwind }
