@@ -602,6 +602,10 @@ private:
   bool ShouldMarkAsGlobal = true;
   llvm::SmallDenseSet<const FunctionDecl *> AlreadyEmittedTargetFunctions;
 
+  /// List of variables that can become declare target implicitly and, thus,
+  /// must be emitted.
+  llvm::SmallDenseSet<const VarDecl *> DeferredGlobalVariables;
+
   /// Creates and registers offloading binary descriptor for the current
   /// compilation unit. The function that does the registration is returned.
   llvm::Function *createOffloadingBinaryDescriptorRegistration();
@@ -1509,6 +1513,8 @@ public:
   /// true, if it was marked already, and false, otherwise.
   bool markAsGlobalTarget(GlobalDecl GD);
 
+  /// Emit deferred declare target variables marked for deferred emission.
+  void emitDeferredTargetDecls() const;
 };
 
 /// Class supports emissionof SIMD-only code.

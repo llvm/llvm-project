@@ -10,6 +10,25 @@
 #ifndef HEADER
 #define HEADER
 
+int out_decl_target = 0;
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: int out_decl_target = 0;
+// CHECK: #pragma omp end declare target{{$}}
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: void lambda()
+// CHECK: #pragma omp end declare target{{$}}
+
+#pragma omp declare target
+void lambda () {
+#ifdef __cpp_lambdas
+  (void)[&] { ++out_decl_target; };
+#else
+  #pragma clang __debug captured
+  (void)out_decl_target;
+#endif
+};
+#pragma omp end declare target
+
 #pragma omp declare target
 // CHECK: #pragma omp declare target{{$}}
 void foo() {}

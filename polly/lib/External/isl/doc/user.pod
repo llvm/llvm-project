@@ -767,7 +767,6 @@ The following unary operations are available on C<isl_val>s.
 	__isl_give isl_val *isl_val_ceil(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_trunc(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_inv(__isl_take isl_val *v);
-	__isl_give isl_val *isl_val_2exp(__isl_take isl_val *v);
 
 The following binary operations are available on C<isl_val>s.
 

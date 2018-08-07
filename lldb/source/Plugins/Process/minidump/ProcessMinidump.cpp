@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -365,6 +365,12 @@ void ProcessMinidump::ReadModuleList() {
       // This enables most LLDB functionality involving address-to-module
       // translations (ex. identifing the module for a stack frame PC) and
       // modules/sections commands (ex. target modules list, ...)
+      if (log) {
+        log->Printf("Unable to locate the matching object file, creating a "
+                    "placeholder module for: %s",
+                    name.getValue().c_str());
+      }
+
       auto placeholder_module =
           std::make_shared<PlaceholderModule>(module_spec);
       placeholder_module->CreateImageSection(module, GetTarget());

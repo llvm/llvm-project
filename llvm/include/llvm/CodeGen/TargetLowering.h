@@ -3497,8 +3497,7 @@ public:
   //
   SDValue BuildSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
                     SmallVectorImpl<SDNode *> &Created) const;
-  SDValue BuildUDIV(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
-                    bool IsAfterLegalization,
+  SDValue BuildUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
                     SmallVectorImpl<SDNode *> &Created) const;
 
   /// Targets may override this function to provide custom SDIV lowering for

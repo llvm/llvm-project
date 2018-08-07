@@ -1480,7 +1480,6 @@ namespace llvm {
     const SDValue &getBasePtr() const { return getOperand(3); }
     const SDValue &getIndex()   const { return getOperand(4); }
     const SDValue &getMask()    const { return getOperand(2); }
-    const SDValue &getValue()   const { return getOperand(1); }
     const SDValue &getScale()   const { return getOperand(5); }
 
     static bool classof(const SDNode *N) {
@@ -1496,6 +1495,8 @@ namespace llvm {
         : X86MaskedGatherScatterSDNode(X86ISD::MGATHER, Order, dl, VTs, MemVT,
                                        MMO) {}
 
+    const SDValue &getPassThru() const { return getOperand(1); }
+
     static bool classof(const SDNode *N) {
       return N->getOpcode() == X86ISD::MGATHER;
     }
@@ -1507,6 +1508,8 @@ namespace llvm {
                            EVT MemVT, MachineMemOperand *MMO)
         : X86MaskedGatherScatterSDNode(X86ISD::MSCATTER, Order, dl, VTs, MemVT,
                                        MMO) {}
+
+    const SDValue &getValue() const { return getOperand(1); }
 
     static bool classof(const SDNode *N) {
       return N->getOpcode() == X86ISD::MSCATTER;

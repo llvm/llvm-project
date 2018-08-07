@@ -556,7 +556,6 @@ class NonvolatileLoad<SDPatternOperator load>
   auto *Load = cast<LoadSDNode>(N);
   return !Load->isVolatile();
 }]>;
-def nonvolatile_load          : NonvolatileLoad<load>;
 def nonvolatile_anyextloadi8  : NonvolatileLoad<anyextloadi8>;
 def nonvolatile_anyextloadi16 : NonvolatileLoad<anyextloadi16>;
 def nonvolatile_anyextloadi32 : NonvolatileLoad<anyextloadi32>;
@@ -567,7 +566,6 @@ class NonvolatileStore<SDPatternOperator store>
   auto *Store = cast<StoreSDNode>(N);
   return !Store->isVolatile();
 }]>;
-def nonvolatile_store         : NonvolatileStore<store>;
 def nonvolatile_truncstorei8  : NonvolatileStore<truncstorei8>;
 def nonvolatile_truncstorei16 : NonvolatileStore<truncstorei16>;
 def nonvolatile_truncstorei32 : NonvolatileStore<truncstorei32>;

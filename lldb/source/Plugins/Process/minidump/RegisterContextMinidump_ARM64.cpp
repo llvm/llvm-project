@@ -12,7 +12,7 @@
 
 // Other libraries and framework includes
 #include "Utility/ARM64_DWARF_Registers.h"
-#include "lldb/Core/RegisterValue.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -313,7 +313,7 @@ static RegisterInfo g_reg_infos[] = {
     {"fp",
      "x29",
      8,
-     OFFSET(x[29]),
+     OFFSET(x) + 29 * 8,
      eEncodingUint,
      eFormatHex,
      {INV, arm64_dwarf::x29, LLDB_REGNUM_GENERIC_FP, INV, reg_fp},
@@ -324,7 +324,7 @@ static RegisterInfo g_reg_infos[] = {
     {"lr",
      "x30",
      8,
-     OFFSET(x[30]),
+     OFFSET(x) + 30 * 8,
      eEncodingUint,
      eFormatHex,
      {INV, arm64_dwarf::x30, LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
@@ -335,7 +335,7 @@ static RegisterInfo g_reg_infos[] = {
     {"sp",
      "x31",
      8,
-     OFFSET(x[31]),
+     OFFSET(x) + 31 * 8,
      eEncodingUint,
      eFormatHex,
      {INV, arm64_dwarf::x31, LLDB_REGNUM_GENERIC_SP, INV, reg_sp},

@@ -1006,12 +1006,6 @@ def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
 // DAG Pattern Matching Rules
 //===----------------------------------------------------------------------===//
 
-def nonvolatile_store : PatFrag<(ops node:$val, node:$ptr),
-                                 (store node:$val, node:$ptr), [{
-  return !cast<StoreSDNode>(N)->isVolatile();
-}]>;
-
-
 // Use AND/OR to store 0/-1 in memory when optimizing for minsize. This saves
 // binary size compared to a regular MOV, but it introduces an unnecessary
 // load, so is not suitable for regular or optsize functions.

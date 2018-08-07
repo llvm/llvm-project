@@ -6460,20 +6460,18 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   LangAS ResultAddrSpace = LangAS::Default;
   LangAS LAddrSpace = lhQual.getAddressSpace();
   LangAS RAddrSpace = rhQual.getAddressSpace();
-  if (S.getLangOpts().OpenCL) {
-    // OpenCL v1.1 s6.5 - Conversion between pointers to distinct address
-    // spaces is disallowed.
-    if (lhQual.isAddressSpaceSupersetOf(rhQual))
-      ResultAddrSpace = LAddrSpace;
-    else if (rhQual.isAddressSpaceSupersetOf(lhQual))
-      ResultAddrSpace = RAddrSpace;
-    else {
-      S.Diag(Loc,
-             diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
-          << LHSTy << RHSTy << 2 << LHS.get()->getSourceRange()
-          << RHS.get()->getSourceRange();
-      return QualType();
-    }
+
+  // OpenCL v1.1 s6.5 - Conversion between pointers to distinct address
+  // spaces is disallowed.
+  if (lhQual.isAddressSpaceSupersetOf(rhQual))
+    ResultAddrSpace = LAddrSpace;
+  else if (rhQual.isAddressSpaceSupersetOf(lhQual))
+    ResultAddrSpace = RAddrSpace;
+  else {
+    S.Diag(Loc, diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
+        << LHSTy << RHSTy << 2 << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
   }
 
   unsigned MergedCVRQual = lhQual.getCVRQualifiers() | rhQual.getCVRQualifiers();
@@ -6491,16 +6489,12 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   // Thus for conditional operator we merge CVR and address space unqualified
   // pointees and if there is a composite type we return a pointer to it with
   // merged qualifiers.
-  if (S.getLangOpts().OpenCL) {
-    LHSCastKind = LAddrSpace == ResultAddrSpace
-                      ? CK_BitCast
-                      : CK_AddressSpaceConversion;
-    RHSCastKind = RAddrSpace == ResultAddrSpace
-                      ? CK_BitCast
-                      : CK_AddressSpaceConversion;
-    lhQual.removeAddressSpace();
-    rhQual.removeAddressSpace();
-  }
+  LHSCastKind =
+      LAddrSpace == ResultAddrSpace ? CK_BitCast : CK_AddressSpaceConversion;
+  RHSCastKind =
+      RAddrSpace == ResultAddrSpace ? CK_BitCast : CK_AddressSpaceConversion;
+  lhQual.removeAddressSpace();
+  rhQual.removeAddressSpace();
 
   lhptee = S.Context.getQualifiedType(lhptee.getUnqualifiedType(), lhQual);
   rhptee = S.Context.getQualifiedType(rhptee.getUnqualifiedType(), rhQual);
@@ -6516,6 +6510,7 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
         S.Context.getAddrSpaceQualType(S.Context.VoidTy, ResultAddrSpace));
     LHS = S.ImpCastExprToType(LHS.get(), incompatTy, LHSCastKind);
     RHS = S.ImpCastExprToType(RHS.get(), incompatTy, RHSCastKind);
+
     // FIXME: For OpenCL the warning emission and cast to void* leaves a room
     // for casts between types with incompatible address space qualifiers.
     // For the following code the compiler produces casts between global and
@@ -6526,6 +6521,7 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
     S.Diag(Loc, diag::ext_typecheck_cond_incompatible_pointers)
         << LHSTy << RHSTy << LHS.get()->getSourceRange()
         << RHS.get()->getSourceRange();
+
     return incompatTy;
   }
 

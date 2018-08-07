@@ -34,12 +34,9 @@ add_lldb_library(lldbCore
   ModuleList.cpp
   Opcode.cpp
   PluginManager.cpp
-  RegisterValue.cpp
-  Scalar.cpp
   SearchFilter.cpp
   Section.cpp
   SourceManager.cpp
-  State.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
   UserSettingsController.cpp

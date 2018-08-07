@@ -73,10 +73,10 @@ void foo() {
 
   int __attribute__((address_space(2))) *adr2;
   int __attribute__((address_space(3))) *adr3;
-  test0 ? adr2 : adr3; // expected-warning {{pointer type mismatch}} expected-warning {{expression result unused}}
+  test0 ? adr2 : adr3; // expected-error{{conditional operator with the second and third operands of type  ('__attribute__((address_space(2))) int *' and '__attribute__((address_space(3))) int *') which are pointers to non-overlapping address spaces}}
 
   // Make sure address-space mask ends up in the result type
-  (test0 ? (test0 ? adr2 : adr2) : nonconst_int); // expected-warning {{pointer type mismatch}} expected-warning {{expression result unused}}
+  (test0 ? (test0 ? adr2 : adr2) : nonconst_int); // expected-error{{conditional operator with the second and third operands of type  ('__attribute__((address_space(2))) int *' and 'int *') which are pointers to non-overlapping address spaces}}
 }
 
 int Postgresql() {

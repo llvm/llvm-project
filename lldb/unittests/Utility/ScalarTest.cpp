@@ -9,9 +9,9 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Testing/Support/Error.h"

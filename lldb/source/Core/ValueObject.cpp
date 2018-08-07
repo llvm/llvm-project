@@ -11,7 +11,6 @@
 
 #include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Scalar.h" // for Scalar
 #include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -20,7 +19,7 @@
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h" // for DumpValueObj...
-#include "lldb/DataFormatters/FormatManager.h" // for FormatManager
+#include "lldb/DataFormatters/FormatManager.h"          // for FormatManager
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeFormat.h"    // for TypeFormatImpl_F...
 #include "lldb/DataFormatters/TypeSummary.h"   // for TypeSummaryOptions
@@ -47,6 +46,7 @@
 #include "lldb/Utility/Flags.h" // for Flags
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"    // for GetLogIfAllCateg...
+#include "lldb/Utility/Scalar.h"     // for Scalar
 #include "lldb/Utility/SharingPtr.h" // for SharingPtr
 #include "lldb/Utility/Stream.h"     // for Stream
 #include "lldb/Utility/StreamString.h"

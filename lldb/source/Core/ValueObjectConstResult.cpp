@@ -9,7 +9,6 @@
 
 #include "lldb/Core/ValueObjectConstResult.h"
 
-#include "lldb/Core/Scalar.h" // for Scalar
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -18,6 +17,7 @@
 #include "lldb/Utility/DataBuffer.h"     // for DataBuffer
 #include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h" // for Scalar
 
 namespace lldb_private {
 class Module;

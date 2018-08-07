@@ -28,5 +28,4 @@ Sections:
 # CHECK-NEXT: Type: regular
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 8
-# CHECK-NEXT: Data:
-# CHECK-NEXT: DEADBEEF BAADF00D
+# CHECK-NEXT: Data: ()

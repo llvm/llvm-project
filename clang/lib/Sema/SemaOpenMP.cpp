@@ -1417,7 +1417,7 @@ bool Sema::isInOpenMPTargetExecutionDirective() const {
              false);
 }
 
-VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) const {
+VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
@@ -1425,13 +1425,22 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) const {
   // 'target' we return true so that this global is also mapped to the device.
   //
   auto *VD = dyn_cast<VarDecl>(D);
-  if (VD && !VD->hasLocalStorage() && isInOpenMPTargetExecutionDirective()) {
-    // If the declaration is enclosed in a 'declare target' directive,
-    // then it should not be captured.
-    //
-    if (isDeclareTargetDeclaration(VD))
+  if (VD && !VD->hasLocalStorage()) {
+    if (isInOpenMPDeclareTargetContext() &&
+        (getCurCapturedRegion() || getCurBlock() || getCurLambda())) {
+      // Try to mark variable as declare target if it is used in capturing
+      // regions.
+      if (!isDeclareTargetDeclaration(VD))
+        checkDeclIsAllowedInOpenMPTarget(nullptr, VD);
       return nullptr;
-    return VD;
+    } else if (isInOpenMPTargetExecutionDirective()) {
+      // If the declaration is enclosed in a 'declare target' directive,
+      // then it should not be captured.
+      //
+      if (isDeclareTargetDeclaration(VD))
+        return nullptr;
+      return VD;
+    }
   }
 
   if (DSAStack->getCurrentDirective() != OMPD_unknown &&

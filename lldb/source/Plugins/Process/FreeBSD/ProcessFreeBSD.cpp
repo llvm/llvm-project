@@ -24,12 +24,12 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/State.h"
 
 #include "FreeBSDThread.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -44,7 +44,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -52,6 +51,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/State.h"
 
 #include "lldb/Host/posix/Fcntl.h"
 

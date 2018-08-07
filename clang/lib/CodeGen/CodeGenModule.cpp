@@ -1747,6 +1747,10 @@ void CodeGenModule::EmitModuleLinkOptions() {
 }
 
 void CodeGenModule::EmitDeferred() {
+  // Emit deferred declare target declarations.
+  if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
+    getOpenMPRuntime().emitDeferredTargetDecls();
+
   // Emit code for any potentially referenced deferred decls.  Since a
   // previously unused static decl may become used during the generation of code
   // for a static function, iterate until no changes are made.

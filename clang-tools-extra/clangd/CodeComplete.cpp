@@ -396,10 +396,7 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
   switch (R.Kind) {
   case CodeCompletionResult::RK_Declaration:
   case CodeCompletionResult::RK_Pattern: {
-    llvm::SmallString<128> USR;
-    if (/*Ignore=*/clang::index::generateUSRForDecl(R.Declaration, USR))
-      return None;
-    return SymbolID(USR);
+    return clang::clangd::getSymbolID(R.Declaration);
   }
   case CodeCompletionResult::RK_Macro:
     // FIXME: Macros do have USRs, but the CCR doesn't contain enough info.

@@ -320,21 +320,20 @@ bool SymbolCollector::handleDeclOccurence(
   if (!shouldCollectSymbol(*ND, *ASTCtx, Opts))
     return true;
 
-  llvm::SmallString<128> USR;
-  if (index::generateUSRForDecl(ND, USR))
+  auto ID = getSymbolID(ND);
+  if (!ID)
     return true;
-  SymbolID ID(USR);
 
   const NamedDecl &OriginalDecl = *cast<NamedDecl>(ASTNode.OrigD);
-  const Symbol *BasicSymbol = Symbols.find(ID);
+  const Symbol *BasicSymbol = Symbols.find(*ID);
   if (!BasicSymbol) // Regardless of role, ND is the canonical declaration.
-    BasicSymbol = addDeclaration(*ND, std::move(ID));
+    BasicSymbol = addDeclaration(*ND, std::move(*ID));
   else if (isPreferredDeclaration(OriginalDecl, Roles))
     // If OriginalDecl is preferred, replace the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
-    BasicSymbol = addDeclaration(OriginalDecl, std::move(ID));
+    BasicSymbol = addDeclaration(OriginalDecl, std::move(*ID));
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
     addDefinition(OriginalDecl, *BasicSymbol);
@@ -423,9 +422,9 @@ void SymbolCollector::finish() {
     }
   };
   for (const NamedDecl *ND : ReferencedDecls) {
-    llvm::SmallString<128> USR;
-    if (!index::generateUSRForDecl(ND, USR))
-      IncRef(SymbolID(USR));
+    if (auto ID = getSymbolID(ND)) {
+      IncRef(*ID);
+    }
   }
   if (Opts.CollectMacro) {
     assert(PP);

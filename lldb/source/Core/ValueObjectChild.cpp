@@ -9,12 +9,12 @@
 
 #include "lldb/Core/ValueObjectChild.h"
 
-#include "lldb/Core/Scalar.h" // for Scalar
-#include "lldb/Core/Value.h"  // for Value, Value::ValueType::e...
+#include "lldb/Core/Value.h" // for Value, Value::ValueType::e...
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"  // for Flags
+#include "lldb/Utility/Scalar.h" // for Scalar
 #include "lldb/Utility/Status.h" // for Status
 #include "lldb/lldb-forward.h"   // for ProcessSP, ModuleSP
 

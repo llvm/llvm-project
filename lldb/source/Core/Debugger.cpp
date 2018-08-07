@@ -12,11 +12,10 @@
 #include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint, Brea...
 #include "lldb/Core/Event.h"            // for Event, EventData...
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/Listener.h" // for Listener
-#include "lldb/Core/Mangled.h"  // for Mangled
-#include "lldb/Core/ModuleList.h"  // for Mangled
+#include "lldb/Core/Listener.h"   // for Listener
+#include "lldb/Core/Mangled.h"    // for Mangled
+#include "lldb/Core/ModuleList.h" // for Mangled
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -43,7 +42,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h" // for ThreadList
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/Log.h"    // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/Log.h" // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
