@@ -986,3 +986,21 @@ void bar() {
   *i = 99; // no-warning
 }
 } // namespace ctor_argument
+
+namespace operator_implicit_argument {
+struct S {
+  bool x;
+  S(bool x): x(x) {}
+  operator bool() const { return x; }
+};
+
+void foo() {
+  if (S(false)) {
+    clang_analyzer_warnIfReached(); // no-warning
+  }
+  if (S(true)) {
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+  }
+}
+} // namespace operator_implicit_argument
+

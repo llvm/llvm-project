@@ -785,7 +785,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   // which is 43 characters.
   SmallString<64> S;
   FixedPointValueToString(
-      S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale, Radix);
+      S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
   return S.str();
 }
 

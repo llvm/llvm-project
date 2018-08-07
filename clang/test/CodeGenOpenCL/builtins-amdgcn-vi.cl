@@ -82,6 +82,13 @@ void test_s_memrealtime(global ulong* out)
   *out = __builtin_amdgcn_s_memrealtime();
 }
 
+// CHECK-LABEL: @test_s_dcache_wb()
+// CHECK: call void @llvm.amdgcn.s.dcache.wb()
+void test_s_dcache_wb()
+{
+  __builtin_amdgcn_s_dcache_wb();
+}
+
 // CHECK-LABEL: @test_mov_dpp
 // CHECK: call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 0, i32 0, i32 0, i1 false)
 void test_mov_dpp(global int* out, int src)
