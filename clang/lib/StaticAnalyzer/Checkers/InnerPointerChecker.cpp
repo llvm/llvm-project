@@ -15,6 +15,7 @@
 
 #include "AllocationState.h"
 #include "ClangSACheckers.h"
+#include "InterCheckerAPI.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -313,6 +314,6 @@ std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
 } // end namespace clang
 
 void ento::registerInnerPointerChecker(CheckerManager &Mgr) {
-  registerNewDeleteChecker(Mgr);
+  registerInnerPointerCheckerAux(Mgr);
   Mgr.registerChecker<InnerPointerChecker>();
 }
