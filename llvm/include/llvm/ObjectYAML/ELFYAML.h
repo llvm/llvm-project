@@ -123,6 +123,7 @@ struct Section {
   StringRef Link;
   StringRef Info;
   llvm::yaml::Hex64 AddressAlign;
+  Optional<llvm::yaml::Hex64> EntSize;
 
   Section(SectionKind Kind) : Kind(Kind) {}
   virtual ~Section();

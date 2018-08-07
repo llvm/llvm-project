@@ -7,25 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Scalar_h_
-#define liblldb_Scalar_h_
+#ifndef LLDB_UTILITY_SCALAR_H
+#define LLDB_UTILITY_SCALAR_H
 
 #include "lldb/Utility/Status.h"     // for Status
 #include "lldb/lldb-enumerations.h"  // for Encoding, ByteOrder
 #include "lldb/lldb-private-types.h" // for type128
-
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t, int64_t
+#include <cstddef> // for size_t
+#include <cstdint> // for uint32_t, uint64_t, int64_t
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class Stream;
-}
+} // namespace lldb_private
 
 #define NUM_OF_WORDS_INT128 2
 #define BITWIDTH_INT128 128
@@ -375,4 +371,4 @@ bool operator>=(const Scalar &lhs, const Scalar &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_Scalar_h_
+#endif // LLDB_UTILITY_SCALAR_H

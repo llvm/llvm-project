@@ -157,6 +157,23 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setMaxAtomicSizeInBitsSupported(64);
 }
 
+TargetLowering::AtomicExpansionKind
+WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  // We have wasm instructions for these
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
+    return AtomicExpansionKind::None;
+  default:
+    break;
+  }
+  return AtomicExpansionKind::CmpXChg;
+}
+
 FastISel *WebAssemblyTargetLowering::createFastISel(
     FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo) const {
   return WebAssembly::createFastISel(FuncInfo, LibInfo);

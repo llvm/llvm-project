@@ -1468,3 +1468,35 @@ TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
   }
   EXPECT_EQ(I, E);
 }
+
+TEST_F(VFSFromYAMLTest, RelativePaths) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  // Filename at root level without a parent directory.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'roots': [\n"
+      "  { 'type': 'file', 'name': 'file-not-in-directory.h',\n"
+      "    'external-contents': '//root/external/file'\n"
+      "  }\n"
+      "] }", Lower);
+  EXPECT_EQ(nullptr, FS.get());
+
+  // Relative file path.
+  FS = getFromYAMLString(
+      "{ 'roots': [\n"
+      "  { 'type': 'file', 'name': 'relative/file/path.h',\n"
+      "    'external-contents': '//root/external/file'\n"
+      "  }\n"
+      "] }", Lower);
+  EXPECT_EQ(nullptr, FS.get());
+
+  // Relative directory path.
+  FS = getFromYAMLString(
+       "{ 'roots': [\n"
+       "  { 'type': 'directory', 'name': 'relative/directory/path.h',\n"
+       "    'contents': []\n"
+       "  }\n"
+       "] }", Lower);
+  EXPECT_EQ(nullptr, FS.get());
+
+  EXPECT_EQ(3, NumDiagnostics);
+}

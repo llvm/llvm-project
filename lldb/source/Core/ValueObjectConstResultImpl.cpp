@@ -9,7 +9,6 @@
 
 #include "lldb/Core/ValueObjectConstResultImpl.h"
 
-#include "lldb/Core/Scalar.h"      // for Scalar
 #include "lldb/Core/Value.h"       // for Value, Value::Val...
 #include "lldb/Core/ValueObject.h" // for ValueObject
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -19,6 +18,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
 #include "lldb/Utility/Endian.h"         // for InlHostByteOrder
+#include "lldb/Utility/Scalar.h"         // for Scalar
 #include "lldb/Utility/SharingPtr.h"     // for SharingPtr
 
 #include <string> // for string

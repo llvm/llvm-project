@@ -1,0 +1,50 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -sections %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .strings
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x04
+    Content:         "FFFFFFFFFFFFFFFF"
+    EntSize:         0x1
+  - Name:            .mydynamic
+    Type:            SHT_DYNAMIC
+    EntSize:         0x0
+
+
+## Check we were able to set entry size for .strings and .mydynamic
+# CHECK:       Name: .strings
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:     SHF_MERGE
+# CHECK-NEXT:     SHF_STRINGS
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address:
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize: 1
+# CHECK-NEXT: }
+# CHECK:        Name: .mydynamic
+# CHECK-NEXT:   Type: SHT_DYNAMIC
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address:
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize: 0
+# CHECK-NEXT: }

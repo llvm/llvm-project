@@ -202,15 +202,6 @@ makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   return L;
 }
 
-// Get the symbol ID for a declaration, if possible.
-llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
-  llvm::SmallString<128> USR;
-  if (index::generateUSRForDecl(D, USR)) {
-    return None;
-  }
-  return SymbolID(USR);
-}
-
 } // namespace
 
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,

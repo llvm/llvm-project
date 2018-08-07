@@ -660,10 +660,11 @@ defm : BinRMWTruncExtPattern<
 // Atomic ternary read-modify-writes
 //===----------------------------------------------------------------------===//
 
-// TODO LLVM IR's cmpxchg instruction returns a pair of {loaded value,
-// success flag}. When we use a success flag or both values, we can't make use
-// of truncate/extend versions of instructions for now, which is suboptimal. Add
-// selection rules for those cases too.
+// TODO LLVM IR's cmpxchg instruction returns a pair of {loaded value, success
+// flag}. When we use the success flag or both values, we can't make use of i64
+// truncate/extend versions of instructions for now, which is suboptimal.
+// Consider adding a pass after instruction selection that optimizes this case
+// if it is frequent.
 
 let Defs = [ARGUMENTS] in {
 

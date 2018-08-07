@@ -12,12 +12,12 @@
 
 // A basic C++ link command-line.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo --stdlib=c++ %s 2>&1 | FileCheck -check-prefix=LINK %s
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo --stdlib=c++ -fuse-ld=wasm-ld %s 2>&1 | FileCheck -check-prefix=LINK %s
 // LINK: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
+// LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ link command-line with optimization.
 
-// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s --stdlib=c++ 2>&1 | FileCheck -check-prefix=LINK_OPT %s
+// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s --stdlib=c++ -fuse-ld=wasm-ld 2>&1 | FileCheck -check-prefix=LINK_OPT %s
 // LINK_OPT: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_OPT: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
+// LINK_OPT: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"

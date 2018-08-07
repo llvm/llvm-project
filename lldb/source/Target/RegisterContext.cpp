@@ -13,8 +13,6 @@
 // Project includes
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -24,6 +22,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"
 
 using namespace lldb;
 using namespace lldb_private;

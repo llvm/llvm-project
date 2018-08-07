@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Index/USRGeneration.h"
 
 namespace clang {
 namespace clangd {
@@ -51,6 +52,13 @@ std::string printQualifiedName(const NamedDecl &ND) {
   OS.flush();
   assert(!StringRef(QName).startswith("::"));
   return QName;
+}
+
+llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+  llvm::SmallString<128> USR;
+  if (index::generateUSRForDecl(D, USR))
+    return None;
+  return SymbolID(USR);
 }
 
 } // namespace clangd

@@ -12,7 +12,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
@@ -20,6 +19,7 @@
 #include "lldb/Target/StackFrame.h"   // for StackFrame
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h" // for Stream, Stream::::eBinary
 #include "lldb/Utility/StreamString.h"

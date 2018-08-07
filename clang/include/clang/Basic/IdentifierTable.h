@@ -50,36 +50,60 @@ using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 class IdentifierInfo {
   friend class IdentifierTable;
 
-  unsigned TokenID            : 9; // Front-end token ID or tok::identifier.
-  // Objective-C keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
-  // First NUM_OBJC_KEYWORDS values are for Objective-C, the remaining values
-  // are for builtins.
-  unsigned ObjCOrBuiltinID    :13;
-  bool HasMacro               : 1; // True if there is a #define for this.
-  bool HadMacro               : 1; // True if there was a #define for this.
-  bool IsExtension            : 1; // True if identifier is a lang extension.
-  bool IsFutureCompatKeyword  : 1; // True if identifier is a keyword in a
-                                   // newer Standard or proposed Standard.
-  bool IsPoisoned             : 1; // True if identifier is poisoned.
-  bool IsCPPOperatorKeyword   : 1; // True if ident is a C++ operator keyword.
-  bool NeedsHandleIdentifier  : 1; // See "RecomputeNeedsHandleIdentifier".
-  bool IsFromAST              : 1; // True if identifier was loaded (at least
-                                   // partially) from an AST file.
-  bool ChangedAfterLoad       : 1; // True if identifier has changed from the
-                                   // definition loaded from an AST file.
-  bool FEChangedAfterLoad     : 1; // True if identifier's frontend information
-                                   // has changed from the definition loaded
-                                   // from an AST file.
-  bool RevertedTokenID        : 1; // True if revertTokenIDToIdentifier was
-                                   // called.
-  bool OutOfDate              : 1; // True if there may be additional
-                                   // information about this identifier
-                                   // stored externally.
-  bool IsModulesImport        : 1; // True if this is the 'import' contextual
-                                   // keyword.
-  // 29 bit left in 64-bit word.
+  /// Front-end token ID or tok::identifier.
+  unsigned TokenID : 9;
 
-  // Managed by the language front-end.
+  /// ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
+  /// First NUM_OBJC_KEYWORDS values are for Objective-C,
+  /// the remaining values are for builtins.
+  unsigned ObjCOrBuiltinID : 13;
+
+  /// True if there is a #define for this.
+  unsigned HasMacro : 1;
+
+  /// True if there was a #define for this.
+  unsigned HadMacro : 1;
+
+  /// True if the identifier is a language extension.
+  unsigned IsExtension : 1;
+
+  /// True if the identifier is a keyword in a newer or proposed Standard.
+  unsigned IsFutureCompatKeyword : 1;
+
+  /// True if the identifier is poisoned.
+  unsigned IsPoisoned : 1;
+
+  /// True if the identifier is a C++ operator keyword.
+  unsigned IsCPPOperatorKeyword : 1;
+
+  /// Internal bit set by the member function RecomputeNeedsHandleIdentifier.
+  /// See comment about RecomputeNeedsHandleIdentifier for more info.
+  unsigned NeedsHandleIdentifier : 1;
+
+  /// True if the identifier was loaded (at least partially) from an AST file.
+  unsigned IsFromAST : 1;
+
+  /// True if the identifier has changed from the definition
+  /// loaded from an AST file.
+  unsigned ChangedAfterLoad : 1;
+
+  /// True if the identifier's frontend information has changed from the
+  /// definition loaded from an AST file.
+  unsigned FEChangedAfterLoad : 1;
+
+  /// True if revertTokenIDToIdentifier was called.
+  unsigned RevertedTokenID : 1;
+
+  /// True if there may be additional information about
+  /// this identifier stored externally.
+  unsigned OutOfDate : 1;
+
+  /// True if this is the 'import' contextual keyword.
+  unsigned IsModulesImport : 1;
+
+  // 29 bits left in a 64-bit word.
+
+  /// Managed by the language front-end.
   void *FETokenInfo = nullptr;
 
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;

@@ -1281,7 +1281,8 @@ class RedirectingFileSystemParser {
     }
   }
 
-  std::unique_ptr<Entry> parseEntry(yaml::Node *N, RedirectingFileSystem *FS) {
+  std::unique_ptr<Entry> parseEntry(yaml::Node *N, RedirectingFileSystem *FS,
+                                    bool IsRootEntry) {
     auto *M = dyn_cast<yaml::MappingNode>(N);
     if (!M) {
       error(N, "expected mapping node for file or directory entry");
@@ -1302,6 +1303,7 @@ class RedirectingFileSystemParser {
     std::vector<std::unique_ptr<Entry>> EntryArrayContents;
     std::string ExternalContentsPath;
     std::string Name;
+    yaml::Node *NameValueNode;
     auto UseExternalName = RedirectingFileEntry::NK_NotSet;
     EntryKind Kind;
 
@@ -1321,6 +1323,7 @@ class RedirectingFileSystemParser {
         if (!parseScalarString(I.getValue(), Value, Buffer))
           return nullptr;
 
+        NameValueNode = I.getValue();
         if (FS->UseCanonicalizedPaths) {
           SmallString<256> Path(Value);
           // Guarantee that old YAML files containing paths with ".." and "."
@@ -1357,7 +1360,8 @@ class RedirectingFileSystemParser {
         }
 
         for (auto &I : *Contents) {
-          if (std::unique_ptr<Entry> E = parseEntry(&I, FS))
+          if (std::unique_ptr<Entry> E =
+                  parseEntry(&I, FS, /*IsRootEntry*/ false))
             EntryArrayContents.push_back(std::move(E));
           else
             return nullptr;
@@ -1415,6 +1419,13 @@ class RedirectingFileSystemParser {
     if (Kind == EK_Directory &&
         UseExternalName != RedirectingFileEntry::NK_NotSet) {
       error(N, "'use-external-name' is not supported for directories");
+      return nullptr;
+    }
+
+    if (IsRootEntry && !sys::path::is_absolute(Name)) {
+      assert(NameValueNode && "Name presence should be checked earlier");
+      error(NameValueNode,
+            "entry with relative path at the root level is not discoverable");
       return nullptr;
     }
 
@@ -1500,7 +1511,8 @@ public:
         }
 
         for (auto &I : *Roots) {
-          if (std::unique_ptr<Entry> E = parseEntry(&I, FS))
+          if (std::unique_ptr<Entry> E =
+                  parseEntry(&I, FS, /*IsRootEntry*/ true))
             RootEntries.push_back(std::move(E));
           else
             return false;

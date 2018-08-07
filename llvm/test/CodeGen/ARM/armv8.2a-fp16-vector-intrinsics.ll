@@ -522,19 +522,23 @@ entry:
   ret <8 x i16> %vcageq_v2.i
 }
 
-; FIXME (PR38404)
-;
-;define dso_local <4 x i16> @test_vcagt_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vcagt_v2.i = tail call <4 x i16> @llvm.arm.neon.vacgt.v4i16.v4f16(<4 x half> %a, <4 x half> %b)
-;  ret <4 x i16> %vcagt_v2.i
-;}
-;
-;define dso_local <8 x i16> @test_vcagtq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vcagtq_v2.i = tail call <8 x i16> @llvm.arm.neon.vacgt.v8i16.v8f16(<8 x half> %a, <8 x half> %b)
-;  ret <8 x i16> %vcagtq_v2.i
-;}
+define dso_local <4 x i16> @test_vcagt_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vcagt_f16:
+; CHECK:         vacgt.f16 d0, d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vcagt_v2.i = tail call <4 x i16> @llvm.arm.neon.vacgt.v4i16.v4f16(<4 x half> %a, <4 x half> %b)
+  ret <4 x i16> %vcagt_v2.i
+}
+
+define dso_local <8 x i16> @test_vcagtq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vcagtq_f16:
+; CHECK:         vacgt.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vcagtq_v2.i = tail call <8 x i16> @llvm.arm.neon.vacgt.v8i16.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x i16> %vcagtq_v2.i
+}
 
 define dso_local <4 x i16> @test_vcale_f16(<4 x half> %a, <4 x half> %b) {
 ; CHECKLABEL: test_vcale_f16:
@@ -553,20 +557,6 @@ entry:
   %vcaleq_v2.i = tail call <8 x i16> @llvm.arm.neon.vacge.v8i16.v8f16(<8 x half> %b, <8 x half> %a)
   ret <8 x i16> %vcaleq_v2.i
 }
-
-; FIXME (PR38404)
-;
-;define dso_local <4 x i16> @test_vcalt_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vcalt_v2.i = tail call <4 x i16> @llvm.arm.neon.vacgt.v4i16.v4f16(<4 x half> %b, <4 x half> %a)
-;  ret <4 x i16> %vcalt_v2.i
-;}
-
-;define dso_local <8 x i16> @test_vcaltq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vcaltq_v2.i = tail call <8 x i16> @llvm.arm.neon.vacgt.v8i16.v8f16(<8 x half> %b, <8 x half> %a)
-;  ret <8 x i16> %vcaltq_v2.i
-;}
 
 define dso_local <4 x i16> @test_vceq_f16(<4 x half> %a, <4 x half> %b) {
 ; CHECKLABEL: test_vceq_f16:
