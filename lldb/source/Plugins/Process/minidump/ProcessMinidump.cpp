@@ -365,6 +365,12 @@ void ProcessMinidump::ReadModuleList() {
       // This enables most LLDB functionality involving address-to-module
       // translations (ex. identifing the module for a stack frame PC) and
       // modules/sections commands (ex. target modules list, ...)
+      if (log) {
+        log->Printf("Unable to locate the matching object file, creating a "
+                    "placeholder module for: %s",
+                    name.getValue().c_str());
+      }
+
       auto placeholder_module =
           std::make_shared<PlaceholderModule>(module_spec);
       placeholder_module->CreateImageSection(module, GetTarget());

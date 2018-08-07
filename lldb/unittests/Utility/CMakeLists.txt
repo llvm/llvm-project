@@ -13,6 +13,7 @@ add_lldb_unittest(UtilityTests
   LogTest.cpp
   NameMatchesTest.cpp
   RegisterValueTest.cpp
+  ScalarTest.cpp
   StateTest.cpp
   StatusTest.cpp
   StreamTeeTest.cpp
@@ -31,6 +32,7 @@ add_lldb_unittest(UtilityTests
   LINK_LIBS
       lldbUtility
       lldbUtilityHelpers
+      LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )

@@ -222,6 +222,18 @@ cmpsw
 cmpsl
 cmpsq
 
+cmpxchgb %cl, %bl
+cmpxchgb %cl, (%rbx)
+
+cmpxchgw %cx, %bx
+cmpxchgw %cx, (%rbx)
+
+cmpxchgl %ecx, %ebx
+cmpxchgl %ecx, (%rbx)
+
+cmpxchgq %rcx, %rbx
+cmpxchgq %rcx, (%rbx)
+
 cpuid
 
 decb %dil
@@ -777,6 +789,33 @@ testq %rsi, (%rax)
 
 ud2
 
+xaddb %bl, %cl
+xaddb %bl, (%rcx)
+
+xaddw %bx, %cx
+xaddw %ax, (%rbx)
+
+xaddl %ebx, %ecx
+xaddl %eax, (%rbx)
+
+xaddq %rbx, %rcx
+xaddq %rax, (%rbx)
+
+xchgb %bl, %cl
+xchgb %bl, (%rbx)
+
+xchgw %ax, %bx
+xchgw %bx, %cx
+xchgw %ax, (%rbx)
+
+xchgl %eax, %ebx
+xchgl %ebx, %ecx
+xchgl %eax, (%rbx)
+
+xchgq %rax, %rbx
+xchgq %rbx, %rcx
+xchgq %rax, (%rbx)
+
 xlatb
 
 xorb $7, %al
@@ -1017,6 +1056,14 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   0.25                  U     cmpsw	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  1      100   0.25                  U     cmpsl	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  1      100   0.25                  U     cmpsq	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  5      5     1.25                        cmpxchgb	%cl, %bl
+# CHECK-NEXT:  6      8     1.00    *      *            cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT:  5      5     1.25                        cmpxchgw	%cx, %bx
+# CHECK-NEXT:  6      8     1.00    *      *            cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT:  5      5     1.25                        cmpxchgl	%ecx, %ebx
+# CHECK-NEXT:  6      8     1.00    *      *            cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT:  5      5     1.25                        cmpxchgq	%rcx, %rbx
+# CHECK-NEXT:  6      8     1.00    *      *            cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  8      18    2.00                  U     cpuid
 # CHECK-NEXT:  1      1     0.25                        decb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            decb	(%rax)
@@ -1510,6 +1557,25 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.25                        testq	%rsi, %rdi
 # CHECK-NEXT:  2      6     0.50    *                   testq	%rsi, (%rax)
 # CHECK-NEXT:  1      100   0.25    *             U     ud2
+# CHECK-NEXT:  3      2     0.75                        xaddb	%bl, %cl
+# CHECK-NEXT:  5      7     1.00    *      *            xaddb	%bl, (%rcx)
+# CHECK-NEXT:  3      2     0.75                        xaddw	%bx, %cx
+# CHECK-NEXT:  5      7     1.00    *      *            xaddw	%ax, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xaddl	%ebx, %ecx
+# CHECK-NEXT:  5      7     1.00    *      *            xaddl	%eax, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xaddq	%rbx, %rcx
+# CHECK-NEXT:  5      7     1.00    *      *            xaddq	%rax, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xchgb	%bl, %cl
+# CHECK-NEXT:  6      8     1.00    *      *            xchgb	%bl, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xchgw	%bx, %ax
+# CHECK-NEXT:  3      2     0.75                        xchgw	%bx, %cx
+# CHECK-NEXT:  6      8     1.00    *      *            xchgw	%ax, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xchgl	%ebx, %eax
+# CHECK-NEXT:  3      2     0.75                        xchgl	%ebx, %ecx
+# CHECK-NEXT:  6      8     1.00    *      *            xchgl	%eax, (%rbx)
+# CHECK-NEXT:  3      2     0.75                        xchgq	%rbx, %rax
+# CHECK-NEXT:  3      2     0.75                        xchgq	%rbx, %rcx
+# CHECK-NEXT:  6      8     1.00    *      *            xchgq	%rax, (%rbx)
 # CHECK-NEXT:  1      5     0.50    *                   xlatb
 # CHECK-NEXT:  1      1     0.25                        xorb	$7, %al
 # CHECK-NEXT:  1      1     0.25                        xorb	$7, %dil
@@ -1556,7 +1622,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT: 50.00   -     469.00 317.50 252.17 252.17 190.00 227.00 501.50 78.67
+# CHECK-NEXT: 50.00   -     494.25 334.75 262.17 262.17 202.00 244.25 526.75 82.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1755,6 +1821,14 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpsw	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpsl	%es:(%rdi), (%rsi)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpsq	%es:(%rdi), (%rsi)
+# CHECK-NEXT:  -      -     1.75   0.75    -      -      -     0.75   1.75    -     cmpxchgb	%cl, %bl
+# CHECK-NEXT:  -      -     1.25   0.25   0.83   0.83   1.00   0.25   1.25   0.33   cmpxchgb	%cl, (%rbx)
+# CHECK-NEXT:  -      -     1.75   0.75    -      -      -     0.75   1.75    -     cmpxchgw	%cx, %bx
+# CHECK-NEXT:  -      -     1.25   0.25   0.83   0.83   1.00   0.25   1.25   0.33   cmpxchgw	%cx, (%rbx)
+# CHECK-NEXT:  -      -     1.75   0.75    -      -      -     0.75   1.75    -     cmpxchgl	%ecx, %ebx
+# CHECK-NEXT:  -      -     1.25   0.25   0.83   0.83   1.00   0.25   1.25   0.33   cmpxchgl	%ecx, (%rbx)
+# CHECK-NEXT:  -      -     1.75   0.75    -      -      -     0.75   1.75    -     cmpxchgq	%rcx, %rbx
+# CHECK-NEXT:  -      -     1.25   0.25   0.83   0.83   1.00   0.25   1.25   0.33   cmpxchgq	%rcx, (%rbx)
 # CHECK-NEXT:  -      -     1.75   1.25    -      -      -     2.25   2.75    -     cpuid
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     decb	%dil
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   decb	(%rax)
@@ -2248,6 +2322,25 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     testq	%rsi, %rdi
 # CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     testq	%rsi, (%rax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     ud2
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xaddb	%bl, %cl
+# CHECK-NEXT:  -      -     0.50   0.50   0.83   0.83   1.00   0.50   0.50   0.33   xaddb	%bl, (%rcx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xaddw	%bx, %cx
+# CHECK-NEXT:  -      -     0.50   0.50   0.83   0.83   1.00   0.50   0.50   0.33   xaddw	%ax, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xaddl	%ebx, %ecx
+# CHECK-NEXT:  -      -     0.50   0.50   0.83   0.83   1.00   0.50   0.50   0.33   xaddl	%eax, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xaddq	%rbx, %rcx
+# CHECK-NEXT:  -      -     0.50   0.50   0.83   0.83   1.00   0.50   0.50   0.33   xaddq	%rax, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgb	%bl, %cl
+# CHECK-NEXT:  -      -     0.75   0.75   0.83   0.83   1.00   0.75   0.75   0.33   xchgb	%bl, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgw	%bx, %ax
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgw	%bx, %cx
+# CHECK-NEXT:  -      -     0.75   0.75   0.83   0.83   1.00   0.75   0.75   0.33   xchgw	%ax, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgl	%ebx, %eax
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgl	%ebx, %ecx
+# CHECK-NEXT:  -      -     0.75   0.75   0.83   0.83   1.00   0.75   0.75   0.33   xchgl	%eax, (%rbx)
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgq	%rbx, %rax
+# CHECK-NEXT:  -      -     0.75   0.75    -      -      -     0.75   0.75    -     xchgq	%rbx, %rcx
+# CHECK-NEXT:  -      -     0.75   0.75   0.83   0.83   1.00   0.75   0.75   0.33   xchgq	%rax, (%rbx)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     xlatb
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     xorb	$7, %al
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     xorb	$7, %dil

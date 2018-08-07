@@ -20,16 +20,31 @@
 // CHECK-DAG: @globals = global %struct.S zeroinitializer,
 // CHECK-DAG: [[STAT:@.+stat]] = internal global %struct.S zeroinitializer,
 // CHECK-DAG: [[STAT_REF:@.+]] = internal constant %struct.S* [[STAT]]
-// CHECK-DAG: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+42]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+43]]_ctor to i8*)],
+// CHECK-DAG: @out_decl_target = global i32 0,
+// CHECK-DAG: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+56]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+57]]_ctor to i8*)],
 // CHECK-DAG: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (%struct.S** [[STAT_REF]] to i8*)],
 
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(%class.TemplateClass* %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(%class.TemplateClass* %{{.*}})
-// CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+36]]_ctor()
+// CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+50]]_ctor()
 
 #ifndef HEADER
 #define HEADER
+
+int out_decl_target = 0;
+#pragma omp declare target
+void lambda () {
+#ifdef __cpp_lambdas
+  (void)[&] { (void)out_decl_target; };
+#else
+#pragma clang __debug captured
+  {
+    (void)out_decl_target;
+  }
+#endif
+};
+#pragma omp end declare target
 
 template <typename T>
 class TemplateClass {

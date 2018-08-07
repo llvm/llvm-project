@@ -162,9 +162,13 @@ Module::Module(const ModuleSpec &module_spec)
   // fill any ivars in so we don't accidentally grab the wrong file later since
   // they don't match...
   ModuleSpec matching_module_spec;
-  if (modules_specs.FindMatchingModuleSpec(module_spec, matching_module_spec) ==
-      0)
+  if (!modules_specs.FindMatchingModuleSpec(module_spec,
+                                            matching_module_spec)) {
+    if (log) {
+      log->Printf("Found local object file but the specs didn't match");
+    }
     return;
+  }
 
   if (module_spec.GetFileSpec())
     m_mod_time = FileSystem::GetModificationTime(module_spec.GetFileSpec());

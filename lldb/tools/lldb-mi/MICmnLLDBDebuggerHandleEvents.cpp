@@ -950,6 +950,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventBroadcastBitStateChanged(
 bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateSuspended(
     const lldb::SBEvent &vEvent) {
   bool bOk = MIstatus::success;
+  lldb::SBStream streamOut;
   lldb::SBDebugger &rDebugger =
       CMICmnLLDBDebugSessionInfo::Instance().GetDebugger();
   lldb::SBProcess sbProcess =
@@ -958,16 +959,17 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateSuspended(
   if (rDebugger.GetSelectedTarget() == target) {
     if (!UpdateSelectedThread())
       return MIstatus::failure;
-
-    lldb::SBCommandReturnObject result;
-    const lldb::ReturnStatus status =
-        rDebugger.GetCommandInterpreter().HandleCommand("process status",
-                                                        result, false);
-    MIunused(status);
-    bOk = TextToStderr(result.GetError());
-    bOk = bOk && TextToStdout(result.GetOutput());
+    sbProcess.GetDescription(streamOut);
+    // Add a delimiter between process' and threads' info.
+    streamOut.Printf("\n");
+    for (uint32_t i = 0, e = sbProcess.GetNumThreads(); i < e; ++i) {
+      const lldb::SBThread thread = sbProcess.GetThreadAtIndex(i);
+      if (!thread.IsValid())
+        continue;
+      thread.GetDescription(streamOut);
+    }
+    bOk = TextToStdout(streamOut.GetData());
   } else {
-    lldb::SBStream streamOut;
     const MIuint nTargetIndex = rDebugger.GetIndexOfTarget(target);
     if (nTargetIndex != UINT_MAX)
       streamOut.Printf("Target %d: (", nTargetIndex);
