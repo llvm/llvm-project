@@ -40,7 +40,6 @@
 #ifndef LLDB_DISABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
@@ -53,6 +52,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/State.h"
 #endif
 
 #include "llvm/ADT/StringRef.h" // for StringRef

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/State.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThreadBase.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -15,6 +14,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
+#include "lldb/Utility/State.h"
 
 #include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessWindows.h"

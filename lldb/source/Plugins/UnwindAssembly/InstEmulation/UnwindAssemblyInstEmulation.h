@@ -15,9 +15,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/UnwindAssembly.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
 class UnwindAssemblyInstEmulation : public lldb_private::UnwindAssembly {

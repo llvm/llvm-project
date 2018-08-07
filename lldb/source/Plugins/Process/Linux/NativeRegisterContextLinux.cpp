@@ -9,10 +9,10 @@
 
 #include "NativeRegisterContextLinux.h"
 
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
+#include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"

@@ -15,7 +15,6 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/TypeList.h"
@@ -30,6 +29,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;

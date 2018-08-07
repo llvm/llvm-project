@@ -12,8 +12,8 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include <functional>

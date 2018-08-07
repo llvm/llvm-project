@@ -13,11 +13,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;

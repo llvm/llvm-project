@@ -18,7 +18,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
@@ -38,6 +37,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 
 #include "lldb/API/SBDebugger.h"

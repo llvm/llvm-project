@@ -7,16 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_State_h_
-#define liblldb_State_h_
+#ifndef LLDB_UTILITY_STATE_H
+#define LLDB_UTILITY_STATE_H
 
+#include "lldb/lldb-enumerations.h" // for StateType
+#include "llvm/ADT/StringRef.h"     // for StringRef
 #include "llvm/Support/FormatProviders.h"
-
-#include "lldb/lldb-enumerations.h"   // for StateType
-#include "llvm/ADT/StringRef.h"       // for StringRef
 #include "llvm/Support/raw_ostream.h" // for raw_ostream
-
-#include <stdint.h> // for uint32_t
+#include <cstdint>                    // for uint32_t
 
 namespace lldb_private {
 
@@ -80,6 +78,6 @@ template <> struct format_provider<lldb::StateType> {
     Stream << lldb_private::StateAsCString(state);
   }
 };
-}
+} // namespace llvm
 
-#endif // liblldb_State_h_
+#endif // LLDB_UTILITY_STATE_H

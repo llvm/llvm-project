@@ -12,7 +12,7 @@
 
 // Other libraries and framework includes
 #include "Utility/ARM_DWARF_Registers.h"
-#include "lldb/Core/RegisterValue.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-enumerations.h"

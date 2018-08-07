@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/RegisterValue.h"
+#include "lldb/Utility/RegisterValue.h"
 
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"

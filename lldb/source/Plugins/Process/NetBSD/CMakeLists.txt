@@ -5,7 +5,6 @@ add_lldb_library(lldbPluginProcessNetBSD PLUGIN
   NativeThreadNetBSD.cpp
 
   LINK_LIBS
-    lldbCore
     lldbHost
     lldbSymbol
     lldbTarget

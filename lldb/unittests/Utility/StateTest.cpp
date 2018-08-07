@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/State.h"
+#include "lldb/Utility/State.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
