@@ -368,12 +368,6 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                << "No profile record found for '" << HashMismatch.first << "'"
                << " with hash = 0x" << Twine::utohexstr(HashMismatch.second)
                << '\n';
-
-      for (const auto &CounterMismatch : Coverage->getCounterMismatches())
-        errs() << "counter-mismatch: "
-               << "Coverage mapping for " << CounterMismatch.first
-               << " only has " << CounterMismatch.second
-               << " valid counter expressions\n";
     }
   }
 
