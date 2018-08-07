@@ -54,6 +54,7 @@ add_clang_library(clangBasic
   DiagnosticOptions.cpp
   FileManager.cpp
   FileSystemStatCache.cpp
+  FixedPoint.cpp
   IdentifierTable.cpp
   LangOptions.cpp
   MemoryBufferCache.cpp

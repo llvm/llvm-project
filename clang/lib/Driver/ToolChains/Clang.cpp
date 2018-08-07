@@ -3346,6 +3346,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-static-define");
 
+  if (Args.hasArg(options::OPT_municode))
+    CmdArgs.push_back("-DUNICODE");
+
   if (isa<AnalyzeJobAction>(JA))
     RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
 

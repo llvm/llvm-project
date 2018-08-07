@@ -379,6 +379,7 @@ def _SLASH_GZ : CLFlag<"GZ">;
 def _SLASH_H : CLFlag<"H">;
 def _SLASH_homeparams : CLFlag<"homeparams">;
 def _SLASH_hotpatch : CLFlag<"hotpatch">;
+def _SLASH_JMC : CLFlag<"JMC">;
 def _SLASH_kernel : CLFlag<"kernel">;
 def _SLASH_LN : CLFlag<"LN">;
 def _SLASH_MP : CLJoined<"MP">;

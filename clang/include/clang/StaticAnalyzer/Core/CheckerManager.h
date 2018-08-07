@@ -115,13 +115,14 @@ enum class ObjCMessageVisitKind {
 };
 
 class CheckerManager {
+  ASTContext &Context;
   const LangOptions LangOpts;
   AnalyzerOptions &AOptions;
   CheckName CurrentCheckName;
 
 public:
-  CheckerManager(const LangOptions &langOpts, AnalyzerOptions &AOptions)
-      : LangOpts(langOpts), AOptions(AOptions) {}
+  CheckerManager(ASTContext &Context, AnalyzerOptions &AOptions)
+      : Context(Context), LangOpts(Context.getLangOpts()), AOptions(AOptions) {}
 
   ~CheckerManager();
 
@@ -134,6 +135,7 @@ public:
 
   const LangOptions &getLangOpts() const { return LangOpts; }
   AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
+  ASTContext &getASTContext() { return Context; }
 
   using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;

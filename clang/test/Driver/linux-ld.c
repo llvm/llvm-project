@@ -1817,6 +1817,7 @@
 // Check whether the OpenEmbedded ARM libs are added correctly.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-oe-linux-gnueabi -rtlib=libgcc \
+// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
 
@@ -1836,6 +1837,7 @@
 // Check whether the OpenEmbedded AArch64 libs are added correctly.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=aarch64-oe-linux -rtlib=libgcc \
+// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s
 
