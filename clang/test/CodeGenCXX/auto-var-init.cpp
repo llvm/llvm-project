@@ -946,53 +946,53 @@ TEST_BRACES(intvec16, int  __attribute__((vector_size(16))));
 
 TEST_UNINIT(longlongvec32, long long  __attribute__((vector_size(32))));
 // CHECK-LABEL: @test_longlongvec32_uninit()
-// CHECK:       %uninit = alloca <4 x i64>, align 16
+// CHECK:       %uninit = alloca <4 x i64>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 
 TEST_BRACES(longlongvec32, long long  __attribute__((vector_size(32))));
 // CHECK-LABEL: @test_longlongvec32_braces()
-// CHECK:       %braces = alloca <4 x i64>, align 16
-// CHECK-NEXT:  store <4 x i64> zeroinitializer, <4 x i64>* %braces, align 16
+// CHECK:       %braces = alloca <4 x i64>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x i64> zeroinitializer, <4 x i64>* %braces, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
 
 TEST_CUSTOM(longlongvec32, long long  __attribute__((vector_size(32))), { 0x3333333333333333, 0x3333333333333333, 0x3333333333333333, 0x3333333333333333 });
 // CHECK-LABEL: @test_longlongvec32_custom()
-// CHECK:       %custom = alloca <4 x i64>, align 16
-// CHECK-NEXT:  store <4 x i64> <i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323>, <4 x i64>* %custom, align 16
+// CHECK:       %custom = alloca <4 x i64>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x i64> <i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323>, <4 x i64>* %custom, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 TEST_UNINIT(floatvec16, float  __attribute__((vector_size(16))));
 // CHECK-LABEL: @test_floatvec16_uninit()
-// CHECK:       %uninit = alloca <4 x float>, align 16
+// CHECK:       %uninit = alloca <4 x float>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 
 TEST_BRACES(floatvec16, float  __attribute__((vector_size(16))));
 // CHECK-LABEL: @test_floatvec16_braces()
-// CHECK:       %braces = alloca <4 x float>, align 16
-// CHECK-NEXT:  store <4 x float> zeroinitializer, <4 x float>* %braces, align 16
+// CHECK:       %braces = alloca <4 x float>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x float> zeroinitializer, <4 x float>* %braces, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
 
 TEST_CUSTOM(floatvec16, float  __attribute__((vector_size(16))), { 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_floatvec16_custom()
-// CHECK:       %custom = alloca <4 x float>, align 16
-// CHECK-NEXT:  store <4 x float> <float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000>, <4 x float>* %custom, align 16
+// CHECK:       %custom = alloca <4 x float>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x float> <float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000>, <4 x float>* %custom, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 TEST_UNINIT(doublevec32, double  __attribute__((vector_size(32))));
 // CHECK-LABEL: @test_doublevec32_uninit()
-// CHECK:       %uninit = alloca <4 x double>, align 16
+// CHECK:       %uninit = alloca <4 x double>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 
 TEST_BRACES(doublevec32, double  __attribute__((vector_size(32))));
 // CHECK-LABEL: @test_doublevec32_braces()
-// CHECK:       %braces = alloca <4 x double>, align 16
-// CHECK-NEXT:  store <4 x double> zeroinitializer, <4 x double>* %braces, align 16
+// CHECK:       %braces = alloca <4 x double>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x double> zeroinitializer, <4 x double>* %braces, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
 
 TEST_CUSTOM(doublevec32, double  __attribute__((vector_size(32))), { 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_doublevec32_custom()
-// CHECK:       %custom = alloca <4 x double>, align 16
-// CHECK-NEXT:  store <4 x double> <double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18>, <4 x double>* %custom, align 16
+// CHECK:       %custom = alloca <4 x double>, align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  store <4 x double> <double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18>, <4 x double>* %custom, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 
