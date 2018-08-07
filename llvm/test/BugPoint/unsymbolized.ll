@@ -2,7 +2,7 @@
 ; RUN: echo "import sys" > %t.py
 ; RUN: echo "print('args = ' + str(sys.argv))" >> %t.py
 ; RUN: echo "exit(1)" >> %t.py
-; RUN: not bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -opt-command="%python" -opt-args %t.py | FileCheck %s
+; RUN: not bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -opt-command=%python -opt-args %t.py | FileCheck %s
 ; RUN: not --crash opt -load %llvmshlibdir/BugpointPasses%shlibext %s -bugpoint-crashcalls -disable-symbolication 2>&1 | FileCheck --check-prefix=CRASH %s
 ; RUN: not bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -opt-command=%t.non.existent.opt.binary -opt-args %t.py 2>&1 | FileCheck %s --check-prefix=BAD-OPT
 

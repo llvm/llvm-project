@@ -106,11 +106,11 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
 ; Only 8B, 16B and 76B files should stay after pruning.
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-1024', 'w') as file: file.truncate(1024)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-77', 'w') as file: file.truncate(77)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-1024', 'w') as file: file.truncate(1024)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-77', 'w') as file: file.truncate(77)"
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 100
 ; RUN: ls %t.cache/llvmcache-foo-16
 ; RUN: ls %t.cache/llvmcache-foo-8
@@ -123,11 +123,11 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
 ; Only 8B and 16B files should stay after pruning.
-; RUN: "%python" -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1024
-; RUN: "%python" -c "print(' ' * 15)" > %t.cache/llvmcache-foo-16
-; RUN: "%python" -c "print(' ' * 7)" > %t.cache/llvmcache-foo-8
-; RUN: "%python" -c "print(' ' * 75)" > %t.cache/llvmcache-foo-76
-; RUN: "%python" -c "print(' ' * 76)" > %t.cache/llvmcache-foo-77
+; RUN: %python -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1024
+; RUN: %python -c "print(' ' * 15)" > %t.cache/llvmcache-foo-16
+; RUN: %python -c "print(' ' * 7)" > %t.cache/llvmcache-foo-8
+; RUN: %python -c "print(' ' * 75)" > %t.cache/llvmcache-foo-76
+; RUN: %python -c "print(' ' * 76)" > %t.cache/llvmcache-foo-77
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-files 2
 ; RUN: ls %t.cache/llvmcache-foo-16
 ; RUN: ls %t.cache/llvmcache-foo-8

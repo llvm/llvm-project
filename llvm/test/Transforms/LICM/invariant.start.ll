@@ -28,7 +28,7 @@ define void @test2(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: loop:
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %piv)
 ; CHECK: %val = load i32, i32* %ptr
-
+  
 entry:
   br label %loop
 
@@ -62,4 +62,51 @@ loop:
   br label %loop
 }
 
+; can't hoist due to init in loop, only well defined if loop exits
+; on first iteration, but we don't bother checking for that currently
+define void @test4(i1 %cond, i32* %ptr) {
+; CHECK-LABEL: @test4(
+; CHECK-LABEL: entry:
+; CHECK-LABEL: loop:
+; CHECK:   store i32 0, i32* %ptr
+; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
+; CHECK: %val = load i32, i32* %ptr
+
+entry:
+  br label %loop
+
+loop:
+  %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
+  store i32 0, i32* %ptr
+  call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
+  %val = load i32, i32* %ptr
+  %x.inc = add i32 %x, %val
+  br label %loop
+}
+
+; don't try to reason about scopes
+define void @test5(i1 %cond, i32* %ptr) {
+; CHECK-LABEL: @test5(
+; CHECK-LABEL: entry:
+; CHECK-LABEL: loop:
+; CHECK:   store i32 0, i32* %ptr
+; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
+; CHECK: %val = load i32, i32* %ptr
+
+entry:
+  br label %loop
+
+loop:
+  %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
+  store i32 0, i32* %ptr
+  %scope = call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
+  %val = load i32, i32* %ptr
+;;  NOTE: despite being correct syntax, uncommenting this line causes
+;;  a crash in the optimizer.  FIXME
+;;  call void @llvm.invariant.end.p0i32({}* %scope, i64 4, i32* %ptr)
+  %x.inc = add i32 %x, %val
+  br label %loop
+}
+
 declare {}* @llvm.invariant.start.p0i32(i64, i32*)
+declare void @llvm.invariant.end.p0i32({}*, i64, i32*)
