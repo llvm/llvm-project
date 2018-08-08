@@ -378,10 +378,15 @@ class Test:
         fil.write(testcase_xml)
         if self.result.code.isFailure:
             fil.write(">\n\t<failure ><![CDATA[")
-            if type(self.result.output) == unicode:
-                encoded_output = self.result.output.encode("utf-8", 'ignore')
-            else:
+            # In Python2, 'str' and 'unicode' are distinct types, but in Python3, the type 'unicode' does not exist
+            # and instead 'bytes' is distinct
+            # in Python3, there's no unicode
+            if isinstance(self.result.output, str):
                 encoded_output = self.result.output
+            elif isinstance(self.result.output, bytes):
+                encoded_output = self.result.output.decode("utf-8", 'ignore')
+            else:
+                encoded_output = self.result.output.encode("utf-8", 'ignore')
             # In the unlikely case that the output contains the CDATA terminator
             # we wrap it by creating a new CDATA block
             fil.write(encoded_output.replace("]]>", "]]]]><![CDATA[>"))

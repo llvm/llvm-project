@@ -755,7 +755,6 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   const MCInstrInfo &MCII = *Subtarget->getInstrInfo();
 
   if (MI->isBundle()) {
-    assert(Subtarget->usePackets() && "Support for packets is disabled");
     const MachineBasicBlock* MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
 

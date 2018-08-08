@@ -124,7 +124,9 @@ let isReturn = 1 in {
   defm "": SIMD_RETURN<v16i8>;
   defm "": SIMD_RETURN<v8i16>;
   defm "": SIMD_RETURN<v4i32>;
+  defm "": SIMD_RETURN<v2i64>;
   defm "": SIMD_RETURN<v4f32>;
+  defm "": SIMD_RETURN<v2f64>;
 
   defm RETURN_VOID : NRI<(outs), (ins), [(WebAssemblyreturn)], "return", 0x0f>;
 

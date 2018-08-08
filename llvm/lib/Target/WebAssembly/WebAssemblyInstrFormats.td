@@ -60,9 +60,9 @@ multiclass NRI<dag oops, dag iops, list<dag> pattern, string asmstr = "",
 
 multiclass SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                   list<dag> pattern_r, string asmstr_r = "",
-                  string asmstr_s = "", bits<32> inst = -1> {
+                  string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
-              inst>,
+              !or(0xfd00, !and(0xff, simdop))>,
             Requires<[HasSIMD128]>;
 }
 
@@ -119,31 +119,45 @@ multiclass BinaryFP<SDNode node, string name, bits<32> f32Inst,
                 !strconcat("f64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
                 !strconcat("f64.", name), f64Inst>;
 }
-multiclass SIMDBinary<SDNode node, SDNode fnode, string name> {
+multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
   defm _I8x16 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
                        [(set (v16i8 V128:$dst), (node V128:$lhs, V128:$rhs))],
                        !strconcat("i8x16.",
                          !strconcat(name, "\t$dst, $lhs, $rhs")),
-                       !strconcat("i8x16.", name)>;
+                       !strconcat("i8x16.", name), baseInst>;
   defm _I16x8 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
                        [(set (v8i16 V128:$dst), (node V128:$lhs, V128:$rhs))],
                        !strconcat("i16x8.",
                          !strconcat(name, "\t$dst, $lhs, $rhs")),
-                       !strconcat("i16x8.", name)>;
+                       !strconcat("i16x8.", name), !add(baseInst, 1)>;
   defm _I32x4 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
                        [(set (v4i32 V128:$dst), (node V128:$lhs, V128:$rhs))],
                        !strconcat("i32x4.",
                          !strconcat(name, "\t$dst, $lhs, $rhs")),
-                       !strconcat("i32x4.", name)>;
+                       !strconcat("i32x4.", name), !add(baseInst, 2)>;
+  defm _I64x2 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
+                       (outs), (ins),
+                       [(set (v2i64 V128:$dst), (node V128:$lhs, V128:$rhs))],
+                       !strconcat("i64x2.",
+                         !strconcat(name, "\t$dst, $lhs, $rhs")),
+                       !strconcat("i64x2.", name), !add(baseInst, 3)>;
+}
+multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
   defm _F32x4 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
-                       [(set (v4f32 V128:$dst), (fnode V128:$lhs, V128:$rhs))],
+                       [(set (v4f32 V128:$dst), (node V128:$lhs, V128:$rhs))],
                        !strconcat("f32x4.",
                          !strconcat(name, "\t$dst, $lhs, $rhs")),
-                       !strconcat("f32x4.", name)>;
+                       !strconcat("f32x4.", name), baseInst>;
+  defm _F64x2 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
+                       (outs), (ins),
+                       [(set (v2f64 V128:$dst), (node V128:$lhs, V128:$rhs))],
+                       !strconcat("f64x2.",
+                         !strconcat(name, "\t$dst, $lhs, $rhs")),
+                       !strconcat("f64x2.", name), !add(baseInst, 1)>;
 }
 multiclass ComparisonInt<CondCode cond, string name, bits<32> i32Inst, bits<32> i64Inst> {
   defm _I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs), (outs), (ins),

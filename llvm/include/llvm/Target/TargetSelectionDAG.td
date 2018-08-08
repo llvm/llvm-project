@@ -1067,6 +1067,15 @@ def post_truncstf32 : PatFrag<(ops node:$val, node:$base, node:$offset),
   let MemoryVT = f32;
 }
 
+def nonvolatile_load : PatFrag<(ops node:$ptr),
+                               (load node:$ptr), [{
+  return !cast<LoadSDNode>(N)->isVolatile();
+}]>;
+def nonvolatile_store : PatFrag<(ops node:$val, node:$ptr),
+                                (store node:$val, node:$ptr), [{
+  return !cast<StoreSDNode>(N)->isVolatile();
+}]>;
+
 // nontemporal store fragments.
 def nontemporalstore : PatFrag<(ops node:$val, node:$ptr),
                                (store node:$val, node:$ptr), [{
