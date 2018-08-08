@@ -21,6 +21,7 @@
 #include <string_view>
 #include <algorithm>
 #include <cassert>
+#include <stdexcept>
 
 #include "test_macros.h"
 
