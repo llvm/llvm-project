@@ -612,11 +612,30 @@ TEST_BRACES(tailpad4, tailpad[4]);
 // CHECK-NEXT:  call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %{{.*}}, i8 0, i64 16, i1 false)
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
 
-TEST_CUSTOM(tailpad4, tailpad[4], { {17, 1}, {17, 1}, {17, 1}, {17, 1} });
+TEST_CUSTOM(tailpad4, tailpad[4], { {257, 1}, {257, 1}, {257, 1}, {257, 1} });
 // CHECK-LABEL: @test_tailpad4_custom()
 // CHECK:       %custom = alloca [4 x %struct.tailpad], align
 // CHECK-NEXT:  bitcast
 // CHECK-NEXT:  call void @llvm.memcpy
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
+
+TEST_UNINIT(tailpad9, tailpad[9]);
+// CHECK-LABEL: @test_tailpad9_uninit()
+// CHECK:       %uninit = alloca [9 x %struct.tailpad], align
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
+
+TEST_BRACES(tailpad9, tailpad[9]);
+// CHECK-LABEL: @test_tailpad9_braces()
+// CHECK:       %braces = alloca [9 x %struct.tailpad], align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  bitcast
+// CHECK-NEXT:  call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %{{.*}}, i8 0, i64 36, i1 false)
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
+
+TEST_CUSTOM(tailpad9, tailpad[9], { {257, 1}, {257, 1}, {257, 1}, {257, 1}, {257, 1}, {257, 1}, {257, 1}, {257, 1}, {257, 1} });
+// CHECK-LABEL: @test_tailpad9_custom()
+// CHECK:       %custom = alloca [9 x %struct.tailpad], align [[ALIGN:[0-9]*]]
+// CHECK-NEXT:  bitcast
+// CHECK-NEXT:  call void @llvm.memset{{.*}}(i8* align [[ALIGN]] %{{.*}}, i8 1, i64 36, i1 false)
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 
