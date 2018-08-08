@@ -61,6 +61,21 @@
     #if ((FLT_DECIMAL_DIG > DBL_DECIMAL_DIG) || (DBL_DECIMAL_DIG > LDBL_DECIMAL_DIG))
         #error "Mandatory macros {FLT,DBL,LDBL}_DECIMAL_DIG are invalid."
     #endif
+    #ifndef FLT_HAS_SUBNORM
+        #error "Mandatory macro FLT_HAS_SUBNORM is missing."
+    #elif FLT_HAS_SUBNORM != __FLT_HAS_DENORM__
+        #error "Mandatory macro FLT_HAS_SUBNORM is invalid."
+    #endif
+    #ifndef LDBL_HAS_SUBNORM
+        #error "Mandatory macro LDBL_HAS_SUBNORM is missing."
+    #elif LDBL_HAS_SUBNORM != __LDBL_HAS_DENORM__
+        #error "Mandatory macro LDBL_HAS_SUBNORM is invalid."
+    #endif
+    #ifndef DBL_HAS_SUBNORM
+        #error "Mandatory macro DBL_HAS_SUBNORM is missing."
+    #elif DBL_HAS_SUBNORM != __DBL_HAS_DENORM__
+        #error "Mandatory macro DBL_HAS_SUBNORM is invalid."
+    #endif
 #else
     #ifdef FLT_DECIMAL_DIG
         #error "Macro FLT_DECIMAL_DIG should not be defined."
@@ -70,6 +85,15 @@
     #endif
     #ifdef LDBL_DECIMAL_DIG
         #error "Macro LDBL_DECIMAL_DIG should not be defined."
+    #endif
+    #ifdef FLT_HAS_SUBNORM
+        #error "Macro FLT_HAS_SUBNORM should not be defined."
+    #endif
+    #ifdef DBL_HAS_SUBNORM
+        #error "Macro DBL_HAS_SUBNORM should not be defined."
+    #endif
+    #ifdef LDBL_HAS_SUBNORM
+        #error "Macro LDBL_HAS_SUBNORM should not be defined."
     #endif
 #endif
 

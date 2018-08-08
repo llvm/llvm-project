@@ -85,6 +85,9 @@
 #    undef FLT_DECIMAL_DIG
 #    undef DBL_DECIMAL_DIG
 #    undef LDBL_DECIMAL_DIG
+#    undef FLT_HAS_SUBNORM
+#    undef DBL_HAS_SUBNORM
+#    undef LDBL_HAS_SUBNORM
 #  endif
 #endif
 
@@ -141,6 +144,9 @@
 #  define FLT_DECIMAL_DIG __FLT_DECIMAL_DIG__
 #  define DBL_DECIMAL_DIG __DBL_DECIMAL_DIG__
 #  define LDBL_DECIMAL_DIG __LDBL_DECIMAL_DIG__
+#  define FLT_HAS_SUBNORM __FLT_HAS_DENORM__
+#  define DBL_HAS_SUBNORM __DBL_HAS_DENORM__
+#  define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
 #endif
 
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__

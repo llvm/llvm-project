@@ -311,6 +311,22 @@ class CGDebugInfo {
   void AppendAddressSpaceXDeref(unsigned AddressSpace,
                                 SmallVectorImpl<int64_t> &Expr) const;
 
+  /// A helper function to collect debug info for the default elements of a
+  /// block.
+  ///
+  /// \returns The next available field offset after the default elements.
+  uint64_t collectDefaultElementTypesForBlockPointer(
+      const BlockPointerType *Ty, llvm::DIFile *Unit,
+      llvm::DIDerivedType *DescTy, unsigned LineNo,
+      SmallVectorImpl<llvm::Metadata *> &EltTys);
+
+  /// A helper function to collect debug info for the default fields of a
+  /// block.
+  void collectDefaultFieldsForBlockLiteralDeclare(
+      const CGBlockInfo &Block, const ASTContext &Context, SourceLocation Loc,
+      const llvm::StructLayout &BlockLayout, llvm::DIFile *Unit,
+      SmallVectorImpl<llvm::Metadata *> &Fields);
+
 public:
   CGDebugInfo(CodeGenModule &CGM);
   ~CGDebugInfo();

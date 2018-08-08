@@ -19,6 +19,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#include <windows.h>
+#endif
+
 #if defined(__APPLE__)
 #define LIBUNWIND_UNAVAIL __attribute__ (( unavailable ))
 #else
@@ -120,13 +124,17 @@ struct _Unwind_Exception {
   uint64_t exception_class;
   void (*exception_cleanup)(_Unwind_Reason_Code reason,
                             _Unwind_Exception *exc);
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+  uintptr_t private_[6];
+#else
   uintptr_t private_1; // non-zero means forced unwind
   uintptr_t private_2; // holds sp that phase1 found for phase2 to use
+#endif
 #if __SIZEOF_POINTER__ == 4
   // The implementation of _Unwind_Exception uses an attribute mode on the
   // above fields which has the side effect of causing this whole struct to
-  // round up to 32 bytes in size. To be more explicit, we add pad fields
-  // added for binary compatibility.
+  // round up to 32 bytes in size (48 with SEH). To be more explicit, we add
+  // pad fields added for binary compatibility.
   uint32_t reserved[3];
 #endif
   // The Itanium ABI requires that _Unwind_Exception objects are "double-word
@@ -368,6 +376,15 @@ extern void *__deregister_frame_info(const void *fde)
     LIBUNWIND_UNAVAIL;
 extern void *__deregister_frame_info_bases(const void *fde)
     LIBUNWIND_UNAVAIL;
+
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+// This is the common wrapper for GCC-style personality functions with SEH.
+extern EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD exc,
+                                                   PVOID frame,
+                                                   PCONTEXT ctx,
+                                                   PDISPATCHER_CONTEXT disp,
+                                                   _Unwind_Personality_Fn pers);
+#endif
 
 #ifdef __cplusplus
 }

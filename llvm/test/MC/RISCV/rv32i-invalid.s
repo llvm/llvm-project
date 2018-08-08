@@ -69,6 +69,7 @@ csrrci x0, 43, %pcrel_lo(d) # CHECK: :[[@LINE]]:16: error: immediate must be an 
 ori a0, a1, %hi(foo) # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-2048, 2047]
 andi ra, sp, %pcrel_hi(123) # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [-2048, 2047]
 xori a2, a3, %hi(345) # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [-2048, 2047]
+add a1, a2, (a3) # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-2048, 2047]
 
 ## uimm12
 csrrw a0, %lo(1), a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 4095]
@@ -126,7 +127,6 @@ sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction use requires an opti
 # Invalid operand types
 xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
-add a1, a2, (a3) # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
 # Too many operands
 add ra, zero, zero, zero # CHECK: :[[@LINE]]:21: error: invalid operand for instruction

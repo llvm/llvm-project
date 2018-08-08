@@ -127,6 +127,7 @@ namespace clang {
                                 CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
       FrontendTimesIsEnabled = TimePasses;
+      llvm::TimePassesIsEnabled = TimePasses;
     }
     llvm::Module *getModule() const { return Gen->GetModule(); }
     std::unique_ptr<llvm::Module> takeModule() {

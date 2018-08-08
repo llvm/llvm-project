@@ -232,6 +232,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ADDCARRY, MVT::i32, Legal);
   setOperationAction(ISD::SUBCARRY, MVT::i32, Legal);
 
+  setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
+  setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
+
 #if 0
   setOperationAction(ISD::ADDCARRY, MVT::i64, Legal);
   setOperationAction(ISD::SUBCARRY, MVT::i64, Legal);
@@ -2371,6 +2375,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported call to variadic function ");
   }
+
+  if (!CLI.CS.getInstruction())
+    report_fatal_error("unsupported libcall legalization");
 
   if (!CLI.CS.getCalledFunction()) {
     return lowerUnhandledCall(CLI, InVals,

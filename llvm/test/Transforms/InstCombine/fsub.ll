@@ -60,15 +60,15 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
   ret float %t2
 }
 
-; With nsz and reassoc: Y - (X + Y) --> -X 
+; With nsz and reassoc: Y - ((X * 5) + Y) --> X * -5
+
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], 5.000000e+00
-; CHECK-NEXT:    [[T2:%.*]] = fsub reassoc nsz float -0.000000e+00, [[TMP1]]
-; CHECK-NEXT:    ret float [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %mul = fmul float %x, 5.000000e+00
-  %add = fadd float %mul, %y 
+  %add = fadd float %mul, %y
   %r = fsub nsz reassoc float %y, %add
   ret float %r
 }
