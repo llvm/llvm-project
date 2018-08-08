@@ -11,18 +11,15 @@
 #define liblldb_Mangled_h_
 #if defined(__cplusplus)
 
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+
 #include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-enumerations.h" // for LanguageType
-#include "llvm/ADT/StringRef.h"     // for StringRef
 
-#include <stddef.h> // for size_t
+#include "llvm/ADT/StringRef.h"
 
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class Stream;
-}
+#include <memory>
+#include <stddef.h>
 
 namespace lldb_private {
 
@@ -238,7 +235,6 @@ public:
       return true;
     return GetDemangledName(language) == name;
   }
-
   bool NameMatches(const RegularExpression &regex,
                    lldb::LanguageType language) const;
 
@@ -299,6 +295,36 @@ public:
   ///     if there is no mangled or demangled counterpart.
   //----------------------------------------------------------------------
   lldb::LanguageType GuessLanguage() const;
+
+  /// Function signature for filtering mangled names.
+  using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
+
+  //----------------------------------------------------------------------
+  /// Trigger explicit demangling to obtain rich mangling information. This is
+  /// optimized for batch processing while populating a name index. To get the
+  /// pure demangled name string for a single entity, use GetDemangledName()
+  /// instead.
+  ///
+  /// For names that match the Itanium mangling scheme, this uses LLVM's
+  /// ItaniumPartialDemangler. All other names fall back to LLDB's builtin
+  /// parser currently.
+  ///
+  /// This function is thread-safe when used with different \a context
+  /// instances in different threads.
+  ///
+  /// @param[in] context
+  ///     The context for this function. A single instance can be stack-
+  ///     allocated in the caller's frame and used for multiple calls.
+  ///
+  /// @param[in] skip_mangled_name
+  ///     A filtering function for skipping entities based on name and mangling
+  ///     scheme. This can be null if unused.
+  ///
+  /// @return
+  ///     True on success, false otherwise.
+  //----------------------------------------------------------------------
+  bool DemangleWithRichManglingInfo(RichManglingContext &context,
+                                    SkipMangledNameFn *skip_mangled_name);
 
 private:
   //----------------------------------------------------------------------

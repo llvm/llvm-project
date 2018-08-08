@@ -24,6 +24,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "llvm/ADT/DenseMap.h"
 
+#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
@@ -273,6 +274,128 @@ void Mangled::SetValue(const ConstString &name) {
 }
 
 //----------------------------------------------------------------------
+// Local helpers for different demangling implementations.
+//----------------------------------------------------------------------
+static char *GetMSVCDemangledStr(const char *M) {
+#if defined(_MSC_VER)
+  const size_t demangled_length = 2048;
+  char *demangled_cstr = static_cast<char *>(::malloc(demangled_length));
+  ::ZeroMemory(demangled_cstr, demangled_length);
+  DWORD result = safeUndecorateName(M, demangled_cstr, demangled_length);
+
+  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+    if (demangled_cstr && demangled_cstr[0])
+      log->Printf("demangled msvc: %s -> \"%s\"", M, demangled_cstr);
+    else
+      log->Printf("demangled msvc: %s -> error: 0x%lu", M, result);
+  }
+
+  if (result != 0) {
+    return demangled_cstr;
+  } else {
+    ::free(demangled_cstr);
+    return nullptr;
+  }
+#else
+  return nullptr;
+#endif
+}
+
+static char *GetItaniumDemangledStr(const char *M,
+                                    llvm::ItaniumPartialDemangler &ipd) {
+  char *demangled_cstr = nullptr;
+  bool err = ipd.partialDemangle(M);
+  if (!err) {
+    // Default buffer and size (will realloc in case it's too small).
+    size_t demangled_size = 80;
+    demangled_cstr = static_cast<char *>(std::malloc(demangled_size));
+    demangled_cstr = ipd.finishDemangle(demangled_cstr, &demangled_size);
+
+    assert(demangled_cstr &&
+           "finishDemangle must always succeed if partialDemangle did");
+    assert(demangled_cstr[demangled_size - 1] == '\0' &&
+           "Expected demangled_size to return length including trailing null");
+  }
+
+  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+    if (demangled_cstr)
+      log->Printf("demangled itanium: %s -> \"%s\"", M, demangled_cstr);
+    else
+      log->Printf("demangled itanium: %s -> error: failed to demangle", M);
+  }
+
+  return demangled_cstr;
+}
+
+//----------------------------------------------------------------------
+// Explicit demangling for scheduled requests during batch processing. This
+// makes use of ItaniumPartialDemangler's rich demangle info
+//----------------------------------------------------------------------
+bool Mangled::DemangleWithRichManglingInfo(
+    RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
+  // We need to generate and cache the demangled name.
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
+                     "Mangled::DemangleWithRichNameIndexInfo (m_mangled = %s)",
+                     m_mangled.GetCString());
+
+  // Others are not meant to arrive here. ObjC names or C's main() for example
+  // have their names stored in m_demangled, while m_mangled is empty.
+  assert(m_mangled);
+
+  // Check whether or not we are interested in this name at all.
+  ManglingScheme scheme = cstring_mangling_scheme(m_mangled.GetCString());
+  if (skip_mangled_name && skip_mangled_name(m_mangled.GetStringRef(), scheme))
+    return false;
+
+  switch (scheme) {
+  case eManglingSchemeNone:
+    // The current mangled_name_filter would allow llvm_unreachable here.
+    return false;
+
+  case eManglingSchemeItanium:
+    // We want the rich mangling info here, so we don't care whether or not
+    // there is a demangled string in the pool already.
+    if (context.FromItaniumName(m_mangled)) {
+      // If we got an info, we have a name. Copy to string pool and connect the
+      // counterparts to accelerate later access in GetDemangledName().
+      context.ParseFullName();
+      m_demangled.SetStringWithMangledCounterpart(context.GetBufferRef(),
+                                                  m_mangled);
+      return true;
+    } else {
+      m_demangled.SetCString("");
+      return false;
+    }
+
+  case eManglingSchemeMSVC: {
+    // We have no rich mangling for MSVC-mangled names yet, so first try to
+    // demangle it if necessary.
+    if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
+      if (char *d = GetMSVCDemangledStr(m_mangled.GetCString())) {
+        // If we got an info, we have a name. Copy to string pool and connect
+        // the counterparts to accelerate later access in GetDemangledName().
+        m_demangled.SetStringWithMangledCounterpart(llvm::StringRef(d),
+                                                    m_mangled);
+        ::free(d);
+      } else {
+        m_demangled.SetCString("");
+      }
+    }
+
+    if (m_demangled.IsEmpty()) {
+      // Cannot demangle it, so don't try parsing.
+      return false;
+    } else {
+      // Demangled successfully, we can try and parse it with
+      // CPlusPlusLanguage::MethodName.
+      return context.FromCxxMethodName(m_demangled);
+    }
+  }
+  }
+}
+
+//----------------------------------------------------------------------
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
@@ -288,8 +411,6 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
     Timer scoped_timer(func_cat, "Mangled::GetDemangledName (m_mangled = %s)",
                        m_mangled.GetCString());
 
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE);
-
     // Don't bother running anything that isn't mangled
     const char *mangled_name = m_mangled.GetCString();
     ManglingScheme mangling_scheme{cstring_mangling_scheme(mangled_name)};
@@ -299,56 +420,20 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
       // add it to our map.
       char *demangled_name = nullptr;
       switch (mangling_scheme) {
-      case eManglingSchemeMSVC: {
-#if defined(_MSC_VER)
-        if (log)
-          log->Printf("demangle msvc: %s", mangled_name);
-        const size_t demangled_length = 2048;
-        demangled_name = static_cast<char *>(::malloc(demangled_length));
-        ::ZeroMemory(demangled_name, demangled_length);
-        DWORD result =
-            safeUndecorateName(mangled_name, demangled_name, demangled_length);
-        if (log) {
-          if (demangled_name && demangled_name[0])
-            log->Printf("demangled msvc: %s -> \"%s\"", mangled_name,
-                        demangled_name);
-          else
-            log->Printf("demangled msvc: %s -> error: 0x%lu", mangled_name,
-                        result);
-        }
-
-        if (result == 0) {
-          free(demangled_name);
-          demangled_name = nullptr;
-        }
-#endif
+      case eManglingSchemeMSVC:
+        demangled_name = GetMSVCDemangledStr(mangled_name);
         break;
-      }
       case eManglingSchemeItanium: {
-        llvm::ItaniumPartialDemangler IPD;
-        bool demangle_err = IPD.partialDemangle(mangled_name);
-        if (!demangle_err) {
-          // Default buffer and size (realloc is used in case it's too small).
-          size_t demangled_size = 80;
-          demangled_name = static_cast<char *>(::malloc(demangled_size));
-          demangled_name = IPD.finishDemangle(demangled_name, &demangled_size);
-        }
-
-        if (log) {
-          if (demangled_name)
-            log->Printf("demangled itanium: %s -> \"%s\"", mangled_name,
-                        demangled_name);
-          else
-            log->Printf("demangled itanium: %s -> error: failed to demangle",
-                        mangled_name);
-        }
+        llvm::ItaniumPartialDemangler ipd;
+        demangled_name = GetItaniumDemangledStr(mangled_name, ipd);
         break;
       }
       case eManglingSchemeNone:
-        break;
+        llvm_unreachable("eManglingSchemeNone was handled already");
       }
       if (demangled_name) {
-        m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
+        m_demangled.SetStringWithMangledCounterpart(
+            llvm::StringRef(demangled_name), m_mangled);
         free(demangled_name);
       }
     } else if (mangling_scheme == eManglingSchemeNone &&
