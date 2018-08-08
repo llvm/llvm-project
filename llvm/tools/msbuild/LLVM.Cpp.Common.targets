@@ -40,10 +40,7 @@
        to look at the tool output.
       -->
   <Target Name="BeforeClCompile" BeforeTargets="ClCompile">
-    <!-- Warn on /Zi and /ZI, then map them both to /Z7. -->
-    <Warning Condition="'%(ClCompile.DebugInformationFormat)' == 'ProgramDatabase'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support /Zi (Program Database).  The file will be compiled as if /Z7 (C7 Compatible Debug Info) had been passed.  Update the Debug Information Format in project settings to silence this warning."/>
+    <!-- Warn on /ZI, then map to /Z7. /Zi is mapped to /Z7 below too (see comment there), but don't warn on that. -->
     <Warning Condition="'%(ClCompile.DebugInformationFormat)' == 'EditAndContinue'"
              File="@(ClCompile)(0,0)"
            Text="clang-cl does not support /ZI (Program Database for Edit and Continue).  The file will be compiled as if /Z7 (C7 Compatible Debug Info) had been passed.  Update the Debug Information Format in project settings to silence this warning."/>
@@ -57,11 +54,6 @@
     <Warning Condition="'%(ClCompile.WholeProgramOptimization)' == 'true'"
              File="@(ClCompile)(0,0)"
              Text="clang-cl does not support MSVC Link Time Optimization.  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Ignore Standard Include Paths is non-empty, then ignore it. -->
-    <Warning Condition="'%(ClCompile.IgnoreStandardIncludePath)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support Ignore Standard Include Path (/X).  Disable this option in compatibility settings to silence this warning."/>
 
     <!-- Warn if Smaller Type Check is enabled, then ignore it.-->
     <Warning Condition="'%(ClCompile.SmallerTypeCheck)' == 'true'"

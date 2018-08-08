@@ -34,7 +34,9 @@ bool WebAssembly::isArgument(const MachineInstr &MI) {
   case WebAssembly::ARGUMENT_v16i8:
   case WebAssembly::ARGUMENT_v8i16:
   case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v2i64:
   case WebAssembly::ARGUMENT_v4f32:
+  case WebAssembly::ARGUMENT_v2f64:
     return true;
   default:
     return false;
@@ -88,7 +90,9 @@ bool WebAssembly::isCallDirect(const MachineInstr &MI) {
   case WebAssembly::CALL_v16i8:
   case WebAssembly::CALL_v8i16:
   case WebAssembly::CALL_v4i32:
+  case WebAssembly::CALL_v2i64:
   case WebAssembly::CALL_v4f32:
+  case WebAssembly::CALL_v2f64:
   case WebAssembly::CALL_EXCEPT_REF:
     return true;
   default:
@@ -106,7 +110,9 @@ bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
   case WebAssembly::CALL_INDIRECT_v16i8:
   case WebAssembly::CALL_INDIRECT_v8i16:
   case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v2i64:
   case WebAssembly::CALL_INDIRECT_v4f32:
+  case WebAssembly::CALL_INDIRECT_v2f64:
   case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
     return true;
   default:

@@ -299,7 +299,7 @@ class LLVMConfig(object):
                 'count'), verbatim=True, unresolved='fatal'),
             ToolSubst(r'\| \bnot\b', command=FindTool('not'), verbatim=True, unresolved='fatal')]
 
-        self.config.substitutions.append(('%python', "'%s'" % (sys.executable)))
+        self.config.substitutions.append(('%python', '"%s"' % (sys.executable)))
 
         self.add_tool_substitutions(
             tool_patterns, [self.config.llvm_tools_dir])

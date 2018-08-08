@@ -3551,10 +3551,8 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
-  auto &DL = DAG.getDataLayout();
-
   EVT VT = N->getValueType(0);
-  EVT ShVT = getShiftAmountTy(VT, DL);
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
 
   // Check to see if we can do this.
   // FIXME: We should be more aggressive here.
@@ -3669,13 +3667,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
     // For vectors we might have a mix of non-NPQ/NPQ paths, so use
     // MULHU to act as a SRL-by-1 for NPQ, else multiply by zero.
-    if (VT.isVector()) {
+    if (VT.isVector())
       NPQ = GetMULHU(NPQ, NPQFactor);
-    } else {
-      NPQ = DAG.getNode(
-          ISD::SRL, dl, VT, NPQ,
-          DAG.getConstant(1, dl, getShiftAmountTy(NPQ.getValueType(), DL)));
-    }
+    else
+      NPQ = DAG.getNode(ISD::SRL, dl, VT, NPQ, DAG.getConstant(1, dl, ShVT));
+
     Created.push_back(NPQ.getNode());
 
     Q = DAG.getNode(ISD::ADD, dl, VT, NPQ, Q);

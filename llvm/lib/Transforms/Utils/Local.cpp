@@ -1930,7 +1930,8 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     CallInst *CallTrap = CallInst::Create(TrapFn, "", I);
     CallTrap->setDebugLoc(I->getDebugLoc());
   }
-  new UnreachableInst(I->getContext(), I);
+  auto *UI = new UnreachableInst(I->getContext(), I);
+  UI->setDebugLoc(I->getDebugLoc());
 
   // All instructions after this are dead.
   unsigned NumInstrsRemoved = 0;
@@ -2279,7 +2280,7 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
 }
 
 void llvm::combineMetadata(Instruction *K, const Instruction *J,
-                           ArrayRef<unsigned> KnownIDs) {
+                           ArrayRef<unsigned> KnownIDs, bool DoesKMove) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   K->dropUnknownNonDebugMetadata(KnownIDs);
   K->getAllMetadataOtherThanDebugLoc(Metadata);
@@ -2315,8 +2316,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
-        // Only set the !nonnull if it is present in both instructions.
-        K->setMetadata(Kind, JMD);
+        // If K does move, keep nonull if it is present in both instructions.
+        if (DoesKMove)
+          K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
@@ -2352,6 +2354,37 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J) {
       LLVMContext::MD_dereferenceable,
       LLVMContext::MD_dereferenceable_or_null};
   combineMetadata(K, J, KnownIDs);
+}
+
+void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
+  auto *ReplInst = dyn_cast<Instruction>(Repl);
+  if (!ReplInst)
+    return;
+
+  // Patch the replacement so that it is not more restrictive than the value
+  // being replaced.
+  // Note that if 'I' is a load being replaced by some operation,
+  // for example, by an arithmetic operation, then andIRFlags()
+  // would just erase all math flags from the original arithmetic
+  // operation, which is clearly not wanted and not needed.
+  if (!isa<LoadInst>(I))
+    ReplInst->andIRFlags(I);
+
+  // FIXME: If both the original and replacement value are part of the
+  // same control-flow region (meaning that the execution of one
+  // guarantees the execution of the other), then we can combine the
+  // noalias scopes here and do better than the general conservative
+  // answer used in combineMetadata().
+
+  // In general, GVN unifies expressions over different control-flow
+  // regions, and so we need a conservative combination of the noalias
+  // scopes.
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,         LLVMContext::MD_range,
+      LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
+      LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull};
+  combineMetadata(ReplInst, I, KnownIDs, false);
 }
 
 template <typename RootType, typename DominatesFn>

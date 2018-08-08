@@ -569,6 +569,22 @@ define float @minnum_undef_op0(float %x) {
   ret float %val
 }
 
+define float @minnum_undef_undef(float %x) {
+; CHECK-LABEL: @minnum_undef_undef(
+; CHECK-NEXT:    ret float undef
+;
+  %val = call float @llvm.minnum.f32(float undef, float undef)
+  ret float %val
+}
+
+define float @maxnum_undef_undef(float %x) {
+; CHECK-LABEL: @maxnum_undef_undef(
+; CHECK-NEXT:    ret float undef
+;
+  %val = call float @llvm.maxnum.f32(float undef, float undef)
+  ret float %val
+}
+
 define float @minnum_same_args(float %x) {
 ; CHECK-LABEL: @minnum_same_args(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -583,5 +599,299 @@ define float @maxnum_same_args(float %x) {
 ;
   %y = call float @llvm.maxnum.f32(float %x, float %x)
   ret float %y
+}
+
+define float @minnum_x_minnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @minnum_x_minnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %x, float %a)
+  ret float %b
+}
+
+define float @minnum_y_minnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @minnum_y_minnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %y, float %a)
+  ret float %b
+}
+
+define float @minnum_x_y_minnum_x(float %x, float %y) {
+; CHECK-LABEL: @minnum_x_y_minnum_x(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %a, float %x)
+  ret float %b
+}
+
+define float @minnum_x_y_minnum_y(float %x, float %y) {
+; CHECK-LABEL: @minnum_x_y_minnum_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %a, float %y)
+  ret float %b
+}
+
+; negative test
+
+define float @minnum_z_minnum_x_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @minnum_z_minnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.minnum.f32(float [[Z:%.*]], float [[A]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %z, float %a)
+  ret float %b
+}
+
+; negative test
+
+define float @minnum_x_y_minnum_z(float %x, float %y, float %z) {
+; CHECK-LABEL: @minnum_x_y_minnum_z(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.minnum.f32(float [[A]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.minnum.f32(float %x, float %y)
+  %b = call float @llvm.minnum.f32(float %a, float %z)
+  ret float %b
+}
+
+define float @maxnum_x_maxnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @maxnum_x_maxnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %x, float %a)
+  ret float %b
+}
+
+define float @maxnum_y_maxnum_x_y(float %x, float %y) {
+; CHECK-LABEL: @maxnum_y_maxnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %y, float %a)
+  ret float %b
+}
+
+define float @maxnum_x_y_maxnum_x(float %x, float %y) {
+; CHECK-LABEL: @maxnum_x_y_maxnum_x(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %a, float %x)
+  ret float %b
+}
+
+define float @maxnum_x_y_maxnum_y(float %x, float %y) {
+; CHECK-LABEL: @maxnum_x_y_maxnum_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[A]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %a, float %y)
+  ret float %b
+}
+
+; negative test
+
+define float @maxnum_z_maxnum_x_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @maxnum_z_maxnum_x_y(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.maxnum.f32(float [[Z:%.*]], float [[A]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %z, float %a)
+  ret float %b
+}
+
+; negative test
+
+define float @maxnum_x_y_maxnum_z(float %x, float %y, float %z) {
+; CHECK-LABEL: @maxnum_x_y_maxnum_z(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call float @llvm.maxnum.f32(float [[A]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[B]]
+;
+  %a = call float @llvm.maxnum.f32(float %x, float %y)
+  %b = call float @llvm.maxnum.f32(float %a, float %z)
+  ret float %b
+}
+
+; Y - (Y - X) --> X
+
+define float @fsub_fsub_common_op(float %x, float %y) {
+; CHECK-LABEL: @fsub_fsub_common_op(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %s = fsub float %y, %x
+  %r = fsub reassoc nsz float %y, %s
+  ret float %r
+}
+
+define <2 x float> @fsub_fsub_common_op_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fsub_fsub_common_op_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %s = fsub <2 x float> %y, %x
+  %r = fsub reassoc nsz <2 x float> %y, %s
+  ret <2 x float> %r
+}
+
+; Negative test - fsub is not commutative.
+; Y - (X - Y) --> (Y - X) + Y (canonicalized)
+
+define float @fsub_fsub_wrong_common_op(float %x, float %y) {
+; CHECK-LABEL: @fsub_fsub_wrong_common_op(
+; CHECK-NEXT:    [[S:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Y]], [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = fsub float %x, %y
+  %r = fsub reassoc nsz float %y, %s
+  ret float %r
+}
+
+; Negative test - negated operand needed.
+; (Y - X) - Y --> -X
+
+define float @fsub_fsub_common_op_wrong_commute(float %x, float %y) {
+; CHECK-LABEL: @fsub_fsub_common_op_wrong_commute(
+; CHECK-NEXT:    [[S:%.*]] = fsub float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[S]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = fsub float %y, %x
+  %r = fsub reassoc nsz float %s, %y
+  ret float %r
+}
+
+; Negative test - fsub is not commutative.
+; (X - Y) - Y --> ?
+
+define float @fsub_fsub_wrong_common_op_wrong_commute(float %x, float %y) {
+; CHECK-LABEL: @fsub_fsub_wrong_common_op_wrong_commute(
+; CHECK-NEXT:    [[S:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[S]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = fsub float %x, %y
+  %r = fsub reassoc nsz float %s, %y
+  ret float %r
+}
+
+; (Y + X) - Y --> X
+
+define float @fadd_fsub_common_op(float %x, float %y) {
+; CHECK-LABEL: @fadd_fsub_common_op(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %a = fadd float %y, %x
+  %r = fsub reassoc nsz float %a, %y
+  ret float %r
+}
+
+; (X + Y) - Y --> X
+
+define <2 x float> @fadd_fsub_common_op_commute_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fadd_fsub_common_op_commute_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %a = fadd <2 x float> %x, %y
+  %r = fsub reassoc nsz <2 x float> %a, %y
+  ret <2 x float> %r
+}
+
+; Negative test - negated operand needed.
+; Y - (Y + X) --> -X
+
+define float @fadd_fsub_common_op_wrong_commute(float %x, float %y) {
+; CHECK-LABEL: @fadd_fsub_common_op_wrong_commute(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Y]], [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %y, %x
+  %r = fsub reassoc nsz float %y, %a
+  ret float %r
+}
+
+; Negative test - negated operand needed.
+; Y - (X + Y) --> -X
+
+define float @fadd_fsub_common_op_wrong_commute_commute(float %x, float %y) {
+; CHECK-LABEL: @fadd_fsub_common_op_wrong_commute_commute(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Y]], [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, %y
+  %r = fsub reassoc nsz float %y, %a
+  ret float %r
+}
+
+; Y + (X - Y) --> X
+
+define <2 x float> @fsub_fadd_common_op_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fsub_fadd_common_op_vec(
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
+;
+  %s = fsub <2 x float> %x, %y
+  %r = fadd reassoc nsz <2 x float> %y, %s
+  ret <2 x float> %r
+}
+
+; (X - Y) + Y --> X
+
+define float @fsub_fadd_common_op_commute(float %x, float %y) {
+; CHECK-LABEL: @fsub_fadd_common_op_commute(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %s = fsub float %x, %y
+  %r = fadd reassoc nsz float %s, %y
+  ret float %r
+}
+
+; Negative test.
+; Y + (Y - X) --> ?
+
+define float @fsub_fadd_common_op_wrong_commute(float %x, float %y) {
+; CHECK-LABEL: @fsub_fadd_common_op_wrong_commute(
+; CHECK-NEXT:    [[S:%.*]] = fsub float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[Y]], [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = fsub float %y, %x
+  %r = fadd reassoc nsz float %y, %s
+  ret float %r
+}
+
+; Negative test.
+; (Y - X) + Y --> ?
+
+define float @fsub_fadd_common_op_wrong_commute_commute(float %x, float %y) {
+; CHECK-LABEL: @fsub_fadd_common_op_wrong_commute_commute(
+; CHECK-NEXT:    [[S:%.*]] = fsub float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[S]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %s = fsub float %y, %x
+  %r = fadd reassoc nsz float %s, %y
+  ret float %r
 }
 

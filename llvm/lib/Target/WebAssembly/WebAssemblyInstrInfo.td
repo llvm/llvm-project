@@ -172,7 +172,9 @@ defm "": ARGUMENT<EXCEPT_REF>;
 defm "": SIMD_ARGUMENT<v16i8>;
 defm "": SIMD_ARGUMENT<v8i16>;
 defm "": SIMD_ARGUMENT<v4i32>;
+defm "": SIMD_ARGUMENT<v2i64>;
 defm "": SIMD_ARGUMENT<v4f32>;
+defm "": SIMD_ARGUMENT<v2f64>;
 
 let Defs = [ARGUMENTS] in {
 

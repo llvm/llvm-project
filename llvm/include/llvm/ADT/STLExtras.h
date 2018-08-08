@@ -824,6 +824,19 @@ struct less_second {
   }
 };
 
+/// \brief Function object to apply a binary function to the first component of
+/// a std::pair.
+template<typename FuncTy>
+struct on_first {
+  FuncTy func;
+
+  template <typename T>
+  auto operator()(const T &lhs, const T &rhs) const
+      -> decltype(func(lhs.first, rhs.first)) {
+    return func(lhs.first, rhs.first);
+  }
+};
+
 // A subset of N3658. More stuff can be added as-needed.
 
 /// Represents a compile-time sequence of integers.
