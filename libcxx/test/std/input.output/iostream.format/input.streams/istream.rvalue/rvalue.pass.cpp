@@ -65,7 +65,7 @@ int main()
     { // test perfect forwarding
         assert(called == false);
         std::istringstream ss;
-        auto& out = (std::move(ss) >> A{});
+        auto&& out = (std::move(ss) >> A{});
         assert(&out == &ss);
         assert(called);
     }
