@@ -88,6 +88,19 @@ define float @fsub_neg_x_y(float %x, float %y) {
   ret float %r
 }
 
+define float @fsub_neg_y(float %x, float %y) {
+; UNSAFE-LABEL: fsub_neg_y:
+; UNSAFE:       # %bb.0:
+; UNSAFE-NEXT:    mulss {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    subss %xmm1, %xmm0
+; UNSAFE-NEXT:    addss %xmm1, %xmm0
+; UNSAFE-NEXT:    retq
+  %mul = fmul float %x, 5.000000e+00
+  %add = fadd float %mul, %y 
+  %r = fsub nsz reassoc float %y, %add 
+  ret float %r
+}
+
 define float @fsub_negzero(float %x) {
 ; STRICT-LABEL: fsub_negzero:
 ; STRICT:       # %bb.0:

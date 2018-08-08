@@ -83,11 +83,12 @@ MachineBasicBlock *GetMatchingEHPad(MachineInstr *MI) {
   return EHPad;
 }
 
-// Erases the given BB and all its children from the function. If other BBs have
-// this BB as a successor, the successor relationships will be deleted as well.
-static void EraseBBAndChildren(MachineBasicBlock *MBB) {
-  SmallVector<MachineBasicBlock *, 8> WL;
-  WL.push_back(MBB);
+// Erases the given BBs and all their children from the function. If other BBs
+// have the BB as a successor, the successor relationships will be deleted as
+// well.
+template <typename Container>
+static void EraseBBsAndChildren(const Container &MBBs) {
+  SmallVector<MachineBasicBlock *, 8> WL(MBBs.begin(), MBBs.end());
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
     for (auto *Pred : MBB->predecessors())
@@ -243,9 +244,11 @@ bool WebAssemblyLateEHPrepare::addRethrows(MachineFunction &MF) {
       // eventually lead to an unreachable. Delete it because rethrow itself is
       // a terminator, and also delete non-EH pad successors if any.
       MBB.erase(std::next(MachineBasicBlock::iterator(Rethrow)), MBB.end());
+      SmallVector<MachineBasicBlock *, 8> NonPadSuccessors;
       for (auto *Succ : MBB.successors())
         if (!Succ->isEHPad())
-          EraseBBAndChildren(Succ);
+          NonPadSuccessors.push_back(Succ);
+      EraseBBsAndChildren(NonPadSuccessors);
     }
   return Changed;
 }
@@ -302,8 +305,7 @@ bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
     BuildMI(*EHPad, InsertPos, Call->getDebugLoc(),
             TII.get(WebAssembly::UNREACHABLE));
     EHPad->erase(InsertPos, EHPad->end());
-    for (auto *Succ : EHPad->successors())
-      EraseBBAndChildren(Succ);
+    EraseBBsAndChildren(EHPad->successors());
   }
   return Changed;
 }

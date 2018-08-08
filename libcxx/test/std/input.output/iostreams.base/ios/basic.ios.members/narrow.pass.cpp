@@ -18,7 +18,7 @@
 
 int main()
 {
-    const std::ios ios(0);
-    assert(ios.narrow('c', '*') == 'c');
-    assert(ios.narrow('\xFE', '*') == '*');
+    const std::wios ios(0);
+    assert(ios.narrow(L'c', '*') == 'c');
+    assert(ios.narrow(L'\u203C', '*') == '*');
 }

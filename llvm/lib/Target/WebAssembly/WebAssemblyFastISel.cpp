@@ -134,7 +134,9 @@ private:
     case MVT::v16i8:
     case MVT::v8i16:
     case MVT::v4i32:
+    case MVT::v2i64:
     case MVT::v4f32:
+    case MVT::v2f64:
       if (Subtarget->hasSIMD128())
         return VT;
       break;
@@ -678,8 +680,16 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       Opc = WebAssembly::ARGUMENT_v4i32;
       RC = &WebAssembly::V128RegClass;
       break;
+    case MVT::v2i64:
+      Opc = WebAssembly::ARGUMENT_v2i64;
+      RC = &WebAssembly::V128RegClass;
+      break;
     case MVT::v4f32:
       Opc = WebAssembly::ARGUMENT_v4f32;
+      RC = &WebAssembly::V128RegClass;
+      break;
+    case MVT::v2f64:
+      Opc = WebAssembly::ARGUMENT_v2f64;
       RC = &WebAssembly::V128RegClass;
       break;
     case MVT::ExceptRef:
@@ -782,9 +792,19 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
           IsDirect ? WebAssembly::CALL_v4i32 : WebAssembly::PCALL_INDIRECT_v4i32;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
+    case MVT::v2i64:
+      Opc =
+          IsDirect ? WebAssembly::CALL_v2i64 : WebAssembly::PCALL_INDIRECT_v2i64;
+      ResultReg = createResultReg(&WebAssembly::V128RegClass);
+      break;
     case MVT::v4f32:
       Opc =
           IsDirect ? WebAssembly::CALL_v4f32 : WebAssembly::PCALL_INDIRECT_v4f32;
+      ResultReg = createResultReg(&WebAssembly::V128RegClass);
+      break;
+    case MVT::v2f64:
+      Opc =
+          IsDirect ? WebAssembly::CALL_v2f64 : WebAssembly::PCALL_INDIRECT_v2f64;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     case MVT::ExceptRef:
@@ -1297,8 +1317,14 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   case MVT::v4i32:
     Opc = WebAssembly::RETURN_v4i32;
     break;
+  case MVT::v2i64:
+    Opc = WebAssembly::RETURN_v2i64;
+    break;
   case MVT::v4f32:
     Opc = WebAssembly::RETURN_v4f32;
+    break;
+  case MVT::v2f64:
+    Opc = WebAssembly::RETURN_v2f64;
     break;
   case MVT::ExceptRef:
     Opc = WebAssembly::RETURN_EXCEPT_REF;

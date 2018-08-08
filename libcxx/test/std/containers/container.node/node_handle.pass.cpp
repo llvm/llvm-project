@@ -121,10 +121,12 @@ void test_node_handle_operations_multi()
     assert(nt2.empty());
 }
 
+template <class> void test_typedef() {}
+
 template <class Container>
 void test_insert_return_type()
 {
-    using irt_type = typename Container::insert_return_type;
+    test_typedef<typename Container::insert_return_type>();
 }
 
 int main()

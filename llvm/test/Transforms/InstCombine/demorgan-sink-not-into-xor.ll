@@ -17,25 +17,41 @@
 ; Basic positive tests
 ; ============================================================================ ;
 
-; Just fold it into the first operand.
-define i32 @positive(i32 %x, i32 %y) {
-; CHECK-LABEL: @positive(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
-;
-  %tmp1 = xor i32 %x, %y
-  %tmp2 = xor i32 %tmp1, -1
-  ret i32 %tmp2
-}
-
-declare i32 @gen32()
-
-; If the [second] operand is easily-invertible, fold into it.
+; If the operand is easily-invertible, fold into it.
 declare i1 @gen1()
 
-define i1 @positive_easyinvert(i8 %y) {
+define i1 @positive_easyinvert(i16 %x, i8 %y) {
 ; CHECK-LABEL: @positive_easyinvert(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i16 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %tmp1 = icmp slt i16 %x, 0
+  %tmp2 = icmp slt i8 %y, 0
+  %tmp3 = xor i1 %tmp2, %tmp1
+  %tmp4 = xor i1 %tmp3, true
+  ret i1 %tmp4
+}
+
+define i1 @positive_easyinvert0(i8 %y) {
+; CHECK-LABEL: @positive_easyinvert0(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @gen1()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %tmp1 = call i1 @gen1()
+  %tmp2 = icmp slt i8 %y, 0
+  %tmp3 = xor i1 %tmp2, %tmp1
+  %tmp4 = xor i1 %tmp3, true
+  ret i1 %tmp4
+}
+
+define i1 @positive_easyinvert1(i8 %y) {
+; CHECK-LABEL: @positive_easyinvert1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @gen1()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], [[TMP2]]
@@ -47,51 +63,6 @@ define i1 @positive_easyinvert(i8 %y) {
   %tmp3 = xor i1 %tmp1, %tmp2
   %tmp4 = xor i1 %tmp3, true
   ret i1 %tmp4
-}
-
-; ============================================================================ ;
-; Vector tests
-; ============================================================================ ;
-
-define <2 x i32> @positive_vec(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @positive_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
-;
-  %tmp1 = xor <2 x i32> %x, %y
-  %tmp2 = xor <2 x i32> %tmp1, <i32 -1, i32 -1>
-  ret <2 x i32> %tmp2
-}
-
-define <3 x i32> @positive_vec_undef(<3 x i32> %x, <3 x i32> %y) {
-; CHECK-LABEL: @positive_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i32> [[TMP1]], <i32 -1, i32 undef, i32 -1>
-; CHECK-NEXT:    ret <3 x i32> [[TMP2]]
-;
-  %tmp1 = xor <3 x i32> %x, %y
-  %tmp2 = xor <3 x i32> %tmp1, <i32 -1, i32 undef, i32 -1>
-  ret <3 x i32> %tmp2
-}
-
-; ============================================================================ ;
-; One-use tests.
-; ============================================================================ ;
-
-declare void @use32(i32)
-
-define i32 @oneuse_0(i32 %x, i32 %y) {
-; CHECK-LABEL: @oneuse_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
-;
-  %tmp1 = xor i32 %x, %y
-  call void @use32(i32 %tmp1)
-  %tmp2 = xor i32 %tmp1, -1
-  ret i32 %tmp2
 }
 
 ; ============================================================================ ;
@@ -157,14 +128,14 @@ define i1 @oneuse_easyinvert_2(i8 %y) {
 ; Negative tests
 ; ============================================================================ ;
 
-; It has to be 'not'.
+; Not easily invertible.
 define i32 @negative(i32 %x, i32 %y) {
 ; CHECK-LABEL: @negative(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %tmp1 = xor i32 %x, %y
-  %tmp2 = xor i32 %tmp1, 1 ; not -1
+  %tmp2 = xor i32 %tmp1, -1
   ret i32 %tmp2
 }
