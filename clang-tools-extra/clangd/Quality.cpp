@@ -292,6 +292,8 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   // Declarations are scoped, others (like macros) are assumed global.
   if (SemaCCResult.Declaration)
     Scope = std::min(Scope, computeScope(SemaCCResult.Declaration));
+
+  NeedsFixIts = !SemaCCResult.FixIts.empty();
 }
 
 static std::pair<float, unsigned> proximityScore(llvm::StringRef SymbolURI,
@@ -343,6 +345,10 @@ float SymbolRelevanceSignals::evaluate() const {
     Score *= 0.5;
   }
 
+  // Penalize for FixIts.
+  if (NeedsFixIts)
+    Score *= 0.5;
+
   return Score;
 }
 
@@ -350,6 +356,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("=== Symbol relevance: {0}\n", S.evaluate());
   OS << formatv("\tName match: {0}\n", S.NameMatch);
   OS << formatv("\tForbidden: {0}\n", S.Forbidden);
+  OS << formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
   OS << formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
   OS << formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
   OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
