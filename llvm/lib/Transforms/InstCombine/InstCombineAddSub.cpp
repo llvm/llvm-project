@@ -1847,13 +1847,27 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (I.hasNoSignedZeros() && match(Op0, m_PosZeroFP()))
     return BinaryOperator::CreateFNegFMF(Op1, &I);
 
+  Value *X, *Y;
+  Constant *C;
+
+  // Fold negation into constant operand. This is limited with one-use because
+  // fneg is assumed better for analysis and cheaper in codegen than fmul/fdiv.
+  // -(X * C) --> X * (-C)
+  if (match(&I, m_FNeg(m_OneUse(m_FMul(m_Value(X), m_Constant(C))))))
+    return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
+  // -(X / C) --> X / (-C)
+  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Value(X), m_Constant(C))))))
+    return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
+  // -(C / X) --> (-C) / X
+  if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Constant(C), m_Value(X))))))
+    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
+
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)
   // Canonicalize to fadd to make analysis easier.
   // This can also help codegen because fadd is commutative.
   // Note that if this fsub was really an fneg, the fadd with -0.0 will get
   // killed later. We still limit that particular transform with 'hasOneUse'
   // because an fneg is assumed better/cheaper than a generic fsub.
-  Value *X, *Y;
   if (I.hasNoSignedZeros() || CannotBeNegativeZero(Op0, SQ.TLI)) {
     if (match(Op1, m_OneUse(m_FSub(m_Value(X), m_Value(Y))))) {
       Value *NewSub = Builder.CreateFSubFMF(Y, X, &I);
@@ -1869,7 +1883,6 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   // X - C --> X + (-C)
   // But don't transform constant expressions because there's an inverse fold
   // for X + (-Y) --> X - Y.
-  Constant *C;
   if (match(Op1, m_Constant(C)) && !isa<ConstantExpr>(Op1))
     return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
 
@@ -1894,6 +1907,19 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
+    // (Y - X) - Y --> -X
+    if (match(Op0, m_FSub(m_Specific(Op1), m_Value(X))))
+      return BinaryOperator::CreateFNegFMF(X, &I);
+
+    // Y - (X + Y) --> -X
+    // Y - (Y + X) --> -X
+    if (match(Op1, m_c_FAdd(m_Specific(Op0), m_Value(X))))
+      return BinaryOperator::CreateFNegFMF(X, &I);
+
+    // TODO: This performs reassociative folds for FP ops. Some fraction of the
+    // functionality has been subsumed by simple pattern matching here and in
+    // InstSimplify. We should let a dedicated reassociation pass handle more
+    // complex pattern matching and remove this from InstCombine.
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }

@@ -101,7 +101,6 @@ namespace HexagonISD {
 
     bool CanReturnSmallStruct(const Function* CalleeFn, unsigned& RetSize)
         const;
-    void promoteLdStType(MVT VT, MVT PromotedLdStVT);
 
   public:
     explicit HexagonTargetLowering(const TargetMachine &TM,
@@ -146,6 +145,8 @@ namespace HexagonISD {
         const override;
 
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+    void LowerOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                               SelectionDAG &DAG) const override;
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                             SelectionDAG &DAG) const override;
 
@@ -164,6 +165,8 @@ namespace HexagonISD {
     SDValue LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerAddSubCarry(SDValue Op, SelectionDAG &DAG) const;
 
@@ -314,6 +317,9 @@ namespace HexagonISD {
 
   private:
     void initializeHVXLowering();
+    void validateConstPtrAlignment(SDValue Ptr, const SDLoc &dl,
+                                   unsigned NeedAlign) const;
+
     std::pair<SDValue,int> getBaseAndOffset(SDValue Addr) const;
 
     bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,

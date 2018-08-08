@@ -466,16 +466,11 @@ void Fuzzer::CheckForUnstableCounters(const uint8_t *Data, size_t Size) {
 
   // First Rerun
   CBSetupAndRun();
-  TPC.UpdateUnstableCounters(Options.HandleUnstable);
-
-  // Second Rerun
-  CBSetupAndRun();
-  TPC.UpdateUnstableCounters(Options.HandleUnstable);
-
-  // Move minimum hit counts back to ModuleInline8bitCounters
-  if (Options.HandleUnstable == TracePC::MinUnstable ||
-      Options.HandleUnstable == TracePC::ZeroUnstable)
-    TPC.ApplyUnstableCounters();
+  if (TPC.UpdateUnstableCounters(Options.HandleUnstable)) {
+    // Second Rerun
+    CBSetupAndRun();
+    TPC.UpdateAndApplyUnstableCounters(Options.HandleUnstable);
+  }
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,

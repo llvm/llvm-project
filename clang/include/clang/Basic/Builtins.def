@@ -413,6 +413,9 @@ BUILTIN(__builtin_parityll, "iULLi", "nc")
 BUILTIN(__builtin_popcount  , "iUi"  , "nc")
 BUILTIN(__builtin_popcountl , "iULi" , "nc")
 BUILTIN(__builtin_popcountll, "iULLi", "nc")
+BUILTIN(__builtin_clrsb  , "ii"  , "nc")
+BUILTIN(__builtin_clrsbl , "iLi" , "nc")
+BUILTIN(__builtin_clrsbll, "iLLi", "nc")
 
 // FIXME: These type signatures are not correct for targets with int != 32-bits
 // or with ULL != 64-bits.

@@ -1191,19 +1191,25 @@ entry:
   ret <8 x half> %shuffle
 }
 
+define dso_local <4 x half> @test_vext_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vext_f16:
+; CHECK:         vext.16 d0, d0, d1, #2
+; CHECK-NEXT:    bx lr
+entry:
+  %vext = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+  ret <4 x half> %vext
+}
+
+define dso_local <8 x half> @test_vextq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vextq_f16:
+; CHECK:         vext.16 q0, q0, q1, #5
+; CHECK-NEXT:    bx lr
+entry:
+  %vext = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
+  ret <8 x half> %vext
+}
+
 ; FIXME (PR38404)
-;
-;define dso_local <4 x half> @test_vext_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vext = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-;  ret <4 x half> %vext
-;}
-;
-;define dso_local <8 x half> @test_vextq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vext = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
-;  ret <8 x half> %vext
-;}
 ;
 ;define dso_local <4 x half> @test_vrev64_f16(<4 x half> %a) {
 ;entry:

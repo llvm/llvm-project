@@ -111,3 +111,21 @@ negw x31, x1
 # CHECK-INST: addiw t6, ra, 0
 # CHECK-ALIAS: sext.w t6, ra
 sext.w x31, x1
+
+# The following aliases are accepted as input but the canonical form
+# of the instruction will always be printed.
+# CHECK-INST: addiw a2, a3, 4
+# CHECK-ALIAS: addiw a2, a3, 4
+addw a2,a3,4
+
+# CHECK-INST: slliw a2, a3, 4
+# CHECK-ALIAS: slliw a2, a3, 4
+sllw a2,a3,4
+
+# CHECK-INST: srliw a2, a3, 4
+# CHECK-ALIAS: srliw a2, a3, 4
+srlw a2,a3,4
+
+# CHECK-INST: sraiw a2, a3, 4
+# CHECK-ALIAS: sraiw a2, a3, 4
+sraw a2,a3,4

@@ -2452,6 +2452,32 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
   return nullptr;
 }
 
+// Transform
+//   ~(x ^ y)
+// into:
+//   (~x) ^ y
+// or into
+//   x ^ (~y)
+static Instruction *sinkNotIntoXor(BinaryOperator &I,
+                                   InstCombiner::BuilderTy &Builder) {
+  Value *X, *Y;
+  // FIXME: one-use check is not needed in general, but currently we are unable
+  // to fold 'not' into 'icmp', if that 'icmp' has multiple uses. (D35182)
+  if (!match(&I, m_Not(m_OneUse(m_Xor(m_Value(X), m_Value(Y))))))
+    return nullptr;
+
+  // We only want to do the transform if it is free to do.
+  if (IsFreeToInvert(X, X->hasOneUse())) {
+    // Ok, good.
+  } else if (IsFreeToInvert(Y, Y->hasOneUse())) {
+    std::swap(X, Y);
+  } else
+    return nullptr;
+
+  Value *NotX = Builder.CreateNot(X, X->getName() + ".not");
+  return BinaryOperator::CreateXor(NotX, Y, I.getName() + ".demorgan");
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2776,6 +2802,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       }
     }
   }
+
+  if (Instruction *NewXor = sinkNotIntoXor(I, Builder))
+    return NewXor;
 
   return nullptr;
 }

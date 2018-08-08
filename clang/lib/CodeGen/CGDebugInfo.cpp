@@ -942,35 +942,18 @@ llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
   return Cache;
 }
 
-llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
-                                      llvm::DIFile *Unit) {
-  SmallVector<llvm::Metadata *, 8> EltTys;
+uint64_t CGDebugInfo::collectDefaultElementTypesForBlockPointer(
+    const BlockPointerType *Ty, llvm::DIFile *Unit, llvm::DIDerivedType *DescTy,
+    unsigned LineNo, SmallVectorImpl<llvm::Metadata *> &EltTys) {
   QualType FType;
-  uint64_t FieldSize, FieldOffset;
-  uint32_t FieldAlign;
-  llvm::DINodeArray Elements;
 
-  FieldOffset = 0;
-  FType = CGM.getContext().UnsignedLongTy;
-  EltTys.push_back(CreateMemberType(Unit, FType, "reserved", &FieldOffset));
-  EltTys.push_back(CreateMemberType(Unit, FType, "Size", &FieldOffset));
+  // Advanced by calls to CreateMemberType in increments of FType, then
+  // returned as the overall size of the default elements.
+  uint64_t FieldOffset = 0;
 
-  Elements = DBuilder.getOrCreateArray(EltTys);
-  EltTys.clear();
-
-  llvm::DINode::DIFlags Flags = llvm::DINode::FlagAppleBlock;
-  unsigned LineNo = 0;
-
-  auto *EltTy =
-      DBuilder.createStructType(Unit, "__block_descriptor", nullptr, LineNo,
-                                FieldOffset, 0, Flags, nullptr, Elements);
-
-  // Bit size, align and offset of the type.
-  uint64_t Size = CGM.getContext().getTypeSize(Ty);
-
-  auto *DescTy = DBuilder.createPointerType(EltTy, Size);
-
-  FieldOffset = 0;
+  // Blocks in OpenCL have unique constraints which make the standard fields
+  // redundant while requiring size and align fields for enqueue_kernel. See
+  // initializeForBlockHeader in CGBlocks.cpp
   if (CGM.getLangOpts().OpenCL) {
     FType = CGM.getContext().IntTy;
     EltTys.push_back(CreateMemberType(Unit, FType, "__size", &FieldOffset));
@@ -984,13 +967,45 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
     FType = CGM.getContext().getPointerType(Ty->getPointeeType());
     EltTys.push_back(CreateMemberType(Unit, FType, "__FuncPtr", &FieldOffset));
     FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
-    FieldSize = CGM.getContext().getTypeSize(Ty);
-    FieldAlign = CGM.getContext().getTypeAlign(Ty);
+    uint64_t FieldSize = CGM.getContext().getTypeSize(Ty);
+    uint32_t FieldAlign = CGM.getContext().getTypeAlign(Ty);
     EltTys.push_back(DBuilder.createMemberType(
-        Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign, FieldOffset,
-        llvm::DINode::FlagZero, DescTy));
+        Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign,
+        FieldOffset, llvm::DINode::FlagZero, DescTy));
     FieldOffset += FieldSize;
   }
+
+  return FieldOffset;
+}
+
+llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
+                                      llvm::DIFile *Unit) {
+  SmallVector<llvm::Metadata *, 8> EltTys;
+  QualType FType;
+  uint64_t FieldOffset;
+  llvm::DINodeArray Elements;
+
+  FieldOffset = 0;
+  FType = CGM.getContext().UnsignedLongTy;
+  EltTys.push_back(CreateMemberType(Unit, FType, "reserved", &FieldOffset));
+  EltTys.push_back(CreateMemberType(Unit, FType, "Size", &FieldOffset));
+
+  Elements = DBuilder.getOrCreateArray(EltTys);
+  EltTys.clear();
+
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagAppleBlock;
+
+  auto *EltTy =
+      DBuilder.createStructType(Unit, "__block_descriptor", nullptr, 0,
+                                FieldOffset, 0, Flags, nullptr, Elements);
+
+  // Bit size, align and offset of the type.
+  uint64_t Size = CGM.getContext().getTypeSize(Ty);
+
+  auto *DescTy = DBuilder.createPointerType(EltTy, Size);
+
+  FieldOffset = collectDefaultElementTypesForBlockPointer(Ty, Unit, DescTy,
+                                                          0, EltTys);
 
   Elements = DBuilder.getOrCreateArray(EltTys);
 
@@ -998,7 +1013,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   // DW_AT_APPLE_BLOCK attribute and are an implementation detail only
   // the debugger needs to know about. To allow type uniquing, emit
   // them without a name or a location.
-  EltTy = DBuilder.createStructType(Unit, "", nullptr, LineNo, FieldOffset, 0,
+  EltTy = DBuilder.createStructType(Unit, "", nullptr, 0, FieldOffset, 0,
                                     Flags, nullptr, Elements);
 
   return DBuilder.createPointerType(EltTy, Size);
@@ -3830,6 +3845,44 @@ bool operator<(const BlockLayoutChunk &l, const BlockLayoutChunk &r) {
 }
 } // namespace
 
+void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
+    const CGBlockInfo &Block, const ASTContext &Context, SourceLocation Loc,
+    const llvm::StructLayout &BlockLayout, llvm::DIFile *Unit,
+    SmallVectorImpl<llvm::Metadata *> &Fields) {
+  // Blocks in OpenCL have unique constraints which make the standard fields
+  // redundant while requiring size and align fields for enqueue_kernel. See
+  // initializeForBlockHeader in CGBlocks.cpp
+  if (CGM.getLangOpts().OpenCL) {
+    Fields.push_back(createFieldType("__size", Context.IntTy, Loc, AS_public,
+                                     BlockLayout.getElementOffsetInBits(0),
+                                     Unit, Unit));
+    Fields.push_back(createFieldType("__align", Context.IntTy, Loc, AS_public,
+                                     BlockLayout.getElementOffsetInBits(1),
+                                     Unit, Unit));
+  } else {
+    Fields.push_back(createFieldType("__isa", Context.VoidPtrTy, Loc, AS_public,
+                                     BlockLayout.getElementOffsetInBits(0),
+                                     Unit, Unit));
+    Fields.push_back(createFieldType("__flags", Context.IntTy, Loc, AS_public,
+                                     BlockLayout.getElementOffsetInBits(1),
+                                     Unit, Unit));
+    Fields.push_back(
+        createFieldType("__reserved", Context.IntTy, Loc, AS_public,
+                        BlockLayout.getElementOffsetInBits(2), Unit, Unit));
+    auto *FnTy = Block.getBlockExpr()->getFunctionType();
+    auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
+    Fields.push_back(createFieldType("__FuncPtr", FnPtrType, Loc, AS_public,
+                                     BlockLayout.getElementOffsetInBits(3),
+                                     Unit, Unit));
+    Fields.push_back(createFieldType(
+        "__descriptor",
+        Context.getPointerType(Block.NeedsCopyDispose
+                                   ? Context.getBlockDescriptorExtendedType()
+                                   : Context.getBlockDescriptorType()),
+        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit));
+  }
+}
+
 void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
                                                        StringRef Name,
                                                        unsigned ArgNo,
@@ -3852,35 +3905,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  if (CGM.getLangOpts().OpenCL) {
-    fields.push_back(createFieldType("__size", C.IntTy, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(0),
-                                     tunit, tunit));
-    fields.push_back(createFieldType("__align", C.IntTy, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(1),
-                                     tunit, tunit));
-  } else {
-    fields.push_back(createFieldType("__isa", C.VoidPtrTy, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(0),
-                                     tunit, tunit));
-    fields.push_back(createFieldType("__flags", C.IntTy, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(1),
-                                     tunit, tunit));
-    fields.push_back(createFieldType("__reserved", C.IntTy, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(2),
-                                     tunit, tunit));
-    auto *FnTy = block.getBlockExpr()->getFunctionType();
-    auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
-    fields.push_back(createFieldType("__FuncPtr", FnPtrType, loc, AS_public,
-                                     blockLayout->getElementOffsetInBits(3),
-                                     tunit, tunit));
-    fields.push_back(createFieldType(
-        "__descriptor",
-        C.getPointerType(block.NeedsCopyDispose
-                             ? C.getBlockDescriptorExtendedType()
-                             : C.getBlockDescriptorType()),
-        loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
-  }
+  collectDefaultFieldsForBlockLiteralDeclare(block, C, loc, *blockLayout, tunit,
+                                             fields);
 
   // We want to sort the captures by offset, not because DWARF
   // requires this, but because we're paranoid about debuggers.
