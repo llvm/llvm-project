@@ -3812,40 +3812,10 @@ llvm::GlobalVariable *CGObjCGNU::ObjCIvarOffsetVariable(
   // is.  This allows code compiled with non-fragile ivars to work correctly
   // when linked against code which isn't (most of the time).
   llvm::GlobalVariable *IvarOffsetPointer = TheModule.getNamedGlobal(Name);
-  if (!IvarOffsetPointer) {
-    // This will cause a run-time crash if we accidentally use it.  A value of
-    // 0 would seem more sensible, but will silently overwrite the isa pointer
-    // causing a great deal of confusion.
-    uint64_t Offset = -1;
-    // We can't call ComputeIvarBaseOffset() here if we have the
-    // implementation, because it will create an invalid ASTRecordLayout object
-    // that we are then stuck with forever, so we only initialize the ivar
-    // offset variable with a guess if we only have the interface.  The
-    // initializer will be reset later anyway, when we are generating the class
-    // description.
-    if (!CGM.getContext().getObjCImplementation(
-              const_cast<ObjCInterfaceDecl *>(ID)))
-      Offset = ComputeIvarBaseOffset(CGM, ID, Ivar);
-
-    llvm::ConstantInt *OffsetGuess = llvm::ConstantInt::get(Int32Ty, Offset,
-                             /*isSigned*/true);
-    // Don't emit the guess in non-PIC code because the linker will not be able
-    // to replace it with the real version for a library.  In non-PIC code you
-    // must compile with the fragile ABI if you want to use ivars from a
-    // GCC-compiled class.
-    if (CGM.getLangOpts().PICLevel) {
-      llvm::GlobalVariable *IvarOffsetGV = new llvm::GlobalVariable(TheModule,
-            Int32Ty, false,
-            llvm::GlobalValue::PrivateLinkage, OffsetGuess, Name+".guess");
-      IvarOffsetPointer = new llvm::GlobalVariable(TheModule,
-            IvarOffsetGV->getType(), false, llvm::GlobalValue::LinkOnceAnyLinkage,
-            IvarOffsetGV, Name);
-    } else {
-      IvarOffsetPointer = new llvm::GlobalVariable(TheModule,
-              llvm::Type::getInt32PtrTy(VMContext), false,
-              llvm::GlobalValue::ExternalLinkage, nullptr, Name);
-    }
-  }
+  if (!IvarOffsetPointer)
+    IvarOffsetPointer = new llvm::GlobalVariable(TheModule,
+            llvm::Type::getInt32PtrTy(VMContext), false,
+            llvm::GlobalValue::ExternalLinkage, nullptr, Name);
   return IvarOffsetPointer;
 }
 

@@ -1840,7 +1840,8 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
         // No break opportunity - update the penalty and continue with the next
         // logical line.
         if (LineIndex < EndIndex - 1)
-          // The last line's penalty is handled in addNextStateToQueue().
+          // The last line's penalty is handled in addNextStateToQueue() or when
+          // calling replaceWhitespaceAfterLastLine below.
           Penalty += Style.PenaltyExcessCharacter *
                      (ContentStartColumn + RemainingTokenColumns - ColumnLimit);
         LLVM_DEBUG(llvm::dbgs() << "    No break opportunity.\n");
@@ -2095,6 +2096,12 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       Token->getSplitAfterLastLine(TailOffset);
   if (SplitAfterLastLine.first != StringRef::npos) {
     LLVM_DEBUG(llvm::dbgs() << "Replacing whitespace after last line.\n");
+
+    // We add the last line's penalty here, since that line is going to be split
+    // now.
+    Penalty += Style.PenaltyExcessCharacter *
+               (ContentStartColumn + RemainingTokenColumns - ColumnLimit);
+
     if (!DryRun)
       Token->replaceWhitespaceAfterLastLine(TailOffset, SplitAfterLastLine,
                                             Whitespaces);

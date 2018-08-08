@@ -113,9 +113,15 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
       break;
     }
   }
-  if (!InjectedClassName && CurClass->isInvalidDecl())
+  if (!InjectedClassName) {
+    if (!CurClass->isInvalidDecl()) {
+      // FIXME: RequireCompleteDeclContext doesn't check dependent contexts
+      // properly. Work around it here for now.
+      Diag(SS.getLastQualifierNameLoc(),
+           diag::err_incomplete_nested_name_spec) << CurClass << SS.getRange();
+    }
     return ParsedType();
-  assert(InjectedClassName && "couldn't find injected class name");
+  }
 
   QualType T = Context.getTypeDeclType(InjectedClassName);
   DiagnoseUseOfDecl(InjectedClassName, NameLoc);
