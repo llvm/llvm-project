@@ -628,7 +628,6 @@ void ClangASTContext::SetExternalSource(
   if (ast) {
     ast->setExternalSource(ast_source_ap);
     ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
-    // ast->getTranslationUnitDecl()->setHasExternalVisibleStorage(true);
   }
 }
 
@@ -639,7 +638,6 @@ void ClangASTContext::RemoveExternalSource() {
     llvm::IntrusiveRefCntPtr<ExternalASTSource> empty_ast_source_ap;
     ast->setExternalSource(empty_ast_source_ap);
     ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(false);
-    // ast->getTranslationUnitDecl()->setHasExternalVisibleStorage(false);
   }
 }
 

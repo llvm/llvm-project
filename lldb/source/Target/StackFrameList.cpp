@@ -234,6 +234,9 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
     // Done unwinding.
     m_concrete_frames_fetched = UINT32_MAX;
   }
+
+  // Don't create the frames eagerly. Defer this work to GetFrameAtIndex,
+  // which can lazily query the unwinder to create frames.
   m_frames.resize(num_frames);
 }
 
@@ -567,9 +570,6 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
         if ((*pos)->GetStackID() == stack_id)
           return *pos;
       }
-
-      //            if (m_frames.back()->GetStackID() < stack_id)
-      //                frame_idx = m_frames.size();
     }
     do {
       frame_sp = GetFrameAtIndex(frame_idx);
