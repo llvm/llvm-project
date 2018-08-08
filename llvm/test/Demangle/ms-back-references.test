@@ -52,6 +52,5 @@
 ?foo@0@YAXXZ
 ; CHECK: void __cdecl foo::foo(void)
 
-; We have some issues with back-references and class / function templates.
 ??$?HH@S@@QEAAAEAU0@H@Z
-; FIXME: struct S &__cdecl S::operator+<int>(int)
+struct S & __cdecl S::operator+<int>(int)

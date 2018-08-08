@@ -373,6 +373,9 @@ public:
     lldb::SBFileSpec
     GetExecutable ();
 
+    %feature("docstring", "
+    /// Append the path mapping (from -> to) to the target's paths mapping list.
+    ") AppendImageSearchPath;
     void
     AppendImageSearchPath (const char *from,
                            const char *to,

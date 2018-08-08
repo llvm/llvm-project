@@ -8,10 +8,6 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i32 @llvm.ctpop.i32(i32)
-
 ; ==============================================================================
 ; 16 x i8
 ; ==============================================================================
@@ -121,6 +117,42 @@ define <4 x i32> @mul_v4i32(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; ==============================================================================
+; 2 x i64
+; ==============================================================================
+; CHECK-LABEL: add_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i64x2.add $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x i64> @add_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = add <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: sub_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i64x2.sub $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x i64> @sub_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = sub <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: mul_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i64x2.mul $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x i64> @mul_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = mul <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; ==============================================================================
 ; 4 x float
 ; ==============================================================================
 ; CHECK-LABEL: add_v4f32
@@ -145,6 +177,17 @@ define <4 x float> @sub_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %a
 }
 
+; CHECK-LABEL: div_v4f32
+; NO-SIMD128-NOT: f32x4
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f32x4.div $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <4 x float> @div_v4f32(<4 x float> %x, <4 x float> %y) {
+  %a = fdiv <4 x float> %x, %y
+  ret <4 x float> %a
+}
+
 ; CHECK-LABEL: mul_v4f32
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128: .param v128, v128{{$}}
@@ -156,3 +199,49 @@ define <4 x float> @mul_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %a
 }
 
+; ==============================================================================
+; 2 x double
+; ==============================================================================
+; CHECK-LABEL: add_v2f64
+; NO-SIMD128-NOT: f64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f64x2.add $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x double> @add_v2f64(<2 x double> %x, <2 x double> %y) {
+  %a = fadd <2 x double> %x, %y
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: sub_v2f64
+; NO-SIMD128-NOT: f64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f64x2.sub $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x double> @sub_v2f64(<2 x double> %x, <2 x double> %y) {
+  %a = fsub <2 x double> %x, %y
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: div_v2f64
+; NO-SIMD128-NOT: f64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f64x2.div $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x double> @div_v2f64(<2 x double> %x, <2 x double> %y) {
+  %a = fdiv <2 x double> %x, %y
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: mul_v2f64
+; NO-SIMD128-NOT: f64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f64x2.mul $push0=, $0, $1{{$}}
+; SIMD128: return $pop0{{$}}
+define <2 x double> @mul_v2f64(<2 x double> %x, <2 x double> %y) {
+  %a = fmul <2 x double> %x, %y
+  ret <2 x double> %a
+}

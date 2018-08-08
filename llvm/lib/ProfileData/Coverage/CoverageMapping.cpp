@@ -207,12 +207,6 @@ Error CoverageMapping::loadFunctionRecord(
   else
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
 
-  // Don't load records for (filenames, function) pairs we've already seen.
-  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
-                                          Record.Filenames.end());
-  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
-    return Error::success();
-
   CounterMappingContext Ctx(Record.Expressions);
 
   std::vector<uint64_t> Counts;
@@ -230,6 +224,15 @@ Error CoverageMapping::loadFunctionRecord(
 
   assert(!Record.MappingRegions.empty() && "Function has no regions");
 
+  // This coverage record is a zero region for a function that's unused in
+  // some TU, but used in a different TU. Ignore it. The coverage maps from the
+  // the other TU will either be loaded (providing full region counts) or they
+  // won't (in which case we don't unintuitively report functions as uncovered
+  // when they have non-zero counts in the profile).
+  if (Record.MappingRegions.size() == 1 &&
+      Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
+    return Error::success();
+
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
     Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
@@ -239,11 +242,12 @@ Error CoverageMapping::loadFunctionRecord(
     }
     Function.pushRegion(Region, *ExecutionCount);
   }
-  if (Function.CountedRegions.size() != Record.MappingRegions.size()) {
-    FuncCounterMismatches.emplace_back(Record.FunctionName,
-                                       Function.CountedRegions.size());
+
+  // Don't create records for (filenames, function) pairs we've already seen.
+  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
+                                          Record.Filenames.end());
+  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
     return Error::success();
-  }
 
   Functions.push_back(std::move(Function));
   return Error::success();

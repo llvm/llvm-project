@@ -205,6 +205,12 @@ enum FuncClass : uint8_t {
   Far = 1 << 6,
 };
 
+enum NameBackrefBehavior : uint8_t {
+  NBB_None = 0,          // don't save any names as backrefs.
+  NBB_Template = 1 << 0, // save template instanations.
+  NBB_Simple = 1 << 1,   // save simple names.
+};
+
 enum class SymbolCategory { Function, Variable };
 
 namespace {
@@ -931,13 +937,15 @@ private:
   Name *demangleFullyQualifiedSymbolName(StringView &MangledName);
 
   Name *demangleUnqualifiedTypeName(StringView &MangledName, bool Memorize);
-  Name *demangleUnqualifiedSymbolName(StringView &MangledName, bool Memorize);
+  Name *demangleUnqualifiedSymbolName(StringView &MangledName,
+                                      NameBackrefBehavior NBB);
 
   Name *demangleNameScopeChain(StringView &MangledName, Name *UnqualifiedName);
   Name *demangleNameScopePiece(StringView &MangledName);
 
   Name *demangleBackRefName(StringView &MangledName);
-  Name *demangleTemplateInstantiationName(StringView &MangledName);
+  Name *demangleTemplateInstantiationName(StringView &MangledName,
+                                          NameBackrefBehavior NBB);
   Name *demangleOperatorName(StringView &MangledName);
   Name *demangleSimpleName(StringView &MangledName, bool Memorize);
   Name *demangleAnonymousNamespaceName(StringView &MangledName);
@@ -1124,11 +1132,12 @@ Name *Demangler::demangleBackRefName(StringView &MangledName) {
   return Node;
 }
 
-Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName) {
+Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
+                                                   NameBackrefBehavior NBB) {
   assert(MangledName.startsWith("?$"));
   MangledName.consumeFront("?$");
 
-  Name *Node = demangleUnqualifiedSymbolName(MangledName, false);
+  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_None);
   if (Error)
     return nullptr;
 
@@ -1138,16 +1147,18 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName) {
 
   Node->IsTemplateInstantiation = true;
 
-  // Render this class template name into a string buffer so that we can
-  // memorize it for the purpose of back-referencing.
-  OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
-  outputName(OS, Node, *this);
-  OS << '\0';
-  char *Name = OS.getBuffer();
+  if (NBB & NBB_Template) {
+    // Render this class template name into a string buffer so that we can
+    // memorize it for the purpose of back-referencing.
+    OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
+    outputName(OS, Node, *this);
+    OS << '\0';
+    char *Name = OS.getBuffer();
 
-  StringView Owned = copyString(Name);
-  memorizeString(Owned);
-  std::free(Name);
+    StringView Owned = copyString(Name);
+    memorizeString(Owned);
+    std::free(Name);
+  }
 
   return Node;
 }
@@ -1367,7 +1378,12 @@ Name *Demangler::demangleFullyQualifiedTypeName(StringView &MangledName) {
 // Symbol names have slightly different rules regarding what can appear
 // so we separate out the implementations for flexibility.
 Name *Demangler::demangleFullyQualifiedSymbolName(StringView &MangledName) {
-  Name *SymbolName = demangleUnqualifiedSymbolName(MangledName, true);
+  // This is the final component of a symbol name (i.e. the leftmost component
+  // of a mangled name.  Since the only possible template instantiation that
+  // can appear in this context is a function template, and since those are
+  // not saved for the purposes of name backreferences, only backref simple
+  // names.
+  Name *SymbolName = demangleUnqualifiedSymbolName(MangledName, NBB_Simple);
   if (Error)
     return nullptr;
   assert(SymbolName);
@@ -1389,20 +1405,20 @@ Name *Demangler::demangleUnqualifiedTypeName(StringView &MangledName,
     return demangleBackRefName(MangledName);
 
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB_Template);
 
   return demangleSimpleName(MangledName, Memorize);
 }
 
 Name *Demangler::demangleUnqualifiedSymbolName(StringView &MangledName,
-                                               bool Memorize) {
+                                               NameBackrefBehavior NBB) {
   if (startsWithDigit(MangledName))
     return demangleBackRefName(MangledName);
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB);
   if (MangledName.startsWith('?'))
     return demangleOperatorName(MangledName);
-  return demangleSimpleName(MangledName, Memorize);
+  return demangleSimpleName(MangledName, (NBB & NBB_Simple) != 0);
 }
 
 Name *Demangler::demangleNameScopePiece(StringView &MangledName) {
@@ -1410,7 +1426,7 @@ Name *Demangler::demangleNameScopePiece(StringView &MangledName) {
     return demangleBackRefName(MangledName);
 
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB_Template);
 
   if (MangledName.startsWith("?A"))
     return demangleAnonymousNamespaceName(MangledName);

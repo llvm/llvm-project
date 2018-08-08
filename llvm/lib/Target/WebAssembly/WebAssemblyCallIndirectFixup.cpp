@@ -72,7 +72,9 @@ static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
   case PCALL_INDIRECT_v16i8: return CALL_INDIRECT_v16i8;
   case PCALL_INDIRECT_v8i16: return CALL_INDIRECT_v8i16;
   case PCALL_INDIRECT_v4i32: return CALL_INDIRECT_v4i32;
+  case PCALL_INDIRECT_v2i64: return CALL_INDIRECT_v2i64;
   case PCALL_INDIRECT_v4f32: return CALL_INDIRECT_v4f32;
+  case PCALL_INDIRECT_v2f64: return CALL_INDIRECT_v2f64;
   default: return INSTRUCTION_LIST_END;
   }
 }
@@ -133,4 +135,3 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
 
   return Changed;
 }
-
