@@ -1968,6 +1968,16 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
       Elts.push_back(C);
     }
 
+    // This means that the array type is probably "IncompleteType" or some
+    // type that is not ConstantArray.
+    if (CAT == nullptr && CommonElementType == nullptr && !NumInitElts) {
+      const ArrayType *AT = CGM.getContext().getAsArrayType(DestType);
+      CommonElementType = CGM.getTypes().ConvertType(AT->getElementType());
+      llvm::ArrayType *AType = llvm::ArrayType::get(CommonElementType,
+                                                    NumElements);
+      return llvm::ConstantAggregateZero::get(AType);
+    }
+
     return EmitArrayConstant(CGM, CAT, CommonElementType, NumElements, Elts,
                              Filler);
   }
