@@ -346,6 +346,28 @@ TEST(QualityTests, ConstructorQuality) {
   EXPECT_EQ(Q.Category, SymbolQualitySignals::Constructor);
 }
 
+TEST(QualityTests, ItemWithFixItsRankedDown) {
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+
+  auto Header = TestTU::withHeaderCode(R"cpp(
+        int x;
+      )cpp");
+  auto AST = Header.build();
+
+  SymbolRelevanceSignals RelevanceWithFixIt;
+  RelevanceWithFixIt.merge(CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr,
+                                                false, true, {FixItHint{}}));
+  EXPECT_TRUE(RelevanceWithFixIt.NeedsFixIts);
+
+  SymbolRelevanceSignals RelevanceWithoutFixIt;
+  RelevanceWithoutFixIt.merge(
+      CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr, false, true, {}));
+  EXPECT_FALSE(RelevanceWithoutFixIt.NeedsFixIts);
+
+  EXPECT_LT(RelevanceWithFixIt.evaluate(), RelevanceWithoutFixIt.evaluate());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
