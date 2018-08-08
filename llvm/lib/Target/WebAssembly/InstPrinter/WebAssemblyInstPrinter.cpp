@@ -229,7 +229,9 @@ const char *llvm::WebAssembly::TypeToString(MVT Ty) {
   case MVT::v16i8:
   case MVT::v8i16:
   case MVT::v4i32:
+  case MVT::v2i64:
   case MVT::v4f32:
+  case MVT::v2f64:
     return "v128";
   case MVT::ExceptRef:
     return "except_ref";

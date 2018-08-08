@@ -79,6 +79,23 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   return MemIndex::build(std::move(Slab).build());
 }
 
+CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
+                               Position point,
+                               std::vector<Symbol> IndexSymbols = {},
+                               clangd::CodeCompleteOptions Opts = {}) {
+  std::unique_ptr<SymbolIndex> OverrideIndex;
+  if (!IndexSymbols.empty()) {
+    assert(!Opts.Index && "both Index and IndexSymbols given!");
+    OverrideIndex = memIndex(std::move(IndexSymbols));
+    Opts.Index = OverrideIndex.get();
+  }
+
+  auto File = testPath("foo.cpp");
+  runAddDocument(Server, File, TestCode);
+  auto CompletionList = cantFail(runCodeComplete(Server, File, point, Opts));
+  return CompletionList;
+}
+
 CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {}) {
@@ -1340,6 +1357,85 @@ TEST(CompletionTest, CodeCompletionContext) {
       )cpp");
 
   EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+}
+
+TEST(CompletionTest, FixItForArrowToDot) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+  Annotations TestCode(
+      R"cpp(
+        class Auxilary {
+         public:
+          void AuxFunction();
+        };
+        class ClassWithPtr {
+         public:
+          void MemberFunction();
+          Auxilary* operator->() const;
+          Auxilary* Aux;
+        };
+        void f() {
+          ClassWithPtr x;
+          x[[->]]^;
+        }
+      )cpp");
+  auto Results =
+      completions(Server, TestCode.code(), TestCode.point(), {}, Opts);
+  EXPECT_EQ(Results.Completions.size(), 3u);
+
+  TextEdit ReplacementEdit;
+  ReplacementEdit.range = TestCode.range();
+  ReplacementEdit.newText = ".";
+  for (const auto &C : Results.Completions) {
+    EXPECT_TRUE(C.FixIts.size() == 1u || C.Name == "AuxFunction");
+    if (!C.FixIts.empty())
+      EXPECT_THAT(C.FixIts, ElementsAre(ReplacementEdit));
+  }
+}
+
+TEST(CompletionTest, FixItForDotToArrow) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+  Annotations TestCode(
+      R"cpp(
+        class Auxilary {
+         public:
+          void AuxFunction();
+        };
+        class ClassWithPtr {
+         public:
+          void MemberFunction();
+          Auxilary* operator->() const;
+          Auxilary* Aux;
+        };
+        void f() {
+          ClassWithPtr x;
+          x[[.]]^;
+        }
+      )cpp");
+  auto Results =
+      completions(Server, TestCode.code(), TestCode.point(), {}, Opts);
+  EXPECT_EQ(Results.Completions.size(), 3u);
+
+  TextEdit ReplacementEdit;
+  ReplacementEdit.range = TestCode.range();
+  ReplacementEdit.newText = "->";
+  for (const auto &C : Results.Completions) {
+    EXPECT_TRUE(C.FixIts.empty() || C.Name == "AuxFunction");
+    if (!C.FixIts.empty()) {
+      EXPECT_THAT(C.FixIts, ElementsAre(ReplacementEdit));
+    }
+  }
 }
 
 } // namespace

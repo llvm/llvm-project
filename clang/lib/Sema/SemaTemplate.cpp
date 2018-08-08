@@ -974,7 +974,7 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
 QualType Sema::CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
                                                  SourceLocation Loc) {
   if (TSI->getType()->isUndeducedType()) {
-    // C++1z [temp.dep.expr]p3:
+    // C++17 [temp.dep.expr]p3:
     //   An id-expression is type-dependent if it contains
     //    - an identifier associated by name lookup with a non-type
     //      template-parameter declared with a type that contains a
@@ -9865,6 +9865,15 @@ bool Sema::RebuildTemplateParamsInCurrentInstantiation(
                                           NTTP->getDeclName());
     if (!NewTSI)
       return true;
+
+    if (NewTSI->getType()->isUndeducedType()) {
+      // C++17 [temp.dep.expr]p3:
+      //   An id-expression is type-dependent if it contains
+      //    - an identifier associated by name lookup with a non-type
+      //      template-parameter declared with a type that contains a
+      //      placeholder type (7.1.7.4),
+      NewTSI = SubstAutoTypeSourceInfo(NewTSI, Context.DependentTy);
+    }
 
     if (NewTSI != NTTP->getTypeSourceInfo()) {
       NTTP->setTypeSourceInfo(NewTSI);

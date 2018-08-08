@@ -7225,7 +7225,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other) {
-    // If this is a FP operand in an integer register (or visa versa), or more
+    // If this is an FP operand in an integer register (or visa versa), or more
     // generally if the operand value disagrees with the register class we plan
     // to stick it in, fix the operand type.
     //
@@ -7243,12 +7243,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
       if (RegVT.getSizeInBits() == OpInfo.ConstraintVT.getSizeInBits()) {
         // Exclude indirect inputs while they are unsupported because the code
         // to perform the load is missing and thus OpInfo.CallOperand still
-        // refer to the input address rather than the pointed-to value.
+        // refers to the input address rather than the pointed-to value.
         if (OpInfo.Type == InlineAsm::isInput && !OpInfo.isIndirect)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, RegVT, OpInfo.CallOperand);
         OpInfo.ConstraintVT = RegVT;
-        // If the operand is a FP value and we want it in integer registers,
+        // If the operand is an FP value and we want it in integer registers,
         // use the corresponding integer type. This turns an f64 value into
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
@@ -7283,7 +7283,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
     // remember that AX is actually i16 to get the right extension.
     RegVT = *TRI.legalclasstypes_begin(*RC);
 
-    // This is a explicit reference to a physical register.
+    // This is an explicit reference to a physical register.
     Regs.push_back(AssignedReg);
 
     // If this is an expanded reference, add the rest of the regs to Regs.
@@ -7776,10 +7776,29 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     SDValue Val = RetValRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
                                              Chain, &Flag, CS.getInstruction());
 
-    // FIXME: Why don't we do this for inline asms with MRVs?
-    if (CS.getType()->isSingleValueType() && CS.getType()->isSized()) {
-      EVT ResultType = TLI.getValueType(DAG.getDataLayout(), CS.getType());
-
+    llvm::Type *CSResultType = CS.getType();
+    unsigned numRet;
+    ArrayRef<Type *> ResultTypes;
+    SmallVector<SDValue, 1> ResultValues(1);
+    if (CSResultType->isSingleValueType()) {
+      numRet = 1;
+      ResultValues[0] = Val;
+      ResultTypes = makeArrayRef(CSResultType);
+    } else {
+      numRet = CSResultType->getNumContainedTypes();
+      assert(Val->getNumOperands() == numRet &&
+             "Mismatch in number of output operands in asm result");
+      ResultTypes = CSResultType->subtypes();
+      ArrayRef<SDUse> ValueUses = Val->ops();
+      ResultValues.resize(numRet);
+      std::transform(ValueUses.begin(), ValueUses.end(), ResultValues.begin(),
+                     [](const SDUse &u) -> SDValue { return u.get(); });
+    }
+    SmallVector<EVT, 1> ResultVTs(numRet);
+    for (unsigned i = 0; i < numRet; i++) {
+      EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), ResultTypes[i]);
+      SDValue Val = ResultValues[i];
+      assert(ResultTypes[i]->isSized() && "Unexpected unsized type");
       // If the type of the inline asm call site return value is different but
       // has same size as the type of the asm output bitcast it.  One example
       // of this is for vectors with different width / number of elements.
@@ -7790,22 +7809,24 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       // This can also happen for a return value that disagrees with the
       // register class it is put in, eg. a double in a general-purpose
       // register on a 32-bit machine.
-      if (ResultType != Val.getValueType() &&
-          ResultType.getSizeInBits() == Val.getValueSizeInBits()) {
-        Val = DAG.getNode(ISD::BITCAST, getCurSDLoc(),
-                          ResultType, Val);
-
-      } else if (ResultType != Val.getValueType() &&
-                 ResultType.isInteger() && Val.getValueType().isInteger()) {
-        // If a result value was tied to an input value, the computed result may
-        // have a wider width than the expected result.  Extract the relevant
-        // portion.
-        Val = DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), ResultType, Val);
+      if (ResultVT != Val.getValueType() &&
+          ResultVT.getSizeInBits() == Val.getValueSizeInBits())
+        Val = DAG.getNode(ISD::BITCAST, getCurSDLoc(), ResultVT, Val);
+      else if (ResultVT != Val.getValueType() && ResultVT.isInteger() &&
+               Val.getValueType().isInteger()) {
+        // If a result value was tied to an input value, the computed result
+        // may have a wider width than the expected result.  Extract the
+        // relevant portion.
+        Val = DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), ResultVT, Val);
       }
 
-      assert(ResultType == Val.getValueType() && "Asm result value mismatch!");
+      assert(ResultVT == Val.getValueType() && "Asm result value mismatch!");
+      ResultVTs[i] = ResultVT;
+      ResultValues[i] = Val;
     }
 
+    Val = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
+                      DAG.getVTList(ResultVTs), ResultValues);
     setValue(CS.getInstruction(), Val);
     // Don't need to use this as a chain in this case.
     if (!IA->hasSideEffects() && !hasMemory && IndirectStoresToEmit.empty())

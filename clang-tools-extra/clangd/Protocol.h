@@ -171,6 +171,10 @@ struct TextEdit {
   /// The string to be inserted. For delete operations use an
   /// empty string.
   std::string newText;
+
+  bool operator==(const TextEdit &rhs) const {
+    return newText == rhs.newText && range == rhs.range;
+  }
 };
 bool fromJSON(const llvm::json::Value &, TextEdit &);
 llvm::json::Value toJSON(const TextEdit &);

@@ -205,6 +205,12 @@ enum FuncClass : uint8_t {
   Far = 1 << 6,
 };
 
+enum NameBackrefBehavior : uint8_t {
+  NBB_None = 0,          // don't save any names as backrefs.
+  NBB_Template = 1 << 0, // save template instanations.
+  NBB_Simple = 1 << 1,   // save simple names.
+};
+
 enum class SymbolCategory { Function, Variable };
 
 namespace {
@@ -880,6 +886,18 @@ struct Symbol {
 
 namespace {
 
+struct BackrefContext {
+  static constexpr size_t Max = 10;
+
+  Type *FunctionParams[Max];
+  size_t FunctionParamCount = 0;
+
+  // The first 10 BackReferences in a mangled name can be back-referenced by
+  // special name @[0-9]. This is a storage for the first 10 BackReferences.
+  StringView Names[Max];
+  size_t NamesCount = 0;
+};
+
 // Demangler class takes the main role in demangling symbols.
 // It has a set of functions to parse mangled symbols into Type instances.
 // It also has a set of functions to cnovert Type instances to strings.
@@ -931,13 +949,15 @@ private:
   Name *demangleFullyQualifiedSymbolName(StringView &MangledName);
 
   Name *demangleUnqualifiedTypeName(StringView &MangledName, bool Memorize);
-  Name *demangleUnqualifiedSymbolName(StringView &MangledName, bool Memorize);
+  Name *demangleUnqualifiedSymbolName(StringView &MangledName,
+                                      NameBackrefBehavior NBB);
 
   Name *demangleNameScopeChain(StringView &MangledName, Name *UnqualifiedName);
   Name *demangleNameScopePiece(StringView &MangledName);
 
   Name *demangleBackRefName(StringView &MangledName);
-  Name *demangleTemplateInstantiationName(StringView &MangledName);
+  Name *demangleTemplateInstantiationName(StringView &MangledName,
+                                          NameBackrefBehavior NBB);
   Name *demangleOperatorName(StringView &MangledName);
   Name *demangleSimpleName(StringView &MangledName, bool Memorize);
   Name *demangleAnonymousNamespaceName(StringView &MangledName);
@@ -969,13 +989,7 @@ private:
   //  // back-ref map.
   //  using F = void(*)(int*);
   //  F G(int *);
-  Type *FunctionParamBackRefs[10];
-  size_t FunctionParamBackRefCount = 0;
-
-  // The first 10 BackReferences in a mangled name can be back-referenced by
-  // special name @[0-9]. This is a storage for the first 10 BackReferences.
-  StringView BackReferences[10];
-  size_t BackRefCount = 0;
+  BackrefContext Backrefs;
 };
 } // namespace
 
@@ -1107,12 +1121,12 @@ int Demangler::demangleNumber(StringView &MangledName) {
 // First 10 strings can be referenced by special BackReferences ?0, ?1, ..., ?9.
 // Memorize it.
 void Demangler::memorizeString(StringView S) {
-  if (BackRefCount >= sizeof(BackReferences) / sizeof(*BackReferences))
+  if (Backrefs.NamesCount >= BackrefContext::Max)
     return;
-  for (size_t i = 0; i < BackRefCount; ++i)
-    if (S == BackReferences[i])
+  for (size_t i = 0; i < Backrefs.NamesCount; ++i)
+    if (S == Backrefs.Names[i])
       return;
-  BackReferences[BackRefCount++] = S;
+  Backrefs.Names[Backrefs.NamesCount++] = S;
 }
 
 Name *Demangler::demangleBackRefName(StringView &MangledName) {
@@ -1124,30 +1138,36 @@ Name *Demangler::demangleBackRefName(StringView &MangledName) {
   return Node;
 }
 
-Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName) {
+Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
+                                                   NameBackrefBehavior NBB) {
   assert(MangledName.startsWith("?$"));
   MangledName.consumeFront("?$");
 
-  Name *Node = demangleUnqualifiedSymbolName(MangledName, false);
-  if (Error)
-    return nullptr;
+  BackrefContext OuterContext;
+  std::swap(OuterContext, Backrefs);
 
-  Node->TParams = demangleTemplateParameterList(MangledName);
+  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_None);
+  if (!Error)
+    Node->TParams = demangleTemplateParameterList(MangledName);
+
+  std::swap(OuterContext, Backrefs);
   if (Error)
     return nullptr;
 
   Node->IsTemplateInstantiation = true;
 
-  // Render this class template name into a string buffer so that we can
-  // memorize it for the purpose of back-referencing.
-  OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
-  outputName(OS, Node, *this);
-  OS << '\0';
-  char *Name = OS.getBuffer();
+  if (NBB & NBB_Template) {
+    // Render this class template name into a string buffer so that we can
+    // memorize it for the purpose of back-referencing.
+    OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
+    outputName(OS, Node, *this);
+    OS << '\0';
+    char *Name = OS.getBuffer();
 
-  StringView Owned = copyString(Name);
-  memorizeString(Owned);
-  std::free(Name);
+    StringView Owned = copyString(Name);
+    memorizeString(Owned);
+    std::free(Name);
+  }
 
   return Node;
 }
@@ -1367,7 +1387,12 @@ Name *Demangler::demangleFullyQualifiedTypeName(StringView &MangledName) {
 // Symbol names have slightly different rules regarding what can appear
 // so we separate out the implementations for flexibility.
 Name *Demangler::demangleFullyQualifiedSymbolName(StringView &MangledName) {
-  Name *SymbolName = demangleUnqualifiedSymbolName(MangledName, true);
+  // This is the final component of a symbol name (i.e. the leftmost component
+  // of a mangled name.  Since the only possible template instantiation that
+  // can appear in this context is a function template, and since those are
+  // not saved for the purposes of name backreferences, only backref simple
+  // names.
+  Name *SymbolName = demangleUnqualifiedSymbolName(MangledName, NBB_Simple);
   if (Error)
     return nullptr;
   assert(SymbolName);
@@ -1389,20 +1414,20 @@ Name *Demangler::demangleUnqualifiedTypeName(StringView &MangledName,
     return demangleBackRefName(MangledName);
 
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB_Template);
 
   return demangleSimpleName(MangledName, Memorize);
 }
 
 Name *Demangler::demangleUnqualifiedSymbolName(StringView &MangledName,
-                                               bool Memorize) {
+                                               NameBackrefBehavior NBB) {
   if (startsWithDigit(MangledName))
     return demangleBackRefName(MangledName);
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB);
   if (MangledName.startsWith('?'))
     return demangleOperatorName(MangledName);
-  return demangleSimpleName(MangledName, Memorize);
+  return demangleSimpleName(MangledName, (NBB & NBB_Simple) != 0);
 }
 
 Name *Demangler::demangleNameScopePiece(StringView &MangledName) {
@@ -1410,7 +1435,7 @@ Name *Demangler::demangleNameScopePiece(StringView &MangledName) {
     return demangleBackRefName(MangledName);
 
   if (MangledName.startsWith("?$"))
-    return demangleTemplateInstantiationName(MangledName);
+    return demangleTemplateInstantiationName(MangledName, NBB_Template);
 
   if (MangledName.startsWith("?A"))
     return demangleAnonymousNamespaceName(MangledName);
@@ -1951,14 +1976,14 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
 
     if (startsWithDigit(MangledName)) {
       size_t N = MangledName[0] - '0';
-      if (N >= FunctionParamBackRefCount) {
+      if (N >= Backrefs.FunctionParamCount) {
         Error = true;
         return {};
       }
       MangledName = MangledName.dropFront();
 
       *Current = Arena.alloc<FunctionParams>();
-      (*Current)->Current = FunctionParamBackRefs[N]->clone(Arena);
+      (*Current)->Current = Backrefs.FunctionParams[N]->clone(Arena);
       Current = &(*Current)->Next;
       continue;
     }
@@ -1973,8 +1998,9 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
 
     // Single-letter types are ignored for backreferences because memorizing
     // them doesn't save anything.
-    if (FunctionParamBackRefCount <= 9 && CharsConsumed > 1)
-      FunctionParamBackRefs[FunctionParamBackRefCount++] = (*Current)->Current;
+    if (Backrefs.FunctionParamCount <= 9 && CharsConsumed > 1)
+      Backrefs.FunctionParams[Backrefs.FunctionParamCount++] =
+          (*Current)->Current;
 
     Current = &(*Current)->Next;
   }
@@ -2042,9 +2068,9 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
 StringView Demangler::resolve(StringView N) {
   assert(N.size() == 1 && isdigit(N[0]));
   size_t Digit = N[0] - '0';
-  if (Digit >= BackRefCount)
+  if (Digit >= Backrefs.NamesCount)
     return N;
-  return BackReferences[Digit];
+  return Backrefs.Names[Digit];
 }
 
 void Demangler::output(const Symbol *S, OutputStream &OS) {
@@ -2072,14 +2098,14 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
 
 void Demangler::dumpBackReferences() {
   std::printf("%d function parameter backreferences\n",
-              (int)FunctionParamBackRefCount);
+              (int)Backrefs.FunctionParamCount);
 
   // Create an output stream so we can render each type.
   OutputStream OS = OutputStream::create(nullptr, 0, 1024);
-  for (size_t I = 0; I < FunctionParamBackRefCount; ++I) {
+  for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
     OS.setCurrentPosition(0);
 
-    Type *T = FunctionParamBackRefs[I];
+    Type *T = Backrefs.FunctionParams[I];
     Type::outputPre(OS, *T, *this);
     Type::outputPost(OS, *T, *this);
 
@@ -2088,14 +2114,14 @@ void Demangler::dumpBackReferences() {
   }
   std::free(OS.getBuffer());
 
-  if (FunctionParamBackRefCount > 0)
+  if (Backrefs.FunctionParamCount > 0)
     std::printf("\n");
-  std::printf("%d name backreferences\n", (int)BackRefCount);
-  for (size_t I = 0; I < BackRefCount; ++I) {
-    std::printf("  [%d] - %.*s\n", (int)I, (int)BackReferences[I].size(),
-                BackReferences[I].begin());
+  std::printf("%d name backreferences\n", (int)Backrefs.NamesCount);
+  for (size_t I = 0; I < Backrefs.NamesCount; ++I) {
+    std::printf("  [%d] - %.*s\n", (int)I, (int)Backrefs.Names[I].size(),
+                Backrefs.Names[I].begin());
   }
-  if (BackRefCount > 0)
+  if (Backrefs.NamesCount > 0)
     std::printf("\n");
 }
 

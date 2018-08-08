@@ -510,8 +510,8 @@ protected:
 
   /// Returns a selector with the specified type encoding.  An empty string is
   /// used to return an untyped selector (with the types field set to NULL).
-  virtual llvm::Value *GetSelector(CodeGenFunction &CGF, Selector Sel,
-                           const std::string &TypeEncoding);
+  virtual llvm::Value *GetTypedSelector(CodeGenFunction &CGF, Selector Sel,
+                                        const std::string &TypeEncoding);
 
   /// Returns the name of ivar offset variables.  In the GNUstep v1 ABI, this
   /// contains the class and ivar names, in the v2 ABI this contains the type
@@ -1342,8 +1342,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       return Val;
     return llvm::ConstantExpr::getBitCast(Val, Ty);
   }
-  llvm::Value *GetSelector(CodeGenFunction &CGF, Selector Sel,
-    const std::string &TypeEncoding) override {
+  llvm::Value *GetTypedSelector(CodeGenFunction &CGF, Selector Sel,
+                                const std::string &TypeEncoding) override {
     return GetConstantSelector(Sel, TypeEncoding);
   }
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
@@ -2121,8 +2121,8 @@ llvm::Value *CGObjCGNU::EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
   return Value;
 }
 
-llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF, Selector Sel,
-                                    const std::string &TypeEncoding) {
+llvm::Value *CGObjCGNU::GetTypedSelector(CodeGenFunction &CGF, Selector Sel,
+                                         const std::string &TypeEncoding) {
   SmallVectorImpl<TypedSelector> &Types = SelectorTable[Sel];
   llvm::GlobalAlias *SelValue = nullptr;
 
@@ -2155,13 +2155,13 @@ Address CGObjCGNU::GetAddrOfSelector(CodeGenFunction &CGF, Selector Sel) {
 }
 
 llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF, Selector Sel) {
-  return GetSelector(CGF, Sel, std::string());
+  return GetTypedSelector(CGF, Sel, std::string());
 }
 
 llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF,
                                     const ObjCMethodDecl *Method) {
   std::string SelTypes = CGM.getContext().getObjCEncodingForMethodDecl(Method);
-  return GetSelector(CGF, Method->getSelector(), SelTypes);
+  return GetTypedSelector(CGF, Method->getSelector(), SelTypes);
 }
 
 llvm::Constant *CGObjCGNU::GetEHType(QualType T) {

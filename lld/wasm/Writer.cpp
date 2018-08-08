@@ -930,6 +930,8 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
     return ".data";
   if (Name.startswith(".bss."))
     return ".bss";
+  if (Name.startswith(".rodata."))
+    return ".rodata";
   return Name;
 }
 

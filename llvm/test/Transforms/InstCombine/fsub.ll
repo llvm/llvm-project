@@ -60,6 +60,19 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
   ret float %t2
 }
 
+; With nsz and reassoc: Y - ((X * 5) + Y) --> X * -5
+
+define float @sub_add_neg_x(float %x, float %y) {
+; CHECK-LABEL: @sub_add_neg_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %mul = fmul float %x, 5.000000e+00
+  %add = fadd float %mul, %y
+  %r = fsub nsz reassoc float %y, %add
+  ret float %r
+}
+
 ; Same as above: if 'Z' is not -0.0, swap fsub operands and convert to fadd.
 
 define float @sub_sub_known_not_negzero(float %x, float %y) {

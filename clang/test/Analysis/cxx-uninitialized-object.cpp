@@ -1040,13 +1040,12 @@ void assert(int b) {
 // While a singleton would make more sense as a static variable, that would zero
 // initialize all of its fields, hence the not too practical implementation.
 struct Singleton {
-  // TODO: we'd expect the note: {{uninitialized field 'this->i'}}
-  int i; // no-note
+  int i; // expected-note{{uninitialized field 'this->i'}}
+  int dontGetFilteredByNonPedanticMode = 0;
 
   Singleton() {
     assert(!isInstantiated);
-    // TODO: we'd expect the warning: {{1 uninitialized field}}
-    isInstantiated = true; // no-warning
+    isInstantiated = true; // expected-warning{{1 uninitialized field}}
   }
 
   ~Singleton() {

@@ -335,3 +335,46 @@ namespace Nested {
   void g(int, int);
   using Int = A<int>::B<&g>::param2;
 }
+
+namespace rdar41852459 {
+template <auto V> struct G {};
+
+template <class T> struct S {
+  template <auto V> void f() {
+    G<V> x;
+  }
+  template <auto *PV> void f2() {
+    G<PV> x;
+  }
+  template <decltype(auto) V> void f3() {
+    G<V> x;
+  }
+};
+
+template <auto *PV> struct I {};
+
+template <class T> struct K {
+  template <auto *PV> void f() {
+    I<PV> x;
+  }
+  template <auto V> void f2() {
+    I<V> x;
+  }
+  template <decltype(auto) V> void f3() {
+    I<V> x;
+  }
+};
+
+template <decltype(auto)> struct L {};
+template <class T> struct M {
+  template <auto *PV> void f() {
+    L<PV> x;
+  }
+  template <auto V> void f() {
+    L<V> x;
+  }
+  template <decltype(auto) V> void f() {
+    L<V> x;
+  }
+};
+}

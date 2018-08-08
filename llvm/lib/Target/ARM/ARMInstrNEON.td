@@ -4305,17 +4305,29 @@ def : Pat<(v4f32 (fmul (v4f32 QPR:$src1),
                            (v2f32 (EXTRACT_SUBREG QPR:$src2,
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
-
+def : Pat<(v8f16 (fmul (v8f16 QPR:$src1),
+                       (v8f16 (NEONvduplane (v8f16 QPR:$src2), imm:$lane)))),
+          (v8f16 (VMULslhq(v8f16 QPR:$src1),
+                           (v4f16 (EXTRACT_SUBREG QPR:$src2,
+                                   (DSubReg_i16_reg imm:$lane))),
+                           (SubReg_i16_lane imm:$lane)))>;
 
 def : Pat<(v2f32 (fmul DPR:$Rn, (NEONvdup (f32 SPR:$Rm)))),
           (VMULslfd DPR:$Rn,
             (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), SPR:$Rm, ssub_0),
             (i32 0))>;
+def : Pat<(v4f16 (fmul DPR:$Rn, (NEONvdup (f16 HPR:$Rm)))),
+          (VMULslhd DPR:$Rn,
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (i32 0))>;
 def : Pat<(v4f32 (fmul QPR:$Rn, (NEONvdup (f32 SPR:$Rm)))),
           (VMULslfq QPR:$Rn,
             (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), SPR:$Rm, ssub_0),
             (i32 0))>;
-
+def : Pat<(v8f16 (fmul QPR:$Rn, (NEONvdup (f16 HPR:$Rm)))),
+          (VMULslhq QPR:$Rn,
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (i32 0))>;
 
 //   VQDMULH  : Vector Saturating Doubling Multiply Returning High Half
 defm VQDMULH  : N3VInt_HS<0, 0, 0b1011, 0, N3RegFrm, IIC_VMULi16D, IIC_VMULi32D,
@@ -6324,6 +6336,9 @@ def VDUPLN32q : VDUPLNQ<{?,1,0,0}, "vdup", "32", v4i32, v2i32, VectorIndex32> {
   let Inst{19} = lane{0};
 }
 
+def : Pat<(v4f16 (NEONvduplane (v4f16 DPR:$Vm), imm:$lane)),
+          (VDUPLN32d DPR:$Vm, imm:$lane)>;
+
 def : Pat<(v2f32 (NEONvduplane (v2f32 DPR:$Vm), imm:$lane)),
           (VDUPLN32d DPR:$Vm, imm:$lane)>;
 
@@ -6338,6 +6353,10 @@ def : Pat<(v8i16 (NEONvduplane (v8i16 QPR:$src), imm:$lane)),
           (v8i16 (VDUPLN16q (v4i16 (EXTRACT_SUBREG QPR:$src,
                                     (DSubReg_i16_reg imm:$lane))),
                             (SubReg_i16_lane imm:$lane)))>;
+def : Pat<(v8f16 (NEONvduplane (v8f16 QPR:$src), imm:$lane)),
+          (v8f16 (VDUPLN16q (v4f16 (EXTRACT_SUBREG QPR:$src,
+                                    (DSubReg_i16_reg imm:$lane))),
+                            (SubReg_i16_lane imm:$lane)))>;
 def : Pat<(v4i32 (NEONvduplane (v4i32 QPR:$src), imm:$lane)),
           (v4i32 (VDUPLN32q (v2i32 (EXTRACT_SUBREG QPR:$src,
                                     (DSubReg_i32_reg imm:$lane))),
@@ -6347,12 +6366,18 @@ def : Pat<(v4f32 (NEONvduplane (v4f32 QPR:$src), imm:$lane)),
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
 
+def : Pat<(v4f16 (NEONvdup HPR:$src)),
+          (v4f16 (VDUPLN16d (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
+                             HPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v2f32 (NEONvdup (f32 SPR:$src))),
           (v2f32 (VDUPLN32d (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v4f32 (NEONvdup (f32 SPR:$src))),
           (v4f32 (VDUPLN32q (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
+def : Pat<(v8f16 (NEONvdup HPR:$src)),
+          (v8f16 (VDUPLN16q (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
+                             HPR:$src, ssub_0), (i32 0)))>;
 
 //   VMOVN    : Vector Narrowing Move
 defm VMOVN    : N2VN_HSD<0b11,0b11,0b10,0b00100,0,0, IIC_VMOVN,
@@ -6653,13 +6678,14 @@ def VEXTd16 : VEXTd<"vext", "16", v4i16, imm0_3> {
   let Inst{10-9} = index{1-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v4f16 (NEONvext (v4f16 DPR:$Vn), (v4f16 DPR:$Vm), (i32 imm:$index))),
+          (VEXTd16 DPR:$Vn, DPR:$Vm, imm:$index)>;
+
 def VEXTd32 : VEXTd<"vext", "32", v2i32, imm0_1> {
   let Inst{10}     = index{0};
   let Inst{9-8}    = 0b00;
 }
-def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn),
-                           (v2f32 DPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn), (v2f32 DPR:$Vm), (i32 imm:$index))),
           (VEXTd32 DPR:$Vn, DPR:$Vm, imm:$index)>;
 
 def VEXTq8  : VEXTq<"vext", "8",  v16i8, imm0_15> {
@@ -6669,6 +6695,9 @@ def VEXTq16 : VEXTq<"vext", "16", v8i16, imm0_7> {
   let Inst{11-9} = index{2-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v8f16 (NEONvext (v8f16 QPR:$Vn), (v8f16 QPR:$Vm), (i32 imm:$index))),
+          (VEXTq16 QPR:$Vn, QPR:$Vm, imm:$index)>;
+
 def VEXTq32 : VEXTq<"vext", "32", v4i32, imm0_3> {
   let Inst{11-10} = index{1-0};
   let Inst{9-8}    = 0b00;
@@ -6677,9 +6706,7 @@ def VEXTq64 : VEXTq<"vext", "64", v2i64, imm0_1> {
   let Inst{11} = index{0};
   let Inst{10-8}    = 0b000;
 }
-def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn),
-                           (v4f32 QPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn), (v4f32 QPR:$Vm), (i32 imm:$index))),
           (VEXTq32 QPR:$Vn, QPR:$Vm, imm:$index)>;
 
 //   VTRN     : Vector Transpose

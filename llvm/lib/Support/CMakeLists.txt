@@ -71,6 +71,7 @@ add_llvm_library(LLVMSupport
   DJB.cpp
   Error.cpp
   ErrorHandling.cpp
+  FileCheck.cpp
   FileUtilities.cpp
   FileOutputBuffer.cpp
   FoldingSet.cpp

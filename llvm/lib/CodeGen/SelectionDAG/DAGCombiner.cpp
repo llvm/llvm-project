@@ -3148,8 +3148,6 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   EVT CCVT = getSetCCResultType(VT);
   unsigned BitWidth = VT.getScalarSizeInBits();
 
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
-
   // Helper for determining whether a value is a power-2 constant scalar or a
   // vector of such elements.
   auto IsPowerOfTwo = [](ConstantSDNode *C) {
@@ -3166,8 +3164,7 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // FIXME: We check for the exact bit here because the generic lowering gives
   // better results in that case. The target-specific lowering should learn how
   // to handle exact sdivs efficiently.
-  if (!N->getFlags().hasExact() &&
-      ISD::matchUnaryPredicate(N1C ? SDValue(N1C, 0) : N1, IsPowerOfTwo)) {
+  if (!N->getFlags().hasExact() && ISD::matchUnaryPredicate(N1, IsPowerOfTwo)) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;

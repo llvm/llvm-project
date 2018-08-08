@@ -70,15 +70,6 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
   return halfOpenToRange(M, R);
 }
 
-TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
-                    const LangOptions &L) {
-  TextEdit Result;
-  Result.range =
-      halfOpenToRange(M, Lexer::makeFileCharRange(FixIt.RemoveRange, M, L));
-  Result.newText = FixIt.CodeToInsert;
-  return Result;
-}
-
 bool isInsideMainFile(const SourceLocation Loc, const SourceManager &M) {
   return Loc.isValid() && M.isInMainFile(Loc);
 }

@@ -4359,6 +4359,14 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
                        match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0)))))
     return ConstantFP::getNullValue(Op0->getType());
 
+  // (X - Y) + Y --> X
+  // Y + (X - Y) --> X
+  Value *X;
+  if (FMF.noSignedZeros() && FMF.allowReassoc() &&
+      (match(Op0, m_FSub(m_Value(X), m_Specific(Op1))) ||
+       match(Op1, m_FSub(m_Value(X), m_Specific(Op0)))))
+    return X;
+
   return nullptr;
 }
 
@@ -4395,6 +4403,13 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub nnan x, x ==> 0.0
   if (FMF.noNaNs() && Op0 == Op1)
     return Constant::getNullValue(Op0->getType());
+
+  // Y - (Y - X) --> X
+  // (X + Y) - Y --> X
+  if (FMF.noSignedZeros() && FMF.allowReassoc() &&
+      (match(Op1, m_FSub(m_Specific(Op0), m_Value(X))) ||
+       match(Op0, m_c_FAdd(m_Specific(Op1), m_Value(X)))))
+    return X;
 
   return nullptr;
 }
