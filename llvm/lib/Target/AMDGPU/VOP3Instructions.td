@@ -461,17 +461,6 @@ def : GCNPat <
   (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
 >;
 
-def : GCNPat<
-  (i32 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
-  (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
->;
-
-def : GCNPat<
-  (i64 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
-   (REG_SEQUENCE VReg_64,
-     (inst i16:$src0, i16:$src1, i16:$src2, (i1 0)), sub0,
-     (V_MOV_B32_e32 (i32 0)), sub1)
->;
 }
 
 defm: Ternary_i16_Pats<mul, add, V_MAD_U16, zext>;

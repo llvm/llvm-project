@@ -256,7 +256,9 @@ static void FixEndsAtEndOfFunction(
   case MVT::v16i8:
   case MVT::v8i16:
   case MVT::v4i32:
+  case MVT::v2i64:
   case MVT::v4f32:
+  case MVT::v2f64:
     retType = WebAssembly::ExprType::V128;
     break;
   case MVT::ExceptRef: retType = WebAssembly::ExprType::ExceptRef; break;

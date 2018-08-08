@@ -181,8 +181,12 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
     // inline int foo2() { ... }
     //
     // but that's the best we can do for now.
+    // One complication, if the line number returned from GetStartLineSourceInfo
+    // is 0, then we can't do this calculation.  That can happen if
+    // GetStartLineSourceInfo gets an error, or if the first line number in
+    // the function really is 0 - which happens for some languages.
     const int decl_line_is_too_late_fudge = 1;
-    if (m_line_number < line - decl_line_is_too_late_fudge) {
+    if (line && m_line_number < line - decl_line_is_too_late_fudge) {
       LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
       sc_list.RemoveContextAtIndex(i);
       --i;

@@ -192,9 +192,19 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4i32,
             WebAssembly::COPY_V128);
         break;
+      case WebAssembly::RETURN_v2i64:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2i64,
+            WebAssembly::COPY_V128);
+        break;
       case WebAssembly::RETURN_v4f32:
         Changed |= MaybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4f32,
+            WebAssembly::COPY_V128);
+        break;
+      case WebAssembly::RETURN_v2f64:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2f64,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_VOID:

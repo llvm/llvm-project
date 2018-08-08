@@ -91,7 +91,9 @@ let Uses = [SP32, SP64], isCall = 1 in {
   defm "" : SIMD_CALL<v16i8, "i8x16.">;
   defm "" : SIMD_CALL<v8i16, "i16x8.">;
   defm "" : SIMD_CALL<v4i32, "i32x4.">;
+  defm "" : SIMD_CALL<v2i64, "i64x2.">;
   defm "" : SIMD_CALL<v4f32, "f32x4.">;
+  defm "" : SIMD_CALL<v2f64, "f64x2.">;
 
   defm CALL_VOID : I<(outs), (ins function32_op:$callee, variable_ops),
                      (outs), (ins function32_op:$callee),
@@ -132,8 +134,12 @@ def : Pat<(v8i16 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_v8i16 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(v4i32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_v4i32 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v2i64 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v2i64 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(v4f32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_v4f32 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v2f64 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v2f64 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(ExceptRef
            (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_EXCEPT_REF tglobaladdr:$callee)>;
@@ -155,8 +161,12 @@ def : Pat<(v8i16 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_v8i16 texternalsym:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(v4i32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_v4i32 texternalsym:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v2i64 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v2i64 texternalsym:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(v4f32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_v4f32 texternalsym:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v2f64 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v2f64 texternalsym:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(ExceptRef
            (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_EXCEPT_REF texternalsym:$callee)>;

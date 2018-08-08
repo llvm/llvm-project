@@ -16,7 +16,7 @@ kernel void test(int i) {
 // SPIR64: %block_sizes = alloca [1 x i64]
 // COMMON-LABEL: if.then:
 // COMMON-NOT: alloca
-// CHECK-DEBUG: getelementptr {{.*}} %block_sizes, {{.*}} !dbg !34
+// CHECK-DEBUG: getelementptr {{.*}} %block_sizes, {{.*}} !dbg ![[TEMPLOCATION:[0-9]+]]
 // COMMON-LABEL: if.end
   queue_t default_queue;
   unsigned flags = 0;
@@ -27,5 +27,7 @@ kernel void test(int i) {
 
 // Check that the temporary is scoped to the `if`
 
-// CHECK-DEBUG: !32 = distinct !DILexicalBlock(scope: !7, file: !1, line: 24)
-// CHECK-DEBUG: !34 = !DILocation(line: 25, scope: !32)
+// CHECK-DEBUG: ![[TESTFILE:[0-9]+]] = !DIFile(filename: "<stdin>"
+// CHECK-DEBUG: ![[TESTSCOPE:[0-9]+]] = distinct !DISubprogram(name: "test", {{.*}} file: ![[TESTFILE]]
+// CHECK-DEBUG: ![[IFSCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TESTSCOPE]], file: ![[TESTFILE]], line: 24)
+// CHECK-DEBUG: ![[TEMPLOCATION]] = !DILocation(line: 25, scope: ![[IFSCOPE]])

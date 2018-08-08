@@ -272,6 +272,7 @@ public:
 
   lldb::SBFileSpec GetExecutable();
 
+  // Append the path mapping (from -> to) to the target's paths mapping list.
   void AppendImageSearchPath(const char *from, const char *to,
                              lldb::SBError &error);
 

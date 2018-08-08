@@ -19,6 +19,7 @@
 #include <string>
 #include <cmath>
 #include <cassert>
+#include <stdexcept>
 
 #include "test_macros.h"
 
