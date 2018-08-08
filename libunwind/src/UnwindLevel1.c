@@ -287,7 +287,7 @@ unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
     // If there is a personality routine, tell it we are unwinding.
     if (frameInfo.handler != 0) {
       __personality_routine p =
-          (__personality_routine)(long)(frameInfo.handler);
+          (__personality_routine)(intptr_t)(frameInfo.handler);
       _LIBUNWIND_TRACE_UNWINDING(
           "unwind_phase2_forced(ex_ojb=%p): calling personality function %p",
           (void *)exception_object, (void *)(uintptr_t)p);
