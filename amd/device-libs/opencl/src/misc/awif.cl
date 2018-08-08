@@ -95,13 +95,13 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
         } else if (flags == CLK_GLOBAL_MEM_FENCE) {
             if (order != memory_order_acquire) {
                 __llvm_amdgcn_s_waitcnt(WAITCNT_IMM(LGKMC_MAX, EXPC_MAX, 0));
-                __llvm_amdgcn_s_dcache_wb();
+                __builtin_amdgcn_s_dcache_wb();
             }
 
             if ((scope == memory_scope_device) | (scope == memory_scope_all_svm_devices)) {
                 if (order != memory_order_release) {
                     __builtin_amdgcn_buffer_wbinvl1_vol();
-                    __llvm_amdgcn_s_dcache_inv_vol();
+                    __builtin_amdgcn_s_dcache_inv_vol();
                 }
             }
         } else if (flags == (CLK_GLOBAL_MEM_FENCE|CLK_LOCAL_MEM_FENCE)) {
@@ -109,12 +109,12 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
                                     WAITCNT_IMM(0, EXPC_MAX, VMC_MAX) :
                                     WAITCNT_IMM(0, EXPC_MAX, 0));
             if (order != memory_order_acquire)
-                __llvm_amdgcn_s_dcache_wb();
+                __builtin_amdgcn_s_dcache_wb();
 
             if ((scope == memory_scope_device) | (scope == memory_scope_all_svm_devices)) {
                 if (order != memory_order_release) {
                     __builtin_amdgcn_buffer_wbinvl1_vol();
-                    __llvm_amdgcn_s_dcache_inv_vol();
+                    __builtin_amdgcn_s_dcache_inv_vol();
                 }
             }
         }
