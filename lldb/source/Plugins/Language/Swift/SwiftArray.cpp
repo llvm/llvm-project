@@ -327,10 +327,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
     CompilerType argument_type;
 
-    SwiftASTContext *swift_ast_ctx(llvm::dyn_cast_or_null<SwiftASTContext>(
-        valobj.GetCompilerType().GetTypeSystem()));
     SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
-        swift_runtime->GetMetadataPromise(argmetadata_ptr, swift_ast_ctx));
+        swift_runtime->GetMetadataPromise(argmetadata_ptr, valobj));
     if (promise_sp)
       if (CompilerType type = promise_sp->FulfillTypePromise())
         argument_type = type.GetGenericArgumentType(0);
