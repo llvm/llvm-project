@@ -257,3 +257,6 @@ intersphinx_mapping = {}
 # Pygment lexer are sometimes out of date (when parsing LLVM for example) or
 # wrong. Suppress the warning so the build doesn't abort.
 suppress_warnings = [ 'misc.highlighting_failure' ]
+
+# Direct html-ified man pages to llvm.org
+manpages_url = 'https://llvm.org/docs/CommandGuide/{page}.html'

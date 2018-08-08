@@ -81,9 +81,11 @@ void TracePC::InitializeUnstableCounters() {
 
 // Compares the current counters with counters from previous runs
 // and records differences as unstable edges.
-void TracePC::UpdateUnstableCounters(int UnstableMode) {
+bool TracePC::UpdateUnstableCounters(int UnstableMode) {
+  bool Updated = false;
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
     if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
+      Updated = true;
       UnstableCounters[UnstableIdx].IsUnstable = true;
       if (UnstableMode == ZeroUnstable)
         UnstableCounters[UnstableIdx].Counter = 0;
@@ -92,12 +94,20 @@ void TracePC::UpdateUnstableCounters(int UnstableMode) {
             ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
     }
   });
+  return Updated;
 }
 
-// Moves the minimum hit counts to ModuleCounters.
-void TracePC::ApplyUnstableCounters() {
+// Updates and applies unstable counters to ModuleCounters in single iteration
+void TracePC::UpdateAndApplyUnstableCounters(int UnstableMode) {
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    ModuleCounters[i].Start[j] = UnstableCounters[UnstableIdx].Counter;
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
+      UnstableCounters[UnstableIdx].IsUnstable = true;
+      if (UnstableMode == ZeroUnstable)
+        ModuleCounters[i].Start[j] = 0;
+      else if (UnstableMode == MinUnstable)
+        ModuleCounters[i].Start[j] = std::min(
+            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
+    }
   });
 }
 

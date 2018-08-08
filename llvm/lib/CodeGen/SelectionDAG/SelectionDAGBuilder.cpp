@@ -7225,7 +7225,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other) {
-    // If this is a FP operand in an integer register (or visa versa), or more
+    // If this is an FP operand in an integer register (or visa versa), or more
     // generally if the operand value disagrees with the register class we plan
     // to stick it in, fix the operand type.
     //
@@ -7243,12 +7243,12 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
       if (RegVT.getSizeInBits() == OpInfo.ConstraintVT.getSizeInBits()) {
         // Exclude indirect inputs while they are unsupported because the code
         // to perform the load is missing and thus OpInfo.CallOperand still
-        // refer to the input address rather than the pointed-to value.
+        // refers to the input address rather than the pointed-to value.
         if (OpInfo.Type == InlineAsm::isInput && !OpInfo.isIndirect)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, RegVT, OpInfo.CallOperand);
         OpInfo.ConstraintVT = RegVT;
-        // If the operand is a FP value and we want it in integer registers,
+        // If the operand is an FP value and we want it in integer registers,
         // use the corresponding integer type. This turns an f64 value into
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
@@ -7283,7 +7283,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
     // remember that AX is actually i16 to get the right extension.
     RegVT = *TRI.legalclasstypes_begin(*RC);
 
-    // This is a explicit reference to a physical register.
+    // This is an explicit reference to a physical register.
     Regs.push_back(AssignedReg);
 
     // If this is an expanded reference, add the rest of the regs to Regs.

@@ -6678,13 +6678,14 @@ def VEXTd16 : VEXTd<"vext", "16", v4i16, imm0_3> {
   let Inst{10-9} = index{1-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v4f16 (NEONvext (v4f16 DPR:$Vn), (v4f16 DPR:$Vm), (i32 imm:$index))),
+          (VEXTd16 DPR:$Vn, DPR:$Vm, imm:$index)>;
+
 def VEXTd32 : VEXTd<"vext", "32", v2i32, imm0_1> {
   let Inst{10}     = index{0};
   let Inst{9-8}    = 0b00;
 }
-def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn),
-                           (v2f32 DPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn), (v2f32 DPR:$Vm), (i32 imm:$index))),
           (VEXTd32 DPR:$Vn, DPR:$Vm, imm:$index)>;
 
 def VEXTq8  : VEXTq<"vext", "8",  v16i8, imm0_15> {
@@ -6694,6 +6695,9 @@ def VEXTq16 : VEXTq<"vext", "16", v8i16, imm0_7> {
   let Inst{11-9} = index{2-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v8f16 (NEONvext (v8f16 QPR:$Vn), (v8f16 QPR:$Vm), (i32 imm:$index))),
+          (VEXTq16 QPR:$Vn, QPR:$Vm, imm:$index)>;
+
 def VEXTq32 : VEXTq<"vext", "32", v4i32, imm0_3> {
   let Inst{11-10} = index{1-0};
   let Inst{9-8}    = 0b00;
@@ -6702,9 +6706,7 @@ def VEXTq64 : VEXTq<"vext", "64", v2i64, imm0_1> {
   let Inst{11} = index{0};
   let Inst{10-8}    = 0b000;
 }
-def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn),
-                           (v4f32 QPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn), (v4f32 QPR:$Vm), (i32 imm:$index))),
           (VEXTq32 QPR:$Vn, QPR:$Vm, imm:$index)>;
 
 //   VTRN     : Vector Transpose
