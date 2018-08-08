@@ -8,5 +8,5 @@ typedef struct {
   a b[];
 } c;
 
-// CHECK: global %struct.c zeroinitializer, align 1
+// CHECK: {{(dso_local )?}}global %struct.c{{.*}}zeroinitializer
 c d{ };
