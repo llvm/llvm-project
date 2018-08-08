@@ -145,5 +145,50 @@ TEST(PartialDemanglerTest, TestMisc) {
   EXPECT_TRUE(D2.isFunction());
 
   EXPECT_TRUE(D1.partialDemangle("Not a mangled name!"));
+}
 
+TEST(PartialDemanglerTest, TestPrintCases) {
+  llvm::ItaniumPartialDemangler D;
+
+  const size_t OriginalSize = 4;
+  char *Buf = static_cast<char *>(std::malloc(OriginalSize));
+  const char *OriginalBuf = Buf;
+
+  // Default success case: Result fits into the given buffer.
+  // Res points to Buf. N returns string size including null termination.
+  {
+    EXPECT_FALSE(D.partialDemangle("_ZN1a1bEv"));
+
+    size_t N = OriginalSize;
+    char *Res = D.getFunctionDeclContextName(Buf, &N);
+    EXPECT_STREQ("a", Res);
+    EXPECT_EQ(OriginalBuf, Res);
+    EXPECT_EQ(strlen(Res) + 1, N);
+  }
+
+  // Realloc success case: Result does not fit into the given buffer.
+  // Res points to the new or extended buffer. N returns string size
+  // including null termination. Buf was extended or freed.
+  {
+    EXPECT_FALSE(D.partialDemangle("_ZN1a1b1cIiiiEEvm"));
+
+    size_t N = OriginalSize;
+    char *Res = D.finishDemangle(Buf, &N);
+    EXPECT_STREQ("void a::b::c<int, int, int>(unsigned long)", Res);
+    EXPECT_EQ(strlen(Res) + 1, N);
+    Buf = Res;
+  }
+
+  // Failure case: a::c is not a function.
+  // Res is nullptr. N remains unchanged.
+  {
+    EXPECT_FALSE(D.partialDemangle("_ZN1a1cE"));
+
+    size_t N = OriginalSize;
+    char *Res = D.getFunctionName(Buf, &N);
+    EXPECT_EQ(nullptr, Res);
+    EXPECT_EQ(OriginalSize, N);
+  }
+
+  std::free(Buf);
 }
