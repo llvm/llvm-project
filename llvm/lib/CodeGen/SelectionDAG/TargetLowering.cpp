@@ -3561,6 +3561,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   auto BuildUDIVPattern = [](const APInt &Divisor, unsigned &PreShift,
                              APInt &Magic, unsigned &PostShift) {
+    assert(!Divisor.isOneValue() && "UDIV by one not supported");
     // FIXME: We should use a narrower constant when the upper
     // bits are known to be zero.
     APInt::mu magics = Divisor.magicu();
@@ -3605,6 +3606,9 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     for (unsigned i = 0; i != NumElts; ++i) {
       auto *C = dyn_cast<ConstantSDNode>(N1.getOperand(i));
       if (!C || C->isNullValue() || C->getAPIntValue().getBitWidth() != EltBits)
+        return SDValue();
+      // TODO: Handle udiv by one.
+      if (C->isOne())
         return SDValue();
       APInt MagicVal;
       unsigned PreShiftVal, PostShiftVal;

@@ -121,55 +121,77 @@ entry:
   ret <8 x i16> %vcltz.i
 }
 
-; FIXME (PR38404)
-;
-;define dso_local <4 x half> @test_vcvt_f16_s16(<4 x i16> %a) {
-;entry:
-;  %vcvt.i = sitofp <4 x i16> %a to <4 x half>
-;  ret <4 x half> %vcvt.i
-;}
-;
-;define dso_local <8 x half> @test_vcvtq_f16_s16(<8 x i16> %a) {
-;entry:
-;  %vcvt.i = sitofp <8 x i16> %a to <8 x half>
-;  ret <8 x half> %vcvt.i
-;}
+define dso_local <4 x half> @test_vcvt_f16_s16(<4 x i16> %a) {
+; CHECK-LABEL: test_vcvt_f16_s16:
+; CHECK:         vcvt.f16.s16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = sitofp <4 x i16> %a to <4 x half>
+  ret <4 x half> %vcvt.i
+}
 
-;define dso_local <4 x half> @test_vcvt_f16_u16(<4 x i16> %a) {
-;entry:
-;  %vcvt.i = uitofp <4 x i16> %a to <4 x half>
-;  ret <4 x half> %vcvt.i
-;}
+define dso_local <8 x half> @test_vcvtq_f16_s16(<8 x i16> %a) {
+; CHECK-LABEL: test_vcvtq_f16_s16:
+; CHECK:         vcvt.f16.s16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = sitofp <8 x i16> %a to <8 x half>
+  ret <8 x half> %vcvt.i
+}
 
-;define dso_local <8 x half> @test_vcvtq_f16_u16(<8 x i16> %a) {
-;entry:
-;  %vcvt.i = uitofp <8 x i16> %a to <8 x half>
-;  ret <8 x half> %vcvt.i
-;}
+define dso_local <4 x half> @test_vcvt_f16_u16(<4 x i16> %a) {
+; CHECK-LABEL: test_vcvt_f16_u16:
+; CHECK:         vcvt.f16.u16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = uitofp <4 x i16> %a to <4 x half>
+  ret <4 x half> %vcvt.i
+}
 
-;define dso_local <4 x i16> @test_vcvt_s16_f16(<4 x half> %a) {
-;entry:
-;  %vcvt.i = fptosi <4 x half> %a to <4 x i16>
-;  ret <4 x i16> %vcvt.i
-;}
+define dso_local <8 x half> @test_vcvtq_f16_u16(<8 x i16> %a) {
+; CHECK-LABEL: test_vcvtq_f16_u16:
+; CHECK:         vcvt.f16.u16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = uitofp <8 x i16> %a to <8 x half>
+  ret <8 x half> %vcvt.i
+}
 
-;define dso_local <8 x i16> @test_vcvtq_s16_f16(<8 x half> %a) {
-;entry:
-;  %vcvt.i = fptosi <8 x half> %a to <8 x i16>
-;  ret <8 x i16> %vcvt.i
-;}
+define dso_local <4 x i16> @test_vcvt_s16_f16(<4 x half> %a) {
+; CHECK-LABEL: test_vcvt_s16_f16:
+; CHECK:         vcvt.s16.f16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = fptosi <4 x half> %a to <4 x i16>
+  ret <4 x i16> %vcvt.i
+}
 
-;define dso_local <4 x i16> @test_vcvt_u16_f16(<4 x half> %a) {
-;entry:
-;  %vcvt.i = fptoui <4 x half> %a to <4 x i16>
-;  ret <4 x i16> %vcvt.i
-;}
+define dso_local <8 x i16> @test_vcvtq_s16_f16(<8 x half> %a) {
+; CHECK-LABEL: test_vcvtq_s16_f16:
+; CHECK:         vcvt.s16.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = fptosi <8 x half> %a to <8 x i16>
+  ret <8 x i16> %vcvt.i
+}
 
-;define dso_local <8 x i16> @test_vcvtq_u16_f16(<8 x half> %a) {
-;entry:
-;  %vcvt.i = fptoui <8 x half> %a to <8 x i16>
-;  ret <8 x i16> %vcvt.i
-;}
+define dso_local <4 x i16> @test_vcvt_u16_f16(<4 x half> %a) {
+; CHECK-LABEL: test_vcvt_u16_f16:
+; CHECK:         vcvt.u16.f16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = fptoui <4 x half> %a to <4 x i16>
+  ret <4 x i16> %vcvt.i
+}
+
+define dso_local <8 x i16> @test_vcvtq_u16_f16(<8 x half> %a) {
+; CHECK-LABEL: test_vcvtq_u16_f16:
+; CHECK:         vcvt.u16.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %vcvt.i = fptoui <8 x half> %a to <8 x i16>
+  ret <8 x i16> %vcvt.i
+}
 
 define dso_local <4 x i16> @test_vcvta_s16_f16(<4 x half> %a) {
 ; CHECK-LABEL: test_vcvta_s16_f16:
@@ -764,43 +786,59 @@ entry:
   ret <8 x half> %vmaxq_v2.i
 }
 
-; FIXME (PR38404)
-;
-;define dso_local <4 x half> @test_vmaxnm_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vmaxnm_v2.i = tail call <4 x half> @llvm.arm.neon.vmaxnm.v4f16(<4 x half> %a, <4 x half> %b)
-;  ret <4 x half> %vmaxnm_v2.i
-;}
+define dso_local <4 x half> @test_vmaxnm_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vmaxnm_f16:
+; CHECK:         vmaxnm.f16 d0, d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vmaxnm_v2.i = tail call <4 x half> @llvm.arm.neon.vmaxnm.v4f16(<4 x half> %a, <4 x half> %b)
+  ret <4 x half> %vmaxnm_v2.i
+}
 
-;define dso_local <8 x half> @test_vmaxnmq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vmaxnmq_v2.i = tail call <8 x half> @llvm.arm.neon.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
-;  ret <8 x half> %vmaxnmq_v2.i
-;}
+define dso_local <8 x half> @test_vmaxnmq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vmaxnmq_f16:
+; CHECK:         vmaxnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vmaxnmq_v2.i = tail call <8 x half> @llvm.arm.neon.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %vmaxnmq_v2.i
+}
 
-;define dso_local <4 x half> @test_vmin_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vmin_v2.i = tail call <4 x half> @llvm.arm.neon.vmins.v4f16(<4 x half> %a, <4 x half> %b)
-;  ret <4 x half> %vmin_v2.i
-;}
+define dso_local <4 x half> @test_vmin_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vmin_f16:
+; CHECK:         vmin.f16 d0, d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vmin_v2.i = tail call <4 x half> @llvm.arm.neon.vmins.v4f16(<4 x half> %a, <4 x half> %b)
+  ret <4 x half> %vmin_v2.i
+}
 
-;define dso_local <8 x half> @test_vminq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vminq_v2.i = tail call <8 x half> @llvm.arm.neon.vmins.v8f16(<8 x half> %a, <8 x half> %b)
-;  ret <8 x half> %vminq_v2.i
-;}
+define dso_local <8 x half> @test_vminq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vminq_f16:
+; CHECK:         vmin.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vminq_v2.i = tail call <8 x half> @llvm.arm.neon.vmins.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %vminq_v2.i
+}
 
-;define dso_local <4 x half> @test_vminnm_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vminnm_v2.i = tail call <4 x half> @llvm.arm.neon.vminnm.v4f16(<4 x half> %a, <4 x half> %b)
-;  ret <4 x half> %vminnm_v2.i
-;}
+define dso_local <4 x half> @test_vminnm_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vminnm_f16:
+; CHECK:         vminnm.f16 d0, d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vminnm_v2.i = tail call <4 x half> @llvm.arm.neon.vminnm.v4f16(<4 x half> %a, <4 x half> %b)
+  ret <4 x half> %vminnm_v2.i
+}
 
-;define dso_local <8 x half> @test_vminnmq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vminnmq_v2.i = tail call <8 x half> @llvm.arm.neon.vminnm.v8f16(<8 x half> %a, <8 x half> %b)
-;  ret <8 x half> %vminnmq_v2.i
-;}
+define dso_local <8 x half> @test_vminnmq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vminnmq_f16:
+; CHECK:         vminnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vminnmq_v2.i = tail call <8 x half> @llvm.arm.neon.vminnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %vminnmq_v2.i
+}
 
 define dso_local <4 x half> @test_vmul_f16(<4 x half> %a, <4 x half> %b) {
 ; CHECKLABEL: test_vmul_f16:
@@ -941,43 +979,53 @@ entry:
   ret <8 x half> %0
 }
 
-; FIXME (PR38404)
-;
-;define dso_local <4 x half> @test_vmul_lane_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %shuffle = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-;  %mul = fmul <4 x half> %shuffle, %a
-;  ret <4 x half> %mul
-;}
+define dso_local <4 x half> @test_vmul_lane_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vmul_lane_f16:
+; CHECK:         vmul.f16 d0, d0, d1[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %mul = fmul <4 x half> %shuffle, %a
+  ret <4 x half> %mul
+}
 
-;define dso_local <8 x half> @test_vmulq_lane_f16(<8 x half> %a, <4 x half> %b) {
-;entry:
-;  %shuffle = shufflevector <4 x half> %b, <4 x half> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-;  %mul = fmul <8 x half> %shuffle, %a
-;  ret <8 x half> %mul
-;}
+define dso_local <8 x half> @test_vmulq_lane_f16(<8 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vmulq_lane_f16:
+; CHECK:         vmul.f16 q0, q0, d2[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle = shufflevector <4 x half> %b, <4 x half> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %mul = fmul <8 x half> %shuffle, %a
+  ret <8 x half> %mul
+}
 
-;define dso_local <4 x half> @test_vmul_n_f16(<4 x half> %a, float %b.coerce) {
-;entry:
-;  %0 = bitcast float %b.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <4 x half> undef, half %1, i32 0
-;  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
-;  %mul = fmul <4 x half> %vecinit4, %a
-;  ret <4 x half> %mul
-;}
+define dso_local <4 x half> @test_vmul_n_f16(<4 x half> %a, float %b.coerce) {
+; CHECK-LABEL: test_vmul_n_f16:
+; CHECK:         vmul.f16 d0, d0, d1[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %b.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <4 x half> undef, half %1, i32 0
+  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
+  %mul = fmul <4 x half> %vecinit4, %a
+  ret <4 x half> %mul
+}
 
-;define dso_local <8 x half> @test_vmulq_n_f16(<8 x half> %a, float %b.coerce) {
-;entry:
-;  %0 = bitcast float %b.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <8 x half> undef, half %1, i32 0
-;  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
-;  %mul = fmul <8 x half> %vecinit8, %a
-;  ret <8 x half> %mul
-;}
+define dso_local <8 x half> @test_vmulq_n_f16(<8 x half> %a, float %b.coerce) {
+; CHECK-LABEL: test_vmulq_n_f16:
+; CHECK:         vmul.f16 q0, q0, d2[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %b.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <8 x half> undef, half %1, i32 0
+  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
+  %mul = fmul <8 x half> %vecinit8, %a
+  ret <8 x half> %mul
+}
 
 define dso_local <4 x half> @test_vbsl_f16(<4 x i16> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECKLABEL: test_vbsl_f16:
@@ -1072,58 +1120,78 @@ entry:
 ;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vtrn1.i, 0, 1
 ;  ret %struct.float16x8x2_t %.fca.0.1.insert
 ;}
-;
-;define dso_local <4 x half> @test_vmov_n_f16(float %a.coerce) {
-;entry:
-;  %0 = bitcast float %a.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <4 x half> undef, half %1, i32 0
-;  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
-;  ret <4 x half> %vecinit4
-;}
-;
-;define dso_local <8 x half> @test_vmovq_n_f16(float %a.coerce) {
-;entry:
-;  %0 = bitcast float %a.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <8 x half> undef, half %1, i32 0
-;  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
-;  ret <8 x half> %vecinit8
-;}
-;
-;define dso_local <4 x half> @test_vdup_n_f16(float %a.coerce) {
-;entry:
-;  %0 = bitcast float %a.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <4 x half> undef, half %1, i32 0
-;  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
-;  ret <4 x half> %vecinit4
-;}
-;
-;define dso_local <8 x half> @test_vdupq_n_f16(float %a.coerce) {
-;entry:
-;  %0 = bitcast float %a.coerce to i32
-;  %tmp.0.extract.trunc = trunc i32 %0 to i16
-;  %1 = bitcast i16 %tmp.0.extract.trunc to half
-;  %vecinit = insertelement <8 x half> undef, half %1, i32 0
-;  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
-;  ret <8 x half> %vecinit8
-;}
-;
-;define dso_local <4 x half> @test_vdup_lane_f16(<4 x half> %a) {
-;entry:
-;  %shuffle = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-;  ret <4 x half> %shuffle
-;}
-;
-;define dso_local <8 x half> @test_vdupq_lane_f16(<4 x half> %a) {
-;entry:
-;  %shuffle = shufflevector <4 x half> %a, <4 x half> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-;  ret <8 x half> %shuffle
-;}
+
+define dso_local <4 x half> @test_vmov_n_f16(float %a.coerce) {
+; CHECK-LABEL: test_vmov_n_f16:
+; CHECK:         vdup.16 d0, d0[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %a.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <4 x half> undef, half %1, i32 0
+  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
+  ret <4 x half> %vecinit4
+}
+
+define dso_local <8 x half> @test_vmovq_n_f16(float %a.coerce) {
+; CHECK-LABEL: test_vmovq_n_f16:
+; CHECK:         vdup.16 q0, d0[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %a.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <8 x half> undef, half %1, i32 0
+  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
+  ret <8 x half> %vecinit8
+}
+
+define dso_local <4 x half> @test_vdup_n_f16(float %a.coerce) {
+; CHECK-LABEL: test_vdup_n_f16:
+; CHECK:         vdup.16 d0, d0[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %a.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <4 x half> undef, half %1, i32 0
+  %vecinit4 = shufflevector <4 x half> %vecinit, <4 x half> undef, <4 x i32> zeroinitializer
+  ret <4 x half> %vecinit4
+}
+
+define dso_local <8 x half> @test_vdupq_n_f16(float %a.coerce) {
+; CHECK-LABEL: test_vdupq_n_f16:
+; CHECK:        vdup.16 q0, d0[0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %a.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %vecinit = insertelement <8 x half> undef, half %1, i32 0
+  %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
+  ret <8 x half> %vecinit8
+}
+
+define dso_local <4 x half> @test_vdup_lane_f16(<4 x half> %a) {
+; CHECK-LABEL: test_vdup_lane_f16:
+; CHECK:         vdup.32 d0, d0[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x half> %shuffle
+}
+
+define dso_local <8 x half> @test_vdupq_lane_f16(<4 x half> %a) {
+; CHECK-LABEL: test_vdupq_lane_f16:
+; CHECK:         vdup.16 q0, d0[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle = shufflevector <4 x half> %a, <4 x half> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x half> %shuffle
+}
+
+; FIXME (PR38404)
 ;
 ;define dso_local <4 x half> @test_vext_f16(<4 x half> %a, <4 x half> %b) {
 ;entry:

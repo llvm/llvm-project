@@ -22,6 +22,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
+#include "Diagnostics.h"
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
@@ -280,6 +281,10 @@ struct CodeCompletionBuilder {
       }
       Completion.Kind =
           toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
+      for (const auto &FixIt : C.SemaResult->FixIts) {
+        Completion.FixIts.push_back(
+            toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));
+      }
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -906,6 +911,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   // the index can provide results from the preamble.
   // Tell Sema not to deserialize the preamble to look for results.
   Result.LoadExternal = !Index;
+  Result.IncludeFixIts = IncludeFixIts;
 
   return Result;
 }
@@ -1090,8 +1096,8 @@ private:
   // Groups overloads if desired, to form CompletionCandidate::Bundles.
   // The bundles are scored and top results are returned, best to worst.
   std::vector<ScoredBundle>
-  mergeResults(const std::vector<CodeCompletionResult> &SemaResults,
-               const SymbolSlab &IndexResults) {
+      mergeResults(const std::vector<CodeCompletionResult> &SemaResults,
+                   const SymbolSlab &IndexResults) {
     trace::Span Tracer("Merge and score results");
     std::vector<CompletionCandidate::Bundle> Bundles;
     llvm::DenseMap<size_t, size_t> BundleLookup;
@@ -1272,13 +1278,18 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.documentation = Documentation;
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
+  // FIXME(kadircet): Use LSP.textEdit instead of insertText, because it causes
+  // undesired behaviours. Like completing "this.^" into "this-push_back".
   LSP.insertText = RequiredQualifier + Name;
   if (Opts.EnableSnippets)
     LSP.insertText += SnippetSuffix;
   LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
                                              : InsertTextFormat::PlainText;
+  LSP.additionalTextEdits.reserve(FixIts.size() + (HeaderInsertion ? 1 : 0));
+  for (const auto &FixIt : FixIts)
+    LSP.additionalTextEdits.push_back(FixIt);
   if (HeaderInsertion)
-    LSP.additionalTextEdits = {*HeaderInsertion};
+    LSP.additionalTextEdits.push_back(*HeaderInsertion);
   return LSP;
 }
 

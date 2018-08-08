@@ -77,6 +77,8 @@ struct SymbolRelevanceSignals {
   /// 0-1+ fuzzy-match score for unqualified name. Must be explicitly assigned.
   float NameMatch = 1;
   bool Forbidden = false; // Unavailable (e.g const) or inaccessible (private).
+  /// Whether fixits needs to be applied for that completion or not.
+  bool NeedsFixIts = false;
 
   URIDistance *FileProximityMatch = nullptr;
   /// This is used to calculate proximity between the index symbol and the

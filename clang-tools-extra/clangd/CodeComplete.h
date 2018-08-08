@@ -77,6 +77,10 @@ struct CodeCompleteOptions {
   /// FIXME(ioeric): we might want a better way to pass the index around inside
   /// clangd.
   const SymbolIndex *Index = nullptr;
+
+  /// Include completions that require small corrections, e.g. change '.' to
+  /// '->' on member access etc.
+  bool IncludeFixIts = false;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
@@ -114,6 +118,10 @@ struct CodeCompletion {
   std::string Header;
   // Present if Header is set and should be inserted to use this item.
   llvm::Optional<TextEdit> HeaderInsertion;
+
+  /// Holds information about small corrections that needs to be done. Like
+  /// converting '->' to '.' on member access.
+  std::vector<TextEdit> FixIts;
 
   // Scores are used to rank completion items.
   struct Scores {

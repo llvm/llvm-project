@@ -333,6 +333,13 @@ class Attr;
     /// equivalent.
     bool IsStructurallyEquivalent(QualType From, QualType To,
                                   bool Complain = true);
+
+    /// Determine the index of a field in its parent record.
+    /// F should be a field (or indirect field) declaration.
+    /// \returns The index of the field in its parent context, starting from 1.
+    /// 0 is returned on error (parent context is non-record).
+    static unsigned getFieldIndex(Decl *F);
+
   };
 
 } // namespace clang
