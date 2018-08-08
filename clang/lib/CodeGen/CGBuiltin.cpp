@@ -3337,24 +3337,31 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
 
     // Create a temporary array to hold the sizes of local pointer arguments
     // for the block. \p First is the position of the first size argument.
-    auto CreateArrayForSizeVar = [=](unsigned First) {
-      auto *AT = llvm::ArrayType::get(SizeTy, NumArgs - First);
-      auto *Arr = Builder.CreateAlloca(AT);
-      llvm::Value *Ptr;
+    auto CreateArrayForSizeVar = [=](unsigned First)
+        -> std::tuple<llvm::Value *, llvm::Value *, llvm::Value *> {
+      llvm::APInt ArraySize(32, NumArgs - First);
+      QualType SizeArrayTy = getContext().getConstantArrayType(
+          getContext().getSizeType(), ArraySize, ArrayType::Normal,
+          /*IndexTypeQuals=*/0);
+      auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
+      llvm::Value *TmpPtr = Tmp.getPointer();
+      llvm::Value *TmpSize = EmitLifetimeStart(
+          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()), TmpPtr);
+      llvm::Value *ElemPtr;
       // Each of the following arguments specifies the size of the corresponding
       // argument passed to the enqueued block.
       auto *Zero = llvm::ConstantInt::get(IntTy, 0);
       for (unsigned I = First; I < NumArgs; ++I) {
         auto *Index = llvm::ConstantInt::get(IntTy, I - First);
-        auto *GEP = Builder.CreateGEP(Arr, {Zero, Index});
+        auto *GEP = Builder.CreateGEP(TmpPtr, {Zero, Index});
         if (I == First)
-          Ptr = GEP;
+          ElemPtr = GEP;
         auto *V =
             Builder.CreateZExtOrTrunc(EmitScalarExpr(E->getArg(I)), SizeTy);
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlignment(SizeTy));
       }
-      return Ptr;
+      return std::tie(ElemPtr, TmpSize, TmpPtr);
     };
 
     // Could have events and/or varargs.
@@ -3366,24 +3373,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       llvm::Value *Kernel =
           Builder.CreatePointerCast(Info.Kernel, GenericVoidPtrTy);
       auto *Block = Builder.CreatePointerCast(Info.BlockArg, GenericVoidPtrTy);
-      auto *PtrToSizeArray = CreateArrayForSizeVar(4);
+      llvm::Value *ElemPtr, *TmpSize, *TmpPtr;
+      std::tie(ElemPtr, TmpSize, TmpPtr) = CreateArrayForSizeVar(4);
 
       // Create a vector of the arguments, as well as a constant value to
       // express to the runtime the number of variadic arguments.
       std::vector<llvm::Value *> Args = {
           Queue,  Flags, Range,
           Kernel, Block, ConstantInt::get(IntTy, NumArgs - 4),
-          PtrToSizeArray};
+          ElemPtr};
       std::vector<llvm::Type *> ArgTys = {
-          QueueTy,          IntTy,            RangeTy,
-          GenericVoidPtrTy, GenericVoidPtrTy, IntTy,
-          PtrToSizeArray->getType()};
+          QueueTy,          IntTy, RangeTy,           GenericVoidPtrTy,
+          GenericVoidPtrTy, IntTy, ElemPtr->getType()};
 
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      return RValue::get(
-          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
-                             llvm::ArrayRef<llvm::Value *>(Args)));
+      auto Call =
+          RValue::get(Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                                         llvm::ArrayRef<llvm::Value *>(Args)));
+      if (TmpSize)
+        EmitLifetimeEnd(TmpSize, TmpPtr);
+      return Call;
     }
     // Any calls now have event arguments passed.
     if (NumArgs >= 7) {
@@ -3430,15 +3440,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       ArgTys.push_back(Int32Ty);
       Name = "__enqueue_kernel_events_varargs";
 
-      auto *PtrToSizeArray = CreateArrayForSizeVar(7);
-      Args.push_back(PtrToSizeArray);
-      ArgTys.push_back(PtrToSizeArray->getType());
+      llvm::Value *ElemPtr, *TmpSize, *TmpPtr;
+      std::tie(ElemPtr, TmpSize, TmpPtr) = CreateArrayForSizeVar(7);
+      Args.push_back(ElemPtr);
+      ArgTys.push_back(ElemPtr->getType());
 
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      return RValue::get(
-          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
-                             llvm::ArrayRef<llvm::Value *>(Args)));
+      auto Call =
+          RValue::get(Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
+                                         llvm::ArrayRef<llvm::Value *>(Args)));
+      if (TmpSize)
+        EmitLifetimeEnd(TmpSize, TmpPtr);
+      return Call;
     }
     LLVM_FALLTHROUGH;
   }

@@ -10,7 +10,7 @@ from subprocess import check_call
 import os
 import sys
 
-Verbose = 1
+Verbose = 0
 
 
 def runCmd(Command, **kwargs):

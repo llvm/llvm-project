@@ -2284,5 +2284,25 @@ TEST_F(FormatTestJS, BackslashesInComments) {
                "formatMe( );\n");
 }
 
+TEST_F(FormatTestJS, AddsLastLinePenaltyIfEndingIsBroken) {
+  EXPECT_EQ(
+      "a = function() {\n"
+      "  b = function() {\n"
+      "    this.aaaaaaaaaaaaaaaaaaa[aaaaaaaaaaa] = aaaa.aaaaaa ?\n"
+      "        aaaa.aaaaaa : /** @type "
+      "{aaaa.aaaa.aaaaaaaaa.aaaaaaaaaaaaaaaaaaa} */\n"
+      "        (aaaa.aaaa.aaaaaaaaa.aaaaaaaaaaaaa.aaaaaaaaaaaaaaaaa);\n"
+      "  };\n"
+      "};",
+      format("a = function() {\n"
+             "  b = function() {\n"
+             "    this.aaaaaaaaaaaaaaaaaaa[aaaaaaaaaaa] = aaaa.aaaaaa ? "
+             "aaaa.aaaaaa : /** @type "
+             "{aaaa.aaaa.aaaaaaaaa.aaaaaaaaaaaaaaaaaaa} */\n"
+             "        (aaaa.aaaa.aaaaaaaaa.aaaaaaaaaaaaa.aaaaaaaaaaaaaaaaa);\n"
+             "  };\n"
+             "};"));
+}
+
 } // end namespace tooling
 } // end namespace clang

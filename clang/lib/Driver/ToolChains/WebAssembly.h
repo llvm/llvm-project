@@ -66,9 +66,7 @@ private:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   std::string getThreadModel() const override;
 
-  const char *getDefaultLinker() const override {
-    return "lld";
-  }
+  const char *getDefaultLinker() const override { return "wasm-ld"; }
 
   Tool *buildLinker() const override;
 };

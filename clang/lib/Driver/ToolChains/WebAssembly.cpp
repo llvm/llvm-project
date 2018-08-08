@@ -41,8 +41,6 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const ToolChain &ToolChain = getToolChain();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   ArgStringList CmdArgs;
-  CmdArgs.push_back("-flavor");
-  CmdArgs.push_back("wasm");
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");

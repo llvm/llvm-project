@@ -933,6 +933,8 @@ class VFSFromYamlDirIterImpl : public clang::vfs::detail::DirIterImpl {
   RedirectingFileSystem &FS;
   RedirectingDirectoryEntry::iterator Current, End;
 
+  std::error_code incrementImpl();
+
 public:
   VFSFromYamlDirIterImpl(const Twine &Path, RedirectingFileSystem &FS,
                          RedirectingDirectoryEntry::iterator Begin,
@@ -988,7 +990,7 @@ public:
 ///   'type': 'file',
 ///   'name': <string>,
 ///   'use-external-name': <boolean> # Optional
-///   'external-contents': <path to external file>)
+///   'external-contents': <path to external file>
 /// }
 /// \endverbatim
 ///
@@ -1019,7 +1021,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// Currently, case-insensitive matching only works correctly with ASCII.
   bool CaseSensitive = true;
 
-  /// IsRelativeOverlay marks whether a IsExternalContentsPrefixDir path must
+  /// IsRelativeOverlay marks whether a ExternalContentsPrefixDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.
   bool IsRelativeOverlay = false;
 
@@ -1281,7 +1283,8 @@ class RedirectingFileSystemParser {
     }
   }
 
-  std::unique_ptr<Entry> parseEntry(yaml::Node *N, RedirectingFileSystem *FS) {
+  std::unique_ptr<Entry> parseEntry(yaml::Node *N, RedirectingFileSystem *FS,
+                                    bool IsRootEntry) {
     auto *M = dyn_cast<yaml::MappingNode>(N);
     if (!M) {
       error(N, "expected mapping node for file or directory entry");
@@ -1302,6 +1305,7 @@ class RedirectingFileSystemParser {
     std::vector<std::unique_ptr<Entry>> EntryArrayContents;
     std::string ExternalContentsPath;
     std::string Name;
+    yaml::Node *NameValueNode;
     auto UseExternalName = RedirectingFileEntry::NK_NotSet;
     EntryKind Kind;
 
@@ -1321,6 +1325,7 @@ class RedirectingFileSystemParser {
         if (!parseScalarString(I.getValue(), Value, Buffer))
           return nullptr;
 
+        NameValueNode = I.getValue();
         if (FS->UseCanonicalizedPaths) {
           SmallString<256> Path(Value);
           // Guarantee that old YAML files containing paths with ".." and "."
@@ -1357,7 +1362,8 @@ class RedirectingFileSystemParser {
         }
 
         for (auto &I : *Contents) {
-          if (std::unique_ptr<Entry> E = parseEntry(&I, FS))
+          if (std::unique_ptr<Entry> E =
+                  parseEntry(&I, FS, /*IsRootEntry*/ false))
             EntryArrayContents.push_back(std::move(E));
           else
             return nullptr;
@@ -1415,6 +1421,13 @@ class RedirectingFileSystemParser {
     if (Kind == EK_Directory &&
         UseExternalName != RedirectingFileEntry::NK_NotSet) {
       error(N, "'use-external-name' is not supported for directories");
+      return nullptr;
+    }
+
+    if (IsRootEntry && !sys::path::is_absolute(Name)) {
+      assert(NameValueNode && "Name presence should be checked earlier");
+      error(NameValueNode,
+            "entry with relative path at the root level is not discoverable");
       return nullptr;
     }
 
@@ -1500,7 +1513,8 @@ public:
         }
 
         for (auto &I : *Roots) {
-          if (std::unique_ptr<Entry> E = parseEntry(&I, FS))
+          if (std::unique_ptr<Entry> E =
+                  parseEntry(&I, FS, /*IsRootEntry*/ true))
             RootEntries.push_back(std::move(E));
           else
             return false;
@@ -1985,29 +1999,17 @@ VFSFromYamlDirIterImpl::VFSFromYamlDirIterImpl(
     RedirectingDirectoryEntry::iterator Begin,
     RedirectingDirectoryEntry::iterator End, std::error_code &EC)
     : Dir(_Path.str()), FS(FS), Current(Begin), End(End) {
-  while (Current != End) {
-    SmallString<128> PathStr(Dir);
-    llvm::sys::path::append(PathStr, (*Current)->getName());
-    llvm::ErrorOr<vfs::Status> S = FS.status(PathStr);
-    if (S) {
-      CurrentEntry = *S;
-      return;
-    }
-    // Skip entries which do not map to a reliable external content.
-    if (FS.ignoreNonExistentContents() &&
-        S.getError() == llvm::errc::no_such_file_or_directory) {
-      ++Current;
-      continue;
-    } else {
-      EC = S.getError();
-      break;
-    }
-  }
+  EC = incrementImpl();
 }
 
 std::error_code VFSFromYamlDirIterImpl::increment() {
   assert(Current != End && "cannot iterate past end");
-  while (++Current != End) {
+  ++Current;
+  return incrementImpl();
+}
+
+std::error_code VFSFromYamlDirIterImpl::incrementImpl() {
+  while (Current != End) {
     SmallString<128> PathStr(Dir);
     llvm::sys::path::append(PathStr, (*Current)->getName());
     llvm::ErrorOr<vfs::Status> S = FS.status(PathStr);
@@ -2015,6 +2017,7 @@ std::error_code VFSFromYamlDirIterImpl::increment() {
       // Skip entries which do not map to a reliable external content.
       if (FS.ignoreNonExistentContents() &&
           S.getError() == llvm::errc::no_such_file_or_directory) {
+        ++Current;
         continue;
       } else {
         return S.getError();
