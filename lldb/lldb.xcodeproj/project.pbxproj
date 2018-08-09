@@ -1777,6 +1777,7 @@
 		26CFDCA2186163A4000E63E5 /* Editline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Editline.cpp; sourceTree = "<group>"; };
 		26CFDCA01861638D000E63E5 /* Editline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Editline.h; path = include/lldb/Host/Editline.h; sourceTree = "<group>"; };
 		2326CF511BDD693B00A5CEAC /* EditlineTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EditlineTest.cpp; sourceTree = "<group>"; };
+		9481FE6B1B5F2D9200DED357 /* Either.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Either.h; path = include/lldb/Utility/Either.h; sourceTree = "<group>"; };
 		26D9FDC812F784FD0003F2EE /* EmulateInstruction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EmulateInstruction.cpp; path = source/Core/EmulateInstruction.cpp; sourceTree = "<group>"; };
 		26D9FDC612F784E60003F2EE /* EmulateInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EmulateInstruction.h; path = include/lldb/Core/EmulateInstruction.h; sourceTree = "<group>"; };
 		9A22A15D135E30370024DDC3 /* EmulateInstructionARM.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EmulateInstructionARM.cpp; sourceTree = "<group>"; };
@@ -4509,6 +4510,7 @@
 				49CA96E81E6AAC6600C03FEE /* DataEncoder.cpp */,
 				49CA96F41E6AAC8E00C03FEE /* DataExtractor.h */,
 				49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */,
+				9481FE6B1B5F2D9200DED357 /* Either.h */,
 				26BC7DD310F1B7D500F91463 /* Endian.h */,
 				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
 				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
