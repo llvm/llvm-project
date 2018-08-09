@@ -174,9 +174,12 @@ static bool mergeConstants(Module &M) {
       Constant *Init = GV->getInitializer();
 
       // Check to see if the initializer is already known.
-      GlobalVariable *Slot = CMap[Init];
+      auto Found = CMap.find(Init);
+      if (Found == CMap.end())
+        continue;
 
-      if (!Slot || Slot == GV)
+      GlobalVariable *Slot = Found->second;
+      if (Slot == GV)
         continue;
 
       if (!Slot->hasGlobalUnnamedAddr() && !GV->hasGlobalUnnamedAddr())
