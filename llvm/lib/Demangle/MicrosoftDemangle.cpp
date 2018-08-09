@@ -886,6 +886,18 @@ struct Symbol {
 
 namespace {
 
+struct BackrefContext {
+  static constexpr size_t Max = 10;
+
+  Type *FunctionParams[Max];
+  size_t FunctionParamCount = 0;
+
+  // The first 10 BackReferences in a mangled name can be back-referenced by
+  // special name @[0-9]. This is a storage for the first 10 BackReferences.
+  StringView Names[Max];
+  size_t NamesCount = 0;
+};
+
 // Demangler class takes the main role in demangling symbols.
 // It has a set of functions to parse mangled symbols into Type instances.
 // It also has a set of functions to cnovert Type instances to strings.
@@ -977,13 +989,7 @@ private:
   //  // back-ref map.
   //  using F = void(*)(int*);
   //  F G(int *);
-  Type *FunctionParamBackRefs[10];
-  size_t FunctionParamBackRefCount = 0;
-
-  // The first 10 BackReferences in a mangled name can be back-referenced by
-  // special name @[0-9]. This is a storage for the first 10 BackReferences.
-  StringView BackReferences[10];
-  size_t BackRefCount = 0;
+  BackrefContext Backrefs;
 };
 } // namespace
 
@@ -1115,12 +1121,12 @@ int Demangler::demangleNumber(StringView &MangledName) {
 // First 10 strings can be referenced by special BackReferences ?0, ?1, ..., ?9.
 // Memorize it.
 void Demangler::memorizeString(StringView S) {
-  if (BackRefCount >= sizeof(BackReferences) / sizeof(*BackReferences))
+  if (Backrefs.NamesCount >= BackrefContext::Max)
     return;
-  for (size_t i = 0; i < BackRefCount; ++i)
-    if (S == BackReferences[i])
+  for (size_t i = 0; i < Backrefs.NamesCount; ++i)
+    if (S == Backrefs.Names[i])
       return;
-  BackReferences[BackRefCount++] = S;
+  Backrefs.Names[Backrefs.NamesCount++] = S;
 }
 
 Name *Demangler::demangleBackRefName(StringView &MangledName) {
@@ -1137,11 +1143,14 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
   assert(MangledName.startsWith("?$"));
   MangledName.consumeFront("?$");
 
-  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_None);
-  if (Error)
-    return nullptr;
+  BackrefContext OuterContext;
+  std::swap(OuterContext, Backrefs);
 
-  Node->TParams = demangleTemplateParameterList(MangledName);
+  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_None);
+  if (!Error)
+    Node->TParams = demangleTemplateParameterList(MangledName);
+
+  std::swap(OuterContext, Backrefs);
   if (Error)
     return nullptr;
 
@@ -1967,14 +1976,14 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
 
     if (startsWithDigit(MangledName)) {
       size_t N = MangledName[0] - '0';
-      if (N >= FunctionParamBackRefCount) {
+      if (N >= Backrefs.FunctionParamCount) {
         Error = true;
         return {};
       }
       MangledName = MangledName.dropFront();
 
       *Current = Arena.alloc<FunctionParams>();
-      (*Current)->Current = FunctionParamBackRefs[N]->clone(Arena);
+      (*Current)->Current = Backrefs.FunctionParams[N]->clone(Arena);
       Current = &(*Current)->Next;
       continue;
     }
@@ -1989,8 +1998,9 @@ Demangler::demangleFunctionParameterList(StringView &MangledName) {
 
     // Single-letter types are ignored for backreferences because memorizing
     // them doesn't save anything.
-    if (FunctionParamBackRefCount <= 9 && CharsConsumed > 1)
-      FunctionParamBackRefs[FunctionParamBackRefCount++] = (*Current)->Current;
+    if (Backrefs.FunctionParamCount <= 9 && CharsConsumed > 1)
+      Backrefs.FunctionParams[Backrefs.FunctionParamCount++] =
+          (*Current)->Current;
 
     Current = &(*Current)->Next;
   }
@@ -2058,9 +2068,9 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
 StringView Demangler::resolve(StringView N) {
   assert(N.size() == 1 && isdigit(N[0]));
   size_t Digit = N[0] - '0';
-  if (Digit >= BackRefCount)
+  if (Digit >= Backrefs.NamesCount)
     return N;
-  return BackReferences[Digit];
+  return Backrefs.Names[Digit];
 }
 
 void Demangler::output(const Symbol *S, OutputStream &OS) {
@@ -2088,14 +2098,14 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
 
 void Demangler::dumpBackReferences() {
   std::printf("%d function parameter backreferences\n",
-              (int)FunctionParamBackRefCount);
+              (int)Backrefs.FunctionParamCount);
 
   // Create an output stream so we can render each type.
   OutputStream OS = OutputStream::create(nullptr, 0, 1024);
-  for (size_t I = 0; I < FunctionParamBackRefCount; ++I) {
+  for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
     OS.setCurrentPosition(0);
 
-    Type *T = FunctionParamBackRefs[I];
+    Type *T = Backrefs.FunctionParams[I];
     Type::outputPre(OS, *T, *this);
     Type::outputPost(OS, *T, *this);
 
@@ -2104,14 +2114,14 @@ void Demangler::dumpBackReferences() {
   }
   std::free(OS.getBuffer());
 
-  if (FunctionParamBackRefCount > 0)
+  if (Backrefs.FunctionParamCount > 0)
     std::printf("\n");
-  std::printf("%d name backreferences\n", (int)BackRefCount);
-  for (size_t I = 0; I < BackRefCount; ++I) {
-    std::printf("  [%d] - %.*s\n", (int)I, (int)BackReferences[I].size(),
-                BackReferences[I].begin());
+  std::printf("%d name backreferences\n", (int)Backrefs.NamesCount);
+  for (size_t I = 0; I < Backrefs.NamesCount; ++I) {
+    std::printf("  [%d] - %.*s\n", (int)I, (int)Backrefs.Names[I].size(),
+                Backrefs.Names[I].begin());
   }
-  if (BackRefCount > 0)
+  if (Backrefs.NamesCount > 0)
     std::printf("\n");
 }
 

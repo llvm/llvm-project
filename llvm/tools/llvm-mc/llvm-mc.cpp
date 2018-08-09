@@ -313,7 +313,6 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
-  TripleName = Triple::normalize(TripleName);
   setDwarfDebugFlags(argc, argv);
 
   setDwarfDebugProducer();

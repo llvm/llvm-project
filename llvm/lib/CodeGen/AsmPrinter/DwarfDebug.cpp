@@ -544,7 +544,7 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
   StringRef Producer = DIUnit->getProducer();
   StringRef Flags = DIUnit->getFlags();
-  if (!Flags.empty()) {
+  if (!Flags.empty() && !useAppleExtensionAttributes()) {
     std::string ProducerWithFlags = Producer.str() + " " + Flags.str();
     NewCU.addString(Die, dwarf::DW_AT_producer, ProducerWithFlags);
   } else

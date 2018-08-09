@@ -1920,9 +1920,13 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                         << "\n");
     }
 
+    // Avoid spilling LR in Thumb1 if there's a tail call: it's expensive to
+    // restore LR in that case.
+    bool ExpensiveLRRestore = AFI->isThumb1OnlyFunction() && MFI.hasTailCall();
+
     // If LR is not spilled, but at least one of R4, R5, R6, and R7 is spilled.
     // Spill LR as well so we can fold BX_RET to the registers restore (LDM).
-    if (!LRSpilled && CS1Spilled) {
+    if (!LRSpilled && CS1Spilled && !ExpensiveLRRestore) {
       SavedRegs.set(ARM::LR);
       NumGPRSpills++;
       SmallVectorImpl<unsigned>::iterator LRPos;
@@ -1948,7 +1952,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           // Windows on ARM, accept R11 (frame pointer)
           if (!AFI->isThumbFunction() ||
               (STI.isTargetWindows() && Reg == ARM::R11) ||
-              isARMLowRegister(Reg) || Reg == ARM::LR) {
+              isARMLowRegister(Reg) ||
+              (Reg == ARM::LR && !ExpensiveLRRestore)) {
             SavedRegs.set(Reg);
             LLVM_DEBUG(dbgs() << "Spilling " << printReg(Reg, TRI)
                               << " to make up alignment\n");

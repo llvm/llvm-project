@@ -11,5 +11,13 @@ li t4, foo          # CHECK: :[[@LINE]]:8: error: immediate must be an integer i
 negw x1, x2   # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 sext.w x3, x4 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 
+sll x2, x3, 32  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+srl x2, x3, 32  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+sra x2, x3, 32  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+
+sll x2, x3, -1  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+srl x2, x3, -2  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+sra x2, x3, -3  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
+
 foo:
   .space 4
