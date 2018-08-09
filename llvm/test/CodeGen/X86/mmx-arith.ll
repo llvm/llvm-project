@@ -213,12 +213,11 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X32-NEXT:    movdqa %xmm1, %xmm2
-; X32-NEXT:    psrlq $32, %xmm2
-; X32-NEXT:    pmuludq %xmm0, %xmm2
-; X32-NEXT:    movdqa %xmm0, %xmm3
+; X32-NEXT:    pxor %xmm2, %xmm2
+; X32-NEXT:    pmuludq %xmm1, %xmm2
+; X32-NEXT:    movdqa %xmm1, %xmm3
 ; X32-NEXT:    psrlq $32, %xmm3
-; X32-NEXT:    pmuludq %xmm1, %xmm3
+; X32-NEXT:    pmuludq %xmm0, %xmm3
 ; X32-NEXT:    paddq %xmm2, %xmm3
 ; X32-NEXT:    psllq $32, %xmm3
 ; X32-NEXT:    pmuludq %xmm1, %xmm0
@@ -254,12 +253,11 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X64-NEXT:    movdqa %xmm1, %xmm2
-; X64-NEXT:    psrlq $32, %xmm2
-; X64-NEXT:    pmuludq %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    pxor %xmm2, %xmm2
+; X64-NEXT:    pmuludq %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm1, %xmm3
 ; X64-NEXT:    psrlq $32, %xmm3
-; X64-NEXT:    pmuludq %xmm1, %xmm3
+; X64-NEXT:    pmuludq %xmm0, %xmm3
 ; X64-NEXT:    paddq %xmm2, %xmm3
 ; X64-NEXT:    psllq $32, %xmm3
 ; X64-NEXT:    pmuludq %xmm0, %xmm1

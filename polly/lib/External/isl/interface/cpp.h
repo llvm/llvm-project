@@ -50,6 +50,10 @@ private:
 		FunctionDecl *method, function_kind kind);
 	void print_implementations(ostream &os);
 	void print_class_impl(ostream &os, const isl_class &clazz);
+	void print_check_ptr(ostream &os, const char *ptr);
+	void print_check_ptr_start(ostream &os, const isl_class &clazz,
+		const char *ptr);
+	void print_check_ptr_end(ostream &os, const char *ptr);
 	void print_class_factory_impl(ostream &os, const isl_class &clazz);
 	void print_private_constructors_impl(ostream &os,
 		const isl_class &clazz);
@@ -69,6 +73,8 @@ private:
 		function_kind kind);
 	void print_on_error_continue(ostream &os);
 	void print_exceptional_execution_check(ostream &os,
+		FunctionDecl *method);
+	void print_method_return(ostream &os, const isl_class &clazz,
 		FunctionDecl *method);
 	void print_method_impl(ostream &os, const isl_class &clazz,
 		FunctionDecl *method, function_kind kind);

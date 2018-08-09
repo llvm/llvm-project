@@ -3659,7 +3659,6 @@ public:
   inline std::string to_str() const;
   inline void dump() const;
 
-  inline val two_exp() const;
   inline val abs() const;
   inline boolean abs_eq(const val &v2) const;
   inline val add(val v2) const;
@@ -3706,6 +3705,7 @@ public:
   static inline val neginfty(ctx ctx);
   static inline val negone(ctx ctx);
   static inline val one(ctx ctx);
+  inline val pow2() const;
   inline val set_si(long i) const;
   inline int sgn() const;
   inline val sub(val v2) const;
@@ -14168,7 +14168,7 @@ stat schedule_node::foreach_ancestor_top_down(const std::function<stat(schedule_
   } fn_data = { &fn };
   auto fn_lambda = [](isl_schedule_node *arg_0, void *arg_1) -> isl_stat {
     auto *data = static_cast<struct fn_data *>(arg_1);
-    stat ret = (*data->func)(manage(arg_0));
+    stat ret = (*data->func)(manage_copy(arg_0));
     return ret.release();
   };
   auto res = isl_schedule_node_foreach_ancestor_top_down(get(), fn_lambda, &fn_data);
@@ -19087,12 +19087,6 @@ void val::dump() const {
 }
 
 
-val val::two_exp() const
-{
-  auto res = isl_val_2exp(copy());
-  return manage(res);
-}
-
 val val::abs() const
 {
   auto res = isl_val_abs(copy());
@@ -19366,6 +19360,12 @@ val val::negone(ctx ctx)
 val val::one(ctx ctx)
 {
   auto res = isl_val_one(ctx.release());
+  return manage(res);
+}
+
+val val::pow2() const
+{
+  auto res = isl_val_pow2(copy());
   return manage(res);
 }
 

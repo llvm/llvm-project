@@ -126,6 +126,7 @@ defm : HWWriteResPair<WriteIMul64, [HWPort1],   3>;
 
 defm : X86WriteRes<WriteBSWAP32,   [HWPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,   [HWPort06, HWPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteXCHG, [HWPort0156], 2, [3], 3>;
 
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 
@@ -1286,15 +1287,6 @@ def: InstRW<[HWWriteResGroup53_1], (instregex "VPMOVSXBWYrm",
                                               "VPMOVSXDQYrm",
                                               "VPMOVSXWDYrm",
                                               "VPMOVZXWDYrm")>;
-
-def HWWriteResGroup54 : SchedWriteRes<[HWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [3];
-}
-def: InstRW<[HWWriteResGroup54], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr,
-                                         XCHG8rr, XCHG16rr, XCHG32rr, XCHG64rr,
-                                         XCHG16ar, XCHG32ar, XCHG64ar)>;
 
 def HWWriteResGroup57 : SchedWriteRes<[HWPort5,HWPort0156]> {
   let Latency = 3;

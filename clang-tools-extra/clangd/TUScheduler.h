@@ -122,6 +122,13 @@ public:
   /// an LRU cache.
   class ASTCache;
 
+  // The file being built/processed in the current thread. This is a hack in
+  // order to get the file name into the index implementations. Do not depend on
+  // this inside clangd.
+  // FIXME: remove this when there is proper index support via build system
+  // integration.
+  static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
+
 private:
   const bool StorePreamblesInMemory;
   const std::shared_ptr<PCHContainerOperations> PCHOps;
@@ -135,6 +142,7 @@ private:
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
   std::chrono::steady_clock::duration UpdateDebounce;
 };
+
 } // namespace clangd
 } // namespace clang
 

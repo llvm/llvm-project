@@ -537,30 +537,29 @@ entry:
 define <3 x double> @constrained_vector_fma_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_fma_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; NO-FMA-NEXT:    callq fma
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; NO-FMA-NEXT:    callq fma
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; NO-FMA-NEXT:    callq fma
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -964,27 +963,26 @@ entry:
 define <3 x double> @constrained_vector_pow_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_pow_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    callq pow
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    callq pow
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    callq pow
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -1190,27 +1188,26 @@ entry:
 define <3 x double> @constrained_vector_powi_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_powi_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movl $3, %edi
 ; NO-FMA-NEXT:    callq __powidf2
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movl $3, %edi
 ; NO-FMA-NEXT:    callq __powidf2
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    movl $3, %edi
 ; NO-FMA-NEXT:    callq __powidf2
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -1404,24 +1401,23 @@ entry:
 define <3 x double> @constrained_vector_sin_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_sin_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq sin
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq sin
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq sin
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -1601,24 +1597,23 @@ entry:
 define <3 x double> @constrained_vector_cos_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_cos_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq cos
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq cos
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq cos
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -1798,24 +1793,23 @@ entry:
 define <3 x double> @constrained_vector_exp_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_exp_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -1995,24 +1989,23 @@ entry:
 define <3 x double> @constrained_vector_exp2_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_exp2_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp2
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp2
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq exp2
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -2192,24 +2185,23 @@ entry:
 define <3 x double> @constrained_vector_log_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_log_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -2389,24 +2381,23 @@ entry:
 define <3 x double> @constrained_vector_log10_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_log10_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log10
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log10
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log10
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -2586,24 +2577,23 @@ entry:
 define <3 x double> @constrained_vector_log2_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_log2_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log2
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log2
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq log2
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -2765,24 +2755,23 @@ entry:
 define <3 x double> @constrained_vector_rint_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_rint_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq rint
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq rint
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq rint
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;
@@ -2912,24 +2901,23 @@ entry:
 define <3 x double> @constrained_vector_nearby_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_nearby_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    subq $24, %rsp
-; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq nearbyint
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq nearbyint
-; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
-; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NO-FMA-NEXT:    callq nearbyint
 ; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; NO-FMA-NEXT:    movaps %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
-; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
 ; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; NO-FMA-NEXT:    retq
 ;

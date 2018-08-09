@@ -15003,141 +15003,131 @@ define <2 x double> @test_unpckhpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 define <2 x double> @test_unpcklpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_unpcklpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; GENERIC-NEXT:    movapd %xmm0, %xmm1 # sched: [1:1.00]
-; GENERIC-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; GENERIC-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; GENERIC-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; GENERIC-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; GENERIC-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_unpcklpd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; ATOM-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.50]
-; ATOM-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [1:1.00]
-; ATOM-NEXT:    addpd %xmm0, %xmm1 # sched: [6:3.00]
-; ATOM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
+; ATOM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [1:1.00]
+; ATOM-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; ATOM-NEXT:    addpd %xmm2, %xmm0 # sched: [6:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_unpcklpd:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SLM-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.50]
-; SLM-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [4:1.00]
-; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; SLM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
+; SLM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [4:1.00]
+; SLM-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; SLM-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_unpcklpd:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SANDY-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:1.00]
-; SANDY-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; SANDY-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; SANDY-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
+; SANDY-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; SANDY-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SANDY-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_unpcklpd:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SANDY-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [7:1.00]
-; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SANDY-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SANDY-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_unpcklpd:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; HASWELL-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:1.00]
-; HASWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; HASWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; HASWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; HASWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; HASWELL-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_unpcklpd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; HASWELL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [7:1.00]
-; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; HASWELL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:1.00]
+; HASWELL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; HASWELL-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_unpcklpd:
 ; BROADWELL-SSE:       # %bb.0:
-; BROADWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; BROADWELL-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:1.00]
-; BROADWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; BROADWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BROADWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [6:1.00]
+; BROADWELL-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_unpcklpd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; BROADWELL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [6:1.00]
-; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:1.00]
+; BROADWELL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [6:1.00]
+; BROADWELL-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_unpcklpd:
 ; SKYLAKE-SSE:       # %bb.0:
-; SKYLAKE-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKYLAKE-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.33]
-; SKYLAKE-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; SKYLAKE-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKYLAKE-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
+; SKYLAKE-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.33]
+; SKYLAKE-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SKYLAKE-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_unpcklpd:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [7:1.00]
-; SKYLAKE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
+; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SKYLAKE-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_unpcklpd:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKX-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.33]
-; SKX-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; SKX-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKX-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
+; SKX-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.33]
+; SKX-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:1.00]
+; SKX-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SKX-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpcklpd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [7:1.00]
-; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
+; SKX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SKX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [7:1.00]
+; SKX-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_unpcklpd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
-; BTVER2-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.50]
-; BTVER2-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; BTVER2-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [6:1.00]
+; BTVER2-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:0.50]
+; BTVER2-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_unpcklpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
-; BTVER2-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [6:1.00]
-; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:0.50]
+; BTVER2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [6:1.00]
+; BTVER2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_unpcklpd:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
-; ZNVER1-SSE-NEXT:    movapd %xmm0, %xmm1 # sched: [1:0.25]
-; ZNVER1-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
-; ZNVER1-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; ZNVER1-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.25]
+; ZNVER1-SSE-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.25]
+; ZNVER1-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [8:0.50]
+; ZNVER1-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0] sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_unpcklpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
-; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0] sched: [8:0.50]
-; ZNVER1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0] sched: [1:0.50]
+; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0] sched: [8:0.50]
+; ZNVER1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 0, i32 2>
   %2 = load <2 x double>, <2 x double> *%a2, align 16

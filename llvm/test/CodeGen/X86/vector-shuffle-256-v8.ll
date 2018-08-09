@@ -2443,9 +2443,9 @@ define <8 x i32> @insert_dup_mem_v8i32(i32* %ptr) {
 define <8 x i32> @shuffle_v8i32_12345678(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: shuffle_v8i32_12345678:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0],ymm0[3,0],ymm1[4,4],ymm0[7,4]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm2[0,0],ymm1[3,0],ymm2[4,4],ymm1[7,4]
 ; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,2],ymm1[2,0],ymm0[5,6],ymm1[6,4]
 ; AVX1-NEXT:    retq
 ;

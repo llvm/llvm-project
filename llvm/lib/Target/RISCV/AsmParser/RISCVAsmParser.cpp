@@ -73,6 +73,9 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // synthesize the desired immedate value into the destination register.
   void emitLoadImm(unsigned DestReg, int64_t Value, MCStreamer &Out);
 
+  // Helper to emit pseudo instruction "lla" used in PC-rel addressing.
+  void emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
   /// Helper for processing MC instructions that have been successfully matched
   /// by MatchAndEmitInstruction. Modifications to the emitted instructions,
   /// like the expansion of pseudo instructions (e.g., "li"), can be performed
@@ -964,6 +967,26 @@ bool RISCVAsmParser::parseOperand(OperandVector &Operands,
   return true;
 }
 
+/// Return true if the operand at the OperandIdx for opcode Name should be
+/// 'forced' to be parsed as an immediate. This is required for
+/// pseudoinstructions such as tail or call, which allow bare symbols to be used
+/// that could clash with register names.
+static bool shouldForceImediateOperand(StringRef Name, unsigned OperandIdx) {
+  // FIXME: This may not scale so perhaps we want to use a data-driven approach
+  // instead.
+  switch (OperandIdx) {
+  case 0:
+    // call imm
+    // tail imm
+    return Name == "tail" || Name == "call";
+  case 1:
+    // lla rdest, imm
+    return Name == "lla";
+  default:
+    return false;
+  }
+}
+
 bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
@@ -975,18 +998,20 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     return false;
 
   // Parse first operand
-  bool ForceImmediate = (Name == "call" || Name == "tail");
-  if (parseOperand(Operands, ForceImmediate))
+  if (parseOperand(Operands, shouldForceImediateOperand(Name, 0)))
     return true;
 
   // Parse until end of statement, consuming commas between operands
+  unsigned OperandIdx = 1;
   while (getLexer().is(AsmToken::Comma)) {
     // Consume comma token
     getLexer().Lex();
 
     // Parse next operand
-    if (parseOperand(Operands, false))
+    if (parseOperand(Operands, shouldForceImediateOperand(Name, OperandIdx)))
       return true;
+
+    ++OperandIdx;
   }
 
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
@@ -1184,6 +1209,39 @@ void RISCVAsmParser::emitLoadImm(unsigned DestReg, int64_t Value,
                             .addImm(Lo12));
 }
 
+void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
+                                          MCStreamer &Out) {
+  // The local load address pseudo-instruction "lla" is used in PC-relative
+  // addressing of symbols:
+  //   lla rdest, symbol
+  // expands to
+  //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
+  //             ADDI rdest, %pcrel_lo(TmpLabel)
+  MCContext &Ctx = getContext();
+
+  MCSymbol *TmpLabel = Ctx.createTempSymbol(
+      "pcrel_hi", /* AlwaysAddSuffix */ true, /* CanBeUnnamed */ false);
+  Out.EmitLabel(TmpLabel);
+
+  MCOperand DestReg = Inst.getOperand(0);
+  const RISCVMCExpr *Symbol = RISCVMCExpr::create(
+      Inst.getOperand(1).getExpr(), RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
+
+  MCInst &AUIPC =
+      MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(Symbol);
+  emitToStreamer(Out, AUIPC);
+
+  const MCExpr *RefToLinkTmpLabel =
+      RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, Ctx),
+                          RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
+
+  MCInst &ADDI = MCInstBuilder(RISCV::ADDI)
+                     .addOperand(DestReg)
+                     .addOperand(DestReg)
+                     .addExpr(RefToLinkTmpLabel);
+  emitToStreamer(Out, ADDI);
+}
+
 bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                         MCStreamer &Out) {
   Inst.setLoc(IDLoc);
@@ -1197,6 +1255,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (!isRV64())
       Imm = SignExtend64<32>(Imm);
     emitLoadImm(Reg, Imm, Out);
+    return false;
+  } else if (Inst.getOpcode() == RISCV::PseudoLLA) {
+    emitLoadLocalAddress(Inst, IDLoc, Out);
     return false;
   }
 
