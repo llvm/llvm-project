@@ -137,8 +137,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     // we need to make sure the Target's SwiftASTContext has been setup BEFORE
     // we do any Swift name lookups
     if (m_target) {
-      SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(
-          err, *frame);
+      auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
       if (!swift_ast_ctx) {
         if (log)
           log->Printf("  [SUE::SC] NULL Swift AST Context");

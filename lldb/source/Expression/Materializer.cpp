@@ -922,10 +922,12 @@ public:
 
     Status type_system_error;
     TypeSystem *type_system;
-    
+
     if (lang == lldb::eLanguageTypeSwift)
+      // We already acquired the lock in the UserExpression.
       type_system =
-          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp);
+          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp)
+              .get();
     else
       type_system = target_sp->GetScratchTypeSystemForLanguage(
         &type_system_error, m_type.GetMinimumLanguage());

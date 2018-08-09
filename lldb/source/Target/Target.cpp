@@ -2139,47 +2139,55 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
             llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
       if (swift_ast_ctx->CheckProcessChanged() ||
           swift_ast_ctx->HasFatalErrors()) {
-        if (m_use_scratch_typesystem_per_module)
-          DisplayFallbackSwiftContextErrors(swift_ast_ctx);
-        else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
-          errs->Printf(
-              "warning: Swift error in scratch context: %s.\n",
-              swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
-          auto *module_name = GetExecutableModule()
-                                  ->GetPlatformFileSpec()
-                                  .GetFilename()
-                                  .AsCString();
-          errs->Printf("Shared Swift state for %s has developed fatal "
-                       "errors and is being discarded.\n",
-                       module_name);
-          errs->PutCString("REPL definitions and persistent names/types "
-                           "will be lost.\n\n");
-          errs->Flush();
-        }
-
-        m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-        type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
-            language, this, create_on_demand, compiler_options);
-
-        if (SwiftASTContext *new_swift_ast_ctx =
-                llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
-          if (new_swift_ast_ctx->HasFatalErrors()) {
-            if (StreamSP error_stream_sp =
-                    GetDebugger().GetAsyncErrorStream()) {
-              error_stream_sp->PutCString("Can't construct shared Swift state "
-                                          "for this process after repeated "
-                                          "attempts.\n");
-              error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
-              DiagnosticManager diag_mgr;
-              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
-              error_stream_sp->PutCString(diag_mgr.GetString().c_str());
-              error_stream_sp->Flush();
-            }
-
-            m_cant_make_scratch_type_system[language] = true;
-            m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-            type_system = nullptr;
+        // If it is safe to replace the scratch context, do so. If
+        // try_lock() fails, then higher stack frame (or another
+        // thread) is holding a read lock to the scratch context and
+        // replacing it could cause a use-after-free later on.
+        if (GetSwiftScratchContextLock().try_lock()) {
+          if (m_use_scratch_typesystem_per_module)
+            DisplayFallbackSwiftContextErrors(swift_ast_ctx);
+          else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
+            errs->Printf(
+                "warning: Swift error in scratch context: %s.\n",
+                swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+            auto *module_name = GetExecutableModule()
+                                    ->GetPlatformFileSpec()
+                                    .GetFilename()
+                                    .AsCString();
+            errs->Printf("Shared Swift state for %s has developed fatal "
+                         "errors and is being discarded.\n",
+                         module_name);
+            errs->PutCString("REPL definitions and persistent names/types "
+                             "will be lost.\n\n");
+            errs->Flush();
           }
+
+          m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+          type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
+              language, this, create_on_demand, compiler_options);
+
+          if (SwiftASTContext *new_swift_ast_ctx =
+                  llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
+            if (new_swift_ast_ctx->HasFatalErrors()) {
+              if (StreamSP error_stream_sp =
+                      GetDebugger().GetAsyncErrorStream()) {
+                error_stream_sp->PutCString(
+                    "Can't construct shared Swift state "
+                    "for this process after repeated "
+                    "attempts.\n");
+                error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                DiagnosticManager diag_mgr;
+                new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+                error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                error_stream_sp->Flush();
+              }
+
+              m_cant_make_scratch_type_system[language] = true;
+              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+              type_system = nullptr;
+            }
+          }
+          GetSwiftScratchContextLock().unlock();
         }
       }
     } else if (create_on_demand) {
@@ -2225,9 +2233,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language)
 SwiftPersistentExpressionState *
 Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   Status error;
-  auto *swift_ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-          GetScratchSwiftASTContext(error, exe_scope, true));
+  auto swift_ast_context = GetScratchSwiftASTContext(error, exe_scope, true);
   if (!swift_ast_context)
     return nullptr;
   return (SwiftPersistentExpressionState *)
@@ -2242,10 +2248,15 @@ UserExpression *Target::GetUserExpressionForLanguage(
   Status type_system_error;
 
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  TypeSystem *type_system =
-      (language == eLanguageTypeSwift && exe_scope)
-          ? GetScratchSwiftASTContext(type_system_error, *exe_scope, true)
-          : GetScratchTypeSystemForLanguage(&type_system_error, language);
+  TypeSystem *type_system = nullptr;
+  std::unique_ptr<SwiftASTContextReader> reader;
+  if (language == eLanguageTypeSwift && exe_scope) {
+    reader = llvm::make_unique<SwiftASTContextReader>(
+        GetScratchSwiftASTContext(type_system_error, *exe_scope, true));
+    type_system = reader->get();
+  } else {
+    type_system = GetScratchTypeSystemForLanguage(&type_system_error, language);
+  }
   UserExpression *user_expr = nullptr;
 
   if (!type_system) {
@@ -2344,7 +2355,7 @@ ClangASTImporterSP Target::GetClangASTImporter() {
   return ClangASTImporterSP();
 }
 
-SwiftASTContext *Target::GetScratchSwiftASTContext(
+SwiftASTContextReader Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Module *lldb_module = nullptr;
   if (m_use_scratch_typesystem_per_module)
@@ -2356,19 +2367,14 @@ SwiftASTContext *Target::GetScratchSwiftASTContext(
   return GetScratchSwiftASTContext(error, lldb_module, create_on_demand);
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h
-SwiftASTContext *Target::GetScratchSwiftASTContextImpl(Status &error,
-                                                       Module *lldb_module,
-                                                       bool create_on_demand)
-#else
-SwiftASTContext *Target::GetScratchSwiftASTContext(Status &error,
-                                                   Module *lldb_module,
-                                                   bool create_on_demand)
-#endif
-{
+SwiftASTContextReader Target::GetScratchSwiftASTContext(Status &error,
+                                                        Module *lldb_module,
+                                                        bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
-  while (lldb_module && m_use_scratch_typesystem_per_module) {
+  auto get_or_create_fallback_context = [&]() -> SwiftASTContext * {
+    if (!lldb_module || !m_use_scratch_typesystem_per_module)
+      return nullptr;
+
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
@@ -2378,31 +2384,64 @@ SwiftASTContext *Target::GetScratchSwiftASTContext(Status &error,
         DisplayFallbackSwiftContextErrors(cached_ast_ctx);
         // Try again.
         m_scratch_typesystem_for_module.erase(cached);
-        break;
+        return nullptr;
       }
       if (log)
         log->Printf("returned cached module-wide scratch context\n");
       return cached_ast_ctx;
     }
 
-    if (!create_on_demand)
-      break;
+    if (!create_on_demand || !GetSwiftScratchContextLock().try_lock())
+      return nullptr;
 
+    if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(
+            GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, false)))
+      DisplayFallbackSwiftContextErrors(global_scratch_ctx);
+    
     auto typesystem_sp = SwiftASTContext::CreateInstance(
         lldb::eLanguageTypeSwift, *lldb_module, this);
-    auto *swift_ast_context = cast<SwiftASTContext>(typesystem_sp.get());
+    auto *swift_ast_ctx = cast<SwiftASTContext>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
+    GetSwiftScratchContextLock().unlock();
     if (log)
       log->Printf("created module-wide scratch context\n");
-    return swift_ast_context;
-  }
+    return swift_ast_ctx;
+  };
 
-  if (log)
-    log->Printf("returned project-wide scratch context\n");
-  return llvm::dyn_cast_or_null<SwiftASTContext>(
-      GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift,
-                                      create_on_demand));
+  auto *swift_ast_ctx = get_or_create_fallback_context();
+  if (!swift_ast_ctx) {
+    if (log)
+      log->Printf("returned project-wide scratch context\n");
+    swift_ast_ctx =
+        llvm::cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(
+            &error, eLanguageTypeSwift, create_on_demand));
+  }
+  return SwiftASTContextReader(GetSwiftScratchContextLock(), swift_ast_ctx);
 }
+
+static SharedMutex *
+GetSwiftScratchContextMutex(const ExecutionContext *exe_ctx) {
+  if (!exe_ctx)
+    return nullptr;
+  ExecutionContextScope *exe_scope = exe_ctx->GetBestExecutionContextScope();
+  if (auto target = exe_scope->CalculateTarget())
+    return &target->GetSwiftScratchContextLock();
+  return nullptr;
+}
+
+SwiftASTContextLock::SwiftASTContextLock(const ExecutionContext *exe_ctx)
+    : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx)) {}
+
+static SharedMutex *
+GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
+  if (!exe_ctx_ref)
+    return nullptr;
+  ExecutionContext exe_ctx(exe_ctx_ref);
+  return GetSwiftScratchContextMutex(&exe_ctx);
+}
+
+SwiftASTContextLock::SwiftASTContextLock(const ExecutionContextRef *exe_ctx_ref)
+    : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx_ref)) {}
 
 void Target::DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx) {
   assert(m_use_scratch_typesystem_per_module);
