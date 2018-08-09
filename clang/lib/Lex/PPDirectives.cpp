@@ -1896,6 +1896,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (PPOpts->SingleFileParseMode)
     ShouldEnter = false;
 
+  // Any diagnostics after the fatal error will not be visible. As the
+  // compilation failed already and errors in subsequently included files won't
+  // be visible, avoid preprocessing those files.
+  if (ShouldEnter && Diags->hasFatalErrorOccurred())
+    ShouldEnter = false;
+
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
