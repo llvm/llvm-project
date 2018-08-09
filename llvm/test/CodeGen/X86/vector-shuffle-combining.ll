@@ -1849,10 +1849,10 @@ define <4 x i8> @combine_test4c(<4 x i8>* %a, <4 x i8>* %b) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
@@ -1861,10 +1861,10 @@ define <4 x i8> @combine_test4c(<4 x i8>* %a, <4 x i8>* %b) {
 ; SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
@@ -2764,33 +2764,12 @@ entry:
 }
 
 define <8 x float> @PR22412(<8 x float> %a, <8 x float> %b) {
-; SSE2-LABEL: PR22412:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; SSE2-NEXT:    movapd %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm3[3,2]
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm2[3,2]
-; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR22412:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; SSSE3-NEXT:    movapd %xmm2, %xmm0
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm3[3,2]
-; SSSE3-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm2[3,2]
-; SSSE3-NEXT:    movaps %xmm3, %xmm1
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR22412:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
-; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm3[3,2]
-; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm0[3,2]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
-; SSE41-NEXT:    movaps %xmm3, %xmm1
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR22412:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm3[3,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm2[3,2]
+; SSE-NEXT:    movaps %xmm3, %xmm1
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR22412:
 ; AVX1:       # %bb.0: # %entry

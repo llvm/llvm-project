@@ -1213,9 +1213,13 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
   auto fields = builder.beginStruct();
 
   bool IsOpenCL = CGM.getLangOpts().OpenCL;
+  bool IsWindows = CGM.getTarget().getTriple().isOSWindows();
   if (!IsOpenCL) {
     // isa
-    fields.add(CGM.getNSConcreteGlobalBlock());
+    if (IsWindows)
+      fields.addNullPointer(CGM.Int8PtrPtrTy);
+    else
+      fields.add(CGM.getNSConcreteGlobalBlock());
 
     // __flags
     BlockFlags flags = BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE;
@@ -1250,7 +1254,27 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
 
   llvm::Constant *literal = fields.finishAndCreateGlobal(
       "__block_literal_global", blockInfo.BlockAlign,
-      /*constant*/ true, llvm::GlobalVariable::InternalLinkage, AddrSpace);
+      /*constant*/ !IsWindows, llvm::GlobalVariable::InternalLinkage, AddrSpace);
+
+  // Windows does not allow globals to be initialised to point to globals in
+  // different DLLs.  Any such variables must run code to initialise them.
+  if (IsWindows) {
+    auto *Init = llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy,
+          {}), llvm::GlobalValue::InternalLinkage, ".block_isa_init",
+        &CGM.getModule());
+    llvm::IRBuilder<> b(llvm::BasicBlock::Create(CGM.getLLVMContext(), "entry",
+          Init));
+    b.CreateAlignedStore(CGM.getNSConcreteGlobalBlock(),
+        b.CreateStructGEP(literal, 0), CGM.getPointerAlign().getQuantity());
+    b.CreateRetVoid();
+    // We can't use the normal LLVM global initialisation array, because we
+    // need to specify that this runs early in library initialisation.
+    auto *InitVar = new llvm::GlobalVariable(CGM.getModule(), Init->getType(),
+        /*isConstant*/true, llvm::GlobalValue::InternalLinkage,
+        Init, ".block_isa_init_ptr");
+    InitVar->setSection(".CRT$XCLa");
+    CGM.addUsedGlobal(InitVar);
+  }
 
   // Return a constant of the appropriately-casted type.
   llvm::Type *RequiredType =

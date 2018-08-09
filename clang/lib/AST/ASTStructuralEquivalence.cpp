@@ -1178,6 +1178,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 /// Determine structural equivalence of two enums.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
+
+  // Compare the definitions of these two enums. If either or both are
+  // incomplete (i.e. forward declared), we assume that they are equivalent.
+  D1 = D1->getDefinition();
+  D2 = D2->getDefinition();
+  if (!D1 || !D2)
+    return true;
+
   EnumDecl::enumerator_iterator EC2 = D2->enumerator_begin(),
                                 EC2End = D2->enumerator_end();
   for (EnumDecl::enumerator_iterator EC1 = D1->enumerator_begin(),

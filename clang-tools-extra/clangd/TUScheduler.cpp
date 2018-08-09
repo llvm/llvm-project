@@ -63,6 +63,14 @@ namespace {
 class ASTWorker;
 }
 
+static clang::clangd::Key<std::string> kFileBeingProcessed;
+
+llvm::Optional<llvm::StringRef> TUScheduler::getFileBeingProcessedInContext() {
+  if (auto *File = Context::current().get(kFileBeingProcessed))
+    return StringRef(*File);
+  return llvm::None;
+}
+
 /// An LRU cache of idle ASTs.
 /// Because we want to limit the overall number of these we retain, the cache
 /// owns ASTs (and may evict them) while their workers are idle.
@@ -491,8 +499,9 @@ void ASTWorker::startTask(llvm::StringRef Name,
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
-    Requests.push_back({std::move(Task), Name, steady_clock::now(),
-                        Context::current().clone(), UpdateType});
+    Requests.push_back(
+        {std::move(Task), Name, steady_clock::now(),
+         Context::current().derive(kFileBeingProcessed, FileName), UpdateType});
   }
   RequestsCV.notify_all();
 }
@@ -734,10 +743,12 @@ void TUScheduler::runWithPreamble(
     Action(InputsAndPreamble{Contents, Command, Preamble.get()});
   };
 
-  PreambleTasks->runAsync("task:" + llvm::sys::path::filename(File),
-                          Bind(Task, std::string(Name), std::string(File),
-                               It->second->Contents, It->second->Command,
-                               Context::current().clone(), std::move(Action)));
+  PreambleTasks->runAsync(
+      "task:" + llvm::sys::path::filename(File),
+      Bind(Task, std::string(Name), std::string(File), It->second->Contents,
+           It->second->Command,
+           Context::current().derive(kFileBeingProcessed, File),
+           std::move(Action)));
 }
 
 std::vector<std::pair<Path, std::size_t>>
