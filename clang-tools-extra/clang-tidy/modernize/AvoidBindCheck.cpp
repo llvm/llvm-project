@@ -59,7 +59,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result, const CallExpr *C) {
     }
 
     B.Tokens = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(E->getBeginLoc(), E->getLocEnd()),
+        CharSourceRange::getTokenRange(E->getBeginLoc(), E->getEndLoc()),
         *Result.SourceManager, Result.Context->getLangOpts());
 
     SmallVector<StringRef, 2> Matches;

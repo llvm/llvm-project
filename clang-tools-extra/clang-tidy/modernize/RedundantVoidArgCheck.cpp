@@ -105,7 +105,7 @@ void RedundantVoidArgCheck::processFunctionDecl(
     const Stmt *Body = Function->getBody();
     SourceLocation Start = Function->getBeginLoc();
     SourceLocation End =
-        Body ? Body->getBeginLoc().getLocWithOffset(-1) : Function->getLocEnd();
+        Body ? Body->getBeginLoc().getLocWithOffset(-1) : Function->getEndLoc();
     removeVoidArgumentTokens(Result, SourceRange(Start, End),
                              "function definition");
   } else {

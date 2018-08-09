@@ -36,7 +36,7 @@ void UnusedAliasDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     FoundDecls[AliasDecl] = CharSourceRange::getCharRange(
         AliasDecl->getBeginLoc(),
         Lexer::findLocationAfterToken(
-            AliasDecl->getLocEnd(), tok::semi, *Result.SourceManager,
+            AliasDecl->getEndLoc(), tok::semi, *Result.SourceManager,
             getLangOpts(),
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     return;

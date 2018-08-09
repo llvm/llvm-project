@@ -81,7 +81,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       if (!isa<ParenExpr>(SubExpr)) {
         CastText.push_back('(');
         diag_builder << FixItHint::CreateInsertion(
-            Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0,
+            Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0,
                                        *Result.SourceManager, getLangOpts()),
             ")");
       }

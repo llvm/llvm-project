@@ -84,7 +84,7 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
       match(expr(hasDescendant(typeLoc().bind("t"))), *E, *Result.Context);
   const auto *TL = selectFirst<TypeLoc>("t", Matches);
   D << FixItHint::CreateInsertion(
-      Lexer::getLocForEndOfToken(TL->getLocEnd(), 0, *Result.SourceManager,
+      Lexer::getLocForEndOfToken(TL->getEndLoc(), 0, *Result.SourceManager,
                                  getLangOpts()),
       Replacement);
 }

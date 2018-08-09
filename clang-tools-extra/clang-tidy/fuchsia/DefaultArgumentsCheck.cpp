@@ -33,7 +33,7 @@ void DefaultArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<ParmVarDecl>("decl")) {
     SourceRange DefaultArgRange = D->getDefaultArgRange();
 
-    if (DefaultArgRange.getEnd() != D->getLocEnd()) {
+    if (DefaultArgRange.getEnd() != D->getEndLoc()) {
       return;
     } else if (DefaultArgRange.getBegin().isMacroID()) {
       diag(D->getBeginLoc(),

@@ -207,7 +207,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
 
     TypeLoc ValueTL = RefTL.getPointeeLoc();
     auto TypeRange = CharSourceRange::getTokenRange(ParmDecl->getBeginLoc(),
-                                                    ParamTL.getLocEnd());
+                                                    ParamTL.getEndLoc());
     std::string ValueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                                     ValueTL.getSourceRange()),
                                                 SM, getLangOpts())

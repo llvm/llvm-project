@@ -145,7 +145,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   }
 
   SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      Cast->getLocEnd(), 0, Context.getSourceManager(), Context.getLangOpts());
+      Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(EndLoc, EndLocInsertion);
 }
 
@@ -189,7 +189,7 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 
   if (NeedParens) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        Cast->getLocEnd(), 0, Context.getSourceManager(),
+        Cast->getEndLoc(), 0, Context.getSourceManager(),
         Context.getLangOpts());
 
     Diag << FixItHint::CreateInsertion(EndLoc, ")");

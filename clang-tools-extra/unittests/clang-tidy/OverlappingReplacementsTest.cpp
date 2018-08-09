@@ -52,7 +52,7 @@ public:
     auto *Cond = If->getCond();
     SourceRange Range = Cond->getSourceRange();
     if (auto *D = If->getConditionVariable()) {
-      Range = SourceRange(D->getBeginLoc(), D->getLocEnd());
+      Range = SourceRange(D->getBeginLoc(), D->getEndLoc());
     }
     diag(Range.getBegin(), "the cake is a lie") << FixItHint::CreateReplacement(
         CharSourceRange::getTokenRange(Range), "false");

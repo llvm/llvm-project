@@ -63,7 +63,7 @@ void SimplifySubscriptExprCheck::check(const MatchFinder::MatchResult &Result) {
     DiagBuilder << FixItHint::CreateInsertion(Member->getBeginLoc(), "(*")
                 << FixItHint::CreateInsertion(Member->getOperatorLoc(), ")");
   DiagBuilder << FixItHint::CreateRemoval(
-      {Member->getOperatorLoc(), Call->getLocEnd()});
+      {Member->getOperatorLoc(), Call->getEndLoc()});
 }
 
 void SimplifySubscriptExprCheck::storeOptions(

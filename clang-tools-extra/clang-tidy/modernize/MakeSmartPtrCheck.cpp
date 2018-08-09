@@ -201,7 +201,7 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   SourceLocation ResetCallStart = Reset->getExprLoc();
   SourceLocation ExprStart = Expr->getBeginLoc();
   SourceLocation ExprEnd =
-      Lexer::getLocForEndOfToken(Expr->getLocEnd(), 0, SM, getLangOpts());
+      Lexer::getLocForEndOfToken(Expr->getEndLoc(), 0, SM, getLangOpts());
 
   bool InMacro = ExprStart.isMacroID();
 

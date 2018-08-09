@@ -55,7 +55,7 @@ void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
           Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction)) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        Func->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
+        Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
     // FIXME: Improve FixItHint to make the method public.
     diag(Func->getLocation(),

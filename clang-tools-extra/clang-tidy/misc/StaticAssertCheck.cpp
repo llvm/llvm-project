@@ -129,7 +129,7 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
       FixItHints.push_back(FixItHint::CreateRemoval(
           SourceRange(AssertExprRoot->getOperatorLoc())));
       FixItHints.push_back(FixItHint::CreateRemoval(
-          SourceRange(AssertMSG->getBeginLoc(), AssertMSG->getLocEnd())));
+          SourceRange(AssertMSG->getBeginLoc(), AssertMSG->getEndLoc())));
       StaticAssertMSG = (Twine(", \"") + AssertMSG->getString() + "\"").str();
     }
 

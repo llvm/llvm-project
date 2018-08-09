@@ -885,7 +885,7 @@ void RedundantExpressionCheck::checkBitwiseExpr(
       diag(Loc, "expression always evaluates to 0");
     } else if (exprEvaluatesToBitwiseNegatedZero(Opcode, Value)) {
       SourceRange ConstExprRange(ConstExpr->getBeginLoc(),
-                                 ConstExpr->getLocEnd());
+                                 ConstExpr->getEndLoc());
       StringRef ConstExprText = Lexer::getSourceText(
           CharSourceRange::getTokenRange(ConstExprRange), *Result.SourceManager,
           Result.Context->getLangOpts());
@@ -893,7 +893,7 @@ void RedundantExpressionCheck::checkBitwiseExpr(
       diag(Loc, "expression always evaluates to '%0'") << ConstExprText;
 
     } else if (exprEvaluatesToSymbolic(Opcode, Value)) {
-      SourceRange SymExprRange(Sym->getBeginLoc(), Sym->getLocEnd());
+      SourceRange SymExprRange(Sym->getBeginLoc(), Sym->getEndLoc());
 
       StringRef ExprText = Lexer::getSourceText(
           CharSourceRange::getTokenRange(SymExprRange), *Result.SourceManager,

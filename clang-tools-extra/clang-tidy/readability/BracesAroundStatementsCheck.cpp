@@ -177,9 +177,9 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
   if (S->getBeginLoc().isMacroID())
     return SourceLocation();
 
-  SourceLocation CondEndLoc = S->getCond()->getLocEnd();
+  SourceLocation CondEndLoc = S->getCond()->getEndLoc();
   if (const DeclStmt *CondVar = S->getConditionVariableDeclStmt())
-    CondEndLoc = CondVar->getLocEnd();
+    CondEndLoc = CondVar->getEndLoc();
 
   if (!CondEndLoc.isValid()) {
     return SourceLocation();

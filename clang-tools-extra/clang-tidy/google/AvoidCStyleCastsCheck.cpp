@@ -135,7 +135,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     if (!isa<ParenExpr>(SubExpr)) {
       CastText.push_back('(');
       Diag << FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0, SM,
+          Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0, SM,
                                      getLangOpts()),
           ")");
     }

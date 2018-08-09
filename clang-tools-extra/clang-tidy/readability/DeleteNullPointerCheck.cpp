@@ -63,7 +63,7 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
 
   Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
       IfWithDelete->getBeginLoc(),
-      Lexer::getLocForEndOfToken(IfWithDelete->getCond()->getLocEnd(), 0,
+      Lexer::getLocForEndOfToken(IfWithDelete->getCond()->getEndLoc(), 0,
                                  *Result.SourceManager,
                                  Result.Context->getLangOpts())));
   if (Compound) {
