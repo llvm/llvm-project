@@ -2080,8 +2080,12 @@ class TestBase(Base):
               output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
               output += "\nError output:\n" + self.res.GetError()
+            if msg:
+              msg += output
+            if cmd:
+              cmd += output
             self.assertTrue(self.res.Succeeded(),
-                            msg if (msg + output) else CMD_MSG(cmd + output))
+                            msg if (msg) else CMD_MSG(cmd))
 
     def match(
             self,
