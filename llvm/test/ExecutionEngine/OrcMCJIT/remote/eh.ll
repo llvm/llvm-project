@@ -1,6 +1,6 @@
 ; REQUIRES: cxx-shared-library
 ; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s
-; XFAIL: arm, cygwin, win32, mingw
+; XFAIL: arm, cygwin, windows-msvc, windows-gnu
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 declare i8* @__cxa_allocate_exception(i64)

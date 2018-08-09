@@ -1,5 +1,5 @@
 ; REQUIRES: shell
-; XFAIL: mingw32
+; XFAIL: windows-gnu
 
 ; RUN: umask 000
 ; RUN: rm -f %t.000

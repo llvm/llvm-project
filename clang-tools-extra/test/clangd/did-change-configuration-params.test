@@ -1,6 +1,6 @@
 # RUN: clangd -compile_args_from=lsp -lit-test < %s 2> %t | FileCheck -strict-whitespace %s
 # RUN: cat %t | FileCheck --check-prefix=ERR %s
-# UNSUPPORTED: mingw32,win32
+# UNSUPPORTED: windows-gnu,windows-msvc
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---
 {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"compilationDatabaseChanges":{"/clangd-test/foo.c": {"workingDirectory":"/clangd-test", "compilationCommand": ["clang", "-c", "foo.c"]}}}}}

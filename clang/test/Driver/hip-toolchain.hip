@@ -13,13 +13,13 @@
 // RUN: 2>&1 | FileCheck %s
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
-// CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
@@ -39,13 +39,13 @@
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[OBJ_DEV1]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
-// CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-aux-triple" "x86_64--linux-gnu" "-emit-llvm-bc"
+// CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
@@ -64,13 +64,13 @@
 // CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[OBJ_DEV2]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "x86_64--linux-gnu" 
+// CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa" "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "x86_64--linux-gnu"
+// CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa" "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"

@@ -18,10 +18,10 @@
 // RUN: %clang_cc1 -triple x86_64--windows-gnu -fsyntax-only -fseh-exceptions %s
 // RUN: %clang_cc1 -triple x86_64--windows-gnu -fsyntax-only -fsjlj-exceptions %s
 
-// MSVC-X86-DWARF: error: invalid exception model 'fdwarf-exceptions' for target 'i686--windows-msvc'
-// MSVC-X86-SEH: error: invalid exception model 'fseh-exceptions' for target 'i686--windows-msvc'
-// MSVC-X86-SJLJ: error: invalid exception model 'fsjlj-exceptions' for target 'i686--windows-msvc'
+// MSVC-X86-DWARF: error: invalid exception model 'fdwarf-exceptions' for target 'i686-unknown-windows-msvc'
+// MSVC-X86-SEH: error: invalid exception model 'fseh-exceptions' for target 'i686-unknown-windows-msvc'
+// MSVC-X86-SJLJ: error: invalid exception model 'fsjlj-exceptions' for target 'i686-unknown-windows-msvc'
 
-// MSVC-X64-DWARF: error: invalid exception model 'fdwarf-exceptions' for target 'x86_64--windows-msvc'
-// MSVC-X64-SEH: error: invalid exception model 'fseh-exceptions' for target 'x86_64--windows-msvc'
-// MSVC-X64-SJLJ: error: invalid exception model 'fsjlj-exceptions' for target 'x86_64--windows-msvc'
+// MSVC-X64-DWARF: error: invalid exception model 'fdwarf-exceptions' for target 'x86_64-unknown-windows-msvc'
+// MSVC-X64-SEH: error: invalid exception model 'fseh-exceptions' for target 'x86_64-unknown-windows-msvc'
+// MSVC-X64-SJLJ: error: invalid exception model 'fsjlj-exceptions' for target 'x86_64-unknown-windows-msvc'
