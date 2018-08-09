@@ -161,6 +161,26 @@ Changes to the PowerPC Target
 
  During this release ...
 
+Changes to the SystemZ Target
+-----------------------------
+
+During this release the SystemZ target has:
+
+* Added support for vector registers in inline asm statements.
+
+* Added support for stackmaps, patchpoints, and the anyregcc
+  calling convention.
+
+* Changed the default function alignment to 16 bytes.
+
+* Improved codegen for condition code handling.
+
+* Improved instruction scheduling and microarchitecture tuning for z13/z14.
+
+* Fixed support for generating GCOV coverage data.
+
+* Fixed some codegen bugs.
+
 Changes to the X86 Target
 -------------------------
 
@@ -197,6 +217,10 @@ Changes to the DAG infrastructure
   should use UADDO/ADDCARRY/USUBO/SUBCARRY instead of the deprecated opcodes.
 
 * The SETCCE opcode has now been removed in favor of SETCCCARRY.
+
+* TableGen now supports multi-alternative pattern fragments via the PatFrags
+  class.  PatFrag is now derived from PatFrags, which may require minor
+  changes to backends that directly access PatFrag members.
 
 External Open Source Projects Using LLVM 7
 ==========================================
