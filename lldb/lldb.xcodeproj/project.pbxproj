@@ -487,6 +487,9 @@
 		8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */; };
 		2689004313353E0400698AC0 /* Mangled.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8010F1B85900F91463 /* Mangled.cpp */; };
 		4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4F29D3CD21010F84003B549A /* MangledTest.cpp */; };
+		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
+		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
+		4FBC04F5211A13770015A814 /* RichManglingContextTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */; };
 		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2690B3701381D5C300ECFBAE /* Memory.cpp */; };
@@ -2198,6 +2201,9 @@
 		26BC7E8010F1B85900F91463 /* Mangled.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Mangled.cpp; path = source/Core/Mangled.cpp; sourceTree = "<group>"; };
 		26BC7D6910F1B77400F91463 /* Mangled.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mangled.h; path = include/lldb/Core/Mangled.h; sourceTree = "<group>"; };
 		4F29D3CD21010F84003B549A /* MangledTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MangledTest.cpp; sourceTree = "<group>"; };
+		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
+		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
+		4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RichManglingContextTest.cpp; sourceTree = "<group>"; };
 		4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ManualDWARFIndex.cpp; sourceTree = "<group>"; };
 		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
 		2682100C143A59AE004BCF2D /* MappedHash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MappedHash.h; path = include/lldb/Core/MappedHash.h; sourceTree = "<group>"; };
@@ -3676,13 +3682,14 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
-				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
-				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
-				9A3D43E11F3237D500EB767C /* StreamCallbackTest.cpp */,
-				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
+				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
 				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
+				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
+				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
+				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
+				4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */,
+				9A3D43E11F3237D500EB767C /* StreamCallbackTest.cpp */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -5047,6 +5054,8 @@
 				26BC7D7110F1B77400F91463 /* PluginManager.h */,
 				26BC7E8A10F1B85900F91463 /* PluginManager.cpp */,
 				2626B6AD143E1BEA00EF935C /* RangeMap.h */,
+				4FBC04EE211A06820015A814 /* RichManglingContext.h */,
+				4FBC04EC211A06200015A814 /* RichManglingContext.cpp */,
 				26BC7CF910F1B71400F91463 /* SearchFilter.h */,
 				26BC7E1510F1B83100F91463 /* SearchFilter.cpp */,
 				26BC7D7510F1B77400F91463 /* Section.h */,
@@ -6955,6 +6964,7 @@
 				2619C4862107A9A2009CDE81 /* RegisterContextMinidump_ARM64.h in Headers */,
 				AF235EB11FBE77B6009C5541 /* RegisterContextPOSIX_ppc64le.h in Headers */,
 				267F68501CC02E270086832B /* RegisterContextPOSIXCore_s390x.h in Headers */,
+				4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
@@ -7473,6 +7483,7 @@
 				9A2057181F3B861400F6C293 /* TestType.cpp in Sources */,
 				9A2057171F3B861400F6C293 /* TestDWARFCallFrameInfo.cpp in Sources */,
 				4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */,
+				4FBC04F5211A13770015A814 /* RichManglingContextTest.cpp in Sources */,
 				9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */,
 				9A3D43DC1F3151C400EB767C /* TimeoutTest.cpp in Sources */,
 				9A3D43D61F3151C400EB767C /* ConstStringTest.cpp in Sources */,
@@ -7590,6 +7601,7 @@
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
 				AF415AE71D949E4400FCE0D4 /* x86AssemblyInspectionEngine.cpp in Sources */,
 				26474CCD18D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp in Sources */,
+				4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */,
 				AEB0E4591BD6E9F800B24093 /* LLVMUserExpression.cpp in Sources */,
 				2689FFEF13353DB600698AC0 /* Breakpoint.cpp in Sources */,
 				267A47FB1B1411C40021A5BC /* NativeRegisterContext.cpp in Sources */,

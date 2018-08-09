@@ -286,6 +286,7 @@ public:
   static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
   InputFile *fetch();
+  MemoryBufferRef getMemberBuffer();
 
 private:
   const llvm::object::Archive::Symbol Sym;
