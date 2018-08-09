@@ -3620,8 +3620,6 @@ public:
         NeedDecls(!IsModule || !Writer.getLangOpts().CPlusPlus),
         InterestingIdentifierOffsets(InterestingIdentifierOffsets) {}
 
-  bool needDecls() const { return NeedDecls; }
-
   static hash_value_type ComputeHash(const IdentifierInfo* II) {
     return llvm::djbHash(II->getName());
   }
@@ -3774,10 +3772,8 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
       assert(II && "NULL identifier in identifier table");
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST()
-          || II->hasChangedSinceDeserialization() ||
-          (Trait.needDecls() &&
-           II->hasFETokenInfoChangedSinceDeserialization()))
+      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
+          II->hasChangedSinceDeserialization())
         Generator.insert(II, ID, Trait);
     }
 
