@@ -50,60 +50,60 @@ using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 class IdentifierInfo {
   friend class IdentifierTable;
 
-  /// Front-end token ID or tok::identifier.
+  // Front-end token ID or tok::identifier.
   unsigned TokenID : 9;
 
-  /// ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
-  /// First NUM_OBJC_KEYWORDS values are for Objective-C,
-  /// the remaining values are for builtins.
+  // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
+  // First NUM_OBJC_KEYWORDS values are for Objective-C,
+  // the remaining values are for builtins.
   unsigned ObjCOrBuiltinID : 13;
 
-  /// True if there is a #define for this.
+  // True if there is a #define for this.
   unsigned HasMacro : 1;
 
-  /// True if there was a #define for this.
+  // True if there was a #define for this.
   unsigned HadMacro : 1;
 
-  /// True if the identifier is a language extension.
+  // True if the identifier is a language extension.
   unsigned IsExtension : 1;
 
-  /// True if the identifier is a keyword in a newer or proposed Standard.
+  // True if the identifier is a keyword in a newer or proposed Standard.
   unsigned IsFutureCompatKeyword : 1;
 
-  /// True if the identifier is poisoned.
+  // True if the identifier is poisoned.
   unsigned IsPoisoned : 1;
 
-  /// True if the identifier is a C++ operator keyword.
+  // True if the identifier is a C++ operator keyword.
   unsigned IsCPPOperatorKeyword : 1;
 
-  /// Internal bit set by the member function RecomputeNeedsHandleIdentifier.
-  /// See comment about RecomputeNeedsHandleIdentifier for more info.
+  // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
+  // See comment about RecomputeNeedsHandleIdentifier for more info.
   unsigned NeedsHandleIdentifier : 1;
 
-  /// True if the identifier was loaded (at least partially) from an AST file.
+  // True if the identifier was loaded (at least partially) from an AST file.
   unsigned IsFromAST : 1;
 
-  /// True if the identifier has changed from the definition
-  /// loaded from an AST file.
+  // True if the identifier has changed from the definition
+  // loaded from an AST file.
   unsigned ChangedAfterLoad : 1;
 
-  /// True if the identifier's frontend information has changed from the
-  /// definition loaded from an AST file.
+  // True if the identifier's frontend information has changed from the
+  // definition loaded from an AST file.
   unsigned FEChangedAfterLoad : 1;
 
-  /// True if revertTokenIDToIdentifier was called.
+  // True if revertTokenIDToIdentifier was called.
   unsigned RevertedTokenID : 1;
 
-  /// True if there may be additional information about
-  /// this identifier stored externally.
+  // True if there may be additional information about
+  // this identifier stored externally.
   unsigned OutOfDate : 1;
 
-  /// True if this is the 'import' contextual keyword.
+  // True if this is the 'import' contextual keyword.
   unsigned IsModulesImport : 1;
 
   // 29 bits left in a 64-bit word.
 
-  /// Managed by the language front-end.
+  // Managed by the language front-end.
   void *FETokenInfo = nullptr;
 
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;

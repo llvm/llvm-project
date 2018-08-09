@@ -1537,6 +1537,26 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(ComplexVal.second);
   }
 
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll: {
+    // clrsb(x) -> clz(x < 0 ? ~x : x) - 1 or
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+
+    llvm::Type *ArgType = ArgValue->getType();
+    Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *Zero = llvm::Constant::getNullValue(ArgType);
+    Value *IsNeg = Builder.CreateICmpSLT(ArgValue, Zero, "isneg");
+    Value *Inverse = Builder.CreateNot(ArgValue, "not");
+    Value *Tmp = Builder.CreateSelect(IsNeg, Inverse, ArgValue);
+    Value *Ctlz = Builder.CreateCall(F, {Tmp, Builder.getFalse()});
+    Value *Result = Builder.CreateSub(Ctlz, llvm::ConstantInt::get(ArgType, 1));
+    Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
+                                   "cast");
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:

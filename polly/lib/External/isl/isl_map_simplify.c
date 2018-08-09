@@ -3057,10 +3057,10 @@ __isl_give isl_basic_map *isl_basic_map_gist(__isl_take isl_basic_map *bmap,
 
 	bmap = isl_basic_map_remove_redundancies(bmap);
 	context = isl_basic_map_remove_redundancies(context);
+	context = isl_basic_map_align_divs(context, bmap);
 	if (!context)
 		goto error;
 
-	context = isl_basic_map_align_divs(context, bmap);
 	n_div = isl_basic_map_dim(context, isl_dim_div);
 	total = isl_basic_map_dim(bmap, isl_dim_all);
 	extra = n_div - isl_basic_map_dim(bmap, isl_dim_div);
