@@ -83,6 +83,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
 #define VMC_MAX 0xf
 #define WAITCNT_IMM(LGKMC, EXPC, VMC) ((LGKMC << 8) | (EXPC << 4) | VMC)
 
+__attribute__((target("vi-insts,ci-insts")))
 __attribute__((overloadable, always_inline)) void
 atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scope scope)
 {
