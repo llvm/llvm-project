@@ -22,7 +22,7 @@ namespace {
 AST_MATCHER_P(NamedDecl, usesHeaderFileExtension,
               utils::HeaderFileExtensionsSet, HeaderFileExtensions) {
   return utils::isExpansionLocInHeaderFile(
-      Node.getLocStart(), Finder->getASTContext().getSourceManager(),
+      Node.getBeginLoc(), Finder->getASTContext().getSourceManager(),
       HeaderFileExtensions);
 }
 

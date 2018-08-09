@@ -138,7 +138,7 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
       *Result.SourceManager, getLangOpts());
   // Replace foo->get() with *foo, and foo.get() with foo.
   std::string Replacement = Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
-  diag(GetCall->getLocStart(), "redundant get() call on smart pointer")
+  diag(GetCall->getBeginLoc(), "redundant get() call on smart pointer")
       << FixItHint::CreateReplacement(GetCall->getSourceRange(), Replacement);
 }
 

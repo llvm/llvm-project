@@ -78,13 +78,13 @@ MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
 
 int MapASTVisitor::getLine(const NamedDecl *D,
                            const ASTContext &Context) const {
-  return Context.getSourceManager().getPresumedLoc(D->getLocStart()).getLine();
+  return Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
 }
 
 llvm::StringRef MapASTVisitor::getFile(const NamedDecl *D,
                                        const ASTContext &Context) const {
   return Context.getSourceManager()
-      .getPresumedLoc(D->getLocStart())
+      .getPresumedLoc(D->getBeginLoc())
       .getFilename();
 }
 

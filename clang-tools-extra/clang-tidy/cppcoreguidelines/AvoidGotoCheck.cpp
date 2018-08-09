@@ -19,7 +19,7 @@ namespace cppcoreguidelines {
 
 namespace {
 AST_MATCHER(GotoStmt, isForwardJumping) {
-  return Node.getLocStart() < Node.getLabel()->getLocStart();
+  return Node.getBeginLoc() < Node.getLabel()->getBeginLoc();
 }
 } // namespace
 
@@ -49,7 +49,7 @@ void AvoidGotoCheck::check(const MatchFinder::MatchResult &Result) {
 
   diag(Goto->getGotoLoc(), "avoid using 'goto' for flow control")
       << Goto->getSourceRange();
-  diag(Goto->getLabel()->getLocStart(), "label defined here",
+  diag(Goto->getLabel()->getBeginLoc(), "label defined here",
        DiagnosticIDs::Note);
 }
 } // namespace cppcoreguidelines

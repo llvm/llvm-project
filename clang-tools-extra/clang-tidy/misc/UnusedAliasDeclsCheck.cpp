@@ -34,7 +34,7 @@ void UnusedAliasDeclsCheck::registerMatchers(MatchFinder *Finder) {
 void UnusedAliasDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *AliasDecl = Result.Nodes.getNodeAs<NamedDecl>("alias")) {
     FoundDecls[AliasDecl] = CharSourceRange::getCharRange(
-        AliasDecl->getLocStart(),
+        AliasDecl->getBeginLoc(),
         Lexer::findLocationAfterToken(
             AliasDecl->getLocEnd(), tok::semi, *Result.SourceManager,
             getLangOpts(),

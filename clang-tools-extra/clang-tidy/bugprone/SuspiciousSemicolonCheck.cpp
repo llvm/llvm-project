@@ -34,7 +34,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");
-  SourceLocation LocStart = Semicolon->getLocStart();
+  SourceLocation LocStart = Semicolon->getBeginLoc();
 
   if (LocStart.isMacroID())
     return;
@@ -60,7 +60,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
   if (Lexer.LexFromRawLexer(Token))
     return;
 
-  unsigned BaseIndent = SM.getSpellingColumnNumber(Statement->getLocStart());
+  unsigned BaseIndent = SM.getSpellingColumnNumber(Statement->getBeginLoc());
   unsigned NewTokenIndent = SM.getSpellingColumnNumber(Token.getLocation());
   unsigned NewTokenLine = SM.getSpellingLineNumber(Token.getLocation());
 

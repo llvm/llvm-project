@@ -168,7 +168,7 @@ void InefficientVectorOperationCheck::check(
     // FIXME: make it more intelligent to identify the pre-allocating operations
     // before the for loop.
     if (SM.isBeforeInTranslationUnit(Ref->getLocation(),
-                                     LoopStmt->getLocStart())) {
+                                     LoopStmt->getBeginLoc())) {
       return;
     }
   }
@@ -200,13 +200,13 @@ void InefficientVectorOperationCheck::check(
   }
 
   auto Diag =
-      diag(VectorAppendCall->getLocStart(),
+      diag(VectorAppendCall->getBeginLoc(),
            "%0 is called inside a loop; "
            "consider pre-allocating the vector capacity before the loop")
       << VectorAppendCall->getMethodDecl()->getDeclName();
 
   if (!ReserveStmt.empty())
-    Diag << FixItHint::CreateInsertion(LoopStmt->getLocStart(), ReserveStmt);
+    Diag << FixItHint::CreateInsertion(LoopStmt->getBeginLoc(), ReserveStmt);
 }
 
 } // namespace performance

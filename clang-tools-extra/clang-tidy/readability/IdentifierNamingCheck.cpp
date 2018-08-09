@@ -841,7 +841,7 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
     if (StringRef(Fixup).equals(Name)) {
       if (!IgnoreFailedSplit) {
         LLVM_DEBUG(llvm::dbgs()
-                   << Decl->getLocStart().printToString(*Result.SourceManager)
+                   << Decl->getBeginLoc().printToString(*Result.SourceManager)
                    << llvm::format(": unable to split words for %s '%s'\n",
                                    KindName.c_str(), Name.str().c_str()));
       }
