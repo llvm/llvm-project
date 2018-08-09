@@ -2,7 +2,7 @@
 // RUN: %run %t
 
 // REQUIRES: cxxabi
-// UNSUPPORTED: win32
+// UNSUPPORTED: windows-msvc
 
 int volatile n;
 

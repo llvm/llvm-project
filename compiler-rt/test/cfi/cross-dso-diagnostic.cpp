@@ -4,7 +4,7 @@
 // RUN: %clangxx_cfi_diag -g -o %t_exe_suffix %s %ld_flags_rpath_exe
 // RUN: %t_exe_suffix 2>&1 | FileCheck -DDSONAME=%xdynamiclib_namespec %s
 
-// UNSUPPORTED: win32
+// UNSUPPORTED: windows-msvc
 // REQUIRES: cxxabi
 
 #include <dlfcn.h>
