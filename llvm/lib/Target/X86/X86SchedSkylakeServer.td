@@ -112,6 +112,7 @@ defm : SKXWriteResPair<WriteIMul64, [SKXPort1],    3>; // Integer 64-bit multipl
 
 defm : X86WriteRes<WriteBSWAP32, [SKXPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SKXPort06, SKXPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteXCHG,       [SKXPort0156], 2, [3], 3>;
 
 defm : SKXWriteResPair<WriteDiv8,   [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
 defm : SKXWriteResPair<WriteDiv16,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
@@ -843,15 +844,6 @@ def: InstRW<[SKXWriteResGroup35], (instregex "ROL(8|16|32|64)rCL",
                                              "SAR(8|16|32|64)rCL",
                                              "SHL(8|16|32|64)rCL",
                                              "SHR(8|16|32|64)rCL")>;
-
-def SKXWriteResGroup36 : SchedWriteRes<[SKXPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [3];
-}
-def: InstRW<[SKXWriteResGroup36], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr,
-                                          XCHG8rr, XCHG16rr, XCHG32rr, XCHG64rr,
-                                          XCHG16ar, XCHG32ar, XCHG64ar)>;
 
 def SKXWriteResGroup37 : SchedWriteRes<[SKXPort0,SKXPort5]> {
   let Latency = 3;

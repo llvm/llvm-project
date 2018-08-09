@@ -37,7 +37,7 @@
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
 
 // REQUIRES: stable-runtime, cxxabi
-// UNSUPPORTED: win32
+// UNSUPPORTED: windows-msvc
 // Suppressions file not pushed to the device.
 // UNSUPPORTED: android
 // Compilation error

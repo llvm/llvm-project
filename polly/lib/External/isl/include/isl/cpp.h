@@ -1322,6 +1322,7 @@ public:
   static inline val neginfty(ctx ctx);
   static inline val negone(ctx ctx);
   static inline val one(ctx ctx);
+  inline val pow2() const;
   inline int sgn() const;
   inline val sub(val v2) const;
   inline val trunc() const;
@@ -1356,7 +1357,7 @@ aff::aff(const aff &obj)
   auto ctx = isl_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -1636,7 +1637,7 @@ ast_build::ast_build(const ast_build &obj)
   auto ctx = isl_ast_build_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -1808,7 +1809,7 @@ ast_expr::ast_expr(const ast_expr &obj)
   auto ctx = isl_ast_expr_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -1888,7 +1889,7 @@ ast_node::ast_node(const ast_node &obj)
   auto ctx = isl_ast_node_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -1968,7 +1969,7 @@ basic_map::basic_map(const basic_map &obj)
   auto ctx = isl_basic_map_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -2284,7 +2285,7 @@ basic_set::basic_set(const basic_set &obj)
   auto ctx = isl_basic_set_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -2575,7 +2576,7 @@ map::map(const map &obj)
   auto ctx = isl_map_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -2779,7 +2780,7 @@ void map::foreach_basic_map(const std::function<void(basic_map)> &fn) const
     std::rethrow_exception(fn_data.eptr);
   if (res < 0)
     exception::throw_last_error(ctx);
-  return void(res);
+  return;
 }
 
 map map::gist(map context) const
@@ -3074,7 +3075,7 @@ multi_aff::multi_aff(const multi_aff &obj)
   auto ctx = isl_multi_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -3221,7 +3222,7 @@ multi_pw_aff::multi_pw_aff(const multi_pw_aff &obj)
   auto ctx = isl_multi_pw_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -3414,7 +3415,7 @@ multi_union_pw_aff::multi_union_pw_aff(const multi_union_pw_aff &obj)
   auto ctx = isl_multi_union_pw_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -3572,7 +3573,7 @@ multi_val::multi_val(const multi_val &obj)
   auto ctx = isl_multi_val_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -3688,7 +3689,7 @@ point::point(const point &obj)
   auto ctx = isl_point_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -3757,7 +3758,7 @@ pw_aff::pw_aff(const pw_aff &obj)
   auto ctx = isl_pw_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -4144,7 +4145,7 @@ pw_multi_aff::pw_multi_aff(const pw_multi_aff &obj)
   auto ctx = isl_pw_multi_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -4326,7 +4327,7 @@ schedule::schedule(const schedule &obj)
   auto ctx = isl_schedule_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -4438,7 +4439,7 @@ schedule_constraints::schedule_constraints(const schedule_constraints &obj)
   auto ctx = isl_schedule_constraints_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -4682,7 +4683,7 @@ schedule_node::schedule_node(const schedule_node &obj)
   auto ctx = isl_schedule_node_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -4846,7 +4847,7 @@ set::set(const set &obj)
   auto ctx = isl_set_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -5013,7 +5014,7 @@ void set::foreach_basic_set(const std::function<void(basic_set)> &fn) const
     std::rethrow_exception(fn_data.eptr);
   if (res < 0)
     exception::throw_last_error(ctx);
-  return void(res);
+  return;
 }
 
 val set::get_stride(int pos) const
@@ -5296,7 +5297,7 @@ union_access_info::union_access_info(const union_access_info &obj)
   auto ctx = isl_union_access_info_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -5447,7 +5448,7 @@ union_flow::union_flow(const union_flow &obj)
   auto ctx = isl_union_flow_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -5587,7 +5588,7 @@ union_map::union_map(const union_map &obj)
   auto ctx = isl_union_map_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -5886,7 +5887,7 @@ void union_map::foreach_map(const std::function<void(map)> &fn) const
     std::rethrow_exception(fn_data.eptr);
   if (res < 0)
     exception::throw_last_error(ctx);
-  return void(res);
+  return;
 }
 
 union_map union_map::from(union_pw_multi_aff upma)
@@ -6361,7 +6362,7 @@ union_pw_aff::union_pw_aff(const union_pw_aff &obj)
   auto ctx = isl_union_pw_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -6484,7 +6485,7 @@ union_pw_multi_aff::union_pw_multi_aff(const union_pw_multi_aff &obj)
   auto ctx = isl_union_pw_multi_aff_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -6630,7 +6631,7 @@ union_set::union_set(const union_set &obj)
   auto ctx = isl_union_set_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -6796,7 +6797,7 @@ void union_set::foreach_point(const std::function<void(point)> &fn) const
     std::rethrow_exception(fn_data.eptr);
   if (res < 0)
     exception::throw_last_error(ctx);
-  return void(res);
+  return;
 }
 
 void union_set::foreach_set(const std::function<void(set)> &fn) const
@@ -6824,7 +6825,7 @@ void union_set::foreach_set(const std::function<void(set)> &fn) const
     std::rethrow_exception(fn_data.eptr);
   if (res < 0)
     exception::throw_last_error(ctx);
-  return void(res);
+  return;
 }
 
 union_set union_set::gist(union_set context) const
@@ -7083,7 +7084,7 @@ val::val(const val &obj)
   auto ctx = isl_val_get_ctx(obj.ptr);
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   ptr = obj.copy();
-  if (obj.ptr && !ptr)
+  if (!ptr)
     exception::throw_last_error(ctx);
 }
 
@@ -7573,6 +7574,18 @@ val val::one(ctx ctx)
 {
   options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
   auto res = isl_val_one(ctx.release());
+  if (!res)
+    exception::throw_last_error(ctx);
+  return manage(res);
+}
+
+val val::pow2() const
+{
+  if (!ptr)
+    exception::throw_NULL_input(__FILE__, __LINE__);
+  auto ctx = get_ctx();
+  options_scoped_set_on_error saved_on_error(ctx, exception::on_error);
+  auto res = isl_val_pow2(copy());
   if (!res)
     exception::throw_last_error(ctx);
   return manage(res);

@@ -686,6 +686,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     return false;
   }
 
+  assert(!I.mayReadOrWriteMemory() && "unhandled aliasing");
+
   // We've established mechanical ability and aliasing, it's up to the caller
   // to check fault safety
   return true;

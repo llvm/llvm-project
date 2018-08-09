@@ -75,6 +75,7 @@ public:
 	static bool is_string(QualType type);
 	static bool is_static(const isl_class &clazz, FunctionDecl *method);
 	static string extract_type(QualType type);
+	static const FunctionProtoType *extract_prototype(QualType type);
 };
 
 #endif /* ISL_INTERFACE_GENERATOR_H */
