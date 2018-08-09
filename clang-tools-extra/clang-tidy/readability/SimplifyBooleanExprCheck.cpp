@@ -385,7 +385,7 @@ void SimplifyBooleanExprCheck::reportBinOp(
                                    const Expr *ReplaceWith, bool Negated) {
     std::string Replacement =
         replacementExpression(Result, Negated, ReplaceWith);
-    SourceRange Range(LHS->getBeginLoc(), RHS->getLocEnd());
+    SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
     issueDiag(Result, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
               Replacement);
   };
@@ -641,7 +641,7 @@ void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
               "return " + replacementExpression(Result, Negated, Condition);
           issueDiag(
               Result, Lit->getBeginLoc(), SimplifyConditionalReturnDiagnostic,
-              SourceRange(If->getBeginLoc(), Ret->getLocEnd()), Replacement);
+              SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
           return;
         }
 

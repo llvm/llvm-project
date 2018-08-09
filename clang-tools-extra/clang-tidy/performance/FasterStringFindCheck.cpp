@@ -96,7 +96,7 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
       << FindFunc
       << FixItHint::CreateReplacement(
              CharSourceRange::getTokenRange(Literal->getBeginLoc(),
-                                            Literal->getLocEnd()),
+                                            Literal->getEndLoc()),
              *Replacement);
 }
 

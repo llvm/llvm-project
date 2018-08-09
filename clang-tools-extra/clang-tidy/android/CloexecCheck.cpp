@@ -64,7 +64,7 @@ void CloexecCheck::insertMacroFlag(const MatchFinder::MatchResult &Result,
     return;
 
   SourceLocation EndLoc =
-      Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getLocEnd()), 0, SM,
+      Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getEndLoc()), 0, SM,
                                  Result.Context->getLangOpts());
 
   diag(EndLoc, "%0 should use %1 where possible")

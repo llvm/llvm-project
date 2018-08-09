@@ -67,7 +67,7 @@ void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
         CharSourceRange::getTokenRange(EndExpr->getSourceRange()),
         *Result.SourceManager, getLangOpts());
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        AlgCall->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
+        AlgCall->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
     Hint = FixItHint::CreateInsertion(EndLoc, ", " + ReplacementText);
   }
 

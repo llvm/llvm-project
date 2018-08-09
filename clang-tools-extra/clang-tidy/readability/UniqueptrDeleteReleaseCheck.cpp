@@ -52,7 +52,7 @@ void UniqueptrDeleteReleaseCheck::check(
     return;
 
   SourceLocation AfterPtr = Lexer::getLocForEndOfToken(
-      PtrExpr->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
+      PtrExpr->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
   diag(DeleteExpr->getBeginLoc(),
        "prefer '= nullptr' to 'delete x.release()' to reset unique_ptr<> "
@@ -60,7 +60,7 @@ void UniqueptrDeleteReleaseCheck::check(
       << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
              DeleteExpr->getBeginLoc(), PtrExpr->getBeginLoc()))
       << FixItHint::CreateReplacement(
-             CharSourceRange::getTokenRange(AfterPtr, DeleteExpr->getLocEnd()),
+             CharSourceRange::getTokenRange(AfterPtr, DeleteExpr->getEndLoc()),
              " = nullptr");
 }
 

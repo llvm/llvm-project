@@ -710,7 +710,7 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
     const ast_matchers::MatchFinder::MatchResult &Result,
     const NamedDecl *FwdDecl) {
   SourceLocation Start = FwdDecl->getBeginLoc();
-  SourceLocation End = FwdDecl->getLocEnd();
+  SourceLocation End = FwdDecl->getEndLoc();
   const SourceManager &SM = *Result.SourceManager;
   SourceLocation AfterSemi = Lexer::findLocationAfterToken(
       End, tok::semi, SM, Result.Context->getLangOpts(),
@@ -911,7 +911,7 @@ void ChangeNamespaceTool::fixUsingShadowDecl(
     const ast_matchers::MatchFinder::MatchResult &Result,
     const UsingDecl *UsingDeclaration) {
   SourceLocation Start = UsingDeclaration->getBeginLoc();
-  SourceLocation End = UsingDeclaration->getLocEnd();
+  SourceLocation End = UsingDeclaration->getEndLoc();
   if (Start.isInvalid() || End.isInvalid())
     return;
 

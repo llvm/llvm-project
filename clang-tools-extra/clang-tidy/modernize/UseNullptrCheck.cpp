@@ -215,7 +215,7 @@ public:
     }
 
     SourceLocation StartLoc = FirstSubExpr->getBeginLoc();
-    SourceLocation EndLoc = FirstSubExpr->getLocEnd();
+    SourceLocation EndLoc = FirstSubExpr->getEndLoc();
 
     // If the location comes from a macro arg expansion, *all* uses of that
     // arg must be checked to result in NullTo(Member)Pointer casts.

@@ -292,7 +292,7 @@ getLocForEndOfDecl(const clang::Decl *D,
   // If the expansion range is a character range, this is the location of
   // the first character past the end. Otherwise it's the location of the
   // first character in the final token in the range.
-  auto EndExpansionLoc = SM.getExpansionRange(D->getLocEnd()).getEnd();
+  auto EndExpansionLoc = SM.getExpansionRange(D->getEndLoc()).getEnd();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(EndExpansionLoc);
   // Try to load the file buffer.
   bool InvalidTemp = false;
@@ -327,8 +327,8 @@ getFullRange(const clang::Decl *D,
                           getLocForEndOfDecl(D));
   // Expand to comments that are associated with the Decl.
   if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
-    if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getLocEnd()))
-      Full.setEnd(Comment->getLocEnd());
+    if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getEndLoc()))
+      Full.setEnd(Comment->getEndLoc());
     // FIXME: Don't delete a preceding comment, if there are no other entities
     // it could refer to.
     if (SM.isBeforeInTranslationUnit(Comment->getBeginLoc(), Full.getBegin()))

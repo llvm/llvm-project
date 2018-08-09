@@ -51,7 +51,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
       SM.getSpellingLineNumber(Token.getLocation()) != SemicolonLine)
     return;
 
-  SourceLocation LocEnd = Semicolon->getLocEnd();
+  SourceLocation LocEnd = Semicolon->getEndLoc();
   FileID FID = SM.getFileID(LocEnd);
   llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, LocEnd);
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),

@@ -23,7 +23,7 @@ namespace {
 SourceRange getTypeRange(const ParmVarDecl &Param) {
   if (Param.getIdentifier() != nullptr)
     return SourceRange(Param.getBeginLoc(),
-                       Param.getLocEnd().getLocWithOffset(-1));
+                       Param.getEndLoc().getLocWithOffset(-1));
   return Param.getSourceRange();
 }
 
@@ -97,7 +97,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
     Diag << Param;
   }
 
-  if (Param->getBeginLoc().isMacroID() != Param->getLocEnd().isMacroID()) {
+  if (Param->getBeginLoc().isMacroID() != Param->getEndLoc().isMacroID()) {
     // Do not offer a suggestion if the part of the variable declaration comes
     // from a macro.
     return;

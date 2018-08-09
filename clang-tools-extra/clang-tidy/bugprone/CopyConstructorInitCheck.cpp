@@ -81,7 +81,7 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
     if (CtorInitIsWritten) {
       if (!ParamName.empty())
         SafeFixIts.push_back(
-            FixItHint::CreateInsertion(CExpr->getLocEnd(), ParamName));
+            FixItHint::CreateInsertion(CExpr->getEndLoc(), ParamName));
     } else {
       if (Init->getSourceLocation().isMacroID() ||
           Ctor->getLocation().isMacroID() || ShouldNotDoFixit)

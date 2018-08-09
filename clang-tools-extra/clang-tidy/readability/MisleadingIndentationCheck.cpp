@@ -40,7 +40,7 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
   if (IfLoc.isMacroID() || ElseLoc.isMacroID())
     return;
 
-  if (SM.getExpansionLineNumber(If->getThen()->getLocEnd()) ==
+  if (SM.getExpansionLineNumber(If->getThen()->getEndLoc()) ==
       SM.getExpansionLineNumber(ElseLoc))
     return;
 
