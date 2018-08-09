@@ -41,8 +41,8 @@ static CharSourceRange removeNode(const MatchFinder::MatchResult &Result,
                                   const T *PrevNode, const T *Node,
                                   const T *NextNode) {
   if (NextNode)
-    return CharSourceRange::getCharRange(Node->getLocStart(),
-                                         NextNode->getLocStart());
+    return CharSourceRange::getCharRange(Node->getBeginLoc(),
+                                         NextNode->getBeginLoc());
 
   if (PrevNode)
     return CharSourceRange::getTokenRange(

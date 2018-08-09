@@ -68,6 +68,7 @@ llvm_config.feature_config(
                           'Hexagon': 'hexagon',
                           'Mips': 'mips',
                           'PowerPC': 'ppc',
+                          'RISCV': 'riscv',
                           'Sparc': 'sparc',
                           'WebAssembly': 'wasm',
                           'X86': 'x86'})

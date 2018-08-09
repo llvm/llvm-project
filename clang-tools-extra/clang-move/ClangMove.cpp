@@ -117,7 +117,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
                           std::string, AbsoluteFilePath) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
   auto FileEntry =
@@ -323,7 +323,7 @@ clang::CharSourceRange
 getFullRange(const clang::Decl *D,
              const clang::LangOptions &options = clang::LangOptions()) {
   const auto &SM = D->getASTContext().getSourceManager();
-  clang::SourceRange Full(SM.getExpansionLoc(D->getLocStart()),
+  clang::SourceRange Full(SM.getExpansionLoc(D->getBeginLoc()),
                           getLocForEndOfDecl(D));
   // Expand to comments that are associated with the Decl.
   if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
@@ -331,8 +331,8 @@ getFullRange(const clang::Decl *D,
       Full.setEnd(Comment->getLocEnd());
     // FIXME: Don't delete a preceding comment, if there are no other entities
     // it could refer to.
-    if (SM.isBeforeInTranslationUnit(Comment->getLocStart(), Full.getBegin()))
-      Full.setBegin(Comment->getLocStart());
+    if (SM.isBeforeInTranslationUnit(Comment->getBeginLoc(), Full.getBegin()))
+      Full.setBegin(Comment->getBeginLoc());
   }
 
   return clang::CharSourceRange::getCharRange(Full);
@@ -351,7 +351,7 @@ bool isInHeaderFile(const clang::Decl *D,
   const auto &SM = D->getASTContext().getSourceManager();
   if (OldHeader.empty())
     return false;
-  auto ExpansionLoc = SM.getExpansionLoc(D->getLocStart());
+  auto ExpansionLoc = SM.getExpansionLoc(D->getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
 

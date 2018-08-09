@@ -242,7 +242,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     }
 
     CharSourceRange BeforeArgument =
-        makeFileCharRange(ArgBeginLoc, Args[I]->getLocStart());
+        makeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());
     ArgBeginLoc = Args[I]->getLocEnd();
 
     std::vector<std::pair<SourceLocation, StringRef>> Comments;
@@ -251,7 +251,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     } else {
       // Fall back to parsing back from the start of the argument.
       CharSourceRange ArgsRange = makeFileCharRange(
-          Args[I]->getLocStart(), Args[NumArgs - 1]->getLocEnd());
+          Args[I]->getBeginLoc(), Args[NumArgs - 1]->getLocEnd());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 

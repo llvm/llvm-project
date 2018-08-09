@@ -91,7 +91,7 @@ char *__kmp_affinity_print_mask(char *buf, int buf_len,
   char *end = buf + buf_len - 1;
 
   // Find first element / check for empty set.
-  size_t i;
+  int i;
   i = mask->begin();
   if (i == mask->end()) {
     KMP_SNPRINTF(scan, end - scan + 1, "{<empty>}");
@@ -101,7 +101,7 @@ char *__kmp_affinity_print_mask(char *buf, int buf_len,
     return buf;
   }
 
-  KMP_SNPRINTF(scan, end - scan + 1, "{%ld", (long)i);
+  KMP_SNPRINTF(scan, end - scan + 1, "{%d", i);
   while (*scan != '\0')
     scan++;
   i++;
@@ -117,7 +117,7 @@ char *__kmp_affinity_print_mask(char *buf, int buf_len,
     if (end - scan < 15) {
       break;
     }
-    KMP_SNPRINTF(scan, end - scan + 1, ",%-ld", (long)i);
+    KMP_SNPRINTF(scan, end - scan + 1, ",%-d", i);
     while (*scan != '\0')
       scan++;
   }
@@ -840,7 +840,7 @@ static int __kmp_affinity_create_flat_map(AddrUnsPair **address2os,
   *address2os =
       (AddrUnsPair *)__kmp_allocate(sizeof(**address2os) * __kmp_avail_proc);
   int avail_ct = 0;
-  unsigned int i;
+  int i;
   KMP_CPU_SET_ITERATE(i, __kmp_affin_fullMask) {
     // Skip this proc if it is not included in the machine model.
     if (!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) {
@@ -958,17 +958,6 @@ public:
   unsigned threadId; //      ""
 };
 
-static int __kmp_affinity_cmp_apicThreadInfo_os_id(const void *a,
-                                                   const void *b) {
-  const apicThreadInfo *aa = (const apicThreadInfo *)a;
-  const apicThreadInfo *bb = (const apicThreadInfo *)b;
-  if (aa->osId < bb->osId)
-    return -1;
-  if (aa->osId > bb->osId)
-    return 1;
-  return 0;
-}
-
 static int __kmp_affinity_cmp_apicThreadInfo_phys_id(const void *a,
                                                      const void *b) {
   const apicThreadInfo *aa = (const apicThreadInfo *)a;
@@ -995,7 +984,6 @@ static int __kmp_affinity_cmp_apicThreadInfo_phys_id(const void *a,
 static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
                                             kmp_i18n_id_t *const msg_id) {
   kmp_cpuid buf;
-  int rc;
   *address2os = NULL;
   *msg_id = kmp_i18n_null;
 
@@ -1347,7 +1335,7 @@ static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
                __kmp_nThreadsPerCore, __kmp_ncores);
   }
   KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
-  KMP_DEBUG_ASSERT(nApics == __kmp_avail_proc);
+  KMP_DEBUG_ASSERT(nApics == (unsigned)__kmp_avail_proc);
   __kmp_pu_os_idx = (int *)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
   for (i = 0; i < nApics; ++i) {
     __kmp_pu_os_idx[i] = threadInfo[i].osId;
@@ -1802,7 +1790,6 @@ static int __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
     int newPkgLevel = -1;
     int newCoreLevel = -1;
     int newThreadLevel = -1;
-    int i;
     for (level = 0; level < depth; level++) {
       if ((maxCt[level] == 1) && (level != pkgLevel)) {
         // Remove this level. Never remove the package level
@@ -1871,16 +1858,6 @@ static int __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
 
 typedef unsigned *ProcCpuInfo;
 static unsigned maxIndex = pkgIdIndex;
-
-static int __kmp_affinity_cmp_ProcCpuInfo_os_id(const void *a, const void *b) {
-  const unsigned *aa = (const unsigned *)a;
-  const unsigned *bb = (const unsigned *)b;
-  if (aa[osIdIndex] < bb[osIdIndex])
-    return -1;
-  if (aa[osIdIndex] > bb[osIdIndex])
-    return 1;
-  return 0;
-}
 
 static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
                                                   const void *b) {
@@ -2512,7 +2489,7 @@ restart_radix_check:
 #endif // KMP_MIC && REDUCE_TEAM_SIZE
 
   KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
-  KMP_DEBUG_ASSERT(num_avail == __kmp_avail_proc);
+  KMP_DEBUG_ASSERT(num_avail == (unsigned)__kmp_avail_proc);
   __kmp_pu_os_idx = (int *)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
   for (i = 0; i < num_avail; ++i) { // fill the os indices
     __kmp_pu_os_idx[i] = threadInfo[i][osIdIndex];
@@ -2533,7 +2510,6 @@ restart_radix_check:
   // which has a sibling. These levels are in the map, and the package level is
   // always in the map.
   bool *inMap = (bool *)__kmp_allocate((maxIndex + 1) * sizeof(bool));
-  int level = 0;
   for (index = threadIdIndex; index < maxIndex; index++) {
     KMP_ASSERT(totals[index] >= totals[index + 1]);
     inMap[index] = (totals[index] > totals[index + 1]);
@@ -4772,8 +4748,6 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 #if OMP_40_ENABLED
 
 void __kmp_affinity_set_place(int gtid) {
-  int retval;
-
   if (!KMP_AFFINITY_CAPABLE()) {
     return;
   }
@@ -4942,8 +4916,6 @@ int __kmp_aux_get_affinity_max_proc() {
 }
 
 int __kmp_aux_set_affinity_mask_proc(int proc, void **mask) {
-  int retval;
-
   if (!KMP_AFFINITY_CAPABLE()) {
     return -1;
   }
@@ -4976,8 +4948,6 @@ int __kmp_aux_set_affinity_mask_proc(int proc, void **mask) {
 }
 
 int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask) {
-  int retval;
-
   if (!KMP_AFFINITY_CAPABLE()) {
     return -1;
   }
@@ -5010,8 +4980,6 @@ int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask) {
 }
 
 int __kmp_aux_get_affinity_mask_proc(int proc, void **mask) {
-  int retval;
-
   if (!KMP_AFFINITY_CAPABLE()) {
     return -1;
   }

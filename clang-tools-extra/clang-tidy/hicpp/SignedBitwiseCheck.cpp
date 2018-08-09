@@ -75,14 +75,14 @@ void SignedBitwiseCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *UnaryOp = N.getNodeAs<UnaryOperator>("unary-signed")) {
     IsUnary = true;
-    Location = UnaryOp->getLocStart();
+    Location = UnaryOp->getBeginLoc();
   } else {
     if (const auto *BinaryOp =
             N.getNodeAs<BinaryOperator>("binary-no-sign-interference"))
-      Location = BinaryOp->getLocStart();
+      Location = BinaryOp->getBeginLoc();
     else if (const auto *BinaryOp =
                  N.getNodeAs<BinaryOperator>("binary-sign-interference"))
-      Location = BinaryOp->getLocStart();
+      Location = BinaryOp->getBeginLoc();
     else
       llvm_unreachable("unexpected matcher result");
   }

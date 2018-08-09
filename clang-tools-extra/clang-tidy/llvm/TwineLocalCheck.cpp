@@ -50,7 +50,7 @@ void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
       SourceLocation EndLoc = Lexer::getLocForEndOfToken(
           VD->getInit()->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
       Diag << FixItHint::CreateReplacement(TypeRange, "std::string")
-           << FixItHint::CreateInsertion(VD->getInit()->getLocStart(), "(")
+           << FixItHint::CreateInsertion(VD->getInit()->getBeginLoc(), "(")
            << FixItHint::CreateInsertion(EndLoc, ").str()");
     } else {
       // Just an implicit conversion. Insert the real type.

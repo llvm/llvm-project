@@ -68,7 +68,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 
     UsingDeclContext Context(Using);
     Context.UsingDeclRange = CharSourceRange::getCharRange(
-        Using->getLocStart(),
+        Using->getBeginLoc(),
         Lexer::findLocationAfterToken(
             Using->getLocEnd(), tok::semi, *Result.SourceManager, getLangOpts(),
             /*SkipTrailingWhitespaceAndNewLine=*/true));

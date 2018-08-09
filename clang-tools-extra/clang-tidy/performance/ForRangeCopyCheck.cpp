@@ -41,7 +41,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
 void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("loopVar");
   // Ignore code in macros since we can't place the fixes correctly.
-  if (Var->getLocStart().isMacroID())
+  if (Var->getBeginLoc().isMacroID())
     return;
   if (handleConstValueCopy(*Var, *Result.Context))
     return;

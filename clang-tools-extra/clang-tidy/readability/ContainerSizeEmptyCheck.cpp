@@ -201,12 +201,12 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (MemberCall) {
-    diag(MemberCall->getLocStart(),
+    diag(MemberCall->getBeginLoc(),
          "the 'empty' method should be used to check "
          "for emptiness instead of 'size'")
         << Hint;
   } else {
-    diag(BinCmp->getLocStart(),
+    diag(BinCmp->getBeginLoc(),
          "the 'empty' method should be used to check "
          "for emptiness instead of comparing to an empty object")
         << Hint;

@@ -57,14 +57,14 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
   bool WarnOnly = false;
 
   if (C) {
-    BeginLoc = C->getLocStart();
+    BeginLoc = C->getBeginLoc();
     EndLoc = C->getLocEnd();
   } else if (const auto *E = Result.Nodes.getNodeAs<CallExpr>("call_expr")) {
-    BeginLoc = E->getLocStart();
+    BeginLoc = E->getBeginLoc();
     EndLoc = E->getLocEnd();
   } else if (const auto *D =
                  Result.Nodes.getNodeAs<DeclRefExpr>("decl_ref_expr")) {
-    BeginLoc = D->getLocStart();
+    BeginLoc = D->getBeginLoc();
     EndLoc = D->getLocEnd();
     WarnOnly = true;
   } else {

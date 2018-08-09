@@ -120,7 +120,7 @@ void SuspiciousMissingCommaCheck::check(
   if (double(Count) / Size > RatioThreshold)
     return;
 
-  diag(ConcatenatedLiteral->getLocStart(),
+  diag(ConcatenatedLiteral->getBeginLoc(),
        "suspicious string literal, probably missing a comma");
 }
 

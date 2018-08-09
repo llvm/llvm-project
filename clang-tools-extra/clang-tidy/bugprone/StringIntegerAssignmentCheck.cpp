@@ -39,7 +39,7 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
-  SourceLocation Loc = Argument->getLocStart();
+  SourceLocation Loc = Argument->getBeginLoc();
 
   auto Diag =
       diag(Loc, "an integer is interpreted as a character code when assigning "

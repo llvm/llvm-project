@@ -79,15 +79,15 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
     if (isa<CompoundStmt>(Inner))
       continue;
 
-    SourceLocation InnerLoc = Inner->getLocStart();
-    SourceLocation OuterLoc = CurrentStmt->getLocStart();
+    SourceLocation InnerLoc = Inner->getBeginLoc();
+    SourceLocation OuterLoc = CurrentStmt->getBeginLoc();
 
     if (SM.getExpansionLineNumber(InnerLoc) ==
         SM.getExpansionLineNumber(OuterLoc))
       continue;
 
     const Stmt *NextStmt = CStmt->body_begin()[i + 1];
-    SourceLocation NextLoc = NextStmt->getLocStart();
+    SourceLocation NextLoc = NextStmt->getBeginLoc();
 
     if (InnerLoc.isMacroID() || OuterLoc.isMacroID() || NextLoc.isMacroID())
       continue;

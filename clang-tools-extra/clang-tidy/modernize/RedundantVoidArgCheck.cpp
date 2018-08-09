@@ -103,9 +103,9 @@ void RedundantVoidArgCheck::processFunctionDecl(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function) {
   if (Function->isThisDeclarationADefinition()) {
     const Stmt *Body = Function->getBody();
-    SourceLocation Start = Function->getLocStart();
+    SourceLocation Start = Function->getBeginLoc();
     SourceLocation End =
-        Body ? Body->getLocStart().getLocWithOffset(-1) : Function->getLocEnd();
+        Body ? Body->getBeginLoc().getLocWithOffset(-1) : Function->getLocEnd();
     removeVoidArgumentTokens(Result, SourceRange(Start, End),
                              "function definition");
   } else {
@@ -198,10 +198,10 @@ void RedundantVoidArgCheck::processFieldDecl(
 void RedundantVoidArgCheck::processVarDecl(
     const MatchFinder::MatchResult &Result, const VarDecl *Var) {
   if (protoTypeHasNoParms(Var->getType())) {
-    SourceLocation Begin = Var->getLocStart();
+    SourceLocation Begin = Var->getBeginLoc();
     if (Var->hasInit()) {
       SourceLocation InitStart =
-          Result.SourceManager->getExpansionLoc(Var->getInit()->getLocStart())
+          Result.SourceManager->getExpansionLoc(Var->getInit()->getBeginLoc())
               .getLocWithOffset(-1);
       removeVoidArgumentTokens(Result, SourceRange(Begin, InitStart),
                                "variable declaration with initializer");
@@ -237,7 +237,7 @@ void RedundantVoidArgCheck::processLambdaExpr(
       Lambda->hasExplicitParameters()) {
     SourceLocation Begin =
         Lambda->getIntroducerRange().getEnd().getLocWithOffset(1);
-    SourceLocation End = Lambda->getBody()->getLocStart().getLocWithOffset(-1);
+    SourceLocation End = Lambda->getBody()->getBeginLoc().getLocWithOffset(-1);
     removeVoidArgumentTokens(Result, SourceRange(Begin, End),
                              "lambda expression");
   }

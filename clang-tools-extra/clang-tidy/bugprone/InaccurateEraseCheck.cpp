@@ -57,7 +57,7 @@ void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("erase");
   const auto *EndExpr =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("end");
-  const SourceLocation Loc = MemberCall->getLocStart();
+  const SourceLocation Loc = MemberCall->getBeginLoc();
 
   FixItHint Hint;
 

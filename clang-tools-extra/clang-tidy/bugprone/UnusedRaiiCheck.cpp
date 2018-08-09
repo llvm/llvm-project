@@ -52,7 +52,7 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
 
   // We ignore code expanded from macros to reduce the number of false
   // positives.
-  if (E->getLocStart().isMacroID())
+  if (E->getBeginLoc().isMacroID())
     return;
 
   // Don't emit a warning for the last statement in the surrounding compund
@@ -62,7 +62,7 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Emit a warning.
-  auto D = diag(E->getLocStart(), "object destroyed immediately after "
+  auto D = diag(E->getBeginLoc(), "object destroyed immediately after "
                                   "creation; did you mean to name the object?");
   const char *Replacement = " give_me_a_name";
 

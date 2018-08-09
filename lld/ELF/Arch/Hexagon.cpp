@@ -135,6 +135,12 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_HEX_B32_PCREL_X:
     or32le(Loc, applyMask(0x0fff3fff, Val >> 6));
     break;
+  case R_HEX_HI16:
+    or32le(Loc, applyMask(0x00c03fff, Val >> 16));
+    break;
+  case R_HEX_LO16:
+    or32le(Loc, applyMask(0x00c03fff, Val));
+    break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + toString(Type));
     break;
