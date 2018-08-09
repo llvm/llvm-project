@@ -145,7 +145,7 @@ TEST(Isl, APIntToIslVal) {
   {
     APInt APNOne(32, (1ull << 32) - 1, false);
     auto IslNOne = valFromAPInt(IslCtx, APNOne, false);
-    auto IslRef = isl::val(IslCtx, 32).two_exp().sub_ui(1);
+    auto IslRef = isl::val(IslCtx, 32).pow2().sub_ui(1);
     EXPECT_EQ(IslNOne, IslRef);
   }
 
@@ -154,7 +154,7 @@ TEST(Isl, APIntToIslVal) {
     APLarge = APLarge.shl(70);
     auto IslLarge = valFromAPInt(IslCtx, APLarge, false);
     auto IslRef = isl::val(IslCtx, 71);
-    IslRef = IslRef.two_exp();
+    IslRef = IslRef.pow2();
     EXPECT_EQ(IslLarge, IslRef);
   }
 
@@ -232,7 +232,7 @@ TEST(Isl, IslValToAPInt) {
   }
 
   {
-    auto IslNOne = isl::val(IslCtx, 32).two_exp().sub_ui(1);
+    auto IslNOne = isl::val(IslCtx, 32).pow2().sub_ui(1);
     auto APNOne = APIntFromVal(IslNOne);
     EXPECT_EQ((1ull << 32) - 1, APNOne);
     EXPECT_EQ(33u, APNOne.getBitWidth());
@@ -240,7 +240,7 @@ TEST(Isl, IslValToAPInt) {
 
   {
     auto IslLargeNum = isl::val(IslCtx, 60);
-    IslLargeNum = IslLargeNum.two_exp();
+    IslLargeNum = IslLargeNum.pow2();
     IslLargeNum = IslLargeNum.sub_ui(1);
     auto APLargeNum = APIntFromVal(IslLargeNum);
     EXPECT_EQ((1ull << 60) - 1, APLargeNum);
@@ -249,7 +249,7 @@ TEST(Isl, IslValToAPInt) {
 
   {
     auto IslExp = isl::val(IslCtx, 500);
-    auto IslLargePow2 = IslExp.two_exp();
+    auto IslLargePow2 = IslExp.pow2();
     auto APLargePow2 = APIntFromVal(IslLargePow2);
     EXPECT_TRUE(APLargePow2.isPowerOf2());
     EXPECT_EQ(502u, APLargePow2.getBitWidth());
@@ -258,7 +258,7 @@ TEST(Isl, IslValToAPInt) {
 
   {
     auto IslExp = isl::val(IslCtx, 500);
-    auto IslLargeNPow2 = IslExp.two_exp().neg();
+    auto IslLargeNPow2 = IslExp.pow2().neg();
     auto APLargeNPow2 = APIntFromVal(IslLargeNPow2);
     EXPECT_EQ(501u, APLargeNPow2.getBitWidth());
     EXPECT_EQ(501u, APLargeNPow2.getMinSignedBits());
@@ -267,7 +267,7 @@ TEST(Isl, IslValToAPInt) {
 
   {
     auto IslExp = isl::val(IslCtx, 512);
-    auto IslLargePow2 = IslExp.two_exp();
+    auto IslLargePow2 = IslExp.pow2();
     auto APLargePow2 = APIntFromVal(IslLargePow2);
     EXPECT_TRUE(APLargePow2.isPowerOf2());
     EXPECT_EQ(514u, APLargePow2.getBitWidth());
@@ -276,7 +276,7 @@ TEST(Isl, IslValToAPInt) {
 
   {
     auto IslExp = isl::val(IslCtx, 512);
-    auto IslLargeNPow2 = IslExp.two_exp().neg();
+    auto IslLargeNPow2 = IslExp.pow2().neg();
     auto APLargeNPow2 = APIntFromVal(IslLargeNPow2);
     EXPECT_EQ(513u, APLargeNPow2.getBitWidth());
     EXPECT_EQ(513u, APLargeNPow2.getMinSignedBits());
