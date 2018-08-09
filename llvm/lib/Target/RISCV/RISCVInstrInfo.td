@@ -759,6 +759,11 @@ def : Pat<(Tail (iPTR tglobaladdr:$dst)),
 def : Pat<(Tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in
+def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                       "lla", "$dst, $src">;
+
 /// Loads
 
 multiclass LdPat<PatFrag LoadOp, RVInst Inst> {

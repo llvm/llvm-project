@@ -642,6 +642,32 @@ TEST_F(StructuralEquivalenceRecordTest, TemplateVsNonTemplate) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceRecordTest,
+    FwdDeclRecordShouldBeEqualWithFwdDeclRecord) {
+  auto t = makeNamedDecls("class foo;", "class foo;", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest,
+       FwdDeclRecordShouldBeEqualWithRecordWhichHasDefinition) {
+  auto t =
+      makeNamedDecls("class foo;", "class foo { int A; };", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest,
+       RecordShouldBeEqualWithRecordWhichHasDefinition) {
+  auto t = makeNamedDecls("class foo { int A; };", "class foo { int A; };",
+                          Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, RecordsWithDifferentBody) {
+  auto t = makeNamedDecls("class foo { int B; };", "class foo { int A; };",
+                          Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceTest, CompareSameDeclWithMultiple) {
   auto t = makeNamedDecls(
       "struct A{ }; struct B{ }; void foo(A a, A b);",
@@ -649,6 +675,34 @@ TEST_F(StructuralEquivalenceTest, CompareSameDeclWithMultiple) {
       Lang_CXX);
   EXPECT_FALSE(testStructuralMatch(t));
 }
+
+struct StructuralEquivalenceEnumTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceEnumTest, FwdDeclEnumShouldBeEqualWithFwdDeclEnum) {
+  auto t = makeNamedDecls("enum class foo;", "enum class foo;", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumTest,
+       FwdDeclEnumShouldBeEqualWithEnumWhichHasDefinition) {
+  auto t =
+      makeNamedDecls("enum class foo;", "enum class foo { A };", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumTest,
+       EnumShouldBeEqualWithEnumWhichHasDefinition) {
+  auto t = makeNamedDecls("enum class foo { A };", "enum class foo { A };",
+                          Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumTest, EnumsWithDifferentBody) {
+  auto t = makeNamedDecls("enum class foo { B };", "enum class foo { A };",
+                          Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 
 } // end namespace ast_matchers
 } // end namespace clang

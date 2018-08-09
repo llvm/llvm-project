@@ -1041,6 +1041,6 @@ if(LLVM_DISTRIBUTION_COMPONENTS)
 endif()
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
-if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)
   include(InstallRequiredSystemLibraries)
 endif()

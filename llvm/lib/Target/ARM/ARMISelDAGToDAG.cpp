@@ -3076,10 +3076,12 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     switch (VT.getSimpleVT().SimpleTy) {
     default: return;
     case MVT::v8i8:  Opc = ARM::VTRNd8; break;
+    case MVT::v4f16:
     case MVT::v4i16: Opc = ARM::VTRNd16; break;
     case MVT::v2f32:
     case MVT::v2i32: Opc = ARM::VTRNd32; break;
     case MVT::v16i8: Opc = ARM::VTRNq8; break;
+    case MVT::v8f16:
     case MVT::v8i16: Opc = ARM::VTRNq16; break;
     case MVT::v4f32:
     case MVT::v4i32: Opc = ARM::VTRNq32; break;

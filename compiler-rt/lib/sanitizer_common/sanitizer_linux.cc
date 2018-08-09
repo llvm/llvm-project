@@ -55,6 +55,7 @@
 #include <sched.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <sys/param.h>
 #if !SANITIZER_SOLARIS
 #include <sys/ptrace.h>
 #endif
@@ -149,7 +150,11 @@ extern void internal_sigreturn();
 #if SANITIZER_OPENBSD
 # define SANITIZER_USE_GETENTROPY 1
 #else
-# define SANITIZER_USE_GETENTROPY 0
+# if SANITIZER_FREEBSD && __FreeBSD_version >= 1200000
+#   define SANITIZER_USE_GETENTROPY 1
+# else
+#   define SANITIZER_USE_GETENTROPY 0
+# endif
 #endif // SANITIZER_USE_GETENTROPY
 
 namespace __sanitizer {

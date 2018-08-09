@@ -81,6 +81,7 @@ defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteIMul,   [AtomPort01], [AtomPort01],  7,  7,  [7],  [7]>;
 defm : AtomWriteResPair<WriteIMul64, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 
+defm : X86WriteRes<WriteXCHG,        [AtomPort01], 2, [2], 1>;
 defm : X86WriteRes<WriteBSWAP32,     [AtomPort0], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,     [AtomPort0], 1, [1], 1>;
 
@@ -565,8 +566,6 @@ def : InstRW<[AtomWrite01_2], (instrs LEAVE, LEAVE64, POP16r,
                                       SCASB, SCASL, SCASQ, SCASW)>;
 def : InstRW<[AtomWrite01_2], (instregex "BT(C|R|S)(16|32|64)mi8",
                                          "PUSH(CS|DS|ES|FS|GS|SS)(16|32|64)",
-                                         "XADD(8|16|32|64)rr",
-                                         "XCHG(8|16|32|64)(ar|rr)",
                                          "(ST|ISTT)_F(P)?(16|32|64)?(m|rr)",
                                          "MMX_P(ADD|SUB)Qirr",
                                          "MOV(S|Z)X16rr8",

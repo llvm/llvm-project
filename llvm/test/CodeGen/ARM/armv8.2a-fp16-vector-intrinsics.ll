@@ -1101,25 +1101,29 @@ entry:
   ret %struct.float16x8x2_t %.fca.0.1.insert
 }
 
-; FIXME (PR38404)
-;
-;define dso_local %struct.float16x4x2_t @test_vtrn_f16(<4 x half> %a, <4 x half> %b) {
-;entry:
-;  %vtrn.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-;  %vtrn1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vtrn.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vtrn1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
-;
-;define dso_local %struct.float16x8x2_t @test_vtrnq_f16(<8 x half> %a, <8 x half> %b) {
-;entry:
-;  %vtrn.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-;  %vtrn1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vtrn.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vtrn1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x4x2_t @test_vtrn_f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: test_vtrn_f16:
+; CHECK:         vtrn.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vtrn.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  %vtrn1.i = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x half> %vtrn.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x half> %vtrn1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
+
+define dso_local %struct.float16x8x2_t @test_vtrnq_f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_vtrnq_f16:
+; CHECK:         vtrn.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vtrn.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %vtrn1.i = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x half> %vtrn.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x half> %vtrn1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
 
 define dso_local <4 x half> @test_vmov_n_f16(float %a.coerce) {
 ; CHECK-LABEL: test_vmov_n_f16:

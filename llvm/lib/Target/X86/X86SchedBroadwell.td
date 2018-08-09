@@ -121,6 +121,7 @@ defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWDivider], 25, [1, 10]>;
 
 defm : X86WriteRes<WriteBSWAP32,   [BWPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,   [BWPort06, BWPort15], 2, [1, 1], 2>;
+defm : X86WriteRes<WriteXCHG,      [BWPort0156], 2, [3], 3>;
 
 defm : BWWriteResPair<WriteCRC32, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
@@ -758,15 +759,6 @@ def BWWriteResGroup28 : SchedWriteRes<[BWPort5]> {
 }
 def: InstRW<[BWWriteResGroup28], (instregex "VPBROADCASTBrr",
                                             "VPBROADCASTWrr")>;
-
-def BWWriteResGroup30 : SchedWriteRes<[BWPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [3];
-}
-def: InstRW<[BWWriteResGroup30], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr,
-                                         XCHG8rr, XCHG16rr, XCHG32rr, XCHG64rr,
-                                         XCHG16ar, XCHG32ar, XCHG64ar)>;
 
 def BWWriteResGroup33 : SchedWriteRes<[BWPort5,BWPort0156]> {
   let Latency = 3;
