@@ -782,7 +782,8 @@ amd_comgr_status_t AMDGPUCompiler::PreprocessToSource() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+      return Status;
 
   if (auto Status = AddIncludeFlags())
     return Status;
@@ -811,7 +812,8 @@ amd_comgr_status_t AMDGPUCompiler::CompileToBitcode() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+      return Status;
 
   if (auto Status = AddIncludeFlags())
     return Status;
@@ -879,7 +881,8 @@ amd_comgr_status_t AMDGPUCompiler::CodeGenBitcodeToRelocatable() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+      return Status;
 
   Args.push_back("-c");
 
@@ -891,7 +894,8 @@ amd_comgr_status_t AMDGPUCompiler::CodeGenBitcodeToAssembly() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+      return Status;
 
   Args.push_back("-S");
 
@@ -903,7 +907,8 @@ amd_comgr_status_t AMDGPUCompiler::AssembleToRelocatable() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+      return Status;
 
   if (auto Status = AddIncludeFlags())
     return Status;
@@ -959,7 +964,8 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
     return Status;
 
   if (ActionInfo->isa_name)
-    AddTargetIdentifierFlags(ActionInfo->isa_name);
+    if (auto Status = AddTargetIdentifierFlags(ActionInfo->isa_name))
+        return Status;
 
   for (auto &Option : Options)
     Args.push_back(Option.c_str());
