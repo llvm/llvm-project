@@ -158,7 +158,7 @@ std::string getPosixPath(std::string S) {
   SmallString<128> Result;
   llvm::sys::path::native(S, Result, llvm::sys::path::Style::posix);
   return Result.str();
-};
+}
 } // end anonymous namespace
 
 TEST(VirtualFileSystemTest, StatusQueries) {

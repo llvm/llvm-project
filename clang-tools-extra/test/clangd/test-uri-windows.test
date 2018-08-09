@@ -1,5 +1,5 @@
 # RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
-# REQUIRES: mingw32 || win32
+# REQUIRES: windows-gnu || windows-msvc
 # Test authority-less URI
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---

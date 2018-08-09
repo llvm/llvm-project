@@ -1,5 +1,5 @@
 // REQUIRES: clang-driver
-// XFAIL: win32,win64
+// XFAIL: windows-msvc
 
 // RUN: %clang -### -S -fprofile-arcs %s 2>&1 | FileCheck -check-prefix=CHECK-GCNO-DEFAULT-LOCATION %s
 // RUN: %clang -### -S -fprofile-arcs -no-integrated-as %s 2>&1 | FileCheck -check-prefix=CHECK-GCNO-DEFAULT-LOCATION %s

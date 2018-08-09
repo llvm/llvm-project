@@ -34,6 +34,26 @@ TEST(ConstStringTest, MangledCounterpart) {
   EXPECT_EQ("bar", counterpart.GetStringRef());
 }
 
+TEST(ConstStringTest, FromMidOfBufferStringRef) {
+  // StringRef's into bigger buffer: no null termination
+  const char *buffer = "foobarbaz";
+  llvm::StringRef foo_ref(buffer, 3);
+  llvm::StringRef bar_ref(buffer + 3, 3);
+
+  ConstString foo(foo_ref);
+
+  ConstString bar;
+  bar.SetStringWithMangledCounterpart(bar_ref, foo);
+  EXPECT_EQ("bar", bar.GetStringRef());
+
+  ConstString counterpart;
+  EXPECT_TRUE(bar.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("foo", counterpart.GetStringRef());
+
+  EXPECT_TRUE(foo.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("bar", counterpart.GetStringRef());
+}
+
 TEST(ConstStringTest, NullAndEmptyStates) {
   ConstString foo("foo");
   EXPECT_FALSE(!foo);

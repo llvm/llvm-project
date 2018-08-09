@@ -1398,24 +1398,20 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
       T->getAttrKind() == AttributedType::attr_objc_ownership)
     return printAfter(T->getEquivalentType(), OS);
 
-  if (T->getAttrKind() == AttributedType::attr_objc_kindof)
-    return;
-
-  // TODO: not all attributes are GCC-style attributes.
-  if (T->isMSTypeSpec())
-    return;
-
-  // Nothing to print after.
-  if (T->getAttrKind() == AttributedType::attr_nonnull ||
-      T->getAttrKind() == AttributedType::attr_nullable ||
-      T->getAttrKind() == AttributedType::attr_null_unspecified)
-    return printAfter(T->getModifiedType(), OS);
-
   // If this is a calling convention attribute, don't print the implicit CC from
   // the modified type.
   SaveAndRestore<bool> MaybeSuppressCC(InsideCCAttribute, T->isCallingConv());
 
   printAfter(T->getModifiedType(), OS);
+
+  // Some attributes are printed as qualifiers before the type, so we have
+  // nothing left to do.
+  if (T->getAttrKind() == AttributedType::attr_objc_kindof ||
+      T->isMSTypeSpec() ||
+      T->getAttrKind() == AttributedType::attr_nonnull ||
+      T->getAttrKind() == AttributedType::attr_nullable ||
+      T->getAttrKind() == AttributedType::attr_null_unspecified)
+    return;
 
   // Don't print the inert __unsafe_unretained attribute at all.
   if (T->getAttrKind() == AttributedType::attr_objc_inert_unsafe_unretained)
@@ -1426,22 +1422,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
       !T->getEquivalentType()->castAs<FunctionType>()
                              ->getExtInfo().getProducesResult())
     return;
-
-  // Print nullability type specifiers that occur after
-  if (T->getAttrKind() == AttributedType::attr_nonnull ||
-      T->getAttrKind() == AttributedType::attr_nullable ||
-      T->getAttrKind() == AttributedType::attr_null_unspecified) {
-    if (T->getAttrKind() == AttributedType::attr_nonnull)
-      OS << " _Nonnull";
-    else if (T->getAttrKind() == AttributedType::attr_nullable)
-      OS << " _Nullable";
-    else if (T->getAttrKind() == AttributedType::attr_null_unspecified)
-      OS << " _Null_unspecified";
-    else
-      llvm_unreachable("unhandled nullability");
-
-    return;
-  }
 
   if (T->getAttrKind() == AttributedType::attr_lifetimebound) {
     OS << " [[clang::lifetimebound]]";
