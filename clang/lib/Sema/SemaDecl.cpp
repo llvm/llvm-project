@@ -2478,14 +2478,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
                                    AMK == Sema::AMK_Override,
                                    AttrSpellingListIndex);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
-    NewAttr = S.mergeInternalLinkageAttr(
-        D, InternalLinkageA->getRange(),
-        &S.Context.Idents.get(InternalLinkageA->getSpelling()),
-        AttrSpellingListIndex);
+    NewAttr = S.mergeInternalLinkageAttr(D, *InternalLinkageA);
   else if (const auto *CommonA = dyn_cast<CommonAttr>(Attr))
-    NewAttr = S.mergeCommonAttr(D, CommonA->getRange(),
-                                &S.Context.Idents.get(CommonA->getSpelling()),
-                                AttrSpellingListIndex);
+    NewAttr = S.mergeCommonAttr(D, *CommonA);
   else if (isa<AlignedAttr>(Attr))
     // AlignedAttrs are handled separately, because we need to handle all
     // such attributes on a declaration at the same time.

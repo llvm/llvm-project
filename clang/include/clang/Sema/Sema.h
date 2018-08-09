@@ -2486,11 +2486,11 @@ public:
   SwiftNameAttr *mergeSwiftNameAttr(Decl *D, SourceRange Range,
                                     StringRef Name, bool Override,
                                     unsigned AttrSpellingListIndex);
-  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, SourceRange Range,
-                                                IdentifierInfo *Ident,
-                                                unsigned AttrSpellingListIndex);
-  CommonAttr *mergeCommonAttr(Decl *D, SourceRange Range, IdentifierInfo *Ident,
-                              unsigned AttrSpellingListIndex);
+  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
+  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
+                                                const InternalLinkageAttr &AL);
+  CommonAttr *mergeCommonAttr(Decl *D, const ParsedAttr &AL);
+  CommonAttr *mergeCommonAttr(Decl *D, const CommonAttr &AL);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
