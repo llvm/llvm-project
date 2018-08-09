@@ -114,8 +114,19 @@ struct StructuralEquivalenceContext {
 private:
   /// Finish checking all of the structural equivalences.
   ///
-  /// \returns true if an error occurred, false otherwise.
+  /// \returns true if the equivalence check failed (non-equivalence detected),
+  /// false if equivalence was detected.
   bool Finish();
+
+  /// Check for common properties at Finish.
+  /// \returns true if D1 and D2 may be equivalent,
+  /// false if they are for sure not.
+  bool CheckCommonEquivalence(Decl *D1, Decl *D2);
+
+  /// Check for class dependent properties at Finish.
+  /// \returns true if D1 and D2 may be equivalent,
+  /// false if they are for sure not.
+  bool CheckKindSpecificEquivalence(Decl *D1, Decl *D2);
 };
 
 } // namespace clang

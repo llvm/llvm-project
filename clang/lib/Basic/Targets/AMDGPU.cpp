@@ -210,7 +210,8 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
   }
   if (!hasFP32Denormals)
     TargetOpts.Features.push_back(
-        (Twine(CGOptsGPU.HasFastFMAF && !CGOpts.FlushDenorm
+        (Twine(CGOptsGPU.HasFastFMAF && CGOptsGPU.HasFullRateF32Denorms &&
+               !CGOpts.FlushDenorm
                    ? '+'
                    : '-') +
          Twine("fp32-denormals"))

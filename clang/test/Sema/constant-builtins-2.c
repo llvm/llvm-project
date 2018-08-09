@@ -176,6 +176,19 @@ char ffs4[__builtin_ffs(0xfbe70) == 5 ? 1 : -1];
 char ffs5[__builtin_ffs(1U << (BITSIZE(int) - 1)) == BITSIZE(int) ? 1 : -1];
 char ffs6[__builtin_ffsl(0x10L) == 5 ? 1 : -1];
 char ffs7[__builtin_ffsll(0x100LL) == 9 ? 1 : -1];
+
+char clrsb1[__builtin_clrsb(0) == BITSIZE(int) - 1 ? 1 : -1];
+char clrsb2[__builtin_clrsbl(0L) == BITSIZE(long) - 1 ? 1 : -1];
+char clrsb3[__builtin_clrsbll(0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+char clrsb4[__builtin_clrsb(~0) == BITSIZE(int) - 1 ? 1 : -1];
+char clrsb5[__builtin_clrsbl(~0L) == BITSIZE(long) - 1 ? 1 : -1];
+char clrsb6[__builtin_clrsbll(~0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+char clrsb7[__builtin_clrsb(1) == BITSIZE(int) - 2 ? 1 : -1];
+char clrsb8[__builtin_clrsb(~1) == BITSIZE(int) - 2 ? 1 : -1];
+char clrsb9[__builtin_clrsb(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+char clrsb10[__builtin_clrsb(~(1 << (BITSIZE(int) - 1))) == 0 ? 1 : -1];
+char clrsb11[__builtin_clrsb(0xf) == BITSIZE(int) - 5 ? 1 : -1];
+char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
 #undef BITSIZE
 
 // GCC misc stuff

@@ -164,6 +164,6 @@
 // COMMON-SAME: "-x" "cuda"
 // CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
-// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64--linux-gnu"
+// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
 // CHECK-CXXINCLUDE: ld{{.*}}"

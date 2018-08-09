@@ -15,7 +15,7 @@
 // RUN:   --cuda-gpu-arch=sm_30 --cuda-device-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix SM20 -check-prefix SM30 %s
 
-// HOST-DAG: "-cc1" "-triple" "x86_64--linux-gnu"
+// HOST-DAG: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // SM20-DAG: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // SM20-same: "-target-cpu" "sm_20"
 // SM30-DAG: "-cc1" "-triple" "nvptx64-nvidia-cuda"
