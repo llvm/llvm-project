@@ -438,36 +438,63 @@ define double @fail2(double %f1, double %f2) {
   ret double %t3
 }
 
-; c1 * x - x => (c1 - 1.0) * x
-define float @fold13(float %x) {
-; CHECK-LABEL: @fold13(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 6.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %mul = fmul fast float %x, 7.000000e+00
-  %sub = fsub fast float %mul, %x
-  ret float %sub
-}
+; (X * C) - X --> X * (C - 1.0)
 
-; Check again using the minimal subset of FMF.
-define float @fold13_reassoc_nsz(float %x) {
-; CHECK-LABEL: @fold13_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 6.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+define float @fsub_op0_fmul_const(float %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz float [[X:%.*]], 6.000000e+00
+; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %mul = fmul reassoc nsz float %x, 7.000000e+00
+  %mul = fmul float %x, 7.0
   %sub = fsub reassoc nsz float %mul, %x
   ret float %sub
 }
 
+; (X * C) - X --> X * (C - 1.0)
+
+define <2 x float> @fsub_op0_fmul_const_vec(<2 x float> %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float 6.000000e+00, float -4.300000e+01>
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul <2 x float> %x, <float 7.0, float -42.0>
+  %sub = fsub reassoc nsz <2 x float> %mul, %x
+  ret <2 x float> %sub
+}
+
+; X - (X * C) --> X * (1.0 - C)
+
+define float @fsub_op1_fmul_const(float %x) {
+; CHECK-LABEL: @fsub_op1_fmul_const(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz float [[X:%.*]], -6.000000e+00
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %mul = fmul float %x, 7.0
+  %sub = fsub reassoc nsz float %x, %mul
+  ret float %sub
+}
+
+; X - (X * C) --> X * (1.0 - C)
+
+define <2 x float> @fsub_op1_fmul_const_vec(<2 x float> %x) {
+; CHECK-LABEL: @fsub_op1_fmul_const_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float -6.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul <2 x float> %x, <float 7.0, float 0.0>
+  %sub = fsub reassoc nsz <2 x float> %x, %mul
+  ret <2 x float> %sub
+}
+
 ; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fold13_reassoc(float %x) {
-; CHECK-LABEL: @fold13_reassoc(
+
+define float @fsub_op0_fmul_const_wrong_FMF(float %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const_wrong_FMF(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc float [[X:%.*]], 7.000000e+00
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc float [[MUL]], [[X]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %mul = fmul reassoc float %x, 7.000000e+00
+  %mul = fmul reassoc float %x, 7.0
   %sub = fsub reassoc float %mul, %x
   ret float %sub
 }

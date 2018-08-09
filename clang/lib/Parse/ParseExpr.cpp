@@ -1742,7 +1742,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         // Code completion for a member access expression.
         Actions.CodeCompleteMemberReferenceExpr(
             getCurScope(), Base, CorrectedBase, OpLoc, OpKind == tok::arrow,
-            Base && ExprStatementTokLoc == Base->getLocStart());
+            Base && ExprStatementTokLoc == Base->getBeginLoc());
 
         cutOffParsing();
         return ExprError();

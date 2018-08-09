@@ -311,7 +311,7 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
 
   // Retrieve the associated statement.
   const Stmt *S = TrackedNullab->getNullabilitySource();
-  if (!S || S->getLocStart().isInvalid()) {
+  if (!S || S->getBeginLoc().isInvalid()) {
     S = PathDiagnosticLocation::getStmt(N);
   }
 
@@ -766,7 +766,7 @@ void NullabilityChecker::checkPostCall(const CallEvent &Call,
   // CG headers are misannotated. Do not warn for symbols that are the results
   // of CG calls.
   const SourceManager &SM = C.getSourceManager();
-  StringRef FilePath = SM.getFilename(SM.getSpellingLoc(Decl->getLocStart()));
+  StringRef FilePath = SM.getFilename(SM.getSpellingLoc(Decl->getBeginLoc()));
   if (llvm::sys::path::filename(FilePath).startswith("CG")) {
     State = State->set<NullabilityMap>(Region, Nullability::Contradicted);
     C.addTransition(State);

@@ -192,7 +192,7 @@ bool Expr::isKnownToHaveBooleanValue() const {
 // Amusing macro metaprogramming hack: check whether a class provides
 // a more specific implementation of getExprLoc().
 //
-// See also Stmt.cpp:{getLocStart(),getLocEnd()}.
+// See also Stmt.cpp:{getBeginLoc(),getEndLoc()}.
 namespace {
   /// This implementation is used when a class provides a custom
   /// implementation of getExprLoc.
@@ -209,7 +209,7 @@ namespace {
   template <class E>
   SourceLocation getExprLocImpl(const Expr *expr,
                                 SourceLocation (Expr::*v)() const) {
-    return static_cast<const E*>(expr)->getLocStart();
+    return static_cast<const E *>(expr)->getBeginLoc();
   }
 }
 
@@ -447,15 +447,15 @@ DeclRefExpr *DeclRefExpr::CreateEmpty(const ASTContext &Context,
   return new (Mem) DeclRefExpr(EmptyShell());
 }
 
-SourceLocation DeclRefExpr::getLocStart() const {
+SourceLocation DeclRefExpr::getBeginLoc() const {
   if (hasQualifier())
     return getQualifierLoc().getBeginLoc();
-  return getNameInfo().getLocStart();
+  return getNameInfo().getBeginLoc();
 }
-SourceLocation DeclRefExpr::getLocEnd() const {
+SourceLocation DeclRefExpr::getEndLoc() const {
   if (hasExplicitTemplateArgs())
     return getRAngleLoc();
-  return getNameInfo().getLocEnd();
+  return getNameInfo().getEndLoc();
 }
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy, IdentType IT,
@@ -1358,22 +1358,22 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-SourceLocation CallExpr::getLocStart() const {
+SourceLocation CallExpr::getBeginLoc() const {
   if (isa<CXXOperatorCallExpr>(this))
-    return cast<CXXOperatorCallExpr>(this)->getLocStart();
+    return cast<CXXOperatorCallExpr>(this)->getBeginLoc();
 
-  SourceLocation begin = getCallee()->getLocStart();
+  SourceLocation begin = getCallee()->getBeginLoc();
   if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
-    begin = getArg(0)->getLocStart();
+    begin = getArg(0)->getBeginLoc();
   return begin;
 }
-SourceLocation CallExpr::getLocEnd() const {
+SourceLocation CallExpr::getEndLoc() const {
   if (isa<CXXOperatorCallExpr>(this))
-    return cast<CXXOperatorCallExpr>(this)->getLocEnd();
+    return cast<CXXOperatorCallExpr>(this)->getEndLoc();
 
   SourceLocation end = getRParenLoc();
   if (end.isInvalid() && getNumArgs() > 0 && getArg(getNumArgs() - 1))
-    end = getArg(getNumArgs() - 1)->getLocEnd();
+    end = getArg(getNumArgs() - 1)->getEndLoc();
   return end;
 }
 
@@ -1529,7 +1529,7 @@ MemberExpr *MemberExpr::Create(
   return E;
 }
 
-SourceLocation MemberExpr::getLocStart() const {
+SourceLocation MemberExpr::getBeginLoc() const {
   if (isImplicitAccess()) {
     if (hasQualifier())
       return getQualifierLoc().getBeginLoc();
@@ -1538,17 +1538,17 @@ SourceLocation MemberExpr::getLocStart() const {
 
   // FIXME: We don't want this to happen. Rather, we should be able to
   // detect all kinds of implicit accesses more cleanly.
-  SourceLocation BaseStartLoc = getBase()->getLocStart();
+  SourceLocation BaseStartLoc = getBase()->getBeginLoc();
   if (BaseStartLoc.isValid())
     return BaseStartLoc;
   return MemberLoc;
 }
-SourceLocation MemberExpr::getLocEnd() const {
+SourceLocation MemberExpr::getEndLoc() const {
   SourceLocation EndLoc = getMemberNameInfo().getEndLoc();
   if (hasExplicitTemplateArgs())
     EndLoc = getRAngleLoc();
   else if (EndLoc.isInvalid())
-    EndLoc = getBase()->getLocEnd();
+    EndLoc = getBase()->getEndLoc();
   return EndLoc;
 }
 
@@ -2039,9 +2039,9 @@ bool InitListExpr::isIdiomaticZeroInitializer(const LangOptions &LangOpts) const
   return Lit && Lit->getValue() == 0;
 }
 
-SourceLocation InitListExpr::getLocStart() const {
+SourceLocation InitListExpr::getBeginLoc() const {
   if (InitListExpr *SyntacticForm = getSyntacticForm())
-    return SyntacticForm->getLocStart();
+    return SyntacticForm->getBeginLoc();
   SourceLocation Beg = LBraceLoc;
   if (Beg.isInvalid()) {
     // Find the first non-null initializer.
@@ -2049,7 +2049,7 @@ SourceLocation InitListExpr::getLocStart() const {
                                      E = InitExprs.end();
       I != E; ++I) {
       if (Stmt *S = *I) {
-        Beg = S->getLocStart();
+        Beg = S->getBeginLoc();
         break;
       }
     }
@@ -2057,9 +2057,9 @@ SourceLocation InitListExpr::getLocStart() const {
   return Beg;
 }
 
-SourceLocation InitListExpr::getLocEnd() const {
+SourceLocation InitListExpr::getEndLoc() const {
   if (InitListExpr *SyntacticForm = getSyntacticForm())
-    return SyntacticForm->getLocEnd();
+    return SyntacticForm->getEndLoc();
   SourceLocation End = RBraceLoc;
   if (End.isInvalid()) {
     // Find the first non-null initializer from the end.
@@ -2067,7 +2067,7 @@ SourceLocation InitListExpr::getLocEnd() const {
          E = InitExprs.rend();
          I != E; ++I) {
       if (Stmt *S = *I) {
-        End = S->getLocEnd();
+        End = S->getEndLoc();
         break;
       }
     }
@@ -2274,12 +2274,12 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
       if (HasWarnUnusedResultAttr ||
           FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
         WarnE = this;
-        Loc = CE->getCallee()->getLocStart();
+        Loc = CE->getCallee()->getBeginLoc();
         R1 = CE->getCallee()->getSourceRange();
 
         if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getLocStart(),
-                           CE->getArg(NumArgs-1)->getLocEnd());
+          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                           CE->getArg(NumArgs - 1)->getEndLoc());
         return true;
       }
     }
@@ -2296,7 +2296,7 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     if (const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl()) {
       if (Type->hasAttr<WarnUnusedAttr>()) {
         WarnE = this;
-        Loc = getLocStart();
+        Loc = getBeginLoc();
         R1 = getSourceRange();
         return true;
       }
@@ -2396,7 +2396,7 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     WarnE = this;
     if (const CXXFunctionalCastExpr *CXXCE =
             dyn_cast<CXXFunctionalCastExpr>(this)) {
-      Loc = CXXCE->getLocStart();
+      Loc = CXXCE->getBeginLoc();
       R1 = CXXCE->getSubExpr()->getSourceRange();
     } else {
       const CStyleCastExpr *CStyleCE = cast<CStyleCastExpr>(this);
@@ -3866,11 +3866,11 @@ SourceRange DesignatedInitExpr::getDesignatorsSourceRange() const {
   DesignatedInitExpr *DIE = const_cast<DesignatedInitExpr*>(this);
   if (size() == 1)
     return DIE->getDesignator(0)->getSourceRange();
-  return SourceRange(DIE->getDesignator(0)->getLocStart(),
-                     DIE->getDesignator(size()-1)->getLocEnd());
+  return SourceRange(DIE->getDesignator(0)->getBeginLoc(),
+                     DIE->getDesignator(size() - 1)->getEndLoc());
 }
 
-SourceLocation DesignatedInitExpr::getLocStart() const {
+SourceLocation DesignatedInitExpr::getBeginLoc() const {
   SourceLocation StartLoc;
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
@@ -3885,8 +3885,8 @@ SourceLocation DesignatedInitExpr::getLocStart() const {
   return StartLoc;
 }
 
-SourceLocation DesignatedInitExpr::getLocEnd() const {
-  return getInit()->getLocEnd();
+SourceLocation DesignatedInitExpr::getEndLoc() const {
+  return getInit()->getEndLoc();
 }
 
 Expr *DesignatedInitExpr::getArrayIndex(const Designator& D) const {
@@ -3944,12 +3944,12 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
   BaseAndUpdaterExprs[1] = ILE;
 }
 
-SourceLocation DesignatedInitUpdateExpr::getLocStart() const {
-  return getBase()->getLocStart();
+SourceLocation DesignatedInitUpdateExpr::getBeginLoc() const {
+  return getBase()->getBeginLoc();
 }
 
-SourceLocation DesignatedInitUpdateExpr::getLocEnd() const {
-  return getBase()->getLocEnd();
+SourceLocation DesignatedInitUpdateExpr::getEndLoc() const {
+  return getBase()->getEndLoc();
 }
 
 ParenListExpr::ParenListExpr(const ASTContext& C, SourceLocation lparenloc,

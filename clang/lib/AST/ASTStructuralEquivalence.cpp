@@ -1061,9 +1061,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           diag::warn_odr_tag_type_inconsistent)
                 << Context.ToCtx.getTypeDeclType(D2);
-            Context.Diag2(Base2->getLocStart(), diag::note_odr_base)
+            Context.Diag2(Base2->getBeginLoc(), diag::note_odr_base)
                 << Base2->getType() << Base2->getSourceRange();
-            Context.Diag1(Base1->getLocStart(), diag::note_odr_base)
+            Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
                 << Base1->getType() << Base1->getSourceRange();
           }
           return false;
@@ -1075,9 +1075,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           diag::warn_odr_tag_type_inconsistent)
                 << Context.ToCtx.getTypeDeclType(D2);
-            Context.Diag2(Base2->getLocStart(), diag::note_odr_virtual_base)
+            Context.Diag2(Base2->getBeginLoc(), diag::note_odr_virtual_base)
                 << Base2->isVirtual() << Base2->getSourceRange();
-            Context.Diag1(Base1->getLocStart(), diag::note_odr_base)
+            Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
                 << Base1->isVirtual() << Base1->getSourceRange();
           }
           return false;
@@ -1126,7 +1126,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)
             << Context.ToCtx.getTypeDeclType(D2);
         const CXXBaseSpecifier *Base1 = D1CXX->bases_begin();
-        Context.Diag1(Base1->getLocStart(), diag::note_odr_base)
+        Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
             << Base1->getType() << Base1->getSourceRange();
         Context.Diag2(D2->getLocation(), diag::note_odr_missing_base);
       }

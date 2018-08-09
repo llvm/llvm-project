@@ -133,10 +133,12 @@ struct CopyConfig {
 
   StringRef SplitDWO;
   StringRef AddGnuDebugLink;
+  StringRef SymbolsPrefix;
   std::vector<StringRef> ToRemove;
   std::vector<StringRef> Keep;
   std::vector<StringRef> OnlyKeep;
   std::vector<StringRef> AddSection;
+  std::vector<StringRef> DumpSection;
   std::vector<StringRef> SymbolsToLocalize;
   std::vector<StringRef> SymbolsToGlobalize;
   std::vector<StringRef> SymbolsToWeaken;
@@ -323,6 +325,30 @@ static void SplitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   Writer->write();
 }
 
+static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
+                               Object &Obj) {
+  for (auto &Sec : Obj.sections()) {
+    if (Sec.Name == SecName) {
+      if (Sec.OriginalData.size() == 0)
+        return make_error<StringError>("Can't dump section \"" + SecName +
+                                           "\": it has no contents",
+                                       object_error::parse_failed);
+      Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+          FileOutputBuffer::create(Filename, Sec.OriginalData.size());
+      if (!BufferOrErr)
+        return BufferOrErr.takeError();
+      std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
+      std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(),
+                Buf->getBufferStart());
+      if (Error E = Buf->commit())
+        return E;
+      return Error::success();
+    }
+  }
+  return make_error<StringError>("Section not found",
+                                 object_error::parse_failed);
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -363,6 +389,9 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
       const auto I = Config.SymbolsToRename.find(Sym.Name);
       if (I != Config.SymbolsToRename.end())
         Sym.Name = I->getValue();
+
+      if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
+        Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
     });
 
     // The purpose of this loop is to mark symbols referenced by sections
@@ -555,6 +584,16 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
     }
   }
 
+  if (!Config.DumpSection.empty()) {
+    for (const auto &Flag : Config.DumpSection) {
+      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+      StringRef SecName = SecPair.first;
+      StringRef File = SecPair.second;
+      if (Error E = dumpSectionToFile(SecName, File, Obj))
+        reportError(Config.InputFilename, std::move(E));
+    }
+  }
+
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 }
@@ -688,6 +727,7 @@ static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
+  Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
@@ -711,6 +751,8 @@ static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.OnlyKeep.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section))
     Config.AddSection.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_dump_section))
+    Config.DumpSection.push_back(Arg->getValue());
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);

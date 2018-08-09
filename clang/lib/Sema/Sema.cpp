@@ -441,7 +441,7 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 
 void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
   if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
-                      E->getLocStart()))
+                      E->getBeginLoc()))
     return;
   // nullptr only exists from C++11 on, so don't warn on its absence earlier.
   if (!getLangOpts().CPlusPlus11)
@@ -454,13 +454,13 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
 
   // If it is a macro from system header, and if the macro name is not "NULL",
   // do not warn.
-  SourceLocation MaybeMacroLoc = E->getLocStart();
+  SourceLocation MaybeMacroLoc = E->getBeginLoc();
   if (Diags.getSuppressSystemWarnings() &&
       SourceMgr.isInSystemMacro(MaybeMacroLoc) &&
       !findMacroSpelling(MaybeMacroLoc, "NULL"))
     return;
 
-  Diag(E->getLocStart(), diag::warn_zero_as_null_pointer_constant)
+  Diag(E->getBeginLoc(), diag::warn_zero_as_null_pointer_constant)
       << FixItHint::CreateReplacement(E->getSourceRange(), "nullptr");
 }
 
@@ -488,7 +488,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   assert((VK == VK_RValue || !E->isRValue()) && "can't cast rvalue to lvalue");
 #endif
 
-  diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getLocStart());
+  diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
@@ -1899,6 +1899,6 @@ bool Sema::checkOpenCLDisabledTypeDeclSpec(const DeclSpec &DS, QualType QT) {
 
 bool Sema::checkOpenCLDisabledDecl(const NamedDecl &D, const Expr &E) {
   IdentifierInfo *FnName = D.getIdentifier();
-  return checkOpenCLDisabledTypeOrDecl(&D, E.getLocStart(), FnName,
+  return checkOpenCLDisabledTypeOrDecl(&D, E.getBeginLoc(), FnName,
                                        OpenCLDeclExtMap, 1, D.getSourceRange());
 }

@@ -250,6 +250,7 @@ public:
   uint64_t Offset = 0;
   uint64_t Size = 0;
   uint64_t Type = ELF::SHT_NULL;
+  ArrayRef<uint8_t> OriginalData;
 
   virtual ~SectionBase() = default;
 
@@ -386,7 +387,7 @@ struct Symbol {
   SectionBase *DefinedIn = nullptr;
   SymbolShndxType ShndxType;
   uint32_t Index;
-  StringRef Name;
+  std::string Name;
   uint32_t NameIndex;
   uint64_t Size;
   uint8_t Type;

@@ -2032,7 +2032,7 @@ void ASTDumper::VisitOMPExecutableDirective(
            << ClauseName.drop_front() << "Clause";
       }
       dumpPointer(C);
-      dumpSourceRange(SourceRange(C->getLocStart(), C->getLocEnd()));
+      dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
       if (C->isImplicit())
         OS << " <implicit>";
       for (auto *S : C->children())

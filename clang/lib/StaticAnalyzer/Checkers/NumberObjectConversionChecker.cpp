@@ -77,7 +77,7 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
     // to zero literals in non-pedantic mode.
     // FIXME: Introduce an AST matcher to implement the macro-related logic?
     bool MacroIndicatesWeShouldSkipTheCheck = false;
-    SourceLocation Loc = CheckIfNull->getLocStart();
+    SourceLocation Loc = CheckIfNull->getBeginLoc();
     if (Loc.isMacroID()) {
       StringRef MacroName = Lexer::getImmediateMacroName(
           Loc, ACtx.getSourceManager(), ACtx.getLangOpts());

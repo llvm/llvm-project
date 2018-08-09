@@ -245,7 +245,7 @@ AST_POLYMORPHIC_MATCHER(isExpansionInMainFile,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
   return SourceManager.isInMainFile(
-      SourceManager.getExpansionLoc(Node.getLocStart()));
+      SourceManager.getExpansionLoc(Node.getBeginLoc()));
 }
 
 /// Matches AST nodes that were expanded within system-header-files.
@@ -265,7 +265,7 @@ AST_POLYMORPHIC_MATCHER(isExpansionInMainFile,
 AST_POLYMORPHIC_MATCHER(isExpansionInSystemHeader,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid()) {
     return false;
   }
@@ -291,7 +291,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFileMatching,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
                           std::string, RegExp) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid()) {
     return false;
   }

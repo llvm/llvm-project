@@ -609,12 +609,12 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
   }
 
   if (T->isObjCObjectType()) {
-    SourceLocation StarLoc = TInfo->getTypeLoc().getLocEnd();
+    SourceLocation StarLoc = TInfo->getTypeLoc().getEndLoc();
     StarLoc = getLocForEndOfToken(StarLoc);
     Diag(FD.D.getIdentifierLoc(), diag::err_statically_allocated_object)
       << FixItHint::CreateInsertion(StarLoc, "*");
     T = Context.getObjCObjectPointerType(T);
-    SourceLocation TLoc = TInfo->getTypeLoc().getLocStart();
+    SourceLocation TLoc = TInfo->getTypeLoc().getBeginLoc();
     TInfo = Context.getTrivialTypeSourceInfo(T, TLoc);
   }
 
@@ -1061,7 +1061,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
     PropertyIvarLoc = PropertyLoc;
   SourceLocation PropertyDiagLoc = PropertyLoc;
   if (PropertyDiagLoc.isInvalid())
-    PropertyDiagLoc = ClassImpDecl->getLocStart();
+    PropertyDiagLoc = ClassImpDecl->getBeginLoc();
   ObjCPropertyDecl *property = nullptr;
   ObjCInterfaceDecl *IDecl = nullptr;
   // Find the class or category class where this property must have
@@ -1497,8 +1497,8 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
                 Diag(PropertyDiagLoc,
                      diag::err_atomic_property_nontrivial_assign_op)
                     << property->getType();
-                Diag(FuncDecl->getLocStart(),
-                     diag::note_callee_decl) << FuncDecl;
+                Diag(FuncDecl->getBeginLoc(), diag::note_callee_decl)
+                    << FuncDecl;
               }
       }
       PIDecl->setSetterCXXAssignment(Res.getAs<Expr>());
@@ -2100,7 +2100,7 @@ void Sema::diagnoseNullResettableSynthesizedSetters(const ObjCImplDecl *impDecl)
           !impDecl->getInstanceMethod(getterMethod->getSelector())) {
         SourceLocation loc = propertyImpl->getLocation();
         if (loc.isInvalid())
-          loc = impDecl->getLocStart();
+          loc = impDecl->getBeginLoc();
 
         Diag(loc, diag::warn_null_resettable_setter)
           << setterMethod->getSelector() << property->getDeclName();
@@ -2235,7 +2235,7 @@ void Sema::DiagnoseOwningPropertyGetterSynthesis(const ObjCImplementationDecl *D
           if (getterRedecl->getDeclContext() != PD->getDeclContext())
             continue;
           noteLoc = getterRedecl->getLocation();
-          fixItLoc = getterRedecl->getLocEnd();
+          fixItLoc = getterRedecl->getEndLoc();
         }
 
         Preprocessor &PP = getPreprocessor();

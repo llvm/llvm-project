@@ -151,3 +151,11 @@ r0=add(r1,mpyi(r2,##_start))
 # R_HEX_6_X
 { r0 = ##_start; r2 = r16 }
 # CHECK: 28003082   	r0 = ##69632; 	r2 = r16 }
+
+# R_HEX_HI16
+r0.h = #HI(_start)
+# CHECK: r0.h = #1
+
+# R_HEX_LO16
+r0.l = #LO(_start)
+# CHECK: r0.l = #4096

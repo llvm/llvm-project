@@ -10935,19 +10935,21 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
+  if ((Options.UnsafeFPMath ||
+      (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))
+      && N1.getOpcode() == ISD::FADD) {
+    // X - (X + Y) -> -Y
+    if (N0 == N1->getOperand(0))
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1), Flags);
+    // X - (Y + X) -> -Y
+    if (N0 == N1->getOperand(1))
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(0), Flags);
+  }
+
   // fold (fsub A, (fneg B)) -> (fadd A, B)
   if (isNegatibleForFree(N1, LegalOperations, TLI, &Options))
     return DAG.getNode(ISD::FADD, DL, VT, N0,
                        GetNegatedExpression(N1, DAG, LegalOperations), Flags);
-
-  if (Options.UnsafeFPMath && N1.getOpcode() == ISD::FADD) {
-    // X - (X + Y) -> -Y
-    if (N0 == N1->getOperand(0))
-      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1));
-    // X - (Y + X) -> -Y
-    if (N0 == N1->getOperand(1))
-      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(0));
-  }
 
   // FSUB -> FMA combines:
   if (SDValue Fused = visitFSUBForFMACombine(N)) {

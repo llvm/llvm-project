@@ -656,7 +656,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
   // faking up the function chunk is still the right thing to do.
 
   // Otherwise, we need to fake up a function declarator.
-  SourceLocation loc = declarator.getLocStart();
+  SourceLocation loc = declarator.getBeginLoc();
 
   // ...and *prepend* it to the declarator.
   SourceLocation NoLoc;
@@ -808,17 +808,17 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
         rangeToRemove = attr.getLocalSourceRange();
         if (attr.getTypePtr()->getImmediateNullability()) {
           typeArg = attr.getTypePtr()->getModifiedType();
-          S.Diag(attr.getLocStart(),
+          S.Diag(attr.getBeginLoc(),
                  diag::err_objc_type_arg_explicit_nullability)
-            << typeArg << FixItHint::CreateRemoval(rangeToRemove);
+              << typeArg << FixItHint::CreateRemoval(rangeToRemove);
           diagnosed = true;
         }
       }
 
       if (!diagnosed) {
-        S.Diag(qual.getLocStart(), diag::err_objc_type_arg_qualified)
-          << typeArg << typeArg.getQualifiers().getAsString()
-          << FixItHint::CreateRemoval(rangeToRemove);
+        S.Diag(qual.getBeginLoc(), diag::err_objc_type_arg_qualified)
+            << typeArg << typeArg.getQualifiers().getAsString()
+            << FixItHint::CreateRemoval(rangeToRemove);
       }
     }
 
@@ -878,9 +878,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
       }
 
       // Diagnose the mismatch.
-      S.Diag(typeArgInfo->getTypeLoc().getLocStart(),
+      S.Diag(typeArgInfo->getTypeLoc().getBeginLoc(),
              diag::err_objc_type_arg_does_not_match_bound)
-        << typeArg << bound << typeParam->getDeclName();
+          << typeArg << bound << typeParam->getDeclName();
       S.Diag(typeParam->getLocation(), diag::note_objc_type_param_here)
         << typeParam->getDeclName();
 
@@ -906,9 +906,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
         continue;
 
       // Diagnose the mismatch.
-      S.Diag(typeArgInfo->getTypeLoc().getLocStart(),
+      S.Diag(typeArgInfo->getTypeLoc().getBeginLoc(),
              diag::err_objc_type_arg_does_not_match_bound)
-        << typeArg << bound << typeParam->getDeclName();
+          << typeArg << bound << typeParam->getDeclName();
       S.Diag(typeParam->getLocation(), diag::note_objc_type_param_here)
         << typeParam->getDeclName();
 
@@ -924,10 +924,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
     }
 
     // Diagnose non-id-compatible type arguments.
-    S.Diag(typeArgInfo->getTypeLoc().getLocStart(),
+    S.Diag(typeArgInfo->getTypeLoc().getBeginLoc(),
            diag::err_objc_type_arg_not_id_compatible)
-      << typeArg
-      << typeArgInfo->getTypeLoc().getSourceRange();
+        << typeArg << typeArgInfo->getTypeLoc().getSourceRange();
 
     if (failOnError)
       return QualType();
@@ -1186,7 +1185,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   DeclSpec &DS = declarator.getMutableDeclSpec();
   SourceLocation DeclLoc = declarator.getIdentifierLoc();
   if (DeclLoc.isInvalid())
-    DeclLoc = DS.getLocStart();
+    DeclLoc = DS.getBeginLoc();
 
   ASTContext &Context = S.Context;
 
@@ -1268,8 +1267,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       // when one is not allowed.
       if (DS.isEmpty()) {
         S.Diag(DeclLoc, diag::ext_missing_declspec)
-          << DS.getSourceRange()
-        << FixItHint::CreateInsertion(DS.getLocStart(), "int");
+            << DS.getSourceRange()
+            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int");
       }
     } else if (!DS.hasTypeSpecifier()) {
       // C99 and C++ require a type specifier.  For example, C99 6.7.2p2 says:
@@ -2117,8 +2116,8 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   if (!getLangOpts().CPlusPlus11 &&
       ArraySize && !ArraySize->isTypeDependent() &&
       !ArraySize->getType()->isIntegralOrUnscopedEnumerationType()) {
-    Diag(ArraySize->getLocStart(), diag::err_array_size_non_int)
-      << ArraySize->getType() << ArraySize->getSourceRange();
+    Diag(ArraySize->getBeginLoc(), diag::err_array_size_non_int)
+        << ArraySize->getType() << ArraySize->getSourceRange();
     return QualType();
   }
 
@@ -2137,8 +2136,8 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     // of a VLA.
     if (getLangOpts().CPlusPlus11 &&
         !ArraySize->getType()->isIntegralOrUnscopedEnumerationType()) {
-      Diag(ArraySize->getLocStart(), diag::err_array_size_non_int)
-        << ArraySize->getType() << ArraySize->getSourceRange();
+      Diag(ArraySize->getBeginLoc(), diag::err_array_size_non_int)
+          << ArraySize->getType() << ArraySize->getSourceRange();
       return QualType();
     }
 
@@ -2151,25 +2150,25 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     // have a value greater than zero.
     if (ConstVal.isSigned() && ConstVal.isNegative()) {
       if (Entity)
-        Diag(ArraySize->getLocStart(), diag::err_decl_negative_array_size)
-          << getPrintableNameForEntity(Entity) << ArraySize->getSourceRange();
+        Diag(ArraySize->getBeginLoc(), diag::err_decl_negative_array_size)
+            << getPrintableNameForEntity(Entity) << ArraySize->getSourceRange();
       else
-        Diag(ArraySize->getLocStart(), diag::err_typecheck_negative_array_size)
-          << ArraySize->getSourceRange();
+        Diag(ArraySize->getBeginLoc(), diag::err_typecheck_negative_array_size)
+            << ArraySize->getSourceRange();
       return QualType();
     }
     if (ConstVal == 0) {
       // GCC accepts zero sized static arrays. We allow them when
       // we're not in a SFINAE context.
-      Diag(ArraySize->getLocStart(),
-           isSFINAEContext()? diag::err_typecheck_zero_array_size
-                            : diag::ext_typecheck_zero_array_size)
-        << ArraySize->getSourceRange();
+      Diag(ArraySize->getBeginLoc(), isSFINAEContext()
+                                         ? diag::err_typecheck_zero_array_size
+                                         : diag::ext_typecheck_zero_array_size)
+          << ArraySize->getSourceRange();
 
       if (ASM == ArrayType::Static) {
-        Diag(ArraySize->getLocStart(),
+        Diag(ArraySize->getBeginLoc(),
              diag::warn_typecheck_zero_static_array_size)
-          << ArraySize->getSourceRange();
+            << ArraySize->getSourceRange();
         ASM = ArrayType::Normal;
       }
     } else if (!T->isDependentType() && !T->isVariablyModifiedType() &&
@@ -2178,9 +2177,8 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
       unsigned ActiveSizeBits
         = ConstantArrayType::getNumAddressingBits(Context, T, ConstVal);
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-        Diag(ArraySize->getLocStart(), diag::err_array_too_large)
-          << ConstVal.toString(10)
-          << ArraySize->getSourceRange();
+        Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
+            << ConstVal.toString(10) << ArraySize->getSourceRange();
         return QualType();
       }
     }
@@ -2873,9 +2871,9 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         TemplateTypeParmDecl *CorrespondingTemplateParam =
             TemplateTypeParmDecl::Create(
                 SemaRef.Context, SemaRef.Context.getTranslationUnitDecl(),
-                /*KeyLoc*/SourceLocation(), /*NameLoc*/D.getLocStart(),
+                /*KeyLoc*/ SourceLocation(), /*NameLoc*/ D.getBeginLoc(),
                 TemplateParameterDepth, AutoParameterPosition,
-                /*Identifier*/nullptr, false, IsParameterPack);
+                /*Identifier*/ nullptr, false, IsParameterPack);
         LSI->AutoTemplateParams.push_back(CorrespondingTemplateParam);
         // Replace the 'auto' in the function parameter with this invented
         // template type parameter.
@@ -3302,9 +3300,9 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
         << D.getIdentifier();
   // FIXME: A cast to void is probably a better suggestion in cases where it's
   // valid (when there is no initializer and we're not in a condition).
-  S.Diag(D.getLocStart(), diag::note_function_style_cast_add_parentheses)
-      << FixItHint::CreateInsertion(D.getLocStart(), "(")
-      << FixItHint::CreateInsertion(S.getLocForEndOfToken(D.getLocEnd()), ")");
+  S.Diag(D.getBeginLoc(), diag::note_function_style_cast_add_parentheses)
+      << FixItHint::CreateInsertion(D.getBeginLoc(), "(")
+      << FixItHint::CreateInsertion(S.getLocForEndOfToken(D.getEndLoc()), ")");
   S.Diag(Paren.Loc, diag::note_remove_parens_for_variable_declaration)
       << FixItHint::CreateRemoval(Paren.Loc)
       << FixItHint::CreateRemoval(Paren.EndLoc);
@@ -4184,7 +4182,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         if (auto *attr = inferPointerNullability(
                 pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
-                D.getDeclSpec().getLocEnd(),
+                D.getDeclSpec().getEndLoc(),
                 D.getMutableDeclSpec().getAttributes())) {
           T = Context.getAttributedType(
                 AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
@@ -4386,14 +4384,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         } else if (FTI.hasTrailingReturnType()) {
           // T must be exactly 'auto' at this point. See CWG issue 681.
           if (isa<ParenType>(T)) {
-            S.Diag(D.getLocStart(),
-                 diag::err_trailing_return_in_parens)
-              << T << D.getSourceRange();
+            S.Diag(D.getBeginLoc(), diag::err_trailing_return_in_parens)
+                << T << D.getSourceRange();
             D.setInvalidType(true);
           } else if (D.getName().getKind() ==
                      UnqualifiedIdKind::IK_DeductionGuideName) {
             if (T != Context.DependentTy) {
-              S.Diag(D.getDeclSpec().getLocStart(),
+              S.Diag(D.getDeclSpec().getBeginLoc(),
                      diag::err_deduction_guide_with_complex_decl)
                   << D.getSourceRange();
               D.setInvalidType(true);
@@ -4475,11 +4472,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (T->isObjCObjectType()) {
         SourceLocation DiagLoc, FixitLoc;
         if (TInfo) {
-          DiagLoc = TInfo->getTypeLoc().getLocStart();
-          FixitLoc = S.getLocForEndOfToken(TInfo->getTypeLoc().getLocEnd());
+          DiagLoc = TInfo->getTypeLoc().getBeginLoc();
+          FixitLoc = S.getLocForEndOfToken(TInfo->getTypeLoc().getEndLoc());
         } else {
           DiagLoc = D.getDeclSpec().getTypeSpecTypeLoc();
-          FixitLoc = S.getLocForEndOfToken(D.getDeclSpec().getLocEnd());
+          FixitLoc = S.getLocForEndOfToken(D.getDeclSpec().getEndLoc());
         }
         S.Diag(DiagLoc, diag::err_object_cannot_be_passed_returned_by_value)
           << 0 << T
@@ -4887,7 +4884,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         !IsTypedefName &&
         D.getContext() != DeclaratorContext::TemplateArgContext &&
         D.getContext() != DeclaratorContext::TemplateTypeArgContext) {
-      SourceLocation Loc = D.getLocStart();
+      SourceLocation Loc = D.getBeginLoc();
       SourceRange RemovalRange;
       unsigned I;
       if (D.isFunctionDeclarator(I)) {
@@ -5301,7 +5298,7 @@ namespace {
       // FIXME. We should have DS.getTypeSpecTypeEndLoc(). But, it requires
       // addition field. What we have is good enough for dispay of location
       // of 'fixit' on interface name.
-      TL.setNameEndLoc(DS.getLocEnd());
+      TL.setNameEndLoc(DS.getEndLoc());
     }
     void VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
       TypeSourceInfo *RepTInfo = nullptr;
@@ -5815,8 +5812,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
 
     // Check the attribute arguments.
     if (Attr.getNumArgs() != 1) {
-      S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-          << Attr.getName() << 1;
+      S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
+                                                                        << 1;
       Attr.setInvalid();
       return;
     }
@@ -5951,8 +5948,8 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
         S.getSourceManager().getImmediateExpansionRange(AttrLoc).getBegin();
 
   if (!attr.isArgIdent(0)) {
-    S.Diag(AttrLoc, diag::err_attribute_argument_type)
-      << attr.getName() << AANT_ArgumentString;
+    S.Diag(AttrLoc, diag::err_attribute_argument_type) << attr
+                                                       << AANT_ArgumentString;
     attr.setInvalid();
     return true;
   }
@@ -6122,14 +6119,14 @@ static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   // Check the attribute arguments.
   if (!attr.isArgIdent(0)) {
     S.Diag(attr.getLoc(), diag::err_attribute_argument_type)
-      << attr.getName() << AANT_ArgumentString;
+        << attr << AANT_ArgumentString;
     attr.setInvalid();
     return true;
   }
   Qualifiers::GC GCAttr;
   if (attr.getNumArgs() > 1) {
-    S.Diag(attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << attr.getName() << 1;
+    S.Diag(attr.getLoc(), diag::err_attribute_wrong_number_arguments) << attr
+                                                                      << 1;
     attr.setInvalid();
     return true;
   }
@@ -6338,11 +6335,9 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   // pointer-to-member types.
   if (!isa<PointerType>(Desugared)) {
     if (Type->isMemberPointerType())
-      S.Diag(Attr.getLoc(), diag::err_attribute_no_member_pointers)
-          << Attr.getName();
+      S.Diag(Attr.getLoc(), diag::err_attribute_no_member_pointers) << Attr;
     else
-      S.Diag(Attr.getLoc(), diag::err_attribute_pointers_only)
-          << Attr.getName() << 0;
+      S.Diag(Attr.getLoc(), diag::err_attribute_pointers_only) << Attr << 0;
     return true;
   }
 
@@ -6906,8 +6901,8 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
                                  Sema &S) {
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << Attr.getName() << 1;
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
+                                                                      << 1;
     Attr.setInvalid();
     return;
   }
@@ -6943,8 +6938,8 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
   // check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << Attr.getName() << 1;
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
+                                                                      << 1;
     return;
   }
 
@@ -7032,14 +7027,14 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorType::VectorKind VecKind) {
   // Target must have NEON
   if (!S.Context.getTargetInfo().hasFeature("neon")) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr.getName();
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr;
     Attr.setInvalid();
     return;
   }
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << Attr.getName() << 1;
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
+                                                                      << 1;
     Attr.setInvalid();
     return;
   }
@@ -7049,8 +7044,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   if (numEltsExpr->isTypeDependent() || numEltsExpr->isValueDependent() ||
       !numEltsExpr->isIntegerConstantExpr(numEltsInt, S.Context)) {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-      << Attr.getName() << AANT_ArgumentIntegerConstant
-      << numEltsExpr->getSourceRange();
+        << Attr << AANT_ArgumentIntegerConstant
+        << numEltsExpr->getSourceRange();
     Attr.setInvalid();
     return;
   }
@@ -7099,8 +7094,9 @@ static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
       assert(0 && "Unable to find corresponding image type.");
     }
 
-    S.Diag(TypedefTy->getDecl()->getLocStart(),
-       diag::note_opencl_typedef_access_qualifier) << PrevAccessQual;
+    S.Diag(TypedefTy->getDecl()->getBeginLoc(),
+           diag::note_opencl_typedef_access_qualifier)
+        << PrevAccessQual;
   } else if (CurType->isPipeType()) {
     if (Attr.getSemanticSpelling() == OpenCLAccessAttr::Keyword_write_only) {
       QualType ElemType = CurType->getAs<PipeType>()->getElementType();
@@ -7256,7 +7252,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // A C++11 attribute on a declarator chunk must appertain to a type.
       if (attr.isCXX11Attribute() && TAL == TAL_DeclChunk) {
         state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
-          << attr.getName();
+            << attr;
         attr.setUsedAsTypeAttr();
       }
       break;
@@ -7364,9 +7360,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       case TAL_DeclName:
         state.getSema().Diag(attr.getLoc(),
                              diag::err_objc_kindof_wrong_position)
-          << FixItHint::CreateRemoval(attr.getLoc())
-          << FixItHint::CreateInsertion(
-               state.getDeclarator().getDeclSpec().getLocStart(), "__kindof ");
+            << FixItHint::CreateRemoval(attr.getLoc())
+            << FixItHint::CreateInsertion(
+                   state.getDeclarator().getDeclSpec().getBeginLoc(),
+                   "__kindof ");
         break;
       }
 
@@ -7864,7 +7861,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
     Diag(RD->getLocation(), diag::note_non_literal_virtual_base)
       << getLiteralDiagFromTagKind(RD->getTagKind()) << RD->getNumVBases();
     for (const auto &I : RD->vbases())
-      Diag(I.getLocStart(), diag::note_constexpr_virtual_base_here)
+      Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here)
           << I.getSourceRange();
   } else if (!RD->isAggregate() && !RD->hasConstexprNonCopyMoveConstructor() &&
              !RD->hasTrivialDefaultConstructor()) {
@@ -7872,9 +7869,8 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   } else if (RD->hasNonLiteralTypeFieldsOrBases()) {
     for (const auto &I : RD->bases()) {
       if (!I.getType()->isLiteralType(Context)) {
-        Diag(I.getLocStart(),
-             diag::note_non_literal_base_class)
-          << RD << I.getType() << I.getSourceRange();
+        Diag(I.getBeginLoc(), diag::note_non_literal_base_class)
+            << RD << I.getType() << I.getSourceRange();
         return true;
       }
     }

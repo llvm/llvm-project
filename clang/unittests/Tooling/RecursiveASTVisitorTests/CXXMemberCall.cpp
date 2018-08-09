@@ -18,7 +18,7 @@ class CXXMemberCallVisitor
 public:
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *Call) {
     Match(Call->getMethodDecl()->getQualifiedNameAsString(),
-          Call->getLocStart());
+          Call->getBeginLoc());
     return true;
   }
 };

@@ -393,7 +393,7 @@ protected:
     setNumTombstones(other.getNumTombstones());
 
     if (isPodLike<KeyT>::value && isPodLike<ValueT>::value)
-      memcpy(getBuckets(), other.getBuckets(),
+      memcpy(reinterpret_cast<void *>(getBuckets()), other.getBuckets(),
              getNumBuckets() * sizeof(BucketT));
     else
       for (size_t i = 0; i < getNumBuckets(); ++i) {

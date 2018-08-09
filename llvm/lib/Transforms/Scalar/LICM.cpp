@@ -582,6 +582,7 @@ namespace {
 bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<CallInst>(I) ||
+          isa<FenceInst>(I) ||
           isa<BinaryOperator>(I) || isa<CastInst>(I) ||
           isa<SelectInst>(I) || isa<GetElementPtrInst>(I) ||
           isa<CmpInst>(I) || isa<InsertElementInst>(I) ||
@@ -684,6 +685,21 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     // sink the call.
 
     return false;
+  } else if (auto *FI = dyn_cast<FenceInst>(&I)) {
+    // Fences alias (most) everything to provide ordering.  For the moment,
+    // just give up if there are any other memory operations in the loop.
+    auto Begin = CurAST->begin();
+    assert(Begin != CurAST->end() && "must contain FI");
+    if (std::next(Begin) != CurAST->end())
+      // constant memory for instance, TODO: handle better
+      return false;
+    auto *UniqueI = Begin->getUniqueInstruction();
+    if (!UniqueI)
+      // other memory op, give up
+      return false;
+    (void)FI; //suppress unused variable warning
+    assert(UniqueI == FI && "AS must contain FI");
+    return true;
   }
 
   assert(!I.mayReadOrWriteMemory() && "unhandled aliasing");
