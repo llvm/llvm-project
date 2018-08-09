@@ -63,7 +63,7 @@ namespace {
 class ASTWorker;
 }
 
-static const clang::clangd::Key<std::string> kFileBeingProcessed;
+static clang::clangd::Key<std::string> kFileBeingProcessed;
 
 llvm::Optional<llvm::StringRef> TUScheduler::getFileBeingProcessedInContext() {
   if (auto *File = Context::current().get(kFileBeingProcessed))
