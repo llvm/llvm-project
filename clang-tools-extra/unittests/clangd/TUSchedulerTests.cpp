@@ -197,20 +197,22 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
           S.update(File, Inputs, WantDiagnostics::Auto,
-                   [Nonce, &Mut,
+                   [File, Nonce, &Mut,
                     &TotalUpdates](llvm::Optional<std::vector<Diag>> Diags) {
                      EXPECT_THAT(Context::current().get(NonceKey),
                                  Pointee(Nonce));
 
                      std::lock_guard<std::mutex> Lock(Mut);
                      ++TotalUpdates;
+                     EXPECT_EQ(File,
+                               *TUScheduler::getFileBeingProcessedInContext());
                    });
         }
 
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
           S.runWithAST("CheckAST", File,
-                       [Inputs, Nonce, &Mut,
+                       [File, Inputs, Nonce, &Mut,
                         &TotalASTReads](llvm::Expected<InputsAndAST> AST) {
                          EXPECT_THAT(Context::current().get(NonceKey),
                                      Pointee(Nonce));
@@ -221,23 +223,27 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
                          std::lock_guard<std::mutex> Lock(Mut);
                          ++TotalASTReads;
+                         EXPECT_EQ(
+                             File,
+                             *TUScheduler::getFileBeingProcessedInContext());
                        });
         }
 
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
-          S.runWithPreamble("CheckPreamble", File,
-                            [Inputs, Nonce, &Mut, &TotalPreambleReads](
-                                llvm::Expected<InputsAndPreamble> Preamble) {
-                              EXPECT_THAT(Context::current().get(NonceKey),
-                                          Pointee(Nonce));
+          S.runWithPreamble(
+              "CheckPreamble", File,
+              [File, Inputs, Nonce, &Mut, &TotalPreambleReads](
+                  llvm::Expected<InputsAndPreamble> Preamble) {
+                EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
-                              ASSERT_TRUE((bool)Preamble);
-                              EXPECT_EQ(Preamble->Contents, Inputs.Contents);
+                ASSERT_TRUE((bool)Preamble);
+                EXPECT_EQ(Preamble->Contents, Inputs.Contents);
 
-                              std::lock_guard<std::mutex> Lock(Mut);
-                              ++TotalPreambleReads;
-                            });
+                std::lock_guard<std::mutex> Lock(Mut);
+                ++TotalPreambleReads;
+                EXPECT_EQ(File, *TUScheduler::getFileBeingProcessedInContext());
+              });
         }
       }
     }
