@@ -220,6 +220,7 @@ static bool mergeConstants(Module &M) {
       assert(Replacements[i].first->hasLocalLinkage() &&
              "Refusing to delete an externally visible global variable.");
       Replacements[i].first->eraseFromParent();
+      MadeChange = true;
     }
 
     NumMerged += Replacements.size();
