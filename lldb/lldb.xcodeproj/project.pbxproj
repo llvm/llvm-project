@@ -538,6 +538,7 @@
 		9A20573A1F3B8E7E00F6C293 /* MainLoopTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057301F3B8E7600F6C293 /* MainLoopTest.cpp */; };
 		8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */; };
 		2689004313353E0400698AC0 /* Mangled.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8010F1B85900F91463 /* Mangled.cpp */; };
+		4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4F29D3CD21010F84003B549A /* MangledTest.cpp */; };
 		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2690B3701381D5C300ECFBAE /* Memory.cpp */; };
@@ -2340,6 +2341,7 @@
 		2669415F1A6DC2AB0063BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "tools/lldb-mi/Makefile"; sourceTree = SOURCE_ROOT; };
 		26BC7E8010F1B85900F91463 /* Mangled.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Mangled.cpp; path = source/Core/Mangled.cpp; sourceTree = "<group>"; };
 		26BC7D6910F1B77400F91463 /* Mangled.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mangled.h; path = include/lldb/Core/Mangled.h; sourceTree = "<group>"; };
+		4F29D3CD21010F84003B549A /* MangledTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MangledTest.cpp; sourceTree = "<group>"; };
 		4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ManualDWARFIndex.cpp; sourceTree = "<group>"; };
 		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
 		2682100C143A59AE004BCF2D /* MappedHash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MappedHash.h; path = include/lldb/Core/MappedHash.h; sourceTree = "<group>"; };
@@ -3800,6 +3802,7 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
 				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				9A3D43E21F3237D500EB767C /* StateTest.cpp */,
 				9A3D43E11F3237D500EB767C /* StreamCallbackTest.cpp */,
@@ -7842,6 +7845,7 @@
 				9A3D43D71F3151C400EB767C /* LogTest.cpp in Sources */,
 				9A2057181F3B861400F6C293 /* TestType.cpp in Sources */,
 				9A2057171F3B861400F6C293 /* TestDWARFCallFrameInfo.cpp in Sources */,
+				4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */,
 				9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */,
 				9A3D43DC1F3151C400EB767C /* TimeoutTest.cpp in Sources */,
 				9A3D43D61F3151C400EB767C /* ConstStringTest.cpp in Sources */,
@@ -9486,7 +9490,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -9494,7 +9497,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
@@ -10630,7 +10632,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10638,7 +10639,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -10684,7 +10684,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10692,7 +10691,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -10738,7 +10736,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10746,7 +10743,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12085,7 +12081,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12093,7 +12088,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -12784,7 +12778,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12792,7 +12785,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -13765,7 +13757,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -13773,7 +13764,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
@@ -14368,7 +14358,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -14376,7 +14365,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;

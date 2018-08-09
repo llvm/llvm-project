@@ -16,28 +16,13 @@
 #pragma comment(lib, "dbghelp.lib")
 #endif
 
-#include <mutex>   // for mutex, loc...
-#include <string>  // for string
-#include <utility> // for pair
-
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef LLDB_USE_BUILTIN_DEMANGLER
-// Provide a fast-path demangler implemented in FastDemangle.cpp until it can
-// replace the existing C++ demangler with a complete implementation
-#include "lldb/Utility/FastDemangle.h"
-#include "llvm/Demangle/Demangle.h"
-#else
-// FreeBSD9-STABLE requires this to know about size_t in cxxabi.
-#include <cstddef>
-#include <cxxabi.h>
-#endif
+#include <cstdlib>
+#include <mutex>
+#include <string>
+#include <utility>
 
 #include "swift/Demangling/Demangle.h"
 #include "llvm/ADT/DenseMap.h"
-
-#include "lldb/Core/Mangled.h"
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
@@ -49,13 +34,14 @@
 #include <ctype.h>
 #include <functional>
 #include <mutex>
-#include "lldb/lldb-enumerations.h" // for LanguageType
+#include "lldb/lldb-enumerations.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
-#include "llvm/ADT/StringRef.h"    // for StringRef
-#include "llvm/Support/Compiler.h" // for LLVM_PRETT...
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace lldb_private;
 
@@ -339,18 +325,15 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         break;
       }
       case eManglingSchemeItanium: {
-#ifdef LLDB_USE_BUILTIN_DEMANGLER
-        if (log)
-          log->Printf("demangle itanium: %s", mangled_name);
-        // Try to use the fast-path demangler first for the performance win,
-        // falling back to the full demangler only when necessary
-        demangled_name = FastDemangle(mangled_name, m_mangled.GetLength());
-        if (!demangled_name)
-          demangled_name =
-              llvm::itaniumDemangle(mangled_name, NULL, NULL, NULL);
-#else
-        demangled_name = abi::__cxa_demangle(mangled_name, NULL, NULL, NULL);
-#endif
+        llvm::ItaniumPartialDemangler IPD;
+        bool demangle_err = IPD.partialDemangle(mangled_name);
+        if (!demangle_err) {
+          // Default buffer and size (realloc is used in case it's too small).
+          size_t demangled_size = 80;
+          demangled_name = static_cast<char *>(::malloc(demangled_size));
+          demangled_name = IPD.finishDemangle(demangled_name, &demangled_size);
+        }
+
         if (log) {
           if (demangled_name)
             log->Printf("demangled itanium: %s -> \"%s\"", mangled_name,
