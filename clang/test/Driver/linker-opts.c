@@ -5,7 +5,7 @@
 // CHECK: "-L{{.*}}/test1"
 
 // GCC driver is used as linker on cygming. It should be aware of LIBRARY_PATH.
-// XFAIL: win32
+// XFAIL: windows-msvc
 // REQUIRES: clang-driver
 // REQUIRES: native
 

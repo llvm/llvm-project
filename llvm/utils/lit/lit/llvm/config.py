@@ -88,7 +88,7 @@ class LLVMConfig(object):
                         'ASAN_OPTIONS', 'detect_leaks=1', append_path=True)
             if re.match(r'^x86_64.*-linux', target_triple):
                 features.add('x86_64-linux')
-            if re.match(r'.*-win32$', target_triple):
+            if re.match(r'.*-windows-msvc$', target_triple):
                 features.add('target-windows')
 
         use_gmalloc = lit_config.params.get('use_gmalloc', None)
@@ -236,10 +236,10 @@ class LLVMConfig(object):
         if not m:
             self.lit_config.fatal(
                 "Could not turn '%s' into Itanium ABI triple" % triple)
-        if m.group(3).lower() != 'win32':
-            # All non-win32 triples use the Itanium ABI.
+        if m.group(3).lower() != 'windows':
+            # All non-windows triples use the Itanium ABI.
             return triple
-        return m.group(1) + '-' + m.group(2) + '-mingw32'
+        return m.group(1) + '-' + m.group(2) + '-' + m.group(3) + '-gnu'
 
     def make_msabi_triple(self, triple):
         m = re.match(r'(\w+)-(\w+)-(\w+)', triple)
@@ -249,14 +249,14 @@ class LLVMConfig(object):
         isa = m.group(1).lower()
         vendor = m.group(2).lower()
         os = m.group(3).lower()
-        if os == 'win32':
-            # If the OS is win32, we're done.
+        if os == 'windows' and re.match(r'.*-msvc$', triple):
+            # If the OS is windows and environment is msvc, we're done.
             return triple
         if isa.startswith('x86') or isa == 'amd64' or re.match(r'i\d86', isa):
             # For x86 ISAs, adjust the OS.
-            return isa + '-' + vendor + '-win32'
-        # -win32 is not supported for non-x86 targets; use a default.
-        return 'i686-pc-win32'
+            return isa + '-' + vendor + '-windows-msvc'
+        # -msvc is not supported for non-x86 targets; use a default.
+        return 'i686-pc-windows-msvc'
 
     def add_tool_substitutions(self, tools, search_dirs=None):
         if not search_dirs:

@@ -5,7 +5,7 @@
 // RUN: %env_asan_opts=replace_intrin=0 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-ON %s
 
 // FIXME: printf is not intercepted on Windows yet.
-// XFAIL: win32
+// XFAIL: windows-msvc
 
 #include <stdio.h>
 #include <string.h>

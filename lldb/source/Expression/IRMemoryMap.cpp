@@ -272,8 +272,8 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
                                     uint32_t permissions, uint8_t alignment,
                                     AllocationPolicy policy)
     : m_process_alloc(process_alloc), m_process_start(process_start),
-      m_size(size), m_permissions(permissions), m_alignment(alignment),
-      m_policy(policy), m_leak(false) {
+      m_size(size), m_policy(policy), m_leak(false), m_permissions(permissions),
+      m_alignment(alignment) {
   switch (policy) {
   default:
     assert(0 && "We cannot reach this!");
@@ -389,9 +389,10 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
   lldb::addr_t mask = alignment - 1;
   aligned_address = (allocation_address + mask) & (~mask);
 
-  m_allocations[aligned_address] =
-      Allocation(allocation_address, aligned_address, allocation_size,
-                 permissions, alignment, policy);
+  m_allocations.emplace(
+      std::piecewise_construct, std::forward_as_tuple(aligned_address),
+      std::forward_as_tuple(allocation_address, aligned_address,
+                            allocation_size, permissions, alignment, policy));
 
   if (zero_memory) {
     Status write_error;

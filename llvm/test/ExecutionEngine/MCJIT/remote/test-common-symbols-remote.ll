@@ -1,5 +1,5 @@
 ; RUN: %lli -remote-mcjit -O0 -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target%exeext %s
-; XFAIL: mingw32,win32
+; XFAIL: windows-gnu,windows-msvc
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 

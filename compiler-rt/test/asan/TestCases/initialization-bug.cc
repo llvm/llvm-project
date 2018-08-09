@@ -6,7 +6,7 @@
 // Do not test with optimization -- the error may be optimized away.
 
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=186
-// XFAIL: win32
+// XFAIL: windows-msvc
 
 // The test is expected to fail on OS X Yosemite and older
 // UNSUPPORTED: osx-no-ld64-live_support
