@@ -19672,6 +19672,22 @@ rm -f conftest*
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+#include <clang/Basic/SourceManager.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "getImmediateExpansionRange" >/dev/null 2>&1; then :
+
+else
+
+$as_echo "#define getImmediateExpansionRange getImmediateInstantiationRange" >>confdefs.h
+
+
+fi
+rm -f conftest*
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 #include <clang/Basic/Diagnostic.h>
 
 _ACEOF

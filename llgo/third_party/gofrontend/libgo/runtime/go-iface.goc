@@ -1,0 +1,130 @@
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package runtime
+#include "runtime.h"
+#include "go-type.h"
+#include "interface.h"
+
+typedef struct __go_type_descriptor descriptor;
+typedef const struct __go_type_descriptor const_descriptor;
+typedef struct __go_interface interface;
+typedef struct __go_empty_interface empty_interface;
+
+// Compare two type descriptors.
+func ifacetypeeq(a *descriptor, b *descriptor) (eq bool) {
+	eq = __go_type_descriptors_equal(a, b);
+}
+
+// Return the descriptor for an empty interface type.n
+func efacetype(e empty_interface) (d *const_descriptor) {
+	return e.__type_descriptor;
+}
+
+// Return the descriptor for a non-empty interface type.
+func ifacetype(i interface) (d *const_descriptor) {
+	if (i.__methods == nil) {
+		return nil;
+	}
+	d = i.__methods[0];
+}
+
+// Convert an empty interface to an empty interface.
+func ifaceE2E2(e empty_interface) (ret empty_interface, ok bool) {
+	ret = e;
+	ok = ret.__type_descriptor != nil;
+}
+
+// Convert a non-empty interface to an empty interface.
+func ifaceI2E2(i interface) (ret empty_interface, ok bool) {
+	if (i.__methods == nil) {
+		ret.__type_descriptor = nil;
+		ret.__object = nil;
+		ok = 0;
+	} else {
+		ret.__type_descriptor = i.__methods[0];
+		ret.__object = i.__object;
+		ok = 1;
+	}
+}
+
+// Convert an empty interface to a non-empty interface.
+func ifaceE2I2(inter *descriptor, e empty_interface) (ret interface, ok bool) {
+	if (e.__type_descriptor == nil) {
+		ret.__methods = nil;
+		ret.__object = nil;
+		ok = 0;
+	} else {
+		ret.__methods = __go_convert_interface_2(inter,
+							 e.__type_descriptor,
+							 1);
+		ret.__object = e.__object;
+		ok = ret.__methods != nil;
+	}
+}
+
+// Convert a non-empty interface to a non-empty interface.
+func ifaceI2I2(inter *descriptor, i interface) (ret interface, ok bool) {
+	if (i.__methods == nil) {
+		ret.__methods = nil;
+		ret.__object = nil;
+		ok = 0;
+	} else {
+		ret.__methods = __go_convert_interface_2(inter,
+							 i.__methods[0], 1);
+		ret.__object = i.__object;
+		ok = ret.__methods != nil;
+	}
+}
+
+// Convert an empty interface to a pointer type.
+func ifaceE2T2P(inter *descriptor, e empty_interface) (ret *void, ok bool) {
+	if (!__go_type_descriptors_equal(inter, e.__type_descriptor)) {
+		ret = nil;
+		ok = 0;
+	} else {
+		ret = e.__object;
+		ok = 1;
+	}
+}
+
+// Convert a non-empty interface to a pointer type.
+func ifaceI2T2P(inter *descriptor, i interface) (ret *void, ok bool) {
+	if (i.__methods == nil
+	    || !__go_type_descriptors_equal(inter, i.__methods[0])) {
+		ret = nil;
+		ok = 0;
+	} else {
+		ret = i.__object;
+		ok = 1;
+	}
+}
+
+// Convert an empty interface to a non-pointer type.
+func ifaceE2T2(inter *descriptor, e empty_interface, ret *void) (ok bool) {
+	if (!__go_type_descriptors_equal(inter, e.__type_descriptor)) {
+		__builtin_memset(ret, 0, inter->__size);
+		ok = 0;
+	} else {
+		__builtin_memcpy(ret, e.__object, inter->__size);
+		ok = 1;
+	}
+}
+
+// Convert a non-empty interface to a non-pointer type.
+func ifaceI2T2(inter *descriptor, i interface, ret *void) (ok bool) {
+	if (i.__methods == nil
+	    || !__go_type_descriptors_equal(inter, i.__methods[0])) {
+		__builtin_memset(ret, 0, inter->__size);
+		ok = 0;
+	} else {
+		__builtin_memcpy(ret, i.__object, inter->__size);
+		ok = 1;
+	}
+}
+
+// Return whether we can convert an interface to a type.
+func ifaceI2Tp(to *descriptor, from *descriptor) (ok bool) {
+	ok = __go_can_convert_to_interface(to, from);
+}

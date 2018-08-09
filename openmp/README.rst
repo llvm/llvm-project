@@ -194,7 +194,7 @@ Optional Features
 **LIBOMP_OMPT_SUPPORT** = ``ON|OFF``
   Include support for the OpenMP Tools Interface (OMPT). 
   This option is supported and ``ON`` by default for x86, x86_64, AArch64, and 
-  PPC64 on Linux*, Windows*, and macOS*.
+  PPC64 on Linux* and macOS*.
   This option is ``OFF`` if this feature is not supported for the platform.
 
 **LIBOMP_OMPT_OPTIONAL** = ``ON|OFF``

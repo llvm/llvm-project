@@ -9,9 +9,8 @@
 
 #include "lldb/Core/Value.h"
 
-#include "lldb/Core/Address.h"  // for Address
+#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -26,6 +25,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"   // for InlHostByteOrder
 #include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
 #include "lldb/lldb-forward.h" // for DataBufferSP, ModuleSP

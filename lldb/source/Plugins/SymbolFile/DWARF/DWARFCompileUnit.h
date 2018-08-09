@@ -13,8 +13,6 @@
 #include "DWARFUnit.h"
 
 class DWARFCompileUnit : public DWARFUnit {
-  friend class DWARFUnit;
-
 public:
   static DWARFUnitSP Extract(SymbolFileDWARF *dwarf2Data,
                              const lldb_private::DWARFDataExtractor &debug_info,

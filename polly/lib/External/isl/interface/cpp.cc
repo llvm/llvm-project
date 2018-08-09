@@ -288,10 +288,8 @@ void cpp_generator::print_constructors_decl(ostream &os,
 
 	for (in = constructors.begin(); in != constructors.end(); ++in) {
 		FunctionDecl *cons = *in;
-		string fullname = cons->getName();
-		function_kind kind = function_kind_constructor;
 
-		print_method_decl(os, clazz, fullname, cons, kind);
+		print_method_decl(os, clazz, cons, function_kind_constructor);
 	}
 }
 
@@ -379,39 +377,30 @@ void cpp_generator::print_methods_decl(ostream &os, const isl_class &clazz)
 	map<string, set<FunctionDecl *> >::const_iterator it;
 
 	for (it = clazz.methods.begin(); it != clazz.methods.end(); ++it)
-		print_method_group_decl(os, clazz, it->first, it->second);
+		print_method_group_decl(os, clazz, it->second);
 }
 
-/* Print declarations for methods "methods" of name "fullname" in class "clazz"
- * to "os".
- *
- * "fullname" is the name of the generated C++ method.  It commonly corresponds
- * to the isl name, with the object type prefix dropped.
- * In case of overloaded methods, the result type suffix has also been removed.
+/* Print declarations for methods "methods" in class "clazz" to "os".
  */
 void cpp_generator::print_method_group_decl(ostream &os, const isl_class &clazz,
-	const string &fullname, const set<FunctionDecl *> &methods)
+	const set<FunctionDecl *> &methods)
 {
 	set<FunctionDecl *>::const_iterator it;
 
 	for (it = methods.begin(); it != methods.end(); ++it) {
 		function_kind kind = get_method_kind(clazz, *it);
-		print_method_decl(os, clazz, fullname, *it, kind);
+		print_method_decl(os, clazz, *it, kind);
 	}
 }
 
 /* Print declarations for "method" in class "clazz" to "os".
  *
- * "fullname" is the name of the generated C++ method.  It commonly corresponds
- * to the isl name, with the object type prefix dropped.
- * In case of overloaded methods, the result type suffix has also been removed.
- *
  * "kind" specifies the kind of method that should be generated.
  */
 void cpp_generator::print_method_decl(ostream &os, const isl_class &clazz,
-	const string &fullname, FunctionDecl *method, function_kind kind)
+	FunctionDecl *method, function_kind kind)
 {
-	print_method_header(os, clazz, method, fullname, true, kind);
+	print_method_header(os, clazz, method, true, kind);
 }
 
 /* Print implementations for class "clazz" to "os".
@@ -562,10 +551,8 @@ void cpp_generator::print_constructors_impl(ostream &os,
 
 	for (in = constructors.begin(); in != constructors.end(); ++in) {
 		FunctionDecl *cons = *in;
-		string fullname = cons->getName();
-		function_kind kind = function_kind_constructor;
 
-		print_method_impl(os, clazz, fullname, cons, kind);
+		print_method_impl(os, clazz, cons, function_kind_constructor);
 	}
 }
 
@@ -649,21 +636,16 @@ void cpp_generator::print_methods_impl(ostream &os, const isl_class &clazz)
 			first = false;
 		else
 			osprintf(os, "\n");
-		print_method_group_impl(os, clazz, it->first, it->second);
+		print_method_group_impl(os, clazz, it->second);
 	}
 }
 
-/* Print definitions for methods "methods" of name "fullname" in class "clazz"
- * to "os".
- *
- * "fullname" is the name of the generated C++ method.  It commonly corresponds
- * to the isl name, with the object type prefix dropped.
- * In case of overloaded methods, the result type suffix has also been removed.
+/* Print definitions for methods "methods" in class "clazz" to "os".
  *
  * "kind" specifies the kind of method that should be generated.
  */
 void cpp_generator::print_method_group_impl(ostream &os, const isl_class &clazz,
-	const string &fullname, const set<FunctionDecl *> &methods)
+	const set<FunctionDecl *> &methods)
 {
 	set<FunctionDecl *>::const_iterator it;
 	bool first = true;
@@ -675,7 +657,7 @@ void cpp_generator::print_method_group_impl(ostream &os, const isl_class &clazz,
 		else
 			osprintf(os, "\n");
 		kind = get_method_kind(clazz, *it);
-		print_method_impl(os, clazz, fullname, *it, kind);
+		print_method_impl(os, clazz, *it, kind);
 	}
 }
 
@@ -899,10 +881,6 @@ void cpp_generator::print_exceptional_execution_check(ostream &os,
 
 /* Print definition for "method" in class "clazz" to "os".
  *
- * "fullname" is the name of the generated C++ method.  It commonly corresponds
- * to the isl name, with the object type prefix dropped.
- * In case of overloaded methods, the result type suffix has also been removed.
- *
  * "kind" specifies the kind of method that should be generated.
  *
  * This method distinguishes three kinds of methods: member methods, static
@@ -943,7 +921,7 @@ void cpp_generator::print_exceptional_execution_check(ostream &os,
  * because the error message is included in the exception.
  */
 void cpp_generator::print_method_impl(ostream &os, const isl_class &clazz,
-	const string &fullname, FunctionDecl *method, function_kind kind)
+	FunctionDecl *method, function_kind kind)
 {
 	string methodname = method->getName();
 	int num_params = method->getNumParams();
@@ -951,7 +929,7 @@ void cpp_generator::print_method_impl(ostream &os, const isl_class &clazz,
 	string rettype_str = type2cpp(return_type);
 	bool has_callback = false;
 
-	print_method_header(os, clazz, method, fullname, false, kind);
+	print_method_header(os, clazz, method, false, kind);
 	osprintf(os, "{\n");
 	print_argument_validity_check(os, method, kind);
 	print_save_ctx(os, method, kind);
@@ -1008,10 +986,6 @@ void cpp_generator::print_method_impl(ostream &os, const isl_class &clazz,
  * Print the header of a declaration if "is_declaration" is set, otherwise print
  * the header of a method definition.
  *
- * "fullname" is the name of the generated C++ method.  It commonly corresponds
- * to the isl name, with the object type prefix dropped.
- * In case of overloaded methods, the result type suffix has also been removed.
- *
  * "kind" specifies the kind of method that should be generated.
  *
  * This function prints headers for member methods, static methods, and
@@ -1047,10 +1021,9 @@ void cpp_generator::print_method_impl(ostream &os, const isl_class &clazz,
  * know that implicit construction is allowed in absence of an explicit keyword.
  */
 void cpp_generator::print_method_header(ostream &os, const isl_class &clazz,
-	FunctionDecl *method, const string &fullname, bool is_declaration,
-	function_kind kind)
+	FunctionDecl *method, bool is_declaration, function_kind kind)
 {
-	string cname = fullname.substr(clazz.name.length() + 1);
+	string cname = clazz.method_name(method);
 	string rettype_str = type2cpp(method->getReturnType());
 	string classname = type2cpp(clazz);
 	int num_params = method->getNumParams();
@@ -1280,6 +1253,9 @@ void cpp_generator::print_wrapped_call(ostream &os, const string &call)
  *
  *        stat ret = (*data->func)(manage(arg_0));
  *        return isl_stat(ret);
+ *
+ * If the C callback does not take its arguments, then
+ * manage_copy is used instead of manage.
  */
 void cpp_generator::print_callback_local(ostream &os, ParmVarDecl *param)
 {
@@ -1303,7 +1279,11 @@ void cpp_generator::print_callback_local(ostream &os, ParmVarDecl *param)
 
 	call = "(*data->func)(";
 	for (long i = 0; i < num_params - 1; i++) {
-		call += "manage(arg_" + ::to_string(i) + ")";
+		if (!callback_takes_argument(param, i))
+			call += "manage_copy";
+		else
+			call += "manage";
+		call += "(arg_" + ::to_string(i) + ")";
 		if (i != num_params - 2)
 			call += ", ";
 	}

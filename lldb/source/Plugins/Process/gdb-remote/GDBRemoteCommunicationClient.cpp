@@ -19,7 +19,6 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
@@ -31,6 +30,7 @@
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 // Project includes

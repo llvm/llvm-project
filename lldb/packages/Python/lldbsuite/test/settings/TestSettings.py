@@ -528,7 +528,7 @@ class SettingsCommandTestCase(TestBase):
     # settings under an ".experimental" domain should have two properties:
     #   1. If the name does not exist with "experimental" in the name path,
     #      the name lookup should try to find it without "experimental".  So
-    #      a previously-experimental setting that has been promoted to a 
+    #      a previously-experimental setting that has been promoted to a
     #      "real" setting will still be set by the original name.
     #   2. Changing a setting with .experimental., name, where the setting
     #      does not exist either with ".experimental." or without, should

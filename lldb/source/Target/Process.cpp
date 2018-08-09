@@ -25,7 +25,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
@@ -71,6 +70,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/SelectHelper.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -5993,7 +5993,7 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   // that loaded.
 
   // Iterate over a copy of this language runtime list in case the language
-  // runtime ModulesDidLoad somehow causes the language riuntime to be
+  // runtime ModulesDidLoad somehow causes the language runtime to be
   // unloaded.
   LanguageRuntimeCollection language_runtimes(m_language_runtimes);
   for (const auto &pair : language_runtimes) {
@@ -6253,7 +6253,7 @@ void Process::MapSupportedStructuredDataPlugins(
   // For each StructuredDataPlugin, if the plugin handles any of the types in
   // the supported_type_names, map that type name to that plugin. Stop when
   // we've consumed all the type names.
-  // FIXME: should we return an error if there are type names nobody 
+  // FIXME: should we return an error if there are type names nobody
   // supports?
   for (uint32_t plugin_index = 0; !const_type_names.empty(); plugin_index++) {
     auto create_instance =
@@ -6261,7 +6261,7 @@ void Process::MapSupportedStructuredDataPlugins(
                plugin_index);
     if (!create_instance)
       break;
-      
+
     // Create the plugin.
     StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
     if (!plugin_sp) {

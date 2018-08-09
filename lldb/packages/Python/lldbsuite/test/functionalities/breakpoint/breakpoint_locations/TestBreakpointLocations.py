@@ -46,12 +46,12 @@ class BreakpointLocationsTestCase(TestBase):
         self.assertTrue(target, "Target %s is not valid"%(exe))
 
         # This should create a breakpoint with 3 locations.
-        
+
         bkpt = target.BreakpointCreateByLocation("main.c", self.line)
 
         # The breakpoint list should show 3 locations.
         self.assertEqual(bkpt.GetNumLocations(), 3, "Wrong number of locations")
-        
+
         self.expect(
             "breakpoint list -f",
             "Breakpoint locations shown correctly",
@@ -62,7 +62,7 @@ class BreakpointLocationsTestCase(TestBase):
                 "where = a.out`func_inlined .+unresolved, hit count = 0",
                 "where = a.out`main .+\[inlined\].+unresolved, hit count = 0"])
 
-        return bkpt        
+        return bkpt
 
     def shadowed_bkpt_cond_test(self):
         """Test that options set on the breakpoint and location behave correctly."""
@@ -106,7 +106,7 @@ class BreakpointLocationsTestCase(TestBase):
         commands = ["AAAAAA", "BBBBBB", "CCCCCC"]
         str_list = lldb.SBStringList()
         str_list.AppendList(commands, len(commands))
-        
+
         bkpt.SetCommandLineCommands(str_list)
         cmd_list = lldb.SBStringList()
         bkpt.GetCommandLineCommands(cmd_list)
@@ -123,7 +123,7 @@ class BreakpointLocationsTestCase(TestBase):
         bkpt.location[1].GetCommandLineCommands(loc_cmd_list)
 
         loc_list_size = loc_list.GetSize()
-        
+
         # Check that the location has the right commands:
         self.assertEqual(loc_cmd_list.GetSize() , loc_list_size, "Added the right number of commands to location")
         for i in range(0,loc_list_size):

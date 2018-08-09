@@ -1391,7 +1391,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             arch_spec.GetTriple().getOS() == llvm::Triple::OSType::UnknownOS)
           // In case of MIPSR6, the LLDB_NT_OWNER_GNU note is missing for some
           // cases (e.g. compile with -nostdlib) Hence set OS to Linux
-          arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux); 
+          arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
       }
     }
 
@@ -1495,7 +1495,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     const uint32_t sub_type = subTypeFromElfHeader(header);
     arch_spec.SetArchitecture(eArchTypeELF, header.e_machine, sub_type,
                               header.e_ident[EI_OSABI]);
-    
+
     // Validate if it is ok to remove GetOsFromOSABI. Note, that now the OS is
     // determined based on EI_OSABI flag and the info extracted from ELF notes
     // (see RefineModuleDetailsFromNote). However in some cases that still
@@ -3396,8 +3396,6 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   if (section->GetObjectFile() != this)
     return section->GetObjectFile()->ReadSectionData(section, section_data);
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
-
   size_t result = ObjectFile::ReadSectionData(section, section_data);
   if (result == 0 || !section->Test(SHF_COMPRESSED))
     return result;
@@ -3408,20 +3406,27 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
        size_t(section_data.GetByteSize())},
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
-    LLDB_LOG_ERROR(log, Decompressor.takeError(),
-                   "Unable to initialize decompressor for section {0}",
-                   section->GetName());
-    return result;
+    GetModule()->ReportWarning(
+        "Unable to initialize decompressor for section '%s': %s",
+        section->GetName().GetCString(),
+        llvm::toString(Decompressor.takeError()).c_str());
+    section_data.Clear();
+    return 0;
   }
+
   auto buffer_sp =
       std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
-  if (auto Error = Decompressor->decompress(
+  if (auto error = Decompressor->decompress(
           {reinterpret_cast<char *>(buffer_sp->GetBytes()),
            size_t(buffer_sp->GetByteSize())})) {
-    LLDB_LOG_ERROR(log, std::move(Error), "Decompression of section {0} failed",
-                   section->GetName());
-    return result;
+    GetModule()->ReportWarning(
+        "Decompression of section '%s' failed: %s",
+        section->GetName().GetCString(),
+        llvm::toString(std::move(error)).c_str());
+    section_data.Clear();
+    return 0;
   }
+
   section_data.SetData(buffer_sp);
   return buffer_sp->GetByteSize();
 }

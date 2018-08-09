@@ -183,7 +183,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (InBinary) {
+  if (Config->FormatBinary) {
     Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
@@ -497,14 +497,11 @@ static Target2Policy getTarget2(opt::InputArgList &Args) {
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
-  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
-    StringRef S = Arg->getValue();
-    if (S == "binary")
-      return true;
-    if (S.startswith("elf"))
-      return false;
+  StringRef S = Args.getLastArgValue(OPT_oformat, "elf");
+  if (S == "binary")
+    return true;
+  if (!S.startswith("elf"))
     error("unknown --oformat value: " + S);
-  }
   return false;
 }
 
@@ -650,33 +647,28 @@ static void readCallGraph(MemoryBufferRef MB) {
     for (Symbol *Sym : File->getSymbols())
       SymbolNameToSymbol[Sym->getName()] = Sym;
 
+  auto FindSection = [&](StringRef SymName) -> InputSectionBase * {
+    const Symbol *Sym = SymbolNameToSymbol.lookup(SymName);
+    if (Sym)
+      warnUnorderableSymbol(Sym);
+    else if (Config->WarnSymbolOrdering)
+      warn(MB.getBufferIdentifier() + ": no such symbol: " + SymName);
+
+    if (const Defined *DR = dyn_cast_or_null<Defined>(Sym))
+      return dyn_cast_or_null<InputSectionBase>(DR->Section);
+    return nullptr;
+  };
+
   for (StringRef L : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
     L.split(Fields, ' ');
     uint64_t Count;
     if (Fields.size() != 3 || !to_integer(Fields[2], Count))
       fatal(MB.getBufferIdentifier() + ": parse error");
-    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
-    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
-    if (Config->WarnSymbolOrdering) {
-      if (!FromSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[0]);
-      if (!ToSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[1]);
-    }
-    if (!FromSym || !ToSym || Count == 0)
-      continue;
-    warnUnorderableSymbol(FromSym);
-    warnUnorderableSymbol(ToSym);
-    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
-    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
-    if (!FromSymD || !ToSymD)
-      continue;
-    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
-    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
-    if (!FromSB || !ToSB)
-      continue;
-    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+
+    if (const InputSectionBase *FromSB = FindSection(Fields[0]))
+      if (const InputSectionBase *ToSB = FindSection(Fields[1]))
+        Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
   }
 }
 
@@ -1007,7 +999,7 @@ static void setConfigs(opt::InputArgList &Args) {
 }
 
 // Returns a value of "-format" option.
-static bool getBinaryOption(StringRef S) {
+static bool isFormatBinary(StringRef S) {
   if (S == "binary")
     return true;
   if (S == "elf" || S == "default")
@@ -1049,7 +1041,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = true;
       break;
     case OPT_format:
-      InBinary = getBinaryOption(Arg->getValue());
+      Config->FormatBinary = isFormatBinary(Arg->getValue());
       break;
     case OPT_no_as_needed:
       Config->AsNeeded = false;

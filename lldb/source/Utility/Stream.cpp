@@ -12,6 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/SmallString.h" // for SmallString
+#include "llvm/Support/LEB128.h"
 
 #include <string>
 
@@ -23,11 +24,11 @@ using namespace lldb_private;
 
 Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
     : m_flags(flags), m_addr_size(addr_size), m_byte_order(byte_order),
-      m_indent_level(0) {}
+      m_indent_level(0), m_forwarder(*this) {}
 
 Stream::Stream()
     : m_flags(0), m_addr_size(4), m_byte_order(endian::InlHostByteOrder()),
-      m_indent_level(0) {}
+      m_indent_level(0), m_forwarder(*this) {}
 
 //------------------------------------------------------------------
 // Destructor
@@ -49,47 +50,20 @@ void Stream::Offset(uint32_t uval, const char *format) { Printf(format, uval); }
 // Put an SLEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutSLEB128(int64_t sval) {
-  size_t bytes_written = 0;
-  if (m_flags.Test(eBinary)) {
-    bool more = true;
-    while (more) {
-      uint8_t byte = sval & 0x7fu;
-      sval >>= 7;
-      /* sign bit of byte is 2nd high order bit (0x40) */
-      if ((sval == 0 && !(byte & 0x40)) || (sval == -1 && (byte & 0x40)))
-        more = false;
-      else
-        // more bytes to come
-        byte |= 0x80u;
-      bytes_written += Write(&byte, 1);
-    }
-  } else {
-    bytes_written = Printf("0x%" PRIi64, sval);
-  }
-
-  return bytes_written;
+  if (m_flags.Test(eBinary))
+    return llvm::encodeSLEB128(sval, m_forwarder);
+  else
+    return Printf("0x%" PRIi64, sval);
 }
 
 //------------------------------------------------------------------
 // Put an ULEB128 "uval" out to the stream using the printf format in "format".
 //------------------------------------------------------------------
 size_t Stream::PutULEB128(uint64_t uval) {
-  size_t bytes_written = 0;
-  if (m_flags.Test(eBinary)) {
-    do {
-
-      uint8_t byte = uval & 0x7fu;
-      uval >>= 7;
-      if (uval != 0) {
-        // more bytes to come
-        byte |= 0x80u;
-      }
-      bytes_written += Write(&byte, 1);
-    } while (uval != 0);
-  } else {
-    bytes_written = Printf("0x%" PRIx64, uval);
-  }
-  return bytes_written;
+  if (m_flags.Test(eBinary))
+    return llvm::encodeULEB128(uval, m_forwarder);
+  else
+    return Printf("0x%" PRIx64, uval);
 }
 
 //------------------------------------------------------------------
@@ -427,11 +401,11 @@ size_t Stream::PutMaxHex64(uint64_t uvalue, size_t byte_size,
   case 1:
     return PutHex8((uint8_t)uvalue);
   case 2:
-    return PutHex16((uint16_t)uvalue);
+    return PutHex16((uint16_t)uvalue, byte_order);
   case 4:
-    return PutHex32((uint32_t)uvalue);
+    return PutHex32((uint32_t)uvalue, byte_order);
   case 8:
-    return PutHex64(uvalue);
+    return PutHex64(uvalue, byte_order);
   }
   return 0;
 }
@@ -518,56 +492,11 @@ size_t Stream::PutCStringAsRawHex8(const char *s) {
   size_t bytes_written = 0;
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
-  do {
+  while(*s) {
     bytes_written += _PutHex8(*s, false);
     ++s;
-  } while (*s);
+  }
   if (binary_is_set)
     m_flags.Set(eBinary);
   return bytes_written;
-}
-
-void Stream::UnitTest(Stream *s) {
-  s->PutHex8(0x12);
-
-  s->PutChar(' ');
-  s->PutHex16(0x3456, endian::InlHostByteOrder());
-  s->PutChar(' ');
-  s->PutHex16(0x3456, eByteOrderBig);
-  s->PutChar(' ');
-  s->PutHex16(0x3456, eByteOrderLittle);
-
-  s->PutChar(' ');
-  s->PutHex32(0x789abcde, endian::InlHostByteOrder());
-  s->PutChar(' ');
-  s->PutHex32(0x789abcde, eByteOrderBig);
-  s->PutChar(' ');
-  s->PutHex32(0x789abcde, eByteOrderLittle);
-
-  s->PutChar(' ');
-  s->PutHex64(0x1122334455667788ull, endian::InlHostByteOrder());
-  s->PutChar(' ');
-  s->PutHex64(0x1122334455667788ull, eByteOrderBig);
-  s->PutChar(' ');
-  s->PutHex64(0x1122334455667788ull, eByteOrderLittle);
-
-  const char *hola = "Hello World!!!";
-  s->PutChar(' ');
-  s->PutCString(hola);
-
-  s->PutChar(' ');
-  s->Write(hola, 5);
-
-  s->PutChar(' ');
-  s->PutCStringAsRawHex8(hola);
-
-  s->PutChar(' ');
-  s->PutCStringAsRawHex8("01234");
-
-  s->PutChar(' ');
-  s->Printf("pid=%i", 12733);
-
-  s->PutChar(' ');
-  s->PrintfAsRawHex8("pid=%i", 12733);
-  s->PutChar('\n');
 }

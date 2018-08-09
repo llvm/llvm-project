@@ -191,6 +191,7 @@ class RegisterLocationList;
 class RegisterValue;
 class RegularExpression;
 class REPL;
+class RichManglingContext;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
@@ -495,6 +496,16 @@ typedef std::shared_ptr<lldb_private::ValueObjectList> ValueObjectListSP;
 typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
 
 } // namespace lldb
+
+//----------------------------------------------------------------------
+// llvm forward declarations
+//----------------------------------------------------------------------
+namespace llvm {
+
+struct ItaniumPartialDemangler;
+class StringRef;
+
+} // namespace llvm
 
 #endif // #if defined(__cplusplus)
 #endif // LLDB_lldb_forward_h_

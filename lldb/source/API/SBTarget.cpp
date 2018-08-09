@@ -1483,6 +1483,26 @@ bool SBTarget::DeleteAllWatchpoints() {
   return false;
 }
 
+void SBTarget::AppendImageSearchPath(const char *from, const char *to,
+                                     lldb::SBError &error) {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return error.SetErrorString("invalid target");
+
+  const ConstString csFrom(from), csTo(to);
+  if (!csFrom)
+    return error.SetErrorString("<from> path can't be empty");
+  if (!csTo)
+    return error.SetErrorString("<to> path can't be empty");
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  if (log)
+    log->Printf("SBTarget(%p)::%s: '%s' -> '%s'",
+                static_cast<void *>(target_sp.get()),  __FUNCTION__,
+                from, to);
+  target_sp->GetImageSearchPathList().Append(csFrom, csTo, true);
+}
+
 lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr) {
   return AddModule(path, triple, uuid_cstr, NULL);

@@ -12,8 +12,6 @@
 #include "lldb/Core/Address.h"      // for Address
 #include "lldb/Core/AddressRange.h" // for AddressRange
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h" // for DWARFExpression
 #include "lldb/Symbol/Declaration.h"         // for Declaration
@@ -27,7 +25,9 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h"     // for DataExtractor
+#include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"            // for Scalar, operator!=
 #include "lldb/Utility/Status.h"            // for Status
 #include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressTy...
 #include "lldb/lldb-types.h"                // for addr_t

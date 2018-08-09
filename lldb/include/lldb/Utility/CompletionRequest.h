@@ -13,6 +13,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
 
@@ -77,8 +78,29 @@ public:
 
   void SetWordComplete(bool v) { m_word_complete = v; }
 
-  /// The array of matches returned.
-  StringList &GetMatches() { return *m_matches; }
+  /// Adds a possible completion string. If the completion was already
+  /// suggested before, it will not be added to the list of results. A copy of
+  /// the suggested completion is stored, so the given string can be free'd
+  /// afterwards.
+  ///
+  /// @param match The suggested completion.
+  void AddCompletion(llvm::StringRef completion) {
+    // Add the completion if we haven't seen the same value before.
+    if (m_match_set.insert(completion).second)
+      m_matches->AppendString(completion);
+  }
+
+  /// Adds multiple possible completion strings.
+  ///
+  /// \param completions The list of completions.
+  ///
+  /// @see AddCompletion
+  void AddCompletions(const StringList &completions) {
+    for (std::size_t i = 0; i < completions.GetSize(); ++i)
+      AddCompletion(completions.GetStringAtIndex(i));
+  }
+
+  std::size_t GetNumberOfMatches() const { return m_matches->GetSize(); }
 
   llvm::StringRef GetCursorArgument() const {
     return GetParsedLine().GetArgumentAtIndex(GetCursorIndex());
@@ -111,8 +133,15 @@ private:
   /// \btrue if this is a complete option value (a space will be inserted
   /// after the completion.)  \bfalse otherwise.
   bool m_word_complete = false;
-  // We don't own the list.
+
+  // Note: This list is kept private. This is by design to prevent that any
+  // completion depends on any already computed completion from another backend.
+  // Note: We don't own the list. It's owned by the creator of the
+  // CompletionRequest object.
   StringList *m_matches;
+
+  /// List of added completions so far. Used to filter out duplicates.
+  llvm::StringSet<> m_match_set;
 };
 
 } // namespace lldb_private
