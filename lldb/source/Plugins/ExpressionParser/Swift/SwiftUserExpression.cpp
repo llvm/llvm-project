@@ -363,6 +363,15 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                  "couldn't start parsing (no target)");
     return false;
   }
+  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
+    persistent_state->AddHandLoadedModule(ConstString("Swift"));
+    m_result_delegate.RegisterPersistentState(persistent_state);
+    m_error_delegate.RegisterPersistentState(persistent_state);
+  } else {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "couldn't start parsing (no persistent data)");
+    return false;
+  }
 
   ScanContext(exe_ctx, err);
 
@@ -437,21 +446,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   m_parser =
       llvm::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
-  
-  // Don't set the persistent state in the result & error delegates till after
-  // you have made the expression parser.  Doing that could invalidate the 
-  // Target ScratchASTContext, which would destroy the old persistent state, 
-  // leaving the delegates holding onto a dangling pointer.
-  
-  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
-    persistent_state->AddHandLoadedModule(ConstString("Swift"));
-    m_result_delegate.RegisterPersistentState(persistent_state);
-    m_error_delegate.RegisterPersistentState(persistent_state);
-  } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't start parsing (no persistent data)");
-    return false;
-  }
 
   unsigned error_code = m_parser->Parse(
       diagnostic_manager, first_body_line,
