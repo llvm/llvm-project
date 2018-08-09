@@ -15,7 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
@@ -51,6 +50,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -201,7 +201,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -1811,7 +1811,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eModuleCompletion, request,
         nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 };
 
@@ -1852,7 +1852,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eSourceFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 };
 
@@ -2408,7 +2408,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -2755,10 +2755,15 @@ protected:
                   }
                   if (set_pc) {
                     ThreadList &thread_list = process->GetThreadList();
-                    ThreadSP curr_thread(thread_list.GetSelectedThread());
                     RegisterContextSP reg_context(
-                        curr_thread->GetRegisterContext());
-                    reg_context->SetPC(file_entry.GetLoadAddress(target));
+                        thread_list.GetSelectedThread()->GetRegisterContext());
+                    addr_t file_entry_addr = file_entry.GetLoadAddress(target);
+                    if (!reg_context->SetPC(file_entry_addr)) {
+                      result.AppendErrorWithFormat("failed to set PC value to "
+                                                   "0x%" PRIx64 "\n",
+                                                   file_entry_addr);
+                      result.SetStatus(eReturnStatusFailed);
+                    }
                   }
                 }
               } else {
@@ -4002,7 +4007,7 @@ public:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetMatches().GetSize();
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }

@@ -46,7 +46,7 @@ class DeepBundleTestCase(TestBase):
         sleep(5)
 
         # Since the library that was dlopen()'ed is now removed, lldb will need to find the
-        # binary & dSYM via target.exec-search-paths 
+        # binary & dSYM via target.exec-search-paths
         settings_str = "settings set target.exec-search-paths " + self.get_process_working_directory() + "/hide.app"
         self.runCmd(settings_str)
         self.runCmd("process attach -p " + str(popen.pid))
@@ -67,7 +67,7 @@ class DeepBundleTestCase(TestBase):
                 dsym_name = mod.GetSymbolFileSpec().GetFilename()
                 self.assertTrue (dsym_name == 'MyFramework', "Check that we found the dSYM for the bundle that was loaded")
             i=i+1
-         
+
         self.assertTrue(found_module, "Check that we found the framework loaded in lldb's image list")
 
 if __name__ == '__main__':

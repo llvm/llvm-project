@@ -15,9 +15,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

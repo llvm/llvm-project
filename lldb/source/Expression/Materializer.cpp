@@ -13,7 +13,6 @@
 // Project includes
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb_private;
 

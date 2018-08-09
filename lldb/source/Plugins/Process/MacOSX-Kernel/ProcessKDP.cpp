@@ -19,8 +19,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
-#include "lldb/Utility/UUID.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
@@ -37,7 +35,9 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/UUID.h"
 
 #include "llvm/Support/Threading.h"
 

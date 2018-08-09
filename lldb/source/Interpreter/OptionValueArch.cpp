@@ -13,11 +13,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -76,9 +76,8 @@ lldb::OptionValueSP OptionValueArch::DeepCopy() const {
 size_t OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
                                      CompletionRequest &request) {
   request.SetWordComplete(false);
-  request.GetMatches().Clear();
   CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, CommandCompletions::eArchitectureCompletion, request,
       nullptr);
-  return request.GetMatches().GetSize();
+  return request.GetNumberOfMatches();
 }

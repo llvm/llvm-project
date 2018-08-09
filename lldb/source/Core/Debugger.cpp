@@ -26,11 +26,10 @@
 #include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint, Brea...
 #include "lldb/Core/Event.h"            // for Event, EventData...
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/Listener.h" // for Listener
-#include "lldb/Core/Mangled.h"  // for Mangled
-#include "lldb/Core/ModuleList.h"  // for Mangled
+#include "lldb/Core/Listener.h"   // for Listener
+#include "lldb/Core/Mangled.h"    // for Mangled
+#include "lldb/Core/ModuleList.h" // for Mangled
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -59,7 +58,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h" // for ThreadList
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/Log.h"    // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/Log.h" // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
@@ -312,6 +312,8 @@ static PropertyDefinition g_properties[] = {
      nullptr,
      "The number of sources lines to display that come before the "
      "current source line when displaying a stopped context."},
+    {"highlight-source", OptionValue::eTypeBoolean, true, true, nullptr,
+     nullptr, "If true, LLDB will highlight the displayed source code."},
     {"stop-show-column", OptionValue::eTypeEnum, false,
      eStopShowColumnAnsiOrCaret, nullptr, s_stop_show_column_values,
      "If true, LLDB will use the column information from the debug info to "
@@ -375,6 +377,7 @@ enum {
   ePropertyStopDisassemblyDisplay,
   ePropertyStopLineCountAfter,
   ePropertyStopLineCountBefore,
+  ePropertyHighlightSource,
   ePropertyStopShowColumn,
   ePropertyStopShowColumnAnsiPrefix,
   ePropertyStopShowColumnAnsiSuffix,
@@ -547,6 +550,12 @@ bool Debugger::SetUseColor(bool b) {
   bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
   SetPrompt(GetPrompt());
   return ret;
+}
+
+bool Debugger::GetHighlightSource() const {
+  const uint32_t idx = ePropertyHighlightSource;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value);
 }
 
 StopShowColumn Debugger::GetStopShowColumn() const {

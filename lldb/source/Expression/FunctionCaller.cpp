@@ -14,7 +14,6 @@
 // Project includes
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -31,6 +30,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb_private;
 

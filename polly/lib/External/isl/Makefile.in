@@ -17,6 +17,7 @@
 
 
 
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -98,17 +99,23 @@ noinst_PROGRAMS = isl_test$(EXEEXT) isl_polyhedron_sample$(EXEEXT) \
 	isl_closure$(EXEEXT) isl_bound$(EXEEXT) isl_schedule$(EXEEXT) \
 	isl_codegen$(EXEEXT) isl_test_int$(EXEEXT) isl_flow$(EXEEXT) \
 	isl_flow_cmp$(EXEEXT) isl_schedule_cmp$(EXEEXT) \
-	$(am__EXEEXT_1)
+	$(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3)
 TESTS = isl_test$(EXEEXT) codegen_test.sh pip_test.sh bound_test.sh \
 	isl_test_int$(EXEEXT) flow_test.sh schedule_test.sh \
-	$(am__EXEEXT_1)
-@IMATH_FOR_MP_TRUE@am__append_1 = isl_test_imath
-@IMATH_FOR_MP_TRUE@am__append_2 = isl_test_imath
-@IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@am__append_3 = isl_int_sioimath.h \
+	$(am__EXEEXT_1) $(am__EXEEXT_2) $(am__append_5) \
+	$(am__EXEEXT_3)
+@HAVE_CPP_ISL_H_TRUE@@HAVE_CXX11_TRUE@am__append_1 = isl_test_cpp
+@HAVE_CPP_ISL_H_TRUE@@HAVE_CXX11_TRUE@am__append_2 = isl_test_cpp
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@am__append_3 = isl_test_cpp-checked isl_test_cpp-checked-conversion
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@am__append_4 = isl_test_cpp-checked isl_test_cpp-checked-conversion
+@HAVE_CLANG_TRUE@@HAVE_PYTHON_TRUE@am__append_5 = isl_test_python.py
+@IMATH_FOR_MP_TRUE@am__append_6 = isl_test_imath
+@IMATH_FOR_MP_TRUE@am__append_7 = isl_test_imath
+@IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@am__append_8 = isl_int_sioimath.h \
 @IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@	isl_int_sioimath.c \
 @IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@	isl_val_sioimath.c
 
-@IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_FALSE@am__append_4 = isl_val_imath.c
+@IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_FALSE@am__append_9 = isl_val_imath.c
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
@@ -117,6 +124,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 	$(top_srcdir)/m4/ax_compiler_vendor.m4 \
 	$(top_srcdir)/m4/ax_create_pkgconfig_info.m4 \
 	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/ax_detect_clang.m4 \
 	$(top_srcdir)/m4/ax_detect_git_head.m4 \
 	$(top_srcdir)/m4/ax_detect_gmp.m4 \
@@ -141,6 +150,16 @@ CONFIG_HEADER = isl_config.h
 CONFIG_CLEAN_FILES = isl_srcdir.c bound_test.sh codegen_test.sh \
 	pip_test.sh flow_test.sh schedule_test.sh
 CONFIG_CLEAN_VPATH_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+AM_V_AR = $(am__v_AR_@AM_V@)
+am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
+am__v_AR_0 = @echo "  AR      " $@;
+am__v_AR_1 = 
+libdep_a_AR = $(AR) $(ARFLAGS)
+libdep_a_LIBADD =
+am_libdep_a_OBJECTS = all.$(OBJEXT)
+libdep_a_OBJECTS = $(am_libdep_a_OBJECTS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -259,7 +278,11 @@ am__v_lt_1 =
 libisl_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libisl_la_LDFLAGS) $(LDFLAGS) -o $@
-@IMATH_FOR_MP_TRUE@am__EXEEXT_1 = isl_test_imath$(EXEEXT)
+@HAVE_CPP_ISL_H_TRUE@@HAVE_CXX11_TRUE@am__EXEEXT_1 =  \
+@HAVE_CPP_ISL_H_TRUE@@HAVE_CXX11_TRUE@	isl_test_cpp$(EXEEXT)
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@am__EXEEXT_2 = isl_test_cpp-checked$(EXEEXT) \
+@HAVE_CLANG_TRUE@@HAVE_CXX11_TRUE@	isl_test_cpp-checked-conversion$(EXEEXT)
+@IMATH_FOR_MP_TRUE@am__EXEEXT_3 = isl_test_imath$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 am_isl_bound_OBJECTS = bound.$(OBJEXT)
 isl_bound_OBJECTS = $(am_isl_bound_OBJECTS)
@@ -335,6 +358,28 @@ isl_test_DEPENDENCIES = libisl.la
 isl_test_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(isl_test_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_test_cpp_OBJECTS = isl_test_cpp-isl_test_cpp.$(OBJEXT)
+isl_test_cpp_OBJECTS = $(am_isl_test_cpp_OBJECTS)
+isl_test_cpp_DEPENDENCIES = libisl.la
+isl_test_cpp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(isl_test_cpp_CXXFLAGS) \
+	$(CXXFLAGS) $(isl_test_cpp_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_test_cpp_checked_OBJECTS =  \
+	isl_test_cpp_checked-isl_test_cpp-checked.$(OBJEXT)
+isl_test_cpp_checked_OBJECTS = $(am_isl_test_cpp_checked_OBJECTS)
+isl_test_cpp_checked_DEPENDENCIES = libisl.la
+isl_test_cpp_checked_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) \
+	$(isl_test_cpp_checked_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_test_cpp_checked_conversion_OBJECTS = isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.$(OBJEXT)
+isl_test_cpp_checked_conversion_OBJECTS =  \
+	$(am_isl_test_cpp_checked_conversion_OBJECTS)
+isl_test_cpp_checked_conversion_DEPENDENCIES = libisl.la
+isl_test_cpp_checked_conversion_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) \
+	$(isl_test_cpp_checked_conversion_LDFLAGS) $(LDFLAGS) -o $@
 isl_test_imath_SOURCES = isl_test_imath.c
 isl_test_imath_OBJECTS = isl_test_imath.$(OBJEXT)
 @IMATH_FOR_MP_TRUE@isl_test_imath_DEPENDENCIES = libisl.la
@@ -382,23 +427,46 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libisl_la_SOURCES) $(isl_bound_SOURCES) $(isl_cat_SOURCES) \
-	$(isl_closure_SOURCES) $(isl_codegen_SOURCES) \
-	$(isl_flow_SOURCES) $(isl_flow_cmp_SOURCES) $(isl_pip_SOURCES) \
-	$(isl_polyhedron_detect_equalities_SOURCES) \
-	$(isl_polyhedron_minimize_SOURCES) \
-	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
-	$(isl_schedule_SOURCES) $(isl_schedule_cmp_SOURCES) isl_test.c \
-	isl_test_imath.c isl_test_int.c
-DIST_SOURCES = $(am__libisl_la_SOURCES_DIST) $(isl_bound_SOURCES) \
-	$(isl_cat_SOURCES) $(isl_closure_SOURCES) \
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CXXFLAGS) $(CXXFLAGS)
+AM_V_CXX = $(am__v_CXX_@AM_V@)
+am__v_CXX_ = $(am__v_CXX_@AM_DEFAULT_V@)
+am__v_CXX_0 = @echo "  CXX     " $@;
+am__v_CXX_1 = 
+CXXLD = $(CXX)
+CXXLINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
+am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
+am__v_CXXLD_0 = @echo "  CXXLD   " $@;
+am__v_CXXLD_1 = 
+SOURCES = $(libdep_a_SOURCES) $(libisl_la_SOURCES) \
+	$(isl_bound_SOURCES) $(isl_cat_SOURCES) $(isl_closure_SOURCES) \
 	$(isl_codegen_SOURCES) $(isl_flow_SOURCES) \
 	$(isl_flow_cmp_SOURCES) $(isl_pip_SOURCES) \
 	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
 	$(isl_schedule_SOURCES) $(isl_schedule_cmp_SOURCES) isl_test.c \
-	isl_test_imath.c isl_test_int.c
+	$(isl_test_cpp_SOURCES) $(isl_test_cpp_checked_SOURCES) \
+	$(isl_test_cpp_checked_conversion_SOURCES) isl_test_imath.c \
+	isl_test_int.c
+DIST_SOURCES = $(libdep_a_SOURCES) $(am__libisl_la_SOURCES_DIST) \
+	$(isl_bound_SOURCES) $(isl_cat_SOURCES) $(isl_closure_SOURCES) \
+	$(isl_codegen_SOURCES) $(isl_flow_SOURCES) \
+	$(isl_flow_cmp_SOURCES) $(isl_pip_SOURCES) \
+	$(isl_polyhedron_detect_equalities_SOURCES) \
+	$(isl_polyhedron_minimize_SOURCES) \
+	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
+	$(isl_schedule_SOURCES) $(isl_schedule_cmp_SOURCES) isl_test.c \
+	$(isl_test_cpp_SOURCES) $(isl_test_cpp_checked_SOURCES) \
+	$(isl_test_cpp_checked_conversion_SOURCES) isl_test_imath.c \
+	isl_test_int.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -413,27 +481,27 @@ am__can_run_installinfo = \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 DATA = $(pkgconfig_DATA)
-am__pkginclude_HEADERS_DIST = include/isl/val_gmp.h include/isl/aff.h \
-	include/isl/aff_type.h include/isl/arg.h include/isl/ast.h \
-	include/isl/ast_type.h include/isl/ast_build.h \
-	include/isl/constraint.h include/isl/ctx.h \
-	include/isl/fixed_box.h include/isl/flow.h include/isl/id.h \
-	include/isl/id_type.h include/isl/id_to_ast_expr.h \
-	include/isl/id_to_id.h include/isl/id_to_pw_aff.h \
-	include/isl/ilp.h include/isl/hash.h include/isl/hmap.h \
-	include/isl/hmap_templ.c include/isl/list.h \
-	include/isl/local_space.h include/isl/lp.h include/isl/mat.h \
-	include/isl/map.h include/isl/map_to_basic_set.h \
-	include/isl/map_type.h include/isl/maybe.h \
-	include/isl/maybe_ast_expr.h include/isl/maybe_basic_set.h \
-	include/isl/maybe_id.h include/isl/maybe_pw_aff.h \
-	include/isl/maybe_templ.h include/isl/multi.h \
-	include/isl/obj.h include/isl/options.h include/isl/point.h \
-	include/isl/polynomial.h include/isl/polynomial_type.h \
-	include/isl/printer.h include/isl/printer_type.h \
-	include/isl/schedule.h include/isl/schedule_node.h \
-	include/isl/schedule_type.h include/isl/set.h \
-	include/isl/set_type.h include/isl/space.h \
+am__pkginclude_HEADERS_DIST = include/isl/cpp.h include/isl/val_gmp.h \
+	include/isl/aff.h include/isl/aff_type.h include/isl/arg.h \
+	include/isl/ast.h include/isl/ast_type.h \
+	include/isl/ast_build.h include/isl/constraint.h \
+	include/isl/ctx.h include/isl/fixed_box.h include/isl/flow.h \
+	include/isl/id.h include/isl/id_type.h \
+	include/isl/id_to_ast_expr.h include/isl/id_to_id.h \
+	include/isl/id_to_pw_aff.h include/isl/ilp.h \
+	include/isl/hash.h include/isl/hmap.h include/isl/hmap_templ.c \
+	include/isl/list.h include/isl/local_space.h include/isl/lp.h \
+	include/isl/mat.h include/isl/map.h \
+	include/isl/map_to_basic_set.h include/isl/map_type.h \
+	include/isl/maybe.h include/isl/maybe_ast_expr.h \
+	include/isl/maybe_basic_set.h include/isl/maybe_id.h \
+	include/isl/maybe_pw_aff.h include/isl/maybe_templ.h \
+	include/isl/multi.h include/isl/obj.h include/isl/options.h \
+	include/isl/point.h include/isl/polynomial.h \
+	include/isl/polynomial_type.h include/isl/printer.h \
+	include/isl/printer_type.h include/isl/schedule.h \
+	include/isl/schedule_node.h include/isl/schedule_type.h \
+	include/isl/set.h include/isl/set_type.h include/isl/space.h \
 	include/isl/space_type.h include/isl/stream.h \
 	include/isl/stride_info.h include/isl/union_map.h \
 	include/isl/union_map_type.h include/isl/union_set.h \
@@ -627,7 +695,6 @@ am__set_TESTS_bases = \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
 TEST_SUITE_LOG = test-suite.log
-TEST_EXTENSIONS = @EXEEXT@ .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
 am__set_b = \
@@ -642,10 +709,9 @@ am__set_b = \
   esac
 am__test_logs1 = $(TESTS:=.log)
 am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
-TEST_LOGS = $(am__test_logs2:.test.log=.log)
-TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
-TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
-	$(TEST_LOG_FLAGS)
+TEST_LOGS = $(am__test_logs2:.py.log=.log)
+PY_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
+PY_LOG_COMPILE = $(PY_LOG_COMPILER) $(AM_PY_LOG_FLAGS) $(PY_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/bound_test.sh.in \
 	$(srcdir)/codegen_test.sh.in $(srcdir)/flow_test.sh.in \
 	$(srcdir)/isl_config.h.in $(srcdir)/isl_srcdir.c.in \
@@ -711,6 +777,7 @@ CLANG_LIBS = @CLANG_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
+CXX11FLAGS = @CXX11FLAGS@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
@@ -730,6 +797,7 @@ GIT_HEAD = @GIT_HEAD@
 GIT_HEAD_ID = @GIT_HEAD_ID@
 GIT_HEAD_VERSION = @GIT_HEAD_VERSION@
 GREP = @GREP@
+HAVE_CXX11 = @HAVE_CXX11@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -849,6 +917,13 @@ DIST_SUBDIRS = $(MAYBE_INTERFACE) doc
 ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = nostdinc subdir-objects
 lib_LTLIBRARIES = libisl.la
+@HAVE_CPP_ISL_H_TRUE@CPP_H = include/isl/cpp.h
+TEST_EXTENSIONS = .py
+AM_TESTS_ENVIRONMENT = \
+	export PYTHONPATH=interface; \
+	export LD_LIBRARY_PATH=.libs;
+
+PY_LOG_COMPILER = $(PYTHON)
 @GMP_FOR_MP_TRUE@MP_SRC = \
 @GMP_FOR_MP_TRUE@	$(GET_MEMORY_FUNCTIONS) \
 @GMP_FOR_MP_TRUE@	isl_int_gmp.h \
@@ -859,12 +934,13 @@ lib_LTLIBRARIES = libisl.la
 @IMATH_FOR_MP_TRUE@	imath_wrap/gmp_compat.h imath_wrap/imath.h \
 @IMATH_FOR_MP_TRUE@	imath_wrap/imrat.h imath_wrap/wrap.h \
 @IMATH_FOR_MP_TRUE@	imath_wrap/gmp_compat.c imath_wrap/imath.c \
-@IMATH_FOR_MP_TRUE@	imath_wrap/imrat.c $(am__append_3) \
-@IMATH_FOR_MP_TRUE@	$(am__append_4)
+@IMATH_FOR_MP_TRUE@	imath_wrap/imrat.c $(am__append_8) \
+@IMATH_FOR_MP_TRUE@	$(am__append_9)
 @GMP_FOR_MP_TRUE@MP_INCLUDE_H = include/isl/val_gmp.h
 @IMATH_FOR_MP_TRUE@MP_INCLUDE_H = 
 @GMP_FOR_MP_TRUE@@NEED_GET_MEMORY_FUNCTIONS_TRUE@GET_MEMORY_FUNCTIONS = mp_get_memory_functions.c
-AM_CPPFLAGS = -I. -I$(srcdir) -I$(srcdir)/include -Iinclude/ @MP_CPPFLAGS@
+includes = -I. -I$(srcdir) -I$(srcdir)/include -Iinclude/
+AM_CPPFLAGS = $(includes) @MP_CPPFLAGS@
 AM_CFLAGS = @WARNING_FLAGS@
 libisl_la_SOURCES = \
 	$(MP_SRC) \
@@ -1065,10 +1141,37 @@ isl_closure_LDADD = libisl.la
 isl_closure_SOURCES = \
 	closure.c
 
+isl_test_cpp_CXXFLAGS = @CXX11FLAGS@
+isl_test_cpp_SOURCES = \
+	isl_test_cpp.cc \
+	include/isl/cpp.h
+
+isl_test_cpp_LDFLAGS = @MP_LDFLAGS@
+isl_test_cpp_LDADD = libisl.la @MP_LIBS@
+isl_test_cpp_checked_CXXFLAGS = @CXX11FLAGS@
+isl_test_cpp_checked_SOURCES = \
+	isl_test_cpp-checked.cc \
+	include/isl/cpp-checked.h
+
+isl_test_cpp_checked_LDFLAGS = @MP_LDFLAGS@
+isl_test_cpp_checked_LDADD = libisl.la @MP_LIBS@
+isl_test_cpp_checked_conversion_CXXFLAGS = @CXX11FLAGS@
+isl_test_cpp_checked_conversion_SOURCES = \
+	isl_test_cpp-checked-conversion.cc \
+	include/isl/cpp-checked-conversion.h
+
+isl_test_cpp_checked_conversion_LDFLAGS = @MP_LDFLAGS@
+isl_test_cpp_checked_conversion_LDADD = libisl.la @MP_LIBS@
+
+# dummy library that captures the dependencies on all headers
+# that are relevant for the bindings
+noinst_LIBRARIES = libdep.a
+libdep_a_SOURCES = all.c
 nodist_pkginclude_HEADERS = \
 	include/isl/stdint.h
 
 pkginclude_HEADERS = \
+	$(CPP_H) \
 	$(MP_INCLUDE_H) \
 	include/isl/aff.h \
 	include/isl/aff_type.h \
@@ -1129,10 +1232,13 @@ pkginclude_HEADERS = \
 	include/isl/version.h \
 	include/isl/vertices.h
 
-BUILT_SOURCES = gitversion.h
-CLEANFILES = \
-	gitversion.h
+@HAVE_CLANG_TRUE@CPP_INTERFACES = \
+@HAVE_CLANG_TRUE@	include/isl/cpp.h \
+@HAVE_CLANG_TRUE@	include/isl/cpp-checked.h \
+@HAVE_CLANG_TRUE@	include/isl/cpp-checked-conversion.h
 
+BUILT_SOURCES = gitversion.h $(CPP_INTERFACES)
+CLEANFILES = gitversion.h interface/isl.py $(CPP_INTERFACES)
 DISTCLEANFILES = \
 	isl-uninstalled.sh \
 	isl-uninstalled.pc \
@@ -1208,9 +1314,11 @@ EXTRA_DIST = \
 	imath/imath.h \
 	imath/imrat.c \
 	imath/imrat.h \
-	interface/all.h \
-	interface/isl.py.top \
-	interface/isl_test_python.py \
+	all.h \
+	cpp \
+	python \
+	isl_test_cpp-generic.cc \
+	isl_test_python.py \
 	test_inputs
 
 pkgconfigdir = $(pkgconfig_libdir)
@@ -1219,7 +1327,7 @@ all: $(BUILT_SOURCES) isl_config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .log .o .obj .test .test$(EXEEXT) .trs
+.SUFFIXES: .c .cc .lo .log .o .obj .py .py$(EXEEXT) .trs
 am--refresh: Makefile
 	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -1280,6 +1388,14 @@ flow_test.sh: $(top_builddir)/config.status $(srcdir)/flow_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 schedule_test.sh: $(top_builddir)/config.status $(srcdir)/schedule_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
+
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+
+libdep.a: $(libdep_a_OBJECTS) $(libdep_a_DEPENDENCIES) $(EXTRA_libdep_a_DEPENDENCIES) 
+	$(AM_V_at)-rm -f libdep.a
+	$(AM_V_AR)$(libdep_a_AR) libdep.a $(libdep_a_OBJECTS) $(libdep_a_LIBADD)
+	$(AM_V_at)$(RANLIB) libdep.a
 
 install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -1396,6 +1512,18 @@ isl_test$(EXEEXT): $(isl_test_OBJECTS) $(isl_test_DEPENDENCIES) $(EXTRA_isl_test
 	@rm -f isl_test$(EXEEXT)
 	$(AM_V_CCLD)$(isl_test_LINK) $(isl_test_OBJECTS) $(isl_test_LDADD) $(LIBS)
 
+isl_test_cpp$(EXEEXT): $(isl_test_cpp_OBJECTS) $(isl_test_cpp_DEPENDENCIES) $(EXTRA_isl_test_cpp_DEPENDENCIES) 
+	@rm -f isl_test_cpp$(EXEEXT)
+	$(AM_V_CXXLD)$(isl_test_cpp_LINK) $(isl_test_cpp_OBJECTS) $(isl_test_cpp_LDADD) $(LIBS)
+
+isl_test_cpp-checked$(EXEEXT): $(isl_test_cpp_checked_OBJECTS) $(isl_test_cpp_checked_DEPENDENCIES) $(EXTRA_isl_test_cpp_checked_DEPENDENCIES) 
+	@rm -f isl_test_cpp-checked$(EXEEXT)
+	$(AM_V_CXXLD)$(isl_test_cpp_checked_LINK) $(isl_test_cpp_checked_OBJECTS) $(isl_test_cpp_checked_LDADD) $(LIBS)
+
+isl_test_cpp-checked-conversion$(EXEEXT): $(isl_test_cpp_checked_conversion_OBJECTS) $(isl_test_cpp_checked_conversion_DEPENDENCIES) $(EXTRA_isl_test_cpp_checked_conversion_DEPENDENCIES) 
+	@rm -f isl_test_cpp-checked-conversion$(EXEEXT)
+	$(AM_V_CXXLD)$(isl_test_cpp_checked_conversion_LINK) $(isl_test_cpp_checked_conversion_OBJECTS) $(isl_test_cpp_checked_conversion_LDADD) $(LIBS)
+
 isl_test_imath$(EXEEXT): $(isl_test_imath_OBJECTS) $(isl_test_imath_DEPENDENCIES) $(EXTRA_isl_test_imath_DEPENDENCIES) 
 	@rm -f isl_test_imath$(EXEEXT)
 	$(AM_V_CCLD)$(isl_test_imath_LINK) $(isl_test_imath_OBJECTS) $(isl_test_imath_LDADD) $(LIBS)
@@ -1412,6 +1540,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/all.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/basis_reduction_tab.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bound.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cat.Po@am__quote@
@@ -1491,6 +1620,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_tab_pip.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_tarjan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp-isl_test_cpp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_imath.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_test_int.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_transitive_closure.Plo@am__quote@
@@ -1538,6 +1670,72 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+.cc.o:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
+
+.cc.obj:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.cc.lo:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+@am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
+
+isl_test_cpp-isl_test_cpp.o: isl_test_cpp.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp-isl_test_cpp.o -MD -MP -MF $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo -c -o isl_test_cpp-isl_test_cpp.o `test -f 'isl_test_cpp.cc' || echo '$(srcdir)/'`isl_test_cpp.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo $(DEPDIR)/isl_test_cpp-isl_test_cpp.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp.cc' object='isl_test_cpp-isl_test_cpp.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp-isl_test_cpp.o `test -f 'isl_test_cpp.cc' || echo '$(srcdir)/'`isl_test_cpp.cc
+
+isl_test_cpp-isl_test_cpp.obj: isl_test_cpp.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp-isl_test_cpp.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo -c -o isl_test_cpp-isl_test_cpp.obj `if test -f 'isl_test_cpp.cc'; then $(CYGPATH_W) 'isl_test_cpp.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp-isl_test_cpp.Tpo $(DEPDIR)/isl_test_cpp-isl_test_cpp.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp.cc' object='isl_test_cpp-isl_test_cpp.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp-isl_test_cpp.obj `if test -f 'isl_test_cpp.cc'; then $(CYGPATH_W) 'isl_test_cpp.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp.cc'; fi`
+
+isl_test_cpp_checked-isl_test_cpp-checked.o: isl_test_cpp-checked.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked-isl_test_cpp-checked.o -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo -c -o isl_test_cpp_checked-isl_test_cpp-checked.o `test -f 'isl_test_cpp-checked.cc' || echo '$(srcdir)/'`isl_test_cpp-checked.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked.cc' object='isl_test_cpp_checked-isl_test_cpp-checked.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked-isl_test_cpp-checked.o `test -f 'isl_test_cpp-checked.cc' || echo '$(srcdir)/'`isl_test_cpp-checked.cc
+
+isl_test_cpp_checked-isl_test_cpp-checked.obj: isl_test_cpp-checked.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked-isl_test_cpp-checked.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo -c -o isl_test_cpp_checked-isl_test_cpp-checked.obj `if test -f 'isl_test_cpp-checked.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Tpo $(DEPDIR)/isl_test_cpp_checked-isl_test_cpp-checked.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked.cc' object='isl_test_cpp_checked-isl_test_cpp-checked.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked-isl_test_cpp-checked.obj `if test -f 'isl_test_cpp-checked.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked.cc'; fi`
+
+isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o: isl_test_cpp-checked-conversion.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o `test -f 'isl_test_cpp-checked-conversion.cc' || echo '$(srcdir)/'`isl_test_cpp-checked-conversion.cc
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked-conversion.cc' object='isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.o `test -f 'isl_test_cpp-checked-conversion.cc' || echo '$(srcdir)/'`isl_test_cpp-checked-conversion.cc
+
+isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj: isl_test_cpp-checked-conversion.cc
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -MT isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj -MD -MP -MF $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj `if test -f 'isl_test_cpp-checked-conversion.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked-conversion.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked-conversion.cc'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Tpo $(DEPDIR)/isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='isl_test_cpp-checked-conversion.cc' object='isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(isl_test_cpp_checked_conversion_CXXFLAGS) $(CXXFLAGS) -c -o isl_test_cpp_checked_conversion-isl_test_cpp-checked-conversion.obj `if test -f 'isl_test_cpp-checked-conversion.cc'; then $(CYGPATH_W) 'isl_test_cpp-checked-conversion.cc'; else $(CYGPATH_W) '$(srcdir)/isl_test_cpp-checked-conversion.cc'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1908,6 +2106,27 @@ schedule_test.sh.log: schedule_test.sh
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+isl_test_cpp.log: isl_test_cpp$(EXEEXT)
+	@p='isl_test_cpp$(EXEEXT)'; \
+	b='isl_test_cpp'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+isl_test_cpp-checked.log: isl_test_cpp-checked$(EXEEXT)
+	@p='isl_test_cpp-checked$(EXEEXT)'; \
+	b='isl_test_cpp-checked'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+isl_test_cpp-checked-conversion.log: isl_test_cpp-checked-conversion$(EXEEXT)
+	@p='isl_test_cpp-checked-conversion$(EXEEXT)'; \
+	b='isl_test_cpp-checked-conversion'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 isl_test_imath.log: isl_test_imath$(EXEEXT)
 	@p='isl_test_imath$(EXEEXT)'; \
 	b='isl_test_imath'; \
@@ -1915,19 +2134,19 @@ isl_test_imath.log: isl_test_imath$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-.test.log:
+.py.log:
 	@p='$<'; \
 	$(am__set_b); \
-	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
+	$(am__check_pre) $(PY_LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
+	$(am__common_driver_flags) $(AM_PY_LOG_DRIVER_FLAGS) $(PY_LOG_DRIVER_FLAGS) -- $(PY_LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-@am__EXEEXT_TRUE@.test$(EXEEXT).log:
+@am__EXEEXT_TRUE@.py$(EXEEXT).log:
 @am__EXEEXT_TRUE@	@p='$<'; \
 @am__EXEEXT_TRUE@	$(am__set_b); \
-@am__EXEEXT_TRUE@	$(am__check_pre) $(TEST_LOG_DRIVER) --test-name "$$f" \
+@am__EXEEXT_TRUE@	$(am__check_pre) $(PY_LOG_DRIVER) --test-name "$$f" \
 @am__EXEEXT_TRUE@	--log-file $$b.log --trs-file $$b.trs \
-@am__EXEEXT_TRUE@	$(am__common_driver_flags) $(AM_TEST_LOG_DRIVER_FLAGS) $(TEST_LOG_DRIVER_FLAGS) -- $(TEST_LOG_COMPILE) \
+@am__EXEEXT_TRUE@	$(am__common_driver_flags) $(AM_PY_LOG_DRIVER_FLAGS) $(PY_LOG_DRIVER_FLAGS) -- $(PY_LOG_COMPILE) \
 @am__EXEEXT_TRUE@	"$$tst" $(AM_TESTS_FD_REDIRECT)
 
 distdir: $(DISTFILES)
@@ -2125,8 +2344,8 @@ check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-recursive
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(DATA) $(HEADERS) \
-		isl_config.h
+all-am: Makefile $(LIBRARIES) $(LTLIBRARIES) $(PROGRAMS) $(DATA) \
+		$(HEADERS) isl_config.h
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)" "$(DESTDIR)$(pkgincludedir)"; do \
@@ -2174,7 +2393,7 @@ maintainer-clean-generic:
 clean: clean-recursive
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
-	clean-noinstPROGRAMS mostlyclean-am
+	clean-noinstLIBRARIES clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
@@ -2254,16 +2473,17 @@ uninstall-am: uninstall-libLTLIBRARIES uninstall-local \
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-TESTS check-am clean clean-cscope \
 	clean-generic clean-libLTLIBRARIES clean-libtool \
-	clean-noinstPROGRAMS cscope cscopelist-am ctags ctags-am dist \
-	dist-all dist-bzip2 dist-gzip dist-hook dist-lzip dist-shar \
-	dist-tarZ dist-xz dist-zip distcheck distclean \
-	distclean-compile distclean-generic distclean-hdr \
-	distclean-libtool distclean-tags distcleancheck distdir \
-	distuninstallcheck dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am \
-	install-data-local install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-libLTLIBRARIES install-man \
+	clean-noinstLIBRARIES clean-noinstPROGRAMS cscope \
+	cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
+	dist-gzip dist-hook dist-lzip dist-shar dist-tarZ dist-xz \
+	dist-zip distcheck distclean distclean-compile \
+	distclean-generic distclean-hdr distclean-libtool \
+	distclean-tags distcleancheck distdir distuninstallcheck dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-data-local install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am \
+	install-libLTLIBRARIES install-man \
 	install-nodist_pkgincludeHEADERS install-pdf install-pdf-am \
 	install-pkgconfigDATA install-pkgincludeHEADERS install-ps \
 	install-ps-am install-strip installcheck installcheck-am \
@@ -2277,8 +2497,51 @@ uninstall-am: uninstall-libLTLIBRARIES uninstall-local \
 
 .PRECIOUS: Makefile
 
+@HAVE_CLANG_TRUE@FORCE:
+@HAVE_CLANG_TRUE@interface/extract_interface: FORCE
+@HAVE_CLANG_TRUE@	$(MAKE) $(AM_MAKEFLAGS) -C interface extract_interface
+@HAVE_CLANG_TRUE@@HAVE_PYTHON_TRUE@  isl_test_python.py: interface/isl.py libisl.la
 
-dist-hook:
+@HAVE_CLANG_TRUE@interface/isl.py: interface/extract_interface libdep.a python/isl.py.top
+@HAVE_CLANG_TRUE@	(cat $(srcdir)/python/isl.py.top && \
+@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) --language=python \
+@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h) \
+@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+
+@HAVE_CLANG_TRUE@include/isl/cpp.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@		cpp/cpp.h.top cpp/cpp.h.pre cpp/cpp.h.bot
+@HAVE_CLANG_TRUE@	$(MKDIR_P) "include/isl/cpp" && \
+@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp.h.top $(srcdir)/all.h \
+@HAVE_CLANG_TRUE@	    $(srcdir)/cpp/cpp.h.pre && \
+@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) --language=cpp \
+@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp.h.bot) \
+@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+
+@HAVE_CLANG_TRUE@include/isl/cpp-checked.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@		cpp/cpp-checked.h.top \
+@HAVE_CLANG_TRUE@		cpp/cpp-checked.h.pre cpp/cpp-checked.h.bot
+@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp-checked.h.top $(srcdir)/all.h \
+@HAVE_CLANG_TRUE@	    $(srcdir)/cpp/cpp-checked.h.pre && \
+@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) \
+@HAVE_CLANG_TRUE@			--language=cpp-checked \
+@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp-checked.h.bot) \
+@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+
+@HAVE_CLANG_TRUE@include/isl/cpp-checked-conversion.h: interface/extract_interface libdep.a \
+@HAVE_CLANG_TRUE@		cpp/cpp-checked-conversion.h.top \
+@HAVE_CLANG_TRUE@		cpp/cpp-checked-conversion.h.bot
+@HAVE_CLANG_TRUE@	(cat $(srcdir)/cpp/cpp-checked-conversion.h.top && \
+@HAVE_CLANG_TRUE@		interface/extract_interface$(EXEEXT) \
+@HAVE_CLANG_TRUE@			--language=cpp-checked-conversion \
+@HAVE_CLANG_TRUE@			$(includes) $(srcdir)/all.h && \
+@HAVE_CLANG_TRUE@		cat $(srcdir)/cpp/cpp-checked-conversion.h.bot) \
+@HAVE_CLANG_TRUE@			> $@ || (rm $@ && false)
+
+@HAVE_CLANG_TRUE@dist-hook: interface/isl.py
+@HAVE_CLANG_TRUE@	cp interface/isl.py $(distdir)/interface/
+@HAVE_CLANG_FALSE@dist-hook:
 	echo @GIT_HEAD_VERSION@ > $(distdir)/GIT_HEAD_ID
 	(cd doc; make manual.pdf)
 	cp doc/manual.pdf $(distdir)/doc/

@@ -70,29 +70,6 @@ public:
     }
   }
 
-  size_t Write(const void *s, size_t length) override {
-    std::lock_guard<std::recursive_mutex> guard(m_streams_mutex);
-    if (m_streams.empty())
-      return 0;
-
-    size_t min_bytes_written = SIZE_MAX;
-    collection::iterator pos, end;
-    for (pos = m_streams.begin(), end = m_streams.end(); pos != end; ++pos) {
-      // Allow for our collection to contain NULL streams. This allows the
-      // StreamTee to be used with hard coded indexes for clients that might
-      // want N total streams with only a few that are set to valid values.
-      Stream *strm = pos->get();
-      if (strm) {
-        const size_t bytes_written = strm->Write(s, length);
-        if (min_bytes_written > bytes_written)
-          min_bytes_written = bytes_written;
-      }
-    }
-    if (min_bytes_written == SIZE_MAX)
-      return 0;
-    return min_bytes_written;
-  }
-
   size_t AppendStream(const lldb::StreamSP &stream_sp) {
     size_t new_idx = m_streams.size();
     std::lock_guard<std::recursive_mutex> guard(m_streams_mutex);
@@ -131,6 +108,29 @@ protected:
   typedef std::vector<lldb::StreamSP> collection;
   mutable std::recursive_mutex m_streams_mutex;
   collection m_streams;
+
+  size_t WriteImpl(const void *s, size_t length) override {
+    std::lock_guard<std::recursive_mutex> guard(m_streams_mutex);
+    if (m_streams.empty())
+      return 0;
+
+    size_t min_bytes_written = SIZE_MAX;
+    collection::iterator pos, end;
+    for (pos = m_streams.begin(), end = m_streams.end(); pos != end; ++pos) {
+      // Allow for our collection to contain NULL streams. This allows the
+      // StreamTee to be used with hard coded indexes for clients that might
+      // want N total streams with only a few that are set to valid values.
+      Stream *strm = pos->get();
+      if (strm) {
+        const size_t bytes_written = strm->Write(s, length);
+        if (min_bytes_written > bytes_written)
+          min_bytes_written = bytes_written;
+      }
+    }
+    if (min_bytes_written == SIZE_MAX)
+      return 0;
+    return min_bytes_written;
+  }
 };
 
 } // namespace lldb_private

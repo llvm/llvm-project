@@ -58,6 +58,9 @@ enum class SortSectionPolicy { Default, None, Alignment, Name, Priority };
 // For --target2
 enum class Target2Policy { Abs, Rel, GotRel };
 
+// For tracking ARM Float Argument PCS
+enum class ARMVFPArgKind { Default, Base, VFP, ToolChain };
+
 struct SymbolVersion {
   llvm::StringRef Name;
   bool IsExternCpp;
@@ -133,8 +136,10 @@ struct Configuration {
   bool EhFrameHdr;
   bool EmitRelocs;
   bool EnableNewDtags;
+  bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
+  bool FormatBinary = false;
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
@@ -195,6 +200,7 @@ struct Configuration {
   StripPolicy Strip;
   UnresolvedPolicy UnresolvedSymbols;
   Target2Policy Target2;
+  ARMVFPArgKind ARMVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;

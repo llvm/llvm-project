@@ -599,7 +599,7 @@ kmp_proc_bind_t FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PROC_BIND)(void) {
 }
 
 #if OMP_45_ENABLED
-int FTN_STDCALL FTN_GET_NUM_PLACES(void) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_PLACES)(void) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
   return 0;
 #else
@@ -612,7 +612,7 @@ int FTN_STDCALL FTN_GET_NUM_PLACES(void) {
 #endif
 }
 
-int FTN_STDCALL FTN_GET_PLACE_NUM_PROCS(int place_num) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_NUM_PROCS)(int place_num) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
   return 0;
 #else
@@ -637,7 +637,8 @@ int FTN_STDCALL FTN_GET_PLACE_NUM_PROCS(int place_num) {
 #endif
 }
 
-void FTN_STDCALL FTN_GET_PLACE_PROC_IDS(int place_num, int *ids) {
+void FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_PROC_IDS)(int place_num,
+                                                         int *ids) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
 // Nothing.
 #else
@@ -661,7 +662,7 @@ void FTN_STDCALL FTN_GET_PLACE_PROC_IDS(int place_num, int *ids) {
 #endif
 }
 
-int FTN_STDCALL FTN_GET_PLACE_NUM(void) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PLACE_NUM)(void) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
   return -1;
 #else
@@ -680,7 +681,7 @@ int FTN_STDCALL FTN_GET_PLACE_NUM(void) {
 #endif
 }
 
-int FTN_STDCALL FTN_GET_PARTITION_NUM_PLACES(void) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_NUM_PLACES)(void) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
   return 0;
 #else
@@ -708,7 +709,8 @@ int FTN_STDCALL FTN_GET_PARTITION_NUM_PLACES(void) {
 #endif
 }
 
-void FTN_STDCALL FTN_GET_PARTITION_PLACE_NUMS(int *place_nums) {
+void
+    FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_PLACE_NUMS)(int *place_nums) {
 #if defined(KMP_STUB) || !KMP_AFFINITY_SUPPORTED
 // Nothing.
 #else
@@ -1192,7 +1194,7 @@ int FTN_STDCALL FTN_GET_CANCELLATION_STATUS(int cancel_kind) {
 
 #if OMP_45_ENABLED
 /* returns the maximum allowed task priority */
-int FTN_STDCALL FTN_GET_MAX_TASK_PRIORITY(void) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 #ifdef KMP_STUB
   return 0;
 #else
@@ -1291,6 +1293,13 @@ KMP_VERSION_SYMBOL(FTN_IS_INITIAL_DEVICE, 40, "OMP_4.0");
 
 #if OMP_45_ENABLED
 // OMP_4.5 versioned symbols
+KMP_VERSION_SYMBOL(FTN_GET_MAX_TASK_PRIORITY, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_NUM_PLACES, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_PLACE_NUM_PROCS, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_PLACE_PROC_IDS, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_PLACE_NUM, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_PARTITION_NUM_PLACES, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
 #endif
 
 #if OMP_50_ENABLED

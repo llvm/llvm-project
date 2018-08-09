@@ -21,14 +21,14 @@
 
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/Errno.h"
 

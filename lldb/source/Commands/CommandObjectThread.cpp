@@ -14,7 +14,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
@@ -37,6 +36,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Utility/State.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;

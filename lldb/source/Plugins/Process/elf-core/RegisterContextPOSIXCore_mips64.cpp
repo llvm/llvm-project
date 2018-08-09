@@ -9,8 +9,8 @@
 
 #include "RegisterContextPOSIXCore_mips64.h"
 
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb_private;
 

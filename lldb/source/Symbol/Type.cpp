@@ -14,9 +14,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/Symbol/CompilerType.h"

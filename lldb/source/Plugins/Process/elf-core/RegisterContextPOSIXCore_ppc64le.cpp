@@ -9,9 +9,9 @@
 
 #include "RegisterContextPOSIXCore_ppc64le.h"
 
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"

@@ -10,9 +10,9 @@
 #ifndef liblldb_Value_h_
 #define liblldb_Value_h_
 
-#include "lldb/Core/Scalar.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"         // for ByteOrder, ByteOrder::eB...
 #include "lldb/lldb-private-enumerations.h" // for AddressType

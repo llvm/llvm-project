@@ -42,9 +42,6 @@ private:
   // True if we are in --start-lib and --end-lib.
   bool InLib = false;
 
-  // True if we are in -format=binary and -format=elf.
-  bool InBinary = false;
-
   std::vector<InputFile *> Files;
 };
 
@@ -67,7 +64,7 @@ void printHelp();
 std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);
-llvm::Optional<std::string> searchLinkerScript(StringRef Path);
+llvm::Optional<std::string> searchScript(StringRef Path);
 llvm::Optional<std::string> searchLibrary(StringRef Path);
 
 } // namespace elf

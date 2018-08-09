@@ -4,6 +4,13 @@
 # RUN: ld.lld %t2 %t  -o %t3
 # RUN: llvm-objdump -d  %t3 | FileCheck %s
 
+# Note: 69632 == 0x11000
+# R_HEX_32_6_X
+# R_HEX_12_X
+if (p0) r0 = ##_start
+# CHECK: immext(#69632)
+# CHECK: if (p0) r0 = ##69632
+
 # R_HEX_B15_PCREL
 if (p0) jump:nt #_start
 # CHECK: if (p0) jump:nt 0x11000

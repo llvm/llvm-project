@@ -72,6 +72,8 @@ public:
   void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                        Stream &s) override;
 
+  bool IsSourceFile(llvm::StringRef) const override { return false; } 
+
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

@@ -1,3 +1,10 @@
+version: 0.20
+date: Sat Jul 21 18:10:08 CEST 2018
+changes:
+	- keep track of domain in 0D isl_multi_pw_aff and isl_multi_union_pw_aff
+	- add isl_aff_eval and isl_pw_aff_eval
+	- add fixed-size rectangular box hull
+---
 version: 0.19
 date: Sat Mar  3 10:44:49 CET 2018
 changes:

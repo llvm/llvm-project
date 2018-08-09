@@ -267,7 +267,6 @@ int CommandObject::HandleCompletion(CompletionRequest &request) {
   if (WantsRawCommandString() && !WantsCompletion()) {
     // FIXME: Abstract telling the completion to insert the completion
     // character.
-    request.GetMatches().Clear();
     return -1;
   } else {
     // Can we do anything generic with the options?
@@ -282,7 +281,7 @@ int CommandObject::HandleCompletion(CompletionRequest &request) {
       bool handled_by_options = cur_options->HandleOptionCompletion(
           request, opt_element_vector, GetCommandInterpreter());
       if (handled_by_options)
-        return request.GetMatches().GetSize();
+        return request.GetNumberOfMatches();
     }
 
     // If we got here, the last word is not an option or an option argument.

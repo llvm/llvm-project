@@ -85,7 +85,7 @@ class WatchpointSlotsTestCase(TestBase):
         # Set a watchpoint at byteArray[3]
         self.expect("watchpoint set variable byteArray[3]", WATCHPOINT_CREATED,
                     substrs=['Watchpoint created','size = 1'])
-   
+
         # Resume inferior.
         self.runCmd("process continue")
 
@@ -98,6 +98,6 @@ class WatchpointSlotsTestCase(TestBase):
         else:
             self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
                         substrs=['stopped', 'stop reason = watchpoint 3'])
-   
+
         # Resume inferior.
         self.runCmd("process continue")

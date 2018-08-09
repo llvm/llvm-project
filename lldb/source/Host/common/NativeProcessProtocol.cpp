@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/common/SoftwareBreakpoint.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;

@@ -125,3 +125,7 @@ GoLanguage::GetHardcodedSynthetics() {
 
   return g_formatters;
 }
+
+bool GoLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  return file_path.endswith(".go");
+}

@@ -25,6 +25,7 @@ add_lldb_library(lldbCore
   FileLineResolver.cpp
   FileSpecList.cpp
   FormatEntity.cpp
+  Highlighter.cpp
   IOHandler.cpp
   Listener.cpp
   Mangled.cpp
@@ -33,12 +34,10 @@ add_lldb_library(lldbCore
   ModuleList.cpp
   Opcode.cpp
   PluginManager.cpp
-  RegisterValue.cpp
-  Scalar.cpp
+  RichManglingContext.cpp
   SearchFilter.cpp
   Section.cpp
   SourceManager.cpp
-  State.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
   UserSettingsController.cpp

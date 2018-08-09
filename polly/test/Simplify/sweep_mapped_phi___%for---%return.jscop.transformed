@@ -46,20 +46,3 @@
       }
    ]
 }
-
-
-; CHECK: Statistics {
-; CHECK:     Dead accesses removed: 1
-; CHECK: }
-
-; CHECK:      After accesses {
-; CHECK-NEXT:     Stmt_bodyA
-; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:     Stmt_bodyB
-; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_phi__phi[] };
-; CHECK-NEXT:            new: [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_B[i0] };
-; CHECK-NEXT: }

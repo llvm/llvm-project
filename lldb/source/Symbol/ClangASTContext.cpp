@@ -77,7 +77,6 @@
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
@@ -98,6 +97,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Scalar.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
@@ -638,7 +638,6 @@ void ClangASTContext::SetExternalSource(
   if (ast) {
     ast->setExternalSource(ast_source_ap);
     ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
-    // ast->getTranslationUnitDecl()->setHasExternalVisibleStorage(true);
   }
 }
 
@@ -649,7 +648,6 @@ void ClangASTContext::RemoveExternalSource() {
     llvm::IntrusiveRefCntPtr<ExternalASTSource> empty_ast_source_ap;
     ast->setExternalSource(empty_ast_source_ap);
     ast->getTranslationUnitDecl()->setHasExternalLexicalStorage(false);
-    // ast->getTranslationUnitDecl()->setHasExternalVisibleStorage(false);
   }
 }
 

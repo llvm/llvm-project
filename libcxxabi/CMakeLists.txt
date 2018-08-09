@@ -21,7 +21,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 7.0.0svn)
+  set(PACKAGE_VERSION 8.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -83,6 +83,13 @@ set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 # system over a static libc++abi from the output directory.
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
+
+cmake_dependent_option(LIBCXXABI_INSTALL_STATIC_LIBRARY
+  "Install the static libc++abi library." ON
+  "LIBCXXABI_ENABLE_STATIC;LIBCXXABI_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBCXXABI_INSTALL_SHARED_LIBRARY
+  "Install the shared libc++abi library." ON
+  "LIBCXXABI_ENABLE_SHARED;LIBCXXABI_INSTALL_LIBRARY" OFF)
 
 cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY
   "Statically link the LLVM unwinder to static library" ON
@@ -172,7 +179,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 else()
-  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
 endif()
 
 set(LIBCXXABI_INSTALL_PREFIX ${DEFAULT_INSTALL_PREFIX} CACHE STRING

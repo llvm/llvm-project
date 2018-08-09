@@ -95,10 +95,11 @@ std::string formatSI(double interval, int width, char unit) {
     static struct {
       double scale;
       char prefix;
-    } ranges[] = {{1.e12, 'f'},  {1.e9, 'p'},   {1.e6, 'n'},   {1.e3, 'u'},
-                  {1.0, 'm'},    {1.e-3, ' '},  {1.e-6, 'k'},  {1.e-9, 'M'},
-                  {1.e-12, 'G'}, {1.e-15, 'T'}, {1.e-18, 'P'}, {1.e-21, 'E'},
-                  {1.e-24, 'Z'}, {1.e-27, 'Y'}};
+    } ranges[] = {{1.e21, 'y'},  {1.e18, 'z'},  {1.e15, 'a'},  {1.e12, 'f'},
+                  {1.e9, 'p'},   {1.e6, 'n'},   {1.e3, 'u'},   {1.0, 'm'},
+                  {1.e-3, ' '},  {1.e-6, 'k'},  {1.e-9, 'M'},  {1.e-12, 'G'},
+                  {1.e-15, 'T'}, {1.e-18, 'P'}, {1.e-21, 'E'}, {1.e-24, 'Z'},
+                  {1.e-27, 'Y'}};
 
     if (interval == 0.0) {
       os << std::setw(width - 3) << std::right << "0.00" << std::setw(3)

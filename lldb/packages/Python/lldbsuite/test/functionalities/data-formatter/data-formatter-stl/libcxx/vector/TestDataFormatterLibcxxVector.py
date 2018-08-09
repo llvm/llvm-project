@@ -192,7 +192,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.check_numbers("ref")
 
         # The pointer should just show the right number of elements:
-        
+
         self.expect("frame variable ptr", substrs=['ptr =', ' size=7'])
 
         self.expect("p ptr", substrs=['$', 'size=7'])

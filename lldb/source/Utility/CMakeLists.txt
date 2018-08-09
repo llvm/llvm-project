@@ -53,7 +53,6 @@ add_lldb_library(lldbUtility
   Environment.cpp
   FastDemangle.cpp
   FileSpec.cpp
-  History.cpp
   IOObject.cpp
   JSON.cpp
   LLDBAssert.cpp
@@ -61,9 +60,12 @@ add_lldb_library(lldbUtility
   Logging.cpp
   NameMatches.cpp
   Range.cpp
+  RegisterValue.cpp
   RegularExpression.cpp
+  Scalar.cpp
   SelectHelper.cpp
   SharingPtr.cpp
+  State.cpp
   Status.cpp
   Stream.cpp
   StreamCallback.cpp

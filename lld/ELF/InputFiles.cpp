@@ -129,7 +129,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
-  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
+  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),
                       [](ErrorInfoBase &Info) { warn(Info.message()); });
@@ -494,6 +494,46 @@ void ObjFile<ELFT>::initializeSections(
   }
 }
 
+// For ARM only, to set the EF_ARM_ABI_FLOAT_SOFT or EF_ARM_ABI_FLOAT_HARD
+// flag in the ELF Header we need to look at Tag_ABI_VFP_args to find out how
+// the input objects have been compiled.
+static void updateARMVFPArgs(const ARMAttributeParser &Attributes,
+                             const InputFile *F) {
+  if (!Attributes.hasAttribute(ARMBuildAttrs::ABI_VFP_args))
+    // If an ABI tag isn't present then it is implicitly given the value of 0
+    // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
+    // including some in glibc that don't use FP args (and should have value 3)
+    // don't have the attribute so we do not consider an implicit value of 0
+    // as a clash.
+    return;
+
+  unsigned VFPArgs = Attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
+  ARMVFPArgKind Arg;
+  switch (VFPArgs) {
+  case ARMBuildAttrs::BaseAAPCS:
+    Arg = ARMVFPArgKind::Base;
+    break;
+  case ARMBuildAttrs::HardFPAAPCS:
+    Arg = ARMVFPArgKind::VFP;
+    break;
+  case ARMBuildAttrs::ToolChainFPPCS:
+    // Tool chain specific convention that conforms to neither AAPCS variant.
+    Arg = ARMVFPArgKind::ToolChain;
+    break;
+  case ARMBuildAttrs::CompatibleFPAAPCS:
+    // Object compatible with all conventions.
+    return;
+  default:
+    error(toString(F) + ": unknown Tag_ABI_VFP_args value: " + Twine(VFPArgs));
+    return;
+  }
+  // Follow ld.bfd and error if there is a mix of calling conventions.
+  if (Config->ARMVFPArgs != Arg && Config->ARMVFPArgs != ARMVFPArgKind::Default)
+    error(toString(F) + ": incompatible Tag_ABI_VFP_args");
+  else
+    Config->ARMVFPArgs = Arg;
+}
+
 // The ARM support in lld makes some use of instructions that are not available
 // on all ARM architectures. Namely:
 // - Use of BLX instruction for interworking between ARM and Thumb state.
@@ -573,6 +613,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
     Attributes.Parse(Contents, /*isLittle*/ Config->EKind == ELF32LEKind);
     updateSupportedARMFeatures(Attributes);
+    updateARMVFPArgs(Attributes, this);
+
     // FIXME: Retain the first attribute section we see. The eglibc ARM
     // dynamic loaders require the presence of an attribute section for dlopen
     // to work. In a full implementation we would merge all attribute sections.
@@ -898,8 +940,7 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
     unsigned VerdefIndex = CurVerdef->vd_ndx;
-    if (Verdefs.size() <= VerdefIndex)
-      Verdefs.resize(VerdefIndex + 1);
+    Verdefs.resize(VerdefIndex + 1);
     Verdefs[VerdefIndex] = CurVerdef;
   }
 

@@ -129,15 +129,6 @@ class kmp_stats_list;
 #include "ompt-internal.h"
 #endif
 
-/*Select data placement in NUMA memory */
-#define NO_FIRST_TOUCH 0
-#define FIRST_TOUCH 1 /* Exploit SGI's first touch page placement algo */
-
-/* If not specified on compile command line, assume no first touch */
-#ifndef BUILD_MEMORY
-#define BUILD_MEMORY NO_FIRST_TOUCH
-#endif
-
 // 0 - no fast memory allocation, alignment: 8-byte on x86, 16-byte on x64.
 // 3 - fast allocation using sync, non-sync free lists of any size, non-self
 // free lists of limited size.
@@ -3026,7 +3017,7 @@ struct kmp_adaptive_backoff_params_t {
 extern kmp_adaptive_backoff_params_t __kmp_adaptive_backoff_params;
 
 #if KMP_DEBUG_ADAPTIVE_LOCKS
-extern char *__kmp_speculative_statsfile;
+extern const char *__kmp_speculative_statsfile;
 #endif
 
 #endif // KMP_USE_ADAPTIVE_LOCKS
@@ -3816,11 +3807,12 @@ struct kmp_dim { // loop bounds info casted to kmp_int64
   kmp_int64 st; // stride
 };
 KMP_EXPORT void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid,
-                                     kmp_int32 num_dims, struct kmp_dim *dims);
+                                     kmp_int32 num_dims,
+                                     const struct kmp_dim *dims);
 KMP_EXPORT void __kmpc_doacross_wait(ident_t *loc, kmp_int32 gtid,
-                                     kmp_int64 *vec);
+                                     const kmp_int64 *vec);
 KMP_EXPORT void __kmpc_doacross_post(ident_t *loc, kmp_int32 gtid,
-                                     kmp_int64 *vec);
+                                     const kmp_int64 *vec);
 KMP_EXPORT void __kmpc_doacross_fini(ident_t *loc, kmp_int32 gtid);
 #endif
 

@@ -183,7 +183,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (InBinary) {
+  if (Config->FormatBinary) {
     Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
@@ -301,6 +301,14 @@ static void checkOptions(opt::InputArgList &Args) {
       error("-r and --icf may not be used together");
     if (Config->Pie)
       error("-r and -pie may not be used together");
+  }
+
+  if (Config->ExecuteOnly) {
+    if (Config->EMachine != EM_AARCH64)
+      error("-execute-only is only supported on AArch64 targets");
+
+    if (Config->SingleRoRx && !Script->HasSectionsCommand)
+      error("-execute-only and -no-rosegment cannot be used together");
   }
 }
 
@@ -489,12 +497,11 @@ static Target2Policy getTarget2(opt::InputArgList &Args) {
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
-  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
-    StringRef S = Arg->getValue();
-    if (S == "binary")
-      return true;
+  StringRef S = Args.getLastArgValue(OPT_oformat, "elf");
+  if (S == "binary")
+    return true;
+  if (!S.startswith("elf"))
     error("unknown --oformat value: " + S);
-  }
   return false;
 }
 
@@ -640,33 +647,28 @@ static void readCallGraph(MemoryBufferRef MB) {
     for (Symbol *Sym : File->getSymbols())
       SymbolNameToSymbol[Sym->getName()] = Sym;
 
+  auto FindSection = [&](StringRef SymName) -> InputSectionBase * {
+    const Symbol *Sym = SymbolNameToSymbol.lookup(SymName);
+    if (Sym)
+      warnUnorderableSymbol(Sym);
+    else if (Config->WarnSymbolOrdering)
+      warn(MB.getBufferIdentifier() + ": no such symbol: " + SymName);
+
+    if (const Defined *DR = dyn_cast_or_null<Defined>(Sym))
+      return dyn_cast_or_null<InputSectionBase>(DR->Section);
+    return nullptr;
+  };
+
   for (StringRef L : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
     L.split(Fields, ' ');
     uint64_t Count;
     if (Fields.size() != 3 || !to_integer(Fields[2], Count))
       fatal(MB.getBufferIdentifier() + ": parse error");
-    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
-    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
-    if (Config->WarnSymbolOrdering) {
-      if (!FromSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[0]);
-      if (!ToSym)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[1]);
-    }
-    if (!FromSym || !ToSym || Count == 0)
-      continue;
-    warnUnorderableSymbol(FromSym);
-    warnUnorderableSymbol(ToSym);
-    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
-    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
-    if (!FromSymD || !ToSymD)
-      continue;
-    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
-    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
-    if (!FromSB || !ToSB)
-      continue;
-    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+
+    if (const InputSectionBase *FromSB = FindSection(Fields[0]))
+      if (const InputSectionBase *ToSB = FindSection(Fields[1]))
+        Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
   }
 }
 
@@ -747,6 +749,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EnableNewDtags =
       Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
+  Config->ExecuteOnly =
+      Args.hasFlag(OPT_execute_only, OPT_no_execute_only, false);
   Config->ExportDynamic =
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
   Config->FilterList = args::getStrings(Args, OPT_filter);
@@ -939,8 +943,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->Undefined.push_back(Arg->getValue());
 
   for (auto *Arg : Args.filtered(OPT_version_script))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      readVersionScript(*Buffer);
+    if (Optional<std::string> Path = searchScript(Arg->getValue())) {
+      if (Optional<MemoryBufferRef> Buffer = readFile(*Path))
+        readVersionScript(*Buffer);
+    } else {
+      error(Twine("cannot find version script ") + Arg->getValue());
+    }
 }
 
 // Some Config members do not directly correspond to any particular
@@ -991,7 +999,7 @@ static void setConfigs(opt::InputArgList &Args) {
 }
 
 // Returns a value of "-format" option.
-static bool getBinaryOption(StringRef S) {
+static bool isFormatBinary(StringRef S) {
   if (S == "binary")
     return true;
   if (S == "elf" || S == "default")
@@ -1022,7 +1030,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       break;
     }
     case OPT_script:
-      if (Optional<std::string> Path = searchLinkerScript(Arg->getValue())) {
+      if (Optional<std::string> Path = searchScript(Arg->getValue())) {
         if (Optional<MemoryBufferRef> MB = readFile(*Path))
           readLinkerScript(*MB);
         break;
@@ -1033,7 +1041,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = true;
       break;
     case OPT_format:
-      InBinary = getBinaryOption(Arg->getValue());
+      Config->FormatBinary = isFormatBinary(Arg->getValue());
       break;
     case OPT_no_as_needed:
       Config->AsNeeded = false;
@@ -1299,6 +1307,12 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
   }
 }
 
+static const char *LibcallRoutineNames[] = {
+#define HANDLE_LIBCALL(code, name) name,
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+};
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -1365,10 +1379,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (StringRef S : Config->Undefined)
     handleUndefined<ELFT>(S);
 
-  // If an entry symbol is in a static archive, pull out that file now
-  // to complete the symbol table. After this, no new names except a
-  // few linker-synthesized ones will be added to the symbol table.
+  // If an entry symbol is in a static archive, pull out that file now.
   handleUndefined<ELFT>(Config->Entry);
+
+  // If any of our inputs are bitcode files, the LTO code generator may create
+  // references to certain library functions that might not be explicit in the
+  // bitcode file's symbol table. If any of those library functions are defined
+  // in a bitcode file in an archive member, we need to arrange to use LTO to
+  // compile those archive members by adding them to the link beforehand.
+  //
+  // With this the symbol table should be complete. After this, no new names
+  // except a few linker-synthesized ones will be added to the symbol table.
+  if (!BitcodeFiles.empty())
+    for (const char *S : LibcallRoutineNames)
+      handleUndefined<ELFT>(S);
 
   // Return if there were name resolution errors.
   if (errorCount())

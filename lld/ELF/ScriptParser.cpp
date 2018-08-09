@@ -72,6 +72,7 @@ private:
   void readRegionAlias();
   void readSearchDir();
   void readSections();
+  void readTarget();
   void readVersion();
   void readVersionScriptCommand();
 
@@ -255,6 +256,8 @@ void ScriptParser::readLinkerScript() {
       readSearchDir();
     } else if (Tok == "SECTIONS") {
       readSections();
+    } else if (Tok == "TARGET") {
+      readTarget();
     } else if (Tok == "VERSION") {
       readVersion();
     } else if (SymbolAssignment *Cmd = readAssignment(Tok)) {
@@ -344,7 +347,7 @@ void ScriptParser::readInclude() {
     return;
   }
 
-  if (Optional<std::string> Path = searchLinkerScript(Tok)) {
+  if (Optional<std::string> Path = searchScript(Tok)) {
     if (Optional<MemoryBufferRef> MB = readFile(*Path))
       tokenize(*MB);
     return;
@@ -520,6 +523,23 @@ void ScriptParser::readSections() {
 
   Script->SectionCommands.insert(Script->SectionCommands.end(), V.begin(),
                                  V.end());
+}
+
+void ScriptParser::readTarget() {
+  // TARGET(foo) is an alias for "--format foo". Unlike GNU linkers,
+  // we accept only a limited set of BFD names (i.e. "elf" or "binary")
+  // for --format. We recognize only /^elf/ and "binary" in the linker
+  // script as well.
+  expect("(");
+  StringRef Tok = next();
+  expect(")");
+
+  if (Tok.startswith("elf"))
+    Config->FormatBinary = false;
+  else if (Tok == "binary")
+    Config->FormatBinary = true;
+  else
+    setError("unknown target: " + Tok);
 }
 
 static int precedence(StringRef Op) {

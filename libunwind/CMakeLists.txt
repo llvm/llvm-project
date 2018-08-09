@@ -66,9 +66,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     endif()
   else()
-    message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
-                        "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
-                        "or -DLLVM_PATH=path/to/llvm-source-root.")
+    message(WARNING "UNSUPPORTED LIBUNWIND CONFIGURATION DETECTED: "
+                    "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
+                    "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
+                    "or -DLLVM_PATH=path/to/llvm-source-root.")
   endif()
 
   if (EXISTS ${LLVM_CMAKE_PATH})
@@ -76,11 +77,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
     include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
   else()
-    message(FATAL_ERROR "Not found: ${LLVM_CMAKE_PATH}")
+    message(WARNING "Not found: ${LLVM_CMAKE_PATH}")
   endif()
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 7.0.0svn)
+  set(PACKAGE_VERSION 8.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -119,6 +120,7 @@ endif()
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
@@ -137,6 +139,12 @@ option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUD
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBUNWIND_INSTALL_LIBRARY "Install the libunwind library." ON)
+cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
+  "Install the static libunwind library." ON
+  "LIBUNWIND_ENABLE_STATIC;LIBUNWIND_INSTALL_LIBRARY" OFF)
+cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
+  "Install the shared libunwind library." ON
+  "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
@@ -359,4 +367,6 @@ if (LIBUNWIND_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
 
-add_subdirectory(test)
+if (EXISTS ${LLVM_CMAKE_PATH})
+  add_subdirectory(test)
+endif()

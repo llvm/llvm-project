@@ -46,13 +46,13 @@ public:
 
   void Flush() override;
 
-  size_t Write(const void *s, size_t length) override;
 
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from StreamFile can see and modify these
   //------------------------------------------------------------------
   File m_file;
+  size_t WriteImpl(const void *s, size_t length) override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(StreamFile);

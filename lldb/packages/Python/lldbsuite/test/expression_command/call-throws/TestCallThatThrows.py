@@ -37,7 +37,7 @@ class ExprCommandWithThrowTestCase(TestBase):
 
     def call_function(self):
         """Test calling function that throws."""
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    'I am about to throw.', self.main_source_spec)
 
         options = lldb.SBExpressionOptions()

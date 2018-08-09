@@ -19,6 +19,9 @@
 # RUN:   | FileCheck %s --check-prefix ERR
 # ERR: unknown --oformat value: foo
 
+# RUN: ld.lld -o /dev/null %t --oformat elf
+# RUN: ld.lld -o /dev/null %t --oformat elf-foo
+
 .text
 .align 4
 .globl _start

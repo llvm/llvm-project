@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectDynamicValue.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -20,6 +19,7 @@
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet
+#include "lldb/Utility/Scalar.h"  // for Scalar, operator!=
 #include "lldb/Utility/Status.h"  // for Status
 #include "lldb/lldb-types.h"      // for addr_t, offset_t
 

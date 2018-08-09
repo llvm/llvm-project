@@ -12,7 +12,6 @@
 #include "lldb/Utility/SafeMachO.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Core/State.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -20,6 +19,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "Plugins/Process/Utility/StopInfoMachException.h"

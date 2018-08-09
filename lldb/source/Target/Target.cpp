@@ -31,7 +31,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -63,6 +62,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
@@ -1446,12 +1446,32 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   }
 }
 
-bool Target::SetArchitecture(const ArchSpec &arch_spec) {
+bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   bool missing_local_arch = !m_arch.GetSpec().IsValid();
   bool replace_local_arch = true;
   bool compatible_local_arch = false;
   ArchSpec other(arch_spec);
+
+  // Changing the architecture might mean that the currently selected platform
+  // isn't compatible. Set the platform correctly if we are asked to do so,
+  // otherwise assume the user will set the platform manually.
+  if (set_platform) {
+    if (other.IsValid()) {
+      auto platform_sp = GetPlatform();
+      if (!platform_sp ||
+          !platform_sp->IsCompatibleArchitecture(other, false, nullptr)) {
+        ArchSpec platform_arch;
+        auto arch_platform_sp =
+            Platform::GetPlatformForArchitecture(other, &platform_arch);
+        if (arch_platform_sp) {
+          SetPlatform(arch_platform_sp);
+          if (platform_arch.IsValid())
+            other = platform_arch;
+        }
+      }
+    }
+  }
 
   if (!missing_local_arch) {
     if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
