@@ -126,8 +126,8 @@ void python_generator::print_copy(QualType type)
  */
 void python_generator::print_callback(ParmVarDecl *param, int arg)
 {
-	QualType type = param->getOriginalType()->getPointeeType();
-	const FunctionProtoType *fn = type->getAs<FunctionProtoType>();
+	QualType type = param->getOriginalType();
+	const FunctionProtoType *fn = extract_prototype(type);
 	unsigned n_arg = fn->getNumArgs();
 
 	printf("        exc_info = [None]\n");

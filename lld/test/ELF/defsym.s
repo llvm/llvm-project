@@ -68,8 +68,11 @@
 # EXPR-NEXT:   Section: Absolute
 # EXPR-NEXT: }
 
-# RUN: not ld.lld -o %t %t.o --defsym=foo2=und 2>&1 | FileCheck %s -check-prefix=ERR
-# ERR: error: -defsym:1: symbol not found: und
+# RUN: not ld.lld -o %t %t.o --defsym=foo2=und 2>&1 | FileCheck %s -check-prefix=ERR1
+# ERR1: error: -defsym:1: symbol not found: und
+
+# RUN: not ld.lld -o %t %t.o --defsym=xxx=yyy,zzz 2>&1 | FileCheck %s -check-prefix=ERR2
+# ERR2: -defsym:1: EOF expected, but got ,
 
 .globl foo1
  foo1 = 0x123

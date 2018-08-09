@@ -1212,6 +1212,21 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
     Symtab->fetchLazy<ELFT>(Sym);
 }
 
+template <class ELFT> static void handleLibcall(StringRef Name) {
+  Symbol *Sym = Symtab->find(Name);
+  if (!Sym || !Sym->isLazy())
+    return;
+
+  MemoryBufferRef MB;
+  if (auto *LO = dyn_cast<LazyObject>(Sym))
+    MB = LO->File->MB;
+  else
+    MB = cast<LazyArchive>(Sym)->getMemberBuffer();
+
+  if (isBitcode(MB))
+    Symtab->fetchLazy<ELFT>(Sym);
+}
+
 template <class ELFT> static bool shouldDemote(Symbol &Sym) {
   // If all references to a DSO happen to be weak, the DSO is not added to
   // DT_NEEDED. If that happens, we need to eliminate shared symbols created
@@ -1388,11 +1403,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // in a bitcode file in an archive member, we need to arrange to use LTO to
   // compile those archive members by adding them to the link beforehand.
   //
-  // With this the symbol table should be complete. After this, no new names
-  // except a few linker-synthesized ones will be added to the symbol table.
+  // However, adding all libcall symbols to the link can have undesired
+  // consequences. For example, the libgcc implementation of
+  // __sync_val_compare_and_swap_8 on 32-bit ARM pulls in an .init_array entry
+  // that aborts the program if the Linux kernel does not support 64-bit
+  // atomics, which would prevent the program from running even if it does not
+  // use 64-bit atomics.
+  //
+  // Therefore, we only add libcall symbols to the link before LTO if we have
+  // to, i.e. if the symbol's definition is in bitcode. Any other required
+  // libcall symbols will be added to the link after LTO when we add the LTO
+  // object file to the link.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleUndefined<ELFT>(S);
+      handleLibcall<ELFT>(S);
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -1434,6 +1458,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
+  //
+  // With this the symbol table should be complete. After this, no new names
+  // except a few linker-synthesized ones will be added to the symbol table.
   Symtab->addCombinedLTOObject<ELFT>();
   if (errorCount())
     return;
