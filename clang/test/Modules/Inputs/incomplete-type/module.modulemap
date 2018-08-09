@@ -1,0 +1,15 @@
+module X {
+  header "A.h"
+  export *
+}
+
+// Y imports X
+module Y {
+  header "B.h"
+  export *
+}
+
+// Z imports X and Y
+module Z {
+  header "C.h"
+}
