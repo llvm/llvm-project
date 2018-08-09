@@ -10,6 +10,9 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
+#define REQUIRES_16BIT_INSTS __attribute__((target("16-bit-insts")))
+#define REQUIRES_GFX9_INSTS __attribute__((target("gfx9-insts")))
+
 // Generic intrinsics
 extern __attribute__((const)) half __llvm_sqrt_f16(half) __asm("llvm.sqrt.f16");
 extern __attribute__((const)) half __llvm_exp2_f16(half) __asm("llvm.exp2.f16");
@@ -215,8 +218,6 @@ extern __attribute__((const)) half __llvm_amdgcn_ldexp_f16(half, int) __asm("llv
 
 extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llvm.amdgcn.frexp.mant.f16");
 extern __attribute__((const)) short __llvm_amdgcn_frexp_exp_i16_f16(half) __asm("llvm.amdgcn.frexp.exp.i16.f16");
-
-extern __attribute__((const)) half __llvm_amdgcn_fmed3_f16(half, half, half) __asm("llvm.amdgcn.fmed3.f16");
 
 // llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 extern uint __llvm_amdgcn_update_dpp_i32(uint, uint, uint, uint, uint, bool) __asm("llvm.amdgcn.update.dpp.i32");

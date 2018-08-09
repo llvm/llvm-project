@@ -7,6 +7,7 @@
 
 #include "irif.h"
 #include "ockl.h"
+#include "oclc.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -74,10 +75,22 @@ OCKL_MANGLE_F16(max3)(half a, half b, half c)
     return __llvm_maxnum_f16(__llvm_maxnum_f16(a, b), c);
 }
 
+REQUIRES_GFX9_INSTS
+static inline half median3_f16_gfx9_impl(half a, half b, half c)
+{
+    return __builtin_amdgcn_fmed3h(a, b, c);
+}
+
 CATTR half
 OCKL_MANGLE_F16(median3)(half a, half b, half c)
 {
-    return __llvm_amdgcn_fmed3_f16(a, b, c);
+    if (__oclc_ISA_version() >= 900)
+        return median3_f16_gfx9_impl(a, b, c);
+
+    half a1 = __llvm_minnum_f16(a, b);
+    half b1 = __llvm_maxnum_f16(a, b);
+    half c1 = __llvm_maxnum_f16(a1, c);
+    return __llvm_minnum_f16(b1, c1);
 }
 
 CATTR half
