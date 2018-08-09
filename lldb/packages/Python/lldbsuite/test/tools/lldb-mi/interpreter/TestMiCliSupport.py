@@ -38,6 +38,7 @@ class MiCliSupportTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows.
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races.
     @skipIfDarwin
+    @skipIfLinux
     def test_lldbmi_target_list(self):
         """Test that 'lldb-mi --interpreter' can list targets by 'target list' command."""
 
