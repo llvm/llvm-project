@@ -35,6 +35,9 @@ nop
 # CHECK-INST: addi t6, zero, 0
 # CHECK-ALIAS: mv t6, zero
 mv x31, zero
+# CHECK-INST: addi a2, a3, 0
+# CHECK-ALIAS: mv a2, a3
+move a2,a3
 # CHECK-INST: xori t6, ra, -1
 # CHECK-ALIAS: not t6, ra
 not x31, x1
@@ -155,3 +158,49 @@ sfence.vma
 # CHECK-INST: sfence.vma a0, zero
 # CHECK-ALIAS: sfence.vma a0
 sfence.vma a0
+
+# The following aliases are accepted as input but the canonical form
+# of the instruction will always be printed.
+# CHECK-INST: addi a2, a3, 4
+# CHECK-ALIAS: addi a2, a3, 4
+add a2,a3,4
+
+# CHECK-INST: andi a2, a3, 4
+# CHECK-ALIAS: andi a2, a3, 4
+and a2,a3,4
+
+# CHECK-INST: xori a2, a3, 4
+# CHECK-ALIAS: xori a2, a3, 4
+xor a2,a3,4
+
+# CHECK-INST: ori a2, a3, 4
+# CHECK-ALIAS: ori a2, a3, 4
+or a2,a3,4
+
+# CHECK-INST: slli a2, a3, 4
+# CHECK-ALIAS: slli a2, a3, 4
+sll a2,a3,4
+
+# CHECK-INST: srli a2, a3, 4
+# CHECK-ALIAS: srli a2, a3, 4
+srl a2,a3,4
+
+# CHECK-INST: srai a2, a3, 4
+# CHECK-ALIAS: srai a2, a3, 4
+sra a2,a3,4
+
+# CHECK-INST: slti a2, a3, 4
+# CHECK-ALIAS: slti a2, a3, 4
+slt a2,a3,4
+
+# CHECK-INST: sltiu a2, a3, 4
+# CHECK-ALIAS: sltiu a2, a3, 4
+sltu a2,a3,4
+
+# CHECK-INST: ebreak
+# CHECK-ALIAS: ebreak
+sbreak
+
+# CHECK-INST: ecall
+# CHECK-ALIAS: ecall
+scall

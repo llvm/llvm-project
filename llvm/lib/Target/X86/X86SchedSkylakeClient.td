@@ -112,6 +112,7 @@ defm : SKLWriteResPair<WriteIMul64, [SKLPort1],    3>; // Integer 64-bit multipl
 
 defm : X86WriteRes<WriteBSWAP32,    [SKLPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,    [SKLPort06, SKLPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteXCHG, [SKLPort0156], 2, [3], 3>;
 
 defm : SKLWriteResPair<WriteDiv8,   [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
 defm : SKLWriteResPair<WriteDiv16,  [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
@@ -775,15 +776,6 @@ def: InstRW<[SKLWriteResGroup33], (instregex "ROL(8|16|32|64)rCL",
                                              "SAR(8|16|32|64)rCL",
                                              "SHL(8|16|32|64)rCL",
                                              "SHR(8|16|32|64)rCL")>;
-
-def SKLWriteResGroup34 : SchedWriteRes<[SKLPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 3;
-  let ResourceCycles = [3];
-}
-def: InstRW<[SKLWriteResGroup34], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr,
-                                          XCHG8rr, XCHG16rr, XCHG32rr, XCHG64rr,
-                                          XCHG16ar, XCHG32ar, XCHG64ar)>;
 
 def SKLWriteResGroup35 : SchedWriteRes<[SKLPort0,SKLPort5]> {
   let Latency = 3;

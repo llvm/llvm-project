@@ -120,6 +120,7 @@ def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
 
 def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
 def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.
+def  WriteXCHG   : SchedWrite;        // Compare+Exchange - TODO RMW support.
 
 // Integer division.
 defm WriteDiv8   : X86SchedWritePair;

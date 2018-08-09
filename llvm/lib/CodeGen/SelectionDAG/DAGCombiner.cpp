@@ -3148,8 +3148,6 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   EVT CCVT = getSetCCResultType(VT);
   unsigned BitWidth = VT.getScalarSizeInBits();
 
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
-
   // Helper for determining whether a value is a power-2 constant scalar or a
   // vector of such elements.
   auto IsPowerOfTwo = [](ConstantSDNode *C) {
@@ -3166,8 +3164,7 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // FIXME: We check for the exact bit here because the generic lowering gives
   // better results in that case. The target-specific lowering should learn how
   // to handle exact sdivs efficiently.
-  if (!N->getFlags().hasExact() &&
-      ISD::matchUnaryPredicate(N1C ? SDValue(N1C, 0) : N1, IsPowerOfTwo)) {
+  if (!N->getFlags().hasExact() && ISD::matchUnaryPredicate(N1, IsPowerOfTwo)) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;
@@ -10748,6 +10745,12 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   if (N0CFP && !N1CFP)
     return DAG.getNode(ISD::FADD, DL, VT, N1, N0, Flags);
 
+  // N0 + -0.0 --> N0 (also allowed with +0.0 and fast-math)
+  ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1);
+  if (N1C && N1C->isZero())
+    if (N1C->isNegative() || Options.UnsafeFPMath || Flags.hasNoSignedZeros())
+      return N0;
+
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
@@ -10771,15 +10774,6 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     SDValue AddOp = N1IsFMul ? N1.getOperand(0) : N0.getOperand(0);
     SDValue Add = DAG.getNode(ISD::FADD, DL, VT, AddOp, AddOp, Flags);
     return DAG.getNode(ISD::FSUB, DL, VT, N1IsFMul ? N0 : N1, Add, Flags);
-  }
-
-  ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1);
-  if (N1C && N1C->isZero()) {
-    if (N1C->isNegative() || Options.UnsafeFPMath ||
-        Flags.hasNoSignedZeros()) {
-      // fold (fadd A, 0) -> A
-      return N0;
-    }
   }
 
   // No FP constant should be created after legalization as Instruction
@@ -10946,20 +10940,13 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     return DAG.getNode(ISD::FADD, DL, VT, N0,
                        GetNegatedExpression(N1, DAG, LegalOperations), Flags);
 
-  // If 'unsafe math' is enabled, fold lots of things.
-  if (Options.UnsafeFPMath) {
-    // (fsub x, (fadd x, y)) -> (fneg y)
-    // (fsub x, (fadd y, x)) -> (fneg y)
-    if (N1.getOpcode() == ISD::FADD) {
-      SDValue N10 = N1->getOperand(0);
-      SDValue N11 = N1->getOperand(1);
-
-      if (N10 == N0 && isNegatibleForFree(N11, LegalOperations, TLI, &Options))
-        return GetNegatedExpression(N11, DAG, LegalOperations);
-
-      if (N11 == N0 && isNegatibleForFree(N10, LegalOperations, TLI, &Options))
-        return GetNegatedExpression(N10, DAG, LegalOperations);
-    }
+  if (Options.UnsafeFPMath && N1.getOpcode() == ISD::FADD) {
+    // X - (X + Y) -> -Y
+    if (N0 == N1->getOperand(0))
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1));
+    // X - (Y + X) -> -Y
+    if (N0 == N1->getOperand(1))
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(0));
   }
 
   // FSUB -> FMA combines:

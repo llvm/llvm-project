@@ -109,8 +109,8 @@
 ;vector int spltRegVali(int val) {                                            //
 ;  return (vector int) val;                                                   //
 ;}                                                                            //
-;// P8: lxsiwax, xxspltw                                                      //
-;// P9: lxvwsx                                                                //
+;// P8: (LE) lfiwzx, xxpermdi, xxspltw (BE): lfiwzx, xxsldwi, xxspltw         //
+;// P9: (LE) lfiwzx, xxpermdi, xxspltw (BE): lfiwzx, xxsldwi, xxspltw         //
 ;vector int spltMemVali(int *ptr) {                                           //
 ;  return (vector int)*ptr;                                                   //
 ;}                                                                            //
@@ -284,8 +284,8 @@
 ;vector unsigned int spltRegValui(unsigned int val) {                         //
 ;  return (vector unsigned int) val;                                          //
 ;}                                                                            //
-;// P8: lxsiwax, xxspltw                                                      //
-;// P9: lxvwsx                                                                //
+;// P8: (LE) lfiwzx, xxpermdi, xxspltw (BE): lfiwzx, xxsldwi, xxspltw         //
+;// P9: (LE) lfiwzx, xxpermdi, xxspltw (BE): lfiwzx, xxsldwi, xxspltw         //
 ;vector unsigned int spltMemValui(unsigned int *ptr) {                        //
 ;  return (vector unsigned int)*ptr;                                          //
 ;}                                                                            //
@@ -1202,15 +1202,21 @@ entry:
 ; P9LE-LABEL: spltMemVali
 ; P8BE-LABEL: spltMemVali
 ; P8LE-LABEL: spltMemVali
-; P9BE: lxvwsx v2, 0, r3
+; P9BE: lfiwzx f0, 0, r3
+; P9BE: xxsldwi vs0, f0, f0, 1
+; P9BE: xxspltw v2, vs0, 0
 ; P9BE: blr
-; P9LE: lxvwsx v2, 0, r3
+; P9LE: lfiwzx f0, 0, r3
+; P9LE: xxpermdi vs0, f0, f0, 2
+; P9LE: xxspltw v2, vs0, 3
 ; P9LE: blr
-; P8BE: lxsiwax {{[vsf0-9]+}}, 0, r3
-; P8BE: xxspltw v2, {{[vsf0-9]+}}, 1
+; P8BE: lfiwzx f0, 0, r3
+; P8BE: xxsldwi vs0, f0, f0, 1
+; P8BE: xxspltw v2, vs0, 0
 ; P8BE: blr
-; P8LE: lxsiwax {{[vsf0-9]+}}, 0, r3
-; P8LE: xxspltw v2, {{[vsf0-9]+}}, 1
+; P8LE: lfiwzx f0, 0, r3
+; P8LE: xxpermdi vs0, f0, f0, 2
+; P8LE: xxspltw v2, vs0, 3
 ; P8LE: blr
 }
 
@@ -2338,15 +2344,21 @@ entry:
 ; P9LE-LABEL: spltMemValui
 ; P8BE-LABEL: spltMemValui
 ; P8LE-LABEL: spltMemValui
-; P9BE: lxvwsx v2, 0, r3
+; P9BE: lfiwzx f0, 0, r3
+; P9BE: xxsldwi vs0, f0, f0, 1
+; P9BE: xxspltw v2, vs0, 0
 ; P9BE: blr
-; P9LE: lxvwsx v2, 0, r3
+; P9LE: lfiwzx f0, 0, r3
+; P9LE: xxpermdi vs0, f0, f0, 2
+; P9LE: xxspltw v2, vs0, 3
 ; P9LE: blr
-; P8BE: lxsiwax {{[vsf0-9]+}}, 0, r3
-; P8BE: xxspltw v2, {{[vsf0-9]+}}, 1
+; P8BE: lfiwzx f0, 0, r3
+; P8BE: xxsldwi vs0, f0, f0, 1
+; P8BE: xxspltw v2, vs0, 0
 ; P8BE: blr
-; P8LE: lxsiwax {{[vsf0-9]+}}, 0, r3
-; P8LE: xxspltw v2, {{[vsf0-9]+}}, 1
+; P8LE: lfiwzx f0, 0, r3
+; P8LE: xxpermdi vs0, f0, f0, 2
+; P8LE: xxspltw v2, vs0, 3
 ; P8LE: blr
 }
 

@@ -23,9 +23,8 @@ declare i1 @gen1()
 define i1 @positive_easyinvert(i16 %x, i8 %y) {
 ; CHECK-LABEL: @positive_easyinvert(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i16 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %tmp1 = icmp slt i16 %x, 0
@@ -38,9 +37,8 @@ define i1 @positive_easyinvert(i16 %x, i8 %y) {
 define i1 @positive_easyinvert0(i8 %y) {
 ; CHECK-LABEL: @positive_easyinvert0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %tmp1 = call i1 @gen1()
@@ -53,9 +51,8 @@ define i1 @positive_easyinvert0(i8 %y) {
 define i1 @positive_easyinvert1(i8 %y) {
 ; CHECK-LABEL: @positive_easyinvert1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %tmp1 = call i1 @gen1()
