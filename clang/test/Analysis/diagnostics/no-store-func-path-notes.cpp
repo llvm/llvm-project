@@ -357,3 +357,18 @@ int forceElementRegionApperence() {
   return ((HasFieldB*)&a)->x; // expected-warning{{Undefined or garbage value returned to caller}}
                               // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
+
+////////
+
+struct HasForgottenField {
+  int x;
+  HasForgottenField() {} // expected-note{{Returning without writing to 'this->x'}}
+};
+
+// Test that tracking across exclamation mark works.
+bool tracksThroughExclamationMark() {
+  HasForgottenField a; // expected-note{{Calling default constructor for 'HasForgottenField'}}
+                       // expected-note@-1{{Returning from default constructor for 'HasForgottenField'}}
+  return !a.x; // expected-warning{{Undefined or garbage value returned to caller}}
+               // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
