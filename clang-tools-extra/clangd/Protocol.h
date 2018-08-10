@@ -247,6 +247,18 @@ struct CompletionClientCapabilities {
 };
 bool fromJSON(const llvm::json::Value &, CompletionClientCapabilities &);
 
+struct PublishDiagnosticsClientCapabilities {
+  // Whether the client accepts diagnostics with related information.
+  // NOTE: not used by clangd at the moment.
+  // bool relatedInformation;
+
+  /// Whether the client accepts diagnostics with fixes attached using the
+  /// "clangd_fixes" extension.
+  bool clangdFixSupport = false;
+};
+bool fromJSON(const llvm::json::Value &,
+              PublishDiagnosticsClientCapabilities &);
+
 /// A symbol kind.
 enum class SymbolKind {
   File = 1,
@@ -313,6 +325,9 @@ bool fromJSON(const llvm::json::Value &, WorkspaceClientCapabilities &);
 struct TextDocumentClientCapabilities {
   /// Capabilities specific to the `textDocument/completion`
   CompletionClientCapabilities completion;
+
+  /// Capabilities specific to the 'textDocument/publishDiagnostics'
+  PublishDiagnosticsClientCapabilities publishDiagnostics;
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentClientCapabilities &);
 

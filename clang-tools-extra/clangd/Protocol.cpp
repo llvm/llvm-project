@@ -178,6 +178,15 @@ bool fromJSON(const json::Value &Params, CompletionClientCapabilities &R) {
   return true;
 }
 
+bool fromJSON(const llvm::json::Value &Params,
+              PublishDiagnosticsClientCapabilities &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+  O.map("clangdFixSupport", R.clangdFixSupport);
+  return true;
+}
+
 bool fromJSON(const json::Value &E, SymbolKind &Out) {
   if (auto T = E.getAsInteger()) {
     if (*T < static_cast<int>(SymbolKind::File) ||
@@ -240,6 +249,7 @@ bool fromJSON(const json::Value &Params, TextDocumentClientCapabilities &R) {
   if (!O)
     return false;
   O.map("completion", R.completion);
+  O.map("publishDiagnostics", R.publishDiagnostics);
   return true;
 }
 
