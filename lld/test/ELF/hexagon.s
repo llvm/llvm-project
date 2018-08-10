@@ -159,3 +159,16 @@ r0.h = #HI(_start)
 # R_HEX_LO16
 r0.l = #LO(_start)
 # CHECK: r0.l = #4096
+
+# R_HEX_8_X has 3 relocation mask variations
+#0xde000000
+r0=sub(##_start,asl(r1,#4))
+# CHECK: de00c406   	r0 = sub(##69632,asl(r0,#4)) }
+
+#0x3c000000
+memw(r0+#0) = ##_start
+# CHECK: 3c40c000   	memw(r0+#0) = ##69632 }
+
+# The rest:
+r1:0=combine(r2,##_start);
+# CHECK: 7302e000   	r1:0 = combine(r2,##69632) }

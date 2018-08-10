@@ -104,6 +104,14 @@ static uint32_t findMaskR6(uint32_t Insn) {
   return 0;
 }
 
+static uint32_t findMaskR8(uint32_t Insn) {
+  if ((0xff000000 & Insn) == 0xde000000)
+    return 0x00e020e8;
+  if ((0xff000000 & Insn) == 0x3c000000)
+    return 0x0000207f;
+  return 0x00001fe0;
+}
+
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
 void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
@@ -113,6 +121,9 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_HEX_6_PCREL_X:
   case R_HEX_6_X:
     or32le(Loc, applyMask(findMaskR6(read32le(Loc)), Val));
+    break;
+  case R_HEX_8_X:
+    or32le(Loc, applyMask(findMaskR8(read32le(Loc)), Val));
     break;
   case R_HEX_12_X:
     or32le(Loc, applyMask(0x000007e0, Val));
