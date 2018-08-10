@@ -82,6 +82,8 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
 
   CCOpts.EnableSnippets =
       Params.capabilities.textDocument.completion.completionItem.snippetSupport;
+  DiagOpts.EmbedFixesInDiagnostics =
+      Params.capabilities.textDocument.publishDiagnostics.clangdFixSupport;
 
   if (Params.capabilities.workspace && Params.capabilities.workspace->symbol &&
       Params.capabilities.workspace->symbol->symbolKind) {
@@ -486,11 +488,25 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
     toLSPDiags(Diag, [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
-      DiagnosticsJSON.push_back(json::Object{
+      json::Object LSPDiag({
           {"range", Diag.range},
           {"severity", Diag.severity},
           {"message", Diag.message},
       });
+      // LSP extension: embed the fixes in the diagnostic.
+      if (DiagOpts.EmbedFixesInDiagnostics && !Fixes.empty()) {
+        json::Array ClangdFixes;
+        for (const auto &Fix : Fixes) {
+          WorkspaceEdit WE;
+          URIForFile URI{File};
+          WE.changes = {{URI.uri(), std::vector<TextEdit>(Fix.Edits.begin(),
+                                                          Fix.Edits.end())}};
+          ClangdFixes.push_back(
+              json::Object{{"edit", toJSON(WE)}, {"title", Fix.Message}});
+        }
+        LSPDiag["clangd_fixes"] = std::move(ClangdFixes);
+      }
+      DiagnosticsJSON.push_back(std::move(LSPDiag));
 
       auto &FixItsForDiagnostic = LocalFixIts[Diag];
       std::copy(Fixes.begin(), Fixes.end(),
