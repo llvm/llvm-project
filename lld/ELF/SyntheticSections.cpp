@@ -1845,8 +1845,10 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
 void SymbolTableBaseSection::finalizeContents() {
   getParent()->Link = StrTabSec.getParent()->SectionIndex;
 
-  if (this->Type != SHT_DYNSYM)
+  if (this->Type != SHT_DYNSYM) {
+    sortSymTabSymbols();
     return;
+  }
 
   // If it is a .dynsym, there should be no local symbols, but we need
   // to do a few things for the dynamic linker.
@@ -1874,9 +1876,7 @@ void SymbolTableBaseSection::finalizeContents() {
 // Aside from above, we put local symbols in groups starting with the STT_FILE
 // symbol. That is convenient for purpose of identifying where are local symbols
 // coming from.
-void SymbolTableBaseSection::postThunkContents() {
-  assert(this->Type == SHT_SYMTAB);
-
+void SymbolTableBaseSection::sortSymTabSymbols() {
   // Move all local symbols before global symbols.
   auto E = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {

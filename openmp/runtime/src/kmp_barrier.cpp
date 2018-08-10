@@ -1223,7 +1223,6 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
-  ident_t *loc = __kmp_threads[gtid]->th.th_ident;
 #if OMPT_SUPPORT
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
@@ -1373,6 +1372,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
           this_thr->th.th_teams_microtask == NULL &&
 #endif
           team->t.t_active_level == 1) {
+        ident_t *loc = __kmp_threads[gtid]->th.th_ident;
         kmp_uint64 cur_time = __itt_get_timestamp();
         kmp_info_t **other_threads = team->t.t_threads;
         int nproc = this_thr->th.th_team_nproc;

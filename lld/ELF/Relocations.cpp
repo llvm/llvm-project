@@ -1047,6 +1047,11 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
   for (auto I = Rels.begin(), End = Rels.end(); I != End;)
     scanReloc<ELFT>(Sec, GetOffset, I, End);
+
+  // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
+  if (Config->EMachine == EM_RISCV)
+    std::stable_sort(Sec.Relocations.begin(), Sec.Relocations.end(),
+                     RelocationOffsetComparator{});
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
