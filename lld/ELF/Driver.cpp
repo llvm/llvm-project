@@ -1029,7 +1029,10 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       StringRef From;
       StringRef To;
       std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-      readDefsym(From, MemoryBufferRef(To, "-defsym"));
+      if (From.empty() || To.empty())
+        error("-defsym: syntax error: " + StringRef(Arg->getValue()));
+      else
+        readDefsym(From, MemoryBufferRef(To, "-defsym"));
       break;
     }
     case OPT_script:
