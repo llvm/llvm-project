@@ -3257,8 +3257,8 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       swift::VarDecl *var_decl = new (*ast_context->GetASTContext())
           swift::VarDecl(is_static, specifier, is_capture_list, swift::SourceLoc(),
                          ast_context->GetIdentifier(name.GetCString()),
-                         GetSwiftType(ast_context->GetErrorType()),
                          module_decl);
+      var_decl->setType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setInterfaceType(var_decl->getType());
       var_decl->setDebuggerVar(true);
 

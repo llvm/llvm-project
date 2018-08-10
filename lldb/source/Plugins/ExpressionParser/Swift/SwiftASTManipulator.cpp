@@ -491,7 +491,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   const auto specifier = swift::VarDecl::Specifier::Var;
   const bool is_capture_list = false;
   result_loc_info.tmp_var_decl = new (ast_context) swift::VarDecl(
-      is_static, specifier, is_capture_list, source_loc, name, swift::Type(),
+      is_static, specifier, is_capture_list, source_loc, name,
       new_decl_context);
   result_loc_info.tmp_var_decl->setImplicit();
   result_loc_info.tmp_var_decl->setAccess(
@@ -1188,8 +1188,9 @@ bool SwiftASTManipulator::AddExternalVariables(
     // strip that part off:
 
     swift::VarDecl *redirected_var_decl = new (ast_context)
-        swift::VarDecl(is_static, specifier, is_capture_list, loc, name, var_type,
+        swift::VarDecl(is_static, specifier, is_capture_list, loc, name,
                        &m_source_file);
+    redirected_var_decl->setType(var_type);
     redirected_var_decl->setInterfaceType(var_type);
 
     swift::TopLevelCodeDecl *top_level_code =
@@ -1290,8 +1291,9 @@ bool SwiftASTManipulator::AddExternalVariables(
       }
 
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
-          is_static, specifier, is_capture_list, loc, name, var_type,
+          is_static, specifier, is_capture_list, loc, name,
           containing_function);
+      redirected_var_decl->setType(var_type);
       auto interface_type = var_type;
       if (interface_type->hasArchetype())
         interface_type = interface_type->mapTypeOutOfContext();
