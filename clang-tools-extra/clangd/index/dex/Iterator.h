@@ -101,9 +101,10 @@ private:
   virtual llvm::raw_ostream &dump(llvm::raw_ostream &OS) const = 0;
 };
 
-/// Exhausts given iterator and returns all processed DocIDs. The result
-/// contains sorted DocumentIDs.
-std::vector<DocID> consume(Iterator &It);
+/// Advances the iterator until it is either exhausted or the number of
+/// requested items is reached. The result contains sorted DocumentIDs.
+std::vector<DocID> consume(Iterator &It,
+                           size_t Limit = std::numeric_limits<size_t>::max());
 
 /// Returns a document iterator over given PostingList.
 std::unique_ptr<Iterator> create(PostingListRef Documents);
