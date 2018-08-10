@@ -79,17 +79,17 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     const CompoundLiteralExpr *CL = CR->getLiteralExpr();
     os << "stack memory associated with a compound literal "
           "declared on line "
-       << SM.getExpansionLineNumber(CL->getLocStart()) << " returned to caller";
+       << SM.getExpansionLineNumber(CL->getBeginLoc()) << " returned to caller";
     range = CL->getSourceRange();
   } else if (const auto *AR = dyn_cast<AllocaRegion>(R)) {
     const Expr *ARE = AR->getExpr();
-    SourceLocation L = ARE->getLocStart();
+    SourceLocation L = ARE->getBeginLoc();
     range = ARE->getSourceRange();
     os << "stack memory allocated by call to alloca() on line "
        << SM.getExpansionLineNumber(L);
   } else if (const auto *BR = dyn_cast<BlockDataRegion>(R)) {
     const BlockDecl *BD = BR->getCodeRegion()->getDecl();
-    SourceLocation L = BD->getLocStart();
+    SourceLocation L = BD->getBeginLoc();
     range = BD->getSourceRange();
     os << "stack-allocated block declared on line "
        << SM.getExpansionLineNumber(L);

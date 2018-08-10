@@ -150,7 +150,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
     if (const Stmt *S = getUnreachableStmt(CB)) {
       // In macros, 'do {...} while (0)' is often used. Don't warn about the
       // condition 0 when it is unreachable.
-      if (S->getLocStart().isMacroID())
+      if (S->getBeginLoc().isMacroID())
         if (const auto *I = dyn_cast<IntegerLiteral>(S))
           if (I->getValue() == 0ULL)
             if (const Stmt *Parent = PM->getParent(S))

@@ -357,7 +357,7 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::getSuperClass() const {
 
 SourceLocation ObjCInterfaceDecl::getSuperClassLoc() const {
   if (TypeSourceInfo *superTInfo = getSuperClassTInfo())
-    return superTInfo->getTypeLoc().getLocStart();
+    return superTInfo->getTypeLoc().getBeginLoc();
 
   return SourceLocation();
 }
@@ -969,9 +969,9 @@ ObjCMethodDecl *ObjCMethodDecl::getCanonicalDecl() {
   return this;
 }
 
-SourceLocation ObjCMethodDecl::getLocEnd() const {
+SourceLocation ObjCMethodDecl::getEndLoc() const {
   if (Stmt *Body = getBody())
-    return Body->getLocEnd();
+    return Body->getEndLoc();
   return DeclEndLoc;
 }
 

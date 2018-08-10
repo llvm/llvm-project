@@ -1378,7 +1378,7 @@ static bool isImplicitSelf(const Expr *E) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     if (const auto *PD = dyn_cast<ImplicitParamDecl>(DRE->getDecl())) {
       if (PD->getParameterKind() == ImplicitParamDecl::ObjCSelf &&
-          DRE->getLocStart().isInvalid())
+          DRE->getBeginLoc().isInvalid())
         return true;
     }
   }

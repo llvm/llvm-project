@@ -29,7 +29,7 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                        A.getAttributeSpellingListIndex());
   if (!isa<NullStmt>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
-        << Attr.getSpelling() << St->getLocStart();
+        << Attr.getSpelling() << St->getBeginLoc();
     if (isa<SwitchCase>(St)) {
       SourceLocation L = S.getLocForEndOfToken(Range.getEnd());
       S.Diag(L, diag::note_fallthrough_insert_semi_fixit)
@@ -100,7 +100,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
             .Case("unroll_and_jam", "#pragma unroll_and_jam")
             .Case("nounroll_and_jam", "#pragma nounroll_and_jam")
             .Default("#pragma clang loop");
-    S.Diag(St->getLocStart(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
+    S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
     return nullptr;
   }
 
@@ -154,7 +154,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         Option == LoopHintAttr::InterleaveCount ||
         Option == LoopHintAttr::UnrollCount) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
-      if (S.CheckLoopHintExpr(ValueExpr, St->getLocStart()))
+      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
         return nullptr;
       State = LoopHintAttr::Numeric;
     } else if (Option == LoopHintAttr::Vectorize ||
@@ -333,7 +333,7 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute
     S.Diag(A.getRange().getBegin(), diag::err_decl_attribute_invalid_on_stmt)
-        << A.getName() << St->getLocStart();
+        << A.getName() << St->getBeginLoc();
     return nullptr;
   }
 }

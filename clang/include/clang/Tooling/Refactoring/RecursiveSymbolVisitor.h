@@ -74,7 +74,7 @@ public:
     for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
       const OffsetOfNode &Component = S->getComponent(I);
       if (Component.getKind() == OffsetOfNode::Field) {
-        if (!visit(Component.getField(), Component.getLocEnd()))
+        if (!visit(Component.getField(), Component.getEndLoc()))
           return false;
       }
       // FIXME: Try to resolve dependent field references.

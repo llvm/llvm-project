@@ -47,7 +47,7 @@ void TraversalDumper::checkBranchCondition(const Stmt *Condition,
   // It is mildly evil to print directly to llvm::outs() rather than emitting
   // warnings, but this ensures things do not get filtered out by the rest of
   // the static analyzer machinery.
-  SourceLocation Loc = Parent->getLocStart();
+  SourceLocation Loc = Parent->getBeginLoc();
   llvm::outs() << C.getSourceManager().getSpellingLineNumber(Loc) << " "
                << Parent->getStmtClassName() << "\n";
 }

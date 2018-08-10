@@ -505,8 +505,16 @@ public:
   const CXXScopeSpec &getTypeSpecScope() const { return TypeScope; }
 
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   SourceLocation getTypeSpecWidthLoc() const { return TSWRange.getBegin(); }
   SourceRange getTypeSpecWidthRange() const { return TSWRange; }
@@ -1120,8 +1128,16 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(StartLocation, EndLocation);
   }
-  SourceLocation getLocStart() const LLVM_READONLY { return StartLocation; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return EndLocation; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return StartLocation; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return EndLocation; }
 };
 
 /// A set of tokens that has been cached for later parsing.
@@ -1870,8 +1886,16 @@ public:
 
   /// Get the source range that spans this declarator.
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   void SetSourceRange(SourceRange R) { Range = R; }
   /// SetRangeBegin - Set the start of the source range to Loc, unless it's

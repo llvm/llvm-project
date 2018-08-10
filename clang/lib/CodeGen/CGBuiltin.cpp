@@ -461,7 +461,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       assert(DIter != LocalDeclMap.end());
 
       return EmitLoadOfScalar(DIter->second, /*volatile=*/false,
-                              getContext().getSizeType(), E->getLocStart());
+                              getContext().getSizeType(), E->getBeginLoc());
     }
   }
 

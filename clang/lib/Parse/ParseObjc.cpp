@@ -178,8 +178,7 @@ void Parser::CheckNestedObjCContexts(SourceLocation AtLoc)
   Diag(AtLoc, diag::err_objc_missing_end)
       << FixItHint::CreateInsertion(AtLoc, "@end\n");
   if (Decl)
-    Diag(Decl->getLocStart(), diag::note_objc_container_start)
-        << (int) ock;
+    Diag(Decl->getBeginLoc(), diag::note_objc_container_start) << (int)ock;
 }
 
 ///
@@ -692,8 +691,8 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
     case tok::objc_interface:
       Diag(AtLoc, diag::err_objc_missing_end)
           << FixItHint::CreateInsertion(AtLoc, "@end\n");
-      Diag(CDecl->getLocStart(), diag::note_objc_container_start)
-          << (int) Actions.getObjCContainerKind();
+      Diag(CDecl->getBeginLoc(), diag::note_objc_container_start)
+          << (int)Actions.getObjCContainerKind();
       ConsumeToken();
       break;
 
@@ -778,8 +777,8 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
   } else {
     Diag(Tok, diag::err_objc_missing_end)
         << FixItHint::CreateInsertion(Tok.getLocation(), "\n@end\n");
-    Diag(CDecl->getLocStart(), diag::note_objc_container_start)
-        << (int) Actions.getObjCContainerKind();
+    Diag(CDecl->getBeginLoc(), diag::note_objc_container_start)
+        << (int)Actions.getObjCContainerKind();
     AtEnd.setBegin(Tok.getLocation());
     AtEnd.setEnd(Tok.getLocation());
   }
@@ -2225,7 +2224,7 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
     if (P.isEofOrEom()) {
       P.Diag(P.Tok, diag::err_objc_missing_end)
           << FixItHint::CreateInsertion(P.Tok.getLocation(), "\n@end\n");
-      P.Diag(Dcl->getLocStart(), diag::note_objc_container_start)
+      P.Diag(Dcl->getBeginLoc(), diag::note_objc_container_start)
           << Sema::OCK_Implementation;
     }
   }

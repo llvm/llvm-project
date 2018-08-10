@@ -829,7 +829,7 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
   // delegation optimization.
   if (CtorType == Ctor_Complete && IsConstructorDelegationValid(Ctor) &&
       CGM.getTarget().getCXXABI().hasConstructorVariants()) {
-    EmitDelegateCXXConstructorCall(Ctor, Ctor_Base, Args, Ctor->getLocEnd());
+    EmitDelegateCXXConstructorCall(Ctor, Ctor_Base, Args, Ctor->getEndLoc());
     return;
   }
 
@@ -2844,7 +2844,7 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
 
   // Add the rest of the parameters.
   for (auto param : BD->parameters())
-    EmitDelegateCallArg(CallArgs, param, param->getLocStart());
+    EmitDelegateCallArg(CallArgs, param, param->getBeginLoc());
 
   assert(!Lambda->isGenericLambda() &&
             "generic lambda interconversion to block not implemented");
@@ -2863,7 +2863,7 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
 
   // Add the rest of the parameters.
   for (auto Param : MD->parameters())
-    EmitDelegateCallArg(CallArgs, Param, Param->getLocStart());
+    EmitDelegateCallArg(CallArgs, Param, Param->getBeginLoc());
 
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();
   // For a generic lambda, find the corresponding call operator specialization
