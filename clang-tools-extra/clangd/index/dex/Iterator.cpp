@@ -218,9 +218,10 @@ private:
 
 } // end namespace
 
-std::vector<DocID> consume(Iterator &It) {
+std::vector<DocID> consume(Iterator &It, size_t Limit) {
   std::vector<DocID> Result;
-  for (; !It.reachedEnd(); It.advance())
+  for (size_t Retrieved = 0; !It.reachedEnd() && Retrieved < Limit;
+       It.advance(), ++Retrieved)
     Result.push_back(It.peek());
   return Result;
 }

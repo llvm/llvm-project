@@ -240,6 +240,27 @@ TEST(DexIndexIterators, StringRepresentation) {
             "(& (& [1, 3, 5, 8, 9] [1, 5, 7, 9]) (| [0, 5] [0, 1, 5] []))");
 }
 
+TEST(DexIndexIterators, Limit) {
+  const PostingList L0 = {4, 7, 8, 20, 42, 100};
+  const PostingList L1 = {1, 3, 5, 8, 9};
+  const PostingList L2 = {1, 5, 7, 9};
+  const PostingList L3 = {0, 5};
+  const PostingList L4 = {0, 1, 5};
+  const PostingList L5;
+
+  auto DocIterator = create(L0);
+  EXPECT_THAT(consume(*DocIterator, 42), ElementsAre(4, 7, 8, 20, 42, 100));
+
+  DocIterator = create(L0);
+  EXPECT_THAT(consume(*DocIterator), ElementsAre(4, 7, 8, 20, 42, 100));
+
+  DocIterator = create(L0);
+  EXPECT_THAT(consume(*DocIterator, 3), ElementsAre(4, 7, 8));
+
+  DocIterator = create(L0);
+  EXPECT_THAT(consume(*DocIterator, 0), ElementsAre());
+}
+
 testing::Matcher<std::vector<Token>>
 trigramsAre(std::initializer_list<std::string> Trigrams) {
   std::vector<Token> Tokens;
