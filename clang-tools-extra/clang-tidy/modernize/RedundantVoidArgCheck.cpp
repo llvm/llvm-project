@@ -149,6 +149,8 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
           ProtoToken.getRawIdentifier() == "void") {
         State = SawVoid;
         VoidToken = ProtoToken;
+      } else if (ProtoToken.is(tok::TokenKind::l_paren)) {
+        State = SawLeftParen;
       } else {
         State = NothingYet;
       }
@@ -235,10 +237,11 @@ void RedundantVoidArgCheck::processLambdaExpr(
     const MatchFinder::MatchResult &Result, const LambdaExpr *Lambda) {
   if (Lambda->getLambdaClass()->getLambdaCallOperator()->getNumParams() == 0 &&
       Lambda->hasExplicitParameters()) {
-    SourceLocation Begin =
-        Lambda->getIntroducerRange().getEnd().getLocWithOffset(1);
-    SourceLocation End = Lambda->getBody()->getBeginLoc().getLocWithOffset(-1);
-    removeVoidArgumentTokens(Result, SourceRange(Begin, End),
+    SourceManager *SM = Result.SourceManager;
+    TypeLoc TL = Lambda->getLambdaClass()->getLambdaTypeInfo()->getTypeLoc();
+    removeVoidArgumentTokens(Result,
+                             {SM->getSpellingLoc(TL.getBeginLoc()),
+                              SM->getSpellingLoc(TL.getEndLoc())},
                              "lambda expression");
   }
 }
