@@ -25,9 +25,9 @@ main()
         return 0;
 }
 
-// CHECK-LABEL: define internal void @__copy_helper_block_
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_
 // CHECK: call void @_ZN1AC1ERKS_
 
 
-// CHECK-LABEL:define internal void @__destroy_helper_block_
+// CHECK-LABEL:define linkonce_odr hidden void @__destroy_helper_block_
 // CHECK: call void @_ZN1AD1Ev

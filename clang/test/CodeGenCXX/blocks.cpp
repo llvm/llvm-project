@@ -252,3 +252,51 @@ namespace test9 {
     });
   }
 }
+
+namespace test10 {
+  // Check that 'v' is included in the copy helper function name to indicate
+  // the constructor taking a volatile parameter is called to copy the captured
+  // object.
+
+  // CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_8_32c16_ZTSVN6test101BE(
+  // CHECK: call void @_ZN6test101BC1ERVKS0_(
+  // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_8_32c16_ZTSVN6test101BE(
+  // CHECK: call void @_ZN6test101BD1Ev(
+
+  struct B {
+    int a;
+    B();
+    B(const B &);
+    B(const volatile B &);
+    ~B();
+  };
+
+  void test() {
+    volatile B x;
+    ^{ (void)x; };
+  }
+}
+
+// Copy/dispose helper functions that capture objects of non-external types
+// should have internal linkage.
+
+// CHECK-LABEL: define internal void @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(
+// CHECK-LABEL: define internal void @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(
+
+namespace {
+  struct B {
+    int a;
+    B();
+    B(const B &);
+    ~B();
+  };
+
+  void test() {
+    B x;
+    ^{ (void)x; };
+  }
+}
+
+void callTest() {
+  test();
+}

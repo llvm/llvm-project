@@ -139,10 +139,10 @@ void test7(void) {
 // CHECK:       call void @use_block
 // CHECK:       call void @objc_destroyWeak
 
-// CHECK-LABEL: define internal void @__copy_helper_block
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block
 // CHECK:       @objc_copyWeak
 
-// CHECK-LABEL: define internal void @__destroy_helper_block
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block
 // CHECK:       @objc_destroyWeak
 
 void test8(void) {
@@ -162,16 +162,16 @@ void test8(void) {
 // CHECK:       call void @objc_destroyWeak
 
 // CHECK-LABEL: define void @test9_baseline()
-// CHECK:       define internal void @__copy_helper
-// CHECK:       define internal void @__destroy_helper
+// CHECK:       define linkonce_odr hidden void @__copy_helper
+// CHECK:       define linkonce_odr hidden void @__destroy_helper
 void test9_baseline(void) {
   Foo *p = get_object();
   use_block(^{ [p run]; });
 }
 
 // CHECK-LABEL: define void @test9()
-// CHECK-NOT:   define internal void @__copy_helper
-// CHECK-NOT:   define internal void @__destroy_helper
+// CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
+// CHECK-NOT:   define linkonce_odr hidden void @__destroy_helper
 // CHECK:       define void @test9_fin()
 void test9(void) {
   __unsafe_unretained Foo *p = get_object();
@@ -180,8 +180,8 @@ void test9(void) {
 void test9_fin() {}
 
 // CHECK-LABEL: define void @test10()
-// CHECK-NOT:   define internal void @__copy_helper
-// CHECK-NOT:   define internal void @__destroy_helper
+// CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
+// CHECK-NOT:   define linkonce_odr hidden void @__destroy_helper
 // CHECK:       define void @test10_fin()
 void test10(void) {
   typedef __unsafe_unretained Foo *UnsafeFooPtr;
