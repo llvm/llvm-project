@@ -1567,8 +1567,8 @@ define <4 x i64> @insert_dup_mem_v4i64(i64* %ptr) {
 define <4 x i64> @shuffle_v4i64_1234(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-LABEL: shuffle_v4i64_1234:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[3],ymm1[2]
 ; AVX1-NEXT:    retq
 ;

@@ -2,20 +2,12 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
-cmake_policy(SET CMP0022 NEW)
-
-cmake_policy(SET CMP0048 NEW)
-
 # CMake 3.1 and higher include generator expressions of the form
 # $<TARGETLIB:obj> in the SOURCES property.  These need to be
 # stripped everywhere that access the SOURCES property, so we just
 # defer to the OLD behavior of not including generator expressions
 # in the output for now.
 cmake_policy(SET CMP0051 OLD)
-
-cmake_policy(SET CMP0056 NEW)
-
-cmake_policy(SET CMP0057 NEW)
 
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
@@ -645,7 +637,7 @@ endif()
 #  - We generate the library table used by llvm-config.
 #
 #  - We generate the dependencies for the CMake fragment, so that we will
-#    automatically reconfigure outselves.
+#    automatically reconfigure ourselves.
 
 set(LLVMBUILDTOOL "${LLVM_MAIN_SRC_DIR}/utils/llvm-build/llvm-build")
 set(LLVMCONFIGLIBRARYDEPENDENCIESINC

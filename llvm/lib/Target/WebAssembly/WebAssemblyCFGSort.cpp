@@ -212,7 +212,7 @@ struct CompareBlockNumbersBackwards {
 /// Bookkeeping for a region to help ensure that we don't mix blocks not
 /// dominated by the its header among its blocks.
 struct Entry {
-  const Region *Region;
+  const Region *TheRegion;
   unsigned NumBlocksLeft;
 
   /// List of blocks not dominated by Loop's header that are deferred until
@@ -220,7 +220,7 @@ struct Entry {
   std::vector<MachineBasicBlock *> Deferred;
 
   explicit Entry(const class Region *R)
-      : Region(R), NumBlocksLeft(R->getNumBlocks()) {}
+      : TheRegion(R), NumBlocksLeft(R->getNumBlocks()) {}
 };
 } // end anonymous namespace
 
@@ -274,7 +274,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       // the last block in an active region, take it off the list and pick up
       // any blocks deferred because the header didn't dominate them.
       for (Entry &E : Entries)
-        if (E.Region->contains(MBB) && --E.NumBlocksLeft == 0)
+        if (E.TheRegion->contains(MBB) && --E.NumBlocksLeft == 0)
           for (auto DeferredBlock : E.Deferred)
             Ready.push(DeferredBlock);
       while (!Entries.empty() && Entries.back().NumBlocksLeft == 0)
@@ -299,7 +299,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       // If X isn't dominated by the top active region header, defer it until
       // that region is done.
       if (!Entries.empty() &&
-          !MDT.dominates(Entries.back().Region->getHeader(), Next)) {
+          !MDT.dominates(Entries.back().TheRegion->getHeader(), Next)) {
         Entries.back().Deferred.push_back(Next);
         Next = nullptr;
         continue;
@@ -329,7 +329,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
         // If Next isn't dominated by the top active region header, defer it
         // until that region is done.
         if (!Entries.empty() &&
-            !MDT.dominates(Entries.back().Region->getHeader(), Next)) {
+            !MDT.dominates(Entries.back().TheRegion->getHeader(), Next)) {
           Entries.back().Deferred.push_back(Next);
           continue;
         }

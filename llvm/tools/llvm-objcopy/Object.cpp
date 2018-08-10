@@ -433,7 +433,7 @@ void RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
     if (ToRemove(*Reloc.RelocSymbol))
-      error("not stripping symbol `" + Reloc.RelocSymbol->Name +
+      error("not stripping symbol '" + Reloc.RelocSymbol->Name +
             "' because it is named in a relocation");
 }
 
@@ -853,6 +853,9 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
     Sec.Align = Shdr.sh_addralign;
     Sec.EntrySize = Shdr.sh_entsize;
     Sec.Index = Index++;
+    Sec.OriginalData =
+        ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
+                          (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
   }
 
   // If a section index table exists we'll need to initialize it before we

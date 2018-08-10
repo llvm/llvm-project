@@ -1199,3 +1199,69 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     ++I;
   }
 }
+
+TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
+  // Example code:
+  // define void @a(i8* %foo) {
+  //   %bar = getelementptr i8, i8* %foo, i64 1
+  //   store i8 0, i8* %foo
+  //   store i8 0, i8* %bar
+  //   call void @llvm.lifetime.end.p0i8(i64 8, i32* %p)
+  //   call void @llvm.lifetime.start.p0i8(i64 8, i32* %p)
+  //   store i8 0, i8* %foo
+  //   store i8 0, i8* %bar
+  //   ret void
+  // }
+  //
+  // Patterns like this are possible after inlining; the stores to %foo and %bar
+  // should both be clobbered by the lifetime.start call if they're dominated by
+  // it.
+
+  IRBuilder<> B(C);
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  // Make blocks
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+
+  B.SetInsertPoint(Entry);
+  Value *Foo = &*F->arg_begin();
+
+  Value *Bar = B.CreateGEP(Foo, B.getInt64(1), "bar");
+
+  B.CreateStore(B.getInt8(0), Foo);
+  B.CreateStore(B.getInt8(0), Bar);
+
+  auto GetLifetimeIntrinsic = [&](Intrinsic::ID ID) {
+    return Intrinsic::getDeclaration(&M, ID, {Foo->getType()});
+  };
+
+  B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),
+               {B.getInt64(2), Foo});
+  Instruction *LifetimeStart = B.CreateCall(
+      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(2), Foo});
+
+  Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
+  Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  MemoryAccess *LifetimeStartAccess = MSSA.getMemoryAccess(LifetimeStart);
+  ASSERT_NE(LifetimeStartAccess, nullptr);
+
+  MemoryAccess *FooAccess = MSSA.getMemoryAccess(FooStore);
+  ASSERT_NE(FooAccess, nullptr);
+
+  MemoryAccess *BarAccess = MSSA.getMemoryAccess(BarStore);
+  ASSERT_NE(BarAccess, nullptr);
+
+  MemoryAccess *FooClobber =
+      MSSA.getWalker()->getClobberingMemoryAccess(FooAccess);
+  EXPECT_EQ(FooClobber, LifetimeStartAccess);
+
+  MemoryAccess *BarClobber =
+      MSSA.getWalker()->getClobberingMemoryAccess(BarAccess);
+  EXPECT_EQ(BarClobber, LifetimeStartAccess);
+}

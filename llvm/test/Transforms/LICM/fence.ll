@@ -3,8 +3,8 @@
 
 define void @test1(i64 %n) {
 ; CHECK-LABEL: @test1
-; CHECK-LABEL: loop:
 ; CHECK: fence
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 loop:
@@ -19,8 +19,8 @@ exit:
 
 define void @test2(i64 %n) {
 ; CHECK-LABEL: @test2
-; CHECK-LABEL: loop:
 ; CHECK: fence
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 loop:
@@ -35,8 +35,8 @@ exit:
 
 define void @test3(i64 %n) {
 ; CHECK-LABEL: @test3
-; CHECK-LABEL: loop:
 ; CHECK: fence
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 loop:
@@ -51,8 +51,8 @@ exit:
 
 define void @test4(i64 %n) {
 ; CHECK-LABEL: @test4
-; CHECK-LABEL: loop:
 ; CHECK: fence
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 loop:
@@ -99,8 +99,10 @@ exit:
   ret void
 }
 
-define void @testfp1(i64 %n, i64* %p) {
-; CHECK-LABEL: @testfp1
+; Note: While a false negative for LICM on it's own, O3 does get this
+; case by combining the fences.
+define void @testfn1(i64 %n, i64* %p) {
+; CHECK-LABEL: @testfn1
 ; CHECK-LABEL: loop:
 ; CHECK: fence
 entry:
