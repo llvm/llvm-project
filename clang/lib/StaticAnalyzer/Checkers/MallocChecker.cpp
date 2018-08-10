@@ -1996,15 +1996,20 @@ void MallocChecker::ReportUseAfterFree(CheckerContext &C, SourceRange Range,
       BT_UseFree[*CheckKind].reset(new BugType(
           CheckNames[*CheckKind], "Use-after-free", categories::MemoryError));
 
+    AllocationFamily AF =
+        C.getState()->get<RegionState>(Sym)->getAllocationFamily();
+
     auto R = llvm::make_unique<BugReport>(*BT_UseFree[*CheckKind],
-                                         "Use of memory after it is freed", N);
+        AF == AF_InnerBuffer
+              ? "Inner pointer of container used after re/deallocation"
+              : "Use of memory after it is freed",
+        N);
 
     R->markInteresting(Sym);
     R->addRange(Range);
     R->addVisitor(llvm::make_unique<MallocBugVisitor>(Sym));
 
-    const RefState *RS = C.getState()->get<RegionState>(Sym);
-    if (RS->getAllocationFamily() == AF_InnerBuffer)
+    if (AF == AF_InnerBuffer)
       R->addVisitor(allocation_state::getInnerPointerBRVisitor(Sym));
 
     C.emitReport(std::move(R));
@@ -2944,13 +2949,22 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
         case AF_CXXNewArray:
         case AF_IfNameIndex:
           Msg = "Memory is released";
+          StackHint = new StackHintGeneratorForSymbol(Sym,
+                                              "Returning; memory was released");
           break;
         case AF_InnerBuffer: {
-          OS << "Inner pointer invalidated by call to ";
+          const MemRegion *ObjRegion =
+              allocation_state::getContainerObjRegion(statePrev, Sym);
+          const auto *TypedRegion = cast<TypedValueRegion>(ObjRegion);
+          QualType ObjTy = TypedRegion->getValueType();
+          OS << "Inner buffer of '" << ObjTy.getAsString() << "' ";
+
           if (N->getLocation().getKind() == ProgramPoint::PostImplicitCallKind) {
-            OS << "destructor";
+            OS << "deallocated by call to destructor";
+            StackHint = new StackHintGeneratorForSymbol(Sym,
+                                      "Returning; inner buffer was deallocated");
           } else {
-            OS << "'";
+            OS << "reallocated by call to '";
             const Stmt *S = RS->getStmt();
             if (const auto *MemCallE = dyn_cast<CXXMemberCallExpr>(S)) {
               OS << MemCallE->getMethodDecl()->getNameAsString();
@@ -2963,6 +2977,8 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
               OS << (D ? D->getNameAsString() : "unknown");
             }
             OS << "'";
+            StackHint = new StackHintGeneratorForSymbol(Sym,
+                                      "Returning; inner buffer was reallocated");
           }
           Msg = OS.str();
           break;
@@ -2970,8 +2986,6 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
         case AF_None:
           llvm_unreachable("Unhandled allocation family!");
       }
-      StackHint = new StackHintGeneratorForSymbol(Sym,
-                                             "Returning; memory was released");
 
       // See if we're releasing memory while inlining a destructor
       // (or one of its callees). This turns on various common
