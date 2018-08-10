@@ -26,12 +26,12 @@ int testA() {
 // CHECK-LABEL: define internal void @__Block_byref_object_dispose_
 // CHECK: call {{.*}} @_ZN1AD1Ev
 
-// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_e8_32rc40rc(
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_e{{4|8}}_{{20|32}}rc{{24|40}}rc(
 // CHECK: call void @_Block_object_assign(
 // CHECK: invoke void @_Block_object_assign(
 // CHECK: call void @_Block_object_dispose({{.*}}) #[[NOUNWIND_ATTR:[0-9]+]]
 
-// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_e8_32rd40rd(
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_e{{4|8}}_{{20|32}}rd{{24|40}}rd(
 // CHECK: invoke void @_Block_object_dispose(
 // CHECK: call void @_Block_object_dispose(
 // CHECK: invoke void @_Block_object_dispose(
@@ -48,7 +48,7 @@ int testB() {
 // CHECK: call {{.*}} @_ZN1BD1Ev
 
 // CHECK-NOT: define{{.*}}@__copy_helper_block
-// CHECK: define linkonce_odr hidden void @__destroy_helper_block_e8_32r40r(
+// CHECK: define linkonce_odr hidden void @__destroy_helper_block_e{{4|8}}_{{20|32}}r{{24|40}}r(
 
 // CHECK: attributes #[[NOUNWIND_ATTR]] = {{{.*}}nounwind{{.*}}}
 
