@@ -47,7 +47,6 @@ append_list_if(COMPILER_RT_HAS_LIBDL dl HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBM m HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread HWASAN_DYNAMIC_LIBS)
-append_list_if(COMPILER_RT_HAS_LIBLOG log HWASAN_DYNAMIC_LIBS)
 
 # Static runtime library.
 add_compiler_rt_component(hwasan)
