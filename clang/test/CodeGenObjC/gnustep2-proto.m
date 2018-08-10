@@ -22,11 +22,11 @@
 
 // Check that we're emitting the protocol and a correctly initialised
 // indirection variable.
-// CHECK: @._OBJC_PROTOCOL_X = global 
+// CHECK: @._OBJC_PROTOCOL_X = global
 // CHECK-SAME: , section "__objc_protocols", comdat, align 8
-// CHECK: @._OBJC_REF_PROTOCOL_X = global 
+// CHECK: @._OBJC_REF_PROTOCOL_X = linkonce_odr global
 // CHECK-SAME: @._OBJC_PROTOCOL_X
-// CHECK-SAME: , section "__objc_protocol_refs", align 8
+// CHECK-SAME: , section "__objc_protocol_refs", comdat, align 8
 
 
 // Check that we load from the indirection variable on protocol references.

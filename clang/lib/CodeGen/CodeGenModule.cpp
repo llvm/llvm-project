@@ -460,7 +460,7 @@ void CodeGenModule::Release() {
   }
   if (CodeGenOpts.ControlFlowGuard) {
     // We want function ID tables for Control Flow Guard.
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 1);
+    getModule().addModuleFlag(llvm::Module::Warning, "cfguardtable", 1);
   }
   if (CodeGenOpts.OptimizationLevel > 0 && CodeGenOpts.StrictVTablePointers) {
     // We don't support LTO with 2 with different StrictVTablePointers

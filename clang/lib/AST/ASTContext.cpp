@@ -2503,21 +2503,24 @@ const ObjCInterfaceDecl *ASTContext::getObjContainingInterface(
 
 /// Get the copy initialization expression of VarDecl, or nullptr if
 /// none exists.
-Expr *ASTContext::getBlockVarCopyInits(const VarDecl*VD) {
+ASTContext::BlockVarCopyInit
+ASTContext::getBlockVarCopyInit(const VarDecl*VD) const {
   assert(VD && "Passed null params");
   assert(VD->hasAttr<BlocksAttr>() &&
          "getBlockVarCopyInits - not __block var");
-  llvm::DenseMap<const VarDecl*, Expr*>::iterator
-    I = BlockVarCopyInits.find(VD);
-  return (I != BlockVarCopyInits.end()) ? I->second : nullptr;
+  auto I = BlockVarCopyInits.find(VD);
+  if (I != BlockVarCopyInits.end())
+    return I->second;
+  return {nullptr, false};
 }
 
 /// Set the copy inialization expression of a block var decl.
-void ASTContext::setBlockVarCopyInits(VarDecl*VD, Expr* Init) {
-  assert(VD && Init && "Passed null params");
+void ASTContext::setBlockVarCopyInit(const VarDecl*VD, Expr *CopyExpr,
+                                     bool CanThrow) {
+  assert(VD && CopyExpr && "Passed null params");
   assert(VD->hasAttr<BlocksAttr>() &&
          "setBlockVarCopyInits - not __block var");
-  BlockVarCopyInits[VD] = Init;
+  BlockVarCopyInits[VD].setExprAndFlag(CopyExpr, CanThrow);
 }
 
 TypeSourceInfo *ASTContext::CreateTypeSourceInfo(QualType T,
@@ -5962,7 +5965,7 @@ LangAS ASTContext::getOpenCLTypeAddrSpace(const Type *T) const {
 bool ASTContext::BlockRequiresCopying(QualType Ty,
                                       const VarDecl *D) {
   if (const CXXRecordDecl *record = Ty->getAsCXXRecordDecl()) {
-    const Expr *copyExpr = getBlockVarCopyInits(D);
+    const Expr *copyExpr = getBlockVarCopyInit(D).getCopyExpr();
     if (!copyExpr && record->hasTrivialDestructor()) return false;
 
     return true;

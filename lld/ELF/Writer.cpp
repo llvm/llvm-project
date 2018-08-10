@@ -1659,13 +1659,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic(
-      {InX::DynSymTab, InX::Bss,         InX::BssRelRo,    InX::GnuHashTab,
-       InX::HashTab,   InX::SymTab,      InX::SymTabShndx, InX::ShStrTab,
-       InX::StrTab,    In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,
-       InX::MipsGot,   InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,
-       InX::RelrDyn,   InX::RelaIplt,    InX::RelaPlt,     InX::Plt,
-       InX::Iplt,      InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed,
-       InX::Dynamic},
+      {InX::DynSymTab,   InX::Bss,         InX::BssRelRo,     InX::GnuHashTab,
+       InX::HashTab,     InX::SymTabShndx, InX::ShStrTab,     InX::StrTab,
+       In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,          InX::MipsGot,
+       InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,      InX::RelrDyn,
+       InX::RelaIplt,    InX::RelaPlt,     InX::Plt,          InX::Iplt,
+       InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
@@ -1705,7 +1704,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab},
-                 [](SyntheticSection *SS) { SS->postThunkContents(); });
+                 [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result

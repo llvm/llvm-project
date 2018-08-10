@@ -54,34 +54,38 @@ static Value *createMinMax(InstCombiner::BuilderTy &Builder,
   return Builder.CreateSelect(Builder.CreateICmp(Pred, A, B), A, B);
 }
 
-/// Fold
-///   %A = icmp eq/ne i8 %x, 0
-///   %B = op i8 %x, %z
-///   %C = select i1 %A, i8 %B, i8 %y
-/// To
-///   %C = select i1 %A, i8 %z, i8 %y
-/// OP: binop with an identity constant
-/// TODO: support for non-commutative and FP opcodes
+/// Replace a select operand based on an equality comparison with the identity
+/// constant of a binop.
 static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
-
-  Value *Cond = Sel.getCondition();
-  Value *X, *Z;
+  // The select condition must be an equality compare with a constant operand.
+  // TODO: Support FP compares.
+  Value *X;
   Constant *C;
   CmpInst::Predicate Pred;
-  if (!match(Cond, m_ICmp(Pred, m_Value(X), m_Constant(C))) ||
+  if (!match(Sel.getCondition(), m_ICmp(Pred, m_Value(X), m_Constant(C))) ||
       !ICmpInst::isEquality(Pred))
     return nullptr;
 
+  // A select operand must be a binop, and the compare constant must be the
+  // identity constant for that binop.
+  // TODO: Support non-commutative binops.
   bool IsEq = Pred == ICmpInst::ICMP_EQ;
-  auto *BO =
-      dyn_cast<BinaryOperator>(IsEq ? Sel.getTrueValue() : Sel.getFalseValue());
-  // TODO: support for undefs
-  if (BO && match(BO, m_c_BinOp(m_Specific(X), m_Value(Z))) &&
-      ConstantExpr::getBinOpIdentity(BO->getOpcode(), X->getType()) == C) {
-    Sel.setOperand(IsEq ? 1 : 2, Z);
-    return &Sel;
-  }
-  return nullptr;
+  BinaryOperator *BO;
+  if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
+      ConstantExpr::getBinOpIdentity(BO->getOpcode(), X->getType(), false) != C)
+    return nullptr;
+
+  // Last, match the compare variable operand with a binop operand.
+  Value *Y;
+  if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+    return nullptr;
+
+  // BO = binop Y, X
+  // S = { select (cmp eq X, C), BO, ? } or { select (cmp ne X, C), ?, BO }
+  // =>
+  // S = { select (cmp eq X, C),  Y, ? } or { select (cmp ne X, C), ?,  Y }
+  Sel.setOperand(IsEq ? 1 : 2, Y);
+  return &Sel;
 }
 
 /// This folds:

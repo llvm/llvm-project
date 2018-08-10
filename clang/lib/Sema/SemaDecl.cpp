@@ -11812,8 +11812,16 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       if (!result.isInvalid()) {
         result = MaybeCreateExprWithCleanups(result);
         Expr *init = result.getAs<Expr>();
-        Context.setBlockVarCopyInits(var, init);
+        Context.setBlockVarCopyInit(var, init, canThrow(init));
       }
+
+      // The destructor's exception spefication is needed when IRGen generates
+      // block copy/destroy functions. Resolve it here.
+      if (const CXXRecordDecl *RD = type->getAsCXXRecordDecl())
+        if (CXXDestructorDecl *DD = RD->getDestructor()) {
+          auto *FPT = DD->getType()->getAs<FunctionProtoType>();
+          FPT = ResolveExceptionSpec(poi, FPT);
+        }
     }
   }
 

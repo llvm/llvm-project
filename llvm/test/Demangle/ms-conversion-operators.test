@@ -1,0 +1,21 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??$?BH@TemplateOps@@QAEHXZ
+??BOps@@QAEHXZ
+??BConstOps@@QAE?BHXZ
+??BVolatileOps@@QAE?CHXZ
+??BConstVolatileOps@@QAE?DHXZ
+??$?BN@TemplateOps@@QAENXZ
+??BOps@@QAENXZ
+??BConstOps@@QAE?BNXZ
+??BVolatileOps@@QAE?CNXZ
+??BConstVolatileOps@@QAE?DNXZ
+??BCompoundTypeOps@@QAEPAHXZ
+??BCompoundTypeOps@@QAEPBHXZ
+??BCompoundTypeOps@@QAE$$QAHXZ
+??BCompoundTypeOps@@QAE?AU?$Foo@H@@XZ
+??$?BH@CompoundTypeOps@@QAE?AU?$Bar@U?$Foo@H@@@@XZ
+??$?BPAH@TemplateOps@@QAEPAHXZ
+

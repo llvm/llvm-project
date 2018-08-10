@@ -9,7 +9,7 @@ struct A {
 
 // Verify that we destruct things from left to right in the MS C++ ABI: a, b, c, d.
 //
-// CHECK-LABEL: define dso_local void @"?test_arc_order@@YAXUA@@PAUobjc_object@@01@Z"
+// CHECK-LABEL: define dso_local void @"?test_arc_order@@YAXUA@@PAU.objc_object@@01@Z"
 // CHECK:                       (<{ %struct.A, i8*, %struct.A, i8* }>* inalloca)
 void test_arc_order(A a, id __attribute__((ns_consumed)) b , A c, id __attribute__((ns_consumed)) d) {
   // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* %{{.*}})

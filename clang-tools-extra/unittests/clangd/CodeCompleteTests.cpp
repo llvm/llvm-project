@@ -1393,8 +1393,9 @@ TEST(CompletionTest, FixItForArrowToDot) {
   ReplacementEdit.newText = ".";
   for (const auto &C : Results.Completions) {
     EXPECT_TRUE(C.FixIts.size() == 1u || C.Name == "AuxFunction");
-    if (!C.FixIts.empty())
+    if (!C.FixIts.empty()) {
       EXPECT_THAT(C.FixIts, ElementsAre(ReplacementEdit));
+    }
   }
 }
 
