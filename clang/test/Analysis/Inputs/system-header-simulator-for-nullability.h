@@ -9,6 +9,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef struct _NSZone NSZone;
+typedef unsigned long NSUInteger;
+@class NSCoder, NSEnumerator;
 
 @protocol NSObject
 + (instancetype)alloc;
@@ -23,6 +25,22 @@ typedef struct _NSZone NSZone;
 @protocol NSMutableCopying
 - (id)mutableCopyWithZone:(nullable NSZone *)zone;
 @end
+
+@protocol NSCoding
+- (void)encodeWithCoder:(NSCoder *)aCoder;
+@end
+
+@protocol NSSecureCoding <NSCoding>
+@required
++ (BOOL)supportsSecureCoding;
+@end
+
+typedef struct {
+  unsigned long state;
+  id *itemsPtr;
+  unsigned long *mutationsPtr;
+  unsigned long extra[5];
+} NSFastEnumerationState;
 
 __attribute__((objc_root_class))
 @interface
@@ -52,3 +70,36 @@ NSString* _Nonnull  getString();
 @end
 
 NS_ASSUME_NONNULL_END
+
+@interface NSDictionary : NSObject <NSCopying, NSMutableCopying, NSSecureCoding>
+
+- (NSUInteger)count;
+- (id)objectForKey:(id)aKey;
+- (NSEnumerator *)keyEnumerator;
+- (id)objectForKeyedSubscript:(id)aKey;
+
+@end
+
+@interface NSDictionary (NSDictionaryCreation)
+
++ (id)dictionary;
++ (id)dictionaryWithObject:(id)object forKey:(id <NSCopying>)key;
++ (instancetype)dictionaryWithObjects:(const id [])objects forKeys:(const id <NSCopying> [])keys count:(NSUInteger)cnt;
+
+@end
+
+@interface NSMutableDictionary : NSDictionary
+
+- (void)removeObjectForKey:(id)aKey;
+- (void)setObject:(id)anObject forKey:(id <NSCopying>)aKey;
+
+@end
+
+@interface NSMutableDictionary (NSExtendedMutableDictionary)
+
+- (void)addEntriesFromDictionary:(NSDictionary *)otherDictionary;
+- (void)removeAllObjects;
+- (void)setDictionary:(NSDictionary *)otherDictionary;
+- (void)setObject:(id)obj forKeyedSubscript:(id <NSCopying>)key __attribute__((availability(macosx,introduced=10.8)));
+
+@end
