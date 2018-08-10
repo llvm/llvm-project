@@ -143,7 +143,7 @@ public:
   bool VisitMemberExpr(MemberExpr *E) {
     SourceLocation Loc = E->getMemberLoc();
     if (Loc.isInvalid())
-      Loc = E->getLocStart();
+      Loc = E->getBeginLoc();
     SmallVector<SymbolRelation, 4> Relations;
     SymbolRoleSet Roles = getRolesForRef(E, Relations);
     return IndexCtx.handleReference(E->getMemberDecl(), Loc,
@@ -175,7 +175,7 @@ public:
       return true;
     SourceLocation Loc = NameInfo.getLoc();
     if (Loc.isInvalid())
-      Loc = E->getLocStart();
+      Loc = E->getBeginLoc();
     SmallVector<SymbolRelation, 4> Relations;
     SymbolRoleSet Roles = getRolesForRef(E, Relations);
     return IndexCtx.handleReference(Symbols[0], Loc, Parent, ParentDC, Roles,
@@ -312,8 +312,8 @@ public:
     SmallVector<SymbolRelation, 2> Relations;
     addCallRole(Roles, Relations);
     Roles |= (unsigned)SymbolRole::Implicit;
-    return IndexCtx.handleReference(MD, E->getLocStart(),
-                                    Parent, ParentDC, Roles, Relations, E);
+    return IndexCtx.handleReference(MD, E->getBeginLoc(), Parent, ParentDC,
+                                    Roles, Relations, E);
   }
 
   bool VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
@@ -432,7 +432,7 @@ public:
     for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
       const OffsetOfNode &Component = S->getComponent(I);
       if (Component.getKind() == OffsetOfNode::Field)
-        IndexCtx.handleReference(Component.getField(), Component.getLocEnd(),
+        IndexCtx.handleReference(Component.getField(), Component.getEndLoc(),
                                  Parent, ParentDC, SymbolRoleSet(), {});
       // FIXME: Try to resolve dependent field references.
     }

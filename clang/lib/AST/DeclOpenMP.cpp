@@ -112,5 +112,5 @@ OMPCapturedExprDecl *OMPCapturedExprDecl::CreateDeserialized(ASTContext &C,
 
 SourceRange OMPCapturedExprDecl::getSourceRange() const {
   assert(hasInit());
-  return SourceRange(getInit()->getLocStart(), getInit()->getLocEnd());
+  return SourceRange(getInit()->getBeginLoc(), getInit()->getEndLoc());
 }

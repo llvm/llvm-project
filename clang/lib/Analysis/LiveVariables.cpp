@@ -619,8 +619,8 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
 
     llvm::sort(declVec.begin(), declVec.end(),
                [](const Decl *A, const Decl *B) {
-      return A->getLocStart() < B->getLocStart();
-    });
+                 return A->getBeginLoc() < B->getBeginLoc();
+               });
 
     for (std::vector<const VarDecl*>::iterator di = declVec.begin(),
          de = declVec.end(); di != de; ++di) {

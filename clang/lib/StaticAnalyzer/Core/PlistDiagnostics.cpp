@@ -507,15 +507,17 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
           // the leak location even after code is added between the allocation
           // site and the end of scope (leak report location).
           if (UPDLoc.isValid()) {
-            FullSourceLoc UFunL(SM->getExpansionLoc(
-              D->getUniqueingDecl()->getBody()->getLocStart()), *SM);
+            FullSourceLoc UFunL(
+                SM->getExpansionLoc(
+                    D->getUniqueingDecl()->getBody()->getBeginLoc()),
+                *SM);
             o << "  <key>issue_hash_function_offset</key><string>"
               << L.getExpansionLineNumber() - UFunL.getExpansionLineNumber()
               << "</string>\n";
 
           // Otherwise, use the location on which the bug is reported.
           } else {
-            FullSourceLoc FunL(SM->getExpansionLoc(Body->getLocStart()), *SM);
+            FullSourceLoc FunL(SM->getExpansionLoc(Body->getBeginLoc()), *SM);
             o << "  <key>issue_hash_function_offset</key><string>"
               << L.getExpansionLineNumber() - FunL.getExpansionLineNumber()
               << "</string>\n";

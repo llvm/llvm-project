@@ -703,10 +703,9 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
 
     SmallString<64> TextToInsert(" ");
     TextToInsert += AttributeSpelling;
-    Diag(FD->getLocEnd(),
-         diag::note_add_deprecation_attr)
-      << FixItHint::CreateInsertion(FD->getLocEnd().getLocWithOffset(1),
-                                    TextToInsert);
+    Diag(FD->getEndLoc(), diag::note_add_deprecation_attr)
+        << FixItHint::CreateInsertion(FD->getEndLoc().getLocWithOffset(1),
+                                      TextToInsert);
   }
 }
 

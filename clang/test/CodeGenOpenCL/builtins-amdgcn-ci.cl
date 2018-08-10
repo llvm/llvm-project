@@ -10,3 +10,10 @@ void test_s_dcache_inv_vol()
   __builtin_amdgcn_s_dcache_inv_vol();
 }
 
+// CHECK-LABEL: @test_buffer_wbinvl1_vol
+// CHECK: call void @llvm.amdgcn.buffer.wbinvl1.vol()
+void test_buffer_wbinvl1_vol()
+{
+  __builtin_amdgcn_buffer_wbinvl1_vol();
+}
+

@@ -634,7 +634,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   if (ShouldEmitCFICheck) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
 
-    CheckSourceLocation = CGF.EmitCheckSourceLocation(E->getLocStart());
+    CheckSourceLocation = CGF.EmitCheckSourceLocation(E->getBeginLoc());
     CheckTypeDesc = CGF.EmitCheckTypeDescriptor(QualType(MPT, 0));
     llvm::Constant *StaticData[] = {
         llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_VMFCall),
@@ -4146,7 +4146,7 @@ void ItaniumCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 
   // Emit the local.
   CodeGenFunction::AutoVarEmission var = CGF.EmitAutoVarAlloca(*CatchParam);
-  InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF), S->getLocStart());
+  InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF), S->getBeginLoc());
   CGF.EmitAutoVarCleanups(var);
 }
 

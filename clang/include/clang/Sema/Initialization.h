@@ -671,10 +671,11 @@ public:
   static InitializationKind CreateForInit(SourceLocation Loc, bool DirectInit,
                                           Expr *Init) {
     if (!Init) return CreateDefault(Loc);
-    if (!DirectInit) return CreateCopy(Loc, Init->getLocStart());
+    if (!DirectInit)
+      return CreateCopy(Loc, Init->getBeginLoc());
     if (isa<InitListExpr>(Init))
-      return CreateDirectList(Loc, Init->getLocStart(), Init->getLocEnd());
-    return CreateDirect(Loc, Init->getLocStart(), Init->getLocEnd());
+      return CreateDirectList(Loc, Init->getBeginLoc(), Init->getEndLoc());
+    return CreateDirect(Loc, Init->getBeginLoc(), Init->getEndLoc());
   }
 
   /// Determine the initialization kind.

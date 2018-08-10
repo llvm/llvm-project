@@ -637,22 +637,25 @@ public:
   /// getBeginLoc - Retrieve the location of the first token.
   SourceLocation getBeginLoc() const { return NameLoc; }
 
-  /// getEndLoc - Retrieve the location of the last token.
-  SourceLocation getEndLoc() const { return getLocEnd(); }
-
   /// getSourceRange - The range of the declaration name.
   SourceRange getSourceRange() const LLVM_READONLY {
-    return SourceRange(getLocStart(), getLocEnd());
+    return SourceRange(getBeginLoc(), getEndLoc());
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY {
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
     return getBeginLoc();
   }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    SourceLocation EndLoc = getEndLocPrivate();
-    return EndLoc.isValid() ? EndLoc : getLocStart();
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
   }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    SourceLocation EndLoc = getEndLocPrivate();
+    return EndLoc.isValid() ? EndLoc : getBeginLoc();
+  }
+
 private:
   SourceLocation getEndLocPrivate() const;
 };

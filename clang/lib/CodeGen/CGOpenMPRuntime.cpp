@@ -1406,8 +1406,8 @@ llvm::Value *CGOpenMPRuntime::emitTaskOutlinedFunction(
     bool Tied, unsigned &NumberOfParts) {
   auto &&UntiedCodeGen = [this, &D, TaskTVar](CodeGenFunction &CGF,
                                               PrePostActionTy &) {
-    llvm::Value *ThreadID = getThreadID(CGF, D.getLocStart());
-    llvm::Value *UpLoc = emitUpdateLocation(CGF, D.getLocStart());
+    llvm::Value *ThreadID = getThreadID(CGF, D.getBeginLoc());
+    llvm::Value *UpLoc = emitUpdateLocation(CGF, D.getBeginLoc());
     llvm::Value *TaskArgs[] = {
         UpLoc, ThreadID,
         CGF.EmitLoadOfPointerLValue(CGF.GetAddrOfLocalVar(TaskTVar),
@@ -2648,7 +2648,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
 
   QualType ASTTy = VD->getType();
 
-  SourceLocation Loc = VD->getCanonicalDecl()->getLocStart();
+  SourceLocation Loc = VD->getCanonicalDecl()->getBeginLoc();
   // Produce the unique prefix to identify the new target regions. We use
   // the source location of the variable declaration which we know to not
   // conflict with any target region.
@@ -5788,7 +5788,7 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
   std::string Name = CGM.getOpenMPRuntime().getName(
       {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
   Out << Prefix << Name << "_"
-      << D->getCanonicalDecl()->getLocStart().getRawEncoding();
+      << D->getCanonicalDecl()->getBeginLoc().getRawEncoding();
   return Out.str();
 }
 
@@ -6286,7 +6286,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   unsigned DeviceID;
   unsigned FileID;
   unsigned Line;
-  getTargetEntryUniqueInfo(CGM.getContext(), D.getLocStart(), DeviceID, FileID,
+  getTargetEntryUniqueInfo(CGM.getContext(), D.getBeginLoc(), DeviceID, FileID,
                            Line);
   SmallString<64> EntryFnName;
   {
@@ -7802,7 +7802,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
-    emitOutlinedFunctionCall(CGF, D.getLocStart(), OutlinedFn, CapturedVars);
+    emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
     CGF.EmitBranch(OffloadContBlock);
 
     CGF.EmitBlock(OffloadContBlock, /*IsFinished=*/true);
@@ -7816,7 +7816,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
-    emitOutlinedFunctionCall(CGF, D.getLocStart(), OutlinedFn, CapturedVars);
+    emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
   };
 
   auto &&TargetThenGen = [this, &ThenGen, &D, &InputInfo, &MapTypesArray,
@@ -7947,7 +7947,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     unsigned DeviceID;
     unsigned FileID;
     unsigned Line;
-    getTargetEntryUniqueInfo(CGM.getContext(), E.getLocStart(), DeviceID,
+    getTargetEntryUniqueInfo(CGM.getContext(), E.getBeginLoc(), DeviceID,
                              FileID, Line);
 
     // Is this a target region that should not be emitted as an entry point? If
@@ -8855,8 +8855,8 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
 
   // Build call void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid,
   // kmp_int32 num_dims, struct kmp_dim * dims);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, D.getLocStart()),
-                         getThreadID(CGF, D.getLocStart()),
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, D.getBeginLoc()),
+                         getThreadID(CGF, D.getBeginLoc()),
                          llvm::ConstantInt::getSigned(CGM.Int32Ty, 1),
                          CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                              DimsAddr.getPointer(), CGM.VoidPtrTy)};
@@ -8864,7 +8864,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
   llvm::Value *RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_init);
   CGF.EmitRuntimeCall(RTLFn, Args);
   llvm::Value *FiniArgs[DoacrossCleanupTy::DoacrossFinArgs] = {
-      emitUpdateLocation(CGF, D.getLocEnd()), getThreadID(CGF, D.getLocEnd())};
+      emitUpdateLocation(CGF, D.getEndLoc()), getThreadID(CGF, D.getEndLoc())};
   llvm::Value *FiniRTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_fini);
   CGF.EHStack.pushCleanup<DoacrossCleanupTy>(NormalAndEHCleanup, FiniRTLFn,
                                              llvm::makeArrayRef(FiniArgs));
@@ -8881,8 +8881,8 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
                                                  CounterVal->getExprLoc());
   Address CntAddr = CGF.CreateMemTemp(Int64Ty, ".cnt.addr");
   CGF.EmitStoreOfScalar(CntVal, CntAddr, /*Volatile=*/false, Int64Ty);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, C->getLocStart()),
-                         getThreadID(CGF, C->getLocStart()),
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, C->getBeginLoc()),
+                         getThreadID(CGF, C->getBeginLoc()),
                          CntAddr.getPointer()};
   llvm::Value *RTLFn;
   if (C->getDependencyKind() == OMPC_DEPEND_source) {
