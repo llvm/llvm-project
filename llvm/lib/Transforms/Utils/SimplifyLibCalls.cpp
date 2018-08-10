@@ -22,6 +22,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -147,6 +148,29 @@ static bool isLocallyOpenedFile(Value *File, CallInst *CI, IRBuilder<> &B,
   if (PointerMayBeCaptured(File, true, true))
     return false;
 
+  return true;
+}
+
+static bool isOnlyUsedInComparisonWithZero(Value *V) {
+  for (User *U : V->users()) {
+    if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
+      if (Constant *C = dyn_cast<Constant>(IC->getOperand(1)))
+        if (C->isNullValue())
+          continue;
+    // Unknown instruction.
+    return false;
+  }
+  return true;
+}
+
+static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
+                                 const DataLayout &DL) {
+  if (!isOnlyUsedInComparisonWithZero(CI))
+    return false;
+
+  if (!isDereferenceableAndAlignedPointer(Str, 1, APInt(64, Len), DL))
+    return false;
+    
   return true;
 }
 
@@ -322,6 +346,21 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilder<> &B) {
                       B, DL, TLI);
   }
 
+  // strcmp to memcmp
+  if (!HasStr1 && HasStr2) {
+    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+      return emitMemCmp(
+          Str1P, Str2P,
+          ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2), B, DL,
+          TLI);
+  } else if (HasStr1 && !HasStr2) {
+    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+      return emitMemCmp(
+          Str1P, Str2P,
+          ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1), B, DL,
+          TLI);
+  }
+
   return nullptr;
 }
 
@@ -360,6 +399,26 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
 
   if (HasStr2 && Str2.empty()) // strncmp(x, "", n) -> *x
     return B.CreateZExt(B.CreateLoad(Str1P, "strcmpload"), CI->getType());
+
+  uint64_t Len1 = GetStringLength(Str1P);
+  uint64_t Len2 = GetStringLength(Str2P);
+
+  // strncmp to memcmp
+  if (!HasStr1 && HasStr2) {
+    Len2 = std::min(Len2, Length);
+    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+      return emitMemCmp(
+          Str1P, Str2P,
+          ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2), B, DL,
+          TLI);
+  } else if (HasStr1 && !HasStr2) {
+    Len1 = std::min(Len1, Length);
+    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+      return emitMemCmp(
+          Str1P, Str2P,
+          ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1), B, DL,
+          TLI);
+  }
 
   return nullptr;
 }

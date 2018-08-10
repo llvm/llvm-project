@@ -89,20 +89,10 @@ define float @fsub_neg_x_y(float %x, float %y) {
 }
 
 define float @fsub_neg_y(float %x, float %y) {
-; STRICT-LABEL: fsub_neg_y:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    mulss {{.*}}(%rip), %xmm0
-; STRICT-NEXT:    addss %xmm1, %xmm0
-; STRICT-NEXT:    subss %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_neg_y:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    mulss {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    subss %xmm1, %xmm0
-; UNSAFE-NEXT:    addss %xmm1, %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_neg_y:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulss {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %mul = fmul float %x, 5.0
   %add = fadd float %mul, %y
   %r = fsub nsz reassoc float %y, %add
@@ -110,20 +100,10 @@ define float @fsub_neg_y(float %x, float %y) {
 }
 
 define float @fsub_neg_y_commute(float %x, float %y) {
-; STRICT-LABEL: fsub_neg_y_commute:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    mulss {{.*}}(%rip), %xmm0
-; STRICT-NEXT:    addss %xmm1, %xmm0
-; STRICT-NEXT:    subss %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_neg_y_commute:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    mulss {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    subss %xmm1, %xmm0
-; UNSAFE-NEXT:    addss %xmm1, %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_neg_y_commute:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulss {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %mul = fmul float %x, 5.0
   %add = fadd float %y, %mul
   %r = fsub nsz reassoc float %y, %add
@@ -132,17 +112,10 @@ define float @fsub_neg_y_commute(float %x, float %y) {
 ; Y - (X + Y) --> -X
 
 define float @fsub_fadd_common_op_fneg(float %x, float %y) {
-; STRICT-LABEL: fsub_fadd_common_op_fneg:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addss %xmm1, %xmm0
-; STRICT-NEXT:    subss %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_fadd_common_op_fneg:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    xorps {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_fadd_common_op_fneg:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %a = fadd float %x, %y
   %r = fsub reassoc nsz float %y, %a
   ret float %r
@@ -151,17 +124,10 @@ define float @fsub_fadd_common_op_fneg(float %x, float %y) {
 ; Y - (X + Y) --> -X
 
 define <4 x float> @fsub_fadd_common_op_fneg_vec(<4 x float> %x, <4 x float> %y) {
-; STRICT-LABEL: fsub_fadd_common_op_fneg_vec:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addps %xmm1, %xmm0
-; STRICT-NEXT:    subps %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_fadd_common_op_fneg_vec:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    xorps {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_fadd_common_op_fneg_vec:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %a = fadd <4 x float> %x, %y
   %r = fsub nsz reassoc <4 x float> %y, %a
   ret <4 x float> %r
@@ -171,17 +137,10 @@ define <4 x float> @fsub_fadd_common_op_fneg_vec(<4 x float> %x, <4 x float> %y)
 ; Commute operands of the 'add'.
 
 define float @fsub_fadd_common_op_fneg_commute(float %x, float %y) {
-; STRICT-LABEL: fsub_fadd_common_op_fneg_commute:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addss %xmm1, %xmm0
-; STRICT-NEXT:    subss %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_fadd_common_op_fneg_commute:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    xorps {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_fadd_common_op_fneg_commute:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %a = fadd float %y, %x
   %r = fsub reassoc nsz float %y, %a
   ret float %r
@@ -190,17 +149,10 @@ define float @fsub_fadd_common_op_fneg_commute(float %x, float %y) {
 ; Y - (Y + X) --> -X
 
 define <4 x float> @fsub_fadd_common_op_fneg_commute_vec(<4 x float> %x, <4 x float> %y) {
-; STRICT-LABEL: fsub_fadd_common_op_fneg_commute_vec:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addps %xmm1, %xmm0
-; STRICT-NEXT:    subps %xmm0, %xmm1
-; STRICT-NEXT:    movaps %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_fadd_common_op_fneg_commute_vec:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    xorps {{.*}}(%rip), %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_fadd_common_op_fneg_commute_vec:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
   %a = fadd <4 x float> %y, %x
   %r = fsub reassoc nsz <4 x float> %y, %a
   ret <4 x float> %r

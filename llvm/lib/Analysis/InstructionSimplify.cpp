@@ -1694,7 +1694,8 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   return nullptr;
 }
 
-static Value *simplifyAndOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) {
+static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI,
+                                   FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
   if (LHS0->getType() != RHS0->getType())
@@ -1711,8 +1712,8 @@ static Value *simplifyAndOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) {
     // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
     // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
     // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
-    if ((isKnownNeverNaN(LHS0) && (LHS1 == RHS0 || LHS1 == RHS1)) ||
-        (isKnownNeverNaN(LHS1) && (LHS0 == RHS0 || LHS0 == RHS1)))
+    if ((isKnownNeverNaN(LHS0, TLI) && (LHS1 == RHS0 || LHS1 == RHS1)) ||
+        (isKnownNeverNaN(LHS1, TLI) && (LHS0 == RHS0 || LHS0 == RHS1)))
       return RHS;
 
     // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
@@ -1723,15 +1724,16 @@ static Value *simplifyAndOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) {
     // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
     // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
     // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
-    if ((isKnownNeverNaN(RHS0) && (RHS1 == LHS0 || RHS1 == LHS1)) ||
-        (isKnownNeverNaN(RHS1) && (RHS0 == LHS0 || RHS0 == LHS1)))
+    if ((isKnownNeverNaN(RHS0, TLI) && (RHS1 == LHS0 || RHS1 == LHS1)) ||
+        (isKnownNeverNaN(RHS1, TLI) && (RHS0 == LHS0 || RHS0 == LHS1)))
       return LHS;
   }
 
   return nullptr;
 }
 
-static Value *simplifyAndOrOfCmps(Value *Op0, Value *Op1, bool IsAnd) {
+static Value *simplifyAndOrOfCmps(const TargetLibraryInfo *TLI,
+                                  Value *Op0, Value *Op1, bool IsAnd) {
   // Look through casts of the 'and' operands to find compares.
   auto *Cast0 = dyn_cast<CastInst>(Op0);
   auto *Cast1 = dyn_cast<CastInst>(Op1);
@@ -1751,7 +1753,7 @@ static Value *simplifyAndOrOfCmps(Value *Op0, Value *Op1, bool IsAnd) {
   auto *FCmp0 = dyn_cast<FCmpInst>(Op0);
   auto *FCmp1 = dyn_cast<FCmpInst>(Op1);
   if (FCmp0 && FCmp1)
-    V = simplifyAndOrOfFCmps(FCmp0, FCmp1, IsAnd);
+    V = simplifyAndOrOfFCmps(TLI, FCmp0, FCmp1, IsAnd);
 
   if (!V)
     return nullptr;
@@ -1831,7 +1833,7 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return Op1;
   }
 
-  if (Value *V = simplifyAndOrOfCmps(Op0, Op1, true))
+  if (Value *V = simplifyAndOrOfCmps(Q.TLI, Op0, Op1, true))
     return V;
 
   // Try some generic simplifications for associative operations.
@@ -1981,7 +1983,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
        match(Op0, m_c_Xor(m_Not(m_Specific(A)), m_Specific(B)))))
     return Op0;
 
-  if (Value *V = simplifyAndOrOfCmps(Op0, Op1, false))
+  if (Value *V = simplifyAndOrOfCmps(Q.TLI, Op0, Op1, false))
     return V;
 
   // Try some generic simplifications for associative operations.
@@ -4812,7 +4814,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     }
     break;
   case Intrinsic::maxnum:
-  case Intrinsic::minnum:
+  case Intrinsic::minnum: {
     // If the arguments are the same, this is a no-op.
     if (Op0 == Op1) return Op0;
 
@@ -4831,7 +4833,22 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
           (M1->getOperand(0) == Op0 || M1->getOperand(1) == Op0))
         return Op1;
 
+    // minnum(X, -Inf) --> -Inf (and commuted variant)
+    // maxnum(X, +Inf) --> +Inf (and commuted variant)
+    bool UseNegInf = IID == Intrinsic::minnum;
+    const APFloat *C;
+    if ((match(Op0, m_APFloat(C)) && C->isInfinity() &&
+         C->isNegative() == UseNegInf) ||
+        (match(Op1, m_APFloat(C)) && C->isInfinity() &&
+         C->isNegative() == UseNegInf))
+      return ConstantFP::getInfinity(ReturnType, UseNegInf);
+
+    // TODO: minnum(nnan x, inf) -> x
+    // TODO: minnum(nnan ninf x, flt_max) -> x
+    // TODO: maxnum(nnan x, -inf) -> x
+    // TODO: maxnum(nnan ninf x, -flt_max) -> x
     break;
+  }
   default:
     break;
   }

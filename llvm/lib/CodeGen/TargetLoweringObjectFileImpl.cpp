@@ -95,6 +95,156 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
   TM = &TgtM;
+
+  bool Large = TgtM.getCodeModel() == CodeModel::Large;
+
+  switch (TgtM.getTargetTriple().getArch()) {
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
+      break;
+    // Fallthrough if not using EHABI
+    LLVM_FALLTHROUGH;
+  case Triple::ppc:
+  case Triple::x86:
+    PersonalityEncoding = isPositionIndependent()
+                              ? dwarf::DW_EH_PE_indirect |
+                                    dwarf::DW_EH_PE_pcrel |
+                                    dwarf::DW_EH_PE_sdata4
+                              : dwarf::DW_EH_PE_absptr;
+    LSDAEncoding = isPositionIndependent()
+                       ? dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4
+                       : dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = isPositionIndependent()
+                        ? dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                              dwarf::DW_EH_PE_sdata4
+                        : dwarf::DW_EH_PE_absptr;
+    break;
+  case Triple::x86_64:
+    if (isPositionIndependent()) {
+      PersonalityEncoding =
+          dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+          (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel |
+                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                      (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+    } else {
+      PersonalityEncoding =
+          Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
+      LSDAEncoding = Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
+      TTypeEncoding = Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
+    }
+    break;
+  case Triple::hexagon:
+    PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+    LSDAEncoding = dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    if (isPositionIndependent()) {
+      PersonalityEncoding |= dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel;
+      LSDAEncoding |= dwarf::DW_EH_PE_pcrel;
+      TTypeEncoding |= dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel;
+    }
+    break;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    // The small model guarantees static code/data size < 4GB, but not where it
+    // will be in memory. Most of these could end up >2GB away so even a signed
+    // pc-relative 32-bit address is insufficient, theoretically.
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata8;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata8;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::lanai:
+    LSDAEncoding = dwarf::DW_EH_PE_absptr;
+    PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    break;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    // MIPS uses indirect pointer to refer personality functions and types, so
+    // that the eh_frame section can be read-only. DW.ref.personality will be
+    // generated for relocation.
+    PersonalityEncoding = dwarf::DW_EH_PE_indirect;
+    // FIXME: The N64 ABI probably ought to use DW_EH_PE_sdata8 but we can't
+    //        identify N64 from just a triple.
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                    dwarf::DW_EH_PE_sdata4;
+    // We don't support PC-relative LSDA references in GAS so we use the default
+    // DW_EH_PE_absptr for those.
+
+    // FreeBSD must be explicit about the data size and using pcrel since it's
+    // assembler/linker won't do the automatic conversion that the Linux tools
+    // do.
+    if (TgtM.getTargetTriple().isOSFreeBSD()) {
+      PersonalityEncoding |= dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    }
+    break;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata8;
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_udata8;
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata8;
+    break;
+  case Triple::sparcel:
+  case Triple::sparc:
+    if (isPositionIndependent()) {
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::sparcv9:
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::systemz:
+    // All currently-defined code models guarantee that 4-byte PC-relative
+    // values will be in range.
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  default:
+    break;
+  }
 }
 
 void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
@@ -684,6 +834,12 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
                                             MachO::S_MOD_TERM_FUNC_POINTERS,
                                             SectionKind::getData());
   }
+
+  PersonalityEncoding =
+      dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+  LSDAEncoding = dwarf::DW_EH_PE_pcrel;
+  TTypeEncoding =
+      dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
 }
 
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,

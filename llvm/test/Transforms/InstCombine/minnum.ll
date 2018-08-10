@@ -182,23 +182,6 @@ define float @maxnum_x_minnum_x_y(float %x, float %y) {
   ret float %b
 }
 
-define float @fold_minnum_f32_inf_val(float %x) {
-; CHECK-LABEL: @fold_minnum_f32_inf_val(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0x7FF0000000000000)
-; CHECK-NEXT:    ret float [[VAL]]
-;
-  %val = call float @llvm.minnum.f32(float 0x7FF0000000000000, float %x)
-  ret float %val
-}
-
-define float @fold_minnum_f32_minf_val(float %x) {
-; CHECK-LABEL: @fold_minnum_f32_minf_val(
-; CHECK-NEXT:    ret float 0xFFF0000000000000
-;
-  %val = call float @llvm.minnum.f32(float 0xFFF0000000000000, float %x)
-  ret float %val
-}
-
 ; PR37405 - https://bugs.llvm.org/show_bug.cgi?id=37405
 
 define double @neg_neg(double %x, double %y) {

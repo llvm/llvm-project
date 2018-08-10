@@ -363,7 +363,7 @@ bool AsmPrinter::doInitialization(Module &M) {
                                    DWARFGroupName, DWARFGroupDescription));
 
   if (mdconst::extract_or_null<ConstantInt>(
-          MMI->getModule()->getModuleFlag("cfguard")))
+          MMI->getModule()->getModuleFlag("cfguardtable")))
     Handlers.push_back(HandlerInfo(new WinCFGuard(this), CFGuardName,
                                    CFGuardDescription, DWARFGroupName,
                                    DWARFGroupDescription));

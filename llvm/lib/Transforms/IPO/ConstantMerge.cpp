@@ -91,6 +91,37 @@ static unsigned getAlignment(GlobalVariable *GV) {
   return GV->getParent()->getDataLayout().getPreferredAlignment(GV);
 }
 
+enum class CanMerge { No, Yes };
+static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
+  if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
+    return CanMerge::No;
+  if (hasMetadataOtherThanDebugLoc(Old))
+    return CanMerge::No;
+  assert(!hasMetadataOtherThanDebugLoc(New));
+  if (!Old->hasGlobalUnnamedAddr())
+    New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  return CanMerge::Yes;
+}
+
+static void replace(Module &M, GlobalVariable *Old, GlobalVariable *New) {
+  Constant *NewConstant = New;
+
+  LLVM_DEBUG(dbgs() << "Replacing global: @" << Old->getName() << " -> @"
+                    << New->getName() << "\n");
+
+  // Bump the alignment if necessary.
+  if (Old->getAlignment() || New->getAlignment())
+    New->setAlignment(std::max(getAlignment(Old), getAlignment(New)));
+
+  copyDebugLocMetadata(Old, New);
+  Old->replaceAllUsesWith(NewConstant);
+
+  // Delete the global value from the module.
+  assert(Old->hasLocalLinkage() &&
+         "Refusing to delete an externally visible global variable.");
+  Old->eraseFromParent();
+}
+
 static bool mergeConstants(Module &M) {
   // Find all the globals that are marked "used".  These cannot be merged.
   SmallPtrSet<const GlobalValue*, 8> UsedGlobals;
@@ -148,8 +179,12 @@ static bool mergeConstants(Module &M) {
       // If this is the first constant we find or if the old one is local,
       // replace with the current one. If the current is externally visible
       // it cannot be replace, but can be the canonical constant we merge with.
-      if (!Slot || IsBetterCanonical(*GV, *Slot))
+      bool FirstConstantFound = !Slot;
+      if (FirstConstantFound || IsBetterCanonical(*GV, *Slot)) {
         Slot = GV;
+        LLVM_DEBUG(dbgs() << "Cmap[" << *Init << "] = " << GV->getName()
+                          << (FirstConstantFound ? "\n" : " (updated)\n"));
+      }
     }
 
     // Second: identify all globals that can be merged together, filling in
@@ -182,16 +217,12 @@ static bool mergeConstants(Module &M) {
       if (Slot == GV)
         continue;
 
-      if (!Slot->hasGlobalUnnamedAddr() && !GV->hasGlobalUnnamedAddr())
+      if (makeMergeable(GV, Slot) == CanMerge::No)
         continue;
-
-      if (hasMetadataOtherThanDebugLoc(GV))
-        continue;
-
-      if (!GV->hasGlobalUnnamedAddr())
-        Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
       // Make all uses of the duplicate constant use the canonical version.
+      LLVM_DEBUG(dbgs() << "Will replace: @" << GV->getName() << " -> @"
+                        << Slot->getName() << "\n");
       Replacements.push_back(std::make_pair(GV, Slot));
     }
 
@@ -203,23 +234,10 @@ static bool mergeConstants(Module &M) {
     // now.  This avoid invalidating the pointers in CMap, which are unneeded
     // now.
     for (unsigned i = 0, e = Replacements.size(); i != e; ++i) {
-      // Bump the alignment if necessary.
-      if (Replacements[i].first->getAlignment() ||
-          Replacements[i].second->getAlignment()) {
-        Replacements[i].second->setAlignment(
-            std::max(getAlignment(Replacements[i].first),
-                     getAlignment(Replacements[i].second)));
-      }
-
-      copyDebugLocMetadata(Replacements[i].first, Replacements[i].second);
-
-      // Eliminate any uses of the dead global.
-      Replacements[i].first->replaceAllUsesWith(Replacements[i].second);
-
-      // Delete the global value from the module.
-      assert(Replacements[i].first->hasLocalLinkage() &&
-             "Refusing to delete an externally visible global variable.");
-      Replacements[i].first->eraseFromParent();
+      GlobalVariable *Old = Replacements[i].first;
+      GlobalVariable *New = Replacements[i].second;
+      replace(M, Old, New);
+      MadeChange = true;
     }
 
     NumMerged += Replacements.size();

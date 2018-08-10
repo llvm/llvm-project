@@ -2107,6 +2107,13 @@ static bool hasChangeableCC(Function *F) {
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
     return false;
 
+  // Don't break the invariant that the inalloca parameter is the only parameter
+  // passed in memory.
+  // FIXME: GlobalOpt should remove inalloca when possible and hoist the dynamic
+  // alloca it uses to the entry block if possible.
+  if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
+    return false;
+
   // FIXME: Change CC for the whole chain of musttail calls when possible.
   //
   // Can't change CC of the function that either has musttail calls, or is a

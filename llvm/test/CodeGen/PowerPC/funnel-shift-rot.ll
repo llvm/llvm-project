@@ -145,7 +145,6 @@ define i32 @rotr_i32(i32 %x, i32 %z) {
 ; CHECK-LABEL: rotr_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    neg 4, 4
-; CHECK-NEXT:    clrlwi 4, 4, 27
 ; CHECK-NEXT:    rlwnm 3, 3, 4, 0, 31
 ; CHECK-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %z)
@@ -156,8 +155,7 @@ define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-LABEL: rotr_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    neg 4, 4
-; CHECK-NEXT:    rlwinm 4, 4, 0, 26, 31
-; CHECK-NEXT:    rotld 3, 3, 4
+; CHECK-NEXT:    rldcl 3, 3, 4, 0
 ; CHECK-NEXT:    blr
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f

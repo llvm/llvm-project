@@ -187,7 +187,7 @@ def simm10_lsb0000nonzero : Operand<XLenVT>,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return isShiftedInt<6, 4>(Imm);
+    return isShiftedInt<6, 4>(Imm) && (Imm != 0);
   }];
 }
 

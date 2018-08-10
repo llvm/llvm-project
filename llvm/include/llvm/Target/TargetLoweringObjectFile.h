@@ -47,6 +47,12 @@ protected:
   bool SupportGOTPCRelWithOffset = true;
   bool SupportDebugThreadLocalLocation = true;
 
+  /// PersonalityEncoding, LSDAEncoding, TTypeEncoding - Some encoding values
+  /// for EH.
+  unsigned PersonalityEncoding = 0;
+  unsigned LSDAEncoding = 0;
+  unsigned TTypeEncoding = 0;
+
   /// This section contains the static constructor pointer list.
   MCSection *StaticCtorSection = nullptr;
 
@@ -135,6 +141,10 @@ public:
   virtual MCSymbol *getCFIPersonalitySymbol(const GlobalValue *GV,
                                             const TargetMachine &TM,
                                             MachineModuleInfo *MMI) const;
+
+  unsigned getPersonalityEncoding() const { return PersonalityEncoding; }
+  unsigned getLSDAEncoding() const { return LSDAEncoding; }
+  unsigned getTTypeEncoding() const { return TTypeEncoding; }
 
   const MCExpr *getTTypeReference(const MCSymbolRefExpr *Sym, unsigned Encoding,
                                   MCStreamer &Streamer) const;
