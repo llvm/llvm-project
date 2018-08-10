@@ -1,5 +1,7 @@
 # XFAIL: windows
 # -> llvm.org/pr24452
+# REQUIRES: FIX_FOR_RACE_CONDITION
+#
 #
 # RUN: %cc -o %t %p/inputs/main.c -g
 # RUN: %lldbmi %t < %s | FileCheck %s
