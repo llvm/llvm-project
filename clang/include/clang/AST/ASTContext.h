@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -148,6 +149,22 @@ struct TypeInfo {
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
+public:
+  /// Copy initialization expr of a __block variable and a boolean flag that
+  /// indicates whether the expression can throw.
+  struct BlockVarCopyInit {
+    BlockVarCopyInit() = default;
+    BlockVarCopyInit(Expr *CopyExpr, bool CanThrow)
+        : ExprAndFlag(CopyExpr, CanThrow) {}
+    void setExprAndFlag(Expr *CopyExpr, bool CanThrow) {
+      ExprAndFlag.setPointerAndInt(CopyExpr, CanThrow);
+    }
+    Expr *getCopyExpr() const { return ExprAndFlag.getPointer(); }
+    bool canThrow() const { return ExprAndFlag.getInt(); }
+    llvm::PointerIntPair<Expr *, 1, bool> ExprAndFlag;
+  };
+
+private:
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
@@ -236,8 +253,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// interface.
   llvm::DenseMap<const ObjCMethodDecl*,const ObjCMethodDecl*> ObjCMethodRedecls;
 
-  /// Mapping from __block VarDecls to their copy initialization expr.
-  llvm::DenseMap<const VarDecl*, Expr*> BlockVarCopyInits;
+  /// Mapping from __block VarDecls to BlockVarCopyInit.
+  llvm::DenseMap<const VarDecl *, BlockVarCopyInit> BlockVarCopyInits;
 
   /// Mapping from class scope functions specialization to their
   /// template patterns.
@@ -2635,12 +2652,13 @@ public:
   /// otherwise returns null.
   const ObjCInterfaceDecl *getObjContainingInterface(const NamedDecl *ND) const;
 
-  /// Set the copy inialization expression of a block var decl.
-  void setBlockVarCopyInits(VarDecl*VD, Expr* Init);
+  /// Set the copy inialization expression of a block var decl. \p CanThrow
+  /// indicates whether the copy expression can throw or not.
+  void setBlockVarCopyInit(const VarDecl* VD, Expr *CopyExpr, bool CanThrow);
 
   /// Get the copy initialization expression of the VarDecl \p VD, or
   /// nullptr if none exists.
-  Expr *getBlockVarCopyInits(const VarDecl* VD);
+  BlockVarCopyInit getBlockVarCopyInit(const VarDecl* VD) const;
 
   /// Allocate an uninitialized TypeSourceInfo.
   ///
