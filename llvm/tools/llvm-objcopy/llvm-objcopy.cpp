@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objcopy.h"
+
 #include "Object.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -189,14 +191,15 @@ namespace objcopy {
 StringRef ToolName;
 
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  errs() << ToolName << ": " << Message << ".\n";
+  WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
   exit(1);
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
   assert(EC);
-  errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
+  WithColor::error(errs(), ToolName)
+      << "'" << File << "': " << EC.message() << ".\n";
   exit(1);
 }
 
@@ -206,7 +209,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS, "");
   OS.flush();
-  errs() << ToolName << ": '" << File << "': " << Buf;
+  WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(1);
 }
 

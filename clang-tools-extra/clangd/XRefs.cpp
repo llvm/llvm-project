@@ -540,7 +540,7 @@ public:
   //- auto& i = 1;
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
-        D->getTypeSourceInfo()->getTypeLoc().getLocStart() != SearchedLocation)
+        D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
       return true;
 
     auto DeclT = D->getType();

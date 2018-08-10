@@ -235,7 +235,7 @@ struct CompletionCandidate {
       // file e.g. the symbol is forward declared.
       auto &SM = SemaResult->Declaration->getASTContext().getSourceManager();
       for (const Decl *RD : SemaResult->Declaration->redecls())
-        if (SM.isInMainFile(SM.getExpansionLoc(RD->getLocStart())))
+        if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
           return llvm::None;
     }
     return IndexResult->Detail->IncludeHeader;

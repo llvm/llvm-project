@@ -52,14 +52,14 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
 
 void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Op = Result.Nodes.getNodeAs<BinaryOperator>("op")) {
-    if (Op->getLocStart().isMacroID())
+    if (Op->getBeginLoc().isMacroID())
       return;
     diag(Op->getOperatorLoc(), "narrowing conversion from %0 to %1")
         << Op->getRHS()->getType() << Op->getLHS()->getType();
     return;
   }
   const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast");
-  if (Cast->getLocStart().isMacroID())
+  if (Cast->getBeginLoc().isMacroID())
     return;
   diag(Cast->getExprLoc(), "narrowing conversion from %0 to %1")
       << Cast->getSubExpr()->getType() << Cast->getType();

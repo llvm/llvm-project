@@ -117,7 +117,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
                           std::string, AbsoluteFilePath) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
   auto FileEntry =
@@ -292,7 +292,7 @@ getLocForEndOfDecl(const clang::Decl *D,
   // If the expansion range is a character range, this is the location of
   // the first character past the end. Otherwise it's the location of the
   // first character in the final token in the range.
-  auto EndExpansionLoc = SM.getExpansionRange(D->getLocEnd()).getEnd();
+  auto EndExpansionLoc = SM.getExpansionRange(D->getEndLoc()).getEnd();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(EndExpansionLoc);
   // Try to load the file buffer.
   bool InvalidTemp = false;
@@ -323,16 +323,16 @@ clang::CharSourceRange
 getFullRange(const clang::Decl *D,
              const clang::LangOptions &options = clang::LangOptions()) {
   const auto &SM = D->getASTContext().getSourceManager();
-  clang::SourceRange Full(SM.getExpansionLoc(D->getLocStart()),
+  clang::SourceRange Full(SM.getExpansionLoc(D->getBeginLoc()),
                           getLocForEndOfDecl(D));
   // Expand to comments that are associated with the Decl.
   if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
-    if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getLocEnd()))
-      Full.setEnd(Comment->getLocEnd());
+    if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getEndLoc()))
+      Full.setEnd(Comment->getEndLoc());
     // FIXME: Don't delete a preceding comment, if there are no other entities
     // it could refer to.
-    if (SM.isBeforeInTranslationUnit(Comment->getLocStart(), Full.getBegin()))
-      Full.setBegin(Comment->getLocStart());
+    if (SM.isBeforeInTranslationUnit(Comment->getBeginLoc(), Full.getBegin()))
+      Full.setBegin(Comment->getBeginLoc());
   }
 
   return clang::CharSourceRange::getCharRange(Full);
@@ -351,7 +351,7 @@ bool isInHeaderFile(const clang::Decl *D,
   const auto &SM = D->getASTContext().getSourceManager();
   if (OldHeader.empty())
     return false;
-  auto ExpansionLoc = SM.getExpansionLoc(D->getLocStart());
+  auto ExpansionLoc = SM.getExpansionLoc(D->getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
 

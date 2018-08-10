@@ -59,7 +59,7 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     // Is this a multivariable declaration?
     for (const auto Other : VD->getDeclContext()->decls()) {
-      if (Other != D && Other->getLocStart() == VD->getLocStart()) {
+      if (Other != D && Other->getBeginLoc() == VD->getBeginLoc()) {
         MultiVar = true;
         break;
       }

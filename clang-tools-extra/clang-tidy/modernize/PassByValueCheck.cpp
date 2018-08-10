@@ -194,7 +194,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
           *Result.Context))
     return;
 
-  auto Diag = diag(ParamDecl->getLocStart(), "pass by value and use std::move");
+  auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
   // Iterate over all declarations of the constructor.
   for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
@@ -206,8 +206,8 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     TypeLoc ValueTL = RefTL.getPointeeLoc();
-    auto TypeRange = CharSourceRange::getTokenRange(ParmDecl->getLocStart(),
-                                                    ParamTL.getLocEnd());
+    auto TypeRange = CharSourceRange::getTokenRange(ParmDecl->getBeginLoc(),
+                                                    ParamTL.getEndLoc());
     std::string ValueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                                     ValueTL.getSourceRange()),
                                                 SM, getLangOpts())

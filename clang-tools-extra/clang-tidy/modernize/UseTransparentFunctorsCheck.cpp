@@ -85,8 +85,8 @@ void UseTransparentFunctorsCheck::check(
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("FunctorClass");
   if (const auto *FuncInst =
           Result.Nodes.getNodeAs<CXXConstructExpr>("FuncInst")) {
-    diag(FuncInst->getLocStart(), Message)
-          << (FuncClass->getName() + "<>").str();
+    diag(FuncInst->getBeginLoc(), Message)
+        << (FuncClass->getName() + "<>").str();
     return;
   }
 

@@ -194,7 +194,8 @@ class Value;
   /// Return true if the floating-point scalar value is not a NaN or if the
   /// floating-point vector value has no NaN elements. Return false if a value
   /// could ever be NaN.
-  bool isKnownNeverNaN(const Value *V);
+  bool isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
+                       unsigned Depth = 0);
 
   /// Return true if we can prove that the specified FP value's sign bit is 0.
   ///

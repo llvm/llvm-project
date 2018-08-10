@@ -19,7 +19,7 @@ namespace bugprone {
 
 namespace {
 
-AST_MATCHER(Expr, isInMacro) { return Node.getLocStart().isMacroID(); }
+AST_MATCHER(Expr, isInMacro) { return Node.getBeginLoc().isMacroID(); }
 
 /// \brief Find the next statement after `S`.
 const Stmt *nextStmt(const MatchFinder::MatchResult &Result, const Stmt *S) {
@@ -73,13 +73,13 @@ void MultipleStatementMacroCheck::check(
   if (!Next)
     return;
 
-  SourceLocation OuterLoc = Outer->getLocStart();
+  SourceLocation OuterLoc = Outer->getBeginLoc();
   if (Result.Nodes.getNodeAs<Stmt>("else"))
     OuterLoc = cast<IfStmt>(Outer)->getElseLoc();
 
-  auto InnerRanges = getExpansionRanges(Inner->getLocStart(), Result);
+  auto InnerRanges = getExpansionRanges(Inner->getBeginLoc(), Result);
   auto OuterRanges = getExpansionRanges(OuterLoc, Result);
-  auto NextRanges = getExpansionRanges(Next->getLocStart(), Result);
+  auto NextRanges = getExpansionRanges(Next->getBeginLoc(), Result);
 
   // Remove all the common ranges, starting from the top (the last ones in the
   // list).

@@ -280,9 +280,15 @@ public:
   SourceLocation getDeclaratorEndLoc() const { return DeclEndLoc; }
 
   // Location information, modeled after the Stmt API.
-  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return getLocation(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
   SourceLocation getEndLoc() const LLVM_READONLY;
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(getLocation(), getEndLoc());
@@ -2803,7 +2809,10 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return AtLoc; }
   void setAtLoc(SourceLocation Loc) { AtLoc = Loc; }
 

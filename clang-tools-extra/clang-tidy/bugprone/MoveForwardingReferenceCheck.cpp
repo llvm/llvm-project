@@ -29,7 +29,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
 
   CharSourceRange CallRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(
-                                   Callee->getLocStart(), Callee->getLocEnd()),
+                                   Callee->getBeginLoc(), Callee->getEndLoc()),
                                SM, LangOpts);
 
   if (CallRange.isValid()) {

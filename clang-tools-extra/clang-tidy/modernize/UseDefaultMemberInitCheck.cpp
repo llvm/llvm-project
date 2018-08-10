@@ -202,7 +202,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
     const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
   const FieldDecl *Field = Init->getAnyMember();
 
-  SourceLocation StartLoc = Field->getLocStart();
+  SourceLocation StartLoc = Field->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 

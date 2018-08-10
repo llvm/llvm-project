@@ -165,10 +165,16 @@ public:
   }
 
   /// Returns starting location of directive kind.
-  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
   SourceLocation getBeginLoc() const { return StartLoc; }
   /// Returns ending location of directive.
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
   SourceLocation getEndLoc() const { return EndLoc; }
 
   /// Set starting location of directive kind.

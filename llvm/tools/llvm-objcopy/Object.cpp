@@ -433,7 +433,7 @@ void RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
     if (ToRemove(*Reloc.RelocSymbol))
-      error("not stripping symbol `" + Reloc.RelocSymbol->Name +
+      error("not stripping symbol '" + Reloc.RelocSymbol->Name +
             "' because it is named in a relocation");
 }
 

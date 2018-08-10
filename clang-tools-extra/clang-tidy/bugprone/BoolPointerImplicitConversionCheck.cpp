@@ -36,7 +36,7 @@ void BoolPointerImplicitConversionCheck::check(
   auto *Var = Result.Nodes.getNodeAs<DeclRefExpr>("expr");
 
   // Ignore macros.
-  if (Var->getLocStart().isMacroID())
+  if (Var->getBeginLoc().isMacroID())
     return;
 
   // Only allow variable accesses for now, no function calls or member exprs.
@@ -63,9 +63,9 @@ void BoolPointerImplicitConversionCheck::check(
            .empty())
     return;
 
-  diag(Var->getLocStart(), "dubious check of 'bool *' against 'nullptr', did "
+  diag(Var->getBeginLoc(), "dubious check of 'bool *' against 'nullptr', did "
                            "you mean to dereference it?")
-      << FixItHint::CreateInsertion(Var->getLocStart(), "*");
+      << FixItHint::CreateInsertion(Var->getBeginLoc(), "*");
 }
 
 } // namespace bugprone

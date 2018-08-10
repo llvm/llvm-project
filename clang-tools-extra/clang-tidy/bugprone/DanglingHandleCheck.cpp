@@ -178,7 +178,7 @@ void DanglingHandleCheck::registerMatchers(MatchFinder *Finder) {
 
 void DanglingHandleCheck::check(const MatchFinder::MatchResult &Result) {
   auto *Handle = Result.Nodes.getNodeAs<CXXRecordDecl>("handle");
-  diag(Result.Nodes.getNodeAs<Stmt>("bad_stmt")->getLocStart(),
+  diag(Result.Nodes.getNodeAs<Stmt>("bad_stmt")->getBeginLoc(),
        "%0 outlives its value")
       << Handle->getQualifiedNameAsString();
 }
