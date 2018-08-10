@@ -40,7 +40,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "constmerge"
 
-STATISTIC(NumMerged, "Number of global constants merged");
+STATISTIC(NumIdenticalMerged, "Number of identical global constants merged");
 
 /// Find values that are marked as llvm.used.
 static void FindUsedValues(GlobalVariable *LLVMUsed,
@@ -131,25 +131,28 @@ static bool mergeConstants(Module &M) {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
 
-  // Replacements - This vector contains a list of replacements to perform.
-  SmallVector<std::pair<GlobalVariable*, GlobalVariable*>, 32> Replacements;
+  SmallVector<std::pair<GlobalVariable *, GlobalVariable *>, 32>
+      SameContentReplacements;
 
-  bool MadeChange = false;
+  size_t ChangesMade = 0;
+  size_t OldChangesMade = 0;
 
   // Iterate constant merging while we are still making progress.  Merging two
   // constants together may allow us to merge other constants together if the
   // second level constants have initializers which point to the globals that
   // were just merged.
   while (true) {
-    // First: Find the canonical constants others will be merged with.
+    // Find the canonical constants others will be merged with.
     for (Module::global_iterator GVI = M.global_begin(), E = M.global_end();
          GVI != E; ) {
       GlobalVariable *GV = &*GVI++;
+      Constant *Init = GV->getInitializer();
 
       // If this GV is dead, remove it.
       GV->removeDeadConstantUsers();
       if (GV->use_empty() && GV->hasLocalLinkage()) {
         GV->eraseFromParent();
+        ++ChangesMade;
         continue;
       }
 
@@ -171,8 +174,6 @@ static bool mergeConstants(Module &M) {
       if (hasMetadataOtherThanDebugLoc(GV))
         continue;
 
-      Constant *Init = GV->getInitializer();
-
       // Check to see if the initializer is already known.
       GlobalVariable *&Slot = CMap[Init];
 
@@ -187,13 +188,14 @@ static bool mergeConstants(Module &M) {
       }
     }
 
-    // Second: identify all globals that can be merged together, filling in
-    // the Replacements vector.  We cannot do the replacement in this pass
+    // Identify all globals that can be merged together, filling in the
+    // SameContentReplacements vector. We cannot do the replacement in this pass
     // because doing so may cause initializers of other globals to be rewritten,
     // invalidating the Constant* pointers in CMap.
     for (Module::global_iterator GVI = M.global_begin(), E = M.global_end();
          GVI != E; ) {
       GlobalVariable *GV = &*GVI++;
+      Constant *Init = GV->getInitializer();
 
       // Only process constants with initializers in the default address space.
       if (!GV->isConstant() || !GV->hasDefinitiveInitializer() ||
@@ -205,8 +207,6 @@ static bool mergeConstants(Module &M) {
       // We can only replace constant with local linkage.
       if (!GV->hasLocalLinkage())
         continue;
-
-      Constant *Init = GV->getInitializer();
 
       // Check to see if the initializer is already known.
       auto Found = CMap.find(Init);
@@ -223,26 +223,29 @@ static bool mergeConstants(Module &M) {
       // Make all uses of the duplicate constant use the canonical version.
       LLVM_DEBUG(dbgs() << "Will replace: @" << GV->getName() << " -> @"
                         << Slot->getName() << "\n");
-      Replacements.push_back(std::make_pair(GV, Slot));
+      SameContentReplacements.push_back(std::make_pair(GV, Slot));
     }
-
-    if (Replacements.empty())
-      return MadeChange;
-    CMap.clear();
 
     // Now that we have figured out which replacements must be made, do them all
     // now.  This avoid invalidating the pointers in CMap, which are unneeded
     // now.
-    for (unsigned i = 0, e = Replacements.size(); i != e; ++i) {
-      GlobalVariable *Old = Replacements[i].first;
-      GlobalVariable *New = Replacements[i].second;
+    for (unsigned i = 0, e = SameContentReplacements.size(); i != e; ++i) {
+      GlobalVariable *Old = SameContentReplacements[i].first;
+      GlobalVariable *New = SameContentReplacements[i].second;
       replace(M, Old, New);
-      MadeChange = true;
+      ++ChangesMade;
+      ++NumIdenticalMerged;
     }
 
-    NumMerged += Replacements.size();
-    Replacements.clear();
+    if (ChangesMade == OldChangesMade)
+      break;
+    OldChangesMade = ChangesMade;
+
+    SameContentReplacements.clear();
+    CMap.clear();
   }
+
+  return ChangesMade;
 }
 
 PreservedAnalyses ConstantMergePass::run(Module &M, ModuleAnalysisManager &) {
