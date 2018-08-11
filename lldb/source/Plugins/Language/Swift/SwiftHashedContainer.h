@@ -56,9 +56,7 @@ private:
   CreateEmptyHandler(CompilerType elem_type = CompilerType()) const;
 
   HashedStorageHandlerUP
-  CreateNativeHandler(
-    lldb::ValueObjectSP value_sp,
-    lldb::ValueObjectSP storage_sp) const;
+  CreateNativeHandler(lldb::ValueObjectSP storage_sp) const;
 
   HashedStorageHandlerUP
   CreateCocoaHandler(lldb::ValueObjectSP storage_sp) const;
