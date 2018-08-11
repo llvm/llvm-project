@@ -31,46 +31,246 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-size_t SwiftHashedContainerSyntheticFrontEndBufferHandler::GetCount() {
-  return m_frontend->CalculateNumChildren();
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+
+class EmptyHashedStorageHandler: public HashedStorageHandler {
+public:
+  EmptyHashedStorageHandler(CompilerType elem_type)
+    : m_elem_type(elem_type) {}
+
+  virtual size_t GetCount() override { return 0; }
+
+  virtual CompilerType GetElementType() override { return m_elem_type; }
+
+  virtual ValueObjectSP GetElementAtIndex(size_t) override {
+    return ValueObjectSP();
+  }
+
+  virtual bool IsValid() override { return true; }
+
+  virtual ~EmptyHashedStorageHandler() {}
+
+private:
+  CompilerType m_elem_type;
+};
+
+class NativeHashedStorageHandler: public HashedStorageHandler {
+public:
+  NativeHashedStorageHandler(ValueObjectSP storage_sp,
+                             CompilerType key_type,
+                             CompilerType value_type);
+
+  virtual size_t GetCount() override { return m_count; }
+
+  virtual CompilerType GetElementType() override { return m_element_type; }
+
+  virtual ValueObjectSP GetElementAtIndex(size_t) override;
+
+  virtual bool IsValid() override;
+
+  virtual ~NativeHashedStorageHandler() override {}
+
+protected:
+  typedef uint64_t Index;
+  typedef uint64_t Cell;
+
+  bool ReadBitmaskAtIndex(Index, Status &error);
+
+  lldb::addr_t GetLocationOfKeyAtCell(Cell i) {
+    return m_keys_ptr + (i * m_key_stride);
+  }
+
+  lldb::addr_t GetLocationOfValueAtCell(Cell i) {
+    return m_value_stride
+      ? m_values_ptr + (i * m_value_stride)
+      : LLDB_INVALID_ADDRESS;
+  }
+
+  // these are sharp tools that assume that the Cell contains valid data and the
+  // destination buffer
+  // has enough room to store the data to - use with caution
+  bool GetDataForKeyAtCell(Cell i, void *data_ptr) {
+    if (!data_ptr)
+      return false;
+
+    lldb::addr_t addr = GetLocationOfKeyAtCell(i);
+    Status error;
+    m_process->ReadMemory(addr, data_ptr, m_key_stride, error);
+    if (error.Fail())
+      return false;
+
+    return true;
+  }
+
+  bool GetDataForValueAtCell(Cell i, void *data_ptr) {
+    if (!data_ptr || !m_value_stride)
+      return false;
+
+    lldb::addr_t addr = GetLocationOfValueAtCell(i);
+    Status error;
+    m_process->ReadMemory(addr, data_ptr, m_value_stride, error);
+    if (error.Fail())
+      return false;
+
+    return true;
+  }
+
+private:
+  ValueObject *m_nativeStorage;
+  Process *m_process;
+  uint32_t m_ptr_size;
+  uint64_t m_count;
+  uint64_t m_capacity;
+  lldb::addr_t m_bitmask_ptr;
+  lldb::addr_t m_keys_ptr;
+  lldb::addr_t m_values_ptr;
+  CompilerType m_element_type;
+  uint64_t m_key_stride;
+  uint64_t m_value_stride;
+  uint64_t m_key_stride_padded;
+  std::map<lldb::addr_t, uint64_t> m_bitmask_cache;
+};
+
+class CocoaHashedStorageHandler: public HashedStorageHandler {
+public:
+  CocoaHashedStorageHandler(
+    ValueObjectSP cocoaObject_sp,
+    SyntheticChildrenFrontEnd *frontend)
+    : m_cocoaObject_sp(cocoaObject_sp), m_frontend(frontend) {}
+
+  virtual size_t GetCount() override {
+    return m_frontend->CalculateNumChildren();
+  }
+
+  virtual CompilerType GetElementType() override {
+    // this doesn't make sense here - the synthetic children know best
+    return CompilerType();
+  }
+
+  virtual ValueObjectSP GetElementAtIndex(size_t idx) override {
+    return m_frontend->GetChildAtIndex(idx);
+  }
+
+  virtual bool IsValid() override {
+    return m_frontend.get() != nullptr;
+  }
+
+  virtual ~CocoaHashedStorageHandler() {}
+
+private:
+  // reader beware: this entails you must only pass self-rooted
+  // valueobjects to this class
+  ValueObjectSP m_cocoaObject_sp; 
+  std::unique_ptr<SyntheticChildrenFrontEnd> m_frontend;
+};
+
+}
+}
 }
 
-lldb_private::CompilerType
-SwiftHashedContainerSyntheticFrontEndBufferHandler::GetElementType() {
-  // this doesn't make sense here - the synthetic children know best
-  return CompilerType();
+void
+HashedCollectionConfig::RegisterSummaryProviders(
+  lldb::TypeCategoryImplSP swift_category_sp,
+  TypeSummaryImpl::Flags flags
+) const {
+#ifndef LLDB_DISABLE_PYTHON
+  using lldb_private::formatters::AddCXXSummary;
+
+  auto summaryProvider = GetSummaryProvider();
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_collection_demangledRegex, flags, true);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_nativeStorage_demangledRegex, flags, true);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_emptyStorage_demangled, flags, false);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_deferredBridgedStorage_demangledRegex, flags, true);
+#endif // LLDB_DISABLE_PYTHON
 }
 
-lldb::ValueObjectSP
-SwiftHashedContainerSyntheticFrontEndBufferHandler::GetElementAtIndex(
-    size_t idx) {
-  return m_frontend->GetChildAtIndex(idx);
+void
+HashedCollectionConfig::RegisterSyntheticChildrenCreators(
+  lldb::TypeCategoryImplSP swift_category_sp,
+  SyntheticChildren::Flags flags
+) const {
+#ifndef LLDB_DISABLE_PYTHON
+  using lldb_private::formatters::AddCXXSynthetic;
+
+  auto creator = GetSyntheticChildrenCreator();
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_collection_demangledRegex, flags, true);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_nativeStorage_demangledRegex, flags, true);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_emptyStorage_demangled, flags, false);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_deferredBridgedStorage_demangledRegex, flags, true);
+#endif // LLDB_DISABLE_PYTHON
 }
 
-SwiftHashedContainerSyntheticFrontEndBufferHandler::
-    SwiftHashedContainerSyntheticFrontEndBufferHandler(
-        lldb::ValueObjectSP valobj_sp)
-    : m_valobj_sp(valobj_sp),
-      m_frontend(NSDictionarySyntheticFrontEndCreator(nullptr, valobj_sp)) {
+bool
+HashedCollectionConfig::IsNativeStorageName(ConstString name) const {
+  assert(m_nativeStorage_demangledPrefix);
+  auto n = name.GetStringRef();
+  return n.startswith(m_nativeStorage_demangledPrefix.GetStringRef());
+}
+
+bool
+HashedCollectionConfig::IsEmptyStorageName(ConstString name) const {
+  assert(m_emptyStorage_demangled);
+  return name == m_emptyStorage_demangled;
+}
+
+bool
+HashedCollectionConfig::IsDeferredBridgedStorageName(ConstString name) const {
+  assert(m_deferredBridgedStorage_demangledPrefix);
+  auto n = name.GetStringRef();
+  return n.startswith(m_deferredBridgedStorage_demangledPrefix.GetStringRef());
+}
+
+HashedStorageHandlerUP
+HashedCollectionConfig::CreateEmptyHandler(CompilerType elem_type) const {
+  return HashedStorageHandlerUP(new EmptyHashedStorageHandler(elem_type));
+}
+
+HashedStorageHandlerUP
+HashedCollectionConfig::CreateNativeHandler(
+  lldb::ValueObjectSP storage_sp,
+  CompilerType key_type,
+  CompilerType value_type
+) const {
+  return HashedStorageHandlerUP(
+    new NativeHashedStorageHandler(storage_sp, key_type, value_type));
+}
+
+HashedStorageHandlerUP
+HashedCollectionConfig::CreateCocoaHandler(
+  lldb::ValueObjectSP cocoaStorage_sp
+) const {
+  auto cocoaChildrenCreator = GetCocoaSyntheticChildrenCreator();
+  auto frontend = cocoaChildrenCreator(nullptr, cocoaStorage_sp);
+  if (!frontend) {
+    return nullptr;
+  }
   // Cocoa frontends must be updated before use
-  if (m_frontend)
-    m_frontend->Update();
+  frontend->Update();
+  return HashedStorageHandlerUP(
+    new CocoaHashedStorageHandler(cocoaStorage_sp, frontend));
 }
 
-bool SwiftHashedContainerSyntheticFrontEndBufferHandler::IsValid() {
-  return m_frontend.get() != nullptr;
-}
-
-size_t SwiftHashedContainerNativeBufferHandler::GetCount() { return m_count; }
-
-lldb_private::CompilerType
-SwiftHashedContainerNativeBufferHandler::GetElementType() {
-  return m_element_type;
-}
-
-lldb::ValueObjectSP
-SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
-  lldb::ValueObjectSP null_valobj_sp;
+ValueObjectSP
+NativeHashedStorageHandler::GetElementAtIndex(size_t idx) {
+  ValueObjectSP null_valobj_sp;
   if (idx >= m_count)
     return null_valobj_sp;
   if (!IsValid())
@@ -110,8 +310,7 @@ SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
   return null_valobj_sp;
 }
 
-bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i, 
-                                                                 Status &error) {
+bool NativeHashedStorageHandler::ReadBitmaskAtIndex(Index i, Status &error) {
   if (i >= m_capacity)
     return false;
   const size_t word = i / (8 * m_ptr_size);
@@ -135,58 +334,16 @@ bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i,
   return (0 != value);
 }
 
-lldb::addr_t
-SwiftHashedContainerNativeBufferHandler::GetLocationOfKeyAtCell(Cell i) {
-  return m_keys_ptr + (i * m_key_stride);
-}
-
-lldb::addr_t
-SwiftHashedContainerNativeBufferHandler::GetLocationOfValueAtCell(Cell i) {
-  return m_value_stride ? m_values_ptr + (i * m_value_stride)
-                        : LLDB_INVALID_ADDRESS;
-}
-
-// these are sharp tools that assume that the Cell contains valid data and the
-// destination buffer
-// has enough room to store the data to - use with caution
-bool SwiftHashedContainerNativeBufferHandler::GetDataForKeyAtCell(
-    Cell i, void *data_ptr) {
-  if (!data_ptr)
-    return false;
-
-  lldb::addr_t addr = GetLocationOfKeyAtCell(i);
-  Status error;
-  m_process->ReadMemory(addr, data_ptr, m_key_stride, error);
-  if (error.Fail())
-    return false;
-
-  return true;
-}
-
-bool SwiftHashedContainerNativeBufferHandler::GetDataForValueAtCell(
-    Cell i, void *data_ptr) {
-  if (!data_ptr || !m_value_stride)
-    return false;
-
-  lldb::addr_t addr = GetLocationOfValueAtCell(i);
-  Status error;
-  m_process->ReadMemory(addr, data_ptr, m_value_stride, error);
-  if (error.Fail())
-    return false;
-
-  return true;
-}
-
-SwiftHashedContainerNativeBufferHandler::
-    SwiftHashedContainerNativeBufferHandler(
-        lldb::ValueObjectSP nativeStorage_sp, CompilerType key_type,
-        CompilerType value_type)
-    : m_nativeStorage(nativeStorage_sp.get()), m_process(nullptr),
-      m_ptr_size(0), m_count(0), m_capacity(0),
-      m_bitmask_ptr(LLDB_INVALID_ADDRESS), m_keys_ptr(LLDB_INVALID_ADDRESS),
-      m_values_ptr(LLDB_INVALID_ADDRESS), m_element_type(),
-      m_key_stride(key_type.GetByteStride()), m_value_stride(0),
-      m_key_stride_padded(m_key_stride), m_bitmask_cache() {
+NativeHashedStorageHandler::NativeHashedStorageHandler(
+  ValueObjectSP nativeStorage_sp,
+  CompilerType key_type,
+  CompilerType value_type
+) : m_nativeStorage(nativeStorage_sp.get()), m_process(nullptr),
+    m_ptr_size(0), m_count(0), m_capacity(0),
+    m_bitmask_ptr(LLDB_INVALID_ADDRESS), m_keys_ptr(LLDB_INVALID_ADDRESS),
+    m_values_ptr(LLDB_INVALID_ADDRESS), m_element_type(),
+    m_key_stride(key_type.GetByteStride()), m_value_stride(0),
+    m_key_stride_padded(m_key_stride), m_bitmask_cache() {
   static ConstString g_initializedEntries("initializedEntries");
   static ConstString g_values("values");
   static ConstString g__rawValue("_rawValue");
@@ -284,7 +441,7 @@ SwiftHashedContainerNativeBufferHandler::
   }
 }
 
-bool SwiftHashedContainerNativeBufferHandler::IsValid() {
+bool NativeHashedStorageHandler::IsValid() {
   return (m_nativeStorage != nullptr) && (m_process != nullptr) &&
          m_element_type.IsValid() && m_bitmask_ptr != LLDB_INVALID_ADDRESS &&
          m_keys_ptr != LLDB_INVALID_ADDRESS &&
@@ -293,11 +450,12 @@ bool SwiftHashedContainerNativeBufferHandler::IsValid() {
          m_capacity >= m_count;
 }
 
-std::unique_ptr<SwiftHashedContainerBufferHandler>
-SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
-    ValueObject &valobj, lldb::addr_t storage_ptr, bool fail_on_no_children,
-    NativeCreatorFunction Native) {
-
+HashedStorageHandlerUP
+HashedCollectionConfig::CreateNativeStorageHandler(
+  ValueObject &valobj,
+  lldb::addr_t storage_ptr,
+  bool fail_on_no_children
+) const {
   CompilerType valobj_type(valobj.GetCompilerType());
   CompilerType key_type = valobj_type.GetGenericArgumentType(0);
   CompilerType value_type = valobj_type.GetGenericArgumentType(1);
@@ -335,8 +493,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
                 "_TtGSqTPs9AnyObject_PS____")
                 .c_str(),
             error));
-        auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
-            Native(native_sp, key_type, value_type));
+        auto handler = CreateNativeHandler(native_sp, key_type, value_type);
         if (handler && handler->IsValid())
           return handler;
       }
@@ -352,18 +509,15 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     lldb::addr_t native_storage_ptr = process_sp->ReadPointerFromMemory(storage_ptr + 2*process_sp->GetAddressByteSize(), error);
     if (error.Fail() || native_storage_ptr == LLDB_INVALID_ADDRESS)
         return nullptr;
-    auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(native_sp, key_type, value_type));
+    auto handler = CreateNativeHandler(native_sp, key_type, value_type);
     if (handler && handler->IsValid())
         return handler;
 
   return nullptr;
 }
 
-std::unique_ptr<SwiftHashedContainerBufferHandler>
-SwiftHashedContainerBufferHandler::CreateBufferHandler(
-    ValueObject &valobj, NativeCreatorFunction Native,
-    SyntheticCreatorFunction Synthetic, ConstString mangled,
-    ConstString demangled) {
+HashedStorageHandlerUP
+HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   static ConstString g__variantStorage("_variantStorage");
   static ConstString g__variantBuffer("_variantBuffer");
   static ConstString g_Native("native");
@@ -382,14 +536,12 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
     return nullptr;
 
   ConstString type_name_cs(valobj.GetTypeName());
-  if (type_name_cs) {
-    llvm::StringRef type_name_strref(type_name_cs.GetStringRef());
 
-    if (type_name_strref.startswith(mangled.GetCString()) ||
-        type_name_strref.startswith(demangled.GetCString())) {
-      return CreateBufferHandlerForNativeStorageOwner(
-          valobj, valobj.GetPointerValue(), false, Native);
-    }
+  if (IsNativeStorageName(type_name_cs)) {
+    return CreateNativeStorageHandler(valobj, valobj.GetPointerValue(), false);
+  }
+  if (IsEmptyStorageName(type_name_cs)) {
+    return CreateEmptyHandler();
   }
 
   ValueObjectSP valobj_sp =
@@ -404,10 +556,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
         valobj_sp->GetChildMemberWithName(g__variantBuffer, true);
 
   if (!_variantStorageSP) {
-    static ConstString g__SwiftDeferredNSDictionary(
-        "Swift._SwiftDeferredNSDictionary");
-    if (type_name_cs.GetStringRef().startswith(
-            g__SwiftDeferredNSDictionary.GetStringRef())) {
+    if (IsDeferredBridgedStorageName(type_name_cs)) {
       ValueObjectSP storage_sp(
           valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage}));
       if (storage_sp) {
@@ -415,8 +564,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
         CompilerType key_type(child_type.GetGenericArgumentType(0));
         CompilerType value_type(child_type.GetGenericArgumentType(1));
 
-        auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
-            Native(storage_sp, key_type, value_type));
+        auto handler = CreateNativeHandler(storage_sp, key_type, value_type);
         if (handler && handler->IsValid())
           return handler;
       }
@@ -456,13 +604,13 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
     if (!descriptor_sp)
       return nullptr;
     ConstString classname(descriptor_sp->GetClassName());
-    if (classname &&
-        classname.GetStringRef().startswith(mangled.GetCString())) {
-      return CreateBufferHandlerForNativeStorageOwner(
-          *_variantStorageSP, cocoa_storage_ptr, true, Native);
+    if (IsNativeStorageName(classname)) {
+      return CreateNativeStorageHandler(
+        *_variantStorageSP, cocoa_storage_ptr, true);
+    } else if (IsEmptyStorageName(classname)) {
+      return CreateEmptyHandler();
     } else {
-      auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
-          Synthetic(cocoarr_sp));
+      auto handler = CreateCocoaHandler(cocoarr_sp);
       if (handler && handler->IsValid())
         return handler;
       return nullptr;
@@ -481,12 +629,10 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
       return nullptr;
 
     CompilerType child_type(valobj.GetCompilerType());
-    lldb::TemplateArgumentKind kind;
     CompilerType key_type(child_type.GetGenericArgumentType(0));
     CompilerType value_type(child_type.GetGenericArgumentType(1));
 
-    auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
-        Native(nativeStorage_sp, key_type, value_type));
+    auto handler = CreateNativeHandler(nativeStorage_sp, key_type, value_type);
     if (handler && handler->IsValid())
       return handler;
     return nullptr;
@@ -495,21 +641,25 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
   return nullptr;
 }
 
-lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::
-    HashedContainerSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_buffer() {}
+HashedSyntheticChildrenFrontEnd::HashedSyntheticChildrenFrontEnd(
+  const HashedCollectionConfig &config,
+  ValueObjectSP valobj_sp
+) : SyntheticChildrenFrontEnd(*valobj_sp.get()),
+    m_config(config),
+    m_buffer()
+{}
 
-size_t lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::
-    CalculateNumChildren() {
+size_t
+HashedSyntheticChildrenFrontEnd::CalculateNumChildren() {
   return m_buffer ? m_buffer->GetCount() : 0;
 }
 
-lldb::ValueObjectSP lldb_private::formatters::swift::
-    HashedContainerSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP
+HashedSyntheticChildrenFrontEnd::GetChildAtIndex(size_t idx) {
   if (!m_buffer)
     return ValueObjectSP();
 
-  lldb::ValueObjectSP child_sp = m_buffer->GetElementAtIndex(idx);
+  ValueObjectSP child_sp = m_buffer->GetElementAtIndex(idx);
 
   if (child_sp)
     child_sp->SetSyntheticChildrenGenerated(true);
@@ -517,13 +667,21 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
   return child_sp;
 }
 
-bool lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::
-    MightHaveChildren() {
+bool
+HashedSyntheticChildrenFrontEnd::Update() {
+  m_buffer = m_config.CreateHandler(m_backend);
+  return false;
+}
+
+bool
+HashedSyntheticChildrenFrontEnd::MightHaveChildren() {
   return true;
 }
 
-size_t lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+size_t
+HashedSyntheticChildrenFrontEnd::GetIndexOfChildWithName(
+  const ConstString &name
+) {
   if (!m_buffer)
     return UINT32_MAX;
   const char *item_name = name.GetCString();

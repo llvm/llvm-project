@@ -54,6 +54,8 @@ using lldb_private::formatters::AddCXXSynthetic;
 using lldb_private::formatters::AddFormat;
 using lldb_private::formatters::AddStringSummary;
 using lldb_private::formatters::AddSummary;
+using lldb_private::formatters::swift::DictionaryConfig;
+using lldb_private::formatters::swift::SetConfig;
 
 void SwiftLanguage::Initialize() {
   static ConstString g_NSStringClass1(SwiftLanguageRuntime::GetCurrentMangledName("_NSContiguousString"));
@@ -335,25 +337,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.Array summary provider",
       ConstString("_TtCs21_SwiftDeferredNSArray"), summary_flags, false);
 
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::Dictionary_SummaryProvider,
-                "Swift.Dictionary summary provider",
-                ConstString("^Swift\\.Dictionary<.+,.+>$"), summary_flags, true);
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::Dictionary_SummaryProvider,
-                "Swift.Dictionary summary provider",
-                ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$"),
-                summary_flags, true);
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::Dictionary_SummaryProvider,
-                "Swift.Dictionary summary provider",
-                ConstString("^Swift\\._RawNativeDictionaryStorage$"),
-                summary_flags, true);
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::Dictionary_SummaryProvider,
-                "Swift.Dictionary summary provider",
-                ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$"),
-                summary_flags, true);
+  DictionaryConfig::Get()
+    .RegisterSummaryProviders(swift_category_sp, summary_flags);
+  SetConfig::Get()
+    .RegisterSummaryProviders(swift_category_sp, summary_flags);
 
   summary_flags.SetDontShowChildren(true);
   summary_flags.SetSkipPointers(true);
@@ -408,51 +395,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                   synth_flags,
                   false);
 
-
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift\\.Dictionary<.+,.+>$"), synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$"), synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift\\._RawNativeDictionaryStorage$"), synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$"), synth_flags, true);
-
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-      "Swift.Set synthetic children",
-      ConstString("^Swift\\.Set<.+>$"), synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-      "Swift.Set synthetic children",
-      ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$"),
-      synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-      "Swift.Set synthetic children",
-      ConstString("^Swift\\._RawNativeSetStorage$"),
-      synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-      "Swift.Set synthetic children",
-      ConstString("^Swift\\._SwiftDeferredNSSet<.+>$"),
-      synth_flags, true);
+  DictionaryConfig::Get()
+    .RegisterSyntheticChildrenCreators(swift_category_sp, synth_flags);
+  SetConfig::Get()
+    .RegisterSyntheticChildrenCreators(swift_category_sp, synth_flags);
 
   synth_flags.SetSkipPointers(true);
 
