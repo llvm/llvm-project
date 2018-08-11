@@ -71,22 +71,22 @@
 
 
 // Make sure all of our section boundary variables are emitted correctly.
-// CHECK-WIN: @__start___objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$z", comdat, align 1
-// CHECK-WIN: @__start___objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$z", comdat, align 1
-// CHECK-WIN: @__start___objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$z", comdat, align 1
-// CHECK-WIN: @__start___objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$z", comdat, align 1
-// CHECK-WIN: @__start___objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$z", comdat, align 1
-// CHECK-WIN: @__start___objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$z", comdat, align 1
-// CHECK-WIN: @__start___objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$z", comdat, align 1
-// CHECK-WIN: @__start___objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$a", comdat, align 1
-// CHECK-WIN: @__stop__objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$z", comdat, align 1
 // CHECK-WIN: @.objc_init = linkonce_odr hidden global { i64, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel* } { i64 0, %.objc_section_sentinel* @__start___objc_selectors, %.objc_section_sentinel* @__stop__objc_selectors, %.objc_section_sentinel* @__start___objc_classes, %.objc_section_sentinel* @__stop__objc_classes, %.objc_section_sentinel* @__start___objc_class_refs, %.objc_section_sentinel* @__stop__objc_class_refs, %.objc_section_sentinel* @__start___objc_cats, %.objc_section_sentinel* @__stop__objc_cats, %.objc_section_sentinel* @__start___objc_protocols, %.objc_section_sentinel* @__stop__objc_protocols, %.objc_section_sentinel* @__start___objc_protocol_refs, %.objc_section_sentinel* @__stop__objc_protocol_refs, %.objc_section_sentinel* @__start___objc_class_aliases, %.objc_section_sentinel* @__stop__objc_class_aliases, %.objc_section_sentinel* @__start___objc_constant_string, %.objc_section_sentinel* @__stop__objc_constant_string }, comdat, align 8
 
 // Make sure our init variable is in the correct section for late library init.
