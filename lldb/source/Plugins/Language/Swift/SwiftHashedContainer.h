@@ -63,6 +63,16 @@ private:
   HashedStorageHandlerUP
   CreateCocoaHandler(lldb::ValueObjectSP storage_sp) const;
 
+  lldb::ValueObjectSP
+  SwiftObjectAtAddress(
+    const ExecutionContext &exe_ctx,
+    lldb::addr_t address) const;
+
+  lldb::ValueObjectSP
+  CocoaObjectAtAddress(
+    const ExecutionContext &exe_ctx,
+    lldb::addr_t address) const;
+
 protected:
   HashedCollectionConfig() {}
 

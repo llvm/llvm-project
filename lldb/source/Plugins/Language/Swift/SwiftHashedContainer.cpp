@@ -268,6 +268,59 @@ HashedCollectionConfig::CreateEmptyHandler(CompilerType elem_type) const {
   return HashedStorageHandlerUP(new EmptyHashedStorageHandler(elem_type));
 }
 
+ValueObjectSP
+HashedCollectionConfig::SwiftObjectAtAddress(
+    const ExecutionContext &exe_ctx,
+    lldb::addr_t address) const {
+
+  if (address == LLDB_INVALID_ADDRESS)
+    return nullptr;
+
+  ProcessSP process_sp = exe_ctx.GetProcessSP();
+  if (!process_sp)
+    return nullptr;
+  
+  // Create a ValueObject with a Swift AnyObject type referencing the
+  // same address.
+  Status error;
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  auto reader =
+    process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope);
+  SwiftASTContext *ast_ctx = reader.get();
+  if (!ast_ctx)
+    return nullptr;
+  if (error.Fail())
+    return nullptr;
+
+  CompilerType anyObject_type = ast_ctx->FindQualifiedType("Swift.AnyObject");
+  if (!anyObject_type)
+    return nullptr;
+
+  lldb::DataBufferSP buffer(
+    new lldb_private::DataBufferHeap(&address, sizeof(lldb::addr_t)));
+  return ValueObjectConstResult::Create(
+    exe_scope, anyObject_type, ConstString("swift"),
+    buffer, exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+}
+
+ValueObjectSP
+HashedCollectionConfig::CocoaObjectAtAddress(
+  const ExecutionContext &exe_ctx,
+  lldb::addr_t address) const {
+
+  if (address == LLDB_INVALID_ADDRESS)
+    return nullptr;
+  ProcessSP process_sp = exe_ctx.GetProcessSP();
+  if (!process_sp)
+    return nullptr;
+  CompilerType id = exe_ctx.GetTargetSP()
+    ->GetScratchClangASTContext()
+    ->GetBasicType(lldb::eBasicTypeObjCID);
+  InferiorSizedWord isw(address, *process_sp);
+  return ValueObject::CreateValueObjectFromData(
+    "cocoa", isw.GetAsData(process_sp->GetByteOrder()), exe_ctx, id);
+}
+
 HashedStorageHandlerUP
 HashedCollectionConfig::CreateNativeHandler(
   ValueObjectSP value_sp,
@@ -486,14 +539,15 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   Status error;
 
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
-    return nullptr;
-
-  ConstString type_name_cs(valobj.GetTypeName());
-  ValueObjectSP valobj_sp =
-      valobj.GetSP()->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicCanRunTarget, false);
+  ValueObjectSP valobj_sp = valobj.GetSP();
+  if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
+      valobj_sp->IsPointerType()) {
+    valobj_sp = SwiftObjectAtAddress(valobj_sp->GetExecutionContextRef(),
+                                     valobj_sp->GetPointerValue());
+  }
+  valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
+    lldb::eDynamicCanRunTarget, false);
+  ConstString type_name_cs(valobj_sp->GetTypeName());
 
   if (IsNativeStorageName(type_name_cs)) {
     return CreateNativeHandler(valobj_sp, valobj_sp);
@@ -537,23 +591,11 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
     // FIXME: for some reason I need to zero out the MSB; figure out why
     cocoa_ptr &= 0x00FFFFFFFFFFFFFF;
 
-    CompilerType id =
-      process_sp->GetTarget().GetScratchClangASTContext()
-      ->GetBasicType(lldb::eBasicTypeObjCID);
-    InferiorSizedWord isw(cocoa_ptr, *process_sp);
-    ValueObjectSP cocoarr_sp = ValueObject::CreateValueObjectFromData(
-        "cocoarr", isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), id);
-    if (!cocoarr_sp)
+    auto cocoa_sp = CocoaObjectAtAddress(valobj_sp->GetExecutionContextRef(),
+                                         cocoa_ptr);
+    if (!cocoa_sp)
       return nullptr;
-    auto objc_runtime = process_sp->GetObjCLanguageRuntime();
-    auto descriptor_sp = objc_runtime->GetClassDescriptor(*cocoarr_sp);
-    if (!descriptor_sp)
-      return nullptr;
-    ConstString classname(descriptor_sp->GetClassName());
-    assert(!IsNativeStorageName(classname));
-    assert(!IsEmptyStorageName(classname));
-    return CreateCocoaHandler(cocoarr_sp);
+    return CreateCocoaHandler(cocoa_sp);
   }
   if (g_native == variant_cs) {
     auto storage_sp = variant_sp->GetChildAtNamePath({g_native, g__storage});
