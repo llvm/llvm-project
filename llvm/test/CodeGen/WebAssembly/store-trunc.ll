@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-register-codegen-test-mode | FileCheck %s
 
 ; Test that truncating stores are assembled properly.
 

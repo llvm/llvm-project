@@ -6429,6 +6429,29 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
+  if (RHS.getOpcode() == ISD::SETCC && LHS.getOpcode() == AMDGPUISD::FP_CLASS)
+    std::swap(LHS, RHS);
+
+  if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == AMDGPUISD::FP_CLASS &&
+      RHS.hasOneUse()) {
+    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    // and (fcmp seto), (fp_class x, mask) -> fp_class x, mask & ~(p_nan | n_nan)
+    // and (fcmp setuo), (fp_class x, mask) -> fp_class x, mask & (p_nan | n_nan)
+    const ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(RHS.getOperand(1));
+    if ((LCC == ISD::SETO || LCC == ISD::SETUO) && Mask &&
+        (RHS.getOperand(0) == LHS.getOperand(0) &&
+         LHS.getOperand(0) == LHS.getOperand(1))) {
+      const unsigned OrdMask = SIInstrFlags::S_NAN | SIInstrFlags::Q_NAN;
+      unsigned NewMask = LCC == ISD::SETO ?
+        Mask->getZExtValue() & ~OrdMask :
+        Mask->getZExtValue() & OrdMask;
+
+      SDLoc DL(N);
+      return DAG.getNode(AMDGPUISD::FP_CLASS, DL, MVT::i1, RHS.getOperand(0),
+                         DAG.getConstant(NewMask, DL, MVT::i32));
+    }
+  }
+
   if (VT == MVT::i32 &&
       (RHS.getOpcode() == ISD::SIGN_EXTEND || LHS.getOpcode() == ISD::SIGN_EXTEND)) {
     // and x, (sext cc from i1) => select cc, x, 0
@@ -6799,6 +6822,10 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::FRACT:
   case AMDGPUISD::LDEXP:
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
+  case AMDGPUISD::CVT_F32_UBYTE0:
+  case AMDGPUISD::CVT_F32_UBYTE1:
+  case AMDGPUISD::CVT_F32_UBYTE2:
+  case AMDGPUISD::CVT_F32_UBYTE3:
     return true;
 
   // It can/will be lowered or combined as a bit operation.
@@ -6878,10 +6905,15 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_cvt_pkrtz:
+    case Intrinsic::amdgcn_cubeid:
+    case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_fdot2:
       return true;
     default:
       break;
     }
+
+    LLVM_FALLTHROUGH;
   }
   default:
     return denormalsEnabledForType(Op.getValueType()) &&
@@ -7740,16 +7772,26 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                            VT != MVT::f16))
     return SDValue();
 
-  // Match isinf pattern
+  // Match isinf/isfinite pattern
   // (fcmp oeq (fabs x), inf) -> (fp_class x, (p_infinity | n_infinity))
-  if (CC == ISD::SETOEQ && LHS.getOpcode() == ISD::FABS) {
+  // (fcmp one (fabs x), inf) -> (fp_class x,
+  // (p_normal | n_normal | p_subnormal | n_subnormal | p_zero | n_zero)
+  if ((CC == ISD::SETOEQ || CC == ISD::SETONE) && LHS.getOpcode() == ISD::FABS) {
     const ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
     if (!CRHS)
       return SDValue();
 
     const APFloat &APF = CRHS->getValueAPF();
     if (APF.isInfinity() && !APF.isNegative()) {
-      unsigned Mask = SIInstrFlags::P_INFINITY | SIInstrFlags::N_INFINITY;
+      const unsigned IsInfMask = SIInstrFlags::P_INFINITY |
+                                 SIInstrFlags::N_INFINITY;
+      const unsigned IsFiniteMask = SIInstrFlags::N_ZERO |
+                                    SIInstrFlags::P_ZERO |
+                                    SIInstrFlags::N_NORMAL |
+                                    SIInstrFlags::P_NORMAL |
+                                    SIInstrFlags::N_SUBNORMAL |
+                                    SIInstrFlags::P_SUBNORMAL;
+      unsigned Mask = CC == ISD::SETOEQ ? IsInfMask : IsFiniteMask;
       return DAG.getNode(AMDGPUISD::FP_CLASS, SL, MVT::i1, LHS.getOperand(0),
                          DAG.getConstant(Mask, SL, MVT::i32));
     }

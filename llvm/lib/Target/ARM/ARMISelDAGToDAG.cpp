@@ -2309,6 +2309,11 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
                                 Srl_imm)) {
         assert(Srl_imm > 0 && Srl_imm < 32 && "bad amount in shift node!");
 
+        // Mask off the unnecessary bits of the AND immediate; normally
+        // DAGCombine will do this, but that might not happen if
+        // targetShrinkDemandedConstant chooses a different immediate.
+        And_imm &= -1U >> Srl_imm;
+
         // Note: The width operand is encoded as width-1.
         unsigned Width = countTrailingOnes(And_imm) - 1;
         unsigned LSB = Srl_imm;

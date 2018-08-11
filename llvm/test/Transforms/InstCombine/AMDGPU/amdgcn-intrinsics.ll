@@ -457,6 +457,13 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
   ret i1 %val
 }
 
+; CHECK-LABEL: @test_class_is_p0_n0_f32(
+; CHECK: %val = fcmp oeq float %x, 0.000000e+00
+define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 96)
+  ret i1 %val
+}
+
 ; CHECK-LABEL: @test_constant_class_snan_test_snan_f64(
 ; CHECK: ret i1 true
 define i1 @test_constant_class_snan_test_snan_f64() nounwind {

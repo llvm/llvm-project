@@ -494,8 +494,8 @@ for it (vs something else, like 90 columns).
 This is one of many contentious issues in coding standards, but it is not up for
 debate.
 
-Use Spaces Instead of Tabs
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Whitespace
+^^^^^^^^^^
 
 In all cases, prefer spaces to tabs in source files.  People have different
 preferred indentation levels, and different styles of indentation that they
@@ -508,6 +508,12 @@ existing code if you are modifying and extending it.  If you like four spaces of
 indentation, **DO NOT** do that in the middle of a chunk of code with two spaces
 of indentation.  Also, do not reindent a whole source file: it makes for
 incredible diffs that are absolutely worthless.
+
+Do not commit changes that include trailing whitespace. If you find trailing
+whitespace in a file, do not remove it unless you're otherwise changing that
+line of code. Some common editors will automatically remove trailing whitespace
+when saving a file which causes unrelated changes to appear in diffs and
+commits.
 
 Indent Code Consistently
 ^^^^^^^^^^^^^^^^^^^^^^^^

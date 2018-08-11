@@ -32,8 +32,10 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
   return MemFS;
 }
 
-MockCompilationDatabase::MockCompilationDatabase(bool UseRelPaths)
-    : ExtraClangFlags({"-ffreestanding"}), UseRelPaths(UseRelPaths) {
+MockCompilationDatabase::MockCompilationDatabase(StringRef Directory,
+                                                 StringRef RelPathPrefix)
+    : ExtraClangFlags({"-ffreestanding"}), Directory(Directory),
+      RelPathPrefix(RelPathPrefix) {
   // -ffreestanding avoids implicit stdc-predef.h.
 }
 
@@ -42,12 +44,24 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())
     return None;
 
-  auto CommandLine = ExtraClangFlags;
   auto FileName = sys::path::filename(File);
+
+  // Build the compile command.
+  auto CommandLine = ExtraClangFlags;
   CommandLine.insert(CommandLine.begin(), "clang");
-  CommandLine.insert(CommandLine.end(), UseRelPaths ? FileName : File);
-  return {tooling::CompileCommand(sys::path::parent_path(File), FileName,
-                                  std::move(CommandLine), "")};
+  if (RelPathPrefix.empty()) {
+    // Use the absolute path in the compile command.
+    CommandLine.push_back(File);
+  } else {
+    // Build a relative path using RelPathPrefix.
+    SmallString<32> RelativeFilePath(RelPathPrefix);
+    llvm::sys::path::append(RelativeFilePath, FileName);
+    CommandLine.push_back(RelativeFilePath.str());
+  }
+
+  return {tooling::CompileCommand(
+      Directory != StringRef() ? Directory : sys::path::parent_path(File),
+      FileName, std::move(CommandLine), "")};
 }
 
 const char *testRoot() {

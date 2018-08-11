@@ -155,6 +155,8 @@ private:
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
+  /// Options used for diagnostics.
+  ClangdDiagnosticOptions DiagOpts;
   /// The supported kinds of the client.
   SymbolKindBitset SupportedSymbolKinds;
 

@@ -127,6 +127,11 @@ static cl::opt<unsigned long long> ClMappingOffset(
     cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"), cl::Hidden,
     cl::init(0));
 
+static cl::opt<bool>
+    ClWithIfunc("hwasan-with-ifunc",
+                cl::desc("Access dynamic shadow through an ifunc global on "
+                         "platforms that support this"),
+                cl::Hidden, cl::init(false));
 namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
@@ -751,13 +756,21 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple) {
       IsAndroid && !TargetTriple.isAndroidVersionLT(21);
 
   Scale = kDefaultShadowScale;
+  const bool WithIfunc = ClWithIfunc.getNumOccurrences() > 0
+                             ? ClWithIfunc
+                             : IsAndroidWithIfuncSupport;
 
-  if (ClEnableKhwasan || ClInstrumentWithCalls || !IsAndroidWithIfuncSupport)
-    Offset = 0;
-  else
-    Offset = kDynamicShadowSentinel;
-  if (ClMappingOffset.getNumOccurrences() > 0)
+  if (ClMappingOffset.getNumOccurrences() > 0) {
+    InGlobal = false;
     Offset = ClMappingOffset;
-
-  InGlobal = IsAndroidWithIfuncSupport;
+  } else if (ClEnableKhwasan || ClInstrumentWithCalls) {
+    InGlobal = false;
+    Offset = 0;
+  } else if (WithIfunc) {
+    InGlobal = true;
+    Offset = kDynamicShadowSentinel;
+  } else {
+    InGlobal = false;
+    Offset = kDynamicShadowSentinel;
+  }
 }

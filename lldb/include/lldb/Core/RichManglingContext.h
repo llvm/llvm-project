@@ -25,10 +25,9 @@ namespace lldb_private {
 /// providers. See Mangled::DemangleWithRichManglingInfo()
 class RichManglingContext {
 public:
-  RichManglingContext()
-      : m_provider(None), m_ipd_buf_size(2048), m_ipd_str_len(0) {
+  RichManglingContext() : m_provider(None), m_ipd_buf_size(2048) {
     m_ipd_buf = static_cast<char *>(std::malloc(m_ipd_buf_size));
-    m_ipd_buf[m_ipd_str_len] = '\0';
+    m_ipd_buf[0] = '\0';
   }
 
   ~RichManglingContext() { std::free(m_ipd_buf); }
@@ -65,6 +64,7 @@ public:
   /// most recent ParseXy() operation. The next ParseXy() call invalidates it.
   llvm::StringRef GetBufferRef() const {
     assert(m_provider != None && "Initialize a provider first");
+    assert(m_buffer.data() != nullptr && "Parse first");
     return m_buffer;
   }
 
@@ -81,7 +81,6 @@ private:
   llvm::ItaniumPartialDemangler m_ipd;
   char *m_ipd_buf;
   size_t m_ipd_buf_size;
-  size_t m_ipd_str_len;
 
   /// Members for PluginCxxLanguage
   /// Cannot forward declare inner class CPlusPlusLanguage::MethodName. The

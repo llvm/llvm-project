@@ -195,7 +195,7 @@ enum class PrimTy : uint8_t {
 };
 
 // Function classes
-enum FuncClass : uint8_t {
+enum FuncClass : uint16_t {
   Public = 1 << 0,
   Protected = 1 << 1,
   Private = 1 << 2,
@@ -203,6 +203,8 @@ enum FuncClass : uint8_t {
   Static = 1 << 4,
   Virtual = 1 << 5,
   Far = 1 << 6,
+  ExternC = 1 << 7,
+  NoPrototype = 1 << 8,
 };
 
 enum NameBackrefBehavior : uint8_t {
@@ -833,6 +835,9 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     if (FunctionClass & Static)
       OS << "static ";
   }
+  if (FunctionClass & ExternC) {
+    OS << "extern \"C\" ";
+  }
 
   if (ReturnType) {
     Type::outputPre(OS, *ReturnType, Resolver);
@@ -847,6 +852,10 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
 }
 
 void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+  // extern "C" functions don't have a prototype.
+  if (FunctionClass & NoPrototype)
+    return;
+
   OS << "(";
   outputParameterList(OS, Params, Resolver);
   OS << ")";
@@ -1059,7 +1068,9 @@ Symbol *Demangler::parse(StringView &MangledName) {
   if (Error)
     return nullptr;
   // Read a variable.
-  if (startsWithDigit(MangledName)) {
+  if (startsWithDigit(MangledName) && !MangledName.startsWith('9')) {
+    // 9 is a special marker for an extern "C" function with
+    // no prototype.
     S->Category = SymbolCategory::Variable;
     S->SymbolType = demangleVariableEncoding(MangledName);
   } else {
@@ -1517,47 +1528,53 @@ FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
   SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
   RestoreOnError.shouldRestore(false);
 
+  FuncClass TempFlags = FuncClass(0);
+  if (MangledName.consumeFront("$$J0"))
+    TempFlags = ExternC;
+
   switch (MangledName.popFront()) {
+  case '9':
+    return FuncClass(TempFlags | ExternC | NoPrototype);
   case 'A':
     return Private;
   case 'B':
-    return FuncClass(Private | Far);
+    return FuncClass(TempFlags | Private | Far);
   case 'C':
-    return FuncClass(Private | Static);
+    return FuncClass(TempFlags | Private | Static);
   case 'D':
-    return FuncClass(Private | Static);
+    return FuncClass(TempFlags | Private | Static);
   case 'E':
-    return FuncClass(Private | Virtual);
+    return FuncClass(TempFlags | Private | Virtual);
   case 'F':
-    return FuncClass(Private | Virtual);
+    return FuncClass(TempFlags | Private | Virtual);
   case 'I':
-    return Protected;
+    return FuncClass(TempFlags | Protected);
   case 'J':
-    return FuncClass(Protected | Far);
+    return FuncClass(TempFlags | Protected | Far);
   case 'K':
-    return FuncClass(Protected | Static);
+    return FuncClass(TempFlags | Protected | Static);
   case 'L':
-    return FuncClass(Protected | Static | Far);
+    return FuncClass(TempFlags | Protected | Static | Far);
   case 'M':
-    return FuncClass(Protected | Virtual);
+    return FuncClass(TempFlags | Protected | Virtual);
   case 'N':
-    return FuncClass(Protected | Virtual | Far);
+    return FuncClass(TempFlags | Protected | Virtual | Far);
   case 'Q':
-    return Public;
+    return FuncClass(TempFlags | Public);
   case 'R':
-    return FuncClass(Public | Far);
+    return FuncClass(TempFlags | Public | Far);
   case 'S':
-    return FuncClass(Public | Static);
+    return FuncClass(TempFlags | Public | Static);
   case 'T':
-    return FuncClass(Public | Static | Far);
+    return FuncClass(TempFlags | Public | Static | Far);
   case 'U':
-    return FuncClass(Public | Virtual);
+    return FuncClass(TempFlags | Public | Virtual);
   case 'V':
-    return FuncClass(Public | Virtual | Far);
+    return FuncClass(TempFlags | Public | Virtual | Far);
   case 'Y':
-    return Global;
+    return FuncClass(TempFlags | Global);
   case 'Z':
-    return FuncClass(Global | Far);
+    return FuncClass(TempFlags | Global | Far);
   }
 
   Error = true;
@@ -1768,9 +1785,16 @@ FunctionType *Demangler::demangleFunctionType(StringView &MangledName,
 
 Type *Demangler::demangleFunctionEncoding(StringView &MangledName) {
   FuncClass FC = demangleFunctionClass(MangledName);
-
-  bool HasThisQuals = !(FC & (Global | Static));
-  FunctionType *FTy = demangleFunctionType(MangledName, HasThisQuals, false);
+  FunctionType *FTy = nullptr;
+  if (FC & NoPrototype) {
+    // This is an extern "C" function whose full signature hasn't been mangled.
+    // This happens when we need to mangle a local symbol inside of an extern
+    // "C" function.
+    FTy = Arena.alloc<FunctionType>();
+  } else {
+    bool HasThisQuals = !(FC & (Global | Static));
+    FTy = demangleFunctionType(MangledName, HasThisQuals, false);
+  }
   FTy->FunctionClass = FC;
 
   return FTy;
@@ -2101,6 +2125,10 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       // Array
       (*Current)->ParamType =
           demangleType(MangledName, QualifierMangleMode::Drop);
+    } else if (MangledName.consumeFront("$$C")) {
+      // Type has qualifiers.
+      (*Current)->ParamType =
+          demangleType(MangledName, QualifierMangleMode::Mangle);
     } else if (MangledName.startsWith("$1?")) {
       MangledName.consumeFront("$1");
       // Pointer to symbol

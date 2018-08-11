@@ -192,7 +192,7 @@ makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   Range R = {Begin, End};
   Location L;
 
-  auto FilePath = getAbsoluteFilePath(F, SourceMgr);
+  auto FilePath = getRealPath(F, SourceMgr);
   if (!FilePath) {
     log("failed to get path!");
     return llvm::None;
@@ -286,7 +286,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     std::string HintPath;
     const FileEntry *FE =
         SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-    if (auto Path = getAbsoluteFilePath(FE, SourceMgr))
+    if (auto Path = getRealPath(FE, SourceMgr))
       HintPath = *Path;
     // Query the index and populate the empty slot.
     Index->lookup(

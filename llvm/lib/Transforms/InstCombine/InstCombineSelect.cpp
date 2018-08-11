@@ -72,7 +72,7 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
   bool IsEq = Pred == ICmpInst::ICMP_EQ;
   BinaryOperator *BO;
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
-      ConstantExpr::getBinOpIdentity(BO->getOpcode(), X->getType(), false) != C)
+      ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), false) != C)
     return nullptr;
 
   // Last, match the compare variable operand with a binop operand.

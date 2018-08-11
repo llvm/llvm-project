@@ -10,20 +10,20 @@
 ??0?$Class@VTypename@@@@QEAA@XZ
 ; CHECK: __cdecl Class<class Typename>::Class<class Typename>(void)
 
-; ??0?$Class@$$CBVTypename@@@@QAE@XZ
-; FIXME: __thiscall Class<class Typename const>::Class<class Typename const>(void)
-; ??0?$Class@$$CBVTypename@@@@QEAA@XZ
-; FIXME: __thiscall Class<class Typename const>::Class<class Typename const>(void)
+??0?$Class@$$CBVTypename@@@@QAE@XZ
+; CHECK: __thiscall Class<class Typename const>::Class<class Typename const>(void)
+??0?$Class@$$CBVTypename@@@@QEAA@XZ
+; CHECK: __cdecl Class<class Typename const>::Class<class Typename const>(void)
 
-; ??0?$Class@$$CCVTypename@@@@QAE@XZ
-; FIXME: __thiscall Class<class Typename volatile>::Class<class Typename volatile>(void)
-; ??0?$Class@$$CCVTypename@@@@QEAA@XZ
-; FIXME: __thiscall Class<class Typename volatile>::Class<class Typename volatile>(void)
+??0?$Class@$$CCVTypename@@@@QAE@XZ
+; CHECK: __thiscall Class<class Typename volatile>::Class<class Typename volatile>(void)
+??0?$Class@$$CCVTypename@@@@QEAA@XZ
+; CHECK: __cdecl Class<class Typename volatile>::Class<class Typename volatile>(void)
 
-; ??0?$Class@$$CDVTypename@@@@QAE@XZ
-; FIXME: __thiscall Class<class Typename const volatile>::Class<class Typename const volatile>(void)
-; ??0?$Class@$$CDVTypename@@@@QEAA@XZ
-; FIXME: __thiscall Class<class Typename const volatile>::Class<class Typename const volatile>(void)
+??0?$Class@$$CDVTypename@@@@QAE@XZ
+; CHECK: __thiscall Class<class Typename const volatile>::Class<class Typename const volatile>(void)
+??0?$Class@$$CDVTypename@@@@QEAA@XZ
+; CHECK: __cdecl Class<class Typename const volatile>::Class<class Typename const volatile>(void)
 
 ??0?$Class@V?$Nested@VTypename@@@@@@QAE@XZ
 ; CHECK: __thiscall Class<class Nested<class Typename>>::Class<class Nested<class Typename>>(void)
