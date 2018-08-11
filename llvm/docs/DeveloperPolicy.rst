@@ -376,7 +376,13 @@ If you have recently been granted commit access, these policies apply:
    obvious. This is clearly a subjective decision --- we simply expect you to
    use good judgement.  Examples include: fixing build breakage, reverting
    obviously broken patches, documentation/comment changes, any other minor
-   changes.
+   changes. Avoid committing formatting- or whitespace-only changes outside of
+   code you plan to make subsequent changes to. Also, try to separate
+   formatting or whitespace changes from functional changes, either by
+   correcting the format first (ideally) or afterward. Such changes should be
+   highly localized and the commit message should clearly state that the commit
+   is not intended to change functionality, usually by stating it is
+   :ref:`NFC <nfc>`.
 
 #. You are allowed to commit patches without approval to those portions of LLVM
    that you have contributed or maintain (i.e., have been assigned

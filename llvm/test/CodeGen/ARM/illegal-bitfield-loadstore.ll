@@ -30,10 +30,8 @@ define void @i24_and_or(i24* %a) {
 ; LE-LABEL: i24_and_or:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldrh r1, [r0]
-; LE-NEXT:    mov r2, #16256
-; LE-NEXT:    orr r2, r2, #49152
 ; LE-NEXT:    orr r1, r1, #384
-; LE-NEXT:    and r1, r1, r2
+; LE-NEXT:    bic r1, r1, #127
 ; LE-NEXT:    strh r1, [r0]
 ; LE-NEXT:    mov pc, lr
 ;

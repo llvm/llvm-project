@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=-nontrapping-fptoint | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=-nontrapping-fptoint | FileCheck %s
 
 ; Test that basic conversion operations assemble as expected using
 ; the trapping opcodes and explicit code to suppress the trapping.
