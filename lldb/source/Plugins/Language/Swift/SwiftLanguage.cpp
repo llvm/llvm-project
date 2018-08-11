@@ -338,26 +338,21 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::Dictionary_SummaryProvider,
                 "Swift.Dictionary summary provider",
-                ConstString("^Swift.Dictionary<.+,.+>$"), summary_flags, true);
+                ConstString("^Swift\\.Dictionary<.+,.+>$"), summary_flags, true);
   AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::NSDictionarySummaryProvider<false>,
-                "Swift.Dictionary synthetic children",
-                ConstString("^Swift._SwiftDeferredNSDictionary<.+>$"),
+                lldb_private::formatters::swift::Dictionary_SummaryProvider,
+                "Swift.Dictionary summary provider",
+                ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$"),
                 summary_flags, true);
   AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::NSDictionarySummaryProvider<false>,
-                "Swift.Dictionary synthetic children",
-                ConstString("^_TtGCs29_NativeDictionaryStorageOwner.*_$"),
+                lldb_private::formatters::swift::Dictionary_SummaryProvider,
+                "Swift.Dictionary summary provider",
+                ConstString("^Swift\\._RawNativeDictionaryStorage$"),
                 summary_flags, true);
   AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::NSDictionarySummaryProvider<false>,
-                "Swift.Dictionary synthetic children",
-                ConstString("^_TtGCs29_NativeDictionaryStorageOwner.*_$"),
-                summary_flags, true);
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::NSDictionarySummaryProvider<false>,
-                "Swift.Dictionary synthetic children",
-                ConstString("^Swift._NativeDictionaryStorageOwner.*$"),
+                lldb_private::formatters::swift::Dictionary_SummaryProvider,
+                "Swift.Dictionary summary provider",
+                ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$"),
                 summary_flags, true);
 
   summary_flags.SetDontShowChildren(true);
@@ -418,46 +413,46 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
       "Swift.Dictionary synthetic children",
-      ConstString("^Swift.Dictionary<.+,.+>$"), synth_flags, true);
+      ConstString("^Swift\\.Dictionary<.+,.+>$"), synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
-      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
       "Swift.Dictionary synthetic children",
-      ConstString("^_TtCs29_NativeDictionaryStorageOwner[A-Fa-f0-9]+$"),
+      ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$"), synth_flags, true);
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
+      "Swift.Dictionary synthetic children",
+      ConstString("^Swift\\._RawNativeDictionaryStorage$"), synth_flags, true);
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator,
+      "Swift.Dictionary synthetic children",
+      ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$"), synth_flags, true);
+
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
+      "Swift.Set synthetic children",
+      ConstString("^Swift\\.Set<.+>$"), synth_flags, true);
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
+      "Swift.Set synthetic children",
+      ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$"),
       synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
-      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift._SwiftDeferredNSDictionary<.+>$"), synth_flags, true);
+      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
+      "Swift.Set synthetic children",
+      ConstString("^Swift\\._RawNativeSetStorage$"),
+      synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
-      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^_TtGCs29_NativeDictionaryStorageOwner.*_$"), synth_flags,
-      true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
-      "Swift.Dictionary synthetic children",
-      ConstString("^Swift._NativeDictionaryStorageOwner.*$"), synth_flags,
-      true);
-
-  // FIXME: _Set and Set seem to be coexisting on different trains - support
-  // both for a while
-  AddCXXSynthetic(swift_category_sp,
-                  lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-                  "Swift.Set synthetic children",
-                  ConstString("^Swift.Set<.+>$"), synth_flags, true);
-  AddCXXSynthetic(swift_category_sp,
-                  lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
-                  "Swift.Set synthetic children",
-                  ConstString("^Swift._Set<.+>$"), synth_flags, true);
-  AddCXXSynthetic(swift_category_sp,
-                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
-                  "Swift.Set synthetic children",
-                  ConstString("^_TtCs22_NativeSetStorageOwner[A-Fa-f0-9]+$"),
-                  synth_flags, true);
+      lldb_private::formatters::swift::SetSyntheticFrontEndCreator,
+      "Swift.Set synthetic children",
+      ConstString("^Swift\\._SwiftDeferredNSSet<.+>$"),
+      synth_flags, true);
 
   synth_flags.SetSkipPointers(true);
 
