@@ -182,6 +182,7 @@ HashedCollectionConfig::RegisterSummaryProviders(
   AddCXXSummary(swift_category_sp, summaryProvider,
                 m_summaryProviderName.AsCString(),
                 m_collection_demangledRegex, flags, true);
+
   AddCXXSummary(swift_category_sp, summaryProvider,
                 m_summaryProviderName.AsCString(),
                 m_nativeStorage_demangledRegex, flags, true);
@@ -191,6 +192,18 @@ HashedCollectionConfig::RegisterSummaryProviders(
   AddCXXSummary(swift_category_sp, summaryProvider,
                 m_summaryProviderName.AsCString(),
                 m_deferredBridgedStorage_demangledRegex, flags, true);
+
+  flags.SetSkipPointers(false);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_nativeStorage_mangledRegex_ObjC, flags, true);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_emptyStorage_mangled_ObjC, flags, false);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
+                m_deferredBridgedStorage_mangledRegex_ObjC, flags, true);
+
 #endif // LLDB_DISABLE_PYTHON
 }
 
@@ -206,6 +219,7 @@ HashedCollectionConfig::RegisterSyntheticChildrenCreators(
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_collection_demangledRegex, flags, true);
+
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_nativeStorage_demangledRegex, flags, true);
@@ -215,6 +229,17 @@ HashedCollectionConfig::RegisterSyntheticChildrenCreators(
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_deferredBridgedStorage_demangledRegex, flags, true);
+
+  flags.SetSkipPointers(false);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_nativeStorage_mangledRegex_ObjC, flags, true);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_emptyStorage_mangled_ObjC, flags, false);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_deferredBridgedStorage_mangledRegex_ObjC, flags, true);
 #endif // LLDB_DISABLE_PYTHON
 }
 

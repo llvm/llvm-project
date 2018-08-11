@@ -42,16 +42,24 @@ SetConfig::SetConfig()
   m_collection_demangledRegex =
     ConstString("^Swift\\.Set<.+>$");
 
+  // Note: We need to have the old _Tt names here because those are
+  // still used to name classes in the ObjC runtime.
+
   // Native storage class                                                
+  m_nativeStorage_mangledRegex_ObjC =
+    ConstString("^_TtGCs30_HashableTypedNativeSetStorage.*");
   m_nativeStorage_demangledPrefix =
     ConstString("Swift._HashableTypedNativeSetStorage<");
   m_nativeStorage_demangledRegex =
     ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$");
 
   // Type-punned empty set
+  m_emptyStorage_mangled_ObjC = ConstString("_TtCs20_RawNativeSetStorage");
   m_emptyStorage_demangled = ConstString("Swift._RawNativeSetStorage");
 
   // Deferred non-verbatim bridged set
+  m_deferredBridgedStorage_mangledRegex_ObjC
+    = ConstString("^_TtGCs19_SwiftDeferredNSSet.*");
   m_deferredBridgedStorage_demangledPrefix
     = ConstString("Swift._SwiftDeferredNSSet<");
   m_deferredBridgedStorage_demangledRegex

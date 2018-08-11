@@ -41,17 +41,26 @@ DictionaryConfig::DictionaryConfig()
   m_collection_demangledRegex =
     ConstString("^Swift\\.Dictionary<.+,.+>$");
 
+  // Note: We need have use the old _Tt names here because those are
+  // still used to name classes in the ObjC runtime.
+
   // Native storage class
+  m_nativeStorage_mangledRegex_ObjC =
+    ConstString("^_TtGCs37_HashableTypedNativeDictionaryStorage.*");
   m_nativeStorage_demangledPrefix =
     ConstString("Swift._HashableTypedNativeDictionaryStorage<");
   m_nativeStorage_demangledRegex =
     ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
 
   // Type-punned empty dictionary
+  m_emptyStorage_mangled_ObjC =
+    ConstString("_TtCs27_RawNativeDictionaryStorage");
   m_emptyStorage_demangled
     = ConstString("Swift._RawNativeDictionaryStorage");
 
   // Deferred non-verbatim bridged dictionary
+  m_deferredBridgedStorage_mangledRegex_ObjC
+    = ConstString("^_TtGCs26_SwiftDeferredNSDictionary.*");
   m_deferredBridgedStorage_demangledPrefix
     = ConstString("Swift._SwiftDeferredNSDictionary<");
   m_deferredBridgedStorage_demangledRegex
