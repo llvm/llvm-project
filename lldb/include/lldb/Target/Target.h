@@ -71,6 +71,7 @@ typedef enum LoadCWDlldbinitFile {
   eLoadCWDlldbinitWarn
 } LoadCWDlldbinitFile;
 
+
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
@@ -1130,29 +1131,18 @@ public:
 
   lldb::ClangASTImporterSP GetClangASTImporter();
 
-  /// Convenience wrapper that extracts the scope's module first.
-  SwiftASTContext *GetScratchSwiftASTContext(Status &error,
-                                             ExecutionContextScope &exe_scope,
-                                             bool create_on_demand = true);
-
-#ifdef __clang_analyzer__
-  // See GetScratchTypeSystemForLanguage()
-  SwiftASTContext *GetScratchSwiftASTContext(
-      Status &error, Module *lldb_module, bool create_on_demand = true,
-      const char *extra_options = nullptr) __attribute__((always_inline)) {
-    SwiftASTContext *ret = GetScratchSwiftASTContextImpl(
-        error, lldb_module, create_on_demand, extra_options);
-
-    return ret ? ret : nullptr;
+  /// Get the lock guarding the scratch typesystem from being re-initialized.
+  SharedMutex &GetSwiftScratchContextLock() {
+    return m_scratch_typesystem_lock;
   }
 
-  SwiftASTContext *GetScratchSwiftASTContextImpl(Status &error,
-                                                 Module *lldb_module,
-                                                 bool create_on_demand = true);
-#else
-  SwiftASTContext *GetScratchSwiftASTContext(Status &error, Module *lldb_module,
-                                             bool create_on_demand = true);
-#endif
+  /// Convenience wrapper that extracts the scope's module first.
+  SwiftASTContextReader
+  GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
+                            bool create_on_demand = true);
+  SwiftASTContextReader
+  GetScratchSwiftASTContext(Status &error, Module *lldb_module,
+                            bool create_on_demand = true);
 
 private:
   void DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx);
@@ -1416,6 +1406,9 @@ protected:
   typedef std::pair<lldb_private::Module *, char> ModuleLanguage;
   llvm::DenseMap<ModuleLanguage, lldb::TypeSystemSP>
       m_scratch_typesystem_for_module;
+
+  /// Guards the scratch typesystem from being re-initialized.
+  SharedMutex m_scratch_typesystem_lock;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
