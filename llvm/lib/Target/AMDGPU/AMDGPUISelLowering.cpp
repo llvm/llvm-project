@@ -4395,10 +4395,20 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     case Intrinsic::amdgcn_cubeid:
       return true;
 
-    case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_frexp_mant: {
       if (SNaN)
         return true;
       return DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+    }
+    case Intrinsic::amdgcn_cvt_pkrtz: {
+      if (SNaN)
+        return true;
+      return DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
+             DAG.isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1);
+    }
+    case Intrinsic::amdgcn_fdot2:
+      // TODO: Refine on operand
+      return SNaN;
     default:
       return false;
     }

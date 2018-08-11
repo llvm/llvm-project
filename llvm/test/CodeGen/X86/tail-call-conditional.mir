@@ -79,7 +79,7 @@ body:             |
     TCRETURNdi64 @f2, 0, csr_64, implicit $rsp, implicit $rdi, implicit $rsi
 
   bb.4:
-    dead $eax = MOV32ri64 123, implicit-def $rax
+    dead $eax = MOV32ri 123, implicit-def $rax
     RET 0, $rax
 
 ...

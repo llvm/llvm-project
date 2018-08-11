@@ -748,25 +748,99 @@ define float @fact_mul3_reassoc(float %x, float %y, float %z) {
 ; x*z - z*y => (x-y) * z
 define float @fact_mul4(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fact_mul4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul fast float %x, %z
-  %t2 = fmul fast float %z, %y
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_mul4_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul4_reassoc_nsz(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %t1 = fmul reassoc nsz float %x, %z
-  %t2 = fmul reassoc nsz float %z, %y
+  %t1 = fmul float %x, %z
+  %t2 = fmul float %z, %y
+  %t3 = fsub reassoc nsz float %t1, %t2
+  ret float %t3
+}
+
+define float @fact_mul4_commute1(float %x, float %y, float %z) {
+; CHECK-LABEL: @fact_mul4_commute1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %t1 = fmul float %x, %z
+  %t2 = fmul float %y, %z
+  %t3 = fsub reassoc nsz float %t1, %t2
+  ret float %t3
+}
+
+define float @fact_mul4_commute2(float %x, float %y, float %z) {
+; CHECK-LABEL: @fact_mul4_commute2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %t1 = fmul float %z, %x
+  %t2 = fmul float %y, %z
+  %t3 = fsub reassoc nsz float %t1, %t2
+  ret float %t3
+}
+
+define <2 x float> @fact_mul4_commute3_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fact_mul4_commute3_vec(
+; CHECK-NEXT:    [[T1:%.*]] = fmul <2 x float> [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul <2 x float> [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    ret <2 x float> [[T3]]
+;
+  %t1 = fmul <2 x float> %z, %x
+  %t2 = fmul <2 x float> %z, %y
+  %t3 = fsub reassoc nsz <2 x float> %t1, %t2
+  ret <2 x float> %t3
+}
+
+declare void @use(float)
+
+define float @fact_mul4_uses1(float %x, float %y, float %z) {
+; CHECK-LABEL: @fact_mul4_uses1(
+; CHECK-NEXT:    [[T1:%.*]] = fmul float [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %t1 = fmul float %z, %x
+  call void @use(float %t1)
+  %t2 = fmul float %y, %z
+  %t3 = fsub reassoc nsz float %t1, %t2
+  ret float %t3
+}
+
+define float @fact_mul4_uses2(float %x, float %y, float %z) {
+; CHECK-LABEL: @fact_mul4_uses2(
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %t1 = fmul float %x, %z
+  %t2 = fmul float %y, %z
+  call void @use(float %t2)
+  %t3 = fsub reassoc nsz float %t1, %t2
+  ret float %t3
+}
+
+define float @fact_mul4_uses3(float %x, float %y, float %z) {
+; CHECK-LABEL: @fact_mul4_uses3(
+; CHECK-NEXT:    [[T1:%.*]] = fmul float [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[T2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %t1 = fmul float %z, %x
+  call void @use(float %t1)
+  %t2 = fmul float %z, %y
+  call void @use(float %t2)
   %t3 = fsub reassoc nsz float %t1, %t2
   ret float %t3
 }

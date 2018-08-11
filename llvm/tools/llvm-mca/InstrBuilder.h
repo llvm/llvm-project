@@ -50,6 +50,8 @@ class InstrBuilder {
       VariantDescriptors;
 
   const InstrDesc &createInstrDescImpl(const llvm::MCInst &MCI);
+  const InstrDesc &getOrCreateInstrDesc(const llvm::MCInst &MCI);
+
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
@@ -67,7 +69,6 @@ public:
     computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
   }
 
-  const InstrDesc &getOrCreateInstrDesc(const llvm::MCInst &MCI);
   // Returns an array of processor resource masks.
   // Masks are computed by function mca::computeProcResourceMasks. see
   // Support.h for a description of how masks are computed and how masks can be

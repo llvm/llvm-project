@@ -319,16 +319,14 @@ def MOV64ImmSExti8 : I<0, Pseudo, (outs GR64:$dst), (ins i64i8imm:$src), "",
 // that would make it more difficult to rematerialize.
 let isReMaterializable = 1, isAsCheapAsAMove = 1,
     isPseudo = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
-def MOV32ri64 : I<0, Pseudo, (outs GR32:$dst), (ins i64i32imm:$src), "", []>;
+def MOV32ri64 : I<0, Pseudo, (outs GR64:$dst), (ins i64i32imm:$src), "", []>;
 
 // This 64-bit pseudo-move can be used for both a 64-bit constant that is
 // actually the zero-extension of a 32-bit constant and for labels in the
 // x86-64 small code model.
 def mov64imm32 : ComplexPattern<i64, 1, "selectMOV64Imm32", [imm, X86Wrapper]>;
 
-let AddedComplexity = 1 in
-def : Pat<(i64 mov64imm32:$src),
-          (SUBREG_TO_REG (i64 0), (MOV32ri64 mov64imm32:$src), sub_32bit)>;
+def : Pat<(i64 mov64imm32:$src), (MOV32ri64 mov64imm32:$src)>;
 
 // Use sbb to materialize carry bit.
 let Uses = [EFLAGS], Defs = [EFLAGS], isPseudo = 1, SchedRW = [WriteALU] in {
@@ -2060,13 +2058,7 @@ let Predicates = [HasBMI, NoTBM] in {
   def : Pat<(X86bextr (loadi32 addr:$src1), (i32 imm:$src2)),
             (BEXTR32rm addr:$src1, (MOV32ri imm:$src2))>;
   def : Pat<(X86bextr GR64:$src1, mov64imm32:$src2),
-            (BEXTR64rr GR64:$src1,
-                       (SUBREG_TO_REG (i64 0),
-                                      (MOV32ri64 mov64imm32:$src2),
-                                      sub_32bit))>;
+            (BEXTR64rr GR64:$src1, (MOV32ri64 mov64imm32:$src2))>;
   def : Pat<(X86bextr (loadi64 addr:$src1), mov64imm32:$src2),
-            (BEXTR64rm addr:$src1,
-                       (SUBREG_TO_REG (i64 0),
-                                      (MOV32ri64 mov64imm32:$src2),
-                                      sub_32bit))>;
+            (BEXTR64rm addr:$src1, (MOV32ri64 mov64imm32:$src2))>;
 } // HasBMI, NoTBM

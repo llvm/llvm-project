@@ -1521,6 +1521,28 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return (FalseVal + (TrueVal / 2)) / TrueVal;
 }
 
+bool llvm::hasInvariantIterationCount(Loop *InnerLoop,
+                                      ScalarEvolution &SE) {
+  Loop *OuterL = InnerLoop->getParentLoop();
+  if (!OuterL)
+    return true;
+
+  // Get the backedge taken count for the inner loop
+  BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
+  const SCEV *InnerLoopBECountSC = SE.getExitCount(InnerLoop, InnerLoopLatch);
+  if (isa<SCEVCouldNotCompute>(InnerLoopBECountSC) ||
+      !InnerLoopBECountSC->getType()->isIntegerTy())
+    return false;
+
+  // Get whether count is invariant to the outer loop
+  ScalarEvolution::LoopDisposition LD =
+      SE.getLoopDisposition(InnerLoopBECountSC, OuterL);
+  if (LD != ScalarEvolution::LoopInvariant)
+    return false;
+
+  return true;
+}
+
 /// Adds a 'fast' flag to floating point operations.
 static Value *addFastMathFlag(Value *V) {
   if (isa<FPMathOperator>(V)) {
