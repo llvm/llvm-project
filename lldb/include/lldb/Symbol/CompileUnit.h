@@ -18,6 +18,8 @@
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/DenseMap.h"
+
 namespace lldb_private {
 //----------------------------------------------------------------------
 /// @class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
@@ -163,21 +165,19 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
   //------------------------------------------------------------------
-  /// Get a shared pointer to a function in this compile unit by index.
+  /// Apply a lambda to each function in this compile unit.
   ///
-  /// Typically called when iterating though all functions in a compile unit
-  /// after all functions have been parsed. This provides raw access to the
-  /// function shared pointer list and will not cause the SymbolFile plug-in
-  /// to parse any unparsed functions.
+  /// This provides raw access to the function shared pointer list and will not
+  /// cause the SymbolFile plug-in to parse any unparsed functions.
   ///
-  /// @param[in] idx
-  ///     An index into the function list.
+  /// @note Prefer using FindFunctionByUID over this if possible.
   ///
-  /// @return
-  ///     A shared pointer to a function that might contain a NULL
-  ///     Function class pointer.
+  /// @param[in] lambda
+  ///     The lambda that should be applied to every function. The lambda can
+  ///     return true if the iteration should be aborted earlier.
   //------------------------------------------------------------------
-  lldb::FunctionSP GetFunctionAtIndex(size_t idx);
+  void ForeachFunction(
+      llvm::function_ref<bool(const lldb::FunctionSP &)> lambda) const;
 
   //------------------------------------------------------------------
   /// Dump the compile unit contents to the stream \a s.
@@ -415,9 +415,9 @@ protected:
   lldb::LanguageType
       m_language; ///< The programming language enumeration value.
   Flags m_flags;  ///< Compile unit flags that help with partial parsing.
-  std::vector<lldb::FunctionSP> m_functions; ///< The sparsely populated list of
-                                             ///shared pointers to functions
-  ///< that gets populated as functions get partially parsed.
+
+  /// Maps UIDs to functions.
+  llvm::DenseMap<lldb::user_id_t, lldb::FunctionSP> m_functions_by_uid;
   std::vector<ConstString> m_imported_modules; ///< All modules, including the
                                                ///current module, imported by
                                                ///this

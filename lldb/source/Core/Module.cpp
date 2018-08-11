@@ -371,15 +371,13 @@ void Module::ParseAllDebugSymbols() {
 
       symbols->ParseCompileUnitFunctions(sc);
 
-      for (size_t func_idx = 0;
-           (sc.function = sc.comp_unit->GetFunctionAtIndex(func_idx).get()) !=
-           nullptr;
-           ++func_idx) {
+      sc.comp_unit->ForeachFunction([&sc, &symbols](const FunctionSP &f) {
+        sc.function = f.get();
         symbols->ParseFunctionBlocks(sc);
-
         // Parse the variables for this function and all its blocks
         symbols->ParseVariablesForContext(sc);
-      }
+        return false;
+      });
 
       // Parse all types for this compile unit
       sc.function = nullptr;
