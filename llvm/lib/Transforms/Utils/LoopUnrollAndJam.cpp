@@ -754,20 +754,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   // Check inner loop backedge count is consistent on all iterations of the
   // outer loop
-  auto CheckInnerLoopIterationCountInvariant = [](Loop *SubLoop, Loop *OuterL,
-                                                  ScalarEvolution &SE) {
-    BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-    const SCEV *SubLoopBECountSC = SE.getExitCount(SubLoop, SubLoopLatch);
-    if (isa<SCEVCouldNotCompute>(SubLoopBECountSC) ||
-        !SubLoopBECountSC->getType()->isIntegerTy())
-      return false;
-    ScalarEvolution::LoopDisposition LD =
-        SE.getLoopDisposition(SubLoopBECountSC, OuterL);
-    if (LD != ScalarEvolution::LoopInvariant)
-      return false;
-    return true;
-  };
-  if (!CheckInnerLoopIterationCountInvariant(SubLoop, L, SE)) {
+  if (!hasInvariantIterationCount(SubLoop, SE)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop iteration count is "
                          "not consistent on each iteration\n");
     return false;

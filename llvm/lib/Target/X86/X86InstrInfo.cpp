@@ -4267,9 +4267,14 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
-  case X86::MOV32ri64:
+  case X86::MOV32ri64: {
+    unsigned Reg = MIB->getOperand(0).getReg();
+    unsigned Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
     MI.setDesc(get(X86::MOV32ri));
+    MIB->getOperand(0).setReg(Reg32);
+    MIB.addReg(Reg, RegState::ImplicitDefine);
     return true;
+  }
 
   // KNL does not recognize dependency-breaking idioms for mask registers,
   // so kxnor %k1, %k1, %k2 has a RAW dependence on %k1.

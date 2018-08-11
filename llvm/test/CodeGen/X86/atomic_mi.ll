@@ -2050,8 +2050,8 @@ define void @fadd_64g() {
 define void @fadd_32imm() {
 ; X64-LABEL: fadd_32imm:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
 ; X64-NEXT:    addss (%rax), %xmm0
 ; X64-NEXT:    movss %xmm0, (%rax)
 ; X64-NEXT:    retq
@@ -2082,8 +2082,8 @@ define void @fadd_32imm() {
 define void @fadd_64imm() {
 ; X64-LABEL: fadd_64imm:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movl $3735928559, %eax # imm = 0xDEADBEEF
 ; X64-NEXT:    addsd (%rax), %xmm0
 ; X64-NEXT:    movsd %xmm0, (%rax)
 ; X64-NEXT:    retq
