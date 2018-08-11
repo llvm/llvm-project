@@ -1758,7 +1758,6 @@ SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
     return {};
-
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();
