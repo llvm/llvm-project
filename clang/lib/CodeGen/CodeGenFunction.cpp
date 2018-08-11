@@ -772,9 +772,11 @@ static bool endsWithReturn(const Decl* F) {
   return false;
 }
 
-static void markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
-  Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
-  Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+void CodeGenFunction::markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
+  if (SanOpts.has(SanitizerKind::Thread)) {
+    Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
+    Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+  }
 }
 
 static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
@@ -887,10 +889,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
           (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
         markAsIgnoreThreadCheckingAtRuntime(Fn);
       }
-    } else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-      IdentifierInfo *II = FD->getIdentifier();
-      if (II && II->isStr("__destroy_helper_block_"))
-        markAsIgnoreThreadCheckingAtRuntime(Fn);
     }
   }
 

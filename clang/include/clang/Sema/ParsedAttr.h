@@ -78,7 +78,7 @@ struct AvailabilityData {
 };
 
 struct TypeTagForDatatypeData {
-  ParsedType *MatchingCType;
+  ParsedType MatchingCType;
   unsigned LayoutCompatible : 1;
   unsigned MustBeNull : 1;
 };
@@ -502,7 +502,7 @@ public:
   const ParsedType &getMatchingCType() const {
     assert(getKind() == AT_TypeTagForDatatype &&
            "Not a type_tag_for_datatype attribute");
-    return *getTypeTagForDatatypeDataSlot().MatchingCType;
+    return getTypeTagForDatatypeDataSlot().MatchingCType;
   }
 
   bool getLayoutCompatible() const {

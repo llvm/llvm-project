@@ -1,4 +1,9 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - -fblocks | FileCheck %s
+
+// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
+
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i32 0, i32 24, void (i8*, i8*)* @__copy_helper_block_4_20r, void (i8*)* @__destroy_helper_block_4_20r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i8* null }, align 4
+
 void (^f)(void) = ^{};
 
 // rdar://6768379
@@ -26,6 +31,32 @@ void (^test1)(void) = ^(void) {
   __block int i;
   ^ { i = 1; }();
 };
+
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_4_20r(i8*, i8*) unnamed_addr
+// CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
+// CHECK-NEXT: %[[_ADDR1:.*]] = alloca i8*, align 4
+// CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
+// CHECK-NEXT: store i8* %1, i8** %[[_ADDR1]], align 4
+// CHECK-NEXT: %[[V2:.*]] = load i8*, i8** %[[_ADDR1]], align 4
+// CHECK-NEXT: %[[BLOCK_SOURCE:.*]] = bitcast i8* %[[V2]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
+// CHECK-NEXT: %[[V3:.*]] = load i8*, i8** %[[_ADDR]], align 4
+// CHECK-NEXT: %[[BLOCK_DEST:.*]] = bitcast i8* %[[V3]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
+// CHECK-NEXT: %[[V4:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK_SOURCE]], i32 0, i32 5
+// CHECK-NEXT: %[[V5:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK_DEST]], i32 0, i32 5
+// CHECK-NEXT: %[[BLOCKCOPY_SRC:.*]] = load i8*, i8** %[[V4]], align 4
+// CHECK-NEXT: %[[V6:.*]] = bitcast i8** %[[V5]] to i8*
+// CHECK-NEXT: call void @_Block_object_assign(i8* %[[V6]], i8* %[[BLOCKCOPY_SRC]], i32 8)
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(i8*) unnamed_addr
+// CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
+// CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
+// CHECK-NEXT: %[[V1:.*]] = load i8*, i8** %[[_ADDR]], align 4
+// CHECK-NEXT: %[[BLOCK:.*]] = bitcast i8* %[[V1]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
+// CHECK-NEXT: %[[V2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]], i32 0, i32 5
+// CHECK-NEXT: %[[V3:.*]] = load i8*, i8** %[[V2]], align 4
+// CHECK-NEXT: call void @_Block_object_dispose(i8* %[[V3]], i32 8)
+// CHECK-NEXT: ret void
 
 typedef double ftype(double);
 // It's not clear that we *should* support this syntax, but until that decision
@@ -85,30 +116,8 @@ void testConstCaptureInCopyAndDestroyHelpers() {
   __block int i;
   (^ { i = x; })();
 }
-// CHECK-LABEL: testConstCaptureInCopyAndDestroyHelpers_block_invoke
+// CHECK-LABEL: define void @testConstCaptureInCopyAndDestroyHelpers(
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP21]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 4
 
-// CHECK: @__copy_helper_block
-// CHECK: alloca
-// CHECK-NEXT: alloca
-// CHECK-NEXT: store
-// CHECK-NEXT: store
-// CHECK-NEXT: load
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: load
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: getelementptr
-// CHECK-NEXT: getelementptr
-// CHECK-NEXT: load
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: call void @_Block_object_assign
-// CHECK-NEXT: ret
-
-// CHECK: @__destroy_helper_block
-// CHECK: alloca
-// CHECK-NEXT: store
-// CHECK-NEXT: load
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: getelementptr
-// CHECK-NEXT: load
-// CHECK-NEXT: call void @_Block_object_dispose
-// CHECK-NEXT: ret
+// CHECK-LABEL: define internal void @__testConstCaptureInCopyAndDestroyHelpers_block_invoke

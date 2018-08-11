@@ -997,7 +997,8 @@ var numToId = function(num) {
 };
 
 var navigateTo = function(up) {
-  var numItems = document.querySelectorAll(".line > .msg").length;
+  var numItems = document.querySelectorAll(
+      ".line > .msgEvent, .line > .msgControl").length;
   var currentSelected = findNum();
   var newSelected = move(currentSelected, up, numItems);
   var newEl = numToId(newSelected, numItems);

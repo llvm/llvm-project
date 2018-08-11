@@ -1,6 +1,17 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT %s
 
+// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
+// CHECK-UNOPT: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP9:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32r, void (i8*)* @__destroy_helper_block_8_32r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
+// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-UNOPT: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i64 0, i64 48, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32b, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i64 256 }, align 8
+
 // This shouldn't crash.
 void test0(id (^maker)(void)) {
   maker();
@@ -43,7 +54,7 @@ void test2(id x) {
   extern void test2_helper(id (^)(void));
   test2_helper(^{ return x; });
 
-// CHECK-LABEL:    define internal void @__copy_helper_block_(i8*, i8*) #{{[0-9]+}} {
+// CHECK:    define linkonce_odr hidden void @__copy_helper_block_8_32s(i8*, i8*) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load i8*, i8**
 // CHECK-NEXT: [[SRC:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8**
@@ -53,7 +64,8 @@ void test2(id x) {
 // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retain(i8* [[T1]]) [[NUW]]
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL:    define internal void @__destroy_helper_block_(i8*) #{{[0-9]+}} {
+
+// CHECK:    define linkonce_odr hidden void @__destroy_helper_block_8_32s(i8*) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load i8*, i8**
 // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[T1]], i32 0, i32 5
@@ -155,10 +167,10 @@ void test4(void) {
   // CHECK-NEXT: call void @objc_release(i8* [[T0]])
   // CHECK-NEXT: ret void
 
-  // CHECK-LABEL:    define internal void @__copy_helper_block_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32r(i8*, i8*) unnamed_addr #{{[0-9]+}} {
   // CHECK:      call void @_Block_object_assign(i8* {{%.*}}, i8* {{%.*}}, i32 8)
 
-  // CHECK-LABEL:    define internal void @__destroy_helper_block_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32r(i8*) unnamed_addr #{{[0-9]+}} {
   // CHECK:      call void @_Block_object_dispose(i8* {{%.*}}, i32 8)
 }
 
@@ -211,6 +223,8 @@ void test6(void) {
   // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 6
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
+  // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP9]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
   // CHECK:      [[T0:%.*]] = bitcast [[BYREF_T]]* [[VAR]] to i8*
   // CHECK-NEXT: store i8* [[T0]], i8**
   // CHECK:      call void @test6_helper(
@@ -236,14 +250,6 @@ void test6(void) {
   // CHECK:      [[SLOT:%.*]] = getelementptr inbounds {{.*}}, i32 0, i32 6
   // CHECK-NEXT: call i8* @objc_storeWeak(i8** [[SLOT]], i8* null)
   // CHECK-NEXT: ret void
-
-  // CHECK-LABEL:    define internal void @__copy_helper_block_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
-  // 0x8 - FIELD_IS_BYREF (no FIELD_IS_WEAK because clang in control)
-  // CHECK:      call void @_Block_object_assign(i8* {{%.*}}, i8* {{%.*}}, i32 8)
-
-  // CHECK-LABEL:    define internal void @__destroy_helper_block_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
-  // 0x8 - FIELD_IS_BYREF (no FIELD_IS_WEAK because clang in control)
-  // CHECK:      call void @_Block_object_dispose(i8* {{%.*}}, i32 8)
 }
 
 void test7(void) {
@@ -276,12 +282,12 @@ void test7(void) {
   // CHECK-NEXT: call void @objc_release(i8* [[T0]])
   // CHECK: ret void
 
-  // CHECK-LABEL:    define internal void @__copy_helper_block_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__copy_helper_block_8_32w(i8*, i8*) unnamed_addr #{{[0-9]+}} {
   // CHECK:      getelementptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: call void @objc_copyWeak(
 
-  // CHECK-LABEL:    define internal void @__destroy_helper_block_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
+  // CHECK-LABEL:    define linkonce_odr hidden void @__destroy_helper_block_8_32w(i8*) unnamed_addr #{{[0-9]+}} {
   // CHECK:      getelementptr
   // CHECK-NEXT: call void @objc_destroyWeak(
 }
@@ -631,6 +637,8 @@ void test18(id x) {
 // CHECK-UNOPT-NEXT: store i8* null, i8** [[X]]
 // CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[X]], 
 // CHECK-UNOPT-NEXT: [[SLOTREL:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
+// CHECK-UNOPT: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 4
+// CHECK-UNOPT: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP44]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 // CHECK-UNOPT:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-UNOPT-NEXT: [[T0:%.*]] = load i8*, i8** [[X]],
 // CHECK-UNOPT-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]])
@@ -642,25 +650,6 @@ void test18(id x) {
 // CHECK-UNOPT-NEXT: ret void
   extern void test18_helper(id (^)(void));
   test18_helper(^{ return x; });
-
-// CHECK-UNOPT-LABEL:    define internal void @__copy_helper_block_.{{[0-9]+}}(i8*, i8*) #{{[0-9]+}} {
-// CHECK-UNOPT:      [[T0:%.*]] = load i8*, i8**
-// CHECK-UNOPT-NEXT: [[SRC:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
-// CHECK-UNOPT-NEXT: [[T0:%.*]] = load i8*, i8**
-// CHECK-UNOPT-NEXT: [[DST:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
-// CHECK-UNOPT-NEXT: [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[SRC]], i32 0, i32 5
-// CHECK-UNOPT-NEXT: [[T1:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[DST]], i32 0, i32 5
-// CHECK-UNOPT-NEXT: [[T2:%.*]] = load i8*, i8** [[T0]]
-// CHECK-UNOPT-NEXT: store i8* null, i8** [[T1]]
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[T1]], i8* [[T2]]) [[NUW]]
-// CHECK-UNOPT-NEXT: ret void
-
-// CHECK-UNOPT-LABEL:    define internal void @__destroy_helper_block_.{{[0-9]+}}(i8*) #{{[0-9]+}} {
-// CHECK-UNOPT:      [[T0:%.*]] = load i8*, i8**
-// CHECK-UNOPT-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to [[BLOCK_T]]*
-// CHECK-UNOPT-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[T1]], i32 0, i32 5
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[T2]], i8* null)
-// CHECK-UNOPT-NEXT: ret void
 }
 
 // Ensure that we don't emit helper code in copy/dispose routines for variables
@@ -670,33 +659,12 @@ void testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(id x, id y) {
   (^ { testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(x, unsafeObject); })();
 }
 
-// CHECK-LABEL: testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
-// CHECK-UNOPT-LABEL: testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
+// CHECK-LABEL: define void @testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers
+// %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>* %{{.*}}, i32 0, i32 4
+// store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP46]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
-// CHECK-UNOPT: @__copy_helper_block
-// CHECK-UNOPT: alloca
-// CHECK-UNOPT-NEXT: alloca
-// CHECK-UNOPT-NEXT: store
-// CHECK-UNOPT-NEXT: store
-// CHECK-UNOPT-NEXT: load
-// CHECK-UNOPT-NEXT: bitcast
-// CHECK-UNOPT-NEXT: load
-// CHECK-UNOPT-NEXT: bitcast
-// CHECK-UNOPT-NEXT: getelementptr
-// CHECK-UNOPT-NEXT: getelementptr
-// CHECK-UNOPT-NEXT: load
-// CHECK-UNOPT-NEXT: store
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong
-// CHECK-UNOPT-NEXT: ret
-
-// CHECK-UNOPT: @__destroy_helper_block
-// CHECK-UNOPT: alloca
-// CHECK-UNOPT-NEXT: store
-// CHECK-UNOPT-NEXT: load
-// CHECK-UNOPT-NEXT: bitcast
-// CHECK-UNOPT-NEXT: getelementptr
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong
-// CHECK-UNOPT-NEXT: ret
+// CHECK-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
+// CHECK-UNOPT-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
 
 // rdar://13588325
 void test19_sink(void (^)(int));
@@ -712,6 +680,8 @@ void test19(void (^b)(void)) {
 
 //   Block setup.  We skip most of this.  Note the bare retain.
 // CHECK-NEXT: [[SLOTREL:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP48]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T0:%.*]] = load void ()*, void ()** [[B]],
 // CHECK-NEXT: [[T1:%.*]] = bitcast void ()* [[T0]] to i8*
@@ -761,12 +731,6 @@ void test19(void (^b)(void)) {
 // CHECK-UNOPT: [[RETAINED:%.*]] = call i8* @objc_retain(i8* [[CAPTURED]])
 // CHECK-UNOPT: store i8* [[RETAINED]], i8** [[BLOCKCAPTURED]]
 // CHECK-UNOPT: call void @objc_storeStrong(i8** [[CAPTUREFIELD]], i8* null)
-
-// CHECK-LABEL: define internal void @__copy_helper_block
-// CHECK: [[BLOCKSOURCE:%.*]] = bitcast i8* %{{.*}} to <[[BLOCKTY]]>*
-// CHECK: [[CAPTUREFIELD:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCKSOURCE]], i32 0, i32 5
-// CHECK: [[BLOCKCOPYSRC:%.*]] = load i8*, i8** [[CAPTUREFIELD]]
-// CHECK: call i8* @objc_retain(i8* [[BLOCKCOPYSRC]])
 
 void test20_callee(void (^)());
 void test20(const id x) {

@@ -1726,7 +1726,8 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
     if (emission.Variable->getType().isObjCGCWeak())
       Flags |= BLOCK_FIELD_IS_WEAK;
     enterByrefCleanup(NormalAndEHCleanup, emission.Addr, Flags,
-                      /*LoadBlockVarAddr*/ false);
+                      /*LoadBlockVarAddr*/ false,
+                      cxxDestructorCanThrow(emission.Variable->getType()));
   }
 }
 
