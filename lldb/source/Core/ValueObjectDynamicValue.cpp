@@ -145,6 +145,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
     m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
   }
+ 
+  auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
 
   // First make sure our Type and/or Address haven't changed:
   Process *process = exe_ctx.GetProcessPtr();
@@ -408,4 +410,16 @@ void ValueObjectDynamicValue::SetLanguageFlags(uint64_t flags) {
     m_parent->SetLanguageFlags(flags);
   else
     this->ValueObject::SetLanguageFlags(flags);
+}
+
+bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
+  if (GetPreferredDisplayLanguage() != eLanguageTypeSwift)
+    return false;
+
+  if (!m_dynamic_type_info.HasType())
+    return false;
+
+  auto *cached_ctx =
+      static_cast<SwiftASTContext *>(m_value.GetCompilerType().GetTypeSystem());
+  return cached_ctx == GetScratchSwiftASTContext().get();
 }

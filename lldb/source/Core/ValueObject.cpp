@@ -155,6 +155,15 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
 
+  // Swift: Check whether the dynamic type system became stale.
+  if (m_dynamic_value) {
+    auto *dyn_val = static_cast<ValueObjectDynamicValue *>(m_dynamic_value);
+    if (dyn_val->DynamicValueTypeInfoNeedsUpdate()) {
+      dyn_val->SetNeedsUpdate();
+      SetNeedsUpdate();
+    }
+  }
+  
   if (update_format)
     did_change_formats = UpdateFormatsIfNeeded();
 
@@ -1742,13 +1751,13 @@ SwiftASTContext *ValueObject::GetSwiftASTContext() {
     auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
     return llvm::dyn_cast_or_null<SwiftASTContext>(ts);
   }
-  return GetScratchSwiftASTContext();
+  return GetScratchSwiftASTContext().get();
 }
 
-SwiftASTContext *ValueObject::GetScratchSwiftASTContext() {
+SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
-    return nullptr;
+    return {};
 
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
@@ -2831,9 +2840,16 @@ void ValueObject::LogValueObject(Log *log,
   }
 }
 
+static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
+  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
+             ? &valobj.GetExecutionContextRef()
+             : nullptr;
+}
+
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+  auto swift_scratch_ctx_lock = SwiftASTContextLock(GetSwiftExeCtx(*this));
   ValueObjectPrinter printer(this, &s, options);
   printer.PrintValueObject();
 }
