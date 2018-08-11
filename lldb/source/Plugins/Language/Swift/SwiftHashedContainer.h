@@ -56,12 +56,12 @@ private:
   CreateEmptyHandler(CompilerType elem_type = CompilerType()) const;
 
   HashedStorageHandlerUP
-  CreateNativeHandler(lldb::ValueObjectSP storage_sp,
-                      CompilerType key_type,
-                      CompilerType value_type) const;
+  CreateNativeHandler(
+    lldb::ValueObjectSP value_sp,
+    lldb::ValueObjectSP storage_sp) const;
 
   HashedStorageHandlerUP
-  CreateCocoaHandler(lldb::ValueObjectSP cocoaStorage_sp) const;
+  CreateCocoaHandler(lldb::ValueObjectSP storage_sp) const;
 
 protected:
   HashedCollectionConfig() {}
@@ -74,11 +74,6 @@ protected:
 
   virtual CXXSyntheticChildren::CreateFrontEndCallback
   GetCocoaSyntheticChildrenCreator() const = 0;
-
-  HashedStorageHandlerUP
-  CreateNativeStorageHandler(ValueObject &valobj,
-                             lldb::addr_t storage_ptr,
-                             bool fail_on_no_children) const;
 
   ConstString m_summaryProviderName;
   ConstString m_syntheticChildrenName;
