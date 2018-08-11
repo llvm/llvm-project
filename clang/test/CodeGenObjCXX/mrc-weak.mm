@@ -119,10 +119,10 @@ void test7(void) {
 // CHECK:       call void @use_block
 // CHECK:       call void @objc_destroyWeak
 
-// CHECK-LABEL: define internal void @__copy_helper_block
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block
 // CHECK:       @objc_copyWeak
 
-// CHECK-LABEL: define internal void @__destroy_helper_block
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block
 // CHECK:       @objc_destroyWeak
 
 void test8(void) {
@@ -142,8 +142,8 @@ void test8(void) {
 // CHECK:       call void @objc_destroyWeak
 
 // CHECK-LABEL: define void @_Z14test9_baselinev()
-// CHECK:       define internal void @__copy_helper
-// CHECK:       define internal void @__destroy_helper
+// CHECK:       define linkonce_odr hidden void @__copy_helper
+// CHECK:       define linkonce_odr hidden void @__destroy_helper
 void test9_baseline(void) {
   Foo *p = get_object();
   use_block(^{ [p run]; });

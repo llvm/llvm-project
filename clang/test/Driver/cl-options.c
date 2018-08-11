@@ -577,6 +577,7 @@
 // RUN: %clang_cl \
 // RUN:     --driver-mode=cl \
 // RUN:     -fblocks \
+// RUN:     -fcrash-diagnostics-dir=/foo \
 // RUN:     -fno-blocks \
 // RUN:     -fbuiltin \
 // RUN:     -fno-builtin \
