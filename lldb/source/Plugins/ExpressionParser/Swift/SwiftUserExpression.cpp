@@ -134,8 +134,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     m_language_flags &= ~eLanguageFlagIsClass;
     m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
 
-    // we need to make sure the Target's SwiftASTContext has been setup BEFORE
-    // we do any Swift name lookups
+    // Make sure the target's SwiftASTContext has been setup before
+    // doing any Swift name lookups.
     if (m_target) {
       auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
       if (!swift_ast_ctx) {

@@ -128,13 +128,13 @@ public:
     bool m_parse_error;
   };
 
+  /// A proxy object to support lazy binding of Archetypes.
   class MetadataPromise {
     friend class SwiftLanguageRuntime;
 
-    MetadataPromise(SwiftASTContext &, SwiftLanguageRuntime &, lldb::addr_t);
+    MetadataPromise(ValueObject &, SwiftLanguageRuntime &, lldb::addr_t);
 
-    swift::ASTContext &m_swift_ast;
-    swift::remoteAST::RemoteASTContext &m_remote_ast;
+    ValueObject &m_for_object;
     SwiftLanguageRuntime &m_swift_runtime;
     lldb::addr_t m_metadata_location;
     llvm::Optional<swift::MetadataKind> m_metadata_kind;
@@ -300,9 +300,8 @@ public:
 
   virtual bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
-  virtual MetadataPromiseSP
-  GetMetadataPromise(lldb::addr_t addr,
-                     SwiftASTContext *swift_ast_ctx = nullptr);
+  virtual MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
+                                               ValueObject &for_object);
 
   /// Build the artificial type metadata variable name for \p swift_type.
   static bool GetAbstractTypeName(StreamString &name, swift::Type swift_type);

@@ -924,7 +924,7 @@ public:
     TypeSystem *type_system;
 
     if (lang == lldb::eLanguageTypeSwift)
-      // We already acquired the lock in the UserExpression.
+      // We already acquired the lock in the SwiftUserExpression.
       type_system =
           target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp)
               .get();
