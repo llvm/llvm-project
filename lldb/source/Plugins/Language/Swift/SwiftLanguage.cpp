@@ -1034,6 +1034,7 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
   if (use_dynamic == lldb::eNoDynamicValues)
     return result;
 
+  SwiftASTContextLock scratch_ctx_lock(&valobj.GetExecutionContextRef());
   CompilerType compiler_type(valobj.GetCompilerType());
 
   const bool check_cpp = false;
@@ -1353,8 +1354,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              SwiftASTContext *ast_ctx(target->GetScratchSwiftASTContext(
-                  error, *exe_scope, create_on_demand));
+              auto ast_ctx = target->GetScratchSwiftASTContext(
+                  error, *exe_scope, create_on_demand);
               if (ast_ctx) {
                 const bool is_mangled = true;
                 Mangled mangled(ConstString(input), is_mangled);
@@ -1412,8 +1413,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            SwiftASTContext *ast_ctx(target->GetScratchSwiftASTContext(
-                error, *exe_scope, create_on_demand));
+            auto ast_ctx = target->GetScratchSwiftASTContext(error, *exe_scope,
+                                                             create_on_demand);
             if (ast_ctx) {
               auto iter = ast_ctx->GetModuleCache().begin(),
                    end = ast_ctx->GetModuleCache().end();
@@ -1422,15 +1423,16 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
               SplitDottedName(input, name_parts);
 
               std::function<void(swift::ModuleDecl *)> lookup_func =
-                  [ast_ctx, input, name_parts,
+                  [&ast_ctx, input, name_parts,
                    &results](swift::ModuleDecl *module) -> void {
 
                 swift::ModuleDecl::AccessPathTy access_path;
 
                 module->forAllVisibleModules(
                     access_path,
-                    [ast_ctx, input, name_parts, &results](
-                        swift::ModuleDecl::ImportedModule imported_module) -> bool {
+                    [&ast_ctx, input, name_parts, &results](
+                        swift::ModuleDecl::ImportedModule imported_module)
+                        -> bool {
                       auto module = imported_module.second;
                       TypesOrDecls local_results;
                       ast_ctx->FindTypesOrDecls(input, module, local_results,
@@ -1666,6 +1668,7 @@ bool SwiftLanguage::IsUninitializedReference(ValueObject &valobj) {
 bool SwiftLanguage::GetFunctionDisplayName(
     const SymbolContext *sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
+  SwiftASTContextLock scratch_ctx_lock(exe_ctx);
   switch (representation) {
   case Language::FunctionNameRepresentation::eName:
     break; // no need to customize this

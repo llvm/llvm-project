@@ -1434,6 +1434,17 @@ static size_t BaseClassDepth(ValueObject &in_value) {
   return depth;
 }
 
+/// Determine whether the scratch SwiftASTContext has been locked.
+static bool IsScratchContextLocked(TargetSP target) {
+  if (target) {
+    if (target->GetSwiftScratchContextLock().try_lock()) {
+      target->GetSwiftScratchContextLock().unlock();
+      return false;
+    }
+  }
+  return true;
+}
+
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address) {
@@ -1457,8 +1468,10 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
 
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
+  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
+         "Swift scratch context not locked ahead of dynamic type resolution");
   Status error;
-  SwiftASTContext *swift_ast_ctx = in_value.GetScratchSwiftASTContext();
+  auto swift_ast_ctx = in_value.GetScratchSwiftASTContext();
 
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return false;
@@ -1495,14 +1508,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
                       "shared Swift state. Falling back to per-module "
                       "scratch context.\n");
         target.SetUseScratchTypesystemPerModule(true);
-        return GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
-                                              class_type_or_name, address);
       }
     }
     return false;
   }
 
-  CompilerType result_type(swift_ast_ctx,
+  // The read lock must have been acquired by the caller.
+  CompilerType result_type(swift_ast_ctx.get(),
                            instance_type.getValue().getPointer());
   class_type_or_name.SetCompilerType(result_type);
   return true;
@@ -2143,7 +2155,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
 
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
-  SwiftASTContext *swift_ast_ctx = in_value.GetScratchSwiftASTContext();
+  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
+         "Swift scratch context not locked ahead of dynamic type resolution");
+  auto swift_ast_ctx = in_value.GetScratchSwiftASTContext();
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return false;
 
@@ -2154,7 +2168,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
                                               /*skipArtificial*/ true);
   if (!instance_type)
     return false;
-  CompilerType result_type(swift_ast_ctx,
+  // The read lock must have been acquired by the caller.
+  CompilerType result_type(swift_ast_ctx.get(),
                            instance_type.getValue().getPointer());
   class_type_or_name.SetCompilerType(result_type);
   return true;
@@ -2996,8 +3011,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
       ExecutionContext exe_ctx(frame);
-      SwiftASTContext *swift_ast =
-          target.GetScratchSwiftASTContext(error, frame);
+      auto swift_ast = target.GetScratchSwiftASTContext(error, frame);
       if (swift_ast) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName().AsCString(), error);
@@ -3200,8 +3214,7 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
     frame_sp->CalculateExecutionContext(exe_ctx);
     DataExtractor data;
 
-    SwiftASTContext *ast_context = target->GetScratchSwiftASTContext(
-        error, *frame_sp);
+    auto ast_context = target->GetScratchSwiftASTContext(error, *frame_sp);
     if (!ast_context || error.Fail())
       return error_valobj_sp;
 
@@ -3715,7 +3728,7 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (SwiftASTContext *swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
+  if (auto swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
     Status error;
     CompilerType swift_type =
         swift_ast_ctx->GetTypeFromMangledTypename(type_name, error);
