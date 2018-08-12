@@ -680,7 +680,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // If all of the unknown bits are known to be zero on one side or the other
     // (but not both) turn this into an *inclusive* or.
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
-    if ((NewMask & ~Known.Zero & ~Known2.Zero) == 0)
+    if (NewMask.isSubsetOf(Known.Zero|Known2.Zero))
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT,
                                                Op.getOperand(0),
                                                Op.getOperand(1)));
@@ -690,32 +690,32 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
     KnownOut.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
 
-    // If all of the demanded bits on one side are known, and all of the set
-    // bits on that side are also known to be set on the other side, turn this
-    // into an AND, as we know the bits will be cleared.
-    //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
-    // NB: it is okay if more bits are known than are requested
-    if (NewMask.isSubsetOf(Known.Zero|Known.One)) { // all known on one side
-      if (Known.One == Known2.One) { // set bits are the same on both sides
-        SDValue ANDC = TLO.DAG.getConstant(~Known.One & NewMask, dl, VT);
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
+      // If one side is a constant, and all of the known set bits on the other
+      // side are also set in the constant, turn this into an AND, as we know
+      // the bits will be cleared.
+      //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
+      // NB: it is okay if more bits are known than are requested
+      if (C->getAPIntValue() == Known2.One) {
+        SDValue ANDC = TLO.DAG.getConstant(~C->getAPIntValue() & NewMask,
+                                           dl, VT);
         return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT,
                                                  Op.getOperand(0), ANDC));
       }
-    }
 
-    // If the RHS is a constant, see if we can change it. Don't alter a -1
-    // constant because that's a 'not' op, and that is better for combining and
-    // codegen.
-    ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1));
-    if (C && !C->isAllOnesValue()) {
-      if (NewMask.isSubsetOf(C->getAPIntValue())) {
-        // We're flipping all demanded bits. Flip the undemanded bits too.
-        SDValue New = TLO.DAG.getNOT(dl, Op.getOperand(0), VT);
-        return TLO.CombineTo(Op, New);
+      // If the RHS is a constant, see if we can change it. Don't alter a -1
+      // constant because that's a 'not' op, and that is better for combining
+      // and codegen.
+      if (!C->isAllOnesValue()) {
+        if (NewMask.isSubsetOf(C->getAPIntValue())) {
+          // We're flipping all demanded bits. Flip the undemanded bits too.
+          SDValue New = TLO.DAG.getNOT(dl, Op.getOperand(0), VT);
+          return TLO.CombineTo(Op, New);
+        }
+        // If we can't turn this into a 'not', try to shrink the constant.
+        if (ShrinkDemandedConstant(Op, NewMask, TLO))
+          return true;
       }
-      // If we can't turn this into a 'not', try to shrink the constant.
-      if (ShrinkDemandedConstant(Op, NewMask, TLO))
-        return true;
     }
 
     Known = std::move(KnownOut);

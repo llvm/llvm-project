@@ -167,9 +167,9 @@ void CallGraphSort::groupClusters() {
   std::vector<int> SortedSecs(Clusters.size());
   std::vector<Cluster *> SecToCluster(Clusters.size());
 
-  for (int SI = 0, SE = Clusters.size(); SI != SE; ++SI) {
-    SortedSecs[SI] = SI;
-    SecToCluster[SI] = &Clusters[SI];
+  for (size_t I = 0; I < Clusters.size(); ++I) {
+    SortedSecs[I] = I;
+    SecToCluster[I] = &Clusters[I];
   }
 
   std::stable_sort(SortedSecs.begin(), SortedSecs.end(), [&](int A, int B) {
