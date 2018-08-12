@@ -688,6 +688,38 @@ define amdgpu_kernel void @v_clamp_v2f16_shuffle(<2 x half> addrspace(1)* %out, 
   ret void
 }
 
+; GCN-LABEL: {{^}}v_clamp_v2f16_undef_limit_elts0:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GFX9-NOT: [[A]]
+; GFX9: v_pk_max_f16 [[CLAMP:v[0-9]+]], [[A]], [[A]] clamp{{$}}
+define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
+  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half undef>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half undef, half 1.0>)
+
+  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_clamp_v2f16_undef_limit_elts1:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GFX9-NOT: [[A]]
+; GFX9: v_pk_max_f16 [[CLAMP:v[0-9]+]], [[A]], [[A]] clamp{{$}}
+define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
+  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
+
+  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  ret void
+}
+
 ; GCN-LABEL: {{^}}v_clamp_diff_source_f32:
 ; GCN: v_add_f32_e32 [[A:v[0-9]+]]
 ; GCN: v_add_f32_e32 [[B:v[0-9]+]]
