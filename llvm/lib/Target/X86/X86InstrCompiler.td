@@ -1282,7 +1282,7 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 
 // (or x1, x2) -> (add x1, x2) if two operands are known not to share bits.
 // Try this before the selecting to OR.
-let AddedComplexity = 5, SchedRW = [WriteALU] in {
+let SchedRW = [WriteALU] in {
 
 let isConvertibleToThreeAddress = 1,
     Constraints = "$src1 = $dst", Defs = [EFLAGS] in {

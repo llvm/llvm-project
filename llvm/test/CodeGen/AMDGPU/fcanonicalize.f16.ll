@@ -565,16 +565,67 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_undef_reg_v2f16:
-; GFX9: s_waitcnt
-; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT: v_lshl_or_b32 v0, v0, 16, 0
-; GFX9-NEXT: s_setpc_b64
-
-; VI: s_waitcnt
-; VI-NEXT: v_max_f16_sdwa v0, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT: s_setpc_b64
+; GFX89: s_waitcnt
+; GFX89-NEXT: v_max_f16_sdwa v0, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX89-NEXT: s_setpc_b64
 define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
   %vec = insertelement <2 x half> undef, half %val, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_undef_lo_imm_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x3c003c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x7fc00000
+; CI-NEXT: v_mov_b32_e32 v1, 1.0
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 1.0, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_imm_lo_undef_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x3c003c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 1.0
+; CI-NEXT: v_mov_b32_e32 v1, 0x7fc00000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 1.0, i32 0
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_undef_lo_k_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x4c004c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x7fc00000
+; CI-NEXT: v_mov_b32_e32 v1, 0x41800000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 16.0, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_k_lo_undef_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x4c004c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x41800000
+; CI-NEXT: v_mov_b32_e32 v1, 0x7fc00000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 16.0, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
 }

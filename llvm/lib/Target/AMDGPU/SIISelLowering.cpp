@@ -4287,21 +4287,30 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
   }
 
   assert(VT == MVT::v2f16 || VT == MVT::v2i16);
+  assert(!Subtarget->hasVOP3PInsts() && "this should be legal");
 
   SDValue Lo = Op.getOperand(0);
   SDValue Hi = Op.getOperand(1);
 
-  Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
-  Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Hi);
+  // Avoid adding defined bits with the zero_extend.
+  if (Hi.isUndef()) {
+    Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
+    SDValue ExtLo = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Lo);
+    return DAG.getNode(ISD::BITCAST, SL, VT, ExtLo);
+  }
 
-  Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
+  Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Hi);
   Hi = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Hi);
 
   SDValue ShlHi = DAG.getNode(ISD::SHL, SL, MVT::i32, Hi,
                               DAG.getConstant(16, SL, MVT::i32));
+  if (Lo.isUndef())
+    return DAG.getNode(ISD::BITCAST, SL, VT, ShlHi);
+
+  Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
+  Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
 
   SDValue Or = DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi);
-
   return DAG.getNode(ISD::BITCAST, SL, VT, Or);
 }
 
@@ -6980,25 +6989,40 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   // TODO: This could be better with wider vectors that will be split to v2f16,
   // and to consider uses since there aren't that many packed operations.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16) {
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16 &&
+      isTypeLegal(MVT::v2f16)) {
     SDLoc SL(N);
     SDValue NewElts[2];
     SDValue Lo = N0.getOperand(0);
     SDValue Hi = N0.getOperand(1);
+    EVT EltVT = Lo.getValueType();
+
     if (vectorEltWillFoldAway(Lo) || vectorEltWillFoldAway(Hi)) {
       for (unsigned I = 0; I != 2; ++I) {
         SDValue Op = N0.getOperand(I);
-        EVT EltVT = Op.getValueType();
         if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
           NewElts[I] = getCanonicalConstantFP(DAG, SL, EltVT,
                                               CFP->getValueAPF());
         } else if (Op.isUndef()) {
-          // This would ordinarily be folded to a qNaN. Since this may be half
-          // of a packed operation, it may be cheaper to use a 0.
-          NewElts[I] = DAG.getConstantFP(0.0f, SL, EltVT);
+          // Handled below based on what the other operand is.
+          NewElts[I] = Op;
         } else {
           NewElts[I] = DAG.getNode(ISD::FCANONICALIZE, SL, EltVT, Op);
         }
+      }
+
+      // If one half is undef, and one is constant, perfer a splat vector rather
+      // than the normal qNaN. If it's a register, prefer 0.0 since that's
+      // cheaper to use and may be free with a packed operation.
+      if (NewElts[0].isUndef()) {
+        if (isa<ConstantFPSDNode>(NewElts[1]))
+          NewElts[0] = isa<ConstantFPSDNode>(NewElts[1]) ?
+            NewElts[1]: DAG.getConstantFP(0.0f, SL, EltVT);
+      }
+
+      if (NewElts[1].isUndef()) {
+        NewElts[1] = isa<ConstantFPSDNode>(NewElts[0]) ?
+          NewElts[0] : DAG.getConstantFP(0.0f, SL, EltVT);
       }
 
       return DAG.getBuildVector(VT, SL, NewElts);

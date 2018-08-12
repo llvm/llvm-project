@@ -994,9 +994,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   // omod is ignored by hardware if IEEE bit is enabled. omod also does not
   // correctly handle signed zeros.
   //
-  // TODO: Check nsz on instructions when fast math flags are preserved to MI
-  // level.
-  bool IsIEEEMode = ST->enableIEEEBit(MF) || !MFI->hasNoSignedZerosFPMath();
+  bool IsIEEEMode = ST->enableIEEEBit(MF);
+  bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineBasicBlock::iterator I, Next;
@@ -1007,7 +1006,10 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       tryFoldInst(TII, &MI);
 
       if (!TII->isFoldableCopy(MI)) {
-        if (IsIEEEMode || !tryFoldOMod(MI))
+        // TODO: Omod might be OK if there is NSZ only on the source
+        // instruction, and not the omod multiply.
+        if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
+            !tryFoldOMod(MI))
           tryFoldClamp(MI);
         continue;
       }
