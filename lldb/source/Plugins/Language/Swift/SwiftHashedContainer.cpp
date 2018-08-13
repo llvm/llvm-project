@@ -531,10 +531,11 @@ bool NativeHashedStorageHandler::IsValid() {
 
 HashedStorageHandlerUP
 HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
-  static ConstString g__variantBuffer("_variantBuffer");
+  static ConstString g__variant("_variant"); // Swift 5
+  static ConstString g__variantBuffer("_variantBuffer"); // Swift 4
   static ConstString g_native("native");
   static ConstString g_cocoa("cocoa");
-  static ConstString g_nativeBuffer("nativeBuffer");
+  static ConstString g_nativeBuffer("nativeBuffer"); // Swift 4
   static ConstString g__storage("_storage");
 
   Status error;
@@ -556,13 +557,16 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
     return CreateEmptyHandler();
   }
   if (IsDeferredBridgedStorageName(type_name_cs)) {
-    auto storage_sp
-      = valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage});
+    auto storage_sp = valobj_sp->GetChildAtNamePath({g_native, g__storage});
+    if (!storage_sp) // try Swift 4 name
+      storage_sp = valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage});
     return CreateNativeHandler(valobj_sp, storage_sp);
   }
 
-  ValueObjectSP variant_sp(
-      valobj_sp->GetChildMemberWithName(g__variantBuffer, true));
+  ValueObjectSP variant_sp =
+    valobj_sp->GetChildMemberWithName(g__variant, true);
+  if (!variant_sp) // try Swift 4 name
+    variant_sp = valobj_sp->GetChildMemberWithName(g__variantBuffer, true);
   if (!variant_sp)
     return nullptr;
 
@@ -572,11 +576,15 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   if (g_cocoa == variant_cs) {
     // it's an NSDictionary/NSSet in disguise
+    static ConstString g_object("object"); // Swift 5
     static ConstString g_cocoaDictionary("cocoaDictionary"); // Swift 4
     static ConstString g_cocoaSet("cocoaSet"); // Swift 4
-    ValueObjectSP child_sp
-      = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaDictionary});
-    if (!child_sp)
+    
+    ValueObjectSP child_sp =
+      variant_sp->GetChildAtNamePath({g_cocoa, g_object});
+    if (!child_sp) // try Swift 4 name for dictionaries
+      child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaDictionary});
+    if (!child_sp) // try Swift 4 name for sets
       child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaSet});
     if (!child_sp)
       return nullptr;
