@@ -136,12 +136,18 @@ void UninitializedObjectChecker::checkEndFunction(
   if (!Object)
     return;
 
-  FindUninitializedFields F(Context.getState(), Object->getRegion(), IsPedantic,
+  FindUninitializedFields F(Context.getState(), Object->getRegion(),
                             CheckPointeeInitialization);
 
   const UninitFieldMap &UninitFields = F.getUninitFields();
 
   if (UninitFields.empty())
+    return;
+
+  // In non-pedantic mode, if Object's region doesn't contain a single
+  // initialized field, we'll assume that Object was intentionally left
+  // uninitialized.
+  if (!IsPedantic && !F.isAnyFieldInitialized())
     return;
 
   // There are uninitialized fields in the record.
@@ -192,18 +198,12 @@ void UninitializedObjectChecker::checkEndFunction(
 //===----------------------------------------------------------------------===//
 
 FindUninitializedFields::FindUninitializedFields(
-    ProgramStateRef State, const TypedValueRegion *const R, bool IsPedantic,
+    ProgramStateRef State, const TypedValueRegion *const R,
     bool CheckPointeeInitialization)
-    : State(State), ObjectR(R), IsPedantic(IsPedantic),
-      CheckPointeeInitialization(CheckPointeeInitialization) {}
+    : State(State), ObjectR(R),
+      CheckPointeeInitialization(CheckPointeeInitialization) {
 
-const UninitFieldMap &FindUninitializedFields::getUninitFields() {
   isNonUnionUninit(ObjectR, FieldChainInfo(ChainFactory));
-
-  if (!IsPedantic && !IsAnyFieldInitialized)
-    UninitFields.clear();
-
-  return UninitFields;
 }
 
 bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain) {
