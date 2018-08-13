@@ -265,7 +265,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    if (T->isPointerType() || T->isReferenceType() || T->isBlockPointerType()) {
+    if (T->isAnyPointerType() || T->isReferenceType() || T->isBlockPointerType()) {
       if (isPointerOrReferenceUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
