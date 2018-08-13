@@ -249,11 +249,11 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 // temporary! The following is equivalent on all supported platforms but
 // aarch64 (which uses a different register for sret value).  We have a test
 // to confirm that.
-INTERCEPTOR(void, mallinfo, __sanitizer_mallinfo *sret) {
+INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
 #ifdef __aarch64__
   uptr r8;
   asm volatile("mov %0,x8" : "=r" (r8));
-  sret = reinterpret_cast<__sanitizer_mallinfo*>(r8);
+  sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
 #endif
   REAL(memset)(sret, 0, sizeof(*sret));
   __msan_unpoison(sret, sizeof(*sret));

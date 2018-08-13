@@ -20,6 +20,9 @@
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_shadow_init();
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_init();
 
 using __sanitizer::uptr;

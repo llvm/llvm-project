@@ -57,6 +57,7 @@ Flags *flags() {
 }
 
 int hwasan_inited = 0;
+int hwasan_shadow_inited = 0;
 bool hwasan_init_is_running;
 
 int hwasan_report_count = 0;
@@ -161,6 +162,22 @@ using namespace __hwasan;
 
 uptr __hwasan_shadow_memory_dynamic_address;  // Global interface symbol.
 
+void __hwasan_shadow_init() {
+  if (hwasan_shadow_inited) return;
+  if (!InitShadow()) {
+    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
+    if (HWASAN_FIXED_MAPPING) {
+      Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
+      Printf("FATAL: Disabling ASLR is known to cause this error.\n");
+      Printf("FATAL: If running under GDB, try "
+             "'set disable-randomization off'.\n");
+    }
+    DumpProcessMap();
+    Die();
+  }
+  hwasan_shadow_inited = 1;
+}
+
 void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
   if (hwasan_inited) return;
@@ -178,17 +195,8 @@ void __hwasan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   DisableCoreDumperIfNecessary();
-  if (!InitShadow()) {
-    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
-    if (HWASAN_FIXED_MAPPING) {
-      Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
-      Printf("FATAL: Disabling ASLR is known to cause this error.\n");
-      Printf("FATAL: If running under GDB, try "
-             "'set disable-randomization off'.\n");
-    }
-    DumpProcessMap();
-    Die();
-  }
+  __hwasan_shadow_init();
+  MadviseShadow();
 
   InitializeInterceptors();
   InstallDeadlySignalHandlers(HwasanOnDeadlySignal);
