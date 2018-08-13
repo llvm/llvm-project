@@ -401,5 +401,17 @@ std::string sortText(float Score, llvm::StringRef Name) {
   return S;
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SignatureQualitySignals &S) {
+  OS << formatv("=== Signature Quality:\n");
+  OS << formatv("\tNumber of parameters: {0}\n", S.NumberOfParameters);
+  OS << formatv("\tNumber of optional parameters: {0}\n",
+                S.NumberOfOptionalParameters);
+  OS << formatv("\tContains active parameter: {0}\n",
+                S.ContainsActiveParameter);
+  OS << formatv("\tKind: {0}\n", S.Kind);
+  return OS;
+}
+
 } // namespace clangd
 } // namespace clang

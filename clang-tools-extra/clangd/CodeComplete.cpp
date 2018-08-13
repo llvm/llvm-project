@@ -129,16 +129,16 @@ toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
 /// Get the optional chunk as a string. This function is possibly recursive.
 ///
 /// The parameter info for each parameter is appended to the Parameters.
-std::string
-getOptionalParameters(const CodeCompletionString &CCS,
-                      std::vector<ParameterInformation> &Parameters) {
+std::string getOptionalParameters(const CodeCompletionString &CCS,
+                                  std::vector<ParameterInformation> &Parameters,
+                                  SignatureQualitySignals &Signal) {
   std::string Result;
   for (const auto &Chunk : CCS) {
     switch (Chunk.Kind) {
     case CodeCompletionString::CK_Optional:
       assert(Chunk.Optional &&
              "Expected the optional code completion string to be non-null.");
-      Result += getOptionalParameters(*Chunk.Optional, Parameters);
+      Result += getOptionalParameters(*Chunk.Optional, Parameters, Signal);
       break;
     case CodeCompletionString::CK_VerticalSpace:
       break;
@@ -154,6 +154,8 @@ getOptionalParameters(const CodeCompletionString &CCS,
       ParameterInformation Info;
       Info.label = Chunk.Text;
       Parameters.push_back(std::move(Info));
+      Signal.ContainsActiveParameter = true;
+      Signal.NumberOfOptionalParameters++;
       break;
     }
     default:
@@ -685,6 +687,9 @@ private:
   llvm::unique_function<void()> ResultsCallback;
 };
 
+using ScoredSignature =
+    std::pair<SignatureQualitySignals, SignatureInformation>;
+
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 
 public:
@@ -698,7 +703,9 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates) override {
+    std::vector<ScoredSignature> ScoredSignatures;
     SigHelp.signatures.reserve(NumCandidates);
+    ScoredSignatures.reserve(NumCandidates);
     // FIXME(rwols): How can we determine the "active overload candidate"?
     // Right now the overloaded candidates seem to be provided in a "best fit"
     // order, so I'm not too worried about this.
@@ -712,11 +719,45 @@ public:
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       // FIXME: for headers, we need to get a comment from the index.
-      SigHelp.signatures.push_back(processOverloadCandidate(
+      ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
           getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
                                  /*CommentsFromHeaders=*/false)));
     }
+    std::sort(ScoredSignatures.begin(), ScoredSignatures.end(),
+              [](const ScoredSignature &L, const ScoredSignature &R) {
+                // Ordering follows:
+                // - Less number of parameters is better.
+                // - Function is better than FunctionType which is better than
+                // Function Template.
+                // - High score is better.
+                // - Shorter signature is better.
+                // - Alphebatically smaller is better.
+                if (L.first.NumberOfParameters != R.first.NumberOfParameters)
+                  return L.first.NumberOfParameters <
+                         R.first.NumberOfParameters;
+                if (L.first.NumberOfOptionalParameters !=
+                    R.first.NumberOfOptionalParameters)
+                  return L.first.NumberOfOptionalParameters <
+                         R.first.NumberOfOptionalParameters;
+                if (L.first.Kind != R.first.Kind) {
+                  using OC = CodeCompleteConsumer::OverloadCandidate;
+                  switch (L.first.Kind) {
+                  case OC::CK_Function:
+                    return true;
+                  case OC::CK_FunctionType:
+                    return R.first.Kind != OC::CK_Function;
+                  case OC::CK_FunctionTemplate:
+                    return false;
+                  }
+                  llvm_unreachable("Unknown overload candidate type.");
+                }
+                if (L.second.label.size() != R.second.label.size())
+                  return L.second.label.size() < R.second.label.size();
+                return L.second.label < R.second.label;
+              });
+    for (const auto &SS : ScoredSignatures)
+      SigHelp.signatures.push_back(SS.second);
   }
 
   GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
@@ -726,14 +767,15 @@ public:
 private:
   // FIXME(ioeric): consider moving CodeCompletionString logic here to
   // CompletionString.h.
-  SignatureInformation
-  processOverloadCandidate(const OverloadCandidate &Candidate,
-                           const CodeCompletionString &CCS,
-                           llvm::StringRef DocComment) const {
+  ScoredSignature processOverloadCandidate(const OverloadCandidate &Candidate,
+                                           const CodeCompletionString &CCS,
+                                           llvm::StringRef DocComment) const {
     SignatureInformation Result;
+    SignatureQualitySignals Signal;
     const char *ReturnType = nullptr;
 
     Result.documentation = formatDocumentation(CCS, DocComment);
+    Signal.Kind = Candidate.getKind();
 
     for (const auto &Chunk : CCS) {
       switch (Chunk.Kind) {
@@ -755,6 +797,8 @@ private:
         ParameterInformation Info;
         Info.label = Chunk.Text;
         Result.parameters.push_back(std::move(Info));
+        Signal.NumberOfParameters++;
+        Signal.ContainsActiveParameter = true;
         break;
       }
       case CodeCompletionString::CK_Optional: {
@@ -762,7 +806,7 @@ private:
         assert(Chunk.Optional &&
                "Expected the optional code completion string to be non-null.");
         Result.label +=
-            getOptionalParameters(*Chunk.Optional, Result.parameters);
+            getOptionalParameters(*Chunk.Optional, Result.parameters, Signal);
         break;
       }
       case CodeCompletionString::CK_VerticalSpace:
@@ -776,7 +820,8 @@ private:
       Result.label += " -> ";
       Result.label += ReturnType;
     }
-    return Result;
+    dlog("Signal for {0}: {1}", Result, Signal);
+    return {Signal, Result};
   }
 
   SignatureHelp &SigHelp;
