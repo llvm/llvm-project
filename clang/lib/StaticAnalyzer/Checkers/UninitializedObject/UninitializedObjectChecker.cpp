@@ -46,7 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "../ClangSACheckers.h"
 #include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -74,7 +74,7 @@ public:
 
 /// A basic field type, that is not a pointer or a reference, it's dynamic and
 /// static type is the same.
-class RegularField : public FieldNode {
+class RegularField final : public FieldNode {
 public:
   RegularField(const FieldRegion *FR) : FieldNode(FR) {}
 
@@ -84,7 +84,7 @@ public:
 
   virtual void printPrefix(llvm::raw_ostream &Out) const override {}
 
-  virtual void printNode(llvm::raw_ostream &Out) const {
+  virtual void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl());
   }
 

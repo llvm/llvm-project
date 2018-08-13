@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "../ClangSACheckers.h"
 #include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -31,7 +31,7 @@ using namespace clang::ento;
 namespace {
 
 /// Represents a pointer or a reference field.
-class LocField : public FieldNode {
+class LocField final : public FieldNode {
   /// We'll store whether the pointee or the pointer itself is uninitialited.
   const bool IsDereferenced;
 
