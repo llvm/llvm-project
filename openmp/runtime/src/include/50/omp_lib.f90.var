@@ -531,11 +531,12 @@
             integer (kind=omp_lock_hint_kind), value :: hint
           end subroutine omp_init_nest_lock_with_hint
 
-          function omp_control_tool(command, modifier) bind(c)
+          function omp_control_tool(command, modifier, arg) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_control_tool
             integer (kind=omp_control_tool_kind), value :: command
             integer (kind=omp_control_tool_kind), value :: modifier
+            integer (kind=kmp_pointer_kind), optional :: arg
           end function omp_control_tool
 
         end interface
