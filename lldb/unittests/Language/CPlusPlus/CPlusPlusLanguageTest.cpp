@@ -183,4 +183,5 @@ TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
   EXPECT_THAT(FindAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
   EXPECT_THAT(FindAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
   EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
+  EXPECT_THAT(FindAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
 }

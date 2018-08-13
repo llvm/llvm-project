@@ -95,7 +95,7 @@ define <2 x float> @test_simplify5v(<2 x float> %x) {
 ; CHECK-LABEL: @test_simplify5v(
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 0.0, float 0.0>)
   ret <2 x float> %retval
-; CHECK-NEXT: %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
+; CHECK-NEXT: ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
 }
 
 define double @test_simplify6(double %x) {
@@ -109,7 +109,7 @@ define <2 x double> @test_simplify6v(<2 x double> %x) {
 ; CHECK-LABEL: @test_simplify6v(
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 0.0, double 0.0>)
   ret <2 x double> %retval
-; CHECK-NEXT: %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> zeroinitializer)
+; CHECK-NEXT: ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
 }
 
 ; Check pow(x, 0.5) -> fabs(sqrt(x)), where x != -infinity.
@@ -165,7 +165,7 @@ define <2 x float> @test_simplify11v(<2 x float> %x) {
 ; CHECK-LABEL: @test_simplify11v(
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 1.0, float 1.0>)
   ret <2 x float> %retval
-; CHECK-NEXT: %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 1.000000e+00, float 1.000000e+00>)
+; CHECK-NEXT: ret <2 x float> %x
 }
 
 define double @test_simplify12(double %x) {
@@ -179,7 +179,7 @@ define <2 x double> @test_simplify12v(<2 x double> %x) {
 ; CHECK-LABEL: @test_simplify12v(
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 1.0, double 1.0>)
   ret <2 x double> %retval
-; CHECK-NEXT: %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 1.000000e+00, double 1.000000e+00>)
+; CHECK-NEXT: ret <2 x double> %x
 }
 
 ; Check pow(x, 2.0) -> x*x.
@@ -195,7 +195,7 @@ define float @pow2_strict(float %x) {
 
 define <2 x float> @pow2_strictv(<2 x float> %x) {
 ; CHECK-LABEL: @pow2_strictv(
-; CHECK-NEXT:    [[POW2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 2.000000e+00, float 2.000000e+00>)
+; CHECK-NEXT:    [[POW2:%.*]] = fmul <2 x float> %x, %x
 ; CHECK-NEXT:    ret <2 x float> [[POW2]]
 ;
   %r = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float 2.0, float 2.0>)
@@ -212,7 +212,7 @@ define double @pow2_double_strict(double %x) {
 }
 define <2 x double> @pow2_double_strictv(<2 x double> %x) {
 ; CHECK-LABEL: @pow2_double_strictv(
-; CHECK-NEXT:    [[POW2:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 2.000000e+00, double 2.000000e+00>)
+; CHECK-NEXT:    [[POW2:%.*]] = fmul <2 x double> %x, %x
 ; CHECK-NEXT:    ret <2 x double> [[POW2]]
 ;
   %r = call <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 2.0, double 2.0>)
@@ -243,7 +243,7 @@ define float @pow_neg1_strict(float %x) {
 
 define <2 x float> @pow_neg1_strictv(<2 x float> %x) {
 ; CHECK-LABEL: @pow_neg1_strictv(
-; CHECK-NEXT:    [[POWRECIP:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float -1.000000e+00, float -1.000000e+00>)
+; CHECK-NEXT:    [[POWRECIP:%.*]] = fdiv <2 x float> <float 1.000000e+00, float 1.000000e+00>, %x
 ; CHECK-NEXT:    ret <2 x float> [[POWRECIP]]
 ;
   %r = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> <float -1.0, float -1.0>)
@@ -261,7 +261,7 @@ define double @pow_neg1_double_fast(double %x) {
 
 define <2 x double> @pow_neg1_double_fastv(<2 x double> %x) {
 ; CHECK-LABEL: @pow_neg1_double_fastv(
-; CHECK-NEXT:    [[POWRECIP:%.*]] = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -1.000000e+00, double -1.000000e+00>)
+; CHECK-NEXT:    [[POWRECIP:%.*]] = fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>, %x
 ; CHECK-NEXT:    ret <2 x double> [[POWRECIP]]
 ;
   %r = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -1.0, double -1.0>)

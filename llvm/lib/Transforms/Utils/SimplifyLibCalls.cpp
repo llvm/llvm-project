@@ -1211,6 +1211,10 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   Value *Shrunk = nullptr;
   bool Ignored;
 
+  // Bail out if simplifying libcalls to pow() is disabled.
+  if (!hasUnaryFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
+    return nullptr;
+
   // Propagate the math semantics from the call to any created instructions.
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
@@ -1252,9 +1256,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     Function *CalleeFn = BaseFn->getCalledFunction();
     if (CalleeFn && TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
         (LibFn == LibFunc_exp || LibFn == LibFunc_exp2) && TLI->has(LibFn)) {
-      IRBuilder<>::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(Pow->getFastMathFlags());
-
       Value *FMul = B.CreateFMul(BaseFn->getArgOperand(0), Expo, "mul");
       return emitUnaryFloatFnCall(FMul, CalleeFn->getName(), B,
                                   CalleeFn->getAttributes());
@@ -1263,31 +1264,28 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
 
   // Evaluate special cases related to the exponent.
 
-  if (Value *Sqrt = replacePowWithSqrt(Pow, B))
-    return Sqrt;
-
-  ConstantFP *ExpoC = dyn_cast<ConstantFP>(Expo);
-  if (!ExpoC)
-    return Shrunk;
-
   // pow(x, -1.0) -> 1.0 / x
-  if (ExpoC->isExactlyValue(-1.0))
+  if (match(Expo, m_SpecificFP(-1.0)))
     return B.CreateFDiv(ConstantFP::get(Ty, 1.0), Base, "reciprocal");
 
   // pow(x, 0.0) -> 1.0
-  if (ExpoC->getValueAPF().isZero())
-    return ConstantFP::get(Ty, 1.0);
+  if (match(Expo, m_SpecificFP(0.0)))
+      return ConstantFP::get(Ty, 1.0);
 
   // pow(x, 1.0) -> x
-  if (ExpoC->isExactlyValue(1.0))
+  if (match(Expo, m_FPOne()))
     return Base;
 
   // pow(x, 2.0) -> x * x
-  if (ExpoC->isExactlyValue(2.0))
+  if (match(Expo, m_SpecificFP(2.0)))
     return B.CreateFMul(Base, Base, "square");
 
+  if (Value *Sqrt = replacePowWithSqrt(Pow, B))
+    return Sqrt;
+
   // FIXME: Correct the transforms and pull this into replacePowWithSqrt().
-  if (ExpoC->isExactlyValue(0.5) &&
+  ConstantFP *ExpoC = dyn_cast<ConstantFP>(Expo);
+  if (ExpoC && ExpoC->isExactlyValue(0.5) &&
       hasUnaryFloatFn(TLI, Ty, LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl)) {
     // Expand pow(x, 0.5) to (x == -infinity ? +infinity : fabs(sqrt(x))).
     // This is faster than calling pow(), and still handles -0.0 and
@@ -1307,30 +1305,29 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
     return Sqrt;
   }
 
-  // pow(x, n) -> x * x * x * ....
-  if (Pow->isFast()) {
-    APFloat ExpoA = abs(ExpoC->getValueAPF());
-    // We limit to a max of 7 fmul(s). Thus the maximum exponent is 32.
-    // This transformation applies to integer exponents only.
-    if (!ExpoA.isInteger() ||
-        ExpoA.compare
-            (APFloat(ExpoA.getSemantics(), 32.0)) == APFloat::cmpGreaterThan)
-      return Shrunk;
+  // pow(x, n) -> x * x * x * ...
+  const APFloat *ExpoF;
+  if (Pow->isFast() && match(Expo, m_APFloat(ExpoF))) {
+    // We limit to a max of 7 multiplications, thus the maximum exponent is 32.
+    APFloat LimF(ExpoF->getSemantics(), 33.0),
+            ExpoA(abs(*ExpoF));
+    if (ExpoA.isInteger() && ExpoA.compare(LimF) == APFloat::cmpLessThan) {
+      // We will memoize intermediate products of the Addition Chain.
+      Value *InnerChain[33] = {nullptr};
+      InnerChain[1] = Base;
+      InnerChain[2] = B.CreateFMul(Base, Base, "square");
 
-    // We will memoize intermediate products of the Addition Chain.
-    Value *InnerChain[33] = {nullptr};
-    InnerChain[1] = Base;
-    InnerChain[2] = B.CreateFMul(Base, Base, "square");
+      // We cannot readily convert a non-double type (like float) to a double.
+      // So we first convert it to something which could be converted to double.
+      ExpoA.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
+      Value *FMul = getPow(InnerChain, ExpoA.convertToDouble(), B);
 
-    // We cannot readily convert a non-double type (like float) to a double.
-    // So we first convert it to something which could be converted to double.
-    ExpoA.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
-    Value *FMul = getPow(InnerChain, ExpoA.convertToDouble(), B);
+      // If the exponent is negative, then get the reciprocal.
+      if (ExpoF->isNegative())
+        FMul = B.CreateFDiv(ConstantFP::get(Ty, 1.0), FMul, "reciprocal");
 
-    // If the exponent is negative, then get the reciprocal.
-    if (ExpoC->isNegative())
-      FMul = B.CreateFDiv(ConstantFP::get(Ty, 1.0), FMul, "reciprocal");
-    return FMul;
+      return FMul;
+    }
   }
 
   return Shrunk;
