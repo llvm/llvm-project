@@ -276,8 +276,6 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (Expr == R_TLSDESC_CALL)
-    return 1;
   return 0;
 }
 
