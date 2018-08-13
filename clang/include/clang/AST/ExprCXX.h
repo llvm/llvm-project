@@ -1486,11 +1486,11 @@ public:
   using arg_iterator = ExprIterator;
   using const_arg_iterator = ConstExprIterator;
   using arg_range = llvm::iterator_range<arg_iterator>;
-  using arg_const_range = llvm::iterator_range<const_arg_iterator>;
+  using const_arg_range = llvm::iterator_range<const_arg_iterator>;
 
   arg_range arguments() { return arg_range(arg_begin(), arg_end()); }
-  arg_const_range arguments() const {
-    return arg_const_range(arg_begin(), arg_end());
+  const_arg_range arguments() const {
+    return const_arg_range(arg_begin(), arg_end());
   }
 
   arg_iterator arg_begin() { return Args; }
@@ -3426,15 +3426,21 @@ public:
   unsigned arg_size() const { return NumArgs; }
 
   using arg_iterator = Expr **;
+  using arg_range = llvm::iterator_range<arg_iterator>;
 
   arg_iterator arg_begin() { return getTrailingObjects<Expr *>(); }
   arg_iterator arg_end() { return arg_begin() + NumArgs; }
+  arg_range arguments() { return arg_range(arg_begin(), arg_end()); }
 
   using const_arg_iterator = const Expr* const *;
+  using const_arg_range = llvm::iterator_range<const_arg_iterator>;
 
   const_arg_iterator arg_begin() const { return getTrailingObjects<Expr *>(); }
   const_arg_iterator arg_end() const {
     return arg_begin() + NumArgs;
+  }
+  const_arg_range arguments() const {
+    return const_arg_range(arg_begin(), arg_end());
   }
 
   Expr *getArg(unsigned I) {

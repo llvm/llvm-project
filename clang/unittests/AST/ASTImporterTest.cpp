@@ -814,9 +814,6 @@ TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
       functionTemplateDecl());
 }
 
-const internal::VariadicDynCastAllOfMatcher<Expr, CXXDependentScopeMemberExpr>
-    cxxDependentScopeMemberExpr;
-
 TEST_P(ImportExpr, ImportCXXDependentScopeMemberExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
@@ -2363,9 +2360,6 @@ TEST_P(ImportExpr, DependentNameType) {
              classTemplateDecl(has(
                  cxxRecordDecl(has(typedefDecl(has(dependentNameType())))))));
 }
-
-const internal::VariadicDynCastAllOfMatcher<Expr, UnresolvedMemberExpr>
-    unresolvedMemberExpr;
 
 TEST_P(ImportExpr, UnresolvedMemberExpr) {
   MatchVerifier<Decl> Verifier;

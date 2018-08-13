@@ -868,6 +868,7 @@ void Preprocessor::Lex(Token &Result) {
   if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
     // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
+    setCodeCompletionTokenRange(Result.getLocation(), Result.getEndLoc());
     // Set IdenfitierInfo to null to avoid confusing code that handles both
     // identifiers and completion tokens.
     Result.setIdentifierInfo(nullptr);
