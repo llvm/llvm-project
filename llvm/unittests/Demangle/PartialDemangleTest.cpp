@@ -58,7 +58,7 @@ static ChoppedName NamesToTest[] = {
    "mfn", "void", "(int, char, float, unsigned int, char, double)"},
 };
 
-TEST(PartialDemangleTest, TestNameChopping) {
+TEST(PartialDemanglerTest, TestNameChopping) {
   size_t Size = 1;
   char *Buf = static_cast<char *>(std::malloc(Size));
 
@@ -86,7 +86,7 @@ TEST(PartialDemangleTest, TestNameChopping) {
   std::free(Buf);
 }
 
-TEST(PartialDemangleTest, TestNameMeta) {
+TEST(PartialDemanglerTest, TestNameMeta) {
   llvm::ItaniumPartialDemangler Demangler;
 
   EXPECT_FALSE(Demangler.partialDemangle("_ZNK1f1gEv"));
