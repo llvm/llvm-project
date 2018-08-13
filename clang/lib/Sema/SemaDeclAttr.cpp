@@ -4885,7 +4885,7 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
 
 static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!isa<TagDecl>(D)) {
-    S.Diag(D->getLocStart(), diag::err_nserrordomain_not_tagdecl)
+    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_not_tagdecl)
         << S.getLangOpts().CPlusPlus;
     return;
   }
@@ -4895,7 +4895,7 @@ static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
     // Try to locate the argument directly
     SourceLocation loc = Attr.getLoc();
     if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
-      loc = Attr.getArgAsExpr(0)->getLocStart();
+      loc = Attr.getArgAsExpr(0)->getBeginLoc();
 
     S.Diag(loc, diag::err_nserrordomain_requires_identifier);
     return;

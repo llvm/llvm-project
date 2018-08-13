@@ -18,7 +18,7 @@ namespace tooling {
 SourceLocation findLastLocationOfSourceConstruct(SourceLocation HeaderEnd,
                                                  const Stmt *Body,
                                                  const SourceManager &SM) {
-  SourceLocation BodyStart = SM.getSpellingLoc(Body->getLocStart());
+  SourceLocation BodyStart = SM.getSpellingLoc(Body->getBeginLoc());
   unsigned BodyLine = SM.getSpellingLineNumber(BodyStart);
   unsigned HeaderLine = SM.getSpellingLineNumber(HeaderEnd);
 
@@ -40,7 +40,7 @@ SourceLocation findFirstLocationOfSourceConstruct(SourceLocation HeaderStart,
                                                   const SourceManager &SM) {
   if (!isa<CompoundStmt>(PreviousBody))
     return HeaderStart;
-  SourceLocation BodyEnd = SM.getSpellingLoc(PreviousBody->getLocEnd());
+  SourceLocation BodyEnd = SM.getSpellingLoc(PreviousBody->getEndLoc());
   unsigned BodyLine = SM.getSpellingLineNumber(BodyEnd);
   unsigned HeaderLine = SM.getSpellingLineNumber(HeaderStart);
   if (BodyLine >= HeaderLine)
@@ -88,8 +88,8 @@ SourceRange getRangeOfNextToken(SourceLocation Loc, tok::TokenKind Kind,
 SourceLocation findLastNonCompoundLocation(const Stmt *S) {
   const auto *CS = dyn_cast<CompoundStmt>(S);
   if (!CS)
-    return S->getLocEnd();
-  return CS->body_back() ? CS->body_back()->getLocEnd() : SourceLocation();
+    return S->getEndLoc();
+  return CS->body_back() ? CS->body_back()->getEndLoc() : SourceLocation();
 }
 
 bool areOnSameLine(SourceLocation Loc1, SourceLocation Loc2,
