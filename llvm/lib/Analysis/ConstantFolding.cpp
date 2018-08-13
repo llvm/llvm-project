@@ -1413,6 +1413,22 @@ bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
   case Intrinsic::x86_sse2_cvtsd2si64:
   case Intrinsic::x86_sse2_cvttsd2si:
   case Intrinsic::x86_sse2_cvttsd2si64:
+  case Intrinsic::x86_avx512_vcvtss2si32:
+  case Intrinsic::x86_avx512_vcvtss2si64:
+  case Intrinsic::x86_avx512_cvttss2si:
+  case Intrinsic::x86_avx512_cvttss2si64:
+  case Intrinsic::x86_avx512_vcvtsd2si32:
+  case Intrinsic::x86_avx512_vcvtsd2si64:
+  case Intrinsic::x86_avx512_cvttsd2si:
+  case Intrinsic::x86_avx512_cvttsd2si64:
+  case Intrinsic::x86_avx512_vcvtss2usi32:
+  case Intrinsic::x86_avx512_vcvtss2usi64:
+  case Intrinsic::x86_avx512_cvttss2usi:
+  case Intrinsic::x86_avx512_cvttss2usi64:
+  case Intrinsic::x86_avx512_vcvtsd2usi32:
+  case Intrinsic::x86_avx512_vcvtsd2usi64:
+  case Intrinsic::x86_avx512_cvttsd2usi:
+  case Intrinsic::x86_avx512_cvttsd2usi64:
     return true;
   default:
     return false;
@@ -1553,7 +1569,7 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double), double V,
 /// result. Returns null if the conversion cannot be performed, otherwise
 /// returns the Constant value resulting from the conversion.
 Constant *ConstantFoldSSEConvertToInt(const APFloat &Val, bool roundTowardZero,
-                                      Type *Ty) {
+                                      Type *Ty, bool IsSigned) {
   // All of these conversion intrinsics form an integer of at most 64bits.
   unsigned ResultWidth = Ty->getIntegerBitWidth();
   assert(ResultWidth <= 64 &&
@@ -1565,11 +1581,11 @@ Constant *ConstantFoldSSEConvertToInt(const APFloat &Val, bool roundTowardZero,
                                               : APFloat::rmNearestTiesToEven;
   APFloat::opStatus status =
       Val.convertToInteger(makeMutableArrayRef(UIntVal), ResultWidth,
-                           /*isSigned=*/true, mode, &isExact);
+                           IsSigned, mode, &isExact);
   if (status != APFloat::opOK &&
       (!roundTowardZero || status != APFloat::opInexact))
     return nullptr;
-  return ConstantInt::get(Ty, UIntVal, /*isSigned=*/true);
+  return ConstantInt::get(Ty, UIntVal, IsSigned);
 }
 
 double getValueAsDouble(ConstantFP *Op) {
@@ -1849,7 +1865,8 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         if (ConstantFP *FPOp =
                 dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
           return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
-                                             /*roundTowardZero=*/false, Ty);
+                                             /*roundTowardZero=*/false, Ty,
+                                             /*IsSigned*/true);
         break;
       case Intrinsic::x86_sse_cvttss2si:
       case Intrinsic::x86_sse_cvttss2si64:
@@ -1858,7 +1875,8 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         if (ConstantFP *FPOp =
                 dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
           return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
-                                             /*roundTowardZero=*/true, Ty);
+                                             /*roundTowardZero=*/true, Ty,
+                                             /*IsSigned*/true);
         break;
       }
     }
@@ -1982,6 +2000,59 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
       }
 
       return nullptr;
+    }
+
+    // Support ConstantVector in case we have an Undef in the top.
+    if ((isa<ConstantVector>(Operands[0]) ||
+         isa<ConstantDataVector>(Operands[0])) &&
+        // Check for default rounding mode.
+        // FIXME: Support other rounding modes?
+        isa<ConstantInt>(Operands[1]) &&
+        cast<ConstantInt>(Operands[1])->getValue() == 4) {
+      auto *Op = cast<Constant>(Operands[0]);
+      switch (IntrinsicID) {
+      default: break;
+      case Intrinsic::x86_avx512_vcvtss2si32:
+      case Intrinsic::x86_avx512_vcvtss2si64:
+      case Intrinsic::x86_avx512_vcvtsd2si32:
+      case Intrinsic::x86_avx512_vcvtsd2si64:
+        if (ConstantFP *FPOp =
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/false, Ty,
+                                             /*IsSigned*/true);
+        break;
+      case Intrinsic::x86_avx512_vcvtss2usi32:
+      case Intrinsic::x86_avx512_vcvtss2usi64:
+      case Intrinsic::x86_avx512_vcvtsd2usi32:
+      case Intrinsic::x86_avx512_vcvtsd2usi64:
+        if (ConstantFP *FPOp =
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/false, Ty,
+                                             /*IsSigned*/false);
+        break;
+      case Intrinsic::x86_avx512_cvttss2si:
+      case Intrinsic::x86_avx512_cvttss2si64:
+      case Intrinsic::x86_avx512_cvttsd2si:
+      case Intrinsic::x86_avx512_cvttsd2si64:
+        if (ConstantFP *FPOp =
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/true, Ty,
+                                             /*IsSigned*/true);
+        break;
+      case Intrinsic::x86_avx512_cvttss2usi:
+      case Intrinsic::x86_avx512_cvttss2usi64:
+      case Intrinsic::x86_avx512_cvttsd2usi:
+      case Intrinsic::x86_avx512_cvttsd2usi64:
+        if (ConstantFP *FPOp =
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/true, Ty,
+                                             /*IsSigned*/false);
+        break;
+      }
     }
     return nullptr;
   }

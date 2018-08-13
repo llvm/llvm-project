@@ -16,8 +16,8 @@
 define float @fmul_fadd(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fadd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %x, %z
   %t2 = fmul float %y, %z
@@ -25,14 +25,12 @@ define float @fmul_fadd(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Verify vector types and commuted operands.
 
 define <2 x float> @fmul_fadd_commute1_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fmul_fadd_commute1_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fmul <2 x float> [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul <2 x float> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz <2 x float> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = fmul <2 x float> %z, %x
@@ -41,14 +39,12 @@ define <2 x float> @fmul_fadd_commute1_vec(<2 x float> %x, <2 x float> %y, <2 x 
   ret <2 x float> %r
 }
 
-; FIXME:
 ; Verify vector types, commuted operands, FMF propagation.
 
 define <2 x float> @fmul_fadd_commute2_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fmul_fadd_commute2_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fmul fast <2 x float> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul nnan <2 x float> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc ninf nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc ninf nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf nsz <2 x float> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = fmul fast <2 x float> %x, %z
@@ -62,8 +58,8 @@ define <2 x float> @fmul_fadd_commute2_vec(<2 x float> %x, <2 x float> %y, <2 x 
 define double @fmul_fadd_commute3(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fmul_fadd_commute3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nnan nsz double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan nsz double [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nnan nsz double [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret double [[R]]
 ;
   %t1 = fmul double %z, %x
   %t2 = fmul fast double %y, %z
@@ -88,16 +84,15 @@ define float @fmul_fadd_not_enough_FMF(float %x, float %y, float %z) {
 
 declare void @use(float)
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fadd_uses1(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fadd_uses1(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %z, %x
   %t2 = fmul float %y, %z
@@ -106,16 +101,15 @@ define float @fmul_fadd_uses1(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fadd_uses2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fadd_uses2(
-; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul float [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %z, %x
   %t2 = fmul float %z, %y
@@ -124,18 +118,16 @@ define float @fmul_fadd_uses2(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fadd_uses3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fadd_uses3(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %x, %z
   %t2 = fmul float %z, %y
@@ -150,8 +142,8 @@ define float @fmul_fadd_uses3(float %x, float %y, float %z) {
 define half @fmul_fsub(half %x, half %y, half %z) {
 ; CHECK-LABEL: @fmul_fsub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz half [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz half [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret half [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz half [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret half [[R]]
 ;
   %t1 = fmul half %x, %z
   %t2 = fmul half %y, %z
@@ -159,14 +151,12 @@ define half @fmul_fsub(half %x, half %y, half %z) {
   ret half %r
 }
 
-; FIXME:
 ; Verify vector types and commuted operands.
 
 define <2 x float> @fmul_fsub_commute1_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fmul_fsub_commute1_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fmul <2 x float> [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul <2 x float> [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz <2 x float> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = fmul <2 x float> %z, %x
@@ -175,14 +165,12 @@ define <2 x float> @fmul_fsub_commute1_vec(<2 x float> %x, <2 x float> %y, <2 x 
   ret <2 x float> %r
 }
 
-; FIXME:
 ; Verify vector types, commuted operands, FMF propagation.
 
 define <2 x float> @fmul_fsub_commute2_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fmul_fsub_commute2_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fmul fast <2 x float> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul nnan <2 x float> [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc ninf nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc ninf nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf nsz <2 x float> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = fmul fast <2 x float> %x, %z
@@ -196,8 +184,8 @@ define <2 x float> @fmul_fsub_commute2_vec(<2 x float> %x, <2 x float> %y, <2 x 
 define double @fmul_fsub_commute3(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fmul_fsub_commute3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nnan nsz double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nnan nsz double [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nnan nsz double [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret double [[R]]
 ;
   %t1 = fmul double %z, %x
   %t2 = fmul fast double %z, %y
@@ -220,16 +208,15 @@ define float @fmul_fsub_not_enough_FMF(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fsub_uses1(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fsub_uses1(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %x, %z
   %t2 = fmul float %y, %z
@@ -238,16 +225,15 @@ define float @fmul_fsub_uses1(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fsub_uses2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fsub_uses2(
-; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul float [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %z, %x
   %t2 = fmul float %z, %y
@@ -256,18 +242,16 @@ define float @fmul_fsub_uses2(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fmul_fsub_uses3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmul_fsub_uses3(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul float [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fmul float [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fmul float %x, %z
   %t2 = fmul float %y, %z
@@ -282,8 +266,8 @@ define float @fmul_fsub_uses3(float %x, float %y, float %z) {
 define double @fdiv_fadd(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fdiv_fadd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv reassoc nsz double [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc nsz double [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret double [[R]]
 ;
   %t1 = fdiv double %x, %z
   %t2 = fdiv double %y, %z
@@ -294,8 +278,8 @@ define double @fdiv_fadd(double %x, double %y, double %z) {
 define float @fdiv_fsub(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fdiv_fsub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc nsz float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float %x, %z
   %t2 = fdiv nnan float %y, %z
@@ -303,14 +287,12 @@ define float @fdiv_fsub(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Verify vector types.
 
 define <2 x double> @fdiv_fadd_vec(<2 x double> %x, <2 x double> %y, <2 x double> %z) {
 ; CHECK-LABEL: @fdiv_fadd_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast <2 x double> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv <2 x double> [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz <2 x double> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc nsz <2 x double> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %t1 = fdiv fast <2 x double> %x, %z
@@ -319,14 +301,12 @@ define <2 x double> @fdiv_fadd_vec(<2 x double> %x, <2 x double> %y, <2 x double
   ret <2 x double> %r
 }
 
-; FIXME:
 ; Verify vector types.
 
 define <2 x float> @fdiv_fsub_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fdiv_fsub_vec(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv <2 x float> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv nnan <2 x float> [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc nsz <2 x float> [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = fdiv <2 x float> %x, %z
@@ -395,16 +375,15 @@ define float @fdiv_fsub_not_enough_FMF(float %x, float %y, float %z) {
   ret float %t3
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fdiv_fadd_uses1(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fdiv_fadd_uses1(
 ; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float %x, %z
   %t2 = fdiv fast float %y, %z
@@ -413,16 +392,15 @@ define float @fdiv_fadd_uses1(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fdiv_fsub_uses2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fdiv_fsub_uses2(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float %x, %z
   %t2 = fdiv fast float %y, %z
@@ -431,18 +409,16 @@ define float @fdiv_fsub_uses2(float %x, float %y, float %z) {
   ret float %r
 }
 
-; FIXME:
 ; Negative test - extra uses should disable the fold.
 
 define float @fdiv_fsub_uses3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fdiv_fsub_uses3(
 ; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float [[T1]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
 ; CHECK-NEXT:    call void @use(float [[T2]])
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float %x, %z
   %t2 = fdiv fast float %y, %z
@@ -456,8 +432,8 @@ define float @fdiv_fsub_uses3(float %x, float %y, float %z) {
 
 define float @fdiv_fadd_not_denorm(float %x) {
 ; CHECK-LABEL: @fdiv_fadd_not_denorm(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float 0x3818000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv fast float 0x3818000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %t1 = fdiv fast float 0x3810000000000000, %x
   %t2 = fdiv fast float 0x3800000000000000, %x

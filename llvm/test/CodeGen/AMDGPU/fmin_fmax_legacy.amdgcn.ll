@@ -1,7 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-SAFE -check-prefix=GCN %s
-; RUN: llc -enable-no-nans-fp-math -enable-unsafe-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-NONAN -check-prefix=GCN %s
-
-; FIXME: Should replace unsafe-fp-math with no signed zeros.
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-NONAN -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}min_fneg_select_regression_0:
 ; GCN-SAFE: v_max_legacy_f32_e64 [[MIN:v[0-9]+]], -1.0, -v0
