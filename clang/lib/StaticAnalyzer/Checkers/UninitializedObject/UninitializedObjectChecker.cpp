@@ -46,8 +46,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UninitializedObject.h"
 #include "ClangSACheckers.h"
+#include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -87,7 +87,7 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 /// (e.g. if the object is a field of another object, in which case we'd check
 /// it multiple times).
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
-                               CheckerContext &Context);
+                                      CheckerContext &Context);
 
 /// Constructs a note message for a given FieldChainInfo object.
 static void printNoteMessage(llvm::raw_ostream &Out,
@@ -346,6 +346,13 @@ const FieldDecl *FieldChainInfo::getEndOfChain() const {
   return (*Chain.begin())->getDecl();
 }
 
+/// Prints every element except the last to `Out`. Since ImmutableLists store
+/// elements in reverse order, and have no reverse iterators, we use a
+/// recursive function to print the fieldchain correctly. The last element in
+/// the chain is to be printed by `print`.
+static void printTail(llvm::raw_ostream &Out,
+                      const FieldChainInfo::FieldChainImpl *L);
+
 // TODO: This function constructs an incorrect string if a void pointer is a
 // part of the chain:
 //
@@ -383,15 +390,13 @@ void FieldChainInfo::print(llvm::raw_ostream &Out) const {
   if (Chain.isEmpty())
     return;
 
-  const llvm::ImmutableListImpl<const FieldRegion *> *L =
-      Chain.getInternalPointer();
+  const FieldChainImpl *L = Chain.getInternalPointer();
   printTail(Out, L->getTail());
   Out << getVariableName(L->getHead()->getDecl());
 }
 
-void FieldChainInfo::printTail(
-    llvm::raw_ostream &Out,
-    const llvm::ImmutableListImpl<const FieldRegion *> *L) {
+static void printTail(llvm::raw_ostream &Out,
+                      const FieldChainInfo::FieldChainImpl *L) {
   if (!L)
     return;
 
@@ -420,7 +425,7 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
 }
 
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
-                               CheckerContext &Context) {
+                                      CheckerContext &Context) {
 
   Optional<nonloc::LazyCompoundVal> CurrentObject = getObjectVal(Ctor, Context);
   if (!CurrentObject)

@@ -35,6 +35,7 @@ namespace ento {
 /// constructor calls.
 class FieldChainInfo {
 public:
+  using FieldChainImpl = llvm::ImmutableListImpl<const FieldRegion *>;
   using FieldChain = llvm::ImmutableList<const FieldRegion *>;
 
 private:
@@ -48,7 +49,8 @@ public:
   FieldChainInfo(FieldChain::Factory &F) : Factory(F) {}
 
   FieldChainInfo(const FieldChainInfo &Other, const bool IsDereferenced)
-      : Factory(Other.Factory), Chain(Other.Chain), IsDereferenced(IsDereferenced) {}
+      : Factory(Other.Factory), Chain(Other.Chain),
+        IsDereferenced(IsDereferenced) {}
 
   FieldChainInfo(const FieldChainInfo &Other, const FieldRegion *FR,
                  const bool IsDereferenced = false);
@@ -64,12 +66,6 @@ public:
   void print(llvm::raw_ostream &Out) const;
 
 private:
-  /// Prints every element except the last to `Out`. Since ImmutableLists store
-  /// elements in reverse order, and have no reverse iterators, we use a
-  /// recursive function to print the fieldchain correctly. The last element in
-  /// the chain is to be printed by `print`.
-  static void printTail(llvm::raw_ostream &Out,
-                        const llvm::ImmutableListImpl<const FieldRegion *> *L);
   friend struct FieldChainInfoComparator;
 };
 
