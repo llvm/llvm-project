@@ -128,7 +128,8 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
   // If the number of symbols which can form fuzzy matching trigram is not
   // sufficient, generate a single incomplete trigram for query.
   if (ValidSymbolsCount < 3) {
-    std::string Chars = LowercaseQuery.substr(0, std::min(3UL, Query.size()));
+    std::string Chars =
+        LowercaseQuery.substr(0, std::min<size_t>(3UL, Query.size()));
     Chars.append(3 - Chars.size(), END_MARKER);
     UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
   } else {
