@@ -187,7 +187,7 @@ ImplementDeclaredCXXMethodsOperation::perform(
 void ImplementDeclaredCXXMethodsOperation::addInlineBody(
     const CXXMethodDecl *MD, const ASTContext &Context,
     std::vector<RefactoringReplacement> &Replacements) {
-  SourceLocation EndLoc = MD->getLocEnd();
+  SourceLocation EndLoc = MD->getEndLoc();
   SourceRange SemiRange = getRangeOfNextToken(
       EndLoc, tok::semi, Context.getSourceManager(), Context.getLangOpts());
   if (SemiRange.isValid()) {
@@ -238,7 +238,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
     if (const FunctionDecl *MD = M->getDefinition()) {
       if (!MD->isOutOfLine())
         continue;
-      SourceLocation Loc = SM.getExpansionLoc(MD->getLocStart());
+      SourceLocation Loc = SM.getExpansionLoc(MD->getBeginLoc());
       if (SM.getFileID(Loc) == File)
         DefinedOutOfLineMethods.push_back(cast<CXXMethodDecl>(MD));
     }
@@ -254,7 +254,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   NestedNameSpecifier *NamePrefix = nullptr;
   if (DefinedOutOfLineMethods.empty()) {
     const RecordDecl *OutermostRecord = findOutermostRecord(Class);
-    InsertionLoc = SM.getExpansionRange(OutermostRecord->getLocEnd()).getEnd();
+    InsertionLoc = SM.getExpansionRange(OutermostRecord->getEndLoc()).getEnd();
     if (SM.getFileID(InsertionLoc) == File) {
       // We can insert right after the class. Compute the appropriate
       // qualification.
@@ -297,7 +297,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   } else {
     // Insert at the end of the defined methods.
     for (const CXXMethodDecl *M : DefinedOutOfLineMethods) {
-      SourceLocation EndLoc = SM.getExpansionRange(M->getLocEnd()).getEnd();
+      SourceLocation EndLoc = SM.getExpansionRange(M->getEndLoc()).getEnd();
       if (InsertionLoc.isInvalid() ||
           SM.isBeforeInTranslationUnit(InsertionLoc, EndLoc)) {
         InsertionLoc = EndLoc;
@@ -437,7 +437,7 @@ ImplementDeclaredObjCMethodsOperation::runInImplementationAST(
     OS << StringRef(MethodDeclarations[I.index()]).drop_back(); // Drop the ';'
     OS << " { \n  <#code#>;\n}\n\n";
   }
-  SourceLocation InsertionLoc = ImplementationContainer->getLocEnd();
+  SourceLocation InsertionLoc = ImplementationContainer->getEndLoc();
 
   Replacements.push_back(RefactoringReplacement(
       SourceRange(InsertionLoc, InsertionLoc), std::move(OS.str())));

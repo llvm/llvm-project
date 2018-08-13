@@ -288,8 +288,8 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   // Replace the duplicates with a reference to the variable.
   for (const Expr *E : DuplicateExpressions) {
     Replacements.push_back(RefactoringReplacement(
-        SourceRange(SM.getSpellingLoc(E->getLocStart()),
-                    getPreciseTokenLocEnd(SM.getSpellingLoc(E->getLocEnd()), SM,
+        SourceRange(SM.getSpellingLoc(E->getBeginLoc()),
+                    getPreciseTokenLocEnd(SM.getSpellingLoc(E->getEndLoc()), SM,
                                           Context.getLangOpts())),
         Name, CreatedSymbol,
         /*NameOffset=*/llvm::makeArrayRef(unsigned(0))));
