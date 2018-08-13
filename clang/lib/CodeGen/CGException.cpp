@@ -1829,7 +1829,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   SmallString<128> Name;
   {
     llvm::raw_svector_ostream OS(Name);
-    const FunctionDecl *ParentSEHFn = ParentCGF.CurSEHParent;
+    const NamedDecl *ParentSEHFn = ParentCGF.CurSEHParent;
     assert(ParentSEHFn && "No CurSEHParent!");
     MangleContext &Mangler = CGM.getCXXABI().getMangleContext();
     if (IsFilter)
@@ -1970,6 +1970,11 @@ llvm::Value *CodeGenFunction::EmitSEHAbnormalTermination() {
   // helper.
   auto AI = CurFn->arg_begin();
   return Builder.CreateZExt(&*AI, Int32Ty);
+}
+
+void CodeGenFunction::pushSEHCleanup(CleanupKind Kind,
+                                     llvm::Function *FinallyFunc) {
+  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc);
 }
 
 void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {

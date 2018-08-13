@@ -15,6 +15,7 @@
 
 #include "CGObjCRuntime.h"
 #include "CGCleanup.h"
+#include "CGCXXABI.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -22,6 +23,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -120,6 +122,8 @@ namespace {
     const Stmt *Body;
     llvm::BasicBlock *Block;
     llvm::Constant *TypeInfo;
+    /// Flags used to differentiate cleanups and catchalls in Windows SEH
+    unsigned Flags;
   };
 
   struct CallObjCEndCatch final : EHScopeStack::Cleanup {
@@ -148,12 +152,16 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   if (S.getNumCatchStmts())
     Cont = CGF.getJumpDestInCurrentScope("eh.cont");
 
+  bool useFunclets = EHPersonality::get(CGF).usesFuncletPads();
+
   CodeGenFunction::FinallyInfo FinallyInfo;
-  if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt())
-    FinallyInfo.enter(CGF, Finally->getFinallyBody(),
-                      beginCatchFn, endCatchFn, exceptionRethrowFn);
+  if (!useFunclets)
+    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt())
+      FinallyInfo.enter(CGF, Finally->getFinallyBody(),
+                        beginCatchFn, endCatchFn, exceptionRethrowFn);
 
   SmallVector<CatchHandler, 8> Handlers;
+
 
   // Enter the catch, if there is one.
   if (S.getNumCatchStmts()) {
@@ -166,10 +174,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       Handler.Variable = CatchDecl;
       Handler.Body = CatchStmt->getCatchBody();
       Handler.Block = CGF.createBasicBlock("catch");
+      Handler.Flags = 0;
 
       // @catch(...) always matches.
       if (!CatchDecl) {
-        Handler.TypeInfo = nullptr; // catch-all
+        auto catchAll = getCatchAllTypeInfo();
+        Handler.TypeInfo = catchAll.RTTI;
+        Handler.Flags = catchAll.Flags;
         // Don't consider any other catches.
         break;
       }
@@ -179,9 +190,31 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
 
     EHCatchScope *Catch = CGF.EHStack.pushCatch(Handlers.size());
     for (unsigned I = 0, E = Handlers.size(); I != E; ++I)
-      Catch->setHandler(I, Handlers[I].TypeInfo, Handlers[I].Block);
+      Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
   }
 
+  if (useFunclets)
+    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
+        CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
+        if (!CGF.CurSEHParent)
+            CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
+        // Outline the finally block.
+        const Stmt *FinallyBlock = Finally->getFinallyBody();
+        HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/false, FinallyBlock);
+
+        // Emit the original filter expression, convert to i32, and return.
+        HelperCGF.EmitStmt(FinallyBlock);
+
+        HelperCGF.FinishFunction(FinallyBlock->getLocEnd());
+
+        llvm::Function *FinallyFunc = HelperCGF.CurFn;
+
+
+        // Push a cleanup for __finally blocks.
+        CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
+    }
+
+  
   // Emit the try body.
   CGF.EmitStmt(S.getTryBody());
 
@@ -197,6 +230,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CatchHandler &Handler = Handlers[I];
 
     CGF.EmitBlock(Handler.Block);
+    llvm::CatchPadInst *CPI = nullptr;
+    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
+    if (useFunclets)
+      if ((CPI = dyn_cast_or_null<llvm::CatchPadInst>(Handler.Block->getFirstNonPHI()))) {
+        CGF.CurrentFuncletPad = CPI;
+        CPI->setOperand(2, CGF.getExceptionSlot().getPointer());
+      }
     llvm::Value *RawExn = CGF.getExceptionFromSlot();
 
     // Enter the catch.
@@ -223,6 +263,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       CGF.EmitAutoVarDecl(*CatchParam);
       EmitInitOfCatchParam(CGF, CastExn, CatchParam);
     }
+    if (CPI)
+        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
 
     CGF.ObjCEHValueStack.push_back(Exn);
     CGF.EmitStmt(Handler.Body);
@@ -232,13 +274,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     cleanups.ForceCleanup();
 
     CGF.EmitBranchThroughCleanup(Cont);
-  }
+  }  
 
   // Go back to the try-statement fallthrough.
   CGF.Builder.restoreIP(SavedIP);
 
   // Pop out of the finally.
-  if (S.getFinallyStmt())
+  if (!useFunclets && S.getFinallyStmt())
     FinallyInfo.exit(CGF);
 
   if (Cont.isValid())
@@ -277,7 +319,7 @@ namespace {
       : SyncExitFn(SyncExitFn), SyncArg(SyncArg) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.Builder.CreateCall(SyncExitFn, SyncArg)->setDoesNotThrow();
+      CGF.EmitNounwindRuntimeCall(SyncExitFn, SyncArg);
     }
   };
 }

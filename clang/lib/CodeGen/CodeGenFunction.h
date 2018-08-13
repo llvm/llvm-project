@@ -470,7 +470,7 @@ public:
   /// potentially set the return value.
   bool SawAsmBlock = false;
 
-  const FunctionDecl *CurSEHParent = nullptr;
+  const NamedDecl *CurSEHParent = nullptr;
 
   /// True if the current function is an outlined SEH helper. This can be a
   /// finally block or filter expression.
@@ -2878,6 +2878,8 @@ public:
   void EnterSEHTryStmt(const SEHTryStmt &S);
   void ExitSEHTryStmt(const SEHTryStmt &S);
 
+  void pushSEHCleanup(CleanupKind kind,
+                      llvm::Function *FinallyFunc);
   void startOutlinedSEHHelper(CodeGenFunction &ParentCGF, bool IsFilter,
                               const Stmt *OutlinedStmt);
 
