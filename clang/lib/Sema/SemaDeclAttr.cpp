@@ -7203,6 +7203,11 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_NoDestroy:
     handleDestroyAttr(S, D, AL);
     break;
+
+  // Move semantics attribute.
+  case ParsedAttr::AT_Reinitializes:
+    handleSimpleAttribute<ReinitializesAttr>(S, D, AL);
+    break;
   }
 }
 
