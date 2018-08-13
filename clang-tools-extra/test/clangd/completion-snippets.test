@@ -34,6 +34,19 @@
 # CHECK-NEXT:      "kind": 3,
 # CHECK-NEXT:      "label": " func_with_args(int a, int b)",
 # CHECK-NEXT:      "sortText": "{{.*}}func_with_args"
+# CHECK-NEXT:      "textEdit": {
+# CHECK-NEXT:        "newText": "func_with_args(${1:int a}, ${2:int b})",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 0,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
 # CHECK-NEXT:    }
 # CHECK-NEXT:    ]
 # CHECK-NEXT:  }
