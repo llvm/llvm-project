@@ -68,15 +68,16 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
 
   // A select operand must be a binop, and the compare constant must be the
   // identity constant for that binop.
-  // TODO: Support non-commutative binops.
   bool IsEq = Pred == ICmpInst::ICMP_EQ;
   BinaryOperator *BO;
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
-      ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), false) != C)
+      ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), true) != C)
     return nullptr;
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
+  if (!BO->isCommutative() && !match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
+    return nullptr;
   if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
     return nullptr;
 

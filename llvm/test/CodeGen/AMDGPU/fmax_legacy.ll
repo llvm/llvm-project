@@ -1,16 +1,14 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-SAFE -check-prefix=FUNC %s
-; RUN: llc -enable-no-nans-fp-math -enable-unsafe-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NONAN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-
-; FIXME: Should replace unsafe-fp-math with no signed zeros.
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN-NONAN -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #1
 
-; FUNC-LABEL: @test_fmax_legacy_uge_f32
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
-; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; FUNC-LABEL: {{^}}test_fmax_legacy_uge_f32:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
@@ -27,11 +25,37 @@ define amdgpu_kernel void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, fl
   ret void
 }
 
-; FUNC-LABEL: @test_fmax_legacy_oge_f32
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
-; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; FUNC-LABEL: {{^}}test_fmax_legacy_uge_f32_nnan_src:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-DAG: v_add_f32_e32 [[ADD_A:v[0-9]+]], 1.0, [[A]]
+; GCN-DAG: v_add_f32_e32 [[ADD_B:v[0-9]+]], 2.0, [[B]]
+
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
+
+; EG: MAX
+define amdgpu_kernel void @test_fmax_legacy_uge_f32_nnan_src(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
+  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a.nnan = fadd nnan float %a, 1.0
+  %b.nnan = fadd nnan float %b, 2.0
+
+  %cmp = fcmp uge float %a.nnan, %b.nnan
+  %val = select i1 %cmp, float %a.nnan, float %b.nnan
+  store float %val, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}test_fmax_legacy_oge_f32:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -47,11 +71,11 @@ define amdgpu_kernel void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, fl
   ret void
 }
 
-; FUNC-LABEL: @test_fmax_legacy_ugt_f32
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
-; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; FUNC-LABEL: {{^}}test_fmax_legacy_ugt_f32:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -67,11 +91,11 @@ define amdgpu_kernel void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, fl
   ret void
 }
 
-; FUNC-LABEL: @test_fmax_legacy_ogt_f32
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
-; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_f32:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -88,10 +112,10 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_v1f32:
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
-; SI-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-SAFE: v_max_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN-NONAN: v_max_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -108,12 +132,12 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_v3f32:
-; SI-SAFE: v_max_legacy_f32_e32
-; SI-SAFE: v_max_legacy_f32_e32
-; SI-SAFE: v_max_legacy_f32_e32
-; SI-NONAN: v_max_f32_e32
-; SI-NONAN: v_max_f32_e32
-; SI-NONAN: v_max_f32_e32
+; GCN-SAFE: v_max_legacy_f32_e32
+; GCN-SAFE: v_max_legacy_f32_e32
+; GCN-SAFE: v_max_legacy_f32_e32
+; GCN-NONAN: v_max_f32_e32
+; GCN-NONAN: v_max_f32_e32
+; GCN-NONAN: v_max_f32_e32
 define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
@@ -128,13 +152,13 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v3f32(<3 x float> addrspace(1)* 
   ret void
 }
 
-; FUNC-LABEL: @test_fmax_legacy_ogt_f32_multi_use
-; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI-NOT: v_max_
-; SI: v_cmp_gt_f32
-; SI-NEXT: v_cndmask_b32
-; SI-NOT: v_max_
+; FUNC-LABEL: {{^}}test_fmax_legacy_ogt_f32_multi_use:
+; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN-NOT: v_max_
+; GCN: v_cmp_gt_f32
+; GCN-NEXT: v_cndmask_b32
+; GCN-NOT: v_max_
 
 ; EG: MAX
 define amdgpu_kernel void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 addrspace(1)* %out1, float addrspace(1)* %in) #0 {

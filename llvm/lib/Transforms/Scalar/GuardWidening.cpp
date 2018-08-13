@@ -145,7 +145,7 @@ class GuardWideningImpl {
   bool eliminateGuardViaWidening(
       Instruction *Guard, const df_iterator<DomTreeNode *> &DFSI,
       const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-          GuardsPerBlock);
+          GuardsPerBlock, bool InvertCondition = false);
 
   /// Used to keep track of which widening potential is more effective.
   enum WideningScore {
@@ -169,11 +169,13 @@ class GuardWideningImpl {
 
   /// Compute the score for widening the condition in \p DominatedGuard
   /// (contained in \p DominatedGuardLoop) into \p DominatingGuard (contained in
-  /// \p DominatingGuardLoop).
+  /// \p DominatingGuardLoop). If \p InvertCond is set, then we widen the
+  /// inverted condition of the dominating guard.
   WideningScore computeWideningScore(Instruction *DominatedGuard,
                                      Loop *DominatedGuardLoop,
                                      Instruction *DominatingGuard,
-                                     Loop *DominatingGuardLoop);
+                                     Loop *DominatingGuardLoop,
+                                     bool InvertCond);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
   bool isAvailableAt(Value *V, Instruction *InsertPos) {
@@ -189,13 +191,14 @@ class GuardWideningImpl {
   void makeAvailableAt(Value *V, Instruction *InsertPos);
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
-  /// to generate an expression computing the logical AND of \p Cond0 and \p
-  /// Cond1.  Return true if the expression computing the AND is only as
+  /// to generate an expression computing the logical AND of \p Cond0 and (\p
+  /// Cond1 XOR \p InvertCondition).
+  /// Return true if the expression computing the AND is only as
   /// expensive as computing one of the two. If \p InsertPt is true then
   /// actually generate the resulting expression, make it available at \p
   /// InsertPt and return it in \p Result (else no change to the IR is made).
   bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
-                       Value *&Result);
+                       Value *&Result, bool InvertCondition);
 
   /// Represents a range check of the form \c Base + \c Offset u< \c Length,
   /// with the constraint that \c Length is not negative.  \c CheckInst is the
@@ -256,16 +259,20 @@ class GuardWideningImpl {
 
   /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
   /// computing only one of the two expressions?
-  bool isWideningCondProfitable(Value *Cond0, Value *Cond1) {
+  bool isWideningCondProfitable(Value *Cond0, Value *Cond1, bool InvertCond) {
     Value *ResultUnused;
-    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused);
+    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused,
+                           InvertCond);
   }
 
-  /// Widen \p ToWiden to fail if \p NewCondition is false (in addition to
-  /// whatever it is already checking).
-  void widenGuard(Instruction *ToWiden, Value *NewCondition) {
+  /// If \p InvertCondition is false, Widen \p ToWiden to fail if
+  /// \p NewCondition is false, otherwise make it fail if \p NewCondition is
+  /// true (in addition to whatever it is already checking).
+  void widenGuard(Instruction *ToWiden, Value *NewCondition,
+                  bool InvertCondition) {
     Value *Result;
-    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result);
+    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result,
+                    InvertCondition);
     setCondition(ToWiden, Result);
   }
 
@@ -309,9 +316,15 @@ bool GuardWideningImpl::run() {
       Changed |= eliminateGuardViaWidening(II, DFI, GuardsInBlock);
     if (WidenFrequentBranches && BPI)
       if (auto *BI = dyn_cast<BranchInst>(BB->getTerminator()))
-        if (BI->isConditional() &&
-            BPI->getEdgeProbability(BB, 0U) >= *LikelyTaken)
-          Changed |= eliminateGuardViaWidening(BI, DFI, GuardsInBlock);
+        if (BI->isConditional()) {
+          // If one of branches of a conditional is likely taken, try to
+          // eliminate it.
+          if (BPI->getEdgeProbability(BB, 0U) >= *LikelyTaken)
+            Changed |= eliminateGuardViaWidening(BI, DFI, GuardsInBlock);
+          else if (BPI->getEdgeProbability(BB, 1U) >= *LikelyTaken)
+            Changed |= eliminateGuardViaWidening(BI, DFI, GuardsInBlock,
+                                                 /*InvertCondition*/true);
+        }
   }
 
   assert(EliminatedGuardsAndBranches.empty() || Changed);
@@ -333,7 +346,7 @@ bool GuardWideningImpl::run() {
 bool GuardWideningImpl::eliminateGuardViaWidening(
     Instruction *GuardInst, const df_iterator<DomTreeNode *> &DFSI,
     const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-        GuardsInBlock) {
+        GuardsInBlock, bool InvertCondition) {
   Instruction *BestSoFar = nullptr;
   auto BestScoreSoFar = WS_IllegalOrNegative;
   auto *GuardInstLoop = LI.getLoopFor(GuardInst->getParent());
@@ -377,7 +390,8 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
 
     for (auto *Candidate : make_range(I, E)) {
       auto Score =
-          computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop);
+          computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop,
+                               InvertCondition);
       LLVM_DEBUG(dbgs() << "Score between " << *getCondition(GuardInst)
                         << " and " << *getCondition(Candidate) << " is "
                         << scoreTypeToString(Score) << "\n");
@@ -399,8 +413,11 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   LLVM_DEBUG(dbgs() << "Widening " << *GuardInst << " into " << *BestSoFar
                     << " with score " << scoreTypeToString(BestScoreSoFar)
                     << "\n");
-  widenGuard(BestSoFar, getCondition(GuardInst));
-  setCondition(GuardInst, ConstantInt::getTrue(GuardInst->getContext()));
+  widenGuard(BestSoFar, getCondition(GuardInst), InvertCondition);
+  auto NewGuardCondition = InvertCondition
+                               ? ConstantInt::getFalse(GuardInst->getContext())
+                               : ConstantInt::getTrue(GuardInst->getContext());
+  setCondition(GuardInst, NewGuardCondition);
   EliminatedGuardsAndBranches.push_back(GuardInst);
   WidenedGuards.insert(BestSoFar);
   return true;
@@ -408,7 +425,7 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
 
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
     Instruction *DominatedGuard, Loop *DominatedGuardLoop,
-    Instruction *DominatingGuard, Loop *DominatingGuardLoop) {
+    Instruction *DominatingGuard, Loop *DominatingGuardLoop, bool InvertCond) {
   bool HoistingOutOfLoop = false;
 
   if (DominatingGuardLoop != DominatedGuardLoop) {
@@ -433,7 +450,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   // NOTE: As written, this also lets us hoist right over another guard which
   // is essentially just another spelling for control flow.
   if (isWideningCondProfitable(getCondition(DominatedGuard),
-                               getCondition(DominatingGuard)))
+                               getCondition(DominatingGuard), InvertCond))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
 
   if (HoistingOutOfLoop)
@@ -497,7 +514,8 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) {
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
-                                        Instruction *InsertPt, Value *&Result) {
+                                        Instruction *InsertPt, Value *&Result,
+                                        bool InvertCondition) {
   using namespace llvm::PatternMatch;
 
   {
@@ -507,6 +525,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     ICmpInst::Predicate Pred0, Pred1;
     if (match(Cond0, m_ICmp(Pred0, m_Value(LHS), m_ConstantInt(RHS0))) &&
         match(Cond1, m_ICmp(Pred1, m_Specific(LHS), m_ConstantInt(RHS1)))) {
+      if (InvertCondition)
+        Pred1 = ICmpInst::getInversePredicate(Pred1);
 
       ConstantRange CR0 =
           ConstantRange::makeExactICmpRegion(Pred0, RHS0->getValue());
@@ -540,7 +560,9 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
 
   {
     SmallVector<GuardWideningImpl::RangeCheck, 4> Checks, CombinedChecks;
-    if (parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
+    // TODO: Support InvertCondition case?
+    if (!InvertCondition &&
+        parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
         combineRangeChecks(Checks, CombinedChecks)) {
       if (InsertPt) {
         Result = nullptr;
@@ -564,7 +586,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
   if (InsertPt) {
     makeAvailableAt(Cond0, InsertPt);
     makeAvailableAt(Cond1, InsertPt);
-
+    if (InvertCondition)
+      Cond1 = BinaryOperator::CreateNot(Cond1, "inverted", InsertPt);
     Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
   }
 

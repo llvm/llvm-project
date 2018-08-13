@@ -2984,9 +2984,6 @@ private:
   void gatherOpcodeValues();
   void gatherTypeIDValues();
   void gatherNodeEquivs();
-  // Instruction predicate code that will be emitted in generated functions.
-  SmallVector<std::string, 2> InstructionPredicateCodes;
-  unsigned getOrCreateInstructionPredicateFnId(StringRef Code);
 
   Record *findNodeEquiv(Record *N) const;
   const CodeGenInstruction *getEquivNode(Record &Equiv,
@@ -3084,20 +3081,6 @@ void GlobalISelEmitter::gatherOpcodeValues() {
 
 void GlobalISelEmitter::gatherTypeIDValues() {
   LLTOperandMatcher::initTypeIDValuesMap();
-}
-unsigned GlobalISelEmitter::getOrCreateInstructionPredicateFnId(StringRef Code) {
-  // There's not very many predicates that need to be here at the moment so we
-  // just maintain a simple set-like vector. If it grows then we'll need to do
-  // something more efficient.
-  const auto &I = std::find(InstructionPredicateCodes.begin(),
-                            InstructionPredicateCodes.end(),
-                            Code);
-  if (I == InstructionPredicateCodes.end()) {
-    unsigned ID = InstructionPredicateCodes.size();
-    InstructionPredicateCodes.push_back(Code);
-    return ID;
-  }
-  return std::distance(InstructionPredicateCodes.begin(), I);
 }
 
 void GlobalISelEmitter::gatherNodeEquivs() {

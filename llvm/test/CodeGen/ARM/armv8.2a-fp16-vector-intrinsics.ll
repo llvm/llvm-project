@@ -1213,19 +1213,17 @@ entry:
   ret <8 x half> %vext
 }
 
-; FIXME (PR38404)
-;
-;define dso_local <4 x half> @test_vrev64_f16(<4 x half> %a) {
-;entry:
-;  %shuffle.i = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-;  ret <4 x half> %shuffle.i
-;}
-;
-;define dso_local <8 x half> @test_vrev64q_f16(<8 x half> %a) {
-;entry:
-;  %shuffle.i = shufflevector <8 x half> %a, <8 x half> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-;  ret <8 x half> %shuffle.i
-;}
+define dso_local <4 x half> @test_vrev64_f16(<4 x half> %a) {
+entry:
+  %shuffle.i = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x half> %shuffle.i
+}
+
+define dso_local <8 x half> @test_vrev64q_f16(<8 x half> %a) {
+entry:
+  %shuffle.i = shufflevector <8 x half> %a, <8 x half> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x half> %shuffle.i
+}
 
 declare <4 x half> @llvm.fabs.v4f16(<4 x half>)
 declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
