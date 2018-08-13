@@ -235,8 +235,7 @@ define float @select_fdiv_fcmp(float %x, float %y, float %z) {
 define i32 @select_sub_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sub_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -249,8 +248,7 @@ define i32 @select_sub_icmp_2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sub_icmp_2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use2(i1 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -264,8 +262,7 @@ define i32 @select_sub_icmp_3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sub_icmp_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use2(i1 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -278,8 +275,7 @@ define i32 @select_sub_icmp_3(i32 %x, i32 %y, i32 %z) {
 define <2 x i8> @select_sub_icmp_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_sub_icmp_vec(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = sub <2 x i8> [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[Z:%.*]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %A = icmp eq <2 x i8>  %x, <i8 0, i8 0>
@@ -292,8 +288,7 @@ define i32 @select_shl_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_shl_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use2(i1 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = shl i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -306,8 +301,7 @@ define i32 @select_shl_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_lshr_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_lshr_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -320,8 +314,7 @@ define i32 @select_ashr_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_ashr_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use2(i1 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = ashr i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -334,8 +327,7 @@ define i32 @select_ashr_icmp(i32 %x, i32 %y, i32 %z) {
 define i32 @select_udiv_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_udiv_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = udiv i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 1
@@ -348,8 +340,7 @@ define i32 @select_sdiv_icmp(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sdiv_icmp(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use2(i1 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 1

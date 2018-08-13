@@ -186,8 +186,6 @@ namespace {
 
     Value *simplifyFAdd(AddendVect& V, unsigned InstrQuota);
 
-    Value *performFactorization(Instruction *I);
-
     /// Convert given addend to a Value
     Value *createAddendVal(const FAddend &A, bool& NeedNeg);
 
@@ -427,89 +425,6 @@ unsigned FAddend::drillAddendDownOneStep
   return BreakNum;
 }
 
-// Try to perform following optimization on the input instruction I. Return the
-// simplified expression if was successful; otherwise, return 0.
-//
-//   Instruction "I" is                Simplified into
-// -------------------------------------------------------
-//   (x * y) +/- (x * z)               x * (y +/- z)
-//   (y / x) +/- (z / x)               (y +/- z) / x
-Value *FAddCombine::performFactorization(Instruction *I) {
-  assert((I->getOpcode() == Instruction::FAdd ||
-          I->getOpcode() == Instruction::FSub) && "Expect add/sub");
-
-  Instruction *I0 = dyn_cast<Instruction>(I->getOperand(0));
-  Instruction *I1 = dyn_cast<Instruction>(I->getOperand(1));
-
-  if (!I0 || !I1 || I0->getOpcode() != I1->getOpcode())
-    return nullptr;
-
-  bool isMpy = false;
-  if (I0->getOpcode() == Instruction::FMul)
-    isMpy = true;
-  else if (I0->getOpcode() != Instruction::FDiv)
-    return nullptr;
-
-  Value *Opnd0_0 = I0->getOperand(0);
-  Value *Opnd0_1 = I0->getOperand(1);
-  Value *Opnd1_0 = I1->getOperand(0);
-  Value *Opnd1_1 = I1->getOperand(1);
-
-  //  Input Instr I       Factor   AddSub0  AddSub1
-  //  ----------------------------------------------
-  // (x*y) +/- (x*z)        x        y         z
-  // (y/x) +/- (z/x)        x        y         z
-  Value *Factor = nullptr;
-  Value *AddSub0 = nullptr, *AddSub1 = nullptr;
-
-  if (isMpy) {
-    if (Opnd0_0 == Opnd1_0 || Opnd0_0 == Opnd1_1)
-      Factor = Opnd0_0;
-    else if (Opnd0_1 == Opnd1_0 || Opnd0_1 == Opnd1_1)
-      Factor = Opnd0_1;
-
-    if (Factor) {
-      AddSub0 = (Factor == Opnd0_0) ? Opnd0_1 : Opnd0_0;
-      AddSub1 = (Factor == Opnd1_0) ? Opnd1_1 : Opnd1_0;
-    }
-  } else if (Opnd0_1 == Opnd1_1) {
-    Factor = Opnd0_1;
-    AddSub0 = Opnd0_0;
-    AddSub1 = Opnd1_0;
-  }
-
-  if (!Factor)
-    return nullptr;
-
-  FastMathFlags Flags;
-  Flags.setFast();
-  if (I0) Flags &= I->getFastMathFlags();
-  if (I1) Flags &= I->getFastMathFlags();
-
-  // Create expression "NewAddSub = AddSub0 +/- AddsSub1"
-  Value *NewAddSub = (I->getOpcode() == Instruction::FAdd) ?
-                      createFAdd(AddSub0, AddSub1) :
-                      createFSub(AddSub0, AddSub1);
-  if (ConstantFP *CFP = dyn_cast<ConstantFP>(NewAddSub)) {
-    const APFloat &F = CFP->getValueAPF();
-    if (!F.isNormal())
-      return nullptr;
-  } else if (Instruction *II = dyn_cast<Instruction>(NewAddSub))
-    II->setFastMathFlags(Flags);
-
-  if (isMpy) {
-    Value *RI = createFMul(Factor, NewAddSub);
-    if (Instruction *II = dyn_cast<Instruction>(RI))
-      II->setFastMathFlags(Flags);
-    return RI;
-  }
-
-  Value *RI = createFDiv(NewAddSub, Factor);
-  if (Instruction *II = dyn_cast<Instruction>(RI))
-    II->setFastMathFlags(Flags);
-  return RI;
-}
-
 Value *FAddCombine::simplify(Instruction *I) {
   assert(I->hasAllowReassoc() && I->hasNoSignedZeros() &&
          "Expected 'reassoc'+'nsz' instruction");
@@ -594,8 +509,7 @@ Value *FAddCombine::simplify(Instruction *I) {
       return R;
   }
 
-  // step 6: Try factorization as the last resort,
-  return performFactorization(I);
+  return nullptr;
 }
 
 Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
@@ -1391,6 +1305,45 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+/// Factor a common operand out of fadd/fsub of fmul/fdiv.
+static Instruction *factorizeFAddFSub(BinaryOperator &I,
+                                      InstCombiner::BuilderTy &Builder) {
+  assert((I.getOpcode() == Instruction::FAdd ||
+          I.getOpcode() == Instruction::FSub) && "Expecting fadd/fsub");
+  assert(I.hasAllowReassoc() && I.hasNoSignedZeros() &&
+         "FP factorization requires FMF");
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *X, *Y, *Z;
+  bool IsFMul;
+  if ((match(Op0, m_OneUse(m_FMul(m_Value(X), m_Value(Z)))) &&
+       match(Op1, m_OneUse(m_c_FMul(m_Value(Y), m_Specific(Z))))) ||
+      (match(Op0, m_OneUse(m_FMul(m_Value(Z), m_Value(X)))) &&
+       match(Op1, m_OneUse(m_c_FMul(m_Value(Y), m_Specific(Z))))))
+    IsFMul = true;
+  else if (match(Op0, m_OneUse(m_FDiv(m_Value(X), m_Value(Z)))) &&
+           match(Op1, m_OneUse(m_FDiv(m_Value(Y), m_Specific(Z)))))
+    IsFMul = false;
+  else
+    return nullptr;
+
+  // (X * Z) + (Y * Z) --> (X + Y) * Z
+  // (X * Z) - (Y * Z) --> (X - Y) * Z
+  // (X / Z) + (Y / Z) --> (X + Y) / Z
+  // (X / Z) - (Y / Z) --> (X - Y) / Z
+  bool IsFAdd = I.getOpcode() == Instruction::FAdd;
+  Value *XY = IsFAdd ? Builder.CreateFAddFMF(X, Y, &I)
+                     : Builder.CreateFSubFMF(X, Y, &I);
+
+  // Bail out if we just created a denormal constant.
+  // TODO: This is copied from a previous implementation. Is it necessary?
+  const APFloat *C;
+  if (match(XY, m_APFloat(C)) && !C->isNormal())
+    return nullptr;
+
+  return IsFMul ? BinaryOperator::CreateFMulFMF(XY, Z, &I)
+                : BinaryOperator::CreateFDivFMF(XY, Z, &I);
+}
+
 Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (Value *V = SimplifyFAddInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
@@ -1478,6 +1431,8 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
+    if (Instruction *F = factorizeFAddFSub(I, Builder))
+      return F;
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }
@@ -1924,6 +1879,9 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
       Constant *OneSubC = ConstantExpr::getFSub(ConstantFP::get(Ty, 1.0), C);
       return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
     }
+
+    if (Instruction *F = factorizeFAddFSub(I, Builder))
+      return F;
 
     // TODO: This performs reassociative folds for FP ops. Some fraction of the
     // functionality has been subsumed by simple pattern matching here and in
