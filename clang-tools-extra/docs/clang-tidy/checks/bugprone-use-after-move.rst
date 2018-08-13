@@ -178,6 +178,9 @@ The check considers a variable to be reinitialized in the following cases:
   - ``reset()`` is called on the variable and the variable is of type
     ``std::unique_ptr``, ``std::shared_ptr`` or ``std::weak_ptr``.
 
+  - A member function marked with the ``[[clang::reinitializes]]`` attribute is
+    called on the variable.
+
 If the variable in question is a struct and an individual member variable of
 that struct is written to, the check does not consider this to be a
 reinitialization -- even if, eventually, all member variables of the struct are

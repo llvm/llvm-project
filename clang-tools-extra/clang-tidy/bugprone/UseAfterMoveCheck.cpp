@@ -308,6 +308,10 @@ void UseAfterMoveFinder::getReinits(
                cxxMemberCallExpr(
                    on(allOf(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
                    callee(cxxMethodDecl(hasName("reset")))),
+               // Methods that have the [[clang::reinitializes]] attribute.
+               cxxMemberCallExpr(
+                   on(DeclRefMatcher),
+                   callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
                // Passing variable to a function as a non-const pointer.
                callExpr(forEachArgumentWithParam(
                    unaryOperator(hasOperatorName("&"),
