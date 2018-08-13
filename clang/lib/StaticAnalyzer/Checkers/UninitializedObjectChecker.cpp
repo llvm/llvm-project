@@ -73,17 +73,21 @@ public:
 /// Note that this class is immutable, and new fields may only be added through
 /// constructor calls.
 class FieldChainInfo {
+public:
   using FieldChain = llvm::ImmutableList<const FieldRegion *>;
 
+private:
+  FieldChain::Factory &Factory;
   FieldChain Chain;
 
   const bool IsDereferenced = false;
 
 public:
-  FieldChainInfo() = default;
+  FieldChainInfo() = delete;
+  FieldChainInfo(FieldChain::Factory &F) : Factory(F) {}
 
   FieldChainInfo(const FieldChainInfo &Other, const bool IsDereferenced)
-      : Chain(Other.Chain), IsDereferenced(IsDereferenced) {}
+      : Factory(Other.Factory), Chain(Other.Chain), IsDereferenced(IsDereferenced) {}
 
   FieldChainInfo(const FieldChainInfo &Other, const FieldRegion *FR,
                  const bool IsDereferenced = false);
@@ -128,6 +132,7 @@ class FindUninitializedFields {
 
   bool IsAnyFieldInitialized = false;
 
+  FieldChainInfo::FieldChain::Factory Factory;
   UninitFieldSet UninitFields;
 
 public:
@@ -216,10 +221,6 @@ private:
 };
 
 } // end of anonymous namespace
-
-// Static variable instantionations.
-
-static llvm::ImmutableListFactory<const FieldRegion *> Factory;
 
 // Utility function declarations.
 
@@ -355,7 +356,7 @@ FindUninitializedFields::FindUninitializedFields(
       CheckPointeeInitialization(CheckPointeeInitialization) {}
 
 const UninitFieldSet &FindUninitializedFields::getUninitFields() {
-  isNonUnionUninit(ObjectR, FieldChainInfo());
+  isNonUnionUninit(ObjectR, FieldChainInfo(Factory));
 
   if (!IsPedantic && !IsAnyFieldInitialized)
     UninitFields.clear();
