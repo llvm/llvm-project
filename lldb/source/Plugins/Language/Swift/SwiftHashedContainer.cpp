@@ -322,27 +322,20 @@ HashedCollectionConfig::CocoaObjectAtAddress(
 }
 
 HashedStorageHandlerUP
-HashedCollectionConfig::CreateNativeHandler(ValueObjectSP storage_sp) const {
+HashedCollectionConfig::CreateNativeHandler(
+  ValueObjectSP value_sp,
+  ValueObjectSP storage_sp) const {
   if (!storage_sp)
     return nullptr;
 
-  storage_sp = storage_sp->GetQualifiedRepresentationIfAvailable(
-    lldb::eDynamicCanRunTarget, false);
-
-  auto type = storage_sp->GetCompilerType();
-
-  auto typeName = type.GetTypeName().GetStringRef();
-  if (typeName == m_emptyStorage_demangled.GetStringRef()) {
-    return CreateEmptyHandler();
-  }
-  
-  if (!typeName.startswith(m_nativeStorage_demangledPrefix.GetStringRef())) {
-    return nullptr; // Wrong class
-  }
-
-  auto key_type = type.GetGenericArgumentType(0);
-  auto value_type = type.GetGenericArgumentType(1);
-
+  // FIXME: To prevent reading uninitialized data, get the runtime
+  // class of storage_sp and verify that it's the type we expect
+  // (m_nativeStorage_mangledPrefix).  Also, get the correct key_type
+  // and value_type directly from its generic arguments instead of
+  // using value_sp.
+  CompilerType type(value_sp->GetCompilerType());
+  CompilerType key_type = type.GetGenericArgumentType(0);
+  CompilerType value_type = type.GetGenericArgumentType(1);
   auto handler = HashedStorageHandlerUP(
     new NativeHashedStorageHandler(storage_sp, key_type, value_type));
   if (!handler->IsValid())
@@ -557,7 +550,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   ConstString type_name_cs(valobj_sp->GetTypeName());
 
   if (IsNativeStorageName(type_name_cs)) {
-    return CreateNativeHandler(valobj_sp);
+    return CreateNativeHandler(valobj_sp, valobj_sp);
   }
   if (IsEmptyStorageName(type_name_cs)) {
     return CreateEmptyHandler();
@@ -565,7 +558,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   if (IsDeferredBridgedStorageName(type_name_cs)) {
     auto storage_sp
       = valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage});
-    return CreateNativeHandler(storage_sp);
+    return CreateNativeHandler(valobj_sp, storage_sp);
   }
 
   ValueObjectSP variant_sp(
@@ -606,7 +599,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   }
   if (g_native == variant_cs) {
     auto storage_sp = variant_sp->GetChildAtNamePath({g_native, g__storage});
-    return CreateNativeHandler(storage_sp);
+    return CreateNativeHandler(valobj_sp, storage_sp);
   }
 
   return nullptr;
