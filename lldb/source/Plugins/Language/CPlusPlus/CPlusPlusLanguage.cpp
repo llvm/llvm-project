@@ -21,6 +21,7 @@
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
 
 // Project includes
 #include "lldb/Core/PluginManager.h"
@@ -30,7 +31,6 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/FastDemangle.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
@@ -278,48 +278,67 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
 static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
                                             llvm::StringRef search,
                                             llvm::StringRef replace) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  class PrimitiveParmSubs {
+    llvm::StringRef mangled;
+    llvm::StringRef search;
+    llvm::StringRef replace;
+    ptrdiff_t read_pos;
+    std::string output;
+    std::back_insert_iterator<std::string> writer;
 
-  const size_t max_len =
-      mangled.size() + mangled.count(search) * replace.size() + 1;
+  public:
+    PrimitiveParmSubs(llvm::StringRef m, llvm::StringRef s, llvm::StringRef r)
+        : mangled(m), search(s), replace(r), read_pos(0),
+          writer(std::back_inserter(output)) {}
 
-  // Make a temporary buffer to fix up the mangled parameter types and copy the
-  // original there
-  std::string output_buf;
-  output_buf.reserve(max_len);
-  output_buf.insert(0, mangled.str());
-  ptrdiff_t replaced_offset = 0;
+    void Substitute(llvm::StringRef tail) {
+      assert(tail.data() >= mangled.data() &&
+             tail.data() < mangled.data() + mangled.size() &&
+             "tail must point into range of mangled");
 
-  auto swap_parms_hook = [&](const char *parsee) {
-    if (!parsee || !*parsee)
-      return;
+      if (tail.startswith(search)) {
+        auto reader = mangled.begin() + read_pos;
+        ptrdiff_t read_len = tail.data() - (mangled.data() + read_pos);
 
-    // Check whether we've found a substitutee
-    llvm::StringRef s(parsee);
-    if (s.startswith(search)) {
-      // account for the case where a replacement is of a different length to
-      // the original
-      replaced_offset += replace.size() - search.size();
+        // First write the unmatched part of the original. Then write the
+        // replacement string. Finally skip the search string in the original.
+        writer = std::copy(reader, reader + read_len, writer);
+        writer = std::copy(replace.begin(), replace.end(), writer);
+        read_pos += read_len + search.size();
+      }
+    }
 
-      ptrdiff_t replace_idx = (mangled.size() - s.size()) + replaced_offset;
-      output_buf.erase(replace_idx, search.size());
-      output_buf.insert(replace_idx, replace.str());
+    ConstString Finalize() {
+      // If we did a substitution, write the remaining part of the original.
+      if (read_pos > 0) {
+        writer = std::copy(mangled.begin() + read_pos, mangled.end(), writer);
+        read_pos = mangled.size();
+      }
+
+      return ConstString(output);
+    }
+
+    static void Callback(void *context, const char *match) {
+      ((PrimitiveParmSubs *)context)->Substitute(llvm::StringRef(match));
     }
   };
 
-  // FastDemangle will call our hook for each instance of a primitive type,
+  // FastDemangle will call back for each instance of a primitive type,
   // allowing us to perform substitution
-  char *const demangled =
-      FastDemangle(mangled.str().c_str(), mangled.size(), swap_parms_hook);
+  PrimitiveParmSubs parmSubs(mangled, search, replace);
+  assert(mangled.data()[mangled.size()] == '\0' && "Expect C-String");
+  bool err = llvm::itaniumFindTypesInMangledName(mangled.data(), &parmSubs,
+                                                 PrimitiveParmSubs::Callback);
+  ConstString result = parmSubs.Finalize();
 
-  if (log)
-    log->Printf("substituted mangling for %s:{%s} %s:{%s}\n",
-                mangled.str().c_str(), demangled, output_buf.c_str(),
-                FastDemangle(output_buf.c_str()));
-  // FastDemangle malloc'd this string.
-  free(demangled);
+  if (Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE)) {
+    if (err)
+      LLDB_LOG(log, "Failed to substitute mangling in {0}", mangled);
+    else if (result)
+      LLDB_LOG(log, "Substituted mangling {0} -> {1}", mangled, result);
+  }
 
-  return output_buf == mangled ? ConstString() : ConstString(output_buf);
+  return result;
 }
 
 uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(

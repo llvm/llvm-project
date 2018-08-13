@@ -165,9 +165,6 @@ template <class ELFT>
 static unsigned
 handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
-  if (!(C.Flags & SHF_ALLOC))
-    return 0;
-
   if (!Sym.isTls())
     return 0;
 
@@ -279,8 +276,6 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (Expr == R_TLSDESC_CALL)
-    return 1;
   return 0;
 }
 
