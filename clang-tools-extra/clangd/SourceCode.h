@@ -76,6 +76,8 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// are normalized as much as possible.
 llvm::Optional<std::string> getRealPath(const FileEntry *F,
                                         const SourceManager &SourceMgr);
+
+bool IsRangeConsecutive(const Range &Left, const Range &Right);
 } // namespace clangd
 } // namespace clang
 #endif

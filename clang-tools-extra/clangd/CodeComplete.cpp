@@ -34,6 +34,7 @@
 #include "index/Index.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -285,6 +286,11 @@ struct CodeCompletionBuilder {
         Completion.FixIts.push_back(
             toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));
       }
+      std::sort(Completion.FixIts.begin(), Completion.FixIts.end(),
+                [](const TextEdit &X, const TextEdit &Y) {
+                  return std::tie(X.range.start.line, X.range.start.character) <
+                         std::tie(Y.range.start.line, Y.range.start.character);
+                });
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -1044,6 +1050,23 @@ private:
   // This is called by run() once Sema code completion is done, but before the
   // Sema data structures are torn down. It does all the real work.
   CodeCompleteResult runWithSema() {
+    const auto &CodeCompletionRange = CharSourceRange::getCharRange(
+        Recorder->CCSema->getPreprocessor().getCodeCompletionTokenRange());
+    Range TextEditRange;
+    // When we are getting completions with an empty identifier, for example
+    //    std::vector<int> asdf;
+    //    asdf.^;
+    // Then the range will be invalid and we will be doing insertion, use
+    // current cursor position in such cases as range.
+    if (CodeCompletionRange.isValid()) {
+      TextEditRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
+                                      CodeCompletionRange);
+    } else {
+      const auto &Pos = sourceLocToPosition(
+          Recorder->CCSema->getSourceManager(),
+          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
+      TextEditRange.start = TextEditRange.end = Pos;
+    }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
     QueryScopes = getQueryScopes(Recorder->CCContext,
@@ -1063,6 +1086,7 @@ private:
     for (auto &C : Top) {
       Output.Completions.push_back(toCodeCompletion(C.first));
       Output.Completions.back().Score = C.second;
+      Output.Completions.back().CompletionTokenRange = TextEditRange;
     }
     Output.HasMore = Incomplete;
     Output.Context = Recorder->CCContext.getKind();
@@ -1278,16 +1302,29 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.documentation = Documentation;
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
-  // FIXME(kadircet): Use LSP.textEdit instead of insertText, because it causes
-  // undesired behaviours. Like completing "this.^" into "this-push_back".
-  LSP.insertText = RequiredQualifier + Name;
+  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
+  // Merge continious additionalTextEdits into main edit. The main motivation
+  // behind this is to help LSP clients, it seems most of them are confused when
+  // they are provided with additionalTextEdits that are consecutive to main
+  // edit.
+  // Note that we store additional text edits from back to front in a line. That
+  // is mainly to help LSP clients again, so that changes do not effect each
+  // other.
+  for (const auto &FixIt : FixIts) {
+    if (IsRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
+      LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
+      LSP.textEdit->range.start = FixIt.range.start;
+    } else {
+      LSP.additionalTextEdits.push_back(FixIt);
+    }
+  }
   if (Opts.EnableSnippets)
-    LSP.insertText += SnippetSuffix;
+    LSP.textEdit->newText += SnippetSuffix;
+  // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
+  // compatible with most of the editors.
+  LSP.insertText = LSP.textEdit->newText;
   LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
                                              : InsertTextFormat::PlainText;
-  LSP.additionalTextEdits.reserve(FixIts.size() + (HeaderInsertion ? 1 : 0));
-  for (const auto &FixIt : FixIts)
-    LSP.additionalTextEdits.push_back(FixIt);
   if (HeaderInsertion)
     LSP.additionalTextEdits.push_back(*HeaderInsertion);
   return LSP;

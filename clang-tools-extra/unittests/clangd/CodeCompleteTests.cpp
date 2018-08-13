@@ -1439,6 +1439,82 @@ TEST(CompletionTest, FixItForDotToArrow) {
   }
 }
 
+TEST(CompletionTest, RenderWithFixItMerged) {
+  TextEdit FixIt;
+  FixIt.range.end.character = 5;
+  FixIt.newText = "->";
+
+  CodeCompletion C;
+  C.Name = "x";
+  C.RequiredQualifier = "Foo::";
+  C.FixIts = {FixIt};
+  C.CompletionTokenRange.start.character = 5;
+
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+
+  auto R = C.render(Opts);
+  EXPECT_TRUE(R.textEdit);
+  EXPECT_EQ(R.textEdit->newText, "->Foo::x");
+  EXPECT_TRUE(R.additionalTextEdits.empty());
+}
+
+TEST(CompletionTest, RenderWithFixItNonMerged) {
+  TextEdit FixIt;
+  FixIt.range.end.character = 4;
+  FixIt.newText = "->";
+
+  CodeCompletion C;
+  C.Name = "x";
+  C.RequiredQualifier = "Foo::";
+  C.FixIts = {FixIt};
+  C.CompletionTokenRange.start.character = 5;
+
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+
+  auto R = C.render(Opts);
+  EXPECT_TRUE(R.textEdit);
+  EXPECT_EQ(R.textEdit->newText, "Foo::x");
+  EXPECT_THAT(R.additionalTextEdits, UnorderedElementsAre(FixIt));
+}
+
+TEST(CompletionTest, CompletionTokenRange) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  constexpr const char *TestCodes[] = {
+      R"cpp(
+        class Auxilary {
+         public:
+          void AuxFunction();
+        };
+        void f() {
+          Auxilary x;
+          x.[[Aux]]^;
+        }
+      )cpp",
+      R"cpp(
+        class Auxilary {
+         public:
+          void AuxFunction();
+        };
+        void f() {
+          Auxilary x;
+          x.[[]]^;
+        }
+      )cpp"};
+  for (const auto &Text : TestCodes) {
+    Annotations TestCode(Text);
+    auto Results = completions(Server, TestCode.code(), TestCode.point());
+
+    EXPECT_EQ(Results.Completions.size(), 1u);
+    EXPECT_THAT(Results.Completions.front().CompletionTokenRange, TestCode.range());
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

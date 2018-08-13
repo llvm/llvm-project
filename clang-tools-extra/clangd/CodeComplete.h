@@ -123,6 +123,9 @@ struct CodeCompletion {
   /// converting '->' to '.' on member access.
   std::vector<TextEdit> FixIts;
 
+  /// Holds the range of the token we are going to replace with this completion.
+  Range CompletionTokenRange;
+
   // Scores are used to rank completion items.
   struct Scores {
     // The score that items are ranked by.
