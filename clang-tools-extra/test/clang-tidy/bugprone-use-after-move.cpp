@@ -107,6 +107,15 @@ public:
   int i;
 };
 
+template <class T>
+class AnnotatedContainer {
+public:
+  AnnotatedContainer();
+
+  void foo() const;
+  [[clang::reinitializes]] void clear();
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // General tests.
 
@@ -895,6 +904,32 @@ void standardSmartPointerResetIsReinit() {
     std::move(ptr);
     ptr.reset(new A);
     *ptr;
+  }
+}
+
+void reinitAnnotation() {
+  {
+    AnnotatedContainer<int> obj;
+    std::move(obj);
+    obj.foo();
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'obj' used after it was
+    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    AnnotatedContainer<int> obj;
+    std::move(obj);
+    obj.clear();
+    obj.foo();
+  }
+  {
+    // Calling clear() on a different object to the one that was moved is not
+    // considered a reinitialization.
+    AnnotatedContainer<int> obj1, obj2;
+    std::move(obj1);
+    obj2.clear();
+    obj1.foo();
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'obj1' used after it was
+    // CHECK-MESSAGES: [[@LINE-4]]:5: note: move occurred here
   }
 }
 

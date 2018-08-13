@@ -3076,6 +3076,11 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  // X / undef -> undef
+  // X % undef -> undef
+  // X / 0 -> undef
+  // X % 0 -> undef
+  // NOTE: This includes vectors where any divisor element is zero/undef.
   if (DAG.isUndef(N->getOpcode(), {N0, N1}))
     return DAG.getUNDEF(VT);
 

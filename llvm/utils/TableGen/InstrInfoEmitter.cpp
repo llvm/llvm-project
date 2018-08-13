@@ -358,45 +358,47 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS) {
 
   CodeGenTarget &Target = CDP.getTargetInfo();
   const StringRef TargetName = Target.getName();
-  formatted_raw_ostream FOS(OS);
 
-  FOS << "#ifdef GET_GENINSTRINFO_MC_DECL\n";
-  FOS << "#undef GET_GENINSTRINFO_MC_DECL\n\n";
+  OS << "#ifdef GET_GENINSTRINFO_MC_DECL\n";
+  OS << "#undef GET_GENINSTRINFO_MC_DECL\n\n";
 
-  FOS << "namespace llvm {\n";
-  FOS << "class MCInst;\n\n";
+  OS << "namespace llvm {\n";
+  OS << "class MCInst;\n\n";
 
-  FOS << "namespace " << TargetName << "_MC {\n\n";
+  OS << "namespace " << TargetName << "_MC {\n\n";
 
   for (const Record *Rec : TIIPredicates) {
-    FOS << "bool " << Rec->getValueAsString("FunctionName")
+    OS << "bool " << Rec->getValueAsString("FunctionName")
         << "(const MCInst &MI);\n";
   }
 
-  FOS << "\n} // end " << TargetName << "_MC namespace\n";
-  FOS << "} // end llvm namespace\n\n";
+  OS << "\n} // end " << TargetName << "_MC namespace\n";
+  OS << "} // end llvm namespace\n\n";
 
-  FOS << "#endif // GET_GENINSTRINFO_MC_DECL\n\n";
+  OS << "#endif // GET_GENINSTRINFO_MC_DECL\n\n";
 
-  FOS << "#ifdef GET_GENINSTRINFO_MC_HELPERS\n";
-  FOS << "#undef GET_GENINSTRINFO_MC_HELPERS\n\n";
+  OS << "#ifdef GET_GENINSTRINFO_MC_HELPERS\n";
+  OS << "#undef GET_GENINSTRINFO_MC_HELPERS\n\n";
 
-  FOS << "namespace llvm {\n";
-  FOS << "namespace " << TargetName << "_MC {\n\n";
+  OS << "namespace llvm {\n";
+  OS << "namespace " << TargetName << "_MC {\n\n";
 
   PredicateExpander PE;
   PE.setExpandForMC(true);
+
   for (const Record *Rec : TIIPredicates) {
-    FOS << "bool " << Rec->getValueAsString("FunctionName");
-    FOS << "(const MCInst &MI) {\n";
-    PE.expandStatement(FOS, Rec->getValueAsDef("Body"));
-    FOS << "\n}\n";
+    OS << "bool " << Rec->getValueAsString("FunctionName");
+    OS << "(const MCInst &MI) {\n";
+
+    OS.indent(PE.getIndentLevel() * 2);
+    PE.expandStatement(OS, Rec->getValueAsDef("Body"));
+    OS << "\n}\n";
   }
 
-  FOS << "\n} // end " << TargetName << "_MC namespace\n";
-  FOS << "} // end llvm namespace\n\n";
+  OS << "\n} // end " << TargetName << "_MC namespace\n";
+  OS << "} // end llvm namespace\n\n";
 
-  FOS << "#endif // GET_GENISTRINFO_MC_HELPERS\n";
+  OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n";
 }
 
 void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS) {
@@ -404,16 +406,17 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS) {
   if (TIIPredicates.empty())
     return;
 
-  formatted_raw_ostream FOS(OS);
   PredicateExpander PE;
   PE.setExpandForMC(false);
   PE.setIndentLevel(2);
 
   for (const Record *Rec : TIIPredicates) {
-    FOS << "\n  static bool " << Rec->getValueAsString("FunctionName");
-    FOS << "(const MachineInstr &MI) {\n";
-    PE.expandStatement(FOS, Rec->getValueAsDef("Body"));
-    FOS << "\n  }\n";
+    OS << "\n  static bool " << Rec->getValueAsString("FunctionName");
+    OS << "(const MachineInstr &MI) {\n";
+
+    OS.indent(PE.getIndentLevel() * 2);
+    PE.expandStatement(OS, Rec->getValueAsDef("Body"));
+    OS << "\n  }\n";
   }
 }
 

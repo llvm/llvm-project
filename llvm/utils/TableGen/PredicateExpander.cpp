@@ -15,25 +15,23 @@
 
 namespace llvm {
 
-void PredicateExpander::expandTrue(formatted_raw_ostream &OS) { OS << "true"; }
-void PredicateExpander::expandFalse(formatted_raw_ostream &OS) {
-  OS << "false";
-}
+void PredicateExpander::expandTrue(raw_ostream &OS) { OS << "true"; }
+void PredicateExpander::expandFalse(raw_ostream &OS) { OS << "false"; }
 
-void PredicateExpander::expandCheckImmOperand(formatted_raw_ostream &OS,
-                                              int OpIndex, int ImmVal) {
+void PredicateExpander::expandCheckImmOperand(raw_ostream &OS, int OpIndex,
+                                              int ImmVal) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
      << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
 }
 
-void PredicateExpander::expandCheckImmOperand(formatted_raw_ostream &OS,
-                                              int OpIndex, StringRef ImmVal) {
+void PredicateExpander::expandCheckImmOperand(raw_ostream &OS, int OpIndex,
+                                              StringRef ImmVal) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
      << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
 }
 
-void PredicateExpander::expandCheckRegOperand(formatted_raw_ostream &OS,
-                                              int OpIndex, const Record *Reg) {
+void PredicateExpander::expandCheckRegOperand(raw_ostream &OS, int OpIndex,
+                                              const Record *Reg) {
   assert(Reg->isSubClassOf("Register") && "Expected a register Record!");
 
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
@@ -44,33 +42,31 @@ void PredicateExpander::expandCheckRegOperand(formatted_raw_ostream &OS,
   OS << Reg->getName();
 }
 
-void PredicateExpander::expandCheckInvalidRegOperand(formatted_raw_ostream &OS,
+void PredicateExpander::expandCheckInvalidRegOperand(raw_ostream &OS,
                                                      int OpIndex) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
      << ").getReg() " << (shouldNegate() ? "!= " : "== ") << "0";
 }
 
-void PredicateExpander::expandCheckSameRegOperand(formatted_raw_ostream &OS,
-                                                  int First, int Second) {
+void PredicateExpander::expandCheckSameRegOperand(raw_ostream &OS, int First,
+                                                  int Second) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << First
      << ").getReg() " << (shouldNegate() ? "!=" : "==") << " MI"
      << (isByRef() ? "." : "->") << "getOperand(" << Second << ").getReg()";
 }
 
-void PredicateExpander::expandCheckNumOperands(formatted_raw_ostream &OS,
-                                               int NumOps) {
+void PredicateExpander::expandCheckNumOperands(raw_ostream &OS, int NumOps) {
   OS << "MI" << (isByRef() ? "." : "->") << "getNumOperands() "
      << (shouldNegate() ? "!= " : "== ") << NumOps;
 }
 
-void PredicateExpander::expandCheckOpcode(formatted_raw_ostream &OS,
-                                          const Record *Inst) {
+void PredicateExpander::expandCheckOpcode(raw_ostream &OS, const Record *Inst) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOpcode() "
      << (shouldNegate() ? "!= " : "== ") << Inst->getValueAsString("Namespace")
      << "::" << Inst->getName();
 }
 
-void PredicateExpander::expandCheckOpcode(formatted_raw_ostream &OS,
+void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
                                           const RecVec &Opcodes) {
   assert(!Opcodes.empty() && "Expected at least one opcode to check!");
   bool First = true;
@@ -86,7 +82,7 @@ void PredicateExpander::expandCheckOpcode(formatted_raw_ostream &OS,
   increaseIndentLevel();
   for (const Record *Rec : Opcodes) {
     OS << '\n';
-    OS.PadToColumn(getIndentLevel() * 2);
+    OS.indent(getIndentLevel() * 2);
     if (!First)
       OS << (shouldNegate() ? "&& " : "|| ");
 
@@ -96,11 +92,11 @@ void PredicateExpander::expandCheckOpcode(formatted_raw_ostream &OS,
 
   OS << '\n';
   decreaseIndentLevel();
-  OS.PadToColumn(getIndentLevel() * 2);
+  OS.indent(getIndentLevel() * 2);
   OS << ')';
 }
 
-void PredicateExpander::expandCheckPseudo(formatted_raw_ostream &OS,
+void PredicateExpander::expandCheckPseudo(raw_ostream &OS,
                                           const RecVec &Opcodes) {
   if (shouldExpandForMC())
     expandFalse(OS);
@@ -108,7 +104,7 @@ void PredicateExpander::expandCheckPseudo(formatted_raw_ostream &OS,
     expandCheckOpcode(OS, Opcodes);
 }
 
-void PredicateExpander::expandPredicateSequence(formatted_raw_ostream &OS,
+void PredicateExpander::expandPredicateSequence(raw_ostream &OS,
                                                 const RecVec &Sequence,
                                                 bool IsCheckAll) {
   assert(!Sequence.empty() && "Found an invalid empty predicate set!");
@@ -124,7 +120,7 @@ void PredicateExpander::expandPredicateSequence(formatted_raw_ostream &OS,
   setNegatePredicate(false);
   for (const Record *Rec : Sequence) {
     OS << '\n';
-    OS.PadToColumn(getIndentLevel() * 2);
+    OS.indent(getIndentLevel() * 2);
     if (!First)
       OS << (IsCheckAll ? "&& " : "|| ");
     expandPredicate(OS, Rec);
@@ -132,12 +128,12 @@ void PredicateExpander::expandPredicateSequence(formatted_raw_ostream &OS,
   }
   OS << '\n';
   decreaseIndentLevel();
-  OS.PadToColumn(getIndentLevel() * 2);
+  OS.indent(getIndentLevel() * 2);
   OS << ')';
   setNegatePredicate(OldValue);
 }
 
-void PredicateExpander::expandTIIFunctionCall(formatted_raw_ostream &OS,
+void PredicateExpander::expandTIIFunctionCall(raw_ostream &OS,
                                               StringRef TargetName,
                                               StringRef MethodName) {
   OS << (shouldNegate() ? "!" : "");
@@ -149,26 +145,24 @@ void PredicateExpander::expandTIIFunctionCall(formatted_raw_ostream &OS,
   OS << MethodName << (isByRef() ? "(MI)" : "(*MI)");
 }
 
-void PredicateExpander::expandCheckIsRegOperand(formatted_raw_ostream &OS,
-                                                int OpIndex) {
+void PredicateExpander::expandCheckIsRegOperand(raw_ostream &OS, int OpIndex) {
   OS << (shouldNegate() ? "!" : "") << "MI" << (isByRef() ? "." : "->")
      << "getOperand(" << OpIndex << ").isReg() ";
 }
 
-void PredicateExpander::expandCheckIsImmOperand(formatted_raw_ostream &OS,
-                                                int OpIndex) {
+void PredicateExpander::expandCheckIsImmOperand(raw_ostream &OS, int OpIndex) {
   OS << (shouldNegate() ? "!" : "") << "MI" << (isByRef() ? "." : "->")
      << "getOperand(" << OpIndex << ").isImm() ";
 }
 
-void PredicateExpander::expandCheckFunctionPredicate(formatted_raw_ostream &OS,
+void PredicateExpander::expandCheckFunctionPredicate(raw_ostream &OS,
                                                      StringRef MCInstFn,
                                                      StringRef MachineInstrFn) {
   OS << (shouldExpandForMC() ? MCInstFn : MachineInstrFn)
      << (isByRef() ? "(MI)" : "(*MI)");
 }
 
-void PredicateExpander::expandCheckNonPortable(formatted_raw_ostream &OS,
+void PredicateExpander::expandCheckNonPortable(raw_ostream &OS,
                                                StringRef Code) {
   if (shouldExpandForMC())
     return expandFalse(OS);
@@ -176,58 +170,63 @@ void PredicateExpander::expandCheckNonPortable(formatted_raw_ostream &OS,
   OS << '(' << Code << ')';
 }
 
-void PredicateExpander::expandReturnStatement(formatted_raw_ostream &OS,
+void PredicateExpander::expandReturnStatement(raw_ostream &OS,
                                               const Record *Rec) {
-  OS << "return ";
-  expandPredicate(OS, Rec);
-  OS << ";";
+  std::string Buffer;
+  raw_string_ostream SS(Buffer);
+
+  SS << "return ";
+  expandPredicate(SS, Rec);
+  SS << ";";
+  SS.flush();
+  OS << Buffer;
 }
 
-void PredicateExpander::expandOpcodeSwitchCase(formatted_raw_ostream &OS,
+void PredicateExpander::expandOpcodeSwitchCase(raw_ostream &OS,
                                                const Record *Rec) {
   const RecVec &Opcodes = Rec->getValueAsListOfDefs("Opcodes");
   for (const Record *Opcode : Opcodes) {
-    OS.PadToColumn(getIndentLevel() * 2);
+    OS.indent(getIndentLevel() * 2);
     OS << "case " << Opcode->getValueAsString("Namespace")
        << "::" << Opcode->getName() << " :\n";
   }
 
   increaseIndentLevel();
+  OS.indent(getIndentLevel() * 2);
   expandStatement(OS, Rec->getValueAsDef("CaseStmt"));
   decreaseIndentLevel();
 }
 
-void PredicateExpander::expandOpcodeSwitchStatement(formatted_raw_ostream &OS,
+void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
                                                     const RecVec &Cases,
                                                     const Record *Default) {
-  OS << "switch(MI" << (isByRef() ? "." : "->") << "getOpcode()) {\n";
+  std::string Buffer;
+  raw_string_ostream SS(Buffer);
 
+  SS << "switch(MI" << (isByRef() ? "." : "->") << "getOpcode()) {\n";
   for (const Record *Rec : Cases) {
-    expandOpcodeSwitchCase(OS, Rec);
-    OS << '\n';
+    expandOpcodeSwitchCase(SS, Rec);
+    SS << '\n';
   }
 
-  unsigned ColNum = getIndentLevel() * 2;
-  OS.PadToColumn(ColNum);
-
   // Expand the default case.
-  OS << "default :\n";
-  increaseIndentLevel();
-  expandStatement(OS, Default);
-  decreaseIndentLevel();
-  OS << '\n';
+  SS.indent(getIndentLevel() * 2);
+  SS << "default :\n";
 
-  OS.PadToColumn(ColNum);
-  OS << "} // end of switch-stmt";
+  increaseIndentLevel();
+  SS.indent(getIndentLevel() * 2);
+  expandStatement(SS, Default);
+  decreaseIndentLevel();
+  SS << '\n';
+
+  SS.indent(getIndentLevel() * 2);
+  SS << "} // end of switch-stmt";
+  SS.flush();
+  OS << Buffer;
 }
 
-void PredicateExpander::expandStatement(formatted_raw_ostream &OS,
-                                        const Record *Rec) {
-  OS.flush();
-  unsigned ColNum = getIndentLevel() * 2;
-  if (OS.getColumn() < ColNum)
-    OS.PadToColumn(ColNum);
-
+void PredicateExpander::expandStatement(raw_ostream &OS, const Record *Rec) {
+  // Assume that padding has been added by the caller.
   if (Rec->isSubClassOf("MCOpcodeSwitchStatement")) {
     expandOpcodeSwitchStatement(OS, Rec->getValueAsListOfDefs("Cases"),
                                 Rec->getValueAsDef("DefaultCase"));
@@ -242,13 +241,8 @@ void PredicateExpander::expandStatement(formatted_raw_ostream &OS,
   llvm_unreachable("No known rules to expand this MCStatement");
 }
 
-void PredicateExpander::expandPredicate(formatted_raw_ostream &OS,
-                                        const Record *Rec) {
-  OS.flush();
-  unsigned ColNum = getIndentLevel() * 2;
-  if (OS.getColumn() < ColNum)
-    OS.PadToColumn(ColNum);
-
+void PredicateExpander::expandPredicate(raw_ostream &OS, const Record *Rec) {
+  // Assume that padding has been added by the caller.
   if (Rec->isSubClassOf("MCTrue")) {
     if (shouldNegate())
       return expandFalse(OS);

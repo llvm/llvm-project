@@ -76,6 +76,73 @@ define <4 x i32> @combine_vec_udiv_by_minsigned(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; TODO fold (udiv 0, x) -> 0
+define i32 @combine_udiv_zero(i32 %x) {
+; CHECK-LABEL: combine_udiv_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %edi
+; CHECK-NEXT:    retq
+  %1 = udiv i32 0, %x
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_udiv_zero(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_udiv_zero:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pextrd $1, %xmm0, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    movd %xmm0, %esi
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    divl %esi
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pinsrd $1, %ecx, %xmm1
+; SSE-NEXT:    pextrd $2, %xmm0, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    pinsrd $2, %eax, %xmm1
+; SSE-NEXT:    pextrd $3, %xmm0, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    pinsrd $3, %eax, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_udiv_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpextrd $1, %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    divl %ecx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    vmovd %xmm0, %esi
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    divl %esi
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    divl %ecx
+; AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrd $3, %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    divl %ecx
+; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %1 = udiv <4 x i32> zeroinitializer, %x
+  ret <4 x i32> %1
+}
+
 ; TODO fold (udiv x, x) -> 1
 define i32 @combine_udiv_dupe(i32 %x) {
 ; CHECK-LABEL: combine_udiv_dupe:

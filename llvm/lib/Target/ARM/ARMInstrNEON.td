@@ -6589,6 +6589,8 @@ def VREV64q8  : VREV64Q<0b00, "vrev64", "8", v16i8>;
 def VREV64q16 : VREV64Q<0b01, "vrev64", "16", v8i16>;
 def VREV64q32 : VREV64Q<0b10, "vrev64", "32", v4i32>;
 def : Pat<(v4f32 (NEONvrev64 (v4f32 QPR:$Vm))), (VREV64q32 QPR:$Vm)>;
+def : Pat<(v8f16 (NEONvrev64 (v8f16 QPR:$Vm))), (VREV64q16 QPR:$Vm)>;
+def : Pat<(v4f16 (NEONvrev64 (v4f16 DPR:$Vm))), (VREV64d16 DPR:$Vm)>;
 
 //   VREV32   : Vector Reverse elements within 32-bit words
 

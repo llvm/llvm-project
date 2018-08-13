@@ -2164,11 +2164,21 @@ Decl *ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 }
 
 Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
+  bool IsFriendTemplate = false;
+  if (auto *DCXX = dyn_cast<CXXRecordDecl>(D)) {
+    IsFriendTemplate =
+        DCXX->getDescribedClassTemplate() &&
+        DCXX->getDescribedClassTemplate()->getFriendObjectKind() !=
+            Decl::FOK_None;
+  }
+
   // If this record has a definition in the translation unit we're coming from,
   // but this particular declaration is not that definition, import the
   // definition and map to that.
   TagDecl *Definition = D->getDefinition();
   if (Definition && Definition != D &&
+      // Friend template declaration must be imported on its own.
+      !IsFriendTemplate &&
       // In contrast to a normal CXXRecordDecl, the implicit
       // CXXRecordDecl of ClassTemplateSpecializationDecl is its redeclaration.
       // The definition of the implicit CXXRecordDecl in this case is the
@@ -2241,7 +2251,7 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         PrevDecl = FoundRecord;
 
         if (RecordDecl *FoundDef = FoundRecord->getDefinition()) {
-          if ((SearchName && !D->isCompleteDefinition())
+          if ((SearchName && !D->isCompleteDefinition() && !IsFriendTemplate)
               || (D->isCompleteDefinition() &&
                   D->isAnonymousStructOrUnion()
                     == FoundDef->isAnonymousStructOrUnion() &&
@@ -2279,6 +2289,9 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           if (FoundRecord->isCompleteDefinition() &&
               D->isCompleteDefinition() &&
               !IsStructuralMatch(D, FoundRecord))
+            continue;
+
+          if (IsFriendTemplate)
             continue;
 
           AdoptDecl = FoundRecord;
@@ -2348,7 +2361,7 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         if (!ToDescribed)
           return nullptr;
         D2CXX->setDescribedClassTemplate(ToDescribed);
-        if (!DCXX->isInjectedClassName()) {
+        if (!DCXX->isInjectedClassName() && !IsFriendTemplate) {
           // In a record describing a template the type should be an
           // InjectedClassNameType (see Sema::CheckClassTemplate). Update the
           // previously set type to the correct value here (ToDescribed is not
@@ -4371,12 +4384,14 @@ static ClassTemplateDecl *getDefinition(ClassTemplateDecl *D) {
 }
 
 Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+  bool IsFriend = D->getFriendObjectKind() != Decl::FOK_None;
+
   // If this record has a definition in the translation unit we're coming from,
   // but this particular declaration is not that definition, import the
   // definition and map to that.
   auto *Definition =
       cast_or_null<CXXRecordDecl>(D->getTemplatedDecl()->getDefinition());
-  if (Definition && Definition != D->getTemplatedDecl()) {
+  if (Definition && Definition != D->getTemplatedDecl() && !IsFriend) {
     Decl *ImportedDef
       = Importer.Import(Definition->getDescribedClassTemplate());
     if (!ImportedDef)
@@ -4413,17 +4428,20 @@ Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
           // definition. So, try to get the definition if that is available in
           // the redecl chain.
           ClassTemplateDecl *TemplateWithDef = getDefinition(FoundTemplate);
-          if (!TemplateWithDef)
+          if (TemplateWithDef)
+            FoundTemplate = TemplateWithDef;
+          else
             continue;
-          FoundTemplate = TemplateWithDef; // Continue with the definition.
         }
 
         if (IsStructuralMatch(D, FoundTemplate)) {
-          // The class templates structurally match; call it the same template.
+          if (!IsFriend) {
+            Importer.MapImported(D->getTemplatedDecl(),
+                                 FoundTemplate->getTemplatedDecl());
+            return Importer.MapImported(D, FoundTemplate);
+          }
 
-          Importer.MapImported(D->getTemplatedDecl(),
-                               FoundTemplate->getTemplatedDecl());
-          return Importer.MapImported(D, FoundTemplate);
+          continue;
         }
       }
 
@@ -4461,9 +4479,17 @@ Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   ToTemplated->setDescribedClassTemplate(D2);
 
+  if (ToTemplated->getPreviousDecl()) {
+    assert(
+        ToTemplated->getPreviousDecl()->getDescribedClassTemplate() &&
+        "Missing described template");
+    D2->setPreviousDecl(
+        ToTemplated->getPreviousDecl()->getDescribedClassTemplate());
+  }
   D2->setAccess(D->getAccess());
   D2->setLexicalDeclContext(LexicalDC);
-  LexicalDC->addDeclInternal(D2);
+  if (!IsFriend)
+    LexicalDC->addDeclInternal(D2);
 
   if (FromTemplated->isCompleteDefinition() &&
       !ToTemplated->isCompleteDefinition()) {

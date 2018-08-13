@@ -78,3 +78,14 @@ define i8* @test_sext16(i8* %ptr) nounwind {
   %d = getelementptr i8, i8* %ptr, i8 -21
   ret i8* %d
 }
+
+
+; Test out of int64_t range indices
+
+; OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=7173
+define void @test_outofrange(i96* %ptr) nounwind {
+; CHECK-LABEL: test_outofrange
+  %d = getelementptr i96, i96* %ptr, i96 39614081257132168796771975167
+  %ld = load i96, i96* %d, align 1
+  unreachable
+}
