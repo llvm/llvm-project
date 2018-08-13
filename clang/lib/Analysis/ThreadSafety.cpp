@@ -86,8 +86,8 @@ static void warnInvalidLock(ThreadSafetyHandler &Handler,
 
 namespace {
 
-/// A set of CapabilityExpr objects, which are compiled from thread safety
-/// attributes on a function.
+/// A set of CapabilityInfo objects, which are compiled from the
+/// requires attributes on a function.
 class CapExprSet : public SmallVector<CapabilityExpr, 4> {
 public:
   /// Push M onto list, but discard duplicates.
@@ -944,23 +944,6 @@ public:
     if (FullyRemove)
       FSet.removeLock(FactMan, Cp);
   }
-
-  void Relock(FactSet &FSet, FactManager &FactMan, LockKind LK,
-              SourceLocation RelockLoc, ThreadSafetyHandler &Handler,
-              StringRef DiagKind) const {
-    for (const auto *UnderlyingMutex : UnderlyingMutexes) {
-      CapabilityExpr UnderCp(UnderlyingMutex, false);
-
-      // We're relocking the underlying mutexes. Warn on double locking.
-      if (FSet.findLock(FactMan, UnderCp))
-        Handler.handleDoubleLock(DiagKind, UnderCp.toString(), RelockLoc);
-      else {
-        FSet.removeLock(FactMan, !UnderCp);
-        FSet.addLock(FactMan, llvm::make_unique<LockableFactEntry>(UnderCp, LK,
-                                                                   RelockLoc));
-      }
-    }
-  }
 };
 
 /// Class which implements the core thread safety analysis routines.
@@ -991,9 +974,6 @@ public:
   void removeLock(FactSet &FSet, const CapabilityExpr &CapE,
                   SourceLocation UnlockLoc, bool FullyRemove, LockKind Kind,
                   StringRef DiagKind);
-  void relockScopedLock(FactSet &FSet, const CapabilityExpr &CapE,
-                        SourceLocation RelockLoc, LockKind Kind,
-                        StringRef DiagKind);
 
   template <typename AttrType>
   void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, Expr *Exp,
@@ -1303,27 +1283,6 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 
   LDat->handleUnlock(FSet, FactMan, Cp, UnlockLoc, FullyRemove, Handler,
                      DiagKind);
-}
-
-void ThreadSafetyAnalyzer::relockScopedLock(FactSet &FSet,
-                                            const CapabilityExpr &Cp,
-                                            SourceLocation RelockLoc,
-                                            LockKind Kind, StringRef DiagKind) {
-  if (Cp.shouldIgnore())
-    return;
-
-  const FactEntry *LDat = FSet.findLock(FactMan, Cp);
-  if (!LDat) {
-    // FIXME: It's possible to manually destruct the scope and then relock it.
-    // Should that be a separate warning? For now we pretend nothing happened.
-    // It's undefined behavior, so not related to thread safety.
-    return;
-  }
-
-  // We should only land here if Cp is a scoped capability, so if we have any
-  // fact, it must be a ScopedLockableFactEntry.
-  const auto *SLDat = static_cast<const ScopedLockableFactEntry *>(LDat);
-  SLDat->Relock(FSet, FactMan, Kind, RelockLoc, Handler, DiagKind);
 }
 
 /// Extract the list of mutexIDs from the attribute on an expression,
@@ -1767,18 +1726,13 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
   StringRef CapDiagKind = "mutex";
 
   // Figure out if we're constructing an object of scoped lockable class
-  bool isScopedConstructor = false, isScopedMemberCall = false;
+  bool isScopedVar = false;
   if (VD) {
     if (const auto *CD = dyn_cast<const CXXConstructorDecl>(D)) {
       const CXXRecordDecl* PD = CD->getParent();
       if (PD && PD->hasAttr<ScopedLockableAttr>())
-        isScopedConstructor = true;
+        isScopedVar = true;
     }
-  }
-  if (const auto *MCD = dyn_cast<const CXXMemberCallExpr>(Exp)) {
-    const CXXRecordDecl *PD = MCD->getRecordDecl();
-    if (PD && PD->hasAttr<ScopedLockableAttr>())
-      isScopedMemberCall = true;
   }
 
   for(const Attr *At : D->attrs()) {
@@ -1859,7 +1813,7 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
                              POK_FunctionCall, ClassifyDiagnostic(A),
                              Exp->getExprLoc());
           // use for adopting a lock
-          if (isScopedConstructor) {
+          if (isScopedVar) {
             Analyzer->getMutexIDs(A->isShared() ? ScopedSharedReqs
                                                 : ScopedExclusiveReqs,
                                   A, Exp, D, VD);
@@ -1892,24 +1846,16 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
     Analyzer->removeLock(FSet, M, Loc, Dtor, LK_Generic, CapDiagKind);
 
   // Add locks.
-  if (isScopedMemberCall) {
-    // If the call is on a scoped capability, we need to relock instead.
-    for (const auto &M : ExclusiveLocksToAdd)
-      Analyzer->relockScopedLock(FSet, M, Loc, LK_Exclusive, CapDiagKind);
-    for (const auto &M : SharedLocksToAdd)
-      Analyzer->relockScopedLock(FSet, M, Loc, LK_Shared, CapDiagKind);
-  } else {
-    for (const auto &M : ExclusiveLocksToAdd)
-      Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
-                                  M, LK_Exclusive, Loc, isScopedConstructor),
-                        CapDiagKind);
-    for (const auto &M : SharedLocksToAdd)
-      Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
-                                  M, LK_Shared, Loc, isScopedConstructor),
-                        CapDiagKind);
-  }
+  for (const auto &M : ExclusiveLocksToAdd)
+    Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
+                                M, LK_Exclusive, Loc, isScopedVar),
+                      CapDiagKind);
+  for (const auto &M : SharedLocksToAdd)
+    Analyzer->addLock(FSet, llvm::make_unique<LockableFactEntry>(
+                                M, LK_Shared, Loc, isScopedVar),
+                      CapDiagKind);
 
-  if (isScopedConstructor) {
+  if (isScopedVar) {
     // Add the managing object as a dummy mutex, mapped to the underlying mutex.
     SourceLocation MLoc = VD->getLocation();
     DeclRefExpr DRE(VD, false, VD->getType(), VK_LValue, VD->getLocation());
