@@ -1515,6 +1515,28 @@ TEST(CompletionTest, CompletionTokenRange) {
   }
 }
 
+TEST(SignatureHelpTest, OverloadsOrdering) {
+  const auto Results = signatures(R"cpp(
+    void foo(int x);
+    void foo(int x, float y);
+    void foo(float x, int y);
+    void foo(float x, float y);
+    void foo(int x, int y = 0);
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(
+      Results.signatures,
+      ElementsAre(
+          Sig("foo(int x) -> void", {"int x"}),
+          Sig("foo(int x, int y = 0) -> void", {"int x", "int y = 0"}),
+          Sig("foo(float x, int y) -> void", {"float x", "int y"}),
+          Sig("foo(int x, float y) -> void", {"int x", "float y"}),
+          Sig("foo(float x, float y) -> void", {"float x", "float y"})));
+  // We always prefer the first signature.
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
