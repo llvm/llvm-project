@@ -90,6 +90,11 @@ def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
 
+def NonStaticNonConstCXXMethod
+    : SubsetSubject<CXXMethod,
+                    [{!S->isStatic() && !S->isConst()}],
+                    "non-static non-const member functions">;
+
 def ObjCClassMethod : SubsetSubject<ObjCMethod,
                                     [{!S->isInstanceMethod()}],
                                     "Objective-C class methods">;
@@ -3088,4 +3093,10 @@ def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
   let Documentation = [InternalLinkageDocs];
+}
+
+def Reinitializes : InheritableAttr {
+  let Spellings = [Clang<"reinitializes", 0>];
+  let Subjects = SubjectList<[NonStaticNonConstCXXMethod], ErrorDiag>;
+  let Documentation = [ReinitializesDocs];
 }
