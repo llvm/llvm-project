@@ -6,6 +6,7 @@
 # CHECK-NEXT:    "params": {
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:      {
+# CHECK-NEXT:        "category": "Semantic Issue",
 # CHECK-NEXT:        "clangd_fixes": [
 # CHECK-NEXT:          {
 # CHECK-NEXT:            "edit": {
