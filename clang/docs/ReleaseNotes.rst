@@ -186,6 +186,12 @@ Windows Support
      Visual Studio's default stdafx.h setup now uses precompiled headers with
      clang-cl.
 
+- The alternative entry point names
+  (``wmain``/``WinMain``/``wWinMain``/``DllMain``) now are properly mangled
+  as plain C names in C++ contexts when targeting MinGW, without having to
+  explicit specify ``extern "C"``. (This was already the case for MSVC
+  targets.)
+
 - ...
 
 
