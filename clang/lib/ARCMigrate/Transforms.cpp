@@ -359,7 +359,7 @@ MigrationContext::~MigrationContext() {
 bool MigrationContext::isGCOwnedNonObjC(QualType T) {
   while (!T.isNull()) {
     if (const AttributedType *AttrT = T->getAs<AttributedType>()) {
-      if (AttrT->getAttrKind() == attr::ObjCOwnership)
+      if (AttrT->getAttrKind() == AttributedType::attr_objc_ownership)
         return !AttrT->getModifiedType()->isObjCRetainableType();
     }
 

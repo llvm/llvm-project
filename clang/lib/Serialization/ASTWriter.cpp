@@ -770,7 +770,19 @@ void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-  Record.AddAttr(TL.getAttr());
+  Record.AddSourceLocation(TL.getAttrNameLoc());
+  if (TL.hasAttrOperand()) {
+    SourceRange range = TL.getAttrOperandParensRange();
+    Record.AddSourceLocation(range.getBegin());
+    Record.AddSourceLocation(range.getEnd());
+  }
+  if (TL.hasAttrExprOperand()) {
+    Expr *operand = TL.getAttrExprOperand();
+    Record.push_back(operand ? 1 : 0);
+    if (operand) Record.AddStmt(operand);
+  } else if (TL.hasAttrEnumOperand()) {
+    Record.AddSourceLocation(TL.getAttrEnumOperandLoc());
+  }
 }
 
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
@@ -4469,21 +4481,16 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 // General Serialization Routines
 //===----------------------------------------------------------------------===//
 
-void ASTRecordWriter::AddAttr(const Attr *A) {
-  auto &Record = *this;
-  if (!A)
-    return Record.push_back(0);
-  Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
-  Record.AddSourceRange(A->getRange());
-
-#include "clang/Serialization/AttrPCHWrite.inc"
-}
-
 /// Emit the list of attributes to the specified record.
 void ASTRecordWriter::AddAttributes(ArrayRef<const Attr *> Attrs) {
-  push_back(Attrs.size());
-  for (const auto *A : Attrs)
-    AddAttr(A);
+  auto &Record = *this;
+  Record.push_back(Attrs.size());
+  for (const auto *A : Attrs) {
+    Record.push_back(A->getKind()); // FIXME: stable encoding, target attrs
+    Record.AddSourceRange(A->getRange());
+
+#include "clang/Serialization/AttrPCHWrite.inc"
+  }
 }
 
 void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {

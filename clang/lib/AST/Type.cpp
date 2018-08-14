@@ -592,6 +592,28 @@ bool Type::isObjCClassOrClassKindOfType() const {
   return OPT->isObjCClassType() || OPT->isObjCQualifiedClassType();
 }
 
+/// Was this type written with the special inert-in-MRC __unsafe_unretained
+/// qualifier?
+///
+/// This approximates the answer to the following question: if this
+/// translation unit were compiled in ARC, would this type be qualified
+/// with __unsafe_unretained?
+bool Type::isObjCInertUnsafeUnretainedType() const {
+  const Type *cur = this;
+  while (true) {
+    if (const auto attributed = dyn_cast<AttributedType>(cur)) {
+      if (attributed->getAttrKind() ==
+            AttributedType::attr_objc_inert_unsafe_unretained)
+        return true;
+    }
+
+    // Single-step desugar until we run out of sugar.
+    QualType next = cur->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (next.getTypePtr() == cur) return false;
+    cur = next.getTypePtr();
+  }
+}
+
 ObjCTypeParamType::ObjCTypeParamType(const ObjCTypeParamDecl *D,
                                      QualType can,
                                      ArrayRef<ObjCProtocolDecl *> protocols)
@@ -1617,16 +1639,6 @@ TagDecl *Type::getAsTagDecl() const {
     return Injected->getDecl();
 
   return nullptr;
-}
-
-bool Type::hasAttr(attr::Kind AK) const {
-  const Type *Cur = this;
-  while (const auto *AT = Cur->getAs<AttributedType>()) {
-    if (AT->getAttrKind() == AK)
-      return true;
-    Cur = AT->getEquivalentType().getTypePtr();
-  }
-  return false;
 }
 
 namespace {
@@ -3155,58 +3167,105 @@ bool RecordType::hasConstFields() const {
 }
 
 bool AttributedType::isQualifier() const {
-  // FIXME: Generate this with TableGen.
   switch (getAttrKind()) {
   // These are type qualifiers in the traditional C sense: they annotate
   // something about a specific value/variable of a type.  (They aren't
   // always part of the canonical type, though.)
-  case attr::ObjCGC:
-  case attr::ObjCOwnership:
-  case attr::ObjCInertUnsafeUnretained:
-  case attr::TypeNonNull:
-  case attr::TypeNullable:
-  case attr::TypeNullUnspecified:
-  case attr::LifetimeBound:
+  case AttributedType::attr_address_space:
+  case AttributedType::attr_objc_gc:
+  case AttributedType::attr_objc_ownership:
+  case AttributedType::attr_objc_inert_unsafe_unretained:
+  case AttributedType::attr_nonnull:
+  case AttributedType::attr_nullable:
+  case AttributedType::attr_null_unspecified:
+  case AttributedType::attr_lifetimebound:
     return true;
 
-  // All other type attributes aren't qualifiers; they rewrite the modified
-  // type to be a semantically different type.
-  default:
+  // These aren't qualifiers; they rewrite the modified type to be a
+  // semantically different type.
+  case AttributedType::attr_regparm:
+  case AttributedType::attr_vector_size:
+  case AttributedType::attr_neon_vector_type:
+  case AttributedType::attr_neon_polyvector_type:
+  case AttributedType::attr_pcs:
+  case AttributedType::attr_pcs_vfp:
+  case AttributedType::attr_noreturn:
+  case AttributedType::attr_cdecl:
+  case AttributedType::attr_fastcall:
+  case AttributedType::attr_stdcall:
+  case AttributedType::attr_thiscall:
+  case AttributedType::attr_regcall:
+  case AttributedType::attr_pascal:
+  case AttributedType::attr_swiftcall:
+  case AttributedType::attr_vectorcall:
+  case AttributedType::attr_inteloclbicc:
+  case AttributedType::attr_preserve_most:
+  case AttributedType::attr_preserve_all:
+  case AttributedType::attr_ms_abi:
+  case AttributedType::attr_sysv_abi:
+  case AttributedType::attr_ptr32:
+  case AttributedType::attr_ptr64:
+  case AttributedType::attr_sptr:
+  case AttributedType::attr_uptr:
+  case AttributedType::attr_objc_kindof:
+  case AttributedType::attr_ns_returns_retained:
+  case AttributedType::attr_nocf_check:
     return false;
   }
+  llvm_unreachable("bad attributed type kind");
 }
 
 bool AttributedType::isMSTypeSpec() const {
-  // FIXME: Generate this with TableGen?
   switch (getAttrKind()) {
-  default: return false;
-  case attr::Ptr32:
-  case attr::Ptr64:
-  case attr::SPtr:
-  case attr::UPtr:
+  default:  return false;
+  case attr_ptr32:
+  case attr_ptr64:
+  case attr_sptr:
+  case attr_uptr:
     return true;
   }
   llvm_unreachable("invalid attr kind");
 }
 
 bool AttributedType::isCallingConv() const {
-  // FIXME: Generate this with TableGen.
   switch (getAttrKind()) {
-  default: return false;
-  case attr::Pcs:
-  case attr::CDecl:
-  case attr::FastCall:
-  case attr::StdCall:
-  case attr::ThisCall:
-  case attr::RegCall:
-  case attr::SwiftCall:
-  case attr::VectorCall:
-  case attr::Pascal:
-  case attr::MSABI:
-  case attr::SysVABI:
-  case attr::IntelOclBicc:
-  case attr::PreserveMost:
-  case attr::PreserveAll:
+  case attr_ptr32:
+  case attr_ptr64:
+  case attr_sptr:
+  case attr_uptr:
+  case attr_address_space:
+  case attr_regparm:
+  case attr_vector_size:
+  case attr_neon_vector_type:
+  case attr_neon_polyvector_type:
+  case attr_objc_gc:
+  case attr_objc_ownership:
+  case attr_objc_inert_unsafe_unretained:
+  case attr_noreturn:
+  case attr_nonnull:
+  case attr_ns_returns_retained:
+  case attr_nullable:
+  case attr_null_unspecified:
+  case attr_objc_kindof:
+  case attr_nocf_check:
+  case attr_lifetimebound:
+    return false;
+
+  case attr_pcs:
+  case attr_pcs_vfp:
+  case attr_cdecl:
+  case attr_fastcall:
+  case attr_stdcall:
+  case attr_thiscall:
+  case attr_regcall:
+  case attr_swiftcall:
+  case attr_vectorcall:
+  case attr_pascal:
+  case attr_ms_abi:
+  case attr_sysv_abi:
+  case attr_inteloclbicc:
+  case attr_preserve_most:
+  case attr_preserve_all:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -3649,18 +3708,23 @@ LinkageInfo Type::getLinkageAndVisibility() const {
   return LinkageComputer{}.getTypeLinkageAndVisibility(this);
 }
 
-Optional<NullabilityKind>
-Type::getNullability(const ASTContext &Context) const {
-  QualType Type(this, 0);
-  while (const auto *AT = Type->getAs<AttributedType>()) {
+Optional<NullabilityKind> Type::getNullability(const ASTContext &context) const {
+  QualType type(this, 0);
+  do {
     // Check whether this is an attributed type with nullability
     // information.
-    if (auto Nullability = AT->getImmediateNullability())
-      return Nullability;
+    if (auto attributed = dyn_cast<AttributedType>(type.getTypePtr())) {
+      if (auto nullability = attributed->getImmediateNullability())
+        return nullability;
+    }
 
-    Type = AT->getEquivalentType();
-  }
-  return None;
+    // Desugar the type. If desugaring does nothing, we're done.
+    QualType desugared = type.getSingleStepDesugaredType(context);
+    if (desugared.getTypePtr() == type.getTypePtr())
+      return None;
+
+    type = desugared;
+  } while (true);
 }
 
 bool Type::canHaveNullability(bool ResultIfUnknown) const {
@@ -3773,13 +3837,12 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   llvm_unreachable("bad type kind!");
 }
 
-llvm::Optional<NullabilityKind>
-AttributedType::getImmediateNullability() const {
-  if (getAttrKind() == attr::TypeNonNull)
+llvm::Optional<NullabilityKind> AttributedType::getImmediateNullability() const {
+  if (getAttrKind() == AttributedType::attr_nonnull)
     return NullabilityKind::NonNull;
-  if (getAttrKind() == attr::TypeNullable)
+  if (getAttrKind() == AttributedType::attr_nullable)
     return NullabilityKind::Nullable;
-  if (getAttrKind() == attr::TypeNullUnspecified)
+  if (getAttrKind() == AttributedType::attr_null_unspecified)
     return NullabilityKind::Unspecified;
   return None;
 }

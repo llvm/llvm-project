@@ -11,6 +11,8 @@
 
 #include <cfloat>
 
+#include "test_macros.h"
+
 #ifndef FLT_ROUNDS
 #error FLT_ROUNDS not defined
 #endif

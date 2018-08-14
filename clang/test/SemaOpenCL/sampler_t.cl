@@ -33,6 +33,8 @@ constant sampler_t glb_smp9 = 0x100000000LL; // expected-error{{sampler_t initia
 
 void foo(sampler_t); // expected-note{{passing argument to parameter here}}
 
+void constant_sampler(constant sampler_t s); // expected-error{{parameter may not be qualified with an address space}}
+
 constant struct sampler_s {
   sampler_t smp; // expected-error{{the 'sampler_t' type cannot be used to declare a structure or union field}}
 } sampler_str = {0};

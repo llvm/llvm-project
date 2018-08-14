@@ -5999,14 +5999,14 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
       // The [[lifetimebound]] attribute can be applied to the implicit object
       // parameter of a non-static member function (other than a ctor or dtor)
       // by applying it to the function type.
-      if (const auto *A = ATL.getAttrAs<LifetimeBoundAttr>()) {
+      if (ATL.getAttrKind() == AttributedType::attr_lifetimebound) {
         const auto *MD = dyn_cast<CXXMethodDecl>(FD);
         if (!MD || MD->isStatic()) {
-          S.Diag(A->getLocation(), diag::err_lifetimebound_no_object_param)
-              << !MD << A->getRange();
+          S.Diag(ATL.getAttrNameLoc(), diag::err_lifetimebound_no_object_param)
+              << !MD << ATL.getLocalSourceRange();
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
-          S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
-              << isa<CXXDestructorDecl>(MD) << A->getRange();
+          S.Diag(ATL.getAttrNameLoc(), diag::err_lifetimebound_ctor_dtor)
+              << isa<CXXDestructorDecl>(MD) << ATL.getLocalSourceRange();
         }
       }
     }

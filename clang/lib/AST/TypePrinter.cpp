@@ -1354,14 +1354,12 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,
                                         raw_ostream &OS) {
-  // FIXME: Generate this with TableGen.
-
   // Prefer the macro forms of the GC and ownership qualifiers.
-  if (T->getAttrKind() == attr::ObjCGC ||
-      T->getAttrKind() == attr::ObjCOwnership)
+  if (T->getAttrKind() == AttributedType::attr_objc_gc ||
+      T->getAttrKind() == AttributedType::attr_objc_ownership)
     return printBefore(T->getEquivalentType(), OS);
 
-  if (T->getAttrKind() == attr::ObjCKindOf)
+  if (T->getAttrKind() == AttributedType::attr_objc_kindof)
     OS << "__kindof ";
 
   printBefore(T->getModifiedType(), OS);
@@ -1369,21 +1367,23 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
   if (T->isMSTypeSpec()) {
     switch (T->getAttrKind()) {
     default: return;
-    case attr::Ptr32: OS << " __ptr32"; break;
-    case attr::Ptr64: OS << " __ptr64"; break;
-    case attr::SPtr: OS << " __sptr"; break;
-    case attr::UPtr: OS << " __uptr"; break;
+    case AttributedType::attr_ptr32: OS << " __ptr32"; break;
+    case AttributedType::attr_ptr64: OS << " __ptr64"; break;
+    case AttributedType::attr_sptr: OS << " __sptr"; break;
+    case AttributedType::attr_uptr: OS << " __uptr"; break;
     }
     spaceBeforePlaceHolder(OS);
   }
 
   // Print nullability type specifiers.
-  if (T->getImmediateNullability()) {
-    if (T->getAttrKind() == attr::TypeNonNull)
+  if (T->getAttrKind() == AttributedType::attr_nonnull ||
+      T->getAttrKind() == AttributedType::attr_nullable ||
+      T->getAttrKind() == AttributedType::attr_null_unspecified) {
+    if (T->getAttrKind() == AttributedType::attr_nonnull)
       OS << " _Nonnull";
-    else if (T->getAttrKind() == attr::TypeNullable)
+    else if (T->getAttrKind() == AttributedType::attr_nullable)
       OS << " _Nullable";
-    else if (T->getAttrKind() == attr::TypeNullUnspecified)
+    else if (T->getAttrKind() == AttributedType::attr_null_unspecified)
       OS << " _Null_unspecified";
     else
       llvm_unreachable("unhandled nullability");
@@ -1393,11 +1393,9 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
 
 void TypePrinter::printAttributedAfter(const AttributedType *T,
                                        raw_ostream &OS) {
-  // FIXME: Generate this with TableGen.
-
   // Prefer the macro forms of the GC and ownership qualifiers.
-  if (T->getAttrKind() == attr::ObjCGC ||
-      T->getAttrKind() == attr::ObjCOwnership)
+  if (T->getAttrKind() == AttributedType::attr_objc_gc ||
+      T->getAttrKind() == AttributedType::attr_objc_ownership)
     return printAfter(T->getEquivalentType(), OS);
 
   // If this is a calling convention attribute, don't print the implicit CC from
@@ -1408,74 +1406,107 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   // Some attributes are printed as qualifiers before the type, so we have
   // nothing left to do.
-  if (T->getAttrKind() == attr::ObjCKindOf ||
-      T->isMSTypeSpec() || T->getImmediateNullability())
+  if (T->getAttrKind() == AttributedType::attr_objc_kindof ||
+      T->isMSTypeSpec() ||
+      T->getAttrKind() == AttributedType::attr_nonnull ||
+      T->getAttrKind() == AttributedType::attr_nullable ||
+      T->getAttrKind() == AttributedType::attr_null_unspecified)
     return;
 
   // Don't print the inert __unsafe_unretained attribute at all.
-  if (T->getAttrKind() == attr::ObjCInertUnsafeUnretained)
+  if (T->getAttrKind() == AttributedType::attr_objc_inert_unsafe_unretained)
     return;
 
   // Don't print ns_returns_retained unless it had an effect.
-  if (T->getAttrKind() == attr::NSReturnsRetained &&
+  if (T->getAttrKind() == AttributedType::attr_ns_returns_retained &&
       !T->getEquivalentType()->castAs<FunctionType>()
                              ->getExtInfo().getProducesResult())
     return;
 
-  if (T->getAttrKind() == attr::LifetimeBound) {
+  if (T->getAttrKind() == AttributedType::attr_lifetimebound) {
     OS << " [[clang::lifetimebound]]";
     return;
   }
 
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
-#define TYPE_ATTR(NAME)
-#define DECL_OR_TYPE_ATTR(NAME)
-#define ATTR(NAME) case attr::NAME:
-#include "clang/Basic/AttrList.inc"
-    llvm_unreachable("non-type attribute attached to type");
-
-  case attr::OpenCLPrivateAddressSpace:
-  case attr::OpenCLGlobalAddressSpace:
-  case attr::OpenCLLocalAddressSpace:
-  case attr::OpenCLConstantAddressSpace:
-  case attr::OpenCLGenericAddressSpace:
-    // FIXME: Update printAttributedBefore to print these once we generate
-    // AttributedType nodes for them.
-    break;
-
-  case attr::LifetimeBound:
-  case attr::TypeNonNull:
-  case attr::TypeNullable:
-  case attr::TypeNullUnspecified:
-  case attr::ObjCGC:
-  case attr::ObjCInertUnsafeUnretained:
-  case attr::ObjCKindOf:
-  case attr::ObjCOwnership:
-  case attr::Ptr32:
-  case attr::Ptr64:
-  case attr::SPtr:
-  case attr::UPtr:
+  case AttributedType::attr_lifetimebound:
+  case AttributedType::attr_nonnull:
+  case AttributedType::attr_nullable:
+  case AttributedType::attr_null_unspecified:
+  case AttributedType::attr_objc_gc:
+  case AttributedType::attr_objc_inert_unsafe_unretained:
+  case AttributedType::attr_objc_kindof:
+  case AttributedType::attr_objc_ownership:
+  case AttributedType::attr_ptr32:
+  case AttributedType::attr_ptr64:
+  case AttributedType::attr_sptr:
+  case AttributedType::attr_uptr:
     llvm_unreachable("This attribute should have been handled already");
 
-  case attr::NSReturnsRetained:
+  case AttributedType::attr_address_space:
+    OS << "address_space(";
+    // FIXME: printing the raw LangAS value is wrong. This should probably
+    // use the same code as Qualifiers::print()
+    OS << (unsigned)T->getEquivalentType().getAddressSpace();
+    OS << ')';
+    break;
+
+  case AttributedType::attr_vector_size:
+    OS << "__vector_size__(";
+    if (const auto *vector = T->getEquivalentType()->getAs<VectorType>()) {
+      OS << vector->getNumElements();
+      OS << " * sizeof(";
+      print(vector->getElementType(), OS, StringRef());
+      OS << ')';
+    }
+    OS << ')';
+    break;
+
+  case AttributedType::attr_neon_vector_type:
+  case AttributedType::attr_neon_polyvector_type: {
+    if (T->getAttrKind() == AttributedType::attr_neon_vector_type)
+      OS << "neon_vector_type(";
+    else
+      OS << "neon_polyvector_type(";
+    const auto *vector = T->getEquivalentType()->getAs<VectorType>();
+    OS << vector->getNumElements();
+    OS << ')';
+    break;
+  }
+
+  case AttributedType::attr_regparm: {
+    // FIXME: When Sema learns to form this AttributedType, avoid printing the
+    // attribute again in printFunctionProtoAfter.
+    OS << "regparm(";
+    QualType t = T->getEquivalentType();
+    while (!t->isFunctionType())
+      t = t->getPointeeType();
+    OS << t->getAs<FunctionType>()->getRegParmType();
+    OS << ')';
+    break;
+  }
+
+  case AttributedType::attr_ns_returns_retained:
     OS << "ns_returns_retained";
     break;
 
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
   // attribute again in printFunctionProtoAfter.
-  case attr::AnyX86NoCfCheck: OS << "nocf_check"; break;
-  case attr::CDecl: OS << "cdecl"; break;
-  case attr::FastCall: OS << "fastcall"; break;
-  case attr::StdCall: OS << "stdcall"; break;
-  case attr::ThisCall: OS << "thiscall"; break;
-  case attr::SwiftCall: OS << "swiftcall"; break;
-  case attr::VectorCall: OS << "vectorcall"; break;
-  case attr::Pascal: OS << "pascal"; break;
-  case attr::MSABI: OS << "ms_abi"; break;
-  case attr::SysVABI: OS << "sysv_abi"; break;
-  case attr::RegCall: OS << "regcall"; break;
-  case attr::Pcs: {
+  case AttributedType::attr_noreturn: OS << "noreturn"; break;
+  case AttributedType::attr_nocf_check: OS << "nocf_check"; break;
+  case AttributedType::attr_cdecl: OS << "cdecl"; break;
+  case AttributedType::attr_fastcall: OS << "fastcall"; break;
+  case AttributedType::attr_stdcall: OS << "stdcall"; break;
+  case AttributedType::attr_thiscall: OS << "thiscall"; break;
+  case AttributedType::attr_swiftcall: OS << "swiftcall"; break;
+  case AttributedType::attr_vectorcall: OS << "vectorcall"; break;
+  case AttributedType::attr_pascal: OS << "pascal"; break;
+  case AttributedType::attr_ms_abi: OS << "ms_abi"; break;
+  case AttributedType::attr_sysv_abi: OS << "sysv_abi"; break;
+  case AttributedType::attr_regcall: OS << "regcall"; break;
+  case AttributedType::attr_pcs:
+  case AttributedType::attr_pcs_vfp: {
     OS << "pcs(";
    QualType t = T->getEquivalentType();
    while (!t->isFunctionType())
@@ -1486,12 +1517,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
    break;
   }
 
-  case attr::IntelOclBicc: OS << "inteloclbicc"; break;
-  case attr::PreserveMost:
+  case AttributedType::attr_inteloclbicc: OS << "inteloclbicc"; break;
+  case AttributedType::attr_preserve_most:
     OS << "preserve_most";
     break;
 
-  case attr::PreserveAll:
+  case AttributedType::attr_preserve_all:
     OS << "preserve_all";
     break;
   }

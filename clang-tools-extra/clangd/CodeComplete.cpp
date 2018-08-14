@@ -714,7 +714,15 @@ public:
            "too many arguments");
     SigHelp.activeParameter = static_cast<int>(CurrentArg);
     for (unsigned I = 0; I < NumCandidates; ++I) {
-      const auto &Candidate = Candidates[I];
+      OverloadCandidate Candidate = Candidates[I];
+      // We want to avoid showing instantiated signatures, because they may be
+      // long in some cases (e.g. when 'T' is substituted with 'std::string', we
+      // would get 'std::basic_string<char>').
+      if (auto *Func = Candidate.getFunction()) {
+        if (auto *Pattern = Func->getTemplateInstantiationPattern())
+          Candidate = OverloadCandidate(Pattern);
+      }
+
       const auto *CCS = Candidate.CreateSignatureString(
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
