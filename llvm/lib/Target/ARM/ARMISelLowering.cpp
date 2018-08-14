@@ -10411,6 +10411,25 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+bool
+ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
+                                                 CombineLevel Level) const {
+  if (Level == BeforeLegalizeTypes)
+    return true;
+
+  if (Subtarget->isThumb() && Subtarget->isThumb1Only())
+    return true;
+
+  if (N->getOpcode() != ISD::SHL)
+    return true;
+
+  // Turn off commute-with-shift transform after legalization, so it doesn't
+  // conflict with PerformSHLSimplify.  (We could try to detect when
+  // PerformSHLSimplify would trigger more precisely, but it isn't
+  // really necessary.)
+  return false;
+}
+
 static SDValue PerformSHLSimplify(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *ST) {
@@ -10510,9 +10529,7 @@ static SDValue PerformSHLSimplify(SDNode *N,
   LLVM_DEBUG(dbgs() << "Simplify shl use:\n"; SHL.getOperand(0).dump();
              SHL.dump(); N->dump());
   LLVM_DEBUG(dbgs() << "Into:\n"; X.dump(); BinOp.dump(); Res.dump());
-
-  DAG.ReplaceAllUsesWith(SDValue(N, 0), Res);
-  return SDValue(N, 0);
+  return Res;
 }
 
 
