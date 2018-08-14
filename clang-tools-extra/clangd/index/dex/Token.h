@@ -109,4 +109,4 @@ template <> struct DenseMapInfo<clang::clangd::dex::Token> {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H

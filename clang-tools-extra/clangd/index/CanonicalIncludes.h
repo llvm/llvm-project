@@ -15,7 +15,7 @@
 //   We have a lookup table for common standard library implementations.
 //   libstdc++ puts char_traits in bits/char_traits.h, but we #include <string>.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H

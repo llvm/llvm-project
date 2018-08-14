@@ -1,17 +1,18 @@
-//===--- Compiler.h ---------------------------------------------*- C++-*-===//
+//===--- Compiler.h ----------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Shared utilities for invoking the clang compiler.
 // ClangdUnit takes care of much of this, but some features like CodeComplete
 // run their own compile actions that share logic.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
@@ -50,4 +51,4 @@ std::unique_ptr<CompilerInstance> prepareCompilerInstance(
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H

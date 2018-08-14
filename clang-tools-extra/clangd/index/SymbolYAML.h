@@ -13,7 +13,7 @@
 //
 // This is for **experimental** only. Don't use it in the production code.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_FROM_YAML_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_FROM_YAML_H

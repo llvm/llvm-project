@@ -5,10 +5,14 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+//
 // This file contains synchronous versions of ClangdServer's async API. We
 // deliberately don't expose the sync API outside tests to encourage using the
 // async versions in clangd code.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
 
@@ -49,4 +53,4 @@ runDocumentSymbols(ClangdServer &Server, PathRef File);
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
