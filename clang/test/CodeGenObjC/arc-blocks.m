@@ -3,14 +3,14 @@
 
 // CHECK-COMMON: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
-// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP9:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32r, void (i8*)* @__destroy_helper_block_8_32r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
-// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i64 0, i64 48, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
-// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32b, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP9:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 48, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32b to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i64 256 }, align 8
 
 // This shouldn't crash.
 void test0(id (^maker)(void)) {
@@ -224,7 +224,7 @@ void test6(void) {
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
   // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP9]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP9]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
   // CHECK:      [[T0:%.*]] = bitcast [[BYREF_T]]* [[VAR]] to i8*
   // CHECK-NEXT: store i8* [[T0]], i8**
   // CHECK:      call void @test6_helper(
@@ -638,7 +638,7 @@ void test18(id x) {
 // CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[X]], 
 // CHECK-UNOPT-NEXT: [[SLOTREL:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-UNOPT: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 4
-// CHECK-UNOPT: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP44]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK-UNOPT: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP44]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 // CHECK-UNOPT:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-UNOPT-NEXT: [[T0:%.*]] = load i8*, i8** [[X]],
 // CHECK-UNOPT-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]])
@@ -661,7 +661,7 @@ void testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(id x, id y) {
 
 // CHECK-LABEL: define void @testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers
 // %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP46]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP46]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
 // CHECK-UNOPT-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
@@ -681,7 +681,7 @@ void test19(void (^b)(void)) {
 //   Block setup.  We skip most of this.  Note the bare retain.
 // CHECK-NEXT: [[SLOTREL:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP48]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @[[BLOCK_DESCRIPTOR_TMP48]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T0:%.*]] = load void ()*, void ()** [[B]],
 // CHECK-NEXT: [[T1:%.*]] = bitcast void ()* [[T0]] to i8*
