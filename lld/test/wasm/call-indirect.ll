@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o -wasm-explicit-locals-codegen-test-mode
-; RUN: llc -filetype=obj %s -o %t.o -wasm-explicit-locals-codegen-test-mode
+; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
