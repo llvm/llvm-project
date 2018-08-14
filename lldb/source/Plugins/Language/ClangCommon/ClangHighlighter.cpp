@@ -128,13 +128,11 @@ determineClangStyle(const ClangHighlighter &highlighter,
   return HighlightStyle::ColorStyle();
 }
 
-std::size_t ClangHighlighter::Highlight(const HighlightStyle &options,
-                                        llvm::StringRef line,
-                                        llvm::StringRef previous_lines,
-                                        Stream &result) const {
+void ClangHighlighter::Highlight(const HighlightStyle &options,
+                                 llvm::StringRef line,
+                                 llvm::StringRef previous_lines,
+                                 Stream &result) const {
   using namespace clang;
-
-  std::size_t written_bytes = 0;
 
   FileSystemOptions file_opts;
   FileManager file_mgr(file_opts);
@@ -210,7 +208,7 @@ std::size_t ClangHighlighter::Highlight(const HighlightStyle &options,
     HighlightStyle::ColorStyle color =
         determineClangStyle(*this, token, tok_str, options, in_pp_directive);
 
-    written_bytes += color.Apply(result, tok_str);
+    color.Apply(result, tok_str);
   }
 
   // If we went over the whole file but couldn't find our own file, then
@@ -219,9 +217,6 @@ std::size_t ClangHighlighter::Highlight(const HighlightStyle &options,
   // debug mode we bail out with an assert as this should never happen.
   if (!found_user_line) {
     result << line;
-    written_bytes += line.size();
     assert(false && "We couldn't find the user line in the input file?");
   }
-
-  return written_bytes;
 }
