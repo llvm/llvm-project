@@ -1537,6 +1537,59 @@ TEST(SignatureHelpTest, OverloadsOrdering) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, InstantiatedSignatures) {
+  EXPECT_THAT(signatures(R"cpp(
+    template <class T>
+    void foo(T, T, T);
+
+    int main() {
+      foo<int>(^);
+    }
+  )cpp")
+                  .signatures,
+              ElementsAre(Sig("foo(T, T, T) -> void", {"T", "T", "T"})));
+
+  EXPECT_THAT(signatures(R"cpp(
+    template <class T>
+    void foo(T, T, T);
+
+    int main() {
+      foo(10, ^);
+    })cpp")
+                  .signatures,
+              ElementsAre(Sig("foo(T, T, T) -> void", {"T", "T", "T"})));
+
+  EXPECT_THAT(signatures(R"cpp(
+    template <class ...T>
+    void foo(T...);
+
+    int main() {
+      foo<int>(^);
+    }
+  )cpp")
+                  .signatures,
+              ElementsAre(Sig("foo(T...) -> void", {"T..."})));
+
+  // It is debatable whether we should substitute the outer template parameter
+  // ('T') in that case. Currently we don't substitute it in signature help, but
+  // do substitute in code complete.
+  // FIXME: make code complete and signature help consistent, figure out which
+  // way is better.
+  EXPECT_THAT(signatures(R"cpp(
+    template <class T>
+    struct X {
+      template <class U>
+      void foo(T, U);
+    };
+
+    int main() {
+      X<int>().foo<double>(^)
+    }
+  )cpp")
+                  .signatures,
+              ElementsAre(Sig("foo(T, U) -> void", {"T", "U"})));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
