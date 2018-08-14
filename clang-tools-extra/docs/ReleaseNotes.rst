@@ -57,12 +57,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
-
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 
-  Detect usage of magic numbers, numbers that are used as literals instead of
+  Detects usage of magic numbers, numbers that are used as literals instead of
   introduced via constants or symbols.
 
 Improvements to include-fixer

@@ -103,9 +103,9 @@ Nullability getNullabilityAnnotation(QualType Type) {
   const auto *AttrType = Type->getAs<AttributedType>();
   if (!AttrType)
     return Nullability::Unspecified;
-  if (AttrType->getAttrKind() == AttributedType::attr_nullable)
+  if (AttrType->getAttrKind() == attr::TypeNullable)
     return Nullability::Nullable;
-  else if (AttrType->getAttrKind() == AttributedType::attr_nonnull)
+  else if (AttrType->getAttrKind() == attr::TypeNonNull)
     return Nullability::Nonnull;
   return Nullability::Unspecified;
 }

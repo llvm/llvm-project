@@ -1898,7 +1898,12 @@ void OMPClauseWriter::VisitOMPScheduleClause(OMPScheduleClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPOrderedClause(OMPOrderedClause *C) {
+  Record.push_back(C->getLoopNumIterations().size());
   Record.AddStmt(C->getNumForLoops());
+  for (Expr *NumIter : C->getLoopNumIterations())
+    Record.AddStmt(NumIter);
+  for (unsigned I = 0, E = C->getLoopNumIterations().size(); I <E; ++I)
+    Record.AddStmt(C->getLoopCunter(I));
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
@@ -2102,13 +2107,15 @@ void OMPClauseWriter::VisitOMPFlushClause(OMPFlushClause *C) {
 
 void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
   Record.push_back(C->varlist_size());
+  Record.push_back(C->getNumLoops());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.push_back(C->getDependencyKind());
   Record.AddSourceLocation(C->getDependencyLoc());
   Record.AddSourceLocation(C->getColonLoc());
   for (auto *VE : C->varlists())
     Record.AddStmt(VE);
-  Record.AddStmt(C->getCounterValue());
+  for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
+    Record.AddStmt(C->getLoopData(I));
 }
 
 void OMPClauseWriter::VisitOMPDeviceClause(OMPDeviceClause *C) {

@@ -1483,10 +1483,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
                            const CodeGenSchedClass &SC, PredicateExpander &PE,
                            raw_ostream &OS) {
   std::string Buffer;
-  raw_string_ostream StringStream(Buffer);
-  formatted_raw_ostream FOS(StringStream);
-
-  FOS.PadToColumn(6);
+  raw_string_ostream SS(Buffer);
 
   auto IsTruePredicate = [](const Record *Rec) {
     return Rec->isSubClassOf("MCSchedPredicate") &&
@@ -1496,40 +1493,48 @@ static void emitPredicates(const CodeGenSchedTransition &T,
   // If not all predicates are MCTrue, then we need an if-stmt.
   unsigned NumNonTruePreds =
       T.PredTerm.size() - count_if(T.PredTerm, IsTruePredicate);
+
+  SS.indent(PE.getIndentLevel() * 2);
+
   if (NumNonTruePreds) {
     bool FirstNonTruePredicate = true;
+    SS << "if (";
+
+    PE.setIndentLevel(PE.getIndentLevel() + 2);
+
     for (const Record *Rec : T.PredTerm) {
       // Skip predicates that evaluate to "true".
       if (IsTruePredicate(Rec))
         continue;
 
       if (FirstNonTruePredicate) {
-        FOS << "if (";
         FirstNonTruePredicate = false;
       } else {
-        FOS << "\n";
-        FOS.PadToColumn(8);
-        FOS << "&& ";
+        SS << "\n";
+        SS.indent(PE.getIndentLevel() * 2);
+        SS << "&& ";
       }
 
       if (Rec->isSubClassOf("MCSchedPredicate")) {
-        PE.expandPredicate(FOS, Rec->getValueAsDef("Pred"));
+        PE.expandPredicate(SS, Rec->getValueAsDef("Pred"));
         continue;
       }
 
       // Expand this legacy predicate and wrap it around braces if there is more
       // than one predicate to expand.
-      FOS << ((NumNonTruePreds > 1) ? "(" : "")
-          << Rec->getValueAsString("Predicate")
-          << ((NumNonTruePreds > 1) ? ")" : "");
+      SS << ((NumNonTruePreds > 1) ? "(" : "")
+         << Rec->getValueAsString("Predicate")
+         << ((NumNonTruePreds > 1) ? ")" : "");
     }
 
-    FOS << ")\n"; // end of if-stmt
-    FOS.PadToColumn(8);
+    SS << ")\n"; // end of if-stmt
+    PE.decreaseIndentLevel();
+    SS.indent(PE.getIndentLevel() * 2);
+    PE.decreaseIndentLevel();
   }
 
-  FOS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
-  FOS.flush();
+  SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
+  SS.flush();
   OS << Buffer;
 }
 
@@ -1629,7 +1634,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
       for (const CodeGenSchedTransition &T : SC.Transitions) {
         if (PI != 0 && !count(T.ProcIndices, PI))
           continue;
-        PE.setIndentLevel(4);
+        PE.setIndentLevel(3);
         emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
       }
 

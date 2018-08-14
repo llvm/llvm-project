@@ -29,6 +29,10 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (D->getASTContext().getSourceManager().isInSystemHeader(D->getLocation()))
     return true;
 
+  // Skip function-internal decls.
+  if (const DeclContext *F = D->getParentFunctionOrMethod())
+    return true;
+
   llvm::SmallString<128> USR;
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))

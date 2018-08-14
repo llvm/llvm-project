@@ -5,6 +5,7 @@
 #include "hwasan_poisoning.h"
 #include "hwasan_interface_internal.h"
 
+#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __hwasan {
@@ -36,21 +37,32 @@ HwasanThread *HwasanThread::Create(thread_callback_t start_routine,
 }
 
 void HwasanThread::SetThreadStackAndTls() {
-  uptr tls_size = 0;
-  uptr stack_size = 0;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size,
-                       &tls_begin_, &tls_size);
+  // If this process is "init" (pid 1), /proc may not be mounted yet.
+  if (IsMainThread() && !FileExists("/proc/self/maps")) {
+    stack_top_ = stack_bottom_ = 0;
+    tls_begin_ = tls_end_ = 0;
+    return;
+  }
+
+  uptr tls_size;
+  uptr stack_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
+                       &tls_size);
   stack_top_ = stack_bottom_ + stack_size;
   tls_end_ = tls_begin_ + tls_size;
 
   int local;
   CHECK(AddrIsInStack((uptr)&local));
+  CHECK(MEM_IS_APP(stack_bottom_));
+  CHECK(MEM_IS_APP(stack_top_ - 1));
 }
 
 void HwasanThread::Init() {
   SetThreadStackAndTls();
-  CHECK(MEM_IS_APP(stack_bottom_));
-  CHECK(MEM_IS_APP(stack_top_ - 1));
+  if (stack_bottom_) {
+    CHECK(MEM_IS_APP(stack_bottom_));
+    CHECK(MEM_IS_APP(stack_top_ - 1));
+  }
 }
 
 void HwasanThread::TSDDtor(void *tsd) {
@@ -59,7 +71,8 @@ void HwasanThread::TSDDtor(void *tsd) {
 }
 
 void HwasanThread::ClearShadowForThreadStackAndTLS() {
-  TagMemory(stack_bottom_, stack_top_ - stack_bottom_, 0);
+  if (stack_top_ != stack_bottom_)
+    TagMemory(stack_bottom_, stack_top_ - stack_bottom_, 0);
   if (tls_begin_ != tls_end_)
     TagMemory(tls_begin_, tls_end_ - tls_begin_, 0);
 }

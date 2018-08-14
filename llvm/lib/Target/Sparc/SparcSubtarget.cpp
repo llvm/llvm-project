@@ -47,7 +47,6 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   InsertNOPLoad = false;
   FixAllFDIVSQRT = false;
   DetectRoundChange = false;
-  HasLeonCycleCounter = false;
 
   // Determine default and user specified characteristics
   std::string CPUName = CPU;

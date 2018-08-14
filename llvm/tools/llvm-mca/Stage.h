@@ -17,6 +17,7 @@
 #define LLVM_TOOLS_LLVM_MCA_STAGE_H
 
 #include "HWEventListener.h"
+#include "llvm/Support/Error.h"
 #include <set>
 
 namespace mca {
@@ -27,6 +28,19 @@ class Stage {
   Stage(const Stage &Other) = delete;
   Stage &operator=(const Stage &Other) = delete;
   std::set<HWEventListener *> Listeners;
+
+public:
+  /// A Stage's execute() returns Continue, Stop, or an error.  Returning
+  /// Continue means that the stage successfully completed its 'execute'
+  /// action, and that the instruction being processed can be moved to the next
+  /// pipeline stage during this cycle.  Continue allows the pipeline to
+  /// continue calling 'execute' on subsequent stages.  Returning Stop
+  /// signifies that the stage ran into an error, and tells the pipeline to stop
+  /// passing the instruction to subsequent stages during this cycle.  Any
+  /// failures that occur during 'execute' are represented by the error variant
+  /// that is provided by the Expected template.
+  enum State { Stop, Continue };
+  using Status = llvm::Expected<State>;
 
 protected:
   const std::set<HWEventListener *> &getListeners() const { return Listeners; }
@@ -60,7 +74,7 @@ public:
   /// The primary action that this stage performs.
   /// Returning false prevents successor stages from having their 'execute'
   /// routine called.  This can be called multiple times during a single cycle.
-  virtual bool execute(InstRef &IR) = 0;
+  virtual Status execute(InstRef &IR) = 0;
 
   /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);

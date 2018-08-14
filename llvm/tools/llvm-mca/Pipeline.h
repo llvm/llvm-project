@@ -19,6 +19,7 @@
 #include "Scheduler.h"
 #include "Stage.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 
 namespace mca {
 
@@ -60,9 +61,9 @@ class Pipeline {
   unsigned Cycles;
 
   void preExecuteStages();
-  bool executeStages(InstRef &IR);
+  Stage::Status executeStages(InstRef &IR);
   void postExecuteStages();
-  void runCycle();
+  llvm::Error runCycle();
 
   bool hasWorkToProcess();
   void notifyCycleBegin();
@@ -71,7 +72,7 @@ class Pipeline {
 public:
   Pipeline() : Cycles(0) {}
   void appendStage(std::unique_ptr<Stage> S) { Stages.push_back(std::move(S)); }
-  void run();
+  llvm::Error run();
   void addEventListener(HWEventListener *Listener);
 };
 } // namespace mca

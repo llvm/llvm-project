@@ -19,14 +19,18 @@ namespace mca {
 
 bool FetchStage::hasWorkToComplete() const { return SM.hasNext(); }
 
-bool FetchStage::execute(InstRef &IR) {
+Stage::Status FetchStage::execute(InstRef &IR) {
   if (!SM.hasNext())
-    return false;
+    return Stage::Stop;
   const SourceRef SR = SM.peekNext();
-  std::unique_ptr<Instruction> I = IB.createInstruction(*SR.second);
+  llvm::Expected<std::unique_ptr<Instruction>> InstOrErr =
+      IB.createInstruction(*SR.second);
+  if (!InstOrErr)
+    return InstOrErr.takeError();
+  std::unique_ptr<Instruction> I = std::move(*InstOrErr);
   IR = InstRef(SR.first, I.get());
   Instructions[IR.getSourceIndex()] = std::move(I);
-  return true;
+  return Stage::Continue;
 }
 
 void FetchStage::postExecute() { SM.updateNext(); }

@@ -1,5 +1,5 @@
-; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode -exception-model=wasm
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode -exception-model=wasm -mattr=+exception-handling | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -exception-model=wasm
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -exception-model=wasm -mattr=+exception-handling | FileCheck -allow-deprecated-dag-overlap %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -60,7 +60,7 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK-LABEL: test_cleanup:
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   catch_all
-; CHECK:   i32.call  $push{{.+}}=, _ZN7CleanupD1Ev@FUNCTION
+; CHECK:   i32.call  $push20=, _ZN7CleanupD1Ev@FUNCTION
 ; CHECK:   rethrow
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:

@@ -1841,9 +1841,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
 
-  if (Subtarget->hasLeonCycleCounter())
-    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
-
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   setMinFunctionAlignment(2);
@@ -3590,16 +3587,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
                                   getLibcallName(libCall),
                                   1));
     return;
-  case ISD::READCYCLECOUNTER: {
-    assert(Subtarget->hasLeonCycleCounter());
-    SDValue Lo = DAG.getCopyFromReg(N->getOperand(0), dl, SP::ASR23, MVT::i32);
-    SDValue Hi = DAG.getCopyFromReg(Lo, dl, SP::G0, MVT::i32);
-    SDValue Ops[] = { Lo, Hi };
-    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Ops);
-    Results.push_back(Pair);
-    Results.push_back(N->getOperand(0));
-    return;
-  }
+
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     // Custom lower only if it involves f128 or i64.

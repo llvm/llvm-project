@@ -159,7 +159,7 @@ def : Processor<"leon4", LEON4Itineraries,
 // LEON 4 FT (GR740) 
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"gr740", LEON4Itineraries, 
-                [FeatureLeon, UMACSMACSupport, LeonCASA, LeonCycleCounter]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

@@ -88,7 +88,14 @@ endif ()
 
 set(CLANG_TEST_PARAMS
   clang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  USE_Z3_SOLVER=0
   )
+
+set(ANALYZER_TEST_PARAMS
+  USE_Z3_SOLVER=0)
+
+set(ANALYZER_TEST_PARAMS_Z3
+  USE_Z3_SOLVER=1)
 
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
@@ -125,6 +132,24 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
+
+if (CLANG_ENABLE_STATIC_ANALYZER)
+  add_lit_testsuite(check-clang-analyzer "Running the Clang analyzer tests"
+    ${CMAKE_CURRENT_BINARY_DIR}/Analysis
+    PARAMS ${ANALYZER_TEST_PARAMS}
+    DEPENDS ${CLANG_TEST_DEPS})
+  set_target_properties(check-clang-analyzer PROPERTIES FOLDER "Clang tests")
+
+
+  if (CLANG_ANALYZER_WITH_Z3)
+    add_lit_testsuite(check-clang-analyzer-z3 "Running the Clang analyzer tests, using Z3 as a solver"
+      ${CMAKE_CURRENT_BINARY_DIR}/Analysis
+      PARAMS ${ANALYZER_TEST_PARAMS_Z3}
+      DEPENDS ${CLANG_TEST_DEPS})
+    set_target_properties(check-clang-analyzer-z3 PROPERTIES FOLDER "Clang tests")
+  endif()
+
+endif()
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}

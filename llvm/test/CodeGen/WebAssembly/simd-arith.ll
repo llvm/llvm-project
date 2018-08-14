@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -wasm-enable-unimplemented-simd -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -wasm-enable-unimplemented-simd -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128-VM
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=-simd128 | FileCheck %s --check-prefixes CHECK,NO-SIMD128
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -wasm-enable-unimplemented-simd -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -wasm-enable-unimplemented-simd -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=-simd128 | FileCheck %s --check-prefixes CHECK,NO-SIMD128
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; Test that basic SIMD128 arithmetic operations assemble as expected.
 
