@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -analyzer-config graph-trim-interval=5 -analyzer-config suppress-null-return-paths=false -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config graph-trim-interval=5 -analyzer-config suppress-null-return-paths=false %s -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/../ExpectedOutputs/plists/inlining/eager-reclamation-path-notes.cpp.plist
+// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/eager-reclamation-path-notes.cpp.plist
 
 typedef struct {
   int getValue();

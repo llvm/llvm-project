@@ -20,3 +20,13 @@ void warnOnUninitializedBlock() {
 void noWarningWhenInitialized() {
   StructWithBlock a;
 }
+
+struct StructWithId {
+  int a;
+  id z; // expected-note{{uninitialized pointer 'this->z'}}
+  StructWithId() : a(0) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+};
+
+void warnOnUninitializedId() {
+  StructWithId s;
+}
