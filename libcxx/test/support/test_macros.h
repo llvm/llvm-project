@@ -124,7 +124,7 @@
 
 // Sniff out to see if the underling C library has C11 features
 // Note that at this time (July 2018), MacOS X and iOS do NOT.
-#if __ISO_C_VISIBLE >= 2011
+#if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11
 #  if defined(__FreeBSD__)
 #    define TEST_HAS_C11_FEATURES
 #  elif defined(__Fuchsia__)
