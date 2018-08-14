@@ -2,7 +2,8 @@
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
 
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i32 0, i32 24, void (i8*, i8*)* @__copy_helper_block_4_20r, void (i8*)* @__destroy_helper_block_4_20r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i8* null }, align 4
+// CHECK: @{{.*}} = internal constant { i32, i32, i8*, i8*, i8*, i8* } { i32 0, i32 24, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_4_20r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_4_20r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 4
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, i8*, i8*, i8*, i8* } { i32 0, i32 24, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_4_20r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_4_20r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 4
 
 void (^f)(void) = ^{};
 
@@ -118,6 +119,6 @@ void testConstCaptureInCopyAndDestroyHelpers() {
 }
 // CHECK-LABEL: define void @testConstCaptureInCopyAndDestroyHelpers(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP21]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP21]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 4
 
 // CHECK-LABEL: define internal void @__testConstCaptureInCopyAndDestroyHelpers_block_invoke
