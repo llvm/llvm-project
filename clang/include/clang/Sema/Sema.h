@@ -1442,6 +1442,8 @@ public:
 
   TypeSourceInfo *GetTypeForDeclarator(Declarator &D, Scope *S);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
+  TypeSourceInfo *GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
+                                               TypeSourceInfo *ReturnTypeInfo);
 
   /// Package the given type and TSI into a ParsedType.
   ParsedType CreateParsedType(QualType T, TypeSourceInfo *TInfo);
@@ -3413,14 +3415,19 @@ public:
   const AttributedType *getCallingConvAttributedType(QualType T) const;
 
   /// Check whether a nullability type specifier can be added to the given
-  /// type through some means not written in source (e.g. API notes).
+  /// type.
   ///
   /// \param type The type to which the nullability specifier will be
   /// added. On success, this type will be updated appropriately.
   ///
   /// \param nullability The nullability specifier to add.
   ///
-  /// \param diagLoc The location to use for diagnostics.
+  /// \param nullabilityLoc The location of the nullability specifier.
+  ///
+  /// \param isContextSensitive Whether this nullability specifier was
+  /// written as a context-sensitive keyword (in an Objective-C
+  /// method) or an Objective-C property attribute, rather than as an
+  /// underscored type specifier.
   ///
   /// \param allowArrayTypes Whether to accept nullability specifiers on an
   /// array type (e.g., because it will decay to a pointer).
@@ -3429,11 +3436,12 @@ public:
   /// nullability specifier rather than complaining about the conflict.
   ///
   /// \returns true if nullability cannot be applied, false otherwise.
-  bool checkImplicitNullabilityTypeSpecifier(QualType &type,
-                                             NullabilityKind nullability,
-                                             SourceLocation diagLoc,
-                                             bool allowArrayTypes,
-                                             bool overrideExisting);
+  bool checkNullabilityTypeSpecifier(QualType &type, NullabilityKind nullability,
+                                     SourceLocation nullabilityLoc,
+                                     bool isContextSensitive,
+                                     bool allowArrayTypes,
+                                     bool implicit,
+                                     bool overrideExisting = false);
 
   /// Stmt attributes - this routine is the top level dispatcher.
   StmtResult ProcessStmtAttributes(Stmt *Stmt,
@@ -8103,6 +8111,10 @@ public:
                                ArrayRef<SourceLocation> ProtocolLocs,
                                SourceLocation ProtocolRAngleLoc,
                                bool FailOnError = false);
+
+  /// Check the application of the Objective-C '__kindof' qualifier to
+  /// the given type.
+  bool checkObjCKindOfType(QualType &type, SourceLocation loc);
 
   /// Ensure attributes are consistent with type.
   /// \param [in, out] Attributes The attributes to check; they will
