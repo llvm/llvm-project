@@ -506,6 +506,8 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
         }
         LSPDiag["clangd_fixes"] = std::move(ClangdFixes);
       }
+      if (!Diag.category.empty())
+        LSPDiag["category"] = Diag.category;
       DiagnosticsJSON.push_back(std::move(LSPDiag));
 
       auto &FixItsForDiagnostic = LocalFixIts[Diag];
