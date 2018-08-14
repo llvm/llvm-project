@@ -6465,12 +6465,12 @@ def warn_overaligned_type : Warning<
   "type %0 requires %1 bytes of alignment and the default allocator only "
   "guarantees %2 bytes">,
   InGroup<OveralignedType>, DefaultIgnore;
-def warn_aligned_allocation_unavailable :Warning<
+def err_aligned_allocation_unavailable : Error<
   "aligned %select{allocation|deallocation}0 function of type '%1' is only "
-  "available on %2 %3 or newer">, InGroup<AlignedAllocationUnavailable>, DefaultError;
+  "available on %2 %3 or newer">;
 def note_silence_unligned_allocation_unavailable : Note<
   "if you supply your own aligned allocation functions, use "
-  "-Wno-aligned-allocation-unavailable to silence this diagnostic">;
+  "-faligned-allocation to silence this diagnostic">;
 
 def err_conditional_void_nonvoid : Error<
   "%select{left|right}1 operand to ? is void, but %select{right|left}1 operand "
