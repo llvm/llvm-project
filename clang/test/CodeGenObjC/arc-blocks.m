@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-COMMON %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT -check-prefix=CHECK-COMMON %s
 
-// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
-// CHECK-UNOPT: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP9:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32r, void (i8*)* @__destroy_helper_block_8_32r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
-// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-UNOPT: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK-UNOPT: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i64 0, i64 48, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32b, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP9:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32r, void (i8*)* @__destroy_helper_block_8_32r, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 16 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @{{.*}} = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP44:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* } { i64 0, i64 48, void (i8*, i8*)* @__copy_helper_block_8_32s, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = internal constant { i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i64 } { i64 0, i64 40, void (i8*, i8*)* @__copy_helper_block_8_32b, void (i8*)* @__destroy_helper_block_8_32s, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i64 256 }, align 8
 
 // This shouldn't crash.
 void test0(id (^maker)(void)) {
@@ -661,7 +661,7 @@ void testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(id x, id y) {
 
 // CHECK-LABEL: define void @testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers
 // %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8* }>* %{{.*}}, i32 0, i32 4
-// store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP46]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, void (i8*, i8*)*, void (i8*)*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP46]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
 // CHECK-UNOPT-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
