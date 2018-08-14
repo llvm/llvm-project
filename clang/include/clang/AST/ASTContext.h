@@ -2718,7 +2718,7 @@ public:
   /// predicate.
   void forEachMultiversionedFunctionVersion(
       const FunctionDecl *FD,
-      llvm::function_ref<void(const FunctionDecl *)> Pred) const;
+      llvm::function_ref<void(FunctionDecl *)> Pred) const;
 
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD);

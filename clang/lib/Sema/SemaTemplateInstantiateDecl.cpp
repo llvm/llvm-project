@@ -5192,10 +5192,20 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Inst.first)) {
       bool DefinitionRequired = Function->getTemplateSpecializationKind() ==
                                 TSK_ExplicitInstantiationDefinition;
-      InstantiateFunctionDefinition(/*FIXME:*/Inst.second, Function, true,
-                                    DefinitionRequired, true);
-      if (Function->isDefined())
-        Function->setInstantiationIsPending(false);
+      if (Function->isMultiVersion()) {
+        getASTContext().forEachMultiversionedFunctionVersion(
+            Function, [this, Inst, DefinitionRequired](FunctionDecl *CurFD) {
+              InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, CurFD, true,
+                                            DefinitionRequired, true);
+              if (CurFD->isDefined())
+                CurFD->setInstantiationIsPending(false);
+            });
+      } else {
+        InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, Function, true,
+                                      DefinitionRequired, true);
+        if (Function->isDefined())
+          Function->setInstantiationIsPending(false);
+      }
       continue;
     }
 
