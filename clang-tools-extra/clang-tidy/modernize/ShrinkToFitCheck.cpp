@@ -59,7 +59,7 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Container = Result.Nodes.getNodeAs<Expr>("ContainerToShrink");
   FixItHint Hint;
 
-  if (!MemberCall->getLocStart().isMacroID()) {
+  if (!MemberCall->getBeginLoc().isMacroID()) {
     const LangOptions &Opts = getLangOpts();
     std::string ReplacementText;
     if (const auto *UnaryOp = llvm::dyn_cast<UnaryOperator>(Container)) {
@@ -79,7 +79,7 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
                                         ReplacementText);
   }
 
-  diag(MemberCall->getLocStart(), "the shrink_to_fit method should be used "
+  diag(MemberCall->getBeginLoc(), "the shrink_to_fit method should be used "
                                   "to reduce the capacity of a shrinkable "
                                   "container")
       << Hint;

@@ -96,7 +96,7 @@ void ImplicitConversionInLoopCheck::ReportAndFix(
       "change the type to the matching one (%1 but 'const auto&' is always a "
       "valid option) or remove the reference to make it explicit that you are "
       "creating a new value";
-  diag(VD->getLocStart(), Message) << VD << ConstRefType;
+  diag(VD->getBeginLoc(), Message) << VD << ConstRefType;
 }
 
 } // namespace performance

@@ -41,8 +41,12 @@ size_t ParsedAttr::allocated_size() const {
   else if (IsProperty)
     return AttributeFactory::PropertyAllocSize;
   else if (HasParsedType)
-    return sizeof(ParsedAttr) + sizeof(void *);
-  return (sizeof(ParsedAttr) + NumArgs * sizeof(ArgsUnion));
+    return totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                            detail::TypeTagForDatatypeData, ParsedType,
+                            detail::PropertyData>(0, 0, 0, 1, 0);
+  return totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                          detail::TypeTagForDatatypeData, ParsedType,
+                          detail::PropertyData>(NumArgs, 0, 0, 0, 0);
 }
 
 AttributeFactory::AttributeFactory() {

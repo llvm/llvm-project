@@ -18,7 +18,7 @@ namespace {
 class AttrVisitor : public ExpectedLocationVisitor<AttrVisitor> {
 public:
   bool VisitMemberExpr(MemberExpr *ME) {
-    Match(ME->getMemberDecl()->getNameAsString(), ME->getLocStart());
+    Match(ME->getMemberDecl()->getNameAsString(), ME->getBeginLoc());
     return true;
   }
   bool VisitAttr(Attr *A) {

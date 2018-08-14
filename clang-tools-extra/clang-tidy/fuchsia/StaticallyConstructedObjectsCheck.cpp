@@ -51,7 +51,7 @@ void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
 void StaticallyConstructedObjectsCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *D = Result.Nodes.getNodeAs<VarDecl>("decl"))
-    diag(D->getLocStart(), "static objects are disallowed; if possible, use a "
+    diag(D->getBeginLoc(), "static objects are disallowed; if possible, use a "
                            "constexpr constructor instead");
 }
 

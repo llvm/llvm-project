@@ -4423,11 +4423,11 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
   if (const AutoType *AT = Type.getType()->getAs<AutoType>()) {
     if (AT->isDecltypeAuto()) {
       if (isa<InitListExpr>(Init)) {
-        Diag(Init->getLocStart(), diag::err_decltype_auto_initializer_list);
+        Diag(Init->getBeginLoc(), diag::err_decltype_auto_initializer_list);
         return DAR_FailedAlreadyDiagnosed;
       }
 
-      QualType Deduced = BuildDecltypeType(Init, Init->getLocStart(), false);
+      QualType Deduced = BuildDecltypeType(Init, Init->getBeginLoc(), false);
       if (Deduced.isNull())
         return DAR_FailedAlreadyDiagnosed;
       // FIXME: Support a non-canonical deduced type for 'auto'.
@@ -4438,7 +4438,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       return DAR_Succeeded;
     } else if (!getLangOpts().CPlusPlus) {
       if (isa<InitListExpr>(Init)) {
-        Diag(Init->getLocStart(), diag::err_auto_init_list_from_c);
+        Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c);
         return DAR_FailedAlreadyDiagnosed;
       }
     }

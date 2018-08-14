@@ -78,6 +78,7 @@ def main():
   file_check_suffix = ('-' + args.check_suffix) if args.check_suffix else ''
   check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
   check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
+  check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
 
   # Tests should not rely on STL being available, and instead provide mock
   # implementations of relevant APIs.
@@ -91,9 +92,11 @@ def main():
 
   has_check_fixes = check_fixes_prefix in input_text
   has_check_messages = check_messages_prefix in input_text
+  has_check_notes = check_notes_prefix in input_text
 
-  if not has_check_fixes and not has_check_messages:
-    sys.exit('Neither %s nor %s found in the input' % (check_fixes_prefix, check_messages_prefix) )
+  if not has_check_fixes and not has_check_messages and not has_check_notes:
+    sys.exit('%s, %s or %s not found in the input' % (check_fixes_prefix,
+             check_messages_prefix, check_notes_prefix) )
 
   # Remove the contents of the CHECK lines to avoid CHECKs matching on
   # themselves.  We need to keep the comments to preserve line numbers while
@@ -151,6 +154,19 @@ def main():
           ['FileCheck', '-input-file=' + messages_file, input_file_name,
            '-check-prefix=' + check_messages_prefix,
            '-implicit-check-not={{warning|error}}:'],
+          stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+      print('FileCheck failed:\n' + e.output.decode())
+      raise
+
+  if has_check_notes:
+    notes_file = temp_file_name + '.notes'
+    write_file(notes_file, clang_tidy_output)
+    try:
+      subprocess.check_output(
+          ['FileCheck', '-input-file=' + notes_file, input_file_name,
+           '-check-prefix=' + check_notes_prefix,
+           '-implicit-check-not={{note|warning|error}}:'],
           stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
       print('FileCheck failed:\n' + e.output.decode())

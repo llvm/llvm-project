@@ -185,11 +185,11 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Cast = Result.Nodes.getNodeAs<CastExpr>("Cast");
   if (!CheckImplicitCasts && isa<ImplicitCastExpr>(Cast))
     return;
-  if (Cast->getLocStart().isMacroID())
+  if (Cast->getBeginLoc().isMacroID())
     return;
 
   const auto *Calc = Result.Nodes.getNodeAs<Expr>("Calc");
-  if (Calc->getLocStart().isMacroID())
+  if (Calc->getBeginLoc().isMacroID())
     return;
 
   if (Cast->isTypeDependent() || Cast->isValueDependent() ||
@@ -223,7 +223,7 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (Context.getIntWidth(CalcType) >= getMaxCalculationWidth(Context, Calc))
     return;
 
-  diag(Cast->getLocStart(), "either cast from %0 to %1 is ineffective, or "
+  diag(Cast->getBeginLoc(), "either cast from %0 to %1 is ineffective, or "
                             "there is loss of precision before the conversion")
       << CalcType << CastType;
 }

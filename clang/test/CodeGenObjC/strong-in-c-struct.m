@@ -419,11 +419,11 @@ void test_copy_constructor_StrongVolatile1(Strong *s) {
 // CHECK: call void @__destructor_8_s16(
 // CHECK: ret void
 
-// CHECK: define internal void @__copy_helper_block_.1(i8*, i8*)
+// CHECK: define linkonce_odr hidden void @__copy_helper_block_8_32n13_8_8_t0w16_s16(i8*, i8*)
 // CHECK: call void @__copy_constructor_8_8_t0w16_s16(
 // CHECK: ret void
 
-// CHECK: define internal void @__destroy_helper_block_.2(
+// CHECK: define linkonce_odr hidden void @__destroy_helper_block_8_32n5_8_s16(
 // CHECK: call void @__destructor_8_s16(
 // CHECK: ret void
 

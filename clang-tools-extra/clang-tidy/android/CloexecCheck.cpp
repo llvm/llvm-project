@@ -25,7 +25,7 @@ namespace {
 // end of the string. Else, add <Mode>.
 std::string buildFixMsgForStringFlag(const Expr *Arg, const SourceManager &SM,
                                      const LangOptions &LangOpts, char Mode) {
-  if (Arg->getLocStart().isMacroID())
+  if (Arg->getBeginLoc().isMacroID())
     return (Lexer::getSourceText(
                 CharSourceRange::getTokenRange(Arg->getSourceRange()), SM,
                 LangOpts) +
@@ -64,7 +64,7 @@ void CloexecCheck::insertMacroFlag(const MatchFinder::MatchResult &Result,
     return;
 
   SourceLocation EndLoc =
-      Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getLocEnd()), 0, SM,
+      Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getEndLoc()), 0, SM,
                                  Result.Context->getLangOpts());
 
   diag(EndLoc, "%0 should use %1 where possible")
@@ -75,7 +75,7 @@ void CloexecCheck::insertMacroFlag(const MatchFinder::MatchResult &Result,
 void CloexecCheck::replaceFunc(const MatchFinder::MatchResult &Result,
                                StringRef WarningMsg, StringRef FixMsg) {
   const auto *MatchedCall = Result.Nodes.getNodeAs<CallExpr>(FuncBindingStr);
-  diag(MatchedCall->getLocStart(), WarningMsg)
+  diag(MatchedCall->getBeginLoc(), WarningMsg)
       << FixItHint::CreateReplacement(MatchedCall->getSourceRange(), FixMsg);
 }
 
@@ -94,7 +94,7 @@ void CloexecCheck::insertStringFlag(
   const std::string &ReplacementText = buildFixMsgForStringFlag(
       ModeArg, *Result.SourceManager, Result.Context->getLangOpts(), Mode);
 
-  diag(ModeArg->getLocStart(), "use %0 mode '%1' to set O_CLOEXEC")
+  diag(ModeArg->getBeginLoc(), "use %0 mode '%1' to set O_CLOEXEC")
       << FD << std::string(1, Mode)
       << FixItHint::CreateReplacement(ModeArg->getSourceRange(),
                                       ReplacementText);

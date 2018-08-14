@@ -42,12 +42,11 @@ protected:
   /// dwarf unwind.
   bool OmitDwarfIfHaveCompactUnwind;
 
-  /// PersonalityEncoding, LSDAEncoding, TTypeEncoding - Some encoding values
-  /// for EH.
-  unsigned PersonalityEncoding;
-  unsigned LSDAEncoding;
-  unsigned FDECFIEncoding;
-  unsigned TTypeEncoding;
+  /// FDE CFI encoding. Controls the encoding of the begin label in the
+  /// .eh_frame section. Unlike the LSDA encoding, personality encoding, and
+  /// type encodings, this is something that the assembler just "knows" about
+  /// its target
+  unsigned FDECFIEncoding = 0;
 
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly;
@@ -226,10 +225,7 @@ public:
     return CommDirectiveSupportsAlignment;
   }
 
-  unsigned getPersonalityEncoding() const { return PersonalityEncoding; }
-  unsigned getLSDAEncoding() const { return LSDAEncoding; }
   unsigned getFDEEncoding() const { return FDECFIEncoding; }
-  unsigned getTTypeEncoding() const { return TTypeEncoding; }
 
   unsigned getCompactUnwindDwarfEHFrameOnly() const {
     return CompactUnwindDwarfEHFrameOnly;

@@ -2119,8 +2119,8 @@ define i64 @test_mul_by_neg10(i64 %x) {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    addl %esi, %esi
 ; X86-NEXT:    leal (%esi,%esi,4), %ecx
-; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -2188,8 +2188,8 @@ define i64 @test_mul_by_neg36(i64 %x) {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    shll $2, %esi
 ; X86-NEXT:    leal (%esi,%esi,8), %ecx
-; X86-NEXT:    shll $2, %ecx
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4

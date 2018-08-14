@@ -388,8 +388,7 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
     return true;
   }
   unsigned BitSize = TRI->getSubRegIdxSize(SubIdx);
-  // Convert bit size to byte size to be consistent with
-  // MCRegisterClass::getSize().
+  // Convert bit size to byte size.
   if (BitSize % 8)
     return false;
 

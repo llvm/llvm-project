@@ -1480,114 +1480,177 @@ static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
 }
 
 static void emitPredicates(const CodeGenSchedTransition &T,
-                           const CodeGenSchedClass &SC,
-                           PredicateExpander &PE,
+                           const CodeGenSchedClass &SC, PredicateExpander &PE,
                            raw_ostream &OS) {
   std::string Buffer;
-  raw_string_ostream StringStream(Buffer);
-  formatted_raw_ostream FOS(StringStream);
+  raw_string_ostream SS(Buffer);
 
-  FOS.PadToColumn(6);
-  FOS << "if (";
-  for (RecIter RI = T.PredTerm.begin(), RE = T.PredTerm.end(); RI != RE; ++RI) {
-    if (RI != T.PredTerm.begin()) {
-      FOS << "\n";
-      FOS.PadToColumn(8);
-      FOS << "&& ";
+  auto IsTruePredicate = [](const Record *Rec) {
+    return Rec->isSubClassOf("MCSchedPredicate") &&
+           Rec->getValueAsDef("Pred")->isSubClassOf("MCTrue");
+  };
+
+  // If not all predicates are MCTrue, then we need an if-stmt.
+  unsigned NumNonTruePreds =
+      T.PredTerm.size() - count_if(T.PredTerm, IsTruePredicate);
+
+  SS.indent(PE.getIndentLevel() * 2);
+
+  if (NumNonTruePreds) {
+    bool FirstNonTruePredicate = true;
+    SS << "if (";
+
+    PE.setIndentLevel(PE.getIndentLevel() + 2);
+
+    for (const Record *Rec : T.PredTerm) {
+      // Skip predicates that evaluate to "true".
+      if (IsTruePredicate(Rec))
+        continue;
+
+      if (FirstNonTruePredicate) {
+        FirstNonTruePredicate = false;
+      } else {
+        SS << "\n";
+        SS.indent(PE.getIndentLevel() * 2);
+        SS << "&& ";
+      }
+
+      if (Rec->isSubClassOf("MCSchedPredicate")) {
+        PE.expandPredicate(SS, Rec->getValueAsDef("Pred"));
+        continue;
+      }
+
+      // Expand this legacy predicate and wrap it around braces if there is more
+      // than one predicate to expand.
+      SS << ((NumNonTruePreds > 1) ? "(" : "")
+         << Rec->getValueAsString("Predicate")
+         << ((NumNonTruePreds > 1) ? ")" : "");
     }
-    const Record *Rec = *RI;
-    if (Rec->isSubClassOf("MCSchedPredicate"))
-      PE.expandPredicate(FOS, Rec->getValueAsDef("Pred"));
-    else
-      FOS << "(" << Rec->getValueAsString("Predicate") << ")";
+
+    SS << ")\n"; // end of if-stmt
+    PE.decreaseIndentLevel();
+    SS.indent(PE.getIndentLevel() * 2);
+    PE.decreaseIndentLevel();
   }
 
-  FOS << ")\n";
-  FOS.PadToColumn(8);
-  FOS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
-  FOS.flush();
+  SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
+  SS.flush();
   OS << Buffer;
 }
 
-void SubtargetEmitter::emitSchedModelHelpersImpl(
-    raw_ostream &OS, bool OnlyExpandMCInstPredicates) {
-  // Collect Variant Classes.
-  IdxVec VariantClasses;
-  for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
-    if (SC.Transitions.empty())
-      continue;
-    VariantClasses.push_back(SC.Index);
-  }
-
-  if (!VariantClasses.empty()) {
-    bool FoundPredicates = false;
-    for (unsigned VC : VariantClasses) {
-      // Emit code for each variant scheduling class.
-      const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
-      IdxVec ProcIndices;
-      for (const CodeGenSchedTransition &T : SC.Transitions) {
-        if (OnlyExpandMCInstPredicates &&
-            !all_of(T.PredTerm, [](const Record *Rec) {
-              return Rec->isSubClassOf("MCSchedPredicate");
-            }))
-          continue;
-
-        IdxVec PI;
-        std::set_union(T.ProcIndices.begin(), T.ProcIndices.end(),
-                       ProcIndices.begin(), ProcIndices.end(),
-                       std::back_inserter(PI));
-        ProcIndices.swap(PI);
-      }
-      if (ProcIndices.empty())
-        continue;
-
-      // Emit a switch statement only if there are predicates to expand.
-      if (!FoundPredicates) {
-        OS << "  switch (SchedClass) {\n";
-        FoundPredicates = true;
-      }
-
-      OS << "  case " << VC << ": // " << SC.Name << '\n';
-      PredicateExpander PE;
-      PE.setByRef(false);
-      PE.setExpandForMC(OnlyExpandMCInstPredicates);
-      for (unsigned PI : ProcIndices) {
-        OS << "    ";
-        if (PI != 0) {
-          OS << (OnlyExpandMCInstPredicates
-                     ? "if (CPUID == "
-                     : "if (SchedModel->getProcessorID() == ");
-          OS << PI << ") ";
-        }
-        OS << "{ // " << (SchedModels.procModelBegin() + PI)->ModelName << '\n';
-
-        for (const CodeGenSchedTransition &T : SC.Transitions) {
-          if (PI != 0 && !count(T.ProcIndices, PI))
-            continue;
-          PE.setIndentLevel(4);
-          emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
-        }
-
-        OS << "    }\n";
-        if (PI == 0)
-          break;
-      }
-      if (SC.isInferred())
-        OS << "    return " << SC.Index << ";\n";
-      OS << "    break;\n";
-    }
-
-    if (FoundPredicates)
-     OS << "  };\n";
-  }
-
-  if (OnlyExpandMCInstPredicates) {
+// Used by method `SubtargetEmitter::emitSchedModelHelpersImpl()` to generate
+// epilogue code for the auto-generated helper.
+void emitSchedModelHelperEpilogue(raw_ostream &OS, bool ShouldReturnZero) {
+  if (ShouldReturnZero) {
     OS << "  // Don't know how to resolve this scheduling class.\n"
        << "  return 0;\n";
     return;
   }
 
   OS << "  report_fatal_error(\"Expected a variant SchedClass\");\n";
+}
+
+bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
+  return all_of(T.PredTerm, [](const Record *Rec) {
+    return Rec->isSubClassOf("MCSchedPredicate");
+  });
+}
+
+void collectVariantClasses(const CodeGenSchedModels &SchedModels,
+                           IdxVec &VariantClasses,
+                           bool OnlyExpandMCInstPredicates) {
+  for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
+    // Ignore non-variant scheduling classes.
+    if (SC.Transitions.empty())
+      continue;
+
+    if (OnlyExpandMCInstPredicates) {
+      // Ignore this variant scheduling class if transitions don't uses any
+      // MCSchedPredicate definitions.
+      if (!all_of(SC.Transitions, [](const CodeGenSchedTransition &T) {
+            return hasMCSchedPredicates(T);
+          }))
+        continue;
+    }
+
+    VariantClasses.push_back(SC.Index);
+  }
+}
+
+void collectProcessorIndices(const CodeGenSchedClass &SC, IdxVec &ProcIndices) {
+  // A variant scheduling class may define transitions for multiple
+  // processors.  This function identifies wich processors are associated with
+  // transition rules specified by variant class `SC`.
+  for (const CodeGenSchedTransition &T : SC.Transitions) {
+    IdxVec PI;
+    std::set_union(T.ProcIndices.begin(), T.ProcIndices.end(),
+                   ProcIndices.begin(), ProcIndices.end(),
+                   std::back_inserter(PI));
+    ProcIndices.swap(PI);
+  }
+}
+
+void SubtargetEmitter::emitSchedModelHelpersImpl(
+    raw_ostream &OS, bool OnlyExpandMCInstPredicates) {
+  IdxVec VariantClasses;
+  collectVariantClasses(SchedModels, VariantClasses,
+                        OnlyExpandMCInstPredicates);
+
+  if (VariantClasses.empty()) {
+    emitSchedModelHelperEpilogue(OS, OnlyExpandMCInstPredicates);
+    return;
+  }
+
+  // Construct a switch statement where the condition is a check on the
+  // scheduling class identifier. There is a `case` for every variant class
+  // defined by the processor models of this target.
+  // Each `case` implements a number of rules to resolve (i.e. to transition from)
+  // a variant scheduling class to another scheduling class.  Rules are
+  // described by instances of CodeGenSchedTransition. Note that transitions may
+  // not be valid for all processors.
+  OS << "  switch (SchedClass) {\n";
+  for (unsigned VC : VariantClasses) {
+    IdxVec ProcIndices;
+    const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
+    collectProcessorIndices(SC, ProcIndices);
+
+    OS << "  case " << VC << ": // " << SC.Name << '\n';
+
+    PredicateExpander PE;
+    PE.setByRef(false);
+    PE.setExpandForMC(OnlyExpandMCInstPredicates);
+    for (unsigned PI : ProcIndices) {
+      OS << "    ";
+      // Emit a guard on the processor ID.
+      if (PI != 0) {
+        OS << (OnlyExpandMCInstPredicates
+                   ? "if (CPUID == "
+                   : "if (SchedModel->getProcessorID() == ");
+        OS << PI << ") ";
+        OS << "{ // " << (SchedModels.procModelBegin() + PI)->ModelName << '\n';
+      }
+
+      // Now emit transitions associated with processor PI.
+      for (const CodeGenSchedTransition &T : SC.Transitions) {
+        if (PI != 0 && !count(T.ProcIndices, PI))
+          continue;
+        PE.setIndentLevel(3);
+        emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
+      }
+
+      OS << "    }\n";
+      if (PI == 0)
+        break;
+    }
+
+    if (SC.isInferred())
+      OS << "    return " << SC.Index << ";\n";
+    OS << "    break;\n";
+  }
+
+  OS << "  };\n";
+
+  emitSchedModelHelperEpilogue(OS, OnlyExpandMCInstPredicates);
 }
 
 void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,

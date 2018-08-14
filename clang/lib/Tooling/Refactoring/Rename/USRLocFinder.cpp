@@ -117,7 +117,7 @@ SourceLocation StartLocationForType(TypeLoc TL) {
       return NestedNameSpecifier.getBeginLoc();
     TL = TL.getNextTypeLoc();
   }
-  return TL.getLocStart();
+  return TL.getBeginLoc();
 }
 
 SourceLocation EndLocationForType(TypeLoc TL) {
@@ -255,12 +255,12 @@ public:
       Decl = UsingShadow->getTargetDecl();
     }
 
-    auto StartLoc = Expr->getLocStart();
+    auto StartLoc = Expr->getBeginLoc();
     // For template function call expressions like `foo<int>()`, we want to
     // restrict the end of location to just before the `<` character.
     SourceLocation EndLoc = Expr->hasExplicitTemplateArgs()
                                 ? Expr->getLAngleLoc().getLocWithOffset(-1)
-                                : Expr->getLocEnd();
+                                : Expr->getEndLoc();
 
     if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(Decl)) {
       if (isInUSRSet(MD)) {
@@ -576,7 +576,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
   // Hanlde using declarations explicitly as "using a::Foo" don't trigger
   // typeLoc for "a::Foo".
   for (const auto *Using : Finder.getUsingDecls())
-    Replace(Using->getLocStart(), Using->getLocEnd(), "using " + NewName.str());
+    Replace(Using->getBeginLoc(), Using->getEndLoc(), "using " + NewName.str());
 
   return AtomicChanges;
 }

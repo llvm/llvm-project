@@ -31,7 +31,7 @@ void AvoidNSErrorInitCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidNSErrorInitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr =
       Result.Nodes.getNodeAs<ObjCMessageExpr>("nserrorInit");
-  diag(MatchedExpr->getLocStart(),
+  diag(MatchedExpr->getBeginLoc(),
        "use errorWithDomain:code:userInfo: or initWithDomain:code:userInfo: to "
        "create a new NSError");
 }

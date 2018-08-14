@@ -83,8 +83,8 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
   // see. If both start and end is either before or after the point we're
   // looking for the point cannot be inside of this decl. Don't even look at it.
   for (auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
-    SourceLocation StartLoc = CurrDecl->getLocStart();
-    SourceLocation EndLoc = CurrDecl->getLocEnd();
+    SourceLocation StartLoc = CurrDecl->getBeginLoc();
+    SourceLocation EndLoc = CurrDecl->getEndLoc();
     if (StartLoc.isValid() && EndLoc.isValid() &&
         SM.isBeforeInTranslationUnit(StartLoc, Point) !=
             SM.isBeforeInTranslationUnit(EndLoc, Point))

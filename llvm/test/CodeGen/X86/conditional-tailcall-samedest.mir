@@ -124,7 +124,7 @@ body:             |
     JMP_1 %bb.3
   
   bb.3.init.check.i:
-    dead $edi = MOV32ri64 @static_local_guard, implicit-def $rdi
+    dead $edi = MOV32ri @static_local_guard, implicit-def $rdi
     TCRETURNdi64 @initialize_static_local, 0, csr_64, implicit $rsp, implicit $rdi
   
   bb.4.sw.bb2:

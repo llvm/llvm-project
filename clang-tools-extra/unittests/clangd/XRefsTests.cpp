@@ -312,27 +312,65 @@ TEST(GoToDefinition, All) {
 }
 
 TEST(GoToDefinition, RelPathsInCompileCommand) {
+  // The source is in "/clangd-test/src".
+  // We build in "/clangd-test/build".
+
   Annotations SourceAnnotations(R"cpp(
+#include "header_in_preamble.h"
 int [[foo]];
-int baz = f^oo;
+#include "header_not_in_preamble.h"
+int baz = f$p1^oo + bar_pre$p2^amble + bar_not_pre$p3^amble;
 )cpp");
 
+  Annotations HeaderInPreambleAnnotations(R"cpp(
+int [[bar_preamble]];
+)cpp");
+
+  Annotations HeaderNotInPreambleAnnotations(R"cpp(
+int [[bar_not_preamble]];
+)cpp");
+
+  // Make the compilation paths appear as ../src/foo.cpp in the compile
+  // commands.
+  SmallString<32> RelPathPrefix("..");
+  llvm::sys::path::append(RelPathPrefix, "src");
+  std::string BuildDir = testPath("build");
+  MockCompilationDatabase CDB(BuildDir, RelPathPrefix);
+
   IgnoreDiagnostics DiagConsumer;
-  MockCompilationDatabase CDB(/*UseRelPaths=*/true);
   MockFSProvider FS;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
-  auto FooCpp = testPath("foo.cpp");
+  // Fill the filesystem.
+  auto FooCpp = testPath("src/foo.cpp");
   FS.Files[FooCpp] = "";
+  auto HeaderInPreambleH = testPath("src/header_in_preamble.h");
+  FS.Files[HeaderInPreambleH] = HeaderInPreambleAnnotations.code();
+  auto HeaderNotInPreambleH = testPath("src/header_not_in_preamble.h");
+  FS.Files[HeaderNotInPreambleH] = HeaderNotInPreambleAnnotations.code();
 
-  Server.addDocument(FooCpp, SourceAnnotations.code());
   runAddDocument(Server, FooCpp, SourceAnnotations.code());
-  auto Locations =
-      runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
-  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
 
+  // Go to a definition in main source file.
+  auto Locations =
+      runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p1"));
+  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
                                                SourceAnnotations.range()}));
+
+  // Go to a definition in header_in_preamble.h.
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p2"));
+  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(*Locations,
+              ElementsAre(Location{URIForFile{HeaderInPreambleH},
+                                   HeaderInPreambleAnnotations.range()}));
+
+  // Go to a definition in header_not_in_preamble.h.
+  Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p3"));
+  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(*Locations,
+              ElementsAre(Location{URIForFile{HeaderNotInPreambleH},
+                                   HeaderNotInPreambleAnnotations.range()}));
 }
 
 TEST(Hover, All) {

@@ -61,7 +61,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
 
     SourceRange CharRange = CharZeroFill->getSourceRange();
     auto Diag =
-        diag(CharZeroFill->getLocStart(), "memset fill value is char '0', "
+        diag(CharZeroFill->getBeginLoc(), "memset fill value is char '0', "
                                           "potentially mistaken for int 0");
 
     // Only suggest a fix if no macros are involved.
@@ -82,7 +82,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
         (NumValue >= 0 && NumValue <= UCharMax))
       return;
 
-    diag(NumFill->getLocStart(), "memset fill value is out of unsigned "
+    diag(NumFill->getBeginLoc(), "memset fill value is out of unsigned "
                                  "character range, gets truncated");
   }
 
@@ -110,7 +110,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // `byte_count` is known to be zero at compile time, and `fill_char` is
     // either not known or known to be a positive integer. Emit a warning
     // and fix-its to swap the arguments.
-    auto D = diag(Call->getLocStart(),
+    auto D = diag(Call->getBeginLoc(),
                   "memset of size zero, potentially swapped arguments");
     StringRef RHSString = tooling::fixit::getText(*ByteCount, *Result.Context);
     StringRef LHSString = tooling::fixit::getText(*FillChar, *Result.Context);

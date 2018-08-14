@@ -32,7 +32,7 @@ void UnaryStaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation Loc = MatchedDecl->getLocation();
 
   if (!AssertMessage || AssertMessage->getLength() ||
-      AssertMessage->getLocStart().isMacroID() || Loc.isMacroID())
+      AssertMessage->getBeginLoc().isMacroID() || Loc.isMacroID())
     return;
 
   diag(Loc,

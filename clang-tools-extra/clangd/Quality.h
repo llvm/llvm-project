@@ -163,6 +163,16 @@ private:
 /// LSP. (The highest score compares smallest so it sorts at the top).
 std::string sortText(float Score, llvm::StringRef Tiebreak = "");
 
+struct SignatureQualitySignals {
+  uint32_t NumberOfParameters = 0;
+  uint32_t NumberOfOptionalParameters = 0;
+  bool ContainsActiveParameter = false;
+  CodeCompleteConsumer::OverloadCandidate::CandidateKind Kind =
+      CodeCompleteConsumer::OverloadCandidate::CandidateKind::CK_Function;
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const SignatureQualitySignals &);
+
 } // namespace clangd
 } // namespace clang
 

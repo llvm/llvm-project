@@ -30,7 +30,7 @@ void UsingNamespaceDirectiveCheck::registerMatchers(
 void UsingNamespaceDirectiveCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *U = Result.Nodes.getNodeAs<UsingDirectiveDecl>("usingNamespace");
-  SourceLocation Loc = U->getLocStart();
+  SourceLocation Loc = U->getBeginLoc();
   if (U->isImplicit() || !Loc.isValid())
     return;
 

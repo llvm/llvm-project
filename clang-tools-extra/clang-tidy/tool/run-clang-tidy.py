@@ -153,7 +153,7 @@ def apply_fixes(args, tmpdir):
   subprocess.call(invocation)
 
 
-def run_tidy(args, tmpdir, build_path, queue, failed_files):
+def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
   """Takes filenames out of queue and runs clang-tidy on them."""
   while True:
     name = queue.get()
@@ -161,10 +161,15 @@ def run_tidy(args, tmpdir, build_path, queue, failed_files):
                                      tmpdir, build_path, args.header_filter,
                                      args.extra_arg, args.extra_arg_before,
                                      args.quiet, args.config)
-    sys.stdout.write(' '.join(invocation) + '\n')
-    return_code = subprocess.call(invocation)
-    if return_code != 0:
+
+    proc = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, err = proc.communicate()
+    if proc.returncode != 0:
       failed_files.append(name)
+    with lock:
+      sys.stdout.write(' '.join(invocation) + '\n' + output + '\n')
+      if err > 0:
+        sys.stderr.write(err + '\n')
     queue.task_done()
 
 
@@ -263,9 +268,10 @@ def main():
     task_queue = queue.Queue(max_task)
     # List of files with a non-zero return code.
     failed_files = []
+    lock = threading.Lock()
     for _ in range(max_task):
       t = threading.Thread(target=run_tidy,
-                           args=(args, tmpdir, build_path, task_queue, failed_files))
+                           args=(args, tmpdir, build_path, task_queue, lock, failed_files))
       t.daemon = True
       t.start()
 

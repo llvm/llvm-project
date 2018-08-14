@@ -71,9 +71,10 @@ public:
           // will likely die immediately while previously it was kept alive
           // by the autorelease pool. This is bad practice in general, leave it
           // and emit an error to force the user to restructure their code.
-          Pass.TA.reportError("it is not safe to remove an unused 'autorelease' "
+          Pass.TA.reportError(
+              "it is not safe to remove an unused 'autorelease' "
               "message; its receiver may be destroyed immediately",
-              E->getLocStart(), E->getSourceRange());
+              E->getBeginLoc(), E->getSourceRange());
           return true;
         }
       }
@@ -89,7 +90,7 @@ public:
             std::string err = "it is not safe to remove '";
             err += E->getSelector().getAsString() + "' message on "
                 "an __unsafe_unretained type";
-            Pass.TA.reportError(err, rec->getLocStart());
+            Pass.TA.reportError(err, rec->getBeginLoc());
             return true;
           }
 
@@ -98,15 +99,17 @@ public:
             std::string err = "it is not safe to remove '";
             err += E->getSelector().getAsString() + "' message on "
                 "a global variable";
-            Pass.TA.reportError(err, rec->getLocStart());
+            Pass.TA.reportError(err, rec->getBeginLoc());
             return true;
           }
 
           if (E->getMethodFamily() == OMF_release && isDelegateMessage(rec)) {
-            Pass.TA.reportError("it is not safe to remove 'retain' "
+            Pass.TA.reportError(
+                "it is not safe to remove 'retain' "
                 "message on the result of a 'delegate' message; "
                 "the object that was passed to 'setDelegate:' may not be "
-                "properly retained", rec->getLocStart());
+                "properly retained",
+                rec->getBeginLoc());
             return true;
           }
         }

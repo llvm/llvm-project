@@ -417,7 +417,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    if (T->isPointerType() || T->isReferenceType()) {
+    if (T->isPointerType() || T->isReferenceType() || T->isBlockPointerType()) {
       if (isPointerOrReferenceUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
@@ -478,7 +478,8 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     const FieldRegion *FR, FieldChainInfo LocalChain) {
 
   assert((FR->getDecl()->getType()->isPointerType() ||
-          FR->getDecl()->getType()->isReferenceType()) &&
+          FR->getDecl()->getType()->isReferenceType() ||
+          FR->getDecl()->getType()->isBlockPointerType()) &&
          "This method only checks pointer/reference objects!");
 
   SVal V = State->getSVal(FR);

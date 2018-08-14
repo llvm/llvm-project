@@ -819,13 +819,13 @@ static void findBlockLocations(CFG *CFGraph,
     // Find the source location of the last statement in the block, if the
     // block is not empty.
     if (const Stmt *S = CurrBlock->getTerminator()) {
-      CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc = S->getLocStart();
+      CurrBlockInfo->EntryLoc = CurrBlockInfo->ExitLoc = S->getBeginLoc();
     } else {
       for (CFGBlock::const_reverse_iterator BI = CurrBlock->rbegin(),
            BE = CurrBlock->rend(); BI != BE; ++BI) {
         // FIXME: Handle other CFGElement kinds.
         if (Optional<CFGStmt> CS = BI->getAs<CFGStmt>()) {
-          CurrBlockInfo->ExitLoc = CS->getStmt()->getLocStart();
+          CurrBlockInfo->ExitLoc = CS->getStmt()->getBeginLoc();
           break;
         }
       }
@@ -837,7 +837,7 @@ static void findBlockLocations(CFG *CFGraph,
       for (const auto &BI : *CurrBlock) {
         // FIXME: Handle other CFGElement kinds.
         if (Optional<CFGStmt> CS = BI.getAs<CFGStmt>()) {
-          CurrBlockInfo->EntryLoc = CS->getStmt()->getLocStart();
+          CurrBlockInfo->EntryLoc = CS->getStmt()->getBeginLoc();
           break;
         }
       }
@@ -2080,7 +2080,7 @@ void BuildLockset::VisitDeclStmt(DeclStmt *S) {
         CXXConstructorDecl *CtorD = findConstructorForByValueReturn(RD);
         if (!CtorD || !CtorD->hasAttrs())
           continue;
-        handleCall(buildFakeCtorCall(CtorD, {E}, E->getLocStart()), CtorD, VD);
+        handleCall(buildFakeCtorCall(CtorD, {E}, E->getBeginLoc()), CtorD, VD);
       }
     }
   }
@@ -2396,7 +2396,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           // Create a dummy expression,
           auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
           DeclRefExpr DRE(VD, false, VD->getType().getNonReferenceType(),
-                          VK_LValue, AD.getTriggerStmt()->getLocEnd());
+                          VK_LValue, AD.getTriggerStmt()->getEndLoc());
           LocksetBuilder.handleCall(&DRE, DD);
           break;
         }

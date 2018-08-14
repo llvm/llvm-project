@@ -1985,6 +1985,10 @@ bool BitSimplification::genStoreImmediate(MachineInstr *MI) {
     case Hexagon::S2_storeri_io:
       V = int32_t(U);
       break;
+    default:
+      // Opc is already checked above to be one of the three store instructions.
+      // This silences a -Wuninitialized false positive on GCC 5.4.
+      llvm_unreachable("Unexpected store opcode");
   }
   if (!isInt<8>(V))
     return false;

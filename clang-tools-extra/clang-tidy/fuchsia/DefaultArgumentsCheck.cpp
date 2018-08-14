@@ -27,21 +27,20 @@ void DefaultArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<CXXDefaultArgExpr>("stmt")) {
     diag(S->getUsedLocation(),
          "calling a function that uses a default argument is disallowed");
-    diag(S->getParam()->getLocStart(),
-        "default parameter was declared here",
+    diag(S->getParam()->getBeginLoc(), "default parameter was declared here",
          DiagnosticIDs::Note);
   } else if (const ParmVarDecl *D =
           Result.Nodes.getNodeAs<ParmVarDecl>("decl")) {
     SourceRange DefaultArgRange = D->getDefaultArgRange();
 
-    if (DefaultArgRange.getEnd() != D->getLocEnd()) {
+    if (DefaultArgRange.getEnd() != D->getEndLoc()) {
       return;
     } else if (DefaultArgRange.getBegin().isMacroID()) {
-      diag(D->getLocStart(),
+      diag(D->getBeginLoc(),
            "declaring a parameter with a default argument is disallowed");
     } else {
-      SourceLocation StartLocation = D->getName().empty() ?
-              D->getLocStart() : D->getLocation();
+      SourceLocation StartLocation =
+          D->getName().empty() ? D->getBeginLoc() : D->getLocation();
 
       SourceRange RemovalRange(Lexer::getLocForEndOfToken(
              StartLocation, 0,
@@ -51,10 +50,9 @@ void DefaultArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
            DefaultArgRange.getEnd()
          );
 
-      diag(D->getLocStart(),
-          "declaring a parameter with a default argument is disallowed")
-          << D
-          << FixItHint::CreateRemoval(RemovalRange);
+      diag(D->getBeginLoc(),
+           "declaring a parameter with a default argument is disallowed")
+          << D << FixItHint::CreateRemoval(RemovalRange);
     }
   }
 }

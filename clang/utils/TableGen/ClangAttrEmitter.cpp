@@ -3335,7 +3335,7 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   SS << (Warn ? "warn_attribute_wrong_decl_type_str" :
                "err_attribute_wrong_decl_type_str");
   SS << ")\n";
-  SS << "      << Attr.getName() << ";
+  SS << "      << Attr << ";
   SS << CalculateDiagnostic(*SubjectObj) << ";\n";
   SS << "    return false;\n";
   SS << "  }\n";

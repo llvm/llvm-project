@@ -70,7 +70,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
         (llvm::Twine("\nnamespace ") + Abbreviation + " = " + Namespace + ";")
             .str();
     SourceLocation Loc =
-        Lexer::getLocForEndOfToken(Function->getBody()->getLocStart(), 0,
+        Lexer::getLocForEndOfToken(Function->getBody()->getBeginLoc(), 0,
                                    SourceMgr, Context.getLangOpts());
     AddedAliases[Function][Namespace.str()] = Abbreviation;
     return FixItHint::CreateInsertion(Loc, Declaration);

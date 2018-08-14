@@ -21,7 +21,7 @@ public:
   }
 
   bool VisitInitListExpr(InitListExpr *ILE) {
-    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getLocStart());
+    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getBeginLoc());
     return true;
   }
 };

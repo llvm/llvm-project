@@ -137,7 +137,7 @@ bool AnalysisDeclContext::isBodyAutosynthesized() const {
 bool AnalysisDeclContext::isBodyAutosynthesizedFromModelFile() const {
   bool Tmp;
   Stmt *Body = getBody(Tmp);
-  return Tmp && Body->getLocStart().isValid();
+  return Tmp && Body->getBeginLoc().isValid();
 }
 
 /// Returns true if \param VD is an Objective-C implicit 'self' parameter.
@@ -500,7 +500,7 @@ void LocationContext::dumpStack(
         OS << "Calling anonymous code";
       if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
         OS << " at ";
-        printLocation(OS, SM, S->getLocStart());
+        printLocation(OS, SM, S->getBeginLoc());
       }
       break;
     case Scope:
@@ -510,7 +510,7 @@ void LocationContext::dumpStack(
       OS << "Invoking block";
       if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
         OS << " defined at ";
-        printLocation(OS, SM, D->getLocStart());
+        printLocation(OS, SM, D->getBeginLoc());
       }
       break;
     }

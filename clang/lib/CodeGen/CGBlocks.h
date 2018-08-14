@@ -231,6 +231,11 @@ public:
   /// and their layout meta-data has been generated.
   bool HasCapturedVariableLayout : 1;
 
+  /// Indicates whether an object of a non-external C++ class is captured. This
+  /// bit is used to determine the linkage of the block copy/destroy helper
+  /// functions.
+  bool CapturesNonExternalType : 1;
+
   /// The mapping of allocated indexes within the block.
   llvm::DenseMap<const VarDecl*, Capture> Captures;
 

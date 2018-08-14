@@ -64,7 +64,7 @@ bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
   }
 
   // Only apply this hack within a system header.
-  if (!Context.getSourceManager().isInSystemHeader(D.getLocStart()))
+  if (!Context.getSourceManager().isInSystemHeader(D.getBeginLoc()))
     return false;
 
   return llvm::StringSwitch<bool>(RD->getIdentifier()->getName())
@@ -992,7 +992,7 @@ static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D) {
   if (!FT)
     return CT_Can;
 
-  FT = S.ResolveExceptionSpec(E->getLocStart(), FT);
+  FT = S.ResolveExceptionSpec(E->getBeginLoc(), FT);
   if (!FT)
     return CT_Can;
 

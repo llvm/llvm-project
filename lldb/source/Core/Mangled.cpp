@@ -261,9 +261,10 @@ static char *GetMSVCDemangledStr(const char *M) {
 #endif
 }
 
-static char *GetItaniumDemangledStr(const char *M,
-                                    llvm::ItaniumPartialDemangler &ipd) {
+static char *GetItaniumDemangledStr(const char *M) {
   char *demangled_cstr = nullptr;
+
+  llvm::ItaniumPartialDemangler ipd;
   bool err = ipd.partialDemangle(M);
   if (!err) {
     // Default buffer and size (will realloc in case it's too small).
@@ -384,8 +385,7 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         demangled_name = GetMSVCDemangledStr(mangled_name);
         break;
       case eManglingSchemeItanium: {
-        llvm::ItaniumPartialDemangler ipd;
-        demangled_name = GetItaniumDemangledStr(mangled_name, ipd);
+        demangled_name = GetItaniumDemangledStr(mangled_name);
         break;
       }
       case eManglingSchemeNone:

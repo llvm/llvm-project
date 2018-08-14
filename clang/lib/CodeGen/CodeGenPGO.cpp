@@ -815,7 +815,7 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
 
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
-  auto Loc = D->getBody()->getLocStart();
+  auto Loc = D->getBody()->getBeginLoc();
   return SM.isInSystemHeader(Loc);
 }
 

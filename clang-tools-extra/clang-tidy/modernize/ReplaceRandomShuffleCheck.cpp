@@ -62,13 +62,13 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedArgumentThree = Result.Nodes.getNodeAs<Expr>("randomFunc");
   const auto *MatchedCallExpr = Result.Nodes.getNodeAs<CallExpr>("match");
 
-  if (MatchedCallExpr->getLocStart().isMacroID())
+  if (MatchedCallExpr->getBeginLoc().isMacroID())
     return;
 
   auto Diag = [&] {
     if (MatchedCallExpr->getNumArgs() == 3) {
       auto DiagL =
-          diag(MatchedCallExpr->getLocStart(),
+          diag(MatchedCallExpr->getBeginLoc(),
                "'std::random_shuffle' has been removed in C++17; use "
                "'std::shuffle' and an alternative random mechanism instead");
       DiagL << FixItHint::CreateReplacement(
@@ -76,7 +76,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
           "std::mt19937(std::random_device()())");
       return DiagL;
     } else {
-      auto DiagL = diag(MatchedCallExpr->getLocStart(),
+      auto DiagL = diag(MatchedCallExpr->getBeginLoc(),
                         "'std::random_shuffle' has been removed in C++17; use "
                         "'std::shuffle' instead");
       DiagL << FixItHint::CreateInsertion(
@@ -94,12 +94,12 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
     NewName = "std::" + NewName;
 
   Diag << FixItHint::CreateRemoval(MatchedDecl->getSourceRange());
-  Diag << FixItHint::CreateInsertion(MatchedDecl->getLocStart(), NewName);
+  Diag << FixItHint::CreateInsertion(MatchedDecl->getBeginLoc(), NewName);
 
   if (Optional<FixItHint> IncludeFixit =
           IncludeInserter->CreateIncludeInsertion(
               Result.Context->getSourceManager().getFileID(
-                  MatchedCallExpr->getLocStart()),
+                  MatchedCallExpr->getBeginLoc()),
               "random", /*IsAngled=*/true))
     Diag << IncludeFixit.getValue();
 }

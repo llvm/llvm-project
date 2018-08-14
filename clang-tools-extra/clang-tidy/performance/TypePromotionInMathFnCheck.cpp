@@ -195,7 +195,7 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
   // declared in <math.h>.
   if (FnInCmath)
     if (auto IncludeFixit = IncludeInserter->CreateIncludeInsertion(
-            Result.Context->getSourceManager().getFileID(Call->getLocStart()),
+            Result.Context->getSourceManager().getFileID(Call->getBeginLoc()),
             "cmath", /*IsAngled=*/true))
       Diag << *IncludeFixit;
 }

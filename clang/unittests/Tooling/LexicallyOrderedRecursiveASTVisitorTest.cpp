@@ -61,7 +61,7 @@ public:
   }
 
   template <class T> void match(StringRef Path, const T *D) {
-    Match(Path, D->getLocStart());
+    Match(Path, D->getBeginLoc());
   }
 };
 

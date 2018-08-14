@@ -15,6 +15,7 @@
 
 #include "loop_proto_to_llvm.h"
 #include "cxx_loop_proto.pb.h"
+#include "../handle-llvm/input_arrays.h"
 
 // The following is needed to convert protos in human-readable form
 #include <google/protobuf/text_format.h>
@@ -135,7 +136,11 @@ std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {
             << x.statements()
             << "%ctnew = add i64 %ct, 1\n"
             << "%j = icmp eq i64 %ctnew, %s\n"
-            << "br i1 %j, label %end, label %loop\n}\n";
+            << "br i1 %j, label %end, label %loop, !llvm.loop !0\n}\n"
+            << "!0 = distinct !{!0, !1, !2}\n"
+            << "!1 = !{!\"llvm.loop.vectorize.enable\", i1 true}\n"
+            << "!2 = !{!\"llvm.loop.vectorize.width\", i32 " << kArraySize
+            << "}\n";
 }
 
 // ---------------------------------

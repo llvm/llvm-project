@@ -977,7 +977,7 @@ ObjCPropertyOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
 ExprResult ObjCPropertyOpBuilder::complete(Expr *SyntacticForm) {
   if (isWeakProperty() && !S.isUnevaluatedContext() &&
       !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
-                         SyntacticForm->getLocStart()))
+                         SyntacticForm->getBeginLoc()))
     S.getCurFunction()->recordUseOfWeak(SyntacticRefExpr,
                                         SyntacticRefExpr->isMessagingGetter());
 

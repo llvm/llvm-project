@@ -667,6 +667,34 @@ define float @minnum_x_y_minnum_z(float %x, float %y, float %z) {
   ret float %b
 }
 
+; minnum(X, -INF) --> -INF
+
+define float @minnum_neginf(float %x) {
+; CHECK-LABEL: @minnum_neginf(
+; CHECK-NEXT:    ret float 0xFFF0000000000000
+;
+  %val = call float @llvm.minnum.f32(float %x, float 0xFFF0000000000000)
+  ret float %val
+}
+
+define <2 x double> @minnum_neginf_commute_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_neginf_commute_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+; negative test
+
+define float @minnum_inf(float %x) {
+; CHECK-LABEL: @minnum_inf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minnum.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.minnum.f32(float 0x7FF0000000000000, float %x)
+  ret float %val
+}
 define float @maxnum_x_maxnum_x_y(float %x, float %y) {
 ; CHECK-LABEL: @maxnum_x_maxnum_x_y(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -731,6 +759,35 @@ define float @maxnum_x_y_maxnum_z(float %x, float %y, float %z) {
   %a = call float @llvm.maxnum.f32(float %x, float %y)
   %b = call float @llvm.maxnum.f32(float %a, float %z)
   ret float %b
+}
+
+; maxnum(X, INF) --> INF
+
+define <2 x double> @maxnum_inf(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_inf(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>
+;
+  %val = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double><double 0x7FF0000000000000, double 0x7FF0000000000000>)
+  ret <2 x double> %val
+}
+
+define float @maxnum_inf_commute(float %x) {
+; CHECK-LABEL: @maxnum_inf_commute(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %val = call float @llvm.maxnum.f32(float 0x7FF0000000000000, float %x)
+  ret float %val
+}
+
+; negative test
+
+define float @maxnum_neginf(float %x) {
+; CHECK-LABEL: @maxnum_neginf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.maxnum.f32(float 0xFFF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.maxnum.f32(float 0xFFF0000000000000, float %x)
+  ret float %val
 }
 
 ; Y - (Y - X) --> X

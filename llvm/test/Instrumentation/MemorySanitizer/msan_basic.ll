@@ -915,6 +915,26 @@ entry:
 ; CHECK: call void (i32, ...) @VAArgStructFn
 ; CHECK: ret void
 
+; Same code compiled without SSE (see attributes below).
+; The register save area is only 48 bytes instead of 176.
+define void @VAArgStructNoSSE(%struct.StructByVal* nocapture %s) sanitize_memory #0 {
+entry:
+  %agg.tmp2 = alloca %struct.StructByVal, align 8
+  %0 = bitcast %struct.StructByVal* %s to i8*
+  %agg.tmp.sroa.0.0..sroa_cast = bitcast %struct.StructByVal* %s to i64*
+  %agg.tmp.sroa.0.0.copyload = load i64, i64* %agg.tmp.sroa.0.0..sroa_cast, align 4
+  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, %struct.StructByVal* %s, i64 0, i32 2
+  %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
+  %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
+  %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
+  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval align 8 %agg.tmp2)
+  ret void
+}
+
+attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
+
+; CHECK: bitcast { i32, i32, i32, i32 }* {{.*}}@__msan_va_arg_tls {{.*}}, i64 48
 
 declare i32 @InnerTailCall(i32 %a)
 
