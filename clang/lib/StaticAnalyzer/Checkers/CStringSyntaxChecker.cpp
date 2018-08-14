@@ -90,7 +90,16 @@ class WalkAST: public StmtVisitor<WalkAST> {
   ///   strlcpy(dst, "abcd", 4);
   ///   strlcpy(dst + 3, "abcd", 2);
   ///   strlcpy(dst, "abcd", cpy);
-  bool containsBadStrlcpyPattern(const CallExpr *CE);
+  /// Identify erroneous patterns in the last argument to strlcat - the number
+  /// of bytes to copy.
+  /// The bad pattern checked is when the last argument is basically
+  /// pointing to the destination buffer size or argument larger or
+  /// equal to.  
+  ///   char dst[2];
+  ///   strlcat(dst, src2, sizeof(dst));
+  ///   strlcat(dst, src2, 2);
+  ///   strlcat(dst, src2, 10);
+  bool containsBadStrlcpyStrlcatPattern(const CallExpr *CE);
 
 public:
   WalkAST(const CheckerBase *Checker, BugReporter &BR, AnalysisDeclContext *AC)
@@ -142,15 +151,21 @@ bool WalkAST::containsBadStrncatPattern(const CallExpr *CE) {
   return false;
 }
 
-bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
+bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
   if (CE->getNumArgs() != 3)
     return false;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  bool Append = CheckerContext::isCLibraryFunction(FD, "strlcat");
   const Expr *DstArg = CE->getArg(0);
   const Expr *LenArg = CE->getArg(2);
 
   const auto *DstArgDecl = dyn_cast<DeclRefExpr>(DstArg->IgnoreParenImpCasts());
   const auto *LenArgDecl = dyn_cast<DeclRefExpr>(LenArg->IgnoreParenLValueCasts());
   uint64_t DstOff = 0;
+  // - sizeof(dst)
+  // strlcat appends at most size - strlen(dst) - 1
+  if (Append && isSizeof(LenArg, DstArg))
+    return true;
   // - size_t dstlen = sizeof(dst)
   if (LenArgDecl) {
     const auto *LenArgVal = dyn_cast<VarDecl>(LenArgDecl->getDecl());
@@ -181,7 +196,10 @@ bool WalkAST::containsBadStrlcpyPattern(const CallExpr *CE) {
       if (const auto *Buffer = dyn_cast<ConstantArrayType>(DstArgDecl->getType())) {
         ASTContext &C = BR.getContext();
         uint64_t BufferLen = C.getTypeSize(Buffer) / 8;
-        if ((BufferLen - DstOff) < ILRawVal)
+        auto RemainingBufferLen = BufferLen - DstOff;
+        if (Append)
+          RemainingBufferLen -= 1;
+        if (RemainingBufferLen < ILRawVal)
           return true;
       }
     }
@@ -220,7 +238,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
                          LenArg->getSourceRange());
     }
   } else if (CheckerContext::isCLibraryFunction(FD, "strlcpy")) {
-    if (containsBadStrlcpyPattern(CE)) {
+    if (containsBadStrlcpyStrlcatPattern(CE)) {
       const Expr *DstArg = CE->getArg(0);
       const Expr *LenArg = CE->getArg(2);
       PathDiagnosticLocation Loc =
@@ -233,6 +251,34 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
       os << "The third argument is larger than the size of the input buffer. ";
       if (!DstName.empty())
         os << "Replace with the value 'sizeof(" << DstName << ")` or lower";
+
+      BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
+                         "C String API", os.str(), Loc,
+                         LenArg->getSourceRange());
+    }
+  } else if (CheckerContext::isCLibraryFunction(FD, "strlcat")) {
+    if (containsBadStrlcpyStrlcatPattern(CE)) {
+      const Expr *DstArg = CE->getArg(0);
+      const Expr *LenArg = CE->getArg(2);
+      PathDiagnosticLocation Loc =
+        PathDiagnosticLocation::createBegin(LenArg, BR.getSourceManager(), AC);
+
+      StringRef DstName = getPrintableName(DstArg);
+      StringRef LenName = getPrintableName(LenArg);
+
+      SmallString<256> S;
+      llvm::raw_svector_ostream os(S);
+      os << "The third argument allows to potentially copy more bytes than it should. ";
+      os << "Replace with the value ";
+      if (!LenName.empty())
+        os << "'" << LenName << "'";
+      else
+        os << " <size> ";
+      if (!DstName.empty())
+        os << " - strlen(" << DstName << ")";
+      else
+        os << " - strlen(<destination buffer>)";
+      os << " - 1 or lower";
 
       BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
                          "C String API", os.str(), Loc,

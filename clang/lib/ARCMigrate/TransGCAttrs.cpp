@@ -81,11 +81,10 @@ public:
   }
 
   bool handleAttr(AttributedTypeLoc TL, Decl *D = nullptr) {
-    auto *OwnershipAttr = TL.getAttrAs<ObjCOwnershipAttr>();
-    if (!OwnershipAttr)
+    if (TL.getAttrKind() != AttributedType::attr_objc_ownership)
       return false;
 
-    SourceLocation Loc = OwnershipAttr->getLocation();
+    SourceLocation Loc = TL.getAttrNameLoc();
     unsigned RawLoc = Loc.getRawEncoding();
     if (MigrateCtx.AttrSet.count(RawLoc))
       return true;
@@ -94,7 +93,13 @@ public:
     SourceManager &SM = Ctx.getSourceManager();
     if (Loc.isMacroID())
       Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-    StringRef Spell = OwnershipAttr->getKind()->getName();
+    SmallString<32> Buf;
+    bool Invalid = false;
+    StringRef Spell = Lexer::getSpelling(
+                                  SM.getSpellingLoc(TL.getAttrEnumOperandLoc()),
+                                  Buf, SM, Ctx.getLangOpts(), &Invalid);
+    if (Invalid)
+      return false;
     MigrationContext::GCAttrOccurrence::AttrKind Kind;
     if (Spell == "strong")
       Kind = MigrationContext::GCAttrOccurrence::Strong;
@@ -279,7 +284,7 @@ static void checkAllAtProps(MigrationContext &MigrateCtx,
   }
 
   for (unsigned i = 0, e = ATLs.size(); i != e; ++i) {
-    SourceLocation Loc = ATLs[i].first.getAttr()->getLocation();
+    SourceLocation Loc = ATLs[i].first.getAttrNameLoc();
     if (Loc.isMacroID())
       Loc = MigrateCtx.Pass.Ctx.getSourceManager()
                 .getImmediateExpansionRange(Loc)

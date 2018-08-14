@@ -21,7 +21,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/LLVM.h"
@@ -1871,16 +1870,7 @@ public:
   bool isObjCQualifiedClassType() const;        // Class<foo>
   bool isObjCObjectOrInterfaceType() const;
   bool isObjCIdType() const;                    // id
-
-  /// Was this type written with the special inert-in-ARC __unsafe_unretained
-  /// qualifier?
-  ///
-  /// This approximates the answer to the following question: if this
-  /// translation unit were compiled in ARC, would this type be qualified
-  /// with __unsafe_unretained?
-  bool isObjCInertUnsafeUnretainedType() const {
-    return hasAttr(attr::ObjCInertUnsafeUnretained);
-  }
+  bool isObjCInertUnsafeUnretainedType() const;
 
   /// Whether the type is Objective-C 'id' or a __kindof type of an
   /// object type, e.g., __kindof NSView * or __kindof id
@@ -2093,10 +2083,6 @@ public:
   /// A variant of castAs<> for array type which silently discards
   /// qualifiers from the outermost type.
   const ArrayType *castAsArrayTypeUnsafe() const;
-
-  /// Determine whether this type had the specified attribute applied to it
-  /// (looking through top-level type sugar).
-  bool hasAttr(attr::Kind AK) const;
 
   /// Get the base element type of this type, potentially discarding type
   /// qualifiers.  This should never be used when type qualifiers
@@ -4207,7 +4193,56 @@ public:
 ///   - the canonical type is VectorType(16, int)
 class AttributedType : public Type, public llvm::FoldingSetNode {
 public:
-  using Kind = attr::Kind;
+  // It is really silly to have yet another attribute-kind enum, but
+  // clang::attr::Kind doesn't currently cover the pure type attrs.
+  enum Kind {
+    // Expression operand.
+    attr_address_space,
+    attr_regparm,
+    attr_vector_size,
+    attr_neon_vector_type,
+    attr_neon_polyvector_type,
+
+    FirstExprOperandKind = attr_address_space,
+    LastExprOperandKind = attr_neon_polyvector_type,
+
+    // Enumerated operand (string or keyword).
+    attr_objc_gc,
+    attr_objc_ownership,
+    attr_pcs,
+    attr_pcs_vfp,
+
+    FirstEnumOperandKind = attr_objc_gc,
+    LastEnumOperandKind = attr_pcs_vfp,
+
+    // No operand.
+    attr_noreturn,
+    attr_nocf_check,
+    attr_cdecl,
+    attr_fastcall,
+    attr_stdcall,
+    attr_thiscall,
+    attr_regcall,
+    attr_pascal,
+    attr_swiftcall,
+    attr_vectorcall,
+    attr_inteloclbicc,
+    attr_ms_abi,
+    attr_sysv_abi,
+    attr_preserve_most,
+    attr_preserve_all,
+    attr_ptr32,
+    attr_ptr64,
+    attr_sptr,
+    attr_uptr,
+    attr_nonnull,
+    attr_ns_returns_retained,
+    attr_nullable,
+    attr_null_unspecified,
+    attr_objc_kindof,
+    attr_objc_inert_unsafe_unretained,
+    attr_lifetimebound,
+  };
 
 private:
   friend class ASTContext; // ASTContext creates these
@@ -4215,7 +4250,7 @@ private:
   QualType ModifiedType;
   QualType EquivalentType;
 
-  AttributedType(QualType canon, attr::Kind attrKind, QualType modified,
+  AttributedType(QualType canon, Kind attrKind, QualType modified,
                  QualType equivalent)
       : Type(Attributed, canon, equivalent->isDependentType(),
              equivalent->isInstantiationDependentType(),
@@ -4264,13 +4299,13 @@ public:
   static Kind getNullabilityAttrKind(NullabilityKind kind) {
     switch (kind) {
     case NullabilityKind::NonNull:
-      return attr::TypeNonNull;
+      return attr_nonnull;
 
     case NullabilityKind::Nullable:
-      return attr::TypeNullable;
+      return attr_nullable;
 
     case NullabilityKind::Unspecified:
-      return attr::TypeNullUnspecified;
+      return attr_null_unspecified;
     }
     llvm_unreachable("Unknown nullability kind.");
   }

@@ -2245,9 +2245,6 @@ public:
   CXXTemporary *ReadCXXTemporary(ModuleFile &F, const RecordData &Record,
                                  unsigned &Idx);
 
-  /// Reads one attribute from the current stream position.
-  Attr *ReadAttr(ModuleFile &M, const RecordData &Record, unsigned &Idx);
-
   /// Reads attributes from the current stream position.
   void ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs);
 
@@ -2631,11 +2628,6 @@ public:
   /// Read a version tuple, advancing Idx.
   VersionTuple readVersionTuple() {
     return ASTReader::ReadVersionTuple(Record, Idx);
-  }
-
-  /// Reads one attribute from the current stream position, advancing Idx.
-  Attr *readAttr() {
-    return Reader->ReadAttr(*F, Record, Idx);
   }
 
   /// Reads attributes from the current stream position, advancing Idx.

@@ -26,6 +26,20 @@
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none,all \
 // RUN:     -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes FDR,BASIC %s
+//
+// We also should support having the individual modes be concatenated.
+//
+// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none \
+// RUN:     -fxray-modes=xray-fdr \
+// RUN:     -### %s \
+// RUN:     2>&1 | FileCheck --check-prefixes FDR %s
+//
+// Order also matters.
+//
+// RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=xray-fdr \
+// RUN:     -fxray-modes=none \
+// RUN:     -### %s \
+// RUN:     2>&1 | FileCheck --check-prefixes NONE %s
 
 // BASIC: libclang_rt.xray-basic
 // FDR: libclang_rt.xray-fdr
