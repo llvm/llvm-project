@@ -60,6 +60,32 @@ public:
   }
 };
 
+/// Represents a void* field that needs to be casted back to its dynamic type
+/// for a correct note message.
+class NeedsCastLocField final : public FieldNode {
+  QualType CastBackType;
+
+public:
+  NeedsCastLocField(const FieldRegion *FR, const QualType &T)
+      : FieldNode(FR), CastBackType(T) {}
+
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+    Out << "uninitialized pointee ";
+  }
+
+  virtual void printPrefix(llvm::raw_ostream &Out) const override {
+    Out << "static_cast" << '<' << CastBackType.getAsString() << ">(";
+  }
+
+  virtual void printNode(llvm::raw_ostream &Out) const override {
+    Out << getVariableName(getDecl()) << ')';
+  }
+
+  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+    Out << "->";
+  }
+};
+
 } // end of anonymous namespace
 
 // Utility function declarations.
@@ -122,6 +148,10 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
 
   QualType DynT = DynTInfo.getType();
 
+  // If the static type of the field is a void pointer, we need to cast it back
+  // to the dynamic type before dereferencing.
+  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType());
+
   if (isVoidPointer(DynT)) {
     IsAnyFieldInitialized = true;
     return false;
@@ -160,11 +190,16 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
 
     const TypedValueRegion *R = RecordV->getRegion();
 
-    if (DynT->getPointeeType()->isStructureOrClassType())
+    if (DynT->getPointeeType()->isStructureOrClassType()) {
+      if (NeedsCastBack)
+        return isNonUnionUninit(R, LocalChain.add(NeedsCastLocField(FR, DynT)));
       return isNonUnionUninit(R, LocalChain.add(LocField(FR)));
+    }
 
     if (DynT->getPointeeType()->isUnionType()) {
       if (isUnionUninit(R)) {
+        if (NeedsCastBack)
+          return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
         return addFieldToUninits(LocalChain.add(LocField(FR)));
       } else {
         IsAnyFieldInitialized = true;
@@ -185,8 +220,11 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
          "At this point FR must either have a primitive dynamic type, or it "
          "must be a null, undefined, unknown or concrete pointer!");
 
-  if (isPrimitiveUninit(DerefdV))
+  if (isPrimitiveUninit(DerefdV)) {
+    if (NeedsCastBack)
+      return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
     return addFieldToUninits(LocalChain.add(LocField(FR)));
+  }
 
   IsAnyFieldInitialized = true;
   return false;
