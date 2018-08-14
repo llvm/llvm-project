@@ -692,7 +692,7 @@ public:
     while (I != Pieces.size() && Pieces[I].InputOff + Pieces[I].Size <= Off)
       ++I;
     if (I == Pieces.size())
-      return Off;
+      fatal(".eh_frame: relocation is not in any piece");
 
     // Pieces must be contiguous, so there must be no holes in between.
     assert(Pieces[I].InputOff <= Off && "Relocation not in any piece");
