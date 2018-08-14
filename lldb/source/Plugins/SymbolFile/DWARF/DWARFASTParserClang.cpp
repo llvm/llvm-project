@@ -2094,95 +2094,6 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   return template_param_infos.args.size() == template_param_infos.names.size();
 }
 
-// Checks whether m1 is an overload of m2 (as opposed to an override). This is
-// called by addOverridesForMethod to distinguish overrides (which share a
-// vtable entry) from overloads (which require distinct entries).
-static bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
-  // FIXME: This should detect covariant return types, but currently doesn't.
-  lldbassert(&m1->getASTContext() == &m2->getASTContext() &&
-             "Methods should have the same AST context");
-  clang::ASTContext &context = m1->getASTContext();
-
-  const auto *m1Type =
-    llvm::cast<clang::FunctionProtoType>(
-      context.getCanonicalType(m1->getType()));
-
-  const auto *m2Type =
-    llvm::cast<clang::FunctionProtoType>(
-      context.getCanonicalType(m2->getType()));
-
-  auto compareArgTypes =
-    [&context](const clang::QualType &m1p, const clang::QualType &m2p) {
-      return context.hasSameType(m1p.getUnqualifiedType(),
-                                 m2p.getUnqualifiedType());
-    };
-
-  // FIXME: In C++14 and later, we can just pass m2Type->param_type_end()
-  //        as a fourth parameter to std::equal().
-  return (m1->getNumParams() != m2->getNumParams()) ||
-         !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
-                     m2Type->param_type_begin(), compareArgTypes);
-}
-
-// If decl is a virtual method, walk the base classes looking for methods that
-// decl overrides. This table of overridden methods is used by IRGen to
-// determine the vtable layout for decl's parent class.
-static void addOverridesForMethod(clang::CXXMethodDecl *decl) {
-  if (!decl->isVirtual())
-    return;
-
-  clang::CXXBasePaths paths;
-
-  auto find_overridden_methods =
-    [decl](const clang::CXXBaseSpecifier *specifier, clang::CXXBasePath &path) {
-      if (auto *base_record =
-          llvm::dyn_cast<clang::CXXRecordDecl>(
-            specifier->getType()->getAs<clang::RecordType>()->getDecl())) {
-
-        clang::DeclarationName name = decl->getDeclName();
-
-        // If this is a destructor, check whether the base class destructor is
-        // virtual.
-        if (name.getNameKind() == clang::DeclarationName::CXXDestructorName)
-          if (auto *baseDtorDecl = base_record->getDestructor()) {
-            if (baseDtorDecl->isVirtual()) {
-              path.Decls = baseDtorDecl;
-              return true;
-            } else
-              return false;
-          }
-
-        // Otherwise, search for name in the base class.
-        for (path.Decls = base_record->lookup(name); !path.Decls.empty();
-             path.Decls = path.Decls.slice(1)) {
-          if (auto *method_decl =
-                llvm::dyn_cast<clang::CXXMethodDecl>(path.Decls.front()))
-            if (method_decl->isVirtual() && !isOverload(decl, method_decl)) {
-              path.Decls = method_decl;
-              return true;
-            }
-        }
-      }
-
-      return false;
-    };
-
-  if (decl->getParent()->lookupInBases(find_overridden_methods, paths)) {
-    for (auto *overridden_decl : paths.found_decls())
-      decl->addOverriddenMethod(
-        llvm::cast<clang::CXXMethodDecl>(overridden_decl));
-  }
-}
-
-// If clang_type is a CXXRecordDecl, builds the method override list for each
-// of its virtual methods.
-static void addMethodOverrides(ClangASTContext &ast, CompilerType &clang_type) {
-  if (auto *record =
-      ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType()))
-    for (auto *method : record->methods())
-      addOverridesForMethod(method);
-}
-
 bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                                                 lldb_private::Type *type,
                                                 CompilerType &clang_type) {
@@ -2391,7 +2302,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
       }
     }
 
-    addMethodOverrides(m_ast, clang_type);
+    m_ast.AddMethodOverridesForCXXRecordType(clang_type.GetOpaqueQualType());
     ClangASTContext::BuildIndirectFields(clang_type);
     ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
 
