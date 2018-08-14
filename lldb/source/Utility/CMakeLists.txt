@@ -51,7 +51,6 @@ add_lldb_library(lldbUtility
   DataEncoder.cpp
   DataExtractor.cpp
   Environment.cpp
-  FastDemangle.cpp
   FileSpec.cpp
   IOObject.cpp
   JSON.cpp

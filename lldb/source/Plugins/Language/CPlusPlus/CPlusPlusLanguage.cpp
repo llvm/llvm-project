@@ -323,7 +323,7 @@ static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
     }
   };
 
-  // FastDemangle will call back for each instance of a primitive type,
+  // The demangler will call back for each instance of a primitive type,
   // allowing us to perform substitution
   PrimitiveParmSubs parmSubs(mangled, search, replace);
   assert(mangled.data()[mangled.size()] == '\0' && "Expect C-String");
