@@ -127,7 +127,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
     llvm::Constant *Constant =
         CGM.CreateRuntimeVariable(ConvertType(IdTy), ConstantName);
     LValue LV = MakeNaturalAlignAddrLValue(Constant, IdTy);
-    llvm::Value *Ptr = EmitLoadOfScalar(LV, E->getLocStart());
+    llvm::Value *Ptr = EmitLoadOfScalar(LV, E->getBeginLoc());
     cast<llvm::LoadInst>(Ptr)->setMetadata(
         CGM.getModule().getMDKindID("invariant.load"),
         llvm::MDNode::get(getLLVMContext(), None));
@@ -531,7 +531,7 @@ struct FinishARCDealloc final : EHScopeStack::Cleanup {
 /// CodeGenFunction.
 void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
-  SourceLocation StartLoc = OMD->getLocStart();
+  SourceLocation StartLoc = OMD->getBeginLoc();
   FunctionArgList args;
   // Check if we should generate debug info for this method.
   if (OMD->hasAttr<NoDebugAttr>())
@@ -548,7 +548,7 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   args.append(OMD->param_begin(), OMD->param_end());
 
   CurGD = OMD;
-  CurEHLocation = OMD->getLocEnd();
+  CurEHLocation = OMD->getEndLoc();
 
   StartFunction(OMD, OMD->getReturnType(), Fn, FI, args,
                 OMD->getLocation(), StartLoc);

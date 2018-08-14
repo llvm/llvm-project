@@ -43,7 +43,7 @@ void OverloadedUnaryAndCheck::registerMatchers(
 
 void OverloadedUnaryAndCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Decl = Result.Nodes.getNodeAs<FunctionDecl>("overload");
-  diag(Decl->getLocStart(),
+  diag(Decl->getBeginLoc(),
        "do not overload unary operator&, it is dangerous.");
 }
 

@@ -61,7 +61,7 @@ void IncorrectRoundingsCheck::registerMatchers(MatchFinder *MatchFinder) {
 
 void IncorrectRoundingsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ImplicitCastExpr>("CastExpr");
-  diag(CastExpr->getLocStart(),
+  diag(CastExpr->getBeginLoc(),
        "casting (double + 0.5) to integer leads to incorrect rounding; "
        "consider using lround (#include <cmath>) instead");
 }

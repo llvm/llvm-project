@@ -62,13 +62,22 @@ TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R);
 std::vector<TextEdit> replacementsToEdits(StringRef Code,
                                           const tooling::Replacements &Repls);
 
-/// Get the absolute file path of a given file entry.
-llvm::Optional<std::string> getAbsoluteFilePath(const FileEntry *F,
-                                                const SourceManager &SourceMgr);
-
 TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
                     const LangOptions &L);
 
+/// Get the real/canonical path of \p F.  This means:
+///
+///   - Absolute path
+///   - Symlinks resolved
+///   - No "." or ".." component
+///   - No duplicate or trailing directory separator
+///
+/// This function should be used when sending paths to clients, so that paths
+/// are normalized as much as possible.
+llvm::Optional<std::string> getRealPath(const FileEntry *F,
+                                        const SourceManager &SourceMgr);
+
+bool IsRangeConsecutive(const Range &Left, const Range &Right);
 } // namespace clangd
 } // namespace clang
 #endif

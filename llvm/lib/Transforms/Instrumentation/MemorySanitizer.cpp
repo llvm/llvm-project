@@ -3249,8 +3249,11 @@ struct VarArgAMD64Helper : public VarArgHelper {
   // An unfortunate workaround for asymmetric lowering of va_arg stuff.
   // See a comment in visitCallSite for more details.
   static const unsigned AMD64GpEndOffset = 48;  // AMD64 ABI Draft 0.99.6 p3.5.7
-  static const unsigned AMD64FpEndOffset = 176;
+  static const unsigned AMD64FpEndOffsetSSE = 176;
+  // If SSE is disabled, fp_offset in va_list is zero.
+  static const unsigned AMD64FpEndOffsetNoSSE = AMD64GpEndOffset;
 
+  unsigned AMD64FpEndOffset;
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
@@ -3262,7 +3265,18 @@ struct VarArgAMD64Helper : public VarArgHelper {
   enum ArgKind { AK_GeneralPurpose, AK_FloatingPoint, AK_Memory };
 
   VarArgAMD64Helper(Function &F, MemorySanitizer &MS,
-                    MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
+                    MemorySanitizerVisitor &MSV)
+      : F(F), MS(MS), MSV(MSV) {
+    AMD64FpEndOffset = AMD64FpEndOffsetSSE;
+    for (const auto &Attr : F.getAttributes().getFnAttributes()) {
+      if (Attr.isStringAttribute() &&
+          (Attr.getKindAsString() == "target-features")) {
+        if (Attr.getValueAsString().contains("-sse"))
+          AMD64FpEndOffset = AMD64FpEndOffsetNoSSE;
+        break;
+      }
+    }
+  }
 
   ArgKind classifyArgument(Value* arg) {
     // A very rough approximation of X86_64 argument classification rules.

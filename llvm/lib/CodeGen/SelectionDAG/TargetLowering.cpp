@@ -680,7 +680,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // If all of the unknown bits are known to be zero on one side or the other
     // (but not both) turn this into an *inclusive* or.
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
-    if ((NewMask & ~Known.Zero & ~Known2.Zero) == 0)
+    if (NewMask.isSubsetOf(Known.Zero|Known2.Zero))
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::OR, dl, VT,
                                                Op.getOperand(0),
                                                Op.getOperand(1)));
@@ -690,32 +690,32 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // Output known-1 are known to be set if set in only one of the LHS, RHS.
     KnownOut.One = (Known.Zero & Known2.One) | (Known.One & Known2.Zero);
 
-    // If all of the demanded bits on one side are known, and all of the set
-    // bits on that side are also known to be set on the other side, turn this
-    // into an AND, as we know the bits will be cleared.
-    //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
-    // NB: it is okay if more bits are known than are requested
-    if (NewMask.isSubsetOf(Known.Zero|Known.One)) { // all known on one side
-      if (Known.One == Known2.One) { // set bits are the same on both sides
-        SDValue ANDC = TLO.DAG.getConstant(~Known.One & NewMask, dl, VT);
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
+      // If one side is a constant, and all of the known set bits on the other
+      // side are also set in the constant, turn this into an AND, as we know
+      // the bits will be cleared.
+      //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
+      // NB: it is okay if more bits are known than are requested
+      if (C->getAPIntValue() == Known2.One) {
+        SDValue ANDC = TLO.DAG.getConstant(~C->getAPIntValue() & NewMask,
+                                           dl, VT);
         return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::AND, dl, VT,
                                                  Op.getOperand(0), ANDC));
       }
-    }
 
-    // If the RHS is a constant, see if we can change it. Don't alter a -1
-    // constant because that's a 'not' op, and that is better for combining and
-    // codegen.
-    ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1));
-    if (C && !C->isAllOnesValue()) {
-      if (NewMask.isSubsetOf(C->getAPIntValue())) {
-        // We're flipping all demanded bits. Flip the undemanded bits too.
-        SDValue New = TLO.DAG.getNOT(dl, Op.getOperand(0), VT);
-        return TLO.CombineTo(Op, New);
+      // If the RHS is a constant, see if we can change it. Don't alter a -1
+      // constant because that's a 'not' op, and that is better for combining
+      // and codegen.
+      if (!C->isAllOnesValue()) {
+        if (NewMask.isSubsetOf(C->getAPIntValue())) {
+          // We're flipping all demanded bits. Flip the undemanded bits too.
+          SDValue New = TLO.DAG.getNOT(dl, Op.getOperand(0), VT);
+          return TLO.CombineTo(Op, New);
+        }
+        // If we can't turn this into a 'not', try to shrink the constant.
+        if (ShrinkDemandedConstant(Op, NewMask, TLO))
+          return true;
       }
-      // If we can't turn this into a 'not', try to shrink the constant.
-      if (ShrinkDemandedConstant(Op, NewMask, TLO))
-        return true;
     }
 
     Known = std::move(KnownOut);
@@ -3440,34 +3440,43 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   EVT VT = N->getValueType(0);
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
 
+  auto BuildSDIVPattern = [](APInt Divisor, unsigned &Shift, APInt &Factor) {
+    bool UseSRA = false;
+    Shift = Divisor.countTrailingZeros();
+    if (Shift) {
+      Divisor.ashrInPlace(Shift);
+      UseSRA = true;
+    }
+    // Calculate the multiplicative inverse, using Newton's method.
+    APInt t;
+    Factor = Divisor;
+    while ((t = Divisor * Factor) != 1)
+      Factor *= APInt(Divisor.getBitWidth(), 2) - t;
+    return UseSRA;
+  };
+
   ConstantSDNode *C = isConstOrConstSplat(Op1);
   if (!C || C->isNullValue())
     return SDValue();
 
-  APInt d = C->getAPIntValue();
-  assert(d != 0 && "Division by zero!");
+  APInt FactorVal;
+  unsigned ShiftVal;
+  bool UseSRA = BuildSDIVPattern(C->getAPIntValue(), ShiftVal, FactorVal);
+  SDValue Shift = DAG.getConstant(ShiftVal, dl, ShVT);
+  SDValue Factor = DAG.getConstant(FactorVal, dl, VT);
 
   SDValue Res = Op0;
 
   // Shift the value upfront if it is even, so the LSB is one.
-  unsigned ShAmt = d.countTrailingZeros();
-  if (ShAmt) {
+  if (UseSRA) {
     // TODO: For UDIV use SRL instead of SRA.
-    SDValue Amt = DAG.getConstant(ShAmt, dl, ShVT);
     SDNodeFlags Flags;
     Flags.setExact(true);
-    Res = DAG.getNode(ISD::SRA, dl, VT, Res, Amt, Flags);
+    Res = DAG.getNode(ISD::SRA, dl, VT, Res, Shift, Flags);
     Created.push_back(Res.getNode());
-    d.ashrInPlace(ShAmt);
   }
 
-  // Calculate the multiplicative inverse, using Newton's method.
-  APInt t, xn = d;
-  while ((t = d*xn) != 1)
-    xn *= APInt(d.getBitWidth(), 2) - t;
-
-  SDValue Mul = DAG.getConstant(xn, dl, VT);
-  return DAG.getNode(ISD::MUL, dl, VT, Res, Mul);
+  return DAG.getNode(ISD::MUL, dl, VT, Res, Factor);
 }
 
 SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,

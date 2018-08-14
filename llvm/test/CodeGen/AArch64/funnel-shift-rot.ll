@@ -65,10 +65,8 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 define i64 @rotl_i64(i64 %x, i64 %z) {
 ; CHECK-LABEL: rotl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w9, w1
-; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    lsr x9, x0, x9
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    ror x0, x0, x8
 ; CHECK-NEXT:    ret
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f

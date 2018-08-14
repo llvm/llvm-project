@@ -452,7 +452,10 @@ private:
     new (reinterpret_cast<T *>(Union.buffer)) T(std::forward<U>(V)...);
   }
   template <typename T> T &as() const {
-    return *reinterpret_cast<T *>(Union.buffer);
+    // Using this two-step static_cast via void * instead of reinterpret_cast
+    // silences a -Wstrict-aliasing false positive from GCC6 and earlier.
+    void *Storage = static_cast<void *>(Union.buffer);
+    return *static_cast<T *>(Storage);
   }
 
   template <typename Indenter>

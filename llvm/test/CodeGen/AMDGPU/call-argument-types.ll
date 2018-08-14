@@ -402,9 +402,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
 ; FIXME: materialize constant directly in VGPR
 ; GCN-LABEL: {{^}}test_call_external_void_func_v3i16_imm:
 ; GFX9-DAG: s_mov_b32 [[K01:s[0-9]+]], 0x20001
-; GFX9-DAG: s_pack_ll_b32_b16 [[K23:s[0-9]+]], 3, s{{[0-9]+}}
+; GFX9-DAG: s_mov_b32 [[K2:s[0-9]+]], 3
 ; GFX9: v_mov_b32_e32 v0, [[K01]]
-; GFX9: v_mov_b32_e32 v1, [[K23]]
+; GFX9: v_mov_b32_e32 v1, [[K2]]
 ; GFX9: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() #0 {
   call void @external_void_func_v3i16(<3 x i16> <i16 1, i16 2, i16 3>)

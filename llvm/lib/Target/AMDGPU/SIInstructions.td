@@ -1461,13 +1461,32 @@ class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : GCNPa
 def : ExpPattern<AMDGPUexport, i32, EXP>;
 def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
 
-// COPY_TO_REGCLASS is workaround tablegen bug from multiple outputs
+// COPY is workaround tablegen bug from multiple outputs
 // from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
   (v2i16 (build_vector (i16 0), i16:$src1)),
-  (v2i16 (COPY_TO_REGCLASS (S_LSHL_B32 i16:$src1, (i16 16)), SReg_32_XM0))
+  (v2i16 (COPY (S_LSHL_B32 i16:$src1, (i16 16))))
 >;
 
+def : GCNPat <
+  (v2i16 (build_vector i16:$src0, (i16 undef))),
+  (v2i16 (COPY $src0))
+>;
+
+def : GCNPat <
+  (v2f16 (build_vector f16:$src0, (f16 undef))),
+  (v2f16 (COPY $src0))
+>;
+
+def : GCNPat <
+  (v2i16 (build_vector (i16 undef), i16:$src1)),
+  (v2i16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+>;
+
+def : GCNPat <
+  (v2f16 (build_vector (f16 undef), f16:$src1)),
+  (v2f16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <

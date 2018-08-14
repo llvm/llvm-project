@@ -1539,8 +1539,6 @@ protected:
     unsigned IsKindOf : 1;
   };
 
-  static_assert(NumTypeBits + 7 + 6 + 1 <= 32, "Does not fit in an unsigned");
-
   class ReferenceTypeBitfields {
     friend class ReferenceType;
 
@@ -1619,6 +1617,27 @@ protected:
     ReferenceTypeBitfields ReferenceTypeBits;
     TypeWithKeywordBitfields TypeWithKeywordBits;
     VectorTypeBitfields VectorTypeBits;
+
+    static_assert(sizeof(TypeBitfields) <= 8,
+                  "TypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(ArrayTypeBitfields) <= 8,
+                  "ArrayTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(AttributedTypeBitfields) <= 8,
+                  "AttributedTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(AutoTypeBitfields) <= 8,
+                  "AutoTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(BuiltinTypeBitfields) <= 8,
+                  "BuiltinTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(FunctionTypeBitfields) <= 8,
+                  "FunctionTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(ObjCObjectTypeBitfields) <= 8,
+                  "ObjCObjectTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(ReferenceTypeBitfields) <= 8,
+                  "ReferenceTypeBitfields is larger than 8 bytes!");
+    static_assert(sizeof(TypeWithKeywordBitfields) <= 8,
+                  "TypeWithKeywordBitfields is larger than 8 bytes!");
+    static_assert(sizeof(VectorTypeBitfields) <= 8,
+                  "VectorTypeBitfields is larger than 8 bytes!");
   };
 
 private:

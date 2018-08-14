@@ -287,7 +287,7 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
                                              CheckerContext &C) const {
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
-  FullSourceLoc FL(CE->getArg(0)->getLocStart(), SM);
+  FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
   std::string HashContent =
       GetIssueString(SM, FL, getCheckName().getName(), "Category",
                      C.getLocationContext()->getDecl(), Opts);

@@ -653,7 +653,7 @@ ActOnSuperClassOfClassInterface(Scope *S,
     }
 
     IDecl->setSuperClass(SuperClassTInfo);
-    IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getLocEnd());
+    IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getEndLoc());
   }
 }
 
@@ -717,21 +717,22 @@ DeclResult Sema::actOnObjCTypeParam(Scope *S,
           if (auto attr = qual.getAs<AttributedTypeLoc>()) {
             rangeToRemove = attr.getLocalSourceRange();
             if (attr.getTypePtr()->getImmediateNullability()) {
-              Diag(attr.getLocStart(),
+              Diag(attr.getBeginLoc(),
                    diag::err_objc_type_param_bound_explicit_nullability)
-                << paramName << typeBound
-                << FixItHint::CreateRemoval(rangeToRemove);
+                  << paramName << typeBound
+                  << FixItHint::CreateRemoval(rangeToRemove);
               diagnosed = true;
             }
           }
         }
 
         if (!diagnosed) {
-          Diag(qual ? qual.getLocStart()
-                    : typeBoundInfo->getTypeLoc().getLocStart(),
-              diag::err_objc_type_param_bound_qualified)
-            << paramName << typeBound << typeBound.getQualifiers().getAsString()
-            << FixItHint::CreateRemoval(rangeToRemove);
+          Diag(qual ? qual.getBeginLoc()
+                    : typeBoundInfo->getTypeLoc().getBeginLoc(),
+               diag::err_objc_type_param_bound_qualified)
+              << paramName << typeBound
+              << typeBound.getQualifiers().getAsString()
+              << FixItHint::CreateRemoval(rangeToRemove);
         }
 
         // If the type bound has qualifiers other than CVR, we need to strip
@@ -828,7 +829,7 @@ static bool checkTypeParamListConsistency(Sema &S,
     if (newTypeParams->size() > prevTypeParams->size()) {
       diagLoc = newTypeParams->begin()[prevTypeParams->size()]->getLocation();
     } else {
-      diagLoc = S.getLocForEndOfToken(newTypeParams->back()->getLocEnd());
+      diagLoc = S.getLocForEndOfToken(newTypeParams->back()->getEndLoc());
     }
 
     S.Diag(diagLoc, diag::err_objc_type_param_arity_mismatch)
@@ -865,7 +866,7 @@ static bool checkTypeParamListConsistency(Sema &S,
           // Diagnose the conflict and update the second declaration.
           SourceLocation diagLoc = newTypeParam->getVarianceLoc();
           if (diagLoc.isInvalid())
-            diagLoc = newTypeParam->getLocStart();
+            diagLoc = newTypeParam->getBeginLoc();
 
           auto diag = S.Diag(diagLoc,
                              diag::err_objc_type_param_variance_conflict)
@@ -886,7 +887,7 @@ static bool checkTypeParamListConsistency(Sema &S,
                    : "__contravariant";
             if (newTypeParam->getVariance()
                   == ObjCTypeParamVariance::Invariant) {
-              diag << FixItHint::CreateInsertion(newTypeParam->getLocStart(),
+              diag << FixItHint::CreateInsertion(newTypeParam->getBeginLoc(),
                                                  (newVarianceStr + " ").str());
             } else {
               diag << FixItHint::CreateReplacement(newTypeParam->getVarianceLoc(),
@@ -2164,9 +2165,10 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     } else if (ImplIvar->isBitField() && ClsIvar->isBitField() &&
                ImplIvar->getBitWidthValue(Context) !=
                ClsIvar->getBitWidthValue(Context)) {
-      Diag(ImplIvar->getBitWidth()->getLocStart(),
-           diag::err_conflicting_ivar_bitwidth) << ImplIvar->getIdentifier();
-      Diag(ClsIvar->getBitWidth()->getLocStart(),
+      Diag(ImplIvar->getBitWidth()->getBeginLoc(),
+           diag::err_conflicting_ivar_bitwidth)
+          << ImplIvar->getIdentifier();
+      Diag(ClsIvar->getBitWidth()->getBeginLoc(),
            diag::note_previous_definition);
     }
     // Make sure the names are identical.
@@ -2206,7 +2208,7 @@ static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,
   }
 
   // Issue a note to the original declaration.
-  SourceLocation MethodLoc = method->getLocStart();
+  SourceLocation MethodLoc = method->getBeginLoc();
   if (MethodLoc.isValid())
     S.Diag(MethodLoc, diag::note_method_declared_at) << method;
 }
@@ -3580,12 +3582,12 @@ void Sema::DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &
     else
       Diag(R.getBegin(), diag::warn_multiple_method_decl) << Sel << R;
 
-    Diag(Methods[0]->getLocStart(),
+    Diag(Methods[0]->getBeginLoc(),
          issueError ? diag::note_possibility : diag::note_using)
-    << Methods[0]->getSourceRange();
+        << Methods[0]->getSourceRange();
     for (unsigned I = 1, N = Methods.size(); I != N; ++I) {
-      Diag(Methods[I]->getLocStart(), diag::note_also_found)
-      << Methods[I]->getSourceRange();
+      Diag(Methods[I]->getBeginLoc(), diag::note_also_found)
+          << Methods[I]->getSourceRange();
     }
   }
 }
@@ -4485,7 +4487,7 @@ static void checkObjCMethodX86VectorTypes(Sema &SemaRef,
   QualType T;
   for (const ParmVarDecl *P : Method->parameters()) {
     if (P->getType()->isVectorType()) {
-      Loc = P->getLocStart();
+      Loc = P->getBeginLoc();
       T = P->getType();
       break;
     }

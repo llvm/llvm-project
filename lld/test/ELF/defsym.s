@@ -74,6 +74,12 @@
 # RUN: not ld.lld -o %t %t.o --defsym=xxx=yyy,zzz 2>&1 | FileCheck %s -check-prefix=ERR2
 # ERR2: -defsym:1: EOF expected, but got ,
 
+# RUN: not ld.lld -o %t %t.o --defsym=foo 2>&1 | FileCheck %s -check-prefix=ERR3
+# ERR3: error: -defsym: syntax error: foo
+
+# RUN: not ld.lld -o %t %t.o --defsym= 2>&1 | FileCheck %s -check-prefix=ERR4
+# ERR4: error: -defsym: syntax error:
+
 .globl foo1
  foo1 = 0x123
 

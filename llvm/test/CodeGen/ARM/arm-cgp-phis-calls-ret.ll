@@ -116,48 +116,6 @@ exit:
   ret void
 }
 
-; CHECK-COMMON-LABEL: phi_feeding_switch
-; CHECK-COMMON: ldrb
-; CHECK-COMMON: uxtb
-; CHECK-COMMON-NOT: uxt
-define void @phi_feeding_switch(i8* %memblock, i8* %store, i16 %arg) {
-entry:
-  %pre = load i8, i8* %memblock, align 1
-  %conv = trunc i16 %arg to i8
-  br label %header
-
-header:
-  %phi.0 = phi i8 [ %pre, %entry ], [ %count, %latch ]
-  %phi.1 = phi i8 [ %conv, %entry ], [ %phi.3, %latch ]
-  %phi.2 = phi i8 [ 0, %entry], [ %count, %latch ]
-  switch i8 %phi.0, label %default [
-    i8 43, label %for.inc.i
-    i8 45, label %for.inc.i.i
-  ]
-
-for.inc.i:
-  %xor = xor i8 %phi.1, 1
-  br label %latch
-
-for.inc.i.i:
-  %and = and i8 %phi.1, 3
-  br label %latch
-
-default:
-  %sub = sub i8 %phi.0, 1
-  %cmp2 = icmp ugt i8 %sub, 4
-  br i1 %cmp2, label %latch, label %exit
-
-latch:
-  %phi.3 = phi i8 [ %xor, %for.inc.i ], [ %and, %for.inc.i.i ], [ %phi.2, %default ]
-  %count = add nuw i8 %phi.2, 1
-  store i8 %count, i8* %store, align 1
-  br label %header
-
-exit:
-  ret void
-}
-
 ; CHECK-COMMON-LABEL: ret_i8
 ; CHECK-COMMON-NOT:   uxt
 define i8 @ret_i8() {
@@ -185,33 +143,6 @@ if.end:
 exit:
   ret i8 %inc2
 }
-
-; Check that %exp requires uxth in all cases, and will also be required to
-; promote %1 for the call - unless we can generate a uadd16.
-; CHECK-COMMON-LABEL: zext_load_sink_call:
-; CHECK-COMMON:       uxt
-; CHECK-DSP-IMM:      uadd16
-; CHECK-COMMON:       cmp
-; CHECK-DSP:          uxt
-; CHECK-DSP-IMM-NOT:  uxt
-define i32 @zext_load_sink_call(i16* %ptr, i16 %exp) {
-entry:
-  %0 = load i16, i16* %ptr, align 4
-  %1 = add i16 %exp, 3
-  %cmp = icmp eq i16 %0, %exp
-  br i1 %cmp, label %exit, label %if.then
-
-if.then:
-  %conv0 = zext i16 %0 to i32
-  %conv1 = zext i16 %1 to i32
-  %call = tail call arm_aapcs_vfpcc i32 @dummy(i32 %conv0, i32 %conv1)
-  br label %exit
-
-exit:
-  %exitval = phi i32 [ %call, %if.then ], [ 0, %entry  ]
-  ret i32 %exitval
-}
-
 
 ; Check that the pass doesn't try to promote the immediate parameters.
 ; CHECK-COMMON-LABEL: call_with_imms
@@ -301,9 +232,10 @@ entry:
   ret i32 undef
 }
 
+; Transform will bail because of the zext
 ; Check that d.sroa.0.0.be is promoted passed directly into the tail call.
 ; CHECK-COMMON-LABEL: check_zext_phi_call_arg
-; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON: uxt
 define i32 @check_zext_phi_call_arg() {
 entry:
   br label %for.cond
@@ -385,7 +317,6 @@ declare dso_local fastcc zeroext i8 @safe_mul_func_uint8_t_u_u(i8 returned zeroe
 declare dso_local i32 @e(...) local_unnamed_addr #1
 declare dso_local zeroext i16 @f(...) local_unnamed_addr #1
 
-declare i32 @dummy(i32, i32)
 declare i8 @dummy_i8(i8)
 declare i8 @dummy2(i8*, i8, i8)
 declare i16 @dummy3(i16)

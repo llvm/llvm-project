@@ -218,3 +218,7 @@ D: Release management (x.y.0 releases)
 N: whitequark
 E: whitequark@whitequark.org
 D: C API, OCaml bindings
+
+N: Jake Ehrlich
+E: jakehehrlich@google.com
+D: llvm-objcopy (tools/llvm-objcopy)

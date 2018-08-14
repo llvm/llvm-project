@@ -2841,10 +2841,10 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     default:
       break;
     case Intrinsic::maxnum:
-      return (isKnownNeverNaN(I->getOperand(0)) &&
+      return (isKnownNeverNaN(I->getOperand(0), TLI) &&
               cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI,
                                               SignBitOnly, Depth + 1)) ||
-             (isKnownNeverNaN(I->getOperand(1)) &&
+            (isKnownNeverNaN(I->getOperand(1), TLI) &&
               cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI,
                                               SignBitOnly, Depth + 1));
 
@@ -2909,7 +2909,8 @@ bool llvm::SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI) {
   return cannotBeOrderedLessThanZeroImpl(V, TLI, true, 0);
 }
 
-bool llvm::isKnownNeverNaN(const Value *V) {
+bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
+                           unsigned Depth) {
   assert(V->getType()->isFPOrFPVectorTy() && "Querying for NaN on non-FP type");
 
   // If we're told that NaNs won't happen, assume they won't.
@@ -2923,6 +2924,23 @@ bool llvm::isKnownNeverNaN(const Value *V) {
   // Handle scalar constants.
   if (auto *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->isNaN();
+
+  if (Depth == MaxDepth)
+    return false;
+
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::canonicalize:
+    case Intrinsic::fabs:
+    case Intrinsic::copysign:
+      return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1);
+    case Intrinsic::sqrt:
+      return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&
+             CannotBeOrderedLessThanZero(II->getArgOperand(0), TLI);
+    default:
+      return false;
+    }
+  }
 
   // Bail out for constant expressions, but try to handle vector constants.
   if (!V->getType()->isVectorTy() || !isa<Constant>(V))

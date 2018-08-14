@@ -203,7 +203,7 @@ bool OwningMemoryCheck::handleDeletion(const BoundNodes &Nodes) {
 
   // Deletion of non-owners, with `delete variable;`
   if (DeleteStmt) {
-    diag(DeleteStmt->getLocStart(),
+    diag(DeleteStmt->getBeginLoc(),
          "deleting a pointer through a type that is "
          "not marked 'gsl::owner<>'; consider using a "
          "smart pointer instead")
@@ -212,7 +212,7 @@ bool OwningMemoryCheck::handleDeletion(const BoundNodes &Nodes) {
     // FIXME: The declaration of the variable that was deleted can be
     // rewritten.
     const ValueDecl *Decl = DeletedVariable->getDecl();
-    diag(Decl->getLocStart(), "variable declared here", DiagnosticIDs::Note)
+    diag(Decl->getBeginLoc(), "variable declared here", DiagnosticIDs::Note)
         << Decl->getSourceRange();
 
     return true;
@@ -228,7 +228,7 @@ bool OwningMemoryCheck::handleLegacyConsumers(const BoundNodes &Nodes) {
   // as a pointer, which should not be an owner. The argument that is an owner
   // is known and the false positive coming from the filename can be avoided.
   if (LegacyConsumer) {
-    diag(LegacyConsumer->getLocStart(),
+    diag(LegacyConsumer->getBeginLoc(),
          "calling legacy resource function without passing a 'gsl::owner<>'")
         << LegacyConsumer->getSourceRange();
     return true;
@@ -242,7 +242,7 @@ bool OwningMemoryCheck::handleExpectedOwner(const BoundNodes &Nodes) {
 
   // Expected function argument to be owner.
   if (ExpectedOwner) {
-    diag(ExpectedOwner->getLocStart(),
+    diag(ExpectedOwner->getBeginLoc(),
          "expected argument of type 'gsl::owner<>'; got %0")
         << ExpectedOwner->getType() << ExpectedOwner->getSourceRange();
     return true;
@@ -261,7 +261,7 @@ bool OwningMemoryCheck::handleAssignmentAndInit(const BoundNodes &Nodes) {
 
   // Assignments to owners.
   if (OwnerAssignment) {
-    diag(OwnerAssignment->getLocStart(),
+    diag(OwnerAssignment->getBeginLoc(),
          "expected assignment source to be of type 'gsl::owner<>'; got %0")
         << OwnerAssignment->getRHS()->getType()
         << OwnerAssignment->getSourceRange();
@@ -270,7 +270,7 @@ bool OwningMemoryCheck::handleAssignmentAndInit(const BoundNodes &Nodes) {
 
   // Initialization of owners.
   if (OwnerInitialization) {
-    diag(OwnerInitialization->getLocStart(),
+    diag(OwnerInitialization->getBeginLoc(),
          "expected initialization with value of type 'gsl::owner<>'; got %0")
         << OwnerInitialization->getAnyInitializer()->getType()
         << OwnerInitialization->getSourceRange();
@@ -306,7 +306,7 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
 
   // Bad assignments to non-owners, where the RHS is a newly created owner.
   if (BadOwnerAssignment) {
-    diag(BadOwnerAssignment->getLocStart(),
+    diag(BadOwnerAssignment->getBeginLoc(),
          "assigning newly created 'gsl::owner<>' to non-owner %0")
         << BadOwnerAssignment->getLHS()->getType()
         << BadOwnerAssignment->getSourceRange();
@@ -315,7 +315,7 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
 
   // Bad initialization of non-owners, where the RHS is a newly created owner.
   if (BadOwnerInitialization) {
-    diag(BadOwnerInitialization->getLocStart(),
+    diag(BadOwnerInitialization->getBeginLoc(),
          "initializing non-owner %0 with a newly created 'gsl::owner<>'")
         << BadOwnerInitialization->getType()
         << BadOwnerInitialization->getSourceRange();
@@ -326,7 +326,7 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
     // If the type of the variable was deduced, the wrapping owner typedef is
     // eliminated, therefore the check emits a special note for that case.
     if (Nodes.getNodeAs<AutoType>("deduced_type")) {
-      diag(BadOwnerInitialization->getLocStart(),
+      diag(BadOwnerInitialization->getBeginLoc(),
            "type deduction did not result in an owner", DiagnosticIDs::Note);
     }
     return true;
@@ -337,7 +337,7 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
   if (BadOwnerArgument) {
     assert(BadOwnerParameter &&
            "parameter for the problematic argument not found");
-    diag(BadOwnerArgument->getLocStart(), "initializing non-owner argument of "
+    diag(BadOwnerArgument->getBeginLoc(), "initializing non-owner argument of "
                                           "type %0 with a newly created "
                                           "'gsl::owner<>'")
         << BadOwnerParameter->getType() << BadOwnerArgument->getSourceRange();
@@ -356,7 +356,7 @@ bool OwningMemoryCheck::handleReturnValues(const BoundNodes &Nodes) {
   if (BadReturnType) {
     // The returned value is a resource or variable that was not annotated with
     // owner<> and the function return type is not owner<>.
-    diag(BadReturnType->getLocStart(),
+    diag(BadReturnType->getBeginLoc(),
          "returning a newly created resource of "
          "type %0 or 'gsl::owner<>' from a "
          "function whose return type is not 'gsl::owner<>'")
@@ -380,7 +380,7 @@ bool OwningMemoryCheck::handleOwnerMembers(const BoundNodes &Nodes) {
     assert(DeclaredOwnerMember &&
            "match on class with bad destructor but without a declared owner");
 
-    diag(DeclaredOwnerMember->getLocStart(),
+    diag(DeclaredOwnerMember->getBeginLoc(),
          "member variable of type 'gsl::owner<>' requires the class %0 to "
          "implement a destructor to release the owned resource")
         << BadClass;

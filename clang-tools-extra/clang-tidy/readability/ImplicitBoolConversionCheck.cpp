@@ -24,14 +24,14 @@ namespace {
 
 AST_MATCHER(Stmt, isMacroExpansion) {
   SourceManager &SM = Finder->getASTContext().getSourceManager();
-  SourceLocation Loc = Node.getLocStart();
+  SourceLocation Loc = Node.getBeginLoc();
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
   const LangOptions &LO = Context.getLangOpts();
-  SourceLocation Loc = Statement->getLocStart();
+  SourceLocation Loc = Statement->getBeginLoc();
   return SM.isMacroBodyExpansion(Loc) &&
          Lexer::getImmediateMacroName(Loc, SM, LO) == "NULL";
 }
@@ -97,9 +97,9 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   bool InvertComparison =
       Parent != nullptr && isUnaryLogicalNotOperator(Parent);
   if (InvertComparison) {
-    SourceLocation ParentStartLoc = Parent->getLocStart();
+    SourceLocation ParentStartLoc = Parent->getBeginLoc();
     SourceLocation ParentEndLoc =
-        cast<UnaryOperator>(Parent)->getSubExpr()->getLocStart();
+        cast<UnaryOperator>(Parent)->getSubExpr()->getBeginLoc();
     Diag << FixItHint::CreateRemoval(
         CharSourceRange::getCharRange(ParentStartLoc, ParentEndLoc));
 
@@ -122,7 +122,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   }
 
   if (!StartLocInsertion.empty()) {
-    Diag << FixItHint::CreateInsertion(Cast->getLocStart(), StartLocInsertion);
+    Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(), StartLocInsertion);
   }
 
   std::string EndLocInsertion;
@@ -145,7 +145,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   }
 
   SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      Cast->getLocEnd(), 0, Context.getSourceManager(), Context.getLangOpts());
+      Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(EndLoc, EndLocInsertion);
 }
 
@@ -183,13 +183,13 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
   bool NeedParens = !isa<ParenExpr>(SubExpr);
 
   Diag << FixItHint::CreateInsertion(
-      Cast->getLocStart(),
+      Cast->getBeginLoc(),
       (Twine("static_cast<") + OtherType + ">" + (NeedParens ? "(" : ""))
           .str());
 
   if (NeedParens) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-        Cast->getLocEnd(), 0, Context.getSourceManager(),
+        Cast->getEndLoc(), 0, Context.getSourceManager(),
         Context.getLangOpts());
 
     Diag << FixItHint::CreateInsertion(EndLoc, ")");
@@ -354,7 +354,7 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
     return;
   }
 
-  auto Diag = diag(Cast->getLocStart(), "implicit conversion %0 -> bool")
+  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> bool")
               << Cast->getSubExpr()->getType();
 
   StringRef EquivalentLiteral =
@@ -371,7 +371,7 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
     ASTContext &Context) {
   QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Cast->getLocStart(), "implicit conversion bool -> %0")
+  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion bool -> %0")
               << DestType;
 
   if (const auto *BoolLiteral =

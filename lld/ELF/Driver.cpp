@@ -125,9 +125,11 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
           .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
+          .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
+          .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
           .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
@@ -986,7 +988,8 @@ static void setConfigs(opt::InputArgList &Args) {
   // ABI defines which one you need to use. The following expression expresses
   // that.
   Config->IsRela =
-      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
+      (Config->Is64 || IsX32 || Machine == EM_PPC || Machine == EM_RISCV) &&
+      Machine != EM_MIPS;
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -1026,7 +1029,10 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       StringRef From;
       StringRef To;
       std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-      readDefsym(From, MemoryBufferRef(To, "-defsym"));
+      if (From.empty() || To.empty())
+        error("-defsym: syntax error: " + StringRef(Arg->getValue()));
+      else
+        readDefsym(From, MemoryBufferRef(To, "-defsym"));
       break;
     }
     case OPT_script:

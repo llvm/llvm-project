@@ -185,6 +185,7 @@ M
 
 N
 -
+.. _nfc:
 
 **NFC**
   "No functional change". Used in a commit message to indicate that a patch

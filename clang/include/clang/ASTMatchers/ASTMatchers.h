@@ -245,7 +245,7 @@ AST_POLYMORPHIC_MATCHER(isExpansionInMainFile,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
   return SourceManager.isInMainFile(
-      SourceManager.getExpansionLoc(Node.getLocStart()));
+      SourceManager.getExpansionLoc(Node.getBeginLoc()));
 }
 
 /// Matches AST nodes that were expanded within system-header-files.
@@ -265,7 +265,7 @@ AST_POLYMORPHIC_MATCHER(isExpansionInMainFile,
 AST_POLYMORPHIC_MATCHER(isExpansionInSystemHeader,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid()) {
     return false;
   }
@@ -291,7 +291,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFileMatching,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
                           std::string, RegExp) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
-  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getLocStart());
+  auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid()) {
     return false;
   }
@@ -1140,6 +1140,34 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
 /// memberExpr()
 ///   matches this->x, x, y.x, a, this->b
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
+
+/// Matches unresolved member expressions.
+///
+/// Given
+/// \code
+///   struct X {
+///     template <class T> void f();
+///     void g();
+///   };
+///   template <class T> void h() { X x; x.f<T>(); x.g(); }
+/// \endcode
+/// unresolvedMemberExpr()
+///   matches x.f<T>
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedMemberExpr>
+    unresolvedMemberExpr;
+
+/// Matches member expressions where the actual member referenced could not be
+/// resolved because the base expression or the member name was dependent.
+///
+/// Given
+/// \code
+///   template <class T> void f() { T t; t.g(); }
+/// \endcode
+/// cxxDependentScopeMemberExpr()
+///   matches t.g
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   CXXDependentScopeMemberExpr>
+    cxxDependentScopeMemberExpr;
 
 /// Matches call expressions.
 ///
@@ -3537,9 +3565,9 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 /// objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
 ///   matches [i f:12]
 AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                          CXXConstructExpr,
-                                                          ObjCMessageExpr),
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              CallExpr, CXXConstructExpr,
+                              CXXUnresolvedConstructExpr, ObjCMessageExpr),
                           internal::Matcher<Expr>, InnerMatcher) {
   for (const Expr *Arg : Node.arguments()) {
     BoundNodesTreeBuilder Result(*Builder);

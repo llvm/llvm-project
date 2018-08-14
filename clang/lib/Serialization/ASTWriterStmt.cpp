@@ -223,7 +223,7 @@ void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
 
 void ASTStmtWriter::VisitDeclStmt(DeclStmt *S) {
   VisitStmt(S);
-  Record.AddSourceLocation(S->getStartLoc());
+  Record.AddSourceLocation(S->getBeginLoc());
   Record.AddSourceLocation(S->getEndLoc());
   DeclGroupRef DG = S->getDeclGroup();
   for (DeclGroupRef::iterator D = DG.begin(), DEnd = DG.end(); D != DEnd; ++D)
@@ -1823,8 +1823,8 @@ public:
 void OMPClauseWriter::writeClause(OMPClause *C) {
   Record.push_back(C->getClauseKind());
   Visit(C);
-  Record.AddSourceLocation(C->getLocStart());
-  Record.AddSourceLocation(C->getLocEnd());
+  Record.AddSourceLocation(C->getBeginLoc());
+  Record.AddSourceLocation(C->getEndLoc());
 }
 
 void OMPClauseWriter::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
@@ -2278,8 +2278,8 @@ void OMPClauseWriter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
 void ASTStmtWriter::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
-  Record.AddSourceLocation(E->getLocStart());
-  Record.AddSourceLocation(E->getLocEnd());
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
   OMPClauseWriter ClauseWriter(Record);
   for (unsigned i = 0; i < E->getNumClauses(); ++i) {
     ClauseWriter.writeClause(E->getClause(i));

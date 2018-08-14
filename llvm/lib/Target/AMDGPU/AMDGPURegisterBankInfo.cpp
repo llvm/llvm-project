@@ -193,6 +193,8 @@ bool AMDGPURegisterBankInfo::isSALUMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned i = 0, e = MI.getNumOperands();i != e; ++i) {
+    if (!MI.getOperand(i).isReg())
+      continue;
     unsigned Reg = MI.getOperand(i).getReg();
     const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI);
     if (Bank && Bank->getID() != AMDGPU::SGPRRegBankID)
@@ -329,6 +331,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_CONSTANT: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+    break;
+  }
+  case AMDGPU::G_INSERT: {
+    unsigned BankID = isSALUMapping(MI) ? AMDGPU::SGPRRegBankID :
+                                          AMDGPU::VGPRRegBankID;
+    unsigned DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    unsigned SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
+    unsigned EltSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(BankID, DstSize);
+    OpdsMapping[1] = AMDGPU::getValueMapping(BankID, SrcSize);
+    OpdsMapping[2] = AMDGPU::getValueMapping(BankID, EltSize);
+    OpdsMapping[3] = nullptr;
     break;
   }
   case AMDGPU::G_EXTRACT: {

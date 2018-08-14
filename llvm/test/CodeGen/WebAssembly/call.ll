@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-temporary-workarounds=false | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -fast-isel -fast-isel-abort=1 -wasm-temporary-workarounds=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode -wasm-temporary-workarounds=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode -fast-isel -fast-isel-abort=1 -wasm-temporary-workarounds=false | FileCheck %s
 
 ; Test that basic call operations assemble as expected.
 

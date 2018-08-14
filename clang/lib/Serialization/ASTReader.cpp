@@ -9693,8 +9693,8 @@ void ASTReader::diagnoseOdrViolations() {
           unsigned NumBases = DD->NumBases;
           if (NumBases == 0) return SourceRange();
           auto bases = DD->bases();
-          return SourceRange(bases[0].getLocStart(),
-                             bases[NumBases - 1].getLocEnd());
+          return SourceRange(bases[0].getBeginLoc(),
+                             bases[NumBases - 1].getEndLoc());
         };
 
         if (FirstNumBases != SecondNumBases) {
@@ -10195,10 +10195,10 @@ void ASTReader::diagnoseOdrViolations() {
         unsigned FirstODRHash = ComputeODRHash(FirstExpr);
         unsigned SecondODRHash = ComputeODRHash(SecondExpr);
         if (FirstODRHash != SecondODRHash) {
-          ODRDiagError(FirstExpr->getLocStart(), FirstExpr->getSourceRange(),
+          ODRDiagError(FirstExpr->getBeginLoc(), FirstExpr->getSourceRange(),
                        StaticAssertCondition);
-          ODRDiagNote(SecondExpr->getLocStart(),
-                      SecondExpr->getSourceRange(), StaticAssertCondition);
+          ODRDiagNote(SecondExpr->getBeginLoc(), SecondExpr->getSourceRange(),
+                      StaticAssertCondition);
           Diagnosed = true;
           break;
         }
@@ -10210,17 +10210,17 @@ void ASTReader::diagnoseOdrViolations() {
           SourceLocation FirstLoc, SecondLoc;
           SourceRange FirstRange, SecondRange;
           if (FirstStr) {
-            FirstLoc = FirstStr->getLocStart();
+            FirstLoc = FirstStr->getBeginLoc();
             FirstRange = FirstStr->getSourceRange();
           } else {
-            FirstLoc = FirstSA->getLocStart();
+            FirstLoc = FirstSA->getBeginLoc();
             FirstRange = FirstSA->getSourceRange();
           }
           if (SecondStr) {
-            SecondLoc = SecondStr->getLocStart();
+            SecondLoc = SecondStr->getBeginLoc();
             SecondRange = SecondStr->getSourceRange();
           } else {
-            SecondLoc = SecondSA->getLocStart();
+            SecondLoc = SecondSA->getBeginLoc();
             SecondRange = SecondSA->getSourceRange();
           }
           ODRDiagError(FirstLoc, FirstRange, StaticAssertOnlyMessage)
@@ -10233,9 +10233,9 @@ void ASTReader::diagnoseOdrViolations() {
 
         if (FirstStr && SecondStr &&
             FirstStr->getString() != SecondStr->getString()) {
-          ODRDiagError(FirstStr->getLocStart(), FirstStr->getSourceRange(),
+          ODRDiagError(FirstStr->getBeginLoc(), FirstStr->getSourceRange(),
                        StaticAssertMessage);
-          ODRDiagNote(SecondStr->getLocStart(), SecondStr->getSourceRange(),
+          ODRDiagNote(SecondStr->getBeginLoc(), SecondStr->getSourceRange(),
                       StaticAssertMessage);
           Diagnosed = true;
           break;

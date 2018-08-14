@@ -1263,7 +1263,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         = S.Context.getCanonicalType(ToType).getUnqualifiedType();
       if (Constructor->isCopyConstructor() &&
           (FromCanon == ToCanon ||
-           S.IsDerivedFrom(From->getLocStart(), FromCanon, ToCanon))) {
+           S.IsDerivedFrom(From->getBeginLoc(), FromCanon, ToCanon))) {
         // Turn this into a "standard" conversion sequence, so that it
         // gets ranked with standard conversion sequences.
         DeclAccessPair Found = ICS.UserDefined.FoundConversionFunction;
@@ -1355,7 +1355,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   QualType FromType = From->getType();
   if (ToType->getAs<RecordType>() && FromType->getAs<RecordType>() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
-       S.IsDerivedFrom(From->getLocStart(), FromType, ToType))) {
+       S.IsDerivedFrom(From->getBeginLoc(), FromType, ToType))) {
     ICS.setStandard();
     ICS.Standard.setAsIdentityConversion();
     ICS.Standard.setFromType(FromType);
@@ -1418,8 +1418,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     = getLangOpts().ObjCAutoRefCount &&
       (Action == AA_Passing || Action == AA_Sending);
   if (getLangOpts().ObjC1)
-    CheckObjCBridgeRelatedConversions(From->getLocStart(),
-                                      ToType, From->getType(), From);
+    CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
+                                      From->getType(), From);
   ICS = ::TryImplicitConversion(*this, From, ToType,
                                 /*SuppressUserConversions=*/false,
                                 AllowExplicit,
@@ -2011,7 +2011,7 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
 
     // We have already pre-calculated the promotion type, so this is trivial.
     if (ToType->isIntegerType() &&
-        isCompleteType(From->getLocStart(), FromType))
+        isCompleteType(From->getBeginLoc(), FromType))
       return Context.hasSameUnqualifiedType(
           ToType, FromEnumType->getDecl()->getPromotionType());
 
@@ -2353,10 +2353,10 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
   //
   // Note that we do not check for ambiguity or inaccessibility
   // here. That is handled by CheckPointerConversion.
-  if (getLangOpts().CPlusPlus &&
-      FromPointeeType->isRecordType() && ToPointeeType->isRecordType() &&
+  if (getLangOpts().CPlusPlus && FromPointeeType->isRecordType() &&
+      ToPointeeType->isRecordType() &&
       !Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType) &&
-      IsDerivedFrom(From->getLocStart(), FromPointeeType, ToPointeeType)) {
+      IsDerivedFrom(From->getBeginLoc(), FromPointeeType, ToPointeeType)) {
     ConvertedType = BuildSimilarlyQualifiedPointerType(FromTypePtr,
                                                        ToPointeeType,
                                                        ToType, Context);
@@ -2983,7 +2983,7 @@ bool Sema::IsMemberPointerConversion(Expr *From, QualType FromType,
   QualType ToClass(ToTypePtr->getClass(), 0);
 
   if (!Context.hasSameUnqualifiedType(FromClass, ToClass) &&
-      IsDerivedFrom(From->getLocStart(), ToClass, FromClass)) {
+      IsDerivedFrom(From->getBeginLoc(), ToClass, FromClass)) {
     ConvertedType = Context.getMemberPointerType(FromTypePtr->getPointeeType(),
                                                  ToClass.getTypePtr());
     return true;
@@ -3027,7 +3027,7 @@ bool Sema::CheckMemberPointerConversion(Expr *From, QualType ToType,
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/true);
   bool DerivationOkay =
-      IsDerivedFrom(From->getLocStart(), ToClass, FromClass, Paths);
+      IsDerivedFrom(From->getBeginLoc(), ToClass, FromClass, Paths);
   assert(DerivationOkay &&
          "Should not have been called if derivation isn't OK.");
   (void)DerivationOkay;
@@ -3242,8 +3242,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
 
   OverloadCandidateSet::iterator Best;
   switch (auto Result =
-            CandidateSet.BestViableFunction(S, From->getLocStart(),
-                                            Best)) {
+              CandidateSet.BestViableFunction(S, From->getBeginLoc(), Best)) {
   case OR_Deleted:
   case OR_Success: {
     // Record the standard conversion we used and the conversion function.
@@ -3308,7 +3307,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   the parentheses of the initializer.
     if (S.Context.hasSameUnqualifiedType(ToType, From->getType()) ||
         (From->getType()->getAs<RecordType>() &&
-         S.IsDerivedFrom(From->getLocStart(), From->getType(), ToType)))
+         S.IsDerivedFrom(From->getBeginLoc(), From->getType(), ToType)))
       ConstructorsOnly = true;
 
     if (!S.isCompleteType(From->getExprLoc(), ToType)) {
@@ -3376,10 +3375,10 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
   // Enumerate conversion functions, if we're allowed to.
   if (ConstructorsOnly || isa<InitListExpr>(From)) {
-  } else if (!S.isCompleteType(From->getLocStart(), From->getType())) {
+  } else if (!S.isCompleteType(From->getBeginLoc(), From->getType())) {
     // No conversion functions from incomplete types.
-  } else if (const RecordType *FromRecordType
-                                   = From->getType()->getAs<RecordType>()) {
+  } else if (const RecordType *FromRecordType =
+                 From->getType()->getAs<RecordType>()) {
     if (CXXRecordDecl *FromRecordDecl
          = dyn_cast<CXXRecordDecl>(FromRecordType->getDecl())) {
       // Add all of the conversion functions as candidates.
@@ -3416,8 +3415,8 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
   OverloadCandidateSet::iterator Best;
-  switch (auto Result = CandidateSet.BestViableFunction(S, From->getLocStart(),
-                                                        Best)) {
+  switch (auto Result =
+              CandidateSet.BestViableFunction(S, From->getBeginLoc(), Best)) {
   case OR_Success:
   case OR_Deleted:
     // Record the standard conversion we used and the conversion function.
@@ -3496,13 +3495,13 @@ Sema::DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType) {
     IsUserDefinedConversion(*this, From, ToType, ICS.UserDefined,
                             CandidateSet, false, false);
   if (OvResult == OR_Ambiguous)
-    Diag(From->getLocStart(), diag::err_typecheck_ambiguous_condition)
+    Diag(From->getBeginLoc(), diag::err_typecheck_ambiguous_condition)
         << From->getType() << ToType << From->getSourceRange();
   else if (OvResult == OR_No_Viable_Function && !CandidateSet.empty()) {
-    if (!RequireCompleteType(From->getLocStart(), ToType,
+    if (!RequireCompleteType(From->getBeginLoc(), ToType,
                              diag::err_typecheck_nonviable_condition_incomplete,
                              From->getType(), From->getSourceRange()))
-      Diag(From->getLocStart(), diag::err_typecheck_nonviable_condition)
+      Diag(From->getBeginLoc(), diag::err_typecheck_nonviable_condition)
           << false << From->getType() << From->getSourceRange() << ToType;
   } else
     return false;
@@ -4750,7 +4749,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
 
   // We need a complete type for what follows. Incomplete types can never be
   // initialized from init lists.
-  if (!S.isCompleteType(From->getLocStart(), ToType))
+  if (!S.isCompleteType(From->getBeginLoc(), ToType))
     return Result;
 
   // Per DR1467:
@@ -4767,7 +4766,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     if (ToType->isRecordType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
-          S.IsDerivedFrom(From->getLocStart(), InitType, ToType))
+          S.IsDerivedFrom(From->getBeginLoc(), InitType, ToType))
         return TryCopyInitialization(S, From->getInit(0), ToType,
                                      SuppressUserConversions,
                                      InOverloadResolution,
@@ -4823,10 +4822,9 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         break;
       }
       // Otherwise, look for the worst conversion.
-      if (Result.isBad() ||
-          CompareImplicitConversionSequences(S, From->getLocStart(), ICS,
-                                             Result) ==
-              ImplicitConversionSequence::Worse)
+      if (Result.isBad() || CompareImplicitConversionSequences(
+                                S, From->getBeginLoc(), ICS, Result) ==
+                                ImplicitConversionSequence::Worse)
         Result = ICS;
     }
 
@@ -4920,12 +4918,12 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       bool dummy1 = false;
       bool dummy2 = false;
       bool dummy3 = false;
-      Sema::ReferenceCompareResult RefRelationship
-        = S.CompareReferenceRelationship(From->getLocStart(), T1, T2, dummy1,
+      Sema::ReferenceCompareResult RefRelationship =
+          S.CompareReferenceRelationship(From->getBeginLoc(), T1, T2, dummy1,
                                          dummy2, dummy3);
 
       if (RefRelationship >= Sema::Ref_Related) {
-        return TryReferenceInit(S, Init, ToType, /*FIXME*/From->getLocStart(),
+        return TryReferenceInit(S, Init, ToType, /*FIXME*/ From->getBeginLoc(),
                                 SuppressUserConversions,
                                 /*AllowExplicit=*/false);
       }
@@ -5006,9 +5004,8 @@ TryCopyInitialization(Sema &S, Expr *From, QualType ToType,
 
   if (ToType->isReferenceType())
     return TryReferenceInit(S, From, ToType,
-                            /*FIXME:*/From->getLocStart(),
-                            SuppressUserConversions,
-                            AllowExplicit);
+                            /*FIXME:*/ From->getBeginLoc(),
+                            SuppressUserConversions, AllowExplicit);
 
   return TryImplicitConversion(S, From, ToType,
                                SuppressUserConversions,
@@ -5177,7 +5174,7 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
   // Note that we always use the true parent context when performing
   // the actual argument initialization.
   ImplicitConversionSequence ICS = TryObjectArgumentInitialization(
-      *this, From->getLocStart(), From->getType(), FromClassification, Method,
+      *this, From->getBeginLoc(), From->getType(), FromClassification, Method,
       Method->getParent());
   if (ICS.isBad()) {
     switch (ICS.Bad.Kind) {
@@ -5186,10 +5183,9 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
       Qualifiers ToQs = DestType.getQualifiers();
       unsigned CVR = FromQs.getCVRQualifiers() & ~ToQs.getCVRQualifiers();
       if (CVR) {
-        Diag(From->getLocStart(),
-             diag::err_member_function_call_bad_cvr)
-          << Method->getDeclName() << FromRecordType << (CVR - 1)
-          << From->getSourceRange();
+        Diag(From->getBeginLoc(), diag::err_member_function_call_bad_cvr)
+            << Method->getDeclName() << FromRecordType << (CVR - 1)
+            << From->getSourceRange();
         Diag(Method->getLocation(), diag::note_previous_decl)
           << Method->getDeclName();
         return ExprError();
@@ -5201,9 +5197,9 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
     case BadConversionSequence::rvalue_ref_to_lvalue: {
       bool IsRValueQualified =
         Method->getRefQualifier() == RefQualifierKind::RQ_RValue;
-      Diag(From->getLocStart(), diag::err_member_function_call_bad_ref)
-        << Method->getDeclName() << FromClassification.isRValue()
-        << IsRValueQualified;
+      Diag(From->getBeginLoc(), diag::err_member_function_call_bad_ref)
+          << Method->getDeclName() << FromClassification.isRValue()
+          << IsRValueQualified;
       Diag(Method->getLocation(), diag::note_previous_decl)
         << Method->getDeclName();
       return ExprError();
@@ -5214,9 +5210,9 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
       break;
     }
 
-    return Diag(From->getLocStart(),
-                diag::err_member_function_call_bad_type)
-       << ImplicitParamRecordType << FromRecordType << From->getSourceRange();
+    return Diag(From->getBeginLoc(), diag::err_member_function_call_bad_type)
+           << ImplicitParamRecordType << FromRecordType
+           << From->getSourceRange();
   }
 
   if (ICS.Standard.Second == ICK_Derived_To_Base) {
@@ -5257,9 +5253,8 @@ ExprResult Sema::PerformContextuallyConvertToBool(Expr *From) {
     return PerformImplicitConversion(From, Context.BoolTy, ICS, AA_Converting);
 
   if (!DiagnoseMultipleUserDefinedConversion(From, Context.BoolTy))
-    return Diag(From->getLocStart(),
-                diag::err_typecheck_bool_condition)
-                  << From->getType() << From->getSourceRange();
+    return Diag(From->getBeginLoc(), diag::err_typecheck_bool_condition)
+           << From->getType() << From->getSourceRange();
   return ExprError();
 }
 
@@ -5372,9 +5367,9 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   case ImplicitConversionSequence::AmbiguousConversion:
   case ImplicitConversionSequence::BadConversion:
     if (!S.DiagnoseMultipleUserDefinedConversion(From, T))
-      return S.Diag(From->getLocStart(),
+      return S.Diag(From->getBeginLoc(),
                     diag::err_typecheck_converted_constant_expression)
-                << From->getType() << From->getSourceRange() << T;
+             << From->getType() << From->getSourceRange() << T;
     return ExprError();
 
   case ImplicitConversionSequence::EllipsisConversion:
@@ -5383,15 +5378,15 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // Check that we would only use permitted conversions.
   if (!CheckConvertedConstantConversions(S, *SCS)) {
-    return S.Diag(From->getLocStart(),
+    return S.Diag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_disallowed)
-             << From->getType() << From->getSourceRange() << T;
+           << From->getType() << From->getSourceRange() << T;
   }
   // [...] and where the reference binding (if any) binds directly.
   if (SCS->ReferenceBinding && !SCS->DirectBinding) {
-    return S.Diag(From->getLocStart(),
+    return S.Diag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_indirect)
-             << From->getType() << From->getSourceRange() << T;
+           << From->getType() << From->getSourceRange() << T;
   }
 
   ExprResult Result =
@@ -5414,14 +5409,14 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     break;
 
   case NK_Constant_Narrowing:
-    S.Diag(From->getLocStart(), diag::ext_cce_narrowing)
-      << CCE << /*Constant*/1
-      << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
+    S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
+        << CCE << /*Constant*/ 1
+        << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
     break;
 
   case NK_Type_Narrowing:
-    S.Diag(From->getLocStart(), diag::ext_cce_narrowing)
-      << CCE << /*Constant*/0 << From->getType() << T;
+    S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
+        << CCE << /*Constant*/ 0 << From->getType() << T;
     break;
   }
 
@@ -5457,8 +5452,8 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
       Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr)
     S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
   else {
-    S.Diag(From->getLocStart(), diag::err_expr_not_cce)
-      << CCE << From->getSourceRange();
+    S.Diag(From->getBeginLoc(), diag::err_expr_not_cce)
+        << CCE << From->getSourceRange();
     for (unsigned I = 0; I < Notes.size(); ++I)
       S.Diag(Notes[I].first, Notes[I].second);
   }
@@ -5586,10 +5581,10 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
     ConvTy.getAsStringInternal(TypeStr, SemaRef.getPrintingPolicy());
 
     Converter.diagnoseExplicitConv(SemaRef, Loc, T, ConvTy)
-        << FixItHint::CreateInsertion(From->getLocStart(),
+        << FixItHint::CreateInsertion(From->getBeginLoc(),
                                       "static_cast<" + TypeStr + ">(")
         << FixItHint::CreateInsertion(
-               SemaRef.getLocForEndOfToken(From->getLocEnd()), ")");
+               SemaRef.getLocForEndOfToken(From->getEndLoc()), ")");
     Converter.noteExplicitConv(SemaRef, Conversion, ConvTy);
 
     // If we aren't in a SFINAE context, build a call to the
@@ -6009,7 +6004,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     QualType ClassType = Context.getTypeDeclType(Constructor->getParent());
     if (Args.size() == 1 && Constructor->isSpecializationCopyingObject() &&
         (Context.hasSameUnqualifiedType(ClassType, Args[0]->getType()) ||
-         IsDerivedFrom(Args[0]->getLocStart(), Args[0]->getType(),
+         IsDerivedFrom(Args[0]->getBeginLoc(), Args[0]->getType(),
                        ClassType))) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_illegal_constructor;
@@ -6947,15 +6942,15 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
   // lvalues/rvalues and the type. Fortunately, we can allocate this
   // call on the stack and we don't need its arguments to be
   // well-formed.
-  DeclRefExpr ConversionRef(Conversion, false, Conversion->getType(),
-                            VK_LValue, From->getLocStart());
+  DeclRefExpr ConversionRef(Conversion, false, Conversion->getType(), VK_LValue,
+                            From->getBeginLoc());
   ImplicitCastExpr ConversionFn(ImplicitCastExpr::OnStack,
                                 Context.getPointerType(Conversion->getType()),
                                 CK_FunctionToPointerDecay,
                                 &ConversionRef, VK_RValue);
 
   QualType ConversionType = Conversion->getConversionType();
-  if (!isCompleteType(From->getLocStart(), ConversionType)) {
+  if (!isCompleteType(From->getBeginLoc(), ConversionType)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_bad_final_conversion;
     return;
@@ -6968,7 +6963,7 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
   // allocator).
   QualType CallResultType = ConversionType.getNonLValueExprType(Context);
   CallExpr Call(Context, &ConversionFn, None, CallResultType, VK,
-                From->getLocStart());
+                From->getBeginLoc());
   ImplicitConversionSequence ICS =
     TryCopyInitialization(*this, &Call, ToType,
                           /*SuppressUserConversions=*/true,
@@ -9484,7 +9479,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
   if (!isFunctionAlwaysEnabled(S.Context, FD)) {
     if (Complain) {
       if (InOverloadResolution)
-        S.Diag(FD->getLocStart(),
+        S.Diag(FD->getBeginLoc(),
                diag::note_addrof_ovl_candidate_disabled_by_enable_if_attr);
       else
         S.Diag(Loc, diag::err_addrof_function_disabled_by_enable_if_attr) << FD;
@@ -11092,7 +11087,7 @@ private:
 
       // If any candidate has a placeholder return type, trigger its deduction
       // now.
-      if (completeFunctionType(S, FunDecl, SourceExpr->getLocStart(),
+      if (completeFunctionType(S, FunDecl, SourceExpr->getBeginLoc(),
                                Complain)) {
         HasComplained |= Complain;
         return false;
@@ -11168,7 +11163,7 @@ private:
     // here, since the no_viable diagnostic has index 0.
     UnresolvedSetIterator Result = S.getMostSpecialized(
         MatchesCopy.begin(), MatchesCopy.end(), FailedCandidates,
-        SourceExpr->getLocStart(), S.PDiag(),
+        SourceExpr->getBeginLoc(), S.PDiag(),
         S.PDiag(diag::err_addr_ovl_ambiguous)
             << Matches[0].second->getDeclName(),
         S.PDiag(diag::note_ovl_candidate)
@@ -11204,7 +11199,7 @@ private:
 public:
   void ComplainNoMatchesFound() const {
     assert(Matches.empty());
-    S.Diag(OvlExpr->getLocStart(), diag::err_addr_ovl_no_viable)
+    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_no_viable)
         << OvlExpr->getName() << TargetFunctionType
         << OvlExpr->getSourceRange();
     if (FailedCandidates.empty())
@@ -11222,7 +11217,7 @@ public:
           if (!functionHasPassObjectSizeParams(Fun))
             S.NoteOverloadCandidate(*I, Fun, TargetFunctionType,
                                     /*TakingAddress=*/true);
-      FailedCandidates.NoteCandidates(S, OvlExpr->getLocStart());
+      FailedCandidates.NoteCandidates(S, OvlExpr->getBeginLoc());
     }
   }
 
@@ -11244,21 +11239,20 @@ public:
   }
 
   void ComplainIsStaticMemberFunctionFromBoundPointer() const {
-    S.Diag(OvlExpr->getLocStart(),
+    S.Diag(OvlExpr->getBeginLoc(),
            diag::err_invalid_form_pointer_member_function)
-      << OvlExpr->getSourceRange();
+        << OvlExpr->getSourceRange();
   }
 
   void ComplainOfInvalidConversion() const {
-    S.Diag(OvlExpr->getLocStart(), diag::err_addr_ovl_not_func_ptrref)
-      << OvlExpr->getName() << TargetType;
+    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_not_func_ptrref)
+        << OvlExpr->getName() << TargetType;
   }
 
   void ComplainMultipleMatchesFound() const {
     assert(Matches.size() > 1);
-    S.Diag(OvlExpr->getLocStart(), diag::err_addr_ovl_ambiguous)
-      << OvlExpr->getName()
-      << OvlExpr->getSourceRange();
+    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_ambiguous)
+        << OvlExpr->getName() << OvlExpr->getSourceRange();
     S.NoteAllOverloadCandidates(OvlExpr, TargetFunctionType,
                                 /*TakingAddress=*/true);
   }
@@ -11508,7 +11502,7 @@ bool Sema::ResolveAndFixSingleFunctionTemplateSpecialization(
   ExprResult SingleFunctionExpression;
   if (FunctionDecl *fn = ResolveSingleFunctionTemplateSpecialization(
                            ovl.Expression, /*complain*/ false, &found)) {
-    if (DiagnoseUseOfDecl(fn, SrcExpr.get()->getLocStart())) {
+    if (DiagnoseUseOfDecl(fn, SrcExpr.get()->getBeginLoc())) {
       SrcExpr = ExprError();
       return true;
     }
@@ -11944,7 +11938,7 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
 
     OverloadCandidateSet::iterator Best;
     if (CandidateSet->empty() ||
-        CandidateSet->BestViableFunction(*this, Fn->getLocStart(), Best) ==
+        CandidateSet->BestViableFunction(*this, Fn->getBeginLoc(), Best) ==
             OR_No_Viable_Function) {
       // In Microsoft mode, if we are inside a template class member function then
       // create a type dependent CallExpr. The goal is to postpone name lookup
@@ -12021,24 +12015,23 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       }
     }
 
-    SemaRef.Diag(Fn->getLocStart(), diag::err_ovl_no_viable_function_in_call)
+    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_no_viable_function_in_call)
         << ULE->getName() << Fn->getSourceRange();
     CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, Args);
     break;
   }
 
   case OR_Ambiguous:
-    SemaRef.Diag(Fn->getLocStart(), diag::err_ovl_ambiguous_call)
-      << ULE->getName() << Fn->getSourceRange();
+    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_ambiguous_call)
+        << ULE->getName() << Fn->getSourceRange();
     CandidateSet->NoteCandidates(SemaRef, OCD_ViableCandidates, Args);
     break;
 
   case OR_Deleted: {
-    SemaRef.Diag(Fn->getLocStart(), diag::err_ovl_deleted_call)
-      << (*Best)->Function->isDeleted()
-      << ULE->getName()
-      << SemaRef.getDeletedOrUnavailableSuffix((*Best)->Function)
-      << Fn->getSourceRange();
+    SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_deleted_call)
+        << (*Best)->Function->isDeleted() << ULE->getName()
+        << SemaRef.getDeletedOrUnavailableSuffix((*Best)->Function)
+        << Fn->getSourceRange();
     CandidateSet->NoteCandidates(SemaRef, OCD_AllCandidates, Args);
 
     // We emitted an error for the unavailable/deleted function call but keep
@@ -12094,7 +12087,7 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
 
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =
-      CandidateSet.BestViableFunction(*this, Fn->getLocStart(), Best);
+      CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
   return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args,
                                   RParenLoc, ExecConfig, &CandidateSet,
@@ -12819,7 +12812,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       = new (Context) CXXMemberCallExpr(Context, MemExprE, Args,
                                         resultType, valueKind, RParenLoc);
 
-    if (CheckCallReturnType(proto->getReturnType(), op->getRHS()->getLocStart(),
+    if (CheckCallReturnType(proto->getReturnType(), op->getRHS()->getBeginLoc(),
                             call, nullptr))
       return ExprError();
 
@@ -12905,7 +12898,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     UnbridgedCasts.restore();
 
     OverloadCandidateSet::iterator Best;
-    switch (CandidateSet.BestViableFunction(*this, UnresExpr->getLocStart(),
+    switch (CandidateSet.BestViableFunction(*this, UnresExpr->getBeginLoc(),
                                             Best)) {
     case OR_Success:
       Method = cast<CXXMethodDecl>(Best->Function);
@@ -13022,17 +13015,15 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&
         MemExpr->performsVirtualDispatch(getLangOpts())) {
-      Diag(MemExpr->getLocStart(),
+      Diag(MemExpr->getBeginLoc(),
            diag::warn_call_to_pure_virtual_member_function_from_ctor_dtor)
-        << MD->getDeclName() << isa<CXXDestructorDecl>(CurContext)
-        << MD->getParent()->getDeclName();
+          << MD->getDeclName() << isa<CXXDestructorDecl>(CurContext)
+          << MD->getParent()->getDeclName();
 
-      Diag(MD->getLocStart(), diag::note_previous_decl) << MD->getDeclName();
+      Diag(MD->getBeginLoc(), diag::note_previous_decl) << MD->getDeclName();
       if (getLangOpts().AppleKext)
-        Diag(MemExpr->getLocStart(),
-             diag::note_pure_qualified_call_kext)
-             << MD->getParent()->getDeclName()
-             << MD->getDeclName();
+        Diag(MemExpr->getBeginLoc(), diag::note_pure_qualified_call_kext)
+            << MD->getParent()->getDeclName() << MD->getDeclName();
     }
   }
 
@@ -13040,7 +13031,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           dyn_cast<CXXDestructorDecl>(TheCall->getMethodDecl())) {
     // a->A::f() doesn't go through the vtable, except in AppleKext mode.
     bool CallCanBeVirtual = !MemExpr->hasQualifier() || getLangOpts().AppleKext;
-    CheckVirtualDtorCall(DD, MemExpr->getLocStart(), /*IsDelete=*/false,
+    CheckVirtualDtorCall(DD, MemExpr->getBeginLoc(), /*IsDelete=*/false,
                          CallCanBeVirtual, /*WarnOnNonAbstractTypes=*/true,
                          MemExpr->getMemberLoc());
   }
@@ -13145,7 +13136,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   // Perform overload resolution.
   OverloadCandidateSet::iterator Best;
-  switch (CandidateSet.BestViableFunction(*this, Object.get()->getLocStart(),
+  switch (CandidateSet.BestViableFunction(*this, Object.get()->getBeginLoc(),
                                           Best)) {
   case OR_Success:
     // Overload resolution succeeded; we'll build the appropriate call
@@ -13154,30 +13145,26 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   case OR_No_Viable_Function:
     if (CandidateSet.empty())
-      Diag(Object.get()->getLocStart(), diag::err_ovl_no_oper)
-        << Object.get()->getType() << /*call*/ 1
-        << Object.get()->getSourceRange();
+      Diag(Object.get()->getBeginLoc(), diag::err_ovl_no_oper)
+          << Object.get()->getType() << /*call*/ 1
+          << Object.get()->getSourceRange();
     else
-      Diag(Object.get()->getLocStart(),
-           diag::err_ovl_no_viable_object_call)
-        << Object.get()->getType() << Object.get()->getSourceRange();
+      Diag(Object.get()->getBeginLoc(), diag::err_ovl_no_viable_object_call)
+          << Object.get()->getType() << Object.get()->getSourceRange();
     CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
     break;
 
   case OR_Ambiguous:
-    Diag(Object.get()->getLocStart(),
-         diag::err_ovl_ambiguous_object_call)
-      << Object.get()->getType() << Object.get()->getSourceRange();
+    Diag(Object.get()->getBeginLoc(), diag::err_ovl_ambiguous_object_call)
+        << Object.get()->getType() << Object.get()->getSourceRange();
     CandidateSet.NoteCandidates(*this, OCD_ViableCandidates, Args);
     break;
 
   case OR_Deleted:
-    Diag(Object.get()->getLocStart(),
-         diag::err_ovl_deleted_object_call)
-      << Best->Function->isDeleted()
-      << Object.get()->getType()
-      << getDeletedOrUnavailableSuffix(Best->Function)
-      << Object.get()->getSourceRange();
+    Diag(Object.get()->getBeginLoc(), diag::err_ovl_deleted_object_call)
+        << Best->Function->isDeleted() << Object.get()->getType()
+        << getDeletedOrUnavailableSuffix(Best->Function)
+        << Object.get()->getSourceRange();
     CandidateSet.NoteCandidates(*this, OCD_AllCandidates, Args);
     break;
   }
@@ -13574,7 +13561,7 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
     }
     OverloadCandidateSet::iterator Best;
     OverloadingResult OverloadResult =
-        CandidateSet->BestViableFunction(*this, Fn->getLocStart(), Best);
+        CandidateSet->BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
     if (OverloadResult == OR_No_Viable_Function) {
       *CallExpr = ExprError();

@@ -134,6 +134,10 @@
 # RUN: not ld.lld -o /dev/null --script %t1.script %t 2>&1 | FileCheck --check-prefix=FOOHDR %s
 # FOOHDR: error: {{.*}}.script:1: unexpected header attribute: FOOHDR
 
+# RUN: echo "PHDRS { text PT_FOO FOOHDR; }" > %t1.script
+# RUN: not ld.lld -o /dev/null --script %t1.script %t 2>&1 | FileCheck --check-prefix=PTFOO %s
+# PTFOO: invalid program header type: PT_FOO
+
 .global _start
 _start:
  nop

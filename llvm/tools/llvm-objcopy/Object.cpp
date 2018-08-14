@@ -63,8 +63,6 @@ std::unique_ptr<WritableMemoryBuffer> MemBuffer::releaseMemoryBuffer() {
 }
 
 template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
-  using Elf_Phdr = typename ELFT::Phdr;
-
   uint8_t *B = Buf.getBufferStart();
   B += Obj.ProgramHdrSegment.Offset + Seg.Index * sizeof(Elf_Phdr);
   Elf_Phdr &Phdr = *reinterpret_cast<Elf_Phdr *>(B);
@@ -87,7 +85,7 @@ void SectionBase::markSymbols() {}
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart();
   B += Sec.HeaderOffset;
-  typename ELFT::Shdr &Shdr = *reinterpret_cast<typename ELFT::Shdr *>(B);
+  Elf_Shdr &Shdr = *reinterpret_cast<Elf_Shdr *>(B);
   Shdr.sh_name = Sec.NameIndex;
   Shdr.sh_type = Sec.Type;
   Shdr.sh_flags = Sec.Flags;
@@ -162,7 +160,7 @@ void StringTableSection::accept(SectionVisitor &Visitor) const {
 template <class ELFT>
 void ELFSectionWriter<ELFT>::visit(const SectionIndexSection &Sec) {
   uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
-  auto *IndexesBuffer = reinterpret_cast<typename ELFT::Word *>(Buf);
+  auto *IndexesBuffer = reinterpret_cast<Elf_Word *>(Buf);
   std::copy(std::begin(Sec.Indexes), std::end(Sec.Indexes), IndexesBuffer);
 }
 
@@ -344,7 +342,7 @@ template <class ELFT>
 void ELFSectionWriter<ELFT>::visit(const SymbolTableSection &Sec) {
   uint8_t *Buf = Out.getBufferStart();
   Buf += Sec.Offset;
-  typename ELFT::Sym *Sym = reinterpret_cast<typename ELFT::Sym *>(Buf);
+  Elf_Sym *Sym = reinterpret_cast<Elf_Sym *>(Buf);
   // Loop though symbols setting each entry of the symbol table.
   for (auto &Symbol : Sec.Symbols) {
     Sym->st_name = Symbol->NameIndex;
@@ -433,7 +431,7 @@ void RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
     if (ToRemove(*Reloc.RelocSymbol))
-      error("not stripping symbol `" + Reloc.RelocSymbol->Name +
+      error("not stripping symbol '" + Reloc.RelocSymbol->Name +
             "' because it is named in a relocation");
 }
 
@@ -853,6 +851,9 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
     Sec.Align = Shdr.sh_addralign;
     Sec.EntrySize = Shdr.sh_entsize;
     Sec.Index = Index++;
+    Sec.OriginalData =
+        ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
+                          (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
   }
 
   // If a section index table exists we'll need to initialize it before we
@@ -1190,7 +1191,7 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
   // If we need to write the section header table out then we need to align the
   // Offset so that SHOffset is valid.
   if (WriteSectionHeaders)
-    Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
+    Offset = alignTo(Offset, sizeof(Elf_Addr));
   Obj.SHOffset = Offset;
 }
 

@@ -310,6 +310,9 @@ class Preprocessor {
   /// on the stem that is to be code completed.
   IdentifierInfo *CodeCompletionII = nullptr;
 
+  /// Range for the code completion token.
+  SourceRange CodeCompletionTokenRange;
+
   /// The directory that the main file should be considered to occupy,
   /// if it does not correspond to a real file (as happens when building a
   /// module).
@@ -1129,6 +1132,16 @@ public:
   /// Set the code completion token for filtering purposes.
   void setCodeCompletionIdentifierInfo(IdentifierInfo *Filter) {
     CodeCompletionII = Filter;
+  }
+
+  /// Set the code completion token range for detecting replacement range later
+  /// on.
+  void setCodeCompletionTokenRange(const SourceLocation Start,
+                                   const SourceLocation End) {
+    CodeCompletionTokenRange = {Start, End};
+  }
+  SourceRange getCodeCompletionTokenRange() const {
+    return CodeCompletionTokenRange;
   }
 
   /// Get the code completion token for filtering purposes.

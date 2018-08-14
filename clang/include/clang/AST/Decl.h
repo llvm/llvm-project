@@ -81,7 +81,7 @@ class VarTemplateDecl;
 /// A client can read the relevant info using TypeLoc wrappers, e.g:
 /// @code
 /// TypeLoc TL = TypeSourceInfo->getTypeLoc();
-/// TL.getStartLoc().print(OS, SrcMgr);
+/// TL.getBeginLoc().print(OS, SrcMgr);
 /// @endcode
 class alignas(8) TypeSourceInfo {
   // Contains a memory block after the class, used for type source information,
@@ -614,7 +614,11 @@ public:
     return SourceRange(LocStart, RBraceLoc);
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LocStart; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setLocStart(SourceLocation L) { LocStart = L; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
@@ -735,7 +739,11 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  SourceLocation getLocStart() const LLVM_READONLY {
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY {
     return getOuterLocStart();
   }
 
@@ -2865,7 +2873,11 @@ public:
   const Type *getTypeForDecl() const { return TypeForDecl; }
   void setTypeForDecl(const Type *TD) { TypeForDecl = TD; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LocStart; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   void setLocStart(SourceLocation L) { LocStart = L; }
   SourceRange getSourceRange() const override LLVM_READONLY {
     if (LocStart.isValid())
@@ -3114,7 +3126,7 @@ public:
 
   /// Return SourceLocation representing start of source
   /// range ignoring outer template declarations.
-  SourceLocation getInnerLocStart() const { return getLocStart(); }
+  SourceLocation getInnerLocStart() const { return getBeginLoc(); }
 
   /// Return SourceLocation representing start of source
   /// range taking into account any outer template declarations.
@@ -4192,16 +4204,20 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
     if (RBraceLoc.isValid())
       return RBraceLoc;
     // No braces: get the end location of the (only) declaration in context
     // (if present).
-    return decls_empty() ? getLocation() : decls_begin()->getLocEnd();
+    return decls_empty() ? getLocation() : decls_begin()->getEndLoc();
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
-    return SourceRange(getLocation(), getLocEnd());
+    return SourceRange(getLocation(), getEndLoc());
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

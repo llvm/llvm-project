@@ -120,9 +120,8 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (NumConcrete > 1) {
-      diag(D->getLocStart(),
-           "inheriting mulitple classes that aren't "
-           "pure virtual is discouraged");
+      diag(D->getBeginLoc(), "inheriting mulitple classes that aren't "
+                             "pure virtual is discouraged");
     }
   }
 }

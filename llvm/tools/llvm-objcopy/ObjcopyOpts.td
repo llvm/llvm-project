@@ -102,3 +102,9 @@ def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
                       HelpText<"Remove all symbols not needed by relocations">;
 def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
                       HelpText<"Do not remove file symbols">;
+defm dump_section : Eq<"dump-section">,
+                   MetaVarName<"section=file">,
+                   HelpText<"Dump contents of section named <section> into file <file>">;
+defm prefix_symbols : Eq<"prefix-symbols">,
+                       MetaVarName<"prefix">,
+                       HelpText<"Add <prefix> to the start of every symbol name">;

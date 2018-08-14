@@ -1274,21 +1274,21 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // which default to "expand" for at least one type.
 
   // Misc operations.
-  setOperationAction(ISD::ConstantFP, MVT::f32, Legal); // Default: expand
-  setOperationAction(ISD::ConstantFP, MVT::f64, Legal); // Default: expand
-
-  setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
-  setOperationAction(ISD::JumpTable, MVT::i32, Custom);
-  setOperationAction(ISD::BUILD_PAIR, MVT::i64, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
-  setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
-  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
-  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
-  setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
-  setOperationAction(ISD::GLOBAL_OFFSET_TABLE, MVT::i32, Custom);
-  setOperationAction(ISD::GlobalTLSAddress, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+  setOperationAction(ISD::ConstantFP,           MVT::f32,   Legal);
+  setOperationAction(ISD::ConstantFP,           MVT::f64,   Legal);
+  setOperationAction(ISD::TRAP,                 MVT::Other, Legal);
+  setOperationAction(ISD::ConstantPool,         MVT::i32,   Custom);
+  setOperationAction(ISD::JumpTable,            MVT::i32,   Custom);
+  setOperationAction(ISD::BUILD_PAIR,           MVT::i64,   Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG,    MVT::i1,    Expand);
+  setOperationAction(ISD::INLINEASM,            MVT::Other, Custom);
+  setOperationAction(ISD::PREFETCH,             MVT::Other, Custom);
+  setOperationAction(ISD::READCYCLECOUNTER,     MVT::i64,   Custom);
+  setOperationAction(ISD::INTRINSIC_VOID,       MVT::Other, Custom);
+  setOperationAction(ISD::EH_RETURN,            MVT::Other, Custom);
+  setOperationAction(ISD::GLOBAL_OFFSET_TABLE,  MVT::i32,   Custom);
+  setOperationAction(ISD::GlobalTLSAddress,     MVT::i32,   Custom);
+  setOperationAction(ISD::ATOMIC_FENCE,         MVT::Other, Custom);
 
   // Custom legalize GlobalAddress nodes into CONST32.
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);

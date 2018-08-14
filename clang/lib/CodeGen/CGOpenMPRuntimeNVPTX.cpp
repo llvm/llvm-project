@@ -872,7 +872,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              const RegionCodeGenTy &CodeGen) {
   ExecutionModeRAII ModeRAII(CurrentExecutionMode, /*IsSPMD=*/false);
   EntryFunctionState EST;
-  WorkerFunctionState WST(CGM, D.getLocStart());
+  WorkerFunctionState WST(CGM, D.getBeginLoc());
   Work.clear();
   WrapperFunctionsMap.clear();
 
@@ -1600,7 +1600,7 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
 llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
-  SourceLocation Loc = D.getLocStart();
+  SourceLocation Loc = D.getBeginLoc();
 
   // Emit target region as a standalone region.
   class NVPTXPrePostActionTy : public PrePostActionTy {
@@ -3478,7 +3478,7 @@ CGOpenMPRuntimeNVPTX::translateParameter(const FieldDecl *FD,
   return ParmVarDecl::Create(
       CGM.getContext(),
       const_cast<DeclContext *>(NativeParam->getDeclContext()),
-      NativeParam->getLocStart(), NativeParam->getLocation(),
+      NativeParam->getBeginLoc(), NativeParam->getLocation(),
       NativeParam->getIdentifier(), ArgType,
       /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
 }
@@ -3556,10 +3556,10 @@ llvm::Function *CGOpenMPRuntimeNVPTX::createParallelDataSharingWrapper(
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/16, /*Signed=*/false);
   QualType Int32QTy =
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false);
-  ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getLocStart(),
+  ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
                                      /*Id=*/nullptr, Int16QTy,
                                      ImplicitParamDecl::Other);
-  ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getLocStart(),
+  ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
                                /*Id=*/nullptr, Int32QTy,
                                ImplicitParamDecl::Other);
   WrapperArgs.emplace_back(&ParallelLevelArg);
@@ -3577,7 +3577,7 @@ llvm::Function *CGOpenMPRuntimeNVPTX::createParallelDataSharingWrapper(
 
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
   CGF.StartFunction(GlobalDecl(), Ctx.VoidTy, Fn, CGFI, WrapperArgs,
-                    D.getLocStart(), D.getLocStart());
+                    D.getBeginLoc(), D.getBeginLoc());
 
   const auto *RD = CS.getCapturedRecordDecl();
   auto CurField = RD->field_begin();
@@ -3662,7 +3662,7 @@ llvm::Function *CGOpenMPRuntimeNVPTX::createParallelDataSharingWrapper(
     }
   }
 
-  emitOutlinedFunctionCall(CGF, D.getLocStart(), OutlinedParallelFn, Args);
+  emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedParallelFn, Args);
   CGF.FinishFunction();
   return Fn;
 }
@@ -3710,7 +3710,7 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
     Data.insert(std::make_pair(VD, std::make_pair(FD, Address::invalid())));
   }
   if (!NeedToDelayGlobalization) {
-    emitGenericVarsProlog(CGF, D->getLocStart());
+    emitGenericVarsProlog(CGF, D->getBeginLoc());
     struct GlobalizationScope final : EHScopeStack::Cleanup {
       GlobalizationScope() = default;
 

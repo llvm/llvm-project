@@ -7751,8 +7751,8 @@ define i8* @bam02() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam02:
 ; LINUX-64-PIC:       # %bb.0: # %entry
+; LINUX-64-PIC-NEXT:    movq ptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    movq ptr@GOTPCREL(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    addq (%rcx), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;
@@ -7781,22 +7781,22 @@ define i8* @bam02() nounwind {
 ;
 ; DARWIN-64-STATIC-LABEL: bam02:
 ; DARWIN-64-STATIC:       ## %bb.0: ## %entry
+; DARWIN-64-STATIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-STATIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
 ; DARWIN-64-STATIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-STATIC-NEXT:    retq
 ;
 ; DARWIN-64-DYNAMIC-LABEL: bam02:
 ; DARWIN-64-DYNAMIC:       ## %bb.0: ## %entry
+; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-DYNAMIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
 ; DARWIN-64-DYNAMIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-DYNAMIC-NEXT:    retq
 ;
 ; DARWIN-64-PIC-LABEL: bam02:
 ; DARWIN-64-PIC:       ## %bb.0: ## %entry
+; DARWIN-64-PIC-NEXT:    movq _ptr@{{.*}}(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    movl $262144, %eax ## imm = 0x40000
-; DARWIN-64-PIC-NEXT:    movq _ptr@GOTPCREL(%rip), %rcx
 ; DARWIN-64-PIC-NEXT:    addq (%rcx), %rax
 ; DARWIN-64-PIC-NEXT:    retq
 
@@ -7946,8 +7946,8 @@ define i8* @bam05() nounwind {
 ;
 ; LINUX-64-PIC-LABEL: bam05:
 ; LINUX-64-PIC:       # %bb.0: # %entry
+; LINUX-64-PIC-NEXT:    movq dptr@{{.*}}(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    movl $262144, %eax # imm = 0x40000
-; LINUX-64-PIC-NEXT:    movq dptr@GOTPCREL(%rip), %rcx
 ; LINUX-64-PIC-NEXT:    addq (%rcx), %rax
 ; LINUX-64-PIC-NEXT:    retq
 ;

@@ -353,6 +353,9 @@ protected:
   /// If true, loading into a D subregister will be penalized.
   bool SlowLoadDSubregister = false;
 
+  /// If true, use a wider stride when allocating VFP registers.
+  bool UseWideStrideVFP = false;
+
   /// If true, the AGU and NEON/FPU units are multiplexed.
   bool HasMuxedUnits = false;
 
@@ -596,6 +599,7 @@ public:
   bool hasVMLxHazards() const { return HasVMLxHazards; }
   bool hasSlowOddRegister() const { return SlowOddRegister; }
   bool hasSlowLoadDSubregister() const { return SlowLoadDSubregister; }
+  bool useWideStrideVFP() const { return UseWideStrideVFP; }
   bool hasMuxedUnits() const { return HasMuxedUnits; }
   bool dontWidenVMOVS() const { return DontWidenVMOVS; }
   bool useSplatVFPToNeon() const { return SplatVFPToNeon; }

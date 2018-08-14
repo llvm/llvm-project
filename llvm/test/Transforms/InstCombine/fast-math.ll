@@ -438,36 +438,63 @@ define double @fail2(double %f1, double %f2) {
   ret double %t3
 }
 
-; c1 * x - x => (c1 - 1.0) * x
-define float @fold13(float %x) {
-; CHECK-LABEL: @fold13(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 6.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %mul = fmul fast float %x, 7.000000e+00
-  %sub = fsub fast float %mul, %x
-  ret float %sub
-}
+; (X * C) - X --> X * (C - 1.0)
 
-; Check again using the minimal subset of FMF.
-define float @fold13_reassoc_nsz(float %x) {
-; CHECK-LABEL: @fold13_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 6.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+define float @fsub_op0_fmul_const(float %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz float [[X:%.*]], 6.000000e+00
+; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %mul = fmul reassoc nsz float %x, 7.000000e+00
+  %mul = fmul float %x, 7.0
   %sub = fsub reassoc nsz float %mul, %x
   ret float %sub
 }
 
+; (X * C) - X --> X * (C - 1.0)
+
+define <2 x float> @fsub_op0_fmul_const_vec(<2 x float> %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float 6.000000e+00, float -4.300000e+01>
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul <2 x float> %x, <float 7.0, float -42.0>
+  %sub = fsub reassoc nsz <2 x float> %mul, %x
+  ret <2 x float> %sub
+}
+
+; X - (X * C) --> X * (1.0 - C)
+
+define float @fsub_op1_fmul_const(float %x) {
+; CHECK-LABEL: @fsub_op1_fmul_const(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz float [[X:%.*]], -6.000000e+00
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %mul = fmul float %x, 7.0
+  %sub = fsub reassoc nsz float %x, %mul
+  ret float %sub
+}
+
+; X - (X * C) --> X * (1.0 - C)
+
+define <2 x float> @fsub_op1_fmul_const_vec(<2 x float> %x) {
+; CHECK-LABEL: @fsub_op1_fmul_const_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float -6.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul <2 x float> %x, <float 7.0, float 0.0>
+  %sub = fsub reassoc nsz <2 x float> %x, %mul
+  ret <2 x float> %sub
+}
+
 ; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fold13_reassoc(float %x) {
-; CHECK-LABEL: @fold13_reassoc(
+
+define float @fsub_op0_fmul_const_wrong_FMF(float %x) {
+; CHECK-LABEL: @fsub_op0_fmul_const_wrong_FMF(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc float [[X:%.*]], 7.000000e+00
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc float [[MUL]], [[X]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %mul = fmul reassoc float %x, 7.000000e+00
+  %mul = fmul reassoc float %x, 7.0
   %sub = fsub reassoc float %mul, %x
   ret float %sub
 }
@@ -591,305 +618,6 @@ define float @fdiv4(float %x) {
   %mul = fmul float %x, 0x47EFFFFFE0000000
   %div = fdiv float %mul, 0x3FC99999A0000000
   ret float %div
-}
-
-; =========================================================================
-;
-;   Testing-cases about factorization
-;
-; =========================================================================
-; x*z + y*z => (x+y) * z
-define float @fact_mul1(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul fast float %x, %z
-  %t2 = fmul fast float %y, %z
-  %t3 = fadd fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_mul1_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul1_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul reassoc nsz float %x, %z
-  %t2 = fmul reassoc nsz float %y, %z
-  %t3 = fadd reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_mul1_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul1_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc float [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc float [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fmul reassoc float %x, %z
-  %t2 = fmul reassoc float %y, %z
-  %t3 = fadd reassoc float %t1, %t2
-  ret float %t3
-}
-
-; z*x + y*z => (x+y) * z
-define float @fact_mul2(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul fast float %z, %x
-  %t2 = fmul fast float %y, %z
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_mul2_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul2_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul reassoc nsz float %z, %x
-  %t2 = fmul reassoc nsz float %y, %z
-  %t3 = fsub reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_mul2_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul2_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc float [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc float [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fmul reassoc float %z, %x
-  %t2 = fmul reassoc float %y, %z
-  %t3 = fsub reassoc float %t1, %t2
-  ret float %t3
-}
-
-; z*x - z*y => (x-y) * z
-define float @fact_mul3(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t2 = fmul fast float %z, %y
-  %t1 = fmul fast float %z, %x
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_mul3_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul3_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t2 = fmul reassoc nsz float %z, %y
-  %t1 = fmul reassoc nsz float %z, %x
-  %t3 = fsub reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_mul3_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul3_reassoc(
-; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc float [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc float [[Z]], [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t2 = fmul reassoc float %z, %y
-  %t1 = fmul reassoc float %z, %x
-  %t3 = fsub reassoc float %t1, %t2
-  ret float %t3
-}
-
-; x*z - z*y => (x-y) * z
-define float @fact_mul4(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul fast float %x, %z
-  %t2 = fmul fast float %z, %y
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_mul4_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul4_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz float [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fmul reassoc nsz float %x, %z
-  %t2 = fmul reassoc nsz float %z, %y
-  %t3 = fsub reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_mul4_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_mul4_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc float [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc float [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fmul reassoc float %x, %z
-  %t2 = fmul reassoc float %z, %y
-  %t3 = fsub reassoc float %t1, %t2
-  ret float %t3
-}
-
-; x/y + x/z, no xform
-define float @fact_div1(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div1(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fdiv fast float %x, %y
-  %t2 = fdiv fast float %x, %z
-  %t3 = fadd fast float %t1, %t2
-  ret float %t3
-}
-
-; x/y + z/x; no xform
-define float @fact_div2(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div2(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fdiv fast float %x, %y
-  %t2 = fdiv fast float %z, %x
-  %t3 = fadd fast float %t1, %t2
-  ret float %t3
-}
-
-; y/x + z/x => (y+z)/x
-define float @fact_div3(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fdiv fast float %y, %x
-  %t2 = fdiv fast float %z, %x
-  %t3 = fadd fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_div3_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div3_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv reassoc nsz float [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fdiv reassoc nsz float %y, %x
-  %t2 = fdiv reassoc nsz float %z, %x
-  %t3 = fadd reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_div3_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div3_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv reassoc float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc float [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fdiv reassoc float %y, %x
-  %t2 = fdiv reassoc float %z, %x
-  %t3 = fadd reassoc float %t1, %t2
-  ret float %t3
-}
-
-; y/x - z/x => (y-z)/x
-define float @fact_div4(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fdiv fast float %y, %x
-  %t2 = fdiv fast float %z, %x
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
-}
-
-; Check again using the minimal subset of FMF.
-define float @fact_div4_reassoc_nsz(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div4_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz float [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv reassoc nsz float [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP2]]
-;
-  %t1 = fdiv reassoc nsz float %y, %x
-  %t2 = fdiv reassoc nsz float %z, %x
-  %t3 = fsub reassoc nsz float %t1, %t2
-  ret float %t3
-}
-
-; Verify the fold is not done with only 'reassoc' ('nsz' is required).
-define float @fact_div4_reassoc(float %x, float %y, float %z) {
-; CHECK-LABEL: @fact_div4_reassoc(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv reassoc float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc float [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fdiv reassoc float %y, %x
-  %t2 = fdiv reassoc float %z, %x
-  %t3 = fsub reassoc float %t1, %t2
-  ret float %t3
-}
-
-; y/x - z/x => (y-z)/x is disabled if y-z is denormal.
-define float @fact_div5(float %x) {
-; CHECK-LABEL: @fact_div5(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float 0x3818000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
-;
-  %t1 = fdiv fast float 0x3810000000000000, %x
-  %t2 = fdiv fast float 0x3800000000000000, %x
-  %t3 = fadd fast float %t1, %t2
-  ret float %t3
-}
-
-; y/x - z/x => (y-z)/x is disabled if y-z is denormal.
-define float @fact_div6(float %x) {
-; CHECK-LABEL: @fact_div6(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast float 0x3810000000000000, [[X:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv fast float 0x3800000000000000, [[X]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub fast float [[T1]], [[T2]]
-; CHECK-NEXT:    ret float [[T3]]
-;
-  %t1 = fdiv fast float 0x3810000000000000, %x
-  %t2 = fdiv fast float 0x3800000000000000, %x
-  %t3 = fsub fast float %t1, %t2
-  ret float %t3
 }
 
 ; =========================================================================

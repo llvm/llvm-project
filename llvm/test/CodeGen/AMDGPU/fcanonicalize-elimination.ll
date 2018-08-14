@@ -837,6 +837,26 @@ define <2 x half> @v_test_canonicalize_cvt_pkrtz(float %a, float %b) {
   ret <2 x half> %canonicalized
 }
 
+; GCN-LABEL: {{^}}v_test_canonicalize_cubeid:
+; GCN: s_waitcnt
+; GCN-NEXT: v_cubeid_f32 v0, v0, v1, v2
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_cubeid(float %a, float %b, float %c) {
+  %cvt = call float @llvm.amdgcn.cubeid(float %a, float %b, float %c)
+  %canonicalized = call float @llvm.canonicalize.f32(float %cvt)
+  ret float %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_frexp_mant:
+; GCN: s_waitcnt
+; GCN-NEXT: v_frexp_mant_f32_e32 v0, v0
+; GCN-NEXT: s_setpc_b64
+define float @v_test_canonicalize_frexp_mant(float %a) {
+  %cvt = call float @llvm.amdgcn.frexp.mant.f32(float %a)
+  %canonicalized = call float @llvm.canonicalize.f32(float %cvt)
+  ret float %canonicalized
+}
+
 ; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
 ; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
 ; CHECK: .amd_amdgpu_isa
@@ -863,6 +883,8 @@ declare float @llvm.minnum.f32(float, float) #0
 declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.maxnum.f64(double, double) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
+declare float @llvm.amdgcn.cubeid(float, float, float) #0
+declare float @llvm.amdgcn.frexp.mant.f32(float) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { "no-nans-fp-math"="true" }

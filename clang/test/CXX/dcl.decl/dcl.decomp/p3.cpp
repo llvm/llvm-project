@@ -36,7 +36,7 @@ void no_get_2() {
   auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} expected-note {{in implicit initialization of binding declaration 'a0'}}
 }
 
-template<int> float &get(A);
+template<int> float &get(A); // expected-note 2 {{no known conversion}}
 
 void no_tuple_element_1() {
   auto [a0, a1, a2] = A(); // expected-error-re {{'std::tuple_element<0U{{L*}}, A>::type' does not name a type}} expected-note {{in implicit}}
@@ -57,7 +57,7 @@ void no_tuple_element_3() {
 template<> struct std::tuple_element<1, A> { typedef float &type; };
 template<> struct std::tuple_element<2, A> { typedef const float &type; };
 
-template<int N> auto get(B) -> int (&)[N + 1];
+template<int N> auto get(B) -> int (&)[N + 1]; // expected-note 2 {{no known conversion}}
 template<int N> struct std::tuple_element<N, B> { typedef int type[N +1 ]; };
 
 template<typename T> struct std::tuple_size<const T> : std::tuple_size<T> {};
@@ -138,19 +138,25 @@ int member_get() {
   return c;
 }
 
-struct D { template<int> struct get {}; }; // expected-note {{declared here}}
+struct D {
+  // FIXME: Emit a note here explaining why this was ignored.
+  template<int> struct get {};
+};
 template<> struct std::tuple_size<D> { static const int value = 1; };
 template<> struct std::tuple_element<0, D> { typedef D::get<0> type; };
 void member_get_class_template() {
-  auto [d] = D(); // expected-error {{cannot refer to member 'get' in 'D' with '.'}} expected-note {{in implicit init}}
+  auto [d] = D(); // expected-error {{no matching function for call to 'get'}} expected-note {{in implicit init}}
 }
 
-struct E { int get(); };
+struct E {
+  // FIXME: Emit a note here explaining why this was ignored.
+  int get();
+};
 template<> struct std::tuple_size<E> { static const int value = 1; };
 template<> struct std::tuple_element<0, E> { typedef int type; };
 void member_get_non_template() {
   // FIXME: This diagnostic is not very good.
-  auto [e] = E(); // expected-error {{no member named 'get'}} expected-note {{in implicit init}}
+  auto [e] = E(); // expected-error {{no matching function for call to 'get'}} expected-note {{in implicit init}}
 }
 
 namespace ADL {
@@ -230,3 +236,62 @@ namespace constant {
   }
   static_assert(g() == 4); // expected-error {{constant}} expected-note {{in call to 'g()'}}
 }
+
+// P0961R1
+struct InvalidMemberGet {
+  int get();
+  template <class T> int get();
+  struct get {};
+};
+template <> struct std::tuple_size<InvalidMemberGet> { static constexpr size_t value = 1; };
+template <> struct std::tuple_element<0, InvalidMemberGet> { typedef float type; };
+template <size_t> float get(InvalidMemberGet) { return 0; }
+int f() {
+  InvalidMemberGet img;
+  auto [x] = img;
+  typedef decltype(x) same_as_float;
+  typedef float same_as_float;
+}
+
+struct ValidMemberGet {
+  int get();
+  template <class T> int get() { return 0; }
+  template <size_t N> float get() { return 0; }
+};
+template <> struct std::tuple_size<ValidMemberGet> { static constexpr size_t value = 1; };
+template <> struct std::tuple_element<0, ValidMemberGet> { typedef float type; };
+// Don't use this one; we should use the member get.
+template <size_t N> int get(ValidMemberGet) { static_assert(N && false, ""); }
+int f2() {
+  ValidMemberGet img;
+  auto [x] = img;
+  typedef decltype(x) same_as_float;
+  typedef float same_as_float;
+}
+
+struct Base1 {
+  int get(); // expected-note{{member found by ambiguous name lookup}}
+};
+struct Base2 {
+  template<int> int get(); // expected-note{{member found by ambiguous name lookup}}
+};
+struct Derived : Base1, Base2 {};
+
+template <> struct std::tuple_size<Derived> { static constexpr size_t value = 1; };
+template <> struct std::tuple_element<0, Derived> { typedef int type; };
+
+auto [x] = Derived(); // expected-error{{member 'get' found in multiple base classes of different types}}
+
+struct Base {
+  template<int> int get();
+};
+struct UsingGet : Base {
+  using Base::get;
+};
+
+template <> struct std::tuple_size<UsingGet> {
+  static constexpr size_t value = 1;
+};
+template <> struct std::tuple_element<0, UsingGet> { typedef int type; };
+
+auto [y] = UsingGet();

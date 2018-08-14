@@ -195,7 +195,7 @@ enum class PrimTy : uint8_t {
 };
 
 // Function classes
-enum FuncClass : uint8_t {
+enum FuncClass : uint16_t {
   Public = 1 << 0,
   Protected = 1 << 1,
   Private = 1 << 2,
@@ -203,6 +203,8 @@ enum FuncClass : uint8_t {
   Static = 1 << 4,
   Virtual = 1 << 5,
   Far = 1 << 6,
+  ExternC = 1 << 7,
+  NoPrototype = 1 << 8,
 };
 
 enum NameBackrefBehavior : uint8_t {
@@ -234,6 +236,15 @@ struct FunctionParams {
 struct TemplateParams {
   bool IsTemplateTemplate = false;
   bool IsAliasTemplate = false;
+  bool IsIntegerLiteral = false;
+  bool IntegerLiteralIsNegative = false;
+  bool IsEmptyParameterPack = false;
+  bool PointerToSymbol = false;
+  bool ReferenceToSymbol = false;
+
+  // If IsIntegerLiteral is true, this is a non-type template parameter
+  // whose value is contained in this field.
+  uint64_t IntegralValue = 0;
 
   // Type can be null if this is a template template parameter.  In that case
   // only Name will be valid.
@@ -276,12 +287,13 @@ struct Type {
 
 // Represents an identifier which may be a template.
 struct Name {
-  // Name read from an MangledName string.
-  StringView Str;
-
   bool IsTemplateInstantiation = false;
   bool IsOperator = false;
   bool IsBackReference = false;
+  bool IsConversionOperator = false;
+
+  // Name read from an MangledName string.
+  StringView Str;
 
   // Template parameters. Only valid if Flags contains NF_TemplateInstantiation.
   TemplateParams *TParams = nullptr;
@@ -340,14 +352,18 @@ struct UdtType : public Type {
   Name *UdtName = nullptr;
 };
 
+struct ArrayDimension {
+  uint64_t Dim = 0;
+  ArrayDimension *Next = nullptr;
+};
+
 struct ArrayType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
   void outputPre(OutputStream &OS, NameResolver &Resolver) override;
   void outputPost(OutputStream &OS, NameResolver &Resolver) override;
 
   // Either NextDimension or ElementType will be valid.
-  ArrayType *NextDimension = nullptr;
-  uint32_t ArrayDimension = 0;
+  ArrayDimension *Dims = nullptr;
 
   Type *ElementType = nullptr;
 };
@@ -505,12 +521,12 @@ static void outputParameterList(OutputStream &OS, const FunctionParams &Params,
   }
 }
 
-static void outputName(OutputStream &OS, const Name *TheName,
+static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
                        NameResolver &Resolver);
 
 static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
                                 NameResolver &Resolver) {
-  if (!Params.ParamType && !Params.ParamName) {
+  if (Params.IsEmptyParameterPack) {
     OS << "<>";
     return;
   }
@@ -521,11 +537,15 @@ static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
     // Type can be null if this is a template template parameter,
     // and Name can be null if this is a simple type.
 
-    if (Head->ParamType && Head->ParamName) {
-      // Function pointer.
-      OS << "&";
+    if (Head->IsIntegerLiteral) {
+      if (Head->IntegerLiteralIsNegative)
+        OS << '-';
+      OS << Head->IntegralValue;
+    } else if (Head->PointerToSymbol || Head->ReferenceToSymbol) {
+      if (Head->PointerToSymbol)
+        OS << "&";
       Type::outputPre(OS, *Head->ParamType, Resolver);
-      outputName(OS, Head->ParamName, Resolver);
+      outputName(OS, Head->ParamName, Head->ParamType, Resolver);
       Type::outputPost(OS, *Head->ParamType, Resolver);
     } else if (Head->ParamType) {
       // simple type.
@@ -533,7 +553,7 @@ static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
       Type::outputPost(OS, *Head->ParamType, Resolver);
     } else {
       // Template alias.
-      outputName(OS, Head->ParamName, Resolver);
+      outputName(OS, Head->ParamName, Head->ParamType, Resolver);
     }
 
     Head = Head->Next;
@@ -546,17 +566,21 @@ static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
 
 static void outputNameComponent(OutputStream &OS, const Name &N,
                                 NameResolver &Resolver) {
-  StringView S = N.Str;
+  if (N.IsConversionOperator) {
+    OS << " conv";
+  } else {
+    StringView S = N.Str;
 
-  if (N.IsBackReference)
-    S = Resolver.resolve(N.Str);
-  OS << S;
+    if (N.IsBackReference)
+      S = Resolver.resolve(N.Str);
+    OS << S;
+  }
 
-  if (N.IsTemplateInstantiation)
+  if (N.IsTemplateInstantiation && N.TParams)
     outputParameterList(OS, *N.TParams, Resolver);
 }
 
-static void outputName(OutputStream &OS, const Name *TheName,
+static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
                        NameResolver &Resolver) {
   if (!TheName)
     return;
@@ -586,9 +610,23 @@ static void outputName(OutputStream &OS, const Name *TheName,
     return;
   }
 
-  // Print out an overloaded operator.
-  OS << "operator";
-  outputNameComponent(OS, *TheName, Resolver);
+  if (TheName->IsConversionOperator) {
+    OS << "operator";
+    if (TheName->IsTemplateInstantiation && TheName->TParams)
+      outputParameterList(OS, *TheName->TParams, Resolver);
+    OS << " ";
+    if (Ty) {
+      const FunctionType *FTy = static_cast<const FunctionType *>(Ty);
+      Type::outputPre(OS, *FTy->ReturnType, Resolver);
+      Type::outputPost(OS, *FTy->ReturnType, Resolver);
+    } else {
+      OS << "<conversion>";
+    }
+  } else {
+    // Print out an overloaded operator.
+    OS << "operator";
+    outputNameComponent(OS, *TheName, Resolver);
+  }
 }
 
 namespace {
@@ -728,7 +766,7 @@ static void outputPointerIndicator(OutputStream &OS, PointerAffinity Affinity,
   }
 
   if (MemberName) {
-    outputName(OS, MemberName, Resolver);
+    outputName(OS, MemberName, Pointee, Resolver);
     OS << "::";
   }
 
@@ -797,6 +835,9 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     if (FunctionClass & Static)
       OS << "static ";
   }
+  if (FunctionClass & ExternC) {
+    OS << "extern \"C\" ";
+  }
 
   if (ReturnType) {
     Type::outputPre(OS, *ReturnType, Resolver);
@@ -811,6 +852,10 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
 }
 
 void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+  // extern "C" functions don't have a prototype.
+  if (FunctionClass & NoPrototype)
+    return;
+
   OS << "(";
   outputParameterList(OS, Params, Resolver);
   OS << ")";
@@ -855,7 +900,7 @@ void UdtType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     assert(false && "Not a udt type!");
   }
 
-  outputName(OS, UdtName, Resolver);
+  outputName(OS, UdtName, this, Resolver);
 }
 
 Type *ArrayType::clone(ArenaAllocator &Arena) const {
@@ -867,12 +912,16 @@ void ArrayType::outputPre(OutputStream &OS, NameResolver &Resolver) {
 }
 
 void ArrayType::outputPost(OutputStream &OS, NameResolver &Resolver) {
-  if (ArrayDimension > 0)
-    OS << "[" << ArrayDimension << "]";
-  if (NextDimension)
-    Type::outputPost(OS, *NextDimension, Resolver);
-  else if (ElementType)
-    Type::outputPost(OS, *ElementType, Resolver);
+  ArrayDimension *D = Dims;
+  while (D) {
+    OS << "[";
+    if (D->Dim > 0)
+      OS << D->Dim;
+    OS << "]";
+    D = D->Next;
+  }
+
+  Type::outputPost(OS, *ElementType, Resolver);
 }
 
 struct Symbol {
@@ -938,7 +987,7 @@ private:
   TemplateParams *demangleTemplateParameterList(StringView &MangledName);
   FunctionParams demangleFunctionParameterList(StringView &MangledName);
 
-  int demangleNumber(StringView &MangledName);
+  std::pair<uint64_t, bool> demangleNumber(StringView &MangledName);
 
   void memorizeString(StringView s);
 
@@ -1019,7 +1068,9 @@ Symbol *Demangler::parse(StringView &MangledName) {
   if (Error)
     return nullptr;
   // Read a variable.
-  if (startsWithDigit(MangledName)) {
+  if (startsWithDigit(MangledName) && !MangledName.startsWith('9')) {
+    // 9 is a special marker for an extern "C" function with
+    // no prototype.
     S->Category = SymbolCategory::Variable;
     S->SymbolType = demangleVariableEncoding(MangledName);
   } else {
@@ -1091,21 +1142,21 @@ Type *Demangler::demangleVariableEncoding(StringView &MangledName) {
 //                        ::= <hex digit>+ @  # when Numbrer == 0 or >= 10
 //
 // <hex-digit>            ::= [A-P]           # A = 0, B = 1, ...
-int Demangler::demangleNumber(StringView &MangledName) {
-  bool neg = MangledName.consumeFront("?");
+std::pair<uint64_t, bool> Demangler::demangleNumber(StringView &MangledName) {
+  bool IsNegative = MangledName.consumeFront('?');
 
   if (startsWithDigit(MangledName)) {
-    int32_t Ret = MangledName[0] - '0' + 1;
+    uint64_t Ret = MangledName[0] - '0' + 1;
     MangledName = MangledName.dropFront(1);
-    return neg ? -Ret : Ret;
+    return {Ret, IsNegative};
   }
 
-  int Ret = 0;
+  uint64_t Ret = 0;
   for (size_t i = 0; i < MangledName.size(); ++i) {
     char C = MangledName[i];
     if (C == '@') {
       MangledName = MangledName.dropFront(i + 1);
-      return neg ? -Ret : Ret;
+      return {Ret, IsNegative};
     }
     if ('A' <= C && C <= 'P') {
       Ret = (Ret << 4) + (C - 'A');
@@ -1115,7 +1166,7 @@ int Demangler::demangleNumber(StringView &MangledName) {
   }
 
   Error = true;
-  return 0;
+  return {0ULL, false};
 }
 
 // First 10 strings can be referenced by special BackReferences ?0, ?1, ..., ?9.
@@ -1160,7 +1211,7 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
     // Render this class template name into a string buffer so that we can
     // memorize it for the purpose of back-referencing.
     OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
-    outputName(OS, Node, *this);
+    outputName(OS, Node, nullptr, *this);
     OS << '\0';
     char *Name = OS.getBuffer();
 
@@ -1295,7 +1346,12 @@ Name *Demangler::demangleOperatorName(StringView &MangledName) {
   };
 
   Name *Node = Arena.alloc<Name>();
-  Node->Str = NameString();
+  if (MangledName.consumeFront('B')) {
+    // Handle conversion operator specially.
+    Node->IsConversionOperator = true;
+  } else {
+    Node->Str = NameString();
+  }
   Node->IsOperator = true;
   return Node;
 }
@@ -1346,7 +1402,8 @@ Name *Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
 
   Name *Node = Arena.alloc<Name>();
   MangledName.consumeFront('?');
-  int ScopeIdentifier = demangleNumber(MangledName);
+  auto Number = demangleNumber(MangledName);
+  assert(!Number.second);
 
   // One ? to terminate the number
   MangledName.consumeFront('?');
@@ -1361,7 +1418,7 @@ Name *Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
   OS << '`';
   output(Scope, OS);
   OS << '\'';
-  OS << "::`" << ScopeIdentifier << "'";
+  OS << "::`" << Number.first << "'";
   OS << '\0';
   char *Result = OS.getBuffer();
   Node->Str = copyString(Result);
@@ -1471,47 +1528,53 @@ FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
   SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
   RestoreOnError.shouldRestore(false);
 
+  FuncClass TempFlags = FuncClass(0);
+  if (MangledName.consumeFront("$$J0"))
+    TempFlags = ExternC;
+
   switch (MangledName.popFront()) {
+  case '9':
+    return FuncClass(TempFlags | ExternC | NoPrototype);
   case 'A':
     return Private;
   case 'B':
-    return FuncClass(Private | Far);
+    return FuncClass(TempFlags | Private | Far);
   case 'C':
-    return FuncClass(Private | Static);
+    return FuncClass(TempFlags | Private | Static);
   case 'D':
-    return FuncClass(Private | Static);
+    return FuncClass(TempFlags | Private | Static);
   case 'E':
-    return FuncClass(Private | Virtual);
+    return FuncClass(TempFlags | Private | Virtual);
   case 'F':
-    return FuncClass(Private | Virtual);
+    return FuncClass(TempFlags | Private | Virtual);
   case 'I':
-    return Protected;
+    return FuncClass(TempFlags | Protected);
   case 'J':
-    return FuncClass(Protected | Far);
+    return FuncClass(TempFlags | Protected | Far);
   case 'K':
-    return FuncClass(Protected | Static);
+    return FuncClass(TempFlags | Protected | Static);
   case 'L':
-    return FuncClass(Protected | Static | Far);
+    return FuncClass(TempFlags | Protected | Static | Far);
   case 'M':
-    return FuncClass(Protected | Virtual);
+    return FuncClass(TempFlags | Protected | Virtual);
   case 'N':
-    return FuncClass(Protected | Virtual | Far);
+    return FuncClass(TempFlags | Protected | Virtual | Far);
   case 'Q':
-    return Public;
+    return FuncClass(TempFlags | Public);
   case 'R':
-    return FuncClass(Public | Far);
+    return FuncClass(TempFlags | Public | Far);
   case 'S':
-    return FuncClass(Public | Static);
+    return FuncClass(TempFlags | Public | Static);
   case 'T':
-    return FuncClass(Public | Static | Far);
+    return FuncClass(TempFlags | Public | Static | Far);
   case 'U':
-    return FuncClass(Public | Virtual);
+    return FuncClass(TempFlags | Public | Virtual);
   case 'V':
-    return FuncClass(Public | Virtual | Far);
+    return FuncClass(TempFlags | Public | Virtual | Far);
   case 'Y':
-    return Global;
+    return FuncClass(TempFlags | Global);
   case 'Z':
-    return FuncClass(Global | Far);
+    return FuncClass(TempFlags | Global | Far);
   }
 
   Error = true;
@@ -1722,9 +1785,16 @@ FunctionType *Demangler::demangleFunctionType(StringView &MangledName,
 
 Type *Demangler::demangleFunctionEncoding(StringView &MangledName) {
   FuncClass FC = demangleFunctionClass(MangledName);
-
-  bool HasThisQuals = !(FC & (Global | Static));
-  FunctionType *FTy = demangleFunctionType(MangledName, HasThisQuals, false);
+  FunctionType *FTy = nullptr;
+  if (FC & NoPrototype) {
+    // This is an extern "C" function whose full signature hasn't been mangled.
+    // This happens when we need to mangle a local symbol inside of an extern
+    // "C" function.
+    FTy = Arena.alloc<FunctionType>();
+  } else {
+    bool HasThisQuals = !(FC & (Global | Static));
+    FTy = demangleFunctionType(MangledName, HasThisQuals, false);
+  }
   FTy->FunctionClass = FC;
 
   return FTy;
@@ -1933,19 +2003,28 @@ ArrayType *Demangler::demangleArrayType(StringView &MangledName) {
   assert(MangledName.front() == 'Y');
   MangledName.popFront();
 
-  int Dimension = demangleNumber(MangledName);
-  if (Dimension <= 0) {
+  uint64_t Rank = 0;
+  bool IsNegative = false;
+  std::tie(Rank, IsNegative) = demangleNumber(MangledName);
+  if (IsNegative || Rank == 0) {
     Error = true;
     return nullptr;
   }
 
   ArrayType *ATy = Arena.alloc<ArrayType>();
-  ArrayType *Dim = ATy;
-  for (int I = 0; I < Dimension; ++I) {
-    Dim->Prim = PrimTy::Array;
-    Dim->ArrayDimension = demangleNumber(MangledName);
-    Dim->NextDimension = Arena.alloc<ArrayType>();
-    Dim = Dim->NextDimension;
+  ATy->Prim = PrimTy::Array;
+  ATy->Dims = Arena.alloc<ArrayDimension>();
+  ArrayDimension *Dim = ATy->Dims;
+  for (uint64_t I = 0; I < Rank; ++I) {
+    std::tie(Dim->Dim, IsNegative) = demangleNumber(MangledName);
+    if (IsNegative) {
+      Error = true;
+      return nullptr;
+    }
+    if (I + 1 < Rank) {
+      Dim->Next = Arena.alloc<ArrayDimension>();
+      Dim = Dim->Next;
+    }
   }
 
   if (MangledName.consumeFront("$$C")) {
@@ -1958,7 +2037,6 @@ ArrayType *Demangler::demangleArrayType(StringView &MangledName) {
   }
 
   ATy->ElementType = demangleType(MangledName, QualifierMangleMode::Drop);
-  Dim->ElementType = ATy->ElementType;
   return ATy;
 }
 
@@ -2034,16 +2112,46 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
     // Empty parameter pack.
     if (MangledName.consumeFront("$S") || MangledName.consumeFront("$$V") ||
         MangledName.consumeFront("$$$V")) {
+      (*Current)->IsEmptyParameterPack = true;
       break;
     }
 
     if (MangledName.consumeFront("$$Y")) {
+      // Template alias
       (*Current)->IsTemplateTemplate = true;
       (*Current)->IsAliasTemplate = true;
       (*Current)->ParamName = demangleFullyQualifiedTypeName(MangledName);
-    } else if (MangledName.consumeFront("$1?")) {
-      (*Current)->ParamName = demangleFullyQualifiedSymbolName(MangledName);
-      (*Current)->ParamType = demangleFunctionEncoding(MangledName);
+    } else if (MangledName.consumeFront("$$B")) {
+      // Array
+      (*Current)->ParamType =
+          demangleType(MangledName, QualifierMangleMode::Drop);
+    } else if (MangledName.consumeFront("$$C")) {
+      // Type has qualifiers.
+      (*Current)->ParamType =
+          demangleType(MangledName, QualifierMangleMode::Mangle);
+    } else if (MangledName.startsWith("$1?")) {
+      MangledName.consumeFront("$1");
+      // Pointer to symbol
+      Symbol *S = parse(MangledName);
+      (*Current)->ParamName = S->SymbolName;
+      (*Current)->ParamType = S->SymbolType;
+      (*Current)->PointerToSymbol = true;
+    } else if (MangledName.startsWith("$E?")) {
+      MangledName.consumeFront("$E");
+      // Reference to symbol
+      Symbol *S = parse(MangledName);
+      (*Current)->ParamName = S->SymbolName;
+      (*Current)->ParamType = S->SymbolType;
+      (*Current)->ReferenceToSymbol = true;
+    } else if (MangledName.consumeFront("$0")) {
+      // Integral non-type template parameter
+      bool IsNegative = false;
+      uint64_t Value = 0;
+      std::tie(Value, IsNegative) = demangleNumber(MangledName);
+
+      (*Current)->IsIntegerLiteral = true;
+      (*Current)->IntegerLiteralIsNegative = IsNegative;
+      (*Current)->IntegralValue = Value;
     } else {
       (*Current)->ParamType =
           demangleType(MangledName, QualifierMangleMode::Drop);
@@ -2092,7 +2200,7 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
   // "second half". For example, outputPre() writes a return type for a
   // function and outputPost() writes an parameter list.
   Type::outputPre(OS, *S->SymbolType, *this);
-  outputName(OS, S->SymbolName, *this);
+  outputName(OS, S->SymbolName, S->SymbolType, *this);
   Type::outputPost(OS, *S->SymbolType, *this);
 }
 

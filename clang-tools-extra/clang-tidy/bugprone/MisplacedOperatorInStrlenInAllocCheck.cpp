@@ -102,9 +102,10 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
       StrLen->getSourceRange(),
       (StrLenBegin + LHSText + StrLenEnd + " + " + RHSText).str());
 
-  diag(Alloc->getLocStart(),
+  diag(Alloc->getBeginLoc(),
        "addition operator is applied to the argument of %0 instead of its "
-       "result") << StrLen->getDirectCallee()->getName() << Hint;
+       "result")
+      << StrLen->getDirectCallee()->getName() << Hint;
 }
 
 } // namespace bugprone

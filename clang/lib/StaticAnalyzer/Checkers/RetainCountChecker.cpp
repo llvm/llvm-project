@@ -2526,7 +2526,7 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
   if (RegionDescription) {
     os << " stored into '" << *RegionDescription << '\'';
     if (IncludeAllocationLine) {
-      FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
+      FullSourceLoc SL(AllocStmt->getBeginLoc(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
     }
   }

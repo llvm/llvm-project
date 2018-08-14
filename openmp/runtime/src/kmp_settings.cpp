@@ -34,6 +34,7 @@ bool __kmp_env_format = 0; // 0 - old format; 1 - new format
 // -----------------------------------------------------------------------------
 // Helper string functions. Subject to move to kmp_str.
 
+#ifdef USE_LOAD_BALANCE
 static double __kmp_convert_to_double(char const *s) {
   double result;
 
@@ -43,6 +44,7 @@ static double __kmp_convert_to_double(char const *s) {
 
   return result;
 }
+#endif
 
 #ifdef KMP_DEBUG
 static unsigned int __kmp_readstr_with_sentinel(char *dest, char const *src,
@@ -132,6 +134,7 @@ static int __kmp_match_str(char const *token, char const *buf,
   return TRUE;
 }
 
+#if KMP_OS_DARWIN
 static size_t __kmp_round4k(size_t size) {
   size_t _4k = 4 * 1024;
   if (size & (_4k - 1)) {
@@ -142,6 +145,7 @@ static size_t __kmp_round4k(size_t size) {
   }
   return size;
 } // __kmp_round4k
+#endif
 
 /* Here, multipliers are like __kmp_convert_to_seconds, but floating-point
    values are allowed, and the return value is in milliseconds.  The default
@@ -532,6 +536,7 @@ static void __kmp_stg_print_int(kmp_str_buf_t *buffer, char const *name,
   }
 } // __kmp_stg_print_int
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
 static void __kmp_stg_print_uint64(kmp_str_buf_t *buffer, char const *name,
                                    kmp_uint64 value) {
   if (__kmp_env_format) {
@@ -540,6 +545,7 @@ static void __kmp_stg_print_uint64(kmp_str_buf_t *buffer, char const *name,
     __kmp_str_buf_print(buffer, "   %s=%" KMP_UINT64_SPEC "\n", name, value);
   }
 } // __kmp_stg_print_uint64
+#endif
 
 static void __kmp_stg_print_str(kmp_str_buf_t *buffer, char const *name,
                                 char const *value) {
@@ -1949,7 +1955,6 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
   // Guards.
   int type = 0;
   int proclist = 0;
-  int max_proclist = 0;
   int verbose = 0;
   int warnings = 0;
   int respect = 0;
@@ -2639,7 +2644,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
   const char *next = scan;
 
   for (;;) {
-    int start, count, stride;
+    int count, stride;
 
     if (!__kmp_parse_place(var, &scan)) {
       return FALSE;

@@ -242,8 +242,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     }
 
     CharSourceRange BeforeArgument =
-        makeFileCharRange(ArgBeginLoc, Args[I]->getLocStart());
-    ArgBeginLoc = Args[I]->getLocEnd();
+        makeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());
+    ArgBeginLoc = Args[I]->getEndLoc();
 
     std::vector<std::pair<SourceLocation, StringRef>> Comments;
     if (BeforeArgument.isValid()) {
@@ -251,7 +251,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     } else {
       // Fall back to parsing back from the start of the argument.
       CharSourceRange ArgsRange = makeFileCharRange(
-          Args[I]->getLocStart(), Args[NumArgs - 1]->getLocEnd());
+          Args[I]->getBeginLoc(), Args[NumArgs - 1]->getEndLoc());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 
@@ -287,7 +287,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
     if (!Callee)
       return;
 
-    checkCallArgs(Result.Context, Callee, Call->getCallee()->getLocEnd(),
+    checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
                   llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);

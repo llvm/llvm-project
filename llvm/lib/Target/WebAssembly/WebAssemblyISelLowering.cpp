@@ -35,6 +35,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
 
+// Emit proposed instructions that may not have been implemented in engines
+cl::opt<bool> EnableUnimplementedWasmSIMDInstrs(
+    "wasm-enable-unimplemented-simd",
+    cl::desc("Emit potentially-unimplemented WebAssembly SIMD instructions"),
+    cl::init(false));
+
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -59,9 +65,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v16i8, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v8i16, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4i32, &WebAssembly::V128RegClass);
-    addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4f32, &WebAssembly::V128RegClass);
-    addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
+    if (EnableUnimplementedWasmSIMDInstrs) {
+      addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
+      addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
+    }
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());

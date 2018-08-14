@@ -1381,6 +1381,12 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     }
   }
 
+  if (VD->hasAttr<BlocksAttr>() && VD->getType()->getAsCXXRecordDecl()) {
+    Expr *CopyExpr = Record.readExpr();
+    if (CopyExpr)
+      Reader.getContext().setBlockVarCopyInit(VD, CopyExpr, Record.readInt());
+  }
+
   if (VD->getStorageDuration() == SD_Static && Record.readInt())
     Reader.DefinitionSource[VD] = Loc.F->Kind == ModuleKind::MK_MainFile;
 

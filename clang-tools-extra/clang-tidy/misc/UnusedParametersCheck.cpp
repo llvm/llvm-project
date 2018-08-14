@@ -41,15 +41,15 @@ static CharSourceRange removeNode(const MatchFinder::MatchResult &Result,
                                   const T *PrevNode, const T *Node,
                                   const T *NextNode) {
   if (NextNode)
-    return CharSourceRange::getCharRange(Node->getLocStart(),
-                                         NextNode->getLocStart());
+    return CharSourceRange::getCharRange(Node->getBeginLoc(),
+                                         NextNode->getBeginLoc());
 
   if (PrevNode)
     return CharSourceRange::getTokenRange(
-        Lexer::getLocForEndOfToken(PrevNode->getLocEnd(), 0,
+        Lexer::getLocForEndOfToken(PrevNode->getEndLoc(), 0,
                                    *Result.SourceManager,
                                    Result.Context->getLangOpts()),
-        Node->getLocEnd());
+        Node->getEndLoc());
 
   return CharSourceRange::getTokenRange(Node->getSourceRange());
 }

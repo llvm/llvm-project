@@ -81,7 +81,7 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
     if (CtorInitIsWritten) {
       if (!ParamName.empty())
         SafeFixIts.push_back(
-            FixItHint::CreateInsertion(CExpr->getLocEnd(), ParamName));
+            FixItHint::CreateInsertion(CExpr->getEndLoc(), ParamName));
     } else {
       if (Init->getSourceLocation().isMacroID() ||
           Ctor->getLocation().isMacroID() || ShouldNotDoFixit)
@@ -104,7 +104,7 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation FixItLoc;
   // There is no initialization list in this constructor.
   if (!HasWrittenInitializer) {
-    FixItLoc = Ctor->getBody()->getLocStart();
+    FixItLoc = Ctor->getBody()->getBeginLoc();
     FixItMsg = " : " + FixItMsg;
   } else {
     // We apply the missing ctors at the beginning of the initialization list.
