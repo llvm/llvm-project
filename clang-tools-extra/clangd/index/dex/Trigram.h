@@ -69,4 +69,4 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TRIGRAM_H

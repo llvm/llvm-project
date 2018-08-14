@@ -13971,11 +13971,12 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   Worklist.push_back(RootNode);
   while (!Worklist.empty()) {
     auto N = Worklist.pop_back_val();
+    if (!Visited.insert(N).second)
+      continue; // Already present in Visited.
     if (N->getOpcode() == ISD::TokenFactor) {
       for (SDValue Op : N->ops())
         Worklist.push_back(Op.getNode());
     }
-    Visited.insert(N);
   }
 
   // Don't count pruning nodes towards max.

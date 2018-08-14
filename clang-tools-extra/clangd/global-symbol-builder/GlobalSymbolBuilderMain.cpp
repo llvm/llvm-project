@@ -11,7 +11,7 @@
 // whole project. This tools is for **experimental** only. Don't use it in
 // production code.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"

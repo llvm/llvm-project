@@ -232,6 +232,7 @@ private:
 
   /// Returns true if the value should be split into multiple LLTs.
   /// If \p Offsets is given then the split type's offsets will be stored in it.
+  /// If \p Offsets is not empty it will be cleared first.
   bool valueIsSplit(const Value &V,
                     SmallVectorImpl<uint64_t> *Offsets = nullptr);
 

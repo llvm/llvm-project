@@ -905,8 +905,14 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
 
     case DeclarationName::ObjCZeroArgSelector:
     case DeclarationName::ObjCOneArgSelector:
-    case DeclarationName::ObjCMultiArgSelector:
-      llvm_unreachable("Can't mangle Objective-C selector names here!");
+    case DeclarationName::ObjCMultiArgSelector: {
+      // This is reachable only when constructing an outlined SEH finally
+      // block.  Nothing depends on this mangling and it's used only with
+      // functinos with internal linkage.
+      llvm::SmallString<64> Name;
+      mangleSourceName(Name.str());
+      break;
+    }
 
     case DeclarationName::CXXConstructorName:
       if (isStructorDecl(ND)) {
