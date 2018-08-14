@@ -94,7 +94,7 @@ public:
   // RetireStage::hasWorkToComplete will check for that case.
   virtual bool hasWorkToComplete() const override final { return false; }
   virtual void cycleStart() override final;
-  virtual bool execute(InstRef &IR) override final;
+  virtual Status execute(InstRef &IR) override final;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 
 #ifndef NDEBUG

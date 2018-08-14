@@ -766,10 +766,12 @@ std::error_code setPermissions(const Twine &Path, perms Permissions) {
   return std::error_code();
 }
 
-std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
-  FILETIME FT = toFILETIME(Time);
+std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
+                                                 TimePoint<> ModificationTime) {
+  FILETIME AccessFT = toFILETIME(AccessTime);
+  FILETIME ModifyFT = toFILETIME(ModificationTime);
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  if (!SetFileTime(FileHandle, NULL, &FT, &FT))
+  if (!SetFileTime(FileHandle, NULL, &AccessFT, &ModifyFT))
     return mapWindowsError(::GetLastError());
   return std::error_code();
 }

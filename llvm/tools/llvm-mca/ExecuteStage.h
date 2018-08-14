@@ -46,7 +46,7 @@ public:
   virtual bool hasWorkToComplete() const override final { return false; }
 
   virtual void cycleStart() override final;
-  virtual bool execute(InstRef &IR) override final;
+  virtual Status execute(InstRef &IR) override final;
 
   void
   notifyInstructionIssued(const InstRef &IR,

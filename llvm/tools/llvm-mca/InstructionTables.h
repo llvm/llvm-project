@@ -36,7 +36,7 @@ public:
       : Stage(), SM(Model), IB(Builder) {}
 
   bool hasWorkToComplete() const override final { return false; }
-  bool execute(InstRef &IR) override final;
+  Status execute(InstRef &IR) override final;
 };
 } // namespace mca
 

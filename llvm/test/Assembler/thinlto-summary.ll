@@ -49,8 +49,8 @@
 ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^24, ^26)))))
 ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^27, offset: 16))))))
 ^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^25, offset: 16))))))
-^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: (vFuncId: (^27, offset: 16), args: (42), vFuncId: (^27, offset: 24), args: (43))))))
-^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: (vFuncId: (^28, offset: 16), args: (42))))))
+^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^27, offset: 16), args: (42)), (vFuncId: (^27, offset: 24)))))))
+^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^28, offset: 16), args: (42)))))))
 
 ; Test TypeId summaries:
 
@@ -87,8 +87,8 @@
 ; CHECK: ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^24, ^26)))))
 ; CHECK: ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^27, offset: 16))))))
 ; CHECK: ^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^25, offset: 16))))))
-; CHECK: ^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: (vFuncId: (^27, offset: 16), args: (42), vFuncId: (^27, offset: 24), args: (43))))))
-; CHECK: ^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: (vFuncId: (^28, offset: 16), args: (42))))))
+; CHECK: ^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^27, offset: 16), args: (42)), (vFuncId: (^27, offset: 24)))))))
+; CHECK: ^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^28, offset: 16), args: (42)))))))
 ; CHECK: ^24 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
 ; CHECK: ^25 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4))) ; guid = 6203814149063363976
 ; CHECK: ^26 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 1884921850105019584

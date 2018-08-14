@@ -410,7 +410,7 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
     auto ModTimeOrErr = C.getLastModified();
     failIfError(ModTimeOrErr.takeError());
     failIfError(
-        sys::fs::setLastModificationAndAccessTime(FD, ModTimeOrErr.get()));
+        sys::fs::setLastAccessAndModificationTime(FD, ModTimeOrErr.get()));
   }
 
   if (close(FD))

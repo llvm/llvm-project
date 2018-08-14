@@ -32898,6 +32898,51 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Match VSELECTs into add with unsigned saturation.
+  if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::SETCC &&
+      ((Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) ||
+       (Subtarget.hasAVX() && (VT == MVT::v32i8 || VT == MVT::v16i16)) ||
+       (Subtarget.useBWIRegs() && (VT == MVT::v64i8 || VT == MVT::v32i16)))) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
+    SDValue CondLHS = Cond->getOperand(0);
+    SDValue CondRHS = Cond->getOperand(1);
+
+    // Canonicalize ADD to CondRHS to simplify the logic below.
+    if (CondLHS.getOpcode() == ISD::ADD) {
+      std::swap(CondLHS, CondRHS);
+      CC = ISD::getSetCCSwappedOperands(CC);
+    }
+
+    // Check if one of the arms of the VSELECT is vector with all bits set.
+    // If it's on the left side invert the predicate to simplify logic below.
+    SDValue Other;
+    if (ISD::isBuildVectorAllOnes(LHS.getNode())) {
+      Other = RHS;
+      CC = ISD::getSetCCInverse(CC, true);
+    } else if (ISD::isBuildVectorAllOnes(RHS.getNode())) {
+      Other = LHS;
+    }
+
+    // We can test against either of the addition operands.
+    if (Other.getNode() && Other.getNumOperands() == 2 &&
+        (Other.getOperand(0) == CondLHS ||
+         Other.getOperand(1) == CondLHS)) {
+      SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
+
+      auto ADDUSBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                             ArrayRef<SDValue> Ops) {
+        return DAG.getNode(X86ISD::ADDUS, DL, Ops[0].getValueType(), Ops);
+      };
+      
+      // x <= x+y ? x+y : ~0 --> addus x, y
+      if ((CC == ISD::SETULE) &&
+          Other.getOpcode() == ISD::ADD && Other == CondRHS)
+        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
+                                ADDUSBuilder);
+    }
+  }
+
   if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DCI, Subtarget))
     return V;
 
@@ -36958,6 +37003,117 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
                           PMADDBuilder);
 }
 
+/// This function detects the addition or subtraction with saturation pattern
+/// between 2  i8/i16 vectors and replace this operation with the
+/// efficient X86ISD::ADDUS/X86ISD::ADDS/X86ISD::SUBUS/X86ISD::SUBS instruction.
+static SDValue detectAddSubSatPattern(SDValue In, EVT VT, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget,
+                                      const SDLoc &DL) {
+  if (!VT.isVector())
+    return SDValue();
+  EVT InVT = In.getValueType();
+  unsigned NumElems = VT.getVectorNumElements();
+
+  EVT ScalarVT = VT.getVectorElementType();
+  if ((ScalarVT != MVT::i8 && ScalarVT != MVT::i16) ||
+      InVT.getSizeInBits() % 128 != 0 || !isPowerOf2_32(NumElems))
+    return SDValue();
+
+  // InScalarVT is the intermediate type in AddSubSat pattern
+  // and it should be greater than the output type.
+  EVT InScalarVT = InVT.getVectorElementType();
+  if (InScalarVT.getSizeInBits() <= ScalarVT.getSizeInBits())
+    return SDValue();
+
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
+  // Detect the following pattern:
+  // %2 = zext <16 x i8> %0 to <16 x i16>
+  // %3 = zext <16 x i8> %1 to <16 x i16>
+  // %4 = add nuw nsw <16 x i16> %3, %2
+  // %5 = icmp ult <16 x i16> %4, <16 x i16> (vector of max InScalarVT values)
+  // %6 = select <16 x i1> %5, <16 x i16> (vector of max InScalarVT values)
+  // %7 = trunc <16 x i16> %6 to <16 x i8>
+
+  // Detect a Sat Pattern
+  bool Signed = true;
+  SDValue Sat = detectSSatPattern(In, VT, false);
+  if (!Sat) {
+    Sat = detectUSatPattern(In, VT, DAG, DL);
+    Signed = false;
+  }
+  if (!Sat)
+    return SDValue();
+  if (Sat.getOpcode() != ISD::ADD && Sat.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  unsigned Opcode = Sat.getOpcode() == ISD::ADD ? Signed ? X86ISD::ADDS
+                                                         : X86ISD::ADDUS
+                                                : Signed ? X86ISD::SUBS
+                                                         : X86ISD::SUBUS;
+
+  // Get addition elements.
+  SDValue LHS = Sat.getOperand(0);
+  SDValue RHS = Sat.getOperand(1);
+
+  // Don't combine if both operands are constant.
+  if (ISD::isBuildVectorOfConstantSDNodes(LHS.getNode()) &&
+      ISD::isBuildVectorOfConstantSDNodes(RHS.getNode()))
+    return SDValue();
+
+  // Check if Op is a result of type promotion.
+  auto IsExtended = [=, &DAG](SDValue Op) {
+    unsigned Opcode = Op.getOpcode();
+    unsigned EltSize = ScalarVT.getSizeInBits();
+    unsigned ExtEltSize = InScalarVT.getSizeInBits();
+    unsigned ExtPartSize = ExtEltSize - EltSize;
+
+    // Extension of non-constant operand.
+    if (Opcode == ISD::ZERO_EXTEND || Opcode == ISD::SIGN_EXTEND) {
+      if (Signed)
+        return DAG.ComputeNumSignBits(Op) > ExtPartSize;
+      else {
+        APInt HighBitsMask = APInt::getHighBitsSet(ExtEltSize, ExtPartSize);
+        return DAG.MaskedValueIsZero(Op, HighBitsMask);
+      }
+    } else if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+      // Build vector of constant nodes. Each of them needs to be a correct
+      // extension from a constant of ScalarVT type.
+      unsigned NumOperands = Op.getNumOperands();
+      for (unsigned i = 0; i < NumOperands; ++i) {
+        SDValue Elem = Op.getOperand(i);
+        if (Elem.isUndef())
+          return false;
+        APInt Elt = cast<ConstantSDNode>(Elem)->getAPIntValue();
+        if ((Signed && !Elt.isSignedIntN(EltSize)) ||
+            (!Signed && !Elt.isIntN(EltSize)))
+          return false;
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // Either both operands are extended or one of them is extended
+  // and another one is a vector of constants.
+  if (!IsExtended(LHS) || !IsExtended(RHS))
+    return SDValue();
+
+  // Truncate extended nodes to result type.
+  LHS = DAG.getNode(ISD::TRUNCATE, DL, VT, LHS);
+  RHS = DAG.getNode(ISD::TRUNCATE, DL, VT, RHS);
+ 
+  // The pattern is detected, emit ADDS/ADDUS/SUBS/SUBUS instruction.
+  auto AddSubSatBuilder = [Opcode](SelectionDAG &DAG, const SDLoc &DL,
+                                   ArrayRef<SDValue> Ops) {
+    EVT VT = Ops[0].getValueType();
+    return DAG.getNode(Opcode, DL, VT, Ops);
+  };
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, { LHS, RHS },
+                          AddSubSatBuilder);
+}
+
 static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
@@ -36975,6 +37131,10 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   // Try to detect PMADD
   if (SDValue PMAdd = detectPMADDUBSW(Src, VT, DAG, Subtarget, DL))
     return PMAdd;
+
+  // Try to detect addition or subtraction with saturation.
+  if (SDValue AddSubSat = detectAddSubSatPattern(Src, VT, DAG, Subtarget, DL))
+    return AddSubSat;
 
   // Try to combine truncation with signed/unsigned saturation.
   if (SDValue Val = combineTruncateWithSat(Src, VT, DL, DAG, Subtarget))

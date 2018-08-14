@@ -1227,19 +1227,17 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   const RISCVMCExpr *Symbol = RISCVMCExpr::create(
       Inst.getOperand(1).getExpr(), RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
 
-  MCInst &AUIPC =
-      MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(Symbol);
-  emitToStreamer(Out, AUIPC);
+  emitToStreamer(
+      Out, MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(Symbol));
 
   const MCExpr *RefToLinkTmpLabel =
       RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, Ctx),
                           RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
 
-  MCInst &ADDI = MCInstBuilder(RISCV::ADDI)
-                     .addOperand(DestReg)
-                     .addOperand(DestReg)
-                     .addExpr(RefToLinkTmpLabel);
-  emitToStreamer(Out, ADDI);
+  emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
+                          .addOperand(DestReg)
+                          .addOperand(DestReg)
+                          .addExpr(RefToLinkTmpLabel));
 }
 
 bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
