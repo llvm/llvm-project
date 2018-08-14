@@ -172,6 +172,18 @@ Changes to the ARM Target
   deduce the instruction size, without having to specify it with
   e.g. ``.inst.w`` as before.
 
+Changes to the Hexagon Target
+-----------------------------
+
+* Hexagon now supports auto-vectorization for HVX. It is disabled by default
+  and can be turned on with ``-fvectorize``. For auto-vectorization to take
+  effect, code genration for HVX needs to be enabled with ``-mhvx``.
+  The complete set of options should include ``-fvectorize``, ``-mhvx``,
+  and ``-mhvx-length={64b|128b}``.
+
+* The support for Hexagon ISA V4 is deprecated and will be removed in the
+  next release.
+
 Changes to the MIPS Target
 --------------------------
 
