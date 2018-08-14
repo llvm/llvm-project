@@ -177,7 +177,7 @@ Changes to the Hexagon Target
 
 * Hexagon now supports auto-vectorization for HVX. It is disabled by default
   and can be turned on with ``-fvectorize``. For auto-vectorization to take
-  effect, code genration for HVX needs to be enabled with ``-mhvx``.
+  effect, code generation for HVX needs to be enabled with ``-mhvx``.
   The complete set of options should include ``-fvectorize``, ``-mhvx``,
   and ``-mhvx-length={64b|128b}``.
 
