@@ -114,6 +114,19 @@ public:
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
 };
 
+class TypeAttr : public Attr {
+protected:
+  TypeAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
+           bool IsLateParsed)
+      : Attr(AK, R, SpellingListIndex, IsLateParsed) {}
+
+public:
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstTypeAttr &&
+           A->getKind() <= attr::LastTypeAttr;
+  }
+};
+
 class StmtAttr : public Attr {
 protected:
   StmtAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,

@@ -4,7 +4,7 @@ typedef void (^myBlock) ();
 
 struct StructWithBlock {
   int a;
-  myBlock z; // expected-note{{uninitialized field 'this->z'}}
+  myBlock z; // expected-note{{uninitialized pointer 'this->z'}}
 
   StructWithBlock() : a(0), z(^{}) {}
 

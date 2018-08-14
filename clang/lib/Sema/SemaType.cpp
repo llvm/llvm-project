@@ -172,6 +172,16 @@ namespace {
     /// processing is complete.
     SmallVector<ParsedAttr *, 2> ignoredTypeAttrs;
 
+    /// Attributes corresponding to AttributedTypeLocs that we have not yet
+    /// populated.
+    // FIXME: The two-phase mechanism by which we construct Types and fill
+    // their TypeLocs makes it hard to correctly assign these. We keep the
+    // attributes in creation order as an attempt to make them line up
+    // properly.
+    using TypeAttrPair = std::pair<const AttributedType*, const Attr*>;
+    SmallVector<TypeAttrPair, 8> AttrsForTypes;
+    bool AttrsForTypesSorted = true;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
       : sema(sema), declarator(declarator),
@@ -228,6 +238,43 @@ namespace {
     void diagnoseIgnoredTypeAttrs(QualType type) const {
       for (auto *Attr : ignoredTypeAttrs)
         diagnoseBadTypeAttribute(getSema(), *Attr, type);
+    }
+
+    /// Get an attributed type for the given attribute, and remember the Attr
+    /// object so that we can attach it to the AttributedTypeLoc.
+    QualType getAttributedType(Attr *A, QualType ModifiedType,
+                               QualType EquivType) {
+      QualType T =
+          sema.Context.getAttributedType(A->getKind(), ModifiedType, EquivType);
+      AttrsForTypes.push_back({cast<AttributedType>(T.getTypePtr()), A});
+      AttrsForTypesSorted = false;
+      return T;
+    }
+
+    /// Extract and remove the Attr* for a given attributed type.
+    const Attr *takeAttrForAttributedType(const AttributedType *AT) {
+      if (!AttrsForTypesSorted) {
+        std::stable_sort(AttrsForTypes.begin(), AttrsForTypes.end(),
+                         [](const TypeAttrPair &A, const TypeAttrPair &B) {
+                           return A.first < B.first;
+                         });
+        AttrsForTypesSorted = true;
+      }
+
+      // FIXME: This is quadratic if we have lots of reuses of the same
+      // attributed type.
+      for (auto It = std::partition_point(
+               AttrsForTypes.begin(), AttrsForTypes.end(),
+               [=](const TypeAttrPair &A) { return A.first < AT; });
+           It != AttrsForTypes.end() && It->first == AT; ++It) {
+        if (It->second) {
+          const Attr *Result = It->second;
+          It->second = nullptr;
+          return Result;
+        }
+      }
+
+      llvm_unreachable("no Attr* for AttributedType*");
     }
 
     ~TypeProcessingState() {
@@ -3822,6 +3869,32 @@ static bool hasOuterPointerLikeChunk(const Declarator &D, unsigned endIndex) {
   return false;
 }
 
+template<typename AttrT>
+static AttrT *createSimpleAttr(ASTContext &Ctx, ParsedAttr &Attr) {
+  Attr.setUsedAsTypeAttr();
+  return ::new (Ctx)
+      AttrT(Attr.getRange(), Ctx, Attr.getAttributeSpellingListIndex());
+}
+
+static Attr *createNullabilityAttr(ASTContext &Ctx, ParsedAttr &Attr,
+                                   NullabilityKind NK) {
+  switch (NK) {
+  case NullabilityKind::NonNull:
+    return createSimpleAttr<TypeNonNullAttr>(Ctx, Attr);
+
+  case NullabilityKind::Nullable:
+    return createSimpleAttr<TypeNullableAttr>(Ctx, Attr);
+
+  case NullabilityKind::Unspecified:
+    return createSimpleAttr<TypeNullUnspecifiedAttr>(Ctx, Attr);
+  }
+  llvm_unreachable("unknown NullabilityKind");
+}
+
+static TypeSourceInfo *
+GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
+                               QualType T, TypeSourceInfo *ReturnTypeInfo);
+
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -4174,9 +4247,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                 pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
                 D.getDeclSpec().getEndLoc(),
                 D.getMutableDeclSpec().getAttributes())) {
-          T = Context.getAttributedType(
-                AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
-          attr->setUsedAsTypeAttr();
+          T = state.getAttributedType(
+              createNullabilityAttr(Context, *attr, *inferNullability), T, T);
         }
       }
     }
@@ -5015,7 +5087,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   if (D.isInvalidType())
     return Context.getTrivialTypeSourceInfo(T);
 
-  return S.GetTypeSourceInfoForDeclarator(D, T, TInfo);
+  return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
 /// GetTypeForDeclarator - Convert the type for the specified
@@ -5151,131 +5223,25 @@ TypeSourceInfo *Sema::GetTypeForDeclaratorCast(Declarator &D, QualType FromTy) {
   return GetFullTypeForDeclarator(state, declSpecTy, ReturnTypeInfo);
 }
 
-/// Map an AttributedType::Kind to an ParsedAttr::Kind.
-static ParsedAttr::Kind getAttrListKind(AttributedType::Kind kind) {
-  switch (kind) {
-  case AttributedType::attr_address_space:
-    return ParsedAttr::AT_AddressSpace;
-  case AttributedType::attr_regparm:
-    return ParsedAttr::AT_Regparm;
-  case AttributedType::attr_vector_size:
-    return ParsedAttr::AT_VectorSize;
-  case AttributedType::attr_neon_vector_type:
-    return ParsedAttr::AT_NeonVectorType;
-  case AttributedType::attr_neon_polyvector_type:
-    return ParsedAttr::AT_NeonPolyVectorType;
-  case AttributedType::attr_objc_gc:
-    return ParsedAttr::AT_ObjCGC;
-  case AttributedType::attr_objc_ownership:
-  case AttributedType::attr_objc_inert_unsafe_unretained:
-    return ParsedAttr::AT_ObjCOwnership;
-  case AttributedType::attr_noreturn:
-    return ParsedAttr::AT_NoReturn;
-  case AttributedType::attr_nocf_check:
-    return ParsedAttr::AT_AnyX86NoCfCheck;
-  case AttributedType::attr_cdecl:
-    return ParsedAttr::AT_CDecl;
-  case AttributedType::attr_fastcall:
-    return ParsedAttr::AT_FastCall;
-  case AttributedType::attr_stdcall:
-    return ParsedAttr::AT_StdCall;
-  case AttributedType::attr_thiscall:
-    return ParsedAttr::AT_ThisCall;
-  case AttributedType::attr_regcall:
-    return ParsedAttr::AT_RegCall;
-  case AttributedType::attr_pascal:
-    return ParsedAttr::AT_Pascal;
-  case AttributedType::attr_swiftcall:
-    return ParsedAttr::AT_SwiftCall;
-  case AttributedType::attr_vectorcall:
-    return ParsedAttr::AT_VectorCall;
-  case AttributedType::attr_pcs:
-  case AttributedType::attr_pcs_vfp:
-    return ParsedAttr::AT_Pcs;
-  case AttributedType::attr_inteloclbicc:
-    return ParsedAttr::AT_IntelOclBicc;
-  case AttributedType::attr_ms_abi:
-    return ParsedAttr::AT_MSABI;
-  case AttributedType::attr_sysv_abi:
-    return ParsedAttr::AT_SysVABI;
-  case AttributedType::attr_preserve_most:
-    return ParsedAttr::AT_PreserveMost;
-  case AttributedType::attr_preserve_all:
-    return ParsedAttr::AT_PreserveAll;
-  case AttributedType::attr_ptr32:
-    return ParsedAttr::AT_Ptr32;
-  case AttributedType::attr_ptr64:
-    return ParsedAttr::AT_Ptr64;
-  case AttributedType::attr_sptr:
-    return ParsedAttr::AT_SPtr;
-  case AttributedType::attr_uptr:
-    return ParsedAttr::AT_UPtr;
-  case AttributedType::attr_nonnull:
-    return ParsedAttr::AT_TypeNonNull;
-  case AttributedType::attr_nullable:
-    return ParsedAttr::AT_TypeNullable;
-  case AttributedType::attr_null_unspecified:
-    return ParsedAttr::AT_TypeNullUnspecified;
-  case AttributedType::attr_objc_kindof:
-    return ParsedAttr::AT_ObjCKindOf;
-  case AttributedType::attr_ns_returns_retained:
-    return ParsedAttr::AT_NSReturnsRetained;
-  case AttributedType::attr_lifetimebound:
-    return ParsedAttr::AT_LifetimeBound;
-  }
-  llvm_unreachable("unexpected attribute kind!");
-}
-
-static void setAttributedTypeLoc(AttributedTypeLoc TL, const ParsedAttr &attr) {
-  TL.setAttrNameLoc(attr.getLoc());
-  if (TL.hasAttrExprOperand()) {
-    assert(attr.isArgExpr(0) && "mismatched attribute operand kind");
-    TL.setAttrExprOperand(attr.getArgAsExpr(0));
-  } else if (TL.hasAttrEnumOperand()) {
-    assert((attr.isArgIdent(0) || attr.isArgExpr(0)) &&
-           "unexpected attribute operand kind");
-    if (attr.isArgIdent(0))
-      TL.setAttrEnumOperandLoc(attr.getArgAsIdent(0)->Loc);
-    else
-      TL.setAttrEnumOperandLoc(attr.getArgAsExpr(0)->getExprLoc());
-  }
-
-  // FIXME: preserve this information to here.
-  if (TL.hasAttrOperand())
-    TL.setAttrOperandParensRange(SourceRange());
-}
-
 static void fillAttributedTypeLoc(AttributedTypeLoc TL,
-                                  const ParsedAttributesView &Attrs,
-                                  const ParsedAttributesView &DeclAttrs) {
-  // DeclAttrs and Attrs cannot be both empty.
-  assert((!Attrs.empty() || !DeclAttrs.empty()) &&
-         "no type attributes in the expected location!");
-
-  ParsedAttr::Kind parsedKind = getAttrListKind(TL.getAttrKind());
-  // Try to search for an attribute of matching kind in Attrs list.
-  for (const ParsedAttr &AL : Attrs)
-    if (AL.getKind() == parsedKind)
-      return setAttributedTypeLoc(TL, AL);
-
-  for (const ParsedAttr &AL : DeclAttrs)
-    if (AL.isCXX11Attribute() || AL.getKind() == parsedKind)
-      return setAttributedTypeLoc(TL, AL);
-  llvm_unreachable("no matching type attribute in expected location!");
+                                  TypeProcessingState &State) {
+  TL.setAttr(State.takeAttrForAttributedType(TL.getTypePtr()));
 }
 
 namespace {
   class TypeSpecLocFiller : public TypeLocVisitor<TypeSpecLocFiller> {
     ASTContext &Context;
+    TypeProcessingState &State;
     const DeclSpec &DS;
 
   public:
-    TypeSpecLocFiller(ASTContext &Context, const DeclSpec &DS)
-      : Context(Context), DS(DS) {}
+    TypeSpecLocFiller(ASTContext &Context, TypeProcessingState &State,
+                      const DeclSpec &DS)
+        : Context(Context), State(State), DS(DS) {}
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-      fillAttributedTypeLoc(TL, DS.getAttributes(), ParsedAttributesView{});
       Visit(TL.getModifiedLoc());
+      fillAttributedTypeLoc(TL, State);
     }
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
       Visit(TL.getUnqualifiedLoc());
@@ -5432,11 +5398,13 @@ namespace {
 
   class DeclaratorLocFiller : public TypeLocVisitor<DeclaratorLocFiller> {
     ASTContext &Context;
+    TypeProcessingState &State;
     const DeclaratorChunk &Chunk;
 
   public:
-    DeclaratorLocFiller(ASTContext &Context, const DeclaratorChunk &Chunk)
-      : Context(Context), Chunk(Chunk) {}
+    DeclaratorLocFiller(ASTContext &Context, TypeProcessingState &State,
+                        const DeclaratorChunk &Chunk)
+        : Context(Context), State(State), Chunk(Chunk) {}
 
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
       llvm_unreachable("qualified type locs not expected here!");
@@ -5446,7 +5414,7 @@ namespace {
     }
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-      fillAttributedTypeLoc(TL, Chunk.getAttrs(), ParsedAttributesView{});
+      fillAttributedTypeLoc(TL, State);
     }
     void VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
       // nothing
@@ -5603,10 +5571,13 @@ fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
 /// up in the normal place in the declaration specifiers (such as a C++
 /// conversion function), this pointer will refer to a type source information
 /// for that return type.
-TypeSourceInfo *
-Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
-                                     TypeSourceInfo *ReturnTypeInfo) {
-  TypeSourceInfo *TInfo = Context.CreateTypeSourceInfo(T);
+static TypeSourceInfo *
+GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
+                               QualType T, TypeSourceInfo *ReturnTypeInfo) {
+  Sema &S = State.getSema();
+  Declarator &D = State.getDeclarator();
+
+  TypeSourceInfo *TInfo = S.Context.CreateTypeSourceInfo(T);
   UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
 
   // Handle parameter packs whose type is a pack expansion.
@@ -5616,7 +5587,6 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
   }
 
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
-
     if (DependentAddressSpaceTypeLoc DASTL =
         CurrTL.getAs<DependentAddressSpaceTypeLoc>()) {
       fillDependentAddressSpaceTypeLoc(DASTL, D.getTypeObject(i).getAttrs());
@@ -5631,8 +5601,7 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
     }
 
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
-      fillAttributedTypeLoc(TL, D.getTypeObject(i).getAttrs(),
-                            D.getAttributes());
+      fillAttributedTypeLoc(TL, State);
       CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
     }
 
@@ -5640,7 +5609,7 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
     while (AdjustedTypeLoc TL = CurrTL.getAs<AdjustedTypeLoc>())
       CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
 
-    DeclaratorLocFiller(Context, D.getTypeObject(i)).Visit(CurrTL);
+    DeclaratorLocFiller(S.Context, State, D.getTypeObject(i)).Visit(CurrTL);
     CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
   }
 
@@ -5651,7 +5620,7 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
     assert(TL.getFullDataSize() == CurrTL.getFullDataSize());
     memcpy(CurrTL.getOpaqueData(), TL.getOpaqueData(), TL.getFullDataSize());
   } else {
-    TypeSpecLocFiller(Context, D.getDeclSpec()).Visit(CurrTL);
+    TypeSpecLocFiller(S.Context, State, D.getDeclSpec()).Visit(CurrTL);
   }
 
   return TInfo;
@@ -5880,7 +5849,7 @@ static bool hasDirectOwnershipQualifier(QualType type) {
   while (true) {
     // __strong id
     if (const AttributedType *attr = dyn_cast<AttributedType>(type)) {
-      if (attr->getAttrKind() == AttributedType::attr_objc_ownership)
+      if (attr->getAttrKind() == attr::ObjCOwnership)
         return true;
 
       type = attr->getModifiedType();
@@ -6024,9 +5993,9 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
   // the coexistence problems with __unsafe_unretained.
   if (!S.getLangOpts().ObjCAutoRefCount &&
       lifetime == Qualifiers::OCL_ExplicitNone) {
-    type = S.Context.getAttributedType(
-                             AttributedType::attr_objc_inert_unsafe_unretained,
-                                       type, type);
+    type = state.getAttributedType(
+        createSimpleAttr<ObjCInertUnsafeUnretainedAttr>(S.Context, attr),
+        type, type);
     return true;
   }
 
@@ -6036,9 +6005,12 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
 
   // If we have a valid source location for the attribute, use an
   // AttributedType instead.
-  if (AttrLoc.isValid())
-    type = S.Context.getAttributedType(AttributedType::attr_objc_ownership,
-                                       origType, type);
+  if (AttrLoc.isValid()) {
+    type = state.getAttributedType(::new (S.Context) ObjCOwnershipAttr(
+                                       attr.getRange(), S.Context, II,
+                                       attr.getAttributeSpellingListIndex()),
+                                   origType, type);
+  }
 
   auto diagnoseOrDelay = [](Sema &S, SourceLocation loc,
                             unsigned diagnostic, QualType type) {
@@ -6138,8 +6110,10 @@ static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   // Make an attributed type to preserve the source information.
   if (attr.getLoc().isValid())
-    type = S.Context.getAttributedType(AttributedType::attr_objc_gc,
-                                       origType, type);
+    type = state.getAttributedType(
+        ::new (S.Context) ObjCGCAttr(attr.getRange(), S.Context, II,
+                                     attr.getAttributeSpellingListIndex()),
+        origType, type);
 
   return true;
 }
@@ -6282,37 +6256,50 @@ namespace {
 } // end anonymous namespace
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
-                                             ParsedAttr &Attr, QualType &Type) {
+                                             ParsedAttr &PAttr, QualType &Type) {
   Sema &S = State.getSema();
 
-  ParsedAttr::Kind Kind = Attr.getKind();
+  Attr *A;
+  switch (PAttr.getKind()) {
+  default: llvm_unreachable("Unknown attribute kind");
+  case ParsedAttr::AT_Ptr32:
+    A = createSimpleAttr<Ptr32Attr>(S.Context, PAttr);
+    break;
+  case ParsedAttr::AT_Ptr64:
+    A = createSimpleAttr<Ptr64Attr>(S.Context, PAttr);
+    break;
+  case ParsedAttr::AT_SPtr:
+    A = createSimpleAttr<SPtrAttr>(S.Context, PAttr);
+    break;
+  case ParsedAttr::AT_UPtr:
+    A = createSimpleAttr<UPtrAttr>(S.Context, PAttr);
+    break;
+  }
+
+  attr::Kind NewAttrKind = A->getKind();
   QualType Desugared = Type;
   const AttributedType *AT = dyn_cast<AttributedType>(Type);
   while (AT) {
-    AttributedType::Kind CurAttrKind = AT->getAttrKind();
+    attr::Kind CurAttrKind = AT->getAttrKind();
 
     // You cannot specify duplicate type attributes, so if the attribute has
     // already been applied, flag it.
-    if (getAttrListKind(CurAttrKind) == Kind) {
-      S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute_exact)
-        << Attr.getName();
+    if (NewAttrKind == CurAttrKind) {
+      S.Diag(PAttr.getLoc(), diag::warn_duplicate_attribute_exact)
+        << PAttr.getName();
       return true;
     }
 
     // You cannot have both __sptr and __uptr on the same type, nor can you
     // have __ptr32 and __ptr64.
-    if ((CurAttrKind == AttributedType::attr_ptr32 &&
-         Kind == ParsedAttr::AT_Ptr64) ||
-        (CurAttrKind == AttributedType::attr_ptr64 &&
-         Kind == ParsedAttr::AT_Ptr32)) {
-      S.Diag(Attr.getLoc(), diag::err_attributes_are_not_compatible)
+    if ((CurAttrKind == attr::Ptr32 && NewAttrKind == attr::Ptr64) ||
+        (CurAttrKind == attr::Ptr64 && NewAttrKind == attr::Ptr32)) {
+      S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__ptr32'" << "'__ptr64'";
       return true;
-    } else if ((CurAttrKind == AttributedType::attr_sptr &&
-                Kind == ParsedAttr::AT_UPtr) ||
-               (CurAttrKind == AttributedType::attr_uptr &&
-                Kind == ParsedAttr::AT_SPtr)) {
-      S.Diag(Attr.getLoc(), diag::err_attributes_are_not_compatible)
+    } else if ((CurAttrKind == attr::SPtr && NewAttrKind == attr::UPtr) ||
+               (CurAttrKind == attr::UPtr && NewAttrKind == attr::SPtr)) {
+      S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__sptr'" << "'__uptr'";
       return true;
     }
@@ -6323,32 +6310,20 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
 
   // Pointer type qualifiers can only operate on pointer types, but not
   // pointer-to-member types.
+  //
+  // FIXME: Should we really be disallowing this attribute if there is any
+  // type sugar between it and the pointer (other than attributes)? Eg, this
+  // disallows the attribute on a parenthesized pointer.
+  // And if so, should we really allow *any* type attribute?
   if (!isa<PointerType>(Desugared)) {
     if (Type->isMemberPointerType())
-      S.Diag(Attr.getLoc(), diag::err_attribute_no_member_pointers) << Attr;
+      S.Diag(PAttr.getLoc(), diag::err_attribute_no_member_pointers) << PAttr;
     else
-      S.Diag(Attr.getLoc(), diag::err_attribute_pointers_only) << Attr << 0;
+      S.Diag(PAttr.getLoc(), diag::err_attribute_pointers_only) << PAttr << 0;
     return true;
   }
 
-  AttributedType::Kind TAK;
-  switch (Kind) {
-  default: llvm_unreachable("Unknown attribute kind");
-  case ParsedAttr::AT_Ptr32:
-    TAK = AttributedType::attr_ptr32;
-    break;
-  case ParsedAttr::AT_Ptr64:
-    TAK = AttributedType::attr_ptr64;
-    break;
-  case ParsedAttr::AT_SPtr:
-    TAK = AttributedType::attr_sptr;
-    break;
-  case ParsedAttr::AT_UPtr:
-    TAK = AttributedType::attr_uptr;
-    break;
-  }
-
-  Type = S.Context.getAttributedType(TAK, Type, Type);
+  Type = State.getAttributedType(A, Type, Type);
   return false;
 }
 
@@ -6371,15 +6346,36 @@ static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
                                    attributed->getEquivalentType());
 }
 
-bool Sema::checkNullabilityTypeSpecifier(QualType &type,
-                                         NullabilityKind nullability,
-                                         SourceLocation nullabilityLoc,
-                                         bool isContextSensitive,
-                                         bool allowOnArrayType,
-                                         bool implicit,
-                                         bool overrideExisting) {
+/// Map a nullability attribute kind to a nullability kind.
+static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
+  switch (kind) {
+  case ParsedAttr::AT_TypeNonNull:
+    return NullabilityKind::NonNull;
+
+  case ParsedAttr::AT_TypeNullable:
+    return NullabilityKind::Nullable;
+
+  case ParsedAttr::AT_TypeNullUnspecified:
+    return NullabilityKind::Unspecified;
+
+  default:
+    llvm_unreachable("not a nullability attribute kind");
+  }
+}
+
+static bool checkNullabilityTypeSpecifier(Sema &S,
+                                          TypeProcessingState *state,
+                                          ParsedAttr *parsedAttr,
+                                          QualType &type,
+                                          NullabilityKind nullability,
+                                          SourceLocation nullabilityLoc,
+                                          bool isContextSensitive,
+                                          bool allowOnArrayType,
+                                          bool overrideExisting) {
+  bool implicit = (state == nullptr);
+
   if (!implicit)
-    recordNullabilitySeen(*this, nullabilityLoc);
+    recordNullabilitySeen(S, nullabilityLoc);
 
   // Check for existing nullability attributes on the type.
   QualType desugared = type;
@@ -6391,7 +6387,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
         if (implicit)
           break;
 
-        Diag(nullabilityLoc, diag::warn_nullability_duplicate)
+        S.Diag(nullabilityLoc, diag::warn_nullability_duplicate)
           << DiagNullabilityKind(nullability, isContextSensitive)
           << FixItHint::CreateRemoval(nullabilityLoc);
 
@@ -6400,14 +6396,14 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
 
       if (!overrideExisting) {
         // Conflicting nullability.
-        Diag(nullabilityLoc, diag::err_nullability_conflicting)
+        S.Diag(nullabilityLoc, diag::err_nullability_conflicting)
           << DiagNullabilityKind(nullability, isContextSensitive)
           << DiagNullabilityKind(*existingNullability, false);
         return true;
       }
 
       // Rebuild the attributed type, dropping the existing nullability.
-      type  = rebuildAttributedTypeWithoutNullability(Context, type);
+      type = rebuildAttributedTypeWithoutNullability(S.Context, type);
     }
 
     desugared = attributed->getModifiedType();
@@ -6417,9 +6413,9 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // This (unlike the code above) looks through typedefs that might
   // have nullability specifiers on them, which means we cannot
   // provide a useful Fix-It.
-  if (auto existingNullability = desugared->getNullability(Context)) {
+  if (auto existingNullability = desugared->getNullability(S.Context)) {
     if (nullability != *existingNullability && !implicit) {
-      Diag(nullabilityLoc, diag::err_nullability_conflicting)
+      S.Diag(nullabilityLoc, diag::err_nullability_conflicting)
         << DiagNullabilityKind(nullability, isContextSensitive)
         << DiagNullabilityKind(*existingNullability, false);
 
@@ -6430,7 +6426,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
         if (auto typedefNullability
               = AttributedType::stripOuterNullability(underlyingType)) {
           if (*typedefNullability == *existingNullability) {
-            Diag(typedefDecl->getLocation(), diag::note_nullability_here)
+            S.Diag(typedefDecl->getLocation(), diag::note_nullability_here)
               << DiagNullabilityKind(*existingNullability, false);
           }
         }
@@ -6444,7 +6440,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   if (!desugared->canHaveNullability() &&
       !(allowOnArrayType && desugared->isArrayType())) {
     if (!implicit) {
-      Diag(nullabilityLoc, diag::err_nullability_nonpointer)
+      S.Diag(nullabilityLoc, diag::err_nullability_nonpointer)
         << DiagNullabilityKind(nullability, isContextSensitive) << type;
     }
     return true;
@@ -6462,10 +6458,10 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
     if (pointeeType->isAnyPointerType() ||
         pointeeType->isObjCObjectPointerType() ||
         pointeeType->isMemberPointerType()) {
-      Diag(nullabilityLoc, diag::err_nullability_cs_multilevel)
+      S.Diag(nullabilityLoc, diag::err_nullability_cs_multilevel)
         << DiagNullabilityKind(nullability, true)
         << type;
-      Diag(nullabilityLoc, diag::note_nullability_type_specifier)
+      S.Diag(nullabilityLoc, diag::note_nullability_type_specifier)
         << DiagNullabilityKind(nullability, false)
         << type
         << FixItHint::CreateReplacement(nullabilityLoc,
@@ -6475,12 +6471,55 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   }
 
   // Form the attributed type.
-  type = Context.getAttributedType(
-           AttributedType::getNullabilityAttrKind(nullability), type, type);
+  if (state) {
+    assert(parsedAttr);
+    Attr *A = createNullabilityAttr(S.Context, *parsedAttr, nullability);
+    type = state->getAttributedType(A, type, type);
+  } else {
+    attr::Kind attrKind = AttributedType::getNullabilityAttrKind(nullability);
+    type = S.Context.getAttributedType(attrKind, type, type);
+  }
   return false;
 }
 
-bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
+static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
+                                          QualType &type,
+                                          ParsedAttr &attr,
+                                          bool allowOnArrayType) {
+  NullabilityKind nullability = mapNullabilityAttrKind(attr.getKind());
+  SourceLocation nullabilityLoc = attr.getLoc();
+  bool isContextSensitive = attr.isContextSensitiveKeywordAttribute();
+
+  return checkNullabilityTypeSpecifier(state.getSema(), &state, &attr, type,
+                                       nullability, nullabilityLoc,
+                                       isContextSensitive, allowOnArrayType,
+                                       /*overrideExisting*/false);
+}
+
+bool Sema::checkImplicitNullabilityTypeSpecifier(QualType &type,
+                                                 NullabilityKind nullability,
+                                                 SourceLocation diagLoc,
+                                                 bool allowArrayTypes,
+                                                 bool overrideExisting) {
+  return checkNullabilityTypeSpecifier(*this, nullptr, nullptr, type,
+                                       nullability, diagLoc,
+                                       /*isContextSensitive*/false,
+                                       allowArrayTypes, overrideExisting);
+}
+
+/// Check the application of the Objective-C '__kindof' qualifier to
+/// the given type.
+static bool checkObjCKindOfType(TypeProcessingState &state, QualType &type,
+                                ParsedAttr &attr) {
+  Sema &S = state.getSema();
+
+  if (isa<ObjCTypeParamType>(type)) {
+    // Build the attributed type to record where __kindof occurred.
+    type = state.getAttributedType(
+        createSimpleAttr<ObjCKindOfAttr>(S.Context, attr), type, type);
+    return false;
+  }
+
   // Find out if it's an Objective-C object or object pointer type;
   const ObjCObjectPointerType *ptrType = type->getAs<ObjCObjectPointerType>();
   const ObjCObjectType *objType = ptrType ? ptrType->getObjectType()
@@ -6489,7 +6528,7 @@ bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
   // If not, we can't apply __kindof.
   if (!objType) {
     // FIXME: Handle dependent types that aren't yet object types.
-    Diag(loc, diag::err_objc_kindof_nonobject)
+    S.Diag(attr.getLoc(), diag::err_objc_kindof_nonobject)
       << type;
     return true;
   }
@@ -6497,43 +6536,29 @@ bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
   // Rebuild the "equivalent" type, which pushes __kindof down into
   // the object type.
   // There is no need to apply kindof on an unqualified id type.
-  QualType equivType = Context.getObjCObjectType(
+  QualType equivType = S.Context.getObjCObjectType(
       objType->getBaseType(), objType->getTypeArgsAsWritten(),
       objType->getProtocols(),
       /*isKindOf=*/objType->isObjCUnqualifiedId() ? false : true);
 
   // If we started with an object pointer type, rebuild it.
   if (ptrType) {
-    equivType = Context.getObjCObjectPointerType(equivType);
-    if (auto nullability = type->getNullability(Context)) {
-      auto attrKind = AttributedType::getNullabilityAttrKind(*nullability);
-      equivType = Context.getAttributedType(attrKind, equivType, equivType);
+    equivType = S.Context.getObjCObjectPointerType(equivType);
+    if (auto nullability = type->getNullability(S.Context)) {
+      // We create a nullability attribute from the __kindof attribute.
+      // Make sure that will make sense.
+      assert(attr.getAttributeSpellingListIndex() == 0 &&
+             "multiple spellings for __kindof?");
+      Attr *A = createNullabilityAttr(S.Context, attr, *nullability);
+      A->setImplicit(true);
+      equivType = state.getAttributedType(A, equivType, equivType);
     }
   }
 
   // Build the attributed type to record where __kindof occurred.
-  type = Context.getAttributedType(AttributedType::attr_objc_kindof,
-                                   type,
-                                   equivType);
-
+  type = state.getAttributedType(
+      createSimpleAttr<ObjCKindOfAttr>(S.Context, attr), type, equivType);
   return false;
-}
-
-/// Map a nullability attribute kind to a nullability kind.
-static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
-  switch (kind) {
-  case ParsedAttr::AT_TypeNonNull:
-    return NullabilityKind::NonNull;
-
-  case ParsedAttr::AT_TypeNullable:
-    return NullabilityKind::Nullable;
-
-  case ParsedAttr::AT_TypeNullUnspecified:
-    return NullabilityKind::Unspecified;
-
-  default:
-    llvm_unreachable("not a nullability attribute kind");
-  }
 }
 
 /// Distribute a nullability type attribute that cannot be applied to
@@ -6623,27 +6648,27 @@ static bool distributeNullabilityTypeAttr(TypeProcessingState &state,
   return false;
 }
 
-static AttributedType::Kind getCCTypeAttrKind(ParsedAttr &Attr) {
+static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   assert(!Attr.isInvalid());
   switch (Attr.getKind()) {
   default:
     llvm_unreachable("not a calling convention attribute");
   case ParsedAttr::AT_CDecl:
-    return AttributedType::attr_cdecl;
+    return createSimpleAttr<CDeclAttr>(Ctx, Attr);
   case ParsedAttr::AT_FastCall:
-    return AttributedType::attr_fastcall;
+    return createSimpleAttr<FastCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_StdCall:
-    return AttributedType::attr_stdcall;
+    return createSimpleAttr<StdCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_ThisCall:
-    return AttributedType::attr_thiscall;
+    return createSimpleAttr<ThisCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_RegCall:
-    return AttributedType::attr_regcall;
+    return createSimpleAttr<RegCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pascal:
-    return AttributedType::attr_pascal;
+    return createSimpleAttr<PascalAttr>(Ctx, Attr);
   case ParsedAttr::AT_SwiftCall:
-    return AttributedType::attr_swiftcall;
+    return createSimpleAttr<SwiftCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_VectorCall:
-    return AttributedType::attr_vectorcall;
+    return createSimpleAttr<VectorCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,
@@ -6653,20 +6678,22 @@ static AttributedType::Kind getCCTypeAttrKind(ParsedAttr &Attr) {
       Str = cast<StringLiteral>(Attr.getArgAsExpr(0))->getString();
     else
       Str = Attr.getArgAsIdent(0)->Ident->getName();
-    return llvm::StringSwitch<AttributedType::Kind>(Str)
-        .Case("aapcs", AttributedType::attr_pcs)
-        .Case("aapcs-vfp", AttributedType::attr_pcs_vfp);
+    PcsAttr::PCSType Type;
+    if (!PcsAttr::ConvertStrToPCSType(Str, Type))
+      llvm_unreachable("already validated the attribute");
+    return ::new (Ctx) PcsAttr(Attr.getRange(), Ctx, Type,
+                               Attr.getAttributeSpellingListIndex());
   }
   case ParsedAttr::AT_IntelOclBicc:
-    return AttributedType::attr_inteloclbicc;
+    return createSimpleAttr<IntelOclBiccAttr>(Ctx, Attr);
   case ParsedAttr::AT_MSABI:
-    return AttributedType::attr_ms_abi;
+    return createSimpleAttr<MSABIAttr>(Ctx, Attr);
   case ParsedAttr::AT_SysVABI:
-    return AttributedType::attr_sysv_abi;
+    return createSimpleAttr<SysVABIAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveMost:
-    return AttributedType::attr_preserve_most;
+    return createSimpleAttr<PreserveMostAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveAll:
-    return AttributedType::attr_preserve_all;
+    return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -6714,8 +6741,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
         = unwrapped.get()->getExtInfo().withProducesResult(true);
       type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     }
-    type = S.Context.getAttributedType(AttributedType::attr_ns_returns_retained,
-                                       origType, type);
+    type = state.getAttributedType(
+        createSimpleAttr<NSReturnsRetainedAttr>(S.Context, attr),
+        origType, type);
     return true;
   }
 
@@ -6790,13 +6818,12 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   const FunctionType *fn = unwrapped.get();
   CallingConv CCOld = fn->getCallConv();
-  AttributedType::Kind CCAttrKind = getCCTypeAttrKind(attr);
+  Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
   if (CCOld != CC) {
     // Error out on when there's already an attribute on the type
     // and the CCs don't match.
-    const AttributedType *AT = S.getCallingConvAttributedType(type);
-    if (AT && AT->getAttrKind() != CCAttrKind) {
+    if (const AttributedType *AT = S.getCallingConvAttributedType(type)) {
       S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
         << FunctionType::getNameForCallConv(CC)
         << FunctionType::getNameForCallConv(CCOld);
@@ -6850,7 +6877,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     Equivalent =
       unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
   }
-  type = S.Context.getAttributedType(CCAttrKind, type, Equivalent);
+  type = state.getAttributedType(CCAttr, type, Equivalent);
   return true;
 }
 
@@ -7206,14 +7233,15 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
   T = State.getSema().Context.getAddrSpaceQualType(T, ImpAddr);
 }
 
-static void HandleLifetimeBoundAttr(QualType &CurType,
-                                    const ParsedAttr &Attr,
-                                    Sema &S, Declarator &D) {
-  if (D.isDeclarationOfFunction()) {
-    CurType = S.Context.getAttributedType(AttributedType::attr_lifetimebound,
-                                          CurType, CurType);
+static void HandleLifetimeBoundAttr(TypeProcessingState &State,
+                                    QualType &CurType,
+                                    ParsedAttr &Attr) {
+  if (State.getDeclarator().isDeclarationOfFunction()) {
+    CurType = State.getAttributedType(
+        createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
+        CurType, CurType);
   } else {
-    Attr.diagnoseAppertainsTo(S, nullptr);
+    Attr.diagnoseAppertainsTo(State.getSema(), nullptr);
   }
 }
 
@@ -7323,11 +7351,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_LifetimeBound:
-      if (TAL == TAL_DeclChunk) {
-        HandleLifetimeBoundAttr(type, attr, state.getSema(),
-                                state.getDeclarator());
-        attr.setUsedAsTypeAttr();
-      }
+      if (TAL == TAL_DeclChunk)
+        HandleLifetimeBoundAttr(state, type, attr);
       break;
 
     MS_TYPE_ATTRS_CASELIST:
@@ -7351,12 +7376,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         bool allowOnArrayType =
             state.getDeclarator().isPrototypeContext() &&
             !hasOuterPointerLikeChunk(state.getDeclarator(), endIndex);
-        if (state.getSema().checkNullabilityTypeSpecifier(
+        if (checkNullabilityTypeSpecifier(
+              state, 
               type,
-              mapNullabilityAttrKind(attr.getKind()),
-              attr.getLoc(),
-              attr.isContextSensitiveKeywordAttribute(),
-              allowOnArrayType, /*implicit=*/false)) {
+              attr,
+              allowOnArrayType)) {
           attr.setInvalid();
         }
 
@@ -7382,9 +7406,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
 
       // Apply it regardless.
-      if (state.getSema().checkObjCKindOfType(type, attr.getLoc()))
+      if (checkObjCKindOfType(state, type, attr))
         attr.setInvalid();
-      attr.setUsedAsTypeAttr();
       break;
 
     FUNCTION_TYPE_ATTRS_CASELIST:
