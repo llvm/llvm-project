@@ -124,6 +124,84 @@ ClangASTContextSupportsLanguage(lldb::LanguageType language) {
          // Use Clang for D until there is a proper language plugin for it
          language == eLanguageTypeD;
 }
+
+// Checks whether m1 is an overload of m2 (as opposed to an override). This is
+// called by addOverridesForMethod to distinguish overrides (which share a
+// vtable entry) from overloads (which require distinct entries).
+bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
+  // FIXME: This should detect covariant return types, but currently doesn't.
+  lldbassert(&m1->getASTContext() == &m2->getASTContext() &&
+             "Methods should have the same AST context");
+  clang::ASTContext &context = m1->getASTContext();
+
+  const auto *m1Type = llvm::cast<clang::FunctionProtoType>(
+      context.getCanonicalType(m1->getType()));
+
+  const auto *m2Type = llvm::cast<clang::FunctionProtoType>(
+      context.getCanonicalType(m2->getType()));
+
+  auto compareArgTypes = [&context](const clang::QualType &m1p,
+                                    const clang::QualType &m2p) {
+    return context.hasSameType(m1p.getUnqualifiedType(),
+                               m2p.getUnqualifiedType());
+  };
+
+  // FIXME: In C++14 and later, we can just pass m2Type->param_type_end()
+  //        as a fourth parameter to std::equal().
+  return (m1->getNumParams() != m2->getNumParams()) ||
+         !std::equal(m1Type->param_type_begin(), m1Type->param_type_end(),
+                     m2Type->param_type_begin(), compareArgTypes);
+}
+
+// If decl is a virtual method, walk the base classes looking for methods that
+// decl overrides. This table of overridden methods is used by IRGen to
+// determine the vtable layout for decl's parent class.
+void addOverridesForMethod(clang::CXXMethodDecl *decl) {
+  if (!decl->isVirtual())
+    return;
+
+  clang::CXXBasePaths paths;
+
+  auto find_overridden_methods =
+      [decl](const clang::CXXBaseSpecifier *specifier,
+             clang::CXXBasePath &path) {
+        if (auto *base_record = llvm::dyn_cast<clang::CXXRecordDecl>(
+                specifier->getType()->getAs<clang::RecordType>()->getDecl())) {
+
+          clang::DeclarationName name = decl->getDeclName();
+
+          // If this is a destructor, check whether the base class destructor is
+          // virtual.
+          if (name.getNameKind() == clang::DeclarationName::CXXDestructorName)
+            if (auto *baseDtorDecl = base_record->getDestructor()) {
+              if (baseDtorDecl->isVirtual()) {
+                path.Decls = baseDtorDecl;
+                return true;
+              } else
+                return false;
+            }
+
+          // Otherwise, search for name in the base class.
+          for (path.Decls = base_record->lookup(name); !path.Decls.empty();
+               path.Decls = path.Decls.slice(1)) {
+            if (auto *method_decl =
+                    llvm::dyn_cast<clang::CXXMethodDecl>(path.Decls.front()))
+              if (method_decl->isVirtual() && !isOverload(decl, method_decl)) {
+                path.Decls = method_decl;
+                return true;
+              }
+          }
+        }
+
+        return false;
+      };
+
+  if (decl->getParent()->lookupInBases(find_overridden_methods, paths)) {
+    for (auto *overridden_decl : paths.found_decls())
+      decl->addOverriddenMethod(
+          llvm::cast<clang::CXXMethodDecl>(overridden_decl));
+  }
+}
 }
 
 typedef lldb_private::ThreadSafeDenseMap<clang::ASTContext *, ClangASTContext *>
@@ -6371,7 +6449,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
   language_flags = 0;
 
   const bool idx_is_valid = idx < GetNumChildren(type, omit_empty_base_classes);
-  uint32_t bit_offset;
+  int32_t bit_offset;
   switch (parent_type_class) {
   case clang::Type::Builtin:
     if (idx_is_valid) {
@@ -6463,8 +6541,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                                     cxx_record_decl, base_class_decl);
                             const lldb::addr_t base_offset_addr =
                                 vbtable_ptr + vbtable_index * 4;
-                            const uint32_t base_offset =
-                                process->ReadUnsignedIntegerFromMemory(
+                            const int32_t base_offset =
+                                process->ReadSignedIntegerFromMemory(
                                     base_offset_addr, 4, UINT32_MAX, err);
                             if (base_offset != UINT32_MAX) {
                               handled = true;
@@ -6488,8 +6566,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                                 vtable_ptr + base_offset_offset.getQuantity();
                             const uint32_t base_offset_size =
                                 process->GetAddressByteSize();
-                            const uint64_t base_offset =
-                                process->ReadUnsignedIntegerFromMemory(
+                            const int64_t base_offset =
+                                process->ReadSignedIntegerFromMemory(
                                     base_offset_addr, base_offset_size,
                                     UINT32_MAX, err);
                             if (base_offset < UINT32_MAX) {
@@ -8127,6 +8205,13 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
   return cxx_method_decl;
 }
 
+void ClangASTContext::AddMethodOverridesForCXXRecordType(
+    lldb::opaque_compiler_type_t type) {
+  if (auto *record = GetAsCXXRecordDecl(type))
+    for (auto *method : record->methods())
+      addOverridesForMethod(method);
+}
+
 #pragma mark C++ Base Classes
 
 clang::CXXBaseSpecifier *
@@ -9666,11 +9751,16 @@ bool ClangASTContext::LayoutRecordType(
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
   ClangASTContext *ast = (ClangASTContext *)baton;
-  DWARFASTParserClang *dwarf_ast_parser =
-      (DWARFASTParserClang *)ast->GetDWARFParser();
-  return dwarf_ast_parser->GetClangASTImporter().LayoutRecordType(
-      record_decl, bit_size, alignment, field_offsets, base_offsets,
-      vbase_offsets);
+  lldb_private::ClangASTImporter *importer = nullptr;
+  if (ast->m_dwarf_ast_parser_ap)
+    importer = &ast->m_dwarf_ast_parser_ap->GetClangASTImporter();
+  if (!importer && ast->m_pdb_ast_parser_ap)
+    importer = &ast->m_pdb_ast_parser_ap->GetClangASTImporter();
+  if (!importer)
+    return false;
+
+  return importer->LayoutRecordType(record_decl, bit_size, alignment,
+                                    field_offsets, base_offsets, vbase_offsets);
 }
 
 //----------------------------------------------------------------------

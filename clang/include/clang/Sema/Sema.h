@@ -8434,6 +8434,10 @@ public:
   /// \#pragma clang fp contract
   void ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC);
 
+  /// ActOnPragmaFenvAccess - Called on well formed
+  /// \#pragma STDC FENV_ACCESS
+  void ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC);
+
   /// AddAlignmentAttributesForRecord - Adds any needed alignment attributes to
   /// a the record decl, to handle '\#pragma pack' and '\#pragma options align'.
   void AddAlignmentAttributesForRecord(RecordDecl *RD);

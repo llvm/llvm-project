@@ -172,3 +172,8 @@ memw(r0+#0) = ##_start
 # The rest:
 r1:0=combine(r2,##_start);
 # CHECK: 7302e000   	r1:0 = combine(r2,##69632) }
+
+# R_HEX_32:
+r_hex_32:
+.word _start
+# CHECK: 00011000

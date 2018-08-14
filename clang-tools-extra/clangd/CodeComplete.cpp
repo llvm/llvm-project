@@ -1,11 +1,11 @@
-//===--- CodeComplete.cpp ---------------------------------------*- C++-*-===//
+//===--- CodeComplete.cpp ----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Code completion has several moving parts:
 //  - AST-based completions are provided using the completion hooks in Sema.
@@ -16,7 +16,7 @@
 // Signature help works in a similar way as code completion, but it is simpler:
 // it's purely AST-based, and there are few candidates.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "CodeComplete.h"
 #include "AST.h"
@@ -714,7 +714,15 @@ public:
            "too many arguments");
     SigHelp.activeParameter = static_cast<int>(CurrentArg);
     for (unsigned I = 0; I < NumCandidates; ++I) {
-      const auto &Candidate = Candidates[I];
+      OverloadCandidate Candidate = Candidates[I];
+      // We want to avoid showing instantiated signatures, because they may be
+      // long in some cases (e.g. when 'T' is substituted with 'std::string', we
+      // would get 'std::basic_string<char>').
+      if (auto *Func = Candidate.getFunction()) {
+        if (auto *Pattern = Func->getTemplateInstantiationPattern())
+          Candidate = OverloadCandidate(Pattern);
+      }
+
       const auto *CCS = Candidate.CreateSignatureString(
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");

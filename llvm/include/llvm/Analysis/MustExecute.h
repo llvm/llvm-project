@@ -31,7 +31,7 @@ class DominatorTree;
 class Loop;
 
 /// Captures loop safety information.
-/// It keep information for loop & its header may throw exception or otherwise
+/// It keep information for loop blocks may throw exception or otherwise
 /// exit abnormaly on any iteration of the loop which might actually execute
 /// at runtime.  The primary way to consume this infromation is via
 /// isGuaranteedToExecute below, but some callers bailout or fallback to

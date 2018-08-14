@@ -147,7 +147,7 @@ static llvm::cl::opt<Path> InputMirrorFile(
 static llvm::cl::opt<bool> EnableIndex(
     "index",
     llvm::cl::desc("Enable index-based features such as global code completion "
-                   "and searching for symbols."
+                   "and searching for symbols. "
                    "Clang uses an index built from symbols in opened files"),
     llvm::cl::init(true));
 
@@ -160,7 +160,7 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool> HeaderInsertionDecorators(
     "header-insertion-decorators",
     llvm::cl::desc("Prepend a circular dot or space before the completion "
-                   "label, depending on wether "
+                   "label, depending on whether "
                    "an include line will be inserted or not."),
     llvm::cl::init(true));
 

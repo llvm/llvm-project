@@ -18,25 +18,45 @@ TEST(ConstStringTest, format_provider) {
 }
 
 TEST(ConstStringTest, MangledCounterpart) {
-  ConstString foo("foo");
+  ConstString uvw("uvw");
   ConstString counterpart;
-  EXPECT_FALSE(foo.GetMangledCounterpart(counterpart));
+  EXPECT_FALSE(uvw.GetMangledCounterpart(counterpart));
   EXPECT_EQ("", counterpart.GetStringRef());
 
-  ConstString bar;
-  bar.SetStringWithMangledCounterpart("bar", foo);
-  EXPECT_EQ("bar", bar.GetStringRef());
+  ConstString xyz;
+  xyz.SetStringWithMangledCounterpart("xyz", uvw);
+  EXPECT_EQ("xyz", xyz.GetStringRef());
 
-  EXPECT_TRUE(bar.GetMangledCounterpart(counterpart));
-  EXPECT_EQ("foo", counterpart.GetStringRef());
+  EXPECT_TRUE(xyz.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("uvw", counterpart.GetStringRef());
 
-  EXPECT_TRUE(foo.GetMangledCounterpart(counterpart));
-  EXPECT_EQ("bar", counterpart.GetStringRef());
+  EXPECT_TRUE(uvw.GetMangledCounterpart(counterpart));
+  EXPECT_EQ("xyz", counterpart.GetStringRef());
+}
+
+TEST(ConstStringTest, UpdateMangledCounterpart) {
+  { // Add counterpart
+    ConstString some1;
+    some1.SetStringWithMangledCounterpart("some", ConstString(""));
+  }
+  { // Overwrite empty string
+    ConstString some2;
+    some2.SetStringWithMangledCounterpart("some", ConstString("one"));
+  }
+  { // Overwrite with identical value
+    ConstString some2;
+    some2.SetStringWithMangledCounterpart("some", ConstString("one"));
+  }
+  { // Check counterpart is set
+    ConstString counterpart;
+    EXPECT_TRUE(ConstString("some").GetMangledCounterpart(counterpart));
+    EXPECT_EQ("one", counterpart.GetStringRef());
+  }
 }
 
 TEST(ConstStringTest, FromMidOfBufferStringRef) {
   // StringRef's into bigger buffer: no null termination
-  const char *buffer = "foobarbaz";
+  const char *buffer = "abcdefghi";
   llvm::StringRef foo_ref(buffer, 3);
   llvm::StringRef bar_ref(buffer + 3, 3);
 
@@ -44,14 +64,14 @@ TEST(ConstStringTest, FromMidOfBufferStringRef) {
 
   ConstString bar;
   bar.SetStringWithMangledCounterpart(bar_ref, foo);
-  EXPECT_EQ("bar", bar.GetStringRef());
+  EXPECT_EQ("def", bar.GetStringRef());
 
   ConstString counterpart;
   EXPECT_TRUE(bar.GetMangledCounterpart(counterpart));
-  EXPECT_EQ("foo", counterpart.GetStringRef());
+  EXPECT_EQ("abc", counterpart.GetStringRef());
 
   EXPECT_TRUE(foo.GetMangledCounterpart(counterpart));
-  EXPECT_EQ("bar", counterpart.GetStringRef());
+  EXPECT_EQ("def", counterpart.GetStringRef());
 }
 
 TEST(ConstStringTest, NullAndEmptyStates) {

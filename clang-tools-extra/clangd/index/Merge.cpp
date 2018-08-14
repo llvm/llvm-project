@@ -1,18 +1,21 @@
-//===--- Merge.h ------------------------------------------------*- C++-*-===//
+//===--- Merge.cpp -----------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #include "Merge.h"
 #include "../Logger.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
+
 namespace clang {
 namespace clangd {
 namespace {
+
 using namespace llvm;
 
 class MergedIndex : public SymbolIndex {
@@ -131,5 +134,6 @@ std::unique_ptr<SymbolIndex> mergeIndex(const SymbolIndex *Dynamic,
                                         const SymbolIndex *Static) {
   return llvm::make_unique<MergedIndex>(Dynamic, Static);
 }
+
 } // namespace clangd
 } // namespace clang

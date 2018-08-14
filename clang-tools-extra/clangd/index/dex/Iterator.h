@@ -158,4 +158,4 @@ void populateChildren(std::vector<std::unique_ptr<Iterator>> &Children,
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_ITERATOR_H

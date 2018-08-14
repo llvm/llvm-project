@@ -1,11 +1,11 @@
-//===--- Quality.h - Ranking alternatives for ambiguous queries -*- C++-*-===//
+//===--- Quality.h - Ranking alternatives for ambiguous queries --*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 ///
 /// Some operations such as code completion produce a set of candidates.
 /// Usually the user can choose between them, but we should put the best options
@@ -23,21 +23,27 @@
 ///   - sorting utilities like the TopN container.
 /// These could be split up further to isolate dependencies if we care.
 ///
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
+
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <functional>
 #include <vector>
+
 namespace llvm {
 class raw_ostream;
 }
+
 namespace clang {
 class CodeCompletionResult;
+
 namespace clangd {
+
 struct Symbol;
 class URIDistance;
 
@@ -176,4 +182,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H

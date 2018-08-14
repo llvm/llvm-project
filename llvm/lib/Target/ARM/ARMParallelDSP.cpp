@@ -42,6 +42,10 @@ using namespace PatternMatch;
 
 STATISTIC(NumSMLAD , "Number of smlad instructions generated");
 
+static cl::opt<bool>
+DisableParallelDSP("disable-arm-parallel-dsp", cl::Hidden, cl::init(false),
+                   cl::desc("Disable the ARM Parallel DSP pass"));
+
 namespace {
   struct OpChain;
   struct BinOpChain;
@@ -149,6 +153,8 @@ namespace {
     }
 
     bool runOnLoop(Loop *TheLoop, LPPassManager &) override {
+      if (DisableParallelDSP)
+        return false;
       L = TheLoop;
       SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
       AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
