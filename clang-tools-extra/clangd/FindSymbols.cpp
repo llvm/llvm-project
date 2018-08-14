@@ -193,7 +193,7 @@ public:
     const FileEntry *F = SM.getFileEntryForID(SM.getMainFileID());
     if (!F)
       return;
-    auto FilePath = getAbsoluteFilePath(F, SM);
+    auto FilePath = getRealPath(F, SM);
     if (FilePath)
       MainFileUri = URIForFile(*FilePath);
   }

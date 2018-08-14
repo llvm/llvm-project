@@ -194,7 +194,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
           FullSourceLoc L(
               SMgr.getExpansionLoc(path.back()->getLocation().asLocation()),
               SMgr);
-          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getLocStart()), SMgr);
+          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getBeginLoc()), SMgr);
           offsetDecl = L.getExpansionLineNumber() - FunL.getExpansionLineNumber();
       }
   }
@@ -997,7 +997,8 @@ var numToId = function(num) {
 };
 
 var navigateTo = function(up) {
-  var numItems = document.querySelectorAll(".line > .msg").length;
+  var numItems = document.querySelectorAll(
+      ".line > .msgEvent, .line > .msgControl").length;
   var currentSelected = findNum();
   var newSelected = move(currentSelected, up, numItems);
   var newEl = numToId(newSelected, numItems);

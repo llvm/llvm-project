@@ -406,9 +406,22 @@ TEST(Matcher, AnyArgument) {
   auto HasArgumentY = hasAnyArgument(
       ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y"))))));
   StatementMatcher CallArgumentY = callExpr(HasArgumentY);
+  StatementMatcher CtorArgumentY = cxxConstructExpr(HasArgumentY);
+  StatementMatcher UnresolvedCtorArgumentY =
+      cxxUnresolvedConstructExpr(HasArgumentY);
   StatementMatcher ObjCCallArgumentY = objcMessageExpr(HasArgumentY);
   EXPECT_TRUE(matches("void x(int, int) { int y; x(1, y); }", CallArgumentY));
   EXPECT_TRUE(matches("void x(int, int) { int y; x(y, 42); }", CallArgumentY));
+  EXPECT_TRUE(matches("struct Y { Y(int, int); };"
+                      "void x() { int y; (void)Y(1, y); }",
+                      CtorArgumentY));
+  EXPECT_TRUE(matches("struct Y { Y(int, int); };"
+                      "void x() { int y; (void)Y(y, 42); }",
+                      CtorArgumentY));
+  EXPECT_TRUE(matches("template <class Y> void x() { int y; (void)Y(1, y); }",
+                      UnresolvedCtorArgumentY));
+  EXPECT_TRUE(matches("template <class Y> void x() { int y; (void)Y(y, 42); }",
+                      UnresolvedCtorArgumentY));
   EXPECT_TRUE(matchesObjC("@interface I -(void)f:(int) y; @end "
                           "void x(I* i) { int y; [i f:y]; }",
                           ObjCCallArgumentY));
@@ -416,6 +429,12 @@ TEST(Matcher, AnyArgument) {
                            "void x(I* i) { int z; [i f:z]; }",
                            ObjCCallArgumentY));
   EXPECT_TRUE(notMatches("void x(int, int) { x(1, 2); }", CallArgumentY));
+  EXPECT_TRUE(notMatches("struct Y { Y(int, int); };"
+                         "void x() { int y; (void)Y(1, 2); }",
+                         CtorArgumentY));
+  EXPECT_TRUE(notMatches("template <class Y>"
+                         "void x() { int y; (void)Y(1, 2); }",
+                         UnresolvedCtorArgumentY));
 
   StatementMatcher ImplicitCastedArgument = callExpr(
     hasAnyArgument(implicitCastExpr()));

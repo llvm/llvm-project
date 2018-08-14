@@ -279,6 +279,28 @@ void InnerPointerChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(State);
 }
 
+namespace clang {
+namespace ento {
+namespace allocation_state {
+
+std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
+  return llvm::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
+}
+
+const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym) {
+  RawPtrMapTy Map = State->get<RawPtrMap>();
+  for (const auto Entry : Map) {
+    if (Entry.second.contains(Sym)) {
+      return Entry.first;
+    }
+  }
+  return nullptr;
+}
+
+} // end namespace allocation_state
+} // end namespace ento
+} // end namespace clang
+
 std::shared_ptr<PathDiagnosticPiece>
 InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
                                                       const ExplodedNode *PrevN,
@@ -292,26 +314,20 @@ InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
   if (!S)
     return nullptr;
 
+  const MemRegion *ObjRegion =
+      allocation_state::getContainerObjRegion(N->getState(), PtrToBuf);
+  const auto *TypedRegion = cast<TypedValueRegion>(ObjRegion);
+  QualType ObjTy = TypedRegion->getValueType();
+
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
-  OS << "Dangling inner pointer obtained here";
+  OS << "Pointer to inner buffer of '" << ObjTy.getAsString()
+     << "' obtained here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,
                                                     nullptr);
 }
-
-namespace clang {
-namespace ento {
-namespace allocation_state {
-
-std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
-  return llvm::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
-}
-
-} // end namespace allocation_state
-} // end namespace ento
-} // end namespace clang
 
 void ento::registerInnerPointerChecker(CheckerManager &Mgr) {
   registerInnerPointerCheckerAux(Mgr);

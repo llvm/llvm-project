@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-checker=core,nullability,apiModeling  -verify %s
+// RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-checker=core,nullability,apiModeling,debug.ExprInspection  -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"
+
+void clang_analyzer_warnIfReached();
 
 NSString* _Nonnull trust_nonnull_framework_annotation() {
   NSString* out = [NSString generateString];
@@ -67,3 +69,104 @@ NSString * _Nonnull distrustProtocol(id<MyProtocol> o) {
   return out; // expected-warning{{}}
 }
 
+// If the return value is non-nil, the index is non-nil.
+NSString *_Nonnull retImpliesIndex(NSString *s,
+                                   NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (obj)
+    return s; // no-warning
+  return @"foo";
+}
+
+NSString *_Nonnull retImpliesIndexOtherMethod(NSString *s,
+                                   NSDictionary *dic) {
+  id obj = [dic objectForKey:s];
+  if (s) {}
+  if (obj)
+    return s; // no-warning
+  return @"foo";
+}
+
+NSString *_Nonnull retImpliesIndexOnRHS(NSString *s,
+                                        NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (nil != obj)
+    return s; // no-warning
+  return @"foo";
+}
+
+NSString *_Nonnull retImpliesIndexReverseCheck(NSString *s,
+                                               NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (!obj)
+    return @"foo";
+  return s; // no-warning
+}
+
+NSString *_Nonnull retImpliesIndexReverseCheckOnRHS(NSString *s,
+                                                    NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (nil == obj)
+    return @"foo";
+  return s; // no-warning
+}
+
+NSString *_Nonnull retImpliesIndexWrongBranch(NSString *s,
+                                              NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (!obj)
+    return s; // expected-warning{{}}
+  return @"foo";
+}
+
+NSString *_Nonnull retImpliesIndexWrongBranchOnRHS(NSString *s,
+                                                   NSDictionary *dic) {
+  id obj = dic[s];
+  if (s) {}
+  if (nil == obj)
+    return s; // expected-warning{{}}
+  return @"foo";
+}
+
+// The return value could still be nil for a non-nil index.
+NSDictionary *_Nonnull indexDoesNotImplyRet(NSString *s,
+                                            NSDictionary *dic) {
+  id obj = dic[s];
+  if (obj) {}
+  if (s)
+    return obj; // expected-warning{{}}
+  return [[NSDictionary alloc] init];
+}
+
+// The return value could still be nil for a non-nil index.
+NSDictionary *_Nonnull notIndexImpliesNotRet(NSString *s,
+                                             NSDictionary *dic) {
+  id obj = dic[s];
+  if (!s) {
+    if (obj != nil) {
+      clang_analyzer_warnIfReached(); // no-warning
+    }
+  }
+  return [[NSDictionary alloc] init];
+}
+
+NSString *_Nonnull checkAssumeOnMutableDictionary(NSMutableDictionary *d,
+                                                  NSString *k,
+                                                  NSString *val) {
+  d[k] = val;
+  if (k) {}
+  return k; // no-warning
+}
+
+NSString *_Nonnull checkAssumeOnMutableDictionaryOtherMethod(NSMutableDictionary *d,
+                                                             NSString *k,
+                                                             NSString *val) {
+  [d setObject:val forKey:k];
+  if (k) {}
+  return k; // no-warning
+}

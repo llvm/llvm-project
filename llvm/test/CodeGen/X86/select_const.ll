@@ -484,9 +484,9 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
 ; CHECK-LABEL: opaque_constant:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $23, %ecx
-; CHECK-NEXT:    movq $-4, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    movq $-4, %rcx
+; CHECK-NEXT:    movl $23, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; CHECK-NEXT:    andq %rcx, %rax
 ; CHECK-NEXT:    xorl %edx, %edx

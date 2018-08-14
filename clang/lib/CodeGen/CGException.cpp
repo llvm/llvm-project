@@ -1823,13 +1823,13 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
 void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
                                              bool IsFilter,
                                              const Stmt *OutlinedStmt) {
-  SourceLocation StartLoc = OutlinedStmt->getLocStart();
+  SourceLocation StartLoc = OutlinedStmt->getBeginLoc();
 
   // Get the mangled function name.
   SmallString<128> Name;
   {
     llvm::raw_svector_ostream OS(Name);
-    const FunctionDecl *ParentSEHFn = ParentCGF.CurSEHParent;
+    const NamedDecl *ParentSEHFn = ParentCGF.CurSEHParent;
     assert(ParentSEHFn && "No CurSEHParent!");
     MangleContext &Mangler = CGM.getCXXABI().getMangleContext();
     if (IsFilter)
@@ -1871,7 +1871,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   IsOutlinedSEHHelper = true;
 
   StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args,
-                OutlinedStmt->getLocStart(), OutlinedStmt->getLocStart());
+                OutlinedStmt->getBeginLoc(), OutlinedStmt->getBeginLoc());
   CurSEHParent = ParentCGF.CurSEHParent;
 
   CGM.SetLLVMFunctionAttributes(nullptr, FnInfo, CurFn);
@@ -1893,7 +1893,7 @@ CodeGenFunction::GenerateSEHFilterFunction(CodeGenFunction &ParentCGF,
                             FilterExpr->getType()->isSignedIntegerType());
   Builder.CreateStore(R, ReturnValue);
 
-  FinishFunction(FilterExpr->getLocEnd());
+  FinishFunction(FilterExpr->getEndLoc());
 
   return CurFn;
 }
@@ -1907,7 +1907,7 @@ CodeGenFunction::GenerateSEHFinallyFunction(CodeGenFunction &ParentCGF,
   // Emit the original filter expression, convert to i32, and return.
   EmitStmt(FinallyBlock);
 
-  FinishFunction(FinallyBlock->getLocEnd());
+  FinishFunction(FinallyBlock->getEndLoc());
 
   return CurFn;
 }
@@ -1970,6 +1970,11 @@ llvm::Value *CodeGenFunction::EmitSEHAbnormalTermination() {
   // helper.
   auto AI = CurFn->arg_begin();
   return Builder.CreateZExt(&*AI, Int32Ty);
+}
+
+void CodeGenFunction::pushSEHCleanup(CleanupKind Kind,
+                                     llvm::Function *FinallyFunc) {
+  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc);
 }
 
 void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {

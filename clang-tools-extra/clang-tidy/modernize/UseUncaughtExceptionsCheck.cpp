@@ -57,15 +57,15 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
   bool WarnOnly = false;
 
   if (C) {
-    BeginLoc = C->getLocStart();
-    EndLoc = C->getLocEnd();
+    BeginLoc = C->getBeginLoc();
+    EndLoc = C->getEndLoc();
   } else if (const auto *E = Result.Nodes.getNodeAs<CallExpr>("call_expr")) {
-    BeginLoc = E->getLocStart();
-    EndLoc = E->getLocEnd();
+    BeginLoc = E->getBeginLoc();
+    EndLoc = E->getEndLoc();
   } else if (const auto *D =
                  Result.Nodes.getNodeAs<DeclRefExpr>("decl_ref_expr")) {
-    BeginLoc = D->getLocStart();
-    EndLoc = D->getLocEnd();
+    BeginLoc = D->getBeginLoc();
+    EndLoc = D->getEndLoc();
     WarnOnly = true;
   } else {
     const auto *U = Result.Nodes.getNodeAs<UsingDecl>("using_decl");

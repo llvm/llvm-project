@@ -28,4 +28,4 @@ Symbols:
       Type:            STT_FUNC
       Section:         .text
 
-#CHECK: {{.*}}llvm-objcopy{{(\.EXE|\.exe)?}}: Symbol foo cannot be removed because it is referenced by the section .group[1].
+#CHECK: Symbol foo cannot be removed because it is referenced by the section .group[1].

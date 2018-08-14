@@ -23432,6 +23432,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   SDValue R = Op.getOperand(0);
   SDValue Amt = Op.getOperand(1);
+  unsigned Opc = Op.getOpcode();
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
 
   assert(VT.isVector() && "Custom lowering only for vector shifts!");
@@ -23443,26 +23444,26 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (SDValue V = LowerScalarVariableShift(Op, DAG, Subtarget))
     return V;
 
-  if (SupportedVectorVarShift(VT, Subtarget, Op.getOpcode()))
+  if (SupportedVectorVarShift(VT, Subtarget, Opc))
     return Op;
 
   // XOP has 128-bit variable logical/arithmetic shifts.
   // +ve/-ve Amt = shift left/right.
   if (Subtarget.hasXOP() && (VT == MVT::v2i64 || VT == MVT::v4i32 ||
                              VT == MVT::v8i16 || VT == MVT::v16i8)) {
-    if (Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA) {
+    if (Opc == ISD::SRL || Opc == ISD::SRA) {
       SDValue Zero = DAG.getConstant(0, dl, VT);
       Amt = DAG.getNode(ISD::SUB, dl, VT, Zero, Amt);
     }
-    if (Op.getOpcode() == ISD::SHL || Op.getOpcode() == ISD::SRL)
+    if (Opc == ISD::SHL || Opc == ISD::SRL)
       return DAG.getNode(X86ISD::VPSHL, dl, VT, R, Amt);
-    if (Op.getOpcode() == ISD::SRA)
+    if (Opc == ISD::SRA)
       return DAG.getNode(X86ISD::VPSHA, dl, VT, R, Amt);
   }
 
   // 2i64 vector logical shifts can efficiently avoid scalarization - do the
   // shifts per-lane and then shuffle the partial results back together.
-  if (VT == MVT::v2i64 && Op.getOpcode() != ISD::SRA) {
+  if (VT == MVT::v2i64 && Opc != ISD::SRA) {
     // Splat the shift amounts so the scalar shifts above will catch it.
     SDValue Amt0 = DAG.getVectorShuffle(VT, dl, Amt, Amt, {0, 0});
     SDValue Amt1 = DAG.getVectorShuffle(VT, dl, Amt, Amt, {1, 1});
@@ -23475,7 +23476,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // M = lshr(SIGN_MASK, Amt)
   // ashr(R, Amt) === sub(xor(lshr(R, Amt), M), M)
   if ((VT == MVT::v2i64 || (VT == MVT::v4i64 && Subtarget.hasInt256())) &&
-      Op.getOpcode() == ISD::SRA) {
+      Opc == ISD::SRA) {
     SDValue S = DAG.getConstant(APInt::getSignMask(64), dl, VT);
     SDValue M = DAG.getNode(ISD::SRL, dl, VT, S, Amt);
     R = DAG.getNode(ISD::SRL, dl, VT, R, Amt);
@@ -23523,8 +23524,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         isa<ConstantSDNode>(Amt1) && isa<ConstantSDNode>(Amt2) &&
         (VT != MVT::v16i16 ||
          is128BitLaneRepeatedShuffleMask(VT, ShuffleMask)) &&
-        (VT == MVT::v4i32 || Subtarget.hasSSE41() ||
-         Op.getOpcode() != ISD::SHL || canWidenShuffleElements(ShuffleMask))) {
+        (VT == MVT::v4i32 || Subtarget.hasSSE41() || Opc != ISD::SHL ||
+         canWidenShuffleElements(ShuffleMask))) {
       SDValue Splat1 =
           DAG.getConstant(cast<ConstantSDNode>(Amt1)->getAPIntValue(), dl, VT);
       SDValue Shift1 = DAG.getNode(Op->getOpcode(), dl, VT, R, Splat1);
@@ -23537,14 +23538,14 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // If possible, lower this packed shift into a vector multiply instead of
   // expanding it into a sequence of scalar shifts.
-  if (Op.getOpcode() == ISD::SHL)
+  if (Opc == ISD::SHL)
     if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
       return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
 
   // Constant ISD::SRL can be performed efficiently on vXi8/vXi16 vectors as we
   // can replace with ISD::MULHU, creating scale factor from (NumEltBits - Amt).
   // TODO: Improve support for the shift by zero special case.
-  if (Op.getOpcode() == ISD::SRL && ConstantAmt &&
+  if (Opc == ISD::SRL && ConstantAmt &&
       ((Subtarget.hasSSE41() && VT == MVT::v8i16) ||
        DAG.isKnownNeverZero(Amt)) &&
       (VT == MVT::v16i8 || VT == MVT::v8i16 ||
@@ -23565,7 +23566,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // and shift using the SSE2 variable shifts.
   // The separate results can then be blended together.
   if (VT == MVT::v4i32) {
-    unsigned Opc = Op.getOpcode();
+    unsigned ShOpc = Opc;
     SDValue Amt0, Amt1, Amt2, Amt3;
     if (ConstantAmt) {
       Amt0 = DAG.getVectorShuffle(VT, dl, Amt, DAG.getUNDEF(VT), {0, 0, 0, 0});
@@ -23578,13 +23579,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       default:
         llvm_unreachable("Unknown target vector shift node");
       case ISD::SHL:
-        Opc = X86ISD::VSHL;
+        ShOpc = X86ISD::VSHL;
         break;
       case ISD::SRL:
-        Opc = X86ISD::VSRL;
+        ShOpc = X86ISD::VSRL;
         break;
       case ISD::SRA:
-        Opc = X86ISD::VSRA;
+        ShOpc = X86ISD::VSRA;
         break;
       }
       // The SSE2 shifts use the lower i64 as the same shift amount for
@@ -23612,10 +23613,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
 
-    SDValue R0 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt0));
-    SDValue R1 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt1));
-    SDValue R2 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt2));
-    SDValue R3 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt3));
+    SDValue R0 = DAG.getNode(ShOpc, dl, VT, R, DAG.getBitcast(VT, Amt0));
+    SDValue R1 = DAG.getNode(ShOpc, dl, VT, R, DAG.getBitcast(VT, Amt1));
+    SDValue R2 = DAG.getNode(ShOpc, dl, VT, R, DAG.getBitcast(VT, Amt2));
+    SDValue R3 = DAG.getNode(ShOpc, dl, VT, R, DAG.getBitcast(VT, Amt3));
 
     // Merge the shifted lane results optimally with/without PBLENDW.
     // TODO - ideally shuffle combining would handle this.
@@ -23642,12 +23643,11 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
            "Unexpected vector type");
     MVT EvtSVT = Subtarget.hasBWI() ? MVT::i16 : MVT::i32;
     MVT ExtVT = MVT::getVectorVT(EvtSVT, VT.getVectorNumElements());
-    unsigned ExtOpc =
-        Op.getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    unsigned ExtOpc = Opc == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     R = DAG.getNode(ExtOpc, dl, ExtVT, R);
     Amt = DAG.getNode(ISD::ZERO_EXTEND, dl, ExtVT, Amt);
     return DAG.getNode(ISD::TRUNCATE, dl, VT,
-                       DAG.getNode(Op.getOpcode(), dl, ExtVT, R, Amt));
+                       DAG.getNode(Opc, dl, ExtVT, R, Amt));
   }
 
   if (VT == MVT::v16i8 ||
@@ -23780,8 +23780,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     AHi = DAG.getBitcast(ExtVT, AHi);
     RLo = DAG.getBitcast(ExtVT, RLo);
     RHi = DAG.getBitcast(ExtVT, RHi);
-    SDValue Lo = DAG.getNode(Op.getOpcode(), dl, ExtVT, RLo, ALo);
-    SDValue Hi = DAG.getNode(Op.getOpcode(), dl, ExtVT, RHi, AHi);
+    SDValue Lo = DAG.getNode(Opc, dl, ExtVT, RLo, ALo);
+    SDValue Hi = DAG.getNode(Opc, dl, ExtVT, RHi, AHi);
     Lo = DAG.getNode(ISD::SRL, dl, ExtVT, Lo, DAG.getConstant(16, dl, ExtVT));
     Hi = DAG.getNode(ISD::SRL, dl, ExtVT, Hi, DAG.getConstant(16, dl, ExtVT));
     return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
@@ -29652,7 +29652,8 @@ static bool matchBinaryPermuteVectorShuffle(
 /// instruction but should only be used to replace chains over a certain depth.
 static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                       ArrayRef<int> BaseMask, int Depth,
-                                      bool HasVariableMask, SelectionDAG &DAG,
+                                      bool HasVariableMask,
+                                      bool AllowVariableMask, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
   assert((Inputs.size() == 1 || Inputs.size() == 2) &&
@@ -29865,7 +29866,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   // Depth threshold above which we can efficiently use variable mask shuffles.
   int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 2 : 3;
-  bool AllowVariableMask = (Depth >= VariableShuffleDepth) || HasVariableMask;
+  AllowVariableMask &= (Depth >= VariableShuffleDepth) || HasVariableMask;
 
   bool MaskContainsZeros =
       any_of(Mask, [](int M) { return M == SM_SentinelZero; });
@@ -30199,7 +30200,8 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
 static SDValue combineX86ShufflesRecursively(
     ArrayRef<SDValue> SrcOps, int SrcOpIndex, SDValue Root,
     ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, unsigned Depth,
-    bool HasVariableMask, SelectionDAG &DAG, const X86Subtarget &Subtarget) {
+    bool HasVariableMask, bool AllowVariableMask, SelectionDAG &DAG,
+    const X86Subtarget &Subtarget) {
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
   const unsigned MaxRecursionDepth = 8;
@@ -30354,18 +30356,23 @@ static SDValue combineX86ShufflesRecursively(
   CombinedNodes.push_back(Op.getNode());
 
   // See if we can recurse into each shuffle source op (if it's a target
-  // shuffle). The source op should only be combined if it either has a
-  // single use (i.e. current Op) or all its users have already been combined.
+  // shuffle). The source op should only be generally combined if it either has
+  // a single use (i.e. current Op) or all its users have already been combined,
+  // if not then we can still combine but should prevent generation of variable
+  // shuffles to avoid constant pool bloat.
   // Don't recurse if we already have more source ops than we can combine in
   // the remaining recursion depth.
   if (Ops.size() < (MaxRecursionDepth - Depth)) {
-    for (int i = 0, e = Ops.size(); i < e; ++i)
+    for (int i = 0, e = Ops.size(); i < e; ++i) {
+      bool AllowVar = false;
       if (Ops[i].getNode()->hasOneUse() ||
           SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
-        if (SDValue Res = combineX86ShufflesRecursively(
-                Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
-                DAG, Subtarget))
-          return Res;
+        AllowVar = AllowVariableMask;
+      if (SDValue Res = combineX86ShufflesRecursively(
+              Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
+              AllowVar, DAG, Subtarget))
+        return Res;
+    }
   }
 
   // Attempt to constant fold all of the constant source ops.
@@ -30395,8 +30402,8 @@ static SDValue combineX86ShufflesRecursively(
   }
 
   // Finally, try to combine into a single shuffle instruction.
-  return combineX86ShuffleChain(Ops, Root, Mask, Depth, HasVariableMask, DAG,
-                                Subtarget);
+  return combineX86ShuffleChain(Ops, Root, Mask, Depth, HasVariableMask,
+                                AllowVariableMask, DAG, Subtarget);
 }
 
 /// Get the PSHUF-style mask from PSHUF node.
@@ -30697,7 +30704,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         DemandedMask[i] = i;
       if (SDValue Res = combineX86ShufflesRecursively(
               {BC}, 0, BC, DemandedMask, {}, /*Depth*/ 1,
-              /*HasVarMask*/ false, DAG, Subtarget))
+              /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
         return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                            DAG.getBitcast(SrcVT, Res));
     }
@@ -31316,7 +31323,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // a particular chain.
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, Subtarget))
+            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
       return Res;
   }
 
@@ -33895,10 +33902,12 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
        (SignMulAmt >= 0 && (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9)))) {
 
     if (isPowerOf2_64(MulAmt2) &&
-        !(N->hasOneUse() && N->use_begin()->getOpcode() == ISD::ADD))
+        !(SignMulAmt >= 0 && N->hasOneUse() &&
+          N->use_begin()->getOpcode() == ISD::ADD))
       // If second multiplifer is pow2, issue it first. We want the multiply by
       // 3, 5, or 9 to be folded into the addressing mode unless the lone use
-      // is an add.
+      // is an add. Only do this for positive multiply amounts since the
+      // negate would prevent it from being used as an address mode anyway.
       std::swap(MulAmt1, MulAmt2);
 
     if (isPowerOf2_64(MulAmt1))
@@ -34223,7 +34232,8 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   SDValue Op(N, 0);
   if (SDValue Res =
           combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                        /*HasVarMask*/ false, DAG, Subtarget))
+                                        /*HasVarMask*/ false,
+                                        /*AllowVarMask*/ true, DAG, Subtarget))
     return Res;
 
   return SDValue();
@@ -34283,7 +34293,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, Subtarget))
+            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
       return Res;
   }
 
@@ -34322,7 +34332,8 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
   SDValue Op(N, 0);
   if (SDValue Res =
           combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                        /*HasVarMask*/ false, DAG, Subtarget))
+                                        /*HasVarMask*/ false,
+                                        /*AllowVarMask*/ true, DAG, Subtarget))
     return Res;
 
   return SDValue();
@@ -34848,7 +34859,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, Subtarget))
+            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
       return Res;
   }
 
@@ -34885,7 +34896,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
       if (SDValue Shuffle = combineX86ShufflesRecursively(
               {SrcVec}, 0, SrcVec, ShuffleMask, {}, /*Depth*/ 2,
-              /*HasVarMask*/ false, DAG, Subtarget))
+              /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
         return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), VT, Shuffle,
                            N->getOperand(0).getOperand(1));
     }
@@ -37419,7 +37430,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(
             {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, DAG, Subtarget))
+            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
       return Res;
   }
 
@@ -39679,6 +39690,15 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  // Canonicalize constant to RHS.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(LHS) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(RHS))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), RHS, LHS);
+
+  // Multiply by zero.
+  if (ISD::isBuildVectorAllZeros(RHS.getNode()))
+    return RHS;
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),

@@ -4287,21 +4287,30 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
   }
 
   assert(VT == MVT::v2f16 || VT == MVT::v2i16);
+  assert(!Subtarget->hasVOP3PInsts() && "this should be legal");
 
   SDValue Lo = Op.getOperand(0);
   SDValue Hi = Op.getOperand(1);
 
-  Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
-  Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Hi);
+  // Avoid adding defined bits with the zero_extend.
+  if (Hi.isUndef()) {
+    Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
+    SDValue ExtLo = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Lo);
+    return DAG.getNode(ISD::BITCAST, SL, VT, ExtLo);
+  }
 
-  Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
+  Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Hi);
   Hi = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Hi);
 
   SDValue ShlHi = DAG.getNode(ISD::SHL, SL, MVT::i32, Hi,
                               DAG.getConstant(16, SL, MVT::i32));
+  if (Lo.isUndef())
+    return DAG.getNode(ISD::BITCAST, SL, VT, ShlHi);
+
+  Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
+  Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
 
   SDValue Or = DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi);
-
   return DAG.getNode(ISD::BITCAST, SL, VT, Or);
 }
 
@@ -6429,6 +6438,29 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
+  if (RHS.getOpcode() == ISD::SETCC && LHS.getOpcode() == AMDGPUISD::FP_CLASS)
+    std::swap(LHS, RHS);
+
+  if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == AMDGPUISD::FP_CLASS &&
+      RHS.hasOneUse()) {
+    ISD::CondCode LCC = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    // and (fcmp seto), (fp_class x, mask) -> fp_class x, mask & ~(p_nan | n_nan)
+    // and (fcmp setuo), (fp_class x, mask) -> fp_class x, mask & (p_nan | n_nan)
+    const ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(RHS.getOperand(1));
+    if ((LCC == ISD::SETO || LCC == ISD::SETUO) && Mask &&
+        (RHS.getOperand(0) == LHS.getOperand(0) &&
+         LHS.getOperand(0) == LHS.getOperand(1))) {
+      const unsigned OrdMask = SIInstrFlags::S_NAN | SIInstrFlags::Q_NAN;
+      unsigned NewMask = LCC == ISD::SETO ?
+        Mask->getZExtValue() & ~OrdMask :
+        Mask->getZExtValue() & OrdMask;
+
+      SDLoc DL(N);
+      return DAG.getNode(AMDGPUISD::FP_CLASS, DL, MVT::i1, RHS.getOperand(0),
+                         DAG.getConstant(NewMask, DL, MVT::i32));
+    }
+  }
+
   if (VT == MVT::i32 &&
       (RHS.getOpcode() == ISD::SIGN_EXTEND || LHS.getOpcode() == ISD::SIGN_EXTEND)) {
     // and x, (sext cc from i1) => select cc, x, 0
@@ -6799,6 +6831,10 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::FRACT:
   case AMDGPUISD::LDEXP:
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
+  case AMDGPUISD::CVT_F32_UBYTE0:
+  case AMDGPUISD::CVT_F32_UBYTE1:
+  case AMDGPUISD::CVT_F32_UBYTE2:
+  case AMDGPUISD::CVT_F32_UBYTE3:
     return true;
 
   // It can/will be lowered or combined as a bit operation.
@@ -6878,10 +6914,15 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_cvt_pkrtz:
+    case Intrinsic::amdgcn_cubeid:
+    case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_fdot2:
       return true;
     default:
       break;
     }
+
+    LLVM_FALLTHROUGH;
   }
   default:
     return denormalsEnabledForType(Op.getValueType()) &&
@@ -6948,25 +6989,40 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   // TODO: This could be better with wider vectors that will be split to v2f16,
   // and to consider uses since there aren't that many packed operations.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16) {
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16 &&
+      isTypeLegal(MVT::v2f16)) {
     SDLoc SL(N);
     SDValue NewElts[2];
     SDValue Lo = N0.getOperand(0);
     SDValue Hi = N0.getOperand(1);
+    EVT EltVT = Lo.getValueType();
+
     if (vectorEltWillFoldAway(Lo) || vectorEltWillFoldAway(Hi)) {
       for (unsigned I = 0; I != 2; ++I) {
         SDValue Op = N0.getOperand(I);
-        EVT EltVT = Op.getValueType();
         if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
           NewElts[I] = getCanonicalConstantFP(DAG, SL, EltVT,
                                               CFP->getValueAPF());
         } else if (Op.isUndef()) {
-          // This would ordinarily be folded to a qNaN. Since this may be half
-          // of a packed operation, it may be cheaper to use a 0.
-          NewElts[I] = DAG.getConstantFP(0.0f, SL, EltVT);
+          // Handled below based on what the other operand is.
+          NewElts[I] = Op;
         } else {
           NewElts[I] = DAG.getNode(ISD::FCANONICALIZE, SL, EltVT, Op);
         }
+      }
+
+      // If one half is undef, and one is constant, perfer a splat vector rather
+      // than the normal qNaN. If it's a register, prefer 0.0 since that's
+      // cheaper to use and may be free with a packed operation.
+      if (NewElts[0].isUndef()) {
+        if (isa<ConstantFPSDNode>(NewElts[1]))
+          NewElts[0] = isa<ConstantFPSDNode>(NewElts[1]) ?
+            NewElts[1]: DAG.getConstantFP(0.0f, SL, EltVT);
+      }
+
+      if (NewElts[1].isUndef()) {
+        NewElts[1] = isa<ConstantFPSDNode>(NewElts[0]) ?
+          NewElts[0] : DAG.getConstantFP(0.0f, SL, EltVT);
       }
 
       return DAG.getBuildVector(VT, SL, NewElts);
@@ -7740,16 +7796,26 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                            VT != MVT::f16))
     return SDValue();
 
-  // Match isinf pattern
+  // Match isinf/isfinite pattern
   // (fcmp oeq (fabs x), inf) -> (fp_class x, (p_infinity | n_infinity))
-  if (CC == ISD::SETOEQ && LHS.getOpcode() == ISD::FABS) {
+  // (fcmp one (fabs x), inf) -> (fp_class x,
+  // (p_normal | n_normal | p_subnormal | n_subnormal | p_zero | n_zero)
+  if ((CC == ISD::SETOEQ || CC == ISD::SETONE) && LHS.getOpcode() == ISD::FABS) {
     const ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
     if (!CRHS)
       return SDValue();
 
     const APFloat &APF = CRHS->getValueAPF();
     if (APF.isInfinity() && !APF.isNegative()) {
-      unsigned Mask = SIInstrFlags::P_INFINITY | SIInstrFlags::N_INFINITY;
+      const unsigned IsInfMask = SIInstrFlags::P_INFINITY |
+                                 SIInstrFlags::N_INFINITY;
+      const unsigned IsFiniteMask = SIInstrFlags::N_ZERO |
+                                    SIInstrFlags::P_ZERO |
+                                    SIInstrFlags::N_NORMAL |
+                                    SIInstrFlags::P_NORMAL |
+                                    SIInstrFlags::N_SUBNORMAL |
+                                    SIInstrFlags::P_SUBNORMAL;
+      unsigned Mask = CC == ISD::SETOEQ ? IsInfMask : IsFiniteMask;
       return DAG.getNode(AMDGPUISD::FP_CLASS, SL, MVT::i1, LHS.getOperand(0),
                          DAG.getConstant(Mask, SL, MVT::i32));
     }

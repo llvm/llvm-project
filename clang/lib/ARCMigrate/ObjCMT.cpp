@@ -261,7 +261,7 @@ namespace {
     if (IsGetter) {
       // Find space location range between receiver expression and getter method.
       SourceLocation BegLoc =
-        ReceiverIsSuper ? Msg->getSuperLoc() : receiver->getLocEnd();
+          ReceiverIsSuper ? Msg->getSuperLoc() : receiver->getEndLoc();
       BegLoc = PP.getLocForEndOfToken(BegLoc);
       SourceLocation EndLoc = Msg->getSelectorLoc(0);
       SourceRange SpaceRange(BegLoc, EndLoc);
@@ -269,7 +269,7 @@ namespace {
       // rewrite getter method expression into: receiver.property or
       // (receiver).property
       if (NeedsParen) {
-        commit.insertBefore(receiver->getLocStart(), "(");
+        commit.insertBefore(receiver->getBeginLoc(), "(");
         PropertyDotString = ").";
       }
       else
@@ -291,9 +291,9 @@ namespace {
       if (!RHS)
         return false;
       SourceLocation BegLoc =
-        ReceiverIsSuper ? Msg->getSuperLoc() : receiver->getLocEnd();
+          ReceiverIsSuper ? Msg->getSuperLoc() : receiver->getEndLoc();
       BegLoc = PP.getLocForEndOfToken(BegLoc);
-      SourceLocation EndLoc = RHS->getLocStart();
+      SourceLocation EndLoc = RHS->getBeginLoc();
       EndLoc = EndLoc.getLocWithOffset(-1);
       const char *colon = PP.getSourceManager().getCharacterData(EndLoc);
       // Add a space after '=' if there is no space between RHS and '='
@@ -545,14 +545,14 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
 
   SourceLocation EndGetterSelectorLoc =
     StartGetterSelectorLoc.getLocWithOffset(GetterSelector.getNameForSlot(0).size());
-  commit.replace(CharSourceRange::getCharRange(Getter->getLocStart(),
+  commit.replace(CharSourceRange::getCharRange(Getter->getBeginLoc(),
                                                EndGetterSelectorLoc),
                  PropertyString);
   if (Setter && AvailabilityArgsMatch) {
     SourceLocation EndLoc = Setter->getDeclaratorEndLoc();
     // Get location past ';'
     EndLoc = EndLoc.getLocWithOffset(1);
-    SourceLocation BeginOfSetterDclLoc = Setter->getLocStart();
+    SourceLocation BeginOfSetterDclLoc = Setter->getBeginLoc();
     // FIXME. This assumes that setter decl; is immediately preceded by eoln.
     // It is trying to remove the setter method decl. line entirely.
     BeginOfSetterDclLoc = BeginOfSetterDclLoc.getLocWithOffset(-1);
@@ -720,32 +720,33 @@ static bool rewriteToNSEnumDecl(const EnumDecl *EnumDcl,
 
   ClassString += TypedefDcl->getIdentifier()->getName();
   ClassString += ')';
-  SourceRange R(EnumDcl->getLocStart(), EnumDcl->getLocStart());
+  SourceRange R(EnumDcl->getBeginLoc(), EnumDcl->getBeginLoc());
   commit.replace(R, ClassString);
-  SourceLocation EndOfEnumDclLoc = EnumDcl->getLocEnd();
+  SourceLocation EndOfEnumDclLoc = EnumDcl->getEndLoc();
   EndOfEnumDclLoc = trans::findSemiAfterLocation(EndOfEnumDclLoc,
                                                  NS.getASTContext(), /*IsDecl*/true);
   if (EndOfEnumDclLoc.isValid()) {
-    SourceRange EnumDclRange(EnumDcl->getLocStart(), EndOfEnumDclLoc);
-    commit.insertFromRange(TypedefDcl->getLocStart(), EnumDclRange);
+    SourceRange EnumDclRange(EnumDcl->getBeginLoc(), EndOfEnumDclLoc);
+    commit.insertFromRange(TypedefDcl->getBeginLoc(), EnumDclRange);
   }
   else
     return false;
 
-  SourceLocation EndTypedefDclLoc = TypedefDcl->getLocEnd();
+  SourceLocation EndTypedefDclLoc = TypedefDcl->getEndLoc();
   EndTypedefDclLoc = trans::findSemiAfterLocation(EndTypedefDclLoc,
                                                  NS.getASTContext(), /*IsDecl*/true);
   if (EndTypedefDclLoc.isValid()) {
-    SourceRange TDRange(TypedefDcl->getLocStart(), EndTypedefDclLoc);
+    SourceRange TDRange(TypedefDcl->getBeginLoc(), EndTypedefDclLoc);
     commit.remove(TDRange);
   }
   else
     return false;
 
-  EndOfEnumDclLoc = trans::findLocationAfterSemi(EnumDcl->getLocEnd(), NS.getASTContext(),
-                                                 /*IsDecl*/true);
+  EndOfEnumDclLoc =
+      trans::findLocationAfterSemi(EnumDcl->getEndLoc(), NS.getASTContext(),
+                                   /*IsDecl*/ true);
   if (EndOfEnumDclLoc.isValid()) {
-    SourceLocation BeginOfEnumDclLoc = EnumDcl->getLocStart();
+    SourceLocation BeginOfEnumDclLoc = EnumDcl->getBeginLoc();
     // FIXME. This assumes that enum decl; is immediately preceded by eoln.
     // It is trying to remove the enum decl. lines entirely.
     BeginOfEnumDclLoc = BeginOfEnumDclLoc.getLocWithOffset(-1);
@@ -775,12 +776,13 @@ static void rewriteToNSMacroDecl(ASTContext &Ctx,
   SourceLocation EndLoc = EnumDcl->getBraceRange().getBegin();
   if (EndLoc.isInvalid())
     return;
-  CharSourceRange R = CharSourceRange::getCharRange(EnumDcl->getLocStart(), EndLoc);
+  CharSourceRange R =
+      CharSourceRange::getCharRange(EnumDcl->getBeginLoc(), EndLoc);
   commit.replace(R, ClassString);
   // This is to remove spaces between '}' and typedef name.
-  SourceLocation StartTypedefLoc = EnumDcl->getLocEnd();
+  SourceLocation StartTypedefLoc = EnumDcl->getEndLoc();
   StartTypedefLoc = StartTypedefLoc.getLocWithOffset(+1);
-  SourceLocation EndTypedefLoc = TypedefDcl->getLocEnd();
+  SourceLocation EndTypedefLoc = TypedefDcl->getEndLoc();
 
   commit.remove(SourceRange(StartTypedefLoc, EndTypedefLoc));
 }
@@ -811,7 +813,7 @@ static bool UseNSOptionsMacro(Preprocessor &PP, ASTContext &Ctx,
     }
     if (AllHexdecimalEnumerator && EnumVal) {
       bool FoundHexdecimalEnumerator = false;
-      SourceLocation EndLoc = Enumerator->getLocEnd();
+      SourceLocation EndLoc = Enumerator->getEndLoc();
       Token Tok;
       if (!PP.getRawToken(EndLoc, Tok, /*IgnoreWhiteSpace=*/true))
         if (Tok.isLiteral() && Tok.getLength() > 2) {
@@ -928,7 +930,7 @@ bool ObjCMigrateASTConsumer::migrateNSEnumDecl(ASTContext &Ctx,
     if (const EnumType *EnumTy = qt->getAs<EnumType>()) {
       if (EnumTy->getDecl() == EnumDcl) {
         bool NSOptions = UseNSOptionsMacro(PP, Ctx, EnumDcl);
-        if (!InsertFoundation(Ctx, TypedefDcl->getLocStart()))
+        if (!InsertFoundation(Ctx, TypedefDcl->getBeginLoc()))
           return false;
         edit::Commit commit(*Editor);
         rewriteToNSMacroDecl(Ctx, EnumDcl, TypedefDcl, *NSAPIObj, commit, !NSOptions);
@@ -941,7 +943,7 @@ bool ObjCMigrateASTConsumer::migrateNSEnumDecl(ASTContext &Ctx,
 
   // We may still use NS_OPTIONS based on what we find in the enumertor list.
   bool NSOptions = UseNSOptionsMacro(PP, Ctx, EnumDcl);
-  if (!InsertFoundation(Ctx, TypedefDcl->getLocStart()))
+  if (!InsertFoundation(Ctx, TypedefDcl->getBeginLoc()))
     return false;
   edit::Commit commit(*Editor);
   bool Res = rewriteToNSEnumDecl(EnumDcl, TypedefDcl, *NSAPIObj,
@@ -964,7 +966,7 @@ static void ReplaceWithInstancetype(ASTContext &Ctx,
     ClassString = "instancetype";
   }
   else {
-    R = SourceRange(OM->getLocStart(), OM->getLocStart());
+    R = SourceRange(OM->getBeginLoc(), OM->getBeginLoc());
     ClassString = OM->isInstanceMethod() ? '-' : '+';
     ClassString += " (instancetype)";
   }
@@ -986,7 +988,7 @@ static void ReplaceWithClasstype(const ObjCMigrateASTConsumer &ASTC,
     }
   }
   else {
-    R = SourceRange(OM->getLocStart(), OM->getLocStart());
+    R = SourceRange(OM->getBeginLoc(), OM->getBeginLoc());
     ClassString = "+ (";
     ClassString += IDecl->getName(); ClassString += "*)";
   }
@@ -1257,7 +1259,7 @@ void ObjCMigrateASTConsumer::migrateNsReturnsInnerPointer(ASTContext &Ctx,
     return;
 
   edit::Commit commit(*Editor);
-  commit.insertBefore(OM->getLocEnd(), " NS_RETURNS_INNER_POINTER");
+  commit.insertBefore(OM->getEndLoc(), " NS_RETURNS_INNER_POINTER");
   Editor->commit(commit);
 }
 
@@ -1269,7 +1271,7 @@ void ObjCMigrateASTConsumer::migratePropertyNsReturnsInnerPointer(ASTContext &Ct
       !NSAPIObj->isMacroDefined("NS_RETURNS_INNER_POINTER"))
     return;
   edit::Commit commit(*Editor);
-  commit.insertBefore(P->getLocEnd(), " NS_RETURNS_INNER_POINTER ");
+  commit.insertBefore(P->getEndLoc(), " NS_RETURNS_INNER_POINTER ");
   Editor->commit(commit);
 }
 
@@ -1395,9 +1397,9 @@ void ObjCMigrateASTConsumer::AnnotateImplicitBridging(ASTContext &Ctx) {
     CFFunctionIBCandidates[CFFunctionIBCandidates.size()-1];
   const char *PragmaString = "\nCF_IMPLICIT_BRIDGING_ENABLED\n\n";
   edit::Commit commit(*Editor);
-  commit.insertBefore(FirstFD->getLocStart(), PragmaString);
+  commit.insertBefore(FirstFD->getBeginLoc(), PragmaString);
   PragmaString = "\n\nCF_IMPLICIT_BRIDGING_DISABLED\n";
-  SourceLocation EndLoc = LastFD->getLocEnd();
+  SourceLocation EndLoc = LastFD->getEndLoc();
   // get location just past end of function location.
   EndLoc = PP.getLocForEndOfToken(EndLoc);
   if (isa<FunctionDecl>(LastFD)) {
@@ -1472,7 +1474,7 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
 
     if (AnnotationString) {
       edit::Commit commit(*Editor);
-      commit.insertAfterToken(FuncDecl->getLocEnd(), AnnotationString);
+      commit.insertAfterToken(FuncDecl->getEndLoc(), AnnotationString);
       Editor->commit(commit);
     }
   }
@@ -1598,7 +1600,7 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
 
     if (AnnotationString) {
       edit::Commit commit(*Editor);
-      commit.insertBefore(MethodDecl->getLocEnd(), AnnotationString);
+      commit.insertBefore(MethodDecl->getEndLoc(), AnnotationString);
       Editor->commit(commit);
     }
   }
@@ -1636,7 +1638,7 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
       MethodDecl->getMethodFamily() != OMF_release &&
       NSAPIObj->isMacroDefined("NS_CONSUMES_SELF")) {
     edit::Commit commit(*Editor);
-    commit.insertBefore(MethodDecl->getLocEnd(), " NS_CONSUMES_SELF");
+    commit.insertBefore(MethodDecl->getEndLoc(), " NS_CONSUMES_SELF");
     Editor->commit(commit);
   }
 
@@ -1713,7 +1715,7 @@ void ObjCMigrateASTConsumer::inferDesignatedInitializers(
       continue;
     if (hasSuperInitCall(MD)) {
       edit::Commit commit(*Editor);
-      commit.insert(IFaceM->getLocEnd(), " NS_DESIGNATED_INITIALIZER");
+      commit.insert(IFaceM->getEndLoc(), " NS_DESIGNATED_INITIALIZER");
       Editor->commit(commit);
     }
   }

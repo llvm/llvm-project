@@ -189,7 +189,7 @@ void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
   if (ArgText.empty())
     return;
 
-  diag(Call->getLocStart(), "redundant call to %0")
+  diag(Call->getBeginLoc(), "redundant call to %0")
       << Member->getMemberDecl()
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
 }

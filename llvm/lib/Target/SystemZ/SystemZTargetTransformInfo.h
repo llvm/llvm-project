@@ -37,6 +37,8 @@ public:
   /// \name Scalar TTI Implementations
   /// @{
 
+  unsigned getInliningThresholdMultiplier() { return 3; }
+
   int getIntImmCost(const APInt &Imm, Type *Ty);
 
   int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);

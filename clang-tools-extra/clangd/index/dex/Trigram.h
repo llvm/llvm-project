@@ -36,14 +36,20 @@ namespace dex {
 /// First, given Identifier (unqualified symbol name) is segmented using
 /// FuzzyMatch API and lowercased. After segmentation, the following technique
 /// is applied for generating trigrams: for each letter or digit in the input
-/// string the algorithms looks for the possible next and skip-1-next symbols
+/// string the algorithms looks for the possible next and skip-1-next characters
 /// which can be jumped to during fuzzy matching. Each combination of such three
-/// symbols is inserted into the result.
+/// characters is inserted into the result.
 ///
 /// Trigrams can start at any character in the input. Then we can choose to move
 /// to the next character, move to the start of the next segment, or skip over a
 /// segment.
 ///
+/// This also generates incomplete trigrams for short query scenarios:
+///  * Empty trigram: "$$$".
+///  * Unigram: the first character of the identifier.
+///  * Bigrams: a 2-char prefix of the identifier and a bigram of the first two
+///    HEAD characters (if they exist).
+//
 /// Note: the returned list of trigrams does not have duplicates, if any trigram
 /// belongs to more than one class it is only inserted once.
 std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier);
@@ -53,6 +59,10 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier);
 /// Query is segmented using FuzzyMatch API and downcasted to lowercase. Then,
 /// the simplest trigrams - sequences of three consecutive letters and digits
 /// are extracted and returned after deduplication.
+///
+/// For short queries (less than 3 characters with Head or Tail roles in Fuzzy
+/// Matching segmentation) this returns a single trigram with the first
+/// characters (up to 3) to perfrom prefix match.
 std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 
 } // namespace dex

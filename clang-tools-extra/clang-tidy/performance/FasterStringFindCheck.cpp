@@ -90,13 +90,14 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Replacement)
     return;
 
-  diag(Literal->getLocStart(), "%0 called with a string literal consisting of "
+  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
                                "a single character; consider using the more "
                                "effective overload accepting a character")
-      << FindFunc << FixItHint::CreateReplacement(
-                         CharSourceRange::getTokenRange(Literal->getLocStart(),
-                                                        Literal->getLocEnd()),
-                         *Replacement);
+      << FindFunc
+      << FixItHint::CreateReplacement(
+             CharSourceRange::getTokenRange(Literal->getBeginLoc(),
+                                            Literal->getEndLoc()),
+             *Replacement);
 }
 
 } // namespace performance

@@ -199,9 +199,9 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   const auto *Expr = cast<MemberExpr>(Reset->getCallee());
   SourceLocation OperatorLoc = Expr->getOperatorLoc();
   SourceLocation ResetCallStart = Reset->getExprLoc();
-  SourceLocation ExprStart = Expr->getLocStart();
+  SourceLocation ExprStart = Expr->getBeginLoc();
   SourceLocation ExprEnd =
-      Lexer::getLocForEndOfToken(Expr->getLocEnd(), 0, SM, getLangOpts());
+      Lexer::getLocForEndOfToken(Expr->getEndLoc(), 0, SM, getLangOpts());
 
   bool InMacro = ExprStart.isMacroID();
 
@@ -353,7 +353,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // Has to be replaced with:
       //   smart_ptr<Pair>(Pair{first, second});
       InitRange = SourceRange(
-          New->getAllocatedTypeSourceInfo()->getTypeLoc().getLocStart(),
+          New->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
           New->getInitializer()->getSourceRange().getEnd());
     }
     Diag << FixItHint::CreateRemoval(

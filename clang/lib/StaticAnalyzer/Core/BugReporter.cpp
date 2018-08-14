@@ -1632,8 +1632,8 @@ static void removePunyEdges(PathPieces &path, SourceManager &SM,
     if (isConditionForTerminator(end, endParent))
       continue;
 
-    SourceLocation FirstLoc = start->getLocStart();
-    SourceLocation SecondLoc = end->getLocStart();
+    SourceLocation FirstLoc = start->getBeginLoc();
+    SourceLocation SecondLoc = end->getBeginLoc();
 
     if (!SM.isWrittenInSameFile(FirstLoc, SecondLoc))
       continue;

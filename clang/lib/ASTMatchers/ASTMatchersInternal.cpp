@@ -610,6 +610,10 @@ const internal::VariadicDynCastAllOfMatcher<Decl, FriendDecl> friendDecl;
 const internal::VariadicAllOfMatcher<Stmt> stmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedMemberExpr>
+    unresolvedMemberExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDependentScopeMemberExpr>
+    cxxDependentScopeMemberExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CallExpr> callExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, LambdaExpr> lambdaExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
@@ -710,6 +714,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
 const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
     integerLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral> imaginaryLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
     userDefinedLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>

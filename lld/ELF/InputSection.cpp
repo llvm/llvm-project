@@ -481,6 +481,33 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
   return OS->PtLoad->FirstSec->Addr;
 }
 
+// For R_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
+// points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
+// is calculated using PCREL_HI20's symbol.
+//
+// This function returns the R_RISCV_PCREL_HI20 relocation from
+// R_RISCV_PCREL_LO12's symbol and addend.
+Relocation *lld::elf::getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
+  const Defined *D = cast<Defined>(Sym);
+  InputSection *IS = cast<InputSection>(D->Section);
+
+  if (Addend != 0)
+    warn("Non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
+         IS->getObjMsg(D->Value) + " is ignored");
+
+  // Relocations are sorted by offset, so we can use std::equal_range to do
+  // binary search.
+  auto Range = std::equal_range(IS->Relocations.begin(), IS->Relocations.end(),
+                                D->Value, RelocationOffsetComparator{});
+  for (auto It = std::get<0>(Range); It != std::get<1>(Range); ++It)
+    if (isRelExprOneOf<R_PC>(It->Expr))
+      return &*It;
+
+  error("R_RISCV_PCREL_LO12 relocation points to " + IS->getObjMsg(D->Value) +
+        " without an associated R_RISCV_PCREL_HI20 relocation");
+  return nullptr;
+}
+
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
@@ -566,6 +593,13 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     else
       Dest = getAArch64Page(Sym.getVA(A));
     return Dest - getAArch64Page(P);
+  }
+  case R_RISCV_PC_INDIRECT: {
+    const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A);
+    if (!HiRel)
+      return 0;
+    return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
+                            *HiRel->Sym, HiRel->Expr);
   }
   case R_PC: {
     uint64_t Dest;

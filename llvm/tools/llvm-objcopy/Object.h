@@ -104,6 +104,7 @@ private:
   using Elf_Word = typename ELFT::Word;
   using Elf_Rel = typename ELFT::Rel;
   using Elf_Rela = typename ELFT::Rela;
+  using Elf_Sym = typename ELFT::Sym;
 
 public:
   virtual ~ELFSectionWriter() {}
@@ -190,6 +191,7 @@ public:
 
 template <class ELFT> class ELFWriter : public Writer {
 private:
+  using Elf_Addr = typename ELFT::Addr;
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Phdr = typename ELFT::Phdr;
   using Elf_Ehdr = typename ELFT::Ehdr;
@@ -250,6 +252,7 @@ public:
   uint64_t Offset = 0;
   uint64_t Size = 0;
   uint64_t Type = ELF::SHT_NULL;
+  ArrayRef<uint8_t> OriginalData;
 
   virtual ~SectionBase() = default;
 
@@ -386,7 +389,7 @@ struct Symbol {
   SectionBase *DefinedIn = nullptr;
   SymbolShndxType ShndxType;
   uint32_t Index;
-  StringRef Name;
+  std::string Name;
   uint32_t NameIndex;
   uint64_t Size;
   uint8_t Type;

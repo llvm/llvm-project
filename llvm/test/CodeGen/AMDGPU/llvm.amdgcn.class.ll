@@ -507,5 +507,42 @@ define amdgpu_kernel void @test_class_undef_f32(i32 addrspace(1)* %out, float %a
   ret void
 }
 
+; SI-LABEL: {{^}}test_fold_and_ord:
+; SI: s_waitcnt
+; SI-NEXT: v_cmp_class_f32_e64 s[6:7], v0, 32{{$}}
+; SI-NEXT: v_cndmask_b32_e64 v0, 0, 1, s[6:7]
+; SI-NEXT: s_setpc_b64
+define i1 @test_fold_and_ord(float %a) {
+  %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
+  %ord = fcmp ord float %a, %a
+  %and = and i1 %ord, %class
+  ret i1 %and
+}
+
+; SI-LABEL: {{^}}test_fold_and_unord:
+; SI: s_waitcnt
+; SI-NEXT: v_cmp_class_f32_e64 s[6:7], v0, 3{{$}}
+; SI-NEXT: v_cndmask_b32_e64 v0, 0, 1, s[6:7]
+; SI-NEXT: s_setpc_b64
+define i1 @test_fold_and_unord(float %a) {
+  %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
+  %ord = fcmp uno float %a, %a
+  %and = and i1 %ord, %class
+  ret i1 %and
+}
+
+; SI-LABEL: {{^}}test_fold_and_ord_multi_use:
+; SI: v_cmp_class
+; SI-NOT: v_cmp_class
+; SI: v_cmp_o
+; SI: s_and_b64
+define i1 @test_fold_and_ord_multi_use(float %a) {
+  %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
+  store volatile i1 %class, i1 addrspace(1)* undef
+  %ord = fcmp ord float %a, %a
+  %and = and i1 %ord, %class
+  ret i1 %and
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

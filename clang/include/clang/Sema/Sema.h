@@ -2456,11 +2456,11 @@ public:
                                 unsigned AttrSpellingListIndex);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D, SourceRange Range,
                                           unsigned AttrSpellingListIndex);
-  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, SourceRange Range,
-                                                IdentifierInfo *Ident,
-                                                unsigned AttrSpellingListIndex);
-  CommonAttr *mergeCommonAttr(Decl *D, SourceRange Range, IdentifierInfo *Ident,
-                              unsigned AttrSpellingListIndex);
+  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
+  InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
+                                                const InternalLinkageAttr &AL);
+  CommonAttr *mergeCommonAttr(Decl *D, const ParsedAttr &AL);
+  CommonAttr *mergeCommonAttr(Decl *D, const CommonAttr &AL);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);

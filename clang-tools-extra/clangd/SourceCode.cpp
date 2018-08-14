@@ -185,18 +185,34 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
   return Edits;
 }
 
-llvm::Optional<std::string>
-getAbsoluteFilePath(const FileEntry *F, const SourceManager &SourceMgr) {
-  SmallString<64> FilePath = F->tryGetRealPathName();
-  if (FilePath.empty())
-    FilePath = F->getName();
-  if (!llvm::sys::path::is_absolute(FilePath)) {
-    if (!SourceMgr.getFileManager().makeAbsolutePath(FilePath)) {
-      log("Could not turn relative path to absolute: {0}", FilePath);
+llvm::Optional<std::string> getRealPath(const FileEntry *F,
+                                        const SourceManager &SourceMgr) {
+  // Ideally, we get the real path from the FileEntry object.
+  SmallString<128> FilePath = F->tryGetRealPathName();
+  if (!FilePath.empty()) {
+    return FilePath.str().str();
+  }
+
+  // Otherwise, we try to compute ourselves.
+  vlog("FileEntry for {0} did not contain the real path.", F->getName());
+
+  llvm::SmallString<128> Path = F->getName();
+
+  if (!llvm::sys::path::is_absolute(Path)) {
+    if (!SourceMgr.getFileManager().makeAbsolutePath(Path)) {
+      log("Could not turn relative path to absolute: {0}", Path);
       return llvm::None;
     }
   }
-  return FilePath.str().str();
+
+  llvm::SmallString<128> RealPath;
+  if (SourceMgr.getFileManager().getVirtualFileSystem()->getRealPath(
+          Path, RealPath)) {
+    log("Could not compute real path: {0}", Path);
+    return Path.str().str();
+  }
+
+  return RealPath.str().str();
 }
 
 TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
@@ -206,6 +222,11 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
       halfOpenToRange(M, Lexer::makeFileCharRange(FixIt.RemoveRange, M, L));
   Result.newText = FixIt.CodeToInsert;
   return Result;
+}
+
+bool IsRangeConsecutive(const Range &Left, const Range &Right) {
+  return Left.end.line == Right.start.line &&
+         Left.end.character == Right.start.character;
 }
 
 } // namespace clangd

@@ -156,7 +156,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   //    compilation unit as the signature change could introduce build errors.
   // 4. the function is an explicit template specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Function);
-  if (Param->getLocStart().isMacroID() || (Method && Method->isVirtual()) ||
+  if (Param->getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
       isReferencedOutsideOfCallExpr(*Function, *Result.Context) ||
       isExplicitTemplateSpecialization(*Function))
     return;
@@ -189,20 +189,20 @@ void UnnecessaryValueParamCheck::storeOptions(
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,
                                                const DeclRefExpr &CopyArgument,
                                                const ASTContext &Context) {
-  auto Diag = diag(CopyArgument.getLocStart(),
+  auto Diag = diag(CopyArgument.getBeginLoc(),
                    "parameter %0 is passed by value and only copied once; "
                    "consider moving it to avoid unnecessary copies")
               << &Var;
   // Do not propose fixes in macros since we cannot place them correctly.
-  if (CopyArgument.getLocStart().isMacroID())
+  if (CopyArgument.getBeginLoc().isMacroID())
     return;
   const auto &SM = Context.getSourceManager();
   auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM,
                                            Context.getLangOpts());
-  Diag << FixItHint::CreateInsertion(CopyArgument.getLocStart(), "std::move(")
+  Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")");
   if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
-          SM.getFileID(CopyArgument.getLocStart()), "utility",
+          SM.getFileID(CopyArgument.getBeginLoc()), "utility",
           /*IsAngled=*/true))
     Diag << *IncludeFixit;
 }

@@ -420,8 +420,8 @@ static bool rewriteToArrayLiteral(const ObjCMessageExpr *Msg,
       commit.replace(MsgRange, "@[]");
       return true;
     }
-    SourceRange ArgRange(Msg->getArg(0)->getLocStart(),
-                         Msg->getArg(Msg->getNumArgs()-2)->getLocEnd());
+    SourceRange ArgRange(Msg->getArg(0)->getBeginLoc(),
+                         Msg->getArg(Msg->getNumArgs() - 2)->getEndLoc());
     commit.replaceWithInner(MsgRange, ArgRange);
     commit.insertWrap("@[", ArgRange, "]");
     return true;
@@ -550,8 +550,8 @@ static bool rewriteToDictionaryLiteral(const ObjCMessageExpr *Msg,
     // Range of arguments up until and including the last key.
     // The sentinel and first value are cut off, the value will move after the
     // key.
-    SourceRange ArgRange(Msg->getArg(1)->getLocStart(),
-                         Msg->getArg(SentinelIdx-1)->getLocEnd());
+    SourceRange ArgRange(Msg->getArg(1)->getBeginLoc(),
+                         Msg->getArg(SentinelIdx - 1)->getEndLoc());
     commit.insertWrap("@{", ArgRange, "}");
     commit.replaceWithInner(MsgRange, ArgRange);
     return true;
@@ -591,8 +591,7 @@ static bool rewriteToDictionaryLiteral(const ObjCMessageExpr *Msg,
     }
     // Range of arguments up until and including the last key.
     // The first value is cut off, the value will move after the key.
-    SourceRange ArgRange(Keys.front()->getLocStart(),
-                         Keys.back()->getLocEnd());
+    SourceRange ArgRange(Keys.front()->getBeginLoc(), Keys.back()->getEndLoc());
     commit.insertWrap("@{", ArgRange, "}");
     commit.replaceWithInner(MsgRange, ArgRange);
     return true;
@@ -1131,7 +1130,7 @@ static bool doRewriteToUTF8StringBoxedExpressionHelper(
   if (const StringLiteral *
         StrE = dyn_cast<StringLiteral>(OrigArg->IgnoreParens())) {
     commit.replaceWithInner(Msg->getSourceRange(), StrE->getSourceRange());
-    commit.insert(StrE->getLocStart(), "@");
+    commit.insert(StrE->getBeginLoc(), "@");
     return true;
   }
 

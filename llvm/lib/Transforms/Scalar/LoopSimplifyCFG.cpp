@@ -61,7 +61,8 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // Merge Succ into Pred and delete it.
     MergeBlockIntoPredecessor(Succ, &DTU, &LI);
 
-    SE.forgetLoop(&L);
+    SE.forgetTopmostLoop(&L);
+
     Changed = true;
   }
 

@@ -81,13 +81,12 @@ public:
       return error;
     }
     int get_proc_group() const override {
-      int i;
       int group = -1;
 #if KMP_OS_WINDOWS
       if (__kmp_num_proc_groups == 1) {
         return 1;
       }
-      for (i = 0; i < __kmp_num_proc_groups; i++) {
+      for (int i = 0; i < __kmp_num_proc_groups; i++) {
         // On windows, the long type is always 32 bits
         unsigned long first_32_bits = hwloc_bitmap_to_ith_ulong(mask, i * 2);
         unsigned long second_32_bits =
@@ -333,7 +332,7 @@ class KMPNativeAffinity : public KMPAffinity {
   void deallocate_mask(KMPAffinity::Mask *m) override {
     KMPNativeAffinity::Mask *native_mask =
         static_cast<KMPNativeAffinity::Mask *>(m);
-    delete m;
+    delete native_mask;
   }
   KMPAffinity::Mask *allocate_mask_array(int num) override {
     return new Mask[num];

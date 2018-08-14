@@ -82,7 +82,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
   auto ReplaceRange = CharSourceRange::getCharRange(
-      CastExpr->getLParenLoc(), CastExpr->getSubExprAsWritten()->getLocStart());
+      CastExpr->getLParenLoc(), CastExpr->getSubExprAsWritten()->getBeginLoc());
 
   bool FnToFnCast =
       isFunction(SourceTypeAsWritten) && isFunction(DestTypeAsWritten);
@@ -93,7 +93,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     // in this case. Don't emit "redundant cast" warnings for function
     // pointer/reference types.
     if (SourceTypeAsWritten == DestTypeAsWritten) {
-      diag(CastExpr->getLocStart(), "redundant cast to the same type")
+      diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
           << FixItHint::CreateRemoval(ReplaceRange);
       return;
     }
@@ -116,7 +116,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Ignore code in .c files #included in other files (which shouldn't be done,
   // but people still do this for test and other purposes).
-  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getLocStart())).endswith(".c"))
+  if (SM.getFilename(SM.getSpellingLoc(CastExpr->getBeginLoc())).endswith(".c"))
     return;
 
   // Leave type spelling exactly as it was (unlike
@@ -128,14 +128,14 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
                            SM, getLangOpts());
 
   auto Diag =
-      diag(CastExpr->getLocStart(), "C-style casts are discouraged; use %0");
+      diag(CastExpr->getBeginLoc(), "C-style casts are discouraged; use %0");
 
   auto ReplaceWithCast = [&](std::string CastText) {
     const Expr *SubExpr = CastExpr->getSubExprAsWritten()->IgnoreImpCasts();
     if (!isa<ParenExpr>(SubExpr)) {
       CastText.push_back('(');
       Diag << FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0, SM,
+          Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0, SM,
                                      getLangOpts()),
           ")");
     }

@@ -41,7 +41,7 @@ Optional<FixItHint> UsingInserter::createUsingDeclaration(
     return None;
 
   SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
-      Function->getBody()->getLocStart(), 0, SourceMgr, Context.getLangOpts());
+      Function->getBody()->getBeginLoc(), 0, SourceMgr, Context.getLangOpts());
 
   // Only use using declarations in the main file, not in includes.
   if (SourceMgr.getFileID(InsertLoc) != SourceMgr.getMainFileID())

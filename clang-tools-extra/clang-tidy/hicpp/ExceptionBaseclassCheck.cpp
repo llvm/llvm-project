@@ -35,14 +35,14 @@ void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
 void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BadThrow = Result.Nodes.getNodeAs<CXXThrowExpr>("bad_throw");
 
-  diag(BadThrow->getSubExpr()->getLocStart(), "throwing an exception whose "
+  diag(BadThrow->getSubExpr()->getBeginLoc(), "throwing an exception whose "
                                               "type %0 is not derived from "
                                               "'std::exception'")
       << BadThrow->getSubExpr()->getType() << BadThrow->getSourceRange();
 
   const auto *TypeDecl = Result.Nodes.getNodeAs<NamedDecl>("decl");
   if (TypeDecl != nullptr)
-    diag(TypeDecl->getLocStart(), "type defined here", DiagnosticIDs::Note);
+    diag(TypeDecl->getBeginLoc(), "type defined here", DiagnosticIDs::Note);
 }
 
 } // namespace hicpp

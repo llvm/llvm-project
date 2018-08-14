@@ -453,7 +453,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     // to bool.
     ExprResult Conv = S.PerformContextuallyConvertToBool(AwaitReady);
     if (Conv.isInvalid()) {
-      S.Diag(AwaitReady->getDirectCallee()->getLocStart(),
+      S.Diag(AwaitReady->getDirectCallee()->getBeginLoc(),
              diag::note_await_ready_no_bool_conversion);
       S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
           << AwaitReady->getDirectCallee() << E->getSourceRange();
@@ -1460,7 +1460,7 @@ static Expr *castForMoving(Sema &S, Expr *E, QualType T = QualType()) {
     T = E->getType();
   QualType TargetType = S.BuildReferenceType(
       T, /*SpelledAsLValue*/ false, SourceLocation(), DeclarationName());
-  SourceLocation ExprLoc = E->getLocStart();
+  SourceLocation ExprLoc = E->getBeginLoc();
   TypeSourceInfo *TargetLoc =
       S.Context.getTrivialTypeSourceInfo(TargetType, ExprLoc);
 

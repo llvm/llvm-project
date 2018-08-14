@@ -4915,7 +4915,8 @@ ObjCRuntime Clang::AddObjCRuntimeArgs(const ArgList &args,
     }
     if ((runtime.getKind() == ObjCRuntime::GNUstep) &&
         (runtime.getVersion() >= VersionTuple(2, 0)))
-      if (!getToolChain().getTriple().isOSBinFormatELF()) {
+      if (!getToolChain().getTriple().isOSBinFormatELF() &&
+          !getToolChain().getTriple().isOSBinFormatCOFF()) {
         getToolChain().getDriver().Diag(
             diag::err_drv_gnustep_objc_runtime_incompatible_binary)
           << runtime.getVersion().getMajor();
@@ -5273,9 +5274,28 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       CmdArgs.push_back("msvc");
   }
 
-  if (Args.hasArg(options::OPT__SLASH_Guard) &&
-      Args.getLastArgValue(options::OPT__SLASH_Guard).equals_lower("cf"))
-    CmdArgs.push_back("-cfguard");
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+    SmallVector<StringRef, 1> SplitArgs;
+    StringRef(A->getValue()).split(SplitArgs, ",");
+    bool Instrument = false;
+    bool NoChecks = false;
+    for (StringRef Arg : SplitArgs) {
+      if (Arg.equals_lower("cf"))
+        Instrument = true;
+      else if (Arg.equals_lower("cf-"))
+        Instrument = false;
+      else if (Arg.equals_lower("nochecks"))
+        NoChecks = true;
+      else if (Arg.equals_lower("nochecks-"))
+        NoChecks = false;
+      else
+        D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << Arg;
+    }
+    // Currently there's no support emitting CFG instrumentation; the flag only
+    // emits the table of address-taken functions.
+    if (Instrument || NoChecks)
+      CmdArgs.push_back("-cfguard");
+  }
 }
 
 visualstudio::Compiler *Clang::getCLFallback() const {

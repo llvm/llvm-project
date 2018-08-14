@@ -682,7 +682,7 @@ public:
     if (auto Loc = matchAssignment(N, BRC)) {
       if (isFunctionMacroExpansion(*Loc, SMgr)) {
         std::string MacroName = getMacroName(*Loc, BRC);
-        SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+        SourceLocation BugLoc = BugPoint->getStmt()->getBeginLoc();
         if (!BugLoc.isMacroID() || getMacroName(BugLoc, BRC) != MacroName)
           BR.markInvalid(getTag(), MacroName.c_str());
       }
@@ -730,12 +730,12 @@ private:
         if (const Expr *RHS = VD->getInit())
           if (RegionOfInterest->isSubRegionOf(
                   State->getLValue(VD, LCtx).getAsRegion()))
-            return RHS->getLocStart();
+            return RHS->getBeginLoc();
     } else if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
       const MemRegion *R = N->getSVal(BO->getLHS()).getAsRegion();
       const Expr *RHS = BO->getRHS();
       if (BO->isAssignmentOp() && RegionOfInterest->isSubRegionOf(R)) {
-        return RHS->getLocStart();
+        return RHS->getBeginLoc();
       }
     }
     return None;
@@ -1468,7 +1468,7 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
       CurTerminatorStmt = BE->getSrc()->getTerminator().getStmt();
     } else if (auto SP = CurPoint.getAs<StmtPoint>()) {
       const Stmt *CurStmt = SP->getStmt();
-      if (!CurStmt->getLocStart().isMacroID())
+      if (!CurStmt->getBeginLoc().isMacroID())
         return nullptr;
 
       CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
@@ -1480,9 +1480,9 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
     if (!CurTerminatorStmt)
       return nullptr;
 
-    SourceLocation TerminatorLoc = CurTerminatorStmt->getLocStart();
+    SourceLocation TerminatorLoc = CurTerminatorStmt->getBeginLoc();
     if (TerminatorLoc.isMacroID()) {
-      SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+      SourceLocation BugLoc = BugPoint->getStmt()->getBeginLoc();
 
       // Suppress reports unless we are in that same macro.
       if (!BugLoc.isMacroID() ||
@@ -1559,6 +1559,10 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
   if (auto *BO = dyn_cast<BinaryOperator>(Ex))
     if (const Expr *SubEx = peelOffPointerArithmetic(BO))
       return peelOffOuterExpr(SubEx, N);
+
+  if (auto *UO = dyn_cast<UnaryOperator>(Ex))
+    if (UO->getOpcode() == UO_LNot)
+      return peelOffOuterExpr(UO->getSubExpr(), N);
 
   return Ex;
 }
@@ -2026,8 +2030,8 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
 
   // Use heuristics to determine if Ex is a macro expending to a literal and
   // if so, use the macro's name.
-  SourceLocation LocStart = Ex->getLocStart();
-  SourceLocation LocEnd = Ex->getLocEnd();
+  SourceLocation LocStart = Ex->getBeginLoc();
+  SourceLocation LocEnd = Ex->getEndLoc();
   if (LocStart.isMacroID() && LocEnd.isMacroID() &&
       (isa<GNUNullExpr>(Ex) ||
        isa<ObjCBoolLiteralExpr>(Ex) ||
@@ -2041,10 +2045,10 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
     bool beginAndEndAreTheSameMacro = StartName.equals(EndName);
 
     bool partOfParentMacro = false;
-    if (ParentEx->getLocStart().isMacroID()) {
+    if (ParentEx->getBeginLoc().isMacroID()) {
       StringRef PName = Lexer::getImmediateMacroNameForDiagnostics(
-        ParentEx->getLocStart(), BRC.getSourceManager(),
-        BRC.getASTContext().getLangOpts());
+          ParentEx->getBeginLoc(), BRC.getSourceManager(),
+          BRC.getASTContext().getLangOpts());
       partOfParentMacro = PName.equals(StartName);
     }
 

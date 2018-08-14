@@ -5667,6 +5667,7 @@ let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0101010000000000;
+let hasSideEffects = 1;
 let isSolo = 1;
 }
 def J2_trap1 : HInst<
@@ -5679,6 +5680,7 @@ let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01010100100;
 let hasNewValue = 1;
+let hasSideEffects = 1;
 let opNewValue = 0;
 let isSolo = 1;
 let Uses = [GOSP];
@@ -5692,6 +5694,7 @@ def J2_trap1_noregmap : HInst<
 tc_59a01ead, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+let hasSideEffects = 1;
 }
 def J4_cmpeq_f_jumpnv_nt : HInst<
 (outs),

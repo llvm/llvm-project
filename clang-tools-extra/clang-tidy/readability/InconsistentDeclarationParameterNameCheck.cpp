@@ -324,7 +324,7 @@ void InconsistentDeclarationParameterNameCheck::check(
     return;
   }
 
-  SourceLocation StartLoc = OriginalDeclaration->getLocStart();
+  SourceLocation StartLoc = OriginalDeclaration->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros) {
     markRedeclarationsAsVisited(OriginalDeclaration);
     return;

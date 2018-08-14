@@ -269,8 +269,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, GetSoftenedFloat(InOp));
   case TargetLowering::TypePromoteFloat: {
     // Convert the promoted float by hand.
-    SDValue PromotedOp = GetPromotedFloat(InOp);
-    return DAG.getNode(ISD::FP_TO_FP16, dl, NOutVT, PromotedOp);
+    if (!NOutVT.isVector())
+      return DAG.getNode(ISD::FP_TO_FP16, dl, NOutVT, GetPromotedFloat(InOp));
     break;
   }
   case TargetLowering::TypeExpandInteger:

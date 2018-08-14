@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
+#include "../utils/DeclRefExprUtils.h"
 #include "../utils/ExprMutationAnalyzer.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/TypeTraits.h"
@@ -41,7 +42,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
 void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("loopVar");
   // Ignore code in macros since we can't place the fixes correctly.
-  if (Var->getLocStart().isMacroID())
+  if (Var->getBeginLoc().isMacroID())
     return;
   if (handleConstValueCopy(*Var, *Result.Context))
     return;
@@ -79,15 +80,27 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
-  if (utils::ExprMutationAnalyzer(ForRange.getBody(), &Context)
-          .isMutated(&LoopVar))
-    return false;
-  diag(LoopVar.getLocation(),
-       "loop variable is copied but only used as const reference; consider "
-       "making it a const reference")
-      << utils::fixit::changeVarDeclToConst(LoopVar)
-      << utils::fixit::changeVarDeclToReference(LoopVar, Context);
-  return true;
+  // We omit the case where the loop variable is not used in the loop body. E.g.
+  //
+  // for (auto _ : benchmark_state) {
+  // }
+  //
+  // Because the fix (changing to `const auto &`) will introduce an unused
+  // compiler warning which can't be suppressed.
+  // Since this case is very rare, it is safe to ignore it.
+  if (!utils::ExprMutationAnalyzer(ForRange.getBody(), &Context)
+          .isMutated(&LoopVar) &&
+      !utils::decl_ref_expr::allDeclRefExprs(LoopVar, *ForRange.getBody(),
+                                             Context)
+           .empty()) {
+    diag(LoopVar.getLocation(),
+         "loop variable is copied but only used as const reference; consider "
+         "making it a const reference")
+        << utils::fixit::changeVarDeclToConst(LoopVar)
+        << utils::fixit::changeVarDeclToReference(LoopVar, Context);
+    return true;
+  }
+  return false;
 }
 
 } // namespace performance

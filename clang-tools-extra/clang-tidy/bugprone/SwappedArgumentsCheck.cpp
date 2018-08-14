@@ -84,7 +84,7 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Emit a warning and fix-its that swap the arguments.
-    diag(Call->getLocStart(), "argument with implicit conversion from %0 "
+    diag(Call->getBeginLoc(), "argument with implicit conversion from %0 "
                               "to %1 followed by argument converted from "
                               "%2 to %3, potentially swapped arguments.")
         << LHS->getType() << LHSFrom->getType() << RHS->getType()

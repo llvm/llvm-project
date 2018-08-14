@@ -1674,8 +1674,8 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
       return Init;
     Expr *InitList = Init.get();
     return Actions.ActOnCXXTypeConstructExpr(
-        TypeRep, InitList->getLocStart(), MultiExprArg(&InitList, 1),
-        InitList->getLocEnd(), /*ListInitialization=*/true);
+        TypeRep, InitList->getBeginLoc(), MultiExprArg(&InitList, 1),
+        InitList->getEndLoc(), /*ListInitialization=*/true);
   } else {
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
@@ -1685,10 +1685,10 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 
     if (Tok.isNot(tok::r_paren)) {
       if (ParseExpressionList(Exprs, CommaLocs, [&] {
-            Actions.CodeCompleteConstructor(getCurScope(),
-                                      TypeRep.get()->getCanonicalTypeInternal(),
-                                            DS.getLocEnd(), Exprs);
-         })) {
+            Actions.CodeCompleteConstructor(
+                getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+                DS.getEndLoc(), Exprs);
+          })) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return ExprError();
       }
@@ -2819,10 +2819,9 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
       if (ParseExpressionList(ConstructorArgs, CommaLocs, [&] {
             ParsedType TypeRep = Actions.ActOnTypeName(getCurScope(),
                                                        DeclaratorInfo).get();
-            Actions.CodeCompleteConstructor(getCurScope(),
-                                      TypeRep.get()->getCanonicalTypeInternal(),
-                                            DeclaratorInfo.getLocEnd(),
-                                            ConstructorArgs);
+            Actions.CodeCompleteConstructor(
+                getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+                DeclaratorInfo.getEndLoc(), ConstructorArgs);
       })) {
         SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
         return ExprError();

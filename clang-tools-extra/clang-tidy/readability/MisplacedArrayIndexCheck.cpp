@@ -30,7 +30,7 @@ void MisplacedArrayIndexCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ArraySubscriptE =
       Result.Nodes.getNodeAs<ArraySubscriptExpr>("expr");
 
-  auto Diag = diag(ArraySubscriptE->getLocStart(), "confusing array subscript "
+  auto Diag = diag(ArraySubscriptE->getBeginLoc(), "confusing array subscript "
                                                    "expression, usually the "
                                                    "index is inside the []");
 

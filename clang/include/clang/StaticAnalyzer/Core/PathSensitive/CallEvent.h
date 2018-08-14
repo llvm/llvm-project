@@ -793,7 +793,7 @@ protected:
                     ProgramStateRef St, const LocationContext *LCtx)
       : CXXInstanceCall(DD, St, LCtx) {
     Data = DtorDataTy(Target, IsBaseDestructor).getOpaqueValue();
-    Location = Trigger->getLocEnd();
+    Location = Trigger->getEndLoc();
   }
 
   CXXDestructorCall(const CXXDestructorCall &Other) = default;

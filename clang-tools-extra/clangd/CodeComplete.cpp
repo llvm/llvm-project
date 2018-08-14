@@ -34,6 +34,7 @@
 #include "index/Index.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -128,16 +129,16 @@ toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
 /// Get the optional chunk as a string. This function is possibly recursive.
 ///
 /// The parameter info for each parameter is appended to the Parameters.
-std::string
-getOptionalParameters(const CodeCompletionString &CCS,
-                      std::vector<ParameterInformation> &Parameters) {
+std::string getOptionalParameters(const CodeCompletionString &CCS,
+                                  std::vector<ParameterInformation> &Parameters,
+                                  SignatureQualitySignals &Signal) {
   std::string Result;
   for (const auto &Chunk : CCS) {
     switch (Chunk.Kind) {
     case CodeCompletionString::CK_Optional:
       assert(Chunk.Optional &&
              "Expected the optional code completion string to be non-null.");
-      Result += getOptionalParameters(*Chunk.Optional, Parameters);
+      Result += getOptionalParameters(*Chunk.Optional, Parameters, Signal);
       break;
     case CodeCompletionString::CK_VerticalSpace:
       break;
@@ -153,6 +154,8 @@ getOptionalParameters(const CodeCompletionString &CCS,
       ParameterInformation Info;
       Info.label = Chunk.Text;
       Parameters.push_back(std::move(Info));
+      Signal.ContainsActiveParameter = true;
+      Signal.NumberOfOptionalParameters++;
       break;
     }
     default:
@@ -235,7 +238,7 @@ struct CompletionCandidate {
       // file e.g. the symbol is forward declared.
       auto &SM = SemaResult->Declaration->getASTContext().getSourceManager();
       for (const Decl *RD : SemaResult->Declaration->redecls())
-        if (SM.isInMainFile(SM.getExpansionLoc(RD->getLocStart())))
+        if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
           return llvm::None;
     }
     return IndexResult->Detail->IncludeHeader;
@@ -285,6 +288,11 @@ struct CodeCompletionBuilder {
         Completion.FixIts.push_back(
             toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));
       }
+      std::sort(Completion.FixIts.begin(), Completion.FixIts.end(),
+                [](const TextEdit &X, const TextEdit &Y) {
+                  return std::tie(X.range.start.line, X.range.start.character) <
+                         std::tie(Y.range.start.line, Y.range.start.character);
+                });
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -679,6 +687,9 @@ private:
   llvm::unique_function<void()> ResultsCallback;
 };
 
+using ScoredSignature =
+    std::pair<SignatureQualitySignals, SignatureInformation>;
+
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 
 public:
@@ -692,7 +703,9 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates) override {
+    std::vector<ScoredSignature> ScoredSignatures;
     SigHelp.signatures.reserve(NumCandidates);
+    ScoredSignatures.reserve(NumCandidates);
     // FIXME(rwols): How can we determine the "active overload candidate"?
     // Right now the overloaded candidates seem to be provided in a "best fit"
     // order, so I'm not too worried about this.
@@ -706,11 +719,45 @@ public:
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       // FIXME: for headers, we need to get a comment from the index.
-      SigHelp.signatures.push_back(processOverloadCandidate(
+      ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
           getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
                                  /*CommentsFromHeaders=*/false)));
     }
+    std::sort(ScoredSignatures.begin(), ScoredSignatures.end(),
+              [](const ScoredSignature &L, const ScoredSignature &R) {
+                // Ordering follows:
+                // - Less number of parameters is better.
+                // - Function is better than FunctionType which is better than
+                // Function Template.
+                // - High score is better.
+                // - Shorter signature is better.
+                // - Alphebatically smaller is better.
+                if (L.first.NumberOfParameters != R.first.NumberOfParameters)
+                  return L.first.NumberOfParameters <
+                         R.first.NumberOfParameters;
+                if (L.first.NumberOfOptionalParameters !=
+                    R.first.NumberOfOptionalParameters)
+                  return L.first.NumberOfOptionalParameters <
+                         R.first.NumberOfOptionalParameters;
+                if (L.first.Kind != R.first.Kind) {
+                  using OC = CodeCompleteConsumer::OverloadCandidate;
+                  switch (L.first.Kind) {
+                  case OC::CK_Function:
+                    return true;
+                  case OC::CK_FunctionType:
+                    return R.first.Kind != OC::CK_Function;
+                  case OC::CK_FunctionTemplate:
+                    return false;
+                  }
+                  llvm_unreachable("Unknown overload candidate type.");
+                }
+                if (L.second.label.size() != R.second.label.size())
+                  return L.second.label.size() < R.second.label.size();
+                return L.second.label < R.second.label;
+              });
+    for (const auto &SS : ScoredSignatures)
+      SigHelp.signatures.push_back(SS.second);
   }
 
   GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
@@ -720,14 +767,15 @@ public:
 private:
   // FIXME(ioeric): consider moving CodeCompletionString logic here to
   // CompletionString.h.
-  SignatureInformation
-  processOverloadCandidate(const OverloadCandidate &Candidate,
-                           const CodeCompletionString &CCS,
-                           llvm::StringRef DocComment) const {
+  ScoredSignature processOverloadCandidate(const OverloadCandidate &Candidate,
+                                           const CodeCompletionString &CCS,
+                                           llvm::StringRef DocComment) const {
     SignatureInformation Result;
+    SignatureQualitySignals Signal;
     const char *ReturnType = nullptr;
 
     Result.documentation = formatDocumentation(CCS, DocComment);
+    Signal.Kind = Candidate.getKind();
 
     for (const auto &Chunk : CCS) {
       switch (Chunk.Kind) {
@@ -749,6 +797,8 @@ private:
         ParameterInformation Info;
         Info.label = Chunk.Text;
         Result.parameters.push_back(std::move(Info));
+        Signal.NumberOfParameters++;
+        Signal.ContainsActiveParameter = true;
         break;
       }
       case CodeCompletionString::CK_Optional: {
@@ -756,7 +806,7 @@ private:
         assert(Chunk.Optional &&
                "Expected the optional code completion string to be non-null.");
         Result.label +=
-            getOptionalParameters(*Chunk.Optional, Result.parameters);
+            getOptionalParameters(*Chunk.Optional, Result.parameters, Signal);
         break;
       }
       case CodeCompletionString::CK_VerticalSpace:
@@ -770,7 +820,8 @@ private:
       Result.label += " -> ";
       Result.label += ReturnType;
     }
-    return Result;
+    dlog("Signal for {0}: {1}", Result, Signal);
+    return {Signal, Result};
   }
 
   SignatureHelp &SigHelp;
@@ -1044,6 +1095,23 @@ private:
   // This is called by run() once Sema code completion is done, but before the
   // Sema data structures are torn down. It does all the real work.
   CodeCompleteResult runWithSema() {
+    const auto &CodeCompletionRange = CharSourceRange::getCharRange(
+        Recorder->CCSema->getPreprocessor().getCodeCompletionTokenRange());
+    Range TextEditRange;
+    // When we are getting completions with an empty identifier, for example
+    //    std::vector<int> asdf;
+    //    asdf.^;
+    // Then the range will be invalid and we will be doing insertion, use
+    // current cursor position in such cases as range.
+    if (CodeCompletionRange.isValid()) {
+      TextEditRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
+                                      CodeCompletionRange);
+    } else {
+      const auto &Pos = sourceLocToPosition(
+          Recorder->CCSema->getSourceManager(),
+          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
+      TextEditRange.start = TextEditRange.end = Pos;
+    }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
     QueryScopes = getQueryScopes(Recorder->CCContext,
@@ -1063,6 +1131,7 @@ private:
     for (auto &C : Top) {
       Output.Completions.push_back(toCodeCompletion(C.first));
       Output.Completions.back().Score = C.second;
+      Output.Completions.back().CompletionTokenRange = TextEditRange;
     }
     Output.HasMore = Incomplete;
     Output.Context = Recorder->CCContext.getKind();
@@ -1278,16 +1347,29 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.documentation = Documentation;
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
-  // FIXME(kadircet): Use LSP.textEdit instead of insertText, because it causes
-  // undesired behaviours. Like completing "this.^" into "this-push_back".
-  LSP.insertText = RequiredQualifier + Name;
+  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
+  // Merge continious additionalTextEdits into main edit. The main motivation
+  // behind this is to help LSP clients, it seems most of them are confused when
+  // they are provided with additionalTextEdits that are consecutive to main
+  // edit.
+  // Note that we store additional text edits from back to front in a line. That
+  // is mainly to help LSP clients again, so that changes do not effect each
+  // other.
+  for (const auto &FixIt : FixIts) {
+    if (IsRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
+      LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
+      LSP.textEdit->range.start = FixIt.range.start;
+    } else {
+      LSP.additionalTextEdits.push_back(FixIt);
+    }
+  }
   if (Opts.EnableSnippets)
-    LSP.insertText += SnippetSuffix;
+    LSP.textEdit->newText += SnippetSuffix;
+  // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
+  // compatible with most of the editors.
+  LSP.insertText = LSP.textEdit->newText;
   LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
                                              : InsertTextFormat::PlainText;
-  LSP.additionalTextEdits.reserve(FixIts.size() + (HeaderInsertion ? 1 : 0));
-  for (const auto &FixIt : FixIts)
-    LSP.additionalTextEdits.push_back(FixIt);
   if (HeaderInsertion)
     LSP.additionalTextEdits.push_back(*HeaderInsertion);
   return LSP;

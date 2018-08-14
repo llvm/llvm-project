@@ -83,7 +83,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   auto &Context = *Result.Context;
   auto &SM = *Result.SourceManager;
 
-  SourceLocation StartLoc = MatchedDecl->getLocStart();
+  SourceLocation StartLoc = MatchedDecl->getBeginLoc();
 
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;

@@ -178,10 +178,9 @@ public:
   PathDiagnosticLocation() = default;
 
   /// Create a location corresponding to the given statement.
-  PathDiagnosticLocation(const Stmt *s,
-                         const SourceManager &sm,
+  PathDiagnosticLocation(const Stmt *s, const SourceManager &sm,
                          LocationOrAnalysisDeclContext lac)
-      : K(s->getLocStart().isValid() ? StmtK : SingleLocK),
+      : K(s->getBeginLoc().isValid() ? StmtK : SingleLocK),
         S(K == StmtK ? s : nullptr), SM(&sm),
         Loc(genLocation(SourceLocation(), lac)), Range(genRange(lac)) {
     assert(K == SingleLocK || S);

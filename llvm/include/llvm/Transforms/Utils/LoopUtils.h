@@ -490,6 +490,10 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// estimate can not be made.
 Optional<unsigned> getLoopEstimatedTripCount(Loop *L);
 
+/// Check inner loop (L) backedge count is known to be invariant on all iterations
+/// of its outer loop. If the loop has no parent, this is trivially true.
+bool hasInvariantIterationCount(Loop *L, ScalarEvolution &SE);
+
 /// Helper to consistently add the set of standard passes to a loop pass's \c
 /// AnalysisUsage.
 ///

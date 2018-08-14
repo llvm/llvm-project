@@ -64,10 +64,18 @@ protected:
 
 public:
   /// Returns the starting location of the clause.
-  SourceLocation getLocStart() const { return StartLoc; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
+                            "Use getBeginLoc instead") {
+    return getBeginLoc();
+  }
+  SourceLocation getBeginLoc() const { return StartLoc; }
 
   /// Returns the ending location of the clause.
-  SourceLocation getLocEnd() const { return EndLoc; }
+  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
+                            "Use getEndLoc instead") {
+    return getEndLoc();
+  }
+  SourceLocation getEndLoc() const { return EndLoc; }
 
   /// Sets the starting location of the clause.
   void setLocStart(SourceLocation Loc) { StartLoc = Loc; }

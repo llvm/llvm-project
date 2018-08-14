@@ -772,9 +772,11 @@ static bool endsWithReturn(const Decl* F) {
   return false;
 }
 
-static void markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
-  Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
-  Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+void CodeGenFunction::markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
+  if (SanOpts.has(SanitizerKind::Thread)) {
+    Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
+    Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+  }
 }
 
 static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
@@ -887,10 +889,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
           (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
         markAsIgnoreThreadCheckingAtRuntime(Fn);
       }
-    } else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-      IdentifierInfo *II = FD->getIdentifier();
-      if (II && II->isStr("__destroy_helper_block_"))
-        markAsIgnoreThreadCheckingAtRuntime(Fn);
     }
   }
 
@@ -2089,9 +2087,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             SanitizerScope SanScope(this);
             llvm::Value *Zero = llvm::Constant::getNullValue(Size->getType());
             llvm::Constant *StaticArgs[] = {
-              EmitCheckSourceLocation(size->getLocStart()),
-              EmitCheckTypeDescriptor(size->getType())
-            };
+                EmitCheckSourceLocation(size->getBeginLoc()),
+                EmitCheckTypeDescriptor(size->getType())};
             EmitCheck(std::make_pair(Builder.CreateICmpSGT(Size, Zero),
                                      SanitizerKind::VLABound),
                       SanitizerHandler::VLABoundNotPositive, StaticArgs, Size);
@@ -2319,7 +2316,7 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
       return;
     StringRef(FeatureList).split(ReqFeatures, ',');
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getLocStart(), diag::err_builtin_needs_feature)
+      CGM.getDiags().Report(E->getBeginLoc(), diag::err_builtin_needs_feature)
           << TargetDecl->getDeclName()
           << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
 
@@ -2345,7 +2342,7 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
         ReqFeatures.push_back(F.getKey());
     }
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getLocStart(), diag::err_function_needs_feature)
+      CGM.getDiags().Report(E->getBeginLoc(), diag::err_function_needs_feature)
           << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
   }
 }

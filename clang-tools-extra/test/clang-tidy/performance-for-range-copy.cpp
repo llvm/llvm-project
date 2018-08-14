@@ -260,3 +260,8 @@ void PositiveConstNonMemberOperatorInvoked() {
     bool result = ConstOperatorInvokee != Mutable();
   }
 }
+
+void IgnoreLoopVariableNotUsedInLoopBody() {
+  for (auto _ : View<Iterator<S>>()) {
+  }
+}

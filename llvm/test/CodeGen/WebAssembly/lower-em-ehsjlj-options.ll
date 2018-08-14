@@ -39,9 +39,9 @@ entry:
   %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
   unreachable
-; SJLJ: i32.call ${{[a-zA-Z0-9]+}}=, saveSetjmp@FUNCTION
-; SJLJ: i32.call ${{[a-zA-Z0-9]+}}=, testSetjmp@FUNCTION
-; NONE: i32.call ${{[a-zA-Z0-9]+}}=, setjmp@FUNCTION
+; SJLJ: i32.call saveSetjmp@FUNCTION
+; SJLJ: i32.call testSetjmp@FUNCTION
+; NONE: i32.call setjmp@FUNCTION
 ; NONE: call longjmp@FUNCTION
 }
 
