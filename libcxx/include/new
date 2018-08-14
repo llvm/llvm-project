@@ -108,13 +108,6 @@ void  operator delete[](void* ptr, void*) noexcept;
 # define _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
-    (!(defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_STD_VER > 14 || \
-    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606)))
-# define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
-#endif
-
-
 #if !__has_builtin(__builtin_operator_new) || \
    __has_builtin(__builtin_operator_new) < 201802L || \
    defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
