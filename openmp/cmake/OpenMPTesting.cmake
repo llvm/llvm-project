@@ -87,7 +87,9 @@ function(set_test_compiler_information dir)
 
     # Determine major version.
     string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
+    string(REGEX MATCH "[0-9]+\\.[0-9]+" majorminor "${OPENMP_TEST_C_COMPILER_VERSION}")
     set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${major}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${majorminor}" PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -117,6 +119,7 @@ else()
   # Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
   set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
   set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_MAJOR_VERSION}")
+  set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_MAJOR_VERSION}.${LLVM_MINOR_VERSION}")
   # TODO: Implement blockaddress in GlobalISel and remove this flag!
   set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp -fno-experimental-isel")
 endif()
@@ -131,7 +134,7 @@ function(set_test_compiler_features)
     # Just use the lowercase of the compiler ID as fallback.
     string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
   endif()
-  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
+  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
 endfunction()
 set_test_compiler_features()
 
