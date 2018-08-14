@@ -359,7 +359,7 @@ void f7676608(int);
 void test_7676608(void) {
   float q = 0.7f;
   char c = 5;
-  f7676608(c *= q);
+  f7676608(c *= q); // expected-warning {{conversion}}
 }
 
 // <rdar://problem/7904686>

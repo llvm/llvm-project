@@ -38,7 +38,7 @@ public:
     return !RCU.isEmpty();
   }
   virtual void cycleStart() override final;
-  virtual bool execute(InstRef &IR) override final { return true; }
+  virtual Status execute(InstRef &IR) override final { return Stage::Continue; }
   void notifyInstructionRetired(const InstRef &IR);
   void onInstructionExecuted(unsigned TokenID);
 };

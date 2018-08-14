@@ -8027,12 +8027,18 @@ bool LLParser::ParseConstVCallList(
 }
 
 /// ConstVCall
-///   ::= VFuncId, Args
+///   ::= '(' VFuncId ',' Args ')'
 bool LLParser::ParseConstVCall(FunctionSummary::ConstVCall &ConstVCall,
                                IdToIndexMapType &IdToIndexMap, unsigned Index) {
-  if (ParseVFuncId(ConstVCall.VFunc, IdToIndexMap, Index) ||
-      ParseToken(lltok::comma, "expected ',' here") ||
-      ParseArgs(ConstVCall.Args))
+  if (ParseToken(lltok::lparen, "expected '(' here") ||
+      ParseVFuncId(ConstVCall.VFunc, IdToIndexMap, Index))
+    return true;
+
+  if (EatIfPresent(lltok::comma))
+    if (ParseArgs(ConstVCall.Args))
+      return true;
+
+  if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
 
   return false;

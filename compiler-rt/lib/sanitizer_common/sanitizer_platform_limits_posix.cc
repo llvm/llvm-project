@@ -1206,7 +1206,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_data);
 #endif
 
 #if SANITIZER_LINUX
-COMPILER_CHECK(sizeof(__sanitizer_mallinfo) == sizeof(struct mallinfo));
+COMPILER_CHECK(sizeof(__sanitizer_struct_mallinfo) == sizeof(struct mallinfo));
 #endif
 
 #if !SANITIZER_ANDROID

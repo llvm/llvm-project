@@ -51,8 +51,6 @@ static void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
         size);
     Abort();
   }
-  if (common_flags()->no_huge_pages_for_shadow) NoHugePagesInRegion(beg, size);
-  if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
 }
 
 static void ProtectGap(uptr addr, uptr size) {
@@ -217,6 +215,19 @@ bool InitShadow() {
     ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
 
   return true;
+}
+
+static void MadviseShadowRegion(uptr beg, uptr end) {
+  uptr size = end - beg + 1;
+  if (common_flags()->no_huge_pages_for_shadow)
+    NoHugePagesInRegion(beg, size);
+  if (common_flags()->use_madv_dontdump)
+    DontDumpShadowMemory(beg, size);
+}
+
+void MadviseShadow() {
+  MadviseShadowRegion(kLowShadowStart, kLowShadowEnd);
+  MadviseShadowRegion(kHighShadowStart, kHighShadowEnd);
 }
 
 bool MemIsApp(uptr p) {

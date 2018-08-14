@@ -187,13 +187,13 @@ namespace __sanitizer {
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD
 
 #if SANITIZER_ANDROID
-  struct __sanitizer_mallinfo {
+  struct __sanitizer_struct_mallinfo {
     uptr v[10];
   };
 #endif
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-  struct __sanitizer_mallinfo {
+  struct __sanitizer_struct_mallinfo {
     int v[10];
   };
 
