@@ -54,7 +54,6 @@ public:
   typedef P flag_t;
   kmp_flag_native(volatile P *p, flag_type ft) : loc(p), t(ft) {}
   volatile P *get() { return loc; }
-  void *get_void_p() { return RCAST(void *, CCAST(P *, loc)); }
   void set(volatile P *new_loc) { loc = new_loc; }
   flag_type get_type() { return t; }
   P load() { return *loc; }
@@ -76,10 +75,6 @@ public:
    * @result the pointer to the actual flag
    */
   std::atomic<P> *get() { return loc; }
-  /*!
-   * @result void* pointer to the actual flag
-   */
-  void *get_void_p() { return RCAST(void *, loc); }
   /*!
    * @param new_loc in   set loc to point at new_loc
    */
@@ -158,25 +153,21 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
 
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that
    calls __kmp_wait_*  must make certain that another thread calls __kmp_release
-   to wake it back up to prevent deadlocks!
-
-   NOTE: We may not belong to a team at this point.  */
+   to wake it back up to prevent deadlocks!  */
 template <class C, int final_spin>
 static inline void
 __kmp_wait_template(kmp_info_t *this_thr,
                     C *flag USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  // NOTE: We may not belong to a team at this point.
   volatile void *spin = flag->get();
-#endif
   kmp_uint32 spins;
+  kmp_uint32 hibernate;
   int th_gtid;
   int tasks_completed = FALSE;
   int oversubscribed;
 #if !KMP_USE_MONITOR
   kmp_uint64 poll_count;
   kmp_uint64 hibernate_goal;
-#else
-  kmp_uint32 hibernate;
 #endif
 
   KMP_FSYNC_SPIN_INIT(spin, NULL);
@@ -488,7 +479,7 @@ template <class C> static inline void __kmp_release_template(C *flag) {
 #endif
   KF_TRACE(20, ("__kmp_release: T#%d releasing flag(%x)\n", gtid, flag->get()));
   KMP_DEBUG_ASSERT(flag->get());
-  KMP_FSYNC_RELEASING(flag->get_void_p());
+  KMP_FSYNC_RELEASING(flag->get());
 
   flag->internal_release();
 

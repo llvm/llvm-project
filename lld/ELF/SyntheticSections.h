@@ -50,6 +50,8 @@ public:
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
   virtual bool updateAllocSize() { return false; }
+  // If any additional finalization of contents are needed post thunk creation.
+  virtual void postThunkContents() {}
   virtual bool empty() const { return false; }
 
   static bool classof(const SectionBase *D) {
@@ -559,6 +561,7 @@ class SymbolTableBaseSection : public SyntheticSection {
 public:
   SymbolTableBaseSection(StringTableSection &StrTabSec);
   void finalizeContents() override;
+  void postThunkContents() override;
   size_t getSize() const override { return getNumSymbols() * Entsize; }
   void addSymbol(Symbol *Sym);
   unsigned getNumSymbols() const { return Symbols.size() + 1; }
@@ -566,8 +569,6 @@ public:
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
 protected:
-  void sortSymTabSymbols();
-
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
 

@@ -74,7 +74,6 @@ enum RelExpr {
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
   R_RELAX_TLS_LD_TO_LE_ABS,
-  R_RISCV_PC_INDIRECT,
   R_SIZE,
   R_TLS,
   R_TLSDESC,
@@ -127,21 +126,6 @@ struct Relocation {
   uint64_t Offset;
   int64_t Addend;
   Symbol *Sym;
-};
-
-struct RelocationOffsetComparator {
-  bool operator()(const Relocation &Lhs, const Relocation &Rhs) {
-    return Lhs.Offset < Rhs.Offset;
-  }
-
-  // For std::lower_bound, std::upper_bound, std::equal_range.
-  bool operator()(const Relocation &Rel, uint64_t Val) {
-    return Rel.Offset < Val;
-  }
-
-  bool operator()(uint64_t Val, const Relocation &Rel) {
-    return Val < Rel.Offset;
-  }
 };
 
 template <class ELFT> void scanRelocations(InputSectionBase &);

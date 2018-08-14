@@ -129,7 +129,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
-  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
+  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),
                       [](ErrorInfoBase &Info) { warn(Info.message()); });
@@ -940,7 +940,8 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
     unsigned VerdefIndex = CurVerdef->vd_ndx;
-    Verdefs.resize(VerdefIndex + 1);
+    if (Verdefs.size() <= VerdefIndex)
+      Verdefs.resize(VerdefIndex + 1);
     Verdefs[VerdefIndex] = CurVerdef;
   }
 

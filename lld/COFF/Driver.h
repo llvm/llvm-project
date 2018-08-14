@@ -103,6 +103,7 @@ private:
   std::set<std::string> VisitedLibs;
 
   Symbol *addUndefined(StringRef Sym);
+  StringRef mangle(StringRef Sym);
 
   // Windows specific -- "main" is not the only main function in Windows.
   // You can choose one from these four -- {w,}{WinMain,main}.
@@ -113,6 +114,8 @@ private:
   // entry point name.
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
+
+  void invokeMSVC(llvm::opt::InputArgList &Args);
 
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,

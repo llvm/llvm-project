@@ -4007,11 +4007,10 @@ void __kmp_task_info() {
   kmp_team_t *steam = this_thr->th.th_serial_team;
   kmp_team_t *team = this_thr->th.th_team;
 
-  __kmp_printf(
-      "__kmp_task_info: gtid=%d tid=%d t_thread=%p team=%p steam=%p curtask=%p "
-      "ptask=%p\n",
-      gtid, tid, this_thr, team, steam, this_thr->th.th_current_task,
-      team->t.t_implicit_task_taskdata[tid].td_parent);
+  __kmp_printf("__kmp_task_info: gtid=%d tid=%d t_thread=%p team=%p curtask=%p "
+               "ptask=%p\n",
+               gtid, tid, this_thr, team, this_thr->th.th_current_task,
+               team->t.t_implicit_task_taskdata[tid].td_parent);
 }
 #endif // KMP_DEBUG
 
@@ -6294,7 +6293,7 @@ void __kmp_register_library_startup(void) {
       if (tail != NULL) {
         long *flag_addr = 0;
         long flag_val = 0;
-        KMP_SSCANF(flag_addr_str, "%p", RCAST(void**, &flag_addr));
+        KMP_SSCANF(flag_addr_str, "%p", &flag_addr);
         KMP_SSCANF(flag_val_str, "%lx", &flag_val);
         if (flag_addr != 0 && flag_val != 0 && strcmp(file_name, "") != 0) {
           // First, check whether environment-encoded address is mapped into
@@ -7639,6 +7638,7 @@ __kmp_determine_reduction_method(
   } else {
 
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
+    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64
 
@@ -7652,7 +7652,6 @@ __kmp_determine_reduction_method(
       teamsize_cutoff = 8;
     }
 #endif
-    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
     if (tree_available) {
       if (team_size <= teamsize_cutoff) {
         if (atomic_available) {
@@ -7683,7 +7682,6 @@ __kmp_determine_reduction_method(
 
 #elif KMP_OS_DARWIN
 
-    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
     if (atomic_available && (num_vars <= 3)) {
       retval = atomic_reduce_block;
     } else if (tree_available) {

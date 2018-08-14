@@ -456,6 +456,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
 void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
   int gtid = __kmp_get_gtid();
   kmp_info_t *thr;
+  int ompt_team_size = __kmp_team_from_gtid(gtid)->t.t_nproc;
 
   thr = __kmp_threads[gtid];
 
@@ -1192,6 +1193,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
     ompt_thread_info_t oldInfo;
     kmp_info_t *thread;
     kmp_taskdata_t *taskdata;
+    kmp_taskdata_t *current_task;
     if (ompt_enabled.enabled) {
       // Store the threads states and restore them after the task
       thread = __kmp_threads[gtid];

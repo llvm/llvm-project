@@ -1013,19 +1013,13 @@ static void markSymbolsWithRelocations(ObjFile *File,
     if (!SC || !SC->isLive())
       continue;
 
-    for (const coff_relocation &Reloc : SC->Relocs) {
-      if (Config->Machine == I386 && Reloc.Type == COFF::IMAGE_REL_I386_REL32)
-        // Ignore relative relocations on x86. On x86_64 they can't be ignored
-        // since they're also used to compute absolute addresses.
-        continue;
-
-      Symbol *Ref = SC->File->getSymbol(Reloc.SymbolTableIndex);
-      if (auto *D = dyn_cast_or_null<DefinedCOFF>(Ref)) {
-        if (D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
-          // Ignore relocations against non-functions (e.g. labels).
-          continue;
-
-        // Mark the symbol if it's in an executable section.
+    // Look for relocations in this section against symbols in executable output
+    // sections.
+    for (Symbol *Ref : SC->symbols()) {
+      // FIXME: Do further testing to see if the relocation type matters,
+      // especially for 32-bit where taking the address of something usually
+      // uses an absolute relocation instead of a relative one.
+      if (auto *D = dyn_cast_or_null<Defined>(Ref)) {
         Chunk *RefChunk = D->getChunk();
         OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
         if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)

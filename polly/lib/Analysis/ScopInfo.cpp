@@ -2615,7 +2615,7 @@ bool Scop::propagateInvalidStmtDomains(
       isl::set DomPar = Domain.params();
       recordAssumption(ERRORBLOCK, DomPar, BB->getTerminator()->getDebugLoc(),
                        AS_RESTRICTION);
-      Domain = isl::set::empty(Domain.get_space());
+      Domain = nullptr;
     }
 
     if (InvalidDomain.is_empty()) {
@@ -3523,10 +3523,7 @@ void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
 
 void Scop::removeStmtNotInDomainMap() {
   auto ShouldDelete = [this](ScopStmt &Stmt) -> bool {
-    isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
-    if (!Domain)
-      return true;
-    return Domain.is_empty();
+    return !this->DomainMap.lookup(Stmt.getEntryBlock());
   };
   removeStmts(ShouldDelete, false);
 }
