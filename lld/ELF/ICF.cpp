@@ -80,9 +80,10 @@
 #include "SyntheticSections.h"
 #include "Writer.h"
 #include "lld/Common/Threads.h"
-#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <atomic>
 
@@ -155,12 +156,6 @@ private:
 };
 }
 
-// Returns a hash value for S. Note that the information about
-// relocation targets is not included in the hash value.
-template <class ELFT> static uint32_t getHash(InputSection *S) {
-  return hash_combine(S->Flags, S->getSize(), S->NumRelocations, S->Data);
-}
-
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
   if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC))
@@ -170,6 +165,11 @@ static bool isEligible(InputSection *S) {
   // but are semantically read-only.
   if ((S->Flags & SHF_WRITE) && S->Name != ".data.rel.ro" &&
       !S->Name.startswith(".data.rel.ro."))
+    return false;
+
+  // SHF_LINK_ORDER sections are ICF'd as a unit with their dependent sections,
+  // so we don't consider them for ICF individually.
+  if (S->Flags & SHF_LINK_ORDER)
     return false;
 
   // Don't merge synthetic sections as their Data member is not valid and empty.
@@ -436,7 +436,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(Sections, [&](InputSection *S) {
     // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->Class[0] = getHash<ELFT>(S) | (1U << 31);
+    S->Class[0] = xxHash64(S->Data) | (1U << 31);
   });
 
   // From now on, sections in Sections vector are ordered so that sections

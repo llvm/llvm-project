@@ -221,8 +221,8 @@ template <class ELFT>
 Defined *InputSectionBase::getEnclosingFunction(uint64_t Offset) {
   for (Symbol *B : File->getSymbols())
     if (Defined *D = dyn_cast<Defined>(B))
-      if (D->Section == this && D->Type == STT_FUNC &&
-          D->Value <= Offset && Offset < D->Value + D->Size)
+      if (D->Section == this && D->Type == STT_FUNC && D->Value <= Offset &&
+          Offset < D->Value + D->Size)
         return D;
   return nullptr;
 }
@@ -671,7 +671,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_TLSLD_GOT_FROM_END:
     return InX::Got->getTlsIndexOff() + A - InX::Got->getSize();
   case R_TLSLD_GOT:
-      return InX::Got->getTlsIndexOff() + A;
+    return InX::Got->getTlsIndexOff() + A;
   case R_TLSLD_PC:
     return InX::Got->getTlsIndexVA() + A - P;
   }
@@ -842,8 +842,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
 // For each function-defining prologue, find any calls to __morestack,
 // and replace them with calls to __morestack_non_split.
 static void switchMorestackCallsToMorestackNonSplit(
-    llvm::DenseSet<Defined *>& Prologues,
-    std::vector<Relocation *>& MorestackCalls) {
+    DenseSet<Defined *> &Prologues, std::vector<Relocation *> &MorestackCalls) {
 
   // If the target adjusted a function's prologue, all calls to
   // __morestack inside that function should be switched to
@@ -873,9 +872,8 @@ static void switchMorestackCallsToMorestackNonSplit(
   }
 }
 
-static bool
-enclosingPrologueAdjusted(uint64_t Offset,
-                          const llvm::DenseSet<Defined *> &Prologues) {
+static bool enclosingPrologueAdjusted(uint64_t Offset,
+                                      const DenseSet<Defined *> &Prologues) {
   for (Defined *F : Prologues)
     if (F->Value <= Offset && Offset < F->Value + F->Size)
       return true;
@@ -891,7 +889,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
                                                          uint8_t *End) {
   if (!getFile<ELFT>()->SplitStack)
     return;
-  llvm::DenseSet<Defined *> AdjustedPrologues;
+  DenseSet<Defined *> AdjustedPrologues;
   std::vector<Relocation *> MorestackCalls;
 
   for (Relocation &Rel : Relocations) {
@@ -1071,8 +1069,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> Data,
   bool IsAlloc = Flags & SHF_ALLOC;
 
   for (size_t I = 0; I != Size; I += EntSize)
-    Pieces.emplace_back(I, xxHash64(toStringRef(Data.slice(I, EntSize))),
-                        !IsAlloc);
+    Pieces.emplace_back(I, xxHash64(Data.slice(I, EntSize)), !IsAlloc);
 }
 
 template <class ELFT>

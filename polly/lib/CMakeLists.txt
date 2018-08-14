@@ -52,7 +52,6 @@ add_library(PollyCore OBJECT
   Support/ISLTools.cpp
   Support/DumpModulePass.cpp
   Support/VirtualInstruction.cpp
-  ${POLLY_JSON_FILES}
   Transform/Canonicalization.cpp
   Transform/CodePreparation.cpp
   Transform/DeadCodeElimination.cpp
@@ -77,7 +76,6 @@ set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
 add_polly_library(Polly $<TARGET_OBJECTS:PollyCore>)
 target_link_libraries(Polly PUBLIC
   ${ISL_TARGET}
-  ${JSONCPP_LIBRARIES}
 )
 
 # Additional dependencies for Polly-ACC.
@@ -145,7 +143,7 @@ else ()
   # hosts. This is not the case for bugpoint. Use LLVM_POLLY_LINK_INTO_TOOLS=ON
   # instead which will automatically resolve the additional dependencies by
   # Polly.
-  target_link_libraries(LLVMPolly PUBLIC ${ISL_TARGET} ${JSONCPP_LIBRARIES})
+  target_link_libraries(LLVMPolly PUBLIC ${ISL_TARGET})
   if (GPU_CODEGEN)
     target_link_libraries(LLVMPolly PUBLIC PollyPPCG)
   endif ()

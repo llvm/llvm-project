@@ -9,6 +9,7 @@ _start:
  bx lr
 
 // CHECK:  Flags [
+// CHECK-NEXT:    0x200        
 // CHECK-NEXT:    0x1000000
 // CHECK-NEXT:    0x4000000
 // CHECK-NEXT:  ]
