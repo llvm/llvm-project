@@ -48,4 +48,3 @@ define float @test_simplify_unavailable3(float %f, float %g) {
   %fr = fptrunc double %call to float
   ret float %fr
 }
-

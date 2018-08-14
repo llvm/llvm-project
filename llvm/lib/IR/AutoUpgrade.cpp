@@ -71,7 +71,13 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // like to use this information to remove upgrade code for some older
   // intrinsics. It is currently undecided how we will determine that future
   // point.
-  if (Name=="ssse3.pabs.b.128" || // Added in 6.0
+  if (Name.startswith("sse2.paddus") || // Added in 8.0
+      Name.startswith("sse2.psubus") || // Added in 8.0
+      Name.startswith("avx2.paddus") || // Added in 8.0
+      Name.startswith("avx2.psubus") || // Added in 8.0
+      Name.startswith("avx512.mask.paddus") || // Added in 8.0
+      Name.startswith("avx512.mask.psubus") || // Added in 8.0
+      Name=="ssse3.pabs.b.128" || // Added in 6.0
       Name=="ssse3.pabs.w.128" || // Added in 6.0
       Name=="ssse3.pabs.d.128" || // Added in 6.0
       Name.startswith("fma4.vfmadd.s") || // Added in 7.0
@@ -897,6 +903,37 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
                                              "palignr");
 
   return EmitX86Select(Builder, Mask, Align, Passthru);
+}
+
+static Value *UpgradeX86AddSubSatIntrinsics(IRBuilder<> &Builder, CallInst &CI,
+                                            bool IsAddition) {
+  Value *Op0 = CI.getOperand(0);
+  Value *Op1 = CI.getOperand(1);
+
+  // Collect vector elements and type data.
+  Type *ResultType = CI.getType();
+
+  Value *Res;
+  if (IsAddition) {
+    // ADDUS: a > (a+b) ? ~0 : (a+b)
+    // If Op0 > Add, overflow occured.
+    Value *Add = Builder.CreateAdd(Op0, Op1);
+    Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Op0, Add);
+    Value *Max = llvm::Constant::getAllOnesValue(ResultType);
+    Res = Builder.CreateSelect(ICmp, Max, Add);
+  } else {
+    // SUBUS: max(a, b) - b
+    Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Op0, Op1);
+    Value *Select = Builder.CreateSelect(ICmp, Op0, Op1);
+    Res = Builder.CreateSub(Select, Op1);
+  }
+
+  if (CI.getNumArgOperands() == 4) { // For masked intrinsics.
+    Value *VecSrc = CI.getOperand(2);
+    Value *Mask = CI.getOperand(3);
+    Res = EmitX86Select(Builder, Mask, Res, VecSrc);
+  }
+  return Res;
 }
 
 static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
@@ -2059,7 +2096,15 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
-    } else if (IsX86 && Name.startswith("avx512.mask.palignr.")) {
+    } else if (IsX86 && (Name.startswith("sse2.paddus") ||
+                         Name.startswith("avx2.paddus") ||
+                         Name.startswith("avx512.mask.paddus"))) {
+      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, true /*IsAdd*/);
+    } else if (IsX86 && (Name.startswith("sse2.psubus") ||
+                         Name.startswith("avx2.psubus") ||
+                         Name.startswith("avx512.mask.psubus"))) {
+      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, false /*IsAdd*/);
+    }else if (IsX86 && Name.startswith("avx512.mask.palignr.")) {
       Rep = UpgradeX86ALIGNIntrinsics(Builder, CI->getArgOperand(0),
                                       CI->getArgOperand(1),
                                       CI->getArgOperand(2),

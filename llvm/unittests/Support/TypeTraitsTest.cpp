@@ -35,7 +35,7 @@ void TrivialityTester() {
                     IsTriviallyMoveConstructible,
                 "Mismatch in expected trivial move construction!");
 #endif
-};
+}
 
 template void TrivialityTester<int, true, true>();
 template void TrivialityTester<void *, true, true>();

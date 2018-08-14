@@ -18,12 +18,12 @@
 #define LLVM_UTILS_TABLEGEN_PREDICATEEXPANDER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 
 namespace llvm {
 
-class formatted_raw_ostream;
+class raw_ostream;
 
 class PredicateExpander {
   bool EmitCallsByRef;
@@ -52,38 +52,33 @@ public:
   void setIndentLevel(unsigned Level) { IndentLevel = Level; }
 
   using RecVec = std::vector<Record *>;
-  void expandTrue(formatted_raw_ostream &OS);
-  void expandFalse(formatted_raw_ostream &OS);
-  void expandCheckImmOperand(formatted_raw_ostream &OS, int OpIndex,
-                             int ImmVal);
-  void expandCheckImmOperand(formatted_raw_ostream &OS, int OpIndex,
-                             StringRef ImmVal);
-  void expandCheckRegOperand(formatted_raw_ostream &OS, int OpIndex,
-                             const Record *Reg);
-  void expandCheckSameRegOperand(formatted_raw_ostream &OS, int First,
-                                 int Second);
-  void expandCheckNumOperands(formatted_raw_ostream &OS, int NumOps);
-  void expandCheckOpcode(formatted_raw_ostream &OS, const Record *Inst);
+  void expandTrue(raw_ostream &OS);
+  void expandFalse(raw_ostream &OS);
+  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal);
+  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, StringRef ImmVal);
+  void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg);
+  void expandCheckSameRegOperand(raw_ostream &OS, int First, int Second);
+  void expandCheckNumOperands(raw_ostream &OS, int NumOps);
+  void expandCheckOpcode(raw_ostream &OS, const Record *Inst);
 
-  void expandCheckPseudo(formatted_raw_ostream &OS, const RecVec &Opcodes);
-  void expandCheckOpcode(formatted_raw_ostream &OS, const RecVec &Opcodes);
-  void expandPredicateSequence(formatted_raw_ostream &OS,
-                               const RecVec &Sequence, bool IsCheckAll);
-  void expandTIIFunctionCall(formatted_raw_ostream &OS, StringRef TargetName,
+  void expandCheckPseudo(raw_ostream &OS, const RecVec &Opcodes);
+  void expandCheckOpcode(raw_ostream &OS, const RecVec &Opcodes);
+  void expandPredicateSequence(raw_ostream &OS, const RecVec &Sequence,
+                               bool IsCheckAll);
+  void expandTIIFunctionCall(raw_ostream &OS, StringRef TargetName,
                              StringRef MethodName);
-  void expandCheckIsRegOperand(formatted_raw_ostream &OS, int OpIndex);
-  void expandCheckIsImmOperand(formatted_raw_ostream &OS, int OpIndex);
-  void expandCheckInvalidRegOperand(formatted_raw_ostream &OS, int OpIndex);
-  void expandCheckFunctionPredicate(formatted_raw_ostream &OS,
-                                    StringRef MCInstFn,
+  void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
+  void expandCheckIsImmOperand(raw_ostream &OS, int OpIndex);
+  void expandCheckInvalidRegOperand(raw_ostream &OS, int OpIndex);
+  void expandCheckFunctionPredicate(raw_ostream &OS, StringRef MCInstFn,
                                     StringRef MachineInstrFn);
-  void expandCheckNonPortable(formatted_raw_ostream &OS, StringRef CodeBlock);
-  void expandPredicate(formatted_raw_ostream &OS, const Record *Rec);
-  void expandReturnStatement(formatted_raw_ostream &OS, const Record *Rec);
-  void expandOpcodeSwitchCase(formatted_raw_ostream &OS, const Record *Rec);
-  void expandOpcodeSwitchStatement(formatted_raw_ostream &OS,
-                                   const RecVec &Cases, const Record *Default);
-  void expandStatement(formatted_raw_ostream &OS, const Record *Rec);
+  void expandCheckNonPortable(raw_ostream &OS, StringRef CodeBlock);
+  void expandPredicate(raw_ostream &OS, const Record *Rec);
+  void expandReturnStatement(raw_ostream &OS, const Record *Rec);
+  void expandOpcodeSwitchCase(raw_ostream &OS, const Record *Rec);
+  void expandOpcodeSwitchStatement(raw_ostream &OS, const RecVec &Cases,
+                                   const Record *Default);
+  void expandStatement(raw_ostream &OS, const Record *Rec);
 };
 
 } // namespace llvm

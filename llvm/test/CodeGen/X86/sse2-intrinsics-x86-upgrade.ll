@@ -882,3 +882,87 @@ define <4 x float> @test_x86_sse2_cvtdq2ps(<4 x i32> %a0) {
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>) nounwind readnone
+
+
+define <16 x i8> @test_x86_sse2_paddus_b(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: test_x86_sse2_paddus_b:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    paddusb %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xdc,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_paddus_b:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdc,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_paddus_b:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdc,0xc1]
+; SKX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+
+define <8 x i16> @test_x86_sse2_paddus_w(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: test_x86_sse2_paddus_w:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    paddusw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xdd,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_paddus_w:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdd,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_paddus_w:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdd,0xc1]
+; SKX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
+
+
+define <16 x i8> @test_x86_sse2_psubus_b(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: test_x86_sse2_psubus_b:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    psubusb %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xd8,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_psubus_b:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd8,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_psubus_b:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd8,0xc1]
+; SKX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+
+define <8 x i16> @test_x86_sse2_psubus_w(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: test_x86_sse2_psubus_w:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    psubusw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xd9,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_psubus_w:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd9,0xc1]
+; AVX2-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_psubus_w:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd9,0xc1]
+; SKX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone

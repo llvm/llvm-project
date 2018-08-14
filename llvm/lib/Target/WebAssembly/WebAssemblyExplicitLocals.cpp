@@ -31,21 +31,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-explicit-locals"
 
-// A command-line option to disable this pass, and keep implicit locals and
-// stackified registers for the purpose of testing with lit/llc ONLY.
-// This produces output which is not valid WebAssembly, and is not supported
-// by assemblers/disassemblers and other MC based tools.
-static cl::opt<bool> RegisterCodeGenTestMode(
-    "wasm-register-codegen-test-mode", cl::Hidden,
-    cl::desc("WebAssembly: output stack registers and implicit locals in"
-             " instruction output for test purposes only."),
-    cl::init(false));
-// This one does explicit locals but keeps stackified registers, as required
-// by some current tests.
-static cl::opt<bool> ExplicitLocalsCodeGenTestMode(
-    "wasm-explicit-locals-codegen-test-mode", cl::Hidden,
-    cl::desc("WebAssembly: output stack registers and explicit locals in"
-             " instruction output for test purposes only."),
+// A command-line option to disable this pass. Note that this produces output
+// which is not valid WebAssembly, though it may be more convenient for writing
+// LLVM unit tests with.
+static cl::opt<bool> DisableWebAssemblyExplicitLocals(
+    "disable-wasm-explicit-locals", cl::ReallyHidden,
+    cl::desc("WebAssembly: Disable emission of get_local/set_local."),
     cl::init(false));
 
 namespace {
@@ -67,8 +58,6 @@ public:
   WebAssemblyExplicitLocals() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
-
-unsigned regInstructionToStackInstruction(unsigned OpCode);
 
 char WebAssemblyExplicitLocals::ID = 0;
 INITIALIZE_PASS(WebAssemblyExplicitLocals, DEBUG_TYPE,
@@ -173,7 +162,7 @@ static MVT typeForRegClass(const TargetRegisterClass *RC) {
 
 /// Given a MachineOperand of a stackified vreg, return the instruction at the
 /// start of the expression tree.
-static MachineInstr *findStartOfTree(MachineOperand &MO,
+static MachineInstr *FindStartOfTree(MachineOperand &MO,
                                      MachineRegisterInfo &MRI,
                                      WebAssemblyFunctionInfo &MFI) {
   unsigned Reg = MO.getReg();
@@ -184,7 +173,7 @@ static MachineInstr *findStartOfTree(MachineOperand &MO,
   for (MachineOperand &DefMO : Def->explicit_uses()) {
     if (!DefMO.isReg())
       continue;
-    return findStartOfTree(DefMO, MRI, MFI);
+    return FindStartOfTree(DefMO, MRI, MFI);
   }
 
   // If there were no stackified uses, we've reached the start.
@@ -197,7 +186,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getName() << '\n');
 
   // Disable this pass if directed to do so.
-  if (RegisterCodeGenTestMode)
+  if (DisableWebAssemblyExplicitLocals)
     return false;
 
   bool Changed = false;
@@ -217,19 +206,19 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       break;
     unsigned Reg = MI.getOperand(0).getReg();
     assert(!MFI.isVRegStackified(Reg));
-    Reg2Local[Reg] = static_cast<unsigned>(MI.getOperand(1).getImm());
+    Reg2Local[Reg] = MI.getOperand(1).getImm();
     MI.eraseFromParent();
     Changed = true;
   }
 
   // Start assigning local numbers after the last parameter.
-  unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
+  unsigned CurLocal = MFI.getParams().size();
 
   // Precompute the set of registers that are unused, so that we can insert
   // drops to their defs.
   BitVector UseEmpty(MRI.getNumVirtRegs());
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I)
-    UseEmpty[I] = MRI.use_empty(TargetRegisterInfo::index2VirtReg(I));
+  for (unsigned i = 0, e = MRI.getNumVirtRegs(); i < e; ++i)
+    UseEmpty[i] = MRI.use_empty(TargetRegisterInfo::index2VirtReg(i));
 
   // Visit each instruction in the function.
   for (MachineBasicBlock &MBB : MF) {
@@ -333,7 +322,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // If we see a stackified register, prepare to insert subsequent
         // get_locals before the start of its tree.
         if (MFI.isVRegStackified(OldReg)) {
-          InsertPt = findStartOfTree(MO, MRI, MFI);
+          InsertPt = FindStartOfTree(MO, MRI, MFI);
           continue;
         }
 
@@ -367,414 +356,37 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         Changed = true;
       }
     }
-
-    if (!ExplicitLocalsCodeGenTestMode) {
-      // Remove all uses of stackified registers to bring the instruction format
-      // into its final stack form, and transition opcodes to their _S variant.
-      // We do this in a seperate loop, since the previous loop adds/removes
-      // instructions.
-      // See comments in lib/Target/WebAssembly/WebAssemblyInstrFormats.td for
-      // details.
-      // TODO: the code above creates new registers which are then removed here.
-      // That code could be slightly simplified by not doing that, though maybe
-      // it is simpler conceptually to keep the code above in "register mode"
-      // until this transition point.
-      for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-           I != E;) {
-        MachineInstr &MI = *I++;
-        // FIXME: we are not processing inline assembly, which contains register
-        // operands, because it is used by later target generic code.
-        if (MI.isDebugInstr() || MI.isLabel() || MI.isInlineAsm())
-          continue;
-        auto RegOpcode = MI.getOpcode();
-        auto StackOpcode = regInstructionToStackInstruction(RegOpcode);
-        MI.setDesc(TII->get(StackOpcode));
-        // Now remove all register operands.
-        for (auto I = MI.getNumOperands(); I; --I) {
-          auto &MO = MI.getOperand(I - 1);
-          if (MO.isReg()) {
-            MI.RemoveOperand(I - 1);
-            // TODO: we should also update the MFI here or below to reflect the
-            // removed registers? The MFI is about to be deleted anyway, so
-            // maybe that is not worth it?
-          }
-        }
-      }
-    }
   }
 
   // Define the locals.
   // TODO: Sort the locals for better compression.
   MFI.setNumLocals(CurLocal - MFI.getParams().size());
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
-    auto RL = Reg2Local.find(Reg);
-    if (RL == Reg2Local.end() || RL->second < MFI.getParams().size())
+  for (size_t i = 0, e = MRI.getNumVirtRegs(); i < e; ++i) {
+    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+    auto I = Reg2Local.find(Reg);
+    if (I == Reg2Local.end() || I->second < MFI.getParams().size())
       continue;
 
-    MFI.setLocal(RL->second - MFI.getParams().size(),
+    MFI.setLocal(I->second - MFI.getParams().size(),
                  typeForRegClass(MRI.getRegClass(Reg)));
     Changed = true;
   }
 
-  return Changed;
-}
-
-unsigned regInstructionToStackInstruction(unsigned OpCode) {
-  switch (OpCode) {
-  default:
-    // You may hit this if you add new instructions, please add them below.
-    // For most of these opcodes, this function could have been implemented
-    // as "return OpCode + 1", but since table-gen alphabetically sorts them,
-    // this cannot be guaranteed (see e.g. BR and BR_IF).
-    // The approach below is the same as what the x87 backend does.
-    // TODO(wvo): to make this code cleaner, create a custom tablegen
-    // code generator that emits the table below automatically.
-    llvm_unreachable(
-          "unknown WebAssembly instruction in Explicit Locals pass");
-  case WebAssembly::ABS_F32: return WebAssembly::ABS_F32_S;
-  case WebAssembly::ABS_F64: return WebAssembly::ABS_F64_S;
-  case WebAssembly::ADD_F32: return WebAssembly::ADD_F32_S;
-  case WebAssembly::ADD_F32x4: return WebAssembly::ADD_F32x4_S;
-  case WebAssembly::ADD_F64: return WebAssembly::ADD_F64_S;
-  case WebAssembly::ADD_I16x8: return WebAssembly::ADD_I16x8_S;
-  case WebAssembly::ADD_I32: return WebAssembly::ADD_I32_S;
-  case WebAssembly::ADD_I32x4: return WebAssembly::ADD_I32x4_S;
-  case WebAssembly::ADD_I64: return WebAssembly::ADD_I64_S;
-  case WebAssembly::ADD_I8x16: return WebAssembly::ADD_I8x16_S;
-  case WebAssembly::ADJCALLSTACKDOWN: return WebAssembly::ADJCALLSTACKDOWN_S;
-  case WebAssembly::ADJCALLSTACKUP: return WebAssembly::ADJCALLSTACKUP_S;
-  case WebAssembly::AND_I32: return WebAssembly::AND_I32_S;
-  case WebAssembly::AND_I64: return WebAssembly::AND_I64_S;
-  case WebAssembly::ARGUMENT_EXCEPT_REF: return WebAssembly::ARGUMENT_EXCEPT_REF_S;
-  case WebAssembly::ARGUMENT_F32: return WebAssembly::ARGUMENT_F32_S;
-  case WebAssembly::ARGUMENT_F64: return WebAssembly::ARGUMENT_F64_S;
-  case WebAssembly::ARGUMENT_I32: return WebAssembly::ARGUMENT_I32_S;
-  case WebAssembly::ARGUMENT_I64: return WebAssembly::ARGUMENT_I64_S;
-  case WebAssembly::ARGUMENT_v16i8: return WebAssembly::ARGUMENT_v16i8_S;
-  case WebAssembly::ARGUMENT_v4f32: return WebAssembly::ARGUMENT_v4f32_S;
-  case WebAssembly::ARGUMENT_v4i32: return WebAssembly::ARGUMENT_v4i32_S;
-  case WebAssembly::ARGUMENT_v8i16: return WebAssembly::ARGUMENT_v8i16_S;
-  case WebAssembly::ARGUMENT_v2f64: return WebAssembly::ARGUMENT_v2f64_S;
-  case WebAssembly::ARGUMENT_v2i64: return WebAssembly::ARGUMENT_v2i64_S;
-  case WebAssembly::ATOMIC_LOAD16_U_I32: return WebAssembly::ATOMIC_LOAD16_U_I32_S;
-  case WebAssembly::ATOMIC_LOAD16_U_I64: return WebAssembly::ATOMIC_LOAD16_U_I64_S;
-  case WebAssembly::ATOMIC_LOAD32_U_I64: return WebAssembly::ATOMIC_LOAD32_U_I64_S;
-  case WebAssembly::ATOMIC_LOAD8_U_I32: return WebAssembly::ATOMIC_LOAD8_U_I32_S;
-  case WebAssembly::ATOMIC_LOAD8_U_I64: return WebAssembly::ATOMIC_LOAD8_U_I64_S;
-  case WebAssembly::ATOMIC_LOAD_I32: return WebAssembly::ATOMIC_LOAD_I32_S;
-  case WebAssembly::ATOMIC_LOAD_I64: return WebAssembly::ATOMIC_LOAD_I64_S;
-  case WebAssembly::ATOMIC_STORE16_I32: return WebAssembly::ATOMIC_STORE16_I32_S;
-  case WebAssembly::ATOMIC_STORE16_I64: return WebAssembly::ATOMIC_STORE16_I64_S;
-  case WebAssembly::ATOMIC_STORE32_I64: return WebAssembly::ATOMIC_STORE32_I64_S;
-  case WebAssembly::ATOMIC_STORE8_I32: return WebAssembly::ATOMIC_STORE8_I32_S;
-  case WebAssembly::ATOMIC_STORE8_I64: return WebAssembly::ATOMIC_STORE8_I64_S;
-  case WebAssembly::ATOMIC_STORE_I32: return WebAssembly::ATOMIC_STORE_I32_S;
-  case WebAssembly::ATOMIC_STORE_I64: return WebAssembly::ATOMIC_STORE_I64_S;
-  case WebAssembly::BLOCK: return WebAssembly::BLOCK_S;
-  case WebAssembly::BR: return WebAssembly::BR_S;
-  case WebAssembly::BR_IF: return WebAssembly::BR_IF_S;
-  case WebAssembly::BR_TABLE_I32: return WebAssembly::BR_TABLE_I32_S;
-  case WebAssembly::BR_TABLE_I64: return WebAssembly::BR_TABLE_I64_S;
-  case WebAssembly::BR_UNLESS: return WebAssembly::BR_UNLESS_S;
-  case WebAssembly::CALL_EXCEPT_REF: return WebAssembly::CALL_EXCEPT_REF_S;
-  case WebAssembly::CALL_F32: return WebAssembly::CALL_F32_S;
-  case WebAssembly::CALL_F64: return WebAssembly::CALL_F64_S;
-  case WebAssembly::CALL_I32: return WebAssembly::CALL_I32_S;
-  case WebAssembly::CALL_I64: return WebAssembly::CALL_I64_S;
-  case WebAssembly::CALL_INDIRECT_EXCEPT_REF: return WebAssembly::CALL_INDIRECT_EXCEPT_REF_S;
-  case WebAssembly::CALL_INDIRECT_F32: return WebAssembly::CALL_INDIRECT_F32_S;
-  case WebAssembly::CALL_INDIRECT_F64: return WebAssembly::CALL_INDIRECT_F64_S;
-  case WebAssembly::CALL_INDIRECT_I32: return WebAssembly::CALL_INDIRECT_I32_S;
-  case WebAssembly::CALL_INDIRECT_I64: return WebAssembly::CALL_INDIRECT_I64_S;
-  case WebAssembly::CALL_INDIRECT_VOID: return WebAssembly::CALL_INDIRECT_VOID_S;
-  case WebAssembly::CALL_INDIRECT_v16i8: return WebAssembly::CALL_INDIRECT_v16i8_S;
-  case WebAssembly::CALL_INDIRECT_v4f32: return WebAssembly::CALL_INDIRECT_v4f32_S;
-  case WebAssembly::CALL_INDIRECT_v4i32: return WebAssembly::CALL_INDIRECT_v4i32_S;
-  case WebAssembly::CALL_INDIRECT_v8i16: return WebAssembly::CALL_INDIRECT_v8i16_S;
-  case WebAssembly::CALL_VOID: return WebAssembly::CALL_VOID_S;
-  case WebAssembly::CALL_v16i8: return WebAssembly::CALL_v16i8_S;
-  case WebAssembly::CALL_v4f32: return WebAssembly::CALL_v4f32_S;
-  case WebAssembly::CALL_v4i32: return WebAssembly::CALL_v4i32_S;
-  case WebAssembly::CALL_v8i16: return WebAssembly::CALL_v8i16_S;
-  case WebAssembly::CATCHRET: return WebAssembly::CATCHRET_S;
-  case WebAssembly::CATCH_ALL: return WebAssembly::CATCH_ALL_S;
-  case WebAssembly::CATCH_I32: return WebAssembly::CATCH_I32_S;
-  case WebAssembly::CATCH_I64: return WebAssembly::CATCH_I64_S;
-  case WebAssembly::CEIL_F32: return WebAssembly::CEIL_F32_S;
-  case WebAssembly::CEIL_F64: return WebAssembly::CEIL_F64_S;
-  case WebAssembly::CLEANUPRET: return WebAssembly::CLEANUPRET_S;
-  case WebAssembly::CLZ_I32: return WebAssembly::CLZ_I32_S;
-  case WebAssembly::CLZ_I64: return WebAssembly::CLZ_I64_S;
-  case WebAssembly::CONST_F32: return WebAssembly::CONST_F32_S;
-  case WebAssembly::CONST_F64: return WebAssembly::CONST_F64_S;
-  case WebAssembly::CONST_I32: return WebAssembly::CONST_I32_S;
-  case WebAssembly::CONST_I64: return WebAssembly::CONST_I64_S;
-  case WebAssembly::COPYSIGN_F32: return WebAssembly::COPYSIGN_F32_S;
-  case WebAssembly::COPYSIGN_F64: return WebAssembly::COPYSIGN_F64_S;
-  case WebAssembly::COPY_EXCEPT_REF: return WebAssembly::COPY_EXCEPT_REF_S;
-  case WebAssembly::COPY_F32: return WebAssembly::COPY_F32_S;
-  case WebAssembly::COPY_F64: return WebAssembly::COPY_F64_S;
-  case WebAssembly::COPY_I32: return WebAssembly::COPY_I32_S;
-  case WebAssembly::COPY_I64: return WebAssembly::COPY_I64_S;
-  case WebAssembly::COPY_V128: return WebAssembly::COPY_V128_S;
-  case WebAssembly::CTZ_I32: return WebAssembly::CTZ_I32_S;
-  case WebAssembly::CTZ_I64: return WebAssembly::CTZ_I64_S;
-  case WebAssembly::CURRENT_MEMORY_I32: return WebAssembly::CURRENT_MEMORY_I32_S;
-  case WebAssembly::DIV_F32: return WebAssembly::DIV_F32_S;
-  case WebAssembly::DIV_F64: return WebAssembly::DIV_F64_S;
-  case WebAssembly::DIV_S_I32: return WebAssembly::DIV_S_I32_S;
-  case WebAssembly::DIV_S_I64: return WebAssembly::DIV_S_I64_S;
-  case WebAssembly::DIV_U_I32: return WebAssembly::DIV_U_I32_S;
-  case WebAssembly::DIV_U_I64: return WebAssembly::DIV_U_I64_S;
-  case WebAssembly::DROP_EXCEPT_REF: return WebAssembly::DROP_EXCEPT_REF_S;
-  case WebAssembly::DROP_F32: return WebAssembly::DROP_F32_S;
-  case WebAssembly::DROP_F64: return WebAssembly::DROP_F64_S;
-  case WebAssembly::DROP_I32: return WebAssembly::DROP_I32_S;
-  case WebAssembly::DROP_I64: return WebAssembly::DROP_I64_S;
-  case WebAssembly::DROP_V128: return WebAssembly::DROP_V128_S;
-  case WebAssembly::END_BLOCK: return WebAssembly::END_BLOCK_S;
-  case WebAssembly::END_FUNCTION: return WebAssembly::END_FUNCTION_S;
-  case WebAssembly::END_LOOP: return WebAssembly::END_LOOP_S;
-  case WebAssembly::END_TRY: return WebAssembly::END_TRY_S;
-  case WebAssembly::EQZ_I32: return WebAssembly::EQZ_I32_S;
-  case WebAssembly::EQZ_I64: return WebAssembly::EQZ_I64_S;
-  case WebAssembly::EQ_F32: return WebAssembly::EQ_F32_S;
-  case WebAssembly::EQ_F64: return WebAssembly::EQ_F64_S;
-  case WebAssembly::EQ_I32: return WebAssembly::EQ_I32_S;
-  case WebAssembly::EQ_I64: return WebAssembly::EQ_I64_S;
-  case WebAssembly::F32_CONVERT_S_I32: return WebAssembly::F32_CONVERT_S_I32_S;
-  case WebAssembly::F32_CONVERT_S_I64: return WebAssembly::F32_CONVERT_S_I64_S;
-  case WebAssembly::F32_CONVERT_U_I32: return WebAssembly::F32_CONVERT_U_I32_S;
-  case WebAssembly::F32_CONVERT_U_I64: return WebAssembly::F32_CONVERT_U_I64_S;
-  case WebAssembly::F32_DEMOTE_F64: return WebAssembly::F32_DEMOTE_F64_S;
-  case WebAssembly::F32_REINTERPRET_I32: return WebAssembly::F32_REINTERPRET_I32_S;
-  case WebAssembly::F64_CONVERT_S_I32: return WebAssembly::F64_CONVERT_S_I32_S;
-  case WebAssembly::F64_CONVERT_S_I64: return WebAssembly::F64_CONVERT_S_I64_S;
-  case WebAssembly::F64_CONVERT_U_I32: return WebAssembly::F64_CONVERT_U_I32_S;
-  case WebAssembly::F64_CONVERT_U_I64: return WebAssembly::F64_CONVERT_U_I64_S;
-  case WebAssembly::F64_PROMOTE_F32: return WebAssembly::F64_PROMOTE_F32_S;
-  case WebAssembly::F64_REINTERPRET_I64: return WebAssembly::F64_REINTERPRET_I64_S;
-  case WebAssembly::FALLTHROUGH_RETURN_EXCEPT_REF: return WebAssembly::FALLTHROUGH_RETURN_EXCEPT_REF_S;
-  case WebAssembly::FALLTHROUGH_RETURN_F32: return WebAssembly::FALLTHROUGH_RETURN_F32_S;
-  case WebAssembly::FALLTHROUGH_RETURN_F64: return WebAssembly::FALLTHROUGH_RETURN_F64_S;
-  case WebAssembly::FALLTHROUGH_RETURN_I32: return WebAssembly::FALLTHROUGH_RETURN_I32_S;
-  case WebAssembly::FALLTHROUGH_RETURN_I64: return WebAssembly::FALLTHROUGH_RETURN_I64_S;
-  case WebAssembly::FALLTHROUGH_RETURN_VOID: return WebAssembly::FALLTHROUGH_RETURN_VOID_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v16i8: return WebAssembly::FALLTHROUGH_RETURN_v16i8_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v4f32: return WebAssembly::FALLTHROUGH_RETURN_v4f32_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v4i32: return WebAssembly::FALLTHROUGH_RETURN_v4i32_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v8i16: return WebAssembly::FALLTHROUGH_RETURN_v8i16_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v2f64: return WebAssembly::FALLTHROUGH_RETURN_v2f64_S;
-  case WebAssembly::FALLTHROUGH_RETURN_v2i64: return WebAssembly::FALLTHROUGH_RETURN_v2i64_S;
-  case WebAssembly::FLOOR_F32: return WebAssembly::FLOOR_F32_S;
-  case WebAssembly::FLOOR_F64: return WebAssembly::FLOOR_F64_S;
-  case WebAssembly::FP_TO_SINT_I32_F32: return WebAssembly::FP_TO_SINT_I32_F32_S;
-  case WebAssembly::FP_TO_SINT_I32_F64: return WebAssembly::FP_TO_SINT_I32_F64_S;
-  case WebAssembly::FP_TO_SINT_I64_F32: return WebAssembly::FP_TO_SINT_I64_F32_S;
-  case WebAssembly::FP_TO_SINT_I64_F64: return WebAssembly::FP_TO_SINT_I64_F64_S;
-  case WebAssembly::FP_TO_UINT_I32_F32: return WebAssembly::FP_TO_UINT_I32_F32_S;
-  case WebAssembly::FP_TO_UINT_I32_F64: return WebAssembly::FP_TO_UINT_I32_F64_S;
-  case WebAssembly::FP_TO_UINT_I64_F32: return WebAssembly::FP_TO_UINT_I64_F32_S;
-  case WebAssembly::FP_TO_UINT_I64_F64: return WebAssembly::FP_TO_UINT_I64_F64_S;
-  case WebAssembly::GET_GLOBAL_EXCEPT_REF: return WebAssembly::GET_GLOBAL_EXCEPT_REF_S;
-  case WebAssembly::GET_GLOBAL_F32: return WebAssembly::GET_GLOBAL_F32_S;
-  case WebAssembly::GET_GLOBAL_F64: return WebAssembly::GET_GLOBAL_F64_S;
-  case WebAssembly::GET_GLOBAL_I32: return WebAssembly::GET_GLOBAL_I32_S;
-  case WebAssembly::GET_GLOBAL_I64: return WebAssembly::GET_GLOBAL_I64_S;
-  case WebAssembly::GET_GLOBAL_V128: return WebAssembly::GET_GLOBAL_V128_S;
-  case WebAssembly::GET_LOCAL_EXCEPT_REF: return WebAssembly::GET_LOCAL_EXCEPT_REF_S;
-  case WebAssembly::GET_LOCAL_F32: return WebAssembly::GET_LOCAL_F32_S;
-  case WebAssembly::GET_LOCAL_F64: return WebAssembly::GET_LOCAL_F64_S;
-  case WebAssembly::GET_LOCAL_I32: return WebAssembly::GET_LOCAL_I32_S;
-  case WebAssembly::GET_LOCAL_I64: return WebAssembly::GET_LOCAL_I64_S;
-  case WebAssembly::GET_LOCAL_V128: return WebAssembly::GET_LOCAL_V128_S;
-  case WebAssembly::GE_F32: return WebAssembly::GE_F32_S;
-  case WebAssembly::GE_F64: return WebAssembly::GE_F64_S;
-  case WebAssembly::GE_S_I32: return WebAssembly::GE_S_I32_S;
-  case WebAssembly::GE_S_I64: return WebAssembly::GE_S_I64_S;
-  case WebAssembly::GE_U_I32: return WebAssembly::GE_U_I32_S;
-  case WebAssembly::GE_U_I64: return WebAssembly::GE_U_I64_S;
-  case WebAssembly::GROW_MEMORY_I32: return WebAssembly::GROW_MEMORY_I32_S;
-  case WebAssembly::GT_F32: return WebAssembly::GT_F32_S;
-  case WebAssembly::GT_F64: return WebAssembly::GT_F64_S;
-  case WebAssembly::GT_S_I32: return WebAssembly::GT_S_I32_S;
-  case WebAssembly::GT_S_I64: return WebAssembly::GT_S_I64_S;
-  case WebAssembly::GT_U_I32: return WebAssembly::GT_U_I32_S;
-  case WebAssembly::GT_U_I64: return WebAssembly::GT_U_I64_S;
-  case WebAssembly::I32_EXTEND16_S_I32: return WebAssembly::I32_EXTEND16_S_I32_S;
-  case WebAssembly::I32_EXTEND8_S_I32: return WebAssembly::I32_EXTEND8_S_I32_S;
-  case WebAssembly::I32_REINTERPRET_F32: return WebAssembly::I32_REINTERPRET_F32_S;
-  case WebAssembly::I32_TRUNC_S_F32: return WebAssembly::I32_TRUNC_S_F32_S;
-  case WebAssembly::I32_TRUNC_S_F64: return WebAssembly::I32_TRUNC_S_F64_S;
-  case WebAssembly::I32_TRUNC_S_SAT_F32: return WebAssembly::I32_TRUNC_S_SAT_F32_S;
-  case WebAssembly::I32_TRUNC_S_SAT_F64: return WebAssembly::I32_TRUNC_S_SAT_F64_S;
-  case WebAssembly::I32_TRUNC_U_F32: return WebAssembly::I32_TRUNC_U_F32_S;
-  case WebAssembly::I32_TRUNC_U_F64: return WebAssembly::I32_TRUNC_U_F64_S;
-  case WebAssembly::I32_TRUNC_U_SAT_F32: return WebAssembly::I32_TRUNC_U_SAT_F32_S;
-  case WebAssembly::I32_TRUNC_U_SAT_F64: return WebAssembly::I32_TRUNC_U_SAT_F64_S;
-  case WebAssembly::I32_WRAP_I64: return WebAssembly::I32_WRAP_I64_S;
-  case WebAssembly::I64_EXTEND16_S_I64: return WebAssembly::I64_EXTEND16_S_I64_S;
-  case WebAssembly::I64_EXTEND32_S_I64: return WebAssembly::I64_EXTEND32_S_I64_S;
-  case WebAssembly::I64_EXTEND8_S_I64: return WebAssembly::I64_EXTEND8_S_I64_S;
-  case WebAssembly::I64_EXTEND_S_I32: return WebAssembly::I64_EXTEND_S_I32_S;
-  case WebAssembly::I64_EXTEND_U_I32: return WebAssembly::I64_EXTEND_U_I32_S;
-  case WebAssembly::I64_REINTERPRET_F64: return WebAssembly::I64_REINTERPRET_F64_S;
-  case WebAssembly::I64_TRUNC_S_F32: return WebAssembly::I64_TRUNC_S_F32_S;
-  case WebAssembly::I64_TRUNC_S_F64: return WebAssembly::I64_TRUNC_S_F64_S;
-  case WebAssembly::I64_TRUNC_S_SAT_F32: return WebAssembly::I64_TRUNC_S_SAT_F32_S;
-  case WebAssembly::I64_TRUNC_S_SAT_F64: return WebAssembly::I64_TRUNC_S_SAT_F64_S;
-  case WebAssembly::I64_TRUNC_U_F32: return WebAssembly::I64_TRUNC_U_F32_S;
-  case WebAssembly::I64_TRUNC_U_F64: return WebAssembly::I64_TRUNC_U_F64_S;
-  case WebAssembly::I64_TRUNC_U_SAT_F32: return WebAssembly::I64_TRUNC_U_SAT_F32_S;
-  case WebAssembly::I64_TRUNC_U_SAT_F64: return WebAssembly::I64_TRUNC_U_SAT_F64_S;
-  case WebAssembly::LE_F32: return WebAssembly::LE_F32_S;
-  case WebAssembly::LE_F64: return WebAssembly::LE_F64_S;
-  case WebAssembly::LE_S_I32: return WebAssembly::LE_S_I32_S;
-  case WebAssembly::LE_S_I64: return WebAssembly::LE_S_I64_S;
-  case WebAssembly::LE_U_I32: return WebAssembly::LE_U_I32_S;
-  case WebAssembly::LE_U_I64: return WebAssembly::LE_U_I64_S;
-  case WebAssembly::LOAD16_S_I32: return WebAssembly::LOAD16_S_I32_S;
-  case WebAssembly::LOAD16_S_I64: return WebAssembly::LOAD16_S_I64_S;
-  case WebAssembly::LOAD16_U_I32: return WebAssembly::LOAD16_U_I32_S;
-  case WebAssembly::LOAD16_U_I64: return WebAssembly::LOAD16_U_I64_S;
-  case WebAssembly::LOAD32_S_I64: return WebAssembly::LOAD32_S_I64_S;
-  case WebAssembly::LOAD32_U_I64: return WebAssembly::LOAD32_U_I64_S;
-  case WebAssembly::LOAD8_S_I32: return WebAssembly::LOAD8_S_I32_S;
-  case WebAssembly::LOAD8_S_I64: return WebAssembly::LOAD8_S_I64_S;
-  case WebAssembly::LOAD8_U_I32: return WebAssembly::LOAD8_U_I32_S;
-  case WebAssembly::LOAD8_U_I64: return WebAssembly::LOAD8_U_I64_S;
-  case WebAssembly::LOAD_F32: return WebAssembly::LOAD_F32_S;
-  case WebAssembly::LOAD_F64: return WebAssembly::LOAD_F64_S;
-  case WebAssembly::LOAD_I32: return WebAssembly::LOAD_I32_S;
-  case WebAssembly::LOAD_I64: return WebAssembly::LOAD_I64_S;
-  case WebAssembly::LOOP: return WebAssembly::LOOP_S;
-  case WebAssembly::LT_F32: return WebAssembly::LT_F32_S;
-  case WebAssembly::LT_F64: return WebAssembly::LT_F64_S;
-  case WebAssembly::LT_S_I32: return WebAssembly::LT_S_I32_S;
-  case WebAssembly::LT_S_I64: return WebAssembly::LT_S_I64_S;
-  case WebAssembly::LT_U_I32: return WebAssembly::LT_U_I32_S;
-  case WebAssembly::LT_U_I64: return WebAssembly::LT_U_I64_S;
-  case WebAssembly::MAX_F32: return WebAssembly::MAX_F32_S;
-  case WebAssembly::MAX_F64: return WebAssembly::MAX_F64_S;
-  case WebAssembly::MEMORY_GROW_I32: return WebAssembly::MEMORY_GROW_I32_S;
-  case WebAssembly::MEMORY_SIZE_I32: return WebAssembly::MEMORY_SIZE_I32_S;
-  case WebAssembly::MEM_GROW_I32: return WebAssembly::MEM_GROW_I32_S;
-  case WebAssembly::MEM_SIZE_I32: return WebAssembly::MEM_SIZE_I32_S;
-  case WebAssembly::MIN_F32: return WebAssembly::MIN_F32_S;
-  case WebAssembly::MIN_F64: return WebAssembly::MIN_F64_S;
-  case WebAssembly::MUL_F32: return WebAssembly::MUL_F32_S;
-  case WebAssembly::MUL_F32x4: return WebAssembly::MUL_F32x4_S;
-  case WebAssembly::MUL_F64: return WebAssembly::MUL_F64_S;
-  case WebAssembly::MUL_I16x8: return WebAssembly::MUL_I16x8_S;
-  case WebAssembly::MUL_I32: return WebAssembly::MUL_I32_S;
-  case WebAssembly::MUL_I32x4: return WebAssembly::MUL_I32x4_S;
-  case WebAssembly::MUL_I64: return WebAssembly::MUL_I64_S;
-  case WebAssembly::MUL_I8x16: return WebAssembly::MUL_I8x16_S;
-  case WebAssembly::NEAREST_F32: return WebAssembly::NEAREST_F32_S;
-  case WebAssembly::NEAREST_F64: return WebAssembly::NEAREST_F64_S;
-  case WebAssembly::NEG_F32: return WebAssembly::NEG_F32_S;
-  case WebAssembly::NEG_F64: return WebAssembly::NEG_F64_S;
-  case WebAssembly::NE_F32: return WebAssembly::NE_F32_S;
-  case WebAssembly::NE_F64: return WebAssembly::NE_F64_S;
-  case WebAssembly::NE_I32: return WebAssembly::NE_I32_S;
-  case WebAssembly::NE_I64: return WebAssembly::NE_I64_S;
-  case WebAssembly::NOP: return WebAssembly::NOP_S;
-  case WebAssembly::OR_I32: return WebAssembly::OR_I32_S;
-  case WebAssembly::OR_I64: return WebAssembly::OR_I64_S;
-  case WebAssembly::PCALL_INDIRECT_EXCEPT_REF: return WebAssembly::PCALL_INDIRECT_EXCEPT_REF_S;
-  case WebAssembly::PCALL_INDIRECT_F32: return WebAssembly::PCALL_INDIRECT_F32_S;
-  case WebAssembly::PCALL_INDIRECT_F64: return WebAssembly::PCALL_INDIRECT_F64_S;
-  case WebAssembly::PCALL_INDIRECT_I32: return WebAssembly::PCALL_INDIRECT_I32_S;
-  case WebAssembly::PCALL_INDIRECT_I64: return WebAssembly::PCALL_INDIRECT_I64_S;
-  case WebAssembly::PCALL_INDIRECT_VOID: return WebAssembly::PCALL_INDIRECT_VOID_S;
-  case WebAssembly::PCALL_INDIRECT_v16i8: return WebAssembly::PCALL_INDIRECT_v16i8_S;
-  case WebAssembly::PCALL_INDIRECT_v4f32: return WebAssembly::PCALL_INDIRECT_v4f32_S;
-  case WebAssembly::PCALL_INDIRECT_v4i32: return WebAssembly::PCALL_INDIRECT_v4i32_S;
-  case WebAssembly::PCALL_INDIRECT_v8i16: return WebAssembly::PCALL_INDIRECT_v8i16_S;
-  case WebAssembly::POPCNT_I32: return WebAssembly::POPCNT_I32_S;
-  case WebAssembly::POPCNT_I64: return WebAssembly::POPCNT_I64_S;
-  case WebAssembly::REM_S_I32: return WebAssembly::REM_S_I32_S;
-  case WebAssembly::REM_S_I64: return WebAssembly::REM_S_I64_S;
-  case WebAssembly::REM_U_I32: return WebAssembly::REM_U_I32_S;
-  case WebAssembly::REM_U_I64: return WebAssembly::REM_U_I64_S;
-  case WebAssembly::RETHROW: return WebAssembly::RETHROW_S;
-  case WebAssembly::RETHROW_TO_CALLER: return WebAssembly::RETHROW_TO_CALLER_S;
-  case WebAssembly::RETURN_EXCEPT_REF: return WebAssembly::RETURN_EXCEPT_REF_S;
-  case WebAssembly::RETURN_F32: return WebAssembly::RETURN_F32_S;
-  case WebAssembly::RETURN_F64: return WebAssembly::RETURN_F64_S;
-  case WebAssembly::RETURN_I32: return WebAssembly::RETURN_I32_S;
-  case WebAssembly::RETURN_I64: return WebAssembly::RETURN_I64_S;
-  case WebAssembly::RETURN_VOID: return WebAssembly::RETURN_VOID_S;
-  case WebAssembly::RETURN_v16i8: return WebAssembly::RETURN_v16i8_S;
-  case WebAssembly::RETURN_v4f32: return WebAssembly::RETURN_v4f32_S;
-  case WebAssembly::RETURN_v4i32: return WebAssembly::RETURN_v4i32_S;
-  case WebAssembly::RETURN_v8i16: return WebAssembly::RETURN_v8i16_S;
-  case WebAssembly::ROTL_I32: return WebAssembly::ROTL_I32_S;
-  case WebAssembly::ROTL_I64: return WebAssembly::ROTL_I64_S;
-  case WebAssembly::ROTR_I32: return WebAssembly::ROTR_I32_S;
-  case WebAssembly::ROTR_I64: return WebAssembly::ROTR_I64_S;
-  case WebAssembly::SELECT_EXCEPT_REF: return WebAssembly::SELECT_EXCEPT_REF_S;
-  case WebAssembly::SELECT_F32: return WebAssembly::SELECT_F32_S;
-  case WebAssembly::SELECT_F64: return WebAssembly::SELECT_F64_S;
-  case WebAssembly::SELECT_I32: return WebAssembly::SELECT_I32_S;
-  case WebAssembly::SELECT_I64: return WebAssembly::SELECT_I64_S;
-  case WebAssembly::SET_GLOBAL_EXCEPT_REF: return WebAssembly::SET_GLOBAL_EXCEPT_REF_S;
-  case WebAssembly::SET_GLOBAL_F32: return WebAssembly::SET_GLOBAL_F32_S;
-  case WebAssembly::SET_GLOBAL_F64: return WebAssembly::SET_GLOBAL_F64_S;
-  case WebAssembly::SET_GLOBAL_I32: return WebAssembly::SET_GLOBAL_I32_S;
-  case WebAssembly::SET_GLOBAL_I64: return WebAssembly::SET_GLOBAL_I64_S;
-  case WebAssembly::SET_GLOBAL_V128: return WebAssembly::SET_GLOBAL_V128_S;
-  case WebAssembly::SET_LOCAL_EXCEPT_REF: return WebAssembly::SET_LOCAL_EXCEPT_REF_S;
-  case WebAssembly::SET_LOCAL_F32: return WebAssembly::SET_LOCAL_F32_S;
-  case WebAssembly::SET_LOCAL_F64: return WebAssembly::SET_LOCAL_F64_S;
-  case WebAssembly::SET_LOCAL_I32: return WebAssembly::SET_LOCAL_I32_S;
-  case WebAssembly::SET_LOCAL_I64: return WebAssembly::SET_LOCAL_I64_S;
-  case WebAssembly::SET_LOCAL_V128: return WebAssembly::SET_LOCAL_V128_S;
-  case WebAssembly::SHL_I32: return WebAssembly::SHL_I32_S;
-  case WebAssembly::SHL_I64: return WebAssembly::SHL_I64_S;
-  case WebAssembly::SHR_S_I32: return WebAssembly::SHR_S_I32_S;
-  case WebAssembly::SHR_S_I64: return WebAssembly::SHR_S_I64_S;
-  case WebAssembly::SHR_U_I32: return WebAssembly::SHR_U_I32_S;
-  case WebAssembly::SHR_U_I64: return WebAssembly::SHR_U_I64_S;
-  case WebAssembly::SQRT_F32: return WebAssembly::SQRT_F32_S;
-  case WebAssembly::SQRT_F64: return WebAssembly::SQRT_F64_S;
-  case WebAssembly::STORE16_I32: return WebAssembly::STORE16_I32_S;
-  case WebAssembly::STORE16_I64: return WebAssembly::STORE16_I64_S;
-  case WebAssembly::STORE32_I64: return WebAssembly::STORE32_I64_S;
-  case WebAssembly::STORE8_I32: return WebAssembly::STORE8_I32_S;
-  case WebAssembly::STORE8_I64: return WebAssembly::STORE8_I64_S;
-  case WebAssembly::STORE_F32: return WebAssembly::STORE_F32_S;
-  case WebAssembly::STORE_F64: return WebAssembly::STORE_F64_S;
-  case WebAssembly::STORE_I32: return WebAssembly::STORE_I32_S;
-  case WebAssembly::STORE_I64: return WebAssembly::STORE_I64_S;
-  case WebAssembly::SUB_F32: return WebAssembly::SUB_F32_S;
-  case WebAssembly::SUB_F32x4: return WebAssembly::SUB_F32x4_S;
-  case WebAssembly::SUB_F64: return WebAssembly::SUB_F64_S;
-  case WebAssembly::SUB_I16x8: return WebAssembly::SUB_I16x8_S;
-  case WebAssembly::SUB_I32: return WebAssembly::SUB_I32_S;
-  case WebAssembly::SUB_I32x4: return WebAssembly::SUB_I32x4_S;
-  case WebAssembly::SUB_I64: return WebAssembly::SUB_I64_S;
-  case WebAssembly::SUB_I8x16: return WebAssembly::SUB_I8x16_S;
-  case WebAssembly::TEE_EXCEPT_REF: return WebAssembly::TEE_EXCEPT_REF_S;
-  case WebAssembly::TEE_F32: return WebAssembly::TEE_F32_S;
-  case WebAssembly::TEE_F64: return WebAssembly::TEE_F64_S;
-  case WebAssembly::TEE_I32: return WebAssembly::TEE_I32_S;
-  case WebAssembly::TEE_I64: return WebAssembly::TEE_I64_S;
-  case WebAssembly::TEE_LOCAL_EXCEPT_REF: return WebAssembly::TEE_LOCAL_EXCEPT_REF_S;
-  case WebAssembly::TEE_LOCAL_F32: return WebAssembly::TEE_LOCAL_F32_S;
-  case WebAssembly::TEE_LOCAL_F64: return WebAssembly::TEE_LOCAL_F64_S;
-  case WebAssembly::TEE_LOCAL_I32: return WebAssembly::TEE_LOCAL_I32_S;
-  case WebAssembly::TEE_LOCAL_I64: return WebAssembly::TEE_LOCAL_I64_S;
-  case WebAssembly::TEE_LOCAL_V128: return WebAssembly::TEE_LOCAL_V128_S;
-  case WebAssembly::TEE_V128: return WebAssembly::TEE_V128_S;
-  case WebAssembly::THROW_I32: return WebAssembly::THROW_I32_S;
-  case WebAssembly::THROW_I64: return WebAssembly::THROW_I64_S;
-  case WebAssembly::TRUNC_F32: return WebAssembly::TRUNC_F32_S;
-  case WebAssembly::TRUNC_F64: return WebAssembly::TRUNC_F64_S;
-  case WebAssembly::TRY: return WebAssembly::TRY_S;
-  case WebAssembly::UNREACHABLE: return WebAssembly::UNREACHABLE_S;
-  case WebAssembly::XOR_I32: return WebAssembly::XOR_I32_S;
-  case WebAssembly::XOR_I64: return WebAssembly::XOR_I64_S;
+#ifndef NDEBUG
+  // Assert that all registers have been stackified at this point.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isDebugInstr() || MI.isLabel())
+        continue;
+      for (const MachineOperand &MO : MI.explicit_operands()) {
+        assert(
+            (!MO.isReg() || MRI.use_empty(MO.getReg()) ||
+             MFI.isVRegStackified(MO.getReg())) &&
+            "WebAssemblyExplicitLocals failed to stackify a register operand");
+      }
+    }
   }
+#endif
+
+  return Changed;
 }

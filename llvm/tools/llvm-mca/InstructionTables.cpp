@@ -21,7 +21,7 @@ namespace mca {
 
 using namespace llvm;
 
-bool InstructionTables::execute(InstRef &IR) {
+Stage::Status InstructionTables::execute(InstRef &IR) {
   ArrayRef<uint64_t> Masks = IB.getProcResourceMasks();
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   UsedResources.clear();
@@ -64,7 +64,7 @@ bool InstructionTables::execute(InstRef &IR) {
   // Send a fake instruction issued event to all the views.
   HWInstructionIssuedEvent Event(IR, UsedResources);
   notifyEvent<HWInstructionIssuedEvent>(Event);
-  return true;
+  return Stage::Continue;
 }
 
 } // namespace mca

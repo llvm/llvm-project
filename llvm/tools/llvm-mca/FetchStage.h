@@ -35,7 +35,7 @@ public:
   FetchStage &operator=(const FetchStage &Other) = delete;
 
   bool hasWorkToComplete() const override final;
-  bool execute(InstRef &IR) override final;
+  Status execute(InstRef &IR) override final;
   void postExecute() override final;
   void cycleEnd() override final;
 };

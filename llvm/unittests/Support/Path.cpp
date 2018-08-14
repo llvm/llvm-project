@@ -1297,7 +1297,7 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   ASSERT_NO_ERROR(sys::fs::openFileForWrite(Twine(TempPath), FileDescriptor,
                                             fs::CD_OpenExisting));
   TimePoint<> Epoch(std::chrono::milliseconds(0));
-  ASSERT_NO_ERROR(fs::setLastModificationAndAccessTime(FileDescriptor, Epoch));
+  ASSERT_NO_ERROR(fs::setLastAccessAndModificationTime(FileDescriptor, Epoch));
   ::close(FileDescriptor);
 
   // Open the file and ensure access time is updated, when forced.

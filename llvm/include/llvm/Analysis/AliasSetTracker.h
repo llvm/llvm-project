@@ -461,6 +461,10 @@ private:
 
   AliasSet &addPointer(Value *P, LocationSize Size, const AAMDNodes &AAInfo,
                        AliasSet::AccessLattice E);
+  AliasSet &addPointer(MemoryLocation Loc,
+                       AliasSet::AccessLattice E) {
+    return addPointer(const_cast<Value*>(Loc.Ptr), Loc.Size, Loc.AATags, E);
+  }
   AliasSet *mergeAliasSetsForPointer(const Value *Ptr, LocationSize Size,
                                      const AAMDNodes &AAInfo);
 

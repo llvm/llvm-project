@@ -53,9 +53,9 @@ def BR_TABLE_I32 : NI<(outs), (ins I32:$index, variable_ops),
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
-def BR_TABLE_I32_S : NI<(outs), (ins variable_ops),
+def BR_TABLE_I32_S : NI<(outs), (ins I32:$index),
                         [], 1,
-                        "br_table", 0x0e> {
+                        "br_table \t$index", 0x0e> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
@@ -65,9 +65,9 @@ def BR_TABLE_I64 : NI<(outs), (ins I64:$index, variable_ops),
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
-def BR_TABLE_I64_S : NI<(outs), (ins variable_ops),
+def BR_TABLE_I64_S : NI<(outs), (ins I64:$index),
                         [], 1,
-                        "br_table"> {
+                        "br_table \t$index"> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
