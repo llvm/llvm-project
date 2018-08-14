@@ -160,14 +160,16 @@ TEST(AnyTest, BadAnyCast) {
   llvm::Any C{"hello"};
   llvm::Any D{'x'};
 
-  EXPECT_DEBUG_DEATH(llvm::any_cast<int>(A), "");
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(llvm::any_cast<int>(A), "");
 
-  EXPECT_DEBUG_DEATH(llvm::any_cast<float>(B), "");
-  EXPECT_DEBUG_DEATH(llvm::any_cast<int *>(B), "");
+  EXPECT_DEATH(llvm::any_cast<float>(B), "");
+  EXPECT_DEATH(llvm::any_cast<int *>(B), "");
 
-  EXPECT_DEBUG_DEATH(llvm::any_cast<std::string>(C), "");
+  EXPECT_DEATH(llvm::any_cast<std::string>(C), "");
 
-  EXPECT_DEBUG_DEATH(llvm::any_cast<unsigned char>(D), "");
+  EXPECT_DEATH(llvm::any_cast<unsigned char>(D), "");
+#endif
 }
 
 } // anonymous namespace
