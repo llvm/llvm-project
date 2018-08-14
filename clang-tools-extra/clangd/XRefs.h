@@ -1,15 +1,16 @@
-//===--- XRefs.h ------------------------------------------------*- C++-*-===//
+//===--- XRefs.h -------------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Features that traverse references between symbols.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 
@@ -35,4 +36,5 @@ llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos);
 
 } // namespace clangd
 } // namespace clang
-#endif
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
