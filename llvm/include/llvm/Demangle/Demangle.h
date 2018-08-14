@@ -31,6 +31,11 @@ enum : int {
 char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
 
+/// Calls the callback \c Callback with \c Ctx as an argument whenever a type is
+/// encountered. Returns true if \c MangledName couldn't be parsed.
+bool itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
+                                   void (*Callback)(void *, const char *));
+
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
 /// properties or partially printing the demangled name.
