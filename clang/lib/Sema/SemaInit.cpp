@@ -6360,7 +6360,7 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   for (TypeLoc TL = TSI->getTypeLoc();
        (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
        TL = ATL.getModifiedLoc()) {
-    if (ATL.getAttrKind() == AttributedType::attr_lifetimebound)
+    if (ATL.getAttrAs<LifetimeBoundAttr>())
       return true;
   }
   return false;

@@ -1874,57 +1874,65 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
     Address srcField = Builder.CreateStructGEP(src, index, capture.getOffset());
     Address dstField = Builder.CreateStructGEP(dst, index, capture.getOffset());
 
-    // If there's an explicit copy expression, we do that.
-    if (CI.getCopyExpr()) {
-      assert(CopiedCapture.Kind == BlockCaptureEntityKind::CXXRecord);
+    switch (CopiedCapture.Kind) {
+    case BlockCaptureEntityKind::CXXRecord:
+      // If there's an explicit copy expression, we do that.
+      assert(CI.getCopyExpr() && "copy expression for variable is missing");
       EmitSynthesizedCXXCopyCtor(dstField, srcField, CI.getCopyExpr());
-    } else if (CopiedCapture.Kind == BlockCaptureEntityKind::ARCWeak) {
+      break;
+    case BlockCaptureEntityKind::ARCWeak:
       EmitARCCopyWeak(dstField, srcField);
-    // If this is a C struct that requires non-trivial copy construction, emit a
-    // call to its copy constructor.
-    } else if (CopiedCapture.Kind ==
-               BlockCaptureEntityKind::NonTrivialCStruct) {
+      break;
+    case BlockCaptureEntityKind::NonTrivialCStruct: {
+      // If this is a C struct that requires non-trivial copy construction,
+      // emit a call to its copy constructor.
       QualType varType = CI.getVariable()->getType();
       callCStructCopyConstructor(MakeAddrLValue(dstField, varType),
                                  MakeAddrLValue(srcField, varType));
-    } else {
+      break;
+    }
+    case BlockCaptureEntityKind::ARCStrong: {
       llvm::Value *srcValue = Builder.CreateLoad(srcField, "blockcopy.src");
-      if (CopiedCapture.Kind == BlockCaptureEntityKind::ARCStrong) {
-        // At -O0, store null into the destination field (so that the
-        // storeStrong doesn't over-release) and then call storeStrong.
-        // This is a workaround to not having an initStrong call.
-        if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-          auto *ty = cast<llvm::PointerType>(srcValue->getType());
-          llvm::Value *null = llvm::ConstantPointerNull::get(ty);
-          Builder.CreateStore(null, dstField);
-          EmitARCStoreStrongCall(dstField, srcValue, true);
+      // At -O0, store null into the destination field (so that the
+      // storeStrong doesn't over-release) and then call storeStrong.
+      // This is a workaround to not having an initStrong call.
+      if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
+        auto *ty = cast<llvm::PointerType>(srcValue->getType());
+        llvm::Value *null = llvm::ConstantPointerNull::get(ty);
+        Builder.CreateStore(null, dstField);
+        EmitARCStoreStrongCall(dstField, srcValue, true);
 
-        // With optimization enabled, take advantage of the fact that
-        // the blocks runtime guarantees a memcpy of the block data, and
-        // just emit a retain of the src field.
-        } else {
-          EmitARCRetainNonBlock(srcValue);
-
-          // Unless EH cleanup is required, we don't need this anymore, so kill
-          // it. It's not quite worth the annoyance to avoid creating it in the
-          // first place.
-          if (!needsEHCleanup(captureType.isDestructedType()))
-            cast<llvm::Instruction>(dstField.getPointer())->eraseFromParent();
-        }
+      // With optimization enabled, take advantage of the fact that
+      // the blocks runtime guarantees a memcpy of the block data, and
+      // just emit a retain of the src field.
       } else {
-        assert(CopiedCapture.Kind == BlockCaptureEntityKind::BlockObject);
-        srcValue = Builder.CreateBitCast(srcValue, VoidPtrTy);
-        llvm::Value *dstAddr =
-          Builder.CreateBitCast(dstField.getPointer(), VoidPtrTy);
-        llvm::Value *args[] = {
-          dstAddr, srcValue, llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
-        };
+        EmitARCRetainNonBlock(srcValue);
 
-        if (CI.isByRef() && C.getBlockVarCopyInit(CI.getVariable()).canThrow())
-          EmitRuntimeCallOrInvoke(CGM.getBlockObjectAssign(), args);
-        else
-          EmitNounwindRuntimeCall(CGM.getBlockObjectAssign(), args);
+        // Unless EH cleanup is required, we don't need this anymore, so kill
+        // it. It's not quite worth the annoyance to avoid creating it in the
+        // first place.
+        if (!needsEHCleanup(captureType.isDestructedType()))
+          cast<llvm::Instruction>(dstField.getPointer())->eraseFromParent();
       }
+      break;
+    }
+    case BlockCaptureEntityKind::BlockObject: {
+      llvm::Value *srcValue = Builder.CreateLoad(srcField, "blockcopy.src");
+      srcValue = Builder.CreateBitCast(srcValue, VoidPtrTy);
+      llvm::Value *dstAddr =
+          Builder.CreateBitCast(dstField.getPointer(), VoidPtrTy);
+      llvm::Value *args[] = {
+        dstAddr, srcValue, llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
+      };
+
+      if (CI.isByRef() && C.getBlockVarCopyInit(CI.getVariable()).canThrow())
+        EmitRuntimeCallOrInvoke(CGM.getBlockObjectAssign(), args);
+      else
+        EmitNounwindRuntimeCall(CGM.getBlockObjectAssign(), args);
+      break;
+    }
+    case BlockCaptureEntityKind::None:
+      llvm_unreachable("unexpected BlockCaptureEntityKind");
     }
 
     // Ensure that we destroy the copied object if an exception is thrown later

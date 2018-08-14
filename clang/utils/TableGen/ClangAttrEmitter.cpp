@@ -1241,14 +1241,11 @@ namespace {
     {}
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    AttrVec vec;\n"
-            "    ReadAttributes(Record, vec);\n"
-            "    assert(vec.size() == 1);\n"
-            "    Attr *" << getLowerName() << " = vec.front();";
+      OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
-      OS << "    AddAttributes(SA->get" << getUpperName() << "());";
+      OS << "    AddAttr(SA->get" << getUpperName() << "());";
     }
 
     void writeDump(raw_ostream &OS) const override {}
@@ -2498,8 +2495,10 @@ namespace {
 
 static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "ATTR", "Attr" },
+  { "TYPE_ATTR", "TypeAttr" },
   { "STMT_ATTR", "StmtAttr" },
   { "INHERITABLE_ATTR", "InheritableAttr" },
+  { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
   { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
   { "PARAMETER_ABI_ATTR", "ParameterABIAttr" }
 };

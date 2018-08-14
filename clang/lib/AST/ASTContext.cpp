@@ -3876,7 +3876,7 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
-QualType ASTContext::getAttributedType(AttributedType::Kind attrKind,
+QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
                                        QualType equivalentType) {
   llvm::FoldingSetNodeID id;
@@ -9815,7 +9815,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
 void ASTContext::forEachMultiversionedFunctionVersion(
     const FunctionDecl *FD,
-    llvm::function_ref<void(const FunctionDecl *)> Pred) const {
+    llvm::function_ref<void(FunctionDecl *)> Pred) const {
   assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
   llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
   FD = FD->getCanonicalDecl();
