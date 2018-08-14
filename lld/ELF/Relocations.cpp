@@ -622,9 +622,6 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 // Returns true if this function printed out an error message.
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
-    return false;
-
   if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
     return false;
 

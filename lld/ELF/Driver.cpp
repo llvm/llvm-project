@@ -450,9 +450,6 @@ static std::string getRpath(opt::InputArgList &Args) {
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
 static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
-  if (Args.hasArg(OPT_relocatable))
-    return UnresolvedPolicy::IgnoreAll;
-
   UnresolvedPolicy ErrorOrWarn = Args.hasFlag(OPT_error_unresolved_symbols,
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
