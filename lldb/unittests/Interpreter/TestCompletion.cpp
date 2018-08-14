@@ -41,32 +41,41 @@ class CompletionTest : public testing::Test {
 protected:
   /// Unique temporary directory in which all created filesystem entities must
   /// be placed. It is removed at the end of the test suite.
-  static SmallString<128> BaseDir;
+  SmallString<128> BaseDir;
 
+  /// The working directory that we got when starting the test. Every test
+  /// should chdir into this directory first because some tests maybe chdir
+  /// into another one during their run.
   static SmallString<128> OriginalWorkingDir;
 
-  static SmallString<128> DirFoo;
-  static SmallString<128> DirFooA;
-  static SmallString<128> DirFooB;
-  static SmallString<128> DirFooC;
-  static SmallString<128> DirBar;
-  static SmallString<128> DirBaz;
-  static SmallString<128> DirTestFolder;
-  static SmallString<128> DirNested;
+  SmallString<128> DirFoo;
+  SmallString<128> DirFooA;
+  SmallString<128> DirFooB;
+  SmallString<128> DirFooC;
+  SmallString<128> DirBar;
+  SmallString<128> DirBaz;
+  SmallString<128> DirTestFolder;
+  SmallString<128> DirNested;
 
-  static SmallString<128> FileAA;
-  static SmallString<128> FileAB;
-  static SmallString<128> FileAC;
-  static SmallString<128> FileFoo;
-  static SmallString<128> FileBar;
-  static SmallString<128> FileBaz;
+  SmallString<128> FileAA;
+  SmallString<128> FileAB;
+  SmallString<128> FileAC;
+  SmallString<128> FileFoo;
+  SmallString<128> FileBar;
+  SmallString<128> FileBaz;
 
-  void SetUp() override { llvm::sys::fs::set_current_path(OriginalWorkingDir); }
+  void SetUp() override {
+    // chdir back into the original working dir this test binary started with.
+    // A previous test may have have changed the working dir.
+    ASSERT_NO_ERROR(fs::set_current_path(OriginalWorkingDir));
 
-  static void SetUpTestCase() {
-    llvm::sys::fs::current_path(OriginalWorkingDir);
+    // Get the name of the current test. To prevent that by chance two tests
+    // get the same temporary directory if createUniqueDirectory fails.
+    auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    ASSERT_TRUE(test_info != nullptr);
+    std::string name = test_info->name();
+    ASSERT_NO_ERROR(fs::createUniqueDirectory("FsCompletion-" + name, BaseDir));
 
-    ASSERT_NO_ERROR(fs::createUniqueDirectory("FsCompletion", BaseDir));
     const char *DirNames[] = {"foo", "fooa", "foob",        "fooc",
                               "bar", "baz",  "test_folder", "foo/nested"};
     const char *FileNames[] = {"aa1234.tmp",  "ab1234.tmp",  "ac1234.tmp",
@@ -92,9 +101,11 @@ protected:
     }
   }
 
-  static void TearDownTestCase() {
-    ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
+  static void SetUpTestCase() {
+    ASSERT_NO_ERROR(fs::current_path(OriginalWorkingDir));
   }
+
+  void TearDown() override { ASSERT_NO_ERROR(fs::remove_directories(BaseDir)); }
 
   static bool HasEquivalentFile(const Twine &Path, const StringList &Paths) {
     for (size_t I = 0; I < Paths.GetSize(); ++I) {
@@ -128,24 +139,7 @@ protected:
   }
 };
 
-SmallString<128> CompletionTest::BaseDir;
 SmallString<128> CompletionTest::OriginalWorkingDir;
-
-SmallString<128> CompletionTest::DirFoo;
-SmallString<128> CompletionTest::DirFooA;
-SmallString<128> CompletionTest::DirFooB;
-SmallString<128> CompletionTest::DirFooC;
-SmallString<128> CompletionTest::DirBar;
-SmallString<128> CompletionTest::DirBaz;
-SmallString<128> CompletionTest::DirTestFolder;
-SmallString<128> CompletionTest::DirNested;
-
-SmallString<128> CompletionTest::FileAA;
-SmallString<128> CompletionTest::FileAB;
-SmallString<128> CompletionTest::FileAC;
-SmallString<128> CompletionTest::FileFoo;
-SmallString<128> CompletionTest::FileBar;
-SmallString<128> CompletionTest::FileBaz;
 }
 
 static std::vector<std::string> toVector(const StringList &SL) {
