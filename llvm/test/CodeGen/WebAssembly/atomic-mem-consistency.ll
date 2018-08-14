@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=+atomics,+sign-ext | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Currently all wasm atomic memory access instructions are sequentially
 ; consistent, so even if LLVM IR specifies weaker orderings than that, we

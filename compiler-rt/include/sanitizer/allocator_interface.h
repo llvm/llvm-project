@@ -82,7 +82,6 @@ extern "C" {
      Currently available with ASan only.
   */
   void __sanitizer_purge_allocator(void);
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif

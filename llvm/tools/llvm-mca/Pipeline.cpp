@@ -40,11 +40,15 @@ bool Pipeline::hasWorkToProcess() {
 
 // This routine returns early if any stage returns 'false' after execute() is
 // called on it.
-bool Pipeline::executeStages(InstRef &IR) {
-  for (const std::unique_ptr<Stage> &S : Stages)
-    if (!S->execute(IR))
-      return false;
-  return true;
+Stage::Status Pipeline::executeStages(InstRef &IR) {
+  for (const std::unique_ptr<Stage> &S : Stages) {
+    Stage::Status StatusOrErr = S->execute(IR);
+    if (!StatusOrErr)
+      return StatusOrErr.takeError();
+    else if (StatusOrErr.get() == Stage::Stop)
+      return Stage::Stop;
+  }
+  return Stage::Continue;
 }
 
 void Pipeline::preExecuteStages() {
@@ -57,16 +61,18 @@ void Pipeline::postExecuteStages() {
     S->postExecute();
 }
 
-void Pipeline::run() {
+llvm::Error Pipeline::run() {
   while (hasWorkToProcess()) {
     notifyCycleBegin();
-    runCycle();
+    if (llvm::Error Err = runCycle())
+      return Err;
     notifyCycleEnd();
     ++Cycles;
   }
+  return llvm::ErrorSuccess();
 }
 
-void Pipeline::runCycle() {
+llvm::Error Pipeline::runCycle() {
   // Update the stages before we do any processing for this cycle.
   InstRef IR;
   for (auto &S : Stages)
@@ -76,13 +82,17 @@ void Pipeline::runCycle() {
   // progress.
   while (true) {
     preExecuteStages();
-    if (!executeStages(IR))
+    Stage::Status Val = executeStages(IR);
+    if (!Val)
+      return Val.takeError();
+    if (Val.get() == Stage::Stop)
       break;
     postExecuteStages();
   }
 
   for (auto &S : Stages)
     S->cycleEnd();
+  return llvm::ErrorSuccess();
 }
 
 void Pipeline::notifyCycleBegin() {

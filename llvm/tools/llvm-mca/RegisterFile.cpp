@@ -306,8 +306,14 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
       // microarchitectural registers in register file #0 was changed by the
       // users via flag -reg-file-size. Alternatively, the scheduling model
       // specified a too small number of registers for this register file.
-      report_fatal_error(
-          "Not enough microarchitectural registers in the register file");
+      LLVM_DEBUG(dbgs() << "Not enough registers in the register file.\n");
+
+      // FIXME: Normalize the instruction register count to match the
+      // NumPhysRegs value.  This is a highly unusual case, and is not expected
+      // to occur.  This normalization is hiding an inconsistency in either the
+      // scheduling model or in the value that the user might have specified
+      // for NumPhysRegs.
+      NumRegs = RMT.NumPhysRegs;
     }
 
     if (RMT.NumPhysRegs < (RMT.NumUsedPhysRegs + NumRegs))

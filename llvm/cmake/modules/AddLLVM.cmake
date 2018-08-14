@@ -1566,7 +1566,7 @@ function(llvm_externalize_debuginfo name)
       endif()
       set(strip_command COMMAND ${CMAKE_STRIP} -Sxl $<TARGET_FILE:${name}>)
     else()
-      set(strip_command COMMAND ${CMAKE_STRIP} -gx $<TARGET_FILE:${name}>)
+      set(strip_command COMMAND ${CMAKE_STRIP} -g -x $<TARGET_FILE:${name}>)
     endif()
   endif()
 

@@ -656,7 +656,7 @@ class ELFReader : public Reader {
 public:
   ElfType getElfType() const;
   std::unique_ptr<Object> create() const override;
-  explicit ELFReader(Binary *B) : Bin(B){};
+  explicit ELFReader(Binary *B) : Bin(B) {}
 };
 
 class Object {

@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Error.h"
 
 namespace mca {
 

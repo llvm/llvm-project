@@ -666,7 +666,15 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
 /// @returns errc::success if the file times were successfully set, otherwise a
 ///          platform-specific error_code or errc::function_not_supported on
 ///          platforms where the functionality isn't available.
-std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time);
+std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
+                                                 TimePoint<> ModificationTime);
+
+/// Simpler version that sets both file modification and access time to the same
+/// time.
+inline std::error_code setLastAccessAndModificationTime(int FD,
+                                                        TimePoint<> Time) {
+  return setLastAccessAndModificationTime(FD, Time, Time);
+}
 
 /// Is status available?
 ///

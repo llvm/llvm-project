@@ -599,14 +599,14 @@ def JWriteZeroLatency : SchedWriteRes<[]> {
 
 def JWriteZeroIdiom : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteALU]>
+    SchedVar<NoSchedPred,                          [WriteALU]>
 ]>;
 def : InstRW<[JWriteZeroIdiom], (instrs SUB32rr, SUB64rr,
                                         XOR32rr, XOR64rr)>;
 
 def JWriteFZeroIdiom : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteFLogic]>
+    SchedVar<NoSchedPred,                          [WriteFLogic]>
 ]>;
 def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr,
                                          ANDNPSrr, VANDNPSrr,
@@ -614,20 +614,20 @@ def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr,
 
 def JWriteVZeroIdiomLogic : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecLogic]>
+    SchedVar<NoSchedPred,                          [WriteVecLogic]>
 ]>;
 def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORirr, MMX_PANDNirr)>;
 
 def JWriteVZeroIdiomLogicX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecLogicX]>
+    SchedVar<NoSchedPred,                          [WriteVecLogicX]>
 ]>;
 def : InstRW<[JWriteVZeroIdiomLogicX], (instrs PXORrr, VPXORrr,
                                                PANDNrr, VPANDNrr)>;
 
 def JWriteVZeroIdiomALU : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecALU]>
+    SchedVar<NoSchedPred,                          [WriteVecALU]>
 ]>;
 def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
                                             MMX_PSUBQirr, MMX_PSUBWirr,
@@ -636,7 +636,7 @@ def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
 
 def JWriteVZeroIdiomALUX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
-    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecALUX]>
+    SchedVar<NoSchedPred,                          [WriteVecALUX]>
 ]>;
 def : InstRW<[JWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
                                              PSUBDrr, VPSUBDrr,
@@ -667,8 +667,8 @@ def JSlowLEAPredicate : MCSchedPredicate<
 >;
 
 def JWriteLEA : SchedWriteVariant<[
-    SchedVar<JSlowLEAPredicate,          [JWrite3OpsLEA]>,
-    SchedVar<MCSchedPredicate<TruePred>, [WriteLEA]>
+    SchedVar<JSlowLEAPredicate, [JWrite3OpsLEA]>,
+    SchedVar<NoSchedPred,       [WriteLEA]>
 ]>;
 
 def : InstRW<[JWriteLEA], (instrs LEA32r, LEA64r, LEA64_32r)>;
