@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -fobjc-gc-only -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -fobjc-gc-only -analyzer-output=plist-multi-file %s -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/ExpectedOutputs/plists/retain-release-path-notes-gc.m.plist
+// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/retain-release-path-notes-gc.m.plist
 
 /***
 This file is for testing the path-sensitive notes for retain/release errors.

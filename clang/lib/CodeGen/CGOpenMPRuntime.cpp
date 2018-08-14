@@ -8811,7 +8811,8 @@ public:
 } // namespace
 
 void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
-                                       const OMPLoopDirective &D) {
+                                       const OMPLoopDirective &D,
+                                       ArrayRef<Expr *> NumIterations) {
   if (!CGF.HaveInsertPoint())
     return;
 
@@ -8834,32 +8835,45 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
   } else {
     RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
   }
+  llvm::APInt Size(/*numBits=*/32, NumIterations.size());
+  QualType ArrayTy =
+      C.getConstantArrayType(KmpDimTy, Size, ArrayType::Normal, 0);
 
-  Address DimsAddr = CGF.CreateMemTemp(KmpDimTy, "dims");
-  CGF.EmitNullInitialization(DimsAddr, KmpDimTy);
+  Address DimsAddr = CGF.CreateMemTemp(ArrayTy, "dims");
+  CGF.EmitNullInitialization(DimsAddr, ArrayTy);
   enum { LowerFD = 0, UpperFD, StrideFD };
   // Fill dims with data.
-  LValue DimsLVal = CGF.MakeAddrLValue(DimsAddr, KmpDimTy);
-  // dims.upper = num_iterations;
-  LValue UpperLVal =
-      CGF.EmitLValueForField(DimsLVal, *std::next(RD->field_begin(), UpperFD));
-  llvm::Value *NumIterVal = CGF.EmitScalarConversion(
-      CGF.EmitScalarExpr(D.getNumIterations()), D.getNumIterations()->getType(),
-      Int64Ty, D.getNumIterations()->getExprLoc());
-  CGF.EmitStoreOfScalar(NumIterVal, UpperLVal);
-  // dims.stride = 1;
-  LValue StrideLVal =
-      CGF.EmitLValueForField(DimsLVal, *std::next(RD->field_begin(), StrideFD));
-  CGF.EmitStoreOfScalar(llvm::ConstantInt::getSigned(CGM.Int64Ty, /*V=*/1),
-                        StrideLVal);
+  for (unsigned I = 0, E = NumIterations.size(); I < E; ++I) {
+    LValue DimsLVal =
+        CGF.MakeAddrLValue(CGF.Builder.CreateConstArrayGEP(
+                               DimsAddr, I, C.getTypeSizeInChars(KmpDimTy)),
+                           KmpDimTy);
+    // dims.upper = num_iterations;
+    LValue UpperLVal = CGF.EmitLValueForField(
+        DimsLVal, *std::next(RD->field_begin(), UpperFD));
+    llvm::Value *NumIterVal =
+        CGF.EmitScalarConversion(CGF.EmitScalarExpr(NumIterations[I]),
+                                 D.getNumIterations()->getType(), Int64Ty,
+                                 D.getNumIterations()->getExprLoc());
+    CGF.EmitStoreOfScalar(NumIterVal, UpperLVal);
+    // dims.stride = 1;
+    LValue StrideLVal = CGF.EmitLValueForField(
+        DimsLVal, *std::next(RD->field_begin(), StrideFD));
+    CGF.EmitStoreOfScalar(llvm::ConstantInt::getSigned(CGM.Int64Ty, /*V=*/1),
+                          StrideLVal);
+  }
 
   // Build call void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid,
   // kmp_int32 num_dims, struct kmp_dim * dims);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, D.getBeginLoc()),
-                         getThreadID(CGF, D.getBeginLoc()),
-                         llvm::ConstantInt::getSigned(CGM.Int32Ty, 1),
-                         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             DimsAddr.getPointer(), CGM.VoidPtrTy)};
+  llvm::Value *Args[] = {
+      emitUpdateLocation(CGF, D.getBeginLoc()),
+      getThreadID(CGF, D.getBeginLoc()),
+      llvm::ConstantInt::getSigned(CGM.Int32Ty, NumIterations.size()),
+      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          CGF.Builder
+              .CreateConstArrayGEP(DimsAddr, 0, C.getTypeSizeInChars(KmpDimTy))
+              .getPointer(),
+          CGM.VoidPtrTy)};
 
   llvm::Value *RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_init);
   CGF.EmitRuntimeCall(RTLFn, Args);
@@ -8874,16 +8888,29 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
                                           const OMPDependClause *C) {
   QualType Int64Ty =
       CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
-  const Expr *CounterVal = C->getCounterValue();
-  assert(CounterVal);
-  llvm::Value *CntVal = CGF.EmitScalarConversion(CGF.EmitScalarExpr(CounterVal),
-                                                 CounterVal->getType(), Int64Ty,
-                                                 CounterVal->getExprLoc());
-  Address CntAddr = CGF.CreateMemTemp(Int64Ty, ".cnt.addr");
-  CGF.EmitStoreOfScalar(CntVal, CntAddr, /*Volatile=*/false, Int64Ty);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, C->getBeginLoc()),
-                         getThreadID(CGF, C->getBeginLoc()),
-                         CntAddr.getPointer()};
+  llvm::APInt Size(/*numBits=*/32, C->getNumLoops());
+  QualType ArrayTy = CGM.getContext().getConstantArrayType(
+      Int64Ty, Size, ArrayType::Normal, 0);
+  Address CntAddr = CGF.CreateMemTemp(ArrayTy, ".cnt.addr");
+  for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I) {
+    const Expr *CounterVal = C->getLoopData(I);
+    assert(CounterVal);
+    llvm::Value *CntVal = CGF.EmitScalarConversion(
+        CGF.EmitScalarExpr(CounterVal), CounterVal->getType(), Int64Ty,
+        CounterVal->getExprLoc());
+    CGF.EmitStoreOfScalar(
+        CntVal,
+        CGF.Builder.CreateConstArrayGEP(
+            CntAddr, I, CGM.getContext().getTypeSizeInChars(Int64Ty)),
+        /*Volatile=*/false, Int64Ty);
+  }
+  llvm::Value *Args[] = {
+      emitUpdateLocation(CGF, C->getBeginLoc()),
+      getThreadID(CGF, C->getBeginLoc()),
+      CGF.Builder
+          .CreateConstArrayGEP(CntAddr, 0,
+                               CGM.getContext().getTypeSizeInChars(Int64Ty))
+          .getPointer()};
   llvm::Value *RTLFn;
   if (C->getDependencyKind() == OMPC_DEPEND_source) {
     RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_post);
@@ -9198,7 +9225,8 @@ void CGOpenMPSIMDRuntime::emitTargetDataStandAloneCall(
 }
 
 void CGOpenMPSIMDRuntime::emitDoacrossInit(CodeGenFunction &CGF,
-                                           const OMPLoopDirective &D) {
+                                           const OMPLoopDirective &D,
+                                           ArrayRef<Expr *> NumIterations) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

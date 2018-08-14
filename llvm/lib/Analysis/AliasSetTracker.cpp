@@ -357,71 +357,35 @@ void AliasSetTracker::add(Value *Ptr, LocationSize Size,
 void AliasSetTracker::add(LoadInst *LI) {
   if (isStrongerThanMonotonic(LI->getOrdering())) return addUnknown(LI);
 
-  AAMDNodes AAInfo;
-  LI->getAAMetadata(AAInfo);
-
-  AliasSet::AccessLattice Access = AliasSet::RefAccess;
-  const DataLayout &DL = LI->getModule()->getDataLayout();
-  AliasSet &AS = addPointer(LI->getOperand(0),
-                            DL.getTypeStoreSize(LI->getType()), AAInfo, Access);
+  AliasSet &AS = addPointer(MemoryLocation::get(LI), AliasSet::RefAccess);
   if (LI->isVolatile()) AS.setVolatile();
 }
 
 void AliasSetTracker::add(StoreInst *SI) {
   if (isStrongerThanMonotonic(SI->getOrdering())) return addUnknown(SI);
 
-  AAMDNodes AAInfo;
-  SI->getAAMetadata(AAInfo);
-
-  AliasSet::AccessLattice Access = AliasSet::ModAccess;
-  const DataLayout &DL = SI->getModule()->getDataLayout();
-  Value *Val = SI->getOperand(0);
-  AliasSet &AS = addPointer(
-      SI->getOperand(1), DL.getTypeStoreSize(Val->getType()), AAInfo, Access);
+  AliasSet &AS = addPointer(MemoryLocation::get(SI), AliasSet::ModAccess);
   if (SI->isVolatile()) AS.setVolatile();
 }
 
 void AliasSetTracker::add(VAArgInst *VAAI) {
-  AAMDNodes AAInfo;
-  VAAI->getAAMetadata(AAInfo);
-
-  addPointer(VAAI->getOperand(0), MemoryLocation::UnknownSize, AAInfo,
-             AliasSet::ModRefAccess);
+  addPointer(MemoryLocation::get(VAAI), AliasSet::ModRefAccess);
 }
 
 void AliasSetTracker::add(AnyMemSetInst *MSI) {
-  AAMDNodes AAInfo;
-  MSI->getAAMetadata(AAInfo);
-
-  uint64_t Len;
-
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MSI->getLength()))
-    Len = C->getZExtValue();
-  else
-    Len = MemoryLocation::UnknownSize;
-
-  AliasSet &AS =
-      addPointer(MSI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
+  auto MemLoc = MemoryLocation::getForDest(MSI);
+  AliasSet &AS = addPointer(MemLoc, AliasSet::ModAccess);
   auto *MS = dyn_cast<MemSetInst>(MSI);
   if (MS && MS->isVolatile())
     AS.setVolatile();
 }
 
 void AliasSetTracker::add(AnyMemTransferInst *MTI) {
-  AAMDNodes AAInfo;
-  MTI->getAAMetadata(AAInfo);
+  auto SrcLoc = MemoryLocation::getForSource(MTI);
+  AliasSet &ASSrc = addPointer(SrcLoc, AliasSet::RefAccess);
 
-  uint64_t Len;
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
-    Len = C->getZExtValue();
-  else
-    Len = MemoryLocation::UnknownSize;
-
-  AliasSet &ASSrc =
-      addPointer(MTI->getRawSource(), Len, AAInfo, AliasSet::RefAccess);
-
-  AliasSet &ASDst =
-      addPointer(MTI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
+  auto DestLoc = MemoryLocation::getForDest(MTI);
+  AliasSet &ASDst = addPointer(DestLoc, AliasSet::ModAccess);
 
   auto* MT = dyn_cast<MemTransferInst>(MTI);
   if (MT && MT->isVolatile()) {

@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Error.h"
 
 namespace mca {
 
@@ -49,16 +50,18 @@ class InstrBuilder {
   llvm::DenseMap<const llvm::MCInst *, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
-  const InstrDesc &createInstrDescImpl(const llvm::MCInst &MCI);
-  const InstrDesc &getOrCreateInstrDesc(const llvm::MCInst &MCI);
+  llvm::Expected<const InstrDesc &>
+  createInstrDescImpl(const llvm::MCInst &MCI);
+  llvm::Expected<const InstrDesc &>
+  getOrCreateInstrDesc(const llvm::MCInst &MCI);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
-  void populateWrites(InstrDesc &ID, const llvm::MCInst &MCI,
-                      unsigned SchedClassID);
-  void populateReads(InstrDesc &ID, const llvm::MCInst &MCI,
-                     unsigned SchedClassID);
+  llvm::Error populateWrites(InstrDesc &ID, const llvm::MCInst &MCI,
+                             unsigned SchedClassID);
+  llvm::Error populateReads(InstrDesc &ID, const llvm::MCInst &MCI,
+                            unsigned SchedClassID);
 
 public:
   InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,
@@ -79,7 +82,8 @@ public:
 
   void clear() { VariantDescriptors.shrink_and_clear(); }
 
-  std::unique_ptr<Instruction> createInstruction(const llvm::MCInst &MCI);
+  llvm::Expected<std::unique_ptr<Instruction>>
+  createInstruction(const llvm::MCInst &MCI);
 };
 } // namespace mca
 

@@ -136,12 +136,12 @@ void DispatchStage::cycleStart() {
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
 }
 
-bool DispatchStage::execute(InstRef &IR) {
+Stage::Status DispatchStage::execute(InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   if (!isAvailable(Desc.NumMicroOps) || !canDispatch(IR))
-    return false;
+    return Stage::Stop;
   dispatch(IR);
-  return true;
+  return Stage::Continue;
 }
 
 #ifndef NDEBUG

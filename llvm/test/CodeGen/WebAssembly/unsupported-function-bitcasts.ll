@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-explicit-locals-codegen-test-mode | FileCheck %s
+; RUN: llc < %s -asm-verbose=false | FileCheck %s
 
 ; Test that function pointer casts that require conversions of arguments or
 ; return types are converted to unreachable.

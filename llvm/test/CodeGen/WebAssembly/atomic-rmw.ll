@@ -1,5 +1,5 @@
-; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-explicit-locals-codegen-test-mode
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-register-codegen-test-mode -mattr=+atomics,+sign-ext | FileCheck %s
+; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Test atomic RMW (read-modify-write) instructions are assembled properly.
 
