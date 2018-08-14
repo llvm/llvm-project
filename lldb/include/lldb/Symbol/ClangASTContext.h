@@ -831,6 +831,8 @@ public:
                            bool is_static, bool is_inline, bool is_explicit,
                            bool is_attr_used, bool is_artificial);
 
+  void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
+
   // C++ Base Classes
   clang::CXXBaseSpecifier *
   CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,

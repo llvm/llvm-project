@@ -1,11 +1,11 @@
-//===--- Annotations.h - Annotated source code for tests --------*- C++-*-===//
+//===--- Annotations.h - Annotated source code for tests ---------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Annotations lets you mark points and ranges inside source code, for tests:
 //
@@ -27,8 +27,10 @@
 // to define general overlapping ranges.
 //
 //===---------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H
+
 #include "Protocol.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -66,4 +68,5 @@ private:
 
 } // namespace clangd
 } // namespace clang
-#endif
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_ANNOTATIONS_H

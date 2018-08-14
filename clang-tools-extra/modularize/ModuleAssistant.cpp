@@ -1,11 +1,11 @@
-//===--- ModuleAssistant.cpp - Module map generation manager -*- C++ -*---===//
+//===--- ModuleAssistant.cpp - Module map generation manager --*- C++ -*---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This file defines the module generation entry point function,
 // createModuleMap, a Module class for representing a module,
@@ -27,7 +27,7 @@
 // map file using a stream obtained and managed by an
 // llvm::ToolOutputFile object.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "Modularize.h"
 #include "llvm/ADT/SmallString.h"

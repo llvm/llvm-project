@@ -5,7 +5,8 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #include "TestTU.h"
 #include "TestFS.h"
 #include "index/FileIndex.h"

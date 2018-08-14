@@ -295,7 +295,6 @@
 		49A1CAC51430E8DE00306AC9 /* ExpressionSourceCode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49A1CAC31430E8BD00306AC9 /* ExpressionSourceCode.cpp */; };
 		4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA151B979973008658D4 /* ExpressionVariable.cpp */; };
 		4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 4984BA171B979C08008658D4 /* ExpressionVariable.h */; };
-		AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */; };
 		2689006E13353E1A00698AC0 /* File.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C6EA213011581005E16B0 /* File.cpp */; };
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
 		3FDFDDBF199D345E009756A7 /* FileCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBE199D345E009756A7 /* FileCache.cpp */; };
@@ -1807,8 +1806,6 @@
 		4C29E77D1BA2403F00DFF855 /* ExpressionTypeSystemHelper.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = ExpressionTypeSystemHelper.h; path = include/lldb/Expression/ExpressionTypeSystemHelper.h; sourceTree = "<group>"; };
 		4984BA151B979973008658D4 /* ExpressionVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ExpressionVariable.cpp; path = source/Expression/ExpressionVariable.cpp; sourceTree = "<group>"; };
 		4984BA171B979C08008658D4 /* ExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionVariable.h; path = include/lldb/Expression/ExpressionVariable.h; sourceTree = "<group>"; };
-		AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FastDemangle.cpp; path = source/Utility/FastDemangle.cpp; sourceTree = "<group>"; };
-		AFC2DCED1E6E2F9800283714 /* FastDemangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FastDemangle.h; path = include/lldb/Utility/FastDemangle.h; sourceTree = "<group>"; };
 		260C6EA213011581005E16B0 /* File.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = File.cpp; sourceTree = "<group>"; };
 		260C6EA013011578005E16B0 /* File.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = File.h; path = include/lldb/Host/File.h; sourceTree = "<group>"; };
 		3FDFDDBC199C3A06009756A7 /* FileAction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileAction.cpp; path = source/Target/FileAction.cpp; sourceTree = "<group>"; };
@@ -4510,8 +4507,6 @@
 				49CA96F41E6AAC8E00C03FEE /* DataExtractor.h */,
 				49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */,
 				26BC7DD310F1B7D500F91463 /* Endian.h */,
-				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
-				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
 				4CBFF0471F579A36004AFA92 /* Flags.h */,
 				236124A61986B50E004EFC37 /* IOObject.h */,
 				236124A21986B4E2004EFC37 /* IOObject.cpp */,
@@ -8005,7 +8000,6 @@
 				268900FF13353E6F00698AC0 /* ThreadPlanShouldStopHere.cpp in Sources */,
 				2579065F1BD0488D00178368 /* DomainSocket.cpp in Sources */,
 				2689010013353E6F00698AC0 /* ThreadPlanStepInstruction.cpp in Sources */,
-				AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */,
 				232CB61B191E00CD00EF39FC /* NativeThreadProtocol.cpp in Sources */,
 				4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */,
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,

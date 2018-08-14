@@ -30,7 +30,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
     return true;
 
   // Skip function-internal decls.
-  if (const DeclContext *F = D->getParentFunctionOrMethod())
+  if (D->getParentFunctionOrMethod())
     return true;
 
   llvm::SmallString<128> USR;

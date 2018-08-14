@@ -1028,6 +1028,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       DidInline = true;
       InlinedCallees.insert(&Callee);
 
+      ++NumInlined;
+
       emit_inlined_into(ORE, DLoc, Block, Callee, F, *OIC);
 
       // Add any new callsites to defined functions to the worklist.
@@ -1154,6 +1156,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
     // And delete the actual function from the module.
     M.getFunctionList().erase(DeadF);
+    ++NumDeleted;
   }
 
   if (!Changed)

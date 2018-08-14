@@ -622,9 +622,6 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 // Returns true if this function printed out an error message.
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
-    return false;
-
   if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
     return false;
 
@@ -695,7 +692,7 @@ public:
     while (I != Pieces.size() && Pieces[I].InputOff + Pieces[I].Size <= Off)
       ++I;
     if (I == Pieces.size())
-      return Off;
+      fatal(".eh_frame: relocation is not in any piece");
 
     // Pieces must be contiguous, so there must be no holes in between.
     assert(Pieces[I].InputOff <= Off && "Relocation not in any piece");

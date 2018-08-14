@@ -773,6 +773,18 @@ void Sema::ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC) {
   }
 }
 
+void Sema::ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC) {
+  switch (FPC) {
+  case LangOptions::FEA_On:
+    FPFeatures.setAllowFEnvAccess();
+    break;
+  case LangOptions::FEA_Off:
+    FPFeatures.setDisallowFEnvAccess();
+    break;
+  }
+}
+
+
 void Sema::PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
                                        SourceLocation Loc) {
   // Visibility calculations will consider the namespace's visibility.

@@ -3541,12 +3541,16 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     ConstantInitBuilder builder(CGM);
     auto selectors = builder.beginArray(selStructTy);
     auto &table = SelectorTable; // MSVC workaround
-    for (auto &entry : table) {
+    std::vector<Selector> allSelectors;
+    for (auto &entry : table)
+      allSelectors.push_back(entry.first);
+    llvm::sort(allSelectors.begin(), allSelectors.end());
 
-      std::string selNameStr = entry.first.getAsString();
+    for (auto &untypedSel : allSelectors) {
+      std::string selNameStr = untypedSel.getAsString();
       llvm::Constant *selName = ExportUniqueString(selNameStr, ".objc_sel_name");
 
-      for (TypedSelector &sel : entry.second) {
+      for (TypedSelector &sel : table[untypedSel]) {
         llvm::Constant *selectorTypeEncoding = NULLPtr;
         if (!sel.first.empty())
           selectorTypeEncoding =
