@@ -288,9 +288,6 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     // Check if key 'schedule' is present.
     if (!statements[Index].getAsObject()->get("schedule")) {
       errs() << "Statement " << Index << " has no 'schedule' key.\n";
-      for (auto Element : NewSchedule) {
-        isl_map_free(Element.second);
-      }
       return false;
     }
     Optional<StringRef> Schedule =
@@ -304,9 +301,6 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     if (!Map) {
       errs() << "The schedule was not parsed successfully (index = " << Index
              << ").\n";
-      for (auto Element : NewSchedule) {
-        isl_map_free(Element.second);
-      }
       return false;
     }
 
@@ -321,23 +315,21 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
       Map = isl_map_set_dim_id(Map, isl_dim_param, i, Id);
     }
     isl_space_free(Space);
-    NewSchedule[&Stmt] = Map;
+    NewSchedule[&Stmt] = isl::manage(Map);
     Index++;
   }
 
   // Check whether the new schedule is valid or not.
-  if (!D.isValidSchedule(S, &NewSchedule)) {
+  if (!D.isValidSchedule(S, NewSchedule)) {
     errs() << "JScop file contains a schedule that changes the "
            << "dependences. Use -disable-polly-legality to continue anyways\n";
-    for (auto Element : NewSchedule)
-      isl_map_free(Element.second);
     return false;
   }
 
   auto ScheduleMap = isl::union_map::empty(S.getParamSpace());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
-      ScheduleMap = ScheduleMap.add_map(isl::manage(NewSchedule[&Stmt]));
+      ScheduleMap = ScheduleMap.add_map(NewSchedule[&Stmt]);
     else
       ScheduleMap = ScheduleMap.add_map(Stmt.getSchedule());
   }
@@ -723,9 +715,10 @@ static bool importScop(Scop &S, const Dependences &D, const DataLayout &DL,
   Expected<json::Value> ParseResult =
       json::parse(result.get().get()->getBuffer());
 
-  if (!ParseResult) {
-    ParseResult.takeError();
+  if (Error E = ParseResult.takeError()) {
     errs() << "JSCoP file could not be parsed\n";
+    errs() << E << "\n";
+    consumeError(std::move(E));
     return false;
   }
   json::Object &jscop = *ParseResult.get().getAsObject();

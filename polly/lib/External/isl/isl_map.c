@@ -3878,7 +3878,7 @@ __isl_give isl_basic_map *isl_basic_map_insert_dims(
 	unsigned pos, unsigned n)
 {
 	isl_bool rational;
-	isl_space *res_dim;
+	isl_space *res_space;
 	struct isl_basic_map *res;
 	struct isl_dim_map *dim_map;
 	unsigned total, off;
@@ -3887,10 +3887,10 @@ __isl_give isl_basic_map *isl_basic_map_insert_dims(
 	if (n == 0)
 		return basic_map_space_reset(bmap, type);
 
-	if (!bmap)
-		return NULL;
-
-	res_dim = isl_space_insert_dims(isl_basic_map_get_space(bmap), type, pos, n);
+	res_space = isl_space_insert_dims(isl_basic_map_get_space(bmap),
+					type, pos, n);
+	if (!res_space)
+		return isl_basic_map_free(bmap);
 
 	total = isl_basic_map_total_dim(bmap) + n;
 	dim_map = isl_dim_map_alloc(bmap->ctx, total);
@@ -3905,11 +3905,11 @@ __isl_give isl_basic_map *isl_basic_map_insert_dims(
 			isl_dim_map_dim_range(dim_map, bmap->dim, t,
 						pos, size - pos, off + pos + n);
 		}
-		off += isl_space_dim(res_dim, t);
+		off += isl_space_dim(res_space, t);
 	}
 	isl_dim_map_div(dim_map, bmap, off);
 
-	res = isl_basic_map_alloc_space(res_dim,
+	res = isl_basic_map_alloc_space(res_space,
 			bmap->n_div, bmap->n_eq, bmap->n_ineq);
 	rational = isl_basic_map_is_rational(bmap);
 	if (rational < 0)

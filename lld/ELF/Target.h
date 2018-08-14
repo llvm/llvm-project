@@ -13,6 +13,7 @@
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace lld {
 std::string toString(elf::RelType Type);
@@ -150,6 +151,7 @@ TargetInfo *getAVRTargetInfo();
 TargetInfo *getHexagonTargetInfo();
 TargetInfo *getPPC64TargetInfo();
 TargetInfo *getPPCTargetInfo();
+TargetInfo *getRISCVTargetInfo();
 TargetInfo *getSPARCV9TargetInfo();
 TargetInfo *getX32TargetInfo();
 TargetInfo *getX86TargetInfo();
@@ -189,14 +191,9 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
         Twine(Max).str() + "]" + Hint);
 }
 
-// Sign-extend Nth bit all the way to MSB.
-inline int64_t signExtend(uint64_t V, int N) {
-  return int64_t(V << (64 - N)) >> (64 - N);
-}
-
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *Loc, int64_t V, int N, RelType Type) {
-  if (V != signExtend(V, N))
+  if (V != llvm::SignExtend64(V, N))
     reportRangeError(Loc, Type, Twine(V), llvm::minIntN(N), llvm::maxIntN(N));
 }
 
@@ -210,7 +207,7 @@ inline void checkUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
 inline void checkIntUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
-  if (V != (uint64_t)signExtend(V, N) && (V >> N) != 0)
+  if (V != (uint64_t)llvm::SignExtend64(V, N) && (V >> N) != 0)
     reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
                      llvm::maxIntN(N));
 }
