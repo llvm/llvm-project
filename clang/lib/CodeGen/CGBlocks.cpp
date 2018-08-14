@@ -1816,7 +1816,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
                                    /*IsCopyHelper*/ true, CGM);
 
   if (llvm::GlobalValue *Func = CGM.getModule().getNamedValue(FuncName))
-    return Func;
+    return llvm::ConstantExpr::getBitCast(Func, VoidPtrTy);
 
   ASTContext &C = getContext();
 
@@ -2010,7 +2010,7 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
                                    /*IsCopyHelper*/ false, CGM);
 
   if (llvm::GlobalValue *Func = CGM.getModule().getNamedValue(FuncName))
-    return Func;
+    return llvm::ConstantExpr::getBitCast(Func, VoidPtrTy);
 
   ASTContext &C = getContext();
 
