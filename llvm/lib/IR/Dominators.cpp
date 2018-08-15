@@ -67,7 +67,7 @@ template class llvm::DomTreeNodeBase<BasicBlock>;
 template class llvm::DominatorTreeBase<BasicBlock, false>; // DomTreeBase
 template class llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
 
-template struct llvm::DomTreeBuilder::Update<BasicBlock *>;
+template class llvm::cfg::Update<BasicBlock *>;
 
 template void llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
     DomTreeBuilder::BBDomTree &DT);

@@ -134,6 +134,9 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
 set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 
 if (CLANG_ENABLE_STATIC_ANALYZER)
+  # check-all would launch those tests via check-clang.
+  set(EXCLUDE_FROM_ALL ON)
+
   add_lit_testsuite(check-clang-analyzer "Running the Clang analyzer tests"
     ${CMAKE_CURRENT_BINARY_DIR}/Analysis
     PARAMS ${ANALYZER_TEST_PARAMS}
@@ -149,6 +152,7 @@ if (CLANG_ENABLE_STATIC_ANALYZER)
     set_target_properties(check-clang-analyzer-z3 PROPERTIES FOLDER "Clang tests")
   endif()
 
+  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}

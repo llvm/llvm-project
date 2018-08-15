@@ -653,7 +653,6 @@ TEST_P(ImportExpr, ImportSwitch) {
 
 TEST_P(ImportExpr, ImportStmtExpr) {
   MatchVerifier<Decl> Verifier;
-  // NOTE: has() ignores implicit casts, using hasDescendant() to match it
   testImport(
     "void declToImport() { int b; int a = b ?: 1; int C = ({int X=4; X;}); }",
     Lang_C, "", Lang_C, Verifier,

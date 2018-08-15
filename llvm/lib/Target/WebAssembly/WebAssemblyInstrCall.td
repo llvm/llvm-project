@@ -52,34 +52,35 @@ multiclass CALL<WebAssemblyRegClass vt, string prefix> {
 }
 
 multiclass SIMD_CALL<ValueType vt, string prefix> {
-  defm CALL_#vt : SIMD_I<(outs V128:$dst), (ins function32_op:$callee,
-                           variable_ops),
-                         (outs), (ins function32_op:$callee),
-                         [(set (vt V128:$dst),
-                            (WebAssemblycall1 (i32 imm:$callee)))],
-                         !strconcat(prefix, "call\t$dst, $callee"),
-                         !strconcat(prefix, "call\t$callee"),
-                         0x10>;
+
+  defm CALL_#vt : I<(outs V128:$dst), (ins function32_op:$callee, variable_ops),
+                    (outs), (ins function32_op:$callee),
+                    [(set (vt V128:$dst),
+                      (WebAssemblycall1 (i32 imm:$callee)))],
+                    !strconcat(prefix, "call\t$dst, $callee"),
+                    !strconcat(prefix, "call\t$callee"),
+                    0x10>,
+                  Requires<[HasSIMD128]>;
 
   let isCodeGenOnly = 1 in {
-    defm PCALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
-                                     (ins I32:$callee, variable_ops),
-                                     (outs), (ins I32:$callee),
-                                     [(set (vt V128:$dst),
-                                           (WebAssemblycall1 I32:$callee))],
-                                     "PSEUDO CALL INDIRECT\t$callee",
-                                     "PSEUDO CALL INDIRECT\t$callee">;
+    defm PCALL_INDIRECT_#vt : I<(outs V128:$dst),
+                                (ins I32:$callee, variable_ops),
+                                (outs), (ins I32:$callee),
+                                [(set (vt V128:$dst),
+                                      (WebAssemblycall1 I32:$callee))],
+                                "PSEUDO CALL INDIRECT\t$callee",
+                                "PSEUDO CALL INDIRECT\t$callee">,
+                              Requires<[HasSIMD128]>;
   } // isCodeGenOnly = 1
 
-  defm CALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
-                                  (ins TypeIndex:$type, i32imm:$flags,
-                                        variable_ops),
-                                  (outs), (ins TypeIndex:$type, i32imm:$flags),
-                                  [],
-                                  !strconcat(prefix,
-                                    "call_indirect\t$dst"),
-                                  !strconcat(prefix, "call_indirect\t$type"),
-                                  0x11>;
+  defm CALL_INDIRECT_#vt : I<(outs V128:$dst),
+                             (ins TypeIndex:$type, i32imm:$flags, variable_ops),
+                             (outs), (ins TypeIndex:$type, i32imm:$flags),
+                             [],
+                             !strconcat(prefix, "call_indirect\t$dst"),
+                             !strconcat(prefix, "call_indirect\t$type"),
+                             0x11>,
+                           Requires<[HasSIMD128]>;
 }
 
 let Uses = [SP32, SP64], isCall = 1 in {

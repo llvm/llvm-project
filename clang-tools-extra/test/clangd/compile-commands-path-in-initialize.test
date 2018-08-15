@@ -23,6 +23,7 @@
 # CHECK-NEXT:   "params": {
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:       {
+# CHECK-NEXT:         "category": "#pragma message Directive",
 # CHECK-NEXT:         "message": "MACRO is one",
 ---
 {"jsonrpc":"2.0","id":0,"method":"workspace/didChangeConfiguration","params":{"settings":{"compilationDatabasePath":"INPUT_DIR/build-2"}}}
@@ -30,6 +31,7 @@
 # CHECK-NEXT:   "params": {
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:       {
+# CHECK-NEXT:         "category": "#pragma message Directive",
 # CHECK-NEXT:         "message": "MACRO is two",
 ---
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}

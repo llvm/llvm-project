@@ -30,14 +30,15 @@ class PredicateExpander {
   bool NegatePredicate;
   bool ExpandForMC;
   unsigned IndentLevel;
+  StringRef TargetName;
 
   PredicateExpander(const PredicateExpander &) = delete;
   PredicateExpander &operator=(const PredicateExpander &) = delete;
 
 public:
-  PredicateExpander()
+  PredicateExpander(StringRef Target)
       : EmitCallsByRef(true), NegatePredicate(false), ExpandForMC(false),
-        IndentLevel(1U) {}
+        IndentLevel(1U), TargetName(Target) {}
   bool isByRef() const { return EmitCallsByRef; }
   bool shouldNegate() const { return NegatePredicate; }
   bool shouldExpandForMC() const { return ExpandForMC; }
@@ -65,8 +66,7 @@ public:
   void expandCheckOpcode(raw_ostream &OS, const RecVec &Opcodes);
   void expandPredicateSequence(raw_ostream &OS, const RecVec &Sequence,
                                bool IsCheckAll);
-  void expandTIIFunctionCall(raw_ostream &OS, StringRef TargetName,
-                             StringRef MethodName);
+  void expandTIIFunctionCall(raw_ostream &OS, StringRef MethodName);
   void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckIsImmOperand(raw_ostream &OS, int OpIndex);
   void expandCheckInvalidRegOperand(raw_ostream &OS, int OpIndex);

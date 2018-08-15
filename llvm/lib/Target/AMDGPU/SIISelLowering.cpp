@@ -4512,7 +4512,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  MachineFunction &MF = DAG.getMachineFunction();
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
@@ -4684,9 +4683,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
 
   MachineSDNode *NewNode = DAG.getMachineNode(Opcode, DL, ResultTypes, Ops);
   if (auto MemOp = dyn_cast<MemSDNode>(Op)) {
-    MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
-    *MemRefs = MemOp->getMemOperand();
-    NewNode->setMemRefs(MemRefs, MemRefs + 1);
+    MachineMemOperand *MemRef = MemOp->getMemOperand();
+    DAG.setNodeMemRefs(NewNode, {MemRef});
   }
 
   if (BaseOpcode->AtomicX2) {
@@ -8116,7 +8114,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   if (HasChain) {
     // Update chain.
-    NewNode->setMemRefs(Node->memoperands_begin(), Node->memoperands_end());
+    DAG.setNodeMemRefs(NewNode, Node->memoperands());
     DAG.ReplaceAllUsesOfValueWith(SDValue(Node, 1), SDValue(NewNode, 1));
   }
 

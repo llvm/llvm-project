@@ -815,8 +815,6 @@ void MemberPointerType::outputPre(OutputStream &OS, NameResolver &Resolver) {
   // FIXME: We should output this, but it requires updating lots of tests.
   // if (Ty.Quals & Q_Pointer64)
   //  OS << " __ptr64";
-  if (Quals & Q_Restrict)
-    OS << " __restrict";
 }
 
 void MemberPointerType::outputPost(OutputStream &OS, NameResolver &Resolver) {
@@ -2028,12 +2026,12 @@ ArrayType *Demangler::demangleArrayType(StringView &MangledName) {
   }
 
   if (MangledName.consumeFront("$$C")) {
-    if (MangledName.consumeFront("B"))
-      ATy->Quals = Q_Const;
-    else if (MangledName.consumeFront("C") || MangledName.consumeFront("D"))
-      ATy->Quals = Qualifiers(Q_Const | Q_Volatile);
-    else if (!MangledName.consumeFront("A"))
+    bool IsMember = false;
+    std::tie(ATy->Quals, IsMember) = demangleQualifiers(MangledName);
+    if (IsMember) {
       Error = true;
+      return nullptr;
+    }
   }
 
   ATy->ElementType = demangleType(MangledName, QualifierMangleMode::Drop);

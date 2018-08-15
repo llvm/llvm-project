@@ -149,15 +149,6 @@ MachineInstrBuilder MachineIRBuilderBase::buildConstDbgValue(
   return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
 }
 
-MachineInstrBuilder MachineIRBuilderBase::buildDbgLabel(const MDNode *Label) {
-  assert(isa<DILabel>(Label) && "not a label");
-  assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(State.DL) &&
-         "Expected inlined-at fields to agree");
-  auto MIB = buildInstr(TargetOpcode::DBG_LABEL);
-
-  return MIB.addMetadata(Label);
-}
-
 MachineInstrBuilder MachineIRBuilderBase::buildFrameIndex(unsigned Res,
                                                           int Idx) {
   assert(getMRI()->getType(Res).isPointer() && "invalid operand type");

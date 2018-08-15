@@ -256,10 +256,11 @@ DIBasicType *DIBuilder::createNullPtrType() {
 }
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
-                                        unsigned Encoding) {
+                                        unsigned Encoding,
+                                        DINode::DIFlags Flags) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding);
+                          0, Encoding, Flags);
 }
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
