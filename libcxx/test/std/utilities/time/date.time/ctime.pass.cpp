@@ -47,7 +47,7 @@ int main()
     static_assert((std::is_same<decltype(std::difftime(t,t)), double>::value), "");
     static_assert((std::is_same<decltype(std::mktime(&tm)), std::time_t>::value), "");
     static_assert((std::is_same<decltype(std::time(&t)), std::time_t>::value), "");
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
+#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
     static_assert((std::is_same<decltype(std::timespec_get(nullptr, 0)), int>::value), "");
 #endif
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
