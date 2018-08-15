@@ -122,7 +122,7 @@ void foo(int coin) {
 namespace address_vector_tests {
 
 template <typename T> struct AddressVector {
-  T *buf[10];
+  T *buf[20];
   int len;
 
   AddressVector() : len(0) {}
@@ -138,13 +138,13 @@ class ClassWithoutDestructor {
 
 public:
   ClassWithoutDestructor(AddressVector<ClassWithoutDestructor> &v) : v(v) {
-    v.push(this);
+    push();
   }
 
-  ClassWithoutDestructor(ClassWithoutDestructor &&c) : v(c.v) { v.push(this); }
-  ClassWithoutDestructor(const ClassWithoutDestructor &c) : v(c.v) {
-    v.push(this);
-  }
+  ClassWithoutDestructor(ClassWithoutDestructor &&c) : v(c.v) { push(); }
+  ClassWithoutDestructor(const ClassWithoutDestructor &c) : v(c.v) { push(); }
+
+  void push() { v.push(this); }
 };
 
 ClassWithoutDestructor make1(AddressVector<ClassWithoutDestructor> &v) {
@@ -174,20 +174,44 @@ void testMultipleReturns() {
 #endif
 }
 
+void consume(ClassWithoutDestructor c) {
+  c.push();
+}
+
+void testArgumentConstructorWithoutDestructor() {
+  AddressVector<ClassWithoutDestructor> v;
+
+  consume(make3(v));
+
+#if ELIDE
+  clang_analyzer_eval(v.len == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] == v.buf[1]); // expected-warning{{TRUE}}
+#else
+  clang_analyzer_eval(v.len == 6); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] != v.buf[1]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[1] != v.buf[2]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[2] != v.buf[3]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[3] != v.buf[4]); // expected-warning{{TRUE}}
+  // We forced a push() in consume(), let's see if the address here matches
+  // the address during construction.
+  clang_analyzer_eval(v.buf[4] == v.buf[5]); // expected-warning{{TRUE}}
+#endif
+}
+
 class ClassWithDestructor {
   AddressVector<ClassWithDestructor> &v;
 
 public:
   ClassWithDestructor(AddressVector<ClassWithDestructor> &v) : v(v) {
-    v.push(this);
+    push();
   }
 
-  ClassWithDestructor(ClassWithDestructor &&c) : v(c.v) { v.push(this); }
-  ClassWithDestructor(const ClassWithDestructor &c) : v(c.v) {
-    v.push(this);
-  }
+  ClassWithDestructor(ClassWithDestructor &&c) : v(c.v) { push(); }
+  ClassWithDestructor(const ClassWithDestructor &c) : v(c.v) { push(); }
 
-  ~ClassWithDestructor() { v.push(this); }
+  ~ClassWithDestructor() { push(); }
+
+  void push() { v.push(this); }
 };
 
 void testVariable() {
@@ -301,4 +325,43 @@ void testMultipleReturnsWithDestructors() {
   clang_analyzer_eval(v.buf[7] == v.buf[9]); // expected-warning{{TRUE}}
 #endif
 }
+
+void consume(ClassWithDestructor c) {
+  c.push();
+}
+
+void testArgumentConstructorWithDestructor() {
+  AddressVector<ClassWithDestructor> v;
+
+  consume(make3(v));
+
+#if ELIDE
+  // 0. Construct the argument.
+  // 1. Forced push() in consume().
+  // 2. Destroy the argument.
+  clang_analyzer_eval(v.len == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] == v.buf[1]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[1] == v.buf[2]); // expected-warning{{TRUE}}
+#else
+  // 0. Construct the temporary in make1().
+  // 1. Construct the temporary in make2().
+  // 2. Destroy the temporary in make1().
+  // 3. Construct the temporary in make3().
+  // 4. Destroy the temporary in make2().
+  // 5. Construct the temporary here.
+  // 6. Destroy the temporary in make3().
+  // 7. Construct the argument.
+  // 8. Forced push() in consume().
+  // 9. Destroy the argument. Notice the reverse order!
+  // 10. Destroy the temporary here.
+  clang_analyzer_eval(v.len == 11); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[0] == v.buf[2]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[1] == v.buf[4]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[3] == v.buf[6]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[5] == v.buf[10]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[7] == v.buf[8]); // expected-warning{{TRUE}}
+  clang_analyzer_eval(v.buf[8] == v.buf[9]); // expected-warning{{TRUE}}
+#endif
+}
+
 } // namespace address_vector_tests

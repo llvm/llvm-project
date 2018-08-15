@@ -505,6 +505,49 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
                                              *this);
 }
 
+ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
+                                                       const CallEvent &Call) {
+  const Expr *E = Call.getOriginExpr();
+  // FIXME: Constructors to placement arguments of operator new
+  // are not supported yet.
+  if (!E || isa<CXXNewExpr>(E))
+    return State;
+
+  const LocationContext *LC = Call.getLocationContext();
+  for (unsigned CallI = 0, CallN = Call.getNumArgs(); CallI != CallN; ++CallI) {
+    unsigned I = Call.getASTArgumentIndex(CallI);
+    if (Optional<SVal> V =
+            getObjectUnderConstruction(State, {E, I}, LC)) {
+      SVal VV = *V;
+      assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
+                 ->getStackFrame()->getParent()
+                 ->getStackFrame() == LC->getStackFrame());
+      State = finishObjectConstruction(State, {E, I}, LC);
+    }
+  }
+
+  return State;
+}
+
+void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
+                                            ExplodedNode *Pred,
+                                            const CallEvent &Call) {
+  ProgramStateRef State = Pred->getState();
+  ProgramStateRef CleanedState = finishArgumentConstruction(State, Call);
+  if (CleanedState == State) {
+    Dst.insert(Pred);
+    return;
+  }
+
+  const Expr *E = Call.getOriginExpr();
+  const LocationContext *LC = Call.getLocationContext();
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
+  static SimpleProgramPointTag Tag("ExprEngine",
+                                   "Finish argument construction");
+  PreStmt PP(E, LC, &Tag);
+  B.generateNode(PP, CleanedState, Pred);
+}
+
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                           const CallEvent &Call) {
   // WARNING: At this time, the state attached to 'Call' may be older than the
@@ -516,7 +559,8 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 
   // Run any pre-call checks using the generic call interface.
   ExplodedNodeSet dstPreVisit;
-  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred, Call, *this);
+  getCheckerManager().runCheckersForPreCall(dstPreVisit, Pred,
+                                            Call, *this);
 
   // Actually evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call, and get a callback at
@@ -525,8 +569,14 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   getCheckerManager().runCheckersForEvalCall(dstCallEvaluated, dstPreVisit,
                                              Call, *this);
 
+  // If there were other constructors called for object-type arguments
+  // of this call, clean them up.
+  ExplodedNodeSet dstArgumentCleanup;
+  for (auto I : dstCallEvaluated)
+    finishArgumentConstruction(dstArgumentCleanup, I, Call);
+
   // Finally, run any post-call checks.
-  getCheckerManager().runCheckersForPostCall(Dst, dstCallEvaluated,
+  getCheckerManager().runCheckersForPostCall(Dst, dstArgumentCleanup,
                                              Call, *this);
 }
 
