@@ -626,7 +626,7 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
          de = declVec.end(); di != de; ++di) {
       llvm::errs() << " " << (*di)->getDeclName().getAsString()
                    << " <";
-      (*di)->getLocation().dump(M);
+      (*di)->getLocation().print(llvm::errs(), M);
       llvm::errs() << ">\n";
     }
   }
