@@ -15,11 +15,8 @@
 
 using namespace lldb_private;
 
-std::size_t HighlightStyle::ColorStyle::Apply(Stream &s,
-                                              llvm::StringRef value) const {
+void HighlightStyle::ColorStyle::Apply(Stream &s, llvm::StringRef value) const {
   s << m_prefix << value << m_suffix;
-  // Calculate how many bytes we have written.
-  return m_prefix.size() + value.size() + m_suffix.size();
 }
 
 void HighlightStyle::ColorStyle::Set(llvm::StringRef prefix,
@@ -28,13 +25,11 @@ void HighlightStyle::ColorStyle::Set(llvm::StringRef prefix,
   m_suffix = lldb_utility::ansi::FormatAnsiTerminalCodes(suffix);
 }
 
-std::size_t NoHighlighter::Highlight(const HighlightStyle &options,
-                                     llvm::StringRef line,
-                                     llvm::StringRef previous_lines,
-                                     Stream &s) const {
+void NoHighlighter::Highlight(const HighlightStyle &options,
+                              llvm::StringRef line,
+                              llvm::StringRef previous_lines, Stream &s) const {
   // We just forward the input to the output and do no highlighting.
   s << line;
-  return line.size();
 }
 
 static HighlightStyle::ColorStyle GetColor(const char *c) {

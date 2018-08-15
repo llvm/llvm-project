@@ -20,7 +20,8 @@
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
     defined HANDLE_DW_RLE || defined HANDLE_DW_CFA ||                          \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
-    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX)
+    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
+    defined HANDLE_DW_END)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -98,6 +99,10 @@
 
 #ifndef HANDLE_DW_IDX
 #define HANDLE_DW_IDX(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_END
+#define HANDLE_DW_END(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF)
@@ -690,6 +695,11 @@ HANDLE_DW_ATE(0x10, UTF, 4, DWARF)
 HANDLE_DW_ATE(0x11, UCS, 5, DWARF)
 HANDLE_DW_ATE(0x12, ASCII, 5, DWARF)
 
+// DWARF attribute endianity
+HANDLE_DW_END(0x00, default)
+HANDLE_DW_END(0x01, big)
+HANDLE_DW_END(0x02, little)
+
 // DWARF virtuality codes.
 HANDLE_DW_VIRTUALITY(0x00, none)
 HANDLE_DW_VIRTUALITY(0x01, virtual)
@@ -909,3 +919,4 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DW_UT
 #undef HANDLE_DWARF_SECTION
 #undef HANDLE_DW_IDX
+#undef HANDLE_DW_END

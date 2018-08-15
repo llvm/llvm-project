@@ -1156,6 +1156,11 @@ public:
                                SDValue Op3, SDValue Op4, SDValue Op5);
   SDNode *UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops);
 
+  /// *Mutate* the specified machine node's memory references to the provided
+  /// list.
+  void setNodeMemRefs(MachineSDNode *N,
+                      ArrayRef<MachineMemOperand *> NewMemRefs);
+
   // Propagates the change in divergence to users
   void updateDivergence(SDNode * N);
 

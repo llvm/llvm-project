@@ -713,6 +713,8 @@ public:
   bool isTypePassByReference() const {
     return getFlags() & FlagTypePassByReference;
   }
+  bool isBigEndian() const { return getFlags() & FlagBigEndian; }
+  bool isLittleEndian() const { return getFlags() & FlagLittleEndian; }
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
@@ -739,40 +741,43 @@ class DIBasicType : public DIType {
 
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-              ArrayRef<Metadata *> Ops)
+              DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
-               FlagZero, Ops),
+               Flags, Ops),
         Encoding(Encoding) {}
   ~DIBasicType() = default;
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              StorageType Storage, bool ShouldCreate = true) {
+                              DIFlags Flags, StorageType Storage,
+                              bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   SizeInBits, AlignInBits, Encoding, Storage, ShouldCreate);
+                   SizeInBits, AlignInBits, Encoding, Flags, Storage,
+                   ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              StorageType Storage, bool ShouldCreate = true);
+                              DIFlags Flags, StorageType Storage,
+                              bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
-                        getAlignInBits(), getEncoding());
+                        getAlignInBits(), getEncoding(), getFlags());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0))
+                    (Tag, Name, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 

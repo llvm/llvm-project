@@ -8,12 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.8
-// XFAIL: with_system_cxx_lib=macosx10.7
+
+// aligned allocation functions are not provided prior to macosx10.13
+// XFAIL: macosx10.12
+// XFAIL: macosx10.11
+// XFAIL: macosx10.10
+// XFAIL: macosx10.9
+// XFAIL: macosx10.8
+// XFAIL: macosx10.7
 
 #include <new>
 

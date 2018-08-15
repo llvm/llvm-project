@@ -4045,9 +4045,8 @@ bool PPCDAGToDAGISel::isOffsetMultipleOf(SDNode *N, unsigned Val) const {
 
 void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 }
 
 /// This method returns a node after flipping the MSB of each element
@@ -4683,11 +4682,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
             SelectAddrIdxOnly(LD->getBasePtr(), Base, Offset)) {
           SDValue Chain = LD->getChain();
           SDValue Ops[] = { Base, Offset, Chain };
-          MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-          MemOp[0] = LD->getMemOperand();
+          MachineMemOperand *MemOp = LD->getMemOperand();
           SDNode *NewN = CurDAG->SelectNodeTo(N, PPC::LXVDSX,
                                               N->getValueType(0), Ops);
-          cast<MachineSDNode>(NewN)->setMemRefs(MemOp, MemOp + 1);
+          CurDAG->setNodeMemRefs(cast<MachineSDNode>(NewN), {MemOp});
           return;
         }
       }

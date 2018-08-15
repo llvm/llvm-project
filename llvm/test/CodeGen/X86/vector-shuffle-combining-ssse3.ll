@@ -707,20 +707,23 @@ define <16 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<16 x i8> %a0, <16 x i8> 
 define <16 x i8> @combine_pshufb_pshufb_or_pshufb(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pshufb_pshufb_or_pshufb:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3],zero,zero,zero,zero,xmm1[0,1,2,3],zero,zero,zero,zero
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3]
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_pshufb_pshufb_or_pshufb:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3]
-; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX512F-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
   %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)
   %3 = or <16 x i8> %1, %2

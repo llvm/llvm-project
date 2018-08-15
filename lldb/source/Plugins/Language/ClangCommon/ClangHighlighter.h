@@ -28,9 +28,8 @@ public:
   ClangHighlighter();
   llvm::StringRef GetName() const override { return "clang"; }
 
-  std::size_t Highlight(const HighlightStyle &options, llvm::StringRef line,
-                        llvm::StringRef previous_lines,
-                        Stream &s) const override;
+  void Highlight(const HighlightStyle &options, llvm::StringRef line,
+                 llvm::StringRef previous_lines, Stream &s) const override;
 
   /// Returns true if the given string represents a keywords in any Clang
   /// supported language.

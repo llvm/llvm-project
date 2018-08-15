@@ -1354,11 +1354,8 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
   SDValue Ops[] = { Base, Disp, Operand, InputChain };
   MachineSDNode *Result =
     CurDAG->getMachineNode(NewOpc, DL, MVT::i32, MVT::Other, Ops);
-
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(2);
-  MemOp[0] = StoreNode->getMemOperand();
-  MemOp[1] = LoadNode->getMemOperand();
-  Result->setMemRefs(MemOp, MemOp + 2);
+  CurDAG->setNodeMemRefs(
+      Result, {StoreNode->getMemOperand(), LoadNode->getMemOperand()});
 
   ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
   ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));

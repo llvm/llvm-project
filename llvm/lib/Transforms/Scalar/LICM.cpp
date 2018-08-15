@@ -93,7 +93,7 @@ static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
                                   TargetTransformInfo *TTI, bool &FreeInLoop);
-static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
+static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   const LoopSafetyInfo *SafetyInfo,
                   OptimizationRemarkEmitter *ORE);
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
@@ -487,7 +487,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
            isSafeToExecuteUnconditionally(
                I, DT, CurLoop, SafetyInfo, ORE,
                CurLoop->getLoopPreheader()->getTerminator()))) {
-        Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        Changed = true;
         continue;
       }
 
@@ -1063,7 +1064,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 /// When an instruction is found to only use loop invariant operands that
 /// is safe to hoist, this instruction is called to do the dirty work.
 ///
-static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
+static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   const LoopSafetyInfo *SafetyInfo,
                   OptimizationRemarkEmitter *ORE) {
   auto *Preheader = CurLoop->getLoopPreheader();
@@ -1101,7 +1102,6 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   else if (isa<CallInst>(I))
     ++NumMovedCalls;
   ++NumHoisted;
-  return true;
 }
 
 /// Only sink or hoist an instruction if it is not a trapping instruction,
