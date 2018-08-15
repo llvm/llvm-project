@@ -264,7 +264,8 @@ struct Allocator {
     Quarantine.Init(
         static_cast<uptr>(getFlags()->QuarantineSizeKb) << 10,
         static_cast<uptr>(getFlags()->ThreadLocalQuarantineSizeKb) << 10);
-    QuarantineChunksUpToSize = getFlags()->QuarantineChunksUpToSize;
+    QuarantineChunksUpToSize = (Quarantine.GetCacheSize() == 0) ? 0 :
+        getFlags()->QuarantineChunksUpToSize;
     DeallocationTypeMismatch = getFlags()->DeallocationTypeMismatch;
     DeleteSizeMismatch = getFlags()->DeleteSizeMismatch;
     ZeroContents = getFlags()->ZeroContents;
@@ -389,10 +390,11 @@ struct Allocator {
   // quarantine chunk size threshold.
   void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header,
                                    uptr Size) {
-    const bool BypassQuarantine = (Quarantine.GetCacheSize() == 0) ||
-        (Size > QuarantineChunksUpToSize);
+    const bool BypassQuarantine = !Size || (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
-      Chunk::eraseHeader(Ptr);
+      UnpackedHeader NewHeader = *Header;
+      NewHeader.State = ChunkAvailable;
+      Chunk::compareExchangeHeader(Ptr, &NewHeader, Header);
       void *BackendPtr = Chunk::getBackendPtr(Ptr, Header);
       if (Header->ClassId) {
         bool UnlockRequired;
@@ -675,7 +677,7 @@ void *scudoValloc(uptr Size) {
 }
 
 void *scudoPvalloc(uptr Size) {
-  uptr PageSize = GetPageSizeCached();
+  const uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
     errno = ENOMEM;
     if (Instance.canReturnNull())
