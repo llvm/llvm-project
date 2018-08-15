@@ -134,7 +134,7 @@ public:
 
     MetadataPromise(ValueObject &, SwiftLanguageRuntime &, lldb::addr_t);
 
-    ValueObject &m_for_object;
+    lldb::ValueObjectSP m_for_object_sp;
     SwiftLanguageRuntime &m_swift_runtime;
     lldb::addr_t m_metadata_location;
     llvm::Optional<swift::MetadataKind> m_metadata_kind;
