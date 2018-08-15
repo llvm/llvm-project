@@ -22,20 +22,20 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-/// Computes loop safety information, checks loop body & header
-/// for the possibility of may throw exception.
-///
-void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
+bool LoopSafetyInfo::headerMayThrow() const {
+  return HeaderMayThrow;
+}
+
+bool LoopSafetyInfo::anyBlockMayThrow() const {
+  return MayThrow;
+}
+
+void LoopSafetyInfo::computeLoopSafetyInfo(Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop can't be null");
   BasicBlock *Header = CurLoop->getHeader();
-  // Setting default safety values.
-  SafetyInfo->MayThrow = false;
-  SafetyInfo->HeaderMayThrow = false;
   // Iterate over header and compute safety info.
-  SafetyInfo->HeaderMayThrow =
-    !isGuaranteedToTransferExecutionToSuccessor(Header);
-
-  SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
+  HeaderMayThrow = !isGuaranteedToTransferExecutionToSuccessor(Header);
+  MayThrow = HeaderMayThrow;
   // Iterate over loop instructions and compute safety info.
   // Skip header as it has been computed and stored in HeaderMayThrow.
   // The first block in loopinfo.Blocks is guaranteed to be the header.
@@ -43,9 +43,8 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
          "First block must be header");
   for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
-       (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
-    SafetyInfo->MayThrow |=
-      !isGuaranteedToTransferExecutionToSuccessor(*BB);
+       (BB != BBE) && !MayThrow; ++BB)
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
 
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
@@ -53,7 +52,7 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   if (Fn->hasPersonalityFn())
     if (Constant *PersonalityFn = Fn->getPersonalityFn())
       if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
-        SafetyInfo->BlockColors = colorEHFunclets(*Fn);
+        BlockColors = colorEHFunclets(*Fn);
 }
 
 /// Return true if we can prove that the given ExitBlock is not reached on the
@@ -116,12 +115,12 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
     // Inst unless we can prove that Inst comes before the potential implicit
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
-    return !SafetyInfo->HeaderMayThrow ||
+    return !SafetyInfo->headerMayThrow() ||
       Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
   // Somewhere in this loop there is an instruction which may throw and make us
   // exit the loop.
-  if (SafetyInfo->MayThrow)
+  if (SafetyInfo->anyBlockMayThrow())
     return false;
 
   // Note: There are two styles of reasoning intermixed below for
@@ -196,7 +195,7 @@ static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
   LoopSafetyInfo LSI;
-  computeLoopSafetyInfo(&LSI, L);
+  LSI.computeLoopSafetyInfo(L);
   return isGuaranteedToExecute(I, DT, L, &LSI) ||
     isGuaranteedToExecuteForEveryIteration(&I, L);
 }

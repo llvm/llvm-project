@@ -686,13 +686,16 @@ bool RegisterCoalescer::hasOtherReachingDefs(LiveInterval &IntA,
 
 /// Copy segments with value number @p SrcValNo from liverange @p Src to live
 /// range @Dst and use value number @p DstValNo there.
-static void addSegmentsWithValNo(LiveRange &Dst, VNInfo *DstValNo,
+static bool addSegmentsWithValNo(LiveRange &Dst, VNInfo *DstValNo,
                                  const LiveRange &Src, const VNInfo *SrcValNo) {
+  bool Changed = false;
   for (const LiveRange::Segment &S : Src.segments) {
     if (S.valno != SrcValNo)
       continue;
     Dst.addSegment(LiveRange::Segment(S.start, S.end, DstValNo));
+    Changed = true;
   }
+  return Changed;
 }
 
 bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
@@ -873,10 +876,13 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   // Extend BValNo by merging in IntA live segments of AValNo. Val# definition
   // is updated.
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-  if (IntB.hasSubRanges()) {
+  if (IntA.hasSubRanges() || IntB.hasSubRanges()) {
     if (!IntA.hasSubRanges()) {
       LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(IntA.reg);
       IntA.createSubRangeFrom(Allocator, Mask, IntA);
+    } else if (!IntB.hasSubRanges()) {
+      LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(IntB.reg);
+      IntB.createSubRangeFrom(Allocator, Mask, IntB);
     }
     SlotIndex AIdx = CopyIdx.getRegSlot(true);
     for (LiveInterval::SubRange &SA : IntA.subranges()) {
@@ -889,7 +895,8 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
           ? SR.getNextValue(CopyIdx, Allocator)
           : SR.getVNInfoAt(CopyIdx);
         assert(BSubValNo != nullptr);
-        addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
+        if (addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo))
+          BSubValNo->def = ASubValNo->def;
       });
     }
   }

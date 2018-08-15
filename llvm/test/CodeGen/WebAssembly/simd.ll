@@ -59,6 +59,17 @@ define i8 @extract_v16i8(<16 x i8> %v) {
   ret i8 %elem
 }
 
+; CHECK-LABEL: replace_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128: .param v128, i32{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i8x16.replace_lane $push0=, $0, 11, $1 # encoding: [0xfd,0x11,0x0b]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <16 x i8> @replace_v16i8(<16 x i8> %v, i8 %x) {
+  %res = insertelement <16 x i8> %v, i8 %x, i32 11
+  ret <16 x i8> %res
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -110,6 +121,17 @@ define i16 @extract_v8i16(<8 x i16> %v) {
   ret i16 %elem
 }
 
+; CHECK-LABEL: replace_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128: .param v128, i32{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i16x8.replace_lane $push0=, $0, 7, $1 # encoding: [0xfd,0x12,0x07]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <8 x i16> @replace_v8i16(<8 x i16> %v, i16 %x) {
+  %res = insertelement <8 x i16> %v, i16 %x, i32 7
+  ret <8 x i16> %res
+}
+
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
@@ -135,6 +157,17 @@ define <4 x i32> @splat_v4i32(i32 %x) {
 define i32 @extract_v4i32(<4 x i32> %v) {
   %elem = extractelement <4 x i32> %v, i32 3
   ret i32 %elem
+}
+
+; CHECK-LABEL: replace_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128: .param v128, i32{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i32x4.replace_lane $push0=, $0, 2, $1 # encoding: [0xfd,0x13,0x02]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <4 x i32> @replace_v4i32(<4 x i32> %v, i32 %x) {
+  %res = insertelement <4 x i32> %v, i32 %x, i32 2
+  ret <4 x i32> %res
 }
 
 ; ==============================================================================
@@ -165,6 +198,18 @@ define i64 @extract_v2i64(<2 x i64> %v) {
   ret i64 %elem
 }
 
+; CHECK-LABEL: replace_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-VM-NOT: i64x2
+; SIMD128: .param v128, i64{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: i64x2.replace_lane $push0=, $0, 0, $1 # encoding: [0xfd,0x14,0x00]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
+  %res = insertelement <2 x i64> %v, i64 %x, i32 0
+  ret <2 x i64> %res
+}
+
 ; ==============================================================================
 ; 4 x f32
 ; ==============================================================================
@@ -190,6 +235,17 @@ define <4 x float> @splat_v4f32(float %x) {
 define float @extract_v4f32(<4 x float> %v) {
   %elem = extractelement <4 x float> %v, i32 3
   ret float %elem
+}
+
+; CHECK-LABEL: replace_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128: .param v128, f32{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f32x4.replace_lane $push0=, $0, 2, $1 # encoding: [0xfd,0x15,0x02]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <4 x float> @replace_v4f32(<4 x float> %v, float %x) {
+  %res = insertelement <4 x float> %v, float %x, i32 2
+  ret <4 x float> %res
 }
 
 ; ==============================================================================
@@ -218,4 +274,16 @@ define <2 x double> @splat_v2f64(double %x) {
 define double @extract_v2f64(<2 x double> %v) {
   %elem = extractelement <2 x double> %v, i32 1
   ret double %elem
+}
+
+; CHECK-LABEL: replace_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128: .param v128, f64{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: f64x2.replace_lane $push0=, $0, 0, $1 # encoding: [0xfd,0x16,0x00]{{$}}
+; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
+define <2 x double> @replace_v2f64(<2 x double> %v, double %x) {
+  %res = insertelement <2 x double> %v, double %x, i32 0
+  ret <2 x double> %res
 }

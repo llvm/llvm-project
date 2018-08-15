@@ -3335,8 +3335,10 @@ TemplateSpecializationType(TemplateName T,
          Canon.isNull()? true : Canon->isDependentType(),
          Canon.isNull()? true : Canon->isInstantiationDependentType(),
          false,
-         T.containsUnexpandedParameterPack()),
-    Template(T), NumArgs(Args.size()), TypeAlias(!AliasedType.isNull()) {
+         T.containsUnexpandedParameterPack()), Template(T) {
+  TemplateSpecializationTypeBits.NumArgs = Args.size();
+  TemplateSpecializationTypeBits.TypeAlias = !AliasedType.isNull();
+
   assert(!T.getAsDependentTemplateName() &&
          "Use DependentTemplateSpecializationType for dependent template-name");
   assert((T.getKind() == TemplateName::Template ||
@@ -3365,7 +3367,7 @@ TemplateSpecializationType(TemplateName T,
   }
 
   // Store the aliased type if this is a type alias template specialization.
-  if (TypeAlias) {
+  if (isTypeAlias()) {
     auto *Begin = reinterpret_cast<TemplateArgument *>(this + 1);
     *reinterpret_cast<QualType*>(Begin + getNumArgs()) = AliasedType;
   }

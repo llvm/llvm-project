@@ -1,2 +1,0 @@
-# RUN: not clangd -lit-test < %s
-{"jsonrpc":"2.0":"method":"exit"}

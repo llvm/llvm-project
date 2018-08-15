@@ -59,7 +59,7 @@ void ResourceManager::initialize(const llvm::MCSchedModel &SM) {
   Resources.resize(SM.getNumProcResourceKinds());
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    unsigned Mask = ProcResID2Mask[I];
+    uint64_t Mask = ProcResID2Mask[I];
     Resources[getResourceStateIndex(Mask)] =
         llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
   }
