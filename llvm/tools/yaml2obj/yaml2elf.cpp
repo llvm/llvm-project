@@ -274,7 +274,7 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         return false;
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec.get())) {
       unsigned SymIdx;
-      if (SymN2I.lookup(S->Info, SymIdx)) {
+      if (SymN2I.lookup(S->Info, SymIdx) && !to_integer(S->Info, SymIdx)) {
         WithColor::error() << "Unknown symbol referenced: '" << S->Info
                            << "' at YAML section '" << S->Name << "'.\n";
         return false;
@@ -537,7 +537,8 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     unsigned int sectionIndex = 0;
     if (member.sectionNameOrType == "GRP_COMDAT")
       sectionIndex = llvm::ELF::GRP_COMDAT;
-    else if (SN2I.lookup(member.sectionNameOrType, sectionIndex)) {
+    else if (SN2I.lookup(member.sectionNameOrType, sectionIndex) &&
+             !to_integer(member.sectionNameOrType, sectionIndex)) {
       WithColor::error() << "Unknown section referenced: '"
                          << member.sectionNameOrType << "' at YAML section' "
                          << Section.Name << "\n";

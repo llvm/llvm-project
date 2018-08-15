@@ -870,7 +870,8 @@ let Uses = [RM] in {
                              "xxpermdi $XT, $XA, $XA, $DM", IIC_VecPerm, []>;
   def XXSEL : XX4Form<60, 3,
                       (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, vsrc:$XC),
-                      "xxsel $XT, $XA, $XB, $XC", IIC_VecPerm, []>;
+                      "xxsel $XT, $XA, $XB, $XC", IIC_VecPerm,
+                      [(set v4i32:$XT, (vselect v4i32:$XC, v4i32:$XB, v4i32:$XA))]>;
 
   def XXSLDWI : XX3Form_2<60, 2,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, u2imm:$SHW),
