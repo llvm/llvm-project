@@ -347,7 +347,6 @@
 		49A1CAC51430E8DE00306AC9 /* ExpressionSourceCode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49A1CAC31430E8BD00306AC9 /* ExpressionSourceCode.cpp */; };
 		4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA151B979973008658D4 /* ExpressionVariable.cpp */; };
 		4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 4984BA171B979C08008658D4 /* ExpressionVariable.h */; };
-		AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */; };
 		2689006E13353E1A00698AC0 /* File.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C6EA213011581005E16B0 /* File.cpp */; };
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
 		3FDFDDBF199D345E009756A7 /* FileCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBE199D345E009756A7 /* FileCache.cpp */; };
@@ -538,6 +537,10 @@
 		9A20573A1F3B8E7E00F6C293 /* MainLoopTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057301F3B8E7600F6C293 /* MainLoopTest.cpp */; };
 		8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */; };
 		2689004313353E0400698AC0 /* Mangled.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8010F1B85900F91463 /* Mangled.cpp */; };
+		4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4F29D3CD21010F84003B549A /* MangledTest.cpp */; };
+		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
+		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
+		4FBC04F5211A13770015A814 /* RichManglingContextTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */; };
 		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2690B3701381D5C300ECFBAE /* Memory.cpp */; };
@@ -1945,8 +1948,6 @@
 		4C29E77D1BA2403F00DFF855 /* ExpressionTypeSystemHelper.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = ExpressionTypeSystemHelper.h; path = include/lldb/Expression/ExpressionTypeSystemHelper.h; sourceTree = "<group>"; };
 		4984BA151B979973008658D4 /* ExpressionVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ExpressionVariable.cpp; path = source/Expression/ExpressionVariable.cpp; sourceTree = "<group>"; };
 		4984BA171B979C08008658D4 /* ExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionVariable.h; path = include/lldb/Expression/ExpressionVariable.h; sourceTree = "<group>"; };
-		AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FastDemangle.cpp; path = source/Utility/FastDemangle.cpp; sourceTree = "<group>"; };
-		AFC2DCED1E6E2F9800283714 /* FastDemangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FastDemangle.h; path = include/lldb/Utility/FastDemangle.h; sourceTree = "<group>"; };
 		260C6EA213011581005E16B0 /* File.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = File.cpp; sourceTree = "<group>"; };
 		260C6EA013011578005E16B0 /* File.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = File.h; path = include/lldb/Host/File.h; sourceTree = "<group>"; };
 		3FDFDDBC199C3A06009756A7 /* FileAction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileAction.cpp; path = source/Target/FileAction.cpp; sourceTree = "<group>"; };
@@ -2340,6 +2341,10 @@
 		2669415F1A6DC2AB0063BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "tools/lldb-mi/Makefile"; sourceTree = SOURCE_ROOT; };
 		26BC7E8010F1B85900F91463 /* Mangled.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Mangled.cpp; path = source/Core/Mangled.cpp; sourceTree = "<group>"; };
 		26BC7D6910F1B77400F91463 /* Mangled.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mangled.h; path = include/lldb/Core/Mangled.h; sourceTree = "<group>"; };
+		4F29D3CD21010F84003B549A /* MangledTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MangledTest.cpp; sourceTree = "<group>"; };
+		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
+		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
+		4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RichManglingContextTest.cpp; sourceTree = "<group>"; };
 		4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ManualDWARFIndex.cpp; sourceTree = "<group>"; };
 		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
 		2682100C143A59AE004BCF2D /* MappedHash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MappedHash.h; path = include/lldb/Core/MappedHash.h; sourceTree = "<group>"; };
@@ -3800,6 +3805,7 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
 				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				9A3D43E21F3237D500EB767C /* StateTest.cpp */,
 				9A3D43E11F3237D500EB767C /* StreamCallbackTest.cpp */,
@@ -3807,6 +3813,7 @@
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
+				4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -4606,8 +4613,6 @@
 				49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */,
 				9481FE6B1B5F2D9200DED357 /* Either.h */,
 				26BC7DD310F1B7D500F91463 /* Endian.h */,
-				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
-				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
 				4CBFF0471F579A36004AFA92 /* Flags.h */,
 				236124A61986B50E004EFC37 /* IOObject.h */,
 				236124A21986B4E2004EFC37 /* IOObject.cpp */,
@@ -5146,6 +5151,8 @@
 				2626B6AD143E1BEA00EF935C /* RangeMap.h */,
 				26C6886D137880B900407EDF /* RegisterValue.h */,
 				26C6886E137880C400407EDF /* RegisterValue.cpp */,
+				4FBC04EE211A06820015A814 /* RichManglingContext.h */,
+				4FBC04EC211A06200015A814 /* RichManglingContext.cpp */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26BC7CF910F1B71400F91463 /* SearchFilter.h */,
@@ -7155,6 +7162,7 @@
 				267F68541CC02E920086832B /* RegisterContextLinux_s390x.h in Headers */,
 				AF235EB11FBE77B6009C5541 /* RegisterContextPOSIX_ppc64le.h in Headers */,
 				267F68501CC02E270086832B /* RegisterContextPOSIXCore_s390x.h in Headers */,
+				4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
@@ -7842,6 +7850,8 @@
 				9A3D43D71F3151C400EB767C /* LogTest.cpp in Sources */,
 				9A2057181F3B861400F6C293 /* TestType.cpp in Sources */,
 				9A2057171F3B861400F6C293 /* TestDWARFCallFrameInfo.cpp in Sources */,
+				4F29D3CF21010FA3003B549A /* MangledTest.cpp in Sources */,
+				4FBC04F5211A13770015A814 /* RichManglingContextTest.cpp in Sources */,
 				9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */,
 				9A3D43DC1F3151C400EB767C /* TimeoutTest.cpp in Sources */,
 				9A3D43D61F3151C400EB767C /* ConstStringTest.cpp in Sources */,
@@ -7956,6 +7966,7 @@
 				2689FFDA13353D9D00698AC0 /* lldb.cpp in Sources */,
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
 				26474CCD18D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp in Sources */,
+				4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */,
 				AEB0E4591BD6E9F800B24093 /* LLVMUserExpression.cpp in Sources */,
 				AFF81FB320D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */,
 				2689FFEF13353DB600698AC0 /* Breakpoint.cpp in Sources */,
@@ -8378,7 +8389,6 @@
 				268900FF13353E6F00698AC0 /* ThreadPlanShouldStopHere.cpp in Sources */,
 				2579065F1BD0488D00178368 /* DomainSocket.cpp in Sources */,
 				2689010013353E6F00698AC0 /* ThreadPlanStepInstruction.cpp in Sources */,
-				AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */,
 				232CB61B191E00CD00EF39FC /* NativeThreadProtocol.cpp in Sources */,
 				4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */,
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,
@@ -9486,7 +9496,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -9494,7 +9503,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
@@ -10630,7 +10638,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10638,7 +10645,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -10684,7 +10690,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10692,7 +10697,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -10738,7 +10742,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -10746,7 +10749,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12085,7 +12087,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12093,7 +12094,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -12784,7 +12784,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -12792,7 +12791,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 				);
 				OTHER_LDFLAGS = "";
@@ -13765,7 +13763,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -13773,7 +13770,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
@@ -14368,7 +14364,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 				);
@@ -14376,7 +14371,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-DLLDB_USE_BUILTIN_DEMANGLER",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;

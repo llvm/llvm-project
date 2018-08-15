@@ -346,6 +346,15 @@ public:
   bool IsEmpty() const { return m_string == nullptr || m_string[0] == '\0'; }
 
   //------------------------------------------------------------------
+  /// Test for null string.
+  ///
+  /// @return
+  ///     @li \b true if there is no string associated with this instance.
+  ///     @li \b false if there is a string associated with this instance.
+  //------------------------------------------------------------------
+  bool IsNull() const { return m_string == nullptr; }
+
+  //------------------------------------------------------------------
   /// Set the C string value.
   ///
   /// Set the string value in the object by uniquing the \a cstr string value
@@ -373,15 +382,14 @@ public:
   /// them.
   ///
   /// @param[in] demangled
-  ///     The demangled C string to correlate with the \a mangled
-  ///     name.
+  ///     The demangled string to correlate with the \a mangled name.
   ///
   /// @param[in] mangled
   ///     The already uniqued mangled ConstString to correlate the
   ///     soon to be uniqued version of \a demangled.
   //------------------------------------------------------------------
-  void SetCStringWithMangledCounterpart(const char *demangled,
-                                        const ConstString &mangled);
+  void SetStringWithMangledCounterpart(llvm::StringRef demangled,
+                                       const ConstString &mangled);
 
   //------------------------------------------------------------------
   /// Retrieve the mangled or demangled counterpart for a mangled or demangled

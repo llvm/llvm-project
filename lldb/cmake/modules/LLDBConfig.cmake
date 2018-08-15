@@ -423,15 +423,6 @@ if(LLDB_USING_LIBSTDCXX)
     endif()
 endif()
 
-if(MSVC)
-    set(LLDB_USE_BUILTIN_DEMANGLER ON)
-else()
-    option(LLDB_USE_BUILTIN_DEMANGLER "Use lldb's builtin demangler instead of the system one" ON)
-endif()
-if(LLDB_USE_BUILTIN_DEMANGLER)
-    add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
-endif()
-
 if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
     ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
   add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
