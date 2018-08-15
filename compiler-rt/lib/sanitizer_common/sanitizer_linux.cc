@@ -486,6 +486,14 @@ tid_t GetTid() {
 #endif
 }
 
+int TgKill(pid_t pid, tid_t tid, int sig) {
+#if SANITIZER_LINUX
+  return internal_syscall(SYSCALL(tgkill), pid, tid, sig);
+#else
+  return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
+#endif
+}
+
 #if !SANITIZER_SOLARIS
 u64 NanoTime() {
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD

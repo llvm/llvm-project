@@ -94,6 +94,9 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+uptr __hwasan_tag_pointer(uptr p, u8 tag);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 u8 __hwasan_generate_tag();
 
 // Returns the offset of the first tag mismatch or -1 if the whole range is
