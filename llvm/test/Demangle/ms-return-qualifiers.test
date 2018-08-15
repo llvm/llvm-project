@@ -160,13 +160,11 @@
 ?f9@@YAQQS@@HXZ
 ; CHECK: int S::*const __cdecl f9(void)
 
-; We print __restrict twice here.
 ?f10@@YAPIQS@@HXZ
-; FIXME: int S::* __restrict __cdecl f10(void)
+; CHECK: int S::*__restrict __cdecl f10(void)
 
-; We print __restrict twice here.
 ?f11@@YAQIQS@@HXZ
-; FIXME: int S::* __restrict __cdecl f11(void)
+; CHECK: int S::*const __restrict __cdecl f11(void)
 
 ?g1@@YAP6AHH@ZXZ
 ; CHECK: int (__cdecl * __cdecl g1(void))(int)

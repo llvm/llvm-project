@@ -2956,9 +2956,10 @@ def OMPDeclareSimdDecl : Attr {
   }];
 }
 
-def OMPDeclareTargetDecl : Attr {
+def OMPDeclareTargetDecl : InheritableAttr {
   let Spellings = [Pragma<"omp", "declare target">];
   let SemaHandler = 0;
+  let Subjects = SubjectList<[Function, SharedVar]>;
   let Documentation = [OMPDeclareTargetDocs];
   let Args = [
     EnumArgument<"MapType", "MapTypeTy",
@@ -2970,6 +2971,15 @@ def OMPDeclareTargetDecl : Attr {
       // Use fake syntax because it is for testing and debugging purpose only.
       if (getMapType() != MT_To)
         OS << ' ' << ConvertMapTypeTyToStr(getMapType());
+    }
+    static llvm::Optional<MapTypeTy>
+    isDeclareTargetDeclaration(const ValueDecl *VD) {
+      if (!VD->hasAttrs())
+        return llvm::None;
+      if (const auto *Attr = VD->getAttr<OMPDeclareTargetDeclAttr>())
+        return Attr->getMapType();
+
+      return llvm::None;
     }
   }];
 }

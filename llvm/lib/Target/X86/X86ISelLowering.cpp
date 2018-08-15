@@ -26247,6 +26247,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTTP2UI:           return "X86ISD::CVTTP2UI";
   case X86ISD::CVTTP2SI_RND:       return "X86ISD::CVTTP2SI_RND";
   case X86ISD::CVTTP2UI_RND:       return "X86ISD::CVTTP2UI_RND";
+  case X86ISD::CVTTS2SI:           return "X86ISD::CVTTS2SI";
+  case X86ISD::CVTTS2UI:           return "X86ISD::CVTTS2UI";
   case X86ISD::CVTTS2SI_RND:       return "X86ISD::CVTTS2SI_RND";
   case X86ISD::CVTTS2UI_RND:       return "X86ISD::CVTTS2UI_RND";
   case X86ISD::CVTSI2P:            return "X86ISD::CVTSI2P";
@@ -26263,6 +26265,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTP2UI:            return "X86ISD::CVTP2UI";
   case X86ISD::CVTP2SI_RND:        return "X86ISD::CVTP2SI_RND";
   case X86ISD::CVTP2UI_RND:        return "X86ISD::CVTP2UI_RND";
+  case X86ISD::CVTS2SI:            return "X86ISD::CVTS2SI";
+  case X86ISD::CVTS2UI:            return "X86ISD::CVTS2UI";
   case X86ISD::CVTS2SI_RND:        return "X86ISD::CVTS2SI_RND";
   case X86ISD::CVTS2UI_RND:        return "X86ISD::CVTS2UI_RND";
   case X86ISD::LWPINS:             return "X86ISD::LWPINS";
@@ -30279,23 +30283,26 @@ static SDValue combineX86ShufflesRecursively(
   // Add the inputs to the Ops list, avoiding duplicates.
   SmallVector<SDValue, 16> Ops(SrcOps.begin(), SrcOps.end());
 
-  int InputIdx0 = -1, InputIdx1 = -1;
-  for (int i = 0, e = Ops.size(); i < e; ++i) {
-    SDValue BC = peekThroughBitcasts(Ops[i]);
-    if (Input0 && BC == peekThroughBitcasts(Input0))
-      InputIdx0 = i;
-    if (Input1 && BC == peekThroughBitcasts(Input1))
-      InputIdx1 = i;
-  }
+  auto AddOp = [&Ops](SDValue Input, int InsertionPoint = -1) -> int {
+    if (!Input)
+      return -1;
+    // Attempt to find an existing match.
+    SDValue InputBC = peekThroughBitcasts(Input);
+    for (int i = 0, e = Ops.size(); i < e; ++i)
+      if (InputBC == peekThroughBitcasts(Ops[i]))
+        return i;
+    // Match failed - should we replace an existing Op?
+    if (InsertionPoint >= 0) {
+      Ops[InsertionPoint] = Input;
+      return InsertionPoint;
+    }
+    // Add to the end of the Ops list.
+    Ops.push_back(Input);
+    return Ops.size() - 1;
+  };
 
-  if (Input0 && InputIdx0 < 0) {
-    InputIdx0 = SrcOpIndex;
-    Ops[SrcOpIndex] = Input0;
-  }
-  if (Input1 && InputIdx1 < 0) {
-    InputIdx1 = Ops.size();
-    Ops.push_back(Input1);
-  }
+  int InputIdx0 = AddOp(Input0, SrcOpIndex);
+  int InputIdx1 = AddOp(Input1);
 
   assert(((RootMask.size() > OpMask.size() &&
            RootMask.size() % OpMask.size() == 0) ||

@@ -533,6 +533,8 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
   if (!m_data_sp)
     return 0;
 
+  size_t bytes_written = s->GetWrittenBytes();
+
   std::string previous_content;
 
   HighlightStyle style = HighlightStyle::MakeVimStyle();
@@ -553,7 +555,6 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
       end_line_offset = m_data_sp->GetByteSize();
 
     assert(start_line_offset <= end_line_offset);
-    size_t bytes_written = 0;
     if (start_line_offset < end_line_offset) {
       size_t count = end_line_offset - start_line_offset;
       const uint8_t *cstr = m_data_sp->GetBytes() + start_line_offset;
@@ -563,8 +564,7 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
 
       auto debugger_sp = m_debugger_wp.lock();
       if (should_highlight_source(debugger_sp)) {
-        bytes_written +=
-            highlighter.Highlight(style, ref, previous_content, *s);
+        highlighter.Highlight(style, ref, previous_content, *s);
         displayed_line = true;
         // Add the new line to the previous lines.
         previous_content += ref.str();
@@ -586,7 +586,7 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
             // formatting the column (e.g. underline, inverse, etc.)
 
             // First print the part before the column to mark.
-            bytes_written = s->Write(cstr, column - 1);
+            s->Write(cstr, column - 1);
 
             // Write the pre escape sequence.
             const SymbolContext *sc = nullptr;
@@ -599,15 +599,14 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
             FormatEntity::Format(*ansi_prefix_entry, *s, sc, exe_ctx, &addr,
                                  valobj, function_changed, initial_function);
 
-            // Write the marked column.
-            bytes_written += s->Write(cstr + column - 1, 1);
+            s->Write(cstr + column - 1, 1);
 
             // Write the post escape sequence.
             FormatEntity::Format(*ansi_suffix_entry, *s, sc, exe_ctx, &addr,
                                  valobj, function_changed, initial_function);
 
             // And finish up with the rest of the line.
-            bytes_written += s->Write(cstr + column, count - column);
+            s->Write(cstr + column, count - column);
 
             // Keep track of the fact that we just wrote the line.
             displayed_line = true;
@@ -618,15 +617,14 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
       // If we didn't end up displaying the line with ANSI codes for whatever
       // reason, display it now sans codes.
       if (!displayed_line)
-        bytes_written = s->PutCString(ref);
+        s->PutCString(ref);
 
       // Ensure we get an end of line character one way or another.
       if (!is_newline_char(ref.back()))
-        bytes_written += s->EOL();
+        s->EOL();
     }
-    return bytes_written;
   }
-  return 0;
+  return s->GetWrittenBytes() - bytes_written;
 }
 
 void SourceManager::File::FindLinesMatchingRegex(

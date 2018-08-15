@@ -139,6 +139,25 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMA:
     R = ScalarizeVecRes_TernaryOp(N);
     break;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FNEARBYINT:
+    R = ScalarizeVecRes_StrictFPOp(N);
+    break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -159,6 +178,36 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_TernaryOp(SDNode *N) {
   SDValue Op2 = GetScalarizedVector(N->getOperand(2));
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      Op0.getValueType(), Op0, Op1, Op2);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
+  EVT VT = N->getValueType(0).getVectorElementType();
+  unsigned NumOpers = N->getNumOperands();
+  SDValue Chain = N->getOperand(0);
+  EVT ValueVTs[] = {VT, MVT::Other};
+  SDLoc dl(N);
+
+  SmallVector<SDValue, 4> Opers;
+
+  // The Chain is the first operand.
+  Opers.push_back(Chain);
+
+  // Now process the remaining operands.
+  for (unsigned i = 1; i < NumOpers; ++i) {
+    SDValue Oper = N->getOperand(i);
+
+    if (Oper.getValueType().isVector())
+      Oper = GetScalarizedVector(Oper);
+
+    Opers.push_back(Oper);
+  }
+
+  SDValue Result = DAG.getNode(N->getOpcode(), dl, ValueVTs, Opers);
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
+  return Result;
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,

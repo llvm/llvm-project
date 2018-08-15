@@ -586,6 +586,9 @@ class VectorType;
     unsigned getABIAlignmentForCallingConv(Type *ArgTy,
                                            DataLayout DL) const override;
 
+    bool isDesirableToCommuteWithShift(const SDNode *N,
+                                       CombineLevel Level) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

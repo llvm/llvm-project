@@ -78,7 +78,7 @@ namespace llvm {
 // newly inserted. The current diff treats the CFG as a graph rather than a
 // multigraph. Added edges are pruned to be unique, and deleted edges will
 // remove all existing edges between two blocks.
-template <typename NodePtr> class GraphDiff {
+template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
   using UpdateMapType = SmallDenseMap<NodePtr, SmallVector<NodePtr, 2>>;
   UpdateMapType SuccInsert;
   UpdateMapType SuccDelete;
@@ -102,7 +102,7 @@ template <typename NodePtr> class GraphDiff {
 
 public:
   GraphDiff() {}
-  GraphDiff(ArrayRef<cfg::Update<NodePtr>> Updates, bool InverseGraph = false) {
+  GraphDiff(ArrayRef<cfg::Update<NodePtr>> Updates) {
     SmallVector<cfg::Update<NodePtr>, 4> LegalizedUpdates;
     cfg::LegalizeUpdates<NodePtr>(Updates, LegalizedUpdates, InverseGraph);
     for (auto U : LegalizedUpdates) {
@@ -116,8 +116,7 @@ public:
     }
   }
 
-  bool ignoreChild(const NodePtr BB, NodePtr EdgeEnd, bool InverseEdge,
-                   bool InverseGraph) const {
+  bool ignoreChild(const NodePtr BB, NodePtr EdgeEnd, bool InverseEdge) const {
     auto &DeleteChildren =
         (InverseEdge != InverseGraph) ? PredDelete : SuccDelete;
     auto It = DeleteChildren.find(BB);
@@ -128,8 +127,7 @@ public:
   }
 
   iterator_range<typename SmallVectorImpl<NodePtr>::const_iterator>
-  getAddedChildren(const NodePtr BB, bool InverseEdge,
-                   bool InverseGraph) const {
+  getAddedChildren(const NodePtr BB, bool InverseEdge) const {
     auto &InsertChildren =
         (InverseEdge != InverseGraph) ? PredInsert : SuccInsert;
     auto It = InsertChildren.find(BB);
@@ -159,7 +157,7 @@ public:
 };
 
 template <bool InverseGraph = false> struct CFGViewSuccessors {
-  using DataRef = const GraphDiff<BasicBlock *> *;
+  using DataRef = const GraphDiff<BasicBlock *, InverseGraph> *;
   using NodeRef = std::pair<DataRef, BasicBlock *>;
 
   using ExistingChildIterator =
@@ -168,7 +166,7 @@ template <bool InverseGraph = false> struct CFGViewSuccessors {
     BasicBlock *BB;
     DeletedEdgesFilter(BasicBlock *BB) : BB(BB){};
     bool operator()(NodeRef N) const {
-      return !N.first->ignoreChild(BB, N.second, false, InverseGraph);
+      return !N.first->ignoreChild(BB, N.second, false);
     }
   };
   using FilterExistingChildrenIterator =
@@ -182,7 +180,7 @@ template <bool InverseGraph = false> struct CFGViewSuccessors {
                       AddNewChildrenIterator>;
 
   static ChildIteratorType child_begin(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, false, InverseGraph);
+    auto InsertVec = N.first->getAddedChildren(N.second, false);
     // filter iterator init:
     auto firstit = make_filter_range(
         make_range<ExistingChildIterator>({succ_begin(N.second), N.first},
@@ -197,7 +195,7 @@ template <bool InverseGraph = false> struct CFGViewSuccessors {
   }
 
   static ChildIteratorType child_end(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, false, InverseGraph);
+    auto InsertVec = N.first->getAddedChildren(N.second, false);
     // filter iterator init:
     auto firstit = make_filter_range(
         make_range<ExistingChildIterator>({succ_end(N.second), N.first},
@@ -213,7 +211,7 @@ template <bool InverseGraph = false> struct CFGViewSuccessors {
 };
 
 template <bool InverseGraph = false> struct CFGViewPredecessors {
-  using DataRef = const GraphDiff<BasicBlock *> *;
+  using DataRef = const GraphDiff<BasicBlock *, InverseGraph> *;
   using NodeRef = std::pair<DataRef, BasicBlock *>;
 
   using ExistingChildIterator =
@@ -222,7 +220,7 @@ template <bool InverseGraph = false> struct CFGViewPredecessors {
     BasicBlock *BB;
     DeletedEdgesFilter(BasicBlock *BB) : BB(BB){};
     bool operator()(NodeRef N) const {
-      return !N.first->ignoreChild(BB, N.second, true, InverseGraph);
+      return !N.first->ignoreChild(BB, N.second, true);
     }
   };
   using FilterExistingChildrenIterator =
@@ -236,7 +234,7 @@ template <bool InverseGraph = false> struct CFGViewPredecessors {
                       AddNewChildrenIterator>;
 
   static ChildIteratorType child_begin(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, true, InverseGraph);
+    auto InsertVec = N.first->getAddedChildren(N.second, true);
     // filter iterator init:
     auto firstit = make_filter_range(
         make_range<ExistingChildIterator>({pred_begin(N.second), N.first},
@@ -251,7 +249,7 @@ template <bool InverseGraph = false> struct CFGViewPredecessors {
   }
 
   static ChildIteratorType child_end(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, true, InverseGraph);
+    auto InsertVec = N.first->getAddedChildren(N.second, true);
     // filter iterator init:
     auto firstit = make_filter_range(
         make_range<ExistingChildIterator>({pred_end(N.second), N.first},
@@ -267,19 +265,20 @@ template <bool InverseGraph = false> struct CFGViewPredecessors {
 };
 
 template <>
-struct GraphTraits<std::pair<const GraphDiff<BasicBlock *> *, BasicBlock *>>
+struct GraphTraits<
+    std::pair<const GraphDiff<BasicBlock *, false> *, BasicBlock *>>
     : CFGViewSuccessors<false> {};
 template <>
 struct GraphTraits<
-    std::pair<const GraphDiff<Inverse<BasicBlock *>> *, BasicBlock *>>
+    std::pair<const GraphDiff<BasicBlock *, true> *, BasicBlock *>>
     : CFGViewSuccessors<true> {};
 template <>
 struct GraphTraits<
-    std::pair<const GraphDiff<BasicBlock *> *, Inverse<BasicBlock *>>>
+    std::pair<const GraphDiff<BasicBlock *, false> *, Inverse<BasicBlock *>>>
     : CFGViewPredecessors<false> {};
 template <>
 struct GraphTraits<
-    std::pair<const GraphDiff<Inverse<BasicBlock *>> *, Inverse<BasicBlock *>>>
+    std::pair<const GraphDiff<BasicBlock *, true> *, Inverse<BasicBlock *>>>
     : CFGViewPredecessors<true> {};
 } // end namespace llvm
 

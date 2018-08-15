@@ -150,9 +150,8 @@ enum DecimalSignEncoding {
 
 enum EndianityEncoding {
   // Endianity attribute values
-  DW_END_default = 0x00,
-  DW_END_big = 0x01,
-  DW_END_little = 0x02,
+#define HANDLE_DW_END(ID, NAME) DW_END_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_END_lo_user = 0x40,
   DW_END_hi_user = 0xff
 };

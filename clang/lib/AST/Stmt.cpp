@@ -113,17 +113,23 @@ void Stmt::EnableStatistics() {
 Stmt *Stmt::IgnoreImplicit() {
   Stmt *s = this;
 
-  if (auto *ewc = dyn_cast<ExprWithCleanups>(s))
-    s = ewc->getSubExpr();
+  Stmt *lasts = nullptr;
 
-  if (auto *mte = dyn_cast<MaterializeTemporaryExpr>(s))
-    s = mte->GetTemporaryExpr();
+  while (s != lasts) {
+    lasts = s;
 
-  if (auto *bte = dyn_cast<CXXBindTemporaryExpr>(s))
-    s = bte->getSubExpr();
+    if (auto *ewc = dyn_cast<ExprWithCleanups>(s))
+      s = ewc->getSubExpr();
 
-  while (auto *ice = dyn_cast<ImplicitCastExpr>(s))
-    s = ice->getSubExpr();
+    if (auto *mte = dyn_cast<MaterializeTemporaryExpr>(s))
+      s = mte->GetTemporaryExpr();
+
+    if (auto *bte = dyn_cast<CXXBindTemporaryExpr>(s))
+      s = bte->getSubExpr();
+
+    if (auto *ice = dyn_cast<ImplicitCastExpr>(s))
+      s = ice->getSubExpr();
+  }
 
   return s;
 }

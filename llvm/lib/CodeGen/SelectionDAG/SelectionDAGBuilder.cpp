@@ -2193,12 +2193,11 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
       DAG.getMachineNode(TargetOpcode::LOAD_STACK_GUARD, DL, PtrTy, Chain);
   if (Global) {
     MachinePointerInfo MPInfo(Global);
-    MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
-    *MemRefs = MF.getMachineMemOperand(MPInfo, Flags, PtrTy.getSizeInBits() / 8,
-                                       DAG.getEVTAlignment(PtrTy));
-    Node->setMemRefs(MemRefs, MemRefs + 1);
+    MachineMemOperand *MemRef = MF.getMachineMemOperand(
+        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlignment(PtrTy));
+    DAG.setNodeMemRefs(Node, {MemRef});
   }
   return SDValue(Node, 0);
 }

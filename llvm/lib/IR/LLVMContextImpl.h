@@ -376,20 +376,22 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint64_t SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
+  unsigned Flags;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding)
+                uint32_t AlignInBits, unsigned Encoding, unsigned Flags)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding) {}
+        Encoding(Encoding), Flags(Flags) {}
   MDNodeKeyImpl(const DIBasicType *N)
       : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
-        AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()) {}
+        AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()), Flags(N->getFlags()) {}
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding();
+           Encoding == RHS->getEncoding() &&
+           Flags == RHS->getFlags();
   }
 
   unsigned getHashValue() const {

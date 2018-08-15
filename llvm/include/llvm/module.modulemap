@@ -192,6 +192,7 @@ module LLVM_intrinsic_gen {
 
   // Intrinsics.h
   module IR_CFG { header "IR/CFG.h" export * }
+  module IR_CFGDiff { header "IR/CFGDiff.h" export * }
   module IR_ConstantRange { header "IR/ConstantRange.h" export * }
   module IR_Dominators { header "IR/Dominators.h" export * }
   module Analysis_PostDominators { header "Analysis/PostDominators.h" export * }

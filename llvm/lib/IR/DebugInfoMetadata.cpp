@@ -274,13 +274,14 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  StorageType Storage, bool ShouldCreate) {
+                                  DIFlags Flags, StorageType Storage,
+                                  bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding));
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name};
-  DEFINE_GETIMPL_STORE(DIBasicType, (Tag, SizeInBits, AlignInBits, Encoding),
-                       Ops);
+  DEFINE_GETIMPL_STORE(DIBasicType, (Tag, SizeInBits, AlignInBits, Encoding,
+                      Flags), Ops);
 }
 
 Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {

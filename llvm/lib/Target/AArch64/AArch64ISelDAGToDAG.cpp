@@ -1208,9 +1208,8 @@ void AArch64DAGToDAGISel::SelectLoad(SDNode *N, unsigned NumVecs, unsigned Opc,
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Ld)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
   CurDAG->RemoveDeadNode(N);
 }
@@ -1261,9 +1260,8 @@ void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
@@ -1441,9 +1439,8 @@ void AArch64DAGToDAGISel::SelectStoreLane(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
@@ -1476,9 +1473,8 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
@@ -2751,9 +2747,8 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
       Opcode, SDLoc(N),
       CurDAG->getVTList(RegTy, MVT::i32, MVT::Other), Ops);
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   ReplaceUses(SDValue(N, 0), SDValue(CmpSwap, 0));
   ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
@@ -2923,9 +2918,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                                           MVT::Other, MemAddr, Chain);
 
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(Node)->getMemOperand();
-      cast<MachineSDNode>(Ld)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp =
+          cast<MemIntrinsicSDNode>(Node)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
       ReplaceNode(Node, Ld);
       return;
     }
@@ -2944,9 +2939,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
       SDNode *St = CurDAG->getMachineNode(Op, DL, MVT::i32, MVT::Other, Ops);
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(Node)->getMemOperand();
-      cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp =
+          cast<MemIntrinsicSDNode>(Node)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
       ReplaceNode(Node, St);
       return;

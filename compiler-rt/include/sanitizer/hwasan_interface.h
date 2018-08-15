@@ -32,6 +32,18 @@ extern "C" {
   void __hwasan_enable_allocator_tagging(void);
   void __hwasan_disable_allocator_tagging(void);
 
+  // Mark region of memory with the given tag. Both address and size need to be
+  // 16-byte aligned.
+  void __hwasan_tag_memory(const volatile void *p, unsigned char tag,
+                           size_t size);
+
+  /// Set pointer tag. Previous tag is lost.
+  void *__hwasan_tag_pointer(const volatile void *p, unsigned char tag);
+
+  // Print shadow and origin for the memory range to stderr in a human-readable
+  // format.
+  void __hwasan_print_shadow(const volatile void *x, size_t size);
+
   int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
   void * __sanitizer_memalign(size_t alignment, size_t size);
   void * __sanitizer_aligned_alloc(size_t alignment, size_t size);

@@ -770,17 +770,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                      DI.getVariable(), DI.getExpression());
     return true;
   }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
-    assert(DI.getLabel() && "Missing label");
-
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-
-    MIRBuilder.buildDbgLabel(DI.getLabel());
-    return true;
-  }
   case Intrinsic::vaend:
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!

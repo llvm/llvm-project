@@ -362,12 +362,11 @@ bool MSP430DAGToDAGISel::tryIndexedBinOp(SDNode *Op, SDValue N1, SDValue N2,
 
     MVT VT = LD->getMemoryVT().getSimpleVT();
     unsigned Opc = (VT == MVT::i16 ? Opc16 : Opc8);
-    MachineSDNode::mmo_iterator MemRefs0 = MF->allocateMemRefsArray(1);
-    MemRefs0[0] = cast<MemSDNode>(N1)->getMemOperand();
+    MachineMemOperand *MemRef = cast<MemSDNode>(N1)->getMemOperand();
     SDValue Ops0[] = { N2, LD->getBasePtr(), LD->getChain() };
     SDNode *ResNode =
       CurDAG->SelectNodeTo(Op, Opc, VT, MVT::i16, MVT::Other, Ops0);
-    cast<MachineSDNode>(ResNode)->setMemRefs(MemRefs0, MemRefs0 + 1);
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemRef});
     // Transfer chain.
     ReplaceUses(SDValue(N1.getNode(), 2), SDValue(ResNode, 2));
     // Transfer writeback.

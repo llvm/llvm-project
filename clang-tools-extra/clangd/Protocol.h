@@ -544,6 +544,12 @@ struct Diagnostic {
 
   /// The diagnostic's message.
   std::string message;
+
+  /// The diagnostic's category. Can be omitted.
+  /// An LSP extension that's used to send the name of the category over to the
+  /// client. The category typically describes the compilation stage during
+  /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
+  std::string category;
 };
 
 /// A LSP-specific comparator used to find diagnostic in a container like

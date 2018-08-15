@@ -208,10 +208,6 @@ public:
                                          const MDNode *Variable,
                                          const MDNode *Expr);
 
-  /// Build and insert a DBG_LABEL instructions specifying that \p Label is
-  /// given. Convert "llvm.dbg.label Label" to "DBG_LABEL Label".
-  MachineInstrBuilder buildDbgLabel(const MDNode *Label);
-
   /// Build and insert \p Res = G_FRAME_INDEX \p Idx
   ///
   /// G_FRAME_INDEX materializes the address of an alloca value or other

@@ -923,18 +923,12 @@ define <32 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<32 x i8> %a0, <32 x i8> 
 define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_pshufb_or_pshufb:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero
-; X32-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero,ymm0[16,17,18,19]
-; X32-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; X32-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,1,4,4,4,5]
+; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_pshufb_or_pshufb:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero
-; X64-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[16,17,18,19],zero,zero,zero,zero,ymm0[16,17,18,19]
-; X64-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; X64-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,1,4,4,4,5]
+; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X64-NEXT:    retq
   %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)

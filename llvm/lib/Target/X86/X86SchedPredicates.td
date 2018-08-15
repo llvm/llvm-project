@@ -53,4 +53,4 @@ def IsThreeOperandsLEABody :
 // 3-operands LEA.  Tablegen automatically generates a new method for it in
 // X86GenInstrInfo.
 def IsThreeOperandsLEAFn :
-    TIIPredicate<"X86", "isThreeOperandsLEA", IsThreeOperandsLEABody>;
+    TIIPredicate<"isThreeOperandsLEA", IsThreeOperandsLEABody>;

@@ -4281,19 +4281,21 @@ bool LLParser::ParseDIEnumerator(MDNode *&Result, bool IsDistinct) {
 }
 
 /// ParseDIBasicType:
-///   ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32)
+///   ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32,
+///                    encoding: DW_ATE_encoding, flags: 0)
 bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(encoding, DwarfAttEncodingField, );
+  OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val));
+                                         align.Val, encoding.Val, flags.Val));
   return false;
 }
 
