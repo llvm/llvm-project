@@ -46,4 +46,4 @@
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": null
 ---
-{"jsonrpc":"2.0":"method":"exit"}
+{"jsonrpc":"2.0","method":"exit"}
