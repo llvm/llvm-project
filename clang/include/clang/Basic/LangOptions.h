@@ -137,6 +137,14 @@ public:
     FPC_Fast
   };
 
+  // TODO: merge FEnvAccessModeKind and FPContractModeKind
+  enum FEnvAccessModeKind {
+    FEA_Off,
+
+    FEA_On
+  };
+
+
 public:
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
@@ -262,14 +270,19 @@ public:
 /// Floating point control options
 class FPOptions {
 public:
-  FPOptions() : fp_contract(LangOptions::FPC_Off) {}
+  FPOptions() : fp_contract(LangOptions::FPC_Off), 
+                fenv_access(LangOptions::FEA_Off) {}
 
   // Used for serializing.
   explicit FPOptions(unsigned I)
-      : fp_contract(static_cast<LangOptions::FPContractModeKind>(I)) {}
+      : fp_contract(static_cast<LangOptions::FPContractModeKind>(I & 3)),
+        fenv_access(static_cast<LangOptions::FEnvAccessModeKind>((I >> 2) & 1))
+        {}
 
   explicit FPOptions(const LangOptions &LangOpts)
-      : fp_contract(LangOpts.getDefaultFPContractMode()) {}
+      : fp_contract(LangOpts.getDefaultFPContractMode()),
+        fenv_access(LangOptions::FEA_Off) {}
+  // FIXME: Use getDefaultFEnvAccessMode() when available.
 
   bool allowFPContractWithinStatement() const {
     return fp_contract == LangOptions::FPC_On;
@@ -289,12 +302,24 @@ public:
 
   void setDisallowFPContract() { fp_contract = LangOptions::FPC_Off; }
 
+  bool allowFEnvAccess() const {
+    return fenv_access == LangOptions::FEA_On;
+  }
+
+  void setAllowFEnvAccess() {
+    fenv_access = LangOptions::FEA_On;
+  }
+
+  void setDisallowFEnvAccess() { fenv_access = LangOptions::FEA_Off; }
+
   /// Used to serialize this.
-  unsigned getInt() const { return fp_contract; }
+  unsigned getInt() const { return fp_contract | (fenv_access << 2); }
 
 private:
-  /// Adjust BinaryOperator::FPFeatures to match the bit-field size of this.
+  /// Adjust BinaryOperator::FPFeatures to match the total bit-field size 
+  /// of these two.
   unsigned fp_contract : 2;
+  unsigned fenv_access : 1;
 };
 
 /// Describes the kind of translation unit being processed.

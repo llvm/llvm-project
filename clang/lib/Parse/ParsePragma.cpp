@@ -106,8 +106,19 @@ struct PragmaSTDC_FENV_ACCESSHandler : public PragmaHandler {
     tok::OnOffSwitch OOS;
     if (PP.LexOnOffSwitch(OOS))
      return;
-    if (OOS == tok::OOS_ON)
+    if (OOS == tok::OOS_ON) {
       PP.Diag(Tok, diag::warn_stdc_fenv_access_not_supported);
+    }
+
+    MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1),
+                                1);
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_fenv_access);
+    Toks[0].setLocation(Tok.getLocation());
+    Toks[0].setAnnotationEndLoc(Tok.getLocation());
+    Toks[0].setAnnotationValue(reinterpret_cast<void*>(
+                               static_cast<uintptr_t>(OOS)));
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
   }
 };
 
@@ -603,6 +614,30 @@ void Parser::HandlePragmaFPContract() {
   Actions.ActOnPragmaFPContract(FPC);
   ConsumeAnnotationToken();
 }
+
+void Parser::HandlePragmaFEnvAccess() {
+  assert(Tok.is(tok::annot_pragma_fenv_access));
+  tok::OnOffSwitch OOS =
+    static_cast<tok::OnOffSwitch>(
+    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+
+  LangOptions::FEnvAccessModeKind FPC;
+  switch (OOS) {
+  case tok::OOS_ON:
+    FPC = LangOptions::FEA_On;
+    break;
+  case tok::OOS_OFF:
+    FPC = LangOptions::FEA_Off;
+    break;
+  case tok::OOS_DEFAULT: // FIXME: Add this cli option when it makes sense.
+    FPC = LangOptions::FEA_Off;
+    break;
+  }
+
+  Actions.ActOnPragmaFEnvAccess(FPC);
+  ConsumeAnnotationToken();
+}
+
 
 StmtResult Parser::HandlePragmaCaptured()
 {
