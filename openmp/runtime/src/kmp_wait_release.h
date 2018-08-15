@@ -142,11 +142,6 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
         ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
             ompt_scope_end, NULL, tId, 0, ds_tid);
       }
-#if OMPT_OPTIONAL
-      if (ompt_enabled.ompt_callback_idle) {
-        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_begin);
-      }
-#endif
       // return to idle state
       this_thr->th.ompt_thread_info.state = omp_state_idle;
     } else {
@@ -266,13 +261,6 @@ final_spin=FALSE)
       pId = NULL;
       tId = &(this_thr->th.ompt_thread_info.task_data);
     }
-#if OMPT_OPTIONAL
-    if (ompt_entry_state == omp_state_idle) {
-      if (ompt_enabled.ompt_callback_idle) {
-        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_begin);
-      }
-    } else
-#endif
         if (final_spin && (__kmp_tasking_mode == tskm_immediate_exec ||
                            this_thr->th.th_task_team == NULL)) {
       // implicit task is done. Either no taskqueue, or task-team finished
@@ -453,11 +441,6 @@ final_spin=FALSE)
     }
 #endif
     if (ompt_exit_state == omp_state_idle) {
-#if OMPT_OPTIONAL
-      if (ompt_enabled.ompt_callback_idle) {
-        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_end);
-      }
-#endif
       this_thr->th.ompt_thread_info.state = omp_state_overhead;
     }
   }
