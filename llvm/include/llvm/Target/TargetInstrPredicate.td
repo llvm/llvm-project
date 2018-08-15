@@ -198,19 +198,24 @@ class MCOpcodeSwitchStatement<list<MCOpcodeSwitchCase> cases,
   MCStatement DefaultCase = default;
 }
 
+// Base class for function predicates.
+class FunctionPredicateBase<string name, MCStatement body> {
+  string FunctionName = name;
+  MCStatement Body = body;
+}
+
 // Check that a call to method `Name` in class "XXXGenInstrInfo" (where XXX is
-// the `Target` name) returns true.
+// the name of a target) returns true.
 //
 // TIIPredicate definitions are used to model calls to the target-specific
 // InstrInfo. A TIIPredicate is treated specially by the InstrInfoEmitter
 // tablegen backend, which will use it to automatically generate a definition in
 // the target specific `GenInstrInfo` class.
-class TIIPredicate<string Target, string Name, MCStatement body>
-    : MCInstPredicate {
-  string TargetName = Target;
-  string FunctionName = Name;
-  MCStatement Body = body;
-}
+//
+// There cannot be multiple TIIPredicate definitions with the same name for the
+// same target.
+class TIIPredicate<string Name, MCStatement body>
+    : FunctionPredicateBase<Name, body>, MCInstPredicate;
 
 // A function predicate that takes as input a machine instruction, and returns
 // a boolean value.

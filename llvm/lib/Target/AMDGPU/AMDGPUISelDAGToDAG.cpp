@@ -1849,9 +1849,8 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
     return;
   }
 
-  MachineSDNode::mmo_iterator MMOs = MF->allocateMemRefsArray(1);
-  *MMOs = Mem->getMemOperand();
-  CmpSwap->setMemRefs(MMOs, MMOs + 1);
+  MachineMemOperand *MMO = Mem->getMemOperand();
+  CurDAG->setNodeMemRefs(CmpSwap, {MMO});
 
   unsigned SubReg = Is32 ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
   SDValue Extract

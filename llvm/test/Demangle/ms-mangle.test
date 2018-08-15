@@ -12,9 +12,10 @@
 ?anonymous@?A@N@@3HA
 ; CHECK: int N::`anonymous namespace'::anonymous
 
-; FIXME: Reference Temporaries
-; ?$RT1@NeedsReferenceTemporary@@3ABHB
-; ?$RT1@NeedsReferenceTemporary@@3AEBHEB
+?$RT1@NeedsReferenceTemporary@@3ABHB
+; CHECK: int const &NeedsReferenceTemporary::$RT1
+?$RT1@NeedsReferenceTemporary@@3AEBHEB
+; CHECK: int const &NeedsReferenceTemporary::$RT1
 
 ?_c@@YAHXZ
 ; CHECK: int __cdecl _c(void)
@@ -181,12 +182,13 @@
 ?color2@@3QBNB
 ; CHECK: double const *const color2
 
-; FIXME-EXTRACONST: These tests fails because we print an extra const inside the parens.
-; ?color3@@3QAY02$$CBNA
-; FIXME-EXTRACONST: double const (*color3)[3]
+; undname prints `double const (* color3)[3]`, but this is a bug in undname.
+?color3@@3QAY02$$CBNA
+; CHECK: double const (*const color3)[3]
 
-; ?color4@@3QAY02$$CBNA
-; FIXME-EXTRACONST: double const (*color4)[3]
+; undname prints `double const (* color4)[3]`, but this is a bug in undname.
+?color4@@3QAY02$$CBNA
+; CHECK: double const (*const color4)[3]
 
 ?memptr1@@3RESB@@HES1@
 ; CHECK: int volatile B::*volatile memptr1

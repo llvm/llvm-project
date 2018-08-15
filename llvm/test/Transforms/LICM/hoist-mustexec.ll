@@ -4,6 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f() nounwind
+declare void @llvm.experimental.guard(i1,...)
 
 ; constant fold on first ieration
 define i32 @test1(i32* noalias nocapture readonly %a) nounwind uwtable {
@@ -280,6 +281,31 @@ fail:
   call void @f()
   ret i32 -1
 }
+
+define void @test-hoisting-in-presence-of-guards(i1 %c, i32* %p) {
+
+; CHECK-LABEL: @test-hoisting-in-presence-of-guards
+; CHECK:       entry:
+; CHECK:         %a = load i32, i32* %p
+; CHECK:         %invariant_cond = icmp ne i32 %a, 100
+; CHECK:       loop:
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %a = load i32, i32* %p
+  %invariant_cond = icmp ne i32 %a, 100
+  call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond) [ "deopt"() ]
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 
 declare void @may_throw() inaccessiblememonly
 

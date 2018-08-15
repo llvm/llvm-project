@@ -60,7 +60,7 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK-LABEL: test_cleanup:
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   catch_all
-; CHECK:   i32.call  $push20=, _ZN7CleanupD1Ev@FUNCTION
+; CHECK:   i32.call  $push{{.+}}=, _ZN7CleanupD1Ev@FUNCTION
 ; CHECK:   rethrow
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:

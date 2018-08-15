@@ -145,20 +145,18 @@ static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG, ArrayRef<EVT> VTs,
     Ops.push_back(ExtraOper);
 
   SDVTList VTList = DAG->getVTList(VTs);
-  MachineSDNode::mmo_iterator Begin = nullptr, End = nullptr;
   MachineSDNode *MN = dyn_cast<MachineSDNode>(N);
 
   // Store memory references.
-  if (MN) {
-    Begin = MN->memoperands_begin();
-    End = MN->memoperands_end();
-  }
+  SmallVector<MachineMemOperand *, 2> MMOs;
+  if (MN)
+    MMOs.assign(MN->memoperands_begin(), MN->memoperands_end());
 
   DAG->MorphNodeTo(N, N->getOpcode(), VTList, Ops);
 
   // Reset the memory references
   if (MN)
-    MN->setMemRefs(Begin, End);
+    DAG->setNodeMemRefs(MN, MMOs);
 }
 
 static bool AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {

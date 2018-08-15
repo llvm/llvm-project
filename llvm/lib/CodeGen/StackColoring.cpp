@@ -1022,7 +1022,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       }
 
       // We adjust AliasAnalysis information for merged stack slots.
-      MachineSDNode::mmo_iterator NewMemOps =
+      MachineInstr::mmo_iterator NewMemOps =
           MF->allocateMemRefsArray(I.getNumMemOperands());
       unsigned MemOpIdx = 0;
       bool ReplaceMemOps = false;

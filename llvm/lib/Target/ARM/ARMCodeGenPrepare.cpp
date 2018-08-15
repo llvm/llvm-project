@@ -127,7 +127,9 @@ static bool isSigned(Value *V) {
 static bool isSupportedType(Value *V) {
   LLVM_DEBUG(dbgs() << "ARM CGP: isSupportedType: " << *V << "\n");
   Type *Ty = V->getType();
-  if (Ty->isVoidTy())
+
+  // Allow voids and pointers, these won't be promoted.
+  if (Ty->isVoidTy() || Ty->isPointerTy())
     return true;
 
   if (auto *Ld = dyn_cast<LoadInst>(V))
@@ -150,6 +152,8 @@ static bool isSupportedType(Value *V) {
 /// Many arguments will have the zeroext attribute too, so those would be free
 /// too.
 static bool isSource(Value *V) {
+  if (!isa<IntegerType>(V->getType()))
+    return false;
   // TODO Allow truncs and zext to be sources.
   if (isa<Argument>(V))
     return true;
@@ -177,6 +181,8 @@ static bool isSink(Value *V) {
     return UsesNarrowValue(Return->getReturnValue());
   if (auto *Trunc = dyn_cast<TruncInst>(V))
     return UsesNarrowValue(Trunc->getOperand(0));
+  if (auto *ICmp = dyn_cast<ICmpInst>(V))
+    return ICmp->isSigned();
 
   return isa<CallInst>(V);
 }
@@ -222,8 +228,10 @@ static bool isSafeOverflow(Instruction *I) {
 }
 
 static bool shouldPromote(Value *V) {
-  if (!isa<IntegerType>(V->getType()) || isSink(V))
+  if (!isa<IntegerType>(V->getType()) || isSink(V)) {
+    LLVM_DEBUG(dbgs() << "ARM CGP: Don't need to promote: " << *V << "\n");
     return false;
+  }
 
   if (isSource(V))
     return true;
@@ -288,6 +296,11 @@ void IRPromoter::Mutate(Type *OrigTy,
   LLVM_DEBUG(dbgs() << "ARM CGP: Promoting use-def chains to from "
              << ARMCodeGenPrepare::TypeSize << " to 32-bits\n");
 
+  // Cache original types.
+  DenseMap<Value*, Type*> TruncTysMap;
+  for (auto *V : Visited)
+    TruncTysMap[V] = V->getType();
+
   auto ReplaceAllUsersOfWith = [&](Value *From, Value *To) {
     SmallVector<Instruction*, 4> Users;
     Instruction *InstTo = dyn_cast<Instruction>(To);
@@ -331,6 +344,7 @@ void IRPromoter::Mutate(Type *OrigTy,
     ReplaceAllUsersOfWith(I, Call);
     InstsToRemove.push_back(I);
     NewInsts.insert(Call);
+    TruncTysMap[Call] = OrigTy;
   };
 
   auto InsertZExt = [&](Value *V, Instruction *InsertPt) {
@@ -345,6 +359,7 @@ void IRPromoter::Mutate(Type *OrigTy,
       ZExt->moveAfter(InsertPt);
     ReplaceAllUsersOfWith(V, ZExt);
     NewInsts.insert(ZExt);
+    TruncTysMap[ZExt] = TruncTysMap[V];
   };
 
   // First, insert extending instructions between the leaves and their users.
@@ -369,21 +384,19 @@ void IRPromoter::Mutate(Type *OrigTy,
     if (Leaves.count(V))
       continue;
 
-    if (!isa<Instruction>(V))
-      continue;
-
     auto *I = cast<Instruction>(V);
     if (Roots.count(I))
       continue;
 
-    for (auto &U : I->operands()) {
-      if ((U->getType() == ExtTy) || !isSupportedType(&*U))
+    for (unsigned i = 0, e = I->getNumOperands(); i < e; ++i) {
+      Value *Op = I->getOperand(i);
+      if ((Op->getType() == ExtTy) || !isa<IntegerType>(Op->getType()))
         continue;
 
-      if (auto *Const = dyn_cast<ConstantInt>(&*U))
+      if (auto *Const = dyn_cast<ConstantInt>(Op))
         FixConst(Const, I);
-      else if (isa<UndefValue>(&*U))
-        U->mutateType(ExtTy);
+      else if (isa<UndefValue>(Op))
+        I->setOperand(i, UndefValue::get(ExtTy));
     }
 
     if (shouldPromote(I)) {
@@ -398,15 +411,28 @@ void IRPromoter::Mutate(Type *OrigTy,
     if (Leaves.count(V))
       continue;
 
-    if (!isa<Instruction>(V))
-      continue;
-
     if (!shouldPromote(V) || isPromotedResultSafe(V))
       continue;
 
     // Replace unsafe instructions with appropriate intrinsic calls.
     InsertDSPIntrinsic(cast<Instruction>(V));
   }
+
+  auto InsertTrunc = [&](Value *V, Type *TruncTy) -> Instruction* {
+    if (TruncTy == ExtTy || !isa<Instruction>(V) ||
+        !isa<IntegerType>(V->getType()))
+      return nullptr;
+
+    if (!Promoted.count(V) && !NewInsts.count(V))
+      return nullptr;
+
+    LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy << " Trunc for "
+               << *V << "\n");
+    Builder.SetInsertPoint(cast<Instruction>(V));
+    auto *Trunc = cast<Instruction>(Builder.CreateTrunc(V, TruncTy));
+    NewInsts.insert(Trunc);
+    return Trunc;
+  };
 
   LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the roots:\n");
   // Fix up any stores or returns that use the results of the promoted
@@ -422,25 +448,25 @@ void IRPromoter::Mutate(Type *OrigTy,
       TruncTy = F->getFunctionType()->getReturnType();
     }
 
+    // These will only have one operand to fix.
+    if (isa<StoreInst>(I) || isa<ReturnInst>(I) || isa<TruncInst>(I)) {
+      if (Instruction *Trunc = InsertTrunc(I->getOperand(0), TruncTy)) {
+        Trunc->moveBefore(I);
+        I->setOperand(0, Trunc);
+      }
+      continue;
+    }
+
+    // Now handle calls and signed icmps.
     for (unsigned i = 0; i < I->getNumOperands(); ++i) {
-      Value *V = I->getOperand(i);
-      if (Promoted.count(V) || NewInsts.count(V)) {
-        if (auto *Op = dyn_cast<Instruction>(V)) {
+      if (auto *Call = dyn_cast<CallInst>(I))
+        TruncTy = Call->getFunctionType()->getParamType(i);
+      else
+        TruncTy = TruncTysMap[I->getOperand(i)];
 
-          if (auto *Call = dyn_cast<CallInst>(I))
-            TruncTy = Call->getFunctionType()->getParamType(i);
-
-          if (TruncTy == ExtTy)
-            continue;
-
-          LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy
-                     << " Trunc for " << *Op << "\n");
-          Builder.SetInsertPoint(Op);
-          auto *Trunc = cast<Instruction>(Builder.CreateTrunc(Op, TruncTy));
-          Trunc->moveBefore(I);
-          I->setOperand(i, Trunc);
-          NewInsts.insert(Trunc);
-        }
+      if (Instruction *Trunc = InsertTrunc(I->getOperand(i), TruncTy)) {
+        Trunc->moveBefore(I);
+        I->setOperand(i, Trunc);
       }
     }
   }
@@ -454,8 +480,8 @@ void IRPromoter::Mutate(Type *OrigTy,
 bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
   LLVM_DEBUG(dbgs() << "ARM CGP: Is " << *V << " supported?\n");
 
-  if (auto *ICmp = dyn_cast<ICmpInst>(V))
-    return ICmp->isEquality() || !ICmp->isSigned();
+  if (isa<ICmpInst>(V))
+    return true;
 
   // Memory instructions
   if (isa<StoreInst>(V) || isa<GetElementPtrInst>(V))
@@ -466,7 +492,7 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
     return true;
 
   // Non-instruction values that we can handle.
-  if (isa<ConstantInt>(V) || isa<Argument>(V))
+  if ((isa<Constant>(V) && !isa<ConstantExpr>(V)) || isa<Argument>(V))
     return isSupportedType(V);
 
   if (isa<PHINode>(V) || isa<SelectInst>(V) || isa<ReturnInst>(V) ||
@@ -558,10 +584,6 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
     if (CurrentVisited.count(V))
       return true;
 
-    // Ignore pointer value that aren't instructions.
-    if (!isa<Instruction>(V) && isa<PointerType>(V->getType()))
-      return true;
-
     if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V))) {
       LLVM_DEBUG(dbgs() << "ARM CGP: Can't handle: " << *V << "\n");
       return false;
@@ -578,6 +600,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
     if (CurrentVisited.count(V))
       continue;
 
+    // Ignore non-instructions, other than arguments.
     if (!isa<Instruction>(V) && !isSource(V))
       continue;
 
@@ -620,6 +643,17 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
              for (auto *I : CurrentVisited)
                I->dump();
              );
+  unsigned ToPromote = 0;
+  for (auto *V : CurrentVisited) {
+    if (Leaves.count(V))
+      continue;
+    if (Roots.count(cast<Instruction>(V)))
+      continue;
+    ++ToPromote;
+  }
+
+  if (ToPromote < 2)
+    return false;
 
   Promoter->Mutate(OrigTy, CurrentVisited, Leaves, Roots);
   return true;

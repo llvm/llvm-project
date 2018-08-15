@@ -3720,9 +3720,13 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
 void InnerLoopVectorizer::fixLCSSAPHIs() {
   for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
     if (LCSSAPhi.getNumIncomingValues() == 1) {
-      assert(OrigLoop->isLoopInvariant(LCSSAPhi.getIncomingValue(0)) &&
-             "Incoming value isn't loop invariant");
-      LCSSAPhi.addIncoming(LCSSAPhi.getIncomingValue(0), LoopMiddleBlock);
+      auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
+      // Can be a loop invariant incoming value or the last scalar value to be
+      // extracted from the vectorized loop.
+      Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
+      Value *lastIncomingValue =
+          getOrCreateScalarValue(IncomingValue, {UF - 1, VF - 1});
+      LCSSAPhi.addIncoming(lastIncomingValue, LoopMiddleBlock);
     }
   }
 }

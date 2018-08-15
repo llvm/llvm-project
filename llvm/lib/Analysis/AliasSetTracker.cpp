@@ -24,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -169,7 +170,12 @@ void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
     addRef();
   UnknownInsts.emplace_back(I);
 
-  if (!I->mayWriteToMemory()) {
+  // Guards are marked as modifying memory for control flow modelling purposes,
+  // but don't actually modify any specific memory location.
+  using namespace PatternMatch;
+  bool MayWriteMemory = I->mayWriteToMemory() &&
+                        !match(I, m_Intrinsic<Intrinsic::experimental_guard>());
+  if (!MayWriteMemory) {
     Alias = SetMayAlias;
     Access |= RefAccess;
     return;

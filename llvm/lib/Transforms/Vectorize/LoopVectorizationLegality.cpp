@@ -434,8 +434,10 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
 /// identified reduction variable.
 static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
                                SmallPtrSetImpl<Value *> &AllowedExit) {
-  // Reduction and Induction instructions are allowed to have exit users. All
+  // Reductions, Inductions and non-header phis are allowed to have exit users. All
   // other instructions must not have external users.
+  // TODO: Non-phi instructions can also be taught to have exit users, now that
+  // we know how to extract the last scalar element from the loop.
   if (!AllowedExit.count(Inst))
     // Check that all of the users of the loop are inside the BB.
     for (User *U : Inst->users()) {
@@ -561,7 +563,8 @@ void LoopVectorizationLegality::addInductionPhi(
   // back into the PHI node may have external users.
   // We can allow those uses, except if the SCEVs we have for them rely
   // on predicates that only hold within the loop, since allowing the exit
-  // currently means re-using this SCEV outside the loop.
+  // currently means re-using this SCEV outside the loop (see PR33706 for more
+  // details).
   if (PSE.getUnionPredicate().isAlwaysTrue()) {
     AllowedExit.insert(Phi);
     AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
@@ -597,14 +600,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // can convert it to select during if-conversion. No need to check if
         // the PHIs in this block are induction or reduction variables.
         if (BB != Header) {
-          // Check that this instruction has no outside users or is an
-          // identified reduction value with an outside user.
-          if (!hasOutsideLoopUser(TheLoop, Phi, AllowedExit))
-            continue;
-          ORE->emit(createMissedAnalysis("NeitherInductionNorReduction", Phi)
-                    << "value could not be identified as "
-                       "an induction or reduction variable");
-          return false;
+          // Non-header phi nodes that have outside uses can be vectorized. Add
+          // them to the list of allowed exits.
+          // Unsafe cyclic dependencies with header phis are identified during
+          // legalization for reduction, induction and first order
+          // recurrences.
+          continue;
         }
 
         // We only allow if-converted PHIs with exactly two incoming values.
