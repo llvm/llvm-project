@@ -439,13 +439,14 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
     } else if (mangling_scheme == eManglingSchemeNone &&
                !m_mangled.GetMangledCounterpart(m_demangled) &&
                SwiftLanguageRuntime::IsSwiftMangledName(mangled_name)) {
+      Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE);
       if (log)
         log->Printf("demangle swift: %s", mangled_name);
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
           mangled_name));
       if (!demangled.empty()) {
-        m_demangled.SetCStringWithMangledCounterpart(demangled.c_str(),
-                                                     m_mangled);
+        m_demangled.SetStringWithMangledCounterpart(demangled.c_str(),
+                                                    m_mangled);
         if (log)
           log->Printf("demangle swift: %s -> \"%s\"", mangled_name,
                       demangled.c_str());
