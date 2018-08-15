@@ -1979,6 +1979,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                               diag::err_asm_invalid_type_in_input)
             << OutExpr->getType() << OutputConstraint;
       }
+
+      // Update largest vector width for any vector types.
+      if (auto *VT = dyn_cast<llvm::VectorType>(ResultRegTypes.back()))
+        LargestVectorWidth = std::max(LargestVectorWidth,
+                                      VT->getPrimitiveSizeInBits());
     } else {
       ArgTypes.push_back(Dest.getAddress().getType());
       Args.push_back(Dest.getPointer());
@@ -2000,6 +2005,10 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                                Arg->getType()))
         Arg = Builder.CreateBitCast(Arg, AdjTy);
 
+      // Update largest vector width for any vector types.
+      if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
+        LargestVectorWidth = std::max(LargestVectorWidth,
+                                      VT->getPrimitiveSizeInBits());
       if (Info.allowsRegister())
         InOutConstraints += llvm::utostr(i);
       else
@@ -2079,6 +2088,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     else
       CGM.getDiags().Report(S.getAsmLoc(), diag::err_asm_invalid_type_in_input)
           << InputExpr->getType() << InputConstraint;
+
+    // Update largest vector width for any vector types.
+    if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
+      LargestVectorWidth = std::max(LargestVectorWidth,
+                                    VT->getPrimitiveSizeInBits());
 
     ArgTypes.push_back(Arg->getType());
     Args.push_back(Arg);

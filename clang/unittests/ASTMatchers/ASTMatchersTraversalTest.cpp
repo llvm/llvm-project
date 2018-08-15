@@ -1321,6 +1321,45 @@ TEST(IgnoringImplicit, MatchesImplicit) {
                       varDecl(has(ignoringImplicit(cxxConstructExpr())))));
 }
 
+TEST(IgnoringImplicit, MatchesNestedImplicit) {
+  EXPECT_TRUE(matches(R"(
+
+struct OtherType;
+
+struct SomeType
+{
+    SomeType() {}
+    SomeType(const OtherType&) {}
+    SomeType& operator=(OtherType const&) { return *this; }
+};
+
+struct OtherType
+{
+    OtherType() {}
+    ~OtherType() {}
+};
+
+OtherType something()
+{
+    return {};
+}
+
+int main()
+{
+    SomeType i = something();
+}
+)"
+  , varDecl(
+      hasName("i"),
+      hasInitializer(exprWithCleanups(has(
+        cxxConstructExpr(has(expr(ignoringImplicit(cxxConstructExpr(
+          has(expr(ignoringImplicit(callExpr())))
+          )))))
+        )))
+      )
+  ));
+}
+
 TEST(IgnoringImplicit, DoesNotMatchIncorrectly) {
   EXPECT_TRUE(
       notMatches("class C {}; C a = C();", varDecl(has(cxxConstructExpr()))));

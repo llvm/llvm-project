@@ -897,25 +897,6 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
 }
 
-static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
-isDeclareTargetDeclaration(const ValueDecl *VD) {
-  for (const Decl *D : VD->redecls()) {
-    if (!D->hasAttrs())
-      continue;
-    if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
-      return Attr->getMapType();
-  }
-  if (const auto *V = dyn_cast<VarDecl>(VD)) {
-    if (const VarDecl *TD = V->getTemplateInstantiationPattern())
-      return isDeclareTargetDeclaration(TD);
-  } else if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
-    if (const auto *TD = FD->getTemplateInstantiationPattern())
-      return isDeclareTargetDeclaration(TD);
-  }
-
-  return llvm::None;
-}
-
 LValue ReductionCodeGen::emitSharedLValue(CodeGenFunction &CGF, const Expr *E) {
   return CGF.EmitOMPSharedLValue(E);
 }
@@ -2417,7 +2398,7 @@ Address CGOpenMPRuntime::getAddrOfDeclareTargetLink(const VarDecl *VD) {
   if (CGM.getLangOpts().OpenMPSimd)
     return Address::invalid();
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      isDeclareTargetDeclaration(VD);
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
     SmallString<64> PtrName;
     {
@@ -2639,7 +2620,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
                                                      llvm::GlobalVariable *Addr,
                                                      bool PerformInit) {
   Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      isDeclareTargetDeclaration(VD);
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link)
     return false;
   VD = VD->getDefinition(CGM.getContext());
@@ -6957,7 +6938,7 @@ private:
       if (const auto *VD =
               dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-                isDeclareTargetDeclaration(VD))
+                OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
           if (*Res == OMPDeclareTargetDeclAttr::MT_Link) {
             IsLink = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
@@ -7448,7 +7429,7 @@ public:
         if (!VD)
           continue;
         llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-            isDeclareTargetDeclaration(VD);
+            OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
         if (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link)
           continue;
         StructRangeInfoTy PartialStruct;
@@ -8078,7 +8059,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
 
   // Do not to emit function if it is not marked as declare target.
-  return !isDeclareTargetDeclaration(FD) &&
+  return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD) &&
          AlreadyEmittedTargetFunctions.count(FD->getCanonicalDecl()) == 0;
 }
 
@@ -8105,7 +8086,8 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
 
   // Do not to emit variable if it is not marked as declare target.
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      isDeclareTargetDeclaration(cast<VarDecl>(GD.getDecl()));
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+          cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link) {
     if (CGM.getContext().DeclMustBeEmitted(GD.getDecl()))
       DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
@@ -8117,7 +8099,7 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
 void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
                                                    llvm::Constant *Addr) {
   if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-          isDeclareTargetDeclaration(VD)) {
+          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
     OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags;
     StringRef VarName;
     CharUnits VarSize;
@@ -8171,7 +8153,7 @@ bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
 void CGOpenMPRuntime::emitDeferredTargetDecls() const {
   for (const VarDecl *VD : DeferredGlobalVariables) {
     llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-        isDeclareTargetDeclaration(VD);
+        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
     if (Res) {
       assert(*Res != OMPDeclareTargetDeclAttr::MT_Link &&
              "Implicit declare target variables must be only to().");
@@ -8202,7 +8184,7 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   const FunctionDecl *FD = D->getCanonicalDecl();
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
-  if (isDeclareTargetDeclaration(D)) {
+  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
     if (D->hasBody() && AlreadyEmittedTargetFunctions.count(FD) == 0) {
       if (auto *F = dyn_cast_or_null<llvm::Function>(
               CGM.GetGlobalValue(CGM.getMangledName(GD))))

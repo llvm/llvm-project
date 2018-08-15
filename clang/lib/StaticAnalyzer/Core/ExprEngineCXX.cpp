@@ -292,8 +292,75 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       return std::make_pair(State, V);
     }
     case ConstructionContext::ArgumentKind: {
-      // Function argument constructors. Not implemented yet.
-      break;
+      // Arguments are technically temporaries.
+      CallOpts.IsTemporaryCtorOrDtor = true;
+
+      const auto *ACC = cast<ArgumentConstructionContext>(CC);
+      const Expr *E = ACC->getCallLikeExpr();
+      unsigned Idx = ACC->getIndex();
+      const CXXBindTemporaryExpr *BTE = ACC->getCXXBindTemporaryExpr();
+
+      CallEventManager &CEMgr = getStateManager().getCallEventManager();
+      SVal V = UnknownVal();
+      auto getArgLoc = [&](CallEventRef<> Caller) -> Optional<SVal> {
+        const LocationContext *FutureSFC = Caller->getCalleeStackFrame();
+        // Return early if we are unable to reliably foresee
+        // the future stack frame.
+        if (!FutureSFC)
+          return None;
+
+        // This should be equivalent to Caller->getDecl() for now, but
+        // FutureSFC->getDecl() is likely to support better stuff (like
+        // virtual functions) earlier.
+        const Decl *CalleeD = FutureSFC->getDecl();
+
+        // FIXME: Support for variadic arguments is not implemented here yet.
+        if (CallEvent::isVariadic(CalleeD))
+          return None;
+
+        // Operator arguments do not correspond to operator parameters
+        // because this-argument is implemented as a normal argument in
+        // operator call expressions but not in operator declarations.
+        const VarRegion *VR = Caller->getParameterLocation(
+            *Caller->getAdjustedParameterIndex(Idx));
+        if (!VR)
+          return None;
+
+        return loc::MemRegionVal(VR);
+      };
+
+      if (const auto *CE = dyn_cast<CallExpr>(E)) {
+        CallEventRef<> Caller = CEMgr.getSimpleCall(CE, State, LCtx);
+        if (auto OptV = getArgLoc(Caller))
+          V = *OptV;
+        else
+          break;
+        State = addObjectUnderConstruction(State, {CE, Idx}, LCtx, V);
+      } else if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
+        // Don't bother figuring out the target region for the future
+        // constructor because we won't need it.
+        CallEventRef<> Caller =
+            CEMgr.getCXXConstructorCall(CCE, /*Target=*/nullptr, State, LCtx);
+        if (auto OptV = getArgLoc(Caller))
+          V = *OptV;
+        else
+          break;
+        State = addObjectUnderConstruction(State, {CCE, Idx}, LCtx, V);
+      } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(E)) {
+        CallEventRef<> Caller = CEMgr.getObjCMethodCall(ME, State, LCtx);
+        if (auto OptV = getArgLoc(Caller))
+          V = *OptV;
+        else
+          break;
+        State = addObjectUnderConstruction(State, {ME, Idx}, LCtx, V);
+      }
+
+      assert(!V.isUnknown());
+
+      if (BTE)
+        State = addObjectUnderConstruction(State, BTE, LCtx, V);
+
+      return std::make_pair(State, V);
     }
     }
   }
@@ -502,8 +569,15 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     }
   }
 
+  ExplodedNodeSet DstPostArgumentCleanup;
+  for (auto I : DstEvaluated)
+    finishArgumentConstruction(DstPostArgumentCleanup, I, *Call);
+
+  // If there were other constructors called for object-type arguments
+  // of this constructor, clean them up.
   ExplodedNodeSet DstPostCall;
-  getCheckerManager().runCheckersForPostCall(DstPostCall, DstEvaluated,
+  getCheckerManager().runCheckersForPostCall(DstPostCall,
+                                             DstPostArgumentCleanup,
                                              *Call, *this);
   getCheckerManager().runCheckersForPostStmt(destNodes, DstPostCall, CE, *this);
 }

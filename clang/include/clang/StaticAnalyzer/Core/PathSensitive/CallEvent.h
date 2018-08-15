@@ -428,21 +428,23 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-        getState(), {getOriginExpr(), Index}, getCalleeStackFrame()).hasValue();
+        getState(), {getOriginExpr(), Index}, getLocationContext()).hasValue();
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.
   /// This function converts an argument index to the corresponding
   /// parameter index. Returns None is the argument doesn't correspond
   /// to any parameter variable.
-  Optional<unsigned> getAdjustedParameterIndex(unsigned ArgumentIndex) const {
-    if (dyn_cast_or_null<CXXOperatorCallExpr>(getOriginExpr()) &&
-        dyn_cast_or_null<CXXMethodDecl>(getDecl())) {
-      // For member operator calls argument 0 on the expression corresponds
-      // to implicit this-parameter on the declaration.
-      return (ArgumentIndex > 0) ? Optional<unsigned>(ArgumentIndex - 1) : None;
-    }
-    return ArgumentIndex;
+  virtual Optional<unsigned>
+  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {
+    return ASTArgumentIndex;
+  }
+
+  /// Some call event sub-classes conveniently adjust mismatching AST indices
+  /// to match parameter indices. This function converts an argument index
+  /// as understood by CallEvent to the argument index as understood by the AST.
+  virtual unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const {
+    return CallArgumentIndex;
   }
 
   // Iterator access to formal parameters and their types.
@@ -768,6 +770,20 @@ public:
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMemberOperator;
+  }
+
+  Optional<unsigned>
+  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
+    // For member operator calls argument 0 on the expression corresponds
+    // to implicit this-parameter on the declaration.
+    return (ASTArgumentIndex > 0) ? Optional<unsigned>(ASTArgumentIndex - 1)
+                                  : None;
+  }
+
+  unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {
+    // For member operator calls argument 0 on the expression corresponds
+    // to implicit this-parameter on the declaration.
+    return CallArgumentIndex + 1;
   }
 };
 
