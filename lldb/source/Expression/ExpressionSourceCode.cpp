@@ -485,11 +485,20 @@ bool ExpressionSourceCode::GetText(
       auto triple = arch_spec.GetTriple();
       if (triple.isOSDarwin()) {
         if (auto process_sp = exe_ctx.GetProcessSP()) {
-          llvm::VersionTuple version = 
-            process_sp->GetHostOSVersion();
-
           os_vers << getAvailabilityName(triple.getOS()) << " ";
-          os_vers << version.getAsString();
+          uint32_t major, minor, patch;
+          auto platform = target->GetPlatform();
+          bool is_simulator =
+              platform->GetPluginName().GetStringRef().endswith("-simulator");
+          if (is_simulator) {
+            // The simulators look like the host OS to Process, but Platform
+            // can the version out of an environment variable.
+            os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
+          } else {
+	    llvm::VersionTuple version = 
+	      process_sp->GetHostOSVersion();
+	    os_vers << version.getAsString();
+          }
         }
       }
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
