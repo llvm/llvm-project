@@ -124,22 +124,29 @@
 
 // Sniff out to see if the underling C library has C11 features
 // Note that at this time (July 2018), MacOS X and iOS do NOT.
+// This is cribbed from __config; but lives here as well because we can't assume libc++
 #if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11
 #  if defined(__FreeBSD__)
+//  Specifically, FreeBSD does NOT have timespec_get, even though they have all
+//  the rest of C11 - this is PR#38495
 #    define TEST_HAS_C11_FEATURES
 #  elif defined(__Fuchsia__)
 #    define TEST_HAS_C11_FEATURES
+#    define TEST_HAS_TIMESPEC_GET
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
 #      if _LIBCPP_GLIBC_PREREQ(2, 17)
+#        define TEST_HAS_TIMESPEC_GET
 #        define TEST_HAS_C11_FEATURES
 #      endif
 #    else // defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define TEST_HAS_C11_FEATURES
+#      define TEST_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(_WIN32)
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
 #      define TEST_HAS_C11_FEATURES // Using Microsoft's C Runtime library
+#      define TEST_HAS_TIMESPEC_GET
 #    endif
 #  endif
 #endif
