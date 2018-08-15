@@ -519,6 +519,7 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
     if (Optional<SVal> V =
             getObjectUnderConstruction(State, {E, I}, LC)) {
       SVal VV = *V;
+      (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
                  ->getStackFrame()->getParent()
                  ->getStackFrame() == LC->getStackFrame());
