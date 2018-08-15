@@ -73,7 +73,7 @@ private:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY HIPToolChain final : public AMDGPUToolChain {
+class LLVM_LIBRARY_VISIBILITY HIPToolChain final : public ROCMToolChain {
 public:
   HIPToolChain(const Driver &D, const llvm::Triple &Triple,
                 const ToolChain &HostTC, const llvm::opt::ArgList &Args);

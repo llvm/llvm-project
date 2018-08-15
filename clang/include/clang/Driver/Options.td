@@ -608,6 +608,8 @@ def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
 def fcuda_short_ptr : Flag<["-"], "fcuda-short-ptr">, Flags<[CC1Option]>,
   HelpText<"Use 32-bit pointers for accessing const/local/shared address spaces.">;
 def fno_cuda_short_ptr : Flag<["-"], "fno-cuda-short-ptr">;
+def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
+  HelpText<"ROCm installation path">;
 def hip_device_lib_path_EQ : Joined<["--"], "hip-device-lib-path=">, Group<Link_Group>,
   HelpText<"HIP device library path">;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<Link_Group>,
