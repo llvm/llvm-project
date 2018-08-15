@@ -1,7 +1,7 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck --check-prefix=THREADS %s
 // REQUIRES: ompt
-// UNSUPPORTE: gcc-4, gcc-5, gcc-6, gcc-7
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
 #define TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN
 #include "callback.h"
 #include <omp.h>

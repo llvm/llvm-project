@@ -335,7 +335,7 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
     computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      write64le(Dest, xxHash64(toStringRef(Arr)));
+      write64le(Dest, xxHash64(Arr));
     });
     break;
   case BuildIdKind::Md5:
@@ -1935,6 +1935,23 @@ SymbolTableSection<ELFT>::SymbolTableSection(StringTableSection &StrTabSec)
   this->Entsize = sizeof(Elf_Sym);
 }
 
+static BssSection *getCommonSec(Symbol *Sym) {
+  if (!Config->DefineCommon)
+    if (auto *D = dyn_cast<Defined>(Sym))
+      return dyn_cast_or_null<BssSection>(D->Section);
+  return nullptr;
+}
+
+static uint32_t getSymSectionIndex(Symbol *Sym) {
+  if (getCommonSec(Sym))
+    return SHN_COMMON;
+  if (!isa<Defined>(Sym) || Sym->NeedsPltAddr)
+    return SHN_UNDEF;
+  if (const OutputSection *OS = Sym->getOutputSection())
+    return OS->SectionIndex >= SHN_LORESERVE ? SHN_XINDEX : OS->SectionIndex;
+  return SHN_ABS;
+}
+
 // Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   // The first entry is a null entry as per the ELF spec.
@@ -1956,22 +1973,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     }
 
     ESym->st_name = Ent.StrTabOffset;
-
-    // Set a section index.
-    BssSection *CommonSec = nullptr;
-    if (!Config->DefineCommon)
-      if (auto *D = dyn_cast<Defined>(Sym))
-        CommonSec = dyn_cast_or_null<BssSection>(D->Section);
-    if (CommonSec)
-      ESym->st_shndx = SHN_COMMON;
-    else if (Sym->NeedsPltAddr)
-      ESym->st_shndx = SHN_UNDEF;
-    else if (const OutputSection *OutSec = Sym->getOutputSection())
-      ESym->st_shndx = OutSec->SectionIndex;
-    else if (isa<Defined>(Sym))
-      ESym->st_shndx = SHN_ABS;
-    else
-      ESym->st_shndx = SHN_UNDEF;
+    ESym->st_shndx = getSymSectionIndex(Ent.Sym);
 
     // Copy symbol size if it is a defined symbol. st_size is not significant
     // for undefined symbols, so whether copying it or not is up to us if that's
@@ -1986,7 +1988,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
     // occur if -r is given).
-    if (CommonSec)
+    if (BssSection *CommonSec = getCommonSec(Ent.Sym))
       ESym->st_value = CommonSec->Alignment;
     else
       ESym->st_value = Sym->getVA();
@@ -2024,6 +2026,44 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       ++ESym;
     }
   }
+}
+
+SymtabShndxSection::SymtabShndxSection()
+    : SyntheticSection(0, SHT_SYMTAB_SHNDX, 4, ".symtab_shndxr") {
+  this->Entsize = 4;
+}
+
+void SymtabShndxSection::writeTo(uint8_t *Buf) {
+  // We write an array of 32 bit values, where each value has 1:1 association
+  // with an entry in .symtab. If the corresponding entry contains SHN_XINDEX,
+  // we need to write actual index, otherwise, we must write SHN_UNDEF(0).
+  Buf += 4; // Ignore .symtab[0] entry.
+  for (const SymbolTableEntry &Entry : InX::SymTab->getSymbols()) {
+    if (getSymSectionIndex(Entry.Sym) == SHN_XINDEX)
+      write32(Buf, Entry.Sym->getOutputSection()->SectionIndex);
+    Buf += 4;
+  }
+}
+
+bool SymtabShndxSection::empty() const {
+  // SHT_SYMTAB can hold symbols with section indices values up to
+  // SHN_LORESERVE. If we need more, we want to use extension SHT_SYMTAB_SHNDX
+  // section. Problem is that we reveal the final section indices a bit too
+  // late, and we do not know them here. For simplicity, we just always create
+  // a .symtab_shndxr section when the amount of output sections is huge.
+  size_t Size = 0;
+  for (BaseCommand *Base : Script->SectionCommands)
+    if (isa<OutputSection>(Base))
+      ++Size;
+  return Size < SHN_LORESERVE;
+}
+
+void SymtabShndxSection::finalizeContents() {
+  getParent()->Link = InX::SymTab->getParent()->SectionIndex;
+}
+
+size_t SymtabShndxSection::getSize() const {
+  return InX::SymTab->getNumSymbols() * 4;
 }
 
 // .hash and .gnu.hash sections contain on-disk hash tables that map
@@ -3025,6 +3065,7 @@ RelocationBaseSection *InX::RelaIplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
 SymbolTableBaseSection *InX::SymTab;
+SymtabShndxSection *InX::SymTabShndx;
 
 template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
 template GdbIndexSection *GdbIndexSection::create<ELF32BE>();

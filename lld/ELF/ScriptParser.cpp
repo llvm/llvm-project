@@ -344,7 +344,7 @@ void ScriptParser::readInclude() {
     return;
   }
 
-  if (Optional<std::string> Path = searchLinkerScript(Tok)) {
+  if (Optional<std::string> Path = searchScript(Tok)) {
     if (Optional<MemoryBufferRef> MB = readFile(*Path))
       tokenize(*MB);
     return;

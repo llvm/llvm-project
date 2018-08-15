@@ -287,6 +287,7 @@ template <class ELFT> static void createSyntheticSections() {
   if (Config->Strip != StripPolicy::All) {
     InX::StrTab = make<StringTableSection>(".strtab", false);
     InX::SymTab = make<SymbolTableSection<ELFT>>(*InX::StrTab);
+    InX::SymTabShndx = make<SymtabShndxSection>();
   }
 
   if (Config->BuildId != BuildIdKind::None) {
@@ -409,6 +410,8 @@ template <class ELFT> static void createSyntheticSections() {
 
   if (InX::SymTab)
     Add(InX::SymTab);
+  if (InX::SymTabShndx)
+    Add(InX::SymTabShndx);
   Add(InX::ShStrTab);
   if (InX::StrTab)
     Add(InX::StrTab);
@@ -517,7 +520,6 @@ static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
                                const Symbol &B) {
   if (B.isSection())
     return false;
-
 
   if (Config->Discard == DiscardPolicy::None)
     return true;
@@ -1605,6 +1607,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       OutputSections.push_back(Sec);
 
+  // Ensure data sections are not mixed with executable sections when
+  // -execute-only is used.
+  if (Config->ExecuteOnly)
+    for (OutputSection *OS : OutputSections)
+      if (OS->Flags & SHF_EXECINSTR)
+        for (InputSection *IS : getInputSections(OS))
+          if (!(IS->Flags & SHF_EXECINSTR))
+            error("-execute-only does not support intermingling data and code");
+
   // Prefer command line supplied address over other constraints.
   for (OutputSection *Sec : OutputSections) {
     auto I = Config->SectionStartMap.find(Sec->Name);
@@ -1639,12 +1650,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic(
-      {InX::DynSymTab,   InX::Bss,         InX::BssRelRo,     InX::GnuHashTab,
-       InX::HashTab,     InX::SymTab,      InX::ShStrTab,     InX::StrTab,
-       In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,          InX::MipsGot,
-       InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,      InX::RelrDyn,
-       InX::RelaIplt,    InX::RelaPlt,     InX::Plt,          InX::Iplt,
-       InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
+      {InX::DynSymTab, InX::Bss,         InX::BssRelRo,    InX::GnuHashTab,
+       InX::HashTab,   InX::SymTab,      InX::SymTabShndx, InX::ShStrTab,
+       InX::StrTab,    In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,
+       InX::MipsGot,   InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,
+       InX::RelrDyn,   InX::RelaIplt,    InX::RelaPlt,     InX::Plt,
+       InX::Iplt,      InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed,
+       InX::Dynamic},
       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
@@ -1763,6 +1775,8 @@ static bool needsPtLoad(OutputSection *Sec) {
 static uint64_t computeFlags(uint64_t Flags) {
   if (Config->Omagic)
     return PF_R | PF_W | PF_X;
+  if (Config->ExecuteOnly && (Flags & PF_X))
+    return Flags & ~PF_R;
   if (Config->SingleRoRx && !(Flags & PF_W))
     return Flags | PF_X;
   return Flags;

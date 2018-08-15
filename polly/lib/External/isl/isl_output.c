@@ -268,6 +268,9 @@ static __isl_give isl_printer *print_term(__isl_keep isl_space *space,
 	enum isl_dim_type type;
 	int print_div_def;
 
+	if (!p || !space)
+		return isl_printer_free(p);
+
 	if (pos == 0)
 		return isl_printer_print_isl_int(p, c);
 
@@ -604,7 +607,7 @@ static int print_as_modulo_pos(__isl_keep isl_printer *p,
 	unsigned n_div;
 	enum isl_dim_type type;
 
-	if (!p)
+	if (!p || !space)
 		return -1;
 	n_div = isl_mat_rows(div);
 	if (p->output_format == ISL_FORMAT_C)
@@ -2080,10 +2083,13 @@ static __isl_give isl_printer *print_name_c(__isl_take isl_printer *p,
 }
 
 static __isl_give isl_printer *print_term_c(__isl_take isl_printer *p,
-	__isl_keep isl_space *dim,
+	__isl_keep isl_space *space,
 	__isl_keep isl_basic_set *bset, isl_int c, unsigned pos)
 {
 	enum isl_dim_type type;
+
+	if (!p || !space)
+		return isl_printer_free(p);
 
 	if (pos == 0)
 		return isl_printer_print_isl_int(p, c);
@@ -2096,8 +2102,8 @@ static __isl_give isl_printer *print_term_c(__isl_take isl_printer *p,
 		p = isl_printer_print_isl_int(p, c);
 		p = isl_printer_print_str(p, "*");
 	}
-	type = pos2type(dim, &pos);
-	p = print_name_c(p, dim, bset, type, pos);
+	type = pos2type(space, &pos);
+	p = print_name_c(p, space, bset, type, pos);
 	return p;
 }
 
@@ -2717,6 +2723,9 @@ static __isl_give isl_printer *print_ls_term_c(__isl_take isl_printer *p,
 	__isl_keep isl_local_space *ls, isl_int c, unsigned pos)
 {
 	enum isl_dim_type type;
+
+	if (!p || !ls)
+		return isl_printer_free(p);
 
 	if (pos == 0)
 		return isl_printer_print_isl_int(p, c);

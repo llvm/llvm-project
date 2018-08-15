@@ -281,6 +281,13 @@ void ObjFile::initializeSymbols() {
     if (auto *Def = Sym.getSectionDefinition())
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
+    if (SparseChunks[Sym.getSectionNumber()] == PendingComdat) {
+      StringRef Name;
+      COFFObj->getSymbolName(Sym, Name);
+      log("comdat section " + Name +
+          " without leader and unassociated, discarding");
+      continue;
+    }
     Symbols[I] = createRegular(Sym);
   }
 
@@ -300,17 +307,22 @@ Symbol *ObjFile::createUndefined(COFFSymbolRef Sym) {
 Optional<Symbol *> ObjFile::createDefined(
     COFFSymbolRef Sym,
     std::vector<const coff_aux_section_definition *> &ComdatDefs) {
-  StringRef Name;
+  auto GetName = [&]() {
+    StringRef S;
+    COFFObj->getSymbolName(Sym, S);
+    return S;
+  };
+
   if (Sym.isCommon()) {
     auto *C = make<CommonChunk>(Sym);
     Chunks.push_back(C);
-    COFFObj->getSymbolName(Sym, Name);
-    Symbol *S =
-        Symtab->addCommon(this, Name, Sym.getValue(), Sym.getGeneric(), C);
-    return S;
+    return Symtab->addCommon(this, GetName(), Sym.getValue(), Sym.getGeneric(),
+                             C);
   }
+
   if (Sym.isAbsolute()) {
-    COFFObj->getSymbolName(Sym, Name);
+    StringRef Name = GetName();
+
     // Skip special symbols.
     if (Name == "@comp.id")
       return nullptr;
@@ -318,21 +330,22 @@ Optional<Symbol *> ObjFile::createDefined(
       Feat00Flags = Sym.getValue();
       return nullptr;
     }
+
     if (Sym.isExternal())
       return Symtab->addAbsolute(Name, Sym);
-    else
-      return make<DefinedAbsolute>(Name, Sym);
+    return make<DefinedAbsolute>(Name, Sym);
   }
+
   int32_t SectionNumber = Sym.getSectionNumber();
   if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
 
   if (llvm::COFF::isReservedSectionNumber(SectionNumber))
-    fatal(toString(this) + ": " + Name +
+    fatal(toString(this) + ": " + GetName() +
           " should not refer to special section " + Twine(SectionNumber));
 
   if ((uint32_t)SectionNumber >= SparseChunks.size())
-    fatal(toString(this) + ": " + Name +
+    fatal(toString(this) + ": " + GetName() +
           " should not refer to non-existent section " + Twine(SectionNumber));
 
   // Handle comdat leader symbols.
@@ -341,16 +354,16 @@ Optional<Symbol *> ObjFile::createDefined(
     Symbol *Leader;
     bool Prevailing;
     if (Sym.isExternal()) {
-      COFFObj->getSymbolName(Sym, Name);
       std::tie(Leader, Prevailing) =
-          Symtab->addComdat(this, Name, Sym.getGeneric());
+          Symtab->addComdat(this, GetName(), Sym.getGeneric());
     } else {
       Leader = make<DefinedRegular>(this, /*Name*/ "", false,
                                     /*IsExternal*/ false, Sym.getGeneric());
       Prevailing = true;
     }
+
     if (Prevailing) {
-      SectionChunk *C = readSection(SectionNumber, Def, Name);
+      SectionChunk *C = readSection(SectionNumber, Def, GetName());
       SparseChunks[SectionNumber] = C;
       C->Sym = cast<DefinedRegular>(Leader);
       cast<DefinedRegular>(Leader)->Data = &C->Repl;
