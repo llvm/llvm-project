@@ -1183,8 +1183,8 @@ SwiftLanguageRuntime::GetMemoryReader() {
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
     ValueObject &for_object, SwiftLanguageRuntime &runtime,
     lldb::addr_t location)
-    : m_for_object(for_object),
-      m_swift_runtime(runtime), m_metadata_location(location) {}
+    : m_for_object_sp(for_object.GetSP()), m_swift_runtime(runtime),
+      m_metadata_location(location) {}
 
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
@@ -1201,7 +1201,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   if (m_compiler_type.hasValue())
     return m_compiler_type.getValue();
 
-  auto swift_ast_ctx = m_for_object.GetScratchSwiftASTContext();
+  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
   if (!swift_ast_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
@@ -1243,7 +1243,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise(Status *error) {
   if (m_metadata_kind.hasValue())
     return m_metadata_kind;
 
-  auto swift_ast_ctx = m_for_object.GetScratchSwiftASTContext();
+  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
   if (!swift_ast_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return llvm::None;

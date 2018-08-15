@@ -141,7 +141,7 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
-    @SkipIfLinux
+    @skipIfLinux
     def test_lldbmi_thread_step_in(self):
         """Test that 'lldb-mi --interpreter' can step in by "thread step-in" command."""
 
