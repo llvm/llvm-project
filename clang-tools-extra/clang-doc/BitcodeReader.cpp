@@ -657,7 +657,7 @@ ClangDocBitcodeReader::createInfo(unsigned ID) {
   std::unique_ptr<Info> I = llvm::make_unique<T>();
   if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
     return std::move(Err);
-  return I;
+  return std::unique_ptr<Info>{std::move(I)};;
 }
 
 llvm::Expected<std::unique_ptr<Info>>
