@@ -134,14 +134,9 @@ void PredicateExpander::expandPredicateSequence(raw_ostream &OS,
 }
 
 void PredicateExpander::expandTIIFunctionCall(raw_ostream &OS,
-                                              StringRef TargetName,
                                               StringRef MethodName) {
   OS << (shouldNegate() ? "!" : "");
-  if (shouldExpandForMC())
-    OS << TargetName << "_MC::";
-  else
-    OS << TargetName << "Gen"
-       << "InstrInfo::";
+  OS << TargetName << (shouldExpandForMC() ? "_MC::" : "GenInstrInfo::");
   OS << MethodName << (isByRef() ? "(MI)" : "(*MI)");
 }
 
@@ -313,8 +308,7 @@ void PredicateExpander::expandPredicate(raw_ostream &OS, const Record *Rec) {
     return expandCheckNonPortable(OS, Rec->getValueAsString("CodeBlock"));
 
   if (Rec->isSubClassOf("TIIPredicate"))
-    return expandTIIFunctionCall(OS, Rec->getValueAsString("TargetName"),
-                                 Rec->getValueAsString("FunctionName"));
+    return expandTIIFunctionCall(OS, Rec->getValueAsString("FunctionName"));
 
   llvm_unreachable("No known rules to expand this MCInstPredicate");
 }

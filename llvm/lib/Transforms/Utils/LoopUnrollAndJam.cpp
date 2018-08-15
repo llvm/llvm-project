@@ -754,7 +754,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   // Check inner loop backedge count is consistent on all iterations of the
   // outer loop
-  if (!hasInvariantIterationCount(SubLoop, SE)) {
+  if (!hasIterationCountInvariantInParent(SubLoop, SE)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop iteration count is "
                          "not consistent on each iteration\n");
     return false;
@@ -762,8 +762,8 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   // Check the loop safety info for exceptions.
   LoopSafetyInfo LSI;
-  computeLoopSafetyInfo(&LSI, L);
-  if (LSI.MayThrow) {
+  LSI.computeLoopSafetyInfo(L);
+  if (LSI.anyBlockMayThrow()) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;
   }

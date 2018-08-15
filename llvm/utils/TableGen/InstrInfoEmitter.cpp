@@ -66,11 +66,11 @@ private:
   /// This method is used to custom expand TIIPredicate definitions.
   /// See file llvm/Target/TargetInstPredicates.td for a description of what is
   /// a TIIPredicate and how to use it.
-  void emitTIIHelperMethods(raw_ostream &OS);
+  void emitTIIHelperMethods(raw_ostream &OS, StringRef TargetName);
 
   /// Expand TIIPredicate definitions to functions that accept a const MCInst
   /// reference.
-  void emitMCIIHelperMethods(raw_ostream &OS);
+  void emitMCIIHelperMethods(raw_ostream &OS, StringRef TargetName);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
                   Record *InstrInfo,
                   std::map<std::vector<Record*>, unsigned> &EL,
@@ -351,13 +351,11 @@ void InstrInfoEmitter::emitOperandTypesEnum(raw_ostream &OS,
   OS << "#endif // GET_INSTRINFO_OPERAND_TYPES_ENUM\n\n";
 }
 
-void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS) {
+void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
+                                             StringRef TargetName) {
   RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
   if (TIIPredicates.empty())
     return;
-
-  CodeGenTarget &Target = CDP.getTargetInfo();
-  const StringRef TargetName = Target.getName();
 
   OS << "#ifdef GET_GENINSTRINFO_MC_DECL\n";
   OS << "#undef GET_GENINSTRINFO_MC_DECL\n\n";
@@ -383,7 +381,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS) {
   OS << "namespace llvm {\n";
   OS << "namespace " << TargetName << "_MC {\n\n";
 
-  PredicateExpander PE;
+  PredicateExpander PE(TargetName);
   PE.setExpandForMC(true);
 
   for (const Record *Rec : TIIPredicates) {
@@ -401,12 +399,13 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS) {
   OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n";
 }
 
-void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS) {
+void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
+                                            StringRef TargetName) {
   RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
   if (TIIPredicates.empty())
     return;
 
-  PredicateExpander PE;
+  PredicateExpander PE(TargetName);
   PE.setExpandForMC(false);
   PE.setIndentLevel(2);
 
@@ -518,7 +517,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
      << "(int CFSetupOpcode = -1, int CFDestroyOpcode = -1, int CatchRetOpcode = -1, int ReturnOpcode = -1);\n"
      << "  ~" << ClassName << "() override = default;\n";
 
-  emitTIIHelperMethods(OS);
+  emitTIIHelperMethods(OS, TargetName);
 
   OS << "\n};\n} // end llvm namespace\n";
 
@@ -545,7 +544,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   emitOperandTypesEnum(OS, Target);
 
-  emitMCIIHelperMethods(OS);
+  emitMCIIHelperMethods(OS, TargetName);
 }
 
 void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,

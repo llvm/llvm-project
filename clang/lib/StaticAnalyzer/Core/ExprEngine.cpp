@@ -2199,17 +2199,21 @@ void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
 void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
                                       ExplodedNode *Pred,
                                       const ReturnStmt *RS) {
+  ProgramStateRef State = Pred->getState();
+
+  if (!Pred->getStackFrame()->inTopFrame())
+    State = finishArgumentConstruction(
+        State, *getStateManager().getCallEventManager().getCaller(
+                   Pred->getStackFrame(), Pred->getState()));
+
   // FIXME: We currently cannot assert that temporaries are clear, because
   // lifetime extended temporaries are not always modelled correctly. In some
   // cases when we materialize the temporary, we do
   // createTemporaryRegionIfNeeded(), and the region changes, and also the
   // respective destructor becomes automatic from temporary. So for now clean up
-  // the state manually before asserting. Ideally, the code above the assertion
-  // should go away, but the assertion should remain.
+  // the state manually before asserting. Ideally, this braced block of code
+  // should go away.
   {
-    ExplodedNodeSet CleanUpObjects;
-    NodeBuilder Bldr(Pred, CleanUpObjects, BC);
-    ProgramStateRef State = Pred->getState();
     const LocationContext *FromLC = Pred->getLocationContext();
     const LocationContext *ToLC = FromLC->getStackFrame()->getParent();
     const LocationContext *LC = FromLC;
@@ -2228,15 +2232,20 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
         }
       LC = LC->getParent();
     }
-    if (State != Pred->getState()) {
-      Pred = Bldr.generateNode(Pred->getLocation(), State, Pred);
-      if (!Pred) {
-        // The node with clean temporaries already exists. We might have reached
-        // it on a path on which we initialize different temporaries.
-        return;
-      }
+  }
+
+  // Perform the transition with cleanups.
+  if (State != Pred->getState()) {
+    ExplodedNodeSet PostCleanup;
+    NodeBuilder Bldr(Pred, PostCleanup, BC);
+    Pred = Bldr.generateNode(Pred->getLocation(), State, Pred);
+    if (!Pred) {
+      // The node with clean temporaries already exists. We might have reached
+      // it on a path on which we initialize different temporaries.
+      return;
     }
   }
+
   assert(areAllObjectsFullyConstructed(Pred->getState(),
                                        Pred->getLocationContext(),
                                        Pred->getStackFrame()->getParent()));

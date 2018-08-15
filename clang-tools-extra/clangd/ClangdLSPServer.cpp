@@ -5,7 +5,7 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
@@ -506,6 +506,8 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
         }
         LSPDiag["clangd_fixes"] = std::move(ClangdFixes);
       }
+      if (!Diag.category.empty())
+        LSPDiag["category"] = Diag.category;
       DiagnosticsJSON.push_back(std::move(LSPDiag));
 
       auto &FixItsForDiagnostic = LocalFixIts[Diag];

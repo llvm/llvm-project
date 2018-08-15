@@ -140,7 +140,6 @@ define i32 @select_xor_inv_icmp2(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
-; TODO: FP opcodes support
 define float @select_fadd_fcmp(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
@@ -170,26 +169,26 @@ define float @select_fadd_fcmp_2(float %x, float %y, float %z) {
 define float @select_fadd_fcmp_3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_3(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
-; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fadd float [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %A = fcmp one float %x, -0.0
-  %B = fadd float %x, %z
-  %C = select i1 %A, float %B, float %y
+  %B = fadd float %z, %x
+  %C = select i1 %A, float %y, float %B
   ret float %C
 }
 
 define float @select_fadd_fcmp_4(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_4(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
-; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fadd float [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %A = fcmp une float %x, -0.0
-  %B = fadd float %x, %z
-  %C = select i1 %A, float %B, float %y
+  %B = fadd float %z, %x
+  %C = select i1 %A, float %y, float %B
   ret float %C
 }
 
@@ -209,12 +208,12 @@ define float @select_fmul_fcmp(float %x, float %y, float %z) {
 define float @select_fsub_fcmp(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fsub_fcmp(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[B:%.*]] = fsub float [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fsub float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %A = fcmp oeq float %x, 0.0
-  %B = fsub float %x, %z
+  %B = fsub float %z, %x
   %C = select i1 %A, float %B, float %y
   ret float %C
 }
@@ -222,12 +221,12 @@ define float @select_fsub_fcmp(float %x, float %y, float %z) {
 define float @select_fdiv_fcmp(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fdiv_fcmp(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[B:%.*]] = fdiv float [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fdiv float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %A = fcmp oeq float %x, 1.0
-  %B = fdiv float %x, %z
+  %B = fdiv float %z, %x
   %C = select i1 %A, float %B, float %y
   ret float %C
 }
@@ -534,31 +533,29 @@ define float @select_fadd_fcmp_bad_2(float %x, float %y, float %z) {
   ret float %C
 }
 
-define float @select_fadd_fcmp_bad_3(float %x, float %y, float %z) {
+define float @select_fadd_fcmp_bad_3(float %x, float %y, float %z, float %k) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_3(
-; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], [[K:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
-  %A = fcmp one float %x, -0.0
+  %A = fcmp one float %x, %k
   %B = fadd float %x, %z
   %C = select i1 %A, float %y, float %B
   ret float %C
 }
 
-
-
 define float @select_fadd_fcmp_bad_4(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_4(
 ; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %A = fcmp une float %x, -0.0
   %B = fadd float %x, %z
-  %C = select i1 %A, float %y, float %B
+  %C = select i1 %A, float %B, float %y
   ret float %C
 }
 

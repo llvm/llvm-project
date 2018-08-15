@@ -9806,13 +9806,9 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
           return true;
 
   // If the decl is marked as `declare target`, it should be emitted.
-  for (const auto *Decl : D->redecls()) {
-    if (!Decl->hasAttrs())
-      continue;
-    if (const auto *Attr = Decl->getAttr<OMPDeclareTargetDeclAttr>())
-      if (Attr->getMapType() != OMPDeclareTargetDeclAttr::MT_Link)
-        return true;
-  }
+  if (const llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+    return *Res != OMPDeclareTargetDeclAttr::MT_Link;
 
   return false;
 }

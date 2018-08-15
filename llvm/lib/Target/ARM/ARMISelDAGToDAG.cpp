@@ -1345,9 +1345,8 @@ static inline SDValue getAL(SelectionDAG *CurDAG, const SDLoc &dl) {
 }
 
 void ARMDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 }
 
 bool ARMDAGToDAGISel::tryARMIndexedLoad(SDNode *N) {
@@ -1854,9 +1853,8 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
   }
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(VLd)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLd), {MemOp});
 
   if (NumVecs == 1) {
     ReplaceNode(N, VLd);
@@ -1893,8 +1891,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   if (!SelectAddrMode6(N, N->getOperand(AddrOpIdx), MemAddr, Align))
     return;
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
 
   SDValue Chain = N->getOperand(0);
   EVT VT = N->getOperand(Vec0Idx).getValueType();
@@ -1983,7 +1980,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
     SDNode *VSt = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
 
     // Transfer memoperands.
-    cast<MachineSDNode>(VSt)->setMemRefs(MemOp, MemOp + 1);
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(VSt), {MemOp});
 
     ReplaceNode(N, VSt);
     return;
@@ -2007,7 +2004,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   SDNode *VStA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl,
                                         MemAddr.getValueType(),
                                         MVT::Other, OpsA);
-  cast<MachineSDNode>(VStA)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStA), {MemOp});
   Chain = SDValue(VStA, 1);
 
   // Store the odd D registers.
@@ -2026,7 +2023,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   Ops.push_back(Chain);
   SDNode *VStB = CurDAG->getMachineNode(QOpcodes1[OpcodeIndex], dl, ResTys,
                                         Ops);
-  cast<MachineSDNode>(VStB)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStB), {MemOp});
   ReplaceNode(N, VStB);
 }
 
@@ -2045,8 +2042,7 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   if (!SelectAddrMode6(N, N->getOperand(AddrOpIdx), MemAddr, Align))
     return;
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
 
   SDValue Chain = N->getOperand(0);
   unsigned Lane =
@@ -2135,7 +2131,7 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   unsigned Opc = (is64BitVector ? DOpcodes[OpcodeIndex] :
                                   QOpcodes[OpcodeIndex]);
   SDNode *VLdLn = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
-  cast<MachineSDNode>(VLdLn)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLdLn), {MemOp});
   if (!IsLoad) {
     ReplaceNode(N, VLdLn);
     return;
@@ -2264,9 +2260,8 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   }
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(VLdDup)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLdDup), {MemOp});
 
   // Extract the subregisters.
   if (NumVecs == 1) {
@@ -2481,9 +2476,8 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
       Opcode, SDLoc(N),
       CurDAG->getVTList(MVT::i32, MVT::i32, MVT::Other), Ops);
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   ReplaceUses(SDValue(N, 0), SDValue(CmpSwap, 0));
   ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
@@ -2632,12 +2626,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       // queries work properly. This e.g. gives the register allocation the
       // required information for rematerialization.
       MachineFunction& MF = CurDAG->getMachineFunction();
-      MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
-      MemOp[0] = MF.getMachineMemOperand(
-          MachinePointerInfo::getConstantPool(MF),
-          MachineMemOperand::MOLoad, 4, 4);
+      MachineMemOperand *MemOp =
+          MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                  MachineMemOperand::MOLoad, 4, 4);
 
-      cast<MachineSDNode>(ResNode)->setMemRefs(MemOp, MemOp+1);
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
 
       ReplaceNode(N, ResNode);
       return;
@@ -3421,9 +3414,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
                        CurDAG->getRegister(0, MVT::i32), Chain};
       SDNode *Ld = CurDAG->getMachineNode(NewOpc, dl, ResTys, Ops);
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-      cast<MachineSDNode>(Ld)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
       // Remap uses.
       SDValue OutChain = isThumb ? SDValue(Ld, 2) : SDValue(Ld, 1);
@@ -3489,9 +3481,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
       SDNode *St = CurDAG->getMachineNode(NewOpc, dl, ResTys, Ops);
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-      cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
       ReplaceNode(N, St);
       return;

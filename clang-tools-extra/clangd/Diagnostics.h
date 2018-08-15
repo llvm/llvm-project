@@ -1,11 +1,11 @@
-//===--- Diagnostics.h ------------------------------------------*- C++-*-===//
+//===--- Diagnostics.h -------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
@@ -37,6 +37,7 @@ struct DiagBase {
   std::string File;
   clangd::Range Range;
   DiagnosticsEngine::Level Severity = DiagnosticsEngine::Note;
+  std::string Category;
   // Since File is only descriptive, we store a separate flag to distinguish
   // diags from the main file.
   bool InsideMainFile = false;
@@ -101,4 +102,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H

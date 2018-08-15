@@ -1,11 +1,11 @@
-//===--- Diagnostics.cpp ----------------------------------------*- C++-*-===//
+//===--- Diagnostics.cpp -----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "Diagnostics.h"
 #include "Compiler.h"
@@ -226,6 +226,7 @@ void toLSPDiags(
     clangd::Diagnostic Res;
     Res.range = D.Range;
     Res.severity = getSeverity(D.Severity);
+    Res.category = D.Category;
     return Res;
   };
 
@@ -292,6 +293,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     D.InsideMainFile = InsideMainFile;
     D.File = Info.getSourceManager().getFilename(Info.getLocation());
     D.Severity = DiagLevel;
+    D.Category = DiagnosticIDs::getCategoryNameFromID(
+                     DiagnosticIDs::getCategoryNumberForDiag(Info.getID()))
+                     .str();
     return D;
   };
 

@@ -888,6 +888,55 @@ define <8 x i32> @combine_permd_insertion_as_broadcast_v4i64(i64 %a0) {
   ret <8 x i32> %3
 }
 
+define <32 x i8> @combine_pshufb_pshufb_or_as_blend(<32 x i8> %a0, <32 x i8> %a1) {
+; X32-LABEL: combine_pshufb_pshufb_or_as_blend:
+; X32:       # %bb.0:
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_pshufb_or_as_blend:
+; X64:       # %bb.0:
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; X64-NEXT:    retq
+  %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a1, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+  %3 = or <32 x i8> %1, %2
+  ret <32 x i8> %3
+}
+
+define <32 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<32 x i8> %a0, <32 x i8> %a1) {
+; X32-LABEL: combine_pshufb_pshufb_or_as_unpcklbw:
+; X32:       # %bb.0:
+; X32-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_pshufb_or_as_unpcklbw:
+; X64:       # %bb.0:
+; X64-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
+; X64-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7, i8 -1, i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7, i8 -1>)
+  %2 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a1, <32 x i8> <i8 -1, i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7, i8 -1, i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7>)
+  %3 = or <32 x i8> %1, %2
+  ret <32 x i8> %3
+}
+
+define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_pshufb_or_pshufb:
+; X32:       # %bb.0:
+; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_pshufb_or_pshufb:
+; X64:       # %bb.0:
+; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)
+  %3 = or <32 x i8> %1, %2
+  %4 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %3, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
+  ret <32 x i8> %4
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; X32-LABEL: constant_fold_permd:
 ; X32:       # %bb.0:

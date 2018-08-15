@@ -1091,6 +1091,10 @@ void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
       printTemplateParameters(FD->getTemplateParameterList(I));
   }
   VisitRedeclarableTemplateDecl(D);
+  // Declare target attribute is special one, natural spelling for the pragma
+  // assumes "ending" construct so print it here.
+  if (D->getTemplatedDecl()->hasAttr<OMPDeclareTargetDeclAttr>())
+    Out << "#pragma omp end declare target\n";
 
   // Never print "instantiations" for deduction guides (they don't really
   // have them).

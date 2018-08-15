@@ -9,12 +9,22 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
+// dylibs shipped before macosx10.13 do not provide aligned allocation, so that's a link error
+// UNSUPPORTED: with_system_cxx_lib=macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: with_system_cxx_lib=macosx10.8
+// UNSUPPORTED: with_system_cxx_lib=macosx10.7
+
+// Using aligned allocation functions is a compiler error when deploying to
+// platforms older than macosx10.13
+// UNSUPPORTED: macosx10.12
+// UNSUPPORTED: macosx10.11
+// UNSUPPORTED: macosx10.10
+// UNSUPPORTED: macosx10.9
+// UNSUPPORTED: macosx10.8
+// UNSUPPORTED: macosx10.7
 
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete

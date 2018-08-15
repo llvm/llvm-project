@@ -3269,7 +3269,7 @@ private:
 
   // This is only meaningful for operations on floating point types and 0
   // otherwise.
-  unsigned FPFeatures : 2;
+  unsigned FPFeatures : 3;
   SourceLocation OpLoc;
 
   enum { LHS, RHS, END_EXPR };
@@ -3446,6 +3446,12 @@ public:
   // operations on floating point types.
   bool isFPContractableWithinStatement() const {
     return FPOptions(FPFeatures).allowFPContractWithinStatement();
+  }
+
+  // Get the FENV_ACCESS status of this operator. Only meaningful for
+  // operations on floating point types.
+  bool isFEnvAccessOn() const {
+    return FPOptions(FPFeatures).allowFEnvAccess();
   }
 
 protected:

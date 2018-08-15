@@ -509,15 +509,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
     getMachOToolChain().addStartObjectFileArgs(Args, CmdArgs);
 
-  // SafeStack requires its own runtime libraries
-  // These libraries should be linked first, to make sure the
-  // __safestack_init constructor executes before everything else
-  if (getToolChain().getSanitizerArgs().needsSafeStackRt()) {
-    getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs,
-                                          "libclang_rt.safestack_osx.a",
-                                          toolchains::Darwin::RLO_AlwaysLink);
-  }
-
   Args.AddAllArgs(CmdArgs, options::OPT_L);
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -2297,7 +2288,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   if (isTargetMacOS()) {
     if (!isMacosxVersionLT(10, 9))
       Res |= SanitizerKind::Vptr;
-    Res |= SanitizerKind::SafeStack;
     if (IsX86_64)
       Res |= SanitizerKind::Thread;
   } else if (isTargetIOSSimulator() || isTargetTvOSSimulator()) {

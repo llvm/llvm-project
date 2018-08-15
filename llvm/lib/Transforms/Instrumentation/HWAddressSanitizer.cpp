@@ -199,6 +199,7 @@ private:
   ShadowMapping Mapping;
 
   Type *IntptrTy;
+  Type *Int8PtrTy;
   Type *Int8Ty;
 
   bool CompileKernel;
@@ -250,6 +251,7 @@ bool HWAddressSanitizer::doInitialization(Module &M) {
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
+  Int8PtrTy = IRB.getInt8PtrTy();
   Int8Ty = IRB.getInt8Ty();
 
   HwasanCtorFunction = nullptr;
@@ -286,7 +288,7 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   }
 
   HwasanTagMemoryFunc = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__hwasan_tag_memory", IRB.getVoidTy(), IntptrTy, Int8Ty, IntptrTy));
+      "__hwasan_tag_memory", IRB.getVoidTy(), Int8PtrTy, Int8Ty, IntptrTy));
   HwasanGenerateTagFunc = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty));
 
@@ -426,8 +428,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
                                   IRB.getInt8Ty());
   Value *AddrLong = untagPointer(IRB, PtrLong);
   Value *ShadowLong = memToShadow(AddrLong, PtrLong->getType(), IRB);
-  Value *MemTag =
-      IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
+  Value *MemTag = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, Int8PtrTy));
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
   int matchAllTag = ClMatchAllTag.getNumOccurrences() > 0 ?
@@ -526,13 +527,13 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
   Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
   if (ClInstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
-                   {IRB.CreatePointerCast(AI, IntptrTy), JustTag,
+                   {IRB.CreatePointerCast(AI, Int8PtrTy), JustTag,
                     ConstantInt::get(IntptrTy, Size)});
   } else {
     size_t ShadowSize = Size >> Mapping.Scale;
     Value *ShadowPtr = IRB.CreateIntToPtr(
         memToShadow(IRB.CreatePointerCast(AI, IntptrTy), AI->getType(), IRB),
-        IRB.getInt8PtrTy());
+        Int8PtrTy);
     // If this memset is not inlined, it will be intercepted in the hwasan
     // runtime library. That's OK, because the interceptor skips the checks if
     // the address is in the shadow region.

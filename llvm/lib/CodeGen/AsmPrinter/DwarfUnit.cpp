@@ -409,12 +409,6 @@ void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   addSourceLine(Die, SP->getLine(), SP->getFile());
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, const DILabel *L) {
-  assert(L);
-
-  addSourceLine(Die, L->getLine(), L->getFile());
-}
-
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
   assert(Ty);
 
@@ -865,6 +859,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
 
   uint64_t Size = BTy->getSizeInBits() >> 3;
   addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
+
+  if (BTy->isBigEndian())
+    addUInt(Buffer, dwarf::DW_AT_endianity, None, dwarf::DW_END_big);
+  else if (BTy->isLittleEndian())
+    addUInt(Buffer, dwarf::DW_AT_endianity, None, dwarf::DW_END_little);
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {

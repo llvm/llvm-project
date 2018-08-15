@@ -224,9 +224,14 @@ void __hwasan_init() {
   hwasan_inited = 1;
 }
 
-void __hwasan_print_shadow(const void *x, uptr size) {
-  // FIXME:
-  Printf("FIXME: __hwasan_print_shadow unimplemented\n");
+void __hwasan_print_shadow(const void *p, uptr sz) {
+  uptr ptr_raw = GetAddressFromPointer((uptr)p);
+  uptr shadow_first = MEM_TO_SHADOW(ptr_raw);
+  uptr shadow_last = MEM_TO_SHADOW(ptr_raw + sz - 1);
+  Printf("HWASan shadow map for %zx .. %zx (pointer tag %x)\n", ptr_raw,
+         ptr_raw + sz, GetTagFromPointer((uptr)p));
+  for (uptr s = shadow_first; s <= shadow_last; ++s)
+    Printf("  %zx: %x\n", SHADOW_TO_MEM(s), *(tag_t *)s);
 }
 
 sptr __hwasan_test_shadow(const void *p, uptr sz) {
@@ -398,6 +403,10 @@ void __hwasan_store16_noabort(uptr p) {
 
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
   TagMemoryAligned(p, sz, tag);
+}
+
+uptr __hwasan_tag_pointer(uptr p, u8 tag) {
+  return AddTagToPointer(p, tag);
 }
 
 static const u8 kFallbackTag = 0xBB;

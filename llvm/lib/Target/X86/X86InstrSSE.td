@@ -1001,18 +1001,17 @@ def : InstAlias<"cvtsi2sd\t{$src, $dst|$dst, $src}",
 // Conversion Instructions Intrinsics - Match intrinsics which expect MM
 // and/or XMM operand(s).
 
-// FIXME: We probably want to match the rm form only when optimizing for
-// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_cvt_sint<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
-                          Intrinsic Int, Operand memop, ComplexPattern mem_cpat,
-                          string asm, X86FoldableSchedWrite sched> {
+                          ValueType DstVT, ValueType SrcVT, SDNode OpNode,
+                          Operand memop, ComplexPattern mem_cpat, string asm,
+                          X86FoldableSchedWrite sched> {
   def rr_Int : SI<opc, MRMSrcReg, (outs DstRC:$dst), (ins SrcRC:$src),
                   !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
-                  [(set DstRC:$dst, (Int SrcRC:$src))]>,
+                  [(set DstRC:$dst, (DstVT (OpNode (SrcVT SrcRC:$src))))]>,
                Sched<[sched]>;
   def rm_Int : SI<opc, MRMSrcMem, (outs DstRC:$dst), (ins memop:$src),
                   !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
-                  [(set DstRC:$dst, (Int mem_cpat:$src))]>,
+                  [(set DstRC:$dst, (DstVT (OpNode (SrcVT mem_cpat:$src))))]>,
                Sched<[sched.Folded]>;
 }
 
@@ -1037,16 +1036,16 @@ let hasSideEffects = 0 in {
 }
 
 let Predicates = [UseAVX] in {
-defm VCVTSD2SI : sse12_cvt_sint<0x2D, VR128, GR32,
-                  int_x86_sse2_cvtsd2si, sdmem, sse_load_f64, "cvtsd2si",
+defm VCVTSD2SI : sse12_cvt_sint<0x2D, VR128, GR32, i32, v2f64,
+                  X86cvts2si, sdmem, sse_load_f64, "cvtsd2si",
                   WriteCvtSD2I>, XD, VEX, VEX_LIG;
-defm VCVTSD2SI64 : sse12_cvt_sint<0x2D, VR128, GR64,
-                    int_x86_sse2_cvtsd2si64, sdmem, sse_load_f64, "cvtsd2si",
+defm VCVTSD2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, i64, v2f64,
+                    X86cvts2si, sdmem, sse_load_f64, "cvtsd2si",
                     WriteCvtSD2I>, XD, VEX, VEX_W, VEX_LIG;
 }
-defm CVTSD2SI : sse12_cvt_sint<0x2D, VR128, GR32, int_x86_sse2_cvtsd2si,
+defm CVTSD2SI : sse12_cvt_sint<0x2D, VR128, GR32, i32, v2f64, X86cvts2si,
                  sdmem, sse_load_f64, "cvtsd2si", WriteCvtSD2I>, XD;
-defm CVTSD2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, int_x86_sse2_cvtsd2si64,
+defm CVTSD2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, i64, v2f64, X86cvts2si,
                    sdmem, sse_load_f64, "cvtsd2si", WriteCvtSD2I>, XD, REX_W;
 
 
@@ -1078,47 +1077,47 @@ let isCodeGenOnly = 1 in {
 // Aliases for intrinsics
 let isCodeGenOnly = 1 in {
 let Predicates = [UseAVX] in {
-defm VCVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, int_x86_sse_cvttss2si,
+defm VCVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v4f32, X86cvtts2Int,
                                 ssmem, sse_load_f32, "cvttss2si",
                                 WriteCvtSS2I>, XS, VEX;
-defm VCVTTSS2SI64 : sse12_cvt_sint<0x2C, VR128, GR64,
-                               int_x86_sse_cvttss2si64, ssmem, sse_load_f32,
+defm VCVTTSS2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v4f32,
+                               X86cvtts2Int, ssmem, sse_load_f32,
                                "cvttss2si", WriteCvtSS2I>,
                                XS, VEX, VEX_W;
-defm VCVTTSD2SI : sse12_cvt_sint<0x2C, VR128, GR32, int_x86_sse2_cvttsd2si,
+defm VCVTTSD2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v2f64, X86cvtts2Int,
                                 sdmem, sse_load_f64, "cvttsd2si",
                                 WriteCvtSS2I>, XD, VEX;
-defm VCVTTSD2SI64 : sse12_cvt_sint<0x2C, VR128, GR64,
-                              int_x86_sse2_cvttsd2si64, sdmem, sse_load_f64,
+defm VCVTTSD2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v2f64,
+                              X86cvtts2Int, sdmem, sse_load_f64,
                               "cvttsd2si", WriteCvtSS2I>,
                               XD, VEX, VEX_W;
 }
-defm CVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, int_x86_sse_cvttss2si,
+defm CVTTSS2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v4f32, X86cvtts2Int,
                                     ssmem, sse_load_f32, "cvttss2si",
                                     WriteCvtSS2I>, XS;
-defm CVTTSS2SI64 : sse12_cvt_sint<0x2C, VR128, GR64,
-                                   int_x86_sse_cvttss2si64, ssmem, sse_load_f32,
+defm CVTTSS2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v4f32,
+                                   X86cvtts2Int, ssmem, sse_load_f32,
                                    "cvttss2si", WriteCvtSS2I>, XS, REX_W;
-defm CVTTSD2SI : sse12_cvt_sint<0x2C, VR128, GR32, int_x86_sse2_cvttsd2si,
+defm CVTTSD2SI : sse12_cvt_sint<0x2C, VR128, GR32, i32, v2f64, X86cvtts2Int,
                                     sdmem, sse_load_f64, "cvttsd2si",
                                     WriteCvtSD2I>, XD;
-defm CVTTSD2SI64 : sse12_cvt_sint<0x2C, VR128, GR64,
-                                  int_x86_sse2_cvttsd2si64, sdmem, sse_load_f64,
+defm CVTTSD2SI64 : sse12_cvt_sint<0x2C, VR128, GR64, i64, v2f64,
+                                  X86cvtts2Int, sdmem, sse_load_f64,
                                   "cvttsd2si", WriteCvtSD2I>, XD, REX_W;
 } // isCodeGenOnly = 1
 
 let Predicates = [UseAVX] in {
-defm VCVTSS2SI   : sse12_cvt_sint<0x2D, VR128, GR32, int_x86_sse_cvtss2si,
+defm VCVTSS2SI   : sse12_cvt_sint<0x2D, VR128, GR32, i32, v4f32, X86cvts2si,
                                   ssmem, sse_load_f32, "cvtss2si",
                                   WriteCvtSS2I>, XS, VEX, VEX_LIG;
-defm VCVTSS2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, int_x86_sse_cvtss2si64,
+defm VCVTSS2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, i64, v4f32, X86cvts2si,
                                   ssmem, sse_load_f32, "cvtss2si",
                                   WriteCvtSS2I>, XS, VEX, VEX_W, VEX_LIG;
 }
-defm CVTSS2SI : sse12_cvt_sint<0x2D, VR128, GR32, int_x86_sse_cvtss2si,
+defm CVTSS2SI : sse12_cvt_sint<0x2D, VR128, GR32, i32, v4f32, X86cvts2si,
                                ssmem, sse_load_f32, "cvtss2si",
                                WriteCvtSS2I>, XS;
-defm CVTSS2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, int_x86_sse_cvtss2si64,
+defm CVTSS2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, i64, v4f32, X86cvts2si,
                                  ssmem, sse_load_f32, "cvtss2si",
                                  WriteCvtSS2I>, XS, REX_W;
 

@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/AsmPrinter/DbgEntityHistoryCalculator.h -----*- C++ -*-===//
+//===- llvm/CodeGen/AsmPrinter/DbgValueHistoryCalculator.h ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -58,30 +58,9 @@ public:
 #endif
 };
 
-/// For each inlined instance of a source-level label, keep the corresponding
-/// DBG_LABEL instruction. The DBG_LABEL instruction could be used to generate
-/// a temporary (assembler) label before it.
-class DbgLabelInstrMap {
-public:
-  using InlinedLabel = std::pair<const DILabel *, const DILocation *>;
-  using InstrMap = MapVector<InlinedLabel, const MachineInstr *>;
-
-private:
-  InstrMap LabelInstr;
-
-public:
-  void  addInstr(InlinedLabel Label, const MachineInstr &MI);
-
-  bool empty() const { return LabelInstr.empty(); }
-  void clear() { LabelInstr.clear(); }
-  InstrMap::const_iterator begin() const { return LabelInstr.begin(); }
-  InstrMap::const_iterator end() const { return LabelInstr.end(); }
-};
-
-void calculateDbgEntityHistory(const MachineFunction *MF,
-                               const TargetRegisterInfo *TRI,
-                               DbgValueHistoryMap &DbgValues,
-                               DbgLabelInstrMap &DbgLabels);
+void calculateDbgValueHistory(const MachineFunction *MF,
+                              const TargetRegisterInfo *TRI,
+                              DbgValueHistoryMap &Result);
 
 } // end namespace llvm
 

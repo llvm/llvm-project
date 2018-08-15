@@ -123,11 +123,6 @@ public:
       StringPool &map = m_string_pools[h].m_string_map;
       StringPoolEntryType &entry = *map.try_emplace(demangled).first;
 
-      assert((entry.second == nullptr || entry.second == mangled_ccstr ||
-              strlen(entry.second) == 0) &&
-             "The demangled string must have a unique counterpart or otherwise "
-             "it must be empty");
-
       entry.second = mangled_ccstr;
 
       // Extract the const version of the demangled_cstr

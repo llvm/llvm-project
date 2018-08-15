@@ -606,3 +606,112 @@ entry:
 }
 
 declare fastcc double @foo20(double) nounwind
+
+; bug 28417
+define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret %agg.result) nounwind  {
+; 32-LABEL: t21_sret_to_sret:
+; 32: jmp {{_?}}t21_f_sret
+; 64-LABEL: t21_sret_to_sret:
+; 64: jmp {{_?}}t21_f_sret
+; X32-LABEL: t21_sret_to_sret:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    calll t21_f_sret
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32ABI-LABEL: t21_sret_to_sret:
+; X32ABI:       # %bb.0:
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    movl %edi, %ebx
+; X32ABI-NEXT:    callq t21_f_sret
+; X32ABI-NEXT:    movl %ebx, %eax
+; X32ABI-NEXT:    popq %rbx
+; X32ABI-NEXT:    retq
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %agg.result) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret %agg.result) nounwind  {
+; 32-LABEL: t21_sret_to_non_sret:
+; 32: calll {{_?}}t21_f_non_sret
+; 32: retl
+; 64-LABEL: t21_sret_to_non_sret:
+; 64: callq {{_?}}t21_f_non_sret
+; 64: retq
+; X32-LABEL: t21_sret_to_non_sret:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    calll t21_f_non_sret
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_non_sret:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    callq t21_f_non_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32ABI-LABEL: t21_sret_to_non_sret:
+; X32ABI:       # %bb.0:
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    movl %edi, %ebx
+; X32ABI-NEXT:    callq t21_f_non_sret
+; X32ABI-NEXT:    movl %ebx, %eax
+; X32ABI-NEXT:    popq %rbx
+; X32ABI-NEXT:    retq
+  tail call fastcc void @t21_f_non_sret(%struct.foo* %agg.result) nounwind
+  ret void
+}
+
+define fastcc void @t21_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
+; 32-LABEL: t21_non_sret_to_sret:
+; 32: jmp {{_?}}t21_f_sret
+; 64-LABEL: t21_non_sret_to_sret:
+; 64: jmp {{_?}}t21_f_sret
+; X32-LABEL: t21_non_sret_to_sret:
+; X32:       # %bb.0:
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    calll t21_f_sret
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: t21_non_sret_to_sret:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+;
+; X32ABI-LABEL: t21_non_sret_to_sret:
+; X32ABI:       # %bb.0:
+; X32ABI-NEXT:    pushq %rax
+; X32ABI-NEXT:    callq t21_f_sret
+; X32ABI-NEXT:    popq %rax
+; X32ABI-NEXT:    retq
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %agg.result) nounwind
+  ret void
+}
+
+declare fastcc void @t21_f_sret(%struct.foo* noalias sret) nounwind
+declare fastcc void @t21_f_non_sret(%struct.foo*) nounwind
