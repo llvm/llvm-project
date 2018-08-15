@@ -318,7 +318,7 @@ public:
   /// library name and a list of paths, searching along the list of
   /// paths till you find a matching library.
   ///
-  /// @param[in] local_spec
+  /// @param[in] image_spec
   ///     The name of the shared library that you want to load.  
   ///     If local_spec is a relative path, the relative path will be
   ///     appended to the search paths.

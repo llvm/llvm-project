@@ -442,6 +442,10 @@ void ObjFile<ELFT>::initializeSections(
       bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       this->Sections[I] = &InputSection::Discarded;
 
+      // We only support GRP_COMDAT type of group. Get the all entries of the
+      // section here to let getShtGroupEntries to check the type early for us.
+      ArrayRef<Elf_Word> Entries = getShtGroupEntries(Sec);
+
       // If it is a new section group, we want to keep group members.
       // Group leader sections, which contain indices of group members, are
       // discarded because they are useless beyond this point. The only
@@ -454,7 +458,7 @@ void ObjFile<ELFT>::initializeSections(
       }
 
       // Otherwise, discard group members.
-      for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
+      for (uint32_t SecIndex : Entries) {
         if (SecIndex >= Size)
           fatal(toString(this) +
                 ": invalid section index in group: " + Twine(SecIndex));
