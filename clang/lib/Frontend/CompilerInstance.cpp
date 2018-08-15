@@ -1168,11 +1168,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   llvm::CrashRecoveryContext CRC;
   CRC.RunSafelyOnThread(
       [&]() {
-        SmallString<64> CrashInfoMessage("While building module for '");
-        CrashInfoMessage += ModuleName;
-        CrashInfoMessage += "'";
-        llvm::PrettyStackTraceString CrashInfo(CrashInfoMessage.c_str());
-
         // FIXME: I have no idea what the best way to do this is, but it's
         // probably not this. Interfaces changed upstream.
         std::unique_ptr<FrontendAction> Action(
