@@ -1616,7 +1616,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
 
     OS << "  case " << VC << ": // " << SC.Name << '\n';
 
-    PredicateExpander PE;
+    PredicateExpander PE(Target);
     PE.setByRef(false);
     PE.setExpandForMC(OnlyExpandMCInstPredicates);
     for (unsigned PI : ProcIndices) {

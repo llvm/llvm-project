@@ -4,7 +4,7 @@ declare void @llvm.experimental.guard(i1, ...)
 ; CHECK: Alias sets for function 'test0':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test0(i1 %cond_b) {
@@ -20,7 +20,7 @@ entry:
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test1(i1 %cond_b) {
@@ -36,7 +36,7 @@ entry:
 ; CHECK: Alias sets for function 'test2':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test2(i1 %cond_b) {
@@ -52,7 +52,7 @@ entry:
 ; CHECK: Alias sets for function 'test3':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test3(i1 %cond_b) {
@@ -67,7 +67,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test4':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
@@ -83,7 +83,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test5':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
@@ -99,7 +99,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test6':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
@@ -115,7 +115,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test7':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
@@ -131,7 +131,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test8':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
@@ -148,7 +148,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test9':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
@@ -165,7 +165,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test10':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
@@ -182,7 +182,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test11':
 ; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
@@ -200,7 +200,7 @@ entry:
 ; CHECK: Alias sets for function 'test12':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test12(i8* %b, i1 %cond_b) {
 entry:
@@ -228,7 +228,7 @@ entry:
 ; CHECK: Alias sets for function 'test14':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test14(i8* %b, i1 %cond_b) {
 entry:
@@ -255,7 +255,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test16':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 define void @test16(i1 %cond_a, i8* %b) {
@@ -283,7 +283,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test18':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 define void @test18(i1 %cond_a, i8* %b) {
@@ -311,7 +311,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test20':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 define void @test20(i1 %cond_a, i8* %b, i1 %cond_b) {
@@ -341,7 +341,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test22':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 define void @test22(i1 %cond_a, i8* %b, i1 %cond_b) {
@@ -371,7 +371,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test24':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 define void @test24(i8** %ptr_b, i1 %cond_b) {
@@ -401,7 +401,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test26':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 define void @test26(i8** %ptr_b, i1 %cond_b) {
@@ -431,7 +431,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test28':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 define void @test28(i1 %cond_a, i8** %ptr_b) {
@@ -461,7 +461,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test30':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 define void @test30(i1 %cond_a, i8** %ptr_b) {
@@ -491,7 +491,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test32':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
 define void @test32(i1 %cond_a, i8** %ptr_b, i1 %cond_b) {
@@ -523,7 +523,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test34':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 define void @test34(i1 %cond_a, i8** %ptr_b, i1 %cond_b) {
@@ -555,7 +555,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test36':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test36(i8* %a, i1 %cond_b) {
@@ -569,7 +569,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test37':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test37(i8* %a, i1 %cond_b) {
@@ -611,7 +611,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test40':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test40(i8* %a, i1 %cond_a) {
@@ -625,7 +625,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test41':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test41(i8* %a, i1 %cond_a) {
@@ -667,7 +667,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test44':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test44(i8* %a, i1 %cond_a, i1 %cond_b) {
@@ -682,7 +682,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test45':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Ref       Pointers: (i8* %a, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test45(i8* %a, i1 %cond_a, i1 %cond_b) {
@@ -727,7 +727,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test48':
 ; CHECK: Alias Set Tracker: 1 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test48(i8* %a, i8* %b, i1 %cond_b) {
 entry:
@@ -775,7 +775,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test52':
 ; CHECK: Alias Set Tracker: 1 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 define void @test52(i8* %a, i1 %cond_a, i8* %b) {
 entry:
@@ -823,7 +823,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test56':
 ; CHECK: Alias Set Tracker: 1 alias sets for 2 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test56(i8* %a, i1 %cond_a, i8* %b, i1 %cond_b) {
 entry:
@@ -875,7 +875,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test60':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test60(i8* %a, i8** %ptr_b, i1 %cond_b) {
 entry:
@@ -927,7 +927,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test64':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 define void @test64(i8* %a, i1 %cond_a, i8** %ptr_b) {
 entry:
@@ -979,7 +979,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test68':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test68(i8* %a, i1 %cond_a, i8** %ptr_b, i1 %cond_b) {
 entry:
@@ -1035,7 +1035,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test72':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test72(i8** %ptr_a, i1 %cond_b) {
@@ -1050,7 +1050,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test73':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test73(i8** %ptr_a, i1 %cond_b) {
@@ -1095,7 +1095,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test76':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test76(i8** %ptr_a, i1 %cond_a) {
@@ -1110,7 +1110,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test77':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test77(i8** %ptr_a, i1 %cond_a) {
@@ -1155,7 +1155,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test80':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %b, 1)
 define void @test80(i8** %ptr_a, i1 %cond_a, i1 %cond_b) {
@@ -1171,7 +1171,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test81':
 ; CHECK: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test81(i8** %ptr_a, i1 %cond_a, i1 %cond_b) {
@@ -1219,7 +1219,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test84':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test84(i8** %ptr_a, i8* %b, i1 %cond_b) {
 entry:
@@ -1271,7 +1271,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test88':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 define void @test88(i8** %ptr_a, i1 %cond_a, i8* %b) {
 entry:
@@ -1323,7 +1323,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test92':
 ; CHECK: Alias Set Tracker: 1 alias sets for 3 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 4] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test92(i8** %ptr_a, i1 %cond_a, i8* %b, i1 %cond_b) {
 entry:
@@ -1379,7 +1379,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test96':
 ; CHECK: Alias Set Tracker: 1 alias sets for 4 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test96(i8** %ptr_a, i8** %ptr_b, i1 %cond_b) {
 entry:
@@ -1435,7 +1435,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test100':
 ; CHECK: Alias Set Tracker: 1 alias sets for 4 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ]
 define void @test100(i8** %ptr_a, i1 %cond_a, i8** %ptr_b) {
 entry:
@@ -1491,7 +1491,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test104':
 ; CHECK: Alias Set Tracker: 1 alias sets for 4 pointer values.
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Mod/Ref   Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 5] may alias, Ref       Pointers: (i8** %ptr_a, 8), (i8** %ptr_b, 8), (i8* %a, 1), (i8* %b, 1)
 ; CHECK:     2 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond_a) [ "deopt"() ],   call void (i1, ...) @llvm.experimental.guard(i1 %cond_b) [ "deopt"() ]
 define void @test104(i8** %ptr_a, i1 %cond_a, i8** %ptr_b, i1 %cond_b) {
 entry:

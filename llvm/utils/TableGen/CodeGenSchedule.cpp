@@ -222,7 +222,34 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   // Collect optional processor description.
   collectOptionalProcessorInfo();
 
+  // Check MCInstPredicate definitions.
+  checkMCInstPredicates();
+
   checkCompleteness();
+}
+
+void CodeGenSchedModels::checkMCInstPredicates() const {
+  RecVec MCPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  if (MCPredicates.empty())
+    return;
+
+  // A target cannot have multiple TIIPredicate definitions with a same name.
+  llvm::StringMap<const Record *> TIIPredicates(MCPredicates.size());
+  for (const Record *TIIPred : MCPredicates) {
+    StringRef Name = TIIPred->getValueAsString("FunctionName");
+    StringMap<const Record *>::const_iterator It = TIIPredicates.find(Name);
+    if (It == TIIPredicates.end()) {
+      TIIPredicates[Name] = TIIPred;
+      continue;
+    }
+
+    PrintError(TIIPred->getLoc(),
+               "TIIPredicate " + Name + " is multiply defined.");
+    PrintNote(It->second->getLoc(),
+              " Previous definition of " + Name + " was here.");
+    PrintFatalError(TIIPred->getLoc(),
+                    "Found conflicting definitions of TIIPredicate.");
+  }
 }
 
 void CodeGenSchedModels::collectRetireControlUnits() {

@@ -465,6 +465,8 @@ private:
 
   void inferSchedClasses();
 
+  void checkMCInstPredicates() const;
+  
   void checkCompleteness();
 
   void inferFromRW(ArrayRef<unsigned> OperWrites, ArrayRef<unsigned> OperReads,

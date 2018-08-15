@@ -24,7 +24,9 @@ const Instruction *
 ImplicitControlFlowTracking::getFirstICFI(const BasicBlock *BB) {
   if (!KnownBlocks.count(BB))
     fill(BB);
-  return FirstImplicitControlFlowInsts.lookup(BB);
+  auto *FirstICF = FirstImplicitControlFlowInsts.lookup(BB);
+  assert((!FirstICF || FirstICF->getParent() == BB) && "Inconsistent cache!");
+  return FirstICF;
 }
 
 bool ImplicitControlFlowTracking::hasICF(const BasicBlock *BB) {

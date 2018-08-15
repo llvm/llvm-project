@@ -6206,7 +6206,7 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
       return SDValue();
   }
 
-  if (!TLI.isDesirableToCommuteWithShift(LHS))
+  if (!TLI.isDesirableToCommuteWithShift(N, Level))
     return SDValue();
 
   // Fold the constants, shifting the binop RHS by the shift amount.
@@ -6510,7 +6510,8 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR) &&
       N0.getNode()->hasOneUse() &&
       isConstantOrConstantVector(N1, /* No Opaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true)) {
+      isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true) &&
+      TLI.isDesirableToCommuteWithShift(N, Level)) {
     SDValue Shl0 = DAG.getNode(ISD::SHL, SDLoc(N0), VT, N0.getOperand(0), N1);
     SDValue Shl1 = DAG.getNode(ISD::SHL, SDLoc(N1), VT, N0.getOperand(1), N1);
     AddToWorklist(Shl0.getNode());
@@ -13971,11 +13972,12 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   Worklist.push_back(RootNode);
   while (!Worklist.empty()) {
     auto N = Worklist.pop_back_val();
+    if (!Visited.insert(N).second)
+      continue; // Already present in Visited.
     if (N->getOpcode() == ISD::TokenFactor) {
       for (SDValue Op : N->ops())
         Worklist.push_back(Op.getNode());
     }
-    Visited.insert(N);
   }
 
   // Don't count pruning nodes towards max.

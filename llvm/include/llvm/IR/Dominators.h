@@ -37,13 +37,13 @@ extern template class DomTreeNodeBase<BasicBlock>;
 extern template class DominatorTreeBase<BasicBlock, false>; // DomTree
 extern template class DominatorTreeBase<BasicBlock, true>; // PostDomTree
 
+extern template class cfg::Update<BasicBlock *>;
+
 namespace DomTreeBuilder {
 using BBDomTree = DomTreeBase<BasicBlock>;
 using BBPostDomTree = PostDomTreeBase<BasicBlock>;
 
-extern template struct Update<BasicBlock *>;
-
-using BBUpdates = ArrayRef<Update<BasicBlock *>>;
+using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 
 extern template void Calculate<BBDomTree>(BBDomTree &DT);
 extern template void Calculate<BBPostDomTree>(BBPostDomTree &DT);

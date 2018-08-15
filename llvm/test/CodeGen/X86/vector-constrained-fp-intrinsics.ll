@@ -2,6 +2,27 @@
 ; RUN: llc -O3 -mtriple=x86_64-pc-linux < %s | FileCheck --check-prefix=COMMON --check-prefix=NO-FMA --check-prefix=FMACALL64 --check-prefix=FMACALL32 %s
 ; RUN: llc -O3 -mtriple=x86_64-pc-linux -mattr=+fma < %s | FileCheck -check-prefix=COMMON --check-prefix=HAS-FMA --check-prefix=FMA64 --check-prefix=FMA32 %s
 
+define <1 x float> @constrained_vector_fdiv_v1f32() {
+; NO-FMA-LABEL: constrained_vector_fdiv_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    divss {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_fdiv_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vdivss {{.*}}(%rip), %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %div = call <1 x float> @llvm.experimental.constrained.fdiv.v1f32(
+           <1 x float> <float 1.000000e+00>,
+           <1 x float> <float 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %div
+}
+
 define <2 x double> @constrained_vector_fdiv_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -113,6 +134,27 @@ define <4 x double> @constrained_vector_fdiv_v4f64() {
   ret <4 x double> %div
 }
 
+define <1 x float> @constrained_vector_fmul_v1f32() {
+; NO-FMA-LABEL: constrained_vector_fmul_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    mulss {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_fmul_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %mul = call <1 x float> @llvm.experimental.constrained.fmul.v1f32(
+           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float 2.000000e+00>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %mul
+}
+
 define <2 x double> @constrained_vector_fmul_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_fmul_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -222,6 +264,26 @@ entry:
   ret <4 x double> %mul
 }
 
+define <1 x float> @constrained_vector_fadd_v1f32() {
+; NO-FMA-LABEL: constrained_vector_fadd_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    addss {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_fadd_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(
+           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float 1.0>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %add
+}
 
 define <2 x double> @constrained_vector_fadd_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_fadd_v2f64:
@@ -331,6 +393,27 @@ entry:
            metadata !"round.dynamic",
            metadata !"fpexcept.strict")
   ret <4 x double> %add
+}
+
+define <1 x float> @constrained_vector_fsub_v1f32() {
+; NO-FMA-LABEL: constrained_vector_fsub_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    subss {{.*}}(%rip), %xmm0
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_fsub_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vsubss {{.*}}(%rip), %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %sub = call <1 x float> @llvm.experimental.constrained.fsub.v1f32(
+           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float 1.000000e+00>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %sub
 }
 
 define <2 x double> @constrained_vector_fsub_v2f64() {
@@ -444,6 +527,35 @@ entry:
            metadata !"round.dynamic",
            metadata !"fpexcept.strict")
   ret <4 x double> %sub
+}
+
+define <1 x float> @constrained_vector_fma_v1f32() {
+; NO-FMA-LABEL: constrained_vector_fma_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmaf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_fma_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; HAS-FMA-NEXT:    retq
+entry:
+  %fma = call <1 x float> @llvm.experimental.constrained.fma.v1f32(
+           <1 x float> <float 0.5>,
+           <1 x float> <float 2.5>,
+           <1 x float> <float 4.5>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %fma
 }
 
 define <2 x double> @constrained_vector_fma_v2f64() {
@@ -764,6 +876,26 @@ entry:
   ret <8 x float> %fma
 }
 
+define <1 x float> @constrained_vector_sqrt_v1f32() {
+; NO-FMA-LABEL: constrained_vector_sqrt_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    sqrtss %xmm0, %xmm0
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_sqrt_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %sqrt = call <1 x float> @llvm.experimental.constrained.sqrt.v1f32(
+                              <1 x float> <float 42.0>,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict")
+  ret <1 x float> %sqrt
+}
+
 define <2 x double> @constrained_vector_sqrt_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_sqrt_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -859,6 +991,37 @@ entry:
                               metadata !"round.dynamic",
                               metadata !"fpexcept.strict")
   ret <4 x double> %sqrt
+}
+
+define <1 x float> @constrained_vector_pow_v1f32() {
+; NO-FMA-LABEL: constrained_vector_pow_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq powf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_pow_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq powf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %pow = call <1 x float> @llvm.experimental.constrained.pow.v1f32(
+                             <1 x float> <float 42.0>,
+                             <1 x float> <float 3.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %pow
 }
 
 define <2 x double> @constrained_vector_pow_v2f64() {
@@ -1086,6 +1249,37 @@ entry:
   ret <4 x double> %pow
 }
 
+define <1 x float> @constrained_vector_powi_v1f32() {
+; NO-FMA-LABEL: constrained_vector_powi_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movl $3, %edi
+; NO-FMA-NEXT:    callq __powisf2
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_powi_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    movl $3, %edi
+; HAS-FMA-NEXT:    callq __powisf2
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %powi = call <1 x float> @llvm.experimental.constrained.powi.v1f32(
+                              <1 x float> <float 42.0>,
+                              i32 3,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict")
+  ret <1 x float> %powi
+}
+
 define <2 x double> @constrained_vector_powi_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_powi_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -1310,6 +1504,33 @@ entry:
   ret <4 x double> %powi
 }
 
+define <1 x float> @constrained_vector_sin_v1f32() {
+; NO-FMA-LABEL: constrained_vector_sin_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq sinf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_sin_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq sinf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %sin = call <1 x float> @llvm.experimental.constrained.sin.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %sin
+}
 
 define <2 x double> @constrained_vector_sin_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_sin_v2f64:
@@ -1505,6 +1726,34 @@ entry:
                              metadata !"round.dynamic",
                              metadata !"fpexcept.strict")
   ret <4 x double> %sin
+}
+
+define <1 x float> @constrained_vector_cos_v1f32() {
+; NO-FMA-LABEL: constrained_vector_cos_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq cosf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_cos_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq cosf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %cos = call <1 x float> @llvm.experimental.constrained.cos.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %cos
 }
 
 define <2 x double> @constrained_vector_cos_v2f64() {
@@ -1703,6 +1952,34 @@ entry:
   ret <4 x double> %cos
 }
 
+define <1 x float> @constrained_vector_exp_v1f32() {
+; NO-FMA-LABEL: constrained_vector_exp_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq expf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_exp_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq expf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %exp = call <1 x float> @llvm.experimental.constrained.exp.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %exp
+}
+
 define <2 x double> @constrained_vector_exp_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_exp_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -1897,6 +2174,34 @@ entry:
                              metadata !"round.dynamic",
                              metadata !"fpexcept.strict")
   ret <4 x double> %exp
+}
+
+define <1 x float> @constrained_vector_exp2_v1f32() {
+; NO-FMA-LABEL: constrained_vector_exp2_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq exp2f
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_exp2_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq exp2f
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %exp2 = call <1 x float> @llvm.experimental.constrained.exp2.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %exp2
 }
 
 define <2 x double> @constrained_vector_exp2_v2f64() {
@@ -2095,6 +2400,34 @@ entry:
   ret <4 x double> %exp2
 }
 
+define <1 x float> @constrained_vector_log_v1f32() {
+; NO-FMA-LABEL: constrained_vector_log_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq logf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_log_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq logf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %log = call <1 x float> @llvm.experimental.constrained.log.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %log
+}
+
 define <2 x double> @constrained_vector_log_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_log_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -2289,6 +2622,34 @@ entry:
                              metadata !"round.dynamic",
                              metadata !"fpexcept.strict")
   ret <4 x double> %log
+}
+
+define <1 x float> @constrained_vector_log10_v1f32() {
+; NO-FMA-LABEL: constrained_vector_log10_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq log10f
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_log10_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq log10f
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %log10 = call <1 x float> @llvm.experimental.constrained.log10.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %log10
 }
 
 define <2 x double> @constrained_vector_log10_v2f64() {
@@ -2487,6 +2848,34 @@ entry:
   ret <4 x double> %log10
 }
 
+define <1 x float> @constrained_vector_log2_v1f32() {
+; NO-FMA-LABEL: constrained_vector_log2_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq log2f
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_log2_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq log2f
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %log2 = call <1 x float> @llvm.experimental.constrained.log2.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %log2
+}
+
 define <2 x double> @constrained_vector_log2_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_log2_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -2683,6 +3072,30 @@ entry:
   ret <4 x double> %log2
 }
 
+define <1 x float> @constrained_vector_rint_v1f32() {
+; NO-FMA-LABEL: constrained_vector_rint_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq rintf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_rint_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %rint = call <1 x float> @llvm.experimental.constrained.rint.v1f32(
+                             <1 x float> <float 42.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict")
+  ret <1 x float> %rint
+}
+
 define <2 x double> @constrained_vector_rint_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_rint_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
@@ -2827,6 +3240,30 @@ entry:
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict")
   ret <4 x double> %rint
+}
+
+define <1 x float> @constrained_vector_nearbyint_v1f32() {
+; NO-FMA-LABEL: constrained_vector_nearbyint_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq nearbyintf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_nearbyint_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
+; HAS-FMA-NEXT:    retq
+entry:
+  %nearby = call <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(
+                               <1 x float> <float 42.0>,
+                               metadata !"round.dynamic",
+                               metadata !"fpexcept.strict")
+  ret <1 x float> %nearby
 }
 
 define <2 x double> @constrained_vector_nearbyint_v2f64() {
@@ -2994,6 +3431,25 @@ declare <2 x double> @llvm.experimental.constrained.log10.v2f64(<2 x double>, me
 declare <2 x double> @llvm.experimental.constrained.log2.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
+
+; Scalar width declarations
+declare <1 x float> @llvm.experimental.constrained.fdiv.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fmul.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fsub.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fma.v1f32(<1 x float>, <1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sqrt.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.pow.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.powi.v1f32(<1 x float>, i32, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sin.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.cos.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.exp.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.exp2.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.log.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.log10.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.log2.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
 
 ; Illegal width declarations
 declare <3 x float> @llvm.experimental.constrained.fdiv.v3f32(<3 x float>, <3 x float>, metadata, metadata)
