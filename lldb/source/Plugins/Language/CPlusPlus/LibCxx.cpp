@@ -33,6 +33,28 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
+  if (!valobj_sp)
+    return false;
+
+  // An optional either contains a value or not, the member __engaged_ is
+  // a bool flag, it is true if the optional has a value and false otherwise.
+  ValueObjectSP engaged_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__engaged_"), true));
+
+  if (!engaged_sp)
+    return false;
+
+  llvm::StringRef engaged_as_cstring(
+      engaged_sp->GetValueAsUnsigned(0) == 1 ? "true" : "false");
+
+  stream.Printf(" Has Value=%s ", engaged_as_cstring.data());
+
+  return true;
+}
+
 bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
@@ -120,9 +142,9 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
 
   if (!valobj_sp)
     return false;
-  
+
   static ConstString g___i_("__i_");
-  
+
   // this must be a ValueObject* because it is a child of the ValueObject we
   // are producing children for it if were a ValueObjectSP, we would end up
   // with a loop (iterator -> synthetic -> child -> parent == iterator) and
@@ -163,7 +185,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         m_pair_ptr = nullptr;
         return false;
       }
-      
+
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
       if (addr && addr!=LLDB_INVALID_ADDRESS) {
