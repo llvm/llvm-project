@@ -16,8 +16,6 @@
 #pragma comment(lib, "dbghelp.lib")
 #endif
 
-#include "lldb/Core/Mangled.h"
-
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/ConstString.h"
