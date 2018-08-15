@@ -30283,7 +30283,7 @@ static SDValue combineX86ShufflesRecursively(
   // Add the inputs to the Ops list, avoiding duplicates.
   SmallVector<SDValue, 16> Ops(SrcOps.begin(), SrcOps.end());
 
-  auto AddOp = [&Ops](SDValue Input, int InsertionPoint = -1) -> int {
+  auto AddOp = [&Ops](SDValue Input, int InsertionPoint) -> int {
     if (!Input)
       return -1;
     // Attempt to find an existing match.
@@ -30302,7 +30302,7 @@ static SDValue combineX86ShufflesRecursively(
   };
 
   int InputIdx0 = AddOp(Input0, SrcOpIndex);
-  int InputIdx1 = AddOp(Input1);
+  int InputIdx1 = AddOp(Input1, -1);
 
   assert(((RootMask.size() > OpMask.size() &&
            RootMask.size() % OpMask.size() == 0) ||

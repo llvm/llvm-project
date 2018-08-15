@@ -74,6 +74,27 @@ def : Pat<(i32 (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx))),
 def : Pat<(i32 (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx))),
           (EXTRACT_LANE_U_I16x8 V128:$vec, (i32 LaneIdx8:$idx))>;
 
+// lane replacement
+multiclass ReplaceLane<ValueType vec_t, string vec, WebAssemblyRegClass reg_t,
+                       ValueType lane_t, ImmLeaf imm_t, bits<32> simdop> {
+  defm REPLACE_LANE_#vec_t : SIMD_I<(outs V128:$dst),
+                                    (ins V128:$vec, I32:$idx, reg_t:$x),
+                                    (outs), (ins I32:$idx),
+                                    [(set V128:$dst, (vector_insert
+                                      (vec_t V128:$vec),
+                                      (lane_t reg_t:$x),
+                                      (i32 imm_t:$idx)))],
+                                    vec#".replace_lane\t$dst, $vec, $idx, $x",
+                                    vec#".replace_lane\t$idx", simdop>;
+}
+let Defs = [ARGUMENTS] in {
+defm "" : ReplaceLane<v16i8, "i8x16", I32, i32, LaneIdx16, 17>;
+defm "" : ReplaceLane<v8i16, "i16x8", I32, i32, LaneIdx8, 18>;
+defm "" : ReplaceLane<v4i32, "i32x4", I32, i32, LaneIdx4, 19>;
+defm "" : ReplaceLane<v2i64, "i64x2", I64, i64, LaneIdx2, 20>;
+defm "" : ReplaceLane<v4f32, "f32x4", F32, f32, LaneIdx4, 21>;
+defm "" : ReplaceLane<v2f64, "f64x2", F64, f64, LaneIdx2, 22>;
+} // Defs = [ARGUMENTS]
 
 // splats
 def splat2 : PatFrag<(ops node:$x), (build_vector node:$x, node:$x)>;
@@ -100,7 +121,7 @@ defm "" : Splat<v4i32, "i32x4", I32, splat4, 5>;
 defm "" : Splat<v2i64, "i64x2", I64, splat2, 6>;
 defm "" : Splat<v4f32, "f32x4", F32, splat4, 7>;
 defm "" : Splat<v2f64, "f64x2", F64, splat2, 8>;
-}
+} // Defs = [ARGUMENTS]
 
 // arithmetic
 let Defs = [ARGUMENTS] in {
