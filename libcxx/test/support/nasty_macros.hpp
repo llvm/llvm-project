@@ -22,7 +22,11 @@
 #define _J NASTY_MACRO
 #define _K NASTY_MACRO
 #define _L NASTY_MACRO
+// Because FreeBSD uses _M in its <sys/types.h>, and it is hard to avoid
+// including that header, only define _M for other operating systems.
+#ifndef __FreeBSD__
 #define _M NASTY_MACRO
+#endif
 #define _N NASTY_MACRO
 #define _O NASTY_MACRO
 #define _P NASTY_MACRO
