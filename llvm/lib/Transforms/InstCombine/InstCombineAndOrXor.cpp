@@ -2487,7 +2487,8 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
   if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
-      LHS0->getType() == RHS0->getType()) {
+      LHS0->getType() == RHS0->getType() &&
+      LHS0->getType()->isIntOrIntVectorTy()) {
     // (X > -1) ^ (Y > -1) --> (X ^ Y) < 0
     // (X <  0) ^ (Y <  0) --> (X ^ Y) < 0
     if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_AllOnes()) &&

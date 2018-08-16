@@ -181,8 +181,6 @@ static bool isSink(Value *V) {
     return UsesNarrowValue(Return->getReturnValue());
   if (auto *Trunc = dyn_cast<TruncInst>(V))
     return UsesNarrowValue(Trunc->getOperand(0));
-  if (auto *ICmp = dyn_cast<ICmpInst>(V))
-    return ICmp->isSigned();
 
   return isa<CallInst>(V);
 }
@@ -296,11 +294,6 @@ void IRPromoter::Mutate(Type *OrigTy,
   LLVM_DEBUG(dbgs() << "ARM CGP: Promoting use-def chains to from "
              << ARMCodeGenPrepare::TypeSize << " to 32-bits\n");
 
-  // Cache original types.
-  DenseMap<Value*, Type*> TruncTysMap;
-  for (auto *V : Visited)
-    TruncTysMap[V] = V->getType();
-
   auto ReplaceAllUsersOfWith = [&](Value *From, Value *To) {
     SmallVector<Instruction*, 4> Users;
     Instruction *InstTo = dyn_cast<Instruction>(To);
@@ -344,7 +337,6 @@ void IRPromoter::Mutate(Type *OrigTy,
     ReplaceAllUsersOfWith(I, Call);
     InstsToRemove.push_back(I);
     NewInsts.insert(Call);
-    TruncTysMap[Call] = OrigTy;
   };
 
   auto InsertZExt = [&](Value *V, Instruction *InsertPt) {
@@ -359,7 +351,6 @@ void IRPromoter::Mutate(Type *OrigTy,
       ZExt->moveAfter(InsertPt);
     ReplaceAllUsersOfWith(V, ZExt);
     NewInsts.insert(ZExt);
-    TruncTysMap[ZExt] = TruncTysMap[V];
   };
 
   // First, insert extending instructions between the leaves and their users.
@@ -418,22 +409,6 @@ void IRPromoter::Mutate(Type *OrigTy,
     InsertDSPIntrinsic(cast<Instruction>(V));
   }
 
-  auto InsertTrunc = [&](Value *V, Type *TruncTy) -> Instruction* {
-    if (TruncTy == ExtTy || !isa<Instruction>(V) ||
-        !isa<IntegerType>(V->getType()))
-      return nullptr;
-
-    if (!Promoted.count(V) && !NewInsts.count(V))
-      return nullptr;
-
-    LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy << " Trunc for "
-               << *V << "\n");
-    Builder.SetInsertPoint(cast<Instruction>(V));
-    auto *Trunc = cast<Instruction>(Builder.CreateTrunc(V, TruncTy));
-    NewInsts.insert(Trunc);
-    return Trunc;
-  };
-
   LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the roots:\n");
   // Fix up any stores or returns that use the results of the promoted
   // chain.
@@ -448,25 +423,28 @@ void IRPromoter::Mutate(Type *OrigTy,
       TruncTy = F->getFunctionType()->getReturnType();
     }
 
-    // These will only have one operand to fix.
-    if (isa<StoreInst>(I) || isa<ReturnInst>(I) || isa<TruncInst>(I)) {
-      if (Instruction *Trunc = InsertTrunc(I->getOperand(0), TruncTy)) {
-        Trunc->moveBefore(I);
-        I->setOperand(0, Trunc);
-      }
-      continue;
-    }
-
-    // Now handle calls and signed icmps.
     for (unsigned i = 0; i < I->getNumOperands(); ++i) {
-      if (auto *Call = dyn_cast<CallInst>(I))
-        TruncTy = Call->getFunctionType()->getParamType(i);
-      else
-        TruncTy = TruncTysMap[I->getOperand(i)];
+      Value *V = I->getOperand(i);
+      if (!isa<IntegerType>(V->getType()))
+        continue;
 
-      if (Instruction *Trunc = InsertTrunc(I->getOperand(i), TruncTy)) {
-        Trunc->moveBefore(I);
-        I->setOperand(i, Trunc);
+      if (Promoted.count(V) || NewInsts.count(V)) {
+        if (auto *Op = dyn_cast<Instruction>(V)) {
+
+          if (auto *Call = dyn_cast<CallInst>(I))
+            TruncTy = Call->getFunctionType()->getParamType(i);
+
+          if (TruncTy == ExtTy)
+            continue;
+
+          LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy
+                     << " Trunc for " << *Op << "\n");
+          Builder.SetInsertPoint(Op);
+          auto *Trunc = cast<Instruction>(Builder.CreateTrunc(Op, TruncTy));
+          Trunc->moveBefore(I);
+          I->setOperand(i, Trunc);
+          NewInsts.insert(Trunc);
+        }
       }
     }
   }
@@ -480,8 +458,8 @@ void IRPromoter::Mutate(Type *OrigTy,
 bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
   LLVM_DEBUG(dbgs() << "ARM CGP: Is " << *V << " supported?\n");
 
-  if (isa<ICmpInst>(V))
-    return true;
+  if (auto *ICmp = dyn_cast<ICmpInst>(V))
+    return ICmp->isEquality() || !ICmp->isSigned();
 
   // Memory instructions
   if (isa<StoreInst>(V) || isa<GetElementPtrInst>(V))

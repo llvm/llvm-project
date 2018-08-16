@@ -334,6 +334,7 @@
 #    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_HAS_QUICK_EXIT
+#    define _LIBCPP_HAS_TIMESPEC_GET
 #    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
@@ -342,9 +343,11 @@
 #      endif
 #      if _LIBCPP_GLIBC_PREREQ(2, 17)
 #        define _LIBCPP_HAS_C11_FEATURES
+#        define _LIBCPP_HAS_TIMESPEC_GET
 #      endif
 #    else // defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define _LIBCPP_HAS_QUICK_EXIT
+#      define _LIBCPP_HAS_TIMESPEC_GET
 #      define _LIBCPP_HAS_C11_FEATURES
 #    endif
 #  endif // __linux__

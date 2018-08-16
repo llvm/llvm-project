@@ -1278,7 +1278,7 @@ static unsigned getPatternSize(const TreePatternNode *P,
   for (unsigned i = 0, e = P->getNumChildren(); i != e; ++i) {
     const TreePatternNode *Child = P->getChild(i);
     if (!Child->isLeaf() && Child->getNumTypes()) {
-      const TypeSetByHwMode &T0 = Child->getType(0);
+      const TypeSetByHwMode &T0 = Child->getExtType(0);
       // At this point, all variable type sets should be simple, i.e. only
       // have a default mode.
       if (T0.getMachineValueType() != MVT::Other) {

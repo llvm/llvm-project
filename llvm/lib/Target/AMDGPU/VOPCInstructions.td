@@ -635,6 +635,17 @@ def : ICMP_Pattern <COND_SGE, V_CMP_GE_I64_e64, i64>;
 def : ICMP_Pattern <COND_SLT, V_CMP_LT_I64_e64, i64>;
 def : ICMP_Pattern <COND_SLE, V_CMP_LE_I64_e64, i64>;
 
+def : ICMP_Pattern <COND_EQ, V_CMP_EQ_U16_e64, i16>;
+def : ICMP_Pattern <COND_NE, V_CMP_NE_U16_e64, i16>;
+def : ICMP_Pattern <COND_UGT, V_CMP_GT_U16_e64, i16>;
+def : ICMP_Pattern <COND_UGE, V_CMP_GE_U16_e64, i16>;
+def : ICMP_Pattern <COND_ULT, V_CMP_LT_U16_e64, i16>;
+def : ICMP_Pattern <COND_ULE, V_CMP_LE_U16_e64, i16>;
+def : ICMP_Pattern <COND_SGT, V_CMP_GT_I16_e64, i16>;
+def : ICMP_Pattern <COND_SGE, V_CMP_GE_I16_e64, i16>;
+def : ICMP_Pattern <COND_SLT, V_CMP_LT_I16_e64, i16>;
+def : ICMP_Pattern <COND_SLE, V_CMP_LE_I16_e64, i16>;
+
 class FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : GCNPat <
   (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
@@ -656,6 +667,14 @@ def : FCMP_Pattern <COND_OGE, V_CMP_GE_F64_e64, f64>;
 def : FCMP_Pattern <COND_OLT, V_CMP_LT_F64_e64, f64>;
 def : FCMP_Pattern <COND_OLE, V_CMP_LE_F64_e64, f64>;
 
+def : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_e64, f16>;
+def : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_e64, f16>;
+def : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_e64, f16>;
+def : FCMP_Pattern <COND_OGE, V_CMP_GE_F16_e64, f16>;
+def : FCMP_Pattern <COND_OLT, V_CMP_LT_F16_e64, f16>;
+def : FCMP_Pattern <COND_OLE, V_CMP_LE_F16_e64, f16>;
+
+
 def : FCMP_Pattern <COND_UEQ, V_CMP_NLG_F32_e64, f32>;
 def : FCMP_Pattern <COND_UNE, V_CMP_NEQ_F32_e64, f32>;
 def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F32_e64, f32>;
@@ -669,6 +688,13 @@ def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F64_e64, f64>;
 def : FCMP_Pattern <COND_UGE, V_CMP_NLT_F64_e64, f64>;
 def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
+
+def : FCMP_Pattern <COND_UEQ, V_CMP_NLG_F16_e64, f16>;
+def : FCMP_Pattern <COND_UNE, V_CMP_NEQ_F16_e64, f16>;
+def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F16_e64, f16>;
+def : FCMP_Pattern <COND_UGE, V_CMP_NLT_F16_e64, f16>;
+def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F16_e64, f16>;
+def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_e64, f16>;
 
 //===----------------------------------------------------------------------===//
 // Target

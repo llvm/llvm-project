@@ -207,6 +207,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f16, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2i16, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f16, Custom);
 
@@ -3664,6 +3666,69 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
   return DAG.getMergeValues({ Adjusted, Load.getValue(1) }, DL);
 }
 
+static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
+                                  SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  const auto *CD = dyn_cast<ConstantSDNode>(N->getOperand(3));
+  if (!CD)
+    return DAG.getUNDEF(VT);
+
+  int CondCode = CD->getSExtValue();
+  if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
+      CondCode > ICmpInst::Predicate::LAST_ICMP_PREDICATE)
+    return DAG.getUNDEF(VT);
+
+  ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
+
+
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+
+  SDLoc DL(N);
+
+  EVT CmpVT = LHS.getValueType();
+  if (CmpVT == MVT::i16 && !TLI.isTypeLegal(MVT::i16)) {
+    unsigned PromoteOp = ICmpInst::isSigned(IcInput) ?
+      ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    LHS = DAG.getNode(PromoteOp, DL, MVT::i32, LHS);
+    RHS = DAG.getNode(PromoteOp, DL, MVT::i32, RHS);
+  }
+
+  ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
+
+  return DAG.getNode(AMDGPUISD::SETCC, DL, VT, LHS, RHS,
+                     DAG.getCondCode(CCOpcode));
+}
+
+static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
+                                  SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  const auto *CD = dyn_cast<ConstantSDNode>(N->getOperand(3));
+  if (!CD)
+    return DAG.getUNDEF(VT);
+
+  int CondCode = CD->getSExtValue();
+  if (CondCode < FCmpInst::Predicate::FIRST_FCMP_PREDICATE ||
+      CondCode > FCmpInst::Predicate::LAST_FCMP_PREDICATE) {
+    return DAG.getUNDEF(VT);
+  }
+
+  SDValue Src0 = N->getOperand(1);
+  SDValue Src1 = N->getOperand(2);
+  EVT CmpVT = Src0.getValueType();
+  SDLoc SL(N);
+
+  if (CmpVT == MVT::f16 && !TLI.isTypeLegal(CmpVT)) {
+    Src0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
+    Src1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
+  }
+
+  FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
+  ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
+  return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Src0,
+                     Src1, DAG.getCondCode(CCOpcode));
+}
+
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
@@ -4950,34 +5015,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Denominator, Numerator);
   }
   case Intrinsic::amdgcn_icmp: {
-    const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
-    if (!CD)
-      return DAG.getUNDEF(VT);
-
-    int CondCode = CD->getSExtValue();
-    if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
-        CondCode > ICmpInst::Predicate::LAST_ICMP_PREDICATE)
-      return DAG.getUNDEF(VT);
-
-    ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
-    ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
-    return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), DAG.getCondCode(CCOpcode));
+    return lowerICMPIntrinsic(*this, Op.getNode(), DAG);
   }
   case Intrinsic::amdgcn_fcmp: {
-    const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
-    if (!CD)
-      return DAG.getUNDEF(VT);
-
-    int CondCode = CD->getSExtValue();
-    if (CondCode < FCmpInst::Predicate::FIRST_FCMP_PREDICATE ||
-        CondCode > FCmpInst::Predicate::LAST_FCMP_PREDICATE)
-      return DAG.getUNDEF(VT);
-
-    FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
-    ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
-    return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), DAG.getCondCode(CCOpcode));
+    return lowerFCMPIntrinsic(*this, Op.getNode(), DAG);
   }
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT,
@@ -7308,18 +7349,24 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
       return SDValue();
       // TODO: Support other binary operations.
     case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
     case ISD::ADD:
     case ISD::UMIN:
     case ISD::UMAX:
     case ISD::SMIN:
     case ISD::SMAX:
     case ISD::FMAXNUM:
-    case ISD::FMINNUM:
-      return DAG.getNode(Opc, SL, EltVT,
-                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
-                                     Vec.getOperand(0), Idx),
-                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
-                                     Vec.getOperand(1), Idx));
+    case ISD::FMINNUM: {
+      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                 Vec.getOperand(0), Idx);
+      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                 Vec.getOperand(1), Idx);
+
+      DCI.AddToWorklist(Elt0.getNode());
+      DCI.AddToWorklist(Elt1.getNode());
+      return DAG.getNode(Opc, SL, EltVT, Elt0, Elt1, Vec->getFlags());
+    }
     }
   }
 

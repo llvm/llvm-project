@@ -3984,8 +3984,6 @@ SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   unsigned Stride = SrcEltVT.getSizeInBits() / 8;
   assert(SrcEltVT.isByteSized());
 
-  EVT PtrVT = BasePTR.getValueType();
-
   SmallVector<SDValue, 8> Vals;
   SmallVector<SDValue, 8> LoadChains;
 
@@ -3996,8 +3994,7 @@ SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                        SrcEltVT, MinAlign(LD->getAlignment(), Idx * Stride),
                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
-    BasePTR = DAG.getNode(ISD::ADD, SL, PtrVT, BasePTR,
-                          DAG.getConstant(Stride, SL, PtrVT));
+    BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, Stride);
 
     Vals.push_back(ScalarLoad.getValue(0));
     LoadChains.push_back(ScalarLoad.getValue(1));

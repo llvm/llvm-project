@@ -1750,6 +1750,11 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   SDValue R = SDValue();
 
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
+    LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
+    return false;
+  }
+
   // Nodes that use a promotion-requiring floating point operand, but doesn't
   // produce a promotion-requiring floating point result, need to be legalized
   // to use the promoted float operand.  Nodes that produce at least one

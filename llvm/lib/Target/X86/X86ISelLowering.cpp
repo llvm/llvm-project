@@ -13334,79 +13334,162 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
 /// Lower a vector shuffle by first fixing the 128-bit lanes and then
 /// shuffling each lane.
 ///
-/// This will only succeed when the result of fixing the 128-bit lanes results
-/// in a single-input non-lane-crossing shuffle with a repeating shuffle mask in
-/// each 128-bit lanes. This handles many cases where we can quickly blend away
-/// the lane crosses early and then use simpler shuffles within each lane.
+/// This attempts to create a repeated lane shuffle where each lane uses one
+/// or two of the lanes of the inputs. The lanes of the input vectors are
+/// shuffled in one or two independent shuffles to get the lanes into the
+/// position needed by the final shuffle.
 ///
-/// FIXME: It might be worthwhile at some point to support this without
-/// requiring the 128-bit lane-relative shuffles to be repeating, but currently
-/// in x86 only floating point has interesting non-repeating shuffles, and even
-/// those are still *marginally* more expensive.
+/// FIXME: This should be generalized to 512-bit shuffles.
 static SDValue lowerVectorShuffleByMerging128BitLanes(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   assert(!V2.isUndef() && "This is only useful with multiple inputs.");
 
+  if (is128BitLaneRepeatedShuffleMask(VT, Mask))
+    return SDValue();
+
   int Size = Mask.size();
   int LaneSize = 128 / VT.getScalarSizeInBits();
   int NumLanes = Size / LaneSize;
-  assert(NumLanes > 1 && "Only handles 256-bit and wider shuffles.");
+  assert(NumLanes == 2 && "Only handles 256-bit shuffles.");
 
-  // See if we can build a hypothetical 128-bit lane-fixing shuffle mask. Also
-  // check whether the in-128-bit lane shuffles share a repeating pattern.
-  SmallVector<int, 4> Lanes((unsigned)NumLanes, -1);
-  SmallVector<int, 4> InLaneMask((unsigned)LaneSize, -1);
-  for (int i = 0; i < Size; ++i) {
-    if (Mask[i] < 0)
+  SmallVector<int, 16> RepeatMask(LaneSize, -1);
+  int LaneSrcs[2][2] = { { -1, -1 }, { -1 , -1 } };
+
+  // First pass will try to fill in the RepeatMask from lanes that need two
+  // sources.
+  for (int Lane = 0; Lane != NumLanes; ++Lane) {
+    int Srcs[2] = { -1, -1 };
+    SmallVector<int, 16> InLaneMask(LaneSize, -1);
+    for (int i = 0; i != LaneSize; ++i) {
+      int M = Mask[(Lane * LaneSize) + i];
+      if (M < 0)
+        continue;
+      // Determine which of the 4 possible input lanes (2 from each source)
+      // this element comes from. Assign that as one of the sources for this
+      // lane. We can assign up to 2 sources for this lane. If we run out
+      // sources we can't do anything.
+      int LaneSrc = M / LaneSize;
+      int Src;
+      if (Srcs[0] < 0 || Srcs[0] == LaneSrc)
+        Src = 0;
+      else if (Srcs[1] < 0 || Srcs[1] == LaneSrc)
+        Src = 1;
+      else
+        return SDValue();
+
+      Srcs[Src] = LaneSrc;
+      InLaneMask[i] = (M % LaneSize) + Src * Size;
+    }
+
+    // If this lane has two sources, see if it fits with the repeat mask so far.
+    if (Srcs[1] < 0)
       continue;
 
-    int j = i / LaneSize;
+    LaneSrcs[Lane][0] = Srcs[0];
+    LaneSrcs[Lane][1] = Srcs[1];
 
-    if (Lanes[j] < 0) {
-      // First entry we've seen for this lane.
-      Lanes[j] = Mask[i] / LaneSize;
-    } else if (Lanes[j] != Mask[i] / LaneSize) {
-      // This doesn't match the lane selected previously!
-      return SDValue();
+    auto MatchMasks = [](ArrayRef<int> M1, ArrayRef<int> M2) {
+      assert(M1.size() == M2.size() && "Unexpected mask size");
+      for (int i = 0, e = M1.size(); i != e; ++i)
+        if (M1[i] >= 0 && M2[i] >= 0 && M1[i] != M2[i])
+          return false;
+      return true;
+    };
+
+    auto MergeMasks = [](ArrayRef<int> Mask, MutableArrayRef<int> MergedMask) {
+      assert(Mask.size() == MergedMask.size() && "Unexpected mask size");
+      for (int i = 0, e = MergedMask.size(); i != e; ++i) {
+        int M = Mask[i];
+        if (M < 0)
+          continue;
+        assert((MergedMask[i] < 0 || MergedMask[i] == M) &&
+               "Unexpected mask element");
+        MergedMask[i] = M;
+      }
+    };
+
+    if (MatchMasks(InLaneMask, RepeatMask)) {
+      // Merge this lane mask into the final repeat mask.
+      MergeMasks(InLaneMask, RepeatMask);
+      continue;
     }
 
-    // Check that within each lane we have a consistent shuffle mask.
-    int k = i % LaneSize;
-    if (InLaneMask[k] < 0) {
-      InLaneMask[k] = Mask[i] % LaneSize;
-    } else if (InLaneMask[k] != Mask[i] % LaneSize) {
-      // This doesn't fit a repeating in-lane mask.
-      return SDValue();
+    // Didn't find a match. Swap the operands and try again.
+    std::swap(LaneSrcs[Lane][0], LaneSrcs[Lane][1]);
+    ShuffleVectorSDNode::commuteMask(InLaneMask);
+
+    if (MatchMasks(InLaneMask, RepeatMask)) {
+      // Merge this lane mask into the final repeat mask.
+      MergeMasks(InLaneMask, RepeatMask);
+      continue;
     }
+
+    // Couldn't find a match with the operands in either order.
+    return SDValue();
   }
 
-  // First shuffle the lanes into place.
-  MVT LaneVT = MVT::getVectorVT(VT.isFloatingPoint() ? MVT::f64 : MVT::i64,
-                                VT.getSizeInBits() / 64);
-  SmallVector<int, 8> LaneMask((unsigned)NumLanes * 2, -1);
-  for (int i = 0; i < NumLanes; ++i)
-    if (Lanes[i] >= 0) {
-      LaneMask[2 * i + 0] = 2*Lanes[i] + 0;
-      LaneMask[2 * i + 1] = 2*Lanes[i] + 1;
+  // Now handle any lanes with only one source.
+  for (int Lane = 0; Lane != NumLanes; ++Lane) {
+    // If this lane has already been processed, skip it.
+    if (LaneSrcs[Lane][0] >= 0)
+      continue;
+
+    for (int i = 0; i != LaneSize; ++i) {
+      int M = Mask[(Lane * LaneSize) + i];
+      if (M < 0)
+        continue;
+
+      // If RepeatMask isn't defined yet we can define it ourself.
+      if (RepeatMask[i] < 0)
+        RepeatMask[i] = M % LaneSize;
+
+      if (RepeatMask[i] < Size) {
+        if (RepeatMask[i] != M % LaneSize)
+          return SDValue();
+        LaneSrcs[Lane][0] = M / LaneSize;
+      } else {
+        if (RepeatMask[i] != ((M % LaneSize) + Size))
+          return SDValue();
+        LaneSrcs[Lane][1] = M / LaneSize;
+      }
     }
 
-  V1 = DAG.getBitcast(LaneVT, V1);
-  V2 = DAG.getBitcast(LaneVT, V2);
-  SDValue LaneShuffle = DAG.getVectorShuffle(LaneVT, DL, V1, V2, LaneMask);
+    if (LaneSrcs[Lane][0] < 0 && LaneSrcs[Lane][1] < 0)
+      return SDValue();
+  }
 
-  // Cast it back to the type we actually want.
-  LaneShuffle = DAG.getBitcast(VT, LaneShuffle);
+  SmallVector<int, 16> NewMask(Size, -1);
+  for (int Lane = 0; Lane != NumLanes; ++Lane) {
+    int Src = LaneSrcs[Lane][0];
+    for (int i = 0; i != LaneSize; ++i) {
+      int M = -1;
+      if (Src >= 0)
+        M = Src * LaneSize + i;
+      NewMask[Lane * LaneSize + i] = M;
+    }
+  }
+  SDValue NewV1 = DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
 
-  // Now do a simple shuffle that isn't lane crossing.
-  SmallVector<int, 8> NewMask((unsigned)Size, -1);
-  for (int i = 0; i < Size; ++i)
-    if (Mask[i] >= 0)
-      NewMask[i] = (i / LaneSize) * LaneSize + Mask[i] % LaneSize;
-  assert(!is128BitLaneCrossingShuffleMask(VT, NewMask) &&
-         "Must not introduce lane crosses at this point!");
+  for (int Lane = 0; Lane != NumLanes; ++Lane) {
+    int Src = LaneSrcs[Lane][1];
+    for (int i = 0; i != LaneSize; ++i) {
+      int M = -1;
+      if (Src >= 0)
+        M = Src * LaneSize + i;
+      NewMask[Lane * LaneSize + i] = M;
+    }
+  }
+  SDValue NewV2 = DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
 
-  return DAG.getVectorShuffle(VT, DL, LaneShuffle, DAG.getUNDEF(VT), NewMask);
+  for (int i = 0; i != Size; ++i) {
+    NewMask[i] = RepeatMask[i % LaneSize];
+    if (NewMask[i] < 0)
+      continue;
+
+    NewMask[i] += (i / LaneSize) * LaneSize;
+  }
+  return DAG.getVectorShuffle(VT, DL, NewV1, NewV2, NewMask);
 }
 
 /// Lower shuffles where an entire half of a 256 or 512-bit vector is UNDEF.

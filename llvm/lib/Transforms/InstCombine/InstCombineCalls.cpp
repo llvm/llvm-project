@@ -3630,6 +3630,33 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Intrinsic::ID NewIID = CmpInst::isFPPredicate(SrcPred) ?
         Intrinsic::amdgcn_fcmp : Intrinsic::amdgcn_icmp;
 
+      Type *Ty = SrcLHS->getType();
+      if (auto *CmpType = dyn_cast<IntegerType>(Ty)) {
+        // Promote to next legal integer type.
+        unsigned Width = CmpType->getBitWidth();
+        unsigned NewWidth = Width;
+        if (Width <= 16)
+          NewWidth = 16;
+        else if (Width <= 32)
+          NewWidth = 32;
+        else if (Width <= 64)
+          NewWidth = 64;
+        else if (Width > 64)
+          break; // Can't handle this.
+
+        if (Width != NewWidth) {
+          IntegerType *CmpTy = Builder.getIntNTy(NewWidth);
+          if (CmpInst::isSigned(SrcPred)) {
+            SrcLHS = Builder.CreateSExt(SrcLHS, CmpTy);
+            SrcRHS = Builder.CreateSExt(SrcRHS, CmpTy);
+          } else {
+            SrcLHS = Builder.CreateZExt(SrcLHS, CmpTy);
+            SrcRHS = Builder.CreateZExt(SrcRHS, CmpTy);
+          }
+        }
+      } else if (!Ty->isFloatTy() && !Ty->isDoubleTy() && !Ty->isHalfTy())
+        break;
+
       Value *NewF = Intrinsic::getDeclaration(II->getModule(), NewIID,
                                               SrcLHS->getType());
       Value *Args[] = { SrcLHS, SrcRHS,

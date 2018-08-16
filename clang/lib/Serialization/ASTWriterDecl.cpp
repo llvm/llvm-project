@@ -2237,8 +2237,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
 
   // File scoped assembly or obj-c or OMP declare target implementation must be
   // seen.
-  if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D) ||
-      D->hasAttr<OMPDeclareTargetDeclAttr>())
+  if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D))
     return true;
 
   if (WritingModule && (isa<VarDecl>(D) || isa<ImportDecl>(D))) {

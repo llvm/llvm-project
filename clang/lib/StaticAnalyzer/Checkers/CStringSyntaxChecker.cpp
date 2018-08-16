@@ -273,7 +273,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
       if (!LenName.empty())
         os << "'" << LenName << "'";
       else
-        os << " <size> ";
+        os << "<size>";
       if (!DstName.empty())
         os << " - strlen(" << DstName << ")";
       else
