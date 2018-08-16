@@ -35,7 +35,6 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   RichManglingContext.cpp
-  Scalar.cpp
   SearchFilter.cpp
   Section.cpp
   SourceManager.cpp
