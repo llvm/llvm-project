@@ -12,17 +12,27 @@
 // UNSUPPORTED: sanitizer-new-delete, c++98, c++03, c++11, c++14
 
 // Older Clang versions do not support this
-// XFAIL: clang-3, apple-clang-7, apple-clang-8
+// UNSUPPORTED: clang-3, apple-clang-7, apple-clang-8
 
 // None of the current GCC compilers support this.
-// XFAIL: gcc-5, gcc-6
+// UNSUPPORTED: gcc-5, gcc-6
 
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
+// dylibs shipped before macosx10.13 do not provide aligned allocation, so that's a link error
+// UNSUPPORTED: with_system_cxx_lib=macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: with_system_cxx_lib=macosx10.8
+// UNSUPPORTED: with_system_cxx_lib=macosx10.7
+
+// Using aligned allocation functions is a compiler error when deploying to
+// platforms older than macosx10.13
+// UNSUPPORTED: macosx10.12
+// UNSUPPORTED: macosx10.11
+// UNSUPPORTED: macosx10.10
+// UNSUPPORTED: macosx10.9
+// UNSUPPORTED: macosx10.8
+// UNSUPPORTED: macosx10.7
 
 // On Windows libc++ doesn't provide its own definitions for new/delete
 // but instead depends on the ones in VCRuntime. However VCRuntime does not
