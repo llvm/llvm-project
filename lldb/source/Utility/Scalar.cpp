@@ -76,49 +76,6 @@ Scalar::Scalar() : m_type(e_void), m_float((float)0) {}
 Scalar::Scalar(const Scalar &rhs)
     : m_type(rhs.m_type), m_integer(rhs.m_integer), m_float(rhs.m_float) {}
 
-// Scalar::Scalar(const RegisterValue& reg) :
-//  m_type(e_void),
-//  m_data()
-//{
-//  switch (reg.info.encoding)
-//  {
-//  case eEncodingUint:     // unsigned integer
-//      switch (reg.info.byte_size)
-//      {
-//      case 1: m_type = e_uint; m_data.uint = reg.value.uint8; break;
-//      case 2: m_type = e_uint; m_data.uint = reg.value.uint16; break;
-//      case 4: m_type = e_uint; m_data.uint = reg.value.uint32; break;
-//      case 8: m_type = e_ulonglong; m_data.ulonglong = reg.value.uint64;
-//      break;
-//      break;
-//      }
-//      break;
-//
-//  case eEncodingSint:     // signed integer
-//      switch (reg.info.byte_size)
-//      {
-//      case 1: m_type = e_sint; m_data.sint = reg.value.sint8; break;
-//      case 2: m_type = e_sint; m_data.sint = reg.value.sint16; break;
-//      case 4: m_type = e_sint; m_data.sint = reg.value.sint32; break;
-//      case 8: m_type = e_slonglong; m_data.slonglong = reg.value.sint64;
-//      break;
-//      break;
-//      }
-//      break;
-//
-//  case eEncodingIEEE754:  // float
-//      switch (reg.info.byte_size)
-//      {
-//      case 4: m_type = e_float; m_data.flt = reg.value.float32; break;
-//      case 8: m_type = e_double; m_data.dbl = reg.value.float64; break;
-//      break;
-//      }
-//      break;
-//    case eEncodingVector: // vector registers
-//      break;
-//  }
-//}
-
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
   if (byte_size > 0) {
