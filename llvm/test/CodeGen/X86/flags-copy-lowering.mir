@@ -545,7 +545,7 @@ body:             |
     MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %4
   ; CHECK-NOT:     $eflags =
   ; CHECK:         %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr8 = EXTRACT_SUBREG %[[ZERO]], %subreg.sub_8bit
+  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr8 = COPY %[[ZERO]].sub_8bit
   ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr8 = SUB8rr %[[ZERO_SUBREG]], %[[CF_REG]]
   ; CHECK-NEXT:    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
 
@@ -554,9 +554,9 @@ body:             |
     MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %5
   ; CHECK-NOT:     $eflags =
   ; CHECK:         %[[CF_EXT:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
-  ; CHECK-NEXT:    %[[CF_TRUNC:[^:]*]]:gr16 = EXTRACT_SUBREG %[[CF_EXT]], %subreg.sub_16bit
+  ; CHECK-NEXT:    %[[CF_TRUNC:[^:]*]]:gr16 = COPY %[[CF_EXT]].sub_16bit
   ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
-  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr16 = EXTRACT_SUBREG %[[ZERO]], %subreg.sub_16bit
+  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr16 = COPY %[[ZERO]].sub_16bit
   ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr16 = SUB16rr %[[ZERO_SUBREG]], %[[CF_TRUNC]]
   ; CHECK-NEXT:    MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
 
