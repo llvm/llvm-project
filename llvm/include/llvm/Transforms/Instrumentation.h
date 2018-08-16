@@ -111,6 +111,9 @@ struct InstrProfOptions {
   // Do counter register promotion
   bool DoCounterPromotion = false;
 
+  // Use atomic profile counter increments.
+  bool Atomic = false;
+
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 
