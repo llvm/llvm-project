@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <cassert>
+#include <__cxxabi_config.h>
 
 #include <unwind.h>
 
@@ -27,7 +28,7 @@ struct __attribute__((aligned)) AlignedType {};
 
 // EHABI  : 8-byte aligned
 // Itanium: Largest supported alignment for the system
-#if defined(_LIBUNWIND_ARM_EHABI)
+#if defined(_LIBCXXABI_ARM_EHABI)
 #  define EXPECTED_ALIGNMENT 8
 #else
 #  define EXPECTED_ALIGNMENT alignof(AlignedType)
