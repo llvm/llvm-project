@@ -27,7 +27,6 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <atomic>
 #endif
-#include <bit>
 #include <bitset>
 #include <cassert>
 #include <ccomplex>
