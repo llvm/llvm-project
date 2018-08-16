@@ -26,95 +26,51 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-namespace lldb_private {
-namespace formatters {
-namespace swift {
-class SwiftDictionaryNativeBufferHandler
-    : public SwiftHashedContainerNativeBufferHandler {
-public:
-  SwiftHashedContainerBufferHandler::Kind GetKind() {
-    return Kind::eDictionary;
-  }
-
-  static ConstString GetMangledStorageTypeName();
-
-  static ConstString GetDemangledStorageTypeName();
-
-  SwiftDictionaryNativeBufferHandler(ValueObjectSP nativeStorage_sp,
-                                     CompilerType key_type,
-                                     CompilerType value_type)
-      : SwiftHashedContainerNativeBufferHandler(nativeStorage_sp, key_type,
-                                                value_type) {}
-  friend class SwiftHashedContainerBufferHandler;
-
-private:
-};
-
-class SwiftDictionarySyntheticFrontEndBufferHandler
-    : public SwiftHashedContainerSyntheticFrontEndBufferHandler {
-public:
-  SwiftHashedContainerBufferHandler::Kind GetKind() {
-    return Kind::eDictionary;
-  }
-
-  virtual ~SwiftDictionarySyntheticFrontEndBufferHandler() {}
-
-  SwiftDictionarySyntheticFrontEndBufferHandler(lldb::ValueObjectSP valobj_sp)
-      : SwiftHashedContainerSyntheticFrontEndBufferHandler(valobj_sp) {}
-  friend class SwiftHashedContainerBufferHandler;
-
-private:
-};
-
-class DictionarySyntheticFrontEnd : public HashedContainerSyntheticFrontEnd {
-public:
-  DictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-      : HashedContainerSyntheticFrontEnd(valobj_sp) {}
-
-  virtual bool Update();
-
-  virtual ~DictionarySyntheticFrontEnd() = default;
-};
-}
-}
+const DictionaryConfig &
+DictionaryConfig::Get() {
+  static DictionaryConfig g_config{};
+  return g_config;
 }
 
-SyntheticChildrenFrontEnd *
-lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator(
-    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (!valobj_sp)
-    return NULL;
-  return (new DictionarySyntheticFrontEnd(valobj_sp));
+DictionaryConfig::DictionaryConfig()
+  : HashedCollectionConfig() {
+  m_summaryProviderName =
+    ConstString("Swift.Dictionary summary provider");
+  m_syntheticChildrenName =
+    ConstString("Swift.Dictionary synthetic children");
+  m_collection_demangledRegex =
+    ConstString("^Swift\\.Dictionary<.+,.+>$");
+
+  // Note: We need have use the old _Tt names here because those are
+  // still used to name classes in the ObjC runtime.
+
+  // Native storage class
+  m_nativeStorage_mangledRegex_ObjC =
+    ConstString("^_TtGCs37_HashableTypedNativeDictionaryStorage.*");
+  m_nativeStorage_demangledPrefix =
+    ConstString("Swift._HashableTypedNativeDictionaryStorage<");
+  m_nativeStorage_demangledRegex =
+    ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
+
+  // Type-punned empty dictionary
+  m_emptyStorage_mangled_ObjC =
+    ConstString("_TtCs27_RawNativeDictionaryStorage");
+  m_emptyStorage_demangled
+    = ConstString("Swift._RawNativeDictionaryStorage");
+
+  // Deferred non-verbatim bridged dictionary
+  m_deferredBridgedStorage_mangledRegex_ObjC
+    = ConstString("^_TtGCs26_SwiftDeferredNSDictionary.*");
+  m_deferredBridgedStorage_demangledPrefix
+    = ConstString("Swift._SwiftDeferredNSDictionary<");
+  m_deferredBridgedStorage_demangledRegex
+    = ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$");
 }
 
-bool lldb_private::formatters::swift::DictionarySyntheticFrontEnd::Update() {
-  m_buffer = SwiftHashedContainerBufferHandler::CreateBufferHandler(
-      m_backend,
-      [](ValueObjectSP a, CompilerType b,
-         CompilerType c) -> SwiftHashedContainerBufferHandler * {
-        return new SwiftDictionaryNativeBufferHandler(a, b, c);
-      },
-      [](ValueObjectSP a) -> SwiftHashedContainerBufferHandler * {
-        return new SwiftDictionarySyntheticFrontEndBufferHandler(a);
-      },
-      SwiftDictionaryNativeBufferHandler::GetMangledStorageTypeName(),
-      SwiftDictionaryNativeBufferHandler::GetDemangledStorageTypeName());
-  return false;
-}
-
-bool lldb_private::formatters::swift::Dictionary_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  auto handler = SwiftHashedContainerBufferHandler::CreateBufferHandler(
-      valobj,
-      [](ValueObjectSP a, CompilerType b,
-         CompilerType c) -> SwiftHashedContainerBufferHandler * {
-        return new SwiftDictionaryNativeBufferHandler(a, b, c);
-      },
-      [](ValueObjectSP a) -> SwiftHashedContainerBufferHandler * {
-        return new SwiftDictionarySyntheticFrontEndBufferHandler(a);
-      },
-      SwiftDictionaryNativeBufferHandler::GetMangledStorageTypeName(),
-      SwiftDictionaryNativeBufferHandler::GetDemangledStorageTypeName());
+bool
+DictionaryConfig::SummaryProvider(
+  ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  auto handler = DictionaryConfig::Get().CreateHandler(valobj);
 
   if (!handler)
     return false;
@@ -126,13 +82,11 @@ bool lldb_private::formatters::swift::Dictionary_SummaryProvider(
   return true;
 };
 
-ConstString SwiftDictionaryNativeBufferHandler::GetMangledStorageTypeName() {
-  static ConstString g_name(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs29_NativeDictionaryStorageOwner"));
-  return g_name;
-}
-
-ConstString SwiftDictionaryNativeBufferHandler::GetDemangledStorageTypeName() {
-  static ConstString g_name(
-      "Swift._NativeDictionaryStorageOwner");
-  return g_name;
+SyntheticChildrenFrontEnd *
+DictionaryConfig::SyntheticChildrenCreator(
+  CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  return new HashedSyntheticChildrenFrontEnd(
+    DictionaryConfig::Get(), valobj_sp);
 }
