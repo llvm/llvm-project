@@ -242,12 +242,12 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  bool generateDocForInfo(Info *I, llvm::raw_ostream &OS) override;
+  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS) override;
 };
 
 const char *YAMLGenerator::Format = "yaml";
 
-bool YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
+llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
   llvm::yaml::Output InfoYAML(OS);
   switch (I->IT) {
   case InfoType::IT_namespace:
@@ -263,10 +263,10 @@ bool YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
     InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
     break;
   case InfoType::IT_default:
-    llvm::errs() << "Unexpected info type in index.\n";
-    return true;
+    return llvm::make_error<llvm::StringError>("Unexpected info type.\n",
+                                               llvm::inconvertibleErrorCode());
   }
-  return false;
+  return llvm::Error::success();
 }
 
 static GeneratorRegistry::Add<YAMLGenerator> YAML(YAMLGenerator::Format,

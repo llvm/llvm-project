@@ -10,6 +10,7 @@ add_clang_library(clangDoc
   ClangDoc.cpp
   Generators.cpp
   Mapper.cpp
+  MDGenerator.cpp
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
