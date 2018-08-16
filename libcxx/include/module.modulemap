@@ -228,10 +228,6 @@ module std [system] {
     header "atomic"
     export *
   }
-  module bit {
-    header "bit"
-    export *
-  }
   module bitset {
     header "bitset"
     export string
