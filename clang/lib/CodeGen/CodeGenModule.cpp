@@ -2004,7 +2004,8 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
   // codegen for global variables, because they may be marked as threadprivate.
   if (LangOpts.OpenMP && LangOpts.OpenMPUseTLS &&
       getContext().getTargetInfo().isTLSSupported() && isa<VarDecl>(Global) &&
-      !isTypeConstant(Global->getType(), false))
+      !isTypeConstant(Global->getType(), false) &&
+      !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Global))
     return false;
 
   return true;
@@ -2155,6 +2156,20 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     if (!MustEmitForCuda &&
         VD->isThisDeclarationADefinition() != VarDecl::Definition &&
         !Context.isMSStaticDataMemberInlineDefinition(VD)) {
+      if (LangOpts.OpenMP) {
+        // Emit declaration of the must-be-emitted declare target variable.
+        if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+                OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+          if (*Res == OMPDeclareTargetDeclAttr::MT_To) {
+            (void)GetAddrOfGlobalVar(VD);
+          } else {
+            assert(*Res == OMPDeclareTargetDeclAttr::MT_Link &&
+                   "link claue expected.");
+            (void)getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
+          }
+          return;
+        }
+      }
       // If this declaration may have caused an inline variable definition to
       // change linkage, make sure that it's emitted.
       if (Context.getInlineVariableDefinitionKind(VD) ==

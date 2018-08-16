@@ -2622,7 +2622,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link)
-    return false;
+    return CGM.getLangOpts().OpenMPIsDevice;
   VD = VD->getDefinition(CGM.getContext());
   if (VD && !DeclareTargetWithDefinition.insert(VD).second)
     return CGM.getLangOpts().OpenMPIsDevice;
@@ -8089,8 +8089,7 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
           cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link) {
-    if (CGM.getContext().DeclMustBeEmitted(GD.getDecl()))
-      DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
+    DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
   }
   return false;
@@ -8154,10 +8153,14 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
   for (const VarDecl *VD : DeferredGlobalVariables) {
     llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-    if (Res) {
-      assert(*Res != OMPDeclareTargetDeclAttr::MT_Link &&
-             "Implicit declare target variables must be only to().");
+    if (!Res)
+      continue;
+    if (*Res == OMPDeclareTargetDeclAttr::MT_To) {
       CGM.EmitGlobal(VD);
+    } else {
+      assert(*Res == OMPDeclareTargetDeclAttr::MT_Link &&
+             "Expected to or link clauses.");
+      (void)CGM.getOpenMPRuntime().getAddrOfDeclareTargetLink(VD);
     }
   }
 }

@@ -1322,7 +1322,7 @@ TEST(IgnoringImplicit, MatchesImplicit) {
 }
 
 TEST(IgnoringImplicit, MatchesNestedImplicit) {
-  EXPECT_TRUE(matches(R"(
+  StringRef Code = R"(
 
 struct OtherType;
 
@@ -1348,8 +1348,8 @@ int main()
 {
     SomeType i = something();
 }
-)"
-  , varDecl(
+)";
+  EXPECT_TRUE(matches(Code, varDecl(
       hasName("i"),
       hasInitializer(exprWithCleanups(has(
         cxxConstructExpr(has(expr(ignoringImplicit(cxxConstructExpr(
