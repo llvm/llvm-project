@@ -677,7 +677,8 @@ class Configuration(object):
                 if feature_macros[m]:
                     define += '=%s' % (feature_macros[m])
                 self.cxx.compile_flags += [define]
-            if m == '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS':
+            if m == '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS' or \
+               m == '_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT':
                 continue
             if m == '_LIBCPP_ABI_VERSION':
                 self.config.available_features.add('libcpp-abi-version-v%s'
