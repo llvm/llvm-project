@@ -1509,6 +1509,23 @@ void CodeGenFunction::EmitOMPPrivateLoopCounters(
     }
     ++I;
   }
+  // Privatize extra loop counters used in loops for ordered(n) clauses.
+  for (const auto *C : S.getClausesOfKind<OMPOrderedClause>()) {
+    if (!C->getNumForLoops())
+      continue;
+    for (unsigned I = S.getCollapsedNumber(),
+                  E = C->getLoopNumIterations().size();
+         I < E; ++I) {
+      const auto *DRE = cast<DeclRefExpr>(C->getLoopCunter(I));
+      const auto *VD = cast<VarDecl>(DRE->getDecl());
+      // Override only those variables that are really emitted already.
+      if (LocalDeclMap.count(VD)) {
+        (void)LoopScope.addPrivate(VD, [this, DRE, VD]() {
+          return CreateMemTemp(DRE->getType(), VD->getName());
+        });
+      }
+    }
+  }
 }
 
 static void emitPreCond(CodeGenFunction &CGF, const OMPLoopDirective &S,
@@ -2244,7 +2261,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     bool Ordered = false;
     if (const auto *OrderedClause = S.getSingleClause<OMPOrderedClause>()) {
       if (OrderedClause->getNumForLoops())
-        RT.emitDoacrossInit(*this, S);
+        RT.emitDoacrossInit(*this, S, OrderedClause->getLoopNumIterations());
       else
         Ordered = true;
     }
@@ -4941,6 +4958,20 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
             // Emit only those that were not explicitly referenced in clauses.
             if (!CGF.LocalDeclMap.count(VD))
               CGF.EmitVarDecl(*VD);
+          }
+        }
+        for (const auto *C : D.getClausesOfKind<OMPOrderedClause>()) {
+          if (!C->getNumForLoops())
+            continue;
+          for (unsigned I = LD->getCollapsedNumber(),
+                        E = C->getLoopNumIterations().size();
+               I < E; ++I) {
+            if (const auto *VD = dyn_cast<OMPCapturedExprDecl>(
+                    cast<DeclRefExpr>(C->getLoopCunter(I))->getDecl())) {
+              // Emit only those that were not explicitly referenced in clauses.
+              if (!CGF.LocalDeclMap.count(VD))
+                CGF.EmitVarDecl(*VD);
+            }
           }
         }
       }

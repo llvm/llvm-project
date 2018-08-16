@@ -922,14 +922,37 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp for' has 'ordered' clause with
 /// parameter 2.
-class OMPOrderedClause : public OMPClause {
+class OMPOrderedClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPOrderedClause, Expr *> {
   friend class OMPClauseReader;
+  friend TrailingObjects;
 
   /// Location of '('.
   SourceLocation LParenLoc;
 
   /// Number of for-loops.
   Stmt *NumForLoops = nullptr;
+
+  /// Real number of loops.
+  unsigned NumberOfLoops = 0;
+
+  /// Build 'ordered' clause.
+  ///
+  /// \param Num Expression, possibly associated with this clause.
+  /// \param NumLoops Number of loops, associated with this clause.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPOrderedClause(Expr *Num, unsigned NumLoops, SourceLocation StartLoc,
+                   SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_ordered, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        NumForLoops(Num), NumberOfLoops(NumLoops) {}
+
+  /// Build an empty clause.
+  explicit OMPOrderedClause(unsigned NumLoops)
+      : OMPClause(OMPC_ordered, SourceLocation(), SourceLocation()),
+        NumberOfLoops(NumLoops) {}
 
   /// Set the number of associated for-loops.
   void setNumForLoops(Expr *Num) { NumForLoops = Num; }
@@ -938,17 +961,17 @@ public:
   /// Build 'ordered' clause.
   ///
   /// \param Num Expression, possibly associated with this clause.
+  /// \param NumLoops Number of loops, associated with this clause.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPOrderedClause(Expr *Num, SourceLocation StartLoc,
-                    SourceLocation LParenLoc, SourceLocation EndLoc)
-      : OMPClause(OMPC_ordered, StartLoc, EndLoc), LParenLoc(LParenLoc),
-        NumForLoops(Num) {}
+  static OMPOrderedClause *Create(const ASTContext &C, Expr *Num,
+                                  unsigned NumLoops, SourceLocation StartLoc,
+                                  SourceLocation LParenLoc,
+                                  SourceLocation EndLoc);
 
   /// Build an empty clause.
-  explicit OMPOrderedClause()
-      : OMPClause(OMPC_ordered, SourceLocation(), SourceLocation()) {}
+  static OMPOrderedClause* CreateEmpty(const ASTContext &C, unsigned NumLoops);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -958,6 +981,17 @@ public:
 
   /// Return the number of associated for-loops.
   Expr *getNumForLoops() const { return cast_or_null<Expr>(NumForLoops); }
+
+  /// Set number of iterations for the specified loop.
+  void setLoopNumIterations(unsigned NumLoop, Expr *NumIterations);
+  /// Get number of iterations for all the loops.
+  ArrayRef<Expr *> getLoopNumIterations() const;
+
+  /// Set loop counter for the specified loop.
+  void setLoopCounter(unsigned NumLoop, Expr *Counter);
+  /// Get loops counter for the specified loop.
+  Expr *getLoopCunter(unsigned NumLoop);
+  const Expr *getLoopCunter(unsigned NumLoop) const;
 
   child_range children() { return child_range(&NumForLoops, &NumForLoops + 1); }
 
@@ -3087,24 +3121,32 @@ class OMPDependClause final
   /// Colon location.
   SourceLocation ColonLoc;
 
+  /// Number of loops, associated with the depend clause.
+  unsigned NumLoops = 0;
+
   /// Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   /// \param N Number of the variables in the clause.
+  /// \param NumLoops Number of loops that is associated with this depend
+  /// clause.
   OMPDependClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                  SourceLocation EndLoc, unsigned N)
+                  SourceLocation EndLoc, unsigned N, unsigned NumLoops)
       : OMPVarListClause<OMPDependClause>(OMPC_depend, StartLoc, LParenLoc,
-                                          EndLoc, N) {}
+                                          EndLoc, N), NumLoops(NumLoops) {}
 
   /// Build an empty clause.
   ///
   /// \param N Number of variables.
-  explicit OMPDependClause(unsigned N)
+  /// \param NumLoops Number of loops that is associated with this depend
+  /// clause.
+  explicit OMPDependClause(unsigned N, unsigned NumLoops)
       : OMPVarListClause<OMPDependClause>(OMPC_depend, SourceLocation(),
                                           SourceLocation(), SourceLocation(),
-                                          N) {}
+                                          N),
+        NumLoops(NumLoops) {}
 
   /// Set dependency kind.
   void setDependencyKind(OpenMPDependClauseKind K) { DepKind = K; }
@@ -3126,16 +3168,23 @@ public:
   /// \param DepLoc Location of the dependency type.
   /// \param ColonLoc Colon location.
   /// \param VL List of references to the variables.
-  static OMPDependClause *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation EndLoc, OpenMPDependClauseKind DepKind,
-         SourceLocation DepLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL);
+  /// \param NumLoops Number of loops that is associated with this depend
+  /// clause.
+  static OMPDependClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc,
+                                 OpenMPDependClauseKind DepKind,
+                                 SourceLocation DepLoc, SourceLocation ColonLoc,
+                                 ArrayRef<Expr *> VL, unsigned NumLoops);
 
   /// Creates an empty clause with \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
-  static OMPDependClause *CreateEmpty(const ASTContext &C, unsigned N);
+  /// \param NumLoops Number of loops that is associated with this depend
+  /// clause.
+  static OMPDependClause *CreateEmpty(const ASTContext &C, unsigned N,
+                                      unsigned NumLoops);
 
   /// Get dependency type.
   OpenMPDependClauseKind getDependencyKind() const { return DepKind; }
@@ -3146,15 +3195,16 @@ public:
   /// Get colon location.
   SourceLocation getColonLoc() const { return ColonLoc; }
 
-  /// Set the loop counter value for the depend clauses with 'sink|source' kind
-  /// of dependency. Required for codegen.
-  void setCounterValue(Expr *V);
+  /// Get number of loops associated with the clause.
+  unsigned getNumLoops() const { return NumLoops; }
 
-  /// Get the loop counter value.
-  Expr *getCounterValue();
+  /// Set the loop data for the depend clauses with 'sink|source' kind of
+  /// dependency.
+  void setLoopData(unsigned NumLoop, Expr *Cnt);
 
-  /// Get the loop counter value.
-  const Expr *getCounterValue() const;
+  /// Get the loop data.
+  Expr *getLoopData(unsigned NumLoop);
+  const Expr *getLoopData(unsigned NumLoop) const;
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),

@@ -1465,8 +1465,8 @@ public:
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
-  virtual void emitDoacrossInit(CodeGenFunction &CGF,
-                                const OMPLoopDirective &D);
+  virtual void emitDoacrossInit(CodeGenFunction &CGF, const OMPLoopDirective &D,
+                                ArrayRef<Expr *> NumIterations);
 
   /// Emit code for doacross ordered directive with 'depend' clause.
   /// \param C 'depend' clause with 'sink|source' dependency kind.
@@ -2051,8 +2051,8 @@ public:
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
-  void emitDoacrossInit(CodeGenFunction &CGF,
-                        const OMPLoopDirective &D) override;
+  void emitDoacrossInit(CodeGenFunction &CGF, const OMPLoopDirective &D,
+                        ArrayRef<Expr *> NumIterations) override;
 
   /// Emit code for doacross ordered directive with 'depend' clause.
   /// \param C 'depend' clause with 'sink|source' dependency kind.
