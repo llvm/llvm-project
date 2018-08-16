@@ -117,6 +117,8 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
+    @skipIfLinux
     def test_lldbmi_process_launch(self):
         """Test that 'lldb-mi --interpreter' can launch process by "process launch" command."""
 
