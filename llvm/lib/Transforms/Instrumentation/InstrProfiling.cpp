@@ -96,6 +96,11 @@ cl::opt<double> NumCountersPerValueSite(
     // is usually smaller than 2.
     cl::init(1.0));
 
+cl::opt<bool> AtomicCounterUpdateAll(
+    "instrprof-atomic-counter-update-all", cl::ZeroOrMore,
+    cl::desc("Make all profile counter updates atomic (for testing only)"),
+    cl::init(false));
+
 cl::opt<bool> AtomicCounterUpdatePromoted(
     "atomic-counter-update-promoted", cl::ZeroOrMore,
     cl::desc("Do counter update using atomic fetch add "
@@ -597,12 +602,17 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   uint64_t Index = Inc->getIndex()->getZExtValue();
   Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters, 0, Index);
-  Value *Load = Builder.CreateLoad(Addr, "pgocount");
-  auto *Count = Builder.CreateAdd(Load, Inc->getStep());
-  auto *Store = Builder.CreateStore(Count, Addr);
-  Inc->replaceAllUsesWith(Store);
-  if (isCounterPromotionEnabled())
-    PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
+                            AtomicOrdering::Monotonic);
+  } else {
+    Value *Load = Builder.CreateLoad(Addr, "pgocount");
+    auto *Count = Builder.CreateAdd(Load, Inc->getStep());
+    auto *Store = Builder.CreateStore(Count, Addr);
+    if (isCounterPromotionEnabled())
+      PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
+  }
   Inc->eraseFromParent();
 }
 
