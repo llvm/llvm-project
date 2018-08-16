@@ -49,7 +49,7 @@ class Scheduler;
 //
 // If the number of micro opcodes exceedes DispatchWidth, then the instruction
 // is dispatched in multiple cycles.
-class DispatchStage : public Stage {
+class DispatchStage final : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;
@@ -92,9 +92,9 @@ public:
   // We can always try to dispatch, so returning false is okay in this case.
   // The retire stage, which controls the RCU, might have items to complete but
   // RetireStage::hasWorkToComplete will check for that case.
-  virtual bool hasWorkToComplete() const override final { return false; }
-  virtual void cycleStart() override final;
-  virtual Status execute(InstRef &IR) override final;
+  bool hasWorkToComplete() const override { return false; }
+  void cycleStart() override;
+  Status execute(InstRef &IR) override;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 
 #ifndef NDEBUG

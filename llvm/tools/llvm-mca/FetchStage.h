@@ -23,21 +23,22 @@
 
 namespace mca {
 
-class FetchStage : public Stage {
+class FetchStage final : public Stage {
   using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
   InstMap Instructions;
   InstrBuilder &IB;
   SourceMgr &SM;
 
-public:
-  FetchStage(InstrBuilder &IB, SourceMgr &SM) : IB(IB), SM(SM) {}
   FetchStage(const FetchStage &Other) = delete;
   FetchStage &operator=(const FetchStage &Other) = delete;
 
-  bool hasWorkToComplete() const override final;
-  Status execute(InstRef &IR) override final;
-  void postExecute() override final;
-  void cycleEnd() override final;
+public:
+  FetchStage(InstrBuilder &IB, SourceMgr &SM) : IB(IB), SM(SM) {}
+
+  bool hasWorkToComplete() const override;
+  Status execute(InstRef &IR) override;
+  void postExecute() override;
+  void cycleEnd() override;
 };
 
 } // namespace mca

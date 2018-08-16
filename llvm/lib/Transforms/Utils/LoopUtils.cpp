@@ -1521,8 +1521,8 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return (FalseVal + (TrueVal / 2)) / TrueVal;
 }
 
-bool llvm::hasInvariantIterationCount(Loop *InnerLoop,
-                                      ScalarEvolution &SE) {
+bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
+                                              ScalarEvolution &SE) {
   Loop *OuterL = InnerLoop->getParentLoop();
   if (!OuterL)
     return true;

@@ -68,6 +68,7 @@ void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
+void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
 
 } // end namespace llvm
@@ -89,6 +90,7 @@ extern "C" void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
+  initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
 }
 

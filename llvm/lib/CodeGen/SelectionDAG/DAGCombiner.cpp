@@ -18089,11 +18089,13 @@ SDValue DAGCombiner::BuildSDIVPow2(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
-  SDValue S = TLI.BuildSDIVPow2(N, C->getAPIntValue(), DAG, Built);
+  if (SDValue S = TLI.BuildSDIVPow2(N, C->getAPIntValue(), DAG, Built)) {
+    for (SDNode *N : Built)
+      AddToWorklist(N);
+    return S;
+  }
 
-  for (SDNode *N : Built)
-    AddToWorklist(N);
-  return S;
+  return SDValue();
 }
 
 /// Given an ISD::UDIV node expressing a divide by constant, return a DAG

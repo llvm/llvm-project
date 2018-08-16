@@ -72,6 +72,7 @@ protected:
   bool HasVOP3PInsts;
   bool HasMulI24;
   bool HasMulU24;
+  bool HasInv2PiInlineImm;
   bool HasFminFmaxLegacy;
   bool EnablePromoteAlloca;
   int LocalMemorySize;
@@ -168,6 +169,10 @@ public:
 
   bool hasMulU24() const {
     return HasMulU24;
+  }
+
+  bool hasInv2PiInlineImm() const {
+    return HasInv2PiInlineImm;
   }
 
   bool hasFminFmaxLegacy() const {
@@ -347,7 +352,6 @@ protected:
   bool HasVGPRIndexMode;
   bool HasScalarStores;
   bool HasScalarAtomics;
-  bool HasInv2PiInlineImm;
   bool HasSDWAOmod;
   bool HasSDWAScalar;
   bool HasSDWASdst;
@@ -782,9 +786,6 @@ public:
     return HasScalarAtomics;
   }
 
-  bool hasInv2PiInlineImm() const {
-    return HasInv2PiInlineImm;
-  }
 
   bool hasDPP() const {
     return HasDPP;

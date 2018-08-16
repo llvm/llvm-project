@@ -586,6 +586,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType (ISD::LOAD  , VT, MVT::v4i32);
       setOperationAction(ISD::SELECT, VT, Promote);
       AddPromotedToType (ISD::SELECT, VT, MVT::v4i32);
+      setOperationAction(ISD::VSELECT, VT, Promote);
+      AddPromotedToType (ISD::VSELECT, VT, MVT::v4i32);
       setOperationAction(ISD::SELECT_CC, VT, Promote);
       AddPromotedToType (ISD::SELECT_CC, VT, MVT::v4i32);
       setOperationAction(ISD::STORE, VT, Promote);
@@ -626,7 +628,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::BSWAP, VT, Expand);
-      setOperationAction(ISD::VSELECT, VT, Expand);
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
       setOperationAction(ISD::ROTL, VT, Expand);
       setOperationAction(ISD::ROTR, VT, Expand);
@@ -649,6 +650,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::LOAD  , MVT::v4i32, Legal);
     setOperationAction(ISD::SELECT, MVT::v4i32,
                        Subtarget.useCRBits() ? Legal : Expand);
+    setOperationAction(ISD::VSELECT, MVT::v4i32, Legal);
     setOperationAction(ISD::STORE , MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_SINT, MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT, MVT::v4i32, Legal);
@@ -726,12 +728,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       setOperationAction(ISD::FDIV, MVT::v2f64, Legal);
       setOperationAction(ISD::FSQRT, MVT::v2f64, Legal);
-
-      setOperationAction(ISD::VSELECT, MVT::v16i8, Legal);
-      setOperationAction(ISD::VSELECT, MVT::v8i16, Legal);
-      setOperationAction(ISD::VSELECT, MVT::v4i32, Legal);
-      setOperationAction(ISD::VSELECT, MVT::v4f32, Legal);
-      setOperationAction(ISD::VSELECT, MVT::v2f64, Legal);
 
       // Share the Altivec comparison restrictions.
       setCondCodeAction(ISD::SETUO, MVT::v2f64, Expand);
@@ -11996,10 +11992,15 @@ static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
   auto isSExtOfVecExtract = [&](SDValue Op) -> bool {
     if (!Op)
       return false;
-    if (Op.getOpcode() != ISD::SIGN_EXTEND)
+    if (Op.getOpcode() != ISD::SIGN_EXTEND &&
+        Op.getOpcode() != ISD::SIGN_EXTEND_INREG)
       return false;
 
+    // A SIGN_EXTEND_INREG might be fed by an ANY_EXTEND to produce a value
+    // of the right width.
     SDValue Extract = Op.getOperand(0);
+    if (Extract.getOpcode() == ISD::ANY_EXTEND)
+      Extract = Extract.getOperand(0);
     if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return false;
 
@@ -12087,8 +12088,10 @@ SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
     return Reduced;
 
   // If we're building a vector out of extended elements from another vector
-  // we have P9 vector integer extend instructions.
-  if (Subtarget.hasP9Altivec()) {
+  // we have P9 vector integer extend instructions. The code assumes legal
+  // input types (i.e. it can't handle things like v4i16) so do not run before
+  // legalization.
+  if (Subtarget.hasP9Altivec() && !DCI.isBeforeLegalize()) {
     Reduced = combineBVOfVecSExt(N, DAG);
     if (Reduced)
       return Reduced;

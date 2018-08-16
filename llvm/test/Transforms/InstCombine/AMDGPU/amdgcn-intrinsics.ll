@@ -1649,6 +1649,155 @@ define i64 @fold_not_icmp_ne_0_zext_icmp_sle_i32(i32 %a, i32 %b) {
   ret i64 %mask
 }
 
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i4(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i4(i4 %a, i4 %b) {
+  %cmp = icmp eq i4 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 32)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i8(i8 %a, i8 %b) {
+  %cmp = icmp eq i8 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i16(
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 %a, i16 %b, i32 32)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i16(i16 %a, i16 %b) {
+  %cmp = icmp eq i16 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i36(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i36 [[A:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i36 [[B:%.*]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i64(i64 [[TMP1]], i64 [[TMP2]], i32 32)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i36(i36 %a, i36 %b) {
+  %cmp = icmp eq i36 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i128(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT_CMP:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i128(i128 %a, i128 %b) {
+  %cmp = icmp eq i128 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f16(
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.fcmp.f16(half [[A:%.*]], half [[B:%.*]], i32 1)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f16(half %a, half %b) {
+  %cmp = fcmp oeq half %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f128(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq fp128 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ZEXT_CMP:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i32(i32 [[ZEXT_CMP]], i32 0, i32 33)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f128(fp128 %a, fp128 %b) {
+;
+  %cmp = fcmp oeq fp128 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i4(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i4 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_slt_i4(i4 %a, i4 %b) {
+  %cmp = icmp slt i4 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 40)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_slt_i8(i8 %a, i8 %b) {
+  %cmp = icmp slt i8 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_slt_i16(
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 %a, i16 %b, i32 40)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_slt_i16(i16 %a, i16 %b) {
+  %cmp = icmp slt i16 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i4(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_ult_i4(i4 %a, i4 %b) {
+  %cmp = icmp ult i4 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 [[TMP1]], i16 [[TMP2]], i32 36)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_ult_i8(i8 %a, i8 %b) {
+  %cmp = icmp ult i8 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_i16(
+; CHECK-NEXT:    [[MASK:%.*]] = call i64 @llvm.amdgcn.icmp.i16(i16 %a, i16 %b, i32 36)
+; CHECK-NEXT:    ret i64 [[MASK]]
+define i64 @fold_icmp_ne_0_zext_icmp_ult_i16(i16 %a, i16 %b) {
+  %cmp = icmp ult i16 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.fcmp
 ; --------------------------------------------------------------------

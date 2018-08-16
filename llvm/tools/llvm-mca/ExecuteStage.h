@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the execution stage of an instruction pipeline.
+/// This file defines the execution stage of a default instruction pipeline.
 ///
 /// The ExecuteStage is responsible for managing the hardware scheduler
 /// and issuing notifications that an instruction has been executed.
@@ -26,7 +26,7 @@
 
 namespace mca {
 
-class ExecuteStage : public Stage {
+class ExecuteStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
   RetireControlUnit &RCU;
   Scheduler &HWS;
@@ -36,17 +36,18 @@ class ExecuteStage : public Stage {
   void updateSchedulerQueues();
   void issueReadyInstructions();
 
-public:
-  ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 
+public:
+  ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
+
   // The ExecuteStage will always complete all of its work per call to
   // execute(), so it is never left in a 'to-be-processed' state.
-  virtual bool hasWorkToComplete() const override final { return false; }
+  bool hasWorkToComplete() const override { return false; }
 
-  virtual void cycleStart() override final;
-  virtual Status execute(InstRef &IR) override final;
+  void cycleStart() override;
+  Status execute(InstRef &IR) override;
 
   void
   notifyInstructionIssued(const InstRef &IR,

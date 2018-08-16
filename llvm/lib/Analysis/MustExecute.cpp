@@ -58,7 +58,7 @@ void LoopSafetyInfo::computeLoopSafetyInfo(Loop *CurLoop) {
 /// Return true if we can prove that the given ExitBlock is not reached on the
 /// first iteration of the given loop.  That is, the backedge of the loop must
 /// be executed before the ExitBlock is executed in any dynamic execution trace.
-static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
+static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
                                            const DominatorTree *DT,
                                            const Loop *CurLoop) {
   auto *CondExitBlock = ExitBlock->getSinglePredecessor();

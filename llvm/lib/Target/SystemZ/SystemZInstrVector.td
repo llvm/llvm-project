@@ -1405,8 +1405,8 @@ multiclass ScalarToVectorFP<Instruction vrep, ValueType vt, RegisterOperand cls,
             (vrep (INSERT_SUBREG (vt (IMPLICIT_DEF)), cls:$scalar,
                                  subreg), 0)>;
 }
-defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_r32>;
-defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_r64>;
+defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_h32>;
+defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_h64>;
 
 // Match v2f64 insertions.  The AddedComplexity counters the 3 added by
 // TableGen for the base register operand in VLVG-based integer insertions
@@ -1414,10 +1414,10 @@ defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_r64>;
 let AddedComplexity = 4 in {
   def : Pat<(z_vector_insert (v2f64 VR128:$vec), FP64:$elt, 0),
             (VPDI (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FP64:$elt,
-                                 subreg_r64), VR128:$vec, 1)>;
+                                 subreg_h64), VR128:$vec, 1)>;
   def : Pat<(z_vector_insert (v2f64 VR128:$vec), FP64:$elt, 1),
             (VPDI VR128:$vec, (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FP64:$elt,
-                                             subreg_r64), 0)>;
+                                             subreg_h64), 0)>;
 }
 
 // We extract floating-point element X by replicating (for elements other
@@ -1426,14 +1426,14 @@ let AddedComplexity = 4 in {
 // extractions and ensures that this version is strictly better.
 let AddedComplexity = 4 in {
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_r32)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_h32)>;
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), imm32zx2:$index)),
-            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_r32)>;
+            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_h32)>;
 
   def : Pat<(f64 (z_vector_extract (v2f64 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_r64)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_h64)>;
   def : Pat<(f64 (z_vector_extract (v2f64 VR128:$vec), imm32zx1:$index)),
-            (EXTRACT_SUBREG (VREPG VR128:$vec, imm32zx1:$index), subreg_r64)>;
+            (EXTRACT_SUBREG (VREPG VR128:$vec, imm32zx1:$index), subreg_h64)>;
 }
 
 //===----------------------------------------------------------------------===//

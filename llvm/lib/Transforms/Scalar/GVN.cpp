@@ -678,7 +678,7 @@ static bool IsValueFullyAvailableInBlock(BasicBlock *BB,
 
   // Optimistically assume that the block is fully available and check to see
   // if we already know about this block in one lookup.
-  std::pair<DenseMap<BasicBlock*, char>::iterator, char> IV =
+  std::pair<DenseMap<BasicBlock*, char>::iterator, bool> IV =
     FullyAvailableBlocks.insert(std::make_pair(BB, 2));
 
   // If the entry already existed for this block, return the precomputed value.
