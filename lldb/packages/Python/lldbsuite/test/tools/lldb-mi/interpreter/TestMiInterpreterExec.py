@@ -18,6 +18,7 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
     def test_lldbmi_target_create(self):
         """Test that 'lldb-mi --interpreter' can create target by 'target create' command."""
 
@@ -36,9 +37,30 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows.
+    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races.
+    @skipIfDarwin
+    def test_lldbmi_target_list(self):
+        """Test that 'lldb-mi --interpreter' can list targets by 'target list' command."""
+
+        self.spawnLldbMi(args=None)
+
+        # Test that initially there are no targets.
+        self.runCmd("-interpreter-exec console \"target list\"")
+        self.expect(r"~\"No targets.\\n\"")
+
+        # Add target.
+        self.runCmd("-file-exec-and-symbols %s" % self.myexe)
+
+        # Test that "target list" lists added target.
+        self.runCmd("-interpreter-exec console \"target list\"")
+        self.expect(r"~\"Current targets:\\n\* target #0: %s" % self.myexe)
+
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
     def test_lldbmi_breakpoint_set(self):
         """Test that 'lldb-mi --interpreter' can set breakpoint by 'breakpoint set' command."""
 
@@ -63,6 +85,7 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFlakeyLinux(bugnumber="llvm.org/pr25470")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
     def test_lldbmi_settings_set_target_run_args_before(self):
         """Test that 'lldb-mi --interpreter' can set target arguments by 'setting set target.run-args' command before than target was created."""
 
@@ -155,6 +178,7 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
     def test_lldbmi_thread_step_over(self):
         """Test that 'lldb-mi --interpreter' can step over by "thread step-over" command."""
 
@@ -181,6 +205,7 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFlakeyLinux("llvm.org/pr25470")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @skipIfDarwin
     def test_lldbmi_thread_continue(self):
         """Test that 'lldb-mi --interpreter' can continue execution by "thread continue" command."""
 
