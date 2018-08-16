@@ -34,6 +34,7 @@
 #include "clang/Tooling/StandaloneExecution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -69,13 +70,18 @@ static llvm::cl::opt<bool>
                llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
 
 enum OutputFormatTy {
+  md,
   yaml,
 };
 
-static llvm::cl::opt<OutputFormatTy> FormatEnum(
-    "format", llvm::cl::desc("Format for outputted docs."),
-    llvm::cl::values(clEnumVal(yaml, "Documentation in YAML format.")),
-    llvm::cl::init(yaml), llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy>
+    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
+               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
+                                           "Documentation in YAML format."),
+                                clEnumValN(OutputFormatTy::md, "md",
+                                           "Documentation in MD format.")),
+               llvm::cl::init(OutputFormatTy::yaml),
+               llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<bool> DoxygenOnly(
     "doxygen",
@@ -155,10 +161,12 @@ getInfoOutputFile(StringRef Root,
   return Path;
 }
 
-std::string getFormatString(OutputFormatTy Ty) {
-  switch (Ty) {
-  case yaml:
+std::string getFormatString() {
+  switch (FormatEnum) {
+  case OutputFormatTy::yaml:
     return "yaml";
+  case OutputFormatTy::md:
+    return "md";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -191,19 +199,20 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
-  // Fail early if an invalid format was provided.
-  std::string Format = getFormatString(FormatEnum);
-  auto G = doc::findGeneratorByName(Format);
-  if (!G) {
-    llvm::errs() << toString(G.takeError()) << "\n";
-    return 1;
-  }
-
   auto Exec = clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, ClangDocCategory);
 
   if (!Exec) {
     llvm::errs() << toString(Exec.takeError()) << "\n";
+    return 1;
+  }
+
+  // Fail early if an invalid format was provided.
+  std::string Format = getFormatString();
+  llvm::outs() << "Emiting docs in " << Format << " format.\n";
+  auto G = doc::findGeneratorByName(Format);
+  if (!G) {
+    llvm::errs() << toString(G.takeError()) << "\n";
     return 1;
   }
 
@@ -277,8 +286,8 @@ int main(int argc, const char **argv) {
       continue;
     }
 
-    if (G->get()->generateDocForInfo(I, InfoOS))
-      llvm::errs() << "Unable to generate docs for info.\n";
+    if (auto Err = G->get()->generateDocForInfo(I, InfoOS))
+      llvm::errs() << toString(std::move(Err)) << "\n";
   }
 
   return 0;
