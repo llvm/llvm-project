@@ -1,0 +1,758 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??_C@_01CNACBAHC@?$PP?$AA@
+??_C@_01DEBJCBDD@?$PO?$AA@
+??_C@_01BPDEHCPA@?$PN?$AA@
+??_C@_01GCPEDLB@?$PM?$AA@
+??_C@_01EJGONFHG@?$PL?$AA@
+??_C@_01FAHFOEDH@?z?$AA@
+??_C@_01HLFILHPE@?y?$AA@
+??_C@_01GCEDIGLF@?x?$AA@
+??_C@_01OFNLJKHK@?w?$AA@
+??_C@_01PMMAKLDL@?v?$AA@
+??_C@_01NHONPIPI@?u?$AA@
+??_C@_01MOPGMJLJ@?t?$AA@
+??_C@_01IBLHFPHO@?s?$AA@
+??_C@_01JIKMGODP@?r?$AA@
+??_C@_01LDIBDNPM@?q?$AA@
+??_C@_01KKJKAMLN@?p?$AA@
+??_C@_01GHMAACCD@?o?$AA@
+??_C@_01HONLDDGC@?n?$AA@
+??_C@_01FFPGGAKB@?m?$AA@
+??_C@_01EMONFBOA@?l?$AA@
+??_C@_01DKMMHCH@?k?$AA@
+??_C@_01BKLHPGGG@?j?$AA@
+??_C@_01DBJKKFKF@?i?$AA@
+??_C@_01CIIBJEOE@?h?$AA@
+??_C@_01KPBJIICL@?g?$AA@
+??_C@_01LGACLJGK@?f?$AA@
+??_C@_01JNCPOKKJ@?e?$AA@
+??_C@_01IEDENLOI@?d?$AA@
+??_C@_01MLHFENCP@?c?$AA@
+??_C@_01NCGOHMGO@?b?$AA@
+??_C@_01PJEDCPKN@?a?$AA@
+??_C@_01OAFIBOOM@?$OA?$AA@
+??_C@_01LIIGDENA@?$NP?$AA@
+??_C@_01KBJNAFJB@?$NO?$AA@
+??_C@_01IKLAFGFC@?$NN?$AA@
+??_C@_01JDKLGHBD@?$NM?$AA@
+??_C@_01NMOKPBNE@?$NL?$AA@
+??_C@_01MFPBMAJF@?Z?$AA@
+??_C@_01OONMJDFG@?Y?$AA@
+??_C@_01PHMHKCBH@?X?$AA@
+??_C@_01HAFPLONI@?W?$AA@
+??_C@_01GJEEIPJJ@?V?$AA@
+??_C@_01ECGJNMFK@?U?$AA@
+??_C@_01FLHCONBL@?T?$AA@
+??_C@_01BEDDHLNM@?S?$AA@
+??_C@_01NCIEKJN@?R?$AA@
+??_C@_01CGAFBJFO@?Q?$AA@
+??_C@_01DPBOCIBP@?P?$AA@
+??_C@_01PCEECGIB@?O?$AA@
+??_C@_01OLFPBHMA@?N?$AA@
+??_C@_01MAHCEEAD@?M?$AA@
+??_C@_01NJGJHFEC@?L?$AA@
+??_C@_01JGCIODIF@?K?$AA@
+??_C@_01IPDDNCME@?J?$AA@
+??_C@_01KEBOIBAH@?I?$AA@
+??_C@_01LNAFLAEG@?H?$AA@
+??_C@_01DKJNKMIJ@?G?$AA@
+??_C@_01CDIGJNMI@?F?$AA@
+??_C@_01IKLMOAL@?E?$AA@
+??_C@_01BBLAPPEK@?D?$AA@
+??_C@_01FOPBGJIN@?C?$AA@
+??_C@_01EHOKFIMM@?B?$AA@
+??_C@_01GMMHALAP@?A?$AA@
+??_C@_01HFNMDKEO@?$MA?$AA@
+??_C@_01NNHLFPHH@?$LP?$AA@
+??_C@_01MEGAGODG@?$LO?$AA@
+??_C@_01OPENDNPF@?$LN?$AA@
+??_C@_01PGFGAMLE@?$LM?$AA@
+??_C@_01LJBHJKHD@?$LL?$AA@
+??_C@_01KAAMKLDC@?$LK?$AA@
+??_C@_01ILCBPIPB@?$LJ?$AA@
+??_C@_01JCDKMJLA@?$LI?$AA@
+??_C@_01BFKCNFHP@?$LH?$AA@
+??_C@_01MLJOEDO@?$LG?$AA@
+??_C@_01CHJELHPN@?$LF?$AA@
+??_C@_01DOIPIGLM@?$LE?$AA@
+??_C@_01HBMOBAHL@?$LD?$AA@
+??_C@_01GINFCBDK@?$LC?$AA@
+??_C@_01EDPIHCPJ@?$LB?$AA@
+??_C@_01FKODEDLI@?$LA?$AA@
+??_C@_01JHLJENCG@?$KP?$AA@
+??_C@_01IOKCHMGH@?$KO?$AA@
+??_C@_01KFIPCPKE@?$KN?$AA@
+??_C@_01LMJEBOOF@?$KM?$AA@
+??_C@_01PDNFIICC@?$KL?$AA@
+??_C@_01OKMOLJGD@?$KK?$AA@
+??_C@_01MBODOKKA@?$KJ?$AA@
+??_C@_01NIPINLOB@?$KI?$AA@
+??_C@_01FPGAMHCO@?$KH?$AA@
+??_C@_01EGHLPGGP@?$KG?$AA@
+??_C@_01GNFGKFKM@?$KF?$AA@
+??_C@_01HEENJEON@?$KE?$AA@
+??_C@_01DLAMACCK@?$KD?$AA@
+??_C@_01CCBHDDGL@?$KC?$AA@
+??_C@_01JDKGAKI@?$KB?$AA@
+??_C@_01BACBFBOJ@?$KA?$AA@
+??_C@_01EIPPHLNF@?$JP?$AA@
+??_C@_01FBOEEKJE@?$JO?$AA@
+??_C@_01HKMJBJFH@?$JN?$AA@
+??_C@_01GDNCCIBG@?$JM?$AA@
+??_C@_01CMJDLONB@?$JL?$AA@
+??_C@_01DFIIIPJA@?$JK?$AA@
+??_C@_01BOKFNMFD@?$JJ?$AA@
+??_C@_01HLOONBC@?$JI?$AA@
+??_C@_01IACGPBNN@?$JH?$AA@
+??_C@_01JJDNMAJM@?$JG?$AA@
+??_C@_01LCBAJDFP@?$JF?$AA@
+??_C@_01KLALKCBO@?$JE?$AA@
+??_C@_01OEEKDENJ@?$JD?$AA@
+??_C@_01PNFBAFJI@?$JC?$AA@
+??_C@_01NGHMFGFL@?$JB?$AA@
+??_C@_01MPGHGHBK@?$JA?$AA@
+??_C@_01CDNGJIE@?$IP?$AA@
+??_C@_01BLCGFIMF@?$IO?$AA@
+??_C@_01DAALALAG@?$IN?$AA@
+??_C@_01CJBADKEH@?$IM?$AA@
+??_C@_01GGFBKMIA@?$IL?$AA@
+??_C@_01HPEKJNMB@?$IK?$AA@
+??_C@_01FEGHMOAC@?$IJ?$AA@
+??_C@_01ENHMPPED@?$II?$AA@
+??_C@_01MKOEODIM@?$IH?$AA@
+??_C@_01NDPPNCMN@?$IG?$AA@
+??_C@_01PINCIBAO@?$IF?$AA@
+??_C@_01OBMJLAEP@?$IE?$AA@
+??_C@_01KOIICGII@?$ID?$AA@
+??_C@_01LHJDBHMJ@?$IC?$AA@
+??_C@_01JMLOEEAK@?$IB?$AA@
+??_C@_01IFKFHFEL@?$IA?$AA@
+??_C@_01BGIBIIDJ@?$HP?$AA@
+??_C@_01PJKLJHI@?$HO?$AA@
+??_C@_01CELHOKLL@?$HN?$AA@
+??_C@_01DNKMNLPK@?$HM?$AA@
+??_C@_01HCONENDN@?$HL?$AA@
+??_C@_01GLPGHMHM@z?$AA@
+??_C@_01EANLCPLP@y?$AA@
+??_C@_01FJMABOPO@x?$AA@
+??_C@_01NOFIACDB@w?$AA@
+??_C@_01MHEDDDHA@v?$AA@
+??_C@_01OMGOGALD@u?$AA@
+??_C@_01PFHFFBPC@t?$AA@
+??_C@_01LKDEMHDF@s?$AA@
+??_C@_01KDCPPGHE@r?$AA@
+??_C@_01IIACKFLH@q?$AA@
+??_C@_01JBBJJEPG@p?$AA@
+??_C@_01FMEDJKGI@o?$AA@
+??_C@_01EFFIKLCJ@n?$AA@
+??_C@_01GOHFPIOK@m?$AA@
+??_C@_01HHGOMJKL@l?$AA@
+??_C@_01DICPFPGM@k?$AA@
+??_C@_01CBDEGOCN@j?$AA@
+??_C@_01KBJDNOO@i?$AA@
+??_C@_01BDACAMKP@h?$AA@
+??_C@_01JEJKBAGA@g?$AA@
+??_C@_01INIBCBCB@f?$AA@
+??_C@_01KGKMHCOC@e?$AA@
+??_C@_01LPLHEDKD@d?$AA@
+??_C@_01PAPGNFGE@c?$AA@
+??_C@_01OJONOECF@b?$AA@
+??_C@_01MCMALHOG@a?$AA@
+??_C@_01NLNLIGKH@?$GA?$AA@
+??_C@_01IDAFKMJL@_?$AA@
+??_C@_01JKBOJNNK@?$FO?$AA@
+??_C@_01LBDDMOBJ@?$FN?$AA@
+??_C@_01KICIPPFI@?2?$AA@
+??_C@_01OHGJGJJP@?$FL?$AA@
+??_C@_01POHCFINO@Z?$AA@
+??_C@_01NFFPALBN@Y?$AA@
+??_C@_01MMEEDKFM@X?$AA@
+??_C@_01ELNMCGJD@W?$AA@
+??_C@_01FCMHBHNC@V?$AA@
+??_C@_01HJOKEEBB@U?$AA@
+??_C@_01GAPBHFFA@T?$AA@
+??_C@_01CPLAODJH@S?$AA@
+??_C@_01DGKLNCNG@R?$AA@
+??_C@_01BNIGIBBF@Q?$AA@
+??_C@_01EJNLAFE@P?$AA@
+??_C@_01MJMHLOMK@O?$AA@
+??_C@_01NANMIPIL@N?$AA@
+??_C@_01PLPBNMEI@M?$AA@
+??_C@_01OCOKONAJ@L?$AA@
+??_C@_01KNKLHLMO@K?$AA@
+??_C@_01LELAEKIP@J?$AA@
+??_C@_01JPJNBJEM@I?$AA@
+??_C@_01IGIGCIAN@H?$AA@
+??_C@_01BBODEMC@G?$AA@
+??_C@_01BIAFAFID@F?$AA@
+??_C@_01DDCIFGEA@E?$AA@
+??_C@_01CKDDGHAB@D?$AA@
+??_C@_01GFHCPBMG@C?$AA@
+??_C@_01HMGJMAIH@B?$AA@
+??_C@_01FHEEJDEE@A?$AA@
+??_C@_01EOFPKCAF@?$EA?$AA@
+??_C@_01OGPIMHDM@?$DP?$AA@
+??_C@_01PPODPGHN@?$DO?$AA@
+??_C@_01NEMOKFLO@?$DN?$AA@
+??_C@_01MNNFJEPP@?$DM?$AA@
+??_C@_01ICJEACDI@?$DL?$AA@
+??_C@_01JLIPDDHJ@?3?$AA@
+??_C@_01LAKCGALK@9?$AA@
+??_C@_01KJLJFBPL@8?$AA@
+??_C@_01COCBENDE@7?$AA@
+??_C@_01DHDKHMHF@6?$AA@
+??_C@_01BMBHCPLG@5?$AA@
+??_C@_01FAMBOPH@4?$AA@
+??_C@_01EKENIIDA@3?$AA@
+??_C@_01FDFGLJHB@2?$AA@
+??_C@_01HIHLOKLC@1?$AA@
+??_C@_01GBGANLPD@0?$AA@
+??_C@_01KMDKNFGN@?1?$AA@
+??_C@_01LFCBOECM@?4?$AA@
+??_C@_01JOAMLHOP@?9?$AA@
+??_C@_01IHBHIGKO@?0?$AA@
+??_C@_01MIFGBAGJ@?$CL?$AA@
+??_C@_01NBENCBCI@?$CK?$AA@
+??_C@_01PKGAHCOL@?$CJ?$AA@
+??_C@_01ODHLEDKK@?$CI?$AA@
+??_C@_01GEODFPGF@?8?$AA@
+??_C@_01HNPIGOCE@?$CG?$AA@
+??_C@_01FGNFDNOH@?$CF?$AA@
+??_C@_01EPMOAMKG@$?$AA@
+??_C@_01IPJKGB@?$CD?$AA@
+??_C@_01BJJEKLCA@?$CC?$AA@
+??_C@_01DCLJPIOD@?$CB?$AA@
+??_C@_01CLKCMJKC@?5?$AA@
+??_C@_01HDHMODJO@?$BP?$AA@
+??_C@_01GKGHNCNP@?$BO?$AA@
+??_C@_01EBEKIBBM@?$BN?$AA@
+??_C@_01FIFBLAFN@?$BM?$AA@
+??_C@_01BHBACGJK@?$BL?$AA@
+??_C@_01OALBHNL@?$BK?$AA@
+??_C@_01CFCGEEBI@?$BJ?$AA@
+??_C@_01DMDNHFFJ@?$BI?$AA@
+??_C@_01LLKFGJJG@?$BH?$AA@
+??_C@_01KCLOFINH@?$BG?$AA@
+??_C@_01IJJDALBE@?$BF?$AA@
+??_C@_01JAIIDKFF@?$BE?$AA@
+??_C@_01NPMJKMJC@?$BD?$AA@
+??_C@_01MGNCJNND@?$BC?$AA@
+??_C@_01ONPPMOBA@?$BB?$AA@
+??_C@_01PEOEPPFB@?$BA?$AA@
+??_C@_01DJLOPBMP@?$AP?$AA@
+??_C@_01CAKFMAIO@?$AO?$AA@
+??_C@_01LIIJDEN@?$AN?$AA@
+??_C@_01BCJDKCAM@?$AM?$AA@
+??_C@_01FNNCDEML@?$AL?$AA@
+??_C@_01EEMJAFIK@?6?$AA@
+??_C@_01GPOEFGEJ@?7?$AA@
+??_C@_01HGPPGHAI@?$AI?$AA@
+??_C@_01PBGHHLMH@?$AH?$AA@
+??_C@_01OIHMEKIG@?$AG?$AA@
+??_C@_01MDFBBJEF@?$AF?$AA@
+??_C@_01NKEKCIAE@?$AE?$AA@
+??_C@_01JFALLOMD@?$AD?$AA@
+??_C@_01IMBAIPIC@?$AC?$AA@
+??_C@_01KHDNNMEB@?$AB?$AA@
+??_C@_01LOCGONAA@?$AA?$AA@
+
+; CHECK: const char * {"\xFF"}
+; CHECK: const char * {"\xFE"}
+; CHECK: const char * {"\xFD"}
+; CHECK: const char * {"\xFC"}
+; CHECK: const char * {"\xFB"}
+; CHECK: const char * {"\xFA"}
+; CHECK: const char * {"\xF9"}
+; CHECK: const char * {"\xF8"}
+; CHECK: const char * {"\xF7"}
+; CHECK: const char * {"\xF6"}
+; CHECK: const char * {"\xF5"}
+; CHECK: const char * {"\xF4"}
+; CHECK: const char * {"\xF3"}
+; CHECK: const char * {"\xF2"}
+; CHECK: const char * {"\xF1"}
+; CHECK: const char * {"\xF0"}
+; CHECK: const char * {"\xEF"}
+; CHECK: const char * {"\xEE"}
+; CHECK: const char * {"\xED"}
+; CHECK: const char * {"\xEC"}
+; CHECK: const char * {"\xEB"}
+; CHECK: const char * {"\xEA"}
+; CHECK: const char * {"\xE9"}
+; CHECK: const char * {"\xE8"}
+; CHECK: const char * {"\xE7"}
+; CHECK: const char * {"\xE6"}
+; CHECK: const char * {"\xE5"}
+; CHECK: const char * {"\xE4"}
+; CHECK: const char * {"\xE3"}
+; CHECK: const char * {"\xE2"}
+; CHECK: const char * {"\xE1"}
+; CHECK: const char * {"\xE0"}
+; CHECK: const char * {"\xDF"}
+; CHECK: const char * {"\xDE"}
+; CHECK: const char * {"\xDD"}
+; CHECK: const char * {"\xDC"}
+; CHECK: const char * {"\xDB"}
+; CHECK: const char * {"\xDA"}
+; CHECK: const char * {"\xD9"}
+; CHECK: const char * {"\xD8"}
+; CHECK: const char * {"\xD7"}
+; CHECK: const char * {"\xD6"}
+; CHECK: const char * {"\xD5"}
+; CHECK: const char * {"\xD4"}
+; CHECK: const char * {"\xD3"}
+; CHECK: const char * {"\xD2"}
+; CHECK: const char * {"\xD1"}
+; CHECK: const char * {"\xD0"}
+; CHECK: const char * {"\xCF"}
+; CHECK: const char * {"\xCE"}
+; CHECK: const char * {"\xCD"}
+; CHECK: const char * {"\xCC"}
+; CHECK: const char * {"\xCB"}
+; CHECK: const char * {"\xCA"}
+; CHECK: const char * {"\xC9"}
+; CHECK: const char * {"\xC8"}
+; CHECK: const char * {"\xC7"}
+; CHECK: const char * {"\xC6"}
+; CHECK: const char * {"\xC5"}
+; CHECK: const char * {"\xC4"}
+; CHECK: const char * {"\xC3"}
+; CHECK: const char * {"\xC2"}
+; CHECK: const char * {"\xC1"}
+; CHECK: const char * {"\xC0"}
+; CHECK: const char * {"\xBF"}
+; CHECK: const char * {"\xBE"}
+; CHECK: const char * {"\xBD"}
+; CHECK: const char * {"\xBC"}
+; CHECK: const char * {"\xBB"}
+; CHECK: const char * {"\xBA"}
+; CHECK: const char * {"\xB9"}
+; CHECK: const char * {"\xB8"}
+; CHECK: const char * {"\xB7"}
+; CHECK: const char * {"\xB6"}
+; CHECK: const char * {"\xB5"}
+; CHECK: const char * {"\xB4"}
+; CHECK: const char * {"\xB3"}
+; CHECK: const char * {"\xB2"}
+; CHECK: const char * {"\xB1"}
+; CHECK: const char * {"\xB0"}
+; CHECK: const char * {"\xAF"}
+; CHECK: const char * {"\xAE"}
+; CHECK: const char * {"\xAD"}
+; CHECK: const char * {"\xAC"}
+; CHECK: const char * {"\xAB"}
+; CHECK: const char * {"\xAA"}
+; CHECK: const char * {"\xA9"}
+; CHECK: const char * {"\xA8"}
+; CHECK: const char * {"\xA7"}
+; CHECK: const char * {"\xA6"}
+; CHECK: const char * {"\xA5"}
+; CHECK: const char * {"\xA4"}
+; CHECK: const char * {"\xA3"}
+; CHECK: const char * {"\xA2"}
+; CHECK: const char * {"\xA1"}
+; CHECK: const char * {"\xA0"}
+; CHECK: const char * {"\x9F"}
+; CHECK: const char * {"\x9E"}
+; CHECK: const char * {"\x9D"}
+; CHECK: const char * {"\x9C"}
+; CHECK: const char * {"\x9B"}
+; CHECK: const char * {"\x9A"}
+; CHECK: const char * {"\x99"}
+; CHECK: const char * {"\x98"}
+; CHECK: const char * {"\x97"}
+; CHECK: const char * {"\x96"}
+; CHECK: const char * {"\x95"}
+; CHECK: const char * {"\x94"}
+; CHECK: const char * {"\x93"}
+; CHECK: const char * {"\x92"}
+; CHECK: const char * {"\x91"}
+; CHECK: const char * {"\x90"}
+; CHECK: const char * {"\x8F"}
+; CHECK: const char * {"\x8E"}
+; CHECK: const char * {"\x8D"}
+; CHECK: const char * {"\x8C"}
+; CHECK: const char * {"\x8B"}
+; CHECK: const char * {"\x8A"}
+; CHECK: const char * {"\x89"}
+; CHECK: const char * {"\x88"}
+; CHECK: const char * {"\x87"}
+; CHECK: const char * {"\x86"}
+; CHECK: const char * {"\x85"}
+; CHECK: const char * {"\x84"}
+; CHECK: const char * {"\x83"}
+; CHECK: const char * {"\x82"}
+; CHECK: const char * {"\x81"}
+; CHECK: const char * {"\x80"}
+; CHECK: const char * {"\x7F"}
+; CHECK: const char * {"~"}
+; CHECK: const char * {"}"}
+; CHECK: const char * {"|"}
+; CHECK: const char * {"{"}
+; CHECK: const char * {"z"}
+; CHECK: const char * {"y"}
+; CHECK: const char * {"x"}
+; CHECK: const char * {"w"}
+; CHECK: const char * {"v"}
+; CHECK: const char * {"u"}
+; CHECK: const char * {"t"}
+; CHECK: const char * {"s"}
+; CHECK: const char * {"r"}
+; CHECK: const char * {"q"}
+; CHECK: const char * {"p"}
+; CHECK: const char * {"o"}
+; CHECK: const char * {"n"}
+; CHECK: const char * {"m"}
+; CHECK: const char * {"l"}
+; CHECK: const char * {"k"}
+; CHECK: const char * {"j"}
+; CHECK: const char * {"i"}
+; CHECK: const char * {"h"}
+; CHECK: const char * {"g"}
+; CHECK: const char * {"f"}
+; CHECK: const char * {"e"}
+; CHECK: const char * {"d"}
+; CHECK: const char * {"c"}
+; CHECK: const char * {"b"}
+; CHECK: const char * {"a"}
+; CHECK: const char * {"`"}
+; CHECK: const char * {"_"}
+; CHECK: const char * {"^"}
+; CHECK: const char * {"]"}
+; CHECK: const char * {"\\"}
+; CHECK: const char * {"["}
+; CHECK: const char * {"Z"}
+; CHECK: const char * {"Y"}
+; CHECK: const char * {"X"}
+; CHECK: const char * {"W"}
+; CHECK: const char * {"V"}
+; CHECK: const char * {"U"}
+; CHECK: const char * {"T"}
+; CHECK: const char * {"S"}
+; CHECK: const char * {"R"}
+; CHECK: const char * {"Q"}
+; CHECK: const char * {"P"}
+; CHECK: const char * {"O"}
+; CHECK: const char * {"N"}
+; CHECK: const char * {"M"}
+; CHECK: const char * {"L"}
+; CHECK: const char * {"K"}
+; CHECK: const char * {"J"}
+; CHECK: const char * {"I"}
+; CHECK: const char * {"H"}
+; CHECK: const char * {"G"}
+; CHECK: const char * {"F"}
+; CHECK: const char * {"E"}
+; CHECK: const char * {"D"}
+; CHECK: const char * {"C"}
+; CHECK: const char * {"B"}
+; CHECK: const char * {"A"}
+; CHECK: const char * {"@"}
+; CHECK: const char * {"?"}
+; CHECK: const char * {">"}
+; CHECK: const char * {"="}
+; CHECK: const char * {"<"}
+; CHECK: const char * {";"}
+; CHECK: const char * {":"}
+; CHECK: const char * {"9"}
+; CHECK: const char * {"8"}
+; CHECK: const char * {"7"}
+; CHECK: const char * {"6"}
+; CHECK: const char * {"5"}
+; CHECK: const char * {"4"}
+; CHECK: const char * {"3"}
+; CHECK: const char * {"2"}
+; CHECK: const char * {"1"}
+; CHECK: const char * {"0"}
+; CHECK: const char * {"/"}
+; CHECK: const char * {"."}
+; CHECK: const char * {"-"}
+; CHECK: const char * {","}
+; CHECK: const char * {"+"}
+; CHECK: const char * {"*"}
+; CHECK: const char * {")"}
+; CHECK: const char * {"("}
+; CHECK: const char * {"\'"}
+; CHECK: const char * {"&"}
+; CHECK: const char * {"%"}
+; CHECK: const char * {"$"}
+; CHECK: const char * {"#"}
+; CHECK: const char * {"\""}
+; CHECK: const char * {"!"}
+; CHECK: const char * {" "}
+; CHECK: const char * {"\x1F"}
+; CHECK: const char * {"\x1E"}
+; CHECK: const char * {"\x1D"}
+; CHECK: const char * {"\x1C"}
+; CHECK: const char * {"\x1B"}
+; CHECK: const char * {"\x1A"}
+; CHECK: const char * {"\x19"}
+; CHECK: const char * {"\x18"}
+; CHECK: const char * {"\x17"}
+; CHECK: const char * {"\x16"}
+; CHECK: const char * {"\x15"}
+; CHECK: const char * {"\x14"}
+; CHECK: const char * {"\x13"}
+; CHECK: const char * {"\x12"}
+; CHECK: const char * {"\x11"}
+; CHECK: const char * {"\x10"}
+; CHECK: const char * {"\x0F"}
+; CHECK: const char * {"\x0E"}
+; CHECK: const char * {"\r"}
+; CHECK: const char * {"\f"}
+; CHECK: const char * {"\v"}
+; CHECK: const char * {"\n"}
+; CHECK: const char * {"\t"}
+; CHECK: const char * {"\b"}
+; CHECK: const char * {"\a"}
+; CHECK: const char * {"\x06"}
+; CHECK: const char * {"\x05"}
+; CHECK: const char * {"\x04"}
+; CHECK: const char * {"\x03"}
+; CHECK: const char * {"\x02"}
+; CHECK: const char * {"\x01"}
+; CHECK: const char * {"\x00"}
+
+
+??_C@_13KDLDGPGJ@?$AA?7?$AA?$AA@
+??_C@_13LBAGMAIH@?$AA?6?$AA?$AA@
+??_C@_13JLKKHOC@?$AA?$AL?$AA?$AA@
+??_C@_13HOIJIPNN@?$AA?5?$AA?$AA@
+??_C@_13MGDFOILI@?$AA?$CB?$AA?$AA@
+??_C@_13NEIAEHFG@?$AA?$CC?$AA?$AA@
+??_C@_13GMDMCADD@?$AA?$CD?$AA?$AA@
+??_C@_13PBOLBIIK@?$AA$?$AA?$AA@
+??_C@_13EJFHHPOP@?$AA?$CF?$AA?$AA@
+??_C@_13FLOCNAAB@?$AA?$CG?$AA?$AA@
+??_C@_13ODFOLHGE@?$AA?8?$AA?$AA@
+??_C@_13LLDNKHDC@?$AA?$CI?$AA?$AA@
+??_C@_13DIBMAFH@?$AA?$CJ?$AA?$AA@
+??_C@_13BBDEGPLJ@?$AA?$CK?$AA?$AA@
+??_C@_13KJIIAINM@?$AA?$CL?$AA?$AA@
+??_C@_13DEFPDAGF@?$AA?0?$AA?$AA@
+??_C@_13IMODFHAA@?$AA?9?$AA?$AA@
+??_C@_13JOFGPIOO@?$AA?4?$AA?$AA@
+??_C@_13CGOKJPIL@?$AA?1?$AA?$AA@
+??_C@_13COJANIEC@?$AA0?$AA?$AA@
+??_C@_13JGCMLPCH@?$AA1?$AA?$AA@
+??_C@_13IEJJBAMJ@?$AA2?$AA?$AA@
+??_C@_13DMCFHHKM@?$AA3?$AA?$AA@
+??_C@_13KBPCEPBF@?$AA4?$AA?$AA@
+??_C@_13BJEOCIHA@?$AA5?$AA?$AA@
+??_C@_13LPLIHJO@?$AA6?$AA?$AA@
+??_C@_13LDEHOAPL@?$AA7?$AA?$AA@
+??_C@_13OLCEPAKN@?$AA8?$AA?$AA@
+??_C@_13FDJIJHMI@?$AA9?$AA?$AA@
+??_C@_13EBCNDICG@?$AA?3?$AA?$AA@
+??_C@_13PJJBFPED@?$AA?$DL?$AA?$AA@
+??_C@_13GEEGGHPK@?$AA?$DM?$AA?$AA@
+??_C@_13NMPKAAJP@?$AA?$DN?$AA?$AA@
+??_C@_13MOEPKPHB@?$AA?$DO?$AA?$AA@
+??_C@_13HGPDMIBE@?$AA?$DP?$AA?$AA@
+??_C@_13EFKPHINO@?$AA?$EA?$AA?$AA@
+??_C@_13PNBDBPLL@?$AAA?$AA?$AA@
+??_C@_13OPKGLAFF@?$AAB?$AA?$AA@
+??_C@_13FHBKNHDA@?$AAC?$AA?$AA@
+??_C@_13MKMNOPIJ@?$AAD?$AA?$AA@
+??_C@_13HCHBIIOM@?$AAE?$AA?$AA@
+??_C@_13GAMECHAC@?$AAF?$AA?$AA@
+??_C@_13NIHIEAGH@?$AAG?$AA?$AA@
+??_C@_13IABLFADB@?$AAH?$AA?$AA@
+??_C@_13DIKHDHFE@?$AAI?$AA?$AA@
+??_C@_13CKBCJILK@?$AAJ?$AA?$AA@
+??_C@_13JCKOPPNP@?$AAK?$AA?$AA@
+??_C@_13PHJMHGG@?$AAL?$AA?$AA@
+??_C@_13LHMFKAAD@?$AAM?$AA?$AA@
+??_C@_13KFHAAPON@?$AAN?$AA?$AA@
+??_C@_13BNMMGIII@?$AAO?$AA?$AA@
+??_C@_13BFLGCPEB@?$AAP?$AA?$AA@
+??_C@_13KNAKEICE@?$AAQ?$AA?$AA@
+??_C@_13LPLPOHMK@?$AAR?$AA?$AA@
+??_C@_13HADIAKP@?$AAS?$AA?$AA@
+??_C@_13JKNELIBG@?$AAT?$AA?$AA@
+??_C@_13CCGINPHD@?$AAU?$AA?$AA@
+??_C@_13DANNHAJN@?$AAV?$AA?$AA@
+??_C@_13IIGBBHPI@?$AAW?$AA?$AA@
+??_C@_13NAACAHKO@?$AAX?$AA?$AA@
+??_C@_13GILOGAML@?$AAY?$AA?$AA@
+??_C@_13HKALMPCF@?$AAZ?$AA?$AA@
+??_C@_13MCLHKIEA@?$AA?$FL?$AA?$AA@
+??_C@_13FPGAJAPJ@?$AA?2?$AA?$AA@
+??_C@_13OHNMPHJM@?$AA?$FN?$AA?$AA@
+??_C@_13PFGJFIHC@?$AA?$FO?$AA?$AA@
+??_C@_13ENNFDPBH@?$AA_?$AA?$AA@
+??_C@_13OFJNNHOA@?$AA?$GA?$AA?$AA@
+??_C@_13FNCBLAIF@?$AAa?$AA?$AA@
+??_C@_13EPJEBPGL@?$AAb?$AA?$AA@
+??_C@_13PHCIHIAO@?$AAc?$AA?$AA@
+??_C@_13GKPPEALH@?$AAd?$AA?$AA@
+??_C@_13NCEDCHNC@?$AAe?$AA?$AA@
+??_C@_13MAPGIIDM@?$AAf?$AA?$AA@
+??_C@_13HIEKOPFJ@?$AAg?$AA?$AA@
+??_C@_13CACJPPAP@?$AAh?$AA?$AA@
+??_C@_13JIJFJIGK@?$AAi?$AA?$AA@
+??_C@_13IKCADHIE@?$AAj?$AA?$AA@
+??_C@_13DCJMFAOB@?$AAk?$AA?$AA@
+??_C@_13KPELGIFI@?$AAl?$AA?$AA@
+??_C@_13BHPHAPDN@?$AAm?$AA?$AA@
+??_C@_13FECKAND@?$AAn?$AA?$AA@
+??_C@_13LNPOMHLG@?$AAo?$AA?$AA@
+??_C@_13LFIEIAHP@?$AAp?$AA?$AA@
+??_C@_13NDIOHBK@?$AAq?$AA?$AA@
+??_C@_13BPINEIPE@?$AAr?$AA?$AA@
+??_C@_13KHDBCPJB@?$AAs?$AA?$AA@
+??_C@_13DKOGBHCI@?$AAt?$AA?$AA@
+??_C@_13ICFKHAEN@?$AAu?$AA?$AA@
+??_C@_13JAOPNPKD@?$AAv?$AA?$AA@
+??_C@_13CIFDLIMG@?$AAw?$AA?$AA@
+??_C@_13HADAKIJA@?$AAx?$AA?$AA@
+??_C@_13MIIMMPPF@?$AAy?$AA?$AA@
+??_C@_13NKDJGABL@?$AAz?$AA?$AA@
+??_C@_13GCIFAHHO@?$AA?$HL?$AA?$AA@
+??_C@_13PPFCDPMH@?$AA?$HM?$AA?$AA@
+??_C@_13EHOOFIKC@?$AA?$HN?$AA?$AA@
+??_C@_13FFFLPHEM@?$AA?$HO?$AA?$AA@
+
+; CHECK: const wchar_t * {L"\t"}
+; CHECK: const wchar_t * {L"\n"}
+; CHECK: const wchar_t * {L"\v"}
+; CHECK: const wchar_t * {L" "}
+; CHECK: const wchar_t * {L"!"}
+; CHECK: const wchar_t * {L"\""}
+; CHECK: const wchar_t * {L"#"}
+; CHECK: const wchar_t * {L"$"}
+; CHECK: const wchar_t * {L"%"}
+; CHECK: const wchar_t * {L"&"}
+; CHECK: const wchar_t * {L"\'"}
+; CHECK: const wchar_t * {L"("}
+; CHECK: const wchar_t * {L")"}
+; CHECK: const wchar_t * {L"*"}
+; CHECK: const wchar_t * {L"+"}
+; CHECK: const wchar_t * {L","}
+; CHECK: const wchar_t * {L"-"}
+; CHECK: const wchar_t * {L"."}
+; CHECK: const wchar_t * {L"/"}
+; CHECK: const wchar_t * {L"0"}
+; CHECK: const wchar_t * {L"1"}
+; CHECK: const wchar_t * {L"2"}
+; CHECK: const wchar_t * {L"3"}
+; CHECK: const wchar_t * {L"4"}
+; CHECK: const wchar_t * {L"5"}
+; CHECK: const wchar_t * {L"6"}
+; CHECK: const wchar_t * {L"7"}
+; CHECK: const wchar_t * {L"8"}
+; CHECK: const wchar_t * {L"9"}
+; CHECK: const wchar_t * {L":"}
+; CHECK: const wchar_t * {L";"}
+; CHECK: const wchar_t * {L"<"}
+; CHECK: const wchar_t * {L"="}
+; CHECK: const wchar_t * {L">"}
+; CHECK: const wchar_t * {L"?"}
+; CHECK: const wchar_t * {L"@"}
+; CHECK: const wchar_t * {L"A"}
+; CHECK: const wchar_t * {L"B"}
+; CHECK: const wchar_t * {L"C"}
+; CHECK: const wchar_t * {L"D"}
+; CHECK: const wchar_t * {L"E"}
+; CHECK: const wchar_t * {L"F"}
+; CHECK: const wchar_t * {L"G"}
+; CHECK: const wchar_t * {L"H"}
+; CHECK: const wchar_t * {L"I"}
+; CHECK: const wchar_t * {L"J"}
+; CHECK: const wchar_t * {L"K"}
+; CHECK: const wchar_t * {L"L"}
+; CHECK: const wchar_t * {L"M"}
+; CHECK: const wchar_t * {L"N"}
+; CHECK: const wchar_t * {L"O"}
+; CHECK: const wchar_t * {L"P"}
+; CHECK: const wchar_t * {L"Q"}
+; CHECK: const wchar_t * {L"R"}
+; CHECK: const wchar_t * {L"S"}
+; CHECK: const wchar_t * {L"T"}
+; CHECK: const wchar_t * {L"U"}
+; CHECK: const wchar_t * {L"V"}
+; CHECK: const wchar_t * {L"W"}
+; CHECK: const wchar_t * {L"X"}
+; CHECK: const wchar_t * {L"Y"}
+; CHECK: const wchar_t * {L"Z"}
+; CHECK: const wchar_t * {L"["}
+; CHECK: const wchar_t * {L"\\"}
+; CHECK: const wchar_t * {L"]"}
+; CHECK: const wchar_t * {L"^"}
+; CHECK: const wchar_t * {L"_"}
+; CHECK: const wchar_t * {L"`"}
+; CHECK: const wchar_t * {L"a"}
+; CHECK: const wchar_t * {L"b"}
+; CHECK: const wchar_t * {L"c"}
+; CHECK: const wchar_t * {L"d"}
+; CHECK: const wchar_t * {L"e"}
+; CHECK: const wchar_t * {L"f"}
+; CHECK: const wchar_t * {L"g"}
+; CHECK: const wchar_t * {L"h"}
+; CHECK: const wchar_t * {L"i"}
+; CHECK: const wchar_t * {L"j"}
+; CHECK: const wchar_t * {L"k"}
+; CHECK: const wchar_t * {L"l"}
+; CHECK: const wchar_t * {L"m"}
+; CHECK: const wchar_t * {L"n"}
+; CHECK: const wchar_t * {L"o"}
+; CHECK: const wchar_t * {L"p"}
+; CHECK: const wchar_t * {L"q"}
+; CHECK: const wchar_t * {L"r"}
+; CHECK: const wchar_t * {L"s"}
+; CHECK: const wchar_t * {L"t"}
+; CHECK: const wchar_t * {L"u"}
+; CHECK: const wchar_t * {L"v"}
+; CHECK: const wchar_t * {L"w"}
+; CHECK: const wchar_t * {L"x"}
+; CHECK: const wchar_t * {L"y"}
+; CHECK: const wchar_t * {L"z"}
+; CHECK: const wchar_t * {L"{"}
+; CHECK: const wchar_t * {L"|"}
+; CHECK: const wchar_t * {L"}"}
+; CHECK: const wchar_t * {L"~"}
+
+
+
+??_C@_0CF@LABBIIMO@012345678901234567890123456789AB@
+; CHECK: const char * {"012345678901234567890123456789AB"...}
+
+??_C@_1EK@KFPEBLPK@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AAB@
+; CHECK: const wchar_t * {L"012345678901234567890123456789AB"...}
+
+??_C@_13IIHIAFKH@?W?$PP?$AA?$AA@
+; CHECK: const wchar_t * {L"\xD7\xFF"}
+
+??_C@_02PCEFGMJL@hi?$AA@
+; CHECK: const char * {"hi"}
+
+??_C@_05OMLEGLOC@h?$AAi?$AA?$AA?$AA@
+; CHECK: const char16_t * {u"hi"}
+
+??_C@_0EK@FEAOBHPP@o?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA@
+; CHECK: const char16_t * {u"o123456789012345"...}
+
+??_C@_0M@GFNAJIPG@h?$AA?$AA?$AAi?$AA?$AA?$AA?$AA?$AA?$AA?$AA@
+; CHECK: const char32_t * {U"hi"}
+
+??_C@_0JE@IMHFEDAA@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA7?$AA?$AA?$AA@
+; CHECK: const char32_t * {U"01234567"...}
+
+; These all have just the right length that the trailing 0 just fits.
+??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@
+; CHECK: const char * {"012345678901234567890123456789A"}
+
+??_C@_1EA@LJAFPILO@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AA?$AA@
+; CHECK: const wchar_t * {L"012345678901234567890123456789A"}
+
+??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@
+; CHECK: const char * {"012345678901234567890123456789A"}
+
+??_C@_0CA@NFEFHIFO@0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA?$AA?$AA@
+; CHECK: const char16_t * {u"012345678901234"}
+
+??_C@_0CA@KFPHPCC@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA?$AA?$AA?$AA?$AA@
+; CHECK: const char32_t * {U"0123456"}

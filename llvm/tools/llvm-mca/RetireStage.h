@@ -36,7 +36,7 @@ public:
       : Stage(), RCU(R), PRF(F) {}
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
-  void cycleStart() override;
+  llvm::Error cycleStart() override;
   Status execute(InstRef &IR) override { return Stage::Continue; }
   void notifyInstructionRetired(const InstRef &IR);
   void onInstructionExecuted(unsigned TokenID);

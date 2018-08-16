@@ -318,6 +318,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FLOG, MVT::f32, Custom);
   setOperationAction(ISD::FLOG10, MVT::f32, Custom);
+  setOperationAction(ISD::FEXP, MVT::f32, Custom);
 
 
   setOperationAction(ISD::FNEARBYINT, MVT::f32, Custom);
@@ -450,6 +451,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FDIV, VT, Expand);
     setOperationAction(ISD::FEXP2, VT, Expand);
+    setOperationAction(ISD::FEXP, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
     setOperationAction(ISD::FREM, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
@@ -1141,6 +1143,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return LowerFLOG(Op, DAG, 1 / AMDGPU_LOG2E_F);
   case ISD::FLOG10:
     return LowerFLOG(Op, DAG, AMDGPU_LN2_F / AMDGPU_LN10_F);
+  case ISD::FEXP:
+    return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
@@ -2212,6 +2216,34 @@ SDValue AMDGPUTargetLowering::LowerFLOG(SDValue Op, SelectionDAG &DAG,
   SDValue Log2BaseInvertedOperand = DAG.getConstantFP(Log2BaseInverted, SL, VT);
 
   return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand);
+}
+
+// Return M_LOG2E of appropriate type
+static SDValue getLog2EVal(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f32:
+    return DAG.getConstantFP(1.44269504088896340735992468100189214f, SL, VT);
+  case MVT::f16:
+    return DAG.getConstantFP(
+      APFloat(APFloat::IEEEhalf(), "1.44269504088896340735992468100189214"),
+      SL, VT);
+  case MVT::f64:
+    return DAG.getConstantFP(
+      APFloat(APFloat::IEEEdouble(), "0x1.71547652b82fep+0"), SL, VT);
+  default:
+    llvm_unreachable("unsupported fp type");
+  }
+}
+
+// exp2(M_LOG2E_F * f);
+SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  const SDValue K = getLog2EVal(DAG, SL, VT);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Src, K, Op->getFlags());
+  return DAG.getNode(ISD::FEXP2, SL, VT, Mul, Op->getFlags());
 }
 
 static bool isCtlzOpc(unsigned Opc) {

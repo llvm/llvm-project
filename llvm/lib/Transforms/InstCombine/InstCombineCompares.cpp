@@ -4598,6 +4598,26 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   }
 }
 
+static Instruction *foldVectorCmp(CmpInst &Cmp,
+                                  InstCombiner::BuilderTy &Builder) {
+  // If both arguments of the cmp are shuffles that use the same mask and
+  // shuffle within a single vector, move the shuffle after the cmp.
+  Value *LHS = Cmp.getOperand(0), *RHS = Cmp.getOperand(1);
+  Value *V1, *V2;
+  Constant *M;
+  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(M))) &&
+      match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(M))) &&
+      V1->getType() == V2->getType() &&
+      (LHS->hasOneUse() || RHS->hasOneUse())) {
+    // cmp (shuffle V1, M), (shuffle V2, M) --> shuffle (cmp V1, V2), M
+    CmpInst::Predicate P = Cmp.getPredicate();
+    Value *NewCmp = isa<ICmpInst>(Cmp) ? Builder.CreateICmp(P, V1, V2)
+                                       : Builder.CreateFCmp(P, V1, V2);
+    return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
+  }
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -4866,6 +4886,10 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     if (match(Op1, m_Add(m_Value(X), m_ConstantInt(Cst))) && Op0 == X)
       return foldICmpAddOpConst(X, Cst, I.getSwappedPredicate());
   }
+
+  if (I.getType()->isVectorTy())
+    if (Instruction *Res = foldVectorCmp(I, Builder))
+      return Res;
 
   return Changed ? &I : nullptr;
 }
@@ -5300,6 +5324,10 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
     if (FPExtInst *RHSExt = dyn_cast<FPExtInst>(Op1))
       if (LHSExt->getSrcTy() == RHSExt->getSrcTy())
         return new FCmpInst(Pred, LHSExt->getOperand(0), RHSExt->getOperand(0));
+
+  if (I.getType()->isVectorTy())
+    if (Instruction *Res = foldVectorCmp(I, Builder))
+      return Res;
 
   return Changed ? &I : nullptr;
 }

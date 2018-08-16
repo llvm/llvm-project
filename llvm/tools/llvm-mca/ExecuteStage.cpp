@@ -35,7 +35,7 @@ void ExecuteStage::reclaimSchedulerResources() {
 }
 
 // Update the scheduler's instruction queues.
-void ExecuteStage::updateSchedulerQueues() {
+Error ExecuteStage::updateSchedulerQueues() {
   SmallVector<InstRef, 4> InstructionIDs;
   HWS.updateIssuedSet(InstructionIDs);
   for (const InstRef &IR : InstructionIDs)
@@ -45,10 +45,11 @@ void ExecuteStage::updateSchedulerQueues() {
   HWS.updatePendingQueue(InstructionIDs);
   for (const InstRef &IR : InstructionIDs)
     notifyInstructionReady(IR);
+  return ErrorSuccess();
 }
 
 // Issue instructions that are waiting in the scheduler's ready queue.
-void ExecuteStage::issueReadyInstructions() {
+Error ExecuteStage::issueReadyInstructions() {
   SmallVector<InstRef, 4> InstructionIDs;
   InstRef IR = HWS.select();
   while (IR.isValid()) {
@@ -75,6 +76,8 @@ void ExecuteStage::issueReadyInstructions() {
     // Select the next instruction to issue.
     IR = HWS.select();
   }
+
+  return ErrorSuccess();
 }
 
 // The following routine is the maintenance routine of the ExecuteStage.
@@ -89,10 +92,11 @@ void ExecuteStage::issueReadyInstructions() {
 // Notifications are issued to this stage's listeners when instructions are
 // moved between the HWS's queues.  In particular, when an instruction becomes
 // ready or executed.
-void ExecuteStage::cycleStart() {
+Error ExecuteStage::cycleStart() {
   reclaimSchedulerResources();
-  updateSchedulerQueues();
-  issueReadyInstructions();
+  if (Error S = updateSchedulerQueues())
+    return S;
+  return issueReadyInstructions();
 }
 
 // Schedule the instruction for execution on the hardware.

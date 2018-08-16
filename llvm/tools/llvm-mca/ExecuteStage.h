@@ -33,8 +33,8 @@ class ExecuteStage final : public Stage {
 
   // The following routines are used to maintain the HWS.
   void reclaimSchedulerResources();
-  void updateSchedulerQueues();
-  void issueReadyInstructions();
+  llvm::Error updateSchedulerQueues();
+  llvm::Error issueReadyInstructions();
 
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
@@ -42,11 +42,15 @@ class ExecuteStage final : public Stage {
 public:
   ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
 
-  // The ExecuteStage will always complete all of its work per call to
-  // execute(), so it is never left in a 'to-be-processed' state.
+  // This stage works under the assumption that the Pipeline will eventually
+  // execute a retire stage. We don't need to check if pipelines and/or
+  // schedulers have instructions to process, because those instructions are
+  // also tracked by the retire control unit. That means,
+  // RetireControlUnit::hasWorkToComplete() is responsible for checking if there
+  // are still instructions in-flight in the out-of-order backend.
   bool hasWorkToComplete() const override { return false; }
 
-  void cycleStart() override;
+  llvm::Error cycleStart() override;
   Status execute(InstRef &IR) override;
 
   void

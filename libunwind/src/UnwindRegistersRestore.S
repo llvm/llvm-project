@@ -815,7 +815,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   .set noreorder
   .set nomacro
 #ifdef __mips_hard_float
-#if __mips_fpr == 32
+#if __mips_fpr != 64
   ldc1  $f0, (4 * 36 + 8 * 0)($4)
   ldc1  $f2, (4 * 36 + 8 * 2)($4)
   ldc1  $f4, (4 * 36 + 8 * 4)($4)

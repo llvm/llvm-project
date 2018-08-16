@@ -21,14 +21,9 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "xray_utils.h"
-#include <sys/mman.h>
 #include <cstddef>
 #include <cstdint>
-
-#ifndef MAP_NORESERVE
-// no-op on NetBSD (at least), unsupported flag on FreeBSD basically because unneeded
-#define MAP_NORESERVE 0
-#endif
+#include <sys/mman.h>
 
 namespace __xray {
 
@@ -69,7 +64,7 @@ private:
     if (UNLIKELY(BackingStore == nullptr)) {
       BackingStore = reinterpret_cast<void *>(
           internal_mmap(NULL, MaxMemory, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, 0, 0));
+                        MAP_PRIVATE | MAP_ANONYMOUS, 0, 0));
       if (BackingStore == MAP_FAILED) {
         BackingStore = nullptr;
         if (Verbosity())

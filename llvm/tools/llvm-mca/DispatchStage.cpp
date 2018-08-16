@@ -33,7 +33,7 @@ void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
   notifyEvent<HWInstructionEvent>(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
-bool DispatchStage::checkPRF(const InstRef &IR) {
+bool DispatchStage::checkPRF(const InstRef &IR) const {
   SmallVector<unsigned, 4> RegDefs;
   for (const std::unique_ptr<WriteState> &RegDef :
        IR.getInstruction()->getDefs())
@@ -50,7 +50,7 @@ bool DispatchStage::checkPRF(const InstRef &IR) {
   return true;
 }
 
-bool DispatchStage::checkRCU(const InstRef &IR) {
+bool DispatchStage::checkRCU(const InstRef &IR) const {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU.isAvailable(NumMicroOps))
     return true;
@@ -59,7 +59,7 @@ bool DispatchStage::checkRCU(const InstRef &IR) {
   return false;
 }
 
-bool DispatchStage::checkScheduler(const InstRef &IR) {
+bool DispatchStage::checkScheduler(const InstRef &IR) const {
   HWStallEvent::GenericEventType Event;
   const bool Ready = SC.canBeDispatched(IR, Event);
   if (!Ready)
@@ -131,9 +131,10 @@ void DispatchStage::dispatch(InstRef IR) {
   notifyInstructionDispatched(IR, RegisterFiles);
 }
 
-void DispatchStage::cycleStart() {
+llvm::Error DispatchStage::cycleStart() {
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
+  return llvm::ErrorSuccess();
 }
 
 Stage::Status DispatchStage::execute(InstRef &IR) {

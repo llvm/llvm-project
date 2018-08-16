@@ -58,9 +58,9 @@ class DispatchStage final : public Stage {
   RegisterFile &PRF;
   Scheduler &SC;
 
-  bool checkRCU(const InstRef &IR);
-  bool checkPRF(const InstRef &IR);
-  bool checkScheduler(const InstRef &IR);
+  bool checkRCU(const InstRef &IR) const;
+  bool checkPRF(const InstRef &IR) const;
+  bool checkScheduler(const InstRef &IR) const;
   void dispatch(InstRef IR);
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
@@ -93,7 +93,7 @@ public:
   // The retire stage, which controls the RCU, might have items to complete but
   // RetireStage::hasWorkToComplete will check for that case.
   bool hasWorkToComplete() const override { return false; }
-  void cycleStart() override;
+  llvm::Error cycleStart() override;
   Status execute(InstRef &IR) override;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 

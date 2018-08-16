@@ -199,14 +199,12 @@ define <2 x i1> @PR27786(<2 x i8> %a) {
   ret <2 x i1> %cmp
 }
 
-; FIXME:
 ; This is similar to a transform for shuffled binops: compare first, shuffle after.
 
 define <4 x i1> @same_shuffle_inputs_icmp(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp(
-; CHECK-NEXT:    [[SHUFX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 2, i32 0>
-; CHECK-NEXT:    [[SHUFY:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 2, i32 0>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[SHUFX]], [[SHUFY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %shufx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> < i32 3, i32 3, i32 2, i32 0 >
@@ -219,9 +217,8 @@ define <4 x i1> @same_shuffle_inputs_icmp(<4 x i8> %x, <4 x i8> %y) {
 
 define <5 x i1> @same_shuffle_inputs_fcmp(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_fcmp(
-; CHECK-NEXT:    [[SHUFX:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <5 x i32> <i32 0, i32 1, i32 3, i32 2, i32 0>
-; CHECK-NEXT:    [[SHUFY:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> undef, <5 x i32> <i32 0, i32 1, i32 3, i32 2, i32 0>
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <5 x float> [[SHUFX]], [[SHUFY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq <4 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <5 x i32> <i32 0, i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:    ret <5 x i1> [[CMP]]
 ;
   %shufx = shufflevector <4 x float> %x, <4 x float> undef, <5 x i32> < i32 0, i32 1, i32 3, i32 2, i32 0 >
@@ -235,8 +232,8 @@ declare void @use_v4i8(<4 x i8>)
 define <4 x i1> @same_shuffle_inputs_icmp_extra_use1(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp_extra_use1(
 ; CHECK-NEXT:    [[SHUFX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[SHUFY:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <4 x i8> [[SHUFX]], [[SHUFY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i8> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    call void @use_v4i8(<4 x i8> [[SHUFX]])
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -251,9 +248,9 @@ declare void @use_v2i8(<2 x i8>)
 
 define <2 x i1> @same_shuffle_inputs_icmp_extra_use2(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp_extra_use2(
-; CHECK-NEXT:    [[SHUFX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <2 x i32> <i32 3, i32 2>
 ; CHECK-NEXT:    [[SHUFY:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <2 x i32> <i32 3, i32 2>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SHUFX]], [[SHUFY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <2 x i32> <i32 3, i32 2>
 ; CHECK-NEXT:    call void @use_v2i8(<2 x i8> [[SHUFY]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

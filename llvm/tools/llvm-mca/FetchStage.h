@@ -38,7 +38,7 @@ public:
   bool hasWorkToComplete() const override;
   Status execute(InstRef &IR) override;
   void postExecute() override;
-  void cycleEnd() override;
+  llvm::Error cycleEnd() override;
 };
 
 } // namespace mca

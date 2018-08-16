@@ -4136,8 +4136,10 @@ QualType ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
     (void)CheckT;
   }
 
-  T = new (*this, TypeAlignment)
-      ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
+  void *Mem = Allocate(ElaboratedType::totalSizeToAlloc<TagDecl *>(!!OwnedTagDecl),
+                       TypeAlignment);
+  T = new (Mem) ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
+
   Types.push_back(T);
   ElaboratedTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
