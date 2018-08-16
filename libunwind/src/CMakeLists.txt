@@ -52,6 +52,7 @@ set(LIBUNWIND_SOURCES
 # Generate library list.
 set(libraries ${LIBUNWINDCXX_ABI_LIBRARIES})
 append_if(libraries LIBUNWIND_HAS_C_LIB c)
+append_if(libraries LIBUNWIND_HAS_GCC_S_LIB gcc_s)
 append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
 if (LIBUNWIND_ENABLE_THREADS)
   append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)

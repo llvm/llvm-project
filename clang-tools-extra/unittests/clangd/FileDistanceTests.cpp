@@ -58,7 +58,8 @@ TEST(FileDistanceTests, BadSource) {
   EXPECT_EQ(D.distance("b/b/b/c"), 17u); // a+up+down+down+down+down, not b+down
 }
 
-auto UseUnittestScheme = UnittestSchemeAnchorSource;
+// Force the unittest URI scheme to be linked,
+static int LLVM_ATTRIBUTE_UNUSED UseUnittestScheme = UnittestSchemeAnchorSource;
 
 TEST(FileDistanceTests, URI) {
   FileDistanceOptions Opts;
