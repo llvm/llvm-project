@@ -12007,10 +12007,15 @@ static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
   auto isSExtOfVecExtract = [&](SDValue Op) -> bool {
     if (!Op)
       return false;
-    if (Op.getOpcode() != ISD::SIGN_EXTEND)
+    if (Op.getOpcode() != ISD::SIGN_EXTEND &&
+        Op.getOpcode() != ISD::SIGN_EXTEND_INREG)
       return false;
 
+    // A SIGN_EXTEND_INREG might be fed by an ANY_EXTEND to produce a value
+    // of the right width.
     SDValue Extract = Op.getOperand(0);
+    if (Extract.getOpcode() == ISD::ANY_EXTEND)
+      Extract = Extract.getOperand(0);
     if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return false;
 
@@ -12098,8 +12103,10 @@ SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
     return Reduced;
 
   // If we're building a vector out of extended elements from another vector
-  // we have P9 vector integer extend instructions.
-  if (Subtarget.hasP9Altivec()) {
+  // we have P9 vector integer extend instructions. The code assumes legal
+  // input types (i.e. it can't handle things like v4i16) so do not run before
+  // legalization.
+  if (Subtarget.hasP9Altivec() && !DCI.isBeforeLegalize()) {
     Reduced = combineBVOfVecSExt(N, DAG);
     if (Reduced)
       return Reduced;
