@@ -125,11 +125,9 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
           .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
-          .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
-          .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
           .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
@@ -185,7 +183,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (Config->FormatBinary) {
+  if (InBinary) {
     Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
@@ -450,6 +448,9 @@ static std::string getRpath(opt::InputArgList &Args) {
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
 static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_relocatable))
+    return UnresolvedPolicy::IgnoreAll;
+
   UnresolvedPolicy ErrorOrWarn = Args.hasFlag(OPT_error_unresolved_symbols,
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
@@ -496,11 +497,14 @@ static Target2Policy getTarget2(opt::InputArgList &Args) {
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
-  StringRef S = Args.getLastArgValue(OPT_oformat, "elf");
-  if (S == "binary")
-    return true;
-  if (!S.startswith("elf"))
+  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
+    StringRef S = Arg->getValue();
+    if (S == "binary")
+      return true;
+    if (S.startswith("elf"))
+      return false;
     error("unknown --oformat value: " + S);
+  }
   return false;
 }
 
@@ -646,28 +650,33 @@ static void readCallGraph(MemoryBufferRef MB) {
     for (Symbol *Sym : File->getSymbols())
       SymbolNameToSymbol[Sym->getName()] = Sym;
 
-  auto FindSection = [&](StringRef SymName) -> InputSectionBase * {
-    const Symbol *Sym = SymbolNameToSymbol.lookup(SymName);
-    if (Sym)
-      warnUnorderableSymbol(Sym);
-    else if (Config->WarnSymbolOrdering)
-      warn(MB.getBufferIdentifier() + ": no such symbol: " + SymName);
-
-    if (const Defined *DR = dyn_cast_or_null<Defined>(Sym))
-      return dyn_cast_or_null<InputSectionBase>(DR->Section);
-    return nullptr;
-  };
-
   for (StringRef L : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
     L.split(Fields, ' ');
     uint64_t Count;
     if (Fields.size() != 3 || !to_integer(Fields[2], Count))
       fatal(MB.getBufferIdentifier() + ": parse error");
-
-    if (const InputSectionBase *FromSB = FindSection(Fields[0]))
-      if (const InputSectionBase *ToSB = FindSection(Fields[1]))
-        Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
+    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
+    if (Config->WarnSymbolOrdering) {
+      if (!FromSym)
+        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[0]);
+      if (!ToSym)
+        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[1]);
+    }
+    if (!FromSym || !ToSym || Count == 0)
+      continue;
+    warnUnorderableSymbol(FromSym);
+    warnUnorderableSymbol(ToSym);
+    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
+    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
+    if (!FromSymD || !ToSymD)
+      continue;
+    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
+    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
+    if (!FromSB || !ToSB)
+      continue;
+    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
   }
 }
 
@@ -985,8 +994,7 @@ static void setConfigs(opt::InputArgList &Args) {
   // ABI defines which one you need to use. The following expression expresses
   // that.
   Config->IsRela =
-      (Config->Is64 || IsX32 || Machine == EM_PPC || Machine == EM_RISCV) &&
-      Machine != EM_MIPS;
+      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -999,7 +1007,7 @@ static void setConfigs(opt::InputArgList &Args) {
 }
 
 // Returns a value of "-format" option.
-static bool isFormatBinary(StringRef S) {
+static bool getBinaryOption(StringRef S) {
   if (S == "binary")
     return true;
   if (S == "elf" || S == "default")
@@ -1026,10 +1034,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       StringRef From;
       StringRef To;
       std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-      if (From.empty() || To.empty())
-        error("-defsym: syntax error: " + StringRef(Arg->getValue()));
-      else
-        readDefsym(From, MemoryBufferRef(To, "-defsym"));
+      readDefsym(From, MemoryBufferRef(To, "-defsym"));
       break;
     }
     case OPT_script:
@@ -1044,7 +1049,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = true;
       break;
     case OPT_format:
-      Config->FormatBinary = isFormatBinary(Arg->getValue());
+      InBinary = getBinaryOption(Arg->getValue());
       break;
     case OPT_no_as_needed:
       Config->AsNeeded = false;
@@ -1212,21 +1217,6 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
   Sym->IsUsedInRegularObj = true;
 
   if (Sym->isLazy())
-    Symtab->fetchLazy<ELFT>(Sym);
-}
-
-template <class ELFT> static void handleLibcall(StringRef Name) {
-  Symbol *Sym = Symtab->find(Name);
-  if (!Sym || !Sym->isLazy())
-    return;
-
-  MemoryBufferRef MB;
-  if (auto *LO = dyn_cast<LazyObject>(Sym))
-    MB = LO->File->MB;
-  else
-    MB = cast<LazyArchive>(Sym)->getMemberBuffer();
-
-  if (isBitcode(MB))
     Symtab->fetchLazy<ELFT>(Sym);
 }
 
@@ -1406,20 +1396,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // in a bitcode file in an archive member, we need to arrange to use LTO to
   // compile those archive members by adding them to the link beforehand.
   //
-  // However, adding all libcall symbols to the link can have undesired
-  // consequences. For example, the libgcc implementation of
-  // __sync_val_compare_and_swap_8 on 32-bit ARM pulls in an .init_array entry
-  // that aborts the program if the Linux kernel does not support 64-bit
-  // atomics, which would prevent the program from running even if it does not
-  // use 64-bit atomics.
-  //
-  // Therefore, we only add libcall symbols to the link before LTO if we have
-  // to, i.e. if the symbol's definition is in bitcode. Any other required
-  // libcall symbols will be added to the link after LTO when we add the LTO
-  // object file to the link.
+  // With this the symbol table should be complete. After this, no new names
+  // except a few linker-synthesized ones will be added to the symbol table.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleLibcall<ELFT>(S);
+      handleUndefined<ELFT>(S);
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -1461,9 +1442,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
-  //
-  // With this the symbol table should be complete. After this, no new names
-  // except a few linker-synthesized ones will be added to the symbol table.
   Symtab->addCombinedLTOObject<ELFT>();
   if (errorCount())
     return;

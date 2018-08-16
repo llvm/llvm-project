@@ -265,7 +265,6 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
-    KMP_DEBUG_USE_VAR(counter);
     KA_TRACE(
         20,
         ("__kmp_push_task: T#%d untied_count (%d) incremented for task %p\n",
@@ -527,7 +526,6 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
-    KMP_DEBUG_USE_VAR(counter);
     KA_TRACE(20, ("__kmpc_omp_task_begin_if0: T#%d untied_count (%d) "
                   "incremented for task %p\n",
                   gtid, counter, taskdata));
@@ -1266,6 +1264,7 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
                               kmp_taskdata_t *current_task) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+  kmp_uint64 cur_time;
 #if OMP_40_ENABLED
   int discard = 0 /* false */;
 #endif
@@ -1294,7 +1293,6 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
 #endif
 
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
-  kmp_uint64 cur_time;
   if (__kmp_forkjoin_frames_mode == 3) {
     // Get the current time stamp to measure task execution time to correct
     // barrier imbalance time
@@ -2404,9 +2402,8 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
       victim_td->td.td_deque[prev] = victim_td->td.td_deque[target];
       prev = target;
     }
-    KMP_DEBUG_ASSERT(
-        victim_td->td.td_deque_tail ==
-        (kmp_uint32)((target + 1) & TASK_DEQUE_MASK(victim_td->td)));
+    KMP_DEBUG_ASSERT(victim_td->td.td_deque_tail ==
+                     ((target + 1) & TASK_DEQUE_MASK(victim_td->td)));
     victim_td->td.td_deque_tail = target; // tail -= 1 (wrapped))
   }
   if (*thread_finished) {
@@ -3955,9 +3952,11 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 #endif
   p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
   kmp_uint64 lower = *lb;
+  kmp_uint64 upper = *ub;
   kmp_info_t *thread = __kmp_threads[gtid];
   //  kmp_taskdata_t *current_task = thread->th.th_current_task;
   kmp_task_t *next_task;
+  kmp_int32 lastpriv = 0;
   size_t lower_offset =
       (char *)lb - (char *)task; // remember offset of lb in the task structure
   size_t upper_offset =

@@ -108,7 +108,7 @@ public:
   }
 
 private:
-  std::pair<Symbol *, bool> insert(StringRef Name, InputFile *F);
+  std::pair<Symbol *, bool> insert(StringRef Name);
   StringRef findByPrefix(StringRef Prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
