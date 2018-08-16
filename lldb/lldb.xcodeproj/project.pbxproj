@@ -390,6 +390,7 @@
 		945261C11B9A11FC00BF138D /* LibCxxInitializerList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261B71B9A11E800BF138D /* LibCxxInitializerList.cpp */; };
 		945261C21B9A11FC00BF138D /* LibCxxList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261B81B9A11E800BF138D /* LibCxxList.cpp */; };
 		945261C31B9A11FC00BF138D /* LibCxxMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261B91B9A11E800BF138D /* LibCxxMap.cpp */; };
+		E4A63A9120F55D28000D9548 /* LibCxxOptional.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E4A63A9020F55D27000D9548 /* LibCxxOptional.cpp */; };
 		AF9FF1F71FAA79FE00474976 /* LibCxxQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */; };
 		AF9FF1F51FAA79A400474976 /* LibCxxTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */; };
 		945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */; };
@@ -2010,6 +2011,7 @@
 		945261B71B9A11E800BF138D /* LibCxxInitializerList.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxInitializerList.cpp; path = Language/CPlusPlus/LibCxxInitializerList.cpp; sourceTree = "<group>"; };
 		945261B81B9A11E800BF138D /* LibCxxList.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxList.cpp; path = Language/CPlusPlus/LibCxxList.cpp; sourceTree = "<group>"; };
 		945261B91B9A11E800BF138D /* LibCxxMap.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxMap.cpp; path = Language/CPlusPlus/LibCxxMap.cpp; sourceTree = "<group>"; };
+		E4A63A9020F55D27000D9548 /* LibCxxOptional.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxOptional.cpp; path = Language/CPlusPlus/LibCxxOptional.cpp; sourceTree = "<group>"; };
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxUnorderedMap.cpp; path = Language/CPlusPlus/LibCxxUnorderedMap.cpp; sourceTree = "<group>"; };
@@ -6374,6 +6376,7 @@
 				945261B71B9A11E800BF138D /* LibCxxInitializerList.cpp */,
 				945261B81B9A11E800BF138D /* LibCxxList.cpp */,
 				945261B91B9A11E800BF138D /* LibCxxMap.cpp */,
+				E4A63A9020F55D27000D9548 /* LibCxxOptional.cpp */,
 				AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */,
 				AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */,
 				945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */,
@@ -8079,6 +8082,7 @@
 				AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */,
 				267C012B136880DF006E963E /* OptionGroupValueObjectDisplay.cpp in Sources */,
 				49CA96FE1E6AACC900C03FEE /* DataEncoder.cpp in Sources */,
+				E4A63A9120F55D28000D9548 /* LibCxxOptional.cpp in Sources */,
 				26BCFC521368AE38006DC050 /* OptionGroupFormat.cpp in Sources */,
 				2654A6901E552ED500DA1013 /* VASprintf.cpp in Sources */,
 				AF81DEFA1828A23F0042CF19 /* SystemRuntime.cpp in Sources */,

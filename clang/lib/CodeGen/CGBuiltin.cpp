@@ -8931,12 +8931,6 @@ static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF, const CallExpr *E,
     Res = CGF.Builder.CreateSub(Select, Ops[1]);
   }
 
-  if (E->getNumArgs() == 4) { // For masked intrinsics.
-    Value *VecSRC = Ops[2];
-    Value *Mask = Ops[3];
-    return EmitX86Select(CGF, Mask, Res, VecSRC);
-  }
-
   return Res;
 }
 
@@ -10563,15 +10557,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Load->setVolatile(true);
     return Load;
   }
-  case X86::BI__builtin_ia32_paddusb512_mask:
-  case X86::BI__builtin_ia32_paddusw512_mask:
+  case X86::BI__builtin_ia32_paddusb512:
+  case X86::BI__builtin_ia32_paddusw512:
   case X86::BI__builtin_ia32_paddusb256:
   case X86::BI__builtin_ia32_paddusw256:
   case X86::BI__builtin_ia32_paddusb128:
   case X86::BI__builtin_ia32_paddusw128:
     return EmitX86AddSubSatExpr(*this, E, Ops, true /* IsAddition */);
-  case X86::BI__builtin_ia32_psubusb512_mask:
-  case X86::BI__builtin_ia32_psubusw512_mask:
+  case X86::BI__builtin_ia32_psubusb512:
+  case X86::BI__builtin_ia32_psubusw512:
   case X86::BI__builtin_ia32_psubusb256:
   case X86::BI__builtin_ia32_psubusw256:
   case X86::BI__builtin_ia32_psubusb128:
