@@ -21,12 +21,32 @@
 #include <isl/union_set.h>
 #include <isl/union_map.h>
 #include <isl/schedule_node.h>
+#include <isl/options.h>
 #include <isl_sort.h>
 #include <isl_tarjan.h>
 #include <isl_ast_private.h>
 #include <isl_ast_build_expr.h>
 #include <isl_ast_build_private.h>
 #include <isl_ast_graft_private.h>
+
+/* Try and reduce the number of disjuncts in the representation of "set",
+ * without dropping explicit representations of local variables.
+ */
+static __isl_give isl_set *isl_set_coalesce_preserve(__isl_take isl_set *set)
+{
+	isl_ctx *ctx;
+	int save_preserve;
+
+	if (!set)
+		return NULL;
+
+	ctx = isl_set_get_ctx(set);
+	save_preserve = isl_options_get_coalesce_preserve_locals(ctx);
+	isl_options_set_coalesce_preserve_locals(ctx, 1);
+	set = isl_set_coalesce(set);
+	isl_options_set_coalesce_preserve_locals(ctx, save_preserve);
+	return set;
+}
 
 /* Data used in generate_domain.
  *
@@ -144,7 +164,7 @@ static isl_stat add_domain(__isl_take isl_map *executed,
 
 	guard = isl_map_domain(isl_map_copy(map));
 	guard = isl_set_compute_divs(guard);
-	guard = isl_set_coalesce(guard);
+	guard = isl_set_coalesce_preserve(guard);
 	guard = isl_set_gist(guard, isl_ast_build_get_generated(build));
 	guard = isl_ast_build_specialize(build, guard);
 
@@ -2841,7 +2861,7 @@ static __isl_give isl_set *compute_atomic_domain(
 	}
 
 	domain = isl_ast_build_eliminate(domains->build, domain);
-	domain = isl_set_coalesce(domain);
+	domain = isl_set_coalesce_preserve(domain);
 	bset = isl_set_unshifted_simple_hull(domain);
 	domain = isl_set_from_basic_set(bset);
 	atomic_domain = isl_set_copy(domain);
@@ -2959,7 +2979,7 @@ static isl_stat compute_partial_domains(struct isl_codegen_domains *domains,
 	domain = isl_ast_build_eliminate(domains->build, domain);
 	domain = isl_set_intersect(domain, isl_set_copy(class_domain));
 
-	domain = isl_set_coalesce(domain);
+	domain = isl_set_coalesce_preserve(domain);
 	domain = isl_set_make_disjoint(domain);
 
 	list = isl_basic_set_list_from_set(domain);
@@ -3316,7 +3336,7 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree_base(
 								build);
 
 	domain = isl_ast_build_eliminate(build, domain);
-	domain = isl_set_coalesce(domain);
+	domain = isl_set_coalesce_preserve(domain);
 
 	outer_disjunction = has_pure_outer_disjunction(domain, build);
 	if (outer_disjunction < 0)

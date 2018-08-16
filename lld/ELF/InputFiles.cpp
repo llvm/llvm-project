@@ -129,7 +129,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
-  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
+  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),
                       [](ErrorInfoBase &Info) { warn(Info.message()); });
@@ -442,6 +442,10 @@ void ObjFile<ELFT>::initializeSections(
       bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       this->Sections[I] = &InputSection::Discarded;
 
+      // We only support GRP_COMDAT type of group. Get the all entries of the
+      // section here to let getShtGroupEntries to check the type early for us.
+      ArrayRef<Elf_Word> Entries = getShtGroupEntries(Sec);
+
       // If it is a new section group, we want to keep group members.
       // Group leader sections, which contain indices of group members, are
       // discarded because they are useless beyond this point. The only
@@ -454,7 +458,7 @@ void ObjFile<ELFT>::initializeSections(
       }
 
       // Otherwise, discard group members.
-      for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
+      for (uint32_t SecIndex : Entries) {
         if (SecIndex >= Size)
           fatal(toString(this) +
                 ": invalid section index in group: " + Twine(SecIndex));
@@ -940,8 +944,7 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
     unsigned VerdefIndex = CurVerdef->vd_ndx;
-    if (Verdefs.size() <= VerdefIndex)
-      Verdefs.resize(VerdefIndex + 1);
+    Verdefs.resize(VerdefIndex + 1);
     Verdefs[VerdefIndex] = CurVerdef;
   }
 

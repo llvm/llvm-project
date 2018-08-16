@@ -64,6 +64,8 @@ __isl_export
 __isl_give isl_val *isl_val_trunc(__isl_take isl_val *v);
 __isl_give isl_val *isl_val_2exp(__isl_take isl_val *v);
 __isl_export
+__isl_give isl_val *isl_val_pow2(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_min(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_export
 __isl_give isl_val *isl_val_max(__isl_take isl_val *v1, __isl_take isl_val *v2);

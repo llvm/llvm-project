@@ -151,7 +151,6 @@
     macro (ompt_callback_flush,             ompt_callback_flush_t,             29) /* after executing flush           */ \
                                                                                                                          \
     macro (ompt_callback_cancel,            ompt_callback_cancel_t,            30) /* cancel innermost binding region */ \
-    macro (ompt_callback_idle,              ompt_callback_idle_t,              31) /* begin or end idle state         */
 
 
 
@@ -488,10 +487,6 @@ typedef void (*ompt_callback_master_t) (
     ompt_data_t *parallel_data,           /* data of parallel region             */
     ompt_data_t *task_data,               /* data of task                        */
     const void *codeptr_ra                /* return address of runtime call      */
-);
-
-typedef void (*ompt_callback_idle_t) (
-    ompt_scope_endpoint_t endpoint        /* endpoint of idle time               */
 );
 
 typedef enum ompt_work_type_t {

@@ -25,6 +25,7 @@
 
 #include "polly/ScopPass.h"
 #include "isl/ctx.h"
+#include "isl/isl-noexceptions.h"
 
 struct isl_pw_aff;
 struct isl_union_map;
@@ -62,7 +63,7 @@ struct Dependences {
   using ReductionDependencesMapTy = DenseMap<MemoryAccess *, isl_map *>;
 
   /// Map type to associate statements with schedules.
-  using StatementToIslMapTy = DenseMap<ScopStmt *, isl_map *>;
+  using StatementToIslMapTy = DenseMap<ScopStmt *, isl::map>;
 
   /// The type of the dependences.
   ///
@@ -135,7 +136,7 @@ struct Dependences {
   ///
   /// @return True if the new schedule is valid, false if it reverses
   ///         dependences.
-  bool isValidSchedule(Scop &S, StatementToIslMapTy *NewSchedules) const;
+  bool isValidSchedule(Scop &S, const StatementToIslMapTy &NewSchedules) const;
 
   /// Print the stored dependence information.
   void print(llvm::raw_ostream &OS) const;

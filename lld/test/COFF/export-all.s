@@ -63,6 +63,7 @@ __imp__unexported:
 # RUN: mkdir -p %T/libs
 # RUN: echo -e ".global mingwfunc\n.text\nmingwfunc:\nret\n" > %T/libs/mingwfunc.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/mingwfunc.s -filetype=obj -o %T/libs/mingwfunc.o
+# RUN: rm -f %T/libs/libmingwex.a
 # RUN: llvm-ar rcs %T/libs/libmingwex.a %T/libs/mingwfunc.o
 # RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %T/libs/crtfunc.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/crtfunc.s -filetype=obj -o %T/libs/crt2.o
