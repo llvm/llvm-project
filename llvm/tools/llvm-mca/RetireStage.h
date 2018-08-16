@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the retire stage of an instruction pipeline.
+/// This file defines the retire stage of a default instruction pipeline.
 /// The RetireStage represents the process logic that interacts with the
 /// simulated RetireControlUnit hardware.
 //
@@ -23,22 +23,21 @@
 
 namespace mca {
 
-class RetireStage : public Stage {
+class RetireStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
   RetireControlUnit &RCU;
   RegisterFile &PRF;
 
-public:
-  RetireStage(RetireControlUnit &R, RegisterFile &F)
-      : Stage(), RCU(R), PRF(F) {}
   RetireStage(const RetireStage &Other) = delete;
   RetireStage &operator=(const RetireStage &Other) = delete;
 
-  virtual bool hasWorkToComplete() const override final {
-    return !RCU.isEmpty();
-  }
-  virtual void cycleStart() override final;
-  virtual Status execute(InstRef &IR) override final { return Stage::Continue; }
+public:
+  RetireStage(RetireControlUnit &R, RegisterFile &F)
+      : Stage(), RCU(R), PRF(F) {}
+
+  bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
+  void cycleStart() override;
+  Status execute(InstRef &IR) override { return Stage::Continue; }
   void notifyInstructionRetired(const InstRef &IR);
   void onInstructionExecuted(unsigned TokenID);
 };

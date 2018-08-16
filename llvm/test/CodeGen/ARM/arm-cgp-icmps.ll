@@ -256,3 +256,27 @@ define i32 @icmp_not(i16 zeroext %arg0, i16 zeroext %arg1) {
   ret i32 %res
 }
 
+; CHECK-COMMON-LABEL: icmp_i1
+; CHECK-NOT: uxt
+define i32 @icmp_i1(i1* %arg0, i1 zeroext %arg1, i32 %a, i32 %b) {
+entry:
+  %load = load i1, i1* %arg0
+  %not = xor i1 %load, 1
+  %cmp = icmp eq i1 %arg1, %not
+  %res = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %res
+}
+
+; CHECK-COMMON-LABEL: icmp_i7
+; CHECK-COMMON: ldrb
+; CHECK-COMMON: and
+; CHECK-COMMON: cmp
+define i32 @icmp_i7(i7* %arg0, i7 zeroext %arg1, i32 %a, i32 %b) {
+entry:
+  %load = load i7, i7* %arg0
+  %add = add nuw i7 %load, 1
+  %cmp = icmp ult i7 %arg1, %add
+  %res = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %res
+}
+

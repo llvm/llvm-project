@@ -562,6 +562,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
+  case AMDGPUISD::FMED3:
     return true;
   default:
     return false;
@@ -3449,9 +3450,27 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   return performCtlz_CttzCombine(SDLoc(N), Cond, True, False, DCI);
 }
 
-static bool isConstantFPZero(SDValue N) {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
-    return C->isZero() && !C->isNegative();
+static bool isInv2Pi(const APFloat &APF) {
+  static const APFloat KF16(APFloat::IEEEhalf(), APInt(16, 0x3118));
+  static const APFloat KF32(APFloat::IEEEsingle(), APInt(32, 0x3e22f983));
+  static const APFloat KF64(APFloat::IEEEdouble(), APInt(64, 0x3fc45f306dc9c882));
+
+  return APF.bitwiseIsEqual(KF16) ||
+         APF.bitwiseIsEqual(KF32) ||
+         APF.bitwiseIsEqual(KF64);
+}
+
+// 0 and 1.0 / (0.5 * pi) do not have inline immmediates, so there is an
+// additional cost to negate them.
+bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
+  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N)) {
+    if (C->isZero() && !C->isNegative())
+      return true;
+
+    if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
+      return true;
+  }
+
   return false;
 }
 
@@ -3577,9 +3596,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue RHS = N0.getOperand(1);
 
     // 0 doesn't have a negated inline immediate.
-    // TODO: Shouldn't fold 1/2pi either, and should be generalized to other
-    // operations.
-    if (isConstantFPZero(RHS))
+    // TODO: This constant check should be generalized to other operations.
+    if (isConstantCostlierToNegate(RHS))
       return SDValue();
 
     SDValue NegLHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);
@@ -3587,6 +3605,16 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     unsigned Opposite = inverseMinMax(Opc);
 
     SDValue Res = DAG.getNode(Opposite, SL, VT, NegLHS, NegRHS, N0->getFlags());
+    if (!N0.hasOneUse())
+      DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
+    return Res;
+  }
+  case AMDGPUISD::FMED3: {
+    SDValue Ops[3];
+    for (unsigned I = 0; I < 3; ++I)
+      Ops[I] = DAG.getNode(ISD::FNEG, SL, VT, N0->getOperand(I), N0->getFlags());
+
+    SDValue Res = DAG.getNode(AMDGPUISD::FMED3, SL, VT, Ops, N0->getFlags());
     if (!N0.hasOneUse())
       DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
     return Res;

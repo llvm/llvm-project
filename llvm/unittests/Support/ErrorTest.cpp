@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Error.h"
+#include "llvm-c/Error.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
@@ -830,6 +831,37 @@ TEST(Error, ErrorMatchers) {
                            HasValue(testing::Gt(1))),
       "Expected: succeeded with value (is > 1)\n"
       "  Actual: failed  (CustomError {0})");
+}
+
+TEST(Error, C_API) {
+  EXPECT_THAT_ERROR(unwrap(wrap(Error::success())), Succeeded())
+      << "Failed to round-trip Error success value via C API";
+  EXPECT_THAT_ERROR(unwrap(wrap(make_error<CustomError>(0))),
+                    Failed<CustomError>())
+      << "Failed to round-trip Error failure value via C API";
+
+  auto Err =
+      wrap(make_error<StringError>("test message", inconvertibleErrorCode()));
+  EXPECT_EQ(LLVMGetErrorTypeId(Err), LLVMGetStringErrorTypeId())
+      << "Failed to match error type ids via C API";
+  char *ErrMsg = LLVMGetErrorMessage(Err);
+  EXPECT_STREQ(ErrMsg, "test message")
+      << "Failed to roundtrip StringError error message via C API";
+  LLVMDisposeErrorMessage(ErrMsg);
+
+  bool GotCSE = false;
+  bool GotCE = false;
+  handleAllErrors(
+    unwrap(wrap(joinErrors(make_error<CustomSubError>(42, 7),
+                           make_error<CustomError>(42)))),
+    [&](CustomSubError &CSE) {
+      GotCSE = true;
+    },
+    [&](CustomError &CE) {
+      GotCE = true;
+    });
+  EXPECT_TRUE(GotCSE) << "Failed to round-trip ErrorList via C API";
+  EXPECT_TRUE(GotCE) << "Failed to round-trip ErrorList via C API";
 }
 
 } // end anon namespace

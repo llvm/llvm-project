@@ -14,8 +14,9 @@
 #ifndef LLVM_SUPPORT_ERROR_H
 #define LLVM_SUPPORT_ERROR_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm-c/Error.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
@@ -166,6 +167,9 @@ class LLVM_NODISCARD Error {
   // Expected<T> needs to be able to steal the payload when constructed from an
   // error.
   template <typename T> friend class Expected;
+
+  // wrap needs to be able to steal the payload.
+  friend LLVMErrorRef wrap(Error);
 
 protected:
   /// Create a success value. Prefer using 'Error::success()' for readability
@@ -1182,6 +1186,17 @@ private:
   std::string Banner;
   std::function<int(const Error &)> GetExitCode;
 };
+
+/// Conversion from Error to LLVMErrorRef for C error bindings.
+inline LLVMErrorRef wrap(Error Err) {
+  return reinterpret_cast<LLVMErrorRef>(Err.takePayload().release());
+}
+
+/// Conversion from LLVMErrorRef to Error for C error bindings.
+inline Error unwrap(LLVMErrorRef ErrRef) {
+  return Error(std::unique_ptr<ErrorInfoBase>(
+      reinterpret_cast<ErrorInfoBase *>(ErrRef)));
+}
 
 } // end namespace llvm
 

@@ -393,20 +393,17 @@ ELFFile<ELFT>::android_relas(const Elf_Shdr *Sec) const {
     if (GroupedByAddend && GroupHasAddend)
       Addend += ReadSLEB();
 
+    if (!GroupHasAddend)
+      Addend = 0;
+
     for (uint64_t I = 0; I != NumRelocsInGroup; ++I) {
       Elf_Rela R;
       Offset += GroupedByOffsetDelta ? GroupOffsetDelta : ReadSLEB();
       R.r_offset = Offset;
       R.r_info = GroupedByInfo ? GroupRInfo : ReadSLEB();
-
-      if (GroupHasAddend) {
-        if (!GroupedByAddend)
-          Addend += ReadSLEB();
-        R.r_addend = Addend;
-      } else {
-        R.r_addend = 0;
-      }
-
+      if (GroupHasAddend && !GroupedByAddend)
+        Addend += ReadSLEB();
+      R.r_addend = Addend;
       Relocs.push_back(R);
 
       if (ErrStr)

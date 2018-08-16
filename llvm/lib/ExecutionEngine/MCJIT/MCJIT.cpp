@@ -326,8 +326,9 @@ uint64_t MCJIT::getSymbolAddress(const std::string &Name,
       return *AddrOrErr;
     else
       report_fatal_error(AddrOrErr.takeError());
-  } else
+  } else if (auto Err = Sym.takeError())
     report_fatal_error(Sym.takeError());
+  return 0;
 }
 
 JITSymbol MCJIT::findSymbol(const std::string &Name,
