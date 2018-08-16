@@ -42,9 +42,42 @@ Visibility Macros
 
 **_LIBCPP_HIDE_FROM_ABI**
   Mark a function as not being part of the ABI of any final linked image that
-  uses it, and also as being internal to each TU that uses that function. In
-  other words, the address of a function marked with this attribute is not
-  guaranteed to be the same across translation units.
+  uses it.
+
+**_LIBCPP_HIDE_FROM_ABI_PER_TU**
+  This macro controls whether symbols hidden from the ABI with `_LIBCPP_HIDE_FROM_ABI`
+  are local to each translation unit in addition to being local to each final
+  linked image. This macro is defined to either 0 or 1. When it is defined to
+  1, translation units compiled with different versions of libc++ can be linked
+  together, since all non ABI-facing functions are local to each translation unit.
+  This allows static archives built with different versions of libc++ to be linked
+  together. This also means that functions marked with `_LIBCPP_HIDE_FROM_ABI`
+  are not guaranteed to have the same address across translation unit boundaries.
+
+  When the macro is defined to 0, there is no guarantee that translation units
+  compiled with different versions of libc++ can interoperate. However, this
+  leads to code size improvements, since non ABI-facing functions can be
+  deduplicated across translation unit boundaries.
+
+  This macro can be defined by users to control the behavior they want from
+  libc++. The default value of this macro (0 or 1) is controlled by whether
+  `_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT` is defined, which is intended to
+  be used by vendors only (see below).
+
+**_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT**
+  This macro controls the default value for `_LIBCPP_HIDE_FROM_ABI_PER_TU`.
+  When the macro is defined, per TU ABI insulation is enabled by default, and
+  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 1 unless overriden by users.
+  Otherwise, per TU ABI insulation is disabled by default, and
+  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 0 unless overriden by users.
+
+  This macro is intended for vendors to control whether they want to ship
+  libc++ with per TU ABI insulation enabled by default. Users can always
+  control the behavior they want by defining `_LIBCPP_HIDE_FROM_ABI_PER_TU`
+  appropriately.
+
+  By default, this macro is not defined, which means that per TU ABI insulation
+  is not provided unless explicitly overriden by users.
 
 **_LIBCPP_TYPE_VIS**
   Mark a type's typeinfo, vtable and members as having default visibility.
