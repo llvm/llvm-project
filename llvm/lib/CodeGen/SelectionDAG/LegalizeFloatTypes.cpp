@@ -1941,8 +1941,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
-                     N->getOperand(0));
+  // Input type isn't guaranteed to be i16 so bitcast if not. The bitcast
+  // will be legalized further if necessary.
+  SDValue Cast = DAG.getBitcast(MVT::i16, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {
