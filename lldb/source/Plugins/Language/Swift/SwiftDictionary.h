@@ -23,14 +23,43 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 
+#include "Plugins/Language/ObjC/NSDictionary.h"
+
 namespace lldb_private {
 namespace formatters {
 namespace swift {
-bool Dictionary_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                const TypeSummaryOptions &options);
 
-SyntheticChildrenFrontEnd *
-DictionarySyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+class DictionaryConfig: public HashedCollectionConfig {
+public:
+  static const DictionaryConfig &Get();
+
+  static bool
+  SummaryProvider(ValueObject &valobj, Stream &stream,
+                  const TypeSummaryOptions &options);
+
+  static SyntheticChildrenFrontEnd *
+  SyntheticChildrenCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+
+private:
+  DictionaryConfig();
+
+protected:
+  virtual CXXFunctionSummaryFormat::Callback
+  GetSummaryProvider() const override {
+    return DictionaryConfig::SummaryProvider;
+  }
+  
+  virtual CXXSyntheticChildren::CreateFrontEndCallback
+  GetSyntheticChildrenCreator() const override {
+    return DictionaryConfig::SyntheticChildrenCreator;
+  }
+
+  virtual CXXSyntheticChildren::CreateFrontEndCallback
+  GetCocoaSyntheticChildrenCreator() const override {
+    return NSDictionarySyntheticFrontEndCreator;
+  }
+};    
+
 }
 }
 }
