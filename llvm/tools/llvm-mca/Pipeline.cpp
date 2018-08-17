@@ -32,36 +32,14 @@ void Pipeline::addEventListener(HWEventListener *Listener) {
 }
 
 bool Pipeline::hasWorkToProcess() {
-  const auto It = llvm::find_if(Stages, [](const std::unique_ptr<Stage> &S) {
+  return llvm::any_of(Stages, [](const std::unique_ptr<Stage> &S) {
     return S->hasWorkToComplete();
   });
-  return It != Stages.end();
-}
-
-// This routine returns early if any stage returns 'false' after execute() is
-// called on it.
-Stage::Status Pipeline::executeStages(InstRef &IR) {
-  for (const std::unique_ptr<Stage> &S : Stages) {
-    Stage::Status StatusOrErr = S->execute(IR);
-    if (!StatusOrErr)
-      return StatusOrErr.takeError();
-    else if (StatusOrErr.get() == Stage::Stop)
-      return Stage::Stop;
-  }
-  return Stage::Continue;
-}
-
-void Pipeline::preExecuteStages() {
-  for (const std::unique_ptr<Stage> &S : Stages)
-    S->preExecute();
-}
-
-void Pipeline::postExecuteStages() {
-  for (const std::unique_ptr<Stage> &S : Stages)
-    S->postExecute();
 }
 
 llvm::Error Pipeline::run() {
+  assert(!Stages.empty() && "Unexpected empty pipeline found!");
+
   while (hasWorkToProcess()) {
     notifyCycleBegin();
     if (llvm::Error Err = runCycle())
@@ -73,26 +51,36 @@ llvm::Error Pipeline::run() {
 }
 
 llvm::Error Pipeline::runCycle() {
-  // Update the stages before we do any processing for this cycle.
-  InstRef IR;
-  for (auto &S : Stages)
-    S->cycleStart();
-
-  // Continue executing this cycle until any stage claims it cannot make
-  // progress.
-  while (true) {
-    preExecuteStages();
-    Stage::Status Val = executeStages(IR);
-    if (!Val)
-      return Val.takeError();
-    if (Val.get() == Stage::Stop)
-      break;
-    postExecuteStages();
+  llvm::Error Err = llvm::ErrorSuccess();
+  // Update stages before we start processing new instructions.
+  for (auto I = Stages.rbegin(), E = Stages.rend(); I != E && !Err; ++I) {
+    const std::unique_ptr<Stage> &S = *I;
+    Err = S->cycleStart();
   }
 
-  for (auto &S : Stages)
-    S->cycleEnd();
-  return llvm::ErrorSuccess();
+  // Now fetch and execute new instructions.
+  InstRef IR;
+  Stage &FirstStage = *Stages[0];
+  while (!Err && FirstStage.isAvailable(IR))
+    Err = FirstStage.execute(IR);
+
+  // Update stages in preparation for a new cycle.
+  for (auto I = Stages.rbegin(), E = Stages.rend(); I != E && !Err; ++I) {
+    const std::unique_ptr<Stage> &S = *I;
+    Err = S->cycleEnd();
+  }
+
+  return Err;
+}
+
+void Pipeline::appendStage(std::unique_ptr<Stage> S) {
+  assert(S && "Invalid null stage in input!");
+  if (!Stages.empty()) {
+    Stage *Last = Stages.back().get();
+    Last->setNextInSequence(S.get());
+  }
+
+  Stages.push_back(std::move(S));
 }
 
 void Pipeline::notifyCycleBegin() {

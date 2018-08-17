@@ -26,7 +26,7 @@
 
 namespace mca {
 
-class InstructionTables : public Stage {
+class InstructionTables final : public Stage {
   const llvm::MCSchedModel &SM;
   InstrBuilder &IB;
   llvm::SmallVector<std::pair<ResourceRef, double>, 4> UsedResources;
@@ -35,8 +35,8 @@ public:
   InstructionTables(const llvm::MCSchedModel &Model, InstrBuilder &Builder)
       : Stage(), SM(Model), IB(Builder) {}
 
-  bool hasWorkToComplete() const override final { return false; }
-  Status execute(InstRef &IR) override final;
+  bool hasWorkToComplete() const override { return false; }
+  llvm::Error execute(InstRef &IR) override;
 };
 } // namespace mca
 

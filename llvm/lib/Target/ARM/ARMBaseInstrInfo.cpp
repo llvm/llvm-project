@@ -1590,11 +1590,10 @@ void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     MachineFunction &MF = *MBB.getParent();
     unsigned CPI = Orig.getOperand(1).getIndex();
     unsigned PCLabelId = duplicateCPV(MF, CPI);
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, I, Orig.getDebugLoc(), get(Opcode), DestReg)
-            .addConstantPoolIndex(CPI)
-            .addImm(PCLabelId);
-    MIB->setMemRefs(Orig.memoperands_begin(), Orig.memoperands_end());
+    BuildMI(MBB, I, Orig.getDebugLoc(), get(Opcode), DestReg)
+        .addConstantPoolIndex(CPI)
+        .addImm(PCLabelId)
+        .cloneMemRefs(Orig);
     break;
   }
   }
@@ -4534,9 +4533,9 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
 
   MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
   MIB.addReg(Reg, RegState::Kill)
-     .addImm(0)
-     .setMemRefs(MI->memoperands_begin(), MI->memoperands_end())
-     .add(predOps(ARMCC::AL));
+      .addImm(0)
+      .cloneMemRefs(*MI)
+      .add(predOps(ARMCC::AL));
 }
 
 bool

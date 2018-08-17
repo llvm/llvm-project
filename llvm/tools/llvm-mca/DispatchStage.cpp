@@ -33,7 +33,7 @@ void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
   notifyEvent<HWInstructionEvent>(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
-bool DispatchStage::checkPRF(const InstRef &IR) {
+bool DispatchStage::checkPRF(const InstRef &IR) const {
   SmallVector<unsigned, 4> RegDefs;
   for (const std::unique_ptr<WriteState> &RegDef :
        IR.getInstruction()->getDefs())
@@ -50,7 +50,7 @@ bool DispatchStage::checkPRF(const InstRef &IR) {
   return true;
 }
 
-bool DispatchStage::checkRCU(const InstRef &IR) {
+bool DispatchStage::checkRCU(const InstRef &IR) const {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU.isAvailable(NumMicroOps))
     return true;
@@ -59,12 +59,8 @@ bool DispatchStage::checkRCU(const InstRef &IR) {
   return false;
 }
 
-bool DispatchStage::checkScheduler(const InstRef &IR) {
-  HWStallEvent::GenericEventType Event;
-  const bool Ready = SC.canBeDispatched(IR, Event);
-  if (!Ready)
-    notifyEvent<HWStallEvent>(HWStallEvent(Event, IR));
-  return Ready;
+bool DispatchStage::canDispatch(const InstRef &IR) const {
+  return checkRCU(IR) && checkPRF(IR) && checkNextStage(IR);
 }
 
 void DispatchStage::updateRAWDependencies(ReadState &RS,
@@ -87,7 +83,7 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
   }
 }
 
-void DispatchStage::dispatch(InstRef IR) {
+llvm::Error DispatchStage::dispatch(InstRef IR) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
   Instruction &IS = *IR.getInstruction();
   const InstrDesc &Desc = IS.getDesc();
@@ -127,21 +123,32 @@ void DispatchStage::dispatch(InstRef IR) {
   // dispatched to the schedulers for execution.
   IS.dispatch(RCU.reserveSlot(IR, NumMicroOps));
 
-  // Notify listeners of the "instruction dispatched" event.
+  // Notify listeners of the "instruction dispatched" event,
+  // and move IR to the next stage.
   notifyInstructionDispatched(IR, RegisterFiles);
+  return moveToTheNextStage(IR);
 }
 
-void DispatchStage::cycleStart() {
+llvm::Error DispatchStage::cycleStart() {
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
+  return llvm::ErrorSuccess();
 }
 
-Stage::Status DispatchStage::execute(InstRef &IR) {
+bool DispatchStage::isAvailable(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  if (!isAvailable(Desc.NumMicroOps) || !canDispatch(IR))
-    return Stage::Stop;
-  dispatch(IR);
-  return Stage::Continue;
+  unsigned Required = std::min(Desc.NumMicroOps, DispatchWidth);
+  if (Required > AvailableEntries)
+    return false;
+  // The dispatch logic doesn't internally buffer instructions.  It only accepts
+  // instructions that can be successfully moved to the next stage during this
+  // same cycle.
+  return canDispatch(IR);
+}
+
+llvm::Error DispatchStage::execute(InstRef &IR) {
+  assert(canDispatch(IR) && "Cannot dispatch another instruction!");
+  return dispatch(IR);
 }
 
 #ifndef NDEBUG

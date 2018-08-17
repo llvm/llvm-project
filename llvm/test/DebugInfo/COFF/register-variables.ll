@@ -92,7 +92,7 @@
 ; OBJ:     VarName: p
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegECX (0x12)
+; OBJ:     Register: ECX (0x12)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x0
 ; OBJ:       ISectStart: 0x0
@@ -100,7 +100,7 @@
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegESI (0x17)
+; OBJ:     Register: ESI (0x17)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x7
 ; OBJ:       ISectStart: 0x0
@@ -114,7 +114,7 @@
 ; OBJ:     VarName: c
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegEAX (0x11)
+; OBJ:     Register: EAX (0x11)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
@@ -128,7 +128,7 @@
 ; OBJ:     VarName: a
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegEAX (0x11)
+; OBJ:     Register: EAX (0x11)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
@@ -142,7 +142,7 @@
 ; OBJ:     VarName: b
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegEAX (0x11)
+; OBJ:     Register: EAX (0x11)
 ; OBJ:     MayHaveNoName: 0
 ; OBJ:       OffsetStart: .text+0x13
 ; OBJ:       ISectStart: 0x0
@@ -162,7 +162,7 @@
 ; OBJ:     VarName: a
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegEAX (0x11)
+; OBJ:     Register: EAX (0x11)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
@@ -176,7 +176,7 @@
 ; OBJ:     VarName: b
 ; OBJ:   }
 ; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: CVRegEAX (0x11)
+; OBJ:     Register: EAX (0x11)
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x13
 ; OBJ:       ISectStart: 0x0

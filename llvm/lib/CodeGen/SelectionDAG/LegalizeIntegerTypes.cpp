@@ -2705,25 +2705,56 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
-  // A divide for UMULO should be faster than a function call.
   if (N->getOpcode() == ISD::UMULO) {
+    // This section expands the operation into the following sequence of
+    // instructions. `iNh` here refers to a type which has half the bit width of
+    // the type the original operation operated on.
+    //
+    // %0 = %LHS.HI != 0 && %RHS.HI != 0
+    // %1 = { iNh, i1 } @umul.with.overflow.iNh(iNh %LHS.HI, iNh %RHS.LO)
+    // %2 = { iNh, i1 } @umul.with.overflow.iNh(iNh %RHS.HI, iNh %LHS.LO)
+    // %3 = mul nuw iN (%LHS.LOW as iN), (%RHS.LOW as iN)
+    // %4 = add iN (%1.0 as iN) << Nh, (%2.0 as iN) << Nh
+    // %5 = { iN, i1 } @uadd.with.overflow.iN( %4, %3 )
+    //
+    // %res = { %5.0, %0 || %1.1 || %2.1 || %5.1 }
     SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
+    SDValue LHSHigh, LHSLow, RHSHigh, RHSLow;
+    SplitInteger(LHS, LHSLow, LHSHigh);
+    SplitInteger(RHS, RHSLow, RHSHigh);
+    EVT HalfVT = LHSLow.getValueType()
+      , BitVT = N->getValueType(1);
+    SDVTList VTHalfMulO = DAG.getVTList(HalfVT, BitVT);
+    SDVTList VTFullAddO = DAG.getVTList(VT, BitVT);
 
-    SDValue MUL = DAG.getNode(ISD::MUL, dl, LHS.getValueType(), LHS, RHS);
-    SplitInteger(MUL, Lo, Hi);
+    SDValue HalfZero = DAG.getConstant(0, dl, HalfVT);
+    SDValue Overflow = DAG.getNode(ISD::AND, dl, BitVT,
+      DAG.getSetCC(dl, BitVT, LHSHigh, HalfZero, ISD::SETNE),
+      DAG.getSetCC(dl, BitVT, RHSHigh, HalfZero, ISD::SETNE));
 
-    // A divide for UMULO will be faster than a function call. Select to
-    // make sure we aren't using 0.
-    SDValue isZero = DAG.getSetCC(dl, getSetCCResultType(VT),
-                                  RHS, DAG.getConstant(0, dl, VT), ISD::SETEQ);
-    SDValue NotZero = DAG.getSelect(dl, VT, isZero,
-                                    DAG.getConstant(1, dl, VT), RHS);
-    SDValue DIV = DAG.getNode(ISD::UDIV, dl, VT, MUL, NotZero);
-    SDValue Overflow = DAG.getSetCC(dl, N->getValueType(1), DIV, LHS,
-                                    ISD::SETNE);
-    Overflow = DAG.getSelect(dl, N->getValueType(1), isZero,
-                             DAG.getConstant(0, dl, N->getValueType(1)),
-                             Overflow);
+    SDValue One = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, LHSHigh, RHSLow);
+    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, One.getValue(1));
+    SDValue OneInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
+                                    One.getValue(0));
+
+    SDValue Two = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, RHSHigh, LHSLow);
+    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Two.getValue(1));
+    SDValue TwoInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
+                                    Two.getValue(0));
+
+    // Cannot use `UMUL_LOHI` directly, because some 32-bit targets (ARM) do not
+    // know how to expand `i64,i64 = umul_lohi a, b` and abort (why isn’t this
+    // operation recursively legalized?).
+    //
+    // Many backends understand this pattern and will convert into LOHI
+    // themselves, if applicable.
+    SDValue Three = DAG.getNode(ISD::MUL, dl, VT,
+      DAG.getNode(ISD::ZERO_EXTEND, dl, VT, LHSLow),
+      DAG.getNode(ISD::ZERO_EXTEND, dl, VT, RHSLow));
+    SDValue Four = DAG.getNode(ISD::ADD, dl, VT, OneInHigh, TwoInHigh);
+    SDValue Five = DAG.getNode(ISD::UADDO, dl, VTFullAddO, Three, Four);
+    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Five.getValue(1));
+    SplitInteger(Five, Lo, Hi);
     ReplaceValueWith(SDValue(N, 1), Overflow);
     return;
   }

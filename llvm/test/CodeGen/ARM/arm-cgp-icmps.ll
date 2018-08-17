@@ -269,7 +269,6 @@ entry:
 
 ; CHECK-COMMON-LABEL: icmp_i7
 ; CHECK-COMMON: ldrb
-; CHECK-COMMON: and
 ; CHECK-COMMON: cmp
 define i32 @icmp_i7(i7* %arg0, i7 zeroext %arg1, i32 %a, i32 %b) {
 entry:

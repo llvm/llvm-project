@@ -105,9 +105,8 @@ static bool isSafeToExecuteUnconditionally(Instruction &Inst,
                                            const LoopSafetyInfo *SafetyInfo,
                                            OptimizationRemarkEmitter *ORE,
                                            const Instruction *CtxI = nullptr);
-static bool pointerInvalidatedByLoop(Value *V, uint64_t Size,
-                                     const AAMDNodes &AAInfo,
-                                     AliasSetTracker *CurAST);
+static bool isInvalidatedByLoop(const MemoryLocation &MemLoc,
+                                AliasSetTracker *CurAST);
 static Instruction *
 CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
@@ -629,16 +628,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
-    // Don't hoist loads which have may-aliased stores in loop.
-    uint64_t Size = 0;
-    if (LI->getType()->isSized())
-      Size = I.getModule()->getDataLayout().getTypeStoreSize(LI->getType());
-
-    AAMDNodes AAInfo;
-    LI->getAAMetadata(AAInfo);
-
-    bool Invalidated =
-        pointerInvalidatedByLoop(LI->getOperand(0), Size, AAInfo, CurAST);
+    bool Invalidated = isInvalidatedByLoop(MemoryLocation::get(LI), CurAST);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -679,8 +669,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       if (AliasAnalysis::onlyAccessesArgPointees(Behavior)) {
         for (Value *Op : CI->arg_operands())
           if (Op->getType()->isPointerTy() &&
-              pointerInvalidatedByLoop(Op, MemoryLocation::UnknownSize,
-                                       AAMDNodes(), CurAST))
+              isInvalidatedByLoop(MemoryLocation(Op,
+                                                 MemoryLocation::UnknownSize,
+                                                 AAMDNodes()),
+                                  CurAST))
             return false;
         return true;
       }
@@ -1580,11 +1572,10 @@ void LegacyLICMPass::deleteAnalysisLoop(Loop *L) {
 /// Return true if the body of this loop may store into the memory
 /// location pointed to by V.
 ///
-static bool pointerInvalidatedByLoop(Value *V, uint64_t Size,
-                                     const AAMDNodes &AAInfo,
-                                     AliasSetTracker *CurAST) {
+static bool isInvalidatedByLoop(const MemoryLocation &MemLoc,
+                                AliasSetTracker *CurAST) {
   // Check to see if any of the basic blocks in CurLoop invalidate *V.
-  return CurAST->getAliasSetForPointer(V, Size, AAInfo).isMod();
+  return CurAST->getAliasSetFor(MemLoc).isMod();
 }
 
 /// Little predicate that returns true if the specified basic block is in

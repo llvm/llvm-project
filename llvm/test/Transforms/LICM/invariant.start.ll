@@ -101,9 +101,7 @@ loop:
   store i32 0, i32* %ptr
   %scope = call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
   %val = load i32, i32* %ptr
-;;  NOTE: despite being correct syntax, uncommenting this line causes
-;;  a crash in the optimizer.  FIXME
-;;  call void @llvm.invariant.end.p0i32({}* %scope, i64 4, i32* %ptr)
+  call void @llvm.invariant.end.p0i32({}* %scope, i64 4, i32* %ptr)
   %x.inc = add i32 %x, %val
   br label %loop
 }

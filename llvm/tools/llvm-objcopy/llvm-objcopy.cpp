@@ -35,6 +35,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -161,6 +162,7 @@ struct CopyConfig {
   bool DiscardAll = false;
   bool OnlyKeepDebug = false;
   bool KeepFileSymbols = false;
+  bool PreserveDates = false;
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
@@ -675,17 +677,44 @@ static void executeElfObjcopyOnArchive(const CopyConfig &Config,
     reportError(Config.OutputFilename, std::move(E));
 }
 
+static void restoreDateOnFile(StringRef Filename,
+                              const sys::fs::file_status &Stat) {
+  int FD;
+
+  if (auto EC = sys::fs::openFileForWrite(Filename, FD))
+    reportError(Filename, EC);
+
+  if (auto EC = sys::fs::setLastAccessAndModificationTime(
+          FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+    reportError(Filename, EC);
+
+  if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
+    reportError(Filename, EC);
+}
+
 static void executeElfObjcopy(const CopyConfig &Config) {
+  sys::fs::file_status Stat;
+  if (Config.PreserveDates)
+    if (auto EC = sys::fs::status(Config.InputFilename, Stat))
+      reportError(Config.InputFilename, EC);
+
   Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);
   if (!BinaryOrErr)
     reportError(Config.InputFilename, BinaryOrErr.takeError());
 
-  if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary()))
-    return executeElfObjcopyOnArchive(Config, *Ar);
+  if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
+    executeElfObjcopyOnArchive(Config, *Ar);
+  } else {
+    FileBuffer FB(Config.OutputFilename);
+    executeElfObjcopyOnBinary(Config, *BinaryOrErr.get().getBinary(), FB);
+  }
 
-  FileBuffer FB(Config.OutputFilename);
-  executeElfObjcopyOnBinary(Config, *BinaryOrErr.get().getBinary(), FB);
+  if (Config.PreserveDates) {
+    restoreDateOnFile(Config.OutputFilename, Stat);
+    if (!Config.SplitDWO.empty())
+      restoreDateOnFile(Config.SplitDWO, Stat);
+  }
 }
 
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
@@ -780,6 +809,8 @@ static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.push_back(Arg->getValue());
 
+  Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
+
   return Config;
 }
 
@@ -833,6 +864,8 @@ static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
     Config.SymbolsToKeep.push_back(Arg->getValue());
+
+  Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
 
   return Config;
 }

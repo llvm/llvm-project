@@ -249,13 +249,13 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addLinkageName(*VariableDIE, GV->getLinkageName());
 
   if (addToAccelTable) {
-    DD->addAccelName(GV->getName(), *VariableDIE);
+    DD->addAccelName(*CUNode, GV->getName(), *VariableDIE);
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
     if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
         DD->useAllLinkageNames())
-      DD->addAccelName(GV->getLinkageName(), *VariableDIE);
+      DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
   }
 
   return VariableDIE;
@@ -348,7 +348,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_subprogram nodes.
-  DD->addSubprogramNames(SP, *SPDie);
+  DD->addSubprogramNames(*CUNode, SP, *SPDie);
 
   return *SPDie;
 }
@@ -486,7 +486,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_inlined_subprogram nodes.
-  DD->addSubprogramNames(InlinedSP, *ScopeDIE);
+  DD->addSubprogramNames(*CUNode, InlinedSP, *ScopeDIE);
 
   return ScopeDIE;
 }
@@ -883,13 +883,18 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
-  // Opting in to GNU Pubnames/types overrides the default to ensure these are
-  // generated for things like Gold's gdb_index generation.
-  if (CUNode->getGnuPubnames())
+  switch (CUNode->getNameTableKind()) {
+  case DICompileUnit::DebugNameTableKind::None:
+    return false;
+    // Opting in to GNU Pubnames/types overrides the default to ensure these are
+    // generated for things like Gold's gdb_index generation.
+  case DICompileUnit::DebugNameTableKind::GNU:
     return true;
-
-  return DD->tuneForGDB() && DD->usePubSections() &&
-         !includeMinimalInlineScopes() && !CUNode->isDebugDirectivesOnly();
+  case DICompileUnit::DebugNameTableKind::Default:
+    return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
+           !CUNode->isDebugDirectivesOnly();
+  }
+  llvm_unreachable("Unhandled DICompileUnit::DebugNameTableKind enum");
 }
 
 /// addGlobalName - Add a new global name to the compile unit.

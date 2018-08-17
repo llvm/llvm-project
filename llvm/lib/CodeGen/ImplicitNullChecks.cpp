@@ -651,7 +651,7 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
     }
   }
 
-  MIB.setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+  MIB.setMemRefs(MI->memoperands());
 
   return MIB;
 }

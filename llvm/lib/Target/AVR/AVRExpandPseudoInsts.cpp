@@ -568,8 +568,8 @@ bool AVRExpandPseudo::expand<AVR::LDSWRdK>(Block &MBB, BlockIt MBBI) {
     llvm_unreachable("Unknown operand type!");
   }
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -617,8 +617,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
     buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
   }
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -648,8 +648,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPi>(Block &MBB, BlockIt MBBI) {
     .addReg(SrcReg, RegState::Define | getDeadRegState(SrcIsDead))
     .addReg(SrcReg, RegState::Kill);
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -679,8 +679,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
     .addReg(SrcReg, RegState::Define | getDeadRegState(SrcIsDead))
     .addReg(SrcReg, RegState::Kill);
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -734,8 +734,8 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
     buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
   }
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -782,8 +782,8 @@ bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
     buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
   }
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1003,8 +1003,8 @@ bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
   MIBLO.addReg(SrcLoReg, getKillRegState(SrcIsKill));
   MIBHI.addReg(SrcHiReg, getKillRegState(SrcIsKill));
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1031,8 +1031,8 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
     .addImm(1)
     .addReg(SrcHiReg, getKillRegState(SrcIsKill));
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1065,8 +1065,8 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPiRr>(Block &MBB, BlockIt MBBI) {
     .addReg(SrcHiReg, getKillRegState(SrcIsKill))
     .addImm(Imm);
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1099,8 +1099,8 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
     .addReg(SrcLoReg, getKillRegState(SrcIsKill))
     .addImm(Imm);
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1133,8 +1133,8 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
     .addImm(Imm + 1)
     .addReg(SrcHiReg, getKillRegState(SrcIsKill));
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1163,8 +1163,8 @@ bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
     .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
     .addImm(Imm + 1);
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
@@ -1194,8 +1194,8 @@ bool AVRExpandPseudo::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
     .addImm(Imm)
     .addReg(SrcLoReg, getKillRegState(SrcIsKill));
 
-  MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIBLO.setMemRefs(MI.memoperands());
+  MIBHI.setMemRefs(MI.memoperands());
 
   MI.eraseFromParent();
   return true;
