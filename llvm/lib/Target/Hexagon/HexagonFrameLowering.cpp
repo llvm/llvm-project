@@ -1579,10 +1579,10 @@ bool HexagonFrameLowering::expandStoreInt(MachineBasicBlock &B,
 
   // S2_storeri_io FI, 0, TmpR
   BuildMI(B, It, DL, HII.get(Hexagon::S2_storeri_io))
-    .addFrameIndex(FI)
-    .addImm(0)
-    .addReg(TmpR, RegState::Kill)
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addReg(TmpR, RegState::Kill)
+      .cloneMemRefs(*MI);
 
   NewRegs.push_back(TmpR);
   B.erase(It);
@@ -1604,9 +1604,9 @@ bool HexagonFrameLowering::expandLoadInt(MachineBasicBlock &B,
   // TmpR = L2_loadri_io FI, 0
   unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   BuildMI(B, It, DL, HII.get(Hexagon::L2_loadri_io), TmpR)
-    .addFrameIndex(FI)
-    .addImm(0)
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(0)
+      .cloneMemRefs(*MI);
 
   // DstR = C2_tfrrp TmpR   if DstR is a predicate register
   // DstR = A2_tfrrcr TmpR  if DstR is a modifier register
@@ -1731,10 +1731,10 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
     StoreOpc = NeedAlign <= HasAlign ? Hexagon::V6_vS32b_ai
                                      : Hexagon::V6_vS32Ub_ai;
     BuildMI(B, It, DL, HII.get(StoreOpc))
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addReg(SrcLo, getKillRegState(IsKill))
-      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcLo, getKillRegState(IsKill))
+        .cloneMemRefs(*MI);
   }
 
   // Store high part.
@@ -1742,10 +1742,10 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
     StoreOpc = NeedAlign <= MinAlign(HasAlign, Size) ? Hexagon::V6_vS32b_ai
                                                      : Hexagon::V6_vS32Ub_ai;
     BuildMI(B, It, DL, HII.get(StoreOpc))
-      .addFrameIndex(FI)
-      .addImm(Size)
-      .addReg(SrcHi, getKillRegState(IsKill))
-      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+        .addFrameIndex(FI)
+        .addImm(Size)
+        .addReg(SrcHi, getKillRegState(IsKill))
+        .cloneMemRefs(*MI);
   }
 
   B.erase(It);
@@ -1777,17 +1777,17 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
   LoadOpc = NeedAlign <= HasAlign ? Hexagon::V6_vL32b_ai
                                   : Hexagon::V6_vL32Ub_ai;
   BuildMI(B, It, DL, HII.get(LoadOpc), DstLo)
-    .addFrameIndex(FI)
-    .addImm(0)
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(0)
+      .cloneMemRefs(*MI);
 
   // Load high part.
   LoadOpc = NeedAlign <= MinAlign(HasAlign, Size) ? Hexagon::V6_vL32b_ai
                                                   : Hexagon::V6_vL32Ub_ai;
   BuildMI(B, It, DL, HII.get(LoadOpc), DstHi)
-    .addFrameIndex(FI)
-    .addImm(Size)
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(Size)
+      .cloneMemRefs(*MI);
 
   B.erase(It);
   return true;
@@ -1813,10 +1813,10 @@ bool HexagonFrameLowering::expandStoreVec(MachineBasicBlock &B,
   unsigned StoreOpc = NeedAlign <= HasAlign ? Hexagon::V6_vS32b_ai
                                             : Hexagon::V6_vS32Ub_ai;
   BuildMI(B, It, DL, HII.get(StoreOpc))
-    .addFrameIndex(FI)
-    .addImm(0)
-    .addReg(SrcR, getKillRegState(IsKill))
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addReg(SrcR, getKillRegState(IsKill))
+      .cloneMemRefs(*MI);
 
   B.erase(It);
   return true;
@@ -1841,9 +1841,9 @@ bool HexagonFrameLowering::expandLoadVec(MachineBasicBlock &B,
   unsigned LoadOpc = NeedAlign <= HasAlign ? Hexagon::V6_vL32b_ai
                                            : Hexagon::V6_vL32Ub_ai;
   BuildMI(B, It, DL, HII.get(LoadOpc), DstR)
-    .addFrameIndex(FI)
-    .addImm(0)
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addFrameIndex(FI)
+      .addImm(0)
+      .cloneMemRefs(*MI);
 
   B.erase(It);
   return true;

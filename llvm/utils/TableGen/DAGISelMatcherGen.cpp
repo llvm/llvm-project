@@ -33,15 +33,15 @@ static MVT::SimpleValueType getRegisterValueType(Record *R,
 
     if (!FoundRC) {
       FoundRC = true;
-      ValueTypeByHwMode VVT = RC.getValueTypeNum(0);
+      const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
       if (VVT.isSimple())
         VT = VVT.getSimple().SimpleTy;
       continue;
     }
 
-    // If this occurs in multiple register classes, they all have to agree.
 #ifndef NDEBUG
-    ValueTypeByHwMode T = RC.getValueTypeNum(0);
+    // If this occurs in multiple register classes, they all have to agree.
+    const ValueTypeByHwMode &T = RC.getValueTypeNum(0);
     assert((!T.isSimple() || T.getSimple().SimpleTy == VT) &&
            "ValueType mismatch between register classes for this register");
 #endif

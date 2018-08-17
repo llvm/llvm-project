@@ -42,7 +42,7 @@ void testStrlcat(const char *src) {
   strlcpy(dest, "aaaaa", sizeof("aaaaa") - 1);
   strlcat(dest, "bbbb", (sizeof("bbbb") - 1) - sizeof(dest) - 1);
   strlcpy(dest, "012345678", sizeof(dest));
-  strlcat(dest, "910", sizeof(dest)); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value  <size>  - strlen(dest) - 1 or lower}}
+  strlcat(dest, "910", sizeof(dest)); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value <size> - strlen(dest) - 1 or lower}}
   strlcpy(dest, "0123456789", sizeof(dest));
   strlcat(dest, "0123456789", badlen); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value 'badlen' - strlen(dest) - 1 or lower}}
   strlcat(dest, "0123456789", badlen - strlen(dest) - 1);

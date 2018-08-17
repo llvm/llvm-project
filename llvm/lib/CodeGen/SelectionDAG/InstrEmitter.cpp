@@ -886,12 +886,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       MIB.addReg(ScratchRegs[i], RegState::ImplicitDefine |
                                  RegState::EarlyClobber);
 
-  // Transfer all of the memory reference descriptions of this instruction.
-  ArrayRef<MachineMemOperand *> SDNodeMemRefs =
-      cast<MachineSDNode>(Node)->memoperands();
-  MachineMemOperand **MemRefs = MF->allocateMemRefsArray(SDNodeMemRefs.size());
-  std::copy(SDNodeMemRefs.begin(), SDNodeMemRefs.end(), MemRefs);
-  MIB.setMemRefs({MemRefs, SDNodeMemRefs.size()});
+  // Set the memory reference descriptions of this instruction now that it is
+  // part of the function.
+  MIB.setMemRefs(cast<MachineSDNode>(Node)->memoperands());
 
   // Insert the instruction into position in the block. This needs to
   // happen before any custom inserter hook is called so that the

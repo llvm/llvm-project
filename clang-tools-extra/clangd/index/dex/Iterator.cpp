@@ -49,10 +49,19 @@ public:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << '[';
     auto Separator = "";
-    for (const auto &ID : Documents) {
-      OS << Separator << ID;
+    for (auto It = std::begin(Documents); It != std::end(Documents); ++It) {
+      OS << Separator;
+      if (It == Index)
+        OS << '{' << *It << '}';
+      else
+        OS << *It;
       Separator = ", ";
     }
+    OS << Separator;
+    if (Index == std::end(Documents))
+      OS << "{END}";
+    else
+      OS << "END";
     OS << ']';
     return OS;
   }

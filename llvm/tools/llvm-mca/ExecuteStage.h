@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the execution stage of an instruction pipeline.
+/// This file defines the execution stage of a default instruction pipeline.
 ///
 /// The ExecuteStage is responsible for managing the hardware scheduler
 /// and issuing notifications that an instruction has been executed.
@@ -19,34 +19,36 @@
 #define LLVM_TOOLS_LLVM_MCA_EXECUTE_STAGE_H
 
 #include "Instruction.h"
-#include "RetireControlUnit.h"
 #include "Scheduler.h"
 #include "Stage.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mca {
 
-class ExecuteStage : public Stage {
-  // Owner will go away when we move listeners/eventing to the stages.
-  RetireControlUnit &RCU;
+class ExecuteStage final : public Stage {
   Scheduler &HWS;
 
   // The following routines are used to maintain the HWS.
   void reclaimSchedulerResources();
-  void updateSchedulerQueues();
-  void issueReadyInstructions();
+  llvm::Error updateSchedulerQueues();
+  llvm::Error issueReadyInstructions();
 
-public:
-  ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 
-  // The ExecuteStage will always complete all of its work per call to
-  // execute(), so it is never left in a 'to-be-processed' state.
-  virtual bool hasWorkToComplete() const override final { return false; }
+public:
+  ExecuteStage(Scheduler &S) : Stage(), HWS(S) {}
 
-  virtual void cycleStart() override final;
-  virtual Status execute(InstRef &IR) override final;
+  // This stage works under the assumption that the Pipeline will eventually
+  // execute a retire stage. We don't need to check if pipelines and/or
+  // schedulers have instructions to process, because those instructions are
+  // also tracked by the retire control unit. That means,
+  // RetireControlUnit::hasWorkToComplete() is responsible for checking if there
+  // are still instructions in-flight in the out-of-order backend.
+  bool hasWorkToComplete() const override { return false; }
+  bool isAvailable(const InstRef &IR) const override;
+  llvm::Error cycleStart() override;
+  llvm::Error execute(InstRef &IR) override;
 
   void
   notifyInstructionIssued(const InstRef &IR,

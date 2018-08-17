@@ -573,7 +573,9 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   APInt BlockFreq(128, Freq);
   APInt EntryFreq(128, getEntryFreq());
   BlockCount *= BlockFreq;
-  BlockCount = BlockCount.udiv(EntryFreq);
+  // Rounded division of BlockCount by EntryFreq. Since EntryFreq is unsigned
+  // lshr by 1 gives EntryFreq/2.
+  BlockCount = (BlockCount + EntryFreq.lshr(1)).udiv(EntryFreq);
   return BlockCount.getLimitedValue();
 }
 

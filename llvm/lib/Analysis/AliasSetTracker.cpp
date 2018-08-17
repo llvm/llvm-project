@@ -307,11 +307,12 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
   return FoundSet;
 }
 
-/// getAliasSetForPointer - Return the alias set that the specified pointer
-/// lives in.
-AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer,
-                                                 LocationSize Size,
-                                                 const AAMDNodes &AAInfo) {
+AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
+
+  Value * const Pointer = const_cast<Value*>(MemLoc.Ptr);
+  const LocationSize Size = MemLoc.Size;
+  const AAMDNodes &AAInfo = MemLoc.AATags;
+  
   AliasSet::PointerRec &Entry = getEntryFor(Pointer);
 
   if (AliasAnyAS) {
@@ -567,7 +568,7 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
 AliasSet &AliasSetTracker::addPointer(Value *P, LocationSize Size,
                                       const AAMDNodes &AAInfo,
                                       AliasSet::AccessLattice E) {
-  AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo);
+  AliasSet &AS = getAliasSetFor(MemoryLocation(P, Size, AAInfo));
   AS.Access |= E;
 
   if (!AliasAnyAS && (TotalMayAliasSetSize > SaturationThreshold)) {

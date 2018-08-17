@@ -340,7 +340,7 @@ void MigrationContext::dumpGCAttrs() {
     llvm::errs() << "KIND: "
         << (Attr.Kind == GCAttrOccurrence::Strong ? "strong" : "weak");
     llvm::errs() << "\nLOC: ";
-    Attr.Loc.dump(Pass.Ctx.getSourceManager());
+    Attr.Loc.print(llvm::errs(), Pass.Ctx.getSourceManager());
     llvm::errs() << "\nTYPE: ";
     Attr.ModifiedType.dump();
     if (Attr.Dcl) {

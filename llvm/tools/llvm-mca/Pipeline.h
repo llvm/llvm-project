@@ -60,18 +60,14 @@ class Pipeline {
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
-  void preExecuteStages();
-  Stage::Status executeStages(InstRef &IR);
-  void postExecuteStages();
   llvm::Error runCycle();
-
   bool hasWorkToProcess();
   void notifyCycleBegin();
   void notifyCycleEnd();
 
 public:
   Pipeline() : Cycles(0) {}
-  void appendStage(std::unique_ptr<Stage> S) { Stages.push_back(std::move(S)); }
+  void appendStage(std::unique_ptr<Stage> S);
   llvm::Error run();
   void addEventListener(HWEventListener *Listener);
 };

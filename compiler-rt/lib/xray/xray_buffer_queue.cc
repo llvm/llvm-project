@@ -19,33 +19,14 @@
 #include <memory>
 #include <sys/mman.h>
 
-#ifndef MAP_NORESERVE
-// no-op on NetBSD (at least), unsupported flag on FreeBSD
-#define MAP_NORESERVE 0
-#endif
-
 using namespace __xray;
 using namespace __sanitizer;
 
 template <class T> static T *allocRaw(size_t N) {
   // TODO: Report errors?
-  // We use MAP_NORESERVE on platforms where it's supported to ensure that the
-  // pages we're allocating for XRay never end up in pages that can be swapped
-  // in/out. We're doing this because for FDR mode, we want to ensure that
-  // writes to the buffers stay resident in memory to prevent XRay itself from
-  // causing swapping/thrashing.
-  //
-  // In the case when XRay pages cannot be swapped in/out or there's not enough
-  // RAM to back these pages, we're willing to cause a segmentation fault
-  // instead of introducing latency in the measurement. We assume here that
-  // there are enough pages that are swappable in/out outside of the buffers
-  // being used by FDR mode (which are bounded and configurable anyway) to allow
-  // us to keep using always-resident memory.
-  //
-  // TODO: Make this configurable?
   void *A = reinterpret_cast<void *>(
       internal_mmap(NULL, N * sizeof(T), PROT_WRITE | PROT_READ,
-                    MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0));
+                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0));
   return (A == MAP_FAILED) ? nullptr : reinterpret_cast<T *>(A);
 }
 

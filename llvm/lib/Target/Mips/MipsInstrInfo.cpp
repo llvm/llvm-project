@@ -663,8 +663,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   }
 
   MIB.copyImplicitOps(*I);
-
-  MIB.setMemRefs(I->memoperands_begin(), I->memoperands_end());
+  MIB.cloneMemRefs(*I);
   return MIB;
 }
 

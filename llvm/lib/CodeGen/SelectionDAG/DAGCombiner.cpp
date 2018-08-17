@@ -393,7 +393,7 @@ namespace {
 
     SDValue XformToShuffleWithZero(SDNode *N);
     SDValue ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
-                           SDValue N1);
+                           SDValue N1, SDNodeFlags Flags);
 
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
 
@@ -942,9 +942,13 @@ static bool isAnyConstantBuildVector(const SDNode *N) {
 }
 
 SDValue DAGCombiner::ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
-                                    SDValue N1) {
+                                    SDValue N1, SDNodeFlags Flags) {
+  // Don't reassociate reductions.
+  if (Flags.hasVectorReduction())
+    return SDValue();
+
   EVT VT = N0.getValueType();
-  if (N0.getOpcode() == Opc) {
+  if (N0.getOpcode() == Opc && !N0->getFlags().hasVectorReduction()) {
     if (SDNode *L = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
       if (SDNode *R = DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
         // reassoc. (op (op x, c1), c2) -> (op x, (op c1, c2))
@@ -964,7 +968,7 @@ SDValue DAGCombiner::ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
     }
   }
 
-  if (N1.getOpcode() == Opc) {
+  if (N1.getOpcode() == Opc && !N1->getFlags().hasVectorReduction()) {
     if (SDNode *R = DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1))) {
       if (SDNode *L = DAG.isConstantIntBuildVectorOrConstantInt(N0)) {
         // reassoc. (op c2, (op x, c1)) -> (op x, (op c1, c2))
@@ -2110,7 +2114,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (SDValue RADD = ReassociateOps(ISD::ADD, DL, N0, N1))
+  if (SDValue RADD = ReassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
     return RADD;
 
   // fold ((0-A) + B) -> B-A
@@ -2974,7 +2978,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
                                      N0.getOperand(1), N1));
 
   // reassociate mul
-  if (SDValue RMUL = ReassociateOps(ISD::MUL, SDLoc(N), N0, N1))
+  if (SDValue RMUL = ReassociateOps(ISD::MUL, SDLoc(N), N0, N1, N->getFlags()))
     return RMUL;
 
   return SDValue();
@@ -4429,7 +4433,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return NewSel;
 
   // reassociate and
-  if (SDValue RAND = ReassociateOps(ISD::AND, SDLoc(N), N0, N1))
+  if (SDValue RAND = ReassociateOps(ISD::AND, SDLoc(N), N0, N1, N->getFlags()))
     return RAND;
 
   // Try to convert a constant mask AND into a shuffle clear mask.
@@ -5139,7 +5143,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return BSwap;
 
   // reassociate or
-  if (SDValue ROR = ReassociateOps(ISD::OR, SDLoc(N), N0, N1))
+  if (SDValue ROR = ReassociateOps(ISD::OR, SDLoc(N), N0, N1, N->getFlags()))
     return ROR;
 
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
@@ -6016,7 +6020,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return NewSel;
 
   // reassociate xor
-  if (SDValue RXOR = ReassociateOps(ISD::XOR, SDLoc(N), N0, N1))
+  if (SDValue RXOR = ReassociateOps(ISD::XOR, SDLoc(N), N0, N1, N->getFlags()))
     return RXOR;
 
   // fold !(x cc y) -> (x !cc y)

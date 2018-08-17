@@ -318,6 +318,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FLOG, MVT::f32, Custom);
   setOperationAction(ISD::FLOG10, MVT::f32, Custom);
+  setOperationAction(ISD::FEXP, MVT::f32, Custom);
 
 
   setOperationAction(ISD::FNEARBYINT, MVT::f32, Custom);
@@ -450,6 +451,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FDIV, VT, Expand);
     setOperationAction(ISD::FEXP2, VT, Expand);
+    setOperationAction(ISD::FEXP, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
     setOperationAction(ISD::FREM, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
@@ -562,6 +564,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
+  case AMDGPUISD::FMED3:
     return true;
   default:
     return false;
@@ -1140,6 +1143,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return LowerFLOG(Op, DAG, 1 / AMDGPU_LOG2E_F);
   case ISD::FLOG10:
     return LowerFLOG(Op, DAG, AMDGPU_LN2_F / AMDGPU_LN10_F);
+  case ISD::FEXP:
+    return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
@@ -2211,6 +2216,34 @@ SDValue AMDGPUTargetLowering::LowerFLOG(SDValue Op, SelectionDAG &DAG,
   SDValue Log2BaseInvertedOperand = DAG.getConstantFP(Log2BaseInverted, SL, VT);
 
   return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand);
+}
+
+// Return M_LOG2E of appropriate type
+static SDValue getLog2EVal(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f32:
+    return DAG.getConstantFP(1.44269504088896340735992468100189214f, SL, VT);
+  case MVT::f16:
+    return DAG.getConstantFP(
+      APFloat(APFloat::IEEEhalf(), "1.44269504088896340735992468100189214"),
+      SL, VT);
+  case MVT::f64:
+    return DAG.getConstantFP(
+      APFloat(APFloat::IEEEdouble(), "0x1.71547652b82fep+0"), SL, VT);
+  default:
+    llvm_unreachable("unsupported fp type");
+  }
+}
+
+// exp2(M_LOG2E_F * f);
+SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  const SDValue K = getLog2EVal(DAG, SL, VT);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Src, K, Op->getFlags());
+  return DAG.getNode(ISD::FEXP2, SL, VT, Mul, Op->getFlags());
 }
 
 static bool isCtlzOpc(unsigned Opc) {
@@ -3449,9 +3482,27 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   return performCtlz_CttzCombine(SDLoc(N), Cond, True, False, DCI);
 }
 
-static bool isConstantFPZero(SDValue N) {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
-    return C->isZero() && !C->isNegative();
+static bool isInv2Pi(const APFloat &APF) {
+  static const APFloat KF16(APFloat::IEEEhalf(), APInt(16, 0x3118));
+  static const APFloat KF32(APFloat::IEEEsingle(), APInt(32, 0x3e22f983));
+  static const APFloat KF64(APFloat::IEEEdouble(), APInt(64, 0x3fc45f306dc9c882));
+
+  return APF.bitwiseIsEqual(KF16) ||
+         APF.bitwiseIsEqual(KF32) ||
+         APF.bitwiseIsEqual(KF64);
+}
+
+// 0 and 1.0 / (0.5 * pi) do not have inline immmediates, so there is an
+// additional cost to negate them.
+bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
+  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N)) {
+    if (C->isZero() && !C->isNegative())
+      return true;
+
+    if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
+      return true;
+  }
+
   return false;
 }
 
@@ -3577,9 +3628,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue RHS = N0.getOperand(1);
 
     // 0 doesn't have a negated inline immediate.
-    // TODO: Shouldn't fold 1/2pi either, and should be generalized to other
-    // operations.
-    if (isConstantFPZero(RHS))
+    // TODO: This constant check should be generalized to other operations.
+    if (isConstantCostlierToNegate(RHS))
       return SDValue();
 
     SDValue NegLHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);
@@ -3587,6 +3637,16 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     unsigned Opposite = inverseMinMax(Opc);
 
     SDValue Res = DAG.getNode(Opposite, SL, VT, NegLHS, NegRHS, N0->getFlags());
+    if (!N0.hasOneUse())
+      DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
+    return Res;
+  }
+  case AMDGPUISD::FMED3: {
+    SDValue Ops[3];
+    for (unsigned I = 0; I < 3; ++I)
+      Ops[I] = DAG.getNode(ISD::FNEG, SL, VT, N0->getOperand(I), N0->getFlags());
+
+    SDValue Res = DAG.getNode(AMDGPUISD::FMED3, SL, VT, Ops, N0->getFlags());
     if (!N0.hasOneUse())
       DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
     return Res;

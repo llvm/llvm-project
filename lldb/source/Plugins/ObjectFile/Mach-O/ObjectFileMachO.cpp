@@ -2351,7 +2351,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                     indirect_syms_data_sp, 0,
                     indirect_syms_data_sp->GetByteSize());
             }
-          } else if (memory_module_load_level >=
+          }
+          if (memory_module_load_level >=
                      eMemoryModuleLoadLevelPartial) {
             if (function_starts_load_command.cmd) {
               const addr_t func_start_addr =

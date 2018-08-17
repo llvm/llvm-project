@@ -706,13 +706,12 @@ void IRTranslator::getStackGuard(unsigned DstReg,
     return;
 
   MachinePointerInfo MPInfo(Global);
-  MachineInstr::mmo_iterator MemRefs = MF->allocateMemRefsArray(1);
   auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                MachineMemOperand::MODereferenceable;
-  *MemRefs =
+  MachineMemOperand *MemRef =
       MF->getMachineMemOperand(MPInfo, Flags, DL->getPointerSizeInBits() / 8,
                                DL->getPointerABIAlignment(0));
-  MIB.setMemRefs(MemRefs, MemRefs + 1);
+  MIB.setMemRefs({MemRef});
 }
 
 bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
@@ -848,6 +847,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   case Intrinsic::fabs:
     MIRBuilder.buildInstr(TargetOpcode::G_FABS)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::trunc:
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::round:
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND)
         .addDef(getOrCreateVReg(CI))
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;

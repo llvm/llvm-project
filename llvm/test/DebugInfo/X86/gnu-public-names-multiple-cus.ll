@@ -23,4 +23,4 @@ target triple = "x86_64-unknown-linux-gnu"
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !10 = !{!8}
-!11 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !10, gnuPubnames: true)
+!11 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !10, nameTableKind: GNU)

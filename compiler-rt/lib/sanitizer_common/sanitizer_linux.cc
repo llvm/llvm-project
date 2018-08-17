@@ -489,8 +489,17 @@ tid_t GetTid() {
 int TgKill(pid_t pid, tid_t tid, int sig) {
 #if SANITIZER_LINUX
   return internal_syscall(SYSCALL(tgkill), pid, tid, sig);
-#else
+#elif SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
+#elif SANITIZER_OPENBSD
+  (void)pid;
+  return internal_syscall(SYSCALL(thrkill), tid, sig, nullptr);
+#elif SANITIZER_NETBSD
+  (void)pid;
+  return _lwp_kill(tid, sig);
+#elif SANITIZER_SOLARIS
+  (void)pid;
+  return thr_kill(tid, sig);
 #endif
 }
 

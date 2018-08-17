@@ -5296,6 +5296,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_DECL_MARKED_OPENMP_DECLARETARGET:
+        Record.push_back(D->getAttr<OMPDeclareTargetDeclAttr>()->getMapType());
         Record.AddSourceRange(
             D->getAttr<OMPDeclareTargetDeclAttr>()->getRange());
         break;

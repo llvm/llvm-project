@@ -783,7 +783,7 @@ define <2 x half> @v_test_canonicalize_build_vector_noncanon0_v2f16(<2 x half> %
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_extract_element_v2f16:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_pk_mul_f16 v0, v0, 4.0 op_sel_hi:[1,0]
+; GFX9-NEXT: v_mul_f16_e32 v0, 4.0, v0
 ; GFX9-NEXT: s_setpc_b64
 define half @v_test_canonicalize_extract_element_v2f16(<2 x half> %vec) {
   %vec.op = fmul <2 x half> %vec, <half 4.0, half 4.0>

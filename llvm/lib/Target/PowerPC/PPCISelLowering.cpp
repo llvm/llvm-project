@@ -9964,10 +9964,6 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   const BasicBlock *BB = MBB->getBasicBlock();
   MachineFunction::iterator I = ++MBB->getIterator();
 
-  // Memory Reference
-  MachineInstr::mmo_iterator MMOBegin = MI.memoperands_begin();
-  MachineInstr::mmo_iterator MMOEnd = MI.memoperands_end();
-
   unsigned DstReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
   assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
@@ -10030,10 +10026,10 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   if (Subtarget.isPPC64() && Subtarget.isSVR4ABI()) {
     setUsesTOCBasePtr(*MBB->getParent());
     MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::STD))
-            .addReg(PPC::X2)
-            .addImm(TOCOffset)
-            .addReg(BufReg);
-    MIB.setMemRefs(MMOBegin, MMOEnd);
+              .addReg(PPC::X2)
+              .addImm(TOCOffset)
+              .addReg(BufReg)
+              .cloneMemRefs(MI);
   }
 
   // Naked functions never have a base pointer, and so we use r1. For all
@@ -10048,8 +10044,8 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
                 TII->get(Subtarget.isPPC64() ? PPC::STD : PPC::STW))
             .addReg(BaseReg)
             .addImm(BPOffset)
-            .addReg(BufReg);
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+            .addReg(BufReg)
+            .cloneMemRefs(MI);
 
   // Setup
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::BCLalways)).addMBB(mainMBB);
@@ -10082,8 +10078,7 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
             .addImm(LabelOffset)
             .addReg(BufReg);
   }
-
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+  MIB.cloneMemRefs(MI);
 
   BuildMI(mainMBB, DL, TII->get(PPC::LI), mainDstReg).addImm(0);
   mainMBB->addSuccessor(sinkMBB);
@@ -10106,10 +10101,6 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-
-  // Memory Reference
-  MachineInstr::mmo_iterator MMOBegin = MI.memoperands_begin();
-  MachineInstr::mmo_iterator MMOEnd = MI.memoperands_end();
 
   MVT PVT = getPointerTy(MF->getDataLayout());
   assert((PVT == MVT::i64 || PVT == MVT::i32) &&
@@ -10148,7 +10139,7 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addImm(0)
             .addReg(BufReg);
   }
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+  MIB.cloneMemRefs(MI);
 
   // Reload IP
   if (PVT == MVT::i64) {
@@ -10160,7 +10151,7 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addImm(LabelOffset)
             .addReg(BufReg);
   }
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+  MIB.cloneMemRefs(MI);
 
   // Reload SP
   if (PVT == MVT::i64) {
@@ -10172,7 +10163,7 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addImm(SPOffset)
             .addReg(BufReg);
   }
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+  MIB.cloneMemRefs(MI);
 
   // Reload BP
   if (PVT == MVT::i64) {
@@ -10184,16 +10175,15 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
             .addImm(BPOffset)
             .addReg(BufReg);
   }
-  MIB.setMemRefs(MMOBegin, MMOEnd);
+  MIB.cloneMemRefs(MI);
 
   // Reload TOC
   if (PVT == MVT::i64 && Subtarget.isSVR4ABI()) {
     setUsesTOCBasePtr(*MBB->getParent());
     MIB = BuildMI(*MBB, MI, DL, TII->get(PPC::LD), PPC::X2)
-            .addImm(TOCOffset)
-            .addReg(BufReg);
-
-    MIB.setMemRefs(MMOBegin, MMOEnd);
+              .addImm(TOCOffset)
+              .addReg(BufReg)
+              .cloneMemRefs(MI);
   }
 
   // Jump

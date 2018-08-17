@@ -266,9 +266,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// Use inlined strings.
   bool UseInlineStrings = false;
 
-  /// Whether to emit DWARF pub sections or not.
-  bool UsePubSections = true;
-
   /// Allow emission of .debug_ranges section.
   bool UseRangesSection = true;
 
@@ -346,8 +343,8 @@ class DwarfDebug : public DebugHandlerBase {
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
   template <typename DataT>
-  void addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
-                        const DIE &Die);
+  void addAccelNameImpl(const DICompileUnit &CU, AccelTable<DataT> &AppleAccel,
+                        StringRef Name, const DIE &Die);
 
   void finishVariableDefinitions();
 
@@ -543,9 +540,6 @@ public:
   /// Returns whether to use inline strings.
   bool useInlineStrings() const { return UseInlineStrings; }
 
-  /// Returns whether GNU pub sections should be emitted.
-  bool usePubSections() const { return UsePubSections; }
-
   /// Returns whether ranges section should be emitted.
   bool useRangesSection() const { return UseRangesSection; }
 
@@ -608,17 +602,20 @@ public:
     return Ref.resolve();
   }
 
-  void addSubprogramNames(const DISubprogram *SP, DIE &Die);
+  void addSubprogramNames(const DICompileUnit &CU, const DISubprogram *SP,
+                          DIE &Die);
 
   AddressPool &getAddressPool() { return AddrPool; }
 
-  void addAccelName(StringRef Name, const DIE &Die);
+  void addAccelName(const DICompileUnit &CU, StringRef Name, const DIE &Die);
 
-  void addAccelObjC(StringRef Name, const DIE &Die);
+  void addAccelObjC(const DICompileUnit &CU, StringRef Name, const DIE &Die);
 
-  void addAccelNamespace(StringRef Name, const DIE &Die);
+  void addAccelNamespace(const DICompileUnit &CU, StringRef Name,
+                         const DIE &Die);
 
-  void addAccelType(StringRef Name, const DIE &Die, char Flags);
+  void addAccelType(const DICompileUnit &CU, StringRef Name, const DIE &Die,
+                    char Flags);
 
   const MachineFunction *getCurrentFunction() const { return CurFn; }
 

@@ -158,3 +158,16 @@ define i1 @test14(i8 %A, i8 %B) {
   ret i1 %E
 }
 
+define i1 @xor_icmp_ptr(i8* %c, i8* %d) {
+; CHECK-LABEL: @xor_icmp_ptr(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8* [[C:%.*]], null
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8* [[D:%.*]], null
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %cmp = icmp slt i8* %c, null
+  %cmp1 = icmp slt i8* %d, null
+  %xor = xor i1 %cmp, %cmp1
+  ret i1 %xor
+}
+
