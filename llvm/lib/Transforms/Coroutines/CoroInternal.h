@@ -90,6 +90,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
+  SmallVector<CallInst*, 2> SwiftErrorOps;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
