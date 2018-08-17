@@ -80,3 +80,37 @@ custom optimization level and target triple:
 
 To translate a clang-proto-fuzzer corpus output to C++:
   bin/clang-proto-to-cxx CORPUS_OUTPUT_FILE
+
+===================
+ llvm-proto-fuzzer
+===================
+Like, clang-proto-fuzzer, llvm-proto-fuzzer is also a protobuf-mutator based
+fuzzer. It receives as input a cxx_loop_proto which it then converts into a
+string of valid LLVM IR: a function with either a single loop or two nested
+loops. It then creates a new string of IR by running optimization passes over
+the original IR. Currently, it only runs a loop-vectorize pass but more passes
+can easily be added to the fuzzer. Once there are two versions of the input
+function (optimized and not), llvm-proto-fuzzer uses LLVM's JIT Engine to
+compile both functions. Lastly, it runs both functions on a suite of inputs and
+checks that both functions behave the same on all inputs. In this way,
+llvm-proto-fuzzer can find not only compiler crashes, but also miscompiles
+originating from LLVM's optimization passes.
+
+llvm-proto-fuzzer is built very similarly to clang-proto-fuzzer. You can run the
+fuzzer with the following command:
+  bin/clang-llvm-proto-fuzzer CORPUS_DIR
+
+To translate a cxx_loop_proto file into LLVM IR do:
+  bin/clang-loop-proto-to-llvm CORPUS_OUTPUT_FILE
+To translate a cxx_loop_proto file into C++ do:
+  bin/clang-loop-proto-to-cxx CORPUS_OUTPUT_FILE
+
+Note: To get a higher number of executions per second with llvm-proto-fuzzer it
+helps to build it without ASan instrumentation and with the -O2 flag. Because
+the fuzzer is not only compiling code, but also running it, as the inputs get
+large, the time necessary to fuzz one input can get very high.
+Example:
+  cmake .. -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+    -DCLANG_ENABLE_PROTO_FUZZER=ON -DLLVM_USE_SANITIZE_COVERAGE=YES \
+    -DCMAKE_CXX_FLAGS="-O2"
+  ninja clang-llvm-proto-fuzzer clang-loop-proto-to-llvm

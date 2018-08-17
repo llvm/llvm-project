@@ -125,7 +125,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     {{"sumo"},    {"sumo"},    GK_SUMO,    false, false, false, false, false, false},
     {{"sumo2"},   {"sumo"},    GK_SUMO,    false, false, false, false, false, false},
     {{"barts"},   {"barts"},   GK_BARTS,   false, false, false, false, false, false},
-    {{"caicos"},  {"caicos"},  GK_BARTS,   false, false, false, false, false, false},
+    {{"caicos"},  {"caicos"},  GK_CAICOS,  false, false, false, false, false, false},
     {{"aruba"},   {"cayman"},  GK_CAYMAN,  true,  false, false, false, false, false},
     {{"cayman"},  {"cayman"},  GK_CAYMAN,  true,  false, false, false, false, false},
     {{"turks"},   {"turks"},   GK_TURKS,   false, false, false, false, false, false},
@@ -163,7 +163,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     {{"gfx810"},    {"gfx810"},  GK_GFX810,  true, false, true,  true, true, true},
     {{"stoney"},    {"gfx810"},  GK_GFX810,  true, false, true,  true, true, true},
     {{"gfx900"},    {"gfx900"},  GK_GFX900,  true, true,  true,  true, true, true},
-    {{"gfx902"},    {"gfx902"},  GK_GFX900,  true, true,  true,  true, true, true},
+    {{"gfx902"},    {"gfx902"},  GK_GFX902,  true, true,  true,  true, true, true},
     {{"gfx904"},    {"gfx904"},  GK_GFX904,  true, true,  true,  true, true, true},
     {{"gfx906"},    {"gfx906"},  GK_GFX906,  true, true,  true,  true, true, true},
   };

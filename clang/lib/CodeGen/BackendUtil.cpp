@@ -653,6 +653,11 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     InstrProfOptions Options;
     Options.NoRedZone = CodeGenOpts.DisableRedZone;
     Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;
+
+    // TODO: Surface the option to emit atomic profile counter increments at
+    // the driver level.
+    Options.Atomic = LangOpts.Sanitize.has(SanitizerKind::Thread);
+
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (CodeGenOpts.hasProfileIRInstr()) {
