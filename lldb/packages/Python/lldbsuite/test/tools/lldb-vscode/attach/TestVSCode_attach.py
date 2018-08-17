@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
+import os
 import shutil
 import subprocess
 import tempfile
@@ -37,8 +38,8 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = [breakpoint1_line]
         # Set breakoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
-                        "expect correct number of breakpoints")
+        self.assertEqual(len(breakpoint_ids), len(lines),
+                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
         if continueToExit:
             self.continue_to_exit()
@@ -76,6 +77,13 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         program = tempfile.mktemp()
         shutil.copyfile(orig_program, program)
         shutil.copymode(orig_program, program)
+
+        def cleanup():
+            if os.path.exists(program):
+                os.unlink(program)
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
         self.process = subprocess.Popen([program],
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
