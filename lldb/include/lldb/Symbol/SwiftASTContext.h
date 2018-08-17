@@ -333,9 +333,6 @@ public:
 
   CompilerType CreateTupleType(const std::vector<TupleElement> &elements);
 
-  CompilerType CreateFunctionType(CompilerType arg_type, CompilerType ret_type,
-                                  bool throws = false);
-
   CompilerType GetErrorType();
 
   CompilerType GetNSErrorType(Status &error);
