@@ -2,7 +2,7 @@
 // RUN: c-index-test core -print-source-symbols -include-locals -- %s -target x86_64-apple-macosx10.7 | FileCheck -check-prefix=LOCAL %s
 
 @interface Base
-// CHECK: [[@LINE-1]]:12 | class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Decl | rel: 0
+// CHECK: [[@LINE-1]]:12 | class/ObjC | Base | [[BASE_USR:.*]] | _OBJC_CLASS_$_Base | Decl | rel: 0
 -(void)meth;
 // CHECK: [[@LINE-1]]:8 | instance-method/ObjC | meth | c:objc(cs)Base(im)meth | -[Base meth] | Decl,Dyn,RelChild | rel: 1
 // CHECK-NEXT: RelChild | Base | c:objc(cs)Base
@@ -60,7 +60,7 @@ void goo(Base *b) {
   Base *f = (Base *) 2;
 }
 
-// CHECK: [[@LINE+1]]:11 | protocol/ObjC | Prot1 | c:objc(pl)Prot1 | <no-cgname> | Decl | rel: 0
+// CHECK: [[@LINE+1]]:11 | protocol/ObjC | Prot1 | [[PROT1_USR:.*]] | <no-cgname> | Decl | rel: 0
 @protocol Prot1
 @end
 
@@ -472,3 +472,21 @@ void testImplicitProperties(ImplicitProperties *c) {
 }
 
 @end
+
+@protocol Prot3 // CHECK: [[@LINE]]:11 | protocol/ObjC | Prot3 | [[PROT3_USR:.*]] | <no-cgname> | Decl |
+-(void)meth;
+@end
+
+void test_rec1() {
+  id<Prot3, Prot1> o1;
+  [o1 meth]; // CHECK: [[@LINE]]:7 | instance-method/ObjC | meth | {{.*}} | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 3
+    // CHECK-NEXT: RelCall,RelCont | test_rec1 |
+    // CHECK-NEXT: RelRec | Prot3 | [[PROT3_USR]]
+    // CHECK-NEXT: RelRec | Prot1 | [[PROT1_USR]]
+  Base<Prot3, Prot1> *o2;
+  [o2 meth]; // CHECK: [[@LINE]]:7 | instance-method/ObjC | meth | {{.*}} | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 4
+    // CHECK-NEXT: RelCall,RelCont | test_rec1 |
+    // CHECK-NEXT: RelRec | Base | [[BASE_USR]]
+    // CHECK-NEXT: RelRec | Prot3 | [[PROT3_USR]]
+    // CHECK-NEXT: RelRec | Prot1 | [[PROT1_USR]]
+}
