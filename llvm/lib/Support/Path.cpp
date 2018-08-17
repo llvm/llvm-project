@@ -1150,8 +1150,16 @@ Error TempFile::keep(const Twine &Name) {
   // If we can't cancel the delete don't rename.
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   std::error_code RenameEC = setDeleteDisposition(H, false);
-  if (!RenameEC)
+  if (!RenameEC) {
     RenameEC = rename_fd(FD, Name);
+    // If rename failed because it's cross-device, copy instead
+    if (RenameEC ==
+      std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category())) {
+      RenameEC = copy_file(TmpName, Name);
+      setDeleteDisposition(H, true);
+    }
+  }
+
   // If we can't rename, discard the temporary file.
   if (RenameEC)
     setDeleteDisposition(H, true);
