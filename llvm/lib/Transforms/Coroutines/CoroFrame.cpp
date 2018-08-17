@@ -29,6 +29,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 using namespace llvm;
 
@@ -1075,10 +1076,175 @@ static Instruction *lowerNonLocalAlloca(CoroAllocaAllocInst *AI,
   return cast<Instruction>(Alloc);
 }
 
+/// Get the current swifterror value.
+static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
+                                     coro::Shape &Shape) {
+  // Make a fake function pointer as a sort of intrinsic.
+  auto FnTy = FunctionType::get(ValueTy, {}, false);
+  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+
+  auto Call = Builder.CreateCall(Fn, {});
+  Shape.SwiftErrorOps.push_back(Call);
+
+  return Call;
+}
+
+/// Set the given value as the current swifterror value.
+///
+/// Returns a slot that can be used as a swifterror slot.
+static Value *emitSetSwiftErrorValue(IRBuilder<> &Builder, Value *V,
+                                     coro::Shape &Shape) {
+  // Make a fake function pointer as a sort of intrinsic.
+  auto FnTy = FunctionType::get(V->getType()->getPointerTo(),
+                                {V->getType()}, false);
+  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+
+  auto Call = Builder.CreateCall(Fn, { V });
+  Shape.SwiftErrorOps.push_back(Call);
+
+  return Call;
+}
+
+/// Set the swifterror value from the given alloca before a call,
+/// then put in back in the alloca afterwards.
+///
+/// Returns an address that will stand in for the swifterror slot
+/// until splitting.
+static Value *emitSetAndGetSwiftErrorValueAround(Instruction *Call,
+                                                 AllocaInst *Alloca,
+                                                 coro::Shape &Shape) {
+  auto ValueTy = Alloca->getAllocatedType();
+  IRBuilder<> Builder(Call);
+
+  // Load the current value from the alloca and set it as the
+  // swifterror value.
+  auto ValueBeforeCall = Builder.CreateLoad(ValueTy, Alloca);
+  auto Addr = emitSetSwiftErrorValue(Builder, ValueBeforeCall, Shape);
+
+  // Move to after the call.  Since swifterror only has a guaranteed
+  // value on normal exits, we can ignore implicit and explicit unwind
+  // edges.
+  if (isa<CallInst>(Call)) {
+    Builder.SetInsertPoint(Call->getNextNode());
+  } else {
+    auto Invoke = cast<InvokeInst>(Call);
+    Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstNonPHIOrDbg());
+  }
+
+  // Get the current swifterror value and store it to the alloca.
+  auto ValueAfterCall = emitGetSwiftErrorValue(Builder, ValueTy, Shape);
+  Builder.CreateStore(ValueAfterCall, Alloca);
+
+  return Addr;
+}
+
+/// Eliminate a formerly-swifterror alloca by inserting the get/set
+/// intrinsics and attempting to MemToReg the alloca away.
+static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
+                                      coro::Shape &Shape) {
+  for (auto UI = Alloca->use_begin(), UE = Alloca->use_end(); UI != UE; ) {
+    // We're likely changing the use list, so use a mutation-safe
+    // iteration pattern.
+    auto &Use = *UI;
+    ++UI;
+
+    // swifterror values can only be used in very specific ways.
+    // We take advantage of that here.
+    auto User = Use.getUser();
+    if (isa<LoadInst>(User) || isa<StoreInst>(User))
+      continue;
+
+    assert(isa<CallInst>(User) || isa<InvokeInst>(User));
+    auto Call = cast<Instruction>(User);
+
+    auto Addr = emitSetAndGetSwiftErrorValueAround(Call, Alloca, Shape);
+
+    // Use the returned slot address as the call argument.
+    Use.set(Addr);
+  }
+
+  // All the uses should be loads and stores now.
+  assert(isAllocaPromotable(Alloca));
+}
+
+/// "Eliminate" a swifterror argument by reducing it to the alloca case
+/// and then loading and storing in the prologue and epilog.
+///
+/// The argument keeps the swifterror flag.
+static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
+                                        coro::Shape &Shape,
+                             SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+
+  auto ArgTy = cast<PointerType>(Arg.getType());
+  auto ValueTy = ArgTy->getElementType();
+
+  // Reduce to the alloca case:
+
+  // Create an alloca and replace all uses of the arg with it.
+  auto Alloca = Builder.CreateAlloca(ValueTy, ArgTy->getAddressSpace());
+  Arg.replaceAllUsesWith(Alloca);
+
+  // Set an initial value in the alloca.  swifterror is always null on entry.
+  auto InitialValue = Constant::getNullValue(ValueTy);
+  Builder.CreateStore(InitialValue, Alloca);
+
+  // Find all the suspends in the function and save and restore around them.
+  for (auto Suspend : Shape.CoroSuspends) {
+    (void) emitSetAndGetSwiftErrorValueAround(Suspend, Alloca, Shape);
+  }
+
+  // Find all the coro.ends in the function and restore the error value.
+  for (auto End : Shape.CoroEnds) {
+    Builder.SetInsertPoint(End);
+    auto FinalValue = Builder.CreateLoad(ValueTy, Alloca);
+    (void) emitSetSwiftErrorValue(Builder, FinalValue, Shape);
+  }
+
+  // Now we can use the alloca logic.
+  AllocasToPromote.push_back(Alloca);
+  eliminateSwiftErrorAlloca(F, Alloca, Shape);
+}
+
+/// Eliminate all problematic uses of swifterror arguments and allocas
+/// from the function.  We'll fix them up later when splitting the function.
+static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
+  SmallVector<AllocaInst*, 4> AllocasToPromote;
+
+  // Look for a swifterror argument.
+  for (auto &Arg : F.args()) {
+    if (!Arg.hasSwiftErrorAttr()) continue;
+
+    eliminateSwiftErrorArgument(F, Arg, Shape, AllocasToPromote);
+    break;
+  }
+
+  // Look for swifterror allocas.
+  for (auto &Inst : F.getEntryBlock()) {
+    auto Alloca = dyn_cast<AllocaInst>(&Inst);
+    if (!Alloca || !Alloca->isSwiftError()) continue;
+
+    // Clear the swifterror flag.
+    Alloca->setSwiftError(false);
+
+    AllocasToPromote.push_back(Alloca);
+    eliminateSwiftErrorAlloca(F, Alloca, Shape);
+  }
+
+  // If we have any allocas to promote, compute a dominator tree and
+  // promote them en masse.
+  if (!AllocasToPromote.empty()) {
+    DominatorTree DT(F);
+    PromoteMemToReg(AllocasToPromote, DT);
+  }
+}
+
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   // Lower coro.dbg.declare to coro.dbg.value, since we are going to rewrite
   // access to local variables.
   LowerDbgDeclare(F);
+
+  eliminateSwiftError(F, Shape);
 
   if (Shape.ABI == coro::ABI::Switch &&
       Shape.SwitchLowering.PromiseAlloca) {
