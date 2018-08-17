@@ -132,6 +132,9 @@ public:
   friend bool operator&(BlockFieldFlags l, BlockFieldFlags r) {
     return (l.flags & r.flags);
   }
+  bool operator==(BlockFieldFlags Other) const {
+    return flags == Other.flags;
+  }
 };
 inline BlockFieldFlags operator|(BlockFieldFlag_t l, BlockFieldFlag_t r) {
   return BlockFieldFlags(l) | BlockFieldFlags(r);
