@@ -370,8 +370,7 @@ void ASTWorker::update(
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      if (NewPreamble)
-        LastBuiltPreamble = NewPreamble;
+      LastBuiltPreamble = NewPreamble;
     }
     // Before doing the expensive AST reparse, we want to release our reference
     // to the old preamble, so it can be freed if there are no other references
