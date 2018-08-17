@@ -150,11 +150,35 @@ struct SSSTt {
 // CHECK: #pragma omp end declare target
 // CHECK: int b;
 
+#pragma omp declare target
+template <typename T>
+T baz() { return T(); }
+#pragma omp end declare target
+
+template <>
+int baz() { return 1; }
+
+// CHECK: #pragma omp declare target
+// CHECK: template <typename T> T baz() {
+// CHECK:     return T();
+// CHECK: }
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target
+// CHECK: template<> float baz<float>() {
+// CHECK:     return float();
+// CHECK: }
+// CHECK: template<> int baz<int>() {
+// CHECK:     return 1;
+// CHECK: }
+// CHECK: #pragma omp end declare target
+
 int main (int argc, char **argv) {
   foo();
   foo_c();
   foo_cpp();
   test1();
+  baz<float>();
+  baz<int>();
   return (0);
 }
 

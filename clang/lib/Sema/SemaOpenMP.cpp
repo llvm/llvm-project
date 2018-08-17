@@ -1258,17 +1258,6 @@ void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
   DSAStack->popFunction(OldFSI);
 }
 
-static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
-isDeclareTargetDeclaration(const ValueDecl *VD) {
-  for (const Decl *D : VD->redecls()) {
-    if (!D->hasAttrs())
-      continue;
-    if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
-      return Attr->getMapType();
-  }
-  return llvm::None;
-}
-
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 
@@ -1448,7 +1437,7 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) const {
     // If the declaration is enclosed in a 'declare target' directive,
     // then it should not be captured.
     //
-    if (isDeclareTargetDeclaration(VD))
+    if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
       return nullptr;
     return VD;
   }
@@ -1987,7 +1976,7 @@ public:
 
       // Skip internally declared static variables.
       llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-          isDeclareTargetDeclaration(VD);
+          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
       if (VD->hasGlobalStorage() && !CS->capturesVariable(VD) &&
           (!Res || *Res != OMPDeclareTargetDeclAttr::MT_Link))
         return;
@@ -13143,6 +13132,8 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       return;
     }
   }
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->hasAttr<OMPDeclareTargetDeclAttr>() &&
         (FD->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() ==
@@ -13150,16 +13141,6 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       assert(IdLoc.isValid() && "Source location is expected");
       Diag(IdLoc, diag::err_omp_function_in_link_clause);
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
-      return;
-    }
-  }
-  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D)) {
-    if (FTD->hasAttr<OMPDeclareTargetDeclAttr>() &&
-        (FTD->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() ==
-         OMPDeclareTargetDeclAttr::MT_Link)) {
-      assert(IdLoc.isValid() && "Source location is expected");
-      Diag(IdLoc, diag::err_omp_function_in_link_clause);
-      Diag(FTD->getLocation(), diag::note_defined_here) << FTD;
       return;
     }
   }

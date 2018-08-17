@@ -191,20 +191,10 @@ class CheckVarsEscapingDeclContext final
   bool AllEscaped = false;
   bool IsForCombinedParallelRegion = false;
 
-  static llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
-  isDeclareTargetDeclaration(const ValueDecl *VD) {
-    for (const Decl *D : VD->redecls()) {
-      if (!D->hasAttrs())
-        continue;
-      if (const auto *Attr = D->getAttr<OMPDeclareTargetDeclAttr>())
-        return Attr->getMapType();
-    }
-    return llvm::None;
-  }
-
   void markAsEscaped(const ValueDecl *VD) {
     // Do not globalize declare target variables.
-    if (!isa<VarDecl>(VD) || isDeclareTargetDeclaration(VD))
+    if (!isa<VarDecl>(VD) ||
+        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
       return;
     VD = cast<ValueDecl>(VD->getCanonicalDecl());
     // Variables captured by value must be globalized.
