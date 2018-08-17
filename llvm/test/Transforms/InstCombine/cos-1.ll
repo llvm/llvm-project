@@ -14,6 +14,9 @@ declare double @llvm.sin.f64(double)
 declare float @sinf(float)
 declare float @llvm.sin.f32(float)
 
+declare double @tan(double)
+declare fp128 @tanl(fp128)
+
 ; cos(-x) -> cos(x);
 
 define double @cos_negated_arg(double %x) {
@@ -36,8 +39,6 @@ define float @cosf_negated_arg(float %x) {
   ret float %r
 }
 
-; FIXME: FMF was dropped.
-
 define float @cosf_negated_arg_FMF(float %x) {
 ; ANY-LABEL: @cosf_negated_arg_FMF(
 ; ANY-NEXT:    [[COS:%.*]] = call reassoc nnan float @cosf(float [[X:%.*]])
@@ -52,9 +53,9 @@ define float @cosf_negated_arg_FMF(float %x) {
 
 define double @sin_negated_arg(double %x) {
 ; ANY-LABEL: @sin_negated_arg(
-; ANY-NEXT:    [[SIN:%.*]] = call double @sin(double [[X:%.*]])
-; ANY-NEXT:    [[TMP1:%.*]] = fsub double -0.000000e+00, [[SIN]]
-; ANY-NEXT:    ret double [[TMP1]]
+; ANY-NEXT:    [[TMP1:%.*]] = call double @sin(double [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    ret double [[TMP2]]
 ;
   %neg = fsub double -0.0, %x
   %r = call double @sin(double %neg)
@@ -63,9 +64,9 @@ define double @sin_negated_arg(double %x) {
 
 define float @sinf_negated_arg(float %x) {
 ; ANY-LABEL: @sinf_negated_arg(
-; ANY-NEXT:    [[SIN:%.*]] = call float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[SIN]]
-; ANY-NEXT:    ret float [[TMP1]]
+; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fsub float -0.0, %x
   %r = call float @sinf(float %neg)
@@ -74,9 +75,9 @@ define float @sinf_negated_arg(float %x) {
 
 define float @sinf_negated_arg_FMF(float %x) {
 ; ANY-LABEL: @sinf_negated_arg_FMF(
-; ANY-NEXT:    [[SIN:%.*]] = call nnan afn float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP1:%.*]] = fsub nnan afn float -0.000000e+00, [[SIN]]
-; ANY-NEXT:    ret float [[TMP1]]
+; ANY-NEXT:    [[TMP1:%.*]] = call nnan afn float @sinf(float [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fsub nnan afn float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fsub ninf float -0.0, %x
   %r = call afn nnan float @sinf(float %neg)
@@ -103,13 +104,39 @@ define double @sin_negated_arg_extra_use(double %x) {
 
 define double @neg_sin_negated_arg(double %x) {
 ; ANY-LABEL: @neg_sin_negated_arg(
-; ANY-NEXT:    [[SIN:%.*]] = call double @sin(double [[X:%.*]])
-; ANY-NEXT:    ret double [[SIN]]
+; ANY-NEXT:    [[TMP1:%.*]] = call double @sin(double [[X:%.*]])
+; ANY-NEXT:    ret double [[TMP1]]
 ;
   %neg = fsub double -0.0, %x
   %r = call double @sin(double %neg)
   %rn = fsub double -0.0, %r
   ret double %rn
+}
+
+; tan(-x) -> -tan(x);
+
+define double @tan_negated_arg(double %x) {
+; ANY-LABEL: @tan_negated_arg(
+; ANY-NEXT:    [[TMP1:%.*]] = call double @tan(double [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    ret double [[TMP2]]
+;
+  %neg = fsub double -0.0, %x
+  %r = call double @tan(double %neg)
+  ret double %r
+}
+
+; tanl(-x) -> -tanl(x);
+
+define fp128 @tanl_negated_arg(fp128 %x) {
+; ANY-LABEL: @tanl_negated_arg(
+; ANY-NEXT:    [[TMP1:%.*]] = call fp128 @tanl(fp128 [[X:%.*]])
+; ANY-NEXT:    [[TMP2:%.*]] = fsub fp128 0xL00000000000000008000000000000000, [[TMP1]]
+; ANY-NEXT:    ret fp128 [[TMP2]]
+;
+  %neg = fsub fp128 0xL00000000000000008000000000000000, %x
+  %r = call fp128 @tanl(fp128 %neg)
+  ret fp128 %r
 }
 
 define float @negated_and_shrinkable_libcall(float %f) {

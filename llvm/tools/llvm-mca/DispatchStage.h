@@ -29,8 +29,6 @@
 
 namespace mca {
 
-class Scheduler;
-
 // Implements the hardware dispatch logic.
 //
 // This class is responsible for the dispatch stage, in which instructions are
@@ -56,25 +54,16 @@ class DispatchStage final : public Stage {
   const llvm::MCSubtargetInfo &STI;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
-  Scheduler &SC;
 
   bool checkRCU(const InstRef &IR) const;
   bool checkPRF(const InstRef &IR) const;
-  bool checkScheduler(const InstRef &IR) const;
-  void dispatch(InstRef IR);
+  bool canDispatch(const InstRef &IR) const;
+  llvm::Error dispatch(InstRef IR);
+
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
   void notifyInstructionDispatched(const InstRef &IR,
                                    llvm::ArrayRef<unsigned> UsedPhysRegs);
-
-  bool isAvailable(unsigned NumEntries) const {
-    return NumEntries <= AvailableEntries || AvailableEntries == DispatchWidth;
-  }
-
-  bool canDispatch(const InstRef &IR) {
-    assert(isAvailable(IR.getInstruction()->getDesc().NumMicroOps));
-    return checkRCU(IR) && checkPRF(IR) && checkScheduler(IR);
-  }
 
   void collectWrites(llvm::SmallVectorImpl<WriteRef> &Vec,
                      unsigned RegID) const {
@@ -85,16 +74,17 @@ public:
   DispatchStage(const llvm::MCSubtargetInfo &Subtarget,
                 const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
                 unsigned MaxDispatchWidth, RetireControlUnit &R,
-                RegisterFile &F, Scheduler &Sched)
+                RegisterFile &F)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
+        CarryOver(0U), STI(Subtarget), RCU(R), PRF(F) {}
 
-  // We can always try to dispatch, so returning false is okay in this case.
-  // The retire stage, which controls the RCU, might have items to complete but
-  // RetireStage::hasWorkToComplete will check for that case.
+  bool isAvailable(const InstRef &IR) const override;
+
+  // The dispatch logic internally doesn't buffer instructions. So there is
+  // never work to do at the beginning of every cycle.
   bool hasWorkToComplete() const override { return false; }
   llvm::Error cycleStart() override;
-  Status execute(InstRef &IR) override;
+  llvm::Error execute(InstRef &IR) override;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 
 #ifndef NDEBUG

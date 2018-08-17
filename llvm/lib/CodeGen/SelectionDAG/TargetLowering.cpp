@@ -3510,7 +3510,9 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
+  EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShSVT = ShVT.getScalarType();
   unsigned EltBits = VT.getScalarSizeInBits();
 
   // Check to see if we can do this.
@@ -3522,8 +3524,13 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   if (N->getFlags().hasExact())
     return BuildExactSDIV(*this, N, dl, DAG, Created);
 
-  auto BuildSDIVPattern = [&](const APInt &Divisor, SDValue &MagicFactor,
-                              SDValue &Factor, SDValue &Shift) {
+  SmallVector<SDValue, 16> MagicFactors, Factors, Shifts;
+
+  auto BuildSDIVPattern = [&](ConstantSDNode *C) {
+    if (C->isNullValue())
+      return false;
+
+    const APInt &Divisor = C->getAPIntValue();
     APInt::ms magics = Divisor.magic();
     int NumeratorFactor = 0;
 
@@ -3534,22 +3541,29 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
     else if (Divisor.isNegative() && magics.m.isStrictlyPositive())
       NumeratorFactor = -1;
 
-    MagicFactor = DAG.getConstant(magics.m, dl, VT);
-    Factor = DAG.getConstant(NumeratorFactor, dl, VT);
-    Shift = DAG.getConstant(magics.s, dl, ShVT);
+    MagicFactors.push_back(DAG.getConstant(magics.m, dl, SVT));
+    Factors.push_back(DAG.getConstant(NumeratorFactor, dl, SVT));
+    Shifts.push_back(DAG.getConstant(magics.s, dl, ShSVT));
+    return true;
   };
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  // TODO: Add non-uniform constant support.
-  ConstantSDNode *C = isConstOrConstSplat(N1);
-  if (!C || C->isNullValue())
+  // Collect the shifts / magic values from each element.
+  if (!ISD::matchUnaryPredicate(N1, BuildSDIVPattern))
     return SDValue();
 
-  // Collect the shifts/magic values.
   SDValue MagicFactor, Factor, Shift;
-  BuildSDIVPattern(C->getAPIntValue(), MagicFactor, Factor, Shift);
+  if (VT.isVector()) {
+    MagicFactor = DAG.getBuildVector(VT, dl, MagicFactors);
+    Factor = DAG.getBuildVector(VT, dl, Factors);
+    Shift = DAG.getBuildVector(ShVT, dl, Shifts);
+  } else {
+    MagicFactor = MagicFactors[0];
+    Factor = Factors[0];
+    Shift = Shifts[0];
+  }
 
   // Multiply the numerator (operand 0) by the magic value
   // FIXME: We should support doing a MUL in a wider type

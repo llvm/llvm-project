@@ -25,35 +25,23 @@ namespace mca {
 class InstRef;
 
 class Stage {
+  Stage *NextInSequence;
   std::set<HWEventListener *> Listeners;
 
   Stage(const Stage &Other) = delete;
   Stage &operator=(const Stage &Other) = delete;
 
-public:
-  /// A Stage's execute() returns Continue, Stop, or an error.  Returning
-  /// Continue means that the stage successfully completed its 'execute'
-  /// action, and that the instruction being processed can be moved to the next
-  /// pipeline stage during this cycle.  Continue allows the pipeline to
-  /// continue calling 'execute' on subsequent stages.  Returning Stop
-  /// signifies that the stage ran into an error, and tells the pipeline to stop
-  /// passing the instruction to subsequent stages during this cycle.  Any
-  /// failures that occur during 'execute' are represented by the error variant
-  /// that is provided by the Expected template.
-  enum State { Stop, Continue };
-  using Status = llvm::Expected<State>;
-
 protected:
   const std::set<HWEventListener *> &getListeners() const { return Listeners; }
 
 public:
-  Stage() {}
+  Stage() : NextInSequence(nullptr) {}
   virtual ~Stage();
 
-  /// Called prior to preExecute to ensure that the stage has items that it
-  /// is to process.  For example, a FetchStage might have more instructions
-  /// that need to be processed, or a RCU might have items that have yet to
-  /// retire.
+  /// Returns true if it can execute IR during this cycle.
+  virtual bool isAvailable(const InstRef &IR) const { return true; }
+
+  /// Returns true if some instructions are still executing this stage.
   virtual bool hasWorkToComplete() const = 0;
 
   /// Called once at the start of each cycle.  This can be used as a setup
@@ -63,19 +51,26 @@ public:
   /// Called once at the end of each cycle.
   virtual llvm::Error cycleEnd() { return llvm::ErrorSuccess(); }
 
-  /// Called prior to executing the list of stages.
-  /// This can be called multiple times per cycle.
-  virtual void preExecute() {}
+  /// The primary action that this stage performs on instruction IR.
+  virtual llvm::Error execute(InstRef &IR) = 0;
 
-  /// Called as a cleanup and finalization phase after each execution.
-  /// This will only be called if all stages return a success from their
-  /// execute callback.  This can be called multiple times per cycle.
-  virtual void postExecute() {}
+  void setNextInSequence(Stage *NextStage) {
+    assert(!NextInSequence && "This stage already has a NextInSequence!");
+    NextInSequence = NextStage;
+  }
 
-  /// The primary action that this stage performs.
-  /// Returning false prevents successor stages from having their 'execute'
-  /// routine called.  This can be called multiple times during a single cycle.
-  virtual Status execute(InstRef &IR) = 0;
+  bool checkNextStage(const InstRef &IR) const {
+    return NextInSequence && NextInSequence->isAvailable(IR);
+  }
+
+  /// Called when an instruction is ready to move the next pipeline stage.
+  ///
+  /// Stages are responsible for moving instructions to their immediate
+  /// successor stages.
+  llvm::Error moveToTheNextStage(InstRef &IR) {
+    assert(checkNextStage(IR) && "Next stage is not ready!");
+    return NextInSequence->execute(IR);
+  }
 
   /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);

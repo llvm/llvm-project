@@ -42,6 +42,11 @@ llvm::Error RetireStage::cycleStart() {
   return llvm::ErrorSuccess();
 }
 
+llvm::Error RetireStage::execute(InstRef &IR) {
+  RCU.onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
+  return llvm::ErrorSuccess();
+}
+
 void RetireStage::notifyInstructionRetired(const InstRef &IR) {
   LLVM_DEBUG(llvm::dbgs() << "[E] Instruction Retired: #" << IR << '\n');
   llvm::SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());

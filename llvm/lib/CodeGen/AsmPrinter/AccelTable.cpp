@@ -23,6 +23,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -554,11 +555,20 @@ void llvm::emitDWARF5AccelTable(
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
   std::vector<MCSymbol *> CompUnits;
   for (const auto &CU : enumerate(CUs)) {
+    if (CU.value()->getCUNode()->getNameTableKind() ==
+        DICompileUnit::DebugNameTableKind::None)
+      continue;
     assert(CU.index() == CU.value()->getUniqueID());
     const DwarfCompileUnit *MainCU =
         DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
     CompUnits.push_back(MainCU->getLabelBegin());
   }
+
+  if (CompUnits.empty())
+    return;
+
+  Asm->OutStreamer->SwitchSection(
+      Asm->getObjFileLowering().getDwarfDebugNamesSection());
 
   Contents.finalize(Asm, "names");
   Dwarf5AccelTableWriter<DWARF5AccelTableData>(

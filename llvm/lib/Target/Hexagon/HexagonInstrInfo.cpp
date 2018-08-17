@@ -1086,19 +1086,18 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       unsigned NewOpc = Aligned ? Hexagon::V6_vS32b_ai : Hexagon::V6_vS32Ub_ai;
       unsigned Offset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
 
-      MachineInstr *MI1New =
-          BuildMI(MBB, MI, DL, get(NewOpc))
-              .add(MI.getOperand(0))
-              .addImm(MI.getOperand(1).getImm())
-              .addReg(SrcSubLo)
-              .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+      MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpc))
+                                 .add(MI.getOperand(0))
+                                 .addImm(MI.getOperand(1).getImm())
+                                 .addReg(SrcSubLo)
+                                 .cloneMemRefs(MI);
       MI1New->getOperand(0).setIsKill(false);
       BuildMI(MBB, MI, DL, get(NewOpc))
           .add(MI.getOperand(0))
           // The Vectors are indexed in multiples of vector size.
           .addImm(MI.getOperand(1).getImm() + Offset)
           .addReg(SrcSubHi)
-          .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+          .cloneMemRefs(MI);
       MBB.erase(MI);
       return true;
     }
@@ -1111,15 +1110,15 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
       MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpc),
                                      HRI.getSubReg(DstReg, Hexagon::vsub_lo))
-              .add(MI.getOperand(1))
-              .addImm(MI.getOperand(2).getImm())
-              .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+                                 .add(MI.getOperand(1))
+                                 .addImm(MI.getOperand(2).getImm())
+                                 .cloneMemRefs(MI);
       MI1New->getOperand(1).setIsKill(false);
       BuildMI(MBB, MI, DL, get(NewOpc), HRI.getSubReg(DstReg, Hexagon::vsub_hi))
           .add(MI.getOperand(1))
           // The Vectors are indexed in multiples of vector size.
           .addImm(MI.getOperand(2).getImm() + Offset)
-          .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+          .cloneMemRefs(MI);
       MBB.erase(MI);
       return true;
     }

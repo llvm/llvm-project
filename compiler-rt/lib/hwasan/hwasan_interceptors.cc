@@ -426,14 +426,27 @@ int OnExit() {
     *begin = *end = 0;                                                         \
   }
 
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size) \
-  {                                                       \
-    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);  \
-    if (common_flags()->intercept_intrin &&               \
-        MEM_IS_APP(GetAddressFromPointer(dst)))           \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);     \
-    return REAL(memset)(dst, v, size);                    \
+// AArch64 has TBI and can (and must!) pass the pointer to system memset as-is.
+// Other platforms need to remove the tag.
+#if defined(__aarch64__)
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)     \
+  {                                                           \
+    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);      \
+    if (common_flags()->intercept_intrin &&                   \
+        MEM_IS_APP(GetAddressFromPointer(dst)))               \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);         \
+    return REAL(memset)(dst, v, size); \
   }
+#else
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)     \
+  {                                                           \
+    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);      \
+    if (common_flags()->intercept_intrin &&                   \
+        MEM_IS_APP(GetAddressFromPointer(dst)))               \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);         \
+    return REAL(memset)(GetAddressFromPointer(dst), v, size); \
+  }
+#endif
 
 #define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, fd, \
                                      offset)                                   \

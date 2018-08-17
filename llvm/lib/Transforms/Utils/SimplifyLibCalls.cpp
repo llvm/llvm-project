@@ -1130,16 +1130,19 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Call->getFastMathFlags());
   
-  // TODO: Add tan() and other calls.
   // TODO: Can this be shared to also handle LLVM intrinsics?
   Value *X;
   switch (Func) {
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
     // sin(-X) --> -sin(X)
+    // tan(-X) --> -tan(X)
     if (match(Call->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))))
-      return B.CreateFNeg(B.CreateCall(Call->getCalledFunction(), X, "sin"));
+      return B.CreateFNeg(B.CreateCall(Call->getCalledFunction(), X));
     break;
   case LibFunc_cos:
   case LibFunc_cosf:

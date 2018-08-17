@@ -134,8 +134,8 @@ namespace llvm {
     /// \param SplitDebugInlining    Whether to emit inline debug info.
     /// \param DebugInfoForProfiling Whether to emit extra debug info for
     ///                              profile collection.
-    /// \param GnuPubnames   Whether to emit .debug_gnu_pubnames section instead
-    ///                      of .debug_pubnames.
+    /// \param nameTableKind  Whether to emit .debug_gnu_pubnames,
+    ///                      .debug_pubnames, or no pubnames at all.
     DICompileUnit *
     createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
                       bool isOptimized, StringRef Flags, unsigned RV,
@@ -144,7 +144,8 @@ namespace llvm {
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,
                       bool DebugInfoForProfiling = false,
-                      bool GnuPubnames = false);
+                      DICompileUnit::DebugNameTableKind NameTableKind =
+                          DICompileUnit::DebugNameTableKind::Default);
 
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.

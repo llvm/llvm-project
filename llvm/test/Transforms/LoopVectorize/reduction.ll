@@ -325,7 +325,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; We can vectorize conditional reductions with multi-input phis.
 ; CHECK: reduction_conditional
-; CHECK: fadd <4 x float>
+; CHECK: fadd fast <4 x float>
 
 define float @reduction_conditional(float* %A, float* %B, float* %C, float %S) {
 entry:

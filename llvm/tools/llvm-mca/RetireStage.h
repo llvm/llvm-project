@@ -37,9 +37,8 @@ public:
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
   llvm::Error cycleStart() override;
-  Status execute(InstRef &IR) override { return Stage::Continue; }
+  llvm::Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR);
-  void onInstructionExecuted(unsigned TokenID);
 };
 
 } // namespace mca

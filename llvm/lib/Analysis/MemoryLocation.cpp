@@ -137,6 +137,10 @@ MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
           Arg, cast<ConstantInt>(II->getArgOperand(0))->getZExtValue(), AATags);
 
     case Intrinsic::invariant_end:
+      // The first argument to an invariant.end is a "descriptor" type (e.g. a
+      // pointer to a empty struct) which is never actually dereferenced.
+      if (ArgIdx == 0)
+        return MemoryLocation(Arg, 0, AATags);
       assert(ArgIdx == 2 && "Invalid argument index");
       return MemoryLocation(
           Arg, cast<ConstantInt>(II->getArgOperand(1))->getZExtValue(), AATags);

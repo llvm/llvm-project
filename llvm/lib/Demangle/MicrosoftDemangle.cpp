@@ -1762,6 +1762,7 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
   OS << '\0';
   ResultBuffer = OS.getBuffer();
   Result->Str = copyString(ResultBuffer);
+  std::free(ResultBuffer);
   return Result;
 
 StringLiteralError:

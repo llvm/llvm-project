@@ -528,13 +528,12 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
       .addReg(AddrReg->getReg());
   }
 
-  MachineInstrBuilder Read2 =
-    BuildMI(*MBB, CI.Paired, DL, Read2Desc, DestReg)
-      .addReg(BaseReg, BaseRegFlags) // addr
-      .addImm(NewOffset0)            // offset0
-      .addImm(NewOffset1)            // offset1
-      .addImm(0)                     // gds
-      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+  MachineInstrBuilder Read2 = BuildMI(*MBB, CI.Paired, DL, Read2Desc, DestReg)
+                                  .addReg(BaseReg, BaseRegFlags) // addr
+                                  .addImm(NewOffset0)            // offset0
+                                  .addImm(NewOffset1)            // offset1
+                                  .addImm(0)                     // gds
+                                  .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   (void)Read2;
 
@@ -616,15 +615,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
       .addReg(AddrReg->getReg());
   }
 
-  MachineInstrBuilder Write2 =
-    BuildMI(*MBB, CI.Paired, DL, Write2Desc)
-      .addReg(BaseReg, BaseRegFlags) // addr
-      .add(*Data0)                   // data0
-      .add(*Data1)                   // data1
-      .addImm(NewOffset0)            // offset0
-      .addImm(NewOffset1)            // offset1
-      .addImm(0)                     // gds
-      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+  MachineInstrBuilder Write2 = BuildMI(*MBB, CI.Paired, DL, Write2Desc)
+                                   .addReg(BaseReg, BaseRegFlags) // addr
+                                   .add(*Data0)                   // data0
+                                   .add(*Data1)                   // data1
+                                   .addImm(NewOffset0)            // offset0
+                                   .addImm(NewOffset1)            // offset1
+                                   .addImm(0)                     // gds
+                                   .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   moveInstsAfter(Write2, CI.InstsToMove);
 
@@ -652,7 +650,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
       .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
       .addImm(MergedOffset) // offset
       .addImm(CI.GLC0)      // glc
-      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+      .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   unsigned SubRegIdx0 = CI.IsX2 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
   unsigned SubRegIdx1 = CI.IsX2 ? AMDGPU::sub2_sub3 : AMDGPU::sub1;
@@ -711,7 +709,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
       .addImm(CI.GLC0)      // glc
       .addImm(CI.SLC0)      // slc
       .addImm(0)            // tfe
-      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+      .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   unsigned SubRegIdx0 = CI.IsX2 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
   unsigned SubRegIdx1 = CI.IsX2 ? AMDGPU::sub2_sub3 : AMDGPU::sub1;
@@ -811,10 +809,10 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
   MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::srsrc))
       .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
       .addImm(std::min(CI.Offset0, CI.Offset1)) // offset
-      .addImm(CI.GLC0)      // glc
-      .addImm(CI.SLC0)      // slc
-      .addImm(0)            // tfe
-      .setMemRefs(CI.I->mergeMemRefsWith(*CI.Paired));
+      .addImm(CI.GLC0)                          // glc
+      .addImm(CI.SLC0)                          // slc
+      .addImm(0)                                // tfe
+      .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   moveInstsAfter(MIB, CI.InstsToMove);
 

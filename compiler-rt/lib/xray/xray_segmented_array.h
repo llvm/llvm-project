@@ -325,6 +325,9 @@ public:
   /// Remove N Elements from the end. This leaves the blocks behind, and not
   /// require allocation of new blocks for new elements added after trimming.
   void trim(size_t Elements) {
+    if (Elements == 0)
+      return;
+
     DCHECK_LE(Elements, Size);
     DCHECK_GT(Size, 0);
     auto OldSize = Size;
