@@ -1338,7 +1338,7 @@ static Value *SimplifyLShrInst(Value *Op0, Value *Op1, bool isExact,
     const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
     const unsigned Width = Op0->getType()->getScalarSizeInBits();
     const unsigned EffWidthY = Width - YKnown.countMinLeadingZeros();
-    if (EffWidthY <= ShRAmt->getZExtValue())
+    if (ShRAmt->uge(EffWidthY))
       return X;
   }
 
@@ -1878,9 +1878,9 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op0, m_c_Or(m_CombineAnd(m_NUWShl(m_Value(X), m_APInt(ShAmt)),
                                      m_Value(XShifted)),
                         m_Value(Y)))) {
-    const unsigned ShftCnt = ShAmt->getZExtValue();
-    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
     const unsigned Width = Op0->getType()->getScalarSizeInBits();
+    const unsigned ShftCnt = ShAmt->getLimitedValue(Width);
+    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
     const unsigned EffWidthY = Width - YKnown.countMinLeadingZeros();
     if (EffWidthY <= ShftCnt) {
       const KnownBits XKnown = computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI,
