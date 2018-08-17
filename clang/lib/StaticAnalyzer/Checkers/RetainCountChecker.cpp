@@ -83,14 +83,12 @@ public:
     ReturnedNotOwned, // Return object does not pass ownership to caller.
     ERROR_START,
     ErrorDeallocNotOwned, // -dealloc called on non-owned object.
-    ErrorDeallocGC, // Calling -dealloc with GC enabled.
     ErrorUseAfterRelease, // Object used after released.
     ErrorReleaseNotOwned, // Release of an object that was not owned.
     ERROR_LEAK_START,
     ErrorLeak,  // A memory leak due to excessive reference counts.
     ErrorLeakReturned, // A memory leak due to the returning method not having
                        // the correct naming conventions.
-    ErrorGCLeakReturned,
     ErrorOverAutorelease,
     ErrorReturnedNotOwned
   };
@@ -303,10 +301,6 @@ void RefVal::print(raw_ostream &Out) const {
       Out << "Released";
       break;
 
-    case ErrorDeallocGC:
-      Out << "-dealloc (GC)";
-      break;
-
     case ErrorDeallocNotOwned:
       Out << "-dealloc (not-owned)";
       break;
@@ -317,10 +311,6 @@ void RefVal::print(raw_ostream &Out) const {
 
     case ErrorLeakReturned:
       Out << "Leaked (Bad naming)";
-      break;
-
-    case ErrorGCLeakReturned:
-      Out << "Leaked (GC-ed at return)";
       break;
 
     case ErrorUseAfterRelease:
@@ -600,9 +590,6 @@ class RetainSummaryManager {
   /// Ctx - The ASTContext object for the analyzed ASTs.
   ASTContext &Ctx;
 
-  /// GCEnabled - Records whether or not the analyzed code runs in GC mode.
-  const bool GCEnabled;
-
   /// Records whether or not the analyzed code runs in ARC mode.
   const bool ARCEnabled;
 
@@ -646,7 +633,7 @@ class RetainSummaryManager {
   ///  data in ScratchArgs.
   ArgEffects getArgEffects();
 
-  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
+  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease };
 
   const RetainSummary *getUnarySummary(const FunctionType* FT,
                                        UnaryFuncKind func);
@@ -732,19 +719,14 @@ private:
 
 public:
 
-  RetainSummaryManager(ASTContext &ctx, bool gcenabled, bool usesARC)
+  RetainSummaryManager(ASTContext &ctx, bool usesARC)
    : Ctx(ctx),
-     GCEnabled(gcenabled),
      ARCEnabled(usesARC),
      AF(BPAlloc), ScratchArgs(AF.getEmptyMap()),
-     ObjCAllocRetE(gcenabled
-                    ? RetEffect::MakeGCNotOwned()
-                    : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwned(RetEffect::ObjC))),
-     ObjCInitRetE(gcenabled
-                    ? RetEffect::MakeGCNotOwned()
-                    : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwnedWhenTrackedReceiver())) {
+     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
+                               : RetEffect::MakeOwned(RetEffect::ObjC)),
+     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
+                               : RetEffect::MakeOwnedWhenTrackedReceiver()) {
     InitializeClassMethodSummaries();
     InitializeMethodSummaries();
   }
@@ -802,11 +784,7 @@ public:
   void updateSummaryForCall(const RetainSummary *&Summ,
                             const CallEvent &Call);
 
-  bool isGCEnabled() const { return GCEnabled; }
-
   bool isARCEnabled() const { return ARCEnabled; }
-
-  bool isARCorGCEnabled() const { return GCEnabled || ARCEnabled; }
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
@@ -895,12 +873,6 @@ static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
          FName.endswith_lower("autorelease");
 }
 
-static bool isMakeCollectable(const FunctionDecl *FD, StringRef FName) {
-  // FIXME: Remove FunctionDecl parameter.
-  // FIXME: Is it really okay if MakeCollectable isn't a suffix?
-  return FName.find_lower("MakeCollectable") != StringRef::npos;
-}
-
 static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   switch (E) {
   case DoNothing:
@@ -908,7 +880,6 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case DecRefBridgedTransferred:
   case IncRef:
   case IncRefMsg:
-  case MakeCollectable:
   case UnretainedOutParameter:
   case RetainedOutParameter:
   case MayEscape:
@@ -1073,14 +1044,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
       // This will be addressed better with IPA.
       S = getPersistentStopSummary();
-    } else if (FName == "NSMakeCollectable") {
-      // Handle: id NSMakeCollectable(CFTypeRef)
-      S = (RetTy->isObjCIdType())
-          ? getUnarySummary(FT, cfmakecollectable)
-          : getPersistentStopSummary();
-      // The headers on OS X 10.8 use cf_consumed/ns_returns_retained,
-      // but we can fully model NSMakeCollectable ourselves.
-      AllowAnnotations = false;
     } else if (FName == "CFPlugInInstanceCreate") {
       S = getPersistentSummary(RetEffect::MakeNoRet());
     } else if (FName == "IORegistryEntrySearchCFProperty"
@@ -1180,9 +1143,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
           S = getUnarySummary(FT, cfautorelease);
           // The headers use cf_consumed, but we can fully model CFAutorelease
           // ourselves.
-          AllowAnnotations = false;
-        } else if (isMakeCollectable(FD, FName)) {
-          S = getUnarySummary(FT, cfmakecollectable);
           AllowAnnotations = false;
         } else {
           S = getCFCreateGetRuleSummary(FD);
@@ -1294,7 +1254,6 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   case cfretain: Effect = IncRef; break;
   case cfrelease: Effect = DecRef; break;
   case cfautorelease: Effect = Autorelease; break;
-  case cfmakecollectable: Effect = MakeCollectable; break;
   }
 
   ScratchArgs = AF.add(ScratchArgs, 0, Effect);
@@ -1732,16 +1691,6 @@ namespace {
     }
   };
 
-  class DeallocGC : public CFRefBug {
-  public:
-    DeallocGC(const CheckerBase *checker)
-        : CFRefBug(checker, "-dealloc called while using garbage collection") {}
-
-    const char *getDescription() const override {
-      return "-dealloc called while using garbage collection";
-    }
-  };
-
   class DeallocNotOwned : public CFRefBug {
   public:
     DeallocNotOwned(const CheckerBase *checker)
@@ -1792,11 +1741,10 @@ namespace {
   protected:
     SymbolRef Sym;
     const SummaryLogTy &SummaryLog;
-    bool GCEnabled;
 
   public:
-    CFRefReportVisitor(SymbolRef sym, bool gcEnabled, const SummaryLogTy &log)
-       : Sym(sym), SummaryLog(log), GCEnabled(gcEnabled) {}
+    CFRefReportVisitor(SymbolRef sym, const SummaryLogTy &log)
+       : Sym(sym), SummaryLog(log) {}
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int x = 0;
@@ -1816,9 +1764,9 @@ namespace {
 
   class CFRefLeakReportVisitor : public CFRefReportVisitor {
   public:
-    CFRefLeakReportVisitor(SymbolRef sym, bool GCEnabled,
+    CFRefLeakReportVisitor(SymbolRef sym,
                            const SummaryLogTy &log)
-       : CFRefReportVisitor(sym, GCEnabled, log) {}
+       : CFRefReportVisitor(sym, log) {}
 
     std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
@@ -1826,24 +1774,21 @@ namespace {
   };
 
   class CFRefReport : public BugReport {
-    void addGCModeDescription(const LangOptions &LOpts, bool GCEnabled);
 
   public:
-    CFRefReport(CFRefBug &D, const LangOptions &LOpts, bool GCEnabled,
+    CFRefReport(CFRefBug &D, const LangOptions &LOpts,
                 const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
                 bool registerVisitor = true)
       : BugReport(D, D.getDescription(), n) {
       if (registerVisitor)
-        addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, GCEnabled, Log));
-      addGCModeDescription(LOpts, GCEnabled);
+        addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
     }
 
-    CFRefReport(CFRefBug &D, const LangOptions &LOpts, bool GCEnabled,
+    CFRefReport(CFRefBug &D, const LangOptions &LOpts,
                 const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
                 StringRef endText)
       : BugReport(D, D.getDescription(), endText, n) {
-      addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, GCEnabled, Log));
-      addGCModeDescription(LOpts, GCEnabled);
+      addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
     }
 
     llvm::iterator_range<ranges_iterator> getRanges() override {
@@ -1863,10 +1808,10 @@ namespace {
     // Finds the location where a leak warning for 'sym' should be raised.
     void deriveAllocLocation(CheckerContext &Ctx, SymbolRef sym);
     // Produces description of a leak warning which is printed on the console.
-    void createDescription(CheckerContext &Ctx, bool GCEnabled, bool IncludeAllocationLine);
+    void createDescription(CheckerContext &Ctx, bool IncludeAllocationLine);
 
   public:
-    CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts, bool GCEnabled,
+    CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
                     const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
                     CheckerContext &Ctx,
                     bool IncludeAllocationLine);
@@ -1877,39 +1822,6 @@ namespace {
     }
   };
 } // end anonymous namespace
-
-void CFRefReport::addGCModeDescription(const LangOptions &LOpts,
-                                       bool GCEnabled) {
-  const char *GCModeDescription = nullptr;
-
-  switch (LOpts.getGC()) {
-  case LangOptions::GCOnly:
-    assert(GCEnabled);
-    GCModeDescription = "Code is compiled to only use garbage collection";
-    break;
-
-  case LangOptions::NonGC:
-    assert(!GCEnabled);
-    GCModeDescription = "Code is compiled to use reference counts";
-    break;
-
-  case LangOptions::HybridGC:
-    if (GCEnabled) {
-      GCModeDescription = "Code is compiled to use either garbage collection "
-                          "(GC) or reference counts (non-GC).  The bug occurs "
-                          "with GC enabled";
-      break;
-    } else {
-      GCModeDescription = "Code is compiled to use either garbage collection "
-                          "(GC) or reference counts (non-GC).  The bug occurs "
-                          "in non-GC mode";
-      break;
-    }
-  }
-
-  assert(GCModeDescription && "invalid/unknown GC mode");
-  addExtraText(GCModeDescription);
-}
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
@@ -2047,14 +1959,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
 
       if (CurrV.isOwned()) {
         os << "+1 retain count";
-
-        if (GCEnabled) {
-          assert(CurrV.getObjKind() == RetEffect::CF);
-          os << ".  "
-          "Core Foundation objects are not automatically garbage collected.";
-        }
-      }
-      else {
+      } else {
         assert (CurrV.isNotOwned());
         os << "+0 retain count";
       }
@@ -2091,14 +1996,14 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
         // We have an argument.  Get the effect!
         AEffects.push_back(Summ->getArg(i));
       }
-    }
-    else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
-      if (const Expr *receiver = ME->getInstanceReceiver())
+    } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
+      if (const Expr *receiver = ME->getInstanceReceiver()) {
         if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx)
               .getAsLocSymbol() == Sym) {
           // The symbol we are tracking is the receiver.
           AEffects.push_back(Summ->getReceiverEffect());
         }
+      }
     }
   }
 
@@ -2107,7 +2012,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
     RefVal PrevV = *PrevT;
 
     // Specially handle -dealloc.
-    if (!GCEnabled && std::find(AEffects.begin(), AEffects.end(), Dealloc) !=
+    if (std::find(AEffects.begin(), AEffects.end(), Dealloc) !=
                           AEffects.end()) {
       // Determine if the object's reference count was pushed to zero.
       assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
@@ -2118,41 +2023,6 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
         os << "Object released by directly sending the '-dealloc' message";
         break;
       }
-    }
-
-    // Specially handle CFMakeCollectable and friends.
-    if (std::find(AEffects.begin(), AEffects.end(), MakeCollectable) !=
-        AEffects.end()) {
-      // Get the name of the function.
-      const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
-      SVal X =
-        CurrSt->getSValAsScalarOrLoc(cast<CallExpr>(S)->getCallee(), LCtx);
-      const FunctionDecl *FD = X.getAsFunctionDecl();
-
-      if (GCEnabled) {
-        // Determine if the object's reference count was pushed to zero.
-        assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
-
-        os << "In GC mode a call to '" << *FD
-        <<  "' decrements an object's retain count and registers the "
-        "object with the garbage collector. ";
-
-        if (CurrV.getKind() == RefVal::Released) {
-          assert(CurrV.getCount() == 0);
-          os << "Since it now has a 0 retain count the object can be "
-          "automatically collected by the garbage collector.";
-        }
-        else
-          os << "An object must have a 0 retain count to be garbage collected. "
-          "After this call its retain count is +" << CurrV.getCount()
-          << '.';
-      }
-      else
-        os << "When GC is not enabled a call to '" << *FD
-        << "' has no effect on its argument.";
-
-      // Nothing more to say.
-      break;
     }
 
     // Determine if the typestate has changed.
@@ -2177,12 +2047,6 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
 
           if (unsigned Count = CurrV.getCount())
             os << " The object now has a +" << Count << " retain count.";
-
-          if (PrevV.getKind() == RefVal::Released) {
-            assert(GCEnabled && CurrV.getCount() > 0);
-            os << " The object is not eligible for garbage collection until "
-                  "the retain count reaches 0 again.";
-          }
 
           break;
 
@@ -2211,26 +2075,6 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
         default:
           return nullptr;
       }
-
-    // Emit any remaining diagnostics for the argument effects (if any).
-    for (SmallVectorImpl<ArgEffect>::iterator I=AEffects.begin(),
-         E=AEffects.end(); I != E; ++I) {
-
-      // A bunch of things have alternate behavior under GC.
-      if (GCEnabled)
-        switch (*I) {
-          default: break;
-          case Autorelease:
-            os << "In GC mode an 'autorelease' has no effect.";
-            continue;
-          case IncRefMsg:
-            os << "In GC mode the 'retain' message has no effect.";
-            continue;
-          case DecRefMsg:
-            os << "In GC mode the 'release' message has no effect.";
-            continue;
-        }
-    }
   } while (0);
 
   if (os.str().empty())
@@ -2437,14 +2281,6 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
       }
     }
   }
-  else if (RV->getKind() == RefVal::ErrorGCLeakReturned) {
-    const ObjCMethodDecl &MD = cast<ObjCMethodDecl>(EndN->getCodeDecl());
-    os << " and returned from method '" << MD.getSelector().getAsString()
-       << "' is potentially leaked when using garbage collection.  Callers "
-          "of this method do not expect a returned object with a +1 retain "
-          "count since they expect the object to be managed by the garbage "
-          "collector";
-  }
   else
     os << " is not referenced later in this execution path and has a retain "
           "count of +" << RV->getCount();
@@ -2512,15 +2348,12 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
 }
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
+void CFRefLeakReport::createDescription(CheckerContext &Ctx,
                                         bool IncludeAllocationLine) {
   assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
   Description.clear();
   llvm::raw_string_ostream os(Description);
-  os << "Potential leak ";
-  if (GCEnabled)
-    os << "(when using garbage collection) ";
-  os << "of an object";
+  os << "Potential leak of an object";
 
   Optional<std::string> RegionDescription = describeRegion(AllocBinding);
   if (RegionDescription) {
@@ -2533,19 +2366,19 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
 }
 
 CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                                 bool GCEnabled, const SummaryLogTy &Log,
+                                 const SummaryLogTy &Log,
                                  ExplodedNode *n, SymbolRef sym,
                                  CheckerContext &Ctx,
                                  bool IncludeAllocationLine)
-  : CFRefReport(D, LOpts, GCEnabled, Log, n, sym, false) {
+  : CFRefReport(D, LOpts, Log, n, sym, false) {
 
   deriveAllocLocation(Ctx, sym);
   if (!AllocBinding)
     deriveParamLocation(Ctx, sym);
 
-  createDescription(Ctx, GCEnabled, IncludeAllocationLine);
+  createDescription(Ctx, IncludeAllocationLine);
 
-  addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym, GCEnabled, Log));
+  addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym, Log));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2571,10 +2404,9 @@ class RetainCountChecker
                     eval::Assume,
                     eval::Call > {
   mutable std::unique_ptr<CFRefBug> useAfterRelease, releaseNotOwned;
-  mutable std::unique_ptr<CFRefBug> deallocGC, deallocNotOwned;
+  mutable std::unique_ptr<CFRefBug> deallocNotOwned;
   mutable std::unique_ptr<CFRefBug> overAutorelease, returnNotOwnedForOwned;
   mutable std::unique_ptr<CFRefBug> leakWithinFunction, leakAtReturn;
-  mutable std::unique_ptr<CFRefBug> leakWithinFunctionGC, leakAtReturnGC;
 
   typedef llvm::DenseMap<SymbolRef, const CheckerProgramPointTag *> SymbolTagMap;
 
@@ -2582,7 +2414,6 @@ class RetainCountChecker
   mutable SymbolTagMap DeadSymbolTags;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
-  mutable std::unique_ptr<RetainSummaryManager> SummariesGC;
   mutable SummaryLogTy SummaryLog;
   mutable bool ShouldResetSummaryLog;
 
@@ -2633,72 +2464,31 @@ public:
     ShouldResetSummaryLog = !SummaryLog.empty();
   }
 
-  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts,
-                                     bool GCEnabled) const {
-    if (GCEnabled) {
-      if (!leakWithinFunctionGC)
-        leakWithinFunctionGC.reset(new Leak(this, "Leak of object when using "
-                                                  "garbage collection"));
-      return leakWithinFunctionGC.get();
-    } else {
-      if (!leakWithinFunction) {
-        if (LOpts.getGC() == LangOptions::HybridGC) {
-          leakWithinFunction.reset(new Leak(this,
-                                            "Leak of object when not using "
-                                            "garbage collection (GC) in "
-                                            "dual GC/non-GC code"));
-        } else {
-          leakWithinFunction.reset(new Leak(this, "Leak"));
-        }
-      }
-      return leakWithinFunction.get();
-    }
+  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const {
+    if (!leakWithinFunction)
+      leakWithinFunction.reset(new Leak(this, "Leak"));
+    return leakWithinFunction.get();
   }
 
-  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts, bool GCEnabled) const {
-    if (GCEnabled) {
-      if (!leakAtReturnGC)
-        leakAtReturnGC.reset(new Leak(this,
-                                      "Leak of returned object when using "
-                                      "garbage collection"));
-      return leakAtReturnGC.get();
-    } else {
-      if (!leakAtReturn) {
-        if (LOpts.getGC() == LangOptions::HybridGC) {
-          leakAtReturn.reset(new Leak(this,
-                                      "Leak of returned object when not using "
-                                      "garbage collection (GC) in dual "
-                                      "GC/non-GC code"));
-        } else {
-          leakAtReturn.reset(new Leak(this, "Leak of returned object"));
-        }
-      }
+  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts) const {
+      if (!leakAtReturn)
+        leakAtReturn.reset(new Leak(this, "Leak of returned object"));
       return leakAtReturn.get();
-    }
   }
 
-  RetainSummaryManager &getSummaryManager(ASTContext &Ctx,
-                                          bool GCEnabled) const {
+  RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     // FIXME: We don't support ARC being turned on and off during one analysis.
     // (nor, for that matter, do we support changing ASTContexts)
     bool ARCEnabled = (bool)Ctx.getLangOpts().ObjCAutoRefCount;
-    if (GCEnabled) {
-      if (!SummariesGC)
-        SummariesGC.reset(new RetainSummaryManager(Ctx, true, ARCEnabled));
-      else
-        assert(SummariesGC->isARCEnabled() == ARCEnabled);
-      return *SummariesGC;
-    } else {
-      if (!Summaries)
-        Summaries.reset(new RetainSummaryManager(Ctx, false, ARCEnabled));
-      else
-        assert(Summaries->isARCEnabled() == ARCEnabled);
-      return *Summaries;
-    }
+    if (!Summaries)
+      Summaries.reset(new RetainSummaryManager(Ctx, ARCEnabled));
+    else
+      assert(Summaries->isARCEnabled() == ARCEnabled);
+    return *Summaries;
   }
 
   RetainSummaryManager &getSummaryManager(CheckerContext &C) const {
-    return getSummaryManager(C.getASTContext(), C.isObjCGCEnabled());
+    return getSummaryManager(C.getASTContext());
   }
 
   void printState(raw_ostream &Out, ProgramStateRef State,
@@ -3177,7 +2967,6 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       break;
     }
 
-    case RetEffect::GCNotOwnedSymbol:
     case RetEffect::NotOwnedSymbol: {
       const Expr *Ex = CallOrMsg.getOriginExpr();
       SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
@@ -3217,12 +3006,7 @@ ProgramStateRef
 RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
                                  RefVal V, ArgEffect E, RefVal::Kind &hasErr,
                                  CheckerContext &C) const {
-  // In GC mode [... release] and [... retain] do nothing.
-  // In ARC mode they shouldn't exist at all, but we just ignore them.
-  bool IgnoreRetainMsg = C.isObjCGCEnabled();
-  if (!IgnoreRetainMsg)
-    IgnoreRetainMsg = (bool)C.getASTContext().getLangOpts().ObjCAutoRefCount;
-
+  bool IgnoreRetainMsg = (bool)C.getASTContext().getLangOpts().ObjCAutoRefCount;
   switch (E) {
   default:
     break;
@@ -3230,18 +3014,15 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
     E = IgnoreRetainMsg ? DoNothing : IncRef;
     break;
   case DecRefMsg:
-    E = IgnoreRetainMsg ? DoNothing : DecRef;
+    E = IgnoreRetainMsg ? DoNothing: DecRef;
     break;
   case DecRefMsgAndStopTrackingHard:
     E = IgnoreRetainMsg ? StopTracking : DecRefAndStopTrackingHard;
     break;
-  case MakeCollectable:
-    E = C.isObjCGCEnabled() ? DecRef : DoNothing;
-    break;
   }
 
   // Handle all use-after-releases.
-  if (!C.isObjCGCEnabled() && V.getKind() == RefVal::Released) {
+  if (V.getKind() == RefVal::Released) {
     V = V ^ RefVal::ErrorUseAfterRelease;
     hasErr = V.getKind();
     return setRefBinding(state, sym, V);
@@ -3250,9 +3031,8 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
   switch (E) {
     case DecRefMsg:
     case IncRefMsg:
-    case MakeCollectable:
     case DecRefMsgAndStopTrackingHard:
-      llvm_unreachable("DecRefMsg/IncRefMsg/MakeCollectable already converted");
+      llvm_unreachable("DecRefMsg/IncRefMsg already converted");
 
     case UnretainedOutParameter:
     case RetainedOutParameter:
@@ -3260,13 +3040,6 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
                        "not have ref state.");
 
     case Dealloc:
-      // Any use of -dealloc in GC is *bad*.
-      if (C.isObjCGCEnabled()) {
-        V = V ^ RefVal::ErrorDeallocGC;
-        hasErr = V.getKind();
-        break;
-      }
-
       switch (V.getKind()) {
         default:
           llvm_unreachable("Invalid RefVal state for an explicit dealloc.");
@@ -3294,8 +3067,6 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
       return state;
 
     case Autorelease:
-      if (C.isObjCGCEnabled())
-        return state;
       // Update the autorelease counts.
       V = V.autorelease();
       break;
@@ -3311,11 +3082,6 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
         case RefVal::Owned:
         case RefVal::NotOwned:
           V = V + 1;
-          break;
-        case RefVal::Released:
-          // Non-GC cases are handled above.
-          assert(C.isObjCGCEnabled());
-          V = (V ^ RefVal::Owned) + 1;
           break;
       }
       break;
@@ -3361,13 +3127,6 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
             hasErr = V.getKind();
           }
           break;
-
-        case RefVal::Released:
-          // Non-GC cases are handled above.
-          assert(C.isObjCGCEnabled());
-          V = V ^ RefVal::ErrorUseAfterRelease;
-          hasErr = V.getKind();
-          break;
       }
       break;
   }
@@ -3407,11 +3166,6 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
         releaseNotOwned.reset(new BadRelease(this));
       BT = releaseNotOwned.get();
       break;
-    case RefVal::ErrorDeallocGC:
-      if (!deallocGC)
-        deallocGC.reset(new DeallocGC(this));
-      BT = deallocGC.get();
-      break;
     case RefVal::ErrorDeallocNotOwned:
       if (!deallocNotOwned)
         deallocNotOwned.reset(new DeallocNotOwned(this));
@@ -3421,7 +3175,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
 
   assert(BT);
   auto report = std::unique_ptr<BugReport>(
-      new CFRefReport(*BT, C.getASTContext().getLangOpts(), C.isObjCGCEnabled(),
+      new CFRefReport(*BT, C.getASTContext().getLangOpts(),
                       SummaryLog, N, Sym));
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
@@ -3443,7 +3197,7 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
     return false;
 
   // For now, we're only handling the functions that return aliases of their
-  // arguments: CFRetain and CFMakeCollectable (and their families).
+  // arguments: CFRetain (and its families).
   // Eventually we should add other functions we can model entirely,
   // such as CFRelease, which don't invalidate their arguments or globals.
   if (CE->getNumArgs() != 1)
@@ -3460,19 +3214,14 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   bool hasTrustedImplementationAnnotation = false;
 
   QualType ResultTy = CE->getCallReturnType(C.getASTContext());
-  if (ResultTy->isObjCIdType()) {
-    // Handle: id NSMakeCollectable(CFTypeRef)
-    canEval = II->isStr("NSMakeCollectable");
-  } else if (ResultTy->isPointerType()) {
+  if (ResultTy->isPointerType()) {
     // Handle: (CF|CG|CV)Retain
     //         CFAutorelease
-    //         CFMakeCollectable
-    // It's okay to be a little sloppy here (CGMakeCollectable doesn't exist).
+    // It's okay to be a little sloppy here.
     if (cocoa::isRefType(ResultTy, "CF", FName) ||
         cocoa::isRefType(ResultTy, "CG", FName) ||
         cocoa::isRefType(ResultTy, "CV", FName)) {
-      canEval = isRetain(FD, FName) || isAutorelease(FD, FName) ||
-                isMakeCollectable(FD, FName);
+      canEval = isRetain(FD, FName) || isAutorelease(FD, FName);
     } else {
       if (FD->getDefinition()) {
         canEval = isTrustedReferenceCountImplementation(FD->getDefinition());
@@ -3641,18 +3390,9 @@ void RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
   if (X.isReturnedOwned() && X.getCount() == 0) {
     if (RE.getKind() != RetEffect::NoRet) {
       bool hasError = false;
-      if (C.isObjCGCEnabled() && RE.getObjKind() == RetEffect::ObjC) {
-        // Things are more complicated with garbage collection.  If the
-        // returned object is suppose to be an Objective-C object, we have
-        // a leak (as the caller expects a GC'ed object) because no
-        // method should return ownership unless it returns a CF object.
-        hasError = true;
-        X = X ^ RefVal::ErrorGCLeakReturned;
-      }
-      else if (!RE.isOwned()) {
-        // Either we are using GC and the returned object is a CF type
-        // or we aren't using GC.  In either case, we expect that the
-        // enclosing method is expected to return ownership.
+      if (!RE.isOwned()) {
+        // The returning type is a CF, we expect the enclosing method should
+        // return ownership.
         hasError = true;
         X = X ^ RefVal::ErrorLeakReturned;
       }
@@ -3665,9 +3405,8 @@ void RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         ExplodedNode *N = C.addTransition(state, Pred, &ReturnOwnLeakTag);
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
-          bool GCEnabled = C.isObjCGCEnabled();
           C.emitReport(std::unique_ptr<BugReport>(new CFRefLeakReport(
-              *getLeakAtReturnBug(LOpts, GCEnabled), LOpts, GCEnabled,
+              *getLeakAtReturnBug(LOpts), LOpts,
               SummaryLog, N, Sym, C, IncludeAllocationLine)));
         }
       }
@@ -3695,7 +3434,7 @@ void RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
 
           C.emitReport(std::unique_ptr<BugReport>(new CFRefReport(
               *returnNotOwnedForOwned, C.getASTContext().getLangOpts(),
-              C.isObjCGCEnabled(), SummaryLog, N, Sym)));
+              SummaryLog, N, Sym)));
         }
       }
     }
@@ -3839,7 +3578,6 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
   if (!ACnt)
     return state;
 
-  assert(!Ctx.isObjCGCEnabled() && "Autorelease counts in GC mode?");
   unsigned Cnt = V.getCount();
 
   // FIXME: Handle sending 'autorelease' to already released object.
@@ -3899,7 +3637,7 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
 
     const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
     Ctx.emitReport(std::unique_ptr<BugReport>(
-        new CFRefReport(*overAutorelease, LOpts, /* GCEnabled = */ false,
+        new CFRefReport(*overAutorelease, LOpts,
                         SummaryLog, N, Sym, os.str())));
   }
 
@@ -3947,13 +3685,12 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
          I = Leaked.begin(), E = Leaked.end(); I != E; ++I) {
 
       const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
-      bool GCEnabled = Ctx.isObjCGCEnabled();
-      CFRefBug *BT = Pred ? getLeakWithinFunctionBug(LOpts, GCEnabled)
-                          : getLeakAtReturnBug(LOpts, GCEnabled);
+      CFRefBug *BT = Pred ? getLeakWithinFunctionBug(LOpts)
+                          : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
       Ctx.emitReport(std::unique_ptr<BugReport>(
-          new CFRefLeakReport(*BT, LOpts, GCEnabled, SummaryLog, N, *I, Ctx,
+          new CFRefLeakReport(*BT, LOpts, SummaryLog, N, *I, Ctx,
                               IncludeAllocationLine)));
     }
   }
@@ -4130,7 +3867,7 @@ namespace objc_retain {
 #define createCallEffect(D, KIND)\
   ASTContext &Ctx = D->getASTContext();\
   LangOptions L = Ctx.getLangOpts();\
-  RetainSummaryManager M(Ctx, L.GCOnly, L.ObjCAutoRefCount);\
+  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);\
   const RetainSummary *S = M.get ## KIND ## Summary(D);\
   CallEffects CE(S->getRetEffect());\
   CE.Receiver = S->getReceiverEffect();\
