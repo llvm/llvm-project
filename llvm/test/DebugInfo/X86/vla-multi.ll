@@ -8,7 +8,7 @@
 ;}
 ;
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
+; CHECK-NEXT:     DW_AT_type	([[int_type_die:.*]] "int")
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
 ; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"__ARRAY_SIZE_TYPE__")
@@ -26,7 +26,7 @@
 ; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "__ARRAY_SIZE_TYPE__")
 ; CHECK-NEXT:       DW_AT_count	(0x{{.*}})
 ; CHECK:        DW_TAG_array_type
-; CHECK-NEXT:     DW_AT_type	(0x000000f8 "int")
+; CHECK-NEXT:     DW_AT_type	([[int_type_die]] "int")
 ; CHECK-NOT: TAG
 ; CHECK:          DW_TAG_subrange_type
 ; CHECK-NEXT:       DW_AT_type	(0x{{.*}}"__ARRAY_SIZE_TYPE__")
