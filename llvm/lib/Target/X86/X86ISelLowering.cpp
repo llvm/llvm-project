@@ -28262,10 +28262,14 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   MachineInstrBuilder MIB =
       BuildMI(fallMBB, DL, TII->get(PtrLoadOpc), PrevSSPReg);
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (i == X86::AddrDisp)
-      MIB.addDisp(MI.getOperand(i), SPPOffset);
+      MIB.addDisp(MO, SPPOffset);
+    else if (MO.isReg()) // Don't add the whole operand, we don't want to
+                         // preserve kill flags.
+      MIB.addReg(MO.getReg());
     else
-      MIB.add(MI.getOperand(i));
+      MIB.add(MO);
   }
   MIB.setMemRefs(MMOs);
 
@@ -28383,17 +28387,27 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   // Reload FP
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(PtrLoadOpc), FP);
-  for (unsigned i = 0; i < X86::AddrNumOperands; ++i)
-    MIB.add(MI.getOperand(i));
+  for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    if (MO.isReg()) // Don't add the whole operand, we don't want to
+                    // preserve kill flags.
+      MIB.addReg(MO.getReg());
+    else
+      MIB.add(MO);
+  }
   MIB.setMemRefs(MMOs);
 
   // Reload IP
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(PtrLoadOpc), Tmp);
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (i == X86::AddrDisp)
-      MIB.addDisp(MI.getOperand(i), LabelOffset);
+      MIB.addDisp(MO, LabelOffset);
+    else if (MO.isReg()) // Don't add the whole operand, we don't want to
+                         // preserve kill flags.
+      MIB.addReg(MO.getReg());
     else
-      MIB.add(MI.getOperand(i));
+      MIB.add(MO);
   }
   MIB.setMemRefs(MMOs);
 
@@ -28403,7 +28417,8 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
     if (i == X86::AddrDisp)
       MIB.addDisp(MI.getOperand(i), SPOffset);
     else
-      MIB.add(MI.getOperand(i));
+      MIB.add(MI.getOperand(i)); // We can preserve the kill flags here, it's
+                                 // the last instruction of the expansion.
   }
   MIB.setMemRefs(MMOs);
 

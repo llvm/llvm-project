@@ -1021,6 +1021,51 @@ TEST(GoToInclude, All) {
   EXPECT_THAT(*Locations, IsEmpty());
 }
 
+TEST(GoToDefinition, WithPreamble) {
+  // Test stragety: AST should always use the latest preamble instead of last
+  // good preamble.
+  MockFSProvider FS;
+  IgnoreDiagnostics DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  auto FooCppUri = URIForFile{FooCpp};
+  // The trigger locations must be the same.
+  Annotations FooWithHeader(R"cpp(#include "fo^o.h")cpp");
+  Annotations FooWithoutHeader(R"cpp(double    [[fo^o]]();)cpp");
+
+  FS.Files[FooCpp] = FooWithHeader.code();
+
+  auto FooH = testPath("foo.h");
+  auto FooHUri = URIForFile{FooH};
+  Annotations FooHeader(R"cpp([[]])cpp");
+  FS.Files[FooH] = FooHeader.code();
+
+  runAddDocument(Server, FooCpp, FooWithHeader.code());
+  // GoToDefinition goes to a #include file: the result comes from the preamble.
+  EXPECT_THAT(
+      cantFail(runFindDefinitions(Server, FooCpp, FooWithHeader.point())),
+      ElementsAre(Location{FooHUri, FooHeader.range()}));
+
+  // Only preamble is built, and no AST is built in this request.
+  Server.addDocument(FooCpp, FooWithoutHeader.code(), WantDiagnostics::No);
+  // We build AST here, and it should use the latest preamble rather than the
+  // stale one.
+  EXPECT_THAT(
+      cantFail(runFindDefinitions(Server, FooCpp, FooWithoutHeader.point())),
+      ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
+
+  // Reset test environment.
+  runAddDocument(Server, FooCpp, FooWithHeader.code());
+  // Both preamble and AST are built in this request.
+  Server.addDocument(FooCpp, FooWithoutHeader.code(), WantDiagnostics::Yes);
+  // Use the AST being built in above request.
+  EXPECT_THAT(
+      cantFail(runFindDefinitions(Server, FooCpp, FooWithoutHeader.point())),
+      ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

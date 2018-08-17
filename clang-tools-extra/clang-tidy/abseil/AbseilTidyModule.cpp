@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "DurationDivisionCheck.h"
 #include "StringFindStartswithCheck.h"
 
 namespace clang {
@@ -19,6 +20,8 @@ namespace abseil {
 class AbseilModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<DurationDivisionCheck>(
+        "abseil-duration-division");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
   }

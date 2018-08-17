@@ -17,7 +17,11 @@ void noescapeFunc3(__attribute__((noescape)) union U);
 // helper functions.
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
-// CHECK: @[[BLOCK_DESCIPTOR_TMP_2:.*]] = internal constant { i64, i64, i8*, i64 } { i64 0, i64 40, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
+
+// When the block is non-escaping, copy/dispose helpers aren't generated, so the
+// block layout string must include information about __strong captures.
+
+// CHECK: @[[BLOCK_DESCIPTOR_TMP_2:.*ls32l8"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i64 } { i64 0, i64 40, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
 
 // CHECK-LABEL: define void @test0(
 // CHECK: call void @noescapeFunc0({{.*}}, {{.*}} nocapture {{.*}})

@@ -12,8 +12,7 @@ declare <4 x i8> @llvm.fshr.v4i8(<4 x i8>, <4 x i8>, <4 x i8>)
 
 define i32 @fshl_i32() {
 ; CHECK-LABEL: @fshl_i32(
-; CHECK-NEXT:    [[F:%.*]] = call i32 @llvm.fshl.i32(i32 305419896, i32 -1412567295, i32 5)
-; CHECK-NEXT:    ret i32 [[F]]
+; CHECK-NEXT:    ret i32 1183502101
 ;
   %f = call i32 @llvm.fshl.i32(i32 305419896, i32 2882400001, i32 5)
   ret i32 %f
@@ -24,8 +23,7 @@ define i32 @fshl_i32() {
 
 define i32 @fshr_i32() {
 ; CHECK-LABEL: @fshr_i32(
-; CHECK-NEXT:    [[F:%.*]] = call i32 @llvm.fshr.i32(i32 305419896, i32 -1412567295, i32 37)
-; CHECK-NEXT:    ret i32 [[F]]
+; CHECK-NEXT:    ret i32 -983666824
 ;
   %f = call i32 @llvm.fshr.i32(i32 305419896, i32 2882400001, i32 37)
   ret i32 %f
@@ -38,8 +36,7 @@ define i32 @fshr_i32() {
 
 define i7 @fshl_i7() {
 ; CHECK-LABEL: @fshl_i7(
-; CHECK-NEXT:    [[F:%.*]] = call i7 @llvm.fshl.i7(i7 -16, i7 -1, i7 9)
-; CHECK-NEXT:    ret i7 [[F]]
+; CHECK-NEXT:    ret i7 -61
 ;
   %f = call i7 @llvm.fshl.i7(i7 112, i7 127, i7 9)
   ret i7 %f
@@ -50,8 +47,7 @@ define i7 @fshl_i7() {
 
 define i7 @fshr_i7() {
 ; CHECK-LABEL: @fshr_i7(
-; CHECK-NEXT:    [[F:%.*]] = call i7 @llvm.fshr.i7(i7 -16, i7 -1, i7 16)
-; CHECK-NEXT:    ret i7 [[F]]
+; CHECK-NEXT:    ret i7 31
 ;
   %f = call i7 @llvm.fshr.i7(i7 112, i7 127, i7 16)
   ret i7 %f
@@ -65,8 +61,7 @@ define i7 @fshr_i7() {
 
 define <4 x i8> @fshl_v4i8() {
 ; CHECK-LABEL: @fshl_v4i8(
-; CHECK-NEXT:    [[F:%.*]] = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> <i8 0, i8 -1, i8 16, i8 17>, <4 x i8> <i8 -1, i8 0, i8 85, i8 -86>, <4 x i8> <i8 0, i8 8, i8 9, i8 10>)
-; CHECK-NEXT:    ret <4 x i8> [[F]]
+; CHECK-NEXT:    ret <4 x i8> <i8 0, i8 -1, i8 32, i8 70>
 ;
   %f = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> <i8 0, i8 -1, i8 16, i8 17>, <4 x i8> <i8 -1, i8 0, i8 85, i8 170>, <4 x i8> <i8 0, i8 8, i8 9, i8 10>)
   ret <4 x i8> %f
@@ -80,8 +75,7 @@ define <4 x i8> @fshl_v4i8() {
 
 define <4 x i8> @fshr_v4i8() {
 ; CHECK-LABEL: @fshr_v4i8(
-; CHECK-NEXT:    [[F:%.*]] = call <4 x i8> @llvm.fshr.v4i8(<4 x i8> <i8 0, i8 -1, i8 16, i8 17>, <4 x i8> <i8 -1, i8 0, i8 85, i8 -86>, <4 x i8> <i8 0, i8 8, i8 9, i8 10>)
-; CHECK-NEXT:    ret <4 x i8> [[F]]
+; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 0, i8 42, i8 106>
 ;
   %f = call <4 x i8> @llvm.fshr.v4i8(<4 x i8> <i8 0, i8 -1, i8 16, i8 17>, <4 x i8> <i8 -1, i8 0, i8 85, i8 170>, <4 x i8> <i8 0, i8 8, i8 9, i8 10>)
   ret <4 x i8> %f

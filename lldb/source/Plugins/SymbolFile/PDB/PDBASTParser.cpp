@@ -52,9 +52,8 @@ int TranslateUdtKind(PDB_UdtType pdb_kind) {
     return clang::TTK_Union;
   case PDB_UdtType::Interface:
     return clang::TTK_Interface;
-  default:
-    llvm_unreachable("unsuported PDB UDT type");
   }
+  llvm_unreachable("unsuported PDB UDT type");
 }
 
 lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
@@ -213,9 +212,8 @@ AccessType TranslateMemberAccess(PDB_MemberAccess access) {
     return eAccessProtected;
   case PDB_MemberAccess::Public:
     return eAccessPublic;
-  default:
-    return eAccessNone;
   }
+  return eAccessNone;
 }
 
 AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
@@ -226,9 +224,8 @@ AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
   case PDB_UdtType::Class:
   case PDB_UdtType::Interface:
     return eAccessPrivate;
-  default:
-    llvm_unreachable("unsupported PDB UDT type");
   }
+  llvm_unreachable("unsupported PDB UDT type");
 }
 
 AccessType GetAccessibilityForUdt(const PDBSymbolTypeUDT &udt) {

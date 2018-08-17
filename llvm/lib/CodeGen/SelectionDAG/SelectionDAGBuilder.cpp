@@ -2931,7 +2931,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     ISD::VSELECT : ISD::SELECT;
 
   // Min/max matching is only viable if all output VTs are the same.
-  if (std::equal(ValueVTs.begin(), ValueVTs.end(), ValueVTs.begin())) {
+  if (is_splat(ValueVTs)) {
     EVT VT = ValueVTs[0];
     LLVMContext &Ctx = *DAG.getContext();
     auto &TLI = DAG.getTargetLoweringInfo();

@@ -285,6 +285,8 @@ def HasFP16          : Predicate<"Subtarget->hasFP16()">,
                                  AssemblerPredicate<"FeatureFP16","half-float conversions">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16","full half-float">;
+def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
+                                 AssemblerPredicate<"FeatureFP16FML","full half-float fml">;
 def HasDivideInThumb : Predicate<"Subtarget->hasDivideInThumbMode()">,
                                  AssemblerPredicate<"FeatureHWDivThumb", "divide in THUMB">;
 def HasDivideInARM   : Predicate<"Subtarget->hasDivideInARMMode()">,

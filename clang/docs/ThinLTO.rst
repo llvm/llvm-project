@@ -105,7 +105,9 @@ Controlling Backend Parallelism
 -------------------------------
 .. _parallelism:
 
-By default, the ThinLTO link step will launch up to
+By default, the ThinLTO link step will launch as many
+threads in parallel as there are cores. If the number of
+cores can't be computed for the architecture, then it will launch
 ``std::thread::hardware_concurrency`` number of threads in parallel.
 For machines with hyper-threading, this is the total number of
 virtual cores. For some applications and machine configurations this

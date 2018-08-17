@@ -71,6 +71,9 @@ def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
 def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
   "Full FP16", [FeatureFPARMv8]>;
 
+def FeatureFP16FML : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
+  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+
 def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
   "Enable Statistical Profiling extension">;
 

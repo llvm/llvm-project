@@ -258,27 +258,28 @@ void Scheduler::dump() const {
 #endif
 
 bool Scheduler::canBeDispatched(const InstRef &IR,
-                                HWStallEvent::GenericEventType &Event) const {
-  Event = HWStallEvent::Invalid;
+                                Scheduler::StallKind &Event) const {
+  Event = StallKind::NoStall;
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
+  // Give lower priority to these stall events.
+  if (Desc.MayStore && LSU->isSQFull())
+    Event = StallKind::StoreQueueFull;
   if (Desc.MayLoad && LSU->isLQFull())
-    Event = HWStallEvent::LoadQueueFull;
-  else if (Desc.MayStore && LSU->isSQFull())
-    Event = HWStallEvent::StoreQueueFull;
-  else {
-    switch (Resources->canBeDispatched(Desc.Buffers)) {
-    default:
-      return true;
-    case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
-      Event = HWStallEvent::SchedulerQueueFull;
-      break;
-    case ResourceStateEvent::RS_RESERVED:
-      Event = HWStallEvent::DispatchGroupStall;
-    }
+    Event = StallKind::LoadQueueFull;
+    
+  switch (Resources->canBeDispatched(Desc.Buffers)) {
+  case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
+    Event = StallKind::SchedulerQueueFull;
+    break;
+  case ResourceStateEvent::RS_RESERVED:
+    Event = StallKind::DispatchGroupStall;
+    break;
+  default:
+    break;
   }
 
-  return false;
+  return Event == StallKind::NoStall;
 }
 
 void Scheduler::issueInstructionImpl(

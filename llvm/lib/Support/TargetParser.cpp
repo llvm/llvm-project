@@ -234,6 +234,11 @@ bool llvm::ARM::getExtensionFeatures(unsigned Extensions,
   else
     Features.push_back("-dsp");
 
+  if (Extensions & ARM::AEK_FP16FML)
+    Features.push_back("+fp16fml");
+  else
+    Features.push_back("-fp16fml");
+
   if (Extensions & ARM::AEK_RAS)
     Features.push_back("+ras");
   else
@@ -460,6 +465,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+crypto");
   if (Extensions & AArch64::AEK_DOTPROD)
     Features.push_back("+dotprod");
+  if (Extensions & AArch64::AEK_FP16FML)
+    Features.push_back("+fp16fml");
   if (Extensions & AArch64::AEK_FP16)
     Features.push_back("+fullfp16");
   if (Extensions & AArch64::AEK_PROFILE)

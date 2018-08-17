@@ -1,0 +1,169 @@
+// -*- C++ -*-
+//===------------------------------ bit ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===---------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_BIT
+#define _LIBCPP_BIT
+
+/*
+    bit synopsis
+
+namespace std {
+
+} // namespace std
+
+*/
+
+#include <__config>
+
+#if defined(__IBMCPP__)
+#include "support/ibm/support.h"
+#endif
+#if defined(_LIBCPP_COMPILER_MSVC)
+#include <intrin.h>
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+// Precondition:  __x != 0
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned __ctz(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned>(__builtin_ctz(__x));
+#else
+  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+  static_assert(sizeof(unsigned long) == 4, "");
+  unsigned long where;
+  // Search from LSB to MSB for first set bit.
+  // Returns zero if no set bit is found.
+  if (_BitScanForward(&where, __x))
+    return where;
+  return 32;
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned long __ctz(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned long>(__builtin_ctzl(__x));
+#else
+    static_assert(sizeof(unsigned long) == sizeof(unsigned), "");
+    return __ctz(static_cast<unsigned>(__x));
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned long long __ctz(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned long long>(__builtin_ctzll(__x));
+#else
+    unsigned long where;
+// Search from LSB to MSB for first set bit.
+// Returns zero if no set bit is found.
+#if defined(_LIBCPP_HAS_BITSCAN64)
+    (defined(_M_AMD64) || defined(__x86_64__))
+  if (_BitScanForward64(&where, __x))
+    return static_cast<int>(where);
+#else
+  // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
+  // Scan the Low Word.
+  if (_BitScanForward(&where, static_cast<unsigned long>(__x)))
+    return where;
+  // Scan the High Word.
+  if (_BitScanForward(&where, static_cast<unsigned long>(__x >> 32)))
+    return where + 32; // Create a bit offset from the LSB.
+#endif
+  return 64;
+#endif // _LIBCPP_COMPILER_MSVC
+}
+
+// Precondition:  __x != 0
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned __clz(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned>(__builtin_clz(__x));
+#else
+  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+  static_assert(sizeof(unsigned long) == 4, "");
+  unsigned long where;
+  // Search from LSB to MSB for first set bit.
+  // Returns zero if no set bit is found.
+  if (_BitScanReverse(&where, __x))
+    return 31 - where;
+  return 32; // Undefined Behavior.
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned long __clz(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned long>(__builtin_clzl (__x));
+#else
+    static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+    return __clz(static_cast<unsigned>(__x));
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned long long __clz(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+    return static_cast<unsigned long long>(__builtin_clzll(__x));
+#else
+  unsigned long where;
+// BitScanReverse scans from MSB to LSB for first set bit.
+// Returns 0 if no set bit is found.
+#if defined(_LIBCPP_HAS_BITSCAN64)
+  if (_BitScanReverse64(&where, __x))
+    return static_cast<int>(63 - where);
+#else
+  // Scan the high 32 bits.
+  if (_BitScanReverse(&where, static_cast<unsigned long>(__x >> 32)))
+    return 63 - (where + 32); // Create a bit offset from the MSB.
+  // Scan the low 32 bits.
+  if (_BitScanReverse(&where, static_cast<unsigned long>(__x)))
+    return 63 - where;
+#endif
+  return 64; // Undefined Behavior.
+#endif // _LIBCPP_COMPILER_MSVC
+}
+
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcount  (__x);
+#else
+  static_assert(sizeof(unsigned) == 4, "");
+  return __popcnt(__x);
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcountl (__x);
+#else
+  static_assert(sizeof(unsigned long) == 4, "");
+  return __popcnt(__x);
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcountll(__x);
+#else
+  static_assert(sizeof(unsigned long long) == 8, "");
+  return __popcnt64(__x);
+#endif
+}
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_BIT

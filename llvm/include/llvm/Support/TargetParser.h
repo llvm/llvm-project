@@ -88,6 +88,7 @@ enum ArchExtKind : unsigned {
   AEK_DOTPROD =     1 << 14,
   AEK_SHA2    =     1 << 15,
   AEK_AES     =     1 << 16,
+  AEK_FP16FML =     1 << 17,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,
@@ -178,6 +179,7 @@ enum ArchExtKind : unsigned {
   AEK_SHA3 =        1 << 14,
   AEK_SHA2 =        1 << 15,
   AEK_AES =         1 << 16,
+  AEK_FP16FML =     1 << 17,
 };
 
 StringRef getCanonicalArchName(StringRef Arch);
