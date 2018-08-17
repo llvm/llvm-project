@@ -729,8 +729,9 @@ public:
       // FIXME: for headers, we need to get a comment from the index.
       ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
-          getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
-                                 /*CommentsFromHeaders=*/false)));
+          Candidate.getFunction()
+              ? getDeclComment(S.getASTContext(), *Candidate.getFunction())
+              : ""));
     }
     std::sort(ScoredSignatures.begin(), ScoredSignatures.end(),
               [](const ScoredSignature &L, const ScoredSignature &R) {
