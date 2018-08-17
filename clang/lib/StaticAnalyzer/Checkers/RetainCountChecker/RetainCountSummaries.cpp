@@ -1,0 +1,819 @@
+//== RetainCountSummaries.cpp - Checks for leaks and other issues -*- C++ -*--//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines summaries implementation for RetainCountChecker, which
+//  implements a reference count checker for Core Foundation and Cocoa
+//  on (Mac OS X).
+//
+//===----------------------------------------------------------------------===//
+
+#include "RetainCountSummaries.h"
+#include "RetainCountChecker.h"
+
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/ParentMap.h"
+
+using namespace objc_retain;
+using namespace clang;
+using namespace ento;
+using namespace retaincountchecker;
+
+ArgEffects RetainSummaryManager::getArgEffects() {
+  ArgEffects AE = ScratchArgs;
+  ScratchArgs = AF.getEmptyMap();
+  return AE;
+}
+
+const RetainSummary *
+RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
+  // Unique "simple" summaries -- those without ArgEffects.
+  if (OldSumm.isSimple()) {
+    ::llvm::FoldingSetNodeID ID;
+    OldSumm.Profile(ID);
+
+    void *Pos;
+    CachedSummaryNode *N = SimpleSummaries.FindNodeOrInsertPos(ID, Pos);
+
+    if (!N) {
+      N = (CachedSummaryNode *) BPAlloc.Allocate<CachedSummaryNode>();
+      new (N) CachedSummaryNode(OldSumm);
+      SimpleSummaries.InsertNode(N, Pos);
+    }
+
+    return &N->getValue();
+  }
+
+  RetainSummary *Summ = (RetainSummary *) BPAlloc.Allocate<RetainSummary>();
+  new (Summ) RetainSummary(OldSumm);
+  return Summ;
+}
+
+const RetainSummary *
+RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
+  // If we don't know what function we're calling, use our default summary.
+  if (!FD)
+    return getDefaultSummary();
+
+  // Look up a summary in our cache of FunctionDecls -> Summaries.
+  FuncSummariesTy::iterator I = FuncSummaries.find(FD);
+  if (I != FuncSummaries.end())
+    return I->second;
+
+  // No summary?  Generate one.
+  const RetainSummary *S = nullptr;
+  bool AllowAnnotations = true;
+
+  do {
+    // We generate "stop" summaries for implicitly defined functions.
+    if (FD->isImplicit()) {
+      S = getPersistentStopSummary();
+      break;
+    }
+
+    // [PR 3337] Use 'getAs<FunctionType>' to strip away any typedefs on the
+    // function's type.
+    const FunctionType* FT = FD->getType()->getAs<FunctionType>();
+    const IdentifierInfo *II = FD->getIdentifier();
+    if (!II)
+      break;
+
+    StringRef FName = II->getName();
+
+    // Strip away preceding '_'.  Doing this here will effect all the checks
+    // down below.
+    FName = FName.substr(FName.find_first_not_of('_'));
+
+    // Inspect the result type.
+    QualType RetTy = FT->getReturnType();
+    std::string RetTyName = RetTy.getAsString();
+
+    // FIXME: This should all be refactored into a chain of "summary lookup"
+    //  filters.
+    assert(ScratchArgs.isEmpty());
+
+    if (FName == "pthread_create" || FName == "pthread_setspecific") {
+      // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
+      // This will be addressed better with IPA.
+      S = getPersistentStopSummary();
+    } else if (FName == "CFPlugInInstanceCreate") {
+      S = getPersistentSummary(RetEffect::MakeNoRet());
+    } else if (FName == "IORegistryEntrySearchCFProperty"
+        || (RetTyName == "CFMutableDictionaryRef" && (
+               FName == "IOBSDNameMatching" ||
+               FName == "IOServiceMatching" ||
+               FName == "IOServiceNameMatching" ||
+               FName == "IORegistryEntryIDMatching" ||
+               FName == "IOOpenFirmwarePathMatching"
+            ))) {
+      // Part of <rdar://problem/6961230>. (IOKit)
+      // This should be addressed using a API table.
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+                               DoNothing, DoNothing);
+    } else if (FName == "IOServiceGetMatchingService" ||
+               FName == "IOServiceGetMatchingServices") {
+      // FIXES: <rdar://problem/6326900>
+      // This should be addressed using a API table.  This strcmp is also
+      // a little gross, but there is no need to super optimize here.
+      ScratchArgs = AF.add(ScratchArgs, 1, DecRef);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "IOServiceAddNotification" ||
+               FName == "IOServiceAddMatchingNotification") {
+      // Part of <rdar://problem/6961230>. (IOKit)
+      // This should be addressed using a API table.
+      ScratchArgs = AF.add(ScratchArgs, 2, DecRef);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "CVPixelBufferCreateWithBytes") {
+      // FIXES: <rdar://problem/7283567>
+      // Eventually this can be improved by recognizing that the pixel
+      // buffer passed to CVPixelBufferCreateWithBytes is released via
+      // a callback and doing full IPA to make sure this is done correctly.
+      // FIXME: This function has an out parameter that returns an
+      // allocated object.
+      ScratchArgs = AF.add(ScratchArgs, 7, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "CGBitmapContextCreateWithData") {
+      // FIXES: <rdar://problem/7358899>
+      // Eventually this can be improved by recognizing that 'releaseInfo'
+      // passed to CGBitmapContextCreateWithData is released via
+      // a callback and doing full IPA to make sure this is done correctly.
+      ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+                               DoNothing, DoNothing);
+    } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
+      // FIXES: <rdar://problem/7283567>
+      // Eventually this can be improved by recognizing that the pixel
+      // buffer passed to CVPixelBufferCreateWithPlanarBytes is released
+      // via a callback and doing full IPA to make sure this is done
+      // correctly.
+      ScratchArgs = AF.add(ScratchArgs, 12, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "VTCompressionSessionEncodeFrame") {
+      // The context argument passed to VTCompressionSessionEncodeFrame()
+      // is passed to the callback specified when creating the session
+      // (e.g. with VTCompressionSessionCreate()) which can release it.
+      // To account for this possibility, conservatively stop tracking
+      // the context.
+      ScratchArgs = AF.add(ScratchArgs, 5, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "dispatch_set_context" ||
+               FName == "xpc_connection_set_context") {
+      // <rdar://problem/11059275> - The analyzer currently doesn't have
+      // a good way to reason about the finalizer function for libdispatch.
+      // If we pass a context object that is memory managed, stop tracking it.
+      // <rdar://problem/13783514> - Same problem, but for XPC.
+      // FIXME: this hack should possibly go away once we can handle
+      // libdispatch and XPC finalizers.
+      ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName.startswith("NSLog")) {
+      S = getDoNothingSummary();
+    } else if (FName.startswith("NS") &&
+                (FName.find("Insert") != StringRef::npos)) {
+      // Whitelist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
+      // be deallocated by NSMapRemove. (radar://11152419)
+      ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
+      ScratchArgs = AF.add(ScratchArgs, 2, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    }
+
+    // Did we get a summary?
+    if (S)
+      break;
+
+    if (RetTy->isPointerType()) {
+      // For CoreFoundation ('CF') types.
+      if (cocoa::isRefType(RetTy, "CF", FName)) {
+        if (RetainSummary::isRetain(FD, FName)) {
+          S = getUnarySummary(FT, cfretain);
+          // CFRetain isn't supposed to be annotated. However, this may as well
+          // be a user-made "safe" CFRetain function that is incorrectly
+          // annotated as cf_returns_retained due to lack of better options.
+          // We want to ignore such annotation.
+          AllowAnnotations = false;
+        } else if (RetainSummary::isAutorelease(FD, FName)) {
+          S = getUnarySummary(FT, cfautorelease);
+          // The headers use cf_consumed, but we can fully model CFAutorelease
+          // ourselves.
+          AllowAnnotations = false;
+        } else {
+          S = getCFCreateGetRuleSummary(FD);
+        }
+
+        break;
+      }
+
+      // For CoreGraphics ('CG') and CoreVideo ('CV') types.
+      if (cocoa::isRefType(RetTy, "CG", FName) ||
+          cocoa::isRefType(RetTy, "CV", FName)) {
+        if (RetainSummary::isRetain(FD, FName))
+          S = getUnarySummary(FT, cfretain);
+        else
+          S = getCFCreateGetRuleSummary(FD);
+
+        break;
+      }
+
+      // For all other CF-style types, use the Create/Get
+      // rule for summaries but don't support Retain functions
+      // with framework-specific prefixes.
+      if (coreFoundation::isCFObjectRef(RetTy)) {
+        S = getCFCreateGetRuleSummary(FD);
+        break;
+      }
+
+      if (FD->hasAttr<CFAuditedTransferAttr>()) {
+        S = getCFCreateGetRuleSummary(FD);
+        break;
+      }
+
+      break;
+    }
+
+    // Check for release functions, the only kind of functions that we care
+    // about that don't return a pointer type.
+    if (FName.size() >= 2 &&
+        FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
+      // Test for 'CGCF'.
+      FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
+
+      if (RetainSummary::isRelease(FD, FName))
+        S = getUnarySummary(FT, cfrelease);
+      else {
+        assert (ScratchArgs.isEmpty());
+        // Remaining CoreFoundation and CoreGraphics functions.
+        // We use to assume that they all strictly followed the ownership idiom
+        // and that ownership cannot be transferred.  While this is technically
+        // correct, many methods allow a tracked object to escape.  For example:
+        //
+        //   CFMutableDictionaryRef x = CFDictionaryCreateMutable(...);
+        //   CFDictionaryAddValue(y, key, x);
+        //   CFRelease(x);
+        //   ... it is okay to use 'x' since 'y' has a reference to it
+        //
+        // We handle this and similar cases with the follow heuristic.  If the
+        // function name contains "InsertValue", "SetValue", "AddValue",
+        // "AppendValue", or "SetAttribute", then we assume that arguments may
+        // "escape."  This means that something else holds on to the object,
+        // allowing it be used even after its local retain count drops to 0.
+        ArgEffect E = (StrInStrNoCase(FName, "InsertValue") != StringRef::npos||
+                       StrInStrNoCase(FName, "AddValue") != StringRef::npos ||
+                       StrInStrNoCase(FName, "SetValue") != StringRef::npos ||
+                       StrInStrNoCase(FName, "AppendValue") != StringRef::npos||
+                       StrInStrNoCase(FName, "SetAttribute") != StringRef::npos)
+                      ? MayEscape : DoNothing;
+
+        S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, E);
+      }
+    }
+  }
+  while (0);
+
+  // If we got all the way here without any luck, use a default summary.
+  if (!S)
+    S = getDefaultSummary();
+
+  // Annotations override defaults.
+  if (AllowAnnotations)
+    updateSummaryFromAnnotations(S, FD);
+
+  FuncSummaries[FD] = S;
+  return S;
+}
+
+//===----------------------------------------------------------------------===//
+// Summary creation for functions (largely uses of Core Foundation).
+//===----------------------------------------------------------------------===//
+
+
+static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
+  switch (E) {
+  case DoNothing:
+  case Autorelease:
+  case DecRefBridgedTransferred:
+  case IncRef:
+  case IncRefMsg:
+  case UnretainedOutParameter:
+  case RetainedOutParameter:
+  case MayEscape:
+  case StopTracking:
+  case StopTrackingHard:
+    return StopTrackingHard;
+  case DecRef:
+  case DecRefAndStopTrackingHard:
+    return DecRefAndStopTrackingHard;
+  case DecRefMsg:
+  case DecRefMsgAndStopTrackingHard:
+    return DecRefMsgAndStopTrackingHard;
+  case Dealloc:
+    return Dealloc;
+  }
+
+  llvm_unreachable("Unknown ArgEffect kind");
+}
+
+void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
+                                                const CallEvent &Call) {
+  if (Call.hasNonZeroCallbackArg()) {
+    ArgEffect RecEffect =
+      getStopTrackingHardEquivalent(S->getReceiverEffect());
+    ArgEffect DefEffect =
+      getStopTrackingHardEquivalent(S->getDefaultArgEffect());
+
+    ArgEffects CustomArgEffects = S->getArgEffects();
+    for (ArgEffects::iterator I = CustomArgEffects.begin(),
+                              E = CustomArgEffects.end();
+         I != E; ++I) {
+      ArgEffect Translated = getStopTrackingHardEquivalent(I->second);
+      if (Translated != DefEffect)
+        ScratchArgs = AF.add(ScratchArgs, I->first, Translated);
+    }
+
+    RetEffect RE = RetEffect::MakeNoRetHard();
+
+    // Special cases where the callback argument CANNOT free the return value.
+    // This can generally only happen if we know that the callback will only be
+    // called when the return value is already being deallocated.
+    if (const SimpleFunctionCall *FC = dyn_cast<SimpleFunctionCall>(&Call)) {
+      if (IdentifierInfo *Name = FC->getDecl()->getIdentifier()) {
+        // When the CGBitmapContext is deallocated, the callback here will free
+        // the associated data buffer.
+        // The callback in dispatch_data_create frees the buffer, but not
+        // the data object.
+        if (Name->isStr("CGBitmapContextCreateWithData") ||
+            Name->isStr("dispatch_data_create"))
+          RE = S->getRetEffect();
+      }
+    }
+
+    S = getPersistentSummary(RE, RecEffect, DefEffect);
+  }
+
+  // Special case '[super init];' and '[self init];'
+  //
+  // Even though calling '[super init]' without assigning the result to self
+  // and checking if the parent returns 'nil' is a bad pattern, it is common.
+  // Additionally, our Self Init checker already warns about it. To avoid
+  // overwhelming the user with messages from both checkers, we model the case
+  // of '[super init]' in cases when it is not consumed by another expression
+  // as if the call preserves the value of 'self'; essentially, assuming it can
+  // never fail and return 'nil'.
+  // Note, we don't want to just stop tracking the value since we want the
+  // RetainCount checker to report leaks and use-after-free if SelfInit checker
+  // is turned off.
+  if (const ObjCMethodCall *MC = dyn_cast<ObjCMethodCall>(&Call)) {
+    if (MC->getMethodFamily() == OMF_init && MC->isReceiverSelfOrSuper()) {
+
+      // Check if the message is not consumed, we know it will not be used in
+      // an assignment, ex: "self = [super init]".
+      const Expr *ME = MC->getOriginExpr();
+      const LocationContext *LCtx = MC->getLocationContext();
+      ParentMap &PM = LCtx->getAnalysisDeclContext()->getParentMap();
+      if (!PM.isConsumedExpr(ME)) {
+        RetainSummaryTemplate ModifiableSummaryTemplate(S, *this);
+        ModifiableSummaryTemplate->setReceiverEffect(DoNothing);
+        ModifiableSummaryTemplate->setRetEffect(RetEffect::MakeNoRet());
+      }
+    }
+  }
+}
+
+const RetainSummary *
+RetainSummaryManager::getSummary(const CallEvent &Call,
+                                 ProgramStateRef State) {
+  const RetainSummary *Summ;
+  switch (Call.getKind()) {
+  case CE_Function:
+    Summ = getFunctionSummary(cast<SimpleFunctionCall>(Call).getDecl());
+    break;
+  case CE_CXXMember:
+  case CE_CXXMemberOperator:
+  case CE_Block:
+  case CE_CXXConstructor:
+  case CE_CXXDestructor:
+  case CE_CXXAllocator:
+    // FIXME: These calls are currently unsupported.
+    return getPersistentStopSummary();
+  case CE_ObjCMessage: {
+    const ObjCMethodCall &Msg = cast<ObjCMethodCall>(Call);
+    if (Msg.isInstanceMessage())
+      Summ = getInstanceMethodSummary(Msg, State);
+    else
+      Summ = getClassMethodSummary(Msg);
+    break;
+  }
+  }
+
+  updateSummaryForCall(Summ, Call);
+
+  assert(Summ && "Unknown call type?");
+  return Summ;
+}
+
+
+const RetainSummary *
+RetainSummaryManager::getCFCreateGetRuleSummary(const FunctionDecl *FD) {
+  if (coreFoundation::followsCreateRule(FD))
+    return getCFSummaryCreateRule(FD);
+
+  return getCFSummaryGetRule(FD);
+}
+
+const RetainSummary *
+RetainSummaryManager::getUnarySummary(const FunctionType* FT,
+                                      UnaryFuncKind func) {
+
+  // Sanity check that this is *really* a unary function.  This can
+  // happen if people do weird things.
+  const FunctionProtoType* FTP = dyn_cast<FunctionProtoType>(FT);
+  if (!FTP || FTP->getNumParams() != 1)
+    return getPersistentStopSummary();
+
+  assert (ScratchArgs.isEmpty());
+
+  ArgEffect Effect;
+  switch (func) {
+  case cfretain: Effect = IncRef; break;
+  case cfrelease: Effect = DecRef; break;
+  case cfautorelease: Effect = Autorelease; break;
+  }
+
+  ScratchArgs = AF.add(ScratchArgs, 0, Effect);
+  return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+}
+
+const RetainSummary *
+RetainSummaryManager::getCFSummaryCreateRule(const FunctionDecl *FD) {
+  assert (ScratchArgs.isEmpty());
+
+  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
+}
+
+const RetainSummary *
+RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
+  assert (ScratchArgs.isEmpty());
+  return getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::CF),
+                              DoNothing, DoNothing);
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
+// Summary creation for Selectors.
+//===----------------------------------------------------------------------===//
+
+Optional<RetEffect>
+RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
+                                                  const Decl *D) {
+  if (cocoa::isCocoaObjectRef(RetTy)) {
+    if (D->hasAttr<NSReturnsRetainedAttr>())
+      return ObjCAllocRetE;
+
+    if (D->hasAttr<NSReturnsNotRetainedAttr>() ||
+        D->hasAttr<NSReturnsAutoreleasedAttr>())
+      return RetEffect::MakeNotOwned(RetEffect::ObjC);
+
+  } else if (!RetTy->isPointerType()) {
+    return None;
+  }
+
+  if (D->hasAttr<CFReturnsRetainedAttr>())
+    return RetEffect::MakeOwned(RetEffect::CF);
+  else if (RetainSummary::hasRCAnnotation(D, "rc_ownership_returns_retained"))
+    return RetEffect::MakeOwned(RetEffect::Generalized);
+
+  if (D->hasAttr<CFReturnsNotRetainedAttr>())
+    return RetEffect::MakeNotOwned(RetEffect::CF);
+
+  return None;
+}
+
+void
+RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
+                                                   const FunctionDecl *FD) {
+  if (!FD)
+    return;
+
+  assert(Summ && "Must have a summary to add annotations to.");
+  RetainSummaryTemplate Template(Summ, *this);
+
+  // Effects on the parameters.
+  unsigned parm_idx = 0;
+  for (FunctionDecl::param_const_iterator pi = FD->param_begin(),
+         pe = FD->param_end(); pi != pe; ++pi, ++parm_idx) {
+    const ParmVarDecl *pd = *pi;
+    if (pd->hasAttr<NSConsumedAttr>())
+      Template->addArg(AF, parm_idx, DecRefMsg);
+    else if (pd->hasAttr<CFConsumedAttr>() ||
+             RetainSummary::hasRCAnnotation(pd, "rc_ownership_consumed"))
+      Template->addArg(AF, parm_idx, DecRef);
+    else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
+             RetainSummary::hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
+      QualType PointeeTy = pd->getType()->getPointeeType();
+      if (!PointeeTy.isNull())
+        if (coreFoundation::isCFObjectRef(PointeeTy))
+          Template->addArg(AF, parm_idx, RetainedOutParameter);
+    } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
+      QualType PointeeTy = pd->getType()->getPointeeType();
+      if (!PointeeTy.isNull())
+        if (coreFoundation::isCFObjectRef(PointeeTy))
+          Template->addArg(AF, parm_idx, UnretainedOutParameter);
+    }
+  }
+
+  QualType RetTy = FD->getReturnType();
+  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
+    Template->setRetEffect(*RetE);
+}
+
+void
+RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
+                                                   const ObjCMethodDecl *MD) {
+  if (!MD)
+    return;
+
+  assert(Summ && "Must have a valid summary to add annotations to");
+  RetainSummaryTemplate Template(Summ, *this);
+
+  // Effects on the receiver.
+  if (MD->hasAttr<NSConsumesSelfAttr>())
+    Template->setReceiverEffect(DecRefMsg);
+
+  // Effects on the parameters.
+  unsigned parm_idx = 0;
+  for (ObjCMethodDecl::param_const_iterator
+         pi=MD->param_begin(), pe=MD->param_end();
+       pi != pe; ++pi, ++parm_idx) {
+    const ParmVarDecl *pd = *pi;
+    if (pd->hasAttr<NSConsumedAttr>())
+      Template->addArg(AF, parm_idx, DecRefMsg);
+    else if (pd->hasAttr<CFConsumedAttr>()) {
+      Template->addArg(AF, parm_idx, DecRef);
+    } else if (pd->hasAttr<CFReturnsRetainedAttr>()) {
+      QualType PointeeTy = pd->getType()->getPointeeType();
+      if (!PointeeTy.isNull())
+        if (coreFoundation::isCFObjectRef(PointeeTy))
+          Template->addArg(AF, parm_idx, RetainedOutParameter);
+    } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
+      QualType PointeeTy = pd->getType()->getPointeeType();
+      if (!PointeeTy.isNull())
+        if (coreFoundation::isCFObjectRef(PointeeTy))
+          Template->addArg(AF, parm_idx, UnretainedOutParameter);
+    }
+  }
+
+  QualType RetTy = MD->getReturnType();
+  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
+    Template->setRetEffect(*RetE);
+}
+
+const RetainSummary *
+RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
+                                               Selector S, QualType RetTy) {
+  // Any special effects?
+  ArgEffect ReceiverEff = DoNothing;
+  RetEffect ResultEff = RetEffect::MakeNoRet();
+
+  // Check the method family, and apply any default annotations.
+  switch (MD ? MD->getMethodFamily() : S.getMethodFamily()) {
+    case OMF_None:
+    case OMF_initialize:
+    case OMF_performSelector:
+      // Assume all Objective-C methods follow Cocoa Memory Management rules.
+      // FIXME: Does the non-threaded performSelector family really belong here?
+      // The selector could be, say, @selector(copy).
+      if (cocoa::isCocoaObjectRef(RetTy))
+        ResultEff = RetEffect::MakeNotOwned(RetEffect::ObjC);
+      else if (coreFoundation::isCFObjectRef(RetTy)) {
+        // ObjCMethodDecl currently doesn't consider CF objects as valid return
+        // values for alloc, new, copy, or mutableCopy, so we have to
+        // double-check with the selector. This is ugly, but there aren't that
+        // many Objective-C methods that return CF objects, right?
+        if (MD) {
+          switch (S.getMethodFamily()) {
+          case OMF_alloc:
+          case OMF_new:
+          case OMF_copy:
+          case OMF_mutableCopy:
+            ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+            break;
+          default:
+            ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
+            break;
+          }
+        } else {
+          ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
+        }
+      }
+      break;
+    case OMF_init:
+      ResultEff = ObjCInitRetE;
+      ReceiverEff = DecRefMsg;
+      break;
+    case OMF_alloc:
+    case OMF_new:
+    case OMF_copy:
+    case OMF_mutableCopy:
+      if (cocoa::isCocoaObjectRef(RetTy))
+        ResultEff = ObjCAllocRetE;
+      else if (coreFoundation::isCFObjectRef(RetTy))
+        ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+      break;
+    case OMF_autorelease:
+      ReceiverEff = Autorelease;
+      break;
+    case OMF_retain:
+      ReceiverEff = IncRefMsg;
+      break;
+    case OMF_release:
+      ReceiverEff = DecRefMsg;
+      break;
+    case OMF_dealloc:
+      ReceiverEff = Dealloc;
+      break;
+    case OMF_self:
+      // -self is handled specially by the ExprEngine to propagate the receiver.
+      break;
+    case OMF_retainCount:
+    case OMF_finalize:
+      // These methods don't return objects.
+      break;
+  }
+
+  // If one of the arguments in the selector has the keyword 'delegate' we
+  // should stop tracking the reference count for the receiver.  This is
+  // because the reference count is quite possibly handled by a delegate
+  // method.
+  if (S.isKeywordSelector()) {
+    for (unsigned i = 0, e = S.getNumArgs(); i != e; ++i) {
+      StringRef Slot = S.getNameForSlot(i);
+      if (Slot.substr(Slot.size() - 8).equals_lower("delegate")) {
+        if (ResultEff == ObjCInitRetE)
+          ResultEff = RetEffect::MakeNoRetHard();
+        else
+          ReceiverEff = StopTrackingHard;
+      }
+    }
+  }
+
+  if (ScratchArgs.isEmpty() && ReceiverEff == DoNothing &&
+      ResultEff.getKind() == RetEffect::NoRet)
+    return getDefaultSummary();
+
+  return getPersistentSummary(ResultEff, ReceiverEff, MayEscape);
+}
+
+const RetainSummary *
+RetainSummaryManager::getInstanceMethodSummary(const ObjCMethodCall &Msg,
+                                               ProgramStateRef State) {
+  const ObjCInterfaceDecl *ReceiverClass = nullptr;
+
+  // We do better tracking of the type of the object than the core ExprEngine.
+  // See if we have its type in our private state.
+  // FIXME: Eventually replace the use of state->get<RefBindings> with
+  // a generic API for reasoning about the Objective-C types of symbolic
+  // objects.
+  SVal ReceiverV = Msg.getReceiverSVal();
+  if (SymbolRef Sym = ReceiverV.getAsLocSymbol())
+    if (const RefVal *T = getRefBinding(State, Sym))
+      if (const ObjCObjectPointerType *PT =
+            T->getType()->getAs<ObjCObjectPointerType>())
+        ReceiverClass = PT->getInterfaceDecl();
+
+  // If we don't know what kind of object this is, fall back to its static type.
+  if (!ReceiverClass)
+    ReceiverClass = Msg.getReceiverInterface();
+
+  // FIXME: The receiver could be a reference to a class, meaning that
+  //  we should use the class method.
+  // id x = [NSObject class];
+  // [x performSelector:... withObject:... afterDelay:...];
+  Selector S = Msg.getSelector();
+  const ObjCMethodDecl *Method = Msg.getDecl();
+  if (!Method && ReceiverClass)
+    Method = ReceiverClass->getInstanceMethod(S);
+
+  return getMethodSummary(S, ReceiverClass, Method, Msg.getResultType(),
+                          ObjCMethodSummaries);
+}
+
+const RetainSummary *
+RetainSummaryManager::getMethodSummary(Selector S, const ObjCInterfaceDecl *ID,
+                                       const ObjCMethodDecl *MD, QualType RetTy,
+                                       ObjCMethodSummariesTy &CachedSummaries) {
+
+  // Look up a summary in our summary cache.
+  const RetainSummary *Summ = CachedSummaries.find(ID, S);
+
+  if (!Summ) {
+    Summ = getStandardMethodSummary(MD, S, RetTy);
+
+    // Annotations override defaults.
+    updateSummaryFromAnnotations(Summ, MD);
+
+    // Memoize the summary.
+    CachedSummaries[ObjCSummaryKey(ID, S)] = Summ;
+  }
+
+  return Summ;
+}
+
+void RetainSummaryManager::InitializeClassMethodSummaries() {
+  assert(ScratchArgs.isEmpty());
+  // Create the [NSAssertionHandler currentHander] summary.
+  addClassMethSummary("NSAssertionHandler", "currentHandler",
+                getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::ObjC)));
+
+  // Create the [NSAutoreleasePool addObject:] summary.
+  ScratchArgs = AF.add(ScratchArgs, 0, Autorelease);
+  addClassMethSummary("NSAutoreleasePool", "addObject",
+                      getPersistentSummary(RetEffect::MakeNoRet(),
+                                           DoNothing, Autorelease));
+}
+
+void RetainSummaryManager::InitializeMethodSummaries() {
+
+  assert (ScratchArgs.isEmpty());
+
+  // Create the "init" selector.  It just acts as a pass-through for the
+  // receiver.
+  const RetainSummary *InitSumm = getPersistentSummary(ObjCInitRetE, DecRefMsg);
+  addNSObjectMethSummary(GetNullarySelector("init", Ctx), InitSumm);
+
+  // awakeAfterUsingCoder: behaves basically like an 'init' method.  It
+  // claims the receiver and returns a retained object.
+  addNSObjectMethSummary(GetUnarySelector("awakeAfterUsingCoder", Ctx),
+                         InitSumm);
+
+  // The next methods are allocators.
+  const RetainSummary *AllocSumm = getPersistentSummary(ObjCAllocRetE);
+  const RetainSummary *CFAllocSumm =
+    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
+
+  // Create the "retain" selector.
+  RetEffect NoRet = RetEffect::MakeNoRet();
+  const RetainSummary *Summ = getPersistentSummary(NoRet, IncRefMsg);
+  addNSObjectMethSummary(GetNullarySelector("retain", Ctx), Summ);
+
+  // Create the "release" selector.
+  Summ = getPersistentSummary(NoRet, DecRefMsg);
+  addNSObjectMethSummary(GetNullarySelector("release", Ctx), Summ);
+
+  // Create the -dealloc summary.
+  Summ = getPersistentSummary(NoRet, Dealloc);
+  addNSObjectMethSummary(GetNullarySelector("dealloc", Ctx), Summ);
+
+  // Create the "autorelease" selector.
+  Summ = getPersistentSummary(NoRet, Autorelease);
+  addNSObjectMethSummary(GetNullarySelector("autorelease", Ctx), Summ);
+
+  // For NSWindow, allocated objects are (initially) self-owned.
+  // FIXME: For now we opt for false negatives with NSWindow, as these objects
+  //  self-own themselves.  However, they only do this once they are displayed.
+  //  Thus, we need to track an NSWindow's display status.
+  //  This is tracked in <rdar://problem/6062711>.
+  //  See also http://llvm.org/bugs/show_bug.cgi?id=3714.
+  const RetainSummary *NoTrackYet = getPersistentSummary(RetEffect::MakeNoRet(),
+                                                   StopTracking,
+                                                   StopTracking);
+
+  addClassMethSummary("NSWindow", "alloc", NoTrackYet);
+
+  // For NSPanel (which subclasses NSWindow), allocated objects are not
+  //  self-owned.
+  // FIXME: For now we don't track NSPanels. object for the same reason
+  //   as for NSWindow objects.
+  addClassMethSummary("NSPanel", "alloc", NoTrackYet);
+
+  // For NSNull, objects returned by +null are singletons that ignore
+  // retain/release semantics.  Just don't track them.
+  // <rdar://problem/12858915>
+  addClassMethSummary("NSNull", "null", NoTrackYet);
+
+  // Don't track allocated autorelease pools, as it is okay to prematurely
+  // exit a method.
+  addClassMethSummary("NSAutoreleasePool", "alloc", NoTrackYet);
+  addClassMethSummary("NSAutoreleasePool", "allocWithZone", NoTrackYet, false);
+  addClassMethSummary("NSAutoreleasePool", "new", NoTrackYet);
+
+  // Create summaries QCRenderer/QCView -createSnapShotImageOfType:
+  addInstMethSummary("QCRenderer", AllocSumm, "createSnapshotImageOfType");
+  addInstMethSummary("QCView", AllocSumm, "createSnapshotImageOfType");
+
+  // Create summaries for CIContext, 'createCGImage' and
+  // 'createCGLayerWithSize'.  These objects are CF objects, and are not
+  // automatically garbage collected.
+  addInstMethSummary("CIContext", CFAllocSumm, "createCGImage", "fromRect");
+  addInstMethSummary("CIContext", CFAllocSumm, "createCGImage", "fromRect",
+                     "format", "colorSpace");
+  addInstMethSummary("CIContext", CFAllocSumm, "createCGLayerWithSize", "info");
+}
