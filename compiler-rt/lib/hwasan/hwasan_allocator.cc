@@ -156,8 +156,12 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
   meta->state = CHUNK_ALLOCATED;
   meta->requested_size = size;
   meta->alloc_context_id = StackDepotPut(*stack);
-  if (zeroise)
+  if (zeroise) {
     internal_memset(allocated, 0, size);
+  } else if (flags()->max_malloc_fill_size > 0) {
+    uptr fill_size = Min(size, (uptr)flags()->max_malloc_fill_size);
+    internal_memset(allocated, flags()->malloc_fill_byte, fill_size);
+  }
 
   void *user_ptr = allocated;
   if (flags()->tag_in_malloc &&
@@ -182,6 +186,10 @@ void HwasanDeallocate(StackTrace *stack, void *user_ptr) {
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
   HwasanThread *t = GetCurrentThread();
+  if (flags()->max_free_fill_size > 0) {
+    uptr fill_size = Min(size, (uptr)flags()->max_free_fill_size);
+    internal_memset(p, flags()->free_fill_byte, fill_size);
+  }
   if (flags()->tag_in_free &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
     TagMemoryAligned((uptr)p, size,
