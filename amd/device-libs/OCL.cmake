@@ -27,9 +27,10 @@ set (CMAKE_EXECUTABLE_SUFFIX_OCL ".co")
 macro(opencl_bc_lib name)
   get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
 
-  set(lib_tgt ${name}_lib)
+  set(lib_tgt ${name}_lib_impl)
+  set(final_lib_tgt ${name}_lib)
 
-  list(APPEND AMDGCN_LIB_LIST ${lib_tgt})
+  list(APPEND AMDGCN_LIB_LIST ${final_lib_tgt})
   set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
   foreach(file ${ARGN})
     get_filename_component(fext ${file} EXT)
@@ -69,8 +70,15 @@ macro(opencl_bc_lib name)
     POST_BUILD
     COMMAND ${PREPARE_BUILTINS} $<TARGET_FILE:${lib_tgt}> -o ${output_name}
     DEPENDS ${lib_tgt}
-    COMMENT "Generating ${output_name}"
-  )
+    COMMENT "Generating ${output_name}")
+
+  add_custom_target(${final_lib_tgt})
+  add_dependencies(${final_lib_tgt} ${lib_tgt})
+
+  set_target_properties(${final_lib_tgt} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_NAME "${name}")
+
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${output_name} DESTINATION lib COMPONENT device-libs)
 endmacro()
 
