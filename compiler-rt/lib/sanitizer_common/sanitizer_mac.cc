@@ -890,10 +890,10 @@ struct __sanitizer_task_vm_info {
     (sizeof(__sanitizer_task_vm_info) / sizeof(natural_t)))
 
 uptr GetTaskInfoMaxAddress() {
-  __sanitizer_task_vm_info vm_info = {};
+  __sanitizer_task_vm_info vm_info = {} /* zero initialize */;
   mach_msg_type_number_t count = __SANITIZER_TASK_VM_INFO_COUNT;
   int err = task_info(mach_task_self(), TASK_VM_INFO, (int *)&vm_info, &count);
-  if (err == 0) {
+  if (err == 0 && vm_info.max_address != 0) {
     return vm_info.max_address - 1;
   } else {
     // xnu cannot provide vm address limit
