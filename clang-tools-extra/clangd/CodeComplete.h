@@ -82,6 +82,10 @@ struct CodeCompleteOptions {
   /// Include completions that require small corrections, e.g. change '.' to
   /// '->' on member access etc.
   bool IncludeFixIts = false;
+
+  /// Whether to generate snippets for function arguments on code-completion.
+  /// Needs snippets to be enabled as well.
+  bool EnableFunctionArgSnippets = true;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
