@@ -172,12 +172,11 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 CodeCompleteOptions Opts);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(PathRef FileName,
-                            const tooling::CompileCommand &Command,
-                            PrecompiledPreamble const *Preamble,
-                            StringRef Contents, Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs);
+SignatureHelp
+signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
+              PrecompiledPreamble const *Preamble, StringRef Contents,
+              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+              std::shared_ptr<PCHContainerOperations> PCHs, SymbolIndex *Index);
 
 // For index-based completion, we only consider:
 //   * symbols in namespaces or translation unit scopes (e.g. no class

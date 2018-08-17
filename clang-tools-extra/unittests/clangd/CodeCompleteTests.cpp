@@ -826,11 +826,19 @@ TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
   EXPECT_TRUE(Results.Completions.empty());
 }
 
-SignatureHelp signatures(StringRef Text) {
+SignatureHelp signatures(StringRef Text,
+                         std::vector<Symbol> IndexSymbols = {}) {
+  std::unique_ptr<SymbolIndex> Index;
+  if (!IndexSymbols.empty())
+    Index = memIndex(IndexSymbols);
+
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.StaticIndex = Index.get();
+
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
@@ -845,6 +853,7 @@ MATCHER_P(ParamsAre, P, "") {
       return false;
   return true;
 }
+MATCHER_P(SigDoc, Doc, "") { return arg.documentation == Doc; }
 
 Matcher<SignatureInformation> Sig(std::string Label,
                                   std::vector<std::string> Params) {
@@ -1592,6 +1601,51 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
 
   EXPECT_THAT(signatures(Sig3).signatures,
               ElementsAre(Sig("foo(T, U) -> void", {"T", "U"})));
+}
+
+TEST(SignatureHelpTest, IndexDocumentation) {
+  Symbol::Details DocDetails;
+  DocDetails.Documentation = "Doc from the index";
+
+  Symbol Foo0 = sym("foo", index::SymbolKind::Function, "@F@\\0#");
+  Foo0.Detail = &DocDetails;
+  Symbol Foo1 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#");
+  Foo1.Detail = &DocDetails;
+  Symbol Foo2 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#I#");
+
+  EXPECT_THAT(
+      signatures(R"cpp(
+    int foo();
+    int foo(double);
+
+    void test() {
+      foo(^);
+    }
+  )cpp",
+                 {Foo0})
+          .signatures,
+      ElementsAre(AllOf(Sig("foo() -> int", {}), SigDoc("Doc from the index")),
+                  AllOf(Sig("foo(double) -> int", {"double"}), SigDoc(""))));
+
+  EXPECT_THAT(
+      signatures(R"cpp(
+    int foo();
+    // Overriden doc from sema
+    int foo(int);
+    // Doc from sema
+    int foo(int, int);
+
+    void test() {
+      foo(^);
+    }
+  )cpp",
+                 {Foo0, Foo1, Foo2})
+          .signatures,
+      ElementsAre(AllOf(Sig("foo() -> int", {}), SigDoc("Doc from the index")),
+                  AllOf(Sig("foo(int) -> int", {"int"}),
+                        SigDoc("Overriden doc from sema")),
+                  AllOf(Sig("foo(int, int) -> int", {"int", "int"}),
+                        SigDoc("Doc from sema"))));
 }
 
 } // namespace
