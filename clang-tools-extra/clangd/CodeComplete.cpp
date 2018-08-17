@@ -687,18 +687,23 @@ private:
   llvm::unique_function<void()> ResultsCallback;
 };
 
-using ScoredSignature =
-    std::pair<SignatureQualitySignals, SignatureInformation>;
+struct ScoredSignature {
+  // When set, requires documentation to be requested from the index with this
+  // ID.
+  llvm::Optional<SymbolID> IDForDoc;
+  SignatureInformation Signature;
+  SignatureQualitySignals Quality;
+};
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
-
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
-                         SignatureHelp &SigHelp)
-      : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
+                         SymbolIndex *Index, SignatureHelp &SigHelp)
+      : CodeCompleteConsumer(CodeCompleteOpts,
+                             /*OutputIsBinary=*/false),
         SigHelp(SigHelp),
         Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
-        CCTUInfo(Allocator) {}
+        CCTUInfo(Allocator), Index(Index) {}
 
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
@@ -726,47 +731,74 @@ public:
       const auto *CCS = Candidate.CreateSignatureString(
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
-      // FIXME: for headers, we need to get a comment from the index.
       ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
           Candidate.getFunction()
               ? getDeclComment(S.getASTContext(), *Candidate.getFunction())
               : ""));
     }
-    std::sort(ScoredSignatures.begin(), ScoredSignatures.end(),
-              [](const ScoredSignature &L, const ScoredSignature &R) {
-                // Ordering follows:
-                // - Less number of parameters is better.
-                // - Function is better than FunctionType which is better than
-                // Function Template.
-                // - High score is better.
-                // - Shorter signature is better.
-                // - Alphebatically smaller is better.
-                if (L.first.NumberOfParameters != R.first.NumberOfParameters)
-                  return L.first.NumberOfParameters <
-                         R.first.NumberOfParameters;
-                if (L.first.NumberOfOptionalParameters !=
-                    R.first.NumberOfOptionalParameters)
-                  return L.first.NumberOfOptionalParameters <
-                         R.first.NumberOfOptionalParameters;
-                if (L.first.Kind != R.first.Kind) {
-                  using OC = CodeCompleteConsumer::OverloadCandidate;
-                  switch (L.first.Kind) {
-                  case OC::CK_Function:
-                    return true;
-                  case OC::CK_FunctionType:
-                    return R.first.Kind != OC::CK_Function;
-                  case OC::CK_FunctionTemplate:
-                    return false;
-                  }
-                  llvm_unreachable("Unknown overload candidate type.");
-                }
-                if (L.second.label.size() != R.second.label.size())
-                  return L.second.label.size() < R.second.label.size();
-                return L.second.label < R.second.label;
-              });
-    for (const auto &SS : ScoredSignatures)
-      SigHelp.signatures.push_back(SS.second);
+
+    // Sema does not load the docs from the preamble, so we need to fetch extra
+    // docs from the index instead.
+    llvm::DenseMap<SymbolID, std::string> FetchedDocs;
+    if (Index) {
+      LookupRequest IndexRequest;
+      for (const auto &S : ScoredSignatures) {
+        if (!S.IDForDoc)
+          continue;
+        IndexRequest.IDs.insert(*S.IDForDoc);
+      }
+      Index->lookup(IndexRequest, [&](const Symbol &S) {
+        if (!S.Detail || S.Detail->Documentation.empty())
+          return;
+        FetchedDocs[S.ID] = S.Detail->Documentation;
+      });
+      log("SigHelp: requested docs for {0} symbols from the index, got {1} "
+          "symbols with non-empty docs in the response",
+          IndexRequest.IDs.size(), FetchedDocs.size());
+    }
+
+    std::sort(
+        ScoredSignatures.begin(), ScoredSignatures.end(),
+        [](const ScoredSignature &L, const ScoredSignature &R) {
+          // Ordering follows:
+          // - Less number of parameters is better.
+          // - Function is better than FunctionType which is better than
+          // Function Template.
+          // - High score is better.
+          // - Shorter signature is better.
+          // - Alphebatically smaller is better.
+          if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
+            return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
+          if (L.Quality.NumberOfOptionalParameters !=
+              R.Quality.NumberOfOptionalParameters)
+            return L.Quality.NumberOfOptionalParameters <
+                   R.Quality.NumberOfOptionalParameters;
+          if (L.Quality.Kind != R.Quality.Kind) {
+            using OC = CodeCompleteConsumer::OverloadCandidate;
+            switch (L.Quality.Kind) {
+            case OC::CK_Function:
+              return true;
+            case OC::CK_FunctionType:
+              return R.Quality.Kind != OC::CK_Function;
+            case OC::CK_FunctionTemplate:
+              return false;
+            }
+            llvm_unreachable("Unknown overload candidate type.");
+          }
+          if (L.Signature.label.size() != R.Signature.label.size())
+            return L.Signature.label.size() < R.Signature.label.size();
+          return L.Signature.label < R.Signature.label;
+        });
+
+    for (auto &SS : ScoredSignatures) {
+      auto IndexDocIt =
+          SS.IDForDoc ? FetchedDocs.find(*SS.IDForDoc) : FetchedDocs.end();
+      if (IndexDocIt != FetchedDocs.end())
+        SS.Signature.documentation = IndexDocIt->second;
+
+      SigHelp.signatures.push_back(std::move(SS.Signature));
+    }
   }
 
   GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
@@ -779,11 +811,11 @@ private:
   ScoredSignature processOverloadCandidate(const OverloadCandidate &Candidate,
                                            const CodeCompletionString &CCS,
                                            llvm::StringRef DocComment) const {
-    SignatureInformation Result;
+    SignatureInformation Signature;
     SignatureQualitySignals Signal;
     const char *ReturnType = nullptr;
 
-    Result.documentation = formatDocumentation(CCS, DocComment);
+    Signature.documentation = formatDocumentation(CCS, DocComment);
     Signal.Kind = Candidate.getKind();
 
     for (const auto &Chunk : CCS) {
@@ -802,10 +834,10 @@ private:
         // A piece of text that describes the parameter that corresponds to
         // the code-completion location within a function call, message send,
         // macro invocation, etc.
-        Result.label += Chunk.Text;
+        Signature.label += Chunk.Text;
         ParameterInformation Info;
         Info.label = Chunk.Text;
-        Result.parameters.push_back(std::move(Info));
+        Signature.parameters.push_back(std::move(Info));
         Signal.NumberOfParameters++;
         Signal.ContainsActiveParameter = true;
         break;
@@ -814,29 +846,36 @@ private:
         // The rest of the parameters are defaulted/optional.
         assert(Chunk.Optional &&
                "Expected the optional code completion string to be non-null.");
-        Result.label +=
-            getOptionalParameters(*Chunk.Optional, Result.parameters, Signal);
+        Signature.label += getOptionalParameters(*Chunk.Optional,
+                                                 Signature.parameters, Signal);
         break;
       }
       case CodeCompletionString::CK_VerticalSpace:
         break;
       default:
-        Result.label += Chunk.Text;
+        Signature.label += Chunk.Text;
         break;
       }
     }
     if (ReturnType) {
-      Result.label += " -> ";
-      Result.label += ReturnType;
+      Signature.label += " -> ";
+      Signature.label += ReturnType;
     }
-    dlog("Signal for {0}: {1}", Result, Signal);
-    return {Signal, Result};
+    dlog("Signal for {0}: {1}", Signature, Signal);
+    ScoredSignature Result;
+    Result.Signature = std::move(Signature);
+    Result.Quality = Signal;
+    Result.IDForDoc =
+        Result.Signature.documentation.empty() && Candidate.getFunction()
+            ? clangd::getSymbolID(Candidate.getFunction())
+            : llvm::None;
+    return Result;
   }
 
   SignatureHelp &SigHelp;
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
   CodeCompletionTUInfo CCTUInfo;
-
+  const SymbolIndex *Index;
 }; // SignatureHelpCollector
 
 struct SemaCompleteInput {
@@ -1315,7 +1354,8 @@ SignatureHelp signatureHelp(PathRef FileName,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs) {
+                            std::shared_ptr<PCHContainerOperations> PCHs,
+                            SymbolIndex *Index) {
   SignatureHelp Result;
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
@@ -1323,10 +1363,11 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = false;
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
-  semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
-                   Options,
-                   {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
-                    std::move(PCHs)});
+  semaCodeComplete(
+      llvm::make_unique<SignatureHelpCollector>(Options, Index, Result),
+      Options,
+      {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
+       std::move(PCHs)});
   return Result;
 }
 
