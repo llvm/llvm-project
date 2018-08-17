@@ -111,6 +111,9 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_print_shadow(const void *x, uptr size);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_handle_longjmp(const void *sp_dst);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 u16 __sanitizer_unaligned_load16(const uu16 *p);
 
 SANITIZER_INTERFACE_ATTRIBUTE
