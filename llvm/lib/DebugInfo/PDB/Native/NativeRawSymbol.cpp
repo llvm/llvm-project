@@ -188,7 +188,7 @@ uint32_t NativeRawSymbol::getLiveRangeStartRelativeVirtualAddress() const {
 }
 
 codeview::RegisterId NativeRawSymbol::getLocalBasePointerRegisterId() const {
-  return codeview::RegisterId::CVRegEAX;
+  return codeview::RegisterId::EAX;
 }
 
 uint32_t NativeRawSymbol::getLowerBoundId() const {
@@ -248,7 +248,7 @@ uint32_t NativeRawSymbol::getRank() const {
 }
 
 codeview::RegisterId NativeRawSymbol::getRegisterId() const {
-  return codeview::RegisterId::CVRegEAX;
+  return codeview::RegisterId::EAX;
 }
 
 uint32_t NativeRawSymbol::getRegisterType() const {

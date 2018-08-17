@@ -77,9 +77,15 @@ static cl::opt<unsigned> MaxCheckLimit(
     cl::desc("The maximum number of stores/phis MemorySSA"
              "will consider trying to walk past (default = 100)"));
 
-static cl::opt<bool>
-    VerifyMemorySSA("verify-memoryssa", cl::init(false), cl::Hidden,
-                    cl::desc("Verify MemorySSA in legacy printer pass."));
+// Always verify MemorySSA if expensive checking is enabled.
+#ifdef EXPENSIVE_CHECKS
+bool llvm::VerifyMemorySSA = true;
+#else
+bool llvm::VerifyMemorySSA = false;
+#endif
+static cl::opt<bool, true>
+    VerifyMemorySSAX("verify-memoryssa", cl::location(VerifyMemorySSA),
+                     cl::Hidden, cl::desc("Enable verification of MemorySSA."));
 
 namespace llvm {
 

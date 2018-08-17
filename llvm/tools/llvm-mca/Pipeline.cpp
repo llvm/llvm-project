@@ -32,10 +32,9 @@ void Pipeline::addEventListener(HWEventListener *Listener) {
 }
 
 bool Pipeline::hasWorkToProcess() {
-  const auto It = llvm::find_if(Stages, [](const std::unique_ptr<Stage> &S) {
+  return llvm::any_of(Stages, [](const std::unique_ptr<Stage> &S) {
     return S->hasWorkToComplete();
   });
-  return It != Stages.end();
 }
 
 // This routine returns early if any stage returns 'false' after execute() is
@@ -62,6 +61,8 @@ void Pipeline::postExecuteStages() {
 }
 
 llvm::Error Pipeline::run() {
+  assert(!Stages.empty() && "Unexpected empty pipeline found!");
+
   while (hasWorkToProcess()) {
     notifyCycleBegin();
     if (llvm::Error Err = runCycle())
@@ -73,13 +74,18 @@ llvm::Error Pipeline::run() {
 }
 
 llvm::Error Pipeline::runCycle() {
-  // Update the stages before we do any processing for this cycle.
-  InstRef IR;
-  for (auto &S : Stages)
-    S->cycleStart();
+  // Update stages before we start processing new instructions.
+  llvm::Error Err = llvm::ErrorSuccess();
+  for (auto I = Stages.begin(), E = Stages.end(); I != E && !Err; ++I) {
+    const std::unique_ptr<Stage> &S = *I;
+    Err = S->cycleStart();
+  }
 
-  // Continue executing this cycle until any stage claims it cannot make
-  // progress.
+  if (Err)
+    return Err;
+
+  // Now fetch and execute new instructions.
+  InstRef IR;
   while (true) {
     preExecuteStages();
     Stage::Status Val = executeStages(IR);
@@ -90,9 +96,12 @@ llvm::Error Pipeline::runCycle() {
     postExecuteStages();
   }
 
-  for (auto &S : Stages)
-    S->cycleEnd();
-  return llvm::ErrorSuccess();
+  // Update stages in preparation for a new cycle.
+  for (auto I = Stages.begin(), E = Stages.end(); I != E && !Err; ++I) {
+    const std::unique_ptr<Stage> &S = *I;
+    Err = S->cycleEnd();
+  }
+  return Err;
 }
 
 void Pipeline::notifyCycleBegin() {

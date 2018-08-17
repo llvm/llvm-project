@@ -12,7 +12,7 @@ entry:
 
 ; ASM:         .cv_def_range    Lfunc_begin0 Lfunc_end0, "A\021\200\000\000\000"
 ; OBJ:    DefRangeRegisterSym {
-; OBJ:      Register: CVRegST0 (0x80)
+; OBJ:      Register: ST0 (0x80)
 ; OBJ:      MayHaveNoName: 0
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x0

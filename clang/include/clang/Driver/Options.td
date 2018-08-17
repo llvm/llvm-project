@@ -2348,6 +2348,10 @@ def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,
   Flags<[Unsupported]>;
+def print_target_triple : Flag<["-", "--"], "print-target-triple">,
+  HelpText<"Print the normalized target triple">;
+def print_effective_triple : Flag<["-", "--"], "print-effective-triple">,
+  HelpText<"Print the effective target triple">;
 def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   HelpText<"Print the full program path of <name>">, MetaVarName<"<name>">;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,

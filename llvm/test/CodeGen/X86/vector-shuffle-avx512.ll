@@ -82,33 +82,33 @@ define <4 x double> @expand2(<2 x double> %a) {
 ; SKX64-LABEL: expand2:
 ; SKX64:       # %bb.0:
 ; SKX64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; SKX64-NEXT:    movb $9, %al
-; SKX64-NEXT:    kmovd %eax, %k1
-; SKX64-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; SKX64-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; SKX64-NEXT:    vmovaps %xmm0, %xmm0
+; SKX64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: expand2:
 ; KNL64:       # %bb.0:
 ; KNL64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; KNL64-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; KNL64-NEXT:    vmovaps %xmm0, %xmm0
+; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: expand2:
 ; SKX32:       # %bb.0:
 ; SKX32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; SKX32-NEXT:    movb $9, %al
-; SKX32-NEXT:    kmovd %eax, %k1
-; SKX32-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; SKX32-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; SKX32-NEXT:    vmovaps %xmm0, %xmm0
+; SKX32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: expand2:
 ; KNL32:       # %bb.0:
 ; KNL32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; KNL32-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; KNL32-NEXT:    vmovaps %xmm0, %xmm0
+; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 2, i32 1>
    ret <4 x double> %res
@@ -162,9 +162,9 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ; KNL64-LABEL: expand4:
 ; KNL64:       # %bb.0:
 ; KNL64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; KNL64-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; KNL64-NEXT:    vmovaps %xmm0, %xmm0
+; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: expand4:
@@ -178,9 +178,9 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ; KNL32-LABEL: expand4:
 ; KNL32:       # %bb.0:
 ; KNL32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; KNL32-NEXT:    vperm2f128 {{.*#+}} ymm1 = zero,zero,ymm0[0,1]
+; KNL32-NEXT:    vmovaps %xmm0, %xmm0
+; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <2 x i64> zeroinitializer, <2 x i64> %a, <4 x i32> <i32 2, i32 0, i32 0, i32 3>
    ret <4 x i64> %res

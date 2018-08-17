@@ -245,8 +245,7 @@ Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
 
 static Value *simplifyX86AddsSubs(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
-  bool IsAddition = false;
-  bool IsMasked = false;
+  bool IsAddition;
 
   switch (II.getIntrinsicID()) {
   default: llvm_unreachable("Unexpected intrinsic!");
@@ -254,21 +253,17 @@ static Value *simplifyX86AddsSubs(const IntrinsicInst &II,
   case Intrinsic::x86_sse2_padds_w:
   case Intrinsic::x86_avx2_padds_b:
   case Intrinsic::x86_avx2_padds_w:
-    IsAddition = true; IsMasked = false;
+  case Intrinsic::x86_avx512_padds_b_512:
+  case Intrinsic::x86_avx512_padds_w_512:
+    IsAddition = true;
     break;
   case Intrinsic::x86_sse2_psubs_b:
   case Intrinsic::x86_sse2_psubs_w:
   case Intrinsic::x86_avx2_psubs_b:
   case Intrinsic::x86_avx2_psubs_w:
-    IsAddition = false; IsMasked = false;
-    break;
-  case Intrinsic::x86_avx512_mask_padds_b_512:
-  case Intrinsic::x86_avx512_mask_padds_w_512:
-    IsAddition = true; IsMasked = true;
-    break;
-  case Intrinsic::x86_avx512_mask_psubs_b_512:
-  case Intrinsic::x86_avx512_mask_psubs_w_512:
-    IsAddition = false; IsMasked = true;
+  case Intrinsic::x86_avx512_psubs_b_512:
+  case Intrinsic::x86_avx512_psubs_w_512:
+    IsAddition = false;
     break;
   }
 
@@ -278,7 +273,7 @@ static Value *simplifyX86AddsSubs(const IntrinsicInst &II,
   auto SVT = VT->getElementType();
   unsigned NumElems = VT->getNumElements();
 
-  if (!Arg0 || !Arg1 || (IsMasked && !isa<Constant>(II.getOperand(2))))
+  if (!Arg0 || !Arg1)
     return nullptr;
 
   SmallVector<Constant *, 64> Result;
@@ -306,21 +301,7 @@ static Value *simplifyX86AddsSubs(const IntrinsicInst &II,
     Result.push_back(Constant::getIntegerValue(SVT, ResultElem));
   }
 
-  Value *ResultVec = ConstantVector::get(Result);
-
-  if (II.getNumArgOperands() == 4) { // For masked intrinsics.
-    Value *Src = II.getOperand(2);
-    auto Mask = II.getOperand(3);
-    if (auto *C = dyn_cast<Constant>(Mask))
-      if (C->isAllOnesValue())
-        return ResultVec;
-    auto *MaskTy = VectorType::get(
-        Builder.getInt1Ty(), cast<IntegerType>(Mask->getType())->getBitWidth());
-    Mask = Builder.CreateBitCast(Mask, MaskTy);
-    ResultVec = Builder.CreateSelect(Mask, ResultVec, Src);
-  }
-
-  return ResultVec;
+  return ConstantVector::get(Result);
 }
 
 static Value *simplifyX86immShift(const IntrinsicInst &II,
@@ -2614,14 +2595,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_padds_w:
   case Intrinsic::x86_avx2_psubs_b:
   case Intrinsic::x86_avx2_psubs_w:
-  case Intrinsic::x86_avx512_mask_padds_b_512:
-  case Intrinsic::x86_avx512_mask_padds_w_512:
-  case Intrinsic::x86_avx512_mask_psubs_b_512:
-  case Intrinsic::x86_avx512_mask_psubs_w_512:
+  case Intrinsic::x86_avx512_padds_b_512:
+  case Intrinsic::x86_avx512_padds_w_512:
+  case Intrinsic::x86_avx512_psubs_b_512:
+  case Intrinsic::x86_avx512_psubs_w_512:
     if (Value *V = simplifyX86AddsSubs(*II, Builder))
       return replaceInstUsesWith(*II, V);
     break;
-    
 
   // Constant fold ashr( <A x Bi>, Ci ).
   // Constant fold lshr( <A x Bi>, Ci ).
@@ -3629,6 +3609,33 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
       Intrinsic::ID NewIID = CmpInst::isFPPredicate(SrcPred) ?
         Intrinsic::amdgcn_fcmp : Intrinsic::amdgcn_icmp;
+
+      Type *Ty = SrcLHS->getType();
+      if (auto *CmpType = dyn_cast<IntegerType>(Ty)) {
+        // Promote to next legal integer type.
+        unsigned Width = CmpType->getBitWidth();
+        unsigned NewWidth = Width;
+        if (Width <= 16)
+          NewWidth = 16;
+        else if (Width <= 32)
+          NewWidth = 32;
+        else if (Width <= 64)
+          NewWidth = 64;
+        else if (Width > 64)
+          break; // Can't handle this.
+
+        if (Width != NewWidth) {
+          IntegerType *CmpTy = Builder.getIntNTy(NewWidth);
+          if (CmpInst::isSigned(SrcPred)) {
+            SrcLHS = Builder.CreateSExt(SrcLHS, CmpTy);
+            SrcRHS = Builder.CreateSExt(SrcRHS, CmpTy);
+          } else {
+            SrcLHS = Builder.CreateZExt(SrcLHS, CmpTy);
+            SrcRHS = Builder.CreateZExt(SrcRHS, CmpTy);
+          }
+        }
+      } else if (!Ty->isFloatTy() && !Ty->isDoubleTy() && !Ty->isHalfTy())
+        break;
 
       Value *NewF = Intrinsic::getDeclaration(II->getModule(), NewIID,
                                               SrcLHS->getType());

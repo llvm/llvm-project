@@ -94,7 +94,7 @@ static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
                                   TargetTransformInfo *TTI, bool &FreeInLoop);
 static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  const LoopSafetyInfo *SafetyInfo,
+                  LoopSafetyInfo *SafetyInfo,
                   OptimizationRemarkEmitter *ORE);
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
                  const Loop *CurLoop, LoopSafetyInfo *SafetyInfo,
@@ -1065,8 +1065,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 /// is safe to hoist, this instruction is called to do the dirty work.
 ///
 static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  const LoopSafetyInfo *SafetyInfo,
-                  OptimizationRemarkEmitter *ORE) {
+                  LoopSafetyInfo *SafetyInfo, OptimizationRemarkEmitter *ORE) {
   auto *Preheader = CurLoop->getLoopPreheader();
   LLVM_DEBUG(dbgs() << "LICM hoisting to " << Preheader->getName() << ": " << I
                     << "\n");

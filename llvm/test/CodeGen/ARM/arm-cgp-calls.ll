@@ -42,7 +42,7 @@ define i16 @promote_i8_sink_i16_1(i8 zeroext %arg0, i16 zeroext %arg1, i16 zeroe
 ; CHECK-COMMON-LABEL: promote_i8_sink_i16_2
 ; CHECK-COMMON: bl dummy_i8
 ; CHECK-COMMON: adds r0, #1
-; CHECK-COMMON: uxtb r0, r0
+; CHECK-COMMON-NOT: uxt
 ; CHECK-COMMON: cmp r0
 define i16 @promote_i8_sink_i16_2(i8 zeroext %arg0, i8 zeroext %arg1, i16 zeroext %arg2) {
   %call = tail call zeroext i8 @dummy_i8(i8 %arg0)

@@ -2759,10 +2759,12 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
+#if __mips_isa_rev != 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
     return true;
+#endif
 #if defined(__mips_hard_float) && __mips_fpr == 32
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
@@ -3073,10 +3075,12 @@ inline bool Registers_mips_newabi::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
+#if __mips_isa_rev != 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
     return true;
+#endif
   // FIXME: Hard float, DSP accumulator registers, MSA registers
   return false;
 }

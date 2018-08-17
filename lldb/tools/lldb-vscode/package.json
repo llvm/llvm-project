@@ -1,0 +1,242 @@
+{
+	"name": "lldb-vscode",
+	"displayName": "LLDB native Debug stub",
+	"version": "0.1.0",
+	"publisher": "llvm.org",
+	"description": "Debug adapter for LLDB which uses a C++ tool to interface directly with LLDB.",
+	"author": {
+		"name": "Greg Clayton",
+		"email": "clayborg@gmail.com"
+	},
+	"license": "LLVM",
+	"keywords": [
+		"multi-root ready"
+	],
+	"engines": {
+		"vscode": "^1.18.0",
+		"node": "^7.9.0"
+	},
+	"icon": "images/lldb.png",
+	"categories": [
+		"Debuggers"
+	],
+	"private": true,
+	"devDependencies": {
+		"@types/node": "7.0.43",
+		"@types/mocha": "2.2.45",
+		"typescript": "2.6.2",
+		"mocha": "4.0.1",
+		"vscode": "1.1.10",
+		"vscode-debugadapter-testsupport": "1.25.0",
+		"tslint": "5.8.0",
+		"vsce": "1.35.0"
+	},
+	"contributes": {
+		"debuggers": [
+			{
+				"type": "lldb-vscode",
+				"label": "Native LLDB Debugger",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"ada",
+						"arm",
+						"asm",
+						"c",
+						"cpp",
+						"crystal",
+						"d",
+						"fortan",
+						"fortran-modern",
+						"nim",
+						"objective-c",
+						"objectpascal",
+						"pascal",
+						"rust",
+						"swift"
+					]
+				},
+				"program": "./bin/lldb-vscode",
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"program"
+						],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "Path to the program to debug."
+							},
+							"args": {
+								"type": [ "array", "string" ],
+								"description": "Program arguments.",
+								"default": []
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Program working directory.",
+								"default": "${workspaceRoot}"
+							},
+							"env": {
+								"type": "array",
+								"description": "Additional environment variables.",
+								"default": []
+							},
+							"stopOnEntry": {
+								"type": "boolean",
+								"description": "Automatically stop after launch.",
+								"default": false
+							},
+							"disableASLR": {
+								"type": "boolean",
+								"description": "Enable or disable Address space layout randomization if the debugger supports it.",
+								"default": true
+							},
+							"disableSTDIO": {
+								"type": "boolean",
+								"description": "Don't retrieve STDIN, STDOUT and STDERR as the program is running.",
+								"default": false
+							},
+							"shellExpandArguments": {
+								"type": "boolean",
+								"description": "Expand program arguments as a shell would without actually launching the program in a shell.",
+								"default": false
+							},
+							"detachOnError": {
+								"type": "boolean",
+								"description": "Detach from the program.",
+								"default": false
+							},
+							"trace": {
+								"type": "boolean",
+								"description": "Enable logging of the Debug Adapter Protocol.",
+								"default": true
+							},
+							"sourcePath": {
+								"type": "string",
+								"description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
+							},
+							"sourceMap": {
+								"type": "array",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and desination pathname. Overrides sourcePath.",
+								"default": []
+							},
+							"debuggerRoot": {
+								"type": "string",
+								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
+							},
+							"initCommands": {
+									"type": "array",
+									"description": "Initialization commands executed upon debugger startup.",
+									"default": []
+							},
+							"preRunCommands": {
+									"type": "array",
+									"description": "Commands executed just before the program is launched.",
+									"default": []
+							},
+							"stopCommands": {
+									"type": "array",
+									"description": "Commands executed each time the program stops.",
+									"default": []
+							},
+							"exitCommands": {
+									"type": "array",
+									"description": "Commands executed at the end of debugging session.",
+									"default": []
+							}
+						}
+					},
+					"attach": {
+						"properties": {
+							"program": {
+								"type": "string",
+									"description": "Path to the program to attach to."
+							},
+							"pid": {
+								"type": [
+										"number",
+										"string"
+								],
+								"description": "System process ID to attach to."
+							},
+							"waitFor": {
+								"type": "boolean",
+								"description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
+								"default": true
+							},
+							"trace": {
+								"type": "boolean",
+								"description": "Enable logging of the Debug Adapter Protocol.",
+								"default": true
+							},
+							"sourcePath": {
+								"type": "string",
+								"description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
+							},
+							"sourceMap": {
+								"type": "array",
+								"description": "Specify an array of path remappings; each element must itself be a two element array containing a source and desination pathname. Overrides sourcePath.",
+								"default": []
+							},
+							"debuggerRoot": {
+								"type": "string",
+								"description": "Specify a working directory to set the debug adaptor to so relative object files can be located."
+							},
+							"attachCommands": {
+								"type": "array",
+								"description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
+								"default": []
+							},
+							"initCommands": {
+								"type": "array",
+								"description": "Initialization commands executed upon debugger startup.",
+								"default": []
+							},
+							"preRunCommands": {
+								"type": "array",
+								"description": "Commands executed just before the program is attached to.",
+								"default": []
+							},
+							"stopCommands": {
+								"type": "array",
+								"description": "Commands executed each time the program stops.",
+								"default": []
+							},
+							"exitCommands": {
+								"type": "array",
+									"description": "Commands executed at the end of debugging session.",
+									"default": []
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"type": "lldb-vscode",
+						"request": "launch",
+						"name": "Debug",
+						"program": "${workspaceRoot}/<your program>",
+						"args": [],
+						"env": [],
+						"cwd": "${workspaceRoot}"
+					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "LLDB: Launch",
+						"description": "",
+						"body": {
+							"type": "lldb-vscode",
+							"request": "launch",
+							"name": "${2:Launch}",
+							"program": "^\"\\${workspaceRoot}/${1:<your program>}\"",
+							"args": [],
+							"env": [],
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					}
+				]
+			}
+		]
+	}
+}

@@ -5631,8 +5631,11 @@ struct __temp_value {
     _Tp &   get() { return *__addr(); }
 
     template<class... _Args>
-    __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc)
-    { _Traits::construct(__a, __addr(), _VSTD::forward<_Args>(__args)...); }
+    _LIBCPP_NO_CFI
+    __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc) {
+      _Traits::construct(__a, reinterpret_cast<_Tp*>(addressof(__v)),
+                         _VSTD::forward<_Args>(__args)...);
+    }
 
     ~__temp_value() { _Traits::destroy(__a, __addr()); }
     };

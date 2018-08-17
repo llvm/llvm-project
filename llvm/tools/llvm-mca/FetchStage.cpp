@@ -35,7 +35,7 @@ Stage::Status FetchStage::execute(InstRef &IR) {
 
 void FetchStage::postExecute() { SM.updateNext(); }
 
-void FetchStage::cycleEnd() {
+llvm::Error FetchStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.
   const InstMap::iterator It =
       llvm::find_if(Instructions, [](const InstMap::value_type &KeyValuePair) {
@@ -45,6 +45,8 @@ void FetchStage::cycleEnd() {
   // Erase instructions up to the first that hasn't been retired.
   if (It != Instructions.begin())
     Instructions.erase(Instructions.begin(), It);
+
+  return llvm::ErrorSuccess();
 }
 
 } // namespace mca

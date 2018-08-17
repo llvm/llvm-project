@@ -434,41 +434,32 @@ define <64 x i8> @shuffle_v64i8_64_zz_65_zz_66_zz_67_zz_68_zz_69_zz_70_zz_71_zz_
 define <64 x i8> @shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz(<64 x i8> %a) {
 ; AVX512F-LABEL: shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = <15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u>
-; AVX512F-NEXT:    vpshufb %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512F-NEXT:    vpand %ymm4, %ymm1, %ymm2
-; AVX512F-NEXT:    vpshufb %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128,15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128]
+; AVX512F-NEXT:    vpshufb %ymm3, %ymm1, %ymm2
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX512F-NEXT:    vpand %ymm4, %ymm0, %ymm1
+; AVX512F-NEXT:    vpshufb %ymm3, %ymm0, %ymm1
 ; AVX512F-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = <15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u>
-; AVX512BW-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
-; AVX512BW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,0,1]
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512BW-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; AVX512BW-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128,15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128]
+; AVX512BW-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512BW-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX512BW-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = <15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1,u>
-; AVX512DQ-NEXT:    vpshufb %ymm3, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm1, %ymm2
-; AVX512DQ-NEXT:    vpshufb %ymm3, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128,15,128,13,128,11,128,9,128,7,128,5,128,3,128,1,128]
+; AVX512DQ-NEXT:    vpshufb %ymm3, %ymm1, %ymm2
 ; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm0, %ymm1
+; AVX512DQ-NEXT:    vpshufb %ymm3, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512DQ-NEXT:    retq
 ;
@@ -485,15 +476,13 @@ define <64 x i8> @shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_
 define <64 x i8> @shuffle_v64i8_63_64_61_66_59_68_57_70_55_72_53_74_51_76_49_78_47_80_45_82_43_84_41_86_39_88_37_90_35_92_33_94_31_96_29_98_27_100_25_102_23_104_21_106_19_108_17_110_15_112_13_114_11_116_9_118_7_120_5_122_3_124_1_126(<64 x i8> %a, <64 x i8> %b) {
 ; AVX512F-LABEL: shuffle_v64i8_63_64_61_66_59_68_57_70_55_72_53_74_51_76_49_78_47_80_45_82_43_84_41_86_39_88_37_90_35_92_33_94_31_96_29_98_27_100_25_102_23_104_21_106_19_108_17_110_15_112_13_114_11_116_9_118_7_120_5_122_3_124_1_126:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512F-NEXT:    vpblendvb %ymm4, %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]
-; AVX512F-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14,15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14]
 ; AVX512F-NEXT:    vpshufb %ymm5, %ymm1, %ymm2
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX512F-NEXT:    vpblendvb %ymm4, %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX512F-NEXT:    vpblendvb %ymm4, %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpshufb %ymm5, %ymm0, %ymm1
 ; AVX512F-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512F-NEXT:    retq
@@ -501,31 +490,27 @@ define <64 x i8> @shuffle_v64i8_63_64_61_66_59_68_57_70_55_72_53_74_51_76_49_78_
 ; AVX512BW-LABEL: shuffle_v64i8_63_64_61_66_59_68_57_70_55_72_53_74_51_76_49_78_47_80_45_82_43_84_41_86_39_88_37_90_35_92_33_94_31_96_29_98_27_100_25_102_23_104_21_106_19_108_17_110_15_112_13_114_11_116_9_118_7_120_5_122_3_124_1_126:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512BW-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BW-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm2
-; AVX512BW-NEXT:    vpermq {{.*#+}} ymm4 = ymm2[2,3,0,1]
-; AVX512BW-NEXT:    vpblendvb %ymm3, %ymm2, %ymm4, %ymm2
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm4 = [15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14,15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14]
-; AVX512BW-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
+; AVX512BW-NEXT:    vpermq {{.*#+}} ymm3 = ymm0[2,3,0,1]
+; AVX512BW-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512BW-NEXT:    vpblendvb %ymm4, %ymm2, %ymm3, %ymm2
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm3 = [15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14,15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14]
+; AVX512BW-NEXT:    vpshufb %ymm3, %ymm2, %ymm2
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512BW-NEXT:    vpblendvb %ymm3, %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX512BW-NEXT:    vpblendvb %ymm3, %ymm0, %ymm1, %ymm0
-; AVX512BW-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX512BW-NEXT:    vpblendvb %ymm4, %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpshufb %ymm3, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: shuffle_v64i8_63_64_61_66_59_68_57_70_55_72_53_74_51_76_49_78_47_80_45_82_43_84_41_86_39_88_37_90_35_92_33_94_31_96_29_98_27_100_25_102_23_104_21_106_19_108_17_110_15_112_13_114_11_116_9_118_7_120_5_122_3_124_1_126:
 ; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; AVX512DQ-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm2, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]
-; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm5 = [15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14,15,0,13,2,11,4,9,6,7,8,5,10,3,12,1,14]
 ; AVX512DQ-NEXT:    vpshufb %ymm5, %ymm1, %ymm2
+; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm0, %ymm1, %ymm0
 ; AVX512DQ-NEXT:    vpshufb %ymm5, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512DQ-NEXT:    retq

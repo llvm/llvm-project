@@ -51,12 +51,12 @@ entry:
   ret i8 %4
 }
 
-; The pass will bail because of the zext, otherwise we'd want something like:
-; ldrb [[LD:r[^ ]+]], [r0]
-; subs [[SUB:r[^ ]+]], [[LD]], #1
-; cmp [[LD]], [[SUB]]
+; The pass perform the transform, but a uxtb will still be inserted to handle
+; the zext to the icmp.
 ; CHECK-COMMON-LABEL: icmp_i32_zext:
+; CHECK-COMMON: sub
 ; CHECK-COMMON: uxtb
+; CHECK-COMMON: cmp
 define i8 @icmp_i32_zext(i8* %ptr) {
 entry:
   %gep = getelementptr inbounds i8, i8* %ptr, i32 0
@@ -85,8 +85,10 @@ exit:
   ret i8 %2
 }
 
-; Won't handle zext or sext
+; Won't don't handle sext
 ; CHECK-COMMON-LABEL: icmp_sext_zext_store_i8_i16
+; CHECK-COMMON: ldrb
+; CHECK-COMMON: ldrsh
 define i32 @icmp_sext_zext_store_i8_i16() {
 entry:
   %0 = load i8, i8* getelementptr inbounds ([16 x i8], [16 x i8]* @d_uch, i32 0, i32 2), align 1
@@ -100,12 +102,13 @@ entry:
   ret i32 %conv3
 }
 
-; Pass will bail because of the zext, otherwise:
-; ldrb [[LD:r[^ ]+]], [r1]
-; subs [[SUB:r[^ ]+]], #1
-; cmp [[SUB]], #3
 ; CHECK-COMMON-LABEL: or_icmp_ugt:
-; CHECK-COMMON: uxt
+; CHECK-COMMON:     ldrb
+; CHECK-COMMON:     sub.w
+; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON:     cmp.w
+; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON:     cmp
 define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {
 entry:
   %0 = load i8, i8* %ptr
@@ -149,9 +152,12 @@ exit:
   ret i16 %res
 }
 
-; Pass will bail because of the zext
+; We currently only handle truncs as sinks, so a uxt will still be needed for
+; the icmp ugt instruction.
 ; CHECK-COMMON-LABEL: urem_trunc_icmps
+; CHECK-COMMON: cmp
 ; CHECK-COMMON: uxt
+; CHECK-COMMON: cmp
 define void @urem_trunc_icmps(i16** %in, i32* %g, i32* %k) {
 entry:
   %ptr = load i16*, i16** %in, align 4
@@ -223,7 +229,6 @@ exit:
   ret void
 }
 
-; Again, zexts will prevent the transform.
 ; Check that %exp requires uxth in all cases, and will also be required to
 ; promote %1 for the call - unless we can generate a uadd16.
 ; CHECK-COMMON-LABEL: zext_load_sink_call:

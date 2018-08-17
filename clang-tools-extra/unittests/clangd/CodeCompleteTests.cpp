@@ -1538,36 +1538,39 @@ TEST(SignatureHelpTest, OverloadsOrdering) {
 }
 
 TEST(SignatureHelpTest, InstantiatedSignatures) {
-  EXPECT_THAT(signatures(R"cpp(
+  StringRef Sig0 = R"cpp(
     template <class T>
     void foo(T, T, T);
 
     int main() {
       foo<int>(^);
     }
-  )cpp")
-                  .signatures,
+  )cpp";
+
+  EXPECT_THAT(signatures(Sig0).signatures,
               ElementsAre(Sig("foo(T, T, T) -> void", {"T", "T", "T"})));
 
-  EXPECT_THAT(signatures(R"cpp(
+  StringRef Sig1 = R"cpp(
     template <class T>
     void foo(T, T, T);
 
     int main() {
       foo(10, ^);
-    })cpp")
-                  .signatures,
+    })cpp";
+
+  EXPECT_THAT(signatures(Sig1).signatures,
               ElementsAre(Sig("foo(T, T, T) -> void", {"T", "T", "T"})));
 
-  EXPECT_THAT(signatures(R"cpp(
+  StringRef Sig2 = R"cpp(
     template <class ...T>
     void foo(T...);
 
     int main() {
       foo<int>(^);
     }
-  )cpp")
-                  .signatures,
+  )cpp";
+
+  EXPECT_THAT(signatures(Sig2).signatures,
               ElementsAre(Sig("foo(T...) -> void", {"T..."})));
 
   // It is debatable whether we should substitute the outer template parameter
@@ -1575,7 +1578,7 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
   // do substitute in code complete.
   // FIXME: make code complete and signature help consistent, figure out which
   // way is better.
-  EXPECT_THAT(signatures(R"cpp(
+  StringRef Sig3 = R"cpp(
     template <class T>
     struct X {
       template <class U>
@@ -1585,8 +1588,9 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
     int main() {
       X<int>().foo<double>(^)
     }
-  )cpp")
-                  .signatures,
+  )cpp";
+
+  EXPECT_THAT(signatures(Sig3).signatures,
               ElementsAre(Sig("foo(T, U) -> void", {"T", "U"})));
 }
 

@@ -94,3 +94,45 @@ Symbols:
     - Name:            sym1
     - Name:            sym2
 ...
+
+# RUN: yaml2obj -docnum 3 %s | llvm-readobj -elf-output-style=LLVM -relocations - | FileCheck --check-prefix=LLVM3 %s
+#
+# LLVM3:      Section (1) .rela.dyn {
+# LLVM3-NEXT:   0x1100 R_X86_64_RELATIVE - 0x0
+# LLVM3-NEXT:   0x1180 R_X86_64_RELATIVE - 0x8
+# LLVM3-NEXT:   0x1200 R_X86_64_64 sym1 0x0
+# LLVM3-NEXT:   0x1208 R_X86_64_64 sym2 0x0
+# LLVM3-NEXT:   0x1210 R_X86_64_64 sym1 0x0
+# LLVM3-NEXT:   0x1218 R_X86_64_64 sym2 0x8
+# LLVM3-NEXT: }
+
+# RUN: yaml2obj -docnum 3 %s | llvm-readobj -elf-output-style=GNU -relocations - | FileCheck --check-prefix=GNU3 %s
+# GNU3:      Relocation section '.rela.dyn' at offset 0x180 contains 6 entries:
+# GNU3: 0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
+# GNU3-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 8
+# GNU3-NEXT: 0000000000001200  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 0
+# GNU3-NEXT: 0000000000001208  0000000200000001 R_X86_64_64            0000000000000000 sym2 + 0
+# GNU3-NEXT: 0000000000001210  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 0
+# GNU3-NEXT: 0000000000001218  0000000200000001 R_X86_64_64            0000000000000000 sym2 + 8
+
+# elf-packed-relocs3.s
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x0000000000001000
+Sections:
+  - Name:            .rela.dyn
+    Type:            SHT_ANDROID_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x00000000000001C8
+    Link:            .symtab
+    AddressAlign:    0x0000000000000001
+    Content:         415053320680200208800208008001080802008001818080801008818080802002080881808080100008818080802008
+Symbols:
+  Global:
+    - Name:            sym1
+    - Name:            sym2
+...

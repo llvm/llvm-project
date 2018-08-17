@@ -61,7 +61,7 @@
 
 using namespace llvm;
 
-#define PASS_KEY "x86-speculative-load-hardening"
+#define PASS_KEY "x86-slh"
 #define DEBUG_TYPE PASS_KEY
 
 STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
@@ -2237,9 +2237,9 @@ void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
   ++NumCallsOrJumpsHardened;
 }
 
-INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningPass, PASS_KEY,
                       "X86 speculative load hardener", false, false)
-INITIALIZE_PASS_END(X86SpeculativeLoadHardeningPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86SpeculativeLoadHardeningPass, PASS_KEY,
                     "X86 speculative load hardener", false, false)
 
 FunctionPass *llvm::createX86SpeculativeLoadHardeningPass() {

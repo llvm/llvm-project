@@ -25,9 +25,10 @@ namespace mca {
 class InstRef;
 
 class Stage {
+  std::set<HWEventListener *> Listeners;
+
   Stage(const Stage &Other) = delete;
   Stage &operator=(const Stage &Other) = delete;
-  std::set<HWEventListener *> Listeners;
 
 public:
   /// A Stage's execute() returns Continue, Stop, or an error.  Returning
@@ -46,8 +47,8 @@ protected:
   const std::set<HWEventListener *> &getListeners() const { return Listeners; }
 
 public:
-  Stage();
-  virtual ~Stage() = default;
+  Stage() {}
+  virtual ~Stage();
 
   /// Called prior to preExecute to ensure that the stage has items that it
   /// is to process.  For example, a FetchStage might have more instructions
@@ -57,10 +58,10 @@ public:
 
   /// Called once at the start of each cycle.  This can be used as a setup
   /// phase to prepare for the executions during the cycle.
-  virtual void cycleStart() {}
+  virtual llvm::Error cycleStart() { return llvm::ErrorSuccess(); }
 
   /// Called once at the end of each cycle.
-  virtual void cycleEnd() {}
+  virtual llvm::Error cycleEnd() { return llvm::ErrorSuccess(); }
 
   /// Called prior to executing the list of stages.
   /// This can be called multiple times per cycle.
@@ -80,7 +81,7 @@ public:
   void addListener(HWEventListener *Listener);
 
   /// Notify listeners of a particular hardware event.
-  template <typename EventT> void notifyEvent(const EventT &Event) {
+  template <typename EventT> void notifyEvent(const EventT &Event) const {
     for (HWEventListener *Listener : Listeners)
       Listener->onEvent(Event);
   }

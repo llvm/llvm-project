@@ -18,15 +18,13 @@
 #include "HWEventListener.h"
 #include "llvm/Support/Debug.h"
 
-using namespace llvm;
-
 #define DEBUG_TYPE "llvm-mca"
 
 namespace mca {
 
-void RetireStage::cycleStart() {
+llvm::Error RetireStage::cycleStart() {
   if (RCU.isEmpty())
-    return;
+    return llvm::ErrorSuccess();
 
   const unsigned MaxRetirePerCycle = RCU.getMaxRetirePerCycle();
   unsigned NumRetired = 0;
@@ -40,11 +38,13 @@ void RetireStage::cycleStart() {
     notifyInstructionRetired(Current.IR);
     NumRetired++;
   }
+
+  return llvm::ErrorSuccess();
 }
 
 void RetireStage::notifyInstructionRetired(const InstRef &IR) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: #" << IR << '\n');
-  SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
+  LLVM_DEBUG(llvm::dbgs() << "[E] Instruction Retired: #" << IR << '\n');
+  llvm::SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   const Instruction &Inst = *IR.getInstruction();
   const InstrDesc &Desc = Inst.getDesc();
 

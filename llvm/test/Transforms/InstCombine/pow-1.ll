@@ -129,7 +129,7 @@ define <2 x double> @test_simplify6v(<2 x double> %x) {
 
 define float @test_simplify7(float %x) {
 ; ANY-LABEL: @test_simplify7(
-; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #0
+; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) [[NUW_RO:#[0-9]+]]
 ; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
 ; ANY-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
@@ -141,7 +141,7 @@ define float @test_simplify7(float %x) {
 
 define double @test_simplify8(double %x) {
 ; ANY-LABEL: @test_simplify8(
-; ANY-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]]) #0
+; ANY-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]]) [[NUW_RO]]
 ; ANY-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
 ; ANY-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
@@ -293,7 +293,7 @@ define <2 x double> @pow_neg1_double_fastv(<2 x double> %x) {
 declare double @llvm.pow.f64(double %Val, double %Power)
 define double @test_simplify17(double %x) {
 ; ANY-LABEL: @test_simplify17(
-; ANY-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]]) #2
+; ANY-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
 ; ANY-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
 ; ANY-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
@@ -307,7 +307,7 @@ define double @test_simplify17(double %x) {
 
 define float @test_simplify18(float %x) {
 ; CHECK-EXP10-LABEL: @test_simplify18(
-; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @__exp10f(float [[X:%.*]]) [[NUW_RO:#[0-9]+]]
+; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @__exp10f(float [[X:%.*]]) [[NUW_RO]]
 ; CHECK-EXP10-NEXT:    ret float [[__EXP10F]]
 ;
 ; CHECK-NO-EXP10-LABEL: @test_simplify18(
