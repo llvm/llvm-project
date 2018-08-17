@@ -12,11 +12,11 @@ class cpp_generator : public generator {
 protected:
 	bool checked;
 public:
-	cpp_generator(SourceManager &SM, set<RecordDecl *> &exported_types,
+	cpp_generator(set<RecordDecl *> &exported_types,
 		set<FunctionDecl *> exported_functions,
 		set<FunctionDecl *> functions,
 		bool checked = false) :
-		generator(SM, exported_types, exported_functions, functions),
+		generator(exported_types, exported_functions, functions),
 		checked(checked) {}
 
 	enum function_kind {
@@ -45,15 +45,12 @@ private:
 	void print_get_ctx_decl(ostream &os);
 	void print_methods_decl(ostream &os, const isl_class &clazz);
 	void print_method_group_decl(ostream &os, const isl_class &clazz,
-		const set<FunctionDecl *> &methods);
+		const string &fullname, const set<FunctionDecl *> &methods);
 	void print_method_decl(ostream &os, const isl_class &clazz,
-		FunctionDecl *method, function_kind kind);
+		const string &fullname, FunctionDecl *method,
+		function_kind kind);
 	void print_implementations(ostream &os);
 	void print_class_impl(ostream &os, const isl_class &clazz);
-	void print_check_ptr(ostream &os, const char *ptr);
-	void print_check_ptr_start(ostream &os, const isl_class &clazz,
-		const char *ptr);
-	void print_check_ptr_end(ostream &os, const char *ptr);
 	void print_class_factory_impl(ostream &os, const isl_class &clazz);
 	void print_private_constructors_impl(ostream &os,
 		const isl_class &clazz);
@@ -66,7 +63,7 @@ private:
 	void print_get_ctx_impl(ostream &os, const isl_class &clazz);
 	void print_methods_impl(ostream &os, const isl_class &clazz);
 	void print_method_group_impl(ostream &os, const isl_class &clazz,
-		const set<FunctionDecl *> &methods);
+		const string &fullname, const set<FunctionDecl *> &methods);
 	void print_argument_validity_check(ostream &os, FunctionDecl *method,
 		function_kind kind);
 	void print_save_ctx(ostream &os, FunctionDecl *method,
@@ -74,14 +71,14 @@ private:
 	void print_on_error_continue(ostream &os);
 	void print_exceptional_execution_check(ostream &os,
 		FunctionDecl *method);
-	void print_method_return(ostream &os, const isl_class &clazz,
-		FunctionDecl *method);
 	void print_method_impl(ostream &os, const isl_class &clazz,
-		FunctionDecl *method, function_kind kind);
+		const string &fullname,	FunctionDecl *method,
+		function_kind kind);
 	void print_method_param_use(ostream &os, ParmVarDecl *param,
 		bool load_from_this_ptr);
 	void print_method_header(ostream &os, const isl_class &clazz,
-		FunctionDecl *method, bool is_declaration, function_kind kind);
+		FunctionDecl *method, const string &fullname,
+		bool is_declaration, function_kind kind);
 	string generate_callback_args(QualType type, bool cpp);
 	string generate_callback_type(QualType type);
 	void print_wrapped_call_checked(std::ostream &os,

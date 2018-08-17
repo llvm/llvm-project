@@ -1262,7 +1262,6 @@ static __forceinline kmp_dyna_lockseq_t __kmp_map_hint_to_lock(uintptr_t hint) {
 }
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-#if KMP_USE_DYNAMIC_LOCK
 static kmp_mutex_impl_t
 __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
   if (user_lock) {
@@ -1307,7 +1306,7 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
     return ompt_mutex_impl_unknown;
   }
 }
-#else
+
 // For locks without dynamic binding
 static kmp_mutex_impl_t __ompt_get_mutex_impl_type() {
   switch (__kmp_user_lock_kind) {
@@ -1330,8 +1329,7 @@ static kmp_mutex_impl_t __ompt_get_mutex_impl_type() {
     return ompt_mutex_impl_unknown;
   }
 }
-#endif // KMP_USE_DYNAMIC_LOCK
-#endif // OMPT_SUPPORT && OMPT_OPTIONAL
+#endif
 
 /*!
 @ingroup WORK_SHARING

@@ -643,10 +643,7 @@ OMPT_API_ROUTINE int ompt_get_proc_id(void) {
  * compatability
  ****************************************************************************/
 
-/*
- * Currently unused function
 OMPT_API_ROUTINE int ompt_get_ompt_version() { return OMPT_VERSION; }
-*/
 
 /*****************************************************************************
 * application-facing API
