@@ -25,6 +25,7 @@ set(files
   any
   array
   atomic
+  bit
   bitset
   cassert
   ccomplex
