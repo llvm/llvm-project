@@ -97,6 +97,7 @@ public:
 
 private:
   MachineRegisterInfo *MRI;
+  const X86Subtarget *Subtarget;
   const X86InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const TargetRegisterClass *PromoteRC;
@@ -346,10 +347,10 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
 
-  auto &Subtarget = MF.getSubtarget<X86Subtarget>();
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
   MRI = &MF.getRegInfo();
-  TII = Subtarget.getInstrInfo();
-  TRI = Subtarget.getRegisterInfo();
+  TII = Subtarget->getInstrInfo();
+  TRI = Subtarget->getRegisterInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
   PromoteRC = &X86::GR8RegClass;
 
@@ -960,10 +961,14 @@ void X86FlagsCopyLoweringPass::rewriteSetCarryExtended(
           .addReg(Reg)
           .addImm(SubRegIdx[OrigRegSize]);
     } else if (OrigRegSize > TargetRegSize) {
-      BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::EXTRACT_SUBREG),
+      if (TargetRegSize == 1 && !Subtarget->is64Bit()) {
+        // Need to constrain the register class.
+        MRI->constrainRegClass(Reg, &X86::GR32_ABCDRegClass);
+      }
+
+      BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(Reg)
-          .addImm(SubRegIdx[TargetRegSize]);
+          .addReg(Reg, 0, SubRegIdx[TargetRegSize]);
     } else {
       BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::COPY), NewReg)
           .addReg(Reg);
