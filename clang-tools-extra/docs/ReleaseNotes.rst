@@ -57,6 +57,13 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New :doc:`abseil-duration-division
+  <clang-tidy/checks/abseil-duration-division>` check.
+
+  Checks for uses of ``absl::Duration`` division that is done in a
+  floating-point context, and recommends the use of a function that
+  returns a floating-point value.
+
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 
