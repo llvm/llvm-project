@@ -1413,8 +1413,17 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
       LSP.additionalTextEdits.push_back(FixIt);
     }
   }
-  if (Opts.EnableSnippets)
-    LSP.textEdit->newText += SnippetSuffix;
+  if (Opts.EnableSnippets && !SnippetSuffix.empty()) {
+    if (!Opts.EnableFunctionArgSnippets &&
+        ((Kind == CompletionItemKind::Function) ||
+         (Kind == CompletionItemKind::Method)) &&
+        (SnippetSuffix.front() == '(') && (SnippetSuffix.back() == ')'))
+      // Check whether function has any parameters or not.
+      LSP.textEdit->newText += SnippetSuffix.size() > 2 ? "(${0})" : "()";
+    else
+      LSP.textEdit->newText += SnippetSuffix;
+  }
+
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
   LSP.insertText = LSP.textEdit->newText;

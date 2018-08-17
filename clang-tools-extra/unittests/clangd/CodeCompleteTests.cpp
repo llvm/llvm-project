@@ -1648,6 +1648,58 @@ TEST(SignatureHelpTest, IndexDocumentation) {
                         SigDoc("Doc from sema"))));
 }
 
+TEST(CompletionTest, RenderWithSnippetsForFunctionArgsDisabled) {
+  CodeCompleteOptions Opts;
+  Opts.EnableFunctionArgSnippets = true;
+  {
+    CodeCompletion C;
+    C.RequiredQualifier = "Foo::";
+    C.Name = "x";
+    C.SnippetSuffix = "()";
+
+    auto R = C.render(Opts);
+    EXPECT_EQ(R.textEdit->newText, "Foo::x");
+    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
+  }
+
+  Opts.EnableSnippets = true;
+  Opts.EnableFunctionArgSnippets = false;
+  {
+    CodeCompletion C;
+    C.RequiredQualifier = "Foo::";
+    C.Name = "x";
+    C.SnippetSuffix = "";
+
+    auto R = C.render(Opts);
+    EXPECT_EQ(R.textEdit->newText, "Foo::x");
+    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+  }
+
+  {
+    CodeCompletion C;
+    C.RequiredQualifier = "Foo::";
+    C.Name = "x";
+    C.SnippetSuffix = "()";
+    C.Kind = CompletionItemKind::Method;
+
+    auto R = C.render(Opts);
+    EXPECT_EQ(R.textEdit->newText, "Foo::x()");
+    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+  }
+
+  {
+    CodeCompletion C;
+    C.RequiredQualifier = "Foo::";
+    C.Name = "x";
+    C.SnippetSuffix = "(${0:bool})";
+    C.Kind = CompletionItemKind::Function;
+
+    auto R = C.render(Opts);
+    EXPECT_EQ(R.textEdit->newText, "Foo::x(${0})");
+    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
