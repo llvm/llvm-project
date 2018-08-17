@@ -82,3 +82,54 @@ entry:
   %res = select i1 %cmp, i16 128, i16 255
   ret i16 %res
 }
+
+; CHECK-LABEL: gep_2d_array
+; CHECK-NOT: uxt
+define i8 @gep_2d_array(i8** %a, i8 zeroext %arg) {
+entry:
+  %arrayidx.us = getelementptr inbounds i8*, i8** %a, i32 0
+  %0 = load i8*, i8** %arrayidx.us, align 4
+  %1 = load i8, i8* %0, align 1
+  %sub = sub nuw i8 %1, 1
+  %cmp = icmp ult i8 %sub, %arg
+  %res = select i1 %cmp, i8 27, i8 54
+  ret i8 %res
+}
+
+; CHECK-LABEL: gep_2d_array_loop
+; CHECK-NOT: uxt
+define void @gep_2d_array_loop(i16** nocapture readonly %a, i16** nocapture readonly %b, i32 %N) {
+entry:
+  %cmp30 = icmp eq i32 %N, 0
+  br i1 %cmp30, label %for.cond.cleanup, label %for.cond1.preheader.us
+
+for.cond1.preheader.us:
+  %y.031.us = phi i32 [ %inc13.us, %for.cond1.for.cond.cleanup3_crit_edge.us ], [ 0, %entry ]
+  br label %for.body4.us
+
+for.body4.us:
+  %x.029.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
+  %arrayidx.us = getelementptr inbounds i16*, i16** %a, i32 %x.029.us
+  %0 = load i16*, i16** %arrayidx.us, align 4
+  %arrayidx5.us = getelementptr inbounds i16, i16* %0, i32 %y.031.us
+  %1 = load i16, i16* %arrayidx5.us, align 2
+  %dec.us = add nuw i16 %1, -1
+  %cmp6.us = icmp ult i16 %dec.us, 16383
+  %shl.us = shl nuw i16 %dec.us, 2
+  %spec.select.us = select i1 %cmp6.us, i16 %shl.us, i16 %dec.us
+  %arrayidx10.us = getelementptr inbounds i16*, i16** %b, i32 %x.029.us
+  %2 = load i16*, i16** %arrayidx10.us, align 4
+  %arrayidx11.us = getelementptr inbounds i16, i16* %2, i32 %y.031.us
+  store i16 %spec.select.us, i16* %arrayidx11.us, align 2
+  %inc.us = add nuw i32 %x.029.us, 1
+  %exitcond = icmp eq i32 %inc.us, %N
+  br i1 %exitcond, label %for.cond1.for.cond.cleanup3_crit_edge.us, label %for.body4.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:
+  %inc13.us = add nuw i32 %y.031.us, 1
+  %exitcond32 = icmp eq i32 %inc13.us, %N
+  br i1 %exitcond32, label %for.cond.cleanup, label %for.cond1.preheader.us
+
+for.cond.cleanup:
+  ret void
+}

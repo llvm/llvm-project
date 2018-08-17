@@ -479,7 +479,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   MIB.addImm(CSStackSizeIncImm);
 
   MIB.setMIFlags(MBBI->getFlags());
-  MIB.setMemRefs(MBBI->memoperands_begin(), MBBI->memoperands_end());
+  MIB.setMemRefs(MBBI->memoperands());
 
   return std::prev(MBB.erase(MBBI));
 }

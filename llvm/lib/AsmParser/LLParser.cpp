@@ -3718,6 +3718,13 @@ struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
 
+struct NameTableKindField : public MDUnsignedField {
+  NameTableKindField()
+      : MDUnsignedField(
+            0, (unsigned)
+                   DICompileUnit::DebugNameTableKind::LastDebugNameTableKind) {}
+};
+
 struct DIFlagField : public MDFieldImpl<DINode::DIFlags> {
   DIFlagField() : MDFieldImpl(DINode::FlagZero) {}
 };
@@ -3932,6 +3939,25 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, EmissionKindField &Result
                     "'");
   assert(*Kind <= Result.Max && "Expected valid emission kind");
   Result.assign(*Kind);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
+                            NameTableKindField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return ParseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::NameTableKind)
+    return TokError("expected nameTable kind");
+
+  auto Kind = DICompileUnit::getNameTableKind(Lex.getStrVal());
+  if (!Kind)
+    return TokError("invalid nameTable kind" + Twine(" '") + Lex.getStrVal() +
+                    "'");
+  assert(((unsigned)*Kind) <= Result.Max && "Expected valid nameTable kind");
+  Result.assign((unsigned)*Kind);
   Lex.Lex();
   return false;
 }
@@ -4448,7 +4474,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(dwoId, MDUnsignedField, );                                          \
   OPTIONAL(splitDebugInlining, MDBoolField, = true);                           \
   OPTIONAL(debugInfoForProfiling, MDBoolField, = false);                       \
-  OPTIONAL(gnuPubnames, MDBoolField, = false);
+  OPTIONAL(nameTableKind, NameTableKindField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4456,7 +4482,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
       Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
       retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, gnuPubnames.Val);
+      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val);
   return false;
 }
 

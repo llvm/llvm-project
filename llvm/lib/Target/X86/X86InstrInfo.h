@@ -359,8 +359,7 @@ public:
   void storeRegToAddr(MachineFunction &MF, unsigned SrcReg, bool isKill,
                       SmallVectorImpl<MachineOperand> &Addr,
                       const TargetRegisterClass *RC,
-                      MachineInstr::mmo_iterator MMOBegin,
-                      MachineInstr::mmo_iterator MMOEnd,
+                      ArrayRef<MachineMemOperand *> MMOs,
                       SmallVectorImpl<MachineInstr *> &NewMIs) const;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -371,8 +370,7 @@ public:
   void loadRegFromAddr(MachineFunction &MF, unsigned DestReg,
                        SmallVectorImpl<MachineOperand> &Addr,
                        const TargetRegisterClass *RC,
-                       MachineInstr::mmo_iterator MMOBegin,
-                       MachineInstr::mmo_iterator MMOEnd,
+                       ArrayRef<MachineMemOperand *> MMOs,
                        SmallVectorImpl<MachineInstr *> &NewMIs) const;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;

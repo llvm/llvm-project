@@ -226,8 +226,12 @@ namespace {
     /// If the source value number is defined by a commutable instruction and
     /// its other operand is coalesced to the copy dest register, see if we
     /// can transform the copy into a noop by commuting the definition.
-    /// This returns true if an interval was modified.
-    bool removeCopyByCommutingDef(const CoalescerPair &CP,MachineInstr *CopyMI);
+    /// This returns a pair of two flags:
+    /// - the first element is true if an interval was modified,
+    /// - the second element is true if the destination interval needs
+    ///   to be shrunk after deleting the copy.
+    std::pair<bool,bool> removeCopyByCommutingDef(const CoalescerPair &CP,
+                                                  MachineInstr *CopyMI);
 
     /// We found a copy which can be moved to its less frequent predecessor.
     bool removePartialRedundancy(const CoalescerPair &CP, MachineInstr &CopyMI);
@@ -686,20 +690,32 @@ bool RegisterCoalescer::hasOtherReachingDefs(LiveInterval &IntA,
 
 /// Copy segments with value number @p SrcValNo from liverange @p Src to live
 /// range @Dst and use value number @p DstValNo there.
-static bool addSegmentsWithValNo(LiveRange &Dst, VNInfo *DstValNo,
-                                 const LiveRange &Src, const VNInfo *SrcValNo) {
+static std::pair<bool,bool>
+addSegmentsWithValNo(LiveRange &Dst, VNInfo *DstValNo, const LiveRange &Src,
+                     const VNInfo *SrcValNo) {
   bool Changed = false;
+  bool MergedWithDead = false;
   for (const LiveRange::Segment &S : Src.segments) {
     if (S.valno != SrcValNo)
       continue;
-    Dst.addSegment(LiveRange::Segment(S.start, S.end, DstValNo));
+    // This is adding a segment from Src that ends in a copy that is about
+    // to be removed. This segment is going to be merged with a pre-existing
+    // segment in Dst. This works, except in cases when the corresponding
+    // segment in Dst is dead. For example: adding [192r,208r:1) from Src
+    // to [208r,208d:1) in Dst would create [192r,208d:1) in Dst.
+    // Recognized such cases, so that the segments can be shrunk.
+    LiveRange::Segment Added = LiveRange::Segment(S.start, S.end, DstValNo);
+    LiveRange::Segment &Merged = *Dst.addSegment(Added);
+    if (Merged.end.isDead())
+      MergedWithDead = true;
     Changed = true;
   }
-  return Changed;
+  return std::make_pair(Changed, MergedWithDead);
 }
 
-bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
-                                                 MachineInstr *CopyMI) {
+std::pair<bool,bool>
+RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
+                                            MachineInstr *CopyMI) {
   assert(!CP.isPhys());
 
   LiveInterval &IntA =
@@ -737,19 +753,19 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   VNInfo *AValNo = IntA.getVNInfoAt(CopyIdx.getRegSlot(true));
   assert(AValNo && !AValNo->isUnused() && "COPY source not live");
   if (AValNo->isPHIDef())
-    return false;
+    return { false, false };
   MachineInstr *DefMI = LIS->getInstructionFromIndex(AValNo->def);
   if (!DefMI)
-    return false;
+    return { false, false };
   if (!DefMI->isCommutable())
-    return false;
+    return { false, false };
   // If DefMI is a two-address instruction then commuting it will change the
   // destination register.
   int DefIdx = DefMI->findRegisterDefOperandIdx(IntA.reg);
   assert(DefIdx != -1);
   unsigned UseOpIdx;
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))
-    return false;
+    return { false, false };
 
   // FIXME: The code below tries to commute 'UseOpIdx' operand with some other
   // commutable operand which is expressed by 'CommuteAnyOperandIndex'value
@@ -762,17 +778,17 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   // op#2<->op#3) of commute transformation should be considered/tried here.
   unsigned NewDstIdx = TargetInstrInfo::CommuteAnyOperandIndex;
   if (!TII->findCommutedOpIndices(*DefMI, UseOpIdx, NewDstIdx))
-    return false;
+    return { false, false };
 
   MachineOperand &NewDstMO = DefMI->getOperand(NewDstIdx);
   unsigned NewReg = NewDstMO.getReg();
   if (NewReg != IntB.reg || !IntB.Query(AValNo->def).isKill())
-    return false;
+    return { false, false };
 
   // Make sure there are no other definitions of IntB that would reach the
   // uses which the new definition can reach.
   if (hasOtherReachingDefs(IntA, IntB, AValNo, BValNo))
-    return false;
+    return { false, false };
 
   // If some of the uses of IntA.reg is already coalesced away, return false.
   // It's not possible to determine whether it's safe to perform the coalescing.
@@ -785,7 +801,7 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       continue;
     // If this use is tied to a def, we can't rewrite the register.
     if (UseMI->isRegTiedToDefOperand(OpNo))
-      return false;
+      return { false, false };
   }
 
   LLVM_DEBUG(dbgs() << "\tremoveCopyByCommutingDef: " << AValNo->def << '\t'
@@ -797,11 +813,11 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   MachineInstr *NewMI =
       TII->commuteInstruction(*DefMI, false, UseOpIdx, NewDstIdx);
   if (!NewMI)
-    return false;
+    return { false, false };
   if (TargetRegisterInfo::isVirtualRegister(IntA.reg) &&
       TargetRegisterInfo::isVirtualRegister(IntB.reg) &&
       !MRI->constrainRegClass(IntB.reg, MRI->getRegClass(IntA.reg)))
-    return false;
+    return { false, false };
   if (NewMI != DefMI) {
     LIS->ReplaceMachineInstrInMaps(*DefMI, *NewMI);
     MachineBasicBlock::iterator Pos = DefMI;
@@ -875,6 +891,7 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
 
   // Extend BValNo by merging in IntA live segments of AValNo. Val# definition
   // is updated.
+  bool ShrinkB = false;
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
   if (IntA.hasSubRanges() || IntB.hasSubRanges()) {
     if (!IntA.hasSubRanges()) {
@@ -890,26 +907,30 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       assert(ASubValNo != nullptr);
 
       IntB.refineSubRanges(Allocator, SA.LaneMask,
-          [&Allocator,&SA,CopyIdx,ASubValNo](LiveInterval::SubRange &SR) {
+          [&Allocator,&SA,CopyIdx,ASubValNo,&ShrinkB]
+            (LiveInterval::SubRange &SR) {
         VNInfo *BSubValNo = SR.empty()
           ? SR.getNextValue(CopyIdx, Allocator)
           : SR.getVNInfoAt(CopyIdx);
         assert(BSubValNo != nullptr);
-        if (addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo))
+        auto P = addSegmentsWithValNo(SR, BSubValNo, SA, ASubValNo);
+        ShrinkB |= P.second;
+        if (P.first)
           BSubValNo->def = ASubValNo->def;
       });
     }
   }
 
   BValNo->def = AValNo->def;
-  addSegmentsWithValNo(IntB, BValNo, IntA, AValNo);
+  auto P = addSegmentsWithValNo(IntB, BValNo, IntA, AValNo);
+  ShrinkB |= P.second;
   LLVM_DEBUG(dbgs() << "\t\textended: " << IntB << '\n');
 
   LIS->removeVRegDefAt(IntA, AValNo->def);
 
   LLVM_DEBUG(dbgs() << "\t\ttrimmed:  " << IntA << '\n');
   ++numCommutes;
-  return true;
+  return { true, ShrinkB };
 }
 
 /// For copy B = A in BB2, if A is defined by A = B in BB0 which is a
@@ -1795,9 +1816,18 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     // If we can eliminate the copy without merging the live segments, do so
     // now.
     if (!CP.isPartial() && !CP.isPhys()) {
-      if (adjustCopiesBackFrom(CP, CopyMI) ||
-          removeCopyByCommutingDef(CP, CopyMI)) {
+      bool Changed = adjustCopiesBackFrom(CP, CopyMI);
+      bool Shrink = false;
+      if (!Changed)
+        std::tie(Changed, Shrink) = removeCopyByCommutingDef(CP, CopyMI);
+      if (Changed) {
         deleteInstr(CopyMI);
+        if (Shrink) {
+          unsigned DstReg = CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg();
+          LiveInterval &DstLI = LIS->getInterval(DstReg);
+          shrinkToUses(&DstLI);
+          LLVM_DEBUG(dbgs() << "\t\tshrunk:   " << DstLI << '\n');
+        }
         LLVM_DEBUG(dbgs() << "\tTrivial!\n");
         return true;
       }

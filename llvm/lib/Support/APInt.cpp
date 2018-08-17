@@ -79,7 +79,7 @@ void APInt::initSlowCase(uint64_t val, bool isSigned) {
   U.pVal[0] = val;
   if (isSigned && int64_t(val) < 0)
     for (unsigned i = 1; i < getNumWords(); ++i)
-      U.pVal[i] = WORD_MAX;
+      U.pVal[i] = WORDTYPE_MAX;
   clearUnusedBits();
 }
 
@@ -305,13 +305,13 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   unsigned hiWord = whichWord(hiBit);
 
   // Create an initial mask for the low word with zeros below loBit.
-  uint64_t loMask = WORD_MAX << whichBit(loBit);
+  uint64_t loMask = WORDTYPE_MAX << whichBit(loBit);
 
   // If hiBit is not aligned, we need a high mask.
   unsigned hiShiftAmt = whichBit(hiBit);
   if (hiShiftAmt != 0) {
     // Create a high mask with zeros above hiBit.
-    uint64_t hiMask = WORD_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
+    uint64_t hiMask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
     // If loWord and hiWord are equal, then we combine the masks. Otherwise,
     // set the bits in hiWord.
     if (hiWord == loWord)
@@ -324,7 +324,7 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
 
   // Fill any words between loWord and hiWord with all ones.
   for (unsigned word = loWord + 1; word < hiWord; ++word)
-    U.pVal[word] = WORD_MAX;
+    U.pVal[word] = WORDTYPE_MAX;
 }
 
 /// Toggle every bit to its opposite value.
@@ -355,7 +355,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Single word result can be done as a direct bitmask.
   if (isSingleWord()) {
-    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     U.VAL &= ~(mask << bitPosition);
     U.VAL |= (subBits.U.VAL << bitPosition);
     return;
@@ -367,7 +367,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 
   // Insertion within a single word can be done as a direct bitmask.
   if (loWord == hi1Word) {
-    uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     U.pVal[loWord] &= ~(mask << loBit);
     U.pVal[loWord] |= (subBits.U.VAL << loBit);
     return;
@@ -383,7 +383,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
     // Mask+insert remaining bits.
     unsigned remainingBits = subBitWidth % APINT_BITS_PER_WORD;
     if (remainingBits != 0) {
-      uint64_t mask = WORD_MAX >> (APINT_BITS_PER_WORD - remainingBits);
+      uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - remainingBits);
       U.pVal[hi1Word] &= ~mask;
       U.pVal[hi1Word] |= subBits.getWord(subBitWidth - 1);
     }
@@ -559,7 +559,7 @@ unsigned APInt::countLeadingOnesSlowCase() const {
   unsigned Count = llvm::countLeadingOnes(U.pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
-      if (U.pVal[i] == WORD_MAX)
+      if (U.pVal[i] == WORDTYPE_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
         Count += llvm::countLeadingOnes(U.pVal[i]);
@@ -583,7 +583,7 @@ unsigned APInt::countTrailingZerosSlowCase() const {
 unsigned APInt::countTrailingOnesSlowCase() const {
   unsigned Count = 0;
   unsigned i = 0;
-  for (; i < getNumWords() && U.pVal[i] == WORD_MAX; ++i)
+  for (; i < getNumWords() && U.pVal[i] == WORDTYPE_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
     Count += llvm::countTrailingOnes(U.pVal[i]);

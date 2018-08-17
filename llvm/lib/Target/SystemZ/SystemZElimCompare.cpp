@@ -294,11 +294,10 @@ bool SystemZElimCompare::convertToLoadAndTest(
     return false;
 
   // Rebuild to get the CC operand in the right place.
-  MachineInstr *BuiltMI =
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(Opcode));
+  auto MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(Opcode));
   for (const auto &MO : MI.operands())
-    BuiltMI->addOperand(MO);
-  BuiltMI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.add(MO);
+  MIB.setMemRefs(MI.memoperands());
   MI.eraseFromParent();
 
   return true;

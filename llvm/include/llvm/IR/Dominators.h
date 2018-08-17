@@ -46,6 +46,9 @@ using BBPostDomTree = PostDomTreeBase<BasicBlock>;
 using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 
 extern template void Calculate<BBDomTree>(BBDomTree &DT);
+extern template void CalculateWithUpdates<BBDomTree>(BBDomTree &DT,
+                                                     BBUpdates U);
+
 extern template void Calculate<BBPostDomTree>(BBPostDomTree &DT);
 
 extern template void InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
@@ -145,6 +148,9 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
 
   DominatorTree() = default;
   explicit DominatorTree(Function &F) { recalculate(F); }
+  explicit DominatorTree(DominatorTree &DT, DomTreeBuilder::BBUpdates U) {
+    recalculate(*DT.Parent, U);
+  }
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,

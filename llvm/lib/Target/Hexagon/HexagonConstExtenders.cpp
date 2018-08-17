@@ -1629,7 +1629,7 @@ bool HCE::replaceInstrExact(const ExtDesc &ED, Register ExtR) {
       else
         MIB.add(MachineOperand(ExtR));
     }
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }
@@ -1680,7 +1680,7 @@ bool HCE::replaceInstrExact(const ExtDesc &ED, Register ExtR) {
     // Add the stored value for stores.
     if (MI.mayStore())
       MIB.add(getStoredValueOp(MI));
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }
@@ -1797,7 +1797,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     // Add the stored value for stores.
     if (MI.mayStore())
       MIB.add(getStoredValueOp(MI));
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }

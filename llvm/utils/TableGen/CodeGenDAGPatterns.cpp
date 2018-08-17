@@ -198,15 +198,17 @@ void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
 }
 
 bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
-  bool HaveDefault = hasDefault();
-  if (HaveDefault != VTS.hasDefault())
-    return false;
+  // The isSimple call is much quicker than hasDefault - check this first.
+  bool IsSimple = isSimple();
+  bool VTSIsSimple = VTS.isSimple();
+  if (IsSimple && VTSIsSimple)
+    return *begin() == *VTS.begin();
 
-  if (isSimple()) {
-    if (VTS.isSimple())
-      return *begin() == *VTS.begin();
+  // Speedup: We have a default if the set is simple.
+  bool HaveDefault = IsSimple || hasDefault();
+  bool VTSHaveDefault = VTSIsSimple || VTS.hasDefault();
+  if (HaveDefault != VTSHaveDefault)
     return false;
-  }
 
   SmallDenseSet<unsigned, 4> Modes;
   for (auto &I : *this)
@@ -4483,8 +4485,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
       bool AlreadyExists = false;
       for (unsigned p = 0, e = PatternsToMatch.size(); p != e; ++p) {
         // Skip if the top level predicates do not match.
-        if (PatternsToMatch[i].getPredicates() !=
-            PatternsToMatch[p].getPredicates())
+        if ((i != p) && (PatternsToMatch[i].getPredicates() !=
+                         PatternsToMatch[p].getPredicates()))
           continue;
         // Check to see if this variant already exists.
         if (Variant->isIsomorphicTo(PatternsToMatch[p].getSrcPattern(),

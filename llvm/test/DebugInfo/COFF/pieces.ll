@@ -116,14 +116,14 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegEDI (0x18)
+; OBJ:         Register: EDI (0x18)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
 ; OBJ:         }
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegESI (0x17)
+; OBJ:         Register: ESI (0x17)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -146,7 +146,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegECX (0x12)
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -169,7 +169,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegECX (0x12)
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
@@ -196,7 +196,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: CVRegRCX (0x14A)
+; OBJ:         BaseRegister: RCX (0x14A)
 ; OBJ:         HasSpilledUDTMember: No
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         BasePointerOffset: 0
@@ -207,7 +207,7 @@
 ; OBJ:         VarName: p
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegEAX (0x11)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -231,7 +231,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: CVRegRSP (0x14F)
+; OBJ:         BaseRegister: RSP (0x14F)
 ; OBJ:         HasSpilledUDTMember: Yes
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         BasePointerOffset: 36

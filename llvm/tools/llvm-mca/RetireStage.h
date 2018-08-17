@@ -36,10 +36,9 @@ public:
       : Stage(), RCU(R), PRF(F) {}
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
-  void cycleStart() override;
-  Status execute(InstRef &IR) override { return Stage::Continue; }
+  llvm::Error cycleStart() override;
+  llvm::Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR);
-  void onInstructionExecuted(unsigned TokenID);
 };
 
 } // namespace mca

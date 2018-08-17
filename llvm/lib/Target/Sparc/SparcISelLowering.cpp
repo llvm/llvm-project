@@ -2666,7 +2666,8 @@ static SDValue getFLUSHW(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue getFRAMEADDR(uint64_t depth, SDValue Op, SelectionDAG &DAG,
-                            const SparcSubtarget *Subtarget) {
+                            const SparcSubtarget *Subtarget,
+                            bool AlwaysFlush = false) {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
 
@@ -2676,17 +2677,11 @@ static SDValue getFRAMEADDR(uint64_t depth, SDValue Op, SelectionDAG &DAG,
   unsigned stackBias = Subtarget->getStackPointerBias();
 
   SDValue FrameAddr;
-
-  if (depth == 0) {
-    FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
-    if (Subtarget->is64Bit())
-      FrameAddr = DAG.getNode(ISD::ADD, dl, VT, FrameAddr,
-                              DAG.getIntPtrConstant(stackBias, dl));
-    return FrameAddr;
-  }
+  SDValue Chain;
 
   // flush first to make sure the windowed registers' values are in stack
-  SDValue Chain = getFLUSHW(Op, DAG);
+  Chain = (depth || AlwaysFlush) ? getFLUSHW(Op, DAG) : DAG.getEntryNode();
+
   FrameAddr = DAG.getCopyFromReg(Chain, dl, FrameReg, VT);
 
   unsigned Offset = (Subtarget->is64Bit()) ? (stackBias + 112) : 56;
@@ -2735,7 +2730,7 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   }
 
   // Need frame address to find return address of the caller.
-  SDValue FrameAddr = getFRAMEADDR(depth - 1, Op, DAG, Subtarget);
+  SDValue FrameAddr = getFRAMEADDR(depth - 1, Op, DAG, Subtarget, true);
 
   unsigned Offset = (Subtarget->is64Bit()) ? 120 : 60;
   SDValue Ptr = DAG.getNode(ISD::ADD,
