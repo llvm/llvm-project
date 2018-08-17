@@ -1613,22 +1613,21 @@ TEST(SignatureHelpTest, IndexDocumentation) {
   Foo1.Detail = &DocDetails;
   Symbol Foo2 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#I#");
 
-  EXPECT_THAT(
-      signatures(R"cpp(
+  StringRef Sig0 = R"cpp(
     int foo();
     int foo(double);
 
     void test() {
       foo(^);
     }
-  )cpp",
-                 {Foo0})
-          .signatures,
+  )cpp";
+
+  EXPECT_THAT(
+      signatures(Sig0, {Foo0}).signatures,
       ElementsAre(AllOf(Sig("foo() -> int", {}), SigDoc("Doc from the index")),
                   AllOf(Sig("foo(double) -> int", {"double"}), SigDoc(""))));
 
-  EXPECT_THAT(
-      signatures(R"cpp(
+  StringRef Sig1 = R"cpp(
     int foo();
     // Overriden doc from sema
     int foo(int);
@@ -1638,9 +1637,10 @@ TEST(SignatureHelpTest, IndexDocumentation) {
     void test() {
       foo(^);
     }
-  )cpp",
-                 {Foo0, Foo1, Foo2})
-          .signatures,
+  )cpp";
+
+  EXPECT_THAT(
+      signatures(Sig1, {Foo0, Foo1, Foo2}).signatures,
       ElementsAre(AllOf(Sig("foo() -> int", {}), SigDoc("Doc from the index")),
                   AllOf(Sig("foo(int) -> int", {"int"}),
                         SigDoc("Overriden doc from sema")),
