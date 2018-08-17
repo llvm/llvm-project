@@ -35,134 +35,122 @@ namespace std {
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#ifndef _LIBCPP_COMPILER_MSVC
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __ctz(unsigned __x)           { return __builtin_ctz(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __ctz(unsigned long __x)      { return __builtin_ctzl(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __ctz(unsigned long long __x) { return __builtin_ctzll(__x); }
+
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __clz(unsigned __x)           { return __builtin_clz(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __clz(unsigned long __x)      { return __builtin_clzl(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __clz(unsigned long long __x) { return __builtin_clzll(__x); }
+
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __popcount(unsigned __x)           { return __builtin_popcount(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __popcount(unsigned long __x)      { return __builtin_popcountl(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY
+int __popcount(unsigned long long __x) { return __builtin_popcountll(__x); }
+
+#else  // _LIBCPP_COMPILER_MSVC
+
 // Precondition:  __x != 0
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned __ctz(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned>(__builtin_ctz(__x));
-#else
+int __ctz(unsigned __x) {
   static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
   static_assert(sizeof(unsigned long) == 4, "");
-  unsigned long where;
-  // Search from LSB to MSB for first set bit.
-  // Returns zero if no set bit is found.
-  if (_BitScanForward(&where, __x))
-    return where;
+  unsigned long __where;
+  if (_BitScanForward(&__where, __x))
+    return static_cast<int>(__where);
   return 32;
-#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long __ctz(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long>(__builtin_ctzl(__x));
-#else
+int __ctz(unsigned long __x) {
     static_assert(sizeof(unsigned long) == sizeof(unsigned), "");
     return __ctz(static_cast<unsigned>(__x));
-#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long __ctz(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long long>(__builtin_ctzll(__x));
-#else
-    unsigned long where;
-// Search from LSB to MSB for first set bit.
-// Returns zero if no set bit is found.
+int __ctz(unsigned long long __x) {
+    unsigned long __where;
 #if defined(_LIBCPP_HAS_BITSCAN64)
     (defined(_M_AMD64) || defined(__x86_64__))
-  if (_BitScanForward64(&where, __x))
-    return static_cast<int>(where);
+  if (_BitScanForward64(&__where, __x))
+    return static_cast<int>(__where);
 #else
   // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
-  // Scan the Low Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(__x)))
-    return where;
-  // Scan the High Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(__x >> 32)))
-    return where + 32; // Create a bit offset from the LSB.
+  if (_BitScanForward(&__where, static_cast<unsigned long>(__x)))
+    return static_cast<int>(__where);
+  if (_BitScanForward(&__where, static_cast<unsigned long>(__x >> 32)))
+    return static_cast<int>(__where + 32);
 #endif
   return 64;
-#endif // _LIBCPP_COMPILER_MSVC
 }
 
 // Precondition:  __x != 0
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned __clz(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned>(__builtin_clz(__x));
-#else
+int __clz(unsigned __x) {
   static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
   static_assert(sizeof(unsigned long) == 4, "");
-  unsigned long where;
-  // Search from LSB to MSB for first set bit.
-  // Returns zero if no set bit is found.
-  if (_BitScanReverse(&where, __x))
-    return 31 - where;
+  unsigned long __where;
+  if (_BitScanReverse(&__where, __x))
+    return static_cast<int>(31 - __where);
   return 32; // Undefined Behavior.
-#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long __clz(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long>(__builtin_clzl (__x));
-#else
+int __clz(unsigned long __x) {
     static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
     return __clz(static_cast<unsigned>(__x));
-#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long __clz(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long long>(__builtin_clzll(__x));
-#else
-  unsigned long where;
-// BitScanReverse scans from MSB to LSB for first set bit.
-// Returns 0 if no set bit is found.
+int __clz(unsigned long long __x) {
+  unsigned long __where;
 #if defined(_LIBCPP_HAS_BITSCAN64)
-  if (_BitScanReverse64(&where, __x))
-    return static_cast<int>(63 - where);
+  if (_BitScanReverse64(&__where, __x))
+    return static_cast<int>(63 - __where);
 #else
-  // Scan the high 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(__x >> 32)))
-    return 63 - (where + 32); // Create a bit offset from the MSB.
-  // Scan the low 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(__x)))
-    return 63 - where;
+  // Win32 doesn't have _BitScanReverse64 so emulate it with two 32 bit calls.
+  if (_BitScanReverse(&__where, static_cast<unsigned long>(__x >> 32)))
+    return static_cast<int>(63 - (__where + 32));
+  if (_BitScanReverse(&__where, static_cast<unsigned long>(__x)))
+    return static_cast<int>(63 - __where);
 #endif
   return 64; // Undefined Behavior.
-#endif // _LIBCPP_COMPILER_MSVC
 }
 
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcount  (__x);
-#else
+inline _LIBCPP_INLINE_VISIBILITY int __popcount(unsigned __x) {
   static_assert(sizeof(unsigned) == 4, "");
   return __popcnt(__x);
-#endif
 }
 
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcountl (__x);
-#else
+inline _LIBCPP_INLINE_VISIBILITY int __popcount(unsigned long __x) {
   static_assert(sizeof(unsigned long) == 4, "");
   return __popcnt(__x);
-#endif
 }
 
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcountll(__x);
-#else
+inline _LIBCPP_INLINE_VISIBILITY int __popcount(unsigned long long __x) {
   static_assert(sizeof(unsigned long long) == 8, "");
   return __popcnt64(__x);
-#endif
 }
+
+#endif // _LIBCPP_COMPILER_MSVC
 
 _LIBCPP_END_NAMESPACE_STD
 
