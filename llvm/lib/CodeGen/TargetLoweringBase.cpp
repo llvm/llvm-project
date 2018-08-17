@@ -968,7 +968,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
       MIB.add(MI->getOperand(i));
 
     // Inherit previous memory operands.
-    MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+    MIB.cloneMemRefs(*MI);
     assert(MIB->mayLoad() && "Folded a stackmap use to a non-load!");
 
     // Add a new memory operand for this FI.

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-pub-sections -no-dwarf-ranges-section -dwarf-version 2 -debugger-tune=gdb | FileCheck %s
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-ranges-section -dwarf-version 2 -debugger-tune=gdb | FileCheck %s
 
 ; CHECK:      .file
 
@@ -44,10 +44,10 @@ source_filename = "test/DebugInfo/X86/sections_as_references.ll"
 !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "g", scope: null, file: !8, line: 2, type: !3, isLocal: false, isDefinition: true)
 !8 = !DIFile(filename: "tu2.cpp", directory: "/dir")
-!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !10, globals: !11, imports: !5)
+!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !10, globals: !11, imports: !5, nameTableKind: None)
 !10 = !{!3}
 !11 = !{!0}
-!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !8, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !10, globals: !13, imports: !5)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !8, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !10, globals: !13, imports: !5, nameTableKind: None)
 !13 = !{!6}
 !14 = !{i32 2, !"Dwarf Version", i32 2}
 !15 = !{i32 1, !"Debug Info Version", i32 3}

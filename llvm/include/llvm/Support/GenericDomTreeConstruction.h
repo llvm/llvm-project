@@ -1576,6 +1576,25 @@ void Calculate(DomTreeT &DT) {
   SemiNCAInfo<DomTreeT>::CalculateFromScratch(DT, nullptr);
 }
 
+template <typename DomTreeT>
+void CalculateWithUpdates(DomTreeT &DT,
+                          ArrayRef<typename DomTreeT::UpdateType> Updates) {
+  // TODO: Move BUI creation in common method, reuse in ApplyUpdates.
+  typename SemiNCAInfo<DomTreeT>::BatchUpdateInfo BUI;
+  LLVM_DEBUG(dbgs() << "Legalizing " << BUI.Updates.size() << " updates\n");
+  cfg::LegalizeUpdates<typename DomTreeT::NodePtr>(Updates, BUI.Updates,
+                                                   DomTreeT::IsPostDominator);
+  const size_t NumLegalized = BUI.Updates.size();
+  BUI.FutureSuccessors.reserve(NumLegalized);
+  BUI.FuturePredecessors.reserve(NumLegalized);
+  for (auto &U : BUI.Updates) {
+    BUI.FutureSuccessors[U.getFrom()].push_back({U.getTo(), U.getKind()});
+    BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
+  }
+
+  SemiNCAInfo<DomTreeT>::CalculateFromScratch(DT, &BUI);
+}
+
 template <class DomTreeT>
 void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To) {

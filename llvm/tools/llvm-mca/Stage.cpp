@@ -18,7 +18,7 @@
 namespace mca {
 
 // Pin the vtable here in the implementation file.
-Stage::Stage() {}
+Stage::~Stage() = default;
 
 void Stage::addListener(HWEventListener *Listener) {
   Listeners.insert(Listener);

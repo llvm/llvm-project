@@ -213,7 +213,7 @@ enum NameBackrefBehavior : uint8_t {
   NBB_Simple = 1 << 1,   // save simple names.
 };
 
-enum class SymbolCategory { Function, Variable };
+enum class SymbolCategory { Unknown, Function, Variable, StringLiteral };
 
 namespace {
 
@@ -291,6 +291,11 @@ struct Name {
   bool IsOperator = false;
   bool IsBackReference = false;
   bool IsConversionOperator = false;
+  bool IsStringLiteral = false;
+  bool IsLongStringLiteral = false;
+
+  // If IsStringLiteral is true, this is the character type.
+  PrimTy StringLiteralType = PrimTy::None;
 
   // Name read from an MangledName string.
   StringView Str;
@@ -519,6 +524,30 @@ static void outputParameterList(OutputStream &OS, const FunctionParams &Params,
     if (Head)
       OS << ", ";
   }
+}
+
+static void outputStringLiteral(OutputStream &OS, const Name &TheString) {
+  assert(TheString.IsStringLiteral);
+  switch (TheString.StringLiteralType) {
+  case PrimTy::Wchar:
+    OS << "const wchar_t * {L\"";
+    break;
+  case PrimTy::Char:
+    OS << "const char * {\"";
+    break;
+  case PrimTy::Char16:
+    OS << "const char16_t * {u\"";
+    break;
+  case PrimTy::Char32:
+    OS << "const char32_t * {U\"";
+    break;
+  default:
+    LLVM_BUILTIN_UNREACHABLE;
+  }
+  OS << TheString.Str << "\"";
+  if (TheString.IsLongStringLiteral)
+    OS << "...";
+  OS << "}";
 }
 
 static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
@@ -1009,6 +1038,7 @@ private:
   Name *demangleSimpleName(StringView &MangledName, bool Memorize);
   Name *demangleAnonymousNamespaceName(StringView &MangledName);
   Name *demangleLocallyScopedNamePiece(StringView &MangledName);
+  Name *demangleStringLiteral(StringView &MangledName);
 
   StringView demangleSimpleString(StringView &MangledName, bool Memorize);
 
@@ -1017,6 +1047,8 @@ private:
   StorageClass demangleVariableStorageClass(StringView &MangledName);
   ReferenceKind demangleReferenceKind(StringView &MangledName);
   void demangleThrowSpecification(StringView &MangledName);
+  wchar_t demangleWcharLiteral(StringView &MangledName);
+  uint8_t demangleCharLiteral(StringView &MangledName);
 
   std::pair<Qualifiers, bool> demangleQualifiers(StringView &MangledName);
 
@@ -1051,12 +1083,30 @@ StringView Demangler::copyString(StringView Borrowed) {
 Symbol *Demangler::parse(StringView &MangledName) {
   Symbol *S = Arena.alloc<Symbol>();
 
-  // MSVC-style mangled symbols must start with '?'.
-  if (!MangledName.consumeFront("?")) {
+  // We can't demangle MD5 names, just output them as-is.
+  if (MangledName.startsWith("??@")) {
+    S->Category = SymbolCategory::Unknown;
     S->SymbolName = Arena.alloc<Name>();
     S->SymbolName->Str = MangledName;
-    S->SymbolType = Arena.alloc<Type>();
-    S->SymbolType->Prim = PrimTy::Unknown;
+    S->SymbolType = nullptr;
+    MangledName = StringView();
+    return S;
+  }
+
+  // MSVC-style mangled symbols must start with '?'.
+  if (!MangledName.consumeFront("?")) {
+    S->Category = SymbolCategory::Unknown;
+    S->SymbolName = Arena.alloc<Name>();
+    S->SymbolName->Str = MangledName;
+    S->SymbolType = nullptr;
+    return S;
+  }
+
+  if (MangledName.consumeFront("?_C@_")) {
+    // This is a string literal.  Just demangle it and return.
+    S->Category = SymbolCategory::StringLiteral;
+    S->SymbolName = demangleStringLiteral(MangledName);
+    S->SymbolType = nullptr;
     return S;
   }
 
@@ -1316,6 +1366,32 @@ Name *Demangler::demangleOperatorName(StringView &MangledName) {
         return "|=";
       case '6':
         return "^=";
+      // case '7': # vftable
+      // case '8': # vbtable
+      // case '9': # vcall
+      // case 'A': # typeof
+      // case 'B': # local static guard
+      // case 'D': # vbase destructor
+      // case 'E': # vector deleting destructor
+      // case 'F': # default constructor closure
+      // case 'G': # scalar deleting destructor
+      // case 'H': # vector constructor iterator
+      // case 'I': # vector destructor iterator
+      // case 'J': # vector vbase constructor iterator
+      // case 'K': # virtual displacement map
+      // case 'L': # eh vector constructor iterator
+      // case 'M': # eh vector destructor iterator
+      // case 'N': # eh vector vbase constructor iterator
+      // case 'O': # copy constructor closure
+      // case 'P<name>': # udt returning <name>
+      // case 'Q': # <unknown>
+      // case 'R0': # RTTI Type Descriptor
+      // case 'R1': # RTTI Base Class Descriptor at (a,b,c,d)
+      // case 'R2': # RTTI Base Class Array
+      // case 'R3': # RTTI Class Hierarchy Descriptor
+      // case 'R4': # RTTI Complete Object Locator
+      // case 'S': # local vftable
+      // case 'T': # local vftable constructor closure
       case 'U':
         return " new[]";
       case 'V':
@@ -1350,6 +1426,9 @@ Name *Demangler::demangleOperatorName(StringView &MangledName) {
   } else {
     Node->Str = NameString();
   }
+  if (Error)
+    return nullptr;
+
   Node->IsOperator = true;
   return Node;
 }
@@ -1362,6 +1441,333 @@ Name *Demangler::demangleSimpleName(StringView &MangledName, bool Memorize) {
   Name *Node = Arena.alloc<Name>();
   Node->Str = S;
   return Node;
+}
+
+static bool isRebasedHexDigit(char C) { return (C >= 'A' && C <= 'P'); }
+
+static uint8_t rebasedHexDigitToNumber(char C) {
+  assert(isRebasedHexDigit(C));
+  return (C <= 'J') ? (C - 'A') : (10 + C - 'K');
+}
+
+uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
+  if (!MangledName.startsWith('?'))
+    return MangledName.popFront();
+
+  MangledName = MangledName.dropFront();
+  if (MangledName.empty())
+    goto CharLiteralError;
+
+  if (MangledName.consumeFront('$')) {
+    // Two hex digits
+    if (MangledName.size() < 2)
+      goto CharLiteralError;
+    StringView Nibbles = MangledName.substr(0, 2);
+    if (!isRebasedHexDigit(Nibbles[0]) || !isRebasedHexDigit(Nibbles[1]))
+      goto CharLiteralError;
+    // Don't append the null terminator.
+    uint8_t C1 = rebasedHexDigitToNumber(Nibbles[0]);
+    uint8_t C2 = rebasedHexDigitToNumber(Nibbles[1]);
+    MangledName = MangledName.dropFront(2);
+    return (C1 << 4) | C2;
+  }
+
+  if (startsWithDigit(MangledName)) {
+    const char *Lookup = ",/\\:. \n\t'-";
+    char C = Lookup[MangledName[0] - '0'];
+    MangledName = MangledName.dropFront();
+    return C;
+  }
+
+  if (MangledName[0] >= 'a' && MangledName[0] <= 'z') {
+    char Lookup[26] = {'\xE1', '\xE2', '\xE3', '\xE4', '\xE5', '\xE6', '\xE7',
+                       '\xE8', '\xE9', '\xEA', '\xEB', '\xEC', '\xED', '\xEE',
+                       '\xEF', '\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5',
+                       '\xF6', '\xF7', '\xF8', '\xF9', '\xFA'};
+    char C = Lookup[MangledName[0] - 'a'];
+    MangledName = MangledName.dropFront();
+    return C;
+  }
+
+  if (MangledName[0] >= 'A' && MangledName[0] <= 'Z') {
+    char Lookup[26] = {'\xC1', '\xC2', '\xC3', '\xC4', '\xC5', '\xC6', '\xC7',
+                       '\xC8', '\xC9', '\xCA', '\xCB', '\xCC', '\xCD', '\xCE',
+                       '\xCF', '\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5',
+                       '\xD6', '\xD7', '\xD8', '\xD9', '\xDA'};
+    char C = Lookup[MangledName[0] - 'A'];
+    MangledName = MangledName.dropFront();
+    return C;
+  }
+
+CharLiteralError:
+  Error = true;
+  return '\0';
+}
+
+wchar_t Demangler::demangleWcharLiteral(StringView &MangledName) {
+  uint8_t C1, C2;
+
+  C1 = demangleCharLiteral(MangledName);
+  if (Error)
+    goto WCharLiteralError;
+  C2 = demangleCharLiteral(MangledName);
+  if (Error)
+    goto WCharLiteralError;
+
+  return ((wchar_t)C1 << 8) | (wchar_t)C2;
+
+WCharLiteralError:
+  Error = true;
+  return L'\0';
+}
+
+static void writeHexDigit(char *Buffer, uint8_t Digit) {
+  assert(Digit <= 15);
+  *Buffer = (Digit < 10) ? ('0' + Digit) : ('A' + Digit - 10);
+}
+
+static void outputHex(OutputStream &OS, unsigned C) {
+  if (C == 0) {
+    OS << "\\x00";
+    return;
+  }
+  // It's easier to do the math if we can work from right to left, but we need
+  // to print the numbers from left to right.  So render this into a temporary
+  // buffer first, then output the temporary buffer.  Each byte is of the form
+  // \xAB, which means that each byte needs 4 characters.  Since there are at
+  // most 4 bytes, we need a 4*4+1 = 17 character temporary buffer.
+  char TempBuffer[17];
+
+  ::memset(TempBuffer, 0, sizeof(TempBuffer));
+  constexpr int MaxPos = 15;
+
+  int Pos = MaxPos - 1;
+  while (C != 0) {
+    for (int I = 0; I < 2; ++I) {
+      writeHexDigit(&TempBuffer[Pos--], C % 16);
+      C /= 16;
+    }
+    TempBuffer[Pos--] = 'x';
+    TempBuffer[Pos--] = '\\';
+    assert(Pos >= 0);
+  }
+  OS << StringView(&TempBuffer[Pos + 1]);
+}
+
+static void outputEscapedChar(OutputStream &OS, unsigned C) {
+  switch (C) {
+  case '\'': // single quote
+    OS << "\\\'";
+    return;
+  case '\"': // double quote
+    OS << "\\\"";
+    return;
+  case '\\': // backslash
+    OS << "\\\\";
+    return;
+  case '\a': // bell
+    OS << "\\a";
+    return;
+  case '\b': // backspace
+    OS << "\\b";
+    return;
+  case '\f': // form feed
+    OS << "\\f";
+    return;
+  case '\n': // new line
+    OS << "\\n";
+    return;
+  case '\r': // carriage return
+    OS << "\\r";
+    return;
+  case '\t': // tab
+    OS << "\\t";
+    return;
+  case '\v': // vertical tab
+    OS << "\\v";
+    return;
+  default:
+    break;
+  }
+
+  if (C > 0x1F && C < 0x7F) {
+    // Standard ascii char.
+    OS << (char)C;
+    return;
+  }
+
+  outputHex(OS, C);
+}
+
+unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
+  const uint8_t *End = StringBytes + Length - 1;
+  while (Length > 0 && *End == 0) {
+    --Length;
+    --End;
+  }
+  return End - StringBytes + 1;
+}
+
+unsigned countEmbeddedNulls(const uint8_t *StringBytes, unsigned Length) {
+  unsigned Result = 0;
+  for (unsigned I = 0; I < Length; ++I) {
+    if (*StringBytes++ == 0)
+      ++Result;
+  }
+  return Result;
+}
+
+unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
+                           unsigned NumBytes) {
+  assert(NumBytes > 0);
+
+  // If the number of bytes is odd, this is guaranteed to be a char string.
+  if (NumBytes % 2 == 1)
+    return 1;
+
+  // All strings can encode at most 32 bytes of data.  If it's less than that,
+  // then we encoded the entire string.  In this case we check for a 1-byte,
+  // 2-byte, or 4-byte null terminator.
+  if (NumBytes < 32) {
+    unsigned TrailingNulls = countTrailingNullBytes(StringBytes, NumChars);
+    if (TrailingNulls >= 4)
+      return 4;
+    if (TrailingNulls >= 2)
+      return 2;
+    return 1;
+  }
+
+  // The whole string was not able to be encoded.  Try to look at embedded null
+  // terminators to guess.  The heuristic is that we count all embedded null
+  // terminators.  If more than 2/3 are null, it's a char32.  If more than 1/3
+  // are null, it's a char16.  Otherwise it's a char8.  This obviously isn't
+  // perfect and is biased towards languages that have ascii alphabets, but this
+  // was always going to be best effort since the encoding is lossy.
+  unsigned Nulls = countEmbeddedNulls(StringBytes, NumChars);
+  if (Nulls >= 2 * NumChars / 3)
+    return 4;
+  if (Nulls >= NumChars / 3)
+    return 2;
+  return 1;
+}
+
+static unsigned decodeMultiByteChar(const uint8_t *StringBytes,
+                                    unsigned CharIndex, unsigned CharBytes) {
+  assert(CharBytes == 1 || CharBytes == 2 || CharBytes == 4);
+  unsigned Offset = CharIndex * CharBytes;
+  unsigned Result = 0;
+  StringBytes = StringBytes + Offset;
+  for (unsigned I = 0; I < CharBytes; ++I) {
+    unsigned C = static_cast<unsigned>(StringBytes[I]);
+    Result |= C << (8 * I);
+  }
+  return Result;
+}
+
+Name *Demangler::demangleStringLiteral(StringView &MangledName) {
+  // This function uses goto, so declare all variables up front.
+  OutputStream OS;
+  StringView CRC;
+  uint64_t StringByteSize;
+  bool IsWcharT = false;
+  bool IsNegative = false;
+  size_t CrcEndPos = 0;
+  char *ResultBuffer = nullptr;
+
+  Name *Result = Arena.alloc<Name>();
+  Result->IsStringLiteral = true;
+
+  // Prefix indicating the beginning of a string literal
+  if (MangledName.empty())
+    goto StringLiteralError;
+
+  // Char Type (regular or wchar_t)
+  switch (MangledName.popFront()) {
+  case '1':
+    IsWcharT = true;
+    LLVM_FALLTHROUGH;
+  case '0':
+    break;
+  default:
+    goto StringLiteralError;
+  }
+
+  // Encoded Length
+  std::tie(StringByteSize, IsNegative) = demangleNumber(MangledName);
+  if (Error || IsNegative)
+    goto StringLiteralError;
+
+  // CRC 32 (always 8 characters plus a terminator)
+  CrcEndPos = MangledName.find('@');
+  if (CrcEndPos == StringView::npos)
+    goto StringLiteralError;
+  CRC = MangledName.substr(0, CrcEndPos);
+  MangledName = MangledName.dropFront(CrcEndPos + 1);
+  if (MangledName.empty())
+    goto StringLiteralError;
+
+  OS = OutputStream::create(nullptr, nullptr, 1024);
+  if (IsWcharT) {
+    Result->StringLiteralType = PrimTy::Wchar;
+    if (StringByteSize > 64)
+      Result->IsLongStringLiteral = true;
+
+    while (!MangledName.consumeFront('@')) {
+      assert(StringByteSize >= 2);
+      wchar_t W = demangleWcharLiteral(MangledName);
+      if (StringByteSize != 2 || Result->IsLongStringLiteral)
+        outputEscapedChar(OS, W);
+      StringByteSize -= 2;
+      if (Error)
+        goto StringLiteralError;
+    }
+  } else {
+    if (StringByteSize > 32)
+      Result->IsLongStringLiteral = true;
+
+    constexpr unsigned MaxStringByteLength = 32;
+    uint8_t StringBytes[MaxStringByteLength];
+
+    unsigned BytesDecoded = 0;
+    while (!MangledName.consumeFront('@')) {
+      assert(StringByteSize >= 1);
+      StringBytes[BytesDecoded++] = demangleCharLiteral(MangledName);
+    }
+
+    unsigned CharBytes =
+        guessCharByteSize(StringBytes, BytesDecoded, StringByteSize);
+    assert(StringByteSize % CharBytes == 0);
+    switch (CharBytes) {
+    case 1:
+      Result->StringLiteralType = PrimTy::Char;
+      break;
+    case 2:
+      Result->StringLiteralType = PrimTy::Char16;
+      break;
+    case 4:
+      Result->StringLiteralType = PrimTy::Char32;
+      break;
+    default:
+      LLVM_BUILTIN_UNREACHABLE;
+    }
+    const unsigned NumChars = BytesDecoded / CharBytes;
+    for (unsigned CharIndex = 0; CharIndex < NumChars; ++CharIndex) {
+      unsigned NextChar =
+          decodeMultiByteChar(StringBytes, CharIndex, CharBytes);
+      if (CharIndex + 1 < NumChars || Result->IsLongStringLiteral)
+        outputEscapedChar(OS, NextChar);
+    }
+  }
+
+  OS << '\0';
+  ResultBuffer = OS.getBuffer();
+  Result->Str = copyString(ResultBuffer);
+  std::free(ResultBuffer);
+  return Result;
+
+StringLiteralError:
+  Error = true;
+  return nullptr;
 }
 
 StringView Demangler::demangleSimpleString(StringView &MangledName,
@@ -2180,6 +2586,15 @@ StringView Demangler::resolve(StringView N) {
 }
 
 void Demangler::output(const Symbol *S, OutputStream &OS) {
+  if (S->Category == SymbolCategory::Unknown) {
+    outputName(OS, S->SymbolName, S->SymbolType, *this);
+    return;
+  }
+  if (S->Category == SymbolCategory::StringLiteral) {
+    outputStringLiteral(OS, *S->SymbolName);
+    return;
+  }
+
   // Converts an AST to a string.
   //
   // Converting an AST representing a C++ type to a string is tricky due

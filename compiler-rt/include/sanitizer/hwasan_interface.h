@@ -40,6 +40,13 @@ extern "C" {
   /// Set pointer tag. Previous tag is lost.
   void *__hwasan_tag_pointer(const volatile void *p, unsigned char tag);
 
+  // Set memory tag from the current SP address to the given address to zero.
+  // This is meant to annotate longjmp and other non-local jumps.
+  // This function needs to know the (almost) exact destination frame address;
+  // clearing shadow for the entire thread stack like __asan_handle_no_return
+  // does would cause false reports.
+  void __hwasan_handle_longjmp(const void *sp_dst);
+
   // Print shadow and origin for the memory range to stderr in a human-readable
   // format.
   void __hwasan_print_shadow(const volatile void *x, size_t size);

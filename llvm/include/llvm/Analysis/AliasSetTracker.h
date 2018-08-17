@@ -393,18 +393,17 @@ public:
   /// Return the alias sets that are active.
   const ilist<AliasSet> &getAliasSets() const { return AliasSets; }
 
-  /// Return the alias set that the specified pointer lives in. If the New
-  /// argument is non-null, this method sets the value to true if a new alias
-  /// set is created to contain the pointer (because the pointer didn't alias
-  /// anything).
-  AliasSet &getAliasSetForPointer(Value *P, LocationSize Size,
-                                  const AAMDNodes &AAInfo);
+  /// Return the alias set which contains the specified memory location.  If
+  /// the memory location aliases two or more existing alias sets, will have
+  /// the effect of merging those alias sets before the single resulting alias
+  /// set is returned.  
+  AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
 
-  /// Return the alias set containing the location specified if one exists,
-  /// otherwise return null.
-  AliasSet *getAliasSetForPointerIfExists(const Value *P, LocationSize Size,
-                                          const AAMDNodes &AAInfo) {
-    return mergeAliasSetsForPointer(P, Size, AAInfo);
+  AliasSet &getAliasSetForPointer(Value *P, LocationSize Size,
+                                  const AAMDNodes &AAInfo) {
+    // This adapter exists so that polly can be updated to the new API.  Once
+    // done, please delete this.
+    return getAliasSetFor(MemoryLocation(P, Size, AAInfo));
   }
 
   /// Return true if the specified instruction "may" (or must) alias one of the

@@ -334,6 +334,7 @@
 #    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_HAS_QUICK_EXIT
+#    define _LIBCPP_HAS_TIMESPEC_GET
 #    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
@@ -342,9 +343,11 @@
 #      endif
 #      if _LIBCPP_GLIBC_PREREQ(2, 17)
 #        define _LIBCPP_HAS_C11_FEATURES
+#        define _LIBCPP_HAS_TIMESPEC_GET
 #      endif
 #    else // defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define _LIBCPP_HAS_QUICK_EXIT
+#      define _LIBCPP_HAS_TIMESPEC_GET
 #      define _LIBCPP_HAS_C11_FEATURES
 #    endif
 #  endif // __linux__
@@ -795,8 +798,20 @@ namespace std {
 #  define _LIBCPP_INTERNAL_LINKAGE _LIBCPP_ALWAYS_INLINE
 #endif
 
+#ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU
+#  ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT
+#    define _LIBCPP_HIDE_FROM_ABI_PER_TU 0
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_PER_TU 1
+#  endif
+#endif
+
 #ifndef _LIBCPP_HIDE_FROM_ABI
-#  define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
+#  if _LIBCPP_HIDE_FROM_ABI_PER_TU
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_ALWAYS_INLINE
+#  endif
 #endif
 
 #ifdef _LIBCPP_BUILDING_LIBRARY

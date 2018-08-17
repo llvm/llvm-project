@@ -865,7 +865,7 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
-      MBBICommon->setMemRefs(MBBICommon->mergeMemRefsWith(*MBBI));
+      MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
     // Drop undef flags if they aren't present in all merged instructions.
     for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
       MachineOperand &MO = MBBICommon->getOperand(I);

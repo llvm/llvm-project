@@ -337,7 +337,7 @@ private:
   StringRef parseStringToComma();
 
   bool parseAssignment(StringRef Name, bool allow_redef,
-                       bool NoDeadStrip = false, bool AllowExtendedExpr = false);
+                       bool NoDeadStrip = false);
 
   unsigned getBinOpPrecedence(AsmToken::TokenKind K,
                               MCBinaryExpr::Opcode &Kind);
@@ -1363,7 +1363,8 @@ void AsmParser::altMacroString(StringRef AltMacroStr,std::string &Res) {
 bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // Parse the expression.
   Res = nullptr;
-  if (parsePrimaryExpr(Res, EndLoc) || parseBinOpRHS(1, Res, EndLoc))
+  if (getTargetParser().parsePrimaryExpr(Res, EndLoc) ||
+      parseBinOpRHS(1, Res, EndLoc))
     return true;
 
   // As a special case, we support 'a op b @ modifier' by rewriting the
@@ -1617,7 +1618,7 @@ bool AsmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
 
     // Eat the next primary expression.
     const MCExpr *RHS;
-    if (parsePrimaryExpr(RHS, EndLoc))
+    if (getTargetParser().parsePrimaryExpr(RHS, EndLoc))
       return true;
 
     // If BinOp binds less tightly with RHS than the operator after RHS, let
@@ -1826,7 +1827,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // identifier '=' ... -> assignment statement
     Lex();
 
-    return parseAssignment(IDVal, true, /*NoDeadStrip*/ false, /*AllowExtendedExpr*/true);
+    return parseAssignment(IDVal, true);
 
   default: // Normal instruction or directive.
     break;
@@ -2766,11 +2767,11 @@ void AsmParser::handleMacroExit() {
 }
 
 bool AsmParser::parseAssignment(StringRef Name, bool allow_redef,
-                                bool NoDeadStrip, bool AllowExtendedExpr) {
+                                bool NoDeadStrip) {
   MCSymbol *Sym;
   const MCExpr *Value;
   if (MCParserUtils::parseAssignmentExpression(Name, allow_redef, *this, Sym,
-                                               Value, AllowExtendedExpr))
+                                               Value))
     return true;
 
   if (!Sym) {
@@ -5839,17 +5840,12 @@ static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
 
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value, bool AllowExtendedExpr) {
+                               const MCExpr *&Value) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
-  SMLoc EndLoc;
-  if (AllowExtendedExpr) {
-    if (Parser.getTargetParser().parseAssignmentExpression(Value, EndLoc)) {
-      return Parser.TokError("missing expression");
-    }
-  } else if (Parser.parseExpression(Value, EndLoc))
-      return Parser.TokError("missing expression");
+  if (Parser.parseExpression(Value))
+    return Parser.TokError("missing expression");
 
   // Note: we don't count b as used in "a = b". This is to allow
   // a = b

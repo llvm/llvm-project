@@ -3735,7 +3735,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
           MIB.addImm(TFE->getImm());
         }
 
-        MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+        MIB.cloneMemRefs(MI);
         Addr64 = MIB;
       } else {
         // Atomics with return.
@@ -3749,7 +3749,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
                      .add(*SOffset)
                      .add(*Offset)
                      .addImm(getNamedImmOperand(MI, AMDGPU::OpName::slc))
-                     .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+                     .cloneMemRefs(MI);
       }
 
       MI.removeFromParent();
@@ -3955,17 +3955,17 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       }
 
       MachineInstr *NewInstr =
-        BuildMI(*MBB, Inst, Inst.getDebugLoc(),
-              get(AMDGPU::BUFFER_LOAD_DWORD_OFFEN), VDst)
-        .add(*VAddr) // vaddr
-        .add(*getNamedOperand(Inst, AMDGPU::OpName::sbase)) // srsrc
-        .addImm(0) // soffset
-        .addImm(Offset) // offset
-        .addImm(getNamedOperand(Inst, AMDGPU::OpName::glc)->getImm())
-        .addImm(0) // slc
-        .addImm(0) // tfe
-        .setMemRefs(Inst.memoperands_begin(), Inst.memoperands_end())
-        .getInstr();
+          BuildMI(*MBB, Inst, Inst.getDebugLoc(),
+                  get(AMDGPU::BUFFER_LOAD_DWORD_OFFEN), VDst)
+              .add(*VAddr)                                        // vaddr
+              .add(*getNamedOperand(Inst, AMDGPU::OpName::sbase)) // srsrc
+              .addImm(0)                                          // soffset
+              .addImm(Offset)                                     // offset
+              .addImm(getNamedOperand(Inst, AMDGPU::OpName::glc)->getImm())
+              .addImm(0) // slc
+              .addImm(0) // tfe
+              .cloneMemRefs(Inst)
+              .getInstr();
 
       MRI.replaceRegWith(getNamedOperand(Inst, AMDGPU::OpName::sdst)->getReg(),
                          VDst);

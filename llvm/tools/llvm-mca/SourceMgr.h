@@ -44,6 +44,7 @@ public:
   void updateNext() { Current++; }
 
   const SourceRef peekNext() const {
+    assert(hasNext() && "Already at end of sequence!");
     unsigned Index = getCurrentInstructionIndex();
     return SourceRef(Current, Sequence[Index].get());
   }

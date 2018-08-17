@@ -4225,7 +4225,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           options::OPT_fuse_cxa_atexit, options::OPT_fno_use_cxa_atexit,
           !RawTriple.isOSWindows() &&
               RawTriple.getOS() != llvm::Triple::Solaris &&
-              getToolChain().getArch() != llvm::Triple::hexagon &&
               getToolChain().getArch() != llvm::Triple::xcore &&
               ((RawTriple.getVendor() != llvm::Triple::MipsTechnologies) ||
                RawTriple.hasEnvironment())) ||

@@ -22,6 +22,12 @@ def O : JoinedOrSeparate<["-"], "O">,
 defm split_dwo : Eq<"split-dwo">,
                  MetaVarName<"dwo-file">,
                  HelpText<"Equivalent to extract-dwo on the input file to <dwo-file>, then strip-dwo on the input file">;
+
+def preserve_dates : Flag<[ "-", "--" ], "preserve-dates">,
+                     HelpText<"Preserve access and modification timestamps">;
+
+def p : Flag<[ "-" ], "p">, Alias<preserve_dates>;
+
 defm add_gnu_debuglink : Eq<"add-gnu-debuglink">,
                          MetaVarName<"debug-file">,
                          HelpText<"Add a .gnu_debuglink for <debug-file>">;

@@ -19,6 +19,7 @@ define void @test_throw() {
 }
 
 ; CHECK-LABEL: test_catch_rethrow:
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   i32.catch     $push{{.+}}=, 0
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
@@ -28,6 +29,7 @@ define void @test_throw() {
 ; CHECK:   call      __cxa_end_catch@FUNCTION
 ; CHECK:   call      __cxa_rethrow@FUNCTION
 ; CHECK-NEXT:   rethrow
+; CHECK:   end_try
 define void @test_catch_rethrow() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -58,10 +60,12 @@ try.cont:                                         ; preds = %entry, %catch
 }
 
 ; CHECK-LABEL: test_cleanup:
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   catch_all
 ; CHECK:   i32.call  $push{{.+}}=, _ZN7CleanupD1Ev@FUNCTION
 ; CHECK:   rethrow
+; CHECK:   end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %c = alloca %struct.Cleanup, align 1

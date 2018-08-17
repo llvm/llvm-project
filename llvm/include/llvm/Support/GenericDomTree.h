@@ -193,6 +193,10 @@ template <typename DomTreeT>
 void Calculate(DomTreeT &DT);
 
 template <typename DomTreeT>
+void CalculateWithUpdates(DomTreeT &DT,
+                          ArrayRef<typename DomTreeT::UpdateType> Updates);
+
+template <typename DomTreeT>
 void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
 
@@ -728,6 +732,11 @@ public:
   void recalculate(ParentType &Func) {
     Parent = &Func;
     DomTreeBuilder::Calculate(*this);
+  }
+
+  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates) {
+    Parent = &Func;
+    DomTreeBuilder::CalculateWithUpdates(*this, Updates);
   }
 
   /// verify - checks if the tree is correct. There are 3 level of verification:

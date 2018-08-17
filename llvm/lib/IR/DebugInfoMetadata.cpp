@@ -450,7 +450,7 @@ DICompileUnit *DICompileUnit::getImpl(
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
     Metadata *GlobalVariables, Metadata *ImportedEntities, Metadata *Macros,
     uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-    bool GnuPubnames, StorageType Storage, bool ShouldCreate) {
+    unsigned NameTableKind, StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
@@ -463,7 +463,7 @@ DICompileUnit *DICompileUnit::getImpl(
   return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
-                       DebugInfoForProfiling, GnuPubnames, Ops),
+                       DebugInfoForProfiling, NameTableKind, Ops),
                    Storage);
 }
 
@@ -477,12 +477,33 @@ DICompileUnit::getEmissionKind(StringRef Str) {
       .Default(None);
 }
 
+Optional<DICompileUnit::DebugNameTableKind>
+DICompileUnit::getNameTableKind(StringRef Str) {
+  return StringSwitch<Optional<DebugNameTableKind>>(Str)
+      .Case("Default", DebugNameTableKind::Default)
+      .Case("GNU", DebugNameTableKind::GNU)
+      .Case("None", DebugNameTableKind::None)
+      .Default(None);
+}
+
 const char *DICompileUnit::emissionKindString(DebugEmissionKind EK) {
   switch (EK) {
   case NoDebug:        return "NoDebug";
   case FullDebug:      return "FullDebug";
   case LineTablesOnly: return "LineTablesOnly";
   case DebugDirectivesOnly: return "DebugDirectviesOnly";
+  }
+  return nullptr;
+}
+
+const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
+  switch (NTK) {
+  case DebugNameTableKind::Default:
+    return nullptr;
+  case DebugNameTableKind::GNU:
+    return "GNU";
+  case DebugNameTableKind::None:
+    return "None";
   }
   return nullptr;
 }

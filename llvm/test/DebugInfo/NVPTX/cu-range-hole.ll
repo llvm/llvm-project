@@ -280,7 +280,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!11, !12}
 
 !0 = !{!"clang version 3.5.0 (trunk 204164) (llvm/trunk 204183)"}
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 (trunk 204164) (llvm/trunk 204183)", isOptimized: false, emissionKind: FullDebug, file: !2, enums: !3, retainedTypes: !3, globals: !3, imports: !3)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 (trunk 204164) (llvm/trunk 204183)", isOptimized: false, emissionKind: FullDebug, file: !2, enums: !3, retainedTypes: !3, globals: !3, imports: !3, nameTableKind: None)
 !2 = !DIFile(filename: "b.c", directory: "/source")
 !3 = !{}
 !5 = distinct !DISubprogram(name: "b", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !1, scopeLine: 1, file: !2, scope: !6, type: !7, retainedNodes: !3)

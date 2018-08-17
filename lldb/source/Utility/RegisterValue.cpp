@@ -380,7 +380,6 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
           "unsupported unsigned integer byte size: %u", byte_size);
       break;
     }
-    // TODO: Shouldn't we be setting m_type here?
     break;
 
   case eEncodingSint:
@@ -410,8 +409,6 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
                                      byte_size);
       break;
     }
-
-    // TODO: Shouldn't we be setting m_type here?
     break;
 
   case eEncodingIEEE754: {

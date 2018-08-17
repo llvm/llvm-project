@@ -955,7 +955,7 @@ public:
 
   void SetFrameRegister(unsigned RegNo) override;
 
-  bool parseAssignmentExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -2260,15 +2260,17 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   return X86Operand::CreateMem(getPointerWidth(), Disp, MemStart, MemEnd);
 }
 
-// Parse either a standard expression or a register.
-bool X86AsmParser::parseAssignmentExpression(const MCExpr *&Res,
-                                             SMLoc &EndLoc) {
+// Parse either a standard primary expression or a register.
+bool X86AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
-  if (Parser.parseExpression(Res, EndLoc)) {
+  if (Parser.parsePrimaryExpr(Res, EndLoc)) {
     SMLoc StartLoc = Parser.getTok().getLoc();
     // Normal Expression parse fails, check if it could be a register.
     unsigned RegNo;
-    if (Parser.getTargetParser().ParseRegister(RegNo, StartLoc, EndLoc))
+    bool TryRegParse =
+        getTok().is(AsmToken::Percent) ||
+        (isParsingIntelSyntax() && getTok().is(AsmToken::Identifier));
+    if (!TryRegParse || ParseRegister(RegNo, StartLoc, EndLoc))
       return true;
     // Clear previous parse error and return correct expression.
     Parser.clearPendingErrors();

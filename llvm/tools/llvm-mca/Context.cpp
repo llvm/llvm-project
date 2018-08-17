@@ -40,12 +40,12 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
       SM, Opts.LoadQueueSize, Opts.StoreQueueSize, Opts.AssumeNoAlias);
 
   // Create the pipeline and its stages.
-  auto P = llvm::make_unique<Pipeline>();
-  auto F = llvm::make_unique<FetchStage>(IB, SrcMgr);
-  auto D = llvm::make_unique<DispatchStage>(
-      STI, MRI, Opts.RegisterFileSize, Opts.DispatchWidth, *RCU, *PRF, *HWS);
-  auto R = llvm::make_unique<RetireStage>(*RCU, *PRF);
-  auto E = llvm::make_unique<ExecuteStage>(*RCU, *HWS);
+  auto StagePipeline = llvm::make_unique<Pipeline>();
+  auto Fetch = llvm::make_unique<FetchStage>(IB, SrcMgr);
+  auto Dispatch = llvm::make_unique<DispatchStage>(
+      STI, MRI, Opts.RegisterFileSize, Opts.DispatchWidth, *RCU, *PRF);
+  auto Execute = llvm::make_unique<ExecuteStage>(*HWS);
+  auto Retire = llvm::make_unique<RetireStage>(*RCU, *PRF);
 
   // Add the hardware to the context.
   addHardwareUnit(std::move(RCU));
@@ -53,11 +53,11 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   addHardwareUnit(std::move(HWS));
 
   // Build the pipeline.
-  P->appendStage(std::move(F));
-  P->appendStage(std::move(D));
-  P->appendStage(std::move(R));
-  P->appendStage(std::move(E));
-  return P;
+  StagePipeline->appendStage(std::move(Fetch));
+  StagePipeline->appendStage(std::move(Dispatch));
+  StagePipeline->appendStage(std::move(Execute));
+  StagePipeline->appendStage(std::move(Retire));
+  return StagePipeline;
 }
 
 } // namespace mca

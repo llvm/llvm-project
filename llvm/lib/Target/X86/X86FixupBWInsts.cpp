@@ -288,7 +288,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
   for (unsigned i = 1; i < NumArgs; ++i)
     MIB.add(MI->getOperand(i));
 
-  MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+  MIB.setMemRefs(MI->memoperands());
 
   return MIB;
 }

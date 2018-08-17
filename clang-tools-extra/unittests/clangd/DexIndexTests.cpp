@@ -231,13 +231,14 @@ TEST(DexIndexIterators, StringRepresentation) {
   const PostingList L4 = {0, 1, 5};
   const PostingList L5;
 
-  EXPECT_EQ(llvm::to_string(*(create(L0))), "[4, 7, 8, 20, 42, 100]");
+  EXPECT_EQ(llvm::to_string(*(create(L0))), "[{4}, 7, 8, 20, 42, 100, END]");
 
   auto Nested = createAnd(createAnd(create(L1), create(L2)),
                           createOr(create(L3), create(L4), create(L5)));
 
   EXPECT_EQ(llvm::to_string(*Nested),
-            "(& (& [1, 3, 5, 8, 9] [1, 5, 7, 9]) (| [0, 5] [0, 1, 5] []))");
+            "(& (& [{1}, 3, 5, 8, 9, END] [{1}, 5, 7, 9, END]) (| [0, {5}, "
+            "END] [0, {1}, 5, END] [{END}]))");
 }
 
 TEST(DexIndexIterators, Limit) {

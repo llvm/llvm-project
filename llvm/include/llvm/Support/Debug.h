@@ -94,6 +94,10 @@ extern bool VerifyDomInfo;
 ///
 extern bool VerifyLoopInfo;
 
+/// Enables verification of MemorySSA.
+///
+extern bool VerifyMemorySSA;
+
 ///\}
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug

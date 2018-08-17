@@ -245,7 +245,7 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
     if (!Sec->Link.empty()) {
       unsigned Index;
-      if (SN2I.lookup(Sec->Link, Index)) {
+      if (SN2I.lookup(Sec->Link, Index) && !to_integer(Sec->Link, Index)) {
         WithColor::error() << "Unknown section referenced: '" << Sec->Link
                            << "' at YAML section '" << Sec->Name << "'.\n";
         return false;
@@ -261,12 +261,10 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         SHeader.sh_link = getDotSymTabSecNo();
 
       unsigned Index;
-      if (SN2I.lookup(S->Info, Index)) {
-        if (S->Info.getAsInteger(0, Index)) {
-          WithColor::error() << "Unknown section referenced: '" << S->Info
-                             << "' at YAML section '" << S->Name << "'.\n";
-          return false;
-        }
+      if (SN2I.lookup(S->Info, Index) && !to_integer(S->Info, Index)) {
+        WithColor::error() << "Unknown section referenced: '" << S->Info
+                           << "' at YAML section '" << S->Name << "'.\n";
+        return false;
       }
       SHeader.sh_info = Index;
 

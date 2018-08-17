@@ -11,6 +11,11 @@ defm output : Eq<"o">,
               MetaVarName<"output">,
               HelpText<"Write output to <file>">;
 
+def preserve_dates : Flag<[ "-", "--" ], "preserve-dates">,
+                     HelpText<"Preserve access and modification timestamps">;
+
+def p : Flag<[ "-" ], "p">, Alias<preserve_dates>;
+
 def strip_all : Flag<["-", "--"], "strip-all">,
                 HelpText<"Remove non-allocated sections other than .gnu.warning* sections">;
 

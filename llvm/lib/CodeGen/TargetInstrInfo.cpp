@@ -583,7 +583,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   }
 
   if (NewMI) {
-    NewMI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    NewMI->setMemRefs(MF, MI.memoperands());
     // Add a memory operand, foldMemoryOperandImpl doesn't do that.
     assert((!(Flags & MachineMemOperand::MOStore) ||
             NewMI->mayStore()) &&
@@ -653,10 +653,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 
   // Copy the memoperands from the load to the folded instruction.
   if (MI.memoperands_empty()) {
-    NewMI->setMemRefs(LoadMI.memoperands_begin(), LoadMI.memoperands_end());
+    NewMI->setMemRefs(MF, LoadMI.memoperands());
   } else {
     // Handle the rare case of folding multiple loads.
-    NewMI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    NewMI->setMemRefs(MF, MI.memoperands());
     for (MachineInstr::mmo_iterator I = LoadMI.memoperands_begin(),
                                     E = LoadMI.memoperands_end();
          I != E; ++I) {
