@@ -98,6 +98,7 @@ private:
   ValueToValueMapTy VMap;
   IRBuilder<> Builder;
   Value *NewFramePtr = nullptr;
+  Value *SwiftErrorSlot = nullptr;
 
   /// The active suspend instruction; meaningful only for continuation ABIs.
   AnyCoroSuspendInst *ActiveSuspend = nullptr;
@@ -148,6 +149,7 @@ private:
   void replaceRetconSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
+  void replaceSwiftErrorOps();
   void handleFinalSuspend();
   void maybeFreeContinuationStorage();
 };
@@ -487,6 +489,68 @@ void CoroCloner::replaceCoroEnds() {
   }
 }
 
+static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
+                                 ValueToValueMapTy *VMap) {
+  Value *CachedSlot = nullptr;
+  auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
+    if (CachedSlot) {
+      assert(CachedSlot->getType()->getPointerElementType() == ValueTy &&
+             "multiple swifterror slots in function with different types");
+      return CachedSlot;
+    }
+
+    // Check if the function has a swifterror argument.
+    for (auto &Arg : F.args()) {
+      if (Arg.isSwiftError()) {
+        CachedSlot = &Arg;
+        assert(Arg.getType()->getPointerElementType() == ValueTy &&
+               "swifterror argument does not have expected type");
+        return &Arg;
+      }
+    }
+
+    // Create a swifterror alloca.
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    auto Alloca = Builder.CreateAlloca(ValueTy);
+    Alloca->setSwiftError(true);
+
+    CachedSlot = Alloca;
+    return Alloca;
+  };
+
+  for (CallInst *Op : Shape.SwiftErrorOps) {
+    auto MappedOp = VMap ? cast<CallInst>((*VMap)[Op]) : Op;
+    IRBuilder<> Builder(MappedOp);
+
+    // If there are no arguments, this is a 'get' operation.
+    Value *MappedResult;
+    if (Op->getNumArgOperands() == 0) {
+      auto ValueTy = Op->getType();
+      auto Slot = getSwiftErrorSlot(ValueTy);
+      MappedResult = Builder.CreateLoad(ValueTy, Slot);
+    } else {
+      assert(Op->getNumArgOperands() == 1);
+      auto Value = MappedOp->getArgOperand(0);
+      auto ValueTy = Value->getType();
+      auto Slot = getSwiftErrorSlot(ValueTy);
+      Builder.CreateStore(Value, Slot);
+      MappedResult = Slot;
+    }
+
+    MappedOp->replaceAllUsesWith(MappedResult);
+    MappedOp->eraseFromParent();
+  }
+
+  // If we're updating the original function, we've invalidated SwiftErrorOps.
+  if (VMap == nullptr) {
+    Shape.SwiftErrorOps.clear();
+  }
+}
+
+void CoroCloner::replaceSwiftErrorOps() {
+  ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
+}
+
 void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
@@ -687,6 +751,9 @@ void CoroCloner::create() {
 
   // Handle suspends.
   replaceCoroSuspends();
+
+  // Handle swifterror.
+  replaceSwiftErrorOps();
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
@@ -1290,6 +1357,10 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   } else {
     splitCoroutine(F, Shape, Clones);
   }
+
+  // Replace all the swifterror operations in the original function.
+  // This invalidates SwiftErrorOps in the Shape.
+  replaceSwiftErrorOps(F, Shape, nullptr);
 
   removeCoroEnds(Shape, &CG);
   postSplitCleanup(F);
