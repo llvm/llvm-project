@@ -23,7 +23,7 @@ endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
   set(AMDGPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
-endif (NOT DEFINED AMDGPU_TARGET_TRIPLE)
+endif()
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
 option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)
@@ -44,11 +44,11 @@ add_subdirectory(opencl)
 
 if(BUILD_HC_LIB)
   add_subdirectory(hc)
-endif(BUILD_HC_LIB)
+endif()
 
 if(AMDGCN_TARGETS_LIB_LIST)
   set(${AMDGCN_TARGETS_LIB_LIST} ${AMDGCN_LIB_LIST} PARENT_SCOPE)
-endif(AMDGCN_TARGETS_LIB_LIST)
+endif()
 
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
   if (NOT AMDHSACOD)
@@ -58,7 +58,7 @@ if(ROCM_DEVICELIB_INCLUDE_TESTS)
   enable_testing()
   add_subdirectory(test/opencl)
   add_subdirectory(test/opencl_conformance)
-endif(ROCM_DEVICELIB_INCLUDE_TESTS)
+endif()
 
 ## CPack standard variables
 set ( CPACK_PACKAGE_NAME "rocm-device-libs" )

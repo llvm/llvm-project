@@ -46,7 +46,7 @@ macro(opencl_bc_lib name)
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
     add_dependencies(${lib_tgt} llvm-link clang)
-  endif(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
+  endif()
 
   set_target_properties(${lib_tgt} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
@@ -68,7 +68,7 @@ macro(opencl_bc_lib name)
     COMMENT "Generating ${output_name}"
   )
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${output_name} DESTINATION lib COMPONENT device-libs)
-endmacro(opencl_bc_lib)
+endmacro()
 
 macro(clang_opencl_code name dir)
   set(tgt_name ${name}_code)
@@ -88,7 +88,7 @@ macro(clang_opencl_code name dir)
     COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${CMAKE_OCL_FLAGS}"
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
 
-endmacro(clang_opencl_code)
+endmacro()
 
 set (oclc_default_libs
   oclc_correctly_rounded_sqrt_off
@@ -110,7 +110,7 @@ macro(clang_opencl_test name dir)
       COMMAND ${AMDHSACOD} -test -code $<TARGET_FILE:${name}_code>
     )
   endif()
-endmacro(clang_opencl_test)
+endmacro()
 
 macro(clang_opencl_test_file dir fname)
   get_filename_component(name ${fname} NAME_WE)
