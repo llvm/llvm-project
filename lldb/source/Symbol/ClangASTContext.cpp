@@ -6543,8 +6543,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                                 vbtable_ptr + vbtable_index * 4;
                             const int32_t base_offset =
                                 process->ReadSignedIntegerFromMemory(
-                                    base_offset_addr, 4, UINT32_MAX, err);
-                            if (base_offset != UINT32_MAX) {
+                                    base_offset_addr, 4, INT32_MAX, err);
+                            if (base_offset != INT32_MAX) {
                               handled = true;
                               bit_offset = base_offset * 8;
                             }
@@ -6740,7 +6740,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
                 // Setting this to UINT32_MAX to make sure we don't compute it
                 // twice...
-                bit_offset = UINT32_MAX;
+                bit_offset = INT32_MAX;
 
                 if (child_byte_offset ==
                     static_cast<int32_t>(LLDB_INVALID_IVAR_OFFSET)) {
@@ -6757,7 +6757,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
                 if (ClangASTContext::FieldIsBitfield(getASTContext(), ivar_decl,
                                                      child_bitfield_bit_size)) {
-                  if (bit_offset == UINT32_MAX)
+                  if (bit_offset == INT32_MAX)
                     bit_offset = interface_layout.getFieldOffset(
                         child_idx - superclass_idx);
 

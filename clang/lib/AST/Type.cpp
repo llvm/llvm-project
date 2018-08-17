@@ -2594,7 +2594,8 @@ DependentTemplateSpecializationType::DependentTemplateSpecializationType(
   : TypeWithKeyword(Keyword, DependentTemplateSpecialization, Canon, true, true,
                     /*VariablyModified=*/false,
                     NNS && NNS->containsUnexpandedParameterPack()),
-    NNS(NNS), Name(Name), NumArgs(Args.size()) {
+    NNS(NNS), Name(Name) {
+  DependentTemplateSpecializationTypeBits.NumArgs = Args.size();
   assert((!NNS || NNS->isDependent()) &&
          "DependentTemplateSpecializatonType requires dependent qualifier");
   TemplateArgument *ArgBuffer = getArgBuffer();
@@ -3274,11 +3275,12 @@ SubstTemplateTypeParmPackType(const TemplateTypeParmType *Param,
                               QualType Canon,
                               const TemplateArgument &ArgPack)
     : Type(SubstTemplateTypeParmPack, Canon, true, true, false, true),
-      Replaced(Param),
-      Arguments(ArgPack.pack_begin()), NumArguments(ArgPack.pack_size()) {}
+      Replaced(Param), Arguments(ArgPack.pack_begin()) {
+  SubstTemplateTypeParmPackTypeBits.NumArgs = ArgPack.pack_size();
+}
 
 TemplateArgument SubstTemplateTypeParmPackType::getArgumentPack() const {
-  return TemplateArgument(llvm::makeArrayRef(Arguments, NumArguments));
+  return TemplateArgument(llvm::makeArrayRef(Arguments, getNumArgs()));
 }
 
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID) {
