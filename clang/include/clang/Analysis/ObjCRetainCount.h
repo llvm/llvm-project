@@ -65,6 +65,9 @@ enum ArgEffect {
   /// if CFRetain has been called on the argument.
   IncRef,
 
+  /// Used to mark an argument as collectible in GC mode, currently a noop.
+  MakeCollectable,
+
   /// The argument is a pointer to a retain-counted object; on exit, the new
   /// value of the pointer is a +0 value or NULL.
   UnretainedOutParameter,

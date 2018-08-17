@@ -315,7 +315,7 @@ class RetainSummaryManager {
   ///  data in ScratchArgs.
   ArgEffects getArgEffects();
 
-  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease };
+  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
 
   const RetainSummary *getUnarySummary(const FunctionType* FT,
                                        UnaryFuncKind func);

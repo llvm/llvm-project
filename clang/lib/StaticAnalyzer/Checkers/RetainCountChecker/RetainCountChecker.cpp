@@ -581,6 +581,8 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
   case DecRefMsgAndStopTrackingHard:
     E = IgnoreRetainMsg ? StopTracking : DecRefAndStopTrackingHard;
     break;
+  case MakeCollectable:
+    E = DoNothing;
   }
 
   // Handle all use-after-releases.
@@ -593,8 +595,9 @@ RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
   switch (E) {
     case DecRefMsg:
     case IncRefMsg:
+    case MakeCollectable:
     case DecRefMsgAndStopTrackingHard:
-      llvm_unreachable("DecRefMsg/IncRefMsg already converted");
+      llvm_unreachable("DecRefMsg/IncRefMsg/MakeCollectable already converted");
 
     case UnretainedOutParameter:
     case RetainedOutParameter:
