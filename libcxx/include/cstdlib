@@ -151,11 +151,11 @@ using ::mbtowc;
 using ::wctomb;
 using ::mbstowcs;
 using ::wcstombs;
-#ifdef _LIBCPP_HAS_QUICK_EXIT
+#if !defined(_LIBCPP_CXX03_LANG) && defined(_LIBCPP_HAS_QUICK_EXIT)
 using ::at_quick_exit;
 using ::quick_exit;
 #endif
-#ifdef _LIBCPP_HAS_C11_FEATURES
+#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_C11_FEATURES)
 using ::aligned_alloc;
 #endif
 
