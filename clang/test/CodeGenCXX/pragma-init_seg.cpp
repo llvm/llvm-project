@@ -28,8 +28,8 @@ int z = f();
 namespace internal_init {
 namespace {
 int x = f();
-// CHECK: @"?x@?A@internal_init@@3HA" = internal global i32 0, align 4
-// CHECK: @__cxx_init_fn_ptr.2 = private constant void ()* @"??__Ex@?A@internal_init@@YAXXZ", section ".asdf"
+// CHECK: @"?x@?A0x{{[^@]*}}@internal_init@@3HA" = internal global i32 0, align 4
+// CHECK: @__cxx_init_fn_ptr.2 = private constant void ()* @"??__Ex@?A0x{{[^@]*}}@internal_init@@YAXXZ", section ".asdf"
 }
 }
 

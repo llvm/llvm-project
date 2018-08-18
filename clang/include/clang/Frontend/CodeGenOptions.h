@@ -108,6 +108,12 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum SignReturnAddressScope {
+    None,    // No signing for any function
+    NonLeaf, // Sign the return address of functions that spill LR
+    All      // Sign the return address of all functions
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 

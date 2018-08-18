@@ -2086,7 +2086,6 @@ id makeCollectableNonLeak() {
   return [objCObject autorelease]; // +0
 }
 
-
 void consumeAndStopTracking(id NS_CONSUMED obj, void (^callback)(void));
 void CFConsumeAndStopTracking(CFTypeRef CF_CONSUMED obj, void (^callback)(void));
 

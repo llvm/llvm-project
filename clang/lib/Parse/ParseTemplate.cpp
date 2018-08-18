@@ -425,7 +425,9 @@ bool Parser::isStartOfTemplateTypeParameter() {
     }
   }
 
-  if (Tok.isNot(tok::kw_typename))
+  // 'typedef' is a reasonably-common typo/thinko for 'typename', and is
+  // ill-formed otherwise.
+  if (Tok.isNot(tok::kw_typename) && Tok.isNot(tok::kw_typedef))
     return false;
 
   // C++ [temp.param]p2:
@@ -446,6 +448,13 @@ bool Parser::isStartOfTemplateTypeParameter() {
   case tok::greater:
   case tok::greatergreater:
   case tok::ellipsis:
+    return true;
+
+  case tok::kw_typename:
+  case tok::kw_typedef:
+  case tok::kw_class:
+    // These indicate that a comma was missed after a type parameter, not that
+    // we have found a non-type parameter.
     return true;
 
   default:
@@ -469,25 +478,24 @@ bool Parser::isStartOfTemplateTypeParameter() {
 ///         'template' '<' template-parameter-list '>' 'class' identifier[opt]
 ///               = id-expression
 NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
-  if (isStartOfTemplateTypeParameter())
-    return ParseTypeParameter(Depth, Position);
+  if (isStartOfTemplateTypeParameter()) {
+    // Is there just a typo in the input code? ('typedef' instead of 'typename')
+    if (Tok.is(tok::kw_typedef)) {
+      Diag(Tok.getLocation(), diag::err_expected_template_parameter);
 
-  if (Tok.is(tok::kw_template))
-    return ParseTemplateTemplateParameter(Depth, Position);
+      Diag(Tok.getLocation(), diag::note_meant_to_use_typename)
+          << FixItHint::CreateReplacement(CharSourceRange::getCharRange(
+                                              Tok.getLocation(), Tok.getEndLoc()),
+                                          "typename");
 
-  // Is there just a typo in the input code? ('typedef' instead of 'typename')
-  if (Tok.is(tok::kw_typedef)) {
-    Diag(Tok.getLocation(), diag::err_expected_template_parameter);
-
-    Diag(Tok.getLocation(), diag::note_meant_to_use_typename)
-        << FixItHint::CreateReplacement(CharSourceRange::getCharRange(
-                                            Tok.getLocation(), Tok.getEndLoc()),
-                                        "typename");
-
-    Tok.setKind(tok::kw_typename);
+      Tok.setKind(tok::kw_typename);
+    }
 
     return ParseTypeParameter(Depth, Position);
   }
+
+  if (Tok.is(tok::kw_template))
+    return ParseTemplateTemplateParameter(Depth, Position);
 
   // If it's none of the above, then it must be a parameter declaration.
   // NOTE: This will pick up errors in the closure of the template parameter

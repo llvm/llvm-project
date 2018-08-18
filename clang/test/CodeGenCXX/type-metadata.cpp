@@ -82,8 +82,8 @@
 // MS: comdat($"??_7B@@6B0@@"), !type [[B8:![0-9]+]]
 // MS: comdat($"??_7B@@6BA@@@"), !type [[A8]]
 // MS: comdat($"??_7C@@6B@"), !type [[A8]]
-// MS: comdat($"??_7D@?A@@6BB@@@"), !type [[B8]], !type [[D8:![0-9]+]]
-// MS: comdat($"??_7D@?A@@6BA@@@"), !type [[A8]]
+// MS: comdat($"??_7D@?A0x{{[^@]*}}@@6BB@@@"), !type [[B8]], !type [[D8:![0-9]+]]
+// MS: comdat($"??_7D@?A0x{{[^@]*}}@@6BA@@@"), !type [[A8]]
 // MS: comdat($"??_7FA@?1??foo@@YAXXZ@6B@"), !type [[A8]], !type [[FA8:![0-9]+]]
 
 struct A {
@@ -161,7 +161,7 @@ void af(A *a) {
 }
 
 // ITANIUM: define internal void @_Z3df1PN12_GLOBAL__N_11DE
-// MS: define internal void @"?df1@@YAXPEAUD@?A@@@Z"
+// MS: define internal void @"?df1@@YAXPEAUD@?A0x{{[^@]*}}@@@Z"
 void df1(D *d) {
   // TT-ITANIUM: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata !"?AUA@@")
@@ -171,7 +171,7 @@ void df1(D *d) {
 }
 
 // ITANIUM: define internal void @_Z3dg1PN12_GLOBAL__N_11DE
-// MS: define internal void @"?dg1@@YAXPEAUD@?A@@@Z"
+// MS: define internal void @"?dg1@@YAXPEAUD@?A0x{{[^@]*}}@@@Z"
 void dg1(D *d) {
   // TT-ITANIUM: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata !"_ZTS1B")
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata !"?AUB@@")
@@ -181,7 +181,7 @@ void dg1(D *d) {
 }
 
 // ITANIUM: define internal void @_Z3dh1PN12_GLOBAL__N_11DE
-// MS: define internal void @"?dh1@@YAXPEAUD@?A@@@Z"
+// MS: define internal void @"?dh1@@YAXPEAUD@?A0x{{[^@]*}}@@@Z"
 void dh1(D *d) {
   // TT-ITANIUM: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata ![[DTYPE]])
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
@@ -191,7 +191,7 @@ void dh1(D *d) {
 }
 
 // ITANIUM: define internal void @_Z3df2PN12_GLOBAL__N_11DE
-// MS: define internal void @"?df2@@YAXPEAUD@?A@@@Z"
+// MS: define internal void @"?df2@@YAXPEAUD@?A0x{{[^@]*}}@@@Z"
 __attribute__((no_sanitize("cfi")))
 void df2(D *d) {
   // CFI-NVT-NOT: call i1 @llvm.type.test
@@ -201,7 +201,7 @@ void df2(D *d) {
 }
 
 // ITANIUM: define internal void @_Z3df3PN12_GLOBAL__N_11DE
-// MS: define internal void @"?df3@@YAXPEAUD@?A@@@Z"
+// MS: define internal void @"?df3@@YAXPEAUD@?A0x{{[^@]*}}@@@Z"
 __attribute__((no_sanitize("address"))) __attribute__((no_sanitize("cfi-vcall")))
 void df3(D *d) {
   // CFI-NVT-NOT: call i1 @llvm.type.test

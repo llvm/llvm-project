@@ -1,11 +1,13 @@
 
 @protocol foo;
+@protocol foo2
+@end
 @class itf;
 
 // Expressions
 typedef typeof(@"foo" "bar") objc_string;
 typedef typeof(@encode(int)) objc_encode;
-typedef typeof(@protocol(foo)) objc_protocol;
+typedef typeof(@protocol(foo2)) objc_protocol;
 typedef typeof(@selector(noArgs)) objc_selector_noArgs;
 typedef typeof(@selector(oneArg:)) objc_selector_oneArg;
 typedef typeof(@selector(foo:bar:)) objc_selector_twoArg;

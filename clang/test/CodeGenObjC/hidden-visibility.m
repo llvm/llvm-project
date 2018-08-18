@@ -16,7 +16,7 @@
 @end
 
 
-@protocol Prot0;
+@protocol Prot0 @end
 
 id f0() {
   return @protocol(Prot0);

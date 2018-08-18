@@ -86,7 +86,7 @@ namespace Test4 {
     };
   }
   void C::c() {}
-// CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@?A@Test4@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
+// CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@?A0x{{[^@]*}}@Test4@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
   void C::f() {}
 
   // Force C::f to be used.
