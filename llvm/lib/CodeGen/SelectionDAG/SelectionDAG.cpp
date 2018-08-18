@@ -3641,11 +3641,15 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   switch (Opcode) {
   case ISD::FADD:
   case ISD::FSUB:
-  case ISD::FMUL: {
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
+  case ISD::FSIN:
+  case ISD::FCOS: {
     if (SNaN)
       return true;
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
-           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+    // TODO: Need isKnownNeverInfinity
+    return false;
   }
   case ISD::FCANONICALIZE:
   case ISD::FEXP:
@@ -3668,15 +3672,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::SELECT:
     return isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1);
-  case ISD::FDIV:
-  case ISD::FREM:
-  case ISD::FSIN:
-  case ISD::FCOS: {
-    if (SNaN)
-      return true;
-    // TODO: Need isKnownNeverInfinity
-    return false;
-  }
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     if (SNaN)

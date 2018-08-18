@@ -130,4 +130,34 @@ unsigned __int64 test_umul128(unsigned __int64 Multiplier,
 // CHECK-X64: = mul nuw i128 %
 // CHECK-X64: store i64 %
 // CHECK-X64: ret i64 %
-#endif
+
+unsigned __int64 test__shiftleft128(unsigned __int64 l, unsigned __int64 h,
+                                    unsigned char d) {
+  return __shiftleft128(l, h, d);
+}
+// CHECK-X64-LABEL: define dso_local i64 @test__shiftleft128(i64 %l, i64 %h, i8 %d)
+// CHECK-X64  = zext i64 %h to i128
+// CHECK-X64  = shl nuw i128 %0, 64
+// CHECK-X64  = zext i64 %l to i128
+// CHECK-X64  = or i128 %1, %2
+// CHECK-X64  = and i8 %d, 63
+// CHECK-X64  = shl i128 %
+// CHECK-X64  = lshr i128 %
+// CHECK-X64  = trunc i128 %
+// CHECK-X64  ret i64 %
+
+unsigned __int64 test__shiftright128(unsigned __int64 l, unsigned __int64 h,
+                                     unsigned char d) {
+  return __shiftright128(l, h, d);
+}
+// CHECK-X64-LABEL: define dso_local i64 @test__shiftright128(i64 %l, i64 %h, i8 %d)
+// CHECK-X64  = zext i64 %h to i128
+// CHECK-X64  = shl nuw i128 %
+// CHECK-X64  = zext i64 %l to i128
+// CHECK-X64  = or i128 %
+// CHECK-X64  = and i8 %d, 63
+// CHECK-X64  = lshr i128 %
+// CHECK-X64  = trunc i128 %
+// CHECK-X64  ret i64 %
+
+#endif // defined(__x86_64__)

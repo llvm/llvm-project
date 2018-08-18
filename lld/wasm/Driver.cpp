@@ -395,6 +395,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->CompressRelocTargets = Args.hasArg(OPT_compress_relocations);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
   Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
   Config->ThinLTOCachePolicy = CHECK(
@@ -410,7 +411,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
-  Config->CompressRelocTargets = Config->Optimize > 0 && !Config->Relocatable;
+  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocTargets)
+    error("--compress-relocations is incompatible with output debug"
+          " information. Please pass --strip-debug or --strip-all");
 
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));
@@ -438,6 +441,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       error("entry point specified for relocatable output file");
     if (Config->GcSections)
       error("-r and --gc-sections may not be used together");
+    if (Config->CompressRelocTargets)
+      error("-r -and --compress-relocations may not be used together");
     if (Args.hasArg(OPT_undefined))
       error("-r -and --undefined may not be used together");
   }

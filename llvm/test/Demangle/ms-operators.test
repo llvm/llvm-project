@@ -143,11 +143,11 @@
 ??_8Middle2@@7B@
 ; CHECK: const Middle2::`vbtable'
 
-; ??_9Base@@$B7AA
-; FIXME: [thunk]: __cdecl Base::`vcall'{8, {flat}}' }'
+??_9Base@@$B7AA
+; CHECK: [thunk]: __cdecl Base::`vcall'{8, {flat}}
 
-; ??_B?1??getS@@YAAAUS@@XZ@51
-; FIXME: `struct S & __cdecl getS(void)'::`2'::`local static guard'{2}'
+??_B?1??getS@@YAAAUS@@XZ@51
+; CHECK: `struct S & __cdecl getS(void)'::`2'::`local static guard'{2}
 
 ??_C@_02PCEFGMJL@hi?$AA@
 ; CHECK: const char * {"hi"}
@@ -157,9 +157,6 @@
 
 ??_EBase@@UEAAPEAXI@Z
 ; CHECK: virtual void * __cdecl Base::`vector deleting dtor'(unsigned int)
-
-; ??_EDerived@@$4PPPPPPPM@A@EAAPEAXI@Z
-; FIXME: [thunk]:virtual void * __cdecl Derived::`vector deleting dtor'`vtordisp{4294967292, 0}' (unsigned int)
 
 ??_F?$SomeTemplate@H@@QAEXXZ
 ; CHECK: void __thiscall SomeTemplate<int>::`default ctor closure'(void)
@@ -203,17 +200,17 @@
 ??_V@YAXPEAXAEAVklass@@@Z
 ; CHECK: void __cdecl operator delete[](void *, class klass &)
 
-; ??_R0?AUBase@@@8
-; FIXME: struct Base `RTTI Type Descriptor'
+??_R0?AUBase@@@8
+; CHECK: struct Base `RTTI Type Descriptor'
 
-; ??_R1A@?0A@EA@Base@@8
-; FIXME: Base::`RTTI Base Class Descriptor at (0, -1, 0, 64)'
+??_R1A@?0A@EA@Base@@8
+; CHECK: Base::`RTTI Base Class Descriptor at (0, -1, 0, 64)'
 
-; ??_R2Base@@8
-; FIXME: Base::`RTTI Base Class Array'
+??_R2Base@@8
+; CHECK: Base::`RTTI Base Class Array'
 
-; ??_R3Base@@8
-; FIXME: Base::`RTTI Class Hierarchy Descriptor'
+??_R3Base@@8
+; CHECK: Base::`RTTI Class Hierarchy Descriptor'
 
 ??_R4Base@@6B@
 ; CHECK: const Base::`RTTI Complete Object Locator'

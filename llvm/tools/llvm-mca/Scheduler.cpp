@@ -313,7 +313,7 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
   // ready queue if operands are all ready.
   unsigned RemovedElements = 0;
-  for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E; ) {
+  for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E;) {
     InstRef &IR = *I;
     if (!IR.isValid())
       break;
@@ -375,7 +375,7 @@ InstRef Scheduler::select() {
     return InstRef();
 
   // We found an instruction to issue.
-  
+
   InstRef IR = ReadySet[QueueIndex];
   std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
   ReadySet.pop_back();
@@ -392,7 +392,7 @@ void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   unsigned RemovedElements = 0;
-  for (auto I = IssuedSet.begin(), E = IssuedSet.end(); I != E; ) {
+  for (auto I = IssuedSet.begin(), E = IssuedSet.end(); I != E;) {
     InstRef &IR = *I;
     if (!IR.isValid())
       break;

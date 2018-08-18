@@ -313,7 +313,7 @@ public:
   void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers);
 
   // Reserve a processor resource. A reserved resource is not available for
-  // instruction issue until it is released. 
+  // instruction issue until it is released.
   void reserveResource(uint64_t ResourceID);
 
   // Release a previously reserved processor resource.

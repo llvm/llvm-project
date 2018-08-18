@@ -21,7 +21,7 @@ void g() {
 }
 
 // ITANIUM: define internal void @_ZN12_GLOBAL__N_11fENS_1SE({{.*}} !type [[TS1:![0-9]+]] !type [[TS2:![0-9]+]]
-// MS: define internal void @"?f@?A@@YAXUS@?A@@@Z"({{.*}} !type [[TS1:![0-9]+]] !type [[TS2:![0-9]+]]
+// MS: define internal void @"?f@?A0x{{[^@]*}}@@YAXUS@?A0x{{[^@]*}}@@@Z"({{.*}} !type [[TS1:![0-9]+]] !type [[TS2:![0-9]+]]
 
 // CHECK: [[VOIDS1]] = distinct !{}
 // CHECK: [[TS1]] = !{i64 0, [[VOIDS1]]}

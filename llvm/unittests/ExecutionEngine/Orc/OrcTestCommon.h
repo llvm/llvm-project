@@ -44,12 +44,12 @@ namespace orc {
 // (4) FooSym, BarSym, BazSym, QuxSym -- JITEvaluatedSymbols with FooAddr,
 //     BarAddr, BazAddr, and QuxAddr respectively. All with default strong,
 //     linkage and non-hidden visibility.
-// (5) V -- A VSO associated with ES.
+// (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
 public:
 protected:
   ExecutionSession ES;
-  VSO &V = ES.createVSO("V");
+  JITDylib &JD = ES.createJITDylib("JD");
   SymbolStringPtr Foo = ES.getSymbolStringPool().intern("foo");
   SymbolStringPtr Bar = ES.getSymbolStringPool().intern("bar");
   SymbolStringPtr Baz = ES.getSymbolStringPool().intern("baz");
