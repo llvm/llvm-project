@@ -135,7 +135,7 @@ enum class StorageClass : uint8_t {
   ProtectedStatic,
   PublicStatic,
   Global,
-  FunctionLocalStatic
+  FunctionLocalStatic,
 };
 
 enum class QualifierMangleMode { Drop, Mangle, Result };
@@ -191,11 +191,181 @@ enum class PrimTy : uint8_t {
   Float,
   Double,
   Ldouble,
-  Nullptr
+  Nullptr,
+  Vftable,
+  Vbtable,
+  LocalStaticGuard
+};
+
+enum class OperatorTy : uint8_t {
+  Ctor,                    // ?0 # Foo::Foo()
+  Dtor,                    // ?1 # Foo::~Foo()
+  New,                     // ?2 # operator new
+  Delete,                  // ?3 # operator delete
+  Assign,                  // ?4 # operator=
+  RightShift,              // ?5 # operator>>
+  LeftShift,               // ?6 # operator<<
+  LogicalNot,              // ?7 # operator!
+  Equals,                  // ?8 # operator==
+  NotEquals,               // ?9 # operator!=
+  ArraySubscript,          // ?A # operator[]
+  Conversion,              // ?B # Foo::operator <type>()
+  Pointer,                 // ?C # operator->
+  Dereference,             // ?D # operator*
+  Increment,               // ?E # operator++
+  Decrement,               // ?F # operator--
+  Minus,                   // ?G # operator-
+  Plus,                    // ?H # operator+
+  BitwiseAnd,              // ?I # operator&
+  MemberPointer,           // ?J # operator->*
+  Divide,                  // ?K # operator/
+  Modulus,                 // ?L # operator%
+  LessThan,                // ?M operator<
+  LessThanEqual,           // ?N operator<=
+  GreaterThan,             // ?O operator>
+  GreaterThanEqual,        // ?P operator>=
+  Comma,                   // ?Q operator,
+  Parens,                  // ?R operator()
+  BitwiseNot,              // ?S operator~
+  BitwiseXor,              // ?T operator^
+  BitwiseOr,               // ?U operator|
+  LogicalAnd,              // ?V operator&&
+  LogicalOr,               // ?W operator||
+  TimesEqual,              // ?X operator*=
+  PlusEqual,               // ?Y operator+=
+  MinusEqual,              // ?Z operator-=
+  DivEqual,                // ?_0 operator/=
+  ModEqual,                // ?_1 operator%=
+  RshEqual,                // ?_2 operator>>=
+  LshEqual,                // ?_3 operator<<=
+  BitwiseAndEqual,         // ?_4 operator&=
+  BitwiseOrEqual,          // ?_5 operator|=
+  BitwiseXorEqual,         // ?_6 operator^=
+  Vftable,                 // ?_7 # vftable
+  Vbtable,                 // ?_8 # vbtable
+  Vcall,                   // ?_9 # vcall
+  Typeof,                  // ?_A # typeof
+  LocalStaticGuard,        // ?_B # local static guard
+  StringLiteral,           // ?_C # string literal
+  VbaseDtor,               // ?_D # vbase destructor
+  VecDelDtor,              // ?_E # vector deleting destructor
+  DefaultCtorClosure,      // ?_F # default constructor closure
+  ScalarDelDtor,           // ?_G # scalar deleting destructor
+  VecCtorIter,             // ?_H # vector constructor iterator
+  VecDtorIter,             // ?_I # vector destructor iterator
+  VecVbaseCtorIter,        // ?_J # vector vbase constructor iterator
+  VdispMap,                // ?_K # virtual displacement map
+  EHVecCtorIter,           // ?_L # eh vector constructor iterator
+  EHVecDtorIter,           // ?_M # eh vector destructor iterator
+  EHVecVbaseCtorIter,      // ?_N # eh vector vbase constructor iterator
+  CopyCtorClosure,         // ?_O # copy constructor closure
+  UdtReturning,            // ?_P<name> # udt returning <name>
+  Unknown,                 // ?_Q # <unknown>
+  RttiTypeDescriptor,      // ?_R0 # RTTI Type Descriptor
+  RttiBaseClassDescriptor, // ?_R1 # RTTI Base Class Descriptor at (a,b,c,d)
+  RttiBaseClassArray,      // ?_R2 # RTTI Base Class Array
+  RttiClassHierarchyDescriptor, // ?_R3 # RTTI Class Hierarchy Descriptor
+  RttiCompleteObjLocator,       // ?_R4 # RTTI Complete Object Locator
+  LocalVftable,                 // ?_S # local vftable
+  LocalVftableCtorClosure,      // ?_T # local vftable constructor closure
+  ArrayNew,                     // ?_U operator new[]
+  ArrayDelete,                  // ?_V operator delete[]
+  LiteralOperator,              // ?__K operator ""_name
+  CoAwait,                      // ?__L co_await
+  Spaceship,                    // operator<=>
+};
+
+// A map to translate from operator prefix to operator type.
+struct OperatorMapEntry {
+  StringView Prefix;
+  StringView Name;
+  OperatorTy Operator;
+};
+
+// The entries here must be in the same order as the enumeration so that it can
+// be indexed by enum value.
+OperatorMapEntry OperatorMap[] = {
+    {"0", " <ctor>", OperatorTy::Ctor},
+    {"1", " <dtor>", OperatorTy::Dtor},
+    {"2", "operator new", OperatorTy::New},
+    {"3", "operator delete", OperatorTy::Delete},
+    {"4", "operator=", OperatorTy::Assign},
+    {"5", "operator>>", OperatorTy::RightShift},
+    {"6", "operator<<", OperatorTy::LeftShift},
+    {"7", "operator!", OperatorTy::LogicalNot},
+    {"8", "operator==", OperatorTy::Equals},
+    {"9", "operator!=", OperatorTy::NotEquals},
+    {"A", "operator[]", OperatorTy::ArraySubscript},
+    {"B", "operator <conversion>", OperatorTy::Conversion},
+    {"C", "operator->", OperatorTy::Pointer},
+    {"D", "operator*", OperatorTy::Dereference},
+    {"E", "operator++", OperatorTy::Increment},
+    {"F", "operator--", OperatorTy::Decrement},
+    {"G", "operator-", OperatorTy::Minus},
+    {"H", "operator+", OperatorTy::Plus},
+    {"I", "operator&", OperatorTy::BitwiseAnd},
+    {"J", "operator->*", OperatorTy::MemberPointer},
+    {"K", "operator/", OperatorTy::Divide},
+    {"L", "operator%", OperatorTy::Modulus},
+    {"M", "operator<", OperatorTy::LessThan},
+    {"N", "operator<=", OperatorTy::LessThanEqual},
+    {"O", "operator>", OperatorTy::GreaterThan},
+    {"P", "operator>=", OperatorTy::GreaterThanEqual},
+    {"Q", "operator,", OperatorTy::Comma},
+    {"R", "operator()", OperatorTy::Parens},
+    {"S", "operator~", OperatorTy::BitwiseNot},
+    {"T", "operator^", OperatorTy::BitwiseXor},
+    {"U", "operator|", OperatorTy::BitwiseOr},
+    {"V", "operator&&", OperatorTy::LogicalAnd},
+    {"W", "operator||", OperatorTy::LogicalOr},
+    {"X", "operator*=", OperatorTy::TimesEqual},
+    {"Y", "operator+=", OperatorTy::PlusEqual},
+    {"Z", "operator-=", OperatorTy::MinusEqual},
+    {"_0", "operator/=", OperatorTy::DivEqual},
+    {"_1", "operator%=", OperatorTy::ModEqual},
+    {"_2", "operator>>=", OperatorTy::RshEqual},
+    {"_3", "operator<<=", OperatorTy::LshEqual},
+    {"_4", "operator&=", OperatorTy::BitwiseAndEqual},
+    {"_5", "operator|=", OperatorTy::BitwiseOrEqual},
+    {"_6", "operator^=", OperatorTy::BitwiseXorEqual},
+    {"_7", "`vftable'", OperatorTy::Vftable},
+    {"_8", "`vbtable'", OperatorTy::Vbtable},
+    {"_9", "`vcall'", OperatorTy::Vcall},
+    {"_A", "`typeof'", OperatorTy::Typeof},
+    {"_B", "`local static guard'", OperatorTy::LocalStaticGuard},
+    {"_C", "`string'", OperatorTy::StringLiteral},
+    {"_D", "`vbase dtor'", OperatorTy::VbaseDtor},
+    {"_E", "`vector deleting dtor'", OperatorTy::VecDelDtor},
+    {"_F", "`default ctor closure'", OperatorTy::DefaultCtorClosure},
+    {"_G", "`scalar deleting dtor'", OperatorTy::ScalarDelDtor},
+    {"_H", "`vector ctor iterator'", OperatorTy::VecCtorIter},
+    {"_I", "`vector dtor iterator'", OperatorTy::VecDtorIter},
+    {"_J", "`vector vbase ctor iterator'", OperatorTy::VecVbaseCtorIter},
+    {"_K", "`virtual displacement map'", OperatorTy::VdispMap},
+    {"_L", "`eh vector ctor iterator'", OperatorTy::EHVecCtorIter},
+    {"_M", "`eh vector dtor iterator'", OperatorTy::EHVecDtorIter},
+    {"_N", "`eh vector vbase ctor iterator'", OperatorTy::EHVecVbaseCtorIter},
+    {"_O", "`copy ctor closure'", OperatorTy::CopyCtorClosure},
+    {"_P", "`udt returning'", OperatorTy::UdtReturning},
+    {"_Q", "`unknown'", OperatorTy::Unknown},
+    {"_R0", "`RTTI Type Descriptor'", OperatorTy::RttiTypeDescriptor},
+    {"_R1", "RTTI Base Class Descriptor", OperatorTy::RttiBaseClassDescriptor},
+    {"_R2", "`RTTI Base Class Array'", OperatorTy::RttiBaseClassArray},
+    {"_R3", "`RTTI Class Hierarchy Descriptor'",
+     OperatorTy::RttiClassHierarchyDescriptor},
+    {"_R4", "`RTTI Complete Object Locator'",
+     OperatorTy::RttiCompleteObjLocator},
+    {"_S", "`local vftable'", OperatorTy::LocalVftable},
+    {"_T", "`local vftable ctor closure'", OperatorTy::LocalVftableCtorClosure},
+    {"_U", "operator new[]", OperatorTy::ArrayNew},
+    {"_V", "operator delete[]", OperatorTy::ArrayDelete},
+    {"__K", "operator \"\"", OperatorTy::LiteralOperator},
+    {"__L", "co_await", OperatorTy::CoAwait},
 };
 
 // Function classes
 enum FuncClass : uint16_t {
+  None = 0,
   Public = 1 << 0,
   Protected = 1 << 1,
   Private = 1 << 2,
@@ -205,6 +375,9 @@ enum FuncClass : uint16_t {
   Far = 1 << 6,
   ExternC = 1 << 7,
   NoPrototype = 1 << 8,
+  VirtualThisAdjust = 1 << 9,
+  VirtualThisAdjustEx = 1 << 10,
+  StaticThisAdjust = 1 << 11
 };
 
 enum NameBackrefBehavior : uint8_t {
@@ -213,7 +386,14 @@ enum NameBackrefBehavior : uint8_t {
   NBB_Simple = 1 << 1,   // save simple names.
 };
 
-enum class SymbolCategory { Unknown, Function, Variable, StringLiteral };
+enum class SymbolCategory {
+  Unknown,
+  NamedFunction,
+  NamedVariable,
+  UnnamedFunction,
+  UnnamedVariable,
+  SpecialOperator
+};
 
 namespace {
 
@@ -287,24 +467,63 @@ struct Type {
 
 // Represents an identifier which may be a template.
 struct Name {
+  virtual ~Name() = default;
+
   bool IsTemplateInstantiation = false;
   bool IsOperator = false;
   bool IsBackReference = false;
-  bool IsConversionOperator = false;
-  bool IsStringLiteral = false;
-  bool IsLongStringLiteral = false;
 
-  // If IsStringLiteral is true, this is the character type.
-  PrimTy StringLiteralType = PrimTy::None;
+  bool isStringLiteralOperatorInfo() const;
 
   // Name read from an MangledName string.
   StringView Str;
 
-  // Template parameters. Only valid if Flags contains NF_TemplateInstantiation.
+  // Template parameters. Only valid if IsTemplateInstantiation is true.
   TemplateParams *TParams = nullptr;
 
   // Nested BackReferences (e.g. "A::B::C") are represented as a linked list.
   Name *Next = nullptr;
+};
+
+struct OperatorInfo : public Name {
+  explicit OperatorInfo(const OperatorMapEntry &Info) : Info(&Info) {
+    this->IsOperator = true;
+  }
+  explicit OperatorInfo(OperatorTy OpType)
+      : OperatorInfo(OperatorMap[(int)OpType]) {}
+
+  const OperatorMapEntry *Info = nullptr;
+};
+
+struct StringLiteral : public OperatorInfo {
+  StringLiteral() : OperatorInfo(OperatorTy::StringLiteral) {}
+
+  PrimTy CharType;
+  bool IsTruncated = false;
+};
+
+struct RttiBaseClassDescriptor : public OperatorInfo {
+  RttiBaseClassDescriptor()
+      : OperatorInfo(OperatorTy::RttiBaseClassDescriptor) {}
+
+  uint32_t NVOffset = 0;
+  int32_t VBPtrOffset = 0;
+  uint32_t VBTableOffset = 0;
+  uint32_t Flags = 0;
+};
+
+struct LocalStaticGuardVariable : public OperatorInfo {
+  LocalStaticGuardVariable() : OperatorInfo(OperatorTy::LocalStaticGuard) {}
+
+  uint32_t ScopeIndex = 0;
+  bool IsVisible = false;
+};
+
+struct VirtualMemberPtrThunk : public OperatorInfo {
+  VirtualMemberPtrThunk() : OperatorInfo(OperatorTy::Vcall) {}
+
+  uint64_t OffsetInVTable = 0;
+  CallingConv CC = CallingConv::Cdecl;
 };
 
 struct PointerType : public Type {
@@ -332,6 +551,13 @@ struct MemberPointerType : public Type {
 };
 
 struct FunctionType : public Type {
+  struct ThisAdjustor {
+    uint32_t StaticOffset = 0;
+    int32_t VBPtrOffset = 0;
+    int32_t VBOffsetOffset = 0;
+    int32_t VtordispOffset = 0;
+  };
+
   Type *clone(ArenaAllocator &Arena) const override;
   void outputPre(OutputStream &OS, NameResolver &Resolver) override;
   void outputPost(OutputStream &OS, NameResolver &Resolver) override;
@@ -339,6 +565,7 @@ struct FunctionType : public Type {
   // True if this FunctionType instance is the Pointee of a PointerType or
   // MemberPointerType.
   bool IsFunctionPointer = false;
+  bool IsThunk = false;
 
   Type *ReturnType = nullptr;
   // If this is a reference, the type of reference.
@@ -346,6 +573,9 @@ struct FunctionType : public Type {
 
   CallingConv CallConvention;
   FuncClass FunctionClass;
+
+  // Valid if IsThunk is true.
+  ThisAdjustor *ThisAdjust = nullptr;
 
   FunctionParams Params;
 };
@@ -526,9 +756,8 @@ static void outputParameterList(OutputStream &OS, const FunctionParams &Params,
   }
 }
 
-static void outputStringLiteral(OutputStream &OS, const Name &TheString) {
-  assert(TheString.IsStringLiteral);
-  switch (TheString.StringLiteralType) {
+static void outputStringLiteral(OutputStream &OS, const StringLiteral &Str) {
+  switch (Str.CharType) {
   case PrimTy::Wchar:
     OS << "const wchar_t * {L\"";
     break;
@@ -544,8 +773,8 @@ static void outputStringLiteral(OutputStream &OS, const Name &TheString) {
   default:
     LLVM_BUILTIN_UNREACHABLE;
   }
-  OS << TheString.Str << "\"";
-  if (TheString.IsLongStringLiteral)
+  OS << Str.Str << "\"";
+  if (Str.IsTruncated)
     OS << "...";
   OS << "}";
 }
@@ -593,20 +822,37 @@ static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
   OS << ">";
 }
 
-static void outputNameComponent(OutputStream &OS, const Name &N,
-                                NameResolver &Resolver) {
-  if (N.IsConversionOperator) {
-    OS << " conv";
-  } else {
-    StringView S = N.Str;
-
-    if (N.IsBackReference)
-      S = Resolver.resolve(N.Str);
-    OS << S;
+static void outputQualifiers(OutputStream &OS, Qualifiers Q) {
+  if (Q & Q_Const) {
+    outputSpaceIfNecessary(OS);
+    OS << "const";
   }
 
-  if (N.IsTemplateInstantiation && N.TParams)
-    outputParameterList(OS, *N.TParams, Resolver);
+  if (Q & Q_Volatile) {
+    outputSpaceIfNecessary(OS);
+    OS << "volatile";
+  }
+
+  if (Q & Q_Restrict) {
+    outputSpaceIfNecessary(OS);
+    OS << "__restrict";
+  }
+}
+
+static void outputNameComponent(OutputStream &OS, bool IsBackReference,
+                                const TemplateParams *TParams, StringView Str,
+                                NameResolver &Resolver) {
+  if (IsBackReference)
+    Str = Resolver.resolve(Str);
+  OS << Str;
+
+  if (TParams)
+    outputParameterList(OS, *TParams, Resolver);
+}
+
+static void outputNameComponent(OutputStream &OS, const Name &N,
+                                NameResolver &Resolver) {
+  outputNameComponent(OS, N.IsBackReference, N.TParams, N.Str, Resolver);
 }
 
 static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
@@ -630,16 +876,17 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
     return;
   }
 
+  const OperatorInfo &Operator = static_cast<const OperatorInfo &>(*TheName);
+
   // Print out ctor or dtor.
-  if (TheName->Str == "dtor")
+  switch (Operator.Info->Operator) {
+  case OperatorTy::Dtor:
     OS << "~";
-
-  if (TheName->Str == "ctor" || TheName->Str == "dtor") {
+    LLVM_FALLTHROUGH;
+  case OperatorTy::Ctor:
     outputNameComponent(OS, *Previous, Resolver);
-    return;
-  }
-
-  if (TheName->IsConversionOperator) {
+    break;
+  case OperatorTy::Conversion:
     OS << "operator";
     if (TheName->IsTemplateInstantiation && TheName->TParams)
       outputParameterList(OS, *TheName->TParams, Resolver);
@@ -651,14 +898,82 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
     } else {
       OS << "<conversion>";
     }
-  } else {
-    // Print out an overloaded operator.
-    OS << "operator";
+    break;
+  case OperatorTy::LiteralOperator:
+    OS << Operator.Info->Name;
     outputNameComponent(OS, *TheName, Resolver);
+    break;
+  case OperatorTy::RttiBaseClassDescriptor: {
+    const RttiBaseClassDescriptor &BCD =
+        static_cast<const RttiBaseClassDescriptor &>(Operator);
+    OS << "`" << Operator.Info->Name << " at (";
+    OS << BCD.NVOffset << ", " << BCD.VBPtrOffset << ", " << BCD.VBTableOffset
+       << ", " << BCD.Flags;
+    OS << ")'";
+    break;
+  }
+  case OperatorTy::LocalStaticGuard: {
+    const LocalStaticGuardVariable &LSG =
+        static_cast<const LocalStaticGuardVariable &>(Operator);
+    OS << Operator.Info->Name;
+    if (LSG.ScopeIndex > 0)
+      OS << "{" << LSG.ScopeIndex << "}";
+    break;
+  }
+  default:
+    OS << Operator.Info->Name;
+    if (Operator.IsTemplateInstantiation)
+      outputParameterList(OS, *Operator.TParams, Resolver);
+    break;
+  }
+}
+
+static void outputSpecialOperator(OutputStream &OS, const Name *OuterName,
+                                  NameResolver &Resolver) {
+  assert(OuterName);
+  // The last component should be an operator.
+  const Name *LastComponent = OuterName;
+  while (LastComponent->Next)
+    LastComponent = LastComponent->Next;
+
+  assert(LastComponent->IsOperator);
+  const OperatorInfo &Oper = static_cast<const OperatorInfo &>(*LastComponent);
+  switch (Oper.Info->Operator) {
+  case OperatorTy::StringLiteral: {
+    const StringLiteral &SL = static_cast<const StringLiteral &>(Oper);
+    outputStringLiteral(OS, SL);
+    break;
+  }
+  case OperatorTy::Vcall: {
+    const VirtualMemberPtrThunk &Thunk =
+        static_cast<const VirtualMemberPtrThunk &>(Oper);
+    OS << "[thunk]: ";
+    outputCallingConvention(OS, Thunk.CC);
+    OS << " ";
+    // Print out namespaces or outer class BackReferences.
+    const Name *N = OuterName;
+    for (; N->Next; N = N->Next) {
+      outputNameComponent(OS, *N, Resolver);
+      OS << "::";
+    }
+    OS << "`vcall'{";
+    OS << Thunk.OffsetInVTable << ", {flat}}";
+    break;
+  }
+  default:
+    // There are no other special operator categories.
+    LLVM_BUILTIN_UNREACHABLE;
   }
 }
 
 namespace {
+
+bool Name::isStringLiteralOperatorInfo() const {
+  if (!IsOperator)
+    return false;
+  const OperatorInfo &O = static_cast<const OperatorInfo &>(*this);
+  return O.Info->Operator == OperatorTy::StringLiteral;
+}
 
 Type *Type::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<Type>(*this);
@@ -684,20 +999,7 @@ void Type::outputPre(OutputStream &OS, Type &Ty, NameResolver &Resolver) {
   }
   Ty.outputPre(OS, Resolver);
 
-  if (Ty.Quals & Q_Const) {
-    outputSpaceIfNecessary(OS);
-    OS << "const";
-  }
-
-  if (Ty.Quals & Q_Volatile) {
-    outputSpaceIfNecessary(OS);
-    OS << "volatile";
-  }
-
-  if (Ty.Quals & Q_Restrict) {
-    outputSpaceIfNecessary(OS);
-    OS << "__restrict";
-  }
+  outputQualifiers(OS, Ty.Quals);
 }
 
 // Write the "second half" of a given type.
@@ -766,6 +1068,9 @@ void Type::outputPre(OutputStream &OS, NameResolver &Resolver) {
     break;
   case PrimTy::Nullptr:
     OS << "std::nullptr_t";
+    break;
+  case PrimTy::Vbtable:
+  case PrimTy::Vftable:
     break;
   default:
     assert(false && "Invalid primitive type!");
@@ -858,13 +1163,18 @@ Type *FunctionType::clone(ArenaAllocator &Arena) const {
 }
 
 void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
+  if ((FunctionClass & StaticThisAdjust) || (FunctionClass & VirtualThisAdjust))
+    OS << "[thunk]: ";
+
   if (!(FunctionClass & Global)) {
     if (FunctionClass & Static)
       OS << "static ";
   }
-  if (FunctionClass & ExternC) {
+  if (FunctionClass & ExternC)
     OS << "extern \"C\" ";
-  }
+
+  if (FunctionClass & Virtual)
+    OS << "virtual ";
 
   if (ReturnType) {
     Type::outputPre(OS, *ReturnType, Resolver);
@@ -882,6 +1192,19 @@ void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
   // extern "C" functions don't have a prototype.
   if (FunctionClass & NoPrototype)
     return;
+
+  if (FunctionClass & StaticThisAdjust) {
+    OS << "`adjustor{" << ThisAdjust->StaticOffset << "}'";
+  } else if (FunctionClass & VirtualThisAdjust) {
+    if (FunctionClass & VirtualThisAdjustEx) {
+      OS << "`vtordispex{" << ThisAdjust->VBPtrOffset << ", "
+         << ThisAdjust->VBOffsetOffset << ", " << ThisAdjust->VtordispOffset
+         << ", " << ThisAdjust->StaticOffset << "}'";
+    } else {
+      OS << "`vtordisp{" << ThisAdjust->VtordispOffset << ", "
+         << ThisAdjust->StaticOffset << "}'";
+    }
+  }
 
   OS << "(";
   outputParameterList(OS, Params, Resolver);
@@ -954,6 +1277,7 @@ void ArrayType::outputPost(OutputStream &OS, NameResolver &Resolver) {
 struct Symbol {
   SymbolCategory Category;
 
+  Qualifiers SymbolQuals = Q_None;
   Name *SymbolName = nullptr;
   Type *SymbolType = nullptr;
 };
@@ -985,6 +1309,8 @@ public:
   // You are supposed to call parse() first and then check if error is true.  If
   // it is false, call output() to write the formatted name to the given stream.
   Symbol *parse(StringView &MangledName);
+  Symbol *parseOperator(StringView &MangledName);
+
   void output(const Symbol *S, OutputStream &OS);
 
   StringView resolve(StringView N) override;
@@ -995,8 +1321,12 @@ public:
   void dumpBackReferences();
 
 private:
-  Type *demangleVariableEncoding(StringView &MangledName);
+  std::pair<SymbolCategory, Type *>
+  demangleSymbolCategoryAndType(StringView &MangledName);
+
+  Type *demangleVariableEncoding(StringView &MangledName, StorageClass SC);
   Type *demangleFunctionEncoding(StringView &MangledName);
+  uint64_t demangleThunkThisAdjust(StringView &MangledName);
 
   Qualifiers demanglePointerExtQualifiers(StringView &MangledName);
 
@@ -1015,6 +1345,8 @@ private:
   FunctionParams demangleFunctionParameterList(StringView &MangledName);
 
   std::pair<uint64_t, bool> demangleNumber(StringView &MangledName);
+  uint64_t demangleUnsigned(StringView &MangledName);
+  int64_t demangleSigned(StringView &MangledName);
 
   void memorizeString(StringView s);
 
@@ -1034,11 +1366,12 @@ private:
   Name *demangleBackRefName(StringView &MangledName);
   Name *demangleTemplateInstantiationName(StringView &MangledName,
                                           NameBackrefBehavior NBB);
-  Name *demangleOperatorName(StringView &MangledName);
+  std::pair<OperatorTy, Name *> demangleOperatorName(StringView &MangledName,
+                                                     bool FullyQualified);
   Name *demangleSimpleName(StringView &MangledName, bool Memorize);
   Name *demangleAnonymousNamespaceName(StringView &MangledName);
   Name *demangleLocallyScopedNamePiece(StringView &MangledName);
-  Name *demangleStringLiteral(StringView &MangledName);
+  StringLiteral *demangleStringLiteral(StringView &MangledName);
 
   StringView demangleSimpleString(StringView &MangledName, bool Memorize);
 
@@ -1079,12 +1412,86 @@ StringView Demangler::copyString(StringView Borrowed) {
   return {Stable, Borrowed.size()};
 }
 
-// Parser entry point.
-Symbol *Demangler::parse(StringView &MangledName) {
+Symbol *Demangler::parseOperator(StringView &MangledName) {
   Symbol *S = Arena.alloc<Symbol>();
 
+  bool IsMember = false;
+  OperatorTy OTy;
+  std::tie(OTy, S->SymbolName) = demangleOperatorName(MangledName, true);
+  switch (OTy) {
+  case OperatorTy::StringLiteral:
+  case OperatorTy::Vcall:
+    S->Category = SymbolCategory::SpecialOperator;
+    break;
+  case OperatorTy::Vftable:                // Foo@@6B@
+  case OperatorTy::LocalVftable:           // Foo@@6B@
+  case OperatorTy::RttiCompleteObjLocator: // Foo@@6B@
+  case OperatorTy::Vbtable:                // Foo@@7B@
+    S->Category = SymbolCategory::UnnamedVariable;
+    switch (MangledName.popFront()) {
+    case '6':
+    case '7':
+      std::tie(S->SymbolQuals, IsMember) = demangleQualifiers(MangledName);
+      if (!MangledName.consumeFront('@'))
+        Error = true;
+      break;
+    default:
+      Error = true;
+      break;
+    }
+    break;
+  case OperatorTy::RttiTypeDescriptor: // <type>@@8
+    S->Category = SymbolCategory::UnnamedVariable;
+    S->SymbolType = demangleType(MangledName, QualifierMangleMode::Result);
+    if (Error)
+      break;
+    if (!MangledName.consumeFront("@8"))
+      Error = true;
+    if (!MangledName.empty())
+      Error = true;
+    break;
+  case OperatorTy::LocalStaticGuard: {
+    S->Category = SymbolCategory::UnnamedVariable;
+    break;
+  }
+  default:
+    if (!Error)
+      std::tie(S->Category, S->SymbolType) =
+          demangleSymbolCategoryAndType(MangledName);
+    break;
+  }
+
+  return (Error) ? nullptr : S;
+}
+
+std::pair<SymbolCategory, Type *>
+Demangler::demangleSymbolCategoryAndType(StringView &MangledName) {
+  // Read a variable.
+  switch (MangledName.front()) {
+  case '0':
+  case '1':
+  case '2':
+  case '3':
+  case '4':
+    return std::make_pair(
+        SymbolCategory::NamedVariable,
+        demangleVariableEncoding(MangledName,
+                                 demangleVariableStorageClass(MangledName)));
+  case '8':
+    MangledName.consumeFront('8');
+    return std::pair<SymbolCategory, Type *>(SymbolCategory::UnnamedVariable,
+                                             nullptr);
+  }
+  return std::make_pair(SymbolCategory::NamedFunction,
+                        demangleFunctionEncoding(MangledName));
+}
+
+// Parser entry point.
+Symbol *Demangler::parse(StringView &MangledName) {
   // We can't demangle MD5 names, just output them as-is.
-  if (MangledName.startsWith("??@")) {
+  // Also, MSVC-style mangled symbols must start with '?'.
+  if (MangledName.startsWith("??@") || !MangledName.startsWith('?')) {
+    Symbol *S = Arena.alloc<Symbol>();
     S->Category = SymbolCategory::Unknown;
     S->SymbolName = Arena.alloc<Name>();
     S->SymbolName->Str = MangledName;
@@ -1093,38 +1500,22 @@ Symbol *Demangler::parse(StringView &MangledName) {
     return S;
   }
 
-  // MSVC-style mangled symbols must start with '?'.
-  if (!MangledName.consumeFront("?")) {
-    S->Category = SymbolCategory::Unknown;
-    S->SymbolName = Arena.alloc<Name>();
-    S->SymbolName->Str = MangledName;
-    S->SymbolType = nullptr;
-    return S;
-  }
+  MangledName.consumeFront('?');
 
-  if (MangledName.consumeFront("?_C@_")) {
-    // This is a string literal.  Just demangle it and return.
-    S->Category = SymbolCategory::StringLiteral;
-    S->SymbolName = demangleStringLiteral(MangledName);
-    S->SymbolType = nullptr;
-    return S;
-  }
+  // ?$ is a template instantiation, but all other names that start with ? are
+  // operators / special names.
+  if (MangledName.startsWith('?') && !MangledName.startsWith("?$"))
+    return parseOperator(MangledName);
 
-  // What follows is a main symbol name. This may include
-  // namespaces or class BackReferences.
+  Symbol *S = Arena.alloc<Symbol>();
+  // What follows is a main symbol name. This may include namespaces or class
+  // back references.
   S->SymbolName = demangleFullyQualifiedSymbolName(MangledName);
   if (Error)
     return nullptr;
-  // Read a variable.
-  if (startsWithDigit(MangledName) && !MangledName.startsWith('9')) {
-    // 9 is a special marker for an extern "C" function with
-    // no prototype.
-    S->Category = SymbolCategory::Variable;
-    S->SymbolType = demangleVariableEncoding(MangledName);
-  } else {
-    S->Category = SymbolCategory::Function;
-    S->SymbolType = demangleFunctionEncoding(MangledName);
-  }
+
+  std::tie(S->Category, S->SymbolType) =
+      demangleSymbolCategoryAndType(MangledName);
 
   if (Error)
     return nullptr;
@@ -1139,9 +1530,8 @@ Symbol *Demangler::parse(StringView &MangledName) {
 //                 ::= 3  # global
 //                 ::= 4  # static local
 
-Type *Demangler::demangleVariableEncoding(StringView &MangledName) {
-  StorageClass SC = demangleVariableStorageClass(MangledName);
-
+Type *Demangler::demangleVariableEncoding(StringView &MangledName,
+                                          StorageClass SC) {
   Type *Ty = demangleType(MangledName, QualifierMangleMode::Drop);
 
   Ty->Storage = SC;
@@ -1217,6 +1607,25 @@ std::pair<uint64_t, bool> Demangler::demangleNumber(StringView &MangledName) {
   return {0ULL, false};
 }
 
+uint64_t Demangler::demangleUnsigned(StringView &MangledName) {
+  bool IsNegative = false;
+  uint64_t Number = 0;
+  std::tie(Number, IsNegative) = demangleNumber(MangledName);
+  if (IsNegative)
+    Error = true;
+  return Number;
+}
+
+int64_t Demangler::demangleSigned(StringView &MangledName) {
+  bool IsNegative = false;
+  uint64_t Number = 0;
+  std::tie(Number, IsNegative) = demangleNumber(MangledName);
+  if (Number > INT64_MAX)
+    Error = true;
+  int64_t I = static_cast<int64_t>(Number);
+  return IsNegative ? -I : I;
+}
+
 // First 10 strings can be referenced by special BackReferences ?0, ?1, ..., ?9.
 // Memorize it.
 void Demangler::memorizeString(StringView S) {
@@ -1271,166 +1680,91 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
   return Node;
 }
 
-Name *Demangler::demangleOperatorName(StringView &MangledName) {
+std::pair<OperatorTy, Name *>
+Demangler::demangleOperatorName(StringView &MangledName, bool FullyQualified) {
   assert(MangledName.startsWith('?'));
   MangledName.consumeFront('?');
 
-  auto NameString = [this, &MangledName]() -> StringView {
-    switch (MangledName.popFront()) {
-    case '0':
-      return "ctor";
-    case '1':
-      return "dtor";
-    case '2':
-      return " new";
-    case '3':
-      return " delete";
-    case '4':
-      return "=";
-    case '5':
-      return ">>";
-    case '6':
-      return "<<";
-    case '7':
-      return "!";
-    case '8':
-      return "==";
-    case '9':
-      return "!=";
-    case 'A':
-      return "[]";
-    case 'C':
-      return "->";
-    case 'D':
-      return "*";
-    case 'E':
-      return "++";
-    case 'F':
-      return "--";
-    case 'G':
-      return "-";
-    case 'H':
-      return "+";
-    case 'I':
-      return "&";
-    case 'J':
-      return "->*";
-    case 'K':
-      return "/";
-    case 'L':
-      return "%";
-    case 'M':
-      return "<";
-    case 'N':
-      return "<=";
-    case 'O':
-      return ">";
-    case 'P':
-      return ">=";
-    case 'Q':
-      return ",";
-    case 'R':
-      return "()";
-    case 'S':
-      return "~";
-    case 'T':
-      return "^";
-    case 'U':
-      return "|";
-    case 'V':
-      return "&&";
-    case 'W':
-      return "||";
-    case 'X':
-      return "*=";
-    case 'Y':
-      return "+=";
-    case 'Z':
-      return "-=";
-    case '_': {
-      if (MangledName.empty())
-        break;
-
-      switch (MangledName.popFront()) {
-      case '0':
-        return "/=";
-      case '1':
-        return "%=";
-      case '2':
-        return ">>=";
-      case '3':
-        return "<<=";
-      case '4':
-        return "&=";
-      case '5':
-        return "|=";
-      case '6':
-        return "^=";
-      // case '7': # vftable
-      // case '8': # vbtable
-      // case '9': # vcall
-      // case 'A': # typeof
-      // case 'B': # local static guard
-      // case 'D': # vbase destructor
-      // case 'E': # vector deleting destructor
-      // case 'F': # default constructor closure
-      // case 'G': # scalar deleting destructor
-      // case 'H': # vector constructor iterator
-      // case 'I': # vector destructor iterator
-      // case 'J': # vector vbase constructor iterator
-      // case 'K': # virtual displacement map
-      // case 'L': # eh vector constructor iterator
-      // case 'M': # eh vector destructor iterator
-      // case 'N': # eh vector vbase constructor iterator
-      // case 'O': # copy constructor closure
-      // case 'P<name>': # udt returning <name>
-      // case 'Q': # <unknown>
-      // case 'R0': # RTTI Type Descriptor
-      // case 'R1': # RTTI Base Class Descriptor at (a,b,c,d)
-      // case 'R2': # RTTI Base Class Array
-      // case 'R3': # RTTI Class Hierarchy Descriptor
-      // case 'R4': # RTTI Complete Object Locator
-      // case 'S': # local vftable
-      // case 'T': # local vftable constructor closure
-      case 'U':
-        return " new[]";
-      case 'V':
-        return " delete[]";
-      case '_':
-        if (MangledName.consumeFront("L"))
-          return " co_await";
-        if (MangledName.consumeFront("K")) {
-          size_t EndPos = MangledName.find('@');
-          if (EndPos == StringView::npos)
-            break;
-          StringView OpName = demangleSimpleString(MangledName, false);
-          size_t FullSize = OpName.size() + 3; // <space>""OpName
-          char *Buffer = Arena.allocUnalignedBuffer(FullSize);
-          Buffer[0] = ' ';
-          Buffer[1] = '"';
-          Buffer[2] = '"';
-          std::memcpy(Buffer + 3, OpName.begin(), OpName.size());
-          return {Buffer, FullSize};
-        }
-      }
-    }
-    }
+  const OperatorMapEntry *Entry = nullptr;
+  for (const auto &MapEntry : OperatorMap) {
+    if (!MangledName.consumeFront(MapEntry.Prefix))
+      continue;
+    Entry = &MapEntry;
+    break;
+  }
+  if (!Entry) {
     Error = true;
-    return "";
-  };
+    return std::make_pair(OperatorTy::Unknown, nullptr);
+  }
 
-  Name *Node = Arena.alloc<Name>();
-  if (MangledName.consumeFront('B')) {
-    // Handle conversion operator specially.
-    Node->IsConversionOperator = true;
-  } else {
-    Node->Str = NameString();
+  Name *N = nullptr;
+  switch (Entry->Operator) {
+  case OperatorTy::Vftable:                // Foo@@6B@
+  case OperatorTy::LocalVftable:           // Foo@@6B@
+  case OperatorTy::RttiCompleteObjLocator: // Foo@@6B@
+  case OperatorTy::Vbtable: {              // Foo@@7B@
+    OperatorInfo *Oper = Arena.alloc<OperatorInfo>(*Entry);
+    N = (FullyQualified) ? demangleNameScopeChain(MangledName, Oper) : Oper;
+    break;
+  }
+
+  case OperatorTy::StringLiteral:
+    N = demangleStringLiteral(MangledName);
+    break;
+  case OperatorTy::LiteralOperator:
+    N = Arena.alloc<OperatorInfo>(*Entry);
+    N->Str = demangleSimpleString(MangledName, false);
+    if (!MangledName.consumeFront('@'))
+      Error = true;
+    break;
+  case OperatorTy::RttiBaseClassDescriptor: {
+    RttiBaseClassDescriptor *Temp = Arena.alloc<RttiBaseClassDescriptor>();
+    Temp->NVOffset = demangleUnsigned(MangledName);
+    Temp->VBPtrOffset = demangleSigned(MangledName);
+    Temp->VBTableOffset = demangleUnsigned(MangledName);
+    Temp->Flags = demangleUnsigned(MangledName);
+    N = (FullyQualified) ? demangleNameScopeChain(MangledName, Temp) : Temp;
+    break;
+  }
+  case OperatorTy::Vcall: {
+    VirtualMemberPtrThunk *Temp = Arena.alloc<VirtualMemberPtrThunk>();
+    N = demangleNameScopeChain(MangledName, Temp);
+    if (Error)
+      break;
+    if (!MangledName.consumeFront("$B"))
+      Error = true;
+    Temp->OffsetInVTable = demangleUnsigned(MangledName);
+    if (!MangledName.consumeFront('A'))
+      Error = true;
+    Temp->CC = demangleCallingConvention(MangledName);
+    break;
+  }
+  case OperatorTy::RttiTypeDescriptor:
+    // This one is just followed by a type, not a name scope.
+    N = Arena.alloc<OperatorInfo>(*Entry);
+    break;
+  case OperatorTy::LocalStaticGuard: {
+    LocalStaticGuardVariable *Temp = Arena.alloc<LocalStaticGuardVariable>();
+    N = (FullyQualified) ? demangleNameScopeChain(MangledName, Temp) : Temp;
+    if (MangledName.consumeFront("4IA"))
+      Temp->IsVisible = false;
+    else if (MangledName.consumeFront("5"))
+      Temp->IsVisible = true;
+    else
+      Error = true;
+    if (!MangledName.empty())
+      Temp->ScopeIndex = demangleUnsigned(MangledName);
+    break;
+  }
+  default:
+    N = Arena.alloc<OperatorInfo>(*Entry);
+    N = (FullyQualified) ? demangleNameScopeChain(MangledName, N) : N;
+    break;
   }
   if (Error)
-    return nullptr;
+    return std::make_pair(OperatorTy::Unknown, nullptr);
 
-  Node->IsOperator = true;
-  return Node;
+  return std::make_pair(Entry->Operator, N);
 }
 
 Name *Demangler::demangleSimpleName(StringView &MangledName, bool Memorize) {
@@ -1601,11 +1935,13 @@ static void outputEscapedChar(OutputStream &OS, unsigned C) {
 
 unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
   const uint8_t *End = StringBytes + Length - 1;
+  unsigned Count = 0;
   while (Length > 0 && *End == 0) {
     --Length;
     --End;
+    ++Count;
   }
-  return End - StringBytes + 1;
+  return Count;
 }
 
 unsigned countEmbeddedNulls(const uint8_t *StringBytes, unsigned Length) {
@@ -1664,7 +2000,7 @@ static unsigned decodeMultiByteChar(const uint8_t *StringBytes,
   return Result;
 }
 
-Name *Demangler::demangleStringLiteral(StringView &MangledName) {
+StringLiteral *Demangler::demangleStringLiteral(StringView &MangledName) {
   // This function uses goto, so declare all variables up front.
   OutputStream OS;
   StringView CRC;
@@ -1674,10 +2010,11 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
   size_t CrcEndPos = 0;
   char *ResultBuffer = nullptr;
 
-  Name *Result = Arena.alloc<Name>();
-  Result->IsStringLiteral = true;
+  StringLiteral *Result = Arena.alloc<StringLiteral>();
 
   // Prefix indicating the beginning of a string literal
+  if (!MangledName.consumeFront("@_"))
+    goto StringLiteralError;
   if (MangledName.empty())
     goto StringLiteralError;
 
@@ -1708,14 +2045,14 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
 
   OS = OutputStream::create(nullptr, nullptr, 1024);
   if (IsWcharT) {
-    Result->StringLiteralType = PrimTy::Wchar;
+    Result->CharType = PrimTy::Wchar;
     if (StringByteSize > 64)
-      Result->IsLongStringLiteral = true;
+      Result->IsTruncated = true;
 
     while (!MangledName.consumeFront('@')) {
       assert(StringByteSize >= 2);
       wchar_t W = demangleWcharLiteral(MangledName);
-      if (StringByteSize != 2 || Result->IsLongStringLiteral)
+      if (StringByteSize != 2 || Result->IsTruncated)
         outputEscapedChar(OS, W);
       StringByteSize -= 2;
       if (Error)
@@ -1723,7 +2060,7 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
     }
   } else {
     if (StringByteSize > 32)
-      Result->IsLongStringLiteral = true;
+      Result->IsTruncated = true;
 
     constexpr unsigned MaxStringByteLength = 32;
     uint8_t StringBytes[MaxStringByteLength];
@@ -1739,13 +2076,13 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
     assert(StringByteSize % CharBytes == 0);
     switch (CharBytes) {
     case 1:
-      Result->StringLiteralType = PrimTy::Char;
+      Result->CharType = PrimTy::Char;
       break;
     case 2:
-      Result->StringLiteralType = PrimTy::Char16;
+      Result->CharType = PrimTy::Char16;
       break;
     case 4:
-      Result->StringLiteralType = PrimTy::Char32;
+      Result->CharType = PrimTy::Char32;
       break;
     default:
       LLVM_BUILTIN_UNREACHABLE;
@@ -1754,7 +2091,7 @@ Name *Demangler::demangleStringLiteral(StringView &MangledName) {
     for (unsigned CharIndex = 0; CharIndex < NumChars; ++CharIndex) {
       unsigned NextChar =
           decodeMultiByteChar(StringBytes, CharIndex, CharBytes);
-      if (CharIndex + 1 < NumChars || Result->IsLongStringLiteral)
+      if (CharIndex + 1 < NumChars || Result->IsTruncated)
         outputEscapedChar(OS, NextChar);
     }
   }
@@ -1856,7 +2193,6 @@ Name *Demangler::demangleFullyQualifiedSymbolName(StringView &MangledName) {
   Name *SymbolName = demangleUnqualifiedSymbolName(MangledName, NBB_Simple);
   if (Error)
     return nullptr;
-  assert(SymbolName);
 
   Name *QualName = demangleNameScopeChain(MangledName, SymbolName);
   if (Error)
@@ -1887,7 +2223,7 @@ Name *Demangler::demangleUnqualifiedSymbolName(StringView &MangledName,
   if (MangledName.startsWith("?$"))
     return demangleTemplateInstantiationName(MangledName, NBB);
   if (MangledName.startsWith('?'))
-    return demangleOperatorName(MangledName);
+    return demangleOperatorName(MangledName, false).second;
   return demangleSimpleName(MangledName, (NBB & NBB_Simple) != 0);
 }
 
@@ -1932,53 +2268,77 @@ FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
   SwapAndRestore<StringView> RestoreOnError(MangledName, MangledName);
   RestoreOnError.shouldRestore(false);
 
-  FuncClass TempFlags = FuncClass(0);
-  if (MangledName.consumeFront("$$J0"))
-    TempFlags = ExternC;
-
   switch (MangledName.popFront()) {
   case '9':
-    return FuncClass(TempFlags | ExternC | NoPrototype);
+    return FuncClass(ExternC | NoPrototype);
   case 'A':
     return Private;
   case 'B':
-    return FuncClass(TempFlags | Private | Far);
+    return FuncClass(Private | Far);
   case 'C':
-    return FuncClass(TempFlags | Private | Static);
+    return FuncClass(Private | Static);
   case 'D':
-    return FuncClass(TempFlags | Private | Static);
+    return FuncClass(Private | Static);
   case 'E':
-    return FuncClass(TempFlags | Private | Virtual);
+    return FuncClass(Private | Virtual);
   case 'F':
-    return FuncClass(TempFlags | Private | Virtual);
+    return FuncClass(Private | Virtual);
   case 'I':
-    return FuncClass(TempFlags | Protected);
+    return FuncClass(Protected);
   case 'J':
-    return FuncClass(TempFlags | Protected | Far);
+    return FuncClass(Protected | Far);
   case 'K':
-    return FuncClass(TempFlags | Protected | Static);
+    return FuncClass(Protected | Static);
   case 'L':
-    return FuncClass(TempFlags | Protected | Static | Far);
+    return FuncClass(Protected | Static | Far);
   case 'M':
-    return FuncClass(TempFlags | Protected | Virtual);
+    return FuncClass(Protected | Virtual);
   case 'N':
-    return FuncClass(TempFlags | Protected | Virtual | Far);
+    return FuncClass(Protected | Virtual | Far);
+  case 'O':
+    return FuncClass(Protected | Virtual | StaticThisAdjust);
+  case 'P':
+    return FuncClass(Protected | Virtual | StaticThisAdjust | Far);
   case 'Q':
-    return FuncClass(TempFlags | Public);
+    return FuncClass(Public);
   case 'R':
-    return FuncClass(TempFlags | Public | Far);
+    return FuncClass(Public | Far);
   case 'S':
-    return FuncClass(TempFlags | Public | Static);
+    return FuncClass(Public | Static);
   case 'T':
-    return FuncClass(TempFlags | Public | Static | Far);
+    return FuncClass(Public | Static | Far);
   case 'U':
-    return FuncClass(TempFlags | Public | Virtual);
+    return FuncClass(Public | Virtual);
   case 'V':
-    return FuncClass(TempFlags | Public | Virtual | Far);
+    return FuncClass(Public | Virtual | Far);
+  case 'W':
+    return FuncClass(Public | Virtual | StaticThisAdjust);
+  case 'X':
+    return FuncClass(Public | Virtual | StaticThisAdjust | Far);
   case 'Y':
-    return FuncClass(TempFlags | Global);
+    return FuncClass(Global);
   case 'Z':
-    return FuncClass(TempFlags | Global | Far);
+    return FuncClass(Global | Far);
+  case '$': {
+    FuncClass VFlag = VirtualThisAdjust;
+    if (MangledName.consumeFront('R'))
+      VFlag = FuncClass(VFlag | VirtualThisAdjustEx);
+
+    switch (MangledName.popFront()) {
+    case '0':
+      return FuncClass(Private | Virtual | VFlag);
+    case '1':
+      return FuncClass(Private | Virtual | VFlag | Far);
+    case '2':
+      return FuncClass(Protected | Virtual | VFlag);
+    case '3':
+      return FuncClass(Protected | Virtual | VFlag | Far);
+    case '4':
+      return FuncClass(Public | Virtual | VFlag);
+    case '5':
+      return FuncClass(Public | Virtual | VFlag | Far);
+    }
+  }
   }
 
   Error = true;
@@ -2188,7 +2548,27 @@ FunctionType *Demangler::demangleFunctionType(StringView &MangledName,
 }
 
 Type *Demangler::demangleFunctionEncoding(StringView &MangledName) {
+  FuncClass ExtraFlags = FuncClass::None;
+  if (MangledName.consumeFront("$$J0"))
+    ExtraFlags = FuncClass::ExternC;
+
   FuncClass FC = demangleFunctionClass(MangledName);
+  FC = FuncClass(ExtraFlags | FC);
+
+  FunctionType::ThisAdjustor *Adjustor = nullptr;
+  if (FC & FuncClass::StaticThisAdjust) {
+    Adjustor = Arena.alloc<FunctionType::ThisAdjustor>();
+    Adjustor->StaticOffset = demangleSigned(MangledName);
+  } else if (FC & FuncClass::VirtualThisAdjust) {
+    Adjustor = Arena.alloc<FunctionType::ThisAdjustor>();
+    if (FC & FuncClass::VirtualThisAdjustEx) {
+      Adjustor->VBPtrOffset = demangleSigned(MangledName);
+      Adjustor->VBOffsetOffset = demangleSigned(MangledName);
+    }
+    Adjustor->VtordispOffset = demangleSigned(MangledName);
+    Adjustor->StaticOffset = demangleSigned(MangledName);
+  }
+
   FunctionType *FTy = nullptr;
   if (FC & NoPrototype) {
     // This is an extern "C" function whose full signature hasn't been mangled.
@@ -2199,6 +2579,7 @@ Type *Demangler::demangleFunctionEncoding(StringView &MangledName) {
     bool HasThisQuals = !(FC & (Global | Static));
     FTy = demangleFunctionType(MangledName, HasThisQuals, false);
   }
+  FTy->ThisAdjust = Adjustor;
   FTy->FunctionClass = FC;
 
   return FTy;
@@ -2590,8 +2971,9 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
     outputName(OS, S->SymbolName, S->SymbolType, *this);
     return;
   }
-  if (S->Category == SymbolCategory::StringLiteral) {
-    outputStringLiteral(OS, *S->SymbolName);
+
+  if (S->Category == SymbolCategory::SpecialOperator) {
+    outputSpecialOperator(OS, S->SymbolName, *this);
     return;
   }
 
@@ -2612,9 +2994,14 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
   // the "first half" of type declaration, and outputPost() writes the
   // "second half". For example, outputPre() writes a return type for a
   // function and outputPost() writes an parameter list.
-  Type::outputPre(OS, *S->SymbolType, *this);
-  outputName(OS, S->SymbolName, S->SymbolType, *this);
-  Type::outputPost(OS, *S->SymbolType, *this);
+  if (S->SymbolType) {
+    Type::outputPre(OS, *S->SymbolType, *this);
+    outputName(OS, S->SymbolName, S->SymbolType, *this);
+    Type::outputPost(OS, *S->SymbolType, *this);
+  } else {
+    outputQualifiers(OS, S->SymbolQuals);
+    outputName(OS, S->SymbolName, nullptr, *this);
+  }
 }
 
 void Demangler::dumpBackReferences() {

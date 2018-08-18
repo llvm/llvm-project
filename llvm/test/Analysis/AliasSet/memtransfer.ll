@@ -3,6 +3,28 @@
 @s = global i8 1, align 1
 @d = global i8 2, align 1
 
+
+; CHECK: Alias sets for function 'test_known_size':
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %s, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, 1)
+define void @test_known_size(i8* noalias %s, i8* noalias %d) {
+entry:
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %d, i8* %s, i64 1, i1 false)
+  ret void
+}
+
+; CHECK: Alias sets for function 'test_unknown_size':
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %s, unknown)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %d, unknown)
+define void @test_unknown_size(i8* noalias %s, i8* noalias %d, i64 %len) {
+entry:
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %d, i8* %s, i64 %len, i1 false)
+  ret void
+}
+
+
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 3 alias sets for 4 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)

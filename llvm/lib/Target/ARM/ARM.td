@@ -61,6 +61,11 @@ def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "floating point",
                                              [FeatureFPARMv8]>;
 
+def FeatureFP16FML        : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
+                                             "Enable full half-precision "
+                                             "floating point fml instructions",
+                                             [FeatureFullFP16]>;
+
 def FeatureVFPOnlySP      : SubtargetFeature<"fp-only-sp", "FPOnlySP", "true",
                                              "Floating point unit supports "
                                              "single precision only">;

@@ -58,8 +58,6 @@ namespace {
 using name = SmallString<COFF::NameSize>;
 
 enum AuxiliaryType {
-  ATFunctionDefinition,
-  ATbfAndefSymbol,
   ATWeakExternal,
   ATFile,
   ATSectionDefinition
@@ -515,24 +513,6 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
     const COFFSymbol::AuxiliarySymbols &S) {
   for (const AuxSymbol &i : S) {
     switch (i.AuxType) {
-    case ATFunctionDefinition:
-      W.write<uint32_t>(i.Aux.FunctionDefinition.TagIndex);
-      W.write<uint32_t>(i.Aux.FunctionDefinition.TotalSize);
-      W.write<uint32_t>(i.Aux.FunctionDefinition.PointerToLinenumber);
-      W.write<uint32_t>(i.Aux.FunctionDefinition.PointerToNextFunction);
-      W.OS.write_zeros(sizeof(i.Aux.FunctionDefinition.unused));
-      if (UseBigObj)
-        W.OS.write_zeros(COFF::Symbol32Size - COFF::Symbol16Size);
-      break;
-    case ATbfAndefSymbol:
-      W.OS.write_zeros(sizeof(i.Aux.bfAndefSymbol.unused1));
-      W.write<uint16_t>(i.Aux.bfAndefSymbol.Linenumber);
-      W.OS.write_zeros(sizeof(i.Aux.bfAndefSymbol.unused2));
-      W.write<uint32_t>(i.Aux.bfAndefSymbol.PointerToNextFunction);
-      W.OS.write_zeros(sizeof(i.Aux.bfAndefSymbol.unused3));
-      if (UseBigObj)
-        W.OS.write_zeros(COFF::Symbol32Size - COFF::Symbol16Size);
-      break;
     case ATWeakExternal:
       W.write<uint32_t>(i.Aux.WeakExternal.TagIndex);
       W.write<uint32_t>(i.Aux.WeakExternal.Characteristics);

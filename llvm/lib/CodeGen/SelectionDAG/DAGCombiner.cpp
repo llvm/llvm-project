@@ -3224,7 +3224,7 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // alternate sequence.  Targets may check function attributes for size/speed
   // trade-offs.
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+  if (isConstantOrConstantVector(N1) &&
       !TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue Op = BuildSDIV(N))
       return Op;
@@ -3316,7 +3316,7 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
 
   // fold (udiv x, c) -> alternate
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+  if (isConstantOrConstantVector(N1) &&
       !TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue Op = BuildUDIV(N))
       return Op;
@@ -5276,9 +5276,9 @@ static SDValue extractShiftForRotate(SelectionDAG &DAG, SDValue OppShift,
 
   // Compute the shift amount we need to extract to complete the rotate.
   const unsigned VTWidth = ShiftedVT.getScalarSizeInBits();
-  APInt NeededShiftAmt = VTWidth - OppShiftCst->getAPIntValue();
-  if (NeededShiftAmt.isNegative())
+  if (OppShiftCst->getAPIntValue().ugt(VTWidth))
     return SDValue();
+  APInt NeededShiftAmt = VTWidth - OppShiftCst->getAPIntValue();
   // Normalize the bitwidth of the two mul/udiv/shift constant operands.
   APInt ExtractFromAmt = ExtractFromCst->getAPIntValue();
   APInt OppLHSAmt = OppLHSCst->getAPIntValue();
@@ -6591,31 +6591,30 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   }
 
   // fold (sra (sra x, c1), c2) -> (sra x, (add c1, c2))
+  // clamp (add c1, c2) to max shift.
   if (N0.getOpcode() == ISD::SRA) {
     SDLoc DL(N);
     EVT ShiftVT = N1.getValueType();
+    EVT ShiftSVT = ShiftVT.getScalarType();
+    SmallVector<SDValue, 16> ShiftValues;
 
-    auto MatchOutOfRange = [OpSizeInBits](ConstantSDNode *LHS,
-                                          ConstantSDNode *RHS) {
+    auto SumOfShifts = [&](ConstantSDNode *LHS, ConstantSDNode *RHS) {
       APInt c1 = LHS->getAPIntValue();
       APInt c2 = RHS->getAPIntValue();
       zeroExtendToMatch(c1, c2, 1 /* Overflow Bit */);
-      return (c1 + c2).uge(OpSizeInBits);
+      APInt Sum = c1 + c2;
+      unsigned ShiftSum =
+          Sum.uge(OpSizeInBits) ? (OpSizeInBits - 1) : Sum.getZExtValue();
+      ShiftValues.push_back(DAG.getConstant(ShiftSum, DL, ShiftSVT));
+      return true;
     };
-    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchOutOfRange))
-      return DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0),
-                         DAG.getConstant(OpSizeInBits - 1, DL, ShiftVT));
-
-    auto MatchInRange = [OpSizeInBits](ConstantSDNode *LHS,
-                                       ConstantSDNode *RHS) {
-      APInt c1 = LHS->getAPIntValue();
-      APInt c2 = RHS->getAPIntValue();
-      zeroExtendToMatch(c1, c2, 1 /* Overflow Bit */);
-      return (c1 + c2).ult(OpSizeInBits);
-    };
-    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchInRange)) {
-      SDValue Sum = DAG.getNode(ISD::ADD, DL, ShiftVT, N1, N0.getOperand(1));
-      return DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0), Sum);
+    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), SumOfShifts)) {
+      SDValue ShiftValue;
+      if (VT.isVector())
+        ShiftValue = DAG.getBuildVector(ShiftVT, DL, ShiftValues);
+      else
+        ShiftValue = ShiftValues[0];
+      return DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0), ShiftValue);
     }
   }
 

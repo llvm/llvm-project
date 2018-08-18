@@ -98,6 +98,7 @@
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -277,6 +278,31 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
                     TII);
   }
   return MBB.erase(I);
+}
+
+static bool ShouldSignReturnAddress(MachineFunction &MF) {
+  // The function should be signed in the following situations:
+  // - sign-return-address=all
+  // - sign-return-address=non-leaf and the functions spills the LR
+
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute("sign-return-address"))
+    return false;
+
+  StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
+  if (Scope.equals("none"))
+    return false;
+
+  if (Scope.equals("all"))
+    return true;
+
+  assert(Scope.equals("non-leaf") && "Expected all, none or non-leaf");
+
+  for (const auto &Info : MF.getFrameInfo().getCalleeSavedInfo())
+    if (Info.getReg() == AArch64::LR)
+      return true;
+
+  return false;
 }
 
 void AArch64FrameLowering::emitCalleeSavedFrameMoves(
@@ -568,6 +594,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  if (ShouldSignReturnAddress(MF)) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIASP))
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
+
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
@@ -832,6 +863,32 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+static void InsertReturnAddressAuth(MachineFunction &MF,
+                                    MachineBasicBlock &MBB) {
+  if (!ShouldSignReturnAddress(MF))
+    return;
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
+  // this instruction can safely used for any v8a architecture.
+  // From v8.3a onwards there are optimised authenticate LR and return
+  // instructions, namely RETA{A,B}, that can be used instead.
+  if (Subtarget.hasV8_3aOps() && MBBI != MBB.end() &&
+      MBBI->getOpcode() == AArch64::RET_ReallyLR) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::RETAA)).copyImplicitOps(*MBBI);
+    MBB.erase(MBBI);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::AUTIASP))
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+}
+
 void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -898,6 +955,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   //
   // AArch64TargetLowering::LowerCall figures out ArgumentPopSize and keeps
   // it as the 2nd argument of AArch64ISD::TC_RETURN.
+
+  auto Cleanup = make_scope_exit([&] { InsertReturnAddressAuth(MF, MBB); });
 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());

@@ -77,7 +77,7 @@ extern cl::opt<bool> ScheduleInlineAsm;
 
 namespace llvm {
 
-FunctionPass *createHexagonPacketizer();
+FunctionPass *createHexagonPacketizer(bool Minimal);
 void initializeHexagonPacketizerPass(PassRegistry&);
 
 } // end namespace llvm
@@ -88,7 +88,8 @@ namespace {
   public:
     static char ID;
 
-    HexagonPacketizer() : MachineFunctionPass(ID) {}
+    HexagonPacketizer(bool Min = false)
+      : MachineFunctionPass(ID), Minimal(Min) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
@@ -112,6 +113,7 @@ namespace {
   private:
     const HexagonInstrInfo *HII;
     const HexagonRegisterInfo *HRI;
+    const bool Minimal;
   };
 
 } // end anonymous namespace
@@ -129,8 +131,9 @@ INITIALIZE_PASS_END(HexagonPacketizer, "hexagon-packetizer",
 
 HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
       MachineLoopInfo &MLI, AliasAnalysis *AA,
-      const MachineBranchProbabilityInfo *MBPI)
-    : VLIWPacketizerList(MF, MLI, AA), MBPI(MBPI), MLI(&MLI) {
+      const MachineBranchProbabilityInfo *MBPI, bool Minimal)
+    : VLIWPacketizerList(MF, MLI, AA), MBPI(MBPI), MLI(&MLI),
+      Minimal(Minimal) {
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
@@ -200,9 +203,6 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
-  if (DisablePacketizer || !HST.usePackets() || skipFunction(MF.getFunction()))
-    return false;
-
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfo>();
@@ -213,7 +213,9 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
     HII->genAllInsnTimingClasses(MF);
 
   // Instantiate the packetizer.
-  HexagonPacketizerList Packetizer(MF, MLI, AA, MBPI);
+  bool MinOnly = Minimal || DisablePacketizer || !HST.usePackets() ||
+                 skipFunction(MF.getFunction());
+  HexagonPacketizerList Packetizer(MF, MLI, AA, MBPI, MinOnly);
 
   // DFA state table should not be empty.
   assert(Packetizer.getResourceTracker() && "Empty DFA table!");
@@ -226,7 +228,7 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // Here, Insn 1 will result in the dependence graph not emitting an output
   // dependence between Insn 0 and Insn 2. This can lead to incorrect
   // packetization
-  for (auto &MB : MF) {
+  for (MachineBasicBlock &MB : MF) {
     auto End = MB.end();
     auto MI = MB.begin();
     while (MI != End) {
@@ -1759,8 +1761,8 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
 }
 
 void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
-                                      MachineBasicBlock::iterator MI) {
-  // Replace VLIWPacketizerList::endPacket(MBB, MI).
+                                      MachineBasicBlock::iterator EndMI) {
+  // Replace VLIWPacketizerList::endPacket(MBB, EndMI).
 
   bool memShufDisabled = getmemShufDisabled();
   if (memShufDisabled && !foundLSInPacket()) {
@@ -1769,25 +1771,32 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
   }
   memShufDisabled = getmemShufDisabled();
 
-  if (CurrentPacketMIs.size() > 1) {
-    MachineBasicBlock::instr_iterator FirstMI(CurrentPacketMIs.front());
-    MachineBasicBlock::instr_iterator LastMI(MI.getInstrIterator());
-    finalizeBundle(*MBB, FirstMI, LastMI);
+  OldPacketMIs.clear();
+  for (MachineInstr *MI : CurrentPacketMIs) {
+    MachineBasicBlock::instr_iterator NextMI = std::next(MI->getIterator());
+    for (auto &I : make_range(HII->expandVGatherPseudo(*MI), NextMI))
+      OldPacketMIs.push_back(&I);
+  }
+  CurrentPacketMIs.clear();
 
+  if (OldPacketMIs.size() > 1) {
+    MachineBasicBlock::instr_iterator FirstMI(OldPacketMIs.front());
+    MachineBasicBlock::instr_iterator LastMI(EndMI.getInstrIterator());
+    finalizeBundle(*MBB, FirstMI, LastMI);
     auto BundleMII = std::prev(FirstMI);
     if (memShufDisabled)
       HII->setBundleNoShuf(BundleMII);
 
     setmemShufDisabled(false);
   }
-  OldPacketMIs = CurrentPacketMIs;
-  CurrentPacketMIs.clear();
 
   ResourceTracker->clearResources();
   LLVM_DEBUG(dbgs() << "End packet\n");
 }
 
 bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
+  if (Minimal)
+    return false;
   return !producesStall(MI);
 }
 
@@ -1860,6 +1869,6 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-FunctionPass *llvm::createHexagonPacketizer() {
-  return new HexagonPacketizer();
+FunctionPass *llvm::createHexagonPacketizer(bool Minimal) {
+  return new HexagonPacketizer(Minimal);
 }

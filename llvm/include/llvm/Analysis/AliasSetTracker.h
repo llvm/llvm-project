@@ -399,13 +399,6 @@ public:
   /// set is returned.  
   AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
 
-  AliasSet &getAliasSetForPointer(Value *P, LocationSize Size,
-                                  const AAMDNodes &AAInfo) {
-    // This adapter exists so that polly can be updated to the new API.  Once
-    // done, please delete this.
-    return getAliasSetFor(MemoryLocation(P, Size, AAInfo));
-  }
-
   /// Return true if the specified instruction "may" (or must) alias one of the
   /// members in any of the sets.
   bool containsUnknown(const Instruction *I) const;

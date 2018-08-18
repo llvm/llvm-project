@@ -1389,6 +1389,8 @@ bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
   case Intrinsic::ctpop:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
@@ -2079,6 +2081,29 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         }
       }
     }
+  }
+
+  if (IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) {
+    auto *C0 = dyn_cast<ConstantInt>(Operands[0]);
+    auto *C1 = dyn_cast<ConstantInt>(Operands[1]);
+    auto *C2 = dyn_cast<ConstantInt>(Operands[2]);
+    if (!(C0 && C1 && C2))
+      return nullptr;
+
+    // The shift amount is interpreted as modulo the bitwidth. If the shift
+    // amount is effectively 0, avoid UB due to oversized inverse shift below.
+    unsigned BitWidth = C0->getBitWidth();
+    unsigned ShAmt = C2->getValue().urem(BitWidth);
+    bool IsRight = IntrinsicID == Intrinsic::fshr;
+    if (!ShAmt)
+      return IsRight ? C1 : C0;
+
+    // (X << ShlAmt) | (Y >> LshrAmt)
+    const APInt &X = C0->getValue();
+    const APInt &Y = C1->getValue();
+    unsigned LshrAmt = IsRight ? ShAmt : BitWidth - ShAmt;
+    unsigned ShlAmt = !IsRight ? ShAmt : BitWidth - ShAmt;
+    return ConstantInt::get(Ty->getContext(), X.shl(ShlAmt) | Y.lshr(LshrAmt));
   }
 
   return nullptr;

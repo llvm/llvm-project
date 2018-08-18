@@ -16,7 +16,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGHANDLERBASE_H
 
 #include "AsmPrinterHandler.h"
-#include "DbgValueHistoryCalculator.h"
+#include "DbgEntityHistoryCalculator.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -81,6 +81,9 @@ protected:
   /// History of DBG_VALUE and clobber instructions for each user
   /// variable.  Variables are listed in order of appearance.
   DbgValueHistoryMap DbgValues;
+
+  /// Mapping of inlined labels and DBG_LABEL machine instruction.
+  DbgLabelInstrMap DbgLabels;
 
   /// Maps instruction with label emitted before instruction.
   /// FIXME: Make this private from DwarfDebug, we have the necessary accessors

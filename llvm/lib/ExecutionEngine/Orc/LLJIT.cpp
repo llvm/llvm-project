@@ -28,25 +28,25 @@ Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
   return Main.define(absoluteSymbols(std::move(Symbols)));
 }
 
-Error LLJIT::addIRModule(VSO &V, std::unique_ptr<Module> M) {
+Error LLJIT::addIRModule(JITDylib &JD, std::unique_ptr<Module> M) {
   assert(M && "Can not add null module");
 
   if (auto Err = applyDataLayout(*M))
     return Err;
 
   auto K = ES->allocateVModule();
-  return CompileLayer.add(V, K, std::move(M));
+  return CompileLayer.add(JD, K, std::move(M));
 }
 
-Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(VSO &V,
+Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                         StringRef Name) {
-  return llvm::orc::lookup({&V}, ES->getSymbolStringPool().intern(Name));
+  return llvm::orc::lookup({&JD}, ES->getSymbolStringPool().intern(Name));
 }
 
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              std::unique_ptr<TargetMachine> TM, DataLayout DL)
-    : ES(std::move(ES)), Main(this->ES->createVSO("main")), TM(std::move(TM)),
-      DL(std::move(DL)),
+    : ES(std::move(ES)), Main(this->ES->createJITDylib("main")),
+      TM(std::move(TM)), DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
       CompileLayer(*this->ES, ObjLinkingLayer, SimpleCompiler(*this->TM)),
@@ -106,7 +106,7 @@ LLLazyJIT::Create(std::unique_ptr<ExecutionSession> ES,
                     std::move(CCMgr), std::move(ISMBuilder)));
 }
 
-Error LLLazyJIT::addLazyIRModule(VSO &V, std::unique_ptr<Module> M) {
+Error LLLazyJIT::addLazyIRModule(JITDylib &JD, std::unique_ptr<Module> M) {
   assert(M && "Can not add null module");
 
   if (auto Err = applyDataLayout(*M))
@@ -117,7 +117,7 @@ Error LLLazyJIT::addLazyIRModule(VSO &V, std::unique_ptr<Module> M) {
   recordCtorDtors(*M);
 
   auto K = ES->allocateVModule();
-  return CODLayer.add(V, K, std::move(M));
+  return CODLayer.add(JD, K, std::move(M));
 }
 
 LLLazyJIT::LLLazyJIT(

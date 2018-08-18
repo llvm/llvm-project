@@ -350,11 +350,11 @@ struct TypeInfer {
   bool Validate = true;   // Indicate whether to validate types.
 
 private:
-  TypeSetByHwMode getLegalTypes();
+  const TypeSetByHwMode &getLegalTypes();
 
-  /// Cached legal types.
+  /// Cached legal types (in default mode).
   bool LegalTypesCached = false;
-  TypeSetByHwMode::SetType LegalCache = {};
+  TypeSetByHwMode LegalCache;
 };
 
 /// Set type used to track multiply used variables in patterns

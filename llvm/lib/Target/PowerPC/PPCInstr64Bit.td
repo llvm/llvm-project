@@ -717,9 +717,10 @@ defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
                          "sradi", "$rA, $rS, $SH", IIC_IntRotateDI,
                          [(set i64:$rA, (sra i64:$rS, (i32 imm:$SH)))]>, isPPC64;
 
-defm EXTSWSLI : XSForm_1r<31, 445, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
+defm EXTSWSLI : XSForm_1r<31, 445, (outs g8rc:$rA), (ins gprc:$rS, u6imm:$SH),
                           "extswsli", "$rA, $rS, $SH", IIC_IntRotateDI,
-                          []>, isPPC64;
+                          [(set i64:$rA, (PPCextswsli i32:$rS, (i32 imm:$SH)))]>,
+                          isPPC64, Requires<[IsISA3_0]>;
 
 // For fast-isel:
 let isCodeGenOnly = 1, Defs = [CARRY] in
