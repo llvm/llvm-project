@@ -24,7 +24,6 @@ add_clang_library(clangAnalysis
   ProgramPoint.cpp
   PseudoConstantAnalysis.cpp
   ReachableCode.cpp
-  RetainSummaryManager.cpp
   ScanfFormatString.cpp
   ThreadSafety.cpp
   ThreadSafetyCommon.cpp

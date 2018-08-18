@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Transforms.h"
-#include "clang/Analysis/RetainSummaryManager.h"
+#include "clang/Analysis/ObjCRetainCount.h"
 #include "clang/ARCMigrate/ARCMT.h"
 #include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/AST/ASTConsumer.h"
@@ -35,8 +35,8 @@
 #include "llvm/Support/YAMLParser.h"
 
 using namespace clang;
-using namespace ento;
 using namespace arcmt;
+using namespace ento::objc_retain;
 
 namespace {
 

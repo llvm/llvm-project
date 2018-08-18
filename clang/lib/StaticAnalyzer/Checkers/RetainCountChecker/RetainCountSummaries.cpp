@@ -1,4 +1,4 @@
-//== RetainSummaryManager.cpp - Summaries for reference counting --*- C++ -*--//
+//== RetainCountSummaries.cpp - Checks for leaks and other issues -*- C++ -*--//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,21 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines summaries implementation for retain counting, which
+//  This file defines summaries implementation for RetainCountChecker, which
 //  implements a reference count checker for Core Foundation and Cocoa
 //  on (Mac OS X).
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/RetainSummaryManager.h"
+#include "RetainCountSummaries.h"
+#include "RetainCountChecker.h"
+
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
 
+using namespace objc_retain;
 using namespace clang;
 using namespace ento;
+using namespace retaincountchecker;
 
 ArgEffects RetainSummaryManager::getArgEffects() {
   ArgEffects AE = ScratchArgs;
@@ -404,7 +408,7 @@ void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
 
 const RetainSummary *
 RetainSummaryManager::getSummary(const CallEvent &Call,
-                                 QualType ReceiverType) {
+                                 ProgramStateRef State) {
   const RetainSummary *Summ;
   switch (Call.getKind()) {
   case CE_Function:
@@ -421,7 +425,7 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
   case CE_ObjCMessage: {
     const ObjCMethodCall &Msg = cast<ObjCMethodCall>(Call);
     if (Msg.isInstanceMessage())
-      Summ = getInstanceMethodSummary(Msg, ReceiverType);
+      Summ = getInstanceMethodSummary(Msg, State);
     else
       Summ = getClassMethodSummary(Msg);
     break;
@@ -735,15 +739,22 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
   return getPersistentSummary(ResultEff, ReceiverEff, MayEscape);
 }
 
-const RetainSummary *RetainSummaryManager::getInstanceMethodSummary(
-    const ObjCMethodCall &Msg, QualType ReceiverType) {
+const RetainSummary *
+RetainSummaryManager::getInstanceMethodSummary(const ObjCMethodCall &Msg,
+                                               ProgramStateRef State) {
   const ObjCInterfaceDecl *ReceiverClass = nullptr;
 
   // We do better tracking of the type of the object than the core ExprEngine.
   // See if we have its type in our private state.
-  if (!ReceiverType.isNull())
-    if (const auto *PT = ReceiverType->getAs<ObjCObjectPointerType>())
-      ReceiverClass = PT->getInterfaceDecl();
+  // FIXME: Eventually replace the use of state->get<RefBindings> with
+  // a generic API for reasoning about the Objective-C types of symbolic
+  // objects.
+  SVal ReceiverV = Msg.getReceiverSVal();
+  if (SymbolRef Sym = ReceiverV.getAsLocSymbol())
+    if (const RefVal *T = getRefBinding(State, Sym))
+      if (const ObjCObjectPointerType *PT =
+            T->getType()->getAs<ObjCObjectPointerType>())
+        ReceiverClass = PT->getInterfaceDecl();
 
   // If we don't know what kind of object this is, fall back to its static type.
   if (!ReceiverClass)
@@ -872,31 +883,4 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   addInstMethSummary("CIContext", CFAllocSumm, "createCGImage", "fromRect",
                      "format", "colorSpace");
   addInstMethSummary("CIContext", CFAllocSumm, "createCGLayerWithSize", "info");
-}
-
-CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
-  ASTContext &Ctx = MD->getASTContext();
-  LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);
-  const RetainSummary *S = M.getMethodSummary(MD);
-  CallEffects CE(S->getRetEffect());
-  CE.Receiver = S->getReceiverEffect();
-  unsigned N = MD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
-}
-
-CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
-  ASTContext &Ctx = FD->getASTContext();
-  LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);
-  const RetainSummary *S = M.getFunctionSummary(FD);
-  CallEffects CE(S->getRetEffect());
-  unsigned N = FD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
 }
