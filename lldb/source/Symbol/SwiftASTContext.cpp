@@ -3948,7 +3948,7 @@ CompilerType SwiftASTContext::GetVoidFunctionType() {
     swift::ASTContext *ast = GetASTContext();
     swift::Type empty_tuple_type(swift::TupleType::getEmpty(*ast));
     m_void_function_type = CompilerType(
-        ast, swift::FunctionType::get(empty_tuple_type, empty_tuple_type));
+        ast, swift::FunctionType::get({}, empty_tuple_type));
   }
   return m_void_function_type;
 }
@@ -4471,22 +4471,6 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
         GetASTContext(),
         swift::TupleType::get(fields, *GetASTContext()).getPointer());
   }
-}
-
-CompilerType SwiftASTContext::CreateFunctionType(CompilerType arg_type,
-                                                 CompilerType ret_type,
-                                                 bool throws) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (!llvm::dyn_cast_or_null<SwiftASTContext>(arg_type.GetTypeSystem()) ||
-      !llvm::dyn_cast_or_null<SwiftASTContext>(ret_type.GetTypeSystem()))
-    return CompilerType();
-  swift::FunctionType::ExtInfo ext_info;
-  if (throws)
-    ext_info = ext_info.withThrows();
-  return CompilerType(GetASTContext(), swift::FunctionType::get(
-                                           GetSwiftType(arg_type),
-                                           GetSwiftType(ret_type), ext_info));
 }
 
 CompilerType SwiftASTContext::GetErrorType() {
