@@ -107,6 +107,10 @@ static cl::opt<float> ImportColdMultiplier(
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
 
+static cl::opt<bool> PrintImportFailures(
+    "print-import-failures", cl::init(false), cl::Hidden,
+    cl::desc("Print information for functions rejected for importing"));
+
 static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
 
@@ -163,13 +167,18 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
              ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
-             unsigned Threshold, StringRef CallerModulePath) {
+             unsigned Threshold, StringRef CallerModulePath,
+             FunctionImporter::ImportFailureReason &Reason,
+             GlobalValue::GUID GUID) {
+  Reason = FunctionImporter::ImportFailureReason::None;
   auto It = llvm::find_if(
       CalleeSummaryList,
       [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
         auto *GVSummary = SummaryPtr.get();
-        if (!Index.isGlobalValueLive(GVSummary))
+        if (!Index.isGlobalValueLive(GVSummary)) {
+          Reason = FunctionImporter::ImportFailureReason::NotLive;
           return false;
+        }
 
         // For SamplePGO, in computeImportForFunction the OriginalId
         // may have been used to locate the callee summary list (See
@@ -184,11 +193,15 @@ selectCallee(const ModuleSummaryIndex &Index,
         // When this happens, the logic for SamplePGO kicks in and
         // the static variable in 2) will be found, which needs to be
         // filtered out.
-        if (GVSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind)
+        if (GVSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind) {
+          Reason = FunctionImporter::ImportFailureReason::GlobalVar;
           return false;
-        if (GlobalValue::isInterposableLinkage(GVSummary->linkage()))
+        }
+        if (GlobalValue::isInterposableLinkage(GVSummary->linkage())) {
+          Reason = FunctionImporter::ImportFailureReason::InterposableLinkage;
           // There is no point in importing these, we can't inline them
           return false;
+        }
 
         auto *Summary = cast<FunctionSummary>(GVSummary->getBaseObject());
 
@@ -204,14 +217,21 @@ selectCallee(const ModuleSummaryIndex &Index,
         // a local in another module.
         if (GlobalValue::isLocalLinkage(Summary->linkage()) &&
             CalleeSummaryList.size() > 1 &&
-            Summary->modulePath() != CallerModulePath)
+            Summary->modulePath() != CallerModulePath) {
+          Reason =
+              FunctionImporter::ImportFailureReason::LocalLinkageNotInModule;
           return false;
+        }
 
-        if (Summary->instCount() > Threshold)
+        if (Summary->instCount() > Threshold) {
+          Reason = FunctionImporter::ImportFailureReason::TooLarge;
           return false;
+        }
 
-        if (Summary->notEligibleToImport())
+        if (Summary->notEligibleToImport()) {
+          Reason = FunctionImporter::ImportFailureReason::NotEligible;
           return false;
+        }
 
         return true;
       });
@@ -270,6 +290,27 @@ static void computeImportForReferencedGlobals(
   }
 }
 
+static const char *
+getFailureName(FunctionImporter::ImportFailureReason Reason) {
+  switch (Reason) {
+  case FunctionImporter::ImportFailureReason::None:
+    return "None";
+  case FunctionImporter::ImportFailureReason::GlobalVar:
+    return "GlobalVar";
+  case FunctionImporter::ImportFailureReason::NotLive:
+    return "NotLive";
+  case FunctionImporter::ImportFailureReason::TooLarge:
+    return "TooLarge";
+  case FunctionImporter::ImportFailureReason::InterposableLinkage:
+    return "InterposableLinkage";
+  case FunctionImporter::ImportFailureReason::LocalLinkageNotInModule:
+    return "LocalLinkageNotInModule";
+  case FunctionImporter::ImportFailureReason::NotEligible:
+    return "NotEligible";
+  }
+  llvm_unreachable("invalid reason");
+}
+
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
@@ -316,11 +357,12 @@ static void computeImportForFunction(
     const auto NewThreshold =
         Threshold * GetBonusMultiplier(Edge.second.getHotness());
 
-    auto IT = ImportThresholds.insert(
-        std::make_pair(VI.getGUID(), std::make_pair(NewThreshold, nullptr)));
+    auto IT = ImportThresholds.insert(std::make_pair(
+        VI.getGUID(), std::make_tuple(NewThreshold, nullptr, nullptr)));
     bool PreviouslyVisited = !IT.second;
-    auto &ProcessedThreshold = IT.first->second.first;
-    auto &CalleeSummary = IT.first->second.second;
+    auto &ProcessedThreshold = std::get<0>(IT.first->second);
+    auto &CalleeSummary = std::get<1>(IT.first->second);
+    auto &FailureInfo = std::get<2>(IT.first->second);
 
     const FunctionSummary *ResolvedCalleeSummary = nullptr;
     if (CalleeSummary) {
@@ -345,16 +387,37 @@ static void computeImportForFunction(
         LLVM_DEBUG(
             dbgs() << "ignored! Target was already rejected with Threshold "
             << ProcessedThreshold << "\n");
+        if (PrintImportFailures) {
+          assert(FailureInfo &&
+                 "Expected FailureInfo for previously rejected candidate");
+          FailureInfo->Attempts++;
+        }
         continue;
       }
 
+      FunctionImporter::ImportFailureReason Reason;
       CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                                   Summary.modulePath());
+                                   Summary.modulePath(), Reason, VI.getGUID());
       if (!CalleeSummary) {
         // Update with new larger threshold if this was a retry (otherwise
-        // we would have already inserted with NewThreshold above).
-        if (PreviouslyVisited)
+        // we would have already inserted with NewThreshold above). Also
+        // update failure info if requested.
+        if (PreviouslyVisited) {
           ProcessedThreshold = NewThreshold;
+          if (PrintImportFailures) {
+            assert(FailureInfo &&
+                   "Expected FailureInfo for previously rejected candidate");
+            FailureInfo->Reason = Reason;
+            FailureInfo->Attempts++;
+            FailureInfo->MaxHotness =
+                std::max(FailureInfo->MaxHotness, Edge.second.getHotness());
+          }
+        } else if (PrintImportFailures) {
+          assert(!FailureInfo &&
+                 "Expected no FailureInfo for newly rejected candidate");
+          FailureInfo = llvm::make_unique<FunctionImporter::ImportFailureInfo>(
+              VI, Edge.second.getHotness(), Reason, 1);
+        }
         LLVM_DEBUG(
             dbgs() << "ignored! No qualifying callee with summary found.\n");
         continue;
@@ -421,7 +484,7 @@ static void computeImportForFunction(
 /// another module (that may require promotion).
 static void ComputeImportForModule(
     const GVSummaryMapTy &DefinedGVSummaries, const ModuleSummaryIndex &Index,
-    FunctionImporter::ImportMapTy &ImportList,
+    StringRef ModName, FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
@@ -461,6 +524,30 @@ static void ComputeImportForModule(
                              Worklist, ImportList, ExportLists,
                              ImportThresholds);
   }
+
+  // Print stats about functions considered but rejected for importing
+  // when requested.
+  if (PrintImportFailures) {
+    dbgs() << "Missed imports into module " << ModName << "\n";
+    for (auto &I : ImportThresholds) {
+      auto &ProcessedThreshold = std::get<0>(I.second);
+      auto &CalleeSummary = std::get<1>(I.second);
+      auto &FailureInfo = std::get<2>(I.second);
+      if (CalleeSummary)
+        continue; // We are going to import.
+      assert(FailureInfo);
+      FunctionSummary *FS = nullptr;
+      if (!FailureInfo->VI.getSummaryList().empty())
+        FS = dyn_cast<FunctionSummary>(
+            FailureInfo->VI.getSummaryList()[0]->getBaseObject());
+      dbgs() << FailureInfo->VI
+             << ": Reason = " << getFailureName(FailureInfo->Reason)
+             << ", Threshold = " << ProcessedThreshold
+             << ", Size = " << (FS ? (int)FS->instCount() : -1)
+             << ", MaxHotness = " << getHotnessName(FailureInfo->MaxHotness)
+             << ", Attempts = " << FailureInfo->Attempts << "\n";
+    }
+  }
 }
 
 #ifndef NDEBUG
@@ -498,7 +585,8 @@ void llvm::ComputeCrossModuleImport(
     auto &ImportList = ImportLists[DefinedGVSummaries.first()];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first() << "'\n");
-    ComputeImportForModule(DefinedGVSummaries.second, Index, ImportList,
+    ComputeImportForModule(DefinedGVSummaries.second, Index,
+                           DefinedGVSummaries.first(), ImportList,
                            &ExportLists);
   }
 
@@ -569,7 +657,7 @@ void llvm::ComputeCrossModuleImportForModule(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ComputeImportForModule(FunctionSummaryMap, Index, ImportList);
+  ComputeImportForModule(FunctionSummaryMap, Index, ModulePath, ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);

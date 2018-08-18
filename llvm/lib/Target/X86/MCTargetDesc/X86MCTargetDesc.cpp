@@ -251,6 +251,23 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::AMD64_K5, X86::K5},
       {codeview::RegisterId::AMD64_K6, X86::K6},
       {codeview::RegisterId::AMD64_K7, X86::K7},
+      {codeview::RegisterId::AMD64_XMM16, X86::XMM16},
+      {codeview::RegisterId::AMD64_XMM17, X86::XMM17},
+      {codeview::RegisterId::AMD64_XMM18, X86::XMM18},
+      {codeview::RegisterId::AMD64_XMM19, X86::XMM19},
+      {codeview::RegisterId::AMD64_XMM20, X86::XMM20},
+      {codeview::RegisterId::AMD64_XMM21, X86::XMM21},
+      {codeview::RegisterId::AMD64_XMM22, X86::XMM22},
+      {codeview::RegisterId::AMD64_XMM23, X86::XMM23},
+      {codeview::RegisterId::AMD64_XMM24, X86::XMM24},
+      {codeview::RegisterId::AMD64_XMM25, X86::XMM25},
+      {codeview::RegisterId::AMD64_XMM26, X86::XMM26},
+      {codeview::RegisterId::AMD64_XMM27, X86::XMM27},
+      {codeview::RegisterId::AMD64_XMM28, X86::XMM28},
+      {codeview::RegisterId::AMD64_XMM29, X86::XMM29},
+      {codeview::RegisterId::AMD64_XMM30, X86::XMM30},
+      {codeview::RegisterId::AMD64_XMM31, X86::XMM31},
+
   };
   for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
     MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));

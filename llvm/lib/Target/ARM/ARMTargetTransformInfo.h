@@ -57,7 +57,7 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   const FeatureBitset InlineFeatureWhitelist = {
       ARM::FeatureVFP2, ARM::FeatureVFP3, ARM::FeatureNEON, ARM::FeatureThumb2,
       ARM::FeatureFP16, ARM::FeatureVFP4, ARM::FeatureFPARMv8,
-      ARM::FeatureFullFP16, ARM::FeatureHWDivThumb,
+      ARM::FeatureFullFP16, ARM::FeatureFP16FML, ARM::FeatureHWDivThumb,
       ARM::FeatureHWDivARM, ARM::FeatureDB, ARM::FeatureV7Clrex,
       ARM::FeatureAcquireRelease, ARM::FeatureSlowFPBrcc,
       ARM::FeaturePerfMon, ARM::FeatureTrustZone, ARM::Feature8MSecExt,

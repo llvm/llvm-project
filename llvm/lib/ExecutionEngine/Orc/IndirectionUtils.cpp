@@ -36,10 +36,10 @@ private:
     SymbolMap Result;
     Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
     R.resolve(Result);
-    R.finalize();
+    R.emit();
   }
 
-  void discard(const VSO &V, SymbolStringPtr Name) {
+  void discard(const JITDylib &JD, SymbolStringPtr Name) {
     llvm_unreachable("Discard should never occur on a LMU?");
   }
 
@@ -63,7 +63,7 @@ JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
 
     std::lock_guard<std::mutex> Lock(CCMgrMutex);
     AddrToSymbol[*TrampolineAddr] = CallbackName;
-    cantFail(CallbacksVSO.define(
+    cantFail(CallbacksJD.define(
         llvm::make_unique<CompileCallbackMaterializationUnit>(
             std::move(CallbackName), std::move(Compile))));
     return *TrampolineAddr;
@@ -97,7 +97,7 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       Name = I->second;
   }
 
-  if (auto Sym = lookup({&CallbacksVSO}, Name))
+  if (auto Sym = lookup({&CallbacksJD}, Name))
     return Sym->getAddress();
   else {
     // If anything goes wrong materializing Sym then report it to the session

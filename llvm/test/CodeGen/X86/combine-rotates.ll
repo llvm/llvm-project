@@ -341,3 +341,16 @@ define <4 x i32> @rotate_demanded_bits_3(<4 x i32>, <4 x i32>) {
   %9 = or <4 x i32> %5, %8
   ret <4 x i32> %9
 }
+
+; OSS Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9935
+define i32 @fuzz9935() {
+; CHECK-LABEL: fuzz9935:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    retq
+  %1 = trunc i40 549755813887 to i32
+  %2 = mul i32 %1, %1
+  %3 = lshr i32 %2, %1
+  %4 = or i32 %3, %2
+  ret i32 %4
+}

@@ -5109,6 +5109,54 @@ def: NEONInstAlias<"vacle${p}.f16 $Vd, $Vn, $Vm",
                    (VACGEhq QPR:$Vd, QPR:$Vm, QPR:$Vn, pred:$p)>;
 }
 
+// +fp16fml Floating Point Multiplication Variants
+let Predicates = [HasNEON, HasFP16FML], DecoderNamespace= "VFPV8" in {
+
+class N3VCP8F16Q1<string asm, RegisterClass Td, RegisterClass Tn,
+                RegisterClass Tm, bits<2> op1, bits<2> op2, bit op3>
+  : N3VCP8<op1, op2, 1, op3, (outs Td:$Vd), (ins Tn:$Vn, Tm:$Vm), NoItinerary,
+           asm, "f16", "$Vd, $Vn, $Vm", "", []>;
+
+class N3VCP8F16Q0<string asm, RegisterClass Td, RegisterClass Tn,
+                RegisterClass Tm, bits<2> op1, bits<2> op2, bit op3>
+  : N3VCP8Q0<op1, op2, 0, op3, (outs Td:$Vd), (ins Tn:$Vn, Tm:$Vm), NoItinerary,
+           asm, "f16", "$Vd, $Vn, $Vm", "", []>;
+
+class VFMQ0<string opc, bits<2> S>
+  : N3VLaneCP8<0, S, 0, 1, (outs DPR:$Vd),
+               (ins SPR:$Vn, SPR:$Vm, VectorIndex32:$idx),
+               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+  bit idx;
+  let Inst{3} = idx;
+  let Inst{19-16} = Vn{4-1};
+  let Inst{7}     = Vn{0};
+  let Inst{5}     = Vm{0};
+  let Inst{2-0}   = Vm{3-1};
+}
+
+class VFMQ1<string opc, bits<2> S>
+  : N3VLaneCP8<0, S, 1, 1, (outs QPR:$Vd),
+               (ins DPR:$Vn, DPR:$Vm, VectorIndex16:$idx),
+               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+  bits<2> idx;
+  let Inst{5} = idx{1};
+  let Inst{3} = idx{0};
+}
+
+let hasNoSchedulingInfo = 1 in {
+//                                                op1   op2   op3
+def VFMALD  : N3VCP8F16Q0<"vfmal", DPR, SPR, SPR, 0b00, 0b10, 1>;
+def VFMSLD  : N3VCP8F16Q0<"vfmsl", DPR, SPR, SPR, 0b01, 0b10, 1>;
+def VFMALQ  : N3VCP8F16Q1<"vfmal", QPR, DPR, DPR, 0b00, 0b10, 1>;
+def VFMSLQ  : N3VCP8F16Q1<"vfmsl", QPR, DPR, DPR, 0b01, 0b10, 1>;
+def VFMALDI : VFMQ0<"vfmal", 0b00>;
+def VFMSLDI : VFMQ0<"vfmsl", 0b01>;
+def VFMALQI : VFMQ1<"vfmal", 0b00>;
+def VFMSLQI : VFMQ1<"vfmsl", 0b01>;
+}
+} // HasNEON, HasFP16FML
+
+
 def: NEONInstAlias<"vaclt${p}.f32 $Vd, $Vm",
                    (VACGTfd DPR:$Vd, DPR:$Vm, DPR:$Vd, pred:$p)>;
 def: NEONInstAlias<"vaclt${p}.f32 $Vd, $Vm",

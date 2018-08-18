@@ -66,11 +66,13 @@ protected:
 private:
   const HexagonInstrInfo *HII;
   const HexagonRegisterInfo *HRI;
+  const bool Minimal;
 
 public:
   HexagonPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
                         AliasAnalysis *AA,
-                        const MachineBranchProbabilityInfo *MBPI);
+                        const MachineBranchProbabilityInfo *MBPI,
+                        bool Minimal);
 
   // initPacketizerState - initialize some internal flags.
   void initPacketizerState() override;

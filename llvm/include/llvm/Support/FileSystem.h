@@ -701,7 +701,7 @@ enum CreationDisposition : unsigned {
   ///   * If it does not already exist, create a new file.
   CD_CreateNew = 1,
 
-  /// CD_OpenAlways - When opening a file:
+  /// CD_OpenExisting - When opening a file:
   ///   * If it already exists, open the file with the offset set to 0.
   ///   * If it does not already exist, fail.
   CD_OpenExisting = 2,

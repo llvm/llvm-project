@@ -780,6 +780,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   const unsigned StackOffset = 92;
   bool hasStructRetAttr = false;
+  unsigned SRetArgSize = 0;
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, realArgIdx = 0, byvalArgIdx = 0, e = ArgLocs.size();
        i != e;
@@ -824,6 +825,11 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       MemOpChains.push_back(
           DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo()));
       hasStructRetAttr = true;
+      // sret only allowed on first argument
+      assert(Outs[realArgIdx].OrigArgIndex == 0);
+      PointerType *Ty = cast<PointerType>(CLI.getArgs()[0].Ty);
+      Type *ElementTy = Ty->getElementType();
+      SRetArgSize = DAG.getDataLayout().getTypeAllocSize(ElementTy);
       continue;
     }
 
@@ -932,7 +938,6 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
-  unsigned SRetArgSize = (hasStructRetAttr)? getSRetArgSize(DAG, Callee):0;
   bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CS);
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
@@ -1031,51 +1036,6 @@ unsigned SparcTargetLowering::getRegisterByName(const char* RegName, EVT VT,
 
   report_fatal_error("Invalid register name global variable");
 }
-
-// This functions returns true if CalleeName is a ABI function that returns
-// a long double (fp128).
-static bool isFP128ABICall(const char *CalleeName)
-{
-  static const char *const ABICalls[] =
-    {  "_Q_add", "_Q_sub", "_Q_mul", "_Q_div",
-       "_Q_sqrt", "_Q_neg",
-       "_Q_itoq", "_Q_stoq", "_Q_dtoq", "_Q_utoq",
-       "_Q_lltoq", "_Q_ulltoq",
-       nullptr
-    };
-  for (const char * const *I = ABICalls; *I != nullptr; ++I)
-    if (strcmp(CalleeName, *I) == 0)
-      return true;
-  return false;
-}
-
-unsigned
-SparcTargetLowering::getSRetArgSize(SelectionDAG &DAG, SDValue Callee) const
-{
-  const Function *CalleeFn = nullptr;
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    CalleeFn = dyn_cast<Function>(G->getGlobal());
-  } else if (ExternalSymbolSDNode *E =
-             dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    const Function &F = DAG.getMachineFunction().getFunction();
-    const Module *M = F.getParent();
-    const char *CalleeName = E->getSymbol();
-    CalleeFn = M->getFunction(CalleeName);
-    if (!CalleeFn && isFP128ABICall(CalleeName))
-      return 16; // Return sizeof(fp128)
-  }
-
-  if (!CalleeFn)
-    return 0;
-
-  // It would be nice to check for the sret attribute on CalleeFn here,
-  // but since it is not part of the function type, any check will misfire.
-
-  PointerType *Ty = cast<PointerType>(CalleeFn->arg_begin()->getType());
-  Type *ElementTy = Ty->getElementType();
-  return DAG.getDataLayout().getTypeAllocSize(ElementTy);
-}
-
 
 // Fixup floating point arguments in the ... part of a varargs call.
 //
