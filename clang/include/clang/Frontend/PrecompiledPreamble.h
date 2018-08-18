@@ -286,8 +286,7 @@ public:
 };
 
 enum class BuildPreambleError {
-  PreambleIsEmpty = 1,
-  CouldntCreateTempFile,
+  CouldntCreateTempFile = 1,
   CouldntCreateTargetInfo,
   BeginSourceFileFailed,
   CouldntEmitPCH

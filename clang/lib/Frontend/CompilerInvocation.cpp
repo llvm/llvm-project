@@ -1125,6 +1125,20 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.Addrsig = Args.hasArg(OPT_faddrsig);
 
+  if (Arg *A = Args.getLastArg(OPT_msign_return_address)) {
+    StringRef SignScope = A->getValue();
+    if (SignScope.equals_lower("none"))
+      Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::None);
+    else if (SignScope.equals_lower("all"))
+      Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::All);
+    else if (SignScope.equals_lower("non-leaf"))
+      Opts.setSignReturnAddress(
+          CodeGenOptions::SignReturnAddressScope::NonLeaf);
+    else
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
+
   return Success;
 }
 

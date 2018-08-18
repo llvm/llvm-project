@@ -278,6 +278,10 @@ public:
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
   virtual llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
+  virtual std::string getRCBlockLayoutStr(CodeGen::CodeGenModule &CGM,
+                                          const CGBlockInfo &blockInfo) {
+    return {};
+  }
 
   /// Returns an i8* which points to the byref layout information.
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,

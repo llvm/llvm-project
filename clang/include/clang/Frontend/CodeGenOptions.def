@@ -339,6 +339,7 @@ CODEGENOPT(ForceEmitVTables, 1, 0)
 /// Whether to emit an address-significance table into the object file.
 CODEGENOPT(Addrsig, 1, 0)
 
+ENUM_CODEGENOPT(SignReturnAddress, SignReturnAddressScope, 2, None)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

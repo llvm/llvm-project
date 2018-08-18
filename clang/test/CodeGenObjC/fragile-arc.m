@@ -126,13 +126,13 @@
 extern void useBlock(void (^block)(void));
 
 //  256 == 0x100 == starts with 1 strong
-// GLOBALS: @__block_descriptor_tmp{{.*}} = internal constant {{.*}}, i32 256 }
+// GLOBALS: @"__block_descriptor{{.*}} = linkonce_odr hidden {{.*}}, i32 256 }
 void testBlockLayoutStrong(id x) {
   useBlock(^{ (void) x; });
 }
 
 //  1   == 0x001 == starts with 1 weak
-// GLOBALS: @__block_descriptor_tmp{{.*}} = internal constant {{.*}}, i32 1 }
+// GLOBALS: @"__block_descriptor{{.*}} = linkonce_odr hidden {{.*}}, i32 1 }
 void testBlockLayoutWeak(__weak id x) {
   useBlock(^{ (void) x; });
 }

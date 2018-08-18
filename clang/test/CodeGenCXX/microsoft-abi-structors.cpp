@@ -467,9 +467,9 @@ struct A {
 void *getA() {
   return (void*)new A();
 }
-// CHECK: define internal x86_thiscallcc i8* @"??_GA@?A@@UAEPAXI@Z"
+// CHECK: define internal x86_thiscallcc i8* @"??_GA@?A0x{{[^@]*}}@@UAEPAXI@Z"
 // CHECK:               (%"struct.(anonymous namespace)::A"* %this, i32 %should_call_delete)
-// CHECK: define internal x86_thiscallcc void @"??1A@?A@@UAE@XZ"
+// CHECK: define internal x86_thiscallcc void @"??1A@?A0x{{[^@]*}}@@UAE@XZ"
 // CHECK:               (%"struct.(anonymous namespace)::A"* %this)
 
 // Check that we correctly transform __stdcall to __thiscall for ctors and

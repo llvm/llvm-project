@@ -22,7 +22,7 @@
 // CHECK-DAG: @_TI1P6AXXZ = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.1* @_CTA1P6AXXZ to i8*) }, section ".xdata", comdat
 // CHECK-DAG: @_TIU2PAPFAH = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 4, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.2* @_CTA2PAPFAH to i8*) }, section ".xdata", comdat
 // CHECK-DAG: @_CTA2PAPFAH = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.2 { i32 2, [2 x %eh.CatchableType*] [%eh.CatchableType* @"_CT??_R0PAPFAH@84", %eh.CatchableType* @"_CT??_R0PAX@84"] }, section ".xdata", comdat
-// CHECK-DAG: @"_TI1?AUFoo@?A@@" = internal unnamed_addr constant %eh.ThrowInfo { i32 0, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.1* @"_CTA1?AUFoo@?A@@" to i8*) }, section ".xdata"
+// CHECK-DAG: @"_TI1?AUFoo@?A0x{{[^@]*}}@@" = internal unnamed_addr constant %eh.ThrowInfo { i32 0, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.1* @"_CTA1?AUFoo@?A0x{{[^@]*}}@@" to i8*) }, section ".xdata"
 
 
 struct N { ~N(); };
@@ -135,6 +135,6 @@ namespace { struct Foo { } foo_exc; }
 
 void *GetExceptionInfo_test2() {
 // CHECK-LABEL: @"?GetExceptionInfo_test2@@YAPAXXZ"
-// CHECK:  ret i8* bitcast (%eh.ThrowInfo* @"_TI1?AUFoo@?A@@" to i8*)
+// CHECK:  ret i8* bitcast (%eh.ThrowInfo* @"_TI1?AUFoo@?A0x{{[^@]*}}@@" to i8*)
   return __GetExceptionInfo(foo_exc);
 }
