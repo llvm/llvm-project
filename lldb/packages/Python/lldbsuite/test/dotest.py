@@ -439,7 +439,7 @@ def parseOptionsAndInitTestdirs():
         configuration.num_threads = args.num_threads
 
     if args.test_subdir:
-        configuration.multiprocess_test_subdir = args.test_subdir
+        configuration.exclusive_test_subdir = args.test_subdir
 
     if args.test_runner_name:
         configuration.test_runner_name = args.test_runner_name
@@ -895,6 +895,7 @@ def visit_file(dir, name):
             unittest2.defaultTestLoader.loadTestsFromName(base))
 
 
+# TODO: This should be replaced with a call to find_test_files_in_dir_tree.
 def visit(prefix, dir, names):
     """Visitor function for os.path.walk(path, visit, arg)."""
 
@@ -1172,7 +1173,6 @@ def run_suite():
         from . import dosep
         dosep.main(
             configuration.num_threads,
-            configuration.multiprocess_test_subdir,
             configuration.test_runner_name,
             configuration.results_formatter_object)
         raise Exception("should never get here")
@@ -1267,10 +1267,15 @@ def run_suite():
     # Don't do lldb-server (llgs) tests on anything except Linux.
     configuration.dont_do_llgs_test = not ("linux" in target_platform)
 
-    #
-    # Walk through the testdirs while collecting tests.
-    #
-    for testdir in configuration.testdirs:
+    # Collect tests from the specified testing directories. If a test
+    # subdirectory filter is explicitly specified, limit the search to that
+    # subdirectory.
+    exclusive_test_subdir = configuration.get_absolute_path_to_exclusive_test_subdir()
+    if exclusive_test_subdir:
+        dirs_to_search = [exclusive_test_subdir]
+    else:
+        dirs_to_search = configuration.testdirs
+    for testdir in dirs_to_search:
         for (dirpath, dirnames, filenames) in os.walk(testdir):
             visit('Test', dirpath, filenames)
 

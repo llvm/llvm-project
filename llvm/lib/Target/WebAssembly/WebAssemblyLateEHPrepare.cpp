@@ -47,7 +47,7 @@ public:
 
 char WebAssemblyLateEHPrepare::ID = 0;
 INITIALIZE_PASS(WebAssemblyLateEHPrepare, DEBUG_TYPE,
-                "WebAssembly Exception Preparation", false, false)
+                "WebAssembly Late Exception Preparation", false, false)
 
 FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
   return new WebAssemblyLateEHPrepare();

@@ -1604,6 +1604,8 @@ struct MDFieldPrinter {
   void printDwarfEnum(StringRef Name, IntTy Value, Stringifier toString,
                       bool ShouldSkipZero = true);
   void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
+  void printNameTableKind(StringRef Name,
+                          DICompileUnit::DebugNameTableKind NTK);
 };
 
 } // end anonymous namespace
@@ -1699,6 +1701,13 @@ void MDFieldPrinter::printDIFlags(StringRef Name, DINode::DIFlags Flags) {
 void MDFieldPrinter::printEmissionKind(StringRef Name,
                                        DICompileUnit::DebugEmissionKind EK) {
   Out << FS << Name << ": " << DICompileUnit::emissionKindString(EK);
+}
+
+void MDFieldPrinter::printNameTableKind(StringRef Name,
+                                        DICompileUnit::DebugNameTableKind NTK) {
+  if (NTK == DICompileUnit::DebugNameTableKind::Default)
+    return;
+  Out << FS << Name << ": " << DICompileUnit::nameTableKindString(NTK);
 }
 
 template <class IntTy, class Stringifier>
@@ -1891,7 +1900,7 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printBool("splitDebugInlining", N->getSplitDebugInlining(), true);
   Printer.printBool("debugInfoForProfiling", N->getDebugInfoForProfiling(),
                     false);
-  Printer.printBool("gnuPubnames", N->getGnuPubnames(), false);
+  Printer.printNameTableKind("nameTableKind", N->getNameTableKind());
   Out << ")";
 }
 
@@ -2839,22 +2848,6 @@ static std::string getLinkageNameWithSpace(GlobalValue::LinkageTypes LT) {
   if (LT == GlobalValue::ExternalLinkage)
     return "";
   return getLinkageName(LT) + " ";
-}
-
-static const char *getHotnessName(CalleeInfo::HotnessType HT) {
-  switch (HT) {
-  case CalleeInfo::HotnessType::Unknown:
-    return "unknown";
-  case CalleeInfo::HotnessType::Cold:
-    return "cold";
-  case CalleeInfo::HotnessType::None:
-    return "none";
-  case CalleeInfo::HotnessType::Hot:
-    return "hot";
-  case CalleeInfo::HotnessType::Critical:
-    return "critical";
-  }
-  llvm_unreachable("invalid hotness");
 }
 
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {

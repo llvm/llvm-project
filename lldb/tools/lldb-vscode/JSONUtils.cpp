@@ -12,6 +12,7 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/Host/PosixApi.h"
 
 #include "ExceptionBreakpoint.h"
 #include "JSONUtils.h"
@@ -351,7 +352,7 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints) {
 //   "required": [ "seq", "type" ]
 // }
 //----------------------------------------------------------------------
-llvm::json::Object CreateEvent(const llvm::StringRef event_name) {
+llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
   event.try_emplace("seq", 0);
   event.try_emplace("type", "event");
@@ -734,7 +735,7 @@ llvm::json::Value CreateThread(lldb::SBThread &thread) {
 //----------------------------------------------------------------------
 llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
                                       uint32_t stop_id) {
-  llvm::json::Object event(CreateEvent("stopped"));
+  llvm::json::Object event(CreateEventObject("stopped"));
   llvm::json::Object body;
   switch (thread.GetStopReason()) {
   case lldb::eStopReasonTrace:

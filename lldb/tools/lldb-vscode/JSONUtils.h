@@ -225,7 +225,7 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc);
 ///     A "Event" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 //----------------------------------------------------------------------
-llvm::json::Object CreateEvent(const llvm::StringRef event_name);
+llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
 //----------------------------------------------------------------------
 /// Create a "ExceptionBreakpointsFilter" JSON object as described in

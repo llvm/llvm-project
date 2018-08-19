@@ -1197,7 +1197,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   for (unsigned Str : OF.Sequence) {
     MachineInstr *NewMI =
         MF.CloneMachineInstr(Mapper.IntegerInstructionMap.find(Str)->second);
-    NewMI->dropMemRefs();
+    NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
     NewMI->setDebugLoc(DebugLoc());

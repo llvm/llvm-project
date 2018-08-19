@@ -6852,7 +6852,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
         .addImm(ThisLength)
         .add(SrcBase)
         .addImm(SrcDisp)
-        ->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+        .setMemRefs(MI.memoperands());
     DestDisp += ThisLength;
     SrcDisp += ThisLength;
     Length -= ThisLength;

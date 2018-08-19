@@ -122,7 +122,7 @@ std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
 // Send a "exited" event to indicate the process has exited.
 //----------------------------------------------------------------------
 void SendProcessExitedEvent(lldb::SBProcess &process) {
-  llvm::json::Object event(CreateEvent("exited"));
+  llvm::json::Object event(CreateEventObject("exited"));
   llvm::json::Object body;
   body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
@@ -130,7 +130,7 @@ void SendProcessExitedEvent(lldb::SBProcess &process) {
 }
 
 void SendThreadExitedEvent(lldb::tid_t tid) {
-  llvm::json::Object event(CreateEvent("thread"));
+  llvm::json::Object event(CreateEventObject("thread"));
   llvm::json::Object body;
   body.try_emplace("reason", "exited");
   body.try_emplace("threadId", (int64_t)tid);
@@ -146,7 +146,7 @@ void SendTerminatedEvent() {
   if (!g_vsc.sent_terminated_event) {
     g_vsc.sent_terminated_event = true;
     // Send a "terminated" event
-    llvm::json::Object event(CreateEvent("terminated"));
+    llvm::json::Object event(CreateEventObject("terminated"));
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
   }
 }
@@ -287,7 +287,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
   lldb::SBFileSpec exe_fspec = g_vsc.target.GetExecutable();
   char exe_path[PATH_MAX];
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
-  llvm::json::Object event(CreateEvent("process"));
+  llvm::json::Object event(CreateEventObject("process"));
   llvm::json::Object body;
   body.try_emplace("name", std::string(exe_path));
   const auto pid = g_vsc.target.GetProcess().GetProcessID();
@@ -398,7 +398,7 @@ void EventThreadFunction() {
               auto bp_loc =
                   lldb::SBBreakpoint::GetBreakpointLocationAtIndexFromEvent(
                       event, i);
-              auto bp_event = CreateEvent("breakpoint");
+              auto bp_event = CreateEventObject("breakpoint");
               llvm::json::Object body;
               body.try_emplace("breakpoint", CreateBreakpoint(bp_loc));
               if (added)
@@ -596,7 +596,7 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
     SendProcessEvent(Attach);
-    g_vsc.SendJSON(CreateEvent("initialized"));
+    g_vsc.SendJSON(CreateEventObject("initialized"));
     // SendThreadStoppedEvent();
   }
 }
@@ -1284,7 +1284,7 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
   SendProcessEvent(Launch);
-  g_vsc.SendJSON(llvm::json::Value(CreateEvent("initialized")));
+  g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
   // Reenable async events and start the event thread to catch async events.
   g_vsc.debugger.SetAsync(true);
 }

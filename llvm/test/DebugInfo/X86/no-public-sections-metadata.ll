@@ -1,9 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -debugger-tune=gdb -filetype=asm < %s -no-dwarf-pub-sections | FileCheck %s --check-prefix=DISABLED
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -debugger-tune=gdb -filetype=asm < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -debugger-tune=gdb -filetype=asm < %s | FileCheck %s --check-prefix=DISABLED
 
-; DISABLED-NOT: {{.debug_pubnames|.debug_pubtypes}}
-; CHECK-DAG: .section .debug_pubnames
-; CHECK-DAG: .section .debug_pubtypes
+; DISABLED-NOT: pub{{names|types}}
 
 %struct.bar = type { %"struct.ns::foo" }
 %"struct.ns::foo" = type { i8 }
@@ -16,7 +13,7 @@
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, gnuPubnames: false)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: None)
 !3 = !DIFile(filename: "type.cpp", directory: "/tmp/dbginfo")
 !4 = !{}
 !5 = !{!0}

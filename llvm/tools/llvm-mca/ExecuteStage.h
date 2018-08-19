@@ -19,7 +19,6 @@
 #define LLVM_TOOLS_LLVM_MCA_EXECUTE_STAGE_H
 
 #include "Instruction.h"
-#include "RetireControlUnit.h"
 #include "Scheduler.h"
 #include "Stage.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -27,8 +26,6 @@
 namespace mca {
 
 class ExecuteStage final : public Stage {
-  // Owner will go away when we move listeners/eventing to the stages.
-  RetireControlUnit &RCU;
   Scheduler &HWS;
 
   // The following routines are used to maintain the HWS.
@@ -40,7 +37,7 @@ class ExecuteStage final : public Stage {
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 
 public:
-  ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
+  ExecuteStage(Scheduler &S) : Stage(), HWS(S) {}
 
   // This stage works under the assumption that the Pipeline will eventually
   // execute a retire stage. We don't need to check if pipelines and/or
@@ -49,9 +46,9 @@ public:
   // RetireControlUnit::hasWorkToComplete() is responsible for checking if there
   // are still instructions in-flight in the out-of-order backend.
   bool hasWorkToComplete() const override { return false; }
-
+  bool isAvailable(const InstRef &IR) const override;
   llvm::Error cycleStart() override;
-  Status execute(InstRef &IR) override;
+  llvm::Error execute(InstRef &IR) override;
 
   void
   notifyInstructionIssued(const InstRef &IR,

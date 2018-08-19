@@ -3308,24 +3308,21 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(isKill));
 }
 
-void X86InstrInfo::storeRegToAddr(MachineFunction &MF, unsigned SrcReg,
-                                  bool isKill,
-                                  SmallVectorImpl<MachineOperand> &Addr,
-                                  const TargetRegisterClass *RC,
-                                  MachineInstr::mmo_iterator MMOBegin,
-                                  MachineInstr::mmo_iterator MMOEnd,
-                                  SmallVectorImpl<MachineInstr*> &NewMIs) const {
+void X86InstrInfo::storeRegToAddr(
+    MachineFunction &MF, unsigned SrcReg, bool isKill,
+    SmallVectorImpl<MachineOperand> &Addr, const TargetRegisterClass *RC,
+    ArrayRef<MachineMemOperand *> MMOs,
+    SmallVectorImpl<MachineInstr *> &NewMIs) const {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-  bool isAligned = MMOBegin != MMOEnd &&
-                   (*MMOBegin)->getAlignment() >= Alignment;
+  bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
   DebugLoc DL;
   MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
   for (unsigned i = 0, e = Addr.size(); i != e; ++i)
     MIB.add(Addr[i]);
   MIB.addReg(SrcReg, getKillRegState(isKill));
-  (*MIB).setMemRefs(MMOBegin, MMOEnd);
+  MIB.setMemRefs(MMOs);
   NewMIs.push_back(MIB);
 }
 
@@ -3345,22 +3342,20 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   addFrameReference(BuildMI(MBB, MI, DL, get(Opc), DestReg), FrameIdx);
 }
 
-void X86InstrInfo::loadRegFromAddr(MachineFunction &MF, unsigned DestReg,
-                                 SmallVectorImpl<MachineOperand> &Addr,
-                                 const TargetRegisterClass *RC,
-                                 MachineInstr::mmo_iterator MMOBegin,
-                                 MachineInstr::mmo_iterator MMOEnd,
-                                 SmallVectorImpl<MachineInstr*> &NewMIs) const {
+void X86InstrInfo::loadRegFromAddr(
+    MachineFunction &MF, unsigned DestReg,
+    SmallVectorImpl<MachineOperand> &Addr, const TargetRegisterClass *RC,
+    ArrayRef<MachineMemOperand *> MMOs,
+    SmallVectorImpl<MachineInstr *> &NewMIs) const {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-  bool isAligned = MMOBegin != MMOEnd &&
-                   (*MMOBegin)->getAlignment() >= Alignment;
+  bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
   DebugLoc DL;
   MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc), DestReg);
   for (unsigned i = 0, e = Addr.size(); i != e; ++i)
     MIB.add(Addr[i]);
-  (*MIB).setMemRefs(MMOBegin, MMOEnd);
+  MIB.setMemRefs(MMOs);
   NewMIs.push_back(MIB);
 }
 
@@ -5450,9 +5445,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
 
   // Emit the load instruction.
   if (UnfoldLoad) {
-    std::pair<MachineInstr::mmo_iterator, MachineInstr::mmo_iterator> MMOs =
-        MF.extractLoadMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-    loadRegFromAddr(MF, Reg, AddrOps, RC, MMOs.first, MMOs.second, NewMIs);
+    auto MMOs = extractLoadMMOs(MI.memoperands(), MF);
+    loadRegFromAddr(MF, Reg, AddrOps, RC, MMOs, NewMIs);
     if (UnfoldStore) {
       // Address operands cannot be marked isKill.
       for (unsigned i = 1; i != 1 + X86::AddrNumOperands; ++i) {
@@ -5517,9 +5511,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // Emit the store instruction.
   if (UnfoldStore) {
     const TargetRegisterClass *DstRC = getRegClass(MCID, 0, &RI, MF);
-    std::pair<MachineInstr::mmo_iterator, MachineInstr::mmo_iterator> MMOs =
-        MF.extractStoreMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-    storeRegToAddr(MF, Reg, true, AddrOps, DstRC, MMOs.first, MMOs.second, NewMIs);
+    auto MMOs = extractStoreMMOs(MI.memoperands(), MF);
+    storeRegToAddr(MF, Reg, true, AddrOps, DstRC, MMOs, NewMIs);
   }
 
   return true;

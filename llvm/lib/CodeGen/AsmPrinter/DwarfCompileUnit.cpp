@@ -249,13 +249,13 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addLinkageName(*VariableDIE, GV->getLinkageName());
 
   if (addToAccelTable) {
-    DD->addAccelName(GV->getName(), *VariableDIE);
+    DD->addAccelName(*CUNode, GV->getName(), *VariableDIE);
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
     if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
         DD->useAllLinkageNames())
-      DD->addAccelName(GV->getLinkageName(), *VariableDIE);
+      DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
   }
 
   return VariableDIE;
@@ -348,7 +348,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_subprogram nodes.
-  DD->addSubprogramNames(SP, *SPDie);
+  DD->addSubprogramNames(*CUNode, SP, *SPDie);
 
   return *SPDie;
 }
@@ -486,7 +486,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
 
   // Add name to the name table, we do this here because we're guaranteed
   // to have concrete versions of our DW_TAG_inlined_subprogram nodes.
-  DD->addSubprogramNames(InlinedSP, *ScopeDIE);
+  DD->addSubprogramNames(*CUNode, InlinedSP, *ScopeDIE);
 
   return ScopeDIE;
 }
@@ -511,6 +511,18 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   auto D = constructVariableDIEImpl(DV, Abstract);
   DV.setDIE(*D);
   return D;
+}
+
+DIE *DwarfCompileUnit::constructLabelDIE(DbgLabel &DL,
+                                         const LexicalScope &Scope) {
+  auto LabelDie = DIE::get(DIEValueAllocator, DL.getTag());
+  insertDIE(DL.getLabel(), LabelDie);
+  DL.setDIE(*LabelDie);
+
+  if (Scope.isAbstractScope())
+    applyLabelAttributes(DL, *LabelDie);
+
+  return LabelDie;
 }
 
 DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
@@ -706,6 +718,9 @@ DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
   if (HasNonScopeChildren)
     *HasNonScopeChildren = !Children.empty();
 
+  for (DbgLabel *DL : DU->getScopeLabels().lookup(Scope))
+    Children.push_back(constructLabelDIE(*DL, *Scope));
+
   for (LexicalScope *LS : Scope->getChildren())
     constructScopeDIE(LS, Children);
 
@@ -831,40 +846,52 @@ void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
   }
 }
 
-void DwarfCompileUnit::finishVariableDefinition(const DbgVariable &Var) {
-  DbgVariable *AbsVar = getExistingAbstractVariable(
-      InlinedVariable(Var.getVariable(), Var.getInlinedAt()));
-  auto *VariableDie = Var.getDIE();
-  if (AbsVar && AbsVar->getDIE()) {
-    addDIEEntry(*VariableDie, dwarf::DW_AT_abstract_origin,
-                      *AbsVar->getDIE());
-  } else
-    applyVariableAttributes(Var, *VariableDie);
+void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
+  DbgEntity *AbsEntity = getExistingAbstractEntity(Entity->getEntity());
+
+  auto *Die = Entity->getDIE();
+  /// Label may be used to generate DW_AT_low_pc, so put it outside
+  /// if/else block.
+  const DbgLabel *Label = nullptr;
+  if (AbsEntity && AbsEntity->getDIE()) {
+    addDIEEntry(*Die, dwarf::DW_AT_abstract_origin, *AbsEntity->getDIE());
+    Label = dyn_cast<const DbgLabel>(Entity);
+  } else {
+    if (const DbgVariable *Var = dyn_cast<const DbgVariable>(Entity))
+      applyVariableAttributes(*Var, *Die);
+    else if ((Label = dyn_cast<const DbgLabel>(Entity)))
+      applyLabelAttributes(*Label, *Die);
+    else
+      llvm_unreachable("DbgEntity must be DbgVariable or DbgLabel.");
+  }
+
+  if (Label) {
+    const MCSymbol *Sym = Label->getSymbol();
+    addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
+  }
 }
 
-DbgVariable *DwarfCompileUnit::getExistingAbstractVariable(InlinedVariable IV) {
-  const DILocalVariable *Cleansed;
-  return getExistingAbstractVariable(IV, Cleansed);
-}
-
-// Find abstract variable, if any, associated with Var.
-DbgVariable *DwarfCompileUnit::getExistingAbstractVariable(
-    InlinedVariable IV, const DILocalVariable *&Cleansed) {
-  // More then one inlined variable corresponds to one abstract variable.
-  Cleansed = IV.first;
-  auto &AbstractVariables = getAbstractVariables();
-  auto I = AbstractVariables.find(Cleansed);
-  if (I != AbstractVariables.end())
+DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {
+  auto &AbstractEntities = getAbstractEntities();
+  auto I = AbstractEntities.find(Node);
+  if (I != AbstractEntities.end())
     return I->second.get();
   return nullptr;
 }
 
-void DwarfCompileUnit::createAbstractVariable(const DILocalVariable *Var,
-                                        LexicalScope *Scope) {
+void DwarfCompileUnit::createAbstractEntity(const DINode *Node,
+                                            LexicalScope *Scope) {
   assert(Scope && Scope->isAbstractScope());
-  auto AbsDbgVariable = llvm::make_unique<DbgVariable>(Var, /* IA */ nullptr);
-  DU->addScopeVariable(Scope, AbsDbgVariable.get());
-  getAbstractVariables()[Var] = std::move(AbsDbgVariable);
+  auto &Entity = getAbstractEntities()[Node];
+  if (isa<const DILocalVariable>(Node)) {
+    Entity = llvm::make_unique<DbgVariable>(
+                        cast<const DILocalVariable>(Node), nullptr /* IA */);;
+    DU->addScopeVariable(Scope, cast<DbgVariable>(Entity.get()));
+  } else if (isa<const DILabel>(Node)) {
+    Entity = llvm::make_unique<DbgLabel>(
+                        cast<const DILabel>(Node), nullptr /* IA */);
+    DU->addScopeLabel(Scope, cast<DbgLabel>(Entity.get()));
+  }
 }
 
 void DwarfCompileUnit::emitHeader(bool UseOffsets) {
@@ -883,13 +910,18 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
-  // Opting in to GNU Pubnames/types overrides the default to ensure these are
-  // generated for things like Gold's gdb_index generation.
-  if (CUNode->getGnuPubnames())
+  switch (CUNode->getNameTableKind()) {
+  case DICompileUnit::DebugNameTableKind::None:
+    return false;
+    // Opting in to GNU Pubnames/types overrides the default to ensure these are
+    // generated for things like Gold's gdb_index generation.
+  case DICompileUnit::DebugNameTableKind::GNU:
     return true;
-
-  return DD->tuneForGDB() && DD->usePubSections() &&
-         !includeMinimalInlineScopes() && !CUNode->isDebugDirectivesOnly();
+  case DICompileUnit::DebugNameTableKind::Default:
+    return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
+           !CUNode->isDebugDirectivesOnly();
+  }
+  llvm_unreachable("Unhandled DICompileUnit::DebugNameTableKind enum");
 }
 
 /// addGlobalName - Add a new global name to the compile unit.
@@ -1017,6 +1049,15 @@ void DwarfCompileUnit::applyVariableAttributes(const DbgVariable &Var,
   addType(VariableDie, Var.getType());
   if (Var.isArtificial())
     addFlag(VariableDie, dwarf::DW_AT_artificial);
+}
+
+void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
+                                            DIE &LabelDie) {
+  StringRef Name = Label.getName();
+  if (!Name.empty())
+    addString(LabelDie, dwarf::DW_AT_name, Name);
+  const auto *DILabel = Label.getLabel();
+  addSourceLine(LabelDie, DILabel);
 }
 
 /// Add a Dwarf expression attribute data and value.

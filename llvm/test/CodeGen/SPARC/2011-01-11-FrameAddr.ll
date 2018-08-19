@@ -96,4 +96,22 @@ entry:
   ret i8* %0
 }
 
+define i8* @retaddr3() nounwind readnone {
+entry:
+;V8-LABEL: retaddr3:
+;V8: ta 3
+;V8: ld [%fp+60], {{.+}}
+
+;V9-LABEL: retaddr3:
+;V9: flushw
+;V9: ld [%fp+60], {{.+}}
+
+;SPARC64-LABEL: retaddr3
+;SPARC64:       flushw
+;SPARC64: ldx [%fp+2167],     %[[R0:[goli][0-7]]]
+
+  %0 = tail call i8* @llvm.returnaddress(i32 1)
+  ret i8* %0
+}
+
 declare i8* @llvm.returnaddress(i32) nounwind readnone

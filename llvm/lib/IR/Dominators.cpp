@@ -71,8 +71,13 @@ template class llvm::cfg::Update<BasicBlock *>;
 
 template void llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
     DomTreeBuilder::BBDomTree &DT);
+template void
+llvm::DomTreeBuilder::CalculateWithUpdates<DomTreeBuilder::BBDomTree>(
+    DomTreeBuilder::BBDomTree &DT, BBUpdates U);
+
 template void llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree>(
     DomTreeBuilder::BBPostDomTree &DT);
+// No CalculateWithUpdates<PostDomTree> instantiation, unless a usecase arises.
 
 template void llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBDomTree>(
     DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);

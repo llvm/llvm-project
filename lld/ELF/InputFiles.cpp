@@ -125,10 +125,6 @@ std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   Dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
-  const DWARFObject &Obj = Dwarf->getDWARFObj();
-  DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
-                              Config->Wordsize);
-
   for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),

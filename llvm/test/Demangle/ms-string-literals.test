@@ -514,7 +514,13 @@
 ; CHECK: const char * {"\x03"}
 ; CHECK: const char * {"\x02"}
 ; CHECK: const char * {"\x01"}
-; CHECK: const char * {"\x00"}
+
+; The mangling doesn't distinguish between char and char16 types, so even though
+; this was originally written as a char * with one embedded null, it mangles
+; identically to a char16_t * that is empty.  So when demangling, we choose the
+; "smartest" one, which happened to be wrong, but it's still a "better"
+; demangling.
+; CHECK: const char16_t * {u""}
 
 
 ??_C@_13KDLDGPGJ@?$AA?7?$AA?$AA@

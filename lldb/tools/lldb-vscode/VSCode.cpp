@@ -226,7 +226,7 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
   if (output.empty())
     return;
 
-  llvm::json::Object event(CreateEvent("output"));
+  llvm::json::Object event(CreateEventObject("output"));
   llvm::json::Object body;
   const char *category = nullptr;
   switch (o) {

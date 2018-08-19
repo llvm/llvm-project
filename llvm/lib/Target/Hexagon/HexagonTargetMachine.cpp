@@ -153,7 +153,6 @@ namespace llvm {
   FunctionPass *createHexagonCopyToCombine();
   FunctionPass *createHexagonEarlyIfConversion();
   FunctionPass *createHexagonFixupHwLoops();
-  FunctionPass *createHexagonGatherPacketize();
   FunctionPass *createHexagonGenExtract();
   FunctionPass *createHexagonGenInsert();
   FunctionPass *createHexagonGenMux();
@@ -165,7 +164,7 @@ namespace llvm {
   FunctionPass *createHexagonNewValueJump();
   FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonOptAddrMode();
-  FunctionPass *createHexagonPacketizer();
+  FunctionPass *createHexagonPacketizer(bool Minimal);
   FunctionPass *createHexagonPeephole();
   FunctionPass *createHexagonRDFOpt();
   FunctionPass *createHexagonSplitConst32AndConst64();
@@ -409,7 +408,6 @@ void HexagonPassConfig::addPreEmitPass() {
 
   addPass(createHexagonBranchRelaxation());
 
-  // Create Packets.
   if (!NoOpt) {
     if (!DisableHardwareLoops)
       addPass(createHexagonFixupHwLoops());
@@ -418,12 +416,8 @@ void HexagonPassConfig::addPreEmitPass() {
       addPass(createHexagonGenMux());
   }
 
-  // Create packets for 2 instructions that consitute a gather instruction.
-  // Do this regardless of the opt level.
-  addPass(createHexagonGatherPacketize(), false);
-
-  if (!NoOpt)
-    addPass(createHexagonPacketizer(), false);
+  // Packetization is mandatory: it handles gather/scatter at all opt levels.
+  addPass(createHexagonPacketizer(NoOpt), false);
 
   if (EnableVectorPrint)
     addPass(createHexagonVectorPrint(), false);

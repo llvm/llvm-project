@@ -3175,28 +3175,26 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
     return;
   // If the instruction has memory operands, then adjust the offset
   // when the instruction appears in different stages.
-  unsigned NumRefs = NewMI.memoperands_end() - NewMI.memoperands_begin();
-  if (NumRefs == 0)
+  if (NewMI.memoperands_empty())
     return;
-  MachineInstr::mmo_iterator NewMemRefs = MF.allocateMemRefsArray(NumRefs);
-  unsigned Refs = 0;
+  SmallVector<MachineMemOperand *, 2> NewMMOs;
   for (MachineMemOperand *MMO : NewMI.memoperands()) {
     if (MMO->isVolatile() || (MMO->isInvariant() && MMO->isDereferenceable()) ||
         (!MMO->getValue())) {
-      NewMemRefs[Refs++] = MMO;
+      NewMMOs.push_back(MMO);
       continue;
     }
     unsigned Delta;
     if (Num != UINT_MAX && computeDelta(OldMI, Delta)) {
       int64_t AdjOffset = Delta * Num;
-      NewMemRefs[Refs++] =
-          MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize());
+      NewMMOs.push_back(
+          MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {
-      NewMI.dropMemRefs();
+      NewMI.dropMemRefs(MF);
       return;
     }
   }
-  NewMI.setMemRefs(NewMemRefs, NewMemRefs + NumRefs);
+  NewMI.setMemRefs(MF, NewMMOs);
 }
 
 /// Clone the instruction for the new pipelined loop and update the

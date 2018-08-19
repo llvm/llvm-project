@@ -1558,7 +1558,7 @@ def rerun_tests(test_subdir, tests_for_rerun, dotest_argv, session_dir,
     print("\nTest rerun complete\n")
 
 
-def main(num_threads, test_subdir, test_runner_name, results_formatter):
+def main(num_threads, test_runner_name, results_formatter):
     """Run dotest.py in inferior mode in parallel.
 
     @param num_threads the parsed value of the num-threads command line
@@ -1600,16 +1600,7 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
 
     session_dir = os.path.join(os.getcwd(), dotest_options.s)
 
-    # The root directory was specified on the command line
-    test_directory = os.path.dirname(os.path.realpath(__file__))
-    if test_subdir and len(test_subdir) > 0:
-        test_subdir = os.path.join(test_directory, test_subdir)
-        if not os.path.isdir(test_subdir):
-            print(
-                'specified test subdirectory {} is not a valid directory\n'
-                .format(test_subdir))
-    else:
-        test_subdir = test_directory
+    test_subdir = configuration.get_absolute_path_to_root_test_dir()
 
     # clean core files in test tree from previous runs (Linux)
     cores = find('core.*', test_subdir)

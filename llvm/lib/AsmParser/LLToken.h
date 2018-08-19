@@ -434,6 +434,7 @@ enum Kind {
   DwarfLang,        // DW_LANG_foo
   DwarfCC,          // DW_CC_foo
   EmissionKind,     // lineTablesOnly
+  NameTableKind,    // GNU
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo

@@ -82,6 +82,10 @@ struct CodeCompleteOptions {
   /// Include completions that require small corrections, e.g. change '.' to
   /// '->' on member access etc.
   bool IncludeFixIts = false;
+
+  /// Whether to generate snippets for function arguments on code-completion.
+  /// Needs snippets to be enabled as well.
+  bool EnableFunctionArgSnippets = true;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
@@ -172,12 +176,11 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 CodeCompleteOptions Opts);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(PathRef FileName,
-                            const tooling::CompileCommand &Command,
-                            PrecompiledPreamble const *Preamble,
-                            StringRef Contents, Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs);
+SignatureHelp
+signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
+              PrecompiledPreamble const *Preamble, StringRef Contents,
+              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+              std::shared_ptr<PCHContainerOperations> PCHs, SymbolIndex *Index);
 
 // For index-based completion, we only consider:
 //   * symbols in namespaces or translation unit scopes (e.g. no class

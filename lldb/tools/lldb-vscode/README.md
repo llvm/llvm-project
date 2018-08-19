@@ -190,5 +190,6 @@ Loading a core file can use the `"attach"` request along with the
   "type": "lldb-vscode",
   "request": "attach",
   "attachCommands": ["target create -c /path/to/123.core /path/to/executable"],
+  "stopOnEntry": false
 }
 ```

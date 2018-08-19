@@ -88,6 +88,7 @@ namespace {
     void expandPartwordAtomicRMW(
         AtomicRMWInst *I,
         TargetLoweringBase::AtomicExpansionKind ExpansionKind);
+    AtomicRMWInst *widenPartwordAtomicRMW(AtomicRMWInst *AI);
     void expandPartwordCmpXchg(AtomicCmpXchgInst *I);
 
     AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
@@ -306,6 +307,16 @@ bool AtomicExpand::runOnFunction(Function &F) {
       if (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) {
         MadeChange = true;
       } else {
+        unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
+        unsigned ValueSize = getAtomicOpSize(RMWI);
+        AtomicRMWInst::BinOp Op = RMWI->getOperation();
+        if (ValueSize < MinCASSize &&
+            (Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
+             Op == AtomicRMWInst::And)) {
+          RMWI = widenPartwordAtomicRMW(RMWI);
+          MadeChange = true;
+        }
+
         MadeChange |= tryExpandAtomicRMW(RMWI);
       }
     } else if (CASI) {
@@ -659,12 +670,10 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   }
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
-    // Or/Xor won't affect any other bits, so can just be done
-    // directly.
-    return performAtomicOp(Op, Builder, Loaded, Shifted_Inc);
+  case AtomicRMWInst::And:
+    llvm_unreachable("Or/Xor/And handled by widenPartwordAtomicRMW");
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
-  case AtomicRMWInst::And:
   case AtomicRMWInst::Nand: {
     // The other arithmetic ops need to be masked into place.
     Value *NewVal = performAtomicOp(Op, Builder, Loaded, Shifted_Inc);
@@ -731,6 +740,41 @@ void AtomicExpand::expandPartwordAtomicRMW(
       Builder.CreateLShr(OldResult, PMV.ShiftAmt), PMV.ValueType);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
+}
+
+// Widen the bitwise atomicrmw (or/xor/and) to the minimum supported width.
+AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
+  IRBuilder<> Builder(AI);
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  assert((Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
+          Op == AtomicRMWInst::And) &&
+         "Unable to widen operation");
+
+  PartwordMaskValues PMV =
+      createMaskInstrs(Builder, AI, AI->getType(), AI->getPointerOperand(),
+                       TLI->getMinCmpXchgSizeInBits() / 8);
+
+  Value *ValOperand_Shifted =
+      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
+                        PMV.ShiftAmt, "ValOperand_Shifted");
+
+  Value *NewOperand;
+
+  if (Op == AtomicRMWInst::And)
+    NewOperand =
+        Builder.CreateOr(PMV.Inv_Mask, ValOperand_Shifted, "AndOperand");
+  else
+    NewOperand = ValOperand_Shifted;
+
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(Op, PMV.AlignedAddr,
+                                                 NewOperand, AI->getOrdering());
+
+  Value *FinalOldResult = Builder.CreateTrunc(
+      Builder.CreateLShr(NewAI, PMV.ShiftAmt), PMV.ValueType);
+  AI->replaceAllUsesWith(FinalOldResult);
+  AI->eraseFromParent();
+  return NewAI;
 }
 
 void AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
