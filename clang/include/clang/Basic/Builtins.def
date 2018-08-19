@@ -428,6 +428,15 @@ BUILTIN(__builtin_bitreverse16, "UsUs", "nc")
 BUILTIN(__builtin_bitreverse32, "UiUi", "nc")
 BUILTIN(__builtin_bitreverse64, "ULLiULLi", "nc")
 
+BUILTIN(__builtin_rotateleft8, "UcUcUc", "nc")
+BUILTIN(__builtin_rotateleft16, "UsUsUs", "nc")
+BUILTIN(__builtin_rotateleft32, "UiUiUi", "nc")
+BUILTIN(__builtin_rotateleft64, "ULLiULLiULLi", "nc")
+BUILTIN(__builtin_rotateright8, "UcUcUc", "nc")
+BUILTIN(__builtin_rotateright16, "UsUsUs", "nc")
+BUILTIN(__builtin_rotateright32, "UiUiUi", "nc")
+BUILTIN(__builtin_rotateright64, "ULLiULLiULLi", "nc")
+
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")
 BUILTIN(__builtin_classify_type, "i.", "nctu")

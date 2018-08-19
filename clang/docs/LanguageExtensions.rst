@@ -1739,6 +1739,70 @@ The '``__builtin_bitreverse``' family of builtins is used to reverse
 the bitpattern of an integer value; for example ``0b10110110`` becomes
 ``0b01101101``.
 
+``__builtin_rotateleft``
+------------------------
+
+* ``__builtin_rotateleft8``
+* ``__builtin_rotateleft16``
+* ``__builtin_rotateleft32``
+* ``__builtin_rotateleft64``
+
+**Syntax**:
+
+.. code-block:: c++
+
+     __builtin_rotateleft32(x, y)
+
+**Examples**:
+
+.. code-block:: c++
+
+      uint8_t rot_x = __builtin_rotateleft8(x, y);
+      uint16_t rot_x = __builtin_rotateleft16(x, y);
+      uint32_t rot_x = __builtin_rotateleft32(x, y);
+      uint64_t rot_x = __builtin_rotateleft64(x, y);
+
+**Description**:
+
+The '``__builtin_rotateleft``' family of builtins is used to rotate
+the bits in the first argument by the amount in the second argument. 
+For example, ``0b10000110`` rotated left by 11 becomes ``0b00110100``.
+The shift value is treated as an unsigned amount modulo the size of
+the arguments. Both arguments and the result have the bitwidth specified
+by the name of the builtin.
+
+``__builtin_rotateright``
+_------------------------
+
+* ``__builtin_rotateright8``
+* ``__builtin_rotateright16``
+* ``__builtin_rotateright32``
+* ``__builtin_rotateright64``
+
+**Syntax**:
+
+.. code-block:: c++
+
+     __builtin_rotateright32(x, y)
+
+**Examples**:
+
+.. code-block:: c++
+
+      uint8_t rot_x = __builtin_rotateright8(x, y);
+      uint16_t rot_x = __builtin_rotateright16(x, y);
+      uint32_t rot_x = __builtin_rotateright32(x, y);
+      uint64_t rot_x = __builtin_rotateright64(x, y);
+
+**Description**:
+
+The '``__builtin_rotateright``' family of builtins is used to rotate
+the bits in the first argument by the amount in the second argument. 
+For example, ``0b10000110`` rotated right by 3 becomes ``0b11010000``.
+The shift value is treated as an unsigned amount modulo the size of
+the arguments. Both arguments and the result have the bitwidth specified
+by the name of the builtin.
+
 ``__builtin_unreachable``
 -------------------------
 
