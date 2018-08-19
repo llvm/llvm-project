@@ -30,8 +30,9 @@ public:
   /// Returns the ExecutionSession for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
-  /// Adds a MaterializationUnit representing the given IR to the given VSO.
-  virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M);
+  /// Adds a MaterializationUnit representing the given IR to the given
+  /// JITDylib.
+  virtual Error add(JITDylib &JD, VModuleKey K, std::unique_ptr<Module> M);
 
   /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
@@ -66,7 +67,7 @@ protected:
   SymbolNameToDefinitionMap SymbolToDefinition;
 
 private:
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
@@ -92,8 +93,9 @@ public:
   /// Returns the execution session for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
-  /// Adds a MaterializationUnit representing the given IR to the given VSO.
-  virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
+  /// Adds a MaterializationUnit representing the given IR to the given
+  /// JITDylib.
+  virtual Error add(JITDylib &JD, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
 
   /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
@@ -117,7 +119,7 @@ public:
 private:
 
   void materialize(MaterializationResponsibility R) override;
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
 
   ObjectLayer &L;
   VModuleKey K;

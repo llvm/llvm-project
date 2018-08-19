@@ -277,7 +277,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
           uint64_t Size = I->getCommonSize();
           if (!CommonAlign)
             CommonAlign = Align;
-          CommonSize += alignTo(CommonSize, Align) + Size;
+          CommonSize = alignTo(CommonSize, Align) + Size;
           CommonSymbolsToAllocate.push_back(*I);
         }
       } else

@@ -98,10 +98,10 @@ void autoreleaseUnowned (Foo *foo) {
   return; // expected-warning{{Object autoreleased too many times}} expected-note{{Object was autoreleased but has a +0 retain count}}
 }
 
-void makeCollectableIgnored () {
+void makeCollectableIgnored() {
   CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
-  CFMakeCollectable(leaked); // expected-note{{When GC is not enabled a call to 'CFMakeCollectable' has no effect on its argument}}
-  NSMakeCollectable(leaked); // expected-note{{When GC is not enabled a call to 'NSMakeCollectable' has no effect on its argument}}
+  CFMakeCollectable(leaked);
+  NSMakeCollectable(leaked);
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 

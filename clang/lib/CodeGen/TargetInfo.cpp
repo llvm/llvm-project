@@ -4969,6 +4969,23 @@ public:
   }
 
   bool doesReturnSlotInterfereWithArgs() const override { return false; }
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override {
+    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
+    if (!FD)
+      return;
+    llvm::Function *Fn = cast<llvm::Function>(GV);
+
+    auto Kind = CGM.getCodeGenOpts().getSignReturnAddress();
+    if (Kind == CodeGenOptions::SignReturnAddressScope::None)
+      return;
+
+    Fn->addFnAttr("sign-return-address",
+                  Kind == CodeGenOptions::SignReturnAddressScope::All
+                      ? "all"
+                      : "non-leaf");
+  }
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {

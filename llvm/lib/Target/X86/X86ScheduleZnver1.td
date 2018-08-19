@@ -493,7 +493,7 @@ def : SchedAlias<WriteSTMXCSR, ZnWriteMicrocoded>;
 //-- Move instructions --//
 // MOV.
 // r16,m.
-def : InstRW<[WriteALULd, ReadAfterLd], (instregex "MOV16rm")>;
+def : InstRW<[WriteALULd, ReadAfterLd], (instrs MOV16rm)>;
 
 // MOVSX, MOVZX.
 // r,m.
@@ -515,7 +515,7 @@ def ZnWritePop16r : SchedWriteRes<[ZnAGU]>{
   let Latency = 5;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWritePop16r], (instregex "POP16rmm")>;
+def : InstRW<[ZnWritePop16r], (instrs POP16rmm)>;
 def : InstRW<[WriteMicrocoded], (instregex "POPF(16|32)")>;
 def : InstRW<[WriteMicrocoded], (instregex "POPA(16|32)")>;
 
@@ -778,7 +778,7 @@ def : InstRW<[WriteMicrocoded], (instrs RDPMC)>;
 def : InstRW<[WriteMicrocoded], (instregex "RDRAND(16|32|64)r")>;
 
 // XGETBV.
-def : InstRW<[WriteMicrocoded], (instregex "XGETBV")>;
+def : InstRW<[WriteMicrocoded], (instrs XGETBV)>;
 
 //-- String instructions --//
 // CMPS.
@@ -816,16 +816,16 @@ def ZnWriteSTr: SchedWriteRes<[ZnFPU23]> {
 
 // LD_F.
 // r.
-def : InstRW<[ZnWriteFLDr], (instregex "LD_Frr")>;
+def : InstRW<[ZnWriteFLDr], (instrs LD_Frr)>;
 
 // m.
 def ZnWriteLD_F80m : SchedWriteRes<[ZnAGU, ZnFPU13]> {
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteLD_F80m], (instregex "LD_F80m")>;
+def : InstRW<[ZnWriteLD_F80m], (instrs LD_F80m)>;
 
 // FBLD.
-def : InstRW<[WriteMicrocoded], (instregex "FBLDm")>;
+def : InstRW<[WriteMicrocoded], (instrs FBLDm)>;
 
 // FST(P).
 // r.
@@ -835,11 +835,11 @@ def : InstRW<[ZnWriteSTr], (instregex "ST_(F|FP)rr")>;
 def ZnWriteST_FP80m : SchedWriteRes<[ZnAGU, ZnFPU23]> {
   let Latency = 5;
 }
-def : InstRW<[ZnWriteST_FP80m], (instregex "ST_FP80m")>;
+def : InstRW<[ZnWriteST_FP80m], (instrs ST_FP80m)>;
 
 // FBSTP.
 // m80.
-def : InstRW<[WriteMicrocoded], (instregex "FBSTPm")>;
+def : InstRW<[WriteMicrocoded], (instrs FBSTPm)>;
 
 def ZnWriteFXCH : SchedWriteRes<[ZnFPU]>;
 
@@ -896,10 +896,10 @@ def : InstRW<[ZnWriteFPU3], (instrs FINCSTP, FDECSTP)>;
 def : InstRW<[ZnWriteFPU3], (instregex "FFREE")>;
 
 // FNSAVE.
-def : InstRW<[WriteMicrocoded], (instregex "FSAVEm")>;
+def : InstRW<[WriteMicrocoded], (instrs FSAVEm)>;
 
 // FRSTOR.
-def : InstRW<[WriteMicrocoded], (instregex "FRSTORm")>;
+def : InstRW<[WriteMicrocoded], (instrs FRSTORm)>;
 
 //-- Arithmetic instructions --//
 
@@ -1396,46 +1396,46 @@ def : InstRW<[ZnWriteSHA1MSG1Ld], (instregex "SHA(1|256)MSG1rm")>;
 // SHA1MSG2
 // x,x.
 def ZnWriteSHA1MSG2r : SchedWriteRes<[ZnFPU12]> ;
-def : InstRW<[ZnWriteSHA1MSG2r], (instregex "SHA1MSG2rr")>;
+def : InstRW<[ZnWriteSHA1MSG2r], (instrs SHA1MSG2rr)>;
 // x,m.
 def ZnWriteSHA1MSG2Ld : SchedWriteRes<[ZnAGU, ZnFPU12]> {
   let Latency = 8;
 }
-def : InstRW<[ZnWriteSHA1MSG2Ld], (instregex "SHA1MSG2rm")>;
+def : InstRW<[ZnWriteSHA1MSG2Ld], (instrs SHA1MSG2rm)>;
 
 // SHA1NEXTE
 // x,x.
 def ZnWriteSHA1NEXTEr : SchedWriteRes<[ZnFPU1]> ;
-def : InstRW<[ZnWriteSHA1NEXTEr], (instregex "SHA1NEXTErr")>;
+def : InstRW<[ZnWriteSHA1NEXTEr], (instrs SHA1NEXTErr)>;
 // x,m.
 def ZnWriteSHA1NEXTELd : SchedWriteRes<[ZnAGU, ZnFPU1]> {
   let Latency = 8;
 }
-def : InstRW<[ZnWriteSHA1NEXTELd], (instregex "SHA1NEXTErm")>;
+def : InstRW<[ZnWriteSHA1NEXTELd], (instrs SHA1NEXTErm)>;
 
 // SHA1RNDS4
 // x,x.
 def ZnWriteSHA1RNDS4r : SchedWriteRes<[ZnFPU1]> {
   let Latency = 6;
 }
-def : InstRW<[ZnWriteSHA1RNDS4r], (instregex "SHA1RNDS4rr")>;
+def : InstRW<[ZnWriteSHA1RNDS4r], (instrs SHA1RNDS4rri)>;
 // x,m.
 def ZnWriteSHA1RNDS4Ld : SchedWriteRes<[ZnAGU, ZnFPU1]> {
   let Latency = 13;
 }
-def : InstRW<[ZnWriteSHA1RNDS4Ld], (instregex "SHA1RNDS4rm")>;
+def : InstRW<[ZnWriteSHA1RNDS4Ld], (instrs SHA1RNDS4rmi)>;
 
 // SHA256RNDS2
 // x,x.
 def ZnWriteSHA256RNDS2r : SchedWriteRes<[ZnFPU1]> {
   let Latency = 4;
 }
-def : InstRW<[ZnWriteSHA256RNDS2r], (instregex "SHA256RNDS2rr")>;
+def : InstRW<[ZnWriteSHA256RNDS2r], (instrs SHA256RNDS2rr)>;
 // x,m.
 def ZnWriteSHA256RNDS2Ld : SchedWriteRes<[ZnAGU, ZnFPU1]> {
   let Latency = 11;
 }
-def : InstRW<[ZnWriteSHA256RNDS2Ld], (instregex "SHA256RNDS2rm")>;
+def : InstRW<[ZnWriteSHA256RNDS2Ld], (instrs SHA256RNDS2rm)>;
 
 //-- Arithmetic instructions --//
 

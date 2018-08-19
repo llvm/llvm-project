@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 
+// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
+// CHECK: @[[BLOCK_DESCRIPTOR22:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 36, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 8
+
 namespace test0 {
   // CHECK-LABEL: define void @_ZN5test04testEi(
   // CHECK: define internal void @___ZN5test04testEi_block_invoke{{.*}}(
@@ -122,7 +125,7 @@ namespace test4 {
   // CHECK-LABEL: define internal void @___ZN5test44testEv_block_invoke
   // CHECK: [[TMP:%.*]] = alloca [[A:%.*]], align 1
   // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
-  // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>*
+  // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]* }>*
   // CHECK:      call void @_ZN5test41AC1Ev([[A]]* [[TMP]])
   // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* [[TMP]])
   // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* [[TMP]])
@@ -277,8 +280,11 @@ namespace test10 {
   }
 }
 
-// Copy/dispose helper functions that capture objects of non-external types
-// should have internal linkage.
+// Copy/dispose helper functions and block descriptors of blocks that capture
+// objects that are non-external and non-trivial have internal linkage.
+
+// CHECK-LABEL: define internal void @_ZN12_GLOBAL__N_14testEv(
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR22]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %{{.*}}, align 8
 
 // CHECK-LABEL: define internal void @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(
 // CHECK-LABEL: define internal void @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(

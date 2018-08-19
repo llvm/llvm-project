@@ -472,6 +472,8 @@ public:
   uint64_t getType(const MachineInstr &MI) const;
   unsigned getUnits(const MachineInstr &MI) const;
 
+  MachineBasicBlock::instr_iterator expandVGatherPseudo(MachineInstr &MI) const;
+
   /// getInstrTimingClassLatency - Compute the instruction latency of a given
   /// instruction using Timing Class information, if available.
   unsigned nonDbgBBSize(const MachineBasicBlock *BB) const;

@@ -797,7 +797,7 @@ struct __declspec(dllexport) PR23308 {
 };
 void PR23308::f(InternalLinkageType*) {}
 long use(PR23308* p) { p->f(nullptr); }
-// M32-DAG: define internal x86_thiscallcc void @"?f@PR23308@@QAEXPAUInternalLinkageType@?A@@@Z"
+// M32-DAG: define internal x86_thiscallcc void @"?f@PR23308@@QAEXPAUInternalLinkageType@?A0x{{[^@]*}}@@@Z"
 
 template <typename T> struct PR23770BaseTemplate { void f() {} };
 template <typename T> struct PR23770DerivedTemplate : PR23770BaseTemplate<int> {};

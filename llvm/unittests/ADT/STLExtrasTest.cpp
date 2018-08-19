@@ -415,4 +415,19 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, splat) {
+  std::vector<int> V;
+  EXPECT_FALSE(is_splat(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(is_splat(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(is_splat(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(is_splat(V));
+}
+
 } // namespace

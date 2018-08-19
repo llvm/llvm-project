@@ -15,7 +15,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
 #include "AddressPool.h"
-#include "DbgValueHistoryCalculator.h"
+#include "DbgEntityHistoryCalculator.h"
 #include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
 #include "DwarfFile.h"
@@ -62,6 +62,47 @@ class MDNode;
 class Module;
 
 //===----------------------------------------------------------------------===//
+/// This class is defined as the common parent of DbgVariable and DbgLabel
+/// such that it could levarage polymorphism to extract common code for
+/// DbgVariable and DbgLabel.
+class DbgEntity {
+  const DINode *Entity;
+  const DILocation *InlinedAt;
+  DIE *TheDIE = nullptr;
+  unsigned SubclassID;
+
+public:
+  enum DbgEntityKind {
+    DbgVariableKind,
+    DbgLabelKind
+  };
+
+  DbgEntity(const DINode *N, const DILocation *IA, unsigned ID)
+    : Entity(N), InlinedAt(IA), SubclassID(ID) {}
+  virtual ~DbgEntity() {}
+
+  /// Accessors.
+  /// @{
+  const DINode *getEntity() const { return Entity; }
+  const DILocation *getInlinedAt() const { return InlinedAt; }
+  DIE *getDIE() const { return TheDIE; }
+  unsigned getDbgEntityID() const { return SubclassID; }
+  /// @}
+
+  void setDIE(DIE &D) { TheDIE = &D; }
+
+  static bool classof(const DbgEntity *N) {
+    switch (N->getDbgEntityID()) {
+    default:
+      return false;
+    case DbgVariableKind:
+    case DbgLabelKind:
+      return true;
+    }
+  }
+};
+
+//===----------------------------------------------------------------------===//
 /// This class is used to track local variable information.
 ///
 /// Variables can be created from allocas, in which case they're generated from
@@ -73,10 +114,7 @@ class Module;
 /// single instruction use \a MInsn and (optionally) a single entry of \a Expr.
 ///
 /// Variables that have been optimized out use none of these fields.
-class DbgVariable {
-  const DILocalVariable *Var;                /// Variable Descriptor.
-  const DILocation *IA;                      /// Inlined at location.
-  DIE *TheDIE = nullptr;                     /// Variable DIE.
+class DbgVariable : public DbgEntity {
   unsigned DebugLocListIndex = ~0u;          /// Offset in DebugLocs.
   const MachineInstr *MInsn = nullptr;       /// DBG_VALUE instruction.
 
@@ -93,7 +131,7 @@ public:
   /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
   /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
   DbgVariable(const DILocalVariable *V, const DILocation *IA)
-      : Var(V), IA(IA) {}
+      : DbgEntity(V, IA, DbgVariableKind) {}
 
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
@@ -111,8 +149,9 @@ public:
     assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!MInsn && "Already initialized?");
 
-    assert(Var == DbgValue->getDebugVariable() && "Wrong variable");
-    assert(IA == DbgValue->getDebugLoc()->getInlinedAt() && "Wrong inlined-at");
+    assert(getVariable() == DbgValue->getDebugVariable() && "Wrong variable");
+    assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
+           "Wrong inlined-at");
 
     MInsn = DbgValue;
     if (auto *E = DbgValue->getDebugExpression())
@@ -121,19 +160,18 @@ public:
   }
 
   // Accessors.
-  const DILocalVariable *getVariable() const { return Var; }
-  const DILocation *getInlinedAt() const { return IA; }
+  const DILocalVariable *getVariable() const {
+    return cast<DILocalVariable>(getEntity());
+  }
 
   const DIExpression *getSingleExpression() const {
     assert(MInsn && FrameIndexExprs.size() <= 1);
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
 
-  void setDIE(DIE &D) { TheDIE = &D; }
-  DIE *getDIE() const { return TheDIE; }
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
-  StringRef getName() const { return Var->getName(); }
+  StringRef getName() const { return getVariable()->getName(); }
   const MachineInstr *getMInsn() const { return MInsn; }
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
@@ -143,7 +181,7 @@ public:
   // Translate tag to proper Dwarf tag.
   dwarf::Tag getTag() const {
     // FIXME: Why don't we just infer this tag and store it all along?
-    if (Var->isParameter())
+    if (getVariable()->isParameter())
       return dwarf::DW_TAG_formal_parameter;
 
     return dwarf::DW_TAG_variable;
@@ -151,7 +189,7 @@ public:
 
   /// Return true if DbgVariable is artificial.
   bool isArtificial() const {
-    if (Var->isArtificial())
+    if (getVariable()->isArtificial())
       return true;
     if (getType()->isArtificial())
       return true;
@@ -159,7 +197,7 @@ public:
   }
 
   bool isObjectPointer() const {
-    if (Var->isObjectPointer())
+    if (getVariable()->isObjectPointer())
       return true;
     if (getType()->isObjectPointer())
       return true;
@@ -177,6 +215,45 @@ public:
 
   bool isBlockByrefVariable() const;
   const DIType *getType() const;
+
+  static bool classof(const DbgEntity *N) {
+    return N->getDbgEntityID() == DbgVariableKind;
+  }
+
+private:
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+/// This class is used to track label information.
+///
+/// Labels are collected from \c DBG_LABEL instructions.
+class DbgLabel : public DbgEntity {
+  const MCSymbol *Sym;                  /// Symbol before DBG_LABEL instruction.
+
+public:
+  /// We need MCSymbol information to generate DW_AT_low_pc.
+  DbgLabel(const DILabel *L, const DILocation *IA, const MCSymbol *Sym = nullptr)
+      : DbgEntity(L, IA, DbgLabelKind), Sym(Sym) {}
+
+  /// Accessors.
+  /// @{
+  const DILabel *getLabel() const { return cast<DILabel>(getEntity()); }
+  const MCSymbol *getSymbol() const { return Sym; }
+
+  StringRef getName() const { return getLabel()->getName(); }
+  /// @}
+
+  /// Translate tag to proper Dwarf tag.
+  dwarf::Tag getTag() const {
+    return dwarf::DW_TAG_label;
+  }
+
+  static bool classof(const DbgEntity *N) {
+    return N->getDbgEntityID() == DbgLabelKind;
+  }
 
 private:
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
@@ -217,8 +294,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// Size of each symbol emitted (for those symbols that have a specific size).
   DenseMap<const MCSymbol *, uint64_t> SymSize;
 
-  /// Collection of abstract variables.
-  SmallVector<std::unique_ptr<DbgVariable>, 64> ConcreteVariables;
+  /// Collection of abstract variables/labels.
+  SmallVector<std::unique_ptr<DbgEntity>, 64> ConcreteEntities;
 
   /// Collection of DebugLocEntry. Stored in a linked list so that DIELocLists
   /// can refer to them in spite of insertions into this list.
@@ -330,14 +407,20 @@ class DwarfDebug : public DebugHandlerBase {
   }
 
   using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
+  using InlinedLabel = DbgLabelInstrMap::InlinedLabel;
 
-  void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable IV,
-                                       const MDNode *Scope);
-  void ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU, InlinedVariable IV,
-                                               const MDNode *Scope);
+  void ensureAbstractEntityIsCreated(DwarfCompileUnit &CU,
+                                     const DINode *Node,
+                                     const MDNode *Scope);
+  void ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
+                                             const DINode *Node,
+                                             const MDNode *Scope);
 
-  DbgVariable *createConcreteVariable(DwarfCompileUnit &TheCU,
-                                      LexicalScope &Scope, InlinedVariable IV);
+  DbgEntity *createConcreteEntity(DwarfCompileUnit &TheCU,
+                                  LexicalScope &Scope,
+                                  const DINode *Node,
+                                  const DILocation *Location,
+                                  const MCSymbol *Sym = nullptr);
 
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
@@ -346,7 +429,7 @@ class DwarfDebug : public DebugHandlerBase {
   void addAccelNameImpl(const DICompileUnit &CU, AccelTable<DataT> &AppleAccel,
                         StringRef Name, const DIE &Die);
 
-  void finishVariableDefinitions();
+  void finishEntityDefinitions();
 
   void finishSubprogramDefinitions();
 
@@ -466,8 +549,8 @@ class DwarfDebug : public DebugHandlerBase {
                         unsigned Flags);
 
   /// Populate LexicalScope entries with variables' info.
-  void collectVariableInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
-                           DenseSet<InlinedVariable> &ProcessedVars);
+  void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
+                         DenseSet<InlinedVariable> &ProcessedVars);
 
   /// Build the location list for all DBG_VALUEs in the
   /// function that describe the same variable.

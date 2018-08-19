@@ -18,7 +18,9 @@ struct S {
 @protocol new // expected-error {{expected identifier; 'new' is a keyword in Objective-C++}}
 @end
 
-@protocol P2, delete; // expected-error {{expected identifier; 'delete' is a keyword in Objective-C++}}
+@protocol P2;
+@protocol delete // expected-error {{expected identifier; 'delete' is a keyword in Objective-C++}}
+@end
 
 @class Foo, try; // expected-error {{expected identifier; 'try' is a keyword in Objective-C++}}
 

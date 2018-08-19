@@ -54,8 +54,59 @@ EnableDSPWithImms("arm-enable-scalar-dsp-imms", cl::Hidden, cl::init(false),
                    cl::desc("Use DSP instructions for scalar operations\
                             with immediate operands"));
 
-namespace {
+// The goal of this pass is to enable more efficient code generation for
+// operations on narrow types (i.e. types with < 32-bits) and this is a
+// motivating IR code example:
+//
+//   define hidden i32 @cmp(i8 zeroext) {
+//     %2 = add i8 %0, -49
+//     %3 = icmp ult i8 %2, 3
+//     ..
+//   }
+//
+// The issue here is that i8 is type-legalized to i32 because i8 is not a
+// legal type. Thus, arithmetic is done in integer-precision, but then the
+// byte value is masked out as follows:
+//
+//   t19: i32 = add t4, Constant:i32<-49>
+//     t24: i32 = and t19, Constant:i32<255>
+//
+// Consequently, we generate code like this:
+//
+//   subs  r0, #49
+//   uxtb  r1, r0
+//   cmp r1, #3
+//
+// This shows that masking out the byte value results in generation of
+// the UXTB instruction. This is not optimal as r0 already contains the byte
+// value we need, and so instead we can just generate:
+//
+//   sub.w r1, r0, #49
+//   cmp r1, #3
+//
+// We achieve this by type promoting the IR to i32 like so for this example:
+//
+//   define i32 @cmp(i8 zeroext %c) {
+//     %0 = zext i8 %c to i32
+//     %c.off = add i32 %0, -49
+//     %1 = icmp ult i32 %c.off, 3
+//     ..
+//   }
+//
+// For this to be valid and legal, we need to prove that the i32 add is
+// producing the same value as the i8 addition, and that e.g. no overflow
+// happens.
+//
+// A brief sketch of the algorithm and some terminology.
+// We pattern match interesting IR patterns:
+// - which have "sources": instructions producing narrow values (i8, i16), and
+// - they have "sinks": instructions consuming these narrow values.
+//
+// We collect all instruction connecting sources and sinks in a worklist, so
+// that we can mutate these instruction and perform type promotion when it is
+// legal to do so.
 
+namespace {
 class IRPromoter {
   SmallPtrSet<Value*, 8> NewInsts;
   SmallVector<Instruction*, 4> InstsToRemove;
@@ -77,8 +128,8 @@ public:
 
   void Mutate(Type *OrigTy,
               SmallPtrSetImpl<Value*> &Visited,
-              SmallPtrSetImpl<Value*> &Leaves,
-              SmallPtrSetImpl<Instruction*> &Roots);
+              SmallPtrSetImpl<Value*> &Sources,
+              SmallPtrSetImpl<Instruction*> &Sinks);
 };
 
 class ARMCodeGenPrepare : public FunctionPass {
@@ -110,8 +161,7 @@ public:
 
 }
 
-/// Can the given value generate sign bits.
-static bool isSigned(Value *V) {
+static bool generateSignBits(Value *V) {
   if (!isa<Instruction>(V))
     return false;
 
@@ -144,7 +194,7 @@ static bool isSupportedType(Value *V) {
   return IntTy->getBitWidth() == ARMCodeGenPrepare::TypeSize;
 }
 
-/// Return true if the given value is a leaf in the use-def chain, producing
+/// Return true if the given value is a source in the use-def chain, producing
 /// a narrow (i8, i16) value. These values will be zext to start the promotion
 /// of the tree to i32. We guarantee that these won't populate the upper bits
 /// of the register. ZExt on the loads will be free, and the same for call
@@ -254,7 +304,7 @@ static bool isPromotedResultSafe(Value *V) {
   if (!isa<Instruction>(V))
     return true;
 
-  if (isSigned(V))
+  if (generateSignBits(V))
     return false;
 
   // If I is only being used by something that will require its value to be
@@ -290,8 +340,8 @@ static Intrinsic::ID getNarrowIntrinsic(Instruction *I) {
 
 void IRPromoter::Mutate(Type *OrigTy,
                         SmallPtrSetImpl<Value*> &Visited,
-                        SmallPtrSetImpl<Value*> &Leaves,
-                        SmallPtrSetImpl<Instruction*> &Roots) {
+                        SmallPtrSetImpl<Value*> &Sources,
+                        SmallPtrSetImpl<Instruction*> &Sinks) {
   IRBuilder<> Builder{Ctx};
   Type *ExtTy = Type::getInt32Ty(M->getContext());
   SmallPtrSet<Value*, 8> Promoted;
@@ -364,9 +414,9 @@ void IRPromoter::Mutate(Type *OrigTy,
     TruncTysMap[ZExt] = TruncTysMap[V];
   };
 
-  // First, insert extending instructions between the leaves and their users.
-  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting leaves:\n");
-  for (auto V : Leaves) {
+  // First, insert extending instructions between the sources and their users.
+  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting sources:\n");
+  for (auto V : Sources) {
     LLVM_DEBUG(dbgs() << " - " << *V << "\n");
     if (auto *I = dyn_cast<Instruction>(V))
       InsertZExt(I, I);
@@ -374,7 +424,7 @@ void IRPromoter::Mutate(Type *OrigTy,
       BasicBlock &BB = Arg->getParent()->front();
       InsertZExt(Arg, &*BB.getFirstInsertionPt());
     } else {
-      llvm_unreachable("unhandled leaf that needs extending");
+      llvm_unreachable("unhandled source that needs extending");
     }
     Promoted.insert(V);
   }
@@ -383,11 +433,11 @@ void IRPromoter::Mutate(Type *OrigTy,
   // Then mutate the types of the instructions within the tree. Here we handle
   // constant operands.
   for (auto *V : Visited) {
-    if (Leaves.count(V))
+    if (Sources.count(V))
       continue;
 
     auto *I = cast<Instruction>(V);
-    if (Roots.count(I))
+    if (Sinks.count(I))
       continue;
 
     for (unsigned i = 0, e = I->getNumOperands(); i < e; ++i) {
@@ -410,7 +460,7 @@ void IRPromoter::Mutate(Type *OrigTy,
   // Now we need to remove any zexts that have become unnecessary, as well
   // as insert any intrinsics.
   for (auto *V : Visited) {
-    if (Leaves.count(V))
+    if (Sources.count(V))
       continue;
 
     if (!shouldPromote(V) || isPromotedResultSafe(V))
@@ -425,7 +475,7 @@ void IRPromoter::Mutate(Type *OrigTy,
       return nullptr;
 
     if ((!Promoted.count(V) && !NewInsts.count(V)) || !TruncTysMap.count(V) ||
-        Leaves.count(V))
+        Sources.count(V))
       return nullptr;
 
     Type *TruncTy = TruncTysMap[V];
@@ -440,10 +490,10 @@ void IRPromoter::Mutate(Type *OrigTy,
     return Trunc;
   };
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the roots:\n");
+  LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the sinks:\n");
   // Fix up any stores or returns that use the results of the promoted
   // chain.
-  for (auto I : Roots) {
+  for (auto I : Sinks) {
     LLVM_DEBUG(dbgs() << " - " << *I << "\n");
 
     // Handle calls separately as we need to iterate over arg operands.
@@ -503,7 +553,7 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
 
   // Special cases for calls as we need to check for zeroext
   // TODO We should accept calls even if they don't have zeroext, as they can
-  // still be roots.
+  // still be sinks.
   if (auto *Call = dyn_cast<CallInst>(V))
     return isSupportedType(Call) &&
            Call->hasRetAttr(Attribute::AttrKind::ZExt);
@@ -515,10 +565,11 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
   if (!isSupportedType(V))
     return false;
 
-  bool res = !isSigned(V);
-  if (!res)
-    LLVM_DEBUG(dbgs() << "ARM CGP: No, it's a signed instruction.\n");
-  return res;
+  if (generateSignBits(V)) {
+    LLVM_DEBUG(dbgs() << "ARM CGP: No, instruction can generate sign bits.\n");
+    return false;
+  }
+  return true;
 }
 
 /// Check that the type of V would be promoted and that the original type is
@@ -570,14 +621,15 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
              << TypeSize << "\n");
 
   SetVector<Value*> WorkList;
-  SmallPtrSet<Value*, 8> Leaves;
-  SmallPtrSet<Instruction*, 4> Roots;
+  SmallPtrSet<Value*, 8> Sources;
+  SmallPtrSet<Instruction*, 4> Sinks;
   WorkList.insert(V);
   SmallPtrSet<Value*, 16> CurrentVisited;
   CurrentVisited.clear();
 
-  // Return true if the given value can, or has been, visited. Add V to the
-  // worklist if needed.
+  // Return true if V was added to the worklist as a supported instruction,
+  // if it was already visited, or if we don't need to explore it (e.g.
+  // pointer values and GEPs), and false otherwise.
   auto AddLegalInst = [&](Value *V) {
     if (CurrentVisited.count(V))
       return true;
@@ -621,9 +673,9 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
 
     // Calls can be both sources and sinks.
     if (isSink(V))
-      Roots.insert(cast<Instruction>(V));
+      Sinks.insert(cast<Instruction>(V));
     if (isSource(V))
-      Leaves.insert(V);
+      Sources.insert(V);
     else if (auto *I = dyn_cast<Instruction>(V)) {
       // Visit operands of any instruction visited.
       for (auto &U : I->operands()) {
@@ -648,9 +700,9 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
              );
   unsigned ToPromote = 0;
   for (auto *V : CurrentVisited) {
-    if (Leaves.count(V))
+    if (Sources.count(V))
       continue;
-    if (Roots.count(cast<Instruction>(V)))
+    if (Sinks.count(cast<Instruction>(V)))
       continue;
     ++ToPromote;
   }
@@ -658,7 +710,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   if (ToPromote < 2)
     return false;
 
-  Promoter->Mutate(OrigTy, CurrentVisited, Leaves, Roots);
+  Promoter->Mutate(OrigTy, CurrentVisited, Sources, Sinks);
   return true;
 }
 

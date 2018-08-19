@@ -99,6 +99,22 @@ struct CalleeInfo {
   }
 };
 
+inline const char *getHotnessName(CalleeInfo::HotnessType HT) {
+  switch (HT) {
+  case CalleeInfo::HotnessType::Unknown:
+    return "unknown";
+  case CalleeInfo::HotnessType::Cold:
+    return "cold";
+  case CalleeInfo::HotnessType::None:
+    return "none";
+  case CalleeInfo::HotnessType::Hot:
+    return "hot";
+  case CalleeInfo::HotnessType::Critical:
+    return "critical";
+  }
+  llvm_unreachable("invalid hotness");
+}
+
 class GlobalValueSummary;
 
 using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;

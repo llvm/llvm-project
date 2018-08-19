@@ -147,6 +147,31 @@ entry:
   ret i16 %ret
 }
 
+; CHECK-LABEL: @test_or_i16(
+; (I'm going to just assert on the bits that differ from add, above.)
+; CHECK:atomicrmw.start:
+; CHECK:  %new = or i32 %loaded, %ValOperand_Shifted
+; CHECK:  %6 = cmpxchg i32* %AlignedAddr, i32 %loaded, i32 %new monotonic monotonic
+; CHECK:atomicrmw.end:
+define i16 @test_or_i16(i16* %arg, i16 %val) {
+entry:
+  %ret = atomicrmw or i16* %arg, i16 %val seq_cst
+  ret i16 %ret
+}
+
+; CHECK-LABEL: @test_and_i16(
+; (I'm going to just assert on the bits that differ from add, above.)
+; CHECK:  %AndOperand = or i32 %Inv_Mask, %ValOperand_Shifted
+; CHECK:atomicrmw.start:
+; CHECK:  %new = and i32 %loaded, %AndOperand
+; CHECK:  %6 = cmpxchg i32* %AlignedAddr, i32 %loaded, i32 %new monotonic monotonic
+; CHECK:atomicrmw.end:
+define i16 @test_and_i16(i16* %arg, i16 %val) {
+entry:
+  %ret = atomicrmw and i16* %arg, i16 %val seq_cst
+  ret i16 %ret
+}
+
 ; CHECK-LABEL: @test_min_i16(
 ; CHECK:atomicrmw.start:
 ; CHECK:  %6 = lshr i32 %loaded, %ShiftAmt

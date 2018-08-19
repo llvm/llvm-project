@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 int main() {
-// CHECK-NOT: integer-truncation.c
+// CHECK-NOT: implicit-conversion
 
   // Negative tests. Even if they produce unexpected results, this sanitizer does not care.
   int8_t n0 = (~((uint32_t)(0))); // ~0 -> -1, but do not warn.
@@ -19,6 +19,7 @@ int main() {
   // Positive tests.
   uint8_t t0 = (~((uint32_t)(0)));
 // CHECK: implicit-conversion
+// CHECK-NOT: implicit-conversion
 
   return 0;
 }

@@ -1,12 +1,12 @@
 ; Test DBG_LABEL MachineInstr for label debugging.
 ; REQUIRES: asserts
-; RUN: llc -fast-isel=false -debug-only=isel %s -o /dev/null 2> %t.debug
+; RUN: llc -debug-only=isel %s -o /dev/null 2> %t.debug
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
 ;
 ; CHECKMI: DBG_LABEL "top", debug-location !9
 ; CHECKMI: DBG_LABEL "done", debug-location !11
 ;
-; RUN: llc -fast-isel=false %s -o - | FileCheck %s --check-prefix=CHECKASM
+; RUN: llc %s -o - | FileCheck %s --check-prefix=CHECKASM
 ;
 ; CHECKASM: DEBUG_LABEL: foo:top
 ; CHECKASM: DEBUG_LABEL: foo:done

@@ -4790,6 +4790,14 @@ class BaseSIMDThreeSameVectorTied<bit Q, bit U, bits<3> size, bits<5> opcode,
   let Inst{4-0}   = Rd;
 }
 
+let Predicates = [HasNEON, HasFP16FML] in
+class BaseSIMDThreeSameMult<bit Q, bit U, bit b13, bits<3> size, string asm, string kind1,
+                                 string kind2> :
+        BaseSIMDThreeSameVector<Q, U, size, 0b11101, V128, asm, kind1, [] > {
+  let AsmString = !strconcat(asm, "{\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2 # "}");
+  let Inst{13} = b13;
+}
+
 class BaseSIMDThreeSameVectorDot<bit Q, bit U, string asm, string kind1,
                                  string kind2, RegisterOperand RegType,
                                  ValueType AccumType, ValueType InputType,
@@ -7253,6 +7261,20 @@ class BaseSIMDThreeSameVectorDotIndex<bit Q, bit U, string asm, string dst_kind,
   bits<2> idx;
   let Inst{21}    = idx{0};  // L
   let Inst{11}    = idx{1};  // H
+}
+
+let Predicates = [HasNEON, HasFP16FML] in
+class BaseSIMDThreeSameMultIndex<bit Q, bit U, bits<4> opc, string asm,
+                                 string dst_kind, string lhs_kind,
+                                 string rhs_kind> :
+        BaseSIMDIndexedTied<Q, U, 0, 0b10, opc, V128, V128, V128,
+                            VectorIndexH, asm, "", dst_kind, lhs_kind,
+                            rhs_kind, []> {
+  //idx = H:L:M
+  bits<3> idx;
+  let Inst{11} = idx{2}; // H
+  let Inst{21} = idx{1}; // L
+  let Inst{20} = idx{0}; // M
 }
 
 multiclass SIMDThreeSameVectorDotIndex<bit U, string asm,

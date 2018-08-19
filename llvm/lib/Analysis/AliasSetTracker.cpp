@@ -603,7 +603,10 @@ void AliasSet::print(raw_ostream &OS) const {
     for (iterator I = begin(), E = end(); I != E; ++I) {
       if (I != begin()) OS << ", ";
       I.getPointer()->printAsOperand(OS << "(");
-      OS << ", " << I.getSize() << ")";
+      if (I.getSize() == MemoryLocation::UnknownSize)
+        OS << ", unknown)";
+      else 
+        OS << ", " << I.getSize() << ")";
     }
   }
   if (!UnknownInsts.empty()) {

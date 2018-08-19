@@ -654,13 +654,14 @@ $2 = 0x000000010010aba0 Let's Be Friendsfoobar</tt></pre></code>
                     <b>LLDB.framework</b> to create your own stand-alone python programs, you will
                     need to tell python where to look in order to find this module. This
                     is done by setting the <b>PYTHONPATH</b> environment variable, adding
-                    a path to the directory that contains the <b>lldb.py</b> python module.  On 
-                    Mac OS X, this is contained inside the LLDB.framework, so you would do:
+                    a path to the directory that contains the <b>lldb.py</b> python module.  The 
+                    lldb driver program has an option to report the path to the lldb module.
+                    You can use that to point to correct lldb.py:
                     
                     <p>For csh and tcsh:</p>
-                    <p><code>% <b>setenv PYTHONPATH /Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python</b></code></p>
+                    <p><code>% <b>setenv PYTHONPATH `lldb -P`</b></p>
                     <p>For sh and bash:
-                    <p><code>% <b>export PYTHONPATH=/Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python</b></code></p>
+                    <p><code>% <b>export PYTHONPATH=`lldb -P`</b></p>
                     
                     <p> Alternately, you can append the LLDB Python directory to the <b>sys.path</b> list directly in
                     your Python code before importing the lldb module.</p>

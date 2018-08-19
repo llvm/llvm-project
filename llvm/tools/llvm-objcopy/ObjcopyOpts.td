@@ -81,6 +81,24 @@ def L : JoinedOrSeparate<["-"], "L">,
 defm globalize_symbol : Eq<"globalize-symbol">,
                        MetaVarName<"symbol">,
                        HelpText<"Mark <symbol> as global">;
+
+defm keep_global_symbol
+    : Eq<"keep-global-symbol">,
+      MetaVarName<"symbol">,
+      HelpText<"Convert all symbols except <symbol> to local. May be repeated "
+               "to convert all except a set of symbols to local.">;
+def G : JoinedOrSeparate<[ "-" ], "G">, Alias<keep_global_symbol>;
+
+defm keep_global_symbols
+    : Eq<"keep-global-symbols">,
+      MetaVarName<"filename">,
+      HelpText<
+          "Reads a list of symbols from <filename> and runs as if "
+	  "--keep-global-symbol=<symbol> is set for each one. <filename> "
+	  "contains one symbol per line and may contain comments beginning "
+	  "with '#'. Leading and trailing whitespace is stripped from each "
+	  "line. May be repeated to read symbols from many files.">;
+
 defm weaken_symbol : Eq<"weaken-symbol">,
                        MetaVarName<"symbol">,
                        HelpText<"Mark <symbol> as weak">;

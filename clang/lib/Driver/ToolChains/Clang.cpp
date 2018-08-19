@@ -1455,6 +1455,11 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
     else
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_msign_return_address)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-msign-return-address=") + A->getValue()));
+  }
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,

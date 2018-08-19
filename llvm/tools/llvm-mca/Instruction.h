@@ -423,9 +423,7 @@ public:
   bool isValid() const {
     return Data.first != INVALID_IID && Data.second != nullptr;
   }
-  bool operator==(const WriteRef &Other) const {
-    return Data == Other.Data;
-  }
+  bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
 
 #ifndef NDEBUG
   void dump() const;

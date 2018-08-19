@@ -1,0 +1,78 @@
+# RUN:     llvm-mc -triple arm-none-linux-gnu -mattr=+neon,+fp16fml --disassemble < %s | FileCheck %s
+# RUN:     llvm-mc -triple arm-none-linux-gnu -mattr=+neon,-fullfp16,+fp16fml --disassemble < %s | FileCheck %s
+# RUN:     llvm-mc -triple arm-none-linux-gnu --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-COPROC
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16-INVALID
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+fullfp16,-fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,-fp16fml,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+fullfp16,+fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+fp16fml,-fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16-INVALID
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+neon --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16-INVALID
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+neon,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+neon,+fullfp16,-fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+neon,-fp16fml,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=+v8.2a,+neon,+fp16fml,-fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID,FP16-INVALID
+
+[0x91,0x08,0x20,0xfc]
+[0x91,0x08,0xa0,0xfc]
+[0x52,0x08,0x21,0xfc]
+[0x52,0x08,0xa1,0xfc]
+[0x99,0x08,0x00,0xfe]
+[0x99,0x08,0x10,0xfe]
+[0x7a,0x08,0x01,0xfe]
+[0x7a,0x08,0x11,0xfe]
+
+#A fullfp16 instruction, for testing the interaction of the features
+[0x80,0x09,0x30,0xee]
+
+#CHECK: vfmal.f16 d0, s1, s2
+#CHECK: vfmsl.f16 d0, s1, s2
+#CHECK: vfmal.f16 q0, d1, d2
+#CHECK: vfmsl.f16 q0, d1, d2
+#CHECK: vfmal.f16 d0, s1, s2[1]
+#CHECK: vfmsl.f16 d0, s1, s2[1]
+#CHECK: vfmal.f16 q0, d1, d2[3]
+#CHECK: vfmsl.f16 q0, d1, d2[3]
+#CHECK: vadd.f16  s0, s1, s0
+
+#CHECK-COPROC:  stc2  p8, c0, [r0], #-580
+#CHECK-COPROC:  stc2  p8, c0, [r0], #580
+#CHECK-COPROC:  stc2  p8, c0, [r1], #-328
+#CHECK-COPROC:  stc2  p8, c0, [r1], #328
+#CHECK-COPROC:  mcr2  p8, #0, r0, c0, c9, #4
+#CHECK-COPROC:  mrc2  p8, #0, r0, c0, c9, #4
+#CHECK-COPROC:  mcr2  p8, #0, r0, c1, c10, #3
+#CHECK-COPROC:  mrc2  p8, #0, r0, c1, c10, #3
+#CHECK-COPROC:  cdp   p9, #3, c0, c0, c0, #4
+
+#CHECK-INVALID:  warning: invalid instruction encoding
+#CHECK-INVALID: [0x91,0x08,0x20,0xfc]
+#CHECK-INVALID:  ^
+#CHECK-INVALID:  warning: invalid instruction encoding
+#CHECK-INVALID: [0x91,0x08,0xa0,0xfc]
+#CHECK-INVALID:  ^
+#CHECK-INVALID:  warning: invalid instruction encoding
+#CHECK-INVALID: [0x52,0x08,0x21,0xfc]
+#CHECK-INVALID:  ^
+#CHECK-INVALID:  warning: invalid instruction encoding
+#CHECK-INVALID: [0x52,0x08,0xa1,0xfc]
+#CHECK-INVALID:  ^
+#CHECK-INVALID: warning: invalid instruction encoding
+#CHECK-INVALID: [0x99,0x08,0x00,0xfe]
+#CHECK-INVALID:  ^
+#CHECK-INVALID: warning: invalid instruction encoding
+#CHECK-INVALID: [0x99,0x08,0x10,0xfe]
+#CHECK-INVALID:  ^
+#CHECK-INVALID: warning: invalid instruction encoding
+#CHECK-INVALID: [0x7a,0x08,0x01,0xfe]
+#CHECK-INVALID:  ^
+#CHECK-INVALID: warning: invalid instruction encoding
+#CHECK-INVALID: [0x7a,0x08,0x11,0xfe]
+#CHECK-INVALID:  ^
+
+#FP16-INVALID: warning: invalid instruction encoding
+#FP16-INVALID: [0x80,0x09,0x30,0xee]
+#FP16-INVALID: ^
+
+#FP16-NOT: [0x80,0x09,0x30,0xee]

@@ -62,6 +62,12 @@ public:
   /// instruction that may throw or otherwise exit abnormally.
   bool anyBlockMayThrow() const;
 
+  /// Return true if we must reach the block \p BB under assumption that the
+  /// loop \p CurLoop is entered and no instruction throws or otherwise exits
+  /// abnormally.
+  bool allLoopPathsLeadToBlock(const Loop *CurLoop, const BasicBlock *BB,
+                               const DominatorTree *DT) const;
+
   /// Computes safety information for a loop checks loop body & header for
   /// the possibility of may throw exception, it takes LoopSafetyInfo and loop
   /// as argument. Updates safety information in LoopSafetyInfo argument.

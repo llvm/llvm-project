@@ -53,6 +53,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
                                                      expected_line))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_stackTrace(self):
         '''

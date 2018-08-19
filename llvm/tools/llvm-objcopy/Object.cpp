@@ -230,12 +230,12 @@ void SymbolTableSection::assignIndices() {
     Sym->Index = Index++;
 }
 
-void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
+void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
                                    SectionBase *DefinedIn, uint64_t Value,
                                    uint8_t Visibility, uint16_t Shndx,
-                                   uint64_t Sz) {
+                                   uint64_t Size) {
   Symbol Sym;
-  Sym.Name = Name;
+  Sym.Name = Name.str();
   Sym.Binding = Bind;
   Sym.Type = Type;
   Sym.DefinedIn = DefinedIn;
@@ -249,7 +249,7 @@ void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
   }
   Sym.Value = Value;
   Sym.Visibility = Visibility;
-  Sym.Size = Sz;
+  Sym.Size = Size;
   Sym.Index = Symbols.size();
   Symbols.emplace_back(llvm::make_unique<Symbol>(Sym));
   Size += this->EntrySize;
@@ -587,6 +587,84 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
+template <class ELFT> void BinaryELFBuilder<ELFT>::initFileHeader() {
+  Obj->Flags = 0x0;
+  Obj->Type = ET_REL;
+  Obj->Entry = 0x0;
+  Obj->Machine = EMachine;
+  Obj->Version = 1;
+}
+
+template <class ELFT> void BinaryELFBuilder<ELFT>::initHeaderSegment() {
+  Obj->ElfHdrSegment.Index = 0;
+}
+
+template <class ELFT> StringTableSection *BinaryELFBuilder<ELFT>::addStrTab() {
+  auto &StrTab = Obj->addSection<StringTableSection>();
+  StrTab.Name = ".strtab";
+
+  Obj->SectionNames = &StrTab;
+  return &StrTab;
+}
+
+template <class ELFT>
+SymbolTableSection *
+BinaryELFBuilder<ELFT>::addSymTab(StringTableSection *StrTab) {
+  auto &SymTab = Obj->addSection<SymbolTableSection>();
+
+  SymTab.Name = ".symtab";
+  SymTab.Link = StrTab->Index;
+  // TODO: Factor out dependence on ElfType here.
+  SymTab.EntrySize = sizeof(Elf_Sym);
+
+  // The symbol table always needs a null symbol
+  SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
+
+  Obj->SymbolTable = &SymTab;
+  return &SymTab;
+}
+
+template <class ELFT>
+void BinaryELFBuilder<ELFT>::addData(SymbolTableSection *SymTab) {
+  auto Data = ArrayRef<uint8_t>(
+      reinterpret_cast<const uint8_t *>(MemBuf->getBufferStart()),
+      MemBuf->getBufferSize());
+  auto &DataSection = Obj->addSection<Section>(Data);
+  DataSection.Name = ".data";
+  DataSection.Type = ELF::SHT_PROGBITS;
+  DataSection.Size = Data.size();
+  DataSection.Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE;
+
+  std::string SanitizedFilename = MemBuf->getBufferIdentifier().str();
+  std::replace_if(std::begin(SanitizedFilename), std::end(SanitizedFilename),
+                  [](char c) { return !isalnum(c); }, '_');
+  Twine Prefix = Twine("_binary_") + SanitizedFilename;
+
+  SymTab->addSymbol(Prefix + "_start", STB_GLOBAL, STT_NOTYPE, &DataSection,
+                    /*Value=*/0, STV_DEFAULT, 0, 0);
+  SymTab->addSymbol(Prefix + "_end", STB_GLOBAL, STT_NOTYPE, &DataSection,
+                    /*Value=*/DataSection.Size, STV_DEFAULT, 0, 0);
+  SymTab->addSymbol(Prefix + "_size", STB_GLOBAL, STT_NOTYPE, nullptr,
+                    /*Value=*/DataSection.Size, STV_DEFAULT, SHN_ABS, 0);
+}
+
+template <class ELFT> void BinaryELFBuilder<ELFT>::initSections() {
+  for (auto &Section : Obj->sections()) {
+    Section.initialize(Obj->sections());
+  }
+}
+
+template <class ELFT> std::unique_ptr<Object> BinaryELFBuilder<ELFT>::build() {
+  initFileHeader();
+  initHeaderSegment();
+  StringTableSection *StrTab = addStrTab();
+  SymbolTableSection *SymTab = addSymTab(StrTab);
+  initSections();
+  addData(SymTab);
+
+  return std::move(Obj);
+}
+
 template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   for (auto &Parent : Obj.segments()) {
     // Every segment will overlap with itself but we don't want a segment to
@@ -631,15 +709,6 @@ template <class ELFT> void ELFBuilder<ELFT>::readProgramHeaders() {
   }
 
   auto &ElfHdr = Obj.ElfHdrSegment;
-  // Creating multiple PT_PHDR segments technically is not valid, but PT_LOAD
-  // segments must not overlap, and other types fit even less.
-  ElfHdr.Type = PT_PHDR;
-  ElfHdr.Flags = 0;
-  ElfHdr.OriginalOffset = ElfHdr.Offset = 0;
-  ElfHdr.VAddr = 0;
-  ElfHdr.PAddr = 0;
-  ElfHdr.FileSize = ElfHdr.MemSize = sizeof(Elf_Ehdr);
-  ElfHdr.Align = 0;
   ElfHdr.Index = Index++;
 
   const auto &Ehdr = *ElfFile.getHeader();
@@ -894,7 +963,6 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
 template <class ELFT> void ELFBuilder<ELFT>::build() {
   const auto &Ehdr = *ElfFile.getHeader();
 
-  std::copy(Ehdr.e_ident, Ehdr.e_ident + 16, Obj.Ident);
   Obj.Type = Ehdr.e_type;
   Obj.Machine = Ehdr.e_machine;
   Obj.Version = Ehdr.e_version;
@@ -926,16 +994,15 @@ Writer::~Writer() {}
 
 Reader::~Reader() {}
 
-ElfType ELFReader::getElfType() const {
-  if (isa<ELFObjectFile<ELF32LE>>(Bin))
-    return ELFT_ELF32LE;
-  if (isa<ELFObjectFile<ELF64LE>>(Bin))
-    return ELFT_ELF64LE;
-  if (isa<ELFObjectFile<ELF32BE>>(Bin))
-    return ELFT_ELF32BE;
-  if (isa<ELFObjectFile<ELF64BE>>(Bin))
-    return ELFT_ELF64BE;
-  llvm_unreachable("Invalid ELFType");
+std::unique_ptr<Object> BinaryReader::create() const {
+  if (MInfo.Is64Bit)
+    return MInfo.IsLittleEndian
+               ? BinaryELFBuilder<ELF64LE>(MInfo.EMachine, MemBuf).build()
+               : BinaryELFBuilder<ELF64BE>(MInfo.EMachine, MemBuf).build();
+  else
+    return MInfo.IsLittleEndian
+               ? BinaryELFBuilder<ELF32LE>(MInfo.EMachine, MemBuf).build()
+               : BinaryELFBuilder<ELF32BE>(MInfo.EMachine, MemBuf).build();
 }
 
 std::unique_ptr<Object> ELFReader::create() const {
@@ -963,11 +1030,24 @@ std::unique_ptr<Object> ELFReader::create() const {
 template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   uint8_t *B = Buf.getBufferStart();
   Elf_Ehdr &Ehdr = *reinterpret_cast<Elf_Ehdr *>(B);
-  std::copy(Obj.Ident, Obj.Ident + 16, Ehdr.e_ident);
+  std::fill(Ehdr.e_ident, Ehdr.e_ident + 16, 0);
+  Ehdr.e_ident[EI_MAG0] = 0x7f;
+  Ehdr.e_ident[EI_MAG1] = 'E';
+  Ehdr.e_ident[EI_MAG2] = 'L';
+  Ehdr.e_ident[EI_MAG3] = 'F';
+  Ehdr.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
+  Ehdr.e_ident[EI_DATA] =
+      ELFT::TargetEndianness == support::big ? ELFDATA2MSB : ELFDATA2LSB;
+  Ehdr.e_ident[EI_VERSION] = EV_CURRENT;
+  Ehdr.e_ident[EI_OSABI] = ELFOSABI_NONE;
+  Ehdr.e_ident[EI_ABIVERSION] = 0;
+
   Ehdr.e_type = Obj.Type;
   Ehdr.e_machine = Obj.Machine;
   Ehdr.e_version = Obj.Version;
   Ehdr.e_entry = Obj.Entry;
+  // TODO: Only set phoff when a program header exists, to avoid tools
+  // thinking this is corrupt data.
   Ehdr.e_phoff = Obj.ProgramHdrSegment.Offset;
   Ehdr.e_flags = Obj.Flags;
   Ehdr.e_ehsize = sizeof(Elf_Ehdr);
@@ -1172,6 +1252,17 @@ static uint64_t LayoutSections(Range Sections, uint64_t Offset) {
   return Offset;
 }
 
+template <class ELFT> void ELFWriter<ELFT>::initEhdrSegment() {
+  auto &ElfHdr = Obj.ElfHdrSegment;
+  ElfHdr.Type = PT_PHDR;
+  ElfHdr.Flags = 0;
+  ElfHdr.OriginalOffset = ElfHdr.Offset = 0;
+  ElfHdr.VAddr = 0;
+  ElfHdr.PAddr = 0;
+  ElfHdr.FileSize = ElfHdr.MemSize = sizeof(Elf_Ehdr);
+  ElfHdr.Align = 0;
+}
+
 template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
   // We need a temporary list of segments that has a special order to it
   // so that we know that anytime ->ParentSegment is set that segment has
@@ -1263,6 +1354,7 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
       Obj.SectionNames->addString(Section.Name);
     }
 
+  initEhdrSegment();
   // Before we can prepare for layout the indexes need to be finalized.
   uint64_t Index = 0;
   for (auto &Sec : Obj.sections())
@@ -1389,6 +1481,11 @@ void BinaryWriter::finalize() {
 
 namespace llvm {
 namespace objcopy {
+
+template class BinaryELFBuilder<ELF64LE>;
+template class BinaryELFBuilder<ELF64BE>;
+template class BinaryELFBuilder<ELF32LE>;
+template class BinaryELFBuilder<ELF32BE>;
 
 template class ELFBuilder<ELF64LE>;
 template class ELFBuilder<ELF64BE>;

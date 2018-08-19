@@ -2,7 +2,7 @@
 ; RUN: opt -disable-output -print-mustexecute %s 2>&1 | FileCheck %s
 
 ; Infinite loop.
-; TODO: backedge is provably mustexecute, but the analysis does not know this.
+; Make sure that the backedge is mustexec.
 define void @test_no_exit_block(i1 %cond, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_no_exit_block(
 ; CHECK-NEXT:  entry:
@@ -10,17 +10,13 @@ define void @test_no_exit_block(i1 %cond, i32 %a, i32 %b) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ] ; (mustexec in: loop)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[MAYBE_TAKEN:%.*]], label [[BACKEDGE]] ; (mustexec in: loop)
-
-; FIXME: Should be mustexec in backedge. The current analysis does not handle
-; loops without exit blocks at all.
-; CHECK-NOT:   ; (mustexec in: loop)
-
 ; CHECK:       maybe_taken:
+; CHECK-NOT:   mustexec
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1 ; (mustexec in: loop)
+; CHECK-NEXT:    br label [[LOOP]] ; (mustexec in: loop)
 ;
 entry:
   br label %loop
@@ -75,7 +71,7 @@ exit:
   ret void
 }
 
-; FIXME: This code demonstrates a bug. %div should not be mustexec.
+; Make sure that sdiv is NOT marked as mustexec.
 define void @test_impossible_exit_in_untaken_block(i1 %cond, i32 %a, i32 %b, i32* %p) {
 ; CHECK-LABEL: @test_impossible_exit_in_untaken_block(
 ; CHECK-NEXT:  entry:
@@ -84,13 +80,10 @@ define void @test_impossible_exit_in_untaken_block(i1 %cond, i32 %a, i32 %b, i32
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ] ; (mustexec in: loop)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[MAYBE_TAKEN:%.*]], label [[BACKEDGE]] ; (mustexec in: loop)
 ; CHECK:       maybe_taken:
-
-; FIXME: The block below is NOT always taken!!! Current this example demonstrates a
-;        bug in current mustexecute analysis.
-
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]] ; (mustexec in: loop)
-; CHECK-NEXT:    store i32 [[DIV]], i32* [[P:%.*]] ; (mustexec in: loop)
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[EXIT:%.*]] ; (mustexec in: loop)
+; CHECK-NOT:   mustexec
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[DIV]], i32* [[P:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1 ; (mustexec in: loop)
 ; CHECK-NEXT:    br label [[LOOP]] ; (mustexec in: loop)

@@ -12,11 +12,11 @@ target triple = "hexagon"
 ; CHECK-NEXT:   m0 = r2
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
-; CHECK-NEXT:   vtmp.w = vgather(r1,m0,v0.w).w
-; CHECK-NEXT:   vmem(r0+#0) = vtmp.new
+; CHECK-NEXT:   r29 = and(r29,#-64)
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
-; CHECK-NEXT:   r29 = and(r29,#-64)
+; CHECK-NEXT:   vtmp.w = vgather(r1,m0,v0.w).w
+; CHECK-NEXT:   vmem(r0+#0) = vtmp.new
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT:   r0 = add(r29,#0)

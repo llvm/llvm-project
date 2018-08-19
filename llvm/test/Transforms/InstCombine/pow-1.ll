@@ -53,7 +53,7 @@ define <2 x double> @test_simplify2v(<2 x double> %x) {
   ret <2 x double> %retval
 }
 
-; Check pow(2.0, x) -> exp2(x).
+; Check pow(2.0 ** n, x) -> exp2(n * x).
 
 define float @test_simplify3(float %x) {
 ; ANY-LABEL: @test_simplify3(
@@ -62,6 +62,16 @@ define float @test_simplify3(float %x) {
 ;
   %retval = call float @powf(float 2.0, float %x)
   ret float %retval
+}
+
+; TODO: Should result in exp2(-2.0 * x).
+define double @test_simplify3n(double %x) {
+; ANY-LABEL: @test_simplify3n(
+; ANY-NEXT:    [[RETVAL:%.*]] = call double @pow(double 2.500000e-01, double [[X:%.*]])
+; ANY-NEXT:    ret double [[RETVAL]]
+;
+  %retval = call double @pow(double 0.25, double %x)
+  ret double %retval
 }
 
 define <2 x float> @test_simplify3v(<2 x float> %x) {
@@ -73,6 +83,16 @@ define <2 x float> @test_simplify3v(<2 x float> %x) {
   ret <2 x float> %retval
 }
 
+; TODO: Should result in exp2(2.0 * x).
+define <2 x double> @test_simplify3vn(<2 x double> %x) {
+; ANY-LABEL: @test_simplify3vn(
+; ANY-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X:%.*]])
+; ANY-NEXT:    ret <2 x double> [[RETVAL]]
+;
+  %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.0, double 4.0>, <2 x double> %x)
+  ret <2 x double> %retval
+}
+
 define double @test_simplify4(double %x) {
 ; ANY-LABEL: @test_simplify4(
 ; ANY-NEXT:    [[EXP2:%.*]] = call double @llvm.exp2.f64(double [[X:%.*]])
@@ -82,6 +102,16 @@ define double @test_simplify4(double %x) {
   ret double %retval
 }
 
+; TODO: Should result in exp2f(3.0 * x).
+define float @test_simplify4n(float %x) {
+; ANY-LABEL: @test_simplify4n(
+; ANY-NEXT:    [[RETVAL:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
+; ANY-NEXT:    ret float [[RETVAL]]
+;
+  %retval = call float @powf(float 8.0, float %x)
+  ret float %retval
+}
+
 define <2 x double> @test_simplify4v(<2 x double> %x) {
 ; ANY-LABEL: @test_simplify4v(
 ; ANY-NEXT:    [[EXP2:%.*]] = call <2 x double> @llvm.exp2.v2f64(<2 x double> [[X:%.*]])
@@ -89,6 +119,16 @@ define <2 x double> @test_simplify4v(<2 x double> %x) {
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.0, double 2.0>, <2 x double> %x)
   ret <2 x double> %retval
+}
+
+; TODO: Should result in exp2f(-x).
+define <2 x float> @test_simplify4vn(<2 x float> %x) {
+; ANY-LABEL: @test_simplify4vn(
+; ANY-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X:%.*]])
+; ANY-NEXT:    ret <2 x float> [[RETVAL]]
+;
+  %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 0.5, float 0.5>, <2 x float> %x)
+  ret <2 x float> %retval
 }
 
 ; Check pow(x, 0.0) -> 1.0.
@@ -332,4 +372,3 @@ define double @test_simplify19(double %x) {
 }
 
 ; CHECK-EXP10: attributes [[NUW_RO]] = { nounwind readonly }
-

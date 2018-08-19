@@ -237,9 +237,6 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     PreambleCallbacks &Callbacks) {
   assert(VFS && "VFS is null");
 
-  if (!Bounds.Size)
-    return BuildPreambleError::PreambleIsEmpty;
-
   auto PreambleInvocation = std::make_shared<CompilerInvocation>(Invocation);
   FrontendOptions &FrontendOpts = PreambleInvocation->getFrontendOpts();
   PreprocessorOptions &PreprocessorOpts =
@@ -422,9 +419,6 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   auto PreambleInvocation = std::make_shared<CompilerInvocation>(Invocation);
   PreprocessorOptions &PreprocessorOpts =
       PreambleInvocation->getPreprocessorOpts();
-
-  if (!Bounds.Size)
-    return false;
 
   // We've previously computed a preamble. Check whether we have the same
   // preamble now that we did before, and that there's enough space in
@@ -758,8 +752,6 @@ const char *BuildPreambleErrorCategory::name() const noexcept {
 
 std::string BuildPreambleErrorCategory::message(int condition) const {
   switch (static_cast<BuildPreambleError>(condition)) {
-  case BuildPreambleError::PreambleIsEmpty:
-    return "Preamble is empty";
   case BuildPreambleError::CouldntCreateTempFile:
     return "Could not create temporary file for PCH";
   case BuildPreambleError::CouldntCreateTargetInfo:

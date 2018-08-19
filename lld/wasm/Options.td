@@ -23,6 +23,9 @@ def color_diagnostics: F<"color-diagnostics">,
 def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
 
+def compress_relocations: F<"compress-relocations">,
+  HelpText<"Compress the relocation targets in the code section.">;
+
 defm demangle: B<"demangle",
     "Demangle symbol names",
     "Do not demangle symbol names">;

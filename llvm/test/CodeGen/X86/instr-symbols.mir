@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux -start-before=x86-flags-copy-lowering -o - %s | FileCheck %s
 #
 # Test the emission of pre- and post-instruction labels.
 

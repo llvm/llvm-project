@@ -33,7 +33,7 @@ class AsynchronousSymbolQuery;
 class ExecutionSession;
 class MaterializationUnit;
 class MaterializationResponsibility;
-class VSO;
+class JITDylib;
 
 /// VModuleKey provides a unique identifier (allocated and managed by
 /// ExecutionSessions) for a module added to the JIT.
@@ -61,16 +61,16 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap &Symbols);
 
 /// A base class for materialization failures that allows the failing
 ///        symbols to be obtained for logging.
-using SymbolDependenceMap = std::map<VSO *, SymbolNameSet>;
+using SymbolDependenceMap = std::map<JITDylib *, SymbolNameSet>;
 
 /// Render a SymbolDependendeMap.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
 
-/// A list of VSO pointers.
-using VSOList = std::vector<VSO *>;
+/// A list of JITDylib pointers.
+using JITDylibList = std::vector<JITDylib *>;
 
-/// Render a VSOList.
-raw_ostream &operator<<(raw_ostream &OS, const VSOList &VSOs);
+/// Render a JITDylibList.
+raw_ostream &operator<<(raw_ostream &OS, const JITDylibList &JDs);
 
 /// Callback to notify client that symbols have been resolved.
 using SymbolsResolvedCallback = std::function<void(Expected<SymbolMap>)>;
@@ -86,7 +86,8 @@ using RegisterDependenciesFunction =
 /// are no dependants to register with.
 extern RegisterDependenciesFunction NoDependenciesToRegister;
 
-/// Used to notify a VSO that the given set of symbols failed to materialize.
+/// Used to notify a JITDylib that the given set of symbols failed to
+/// materialize.
 class FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
 public:
   static char ID;
@@ -115,11 +116,11 @@ private:
 };
 
 /// Tracks responsibility for materialization, and mediates interactions between
-/// MaterializationUnits and VSOs.
+/// MaterializationUnits and JDs.
 ///
 /// An instance of this class is passed to MaterializationUnits when their
 /// materialize method is called. It allows MaterializationUnits to resolve and
-/// finalize symbols, or abandon materialization by notifying any unmaterialized
+/// emit symbols, or abandon materialization by notifying any unmaterialized
 /// symbols of an error.
 class MaterializationResponsibility {
   friend class MaterializationUnit;
@@ -130,12 +131,12 @@ public:
 
   /// Destruct a MaterializationResponsibility instance. In debug mode
   ///        this asserts that all symbols being tracked have been either
-  ///        finalized or notified of an error.
+  ///        emitted or notified of an error.
   ~MaterializationResponsibility();
 
-  /// Returns the target VSO that these symbols are being materialized
+  /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
-  VSO &getTargetVSO() const { return V; }
+  JITDylib &getTargetJITDylib() const { return JD; }
 
   /// Returns the symbol flags map for this responsibility instance.
   SymbolFlagsMap getSymbols() { return SymbolFlags; }
@@ -143,28 +144,35 @@ public:
   /// Returns the names of any symbols covered by this
   /// MaterializationResponsibility object that have queries pending. This
   /// information can be used to return responsibility for unrequested symbols
-  /// back to the VSO via the delegate method.
+  /// back to the JITDylib via the delegate method.
   SymbolNameSet getRequestedSymbols();
 
-  /// Resolves the given symbols. Individual calls to this method may
-  ///        resolve a subset of the symbols, but all symbols must have been
-  ///        resolved prior to calling finalize.
+  /// Notifies the target JITDylib that the given symbols have been resolved.
+  /// This will update the given symbols' addresses in the JITDylib, and notify
+  /// any pending queries on the given symbols of their resolution. The given
+  /// symbols must be ones covered by this MaterializationResponsibility
+  /// instance. Individual calls to this method may resolve a subset of the
+  /// symbols, but all symbols must have been resolved prior to calling emit.
   void resolve(const SymbolMap &Symbols);
 
-  /// Finalizes all symbols tracked by this instance.
-  void finalize();
+  /// Notifies the target JITDylib (and any pending queries on that JITDylib)
+  /// that all symbols covered by this MaterializationResponsibility instance
+  /// have been emitted.
+  void emit();
 
-  /// Adds new symbols to the VSO and this responsibility instance.
-  ///        VSO entries start out in the materializing state.
+  /// Adds new symbols to the JITDylib and this responsibility instance.
+  ///        JITDylib entries start out in the materializing state.
   ///
   ///   This method can be used by materialization units that want to add
   /// additional symbols at materialization time (e.g. stubs, compile
   /// callbacks, metadata).
   Error defineMaterializing(const SymbolFlagsMap &SymbolFlags);
 
-  /// Notify all unfinalized symbols that an error has occurred.
+  /// Notify all not-yet-emitted covered by this MaterializationResponsibility
+  /// instance that an error has occurred.
   /// This will remove all symbols covered by this MaterializationResponsibilty
-  /// from V, and send an error to any queries waiting on these symbols.
+  /// from the target JITDylib, and send an error to any queries waiting on
+  /// these symbols.
   void failMaterialization();
 
   /// Transfers responsibility to the given MaterializationUnit for all
@@ -186,11 +194,11 @@ public:
   void addDependenciesForAll(const SymbolDependenceMap &Dependencies);
 
 private:
-  /// Create a MaterializationResponsibility for the given VSO and
+  /// Create a MaterializationResponsibility for the given JITDylib and
   ///        initial symbols.
-  MaterializationResponsibility(VSO &V, SymbolFlagsMap SymbolFlags);
+  MaterializationResponsibility(JITDylib &JD, SymbolFlagsMap SymbolFlags);
 
-  VSO &V;
+  JITDylib &JD;
   SymbolFlagsMap SymbolFlags;
 };
 
@@ -199,9 +207,9 @@ private:
 ///        overriding definitions are encountered).
 ///
 /// MaterializationUnits are used when providing lazy definitions of symbols to
-/// VSOs. The VSO will call materialize when the address of a symbol is
-/// requested via the lookup method. The VSO will call discard if a stronger
-/// definition is added or already present.
+/// JITDylibs. The JITDylib will call materialize when the address of a symbol
+/// is requested via the lookup method. The JITDylib will call discard if a
+/// stronger definition is added or already present.
 class MaterializationUnit {
 public:
   MaterializationUnit(SymbolFlagsMap InitalSymbolFlags)
@@ -215,15 +223,15 @@ public:
   /// Called by materialization dispatchers (see
   /// ExecutionSession::DispatchMaterializationFunction) to trigger
   /// materialization of this MaterializationUnit.
-  void doMaterialize(VSO &V) {
-    materialize(MaterializationResponsibility(V, std::move(SymbolFlags)));
+  void doMaterialize(JITDylib &JD) {
+    materialize(MaterializationResponsibility(JD, std::move(SymbolFlags)));
   }
 
-  /// Called by VSOs to notify MaterializationUnits that the given symbol has
-  /// been overridden.
-  void doDiscard(const VSO &V, SymbolStringPtr Name) {
+  /// Called by JITDylibs to notify MaterializationUnits that the given symbol
+  /// has been overridden.
+  void doDiscard(const JITDylib &JD, SymbolStringPtr Name) {
     SymbolFlags.erase(Name);
-    discard(V, std::move(Name));
+    discard(JD, std::move(Name));
   }
 
 protected:
@@ -241,7 +249,7 @@ private:
   ///        from the source (e.g. if the source is an LLVM IR Module and the
   ///        symbol is a function, delete the function body or mark it available
   ///        externally).
-  virtual void discard(const VSO &V, SymbolStringPtr Name) = 0;
+  virtual void discard(const JITDylib &JD, SymbolStringPtr Name) = 0;
 };
 
 using MaterializationUnitList =
@@ -257,19 +265,19 @@ public:
 
 private:
   void materialize(MaterializationResponsibility R) override;
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
   static SymbolFlagsMap extractFlags(const SymbolMap &Symbols);
 
   SymbolMap Symbols;
 };
 
 /// Create an AbsoluteSymbolsMaterializationUnit with the given symbols.
-/// Useful for inserting absolute symbols into a VSO. E.g.:
+/// Useful for inserting absolute symbols into a JITDylib. E.g.:
 /// \code{.cpp}
-///   VSO &V = ...;
+///   JITDylib &JD = ...;
 ///   SymbolStringPtr Foo = ...;
 ///   JITEvaluatedSymbol FooSym = ...;
-///   if (auto Err = V.define(absoluteSymbols({{Foo, FooSym}})))
+///   if (auto Err = JD.define(absoluteSymbols({{Foo, FooSym}})))
 ///     return Err;
 /// \endcode
 ///
@@ -295,32 +303,31 @@ using SymbolAliasMap = std::map<SymbolStringPtr, SymbolAliasMapEntry>;
 /// aliased with alternate flags.
 class ReExportsMaterializationUnit : public MaterializationUnit {
 public:
-  /// SourceVSO is allowed to be nullptr, in which case the source VSO is
-  /// taken to be whatever VSO these definitions are materialized in. This
-  /// is useful for defining aliases within a VSO.
+  /// SourceJD is allowed to be nullptr, in which case the source JITDylib is
+  /// taken to be whatever JITDylib these definitions are materialized in. This
+  /// is useful for defining aliases within a JITDylib.
   ///
   /// Note: Care must be taken that no sets of aliases form a cycle, as such
   ///       a cycle will result in a deadlock when any symbol in the cycle is
   ///       resolved.
-  ReExportsMaterializationUnit(VSO *SourceVSO, SymbolAliasMap Aliases);
+  ReExportsMaterializationUnit(JITDylib *SourceJD, SymbolAliasMap Aliases);
 
 private:
   void materialize(MaterializationResponsibility R) override;
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
-  VSO *SourceVSO = nullptr;
+  JITDylib *SourceJD = nullptr;
   SymbolAliasMap Aliases;
 };
 
 /// Create a ReExportsMaterializationUnit with the given aliases.
-/// Useful for defining symbol aliases.: E.g., given a VSO V containing symbols
-/// "foo" and "bar", we can define aliases "baz" (for "foo") and "qux" (for
-/// "bar") with:
-/// \code{.cpp}
+/// Useful for defining symbol aliases.: E.g., given a JITDylib JD containing
+/// symbols "foo" and "bar", we can define aliases "baz" (for "foo") and "qux"
+/// (for "bar") with: \code{.cpp}
 ///   SymbolStringPtr Baz = ...;
 ///   SymbolStringPtr Qux = ...;
-///   if (auto Err = V.define(symbolAliases({
+///   if (auto Err = JD.define(symbolAliases({
 ///       {Baz, { Foo, JITSymbolFlags::Exported }},
 ///       {Qux, { Bar, JITSymbolFlags::Weak }}}))
 ///     return Err;
@@ -331,42 +338,43 @@ symbolAliases(SymbolAliasMap Aliases) {
                                                          std::move(Aliases));
 }
 
-/// Create a materialization unit for re-exporting symbols from another VSO
+/// Create a materialization unit for re-exporting symbols from another JITDylib
 /// with alternative names/flags.
 inline std::unique_ptr<ReExportsMaterializationUnit>
-reexports(VSO &SourceV, SymbolAliasMap Aliases) {
-  return llvm::make_unique<ReExportsMaterializationUnit>(&SourceV,
+reexports(JITDylib &SourceJD, SymbolAliasMap Aliases) {
+  return llvm::make_unique<ReExportsMaterializationUnit>(&SourceJD,
                                                          std::move(Aliases));
 }
 
 /// Build a SymbolAliasMap for the common case where you want to re-export
-/// symbols from another VSO with the same linkage/flags.
+/// symbols from another JITDylib with the same linkage/flags.
 Expected<SymbolAliasMap>
-buildSimpleReexportsAliasMap(VSO &SourceV, const SymbolNameSet &Symbols);
+buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols);
 
 class ReexportsFallbackDefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
-  ReexportsFallbackDefinitionGenerator(VSO &BackingVSO, SymbolPredicate Allow);
-  SymbolNameSet operator()(VSO &V, const SymbolNameSet &Names);
+  ReexportsFallbackDefinitionGenerator(JITDylib &BackingJD,
+                                       SymbolPredicate Allow);
+  SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
-  VSO &BackingVSO;
+  JITDylib &BackingJD;
   SymbolPredicate Allow;
 };
 
 /// Base utilities for ExecutionSession.
 class ExecutionSessionBase {
   // FIXME: Remove this when we remove the old ORC layers.
-  friend class VSO;
+  friend class JITDylib;
 
 public:
   /// For reporting errors.
   using ErrorReporter = std::function<void(Error)>;
 
   /// For dispatching MaterializationUnit::materialize calls.
-  using DispatchMaterializationFunction =
-      std::function<void(VSO &V, std::unique_ptr<MaterializationUnit> MU)>;
+  using DispatchMaterializationFunction = std::function<void(
+      JITDylib &JD, std::unique_ptr<MaterializationUnit> MU)>;
 
   /// Construct an ExecutionSessionBase.
   ///
@@ -422,7 +430,7 @@ public:
                SymbolNameSet Names, bool WaiUntilReady,
                RegisterDependenciesFunction RegisterDependencies);
 
-  /// Search the given VSO list for the given symbols.
+  /// Search the given JITDylib list for the given symbols.
   ///
   ///
   /// The OnResolve callback will be called once all requested symbols are
@@ -440,7 +448,7 @@ public:
   /// dependenant symbols for this query (e.g. it is being made by a top level
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
-  void lookup(const VSOList &VSOs, const SymbolNameSet &Symbols,
+  void lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
               SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
               RegisterDependenciesFunction RegisterDependencies);
 
@@ -451,14 +459,15 @@ public:
   /// or an error occurs. If WaitUntilReady is false and an error occurs
   /// after resolution, the function will return a success value, but the
   /// error will be reported via reportErrors.
-  Expected<SymbolMap> lookup(const VSOList &VSOs, const SymbolNameSet &Symbols,
+  Expected<SymbolMap> lookup(const JITDylibList &JDs,
+                             const SymbolNameSet &Symbols,
                              RegisterDependenciesFunction RegisterDependencies,
                              bool WaitUntilReady = true);
 
   /// Materialize the given unit.
-  void dispatchMaterialization(VSO &V,
+  void dispatchMaterialization(JITDylib &JD,
                                std::unique_ptr<MaterializationUnit> MU) {
-    DispatchMaterialization(V, std::move(MU));
+    DispatchMaterialization(JD, std::move(MU));
   }
 
 private:
@@ -467,8 +476,9 @@ private:
   }
 
   static void
-  materializeOnCurrentThread(VSO &V, std::unique_ptr<MaterializationUnit> MU) {
-    MU->doMaterialize(V);
+  materializeOnCurrentThread(JITDylib &JD,
+                             std::unique_ptr<MaterializationUnit> MU) {
+    MU->doMaterialize(JD);
   }
 
   void runOutstandingMUs();
@@ -483,7 +493,7 @@ private:
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.
   mutable std::recursive_mutex OutstandingMUsMutex;
-  std::vector<std::pair<VSO *, std::unique_ptr<MaterializationUnit>>>
+  std::vector<std::pair<JITDylib *, std::unique_ptr<MaterializationUnit>>>
       OutstandingMUs;
 };
 
@@ -493,7 +503,7 @@ private:
 /// makes a callback when all symbols are available.
 class AsynchronousSymbolQuery {
   friend class ExecutionSessionBase;
-  friend class VSO;
+  friend class JITDylib;
 
 public:
 
@@ -528,9 +538,9 @@ public:
   void handleFullyReady();
 
 private:
-  void addQueryDependence(VSO &V, SymbolStringPtr Name);
+  void addQueryDependence(JITDylib &JD, SymbolStringPtr Name);
 
-  void removeQueryDependence(VSO &V, const SymbolStringPtr &Name);
+  void removeQueryDependence(JITDylib &JD, const SymbolStringPtr &Name);
 
   bool canStillFail();
 
@@ -550,79 +560,82 @@ private:
 ///
 /// Represents a virtual shared object. Instances can not be copied or moved, so
 /// their addresses may be used as keys for resource management.
-/// VSO state changes must be made via an ExecutionSession to guarantee that
-/// they are synchronized with respect to other VSO operations.
-class VSO {
+/// JITDylib state changes must be made via an ExecutionSession to guarantee
+/// that they are synchronized with respect to other JITDylib operations.
+class JITDylib {
   friend class AsynchronousSymbolQuery;
   friend class ExecutionSession;
   friend class ExecutionSessionBase;
   friend class MaterializationResponsibility;
 public:
-  using FallbackDefinitionGeneratorFunction =
-      std::function<SymbolNameSet(VSO &Parent, const SymbolNameSet &Names)>;
+  using FallbackDefinitionGeneratorFunction = std::function<SymbolNameSet(
+      JITDylib &Parent, const SymbolNameSet &Names)>;
 
   using AsynchronousSymbolQuerySet =
       std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
 
-  VSO(const VSO &) = delete;
-  VSO &operator=(const VSO &) = delete;
-  VSO(VSO &&) = delete;
-  VSO &operator=(VSO &&) = delete;
+  JITDylib(const JITDylib &) = delete;
+  JITDylib &operator=(const JITDylib &) = delete;
+  JITDylib(JITDylib &&) = delete;
+  JITDylib &operator=(JITDylib &&) = delete;
 
-  /// Get the name for this VSO.
-  const std::string &getName() const { return VSOName; }
+  /// Get the name for this JITDylib.
+  const std::string &getName() const { return JITDylibName; }
 
-  /// Get a reference to the ExecutionSession for this VSO.
+  /// Get a reference to the ExecutionSession for this JITDylib.
   ExecutionSessionBase &getExecutionSession() const { return ES; }
 
   /// Set a fallback defenition generator. If set, lookup and lookupFlags will
   /// pass the unresolved symbols set to the fallback definition generator,
-  /// allowing it to add a new definition to the VSO.
+  /// allowing it to add a new definition to the JITDylib.
   void setFallbackDefinitionGenerator(
       FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator) {
     this->FallbackDefinitionGenerator = std::move(FallbackDefinitionGenerator);
   }
 
-  /// Set the search order to be used when fixing up definitions in VSO.
+  /// Set the search order to be used when fixing up definitions in JITDylib.
   /// This will replace the previous search order, and apply to any symbol
-  /// resolutions made for definitions in this VSO after the call to
+  /// resolutions made for definitions in this JITDylib after the call to
   /// setSearchOrder (even if the definition itself was added before the
   /// call).
   ///
-  /// If SearchThisVSOFirst is set, which by default it is, then this VSO will
-  /// add itself to the beginning of the SearchOrder (Clients should *not*
-  /// put this VSO in the list in this case, to avoid redundant lookups).
+  /// If SearchThisJITDylibFirst is set, which by default it is, then this
+  /// JITDylib will add itself to the beginning of the SearchOrder (Clients
+  /// should *not* put this JITDylib in the list in this case, to avoid
+  /// redundant lookups).
   ///
-  /// If SearchThisVSOFirst is false then the search order will be used as
+  /// If SearchThisJITDylibFirst is false then the search order will be used as
   /// given. The main motivation for this feature is to support deliberate
-  /// shadowing of symbols in this VSO by a facade VSO. For example, the
-  /// facade may resolve function names to stubs, and the stubs may compile
+  /// shadowing of symbols in this JITDylib by a facade JITDylib. For example,
+  /// the facade may resolve function names to stubs, and the stubs may compile
   /// lazily by looking up symbols in this dylib. Adding the facade dylib
   /// as the first in the search order (instead of this dylib) ensures that
   /// definitions within this dylib resolve to the lazy-compiling stubs,
   /// rather than immediately materializing the definitions in this dylib.
-  void setSearchOrder(VSOList NewSearchOrder, bool SearchThisVSOFirst = true);
+  void setSearchOrder(JITDylibList NewSearchOrder,
+                      bool SearchThisJITDylibFirst = true);
 
-  /// Add the given VSO to the search order for definitions in this VSO.
-  void addToSearchOrder(VSO &V);
+  /// Add the given JITDylib to the search order for definitions in this
+  /// JITDylib.
+  void addToSearchOrder(JITDylib &JD);
 
-  /// Replace OldV with NewV in the search order if OldV is present. Otherwise
-  /// this operation is a no-op.
-  void replaceInSearchOrder(VSO &OldV, VSO &NewV);
+  /// Replace OldJD with NewJD in the search order if OldJD is present.
+  /// Otherwise this operation is a no-op.
+  void replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD);
 
-  /// Remove the given VSO from the search order for this VSO if it is
+  /// Remove the given JITDylib from the search order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
-  void removeFromSearchOrder(VSO &V);
+  void removeFromSearchOrder(JITDylib &JD);
 
   /// Do something with the search order (run under the session lock).
   template <typename Func>
   auto withSearchOrderDo(Func &&F)
-      -> decltype(F(std::declval<const VSOList &>())) {
+      -> decltype(F(std::declval<const JITDylibList &>())) {
     return ES.runSessionLocked([&]() { return F(SearchOrder); });
   }
 
   /// Define all symbols provided by the materialization unit to be part
-  ///        of the given VSO.
+  ///        of the given JITDylib.
   template <typename UniquePtrToMaterializationUnit>
   typename std::enable_if<
       std::is_convertible<
@@ -645,15 +658,15 @@ public:
     });
   }
 
-  /// Search the given VSO for the symbols in Symbols. If found, store
+  /// Search the given JITDylib for the symbols in Symbols. If found, store
   ///        the flags for each symbol in Flags. Returns any unresolved symbols.
   SymbolFlagsMap lookupFlags(const SymbolNameSet &Names);
 
-  /// Dump current VSO state to OS.
+  /// Dump current JITDylib state to OS.
   void dump(raw_ostream &OS);
 
   /// FIXME: Remove this when we remove the old ORC layers.
-  /// Search the given VSOs in order for the symbols in Symbols. Results
+  /// Search the given JITDylibs in order for the symbols in Symbols. Results
   ///        (once they become available) will be returned via the given Query.
   ///
   /// If any symbol is not found then the unresolved symbols will be returned,
@@ -680,8 +693,8 @@ private:
   struct MaterializingInfo {
     AsynchronousSymbolQueryList PendingQueries;
     SymbolDependenceMap Dependants;
-    SymbolDependenceMap UnfinalizedDependencies;
-    bool IsFinalized = false;
+    SymbolDependenceMap UnemittedDependencies;
+    bool IsEmitted = false;
   };
 
   using MaterializingInfosMap = std::map<SymbolStringPtr, MaterializingInfo>;
@@ -693,7 +706,7 @@ private:
     LLVM_MARK_AS_BITMASK_ENUM(NotifyFullyReady)
   };
 
-  VSO(ExecutionSessionBase &ES, std::string Name);
+  JITDylib(ExecutionSessionBase &ES, std::string Name);
 
   Error defineImpl(MaterializationUnit &MU);
 
@@ -714,9 +727,9 @@ private:
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
 
-  void transferFinalizedNodeDependencies(MaterializingInfo &DependantMI,
-                                         const SymbolStringPtr &DependantName,
-                                         MaterializingInfo &FinalizedMI);
+  void transferEmittedNodeDependencies(MaterializingInfo &DependantMI,
+                                       const SymbolStringPtr &DependantName,
+                                       MaterializingInfo &EmittedMI);
 
   Error defineMaterializing(const SymbolFlagsMap &SymbolFlags);
 
@@ -729,17 +742,17 @@ private:
 
   void resolve(const SymbolMap &Resolved);
 
-  void finalize(const SymbolFlagsMap &Finalized);
+  void emit(const SymbolFlagsMap &Emitted);
 
   void notifyFailed(const SymbolNameSet &FailedSymbols);
 
   ExecutionSessionBase &ES;
-  std::string VSOName;
+  std::string JITDylibName;
   SymbolMap Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
   FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
-  VSOList SearchOrder;
+  JITDylibList SearchOrder;
 };
 
 /// An ExecutionSession represents a running JIT program.
@@ -747,8 +760,8 @@ class ExecutionSession : public ExecutionSessionBase {
 public:
   using ErrorReporter = std::function<void(Error)>;
 
-  using DispatchMaterializationFunction =
-      std::function<void(VSO &V, std::unique_ptr<MaterializationUnit> MU)>;
+  using DispatchMaterializationFunction = std::function<void(
+      JITDylib &JD, std::unique_ptr<MaterializationUnit> MU)>;
 
   /// Construct an ExecutionEngine.
   ///
@@ -756,21 +769,22 @@ public:
   ExecutionSession(std::shared_ptr<SymbolStringPool> SSP = nullptr)
       : ExecutionSessionBase(std::move(SSP)) {}
 
-  /// Add a new VSO to this ExecutionSession.
-  VSO &createVSO(std::string Name);
+  /// Add a new JITDylib to this ExecutionSession.
+  JITDylib &createJITDylib(std::string Name);
 
 private:
-  std::vector<std::unique_ptr<VSO>> VSOs;
+  std::vector<std::unique_ptr<JITDylib>> JDs;
 };
 
-/// Look up the given names in the given VSOs.
-/// VSOs will be searched in order and no VSO pointer may be null.
-/// All symbols must be found within the given VSOs or an error
+/// Look up the given names in the given JITDylibs.
+/// JDs will be searched in order and no JITDylib pointer may be null.
+/// All symbols must be found within the given JITDylibs or an error
 /// will be returned.
-Expected<SymbolMap> lookup(const VSOList &VSOs, SymbolNameSet Names);
+Expected<SymbolMap> lookup(const JITDylibList &JDs, SymbolNameSet Names);
 
-/// Look up a symbol by searching a list of VSOs.
-Expected<JITEvaluatedSymbol> lookup(const VSOList &VSOs, SymbolStringPtr Name);
+/// Look up a symbol by searching a list of JITDylibs.
+Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs,
+                                    SymbolStringPtr Name);
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.

@@ -12,4 +12,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(GlobalISelTests
         LegalizerInfoTest.cpp
         PatternMatchTest.cpp
+        LegalizerHelperTest.cpp
         )

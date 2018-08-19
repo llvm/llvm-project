@@ -409,6 +409,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   addSourceLine(Die, SP->getLine(), SP->getFile());
 }
 
+void DwarfUnit::addSourceLine(DIE &Die, const DILabel *L) {
+  assert(L);
+
+  addSourceLine(Die, L->getLine(), L->getFile());
+}
+
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
   assert(Ty);
 

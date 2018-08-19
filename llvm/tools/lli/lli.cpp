@@ -781,13 +781,13 @@ int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
       }
       return Dump(std::move(M));
     });
-  J->getMainVSO().setFallbackDefinitionGenerator(
+  J->getMainJITDylib().setFallbackDefinitionGenerator(
       orc::DynamicLibraryFallbackGenerator(
           std::move(LibLLI), DL, [](orc::SymbolStringPtr) { return true; }));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
   orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;
-  ExitOnErr(CXXRuntimeOverrides.enable(J->getMainVSO(), Mangle));
+  ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
 
   for (auto &M : Ms) {
     orc::makeAllSymbolsExternallyAccessible(*M);
