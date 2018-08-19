@@ -272,3 +272,29 @@ define <4 x i16> @test_x86_sse2_psubus_w_64(<4 x i16> %a0, <4 x i16> %a1) {
   ret <4 x i16> %sub
 }
 
+; This test has a normal add and a saturating add.
+; FIXME: This should be an addw and a addusw, but a bad canonicalization makes this not work.
+define <8 x i16> @add_addusw(<8 x i16> %x, <8 x i16> %y, <8 x i16> %z) {
+; SSE-LABEL: add_addusw:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    paddw %xmm2, %xmm1 ## encoding: [0x66,0x0f,0xfd,0xca]
+; SSE-NEXT:    paddusw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xdd,0xc1]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: add_addusw:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpaddw %xmm2, %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0xfd,0xca]
+; AVX2-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdd,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: add_addusw:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfd,0xca]
+; SKX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdd,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
+  %a = add <8 x i16> %y, %z
+  %b = add <8 x i16> %x, %a
+  %c = icmp ugt <8 x i16> %a, %b
+  %res = select <8 x i1> %c, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
+  ret <8 x i16> %res
+}

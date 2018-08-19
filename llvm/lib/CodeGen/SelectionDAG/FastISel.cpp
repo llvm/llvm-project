@@ -1426,6 +1426,18 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     }
     return true;
   }
+  case Intrinsic::dbg_label: {
+    const DbgLabelInst *DI = cast<DbgLabelInst>(II);
+    assert(DI->getLabel() && "Missing label");
+    if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      return true;
+    }
+
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::DBG_LABEL)).addMetadata(DI->getLabel());
+    return true;
+  }
   case Intrinsic::objectsize: {
     ConstantInt *CI = cast<ConstantInt>(II->getArgOperand(1));
     unsigned long long Res = CI->isZero() ? -1ULL : 0;
