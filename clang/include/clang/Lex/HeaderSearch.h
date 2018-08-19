@@ -55,7 +55,7 @@ struct HeaderFileInfo {
   /// True if this is a \#pragma once file.
   unsigned isPragmaOnce : 1;
 
-  /// DirInfo - Keep track of whether this is a system header, and if so,
+  /// Keep track of whether this is a system header, and if so,
   /// whether it is C++ clean or not.  This can be set by the include paths or
   /// by \#pragma gcc system_header.  This is an instance of
   /// SrcMgr::CharacteristicKind.
@@ -219,14 +219,14 @@ class HeaderSearch {
   /// name like "Carbon" to the Carbon.framework directory.
   llvm::StringMap<FrameworkCacheEntry, llvm::BumpPtrAllocator> FrameworkMap;
 
-  /// IncludeAliases - maps include file names (including the quotes or
+  /// Maps include file names (including the quotes or
   /// angle brackets) to other include file names.  This is used to support the
   /// include_alias pragma for Microsoft compatibility.
   using IncludeAliasMap =
       llvm::StringMap<std::string, llvm::BumpPtrAllocator>;
   std::unique_ptr<IncludeAliasMap> IncludeAliases;
 
-  /// HeaderMaps - This is a mapping from FileEntry -> HeaderMap, uniquing
+  /// This is a mapping from FileEntry -> HeaderMap, uniquing
   /// headermaps.  This vector owns the headermap.
   std::vector<std::pair<const FileEntry *, const HeaderMap *>> HeaderMaps;
 
@@ -314,7 +314,7 @@ public:
     (*IncludeAliases)[Source] = Dest;
   }
 
-  /// MapHeaderToIncludeAlias - Maps one header file name to a different header
+  /// Maps one header file name to a different header
   /// file name, for use with the include_alias pragma.  Note that the source
   /// file name should include the angle brackets or quotes.  Returns StringRef
   /// as null if the header cannot be mapped.
@@ -408,7 +408,7 @@ public:
   /// HIToolbox is a subframework within Carbon.framework.  If so, return
   /// the FileEntry for the designated file, otherwise return null.
   const FileEntry *LookupSubframeworkHeader(
-      StringRef Filename, const FileEntry *RelativeFileEnt,
+      StringRef Filename, const FileEntry *ContextFileEnt,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule);
 
@@ -425,7 +425,7 @@ public:
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
                               bool isImport, bool ModulesEnabled,
-                              Module *CorrespondingModule);
+                              Module *M);
 
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -448,9 +448,9 @@ public:
   }
 
   /// Mark the specified file as part of a module.
-  void MarkFileModuleHeader(const FileEntry *File,
+  void MarkFileModuleHeader(const FileEntry *FE,
                             ModuleMap::ModuleHeaderRole Role,
-                            bool IsCompiledModuleHeader);
+                            bool isCompilingModuleHeader);
 
   /// Increment the count for the number of times the specified
   /// FileEntry has been entered.
@@ -479,7 +479,7 @@ public:
   /// This routine does not consider the effect of \#import
   bool isFileMultipleIncludeGuarded(const FileEntry *File);
 
-  /// CreateHeaderMap - This method returns a HeaderMap for the specified
+  /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
 
@@ -641,7 +641,7 @@ private:
   /// \return \c true if the file can be used, \c false if we are not permitted to
   ///         find this file due to requirements from \p RequestingModule.
   bool findUsableModuleForFrameworkHeader(
-      const FileEntry *File, StringRef FrameworkDir, Module *RequestingModule,
+      const FileEntry *File, StringRef FrameworkName, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule, bool IsSystemFramework);
 
   /// Look up the file with the specified name and determine its owning
