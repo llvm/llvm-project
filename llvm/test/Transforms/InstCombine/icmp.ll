@@ -99,6 +99,17 @@ define i1 @test7(i32 %x) {
   ret i1 %b
 }
 
+define <2 x i1> @test7_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test7_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[B:%.*]] = icmp ult <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %a = add <2 x i32> %x, <i32 -1, i32 -1>
+  %b = icmp ult <2 x i32> %a, %x
+  ret <2 x i1> %b
+}
+
 define i1 @test8(i32 %x) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    ret i1 false
@@ -106,6 +117,15 @@ define i1 @test8(i32 %x) {
   %a = add i32 %x, -1
   %b = icmp eq i32 %a, %x
   ret i1 %b
+}
+
+define <2 x i1> @test8_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test8_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %a = add <2 x i32> %x, <i32 -1, i32 -1>
+  %b = icmp eq <2 x i32> %a, %x
+  ret <2 x i1> %b
 }
 
 define i1 @test9(i32 %x) {
@@ -118,6 +138,17 @@ define i1 @test9(i32 %x) {
   ret i1 %b
 }
 
+define <2 x i1> @test9_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test9_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[B:%.*]] = icmp ult <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %a = add <2 x i32> %x, <i32 -2, i32 -2>
+  %b = icmp ugt <2 x i32> %x, %a
+  ret <2 x i1> %b
+}
+
 define i1 @test10(i32 %x) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 %x, -2147483648
@@ -128,6 +159,17 @@ define i1 @test10(i32 %x) {
   ret i1 %b
 }
 
+define <2 x i1> @test10_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test10_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[B:%.*]] = icmp slt <2 x i32> [[A]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %a = add <2 x i32> %x, <i32 -1, i32 -1>
+  %b = icmp slt <2 x i32> %a, %x
+  ret <2 x i1> %b
+}
+
 define i1 @test11(i32 %x) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    ret i1 true
@@ -135,6 +177,15 @@ define i1 @test11(i32 %x) {
   %a = add nsw i32 %x, 8
   %b = icmp slt i32 %x, %a
   ret i1 %b
+}
+
+define <2 x i1> @test11_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test11_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %a = add nsw <2 x i32> %x, <i32 8, i32 8>
+  %b = icmp slt <2 x i32> %x, %a
+  ret <2 x i1> %b
 }
 
 ; PR6195

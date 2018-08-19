@@ -299,6 +299,7 @@ func (d *DIBuilder) CreateBasicType(t DIBasicType) Metadata {
 		C.size_t(len(t.Name)),
 		C.uint64_t(t.SizeInBits),
 		C.unsigned(t.Encoding),
+		C.LLVMDIFlags(0),
 	)
 	return Metadata{C: result}
 }
