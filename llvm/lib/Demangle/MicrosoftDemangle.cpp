@@ -397,11 +397,6 @@ enum class SymbolCategory {
 
 namespace {
 
-struct NameResolver {
-  virtual ~NameResolver() = default;
-  virtual StringView resolve(StringView S) = 0;
-};
-
 struct Type;
 struct Name;
 
@@ -448,15 +443,15 @@ struct Type {
   // Write the "first half" of a given type.  This is a static functions to
   // give the code a chance to do processing that is common to a subset of
   // subclasses
-  static void outputPre(OutputStream &OS, Type &Ty, NameResolver &Resolver);
+  static void outputPre(OutputStream &OS, Type &Ty);
 
   // Write the "second half" of a given type.  This is a static functions to
   // give the code a chance to do processing that is common to a subset of
   // subclasses
-  static void outputPost(OutputStream &OS, Type &Ty, NameResolver &Resolver);
+  static void outputPost(OutputStream &OS, Type &Ty);
 
-  virtual void outputPre(OutputStream &OS, NameResolver &Resolver);
-  virtual void outputPost(OutputStream &OS, NameResolver &Resolver);
+  virtual void outputPre(OutputStream &OS);
+  virtual void outputPost(OutputStream &OS);
 
   // Primitive type such as Int.
   PrimTy Prim = PrimTy::Unknown;
@@ -528,8 +523,8 @@ struct VirtualMemberPtrThunk : public OperatorInfo {
 
 struct PointerType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
-  void outputPre(OutputStream &OS, NameResolver &Resolver) override;
-  void outputPost(OutputStream &OS, NameResolver &Resolver) override;
+  void outputPre(OutputStream &OS) override;
+  void outputPost(OutputStream &OS) override;
 
   PointerAffinity Affinity;
 
@@ -540,8 +535,8 @@ struct PointerType : public Type {
 
 struct MemberPointerType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
-  void outputPre(OutputStream &OS, NameResolver &Resolver) override;
-  void outputPost(OutputStream &OS, NameResolver &Resolver) override;
+  void outputPre(OutputStream &OS) override;
+  void outputPost(OutputStream &OS) override;
 
   Name *MemberName = nullptr;
 
@@ -559,8 +554,8 @@ struct FunctionType : public Type {
   };
 
   Type *clone(ArenaAllocator &Arena) const override;
-  void outputPre(OutputStream &OS, NameResolver &Resolver) override;
-  void outputPost(OutputStream &OS, NameResolver &Resolver) override;
+  void outputPre(OutputStream &OS) override;
+  void outputPost(OutputStream &OS) override;
 
   // True if this FunctionType instance is the Pointee of a PointerType or
   // MemberPointerType.
@@ -582,7 +577,7 @@ struct FunctionType : public Type {
 
 struct UdtType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
-  void outputPre(OutputStream &OS, NameResolver &Resolver) override;
+  void outputPre(OutputStream &OS) override;
 
   Name *UdtName = nullptr;
 };
@@ -594,8 +589,8 @@ struct ArrayDimension {
 
 struct ArrayType : public Type {
   Type *clone(ArenaAllocator &Arena) const override;
-  void outputPre(OutputStream &OS, NameResolver &Resolver) override;
-  void outputPost(OutputStream &OS, NameResolver &Resolver) override;
+  void outputPre(OutputStream &OS) override;
+  void outputPost(OutputStream &OS) override;
 
   // Either NextDimension or ElementType will be valid.
   ArrayDimension *Dims = nullptr;
@@ -737,8 +732,8 @@ static bool startsWithLocalScopePattern(StringView S) {
 }
 
 // Write a function or template parameter list.
-static void outputParameterList(OutputStream &OS, const FunctionParams &Params,
-                                NameResolver &Resolver) {
+static void outputParameterList(OutputStream &OS,
+                                const FunctionParams &Params) {
   if (!Params.Current) {
     OS << "void";
     return;
@@ -746,8 +741,8 @@ static void outputParameterList(OutputStream &OS, const FunctionParams &Params,
 
   const FunctionParams *Head = &Params;
   while (Head) {
-    Type::outputPre(OS, *Head->Current, Resolver);
-    Type::outputPost(OS, *Head->Current, Resolver);
+    Type::outputPre(OS, *Head->Current);
+    Type::outputPost(OS, *Head->Current);
 
     Head = Head->Next;
 
@@ -779,11 +774,10 @@ static void outputStringLiteral(OutputStream &OS, const StringLiteral &Str) {
   OS << "}";
 }
 
-static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
-                       NameResolver &Resolver);
+static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty);
 
-static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
-                                NameResolver &Resolver) {
+static void outputParameterList(OutputStream &OS,
+                                const TemplateParams &Params) {
   if (Params.IsEmptyParameterPack) {
     OS << "<>";
     return;
@@ -802,16 +796,16 @@ static void outputParameterList(OutputStream &OS, const TemplateParams &Params,
     } else if (Head->PointerToSymbol || Head->ReferenceToSymbol) {
       if (Head->PointerToSymbol)
         OS << "&";
-      Type::outputPre(OS, *Head->ParamType, Resolver);
-      outputName(OS, Head->ParamName, Head->ParamType, Resolver);
-      Type::outputPost(OS, *Head->ParamType, Resolver);
+      Type::outputPre(OS, *Head->ParamType);
+      outputName(OS, Head->ParamName, Head->ParamType);
+      Type::outputPost(OS, *Head->ParamType);
     } else if (Head->ParamType) {
       // simple type.
-      Type::outputPre(OS, *Head->ParamType, Resolver);
-      Type::outputPost(OS, *Head->ParamType, Resolver);
+      Type::outputPre(OS, *Head->ParamType);
+      Type::outputPost(OS, *Head->ParamType);
     } else {
       // Template alias.
-      outputName(OS, Head->ParamName, Head->ParamType, Resolver);
+      outputName(OS, Head->ParamName, Head->ParamType);
     }
 
     Head = Head->Next;
@@ -839,24 +833,14 @@ static void outputQualifiers(OutputStream &OS, Qualifiers Q) {
   }
 }
 
-static void outputNameComponent(OutputStream &OS, bool IsBackReference,
-                                const TemplateParams *TParams, StringView Str,
-                                NameResolver &Resolver) {
-  if (IsBackReference)
-    Str = Resolver.resolve(Str);
-  OS << Str;
+static void outputNameComponent(OutputStream &OS, const Name &N) {
+  OS << N.Str;
 
-  if (TParams)
-    outputParameterList(OS, *TParams, Resolver);
+  if (N.IsTemplateInstantiation && N.TParams)
+    outputParameterList(OS, *N.TParams);
 }
 
-static void outputNameComponent(OutputStream &OS, const Name &N,
-                                NameResolver &Resolver) {
-  outputNameComponent(OS, N.IsBackReference, N.TParams, N.Str, Resolver);
-}
-
-static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
-                       NameResolver &Resolver) {
+static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty) {
   if (!TheName)
     return;
 
@@ -866,13 +850,13 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
   // Print out namespaces or outer class BackReferences.
   for (; TheName->Next; TheName = TheName->Next) {
     Previous = TheName;
-    outputNameComponent(OS, *TheName, Resolver);
+    outputNameComponent(OS, *TheName);
     OS << "::";
   }
 
   // Print out a regular name.
   if (!TheName->IsOperator) {
-    outputNameComponent(OS, *TheName, Resolver);
+    outputNameComponent(OS, *TheName);
     return;
   }
 
@@ -884,24 +868,24 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
     OS << "~";
     LLVM_FALLTHROUGH;
   case OperatorTy::Ctor:
-    outputNameComponent(OS, *Previous, Resolver);
+    outputNameComponent(OS, *Previous);
     break;
   case OperatorTy::Conversion:
     OS << "operator";
     if (TheName->IsTemplateInstantiation && TheName->TParams)
-      outputParameterList(OS, *TheName->TParams, Resolver);
+      outputParameterList(OS, *TheName->TParams);
     OS << " ";
     if (Ty) {
       const FunctionType *FTy = static_cast<const FunctionType *>(Ty);
-      Type::outputPre(OS, *FTy->ReturnType, Resolver);
-      Type::outputPost(OS, *FTy->ReturnType, Resolver);
+      Type::outputPre(OS, *FTy->ReturnType);
+      Type::outputPost(OS, *FTy->ReturnType);
     } else {
       OS << "<conversion>";
     }
     break;
   case OperatorTy::LiteralOperator:
     OS << Operator.Info->Name;
-    outputNameComponent(OS, *TheName, Resolver);
+    outputNameComponent(OS, *TheName);
     break;
   case OperatorTy::RttiBaseClassDescriptor: {
     const RttiBaseClassDescriptor &BCD =
@@ -923,13 +907,12 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty,
   default:
     OS << Operator.Info->Name;
     if (Operator.IsTemplateInstantiation)
-      outputParameterList(OS, *Operator.TParams, Resolver);
+      outputParameterList(OS, *Operator.TParams);
     break;
   }
 }
 
-static void outputSpecialOperator(OutputStream &OS, const Name *OuterName,
-                                  NameResolver &Resolver) {
+static void outputSpecialOperator(OutputStream &OS, const Name *OuterName) {
   assert(OuterName);
   // The last component should be an operator.
   const Name *LastComponent = OuterName;
@@ -953,7 +936,7 @@ static void outputSpecialOperator(OutputStream &OS, const Name *OuterName,
     // Print out namespaces or outer class BackReferences.
     const Name *N = OuterName;
     for (; N->Next; N = N->Next) {
-      outputNameComponent(OS, *N, Resolver);
+      outputNameComponent(OS, *N);
       OS << "::";
     }
     OS << "`vcall'{";
@@ -980,12 +963,12 @@ Type *Type::clone(ArenaAllocator &Arena) const {
 }
 
 // Write the "first half" of a given type.
-void Type::outputPre(OutputStream &OS, Type &Ty, NameResolver &Resolver) {
+void Type::outputPre(OutputStream &OS, Type &Ty) {
   // Function types require custom handling of const and static so we
   // handle them separately.  All other types use the same decoration
   // for these modifiers, so handle them here in common code.
   if (Ty.Prim == PrimTy::Function) {
-    Ty.outputPre(OS, Resolver);
+    Ty.outputPre(OS);
     return;
   }
 
@@ -997,17 +980,15 @@ void Type::outputPre(OutputStream &OS, Type &Ty, NameResolver &Resolver) {
   default:
     break;
   }
-  Ty.outputPre(OS, Resolver);
+  Ty.outputPre(OS);
 
   outputQualifiers(OS, Ty.Quals);
 }
 
 // Write the "second half" of a given type.
-void Type::outputPost(OutputStream &OS, Type &Ty, NameResolver &Resolver) {
-  Ty.outputPost(OS, Resolver);
-}
+void Type::outputPost(OutputStream &OS, Type &Ty) { Ty.outputPost(OS); }
 
-void Type::outputPre(OutputStream &OS, NameResolver &Resolver) {
+void Type::outputPre(OutputStream &OS) {
   switch (Prim) {
   case PrimTy::Void:
     OS << "void";
@@ -1076,15 +1057,15 @@ void Type::outputPre(OutputStream &OS, NameResolver &Resolver) {
     assert(false && "Invalid primitive type!");
   }
 }
-void Type::outputPost(OutputStream &OS, NameResolver &Resolver) {}
+void Type::outputPost(OutputStream &OS) {}
 
 Type *PointerType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<PointerType>(*this);
 }
 
 static void outputPointerIndicator(OutputStream &OS, PointerAffinity Affinity,
-                                   const Name *MemberName, const Type *Pointee,
-                                   NameResolver &Resolver) {
+                                   const Name *MemberName,
+                                   const Type *Pointee) {
   // "[]" and "()" (for function parameters) take precedence over "*",
   // so "int *x(int)" means "x is a function returning int *". We need
   // parentheses to supercede the default precedence. (e.g. we want to
@@ -1100,7 +1081,7 @@ static void outputPointerIndicator(OutputStream &OS, PointerAffinity Affinity,
   }
 
   if (MemberName) {
-    outputName(OS, MemberName, Pointee, Resolver);
+    outputName(OS, MemberName, Pointee);
     OS << "::";
   }
 
@@ -1112,57 +1093,56 @@ static void outputPointerIndicator(OutputStream &OS, PointerAffinity Affinity,
     OS << "&&";
 }
 
-void PointerType::outputPre(OutputStream &OS, NameResolver &Resolver) {
-  Type::outputPre(OS, *Pointee, Resolver);
+void PointerType::outputPre(OutputStream &OS) {
+  Type::outputPre(OS, *Pointee);
 
   outputSpaceIfNecessary(OS);
 
   if (Quals & Q_Unaligned)
     OS << "__unaligned ";
 
-  outputPointerIndicator(OS, Affinity, nullptr, Pointee, Resolver);
+  outputPointerIndicator(OS, Affinity, nullptr, Pointee);
 
   // FIXME: We should output this, but it requires updating lots of tests.
   // if (Ty.Quals & Q_Pointer64)
   //  OS << " __ptr64";
 }
 
-void PointerType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+void PointerType::outputPost(OutputStream &OS) {
   if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
     OS << ")";
 
-  Type::outputPost(OS, *Pointee, Resolver);
+  Type::outputPost(OS, *Pointee);
 }
 
 Type *MemberPointerType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<MemberPointerType>(*this);
 }
 
-void MemberPointerType::outputPre(OutputStream &OS, NameResolver &Resolver) {
-  Type::outputPre(OS, *Pointee, Resolver);
+void MemberPointerType::outputPre(OutputStream &OS) {
+  Type::outputPre(OS, *Pointee);
 
   outputSpaceIfNecessary(OS);
 
-  outputPointerIndicator(OS, PointerAffinity::Pointer, MemberName, Pointee,
-                         Resolver);
+  outputPointerIndicator(OS, PointerAffinity::Pointer, MemberName, Pointee);
 
   // FIXME: We should output this, but it requires updating lots of tests.
   // if (Ty.Quals & Q_Pointer64)
   //  OS << " __ptr64";
 }
 
-void MemberPointerType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+void MemberPointerType::outputPost(OutputStream &OS) {
   if (Pointee->Prim == PrimTy::Function || Pointee->Prim == PrimTy::Array)
     OS << ")";
 
-  Type::outputPost(OS, *Pointee, Resolver);
+  Type::outputPost(OS, *Pointee);
 }
 
 Type *FunctionType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<FunctionType>(*this);
 }
 
-void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
+void FunctionType::outputPre(OutputStream &OS) {
   if ((FunctionClass & StaticThisAdjust) || (FunctionClass & VirtualThisAdjust))
     OS << "[thunk]: ";
 
@@ -1177,7 +1157,7 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     OS << "virtual ";
 
   if (ReturnType) {
-    Type::outputPre(OS, *ReturnType, Resolver);
+    Type::outputPre(OS, *ReturnType);
     OS << " ";
   }
 
@@ -1188,7 +1168,7 @@ void FunctionType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     outputCallingConvention(OS, CallConvention);
 }
 
-void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+void FunctionType::outputPost(OutputStream &OS) {
   // extern "C" functions don't have a prototype.
   if (FunctionClass & NoPrototype)
     return;
@@ -1207,7 +1187,7 @@ void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
   }
 
   OS << "(";
-  outputParameterList(OS, Params, Resolver);
+  outputParameterList(OS, Params);
   OS << ")";
   if (Quals & Q_Const)
     OS << " const";
@@ -1224,7 +1204,7 @@ void FunctionType::outputPost(OutputStream &OS, NameResolver &Resolver) {
     OS << " &&";
 
   if (ReturnType)
-    Type::outputPost(OS, *ReturnType, Resolver);
+    Type::outputPost(OS, *ReturnType);
   return;
 }
 
@@ -1232,7 +1212,7 @@ Type *UdtType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<UdtType>(*this);
 }
 
-void UdtType::outputPre(OutputStream &OS, NameResolver &Resolver) {
+void UdtType::outputPre(OutputStream &OS) {
   switch (Prim) {
   case PrimTy::Class:
     OS << "class ";
@@ -1250,18 +1230,18 @@ void UdtType::outputPre(OutputStream &OS, NameResolver &Resolver) {
     assert(false && "Not a udt type!");
   }
 
-  outputName(OS, UdtName, this, Resolver);
+  outputName(OS, UdtName, this);
 }
 
 Type *ArrayType::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<ArrayType>(*this);
 }
 
-void ArrayType::outputPre(OutputStream &OS, NameResolver &Resolver) {
-  Type::outputPre(OS, *ElementType, Resolver);
+void ArrayType::outputPre(OutputStream &OS) {
+  Type::outputPre(OS, *ElementType);
 }
 
-void ArrayType::outputPost(OutputStream &OS, NameResolver &Resolver) {
+void ArrayType::outputPost(OutputStream &OS) {
   ArrayDimension *D = Dims;
   while (D) {
     OS << "[";
@@ -1271,7 +1251,7 @@ void ArrayType::outputPost(OutputStream &OS, NameResolver &Resolver) {
     D = D->Next;
   }
 
-  Type::outputPost(OS, *ElementType, Resolver);
+  Type::outputPost(OS, *ElementType);
 }
 
 struct Symbol {
@@ -1301,7 +1281,7 @@ struct BackrefContext {
 // Demangler class takes the main role in demangling symbols.
 // It has a set of functions to parse mangled symbols into Type instances.
 // It also has a set of functions to cnovert Type instances to strings.
-class Demangler : public NameResolver {
+class Demangler {
 public:
   Demangler() = default;
   virtual ~Demangler() = default;
@@ -1312,8 +1292,6 @@ public:
   Symbol *parseOperator(StringView &MangledName);
 
   void output(const Symbol *S, OutputStream &OS);
-
-  StringView resolve(StringView N) override;
 
   // True if an error occurred.
   bool Error = false;
@@ -1639,10 +1617,16 @@ void Demangler::memorizeString(StringView S) {
 
 Name *Demangler::demangleBackRefName(StringView &MangledName) {
   assert(startsWithDigit(MangledName));
-  Name *Node = Arena.alloc<Name>();
-  Node->IsBackReference = true;
-  Node->Str = {MangledName.begin(), 1};
+
+  size_t I = MangledName[0] - '0';
+  if (I >= Backrefs.NamesCount) {
+    Error = true;
+    return nullptr;
+  }
+
   MangledName = MangledName.dropFront();
+  Name *Node = Arena.alloc<Name>();
+  Node->Str = Backrefs.Names[I];
   return Node;
 }
 
@@ -1654,7 +1638,7 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
   BackrefContext OuterContext;
   std::swap(OuterContext, Backrefs);
 
-  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_None);
+  Name *Node = demangleUnqualifiedSymbolName(MangledName, NBB_Simple);
   if (!Error)
     Node->TParams = demangleTemplateParameterList(MangledName);
 
@@ -1668,7 +1652,7 @@ Name *Demangler::demangleTemplateInstantiationName(StringView &MangledName,
     // Render this class template name into a string buffer so that we can
     // memorize it for the purpose of back-referencing.
     OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
-    outputName(OS, Node, nullptr, *this);
+    outputName(OS, Node, nullptr);
     OS << '\0';
     char *Name = OS.getBuffer();
 
@@ -2958,22 +2942,14 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
   return nullptr;
 }
 
-StringView Demangler::resolve(StringView N) {
-  assert(N.size() == 1 && isdigit(N[0]));
-  size_t Digit = N[0] - '0';
-  if (Digit >= Backrefs.NamesCount)
-    return N;
-  return Backrefs.Names[Digit];
-}
-
 void Demangler::output(const Symbol *S, OutputStream &OS) {
   if (S->Category == SymbolCategory::Unknown) {
-    outputName(OS, S->SymbolName, S->SymbolType, *this);
+    outputName(OS, S->SymbolName, S->SymbolType);
     return;
   }
 
   if (S->Category == SymbolCategory::SpecialOperator) {
-    outputSpecialOperator(OS, S->SymbolName, *this);
+    outputSpecialOperator(OS, S->SymbolName);
     return;
   }
 
@@ -2995,12 +2971,12 @@ void Demangler::output(const Symbol *S, OutputStream &OS) {
   // "second half". For example, outputPre() writes a return type for a
   // function and outputPost() writes an parameter list.
   if (S->SymbolType) {
-    Type::outputPre(OS, *S->SymbolType, *this);
-    outputName(OS, S->SymbolName, S->SymbolType, *this);
-    Type::outputPost(OS, *S->SymbolType, *this);
+    Type::outputPre(OS, *S->SymbolType);
+    outputName(OS, S->SymbolName, S->SymbolType);
+    Type::outputPost(OS, *S->SymbolType);
   } else {
     outputQualifiers(OS, S->SymbolQuals);
-    outputName(OS, S->SymbolName, nullptr, *this);
+    outputName(OS, S->SymbolName, nullptr);
   }
 }
 
@@ -3014,8 +2990,8 @@ void Demangler::dumpBackReferences() {
     OS.setCurrentPosition(0);
 
     Type *T = Backrefs.FunctionParams[I];
-    Type::outputPre(OS, *T, *this);
-    Type::outputPost(OS, *T, *this);
+    Type::outputPre(OS, *T);
+    Type::outputPost(OS, *T);
 
     std::printf("  [%d] - %.*s\n", (int)I, (int)OS.getCurrentPosition(),
                 OS.getBuffer());
