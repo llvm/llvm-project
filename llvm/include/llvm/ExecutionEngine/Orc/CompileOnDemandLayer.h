@@ -75,16 +75,16 @@ public:
                         IndirectStubsManagerBuilder BuildIndirectStubsManager,
                         GetAvailableContextFunction GetAvailableContext);
 
-  Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M) override;
+  Error add(JITDylib &V, VModuleKey K, std::unique_ptr<Module> M) override;
 
   void emit(MaterializationResponsibility R, VModuleKey K,
             std::unique_ptr<Module> M) override;
 
 private:
   using StubManagersMap =
-      std::map<const VSO *, std::unique_ptr<IndirectStubsManager>>;
+      std::map<const JITDylib *, std::unique_ptr<IndirectStubsManager>>;
 
-  IndirectStubsManager &getStubsManager(const VSO &V);
+  IndirectStubsManager &getStubsManager(const JITDylib &JD);
 
   void emitExtractedFunctionsModule(MaterializationResponsibility R,
                                     std::unique_ptr<Module> M);

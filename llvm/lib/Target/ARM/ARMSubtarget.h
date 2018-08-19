@@ -227,6 +227,9 @@ protected:
   /// HasFullFP16 - True if subtarget supports half-precision FP operations
   bool HasFullFP16 = false;
 
+  /// HasFP16FML - True if subtarget supports half-precision FP fml operations
+  bool HasFP16FML = false;
+
   /// HasD16 - True if subtarget is limited to 16 double precision
   /// FP registers for VFPv3.
   bool HasD16 = false;
@@ -622,6 +625,7 @@ public:
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }
   bool hasFullFP16() const { return HasFullFP16; }
+  bool hasFP16FML() const { return HasFP16FML; }
 
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }

@@ -44,17 +44,17 @@ public:
                          const RuntimeDyld::LoadedObjectInfo &)>;
 
   /// Functor for receiving finalization notifications.
-  using NotifyFinalizedFunction = std::function<void(VModuleKey)>;
+  using NotifyEmittedFunction = std::function<void(VModuleKey)>;
 
   using GetMemoryManagerFunction =
       std::function<std::shared_ptr<RuntimeDyld::MemoryManager>(VModuleKey)>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
-  ///        and NotifyFinalized functors.
+  ///        and NotifyEmitted functors.
   RTDyldObjectLinkingLayer2(
       ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager,
       NotifyLoadedFunction NotifyLoaded = NotifyLoadedFunction(),
-      NotifyFinalizedFunction NotifyFinalized = NotifyFinalizedFunction());
+      NotifyEmittedFunction NotifyEmitted = NotifyEmittedFunction());
 
   /// Emit the object.
   void emit(MaterializationResponsibility R, VModuleKey K,
@@ -79,7 +79,7 @@ private:
   mutable std::mutex RTDyldLayerMutex;
   GetMemoryManagerFunction GetMemoryManager;
   NotifyLoadedFunction NotifyLoaded;
-  NotifyFinalizedFunction NotifyFinalized;
+  NotifyEmittedFunction NotifyEmitted;
   bool ProcessAllSections;
   std::map<VModuleKey, RuntimeDyld *> ActiveRTDylds;
   std::map<VModuleKey, std::shared_ptr<RuntimeDyld::MemoryManager>> MemMgrs;

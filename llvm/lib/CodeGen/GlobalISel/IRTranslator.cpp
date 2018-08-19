@@ -769,6 +769,17 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                      DI.getVariable(), DI.getExpression());
     return true;
   }
+  case Intrinsic::dbg_label: {
+    const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
+    assert(DI.getLabel() && "Missing label");
+
+    assert(DI.getLabel()->isValidLocationForIntrinsic(
+               MIRBuilder.getDebugLoc()) &&
+           "Expected inlined-at fields to agree");
+
+    MIRBuilder.buildDbgLabel(DI.getLabel());
+    return true;
+  }
   case Intrinsic::vaend:
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!
@@ -847,16 +858,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   case Intrinsic::fabs:
     MIRBuilder.buildInstr(TargetOpcode::G_FABS)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::trunc:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::round:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND)
         .addDef(getOrCreateVReg(CI))
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;

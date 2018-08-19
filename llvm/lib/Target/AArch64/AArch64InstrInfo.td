@@ -49,6 +49,8 @@ def HasRDM           : Predicate<"Subtarget->hasRDM()">,
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
+def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
+                                 AssemblerPredicate<"FeatureFP16FML", "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
                                  AssemblerPredicate<"FeatureSPE", "spe">;
 def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
@@ -3298,6 +3300,24 @@ defm SQRDMLAH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10000,"sqrdmlah",
                                                   int_aarch64_neon_sqadd>;
 defm SQRDMLSH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10001,"sqrdmlsh",
                                                     int_aarch64_neon_sqsub>;
+
+// FP16FML
+def FMLAL_2S   : BaseSIMDThreeSameMult<0, 0, 1, 0b001, "fmlal", ".2s", ".2h">;
+def FMLSL_2S   : BaseSIMDThreeSameMult<0, 0, 1, 0b101, "fmlsl", ".2s", ".2h">;
+def FMLAL_4S   : BaseSIMDThreeSameMult<1, 0, 1, 0b001, "fmlal", ".4s", ".4h">;
+def FMLSL_4S   : BaseSIMDThreeSameMult<1, 0, 1, 0b101, "fmlsl", ".4s", ".4h">;
+def FMLAL2_2S  : BaseSIMDThreeSameMult<0, 1, 0, 0b001, "fmlal2", ".2s", ".2h">;
+def FMLSL2_2S  : BaseSIMDThreeSameMult<0, 1, 0, 0b101, "fmlsl2", ".2s", ".2h">;
+def FMLAL2_4S  : BaseSIMDThreeSameMult<1, 1, 0, 0b001, "fmlal2", ".4s", ".4h">;
+def FMLSL2_4S  : BaseSIMDThreeSameMult<1, 1, 0, 0b101, "fmlsl2", ".4s", ".4h">;
+def FMLALI_2s  : BaseSIMDThreeSameMultIndex<0, 0, 0b0000, "fmlal", ".2s", ".2h", ".h">;
+def FMLSLI_2s  : BaseSIMDThreeSameMultIndex<0, 0, 0b0100, "fmlsl", ".2s", ".2h", ".h">;
+def FMLALI_4s  : BaseSIMDThreeSameMultIndex<1, 0, 0b0000, "fmlal", ".4s", ".4h", ".h">;
+def FMLSLI_4s  : BaseSIMDThreeSameMultIndex<1, 0, 0b0100, "fmlsl", ".4s", ".4h", ".h">;
+def FMLALI2_2s : BaseSIMDThreeSameMultIndex<0, 1, 0b1000, "fmlal2", ".2s", ".2h", ".h">;
+def FMLSLI2_2s : BaseSIMDThreeSameMultIndex<0, 1, 0b1100, "fmlsl2", ".2s", ".2h", ".h">;
+def FMLALI2_4s : BaseSIMDThreeSameMultIndex<1, 1, 0b1000, "fmlal2", ".4s", ".4h", ".h">;
+def FMLSLI2_4s : BaseSIMDThreeSameMultIndex<1, 1, 0b1100, "fmlsl2", ".4s", ".4h", ".h">;
 
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",

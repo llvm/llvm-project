@@ -171,7 +171,7 @@ private:
 
 class CtorDtorRunner2 {
 public:
-  CtorDtorRunner2(VSO &V) : V(V) {}
+  CtorDtorRunner2(JITDylib &JD) : JD(JD) {}
   void add(iterator_range<CtorDtorIterator> CtorDtors);
   Error run();
 
@@ -179,7 +179,7 @@ private:
   using CtorDtorList = std::vector<SymbolStringPtr>;
   using CtorDtorPriorityMap = std::map<unsigned, CtorDtorList>;
 
-  VSO &V;
+  JITDylib &JD;
   CtorDtorPriorityMap CtorDtorsByPriority;
 };
 
@@ -244,20 +244,20 @@ private:
 
 class LocalCXXRuntimeOverrides2 : public LocalCXXRuntimeOverridesBase {
 public:
-  Error enable(VSO &V, MangleAndInterner &Mangler);
+  Error enable(JITDylib &JD, MangleAndInterner &Mangler);
 };
 
 /// A utility class to expose symbols found via dlsym to the JIT.
 ///
-/// If an instance of this class is attached to a VSO as a fallback definition
-/// generator, then any symbol found in the given DynamicLibrary that passes
-/// the 'Allow' predicate will be added to the VSO.
+/// If an instance of this class is attached to a JITDylib as a fallback
+/// definition generator, then any symbol found in the given DynamicLibrary that
+/// passes the 'Allow' predicate will be added to the JITDylib.
 class DynamicLibraryFallbackGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
   DynamicLibraryFallbackGenerator(sys::DynamicLibrary Dylib,
                                   const DataLayout &DL, SymbolPredicate Allow);
-  SymbolNameSet operator()(VSO &V, const SymbolNameSet &Names);
+  SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
   sys::DynamicLibrary Dylib;

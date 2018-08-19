@@ -64,6 +64,15 @@ public:
 
 enum ElfType { ELFT_ELF32LE, ELFT_ELF64LE, ELFT_ELF32BE, ELFT_ELF64BE };
 
+// This type keeps track of the machine info for various architectures. This
+// lets us map architecture names to ELF types and the e_machine value of the
+// ELF file.
+struct MachineInfo {
+  uint16_t EMachine;
+  bool Is64Bit;
+  bool IsLittleEndian;
+};
+
 class SectionVisitor {
 public:
   virtual ~SectionVisitor();
@@ -195,6 +204,8 @@ private:
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Phdr = typename ELFT::Phdr;
   using Elf_Ehdr = typename ELFT::Ehdr;
+
+  void initEhdrSegment();
 
   void writeEhdr();
   void writePhdr(const Segment &Seg);
@@ -440,9 +451,11 @@ protected:
   using SymPtr = std::unique_ptr<Symbol>;
 
 public:
-  void addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
-                 SectionBase *DefinedIn, uint64_t Value, uint8_t Visibility,
-                 uint16_t Shndx, uint64_t Sz);
+  SymbolTableSection() { Type = ELF::SHT_SYMTAB; }
+
+  void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
+                 uint64_t Value, uint8_t Visibility, uint16_t Shndx,
+                 uint64_t Size);
   void prepareForLayout();
   // An 'empty' symbol table still contains a null symbol.
   bool empty() const { return Symbols.size() == 1; }
@@ -626,11 +639,31 @@ using object::ELFFile;
 using object::ELFObjectFile;
 using object::OwningBinary;
 
+template <class ELFT> class BinaryELFBuilder {
+  using Elf_Sym = typename ELFT::Sym;
+
+  uint16_t EMachine;
+  MemoryBuffer *MemBuf;
+  std::unique_ptr<Object> Obj;
+
+  void initFileHeader();
+  void initHeaderSegment();
+  StringTableSection *addStrTab();
+  SymbolTableSection *addSymTab(StringTableSection *StrTab);
+  void addData(SymbolTableSection *SymTab);
+  void initSections();
+
+public:
+  BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB)
+      : EMachine(EM), MemBuf(MB), Obj(llvm::make_unique<Object>()) {}
+
+  std::unique_ptr<Object> build();
+};
+
 template <class ELFT> class ELFBuilder {
 private:
   using Elf_Addr = typename ELFT::Addr;
   using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Ehdr = typename ELFT::Ehdr;
   using Elf_Word = typename ELFT::Word;
 
   const ELFFile<ELFT> &ElfFile;
@@ -650,11 +683,20 @@ public:
   void build();
 };
 
+class BinaryReader : public Reader {
+  const MachineInfo &MInfo;
+  MemoryBuffer *MemBuf;
+
+public:
+  BinaryReader(const MachineInfo &MI, MemoryBuffer *MB)
+      : MInfo(MI), MemBuf(MB) {}
+  std::unique_ptr<Object> create() const override;
+};
+
 class ELFReader : public Reader {
   Binary *Bin;
 
 public:
-  ElfType getElfType() const;
   std::unique_ptr<Object> create() const override;
   explicit ELFReader(Binary *B) : Bin(B) {}
 };
@@ -685,7 +727,6 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
-  uint8_t Ident[16];
   uint64_t Entry;
   uint64_t SHOffset;
   uint32_t Type;
@@ -711,6 +752,7 @@ public:
     auto Sec = llvm::make_unique<T>(std::forward<Ts>(Args)...);
     auto Ptr = Sec.get();
     Sections.emplace_back(std::move(Sec));
+    Ptr->Index = Sections.size();
     return *Ptr;
   }
   Segment &addSegment(ArrayRef<uint8_t> Data) {

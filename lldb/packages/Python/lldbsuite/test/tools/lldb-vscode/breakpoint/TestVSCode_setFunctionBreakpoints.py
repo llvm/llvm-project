@@ -20,6 +20,7 @@ class TestVSCode_setFunctionBreakpoints(
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_set_and_clear(self):
         '''Tests setting and clearing function breakpoints.
@@ -111,6 +112,7 @@ class TestVSCode_setFunctionBreakpoints(
                             "expect %u source breakpoints" % (len(functions)))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single

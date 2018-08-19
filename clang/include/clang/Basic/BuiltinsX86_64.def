@@ -31,6 +31,8 @@ TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nch",   "intrin.h", ALL_MS
 TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nch",   "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftleft128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftright128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")

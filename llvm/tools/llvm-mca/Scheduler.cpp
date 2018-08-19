@@ -258,27 +258,28 @@ void Scheduler::dump() const {
 #endif
 
 bool Scheduler::canBeDispatched(const InstRef &IR,
-                                HWStallEvent::GenericEventType &Event) const {
-  Event = HWStallEvent::Invalid;
+                                Scheduler::StallKind &Event) const {
+  Event = StallKind::NoStall;
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
+  // Give lower priority to these stall events.
+  if (Desc.MayStore && LSU->isSQFull())
+    Event = StallKind::StoreQueueFull;
   if (Desc.MayLoad && LSU->isLQFull())
-    Event = HWStallEvent::LoadQueueFull;
-  else if (Desc.MayStore && LSU->isSQFull())
-    Event = HWStallEvent::StoreQueueFull;
-  else {
-    switch (Resources->canBeDispatched(Desc.Buffers)) {
-    default:
-      return true;
-    case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
-      Event = HWStallEvent::SchedulerQueueFull;
-      break;
-    case ResourceStateEvent::RS_RESERVED:
-      Event = HWStallEvent::DispatchGroupStall;
-    }
+    Event = StallKind::LoadQueueFull;
+    
+  switch (Resources->canBeDispatched(Desc.Buffers)) {
+  case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
+    Event = StallKind::SchedulerQueueFull;
+    break;
+  case ResourceStateEvent::RS_RESERVED:
+    Event = StallKind::DispatchGroupStall;
+    break;
+  default:
+    break;
   }
 
-  return false;
+  return Event == StallKind::NoStall;
 }
 
 void Scheduler::issueInstructionImpl(
@@ -312,7 +313,7 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
   // ready queue if operands are all ready.
   unsigned RemovedElements = 0;
-  for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E; ) {
+  for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E;) {
     InstRef &IR = *I;
     if (!IR.isValid())
       break;
@@ -374,7 +375,7 @@ InstRef Scheduler::select() {
     return InstRef();
 
   // We found an instruction to issue.
-  
+
   InstRef IR = ReadySet[QueueIndex];
   std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
   ReadySet.pop_back();
@@ -391,7 +392,7 @@ void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   unsigned RemovedElements = 0;
-  for (auto I = IssuedSet.begin(), E = IssuedSet.end(); I != E; ) {
+  for (auto I = IssuedSet.begin(), E = IssuedSet.end(); I != E;) {
     InstRef &IR = *I;
     if (!IR.isValid())
       break;

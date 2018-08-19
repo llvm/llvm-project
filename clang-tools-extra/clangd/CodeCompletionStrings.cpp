@@ -51,44 +51,26 @@ std::string getDocComment(const ASTContext &Ctx,
   // get this declaration, so we don't show documentation in that case.
   if (Result.Kind != CodeCompletionResult::RK_Declaration)
     return "";
-  auto *Decl = Result.getDeclaration();
-  if (!Decl || llvm::isa<NamespaceDecl>(Decl)) {
+  return Result.getDeclaration() ? getDeclComment(Ctx, *Result.getDeclaration())
+                                 : "";
+}
+
+std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
+  if (llvm::isa<NamespaceDecl>(Decl)) {
     // Namespaces often have too many redecls for any particular redecl comment
     // to be useful. Moreover, we often confuse file headers or generated
     // comments with namespace comments. Therefore we choose to just ignore
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, Decl);
-  if (!RC)
-    return "";
-
-  // Sanity check that the comment does not come from the PCH. We choose to not
-  // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
-  return Doc;
-}
-
-std::string
-getParameterDocComment(const ASTContext &Ctx,
-                       const CodeCompleteConsumer::OverloadCandidate &Result,
-                       unsigned ArgIndex, bool CommentsFromHeaders) {
-  auto *Func = Result.getFunction();
-  if (!Func)
-    return "";
-  const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
+  const RawComment *RC = getCompletionComment(Ctx, &Decl);
   if (!RC)
     return "";
   // Sanity check that the comment does not come from the PCH. We choose to not
   // write them into PCH, because they are racy and slow to load.
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
   std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
-  return Doc;
+  return looksLikeDocComment(Doc) ? Doc : "";
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,

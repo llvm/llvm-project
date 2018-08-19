@@ -444,6 +444,16 @@ TEST(TargetParserTest, testARMExtension) {
                                 ARM::ArchKind::INVALID, "crypto"));
   EXPECT_FALSE(testARMExtension("cortex-a53",
                                 ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testARMExtension("cortex-a53",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testARMExtension("cortex-a55",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testARMExtension("cortex-a55",
+                                ARM::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testARMExtension("cortex-a75",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testARMExtension("cortex-a75",
+                                ARM::ArchKind::INVALID, "fp16fml"));
   EXPECT_FALSE(testARMExtension("cortex-r52",
                                 ARM::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testARMExtension("iwmmxt", ARM::ArchKind::INVALID, "crc"));
@@ -474,6 +484,12 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8A, "ras"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_1A, "ras"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "spe"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "fp16"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "fp16fml"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_3A, "fp16"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_3A, "fp16fml"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_4A, "fp16"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_4A, "fp16fml"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8R, "ras"));
   EXPECT_FALSE(testARMExtension("generic",
                                 ARM::ArchKind::ARMV8MBaseline, "crc"));
@@ -527,7 +543,8 @@ TEST(TargetParserTest, ARMExtensionFeatures) {
   std::vector<StringRef> Features;
   unsigned Extensions = ARM::AEK_CRC | ARM::AEK_CRYPTO | ARM::AEK_DSP |
                         ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_MP |
-                        ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS;
+                        ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS | ARM::AEK_FP16 |
+                        ARM::AEK_FP16FML;
 
   for (unsigned i = 0; i <= Extensions; i++)
     EXPECT_TRUE(i == 0 ? !ARM::getExtensionFeatures(i, Features)
@@ -555,6 +572,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"sec", "nosec", nullptr, nullptr},
                               {"virt", "novirt", nullptr, nullptr},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
+                              {"fp16fml", "nofp16fml", "+fp16fml", "-fp16fml"},
                               {"ras", "noras", "+ras", "-ras"},
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"os", "noos", nullptr, nullptr},
@@ -852,7 +870,15 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_TRUE(testAArch64Extension("saphira",
                                    AArch64::ArchKind::INVALID, "profile"));
   EXPECT_FALSE(testAArch64Extension("saphira",
-                                    AArch64::ArchKind::INVALID, "fullfp16"));
+                                    AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75",
+                                    AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a75",
+                                    AArch64::ArchKind::INVALID, "fp16fml"));
   EXPECT_FALSE(testAArch64Extension("thunderx2t99",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("thunderx",
@@ -870,6 +896,18 @@ TEST(TargetParserTest, testAArch64Extension) {
       "generic", AArch64::ArchKind::ARMV8_1A, "ras"));
   EXPECT_FALSE(testAArch64Extension(
       "generic", AArch64::ArchKind::ARMV8_2A, "spe"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_2A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_2A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_3A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_3A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_4A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension(
+      "generic", AArch64::ArchKind::ARMV8_4A, "fp16fml"));
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
@@ -879,7 +917,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
                         AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
                         AArch64::AEK_RAS | AArch64::AEK_LSE |
                         AArch64::AEK_RDM | AArch64::AEK_SVE |
-                        AArch64::AEK_DOTPROD | AArch64::AEK_RCPC;
+                        AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
+                        AArch64::AEK_FP16FML;
 
   for (unsigned i = 0; i <= Extensions; i++)
     EXPECT_TRUE(i == 0 ? !AArch64::getExtensionFeatures(i, Features)
@@ -906,6 +945,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"fp", "nofp", "+fp-armv8", "-fp-armv8"},
                               {"simd", "nosimd", "+neon", "-neon"},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
+                              {"fp16fml", "nofp16fml", "+fp16fml", "-fp16fml"},
                               {"profile", "noprofile", "+spe", "-spe"},
                               {"ras", "noras", "+ras", "-ras"},
                               {"lse", "nolse", "+lse", "-lse"},

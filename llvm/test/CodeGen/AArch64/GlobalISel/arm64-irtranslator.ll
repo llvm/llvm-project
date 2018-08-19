@@ -1408,26 +1408,6 @@ define float @test_fabs_intrin(float %a) {
   ret float %res
 }
 
-declare float @llvm.trunc.f32(float)
-define float @test_intrinsic_trunc(float %a) {
-; CHECK-LABEL: name: test_intrinsic_trunc
-; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[A]]
-; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.trunc.f32(float %a)
-  ret float %res
-}
-
-declare float @llvm.round.f32(float)
-define float @test_intrinsic_round(float %a) {
-; CHECK-LABEL: name: test_intrinsic_round
-; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_ROUND [[A]]
-; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.round.f32(float %a)
-  ret float %res
-}
-
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef

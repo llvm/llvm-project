@@ -16,8 +16,8 @@ namespace orc {
 IRLayer::IRLayer(ExecutionSession &ES) : ES(ES) {}
 IRLayer::~IRLayer() {}
 
-Error IRLayer::add(VSO &V, VModuleKey K, std::unique_ptr<Module> M) {
-  return V.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
+Error IRLayer::add(JITDylib &JD, VModuleKey K, std::unique_ptr<Module> M) {
+  return JD.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
       *this, std::move(K), std::move(M)));
 }
 
@@ -42,7 +42,7 @@ IRMaterializationUnit::IRMaterializationUnit(
     : MaterializationUnit(std::move(SymbolFlags)), M(std::move(M)),
       SymbolToDefinition(std::move(SymbolToDefinition)) {}
 
-void IRMaterializationUnit::discard(const VSO &V, SymbolStringPtr Name) {
+void IRMaterializationUnit::discard(const JITDylib &JD, SymbolStringPtr Name) {
   auto I = SymbolToDefinition.find(Name);
   assert(I != SymbolToDefinition.end() &&
          "Symbol not provided by this MU, or previously discarded");
@@ -66,12 +66,13 @@ ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 
 ObjectLayer::~ObjectLayer() {}
 
-Error ObjectLayer::add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O) {
+Error ObjectLayer::add(JITDylib &JD, VModuleKey K,
+                       std::unique_ptr<MemoryBuffer> O) {
   auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(K),
                                                            std::move(O));
   if (!ObjMU)
     return ObjMU.takeError();
-  return V.define(std::move(*ObjMU));
+  return JD.define(std::move(*ObjMU));
 }
 
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
@@ -99,7 +100,7 @@ void BasicObjectLayerMaterializationUnit::materialize(
   L.emit(std::move(R), std::move(K), std::move(O));
 }
 
-void BasicObjectLayerMaterializationUnit::discard(const VSO &V,
+void BasicObjectLayerMaterializationUnit::discard(const JITDylib &JD,
                                                   SymbolStringPtr Name) {
   // FIXME: Support object file level discard. This could be done by building a
   //        filter to pass to the object layer along with the object itself.

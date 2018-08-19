@@ -98,6 +98,73 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   return SimpleCst->isAllOnesValue();
 }
 
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
+                                             const BasicBlock *BB,
+                                             const DominatorTree *DT) const {
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+
+  // Fast path: header is always reached once the loop is entered.
+  if (BB == CurLoop->getHeader())
+    return true;
+
+  // Collect all transitive predecessors of BB in the same loop. This set will
+  // be a subset of the blocks within the loop.
+  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+  SmallVector<const BasicBlock *, 4> WorkList;
+  for (auto *Pred : predecessors(BB)) {
+    Predecessors.insert(Pred);
+    WorkList.push_back(Pred);
+  }
+  while (!WorkList.empty()) {
+    auto *Pred = WorkList.pop_back_val();
+    assert(CurLoop->contains(Pred) && "Should only reach loop blocks!");
+    // We are not interested in backedges and we don't want to leave loop.
+    if (Pred == CurLoop->getHeader())
+      continue;
+    // TODO: If BB lies in an inner loop of CurLoop, this will traverse over all
+    // blocks of this inner loop, even those that are always executed AFTER the
+    // BB. It may make our analysis more conservative than it could be, see test
+    // @nested and @nested_no_throw in test/Analysis/MustExecute/loop-header.ll.
+    // We can ignore backedge of all loops containing BB to get a sligtly more
+    // optimistic result.
+    for (auto *PredPred : predecessors(Pred))
+      if (Predecessors.insert(PredPred).second)
+        WorkList.push_back(PredPred);
+  }
+
+  // Make sure that all successors of all predecessors of BB are either:
+  // 1) BB,
+  // 2) Also predecessors of BB,
+  // 3) Exit blocks which are not taken on 1st iteration.
+  // Memoize blocks we've already checked.
+  SmallPtrSet<const BasicBlock *, 4> CheckedSuccessors;
+  for (auto *Pred : Predecessors)
+    for (auto *Succ : successors(Pred))
+      if (CheckedSuccessors.insert(Succ).second &&
+          Succ != BB && !Predecessors.count(Succ))
+        // By discharging conditions that are not executed on the 1st iteration,
+        // we guarantee that *at least* on the first iteration all paths from
+        // header that *may* execute will lead us to the block of interest. So
+        // that if we had virtually peeled one iteration away, in this peeled
+        // iteration the set of predecessors would contain only paths from
+        // header to BB without any exiting edges that may execute.
+        //
+        // TODO: We only do it for exiting edges currently. We could use the
+        // same function to skip some of the edges within the loop if we know
+        // that they will not be taken on the 1st iteration.
+        //
+        // TODO: If we somehow know the number of iterations in loop, the same
+        // check may be done for any arbitrary N-th iteration as long as N is
+        // not greater than minimum number of iterations in this loop.
+        if (CurLoop->contains(Succ) ||
+            !CanProveNotTakenFirstIteration(Succ, DT, CurLoop))
+          return false;
+
+  // All predecessors can only lead us to BB.
+  return true;
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
 bool llvm::isGuaranteedToExecute(const Instruction &Inst,
@@ -123,41 +190,11 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
   if (SafetyInfo->anyBlockMayThrow())
     return false;
 
-  // Note: There are two styles of reasoning intermixed below for
-  // implementation efficiency reasons.  They are:
-  // 1) If we can prove that the instruction dominates all exit blocks, then we
-  // know the instruction must have executed on *some* iteration before we
-  // exit.  We do not prove *which* iteration the instruction must execute on.
-  // 2) If we can prove that the instruction dominates the latch and all exits
-  // which might be taken on the first iteration, we know the instruction must
-  // execute on the first iteration.  This second style allows a conditional
-  // exit before the instruction of interest which is provably not taken on the
-  // first iteration.  This is a quite common case for range check like
-  // patterns.  TODO: support loops with multiple latches.
-
-  const bool InstDominatesLatch =
-    CurLoop->getLoopLatch() != nullptr &&
-    DT->dominates(Inst.getParent(), CurLoop->getLoopLatch());
-
-  // Get the exit blocks for the current loop.
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  CurLoop->getExitBlocks(ExitBlocks);
-
-  // Verify that the block dominates each of the exit blocks of the loop.
-  for (BasicBlock *ExitBlock : ExitBlocks)
-    if (!DT->dominates(Inst.getParent(), ExitBlock))
-      if (!InstDominatesLatch ||
-          !CanProveNotTakenFirstIteration(ExitBlock, DT, CurLoop))
-        return false;
-
-  // As a degenerate case, if the loop is statically infinite then we haven't
-  // proven anything since there are no exit blocks.
-  if (ExitBlocks.empty())
+  // If there is a path from header to exit or latch that doesn't lead to our
+  // instruction's block, return false.
+  if (!SafetyInfo->allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT))
     return false;
 
-  // FIXME: In general, we have to prove that the loop isn't an infinite loop.
-  // See http::llvm.org/PR24078 .  (The "ExitBlocks.empty()" check above is
-  // just a special case of this.)
   return true;
 }
 

@@ -30,7 +30,8 @@ int main() {
   void (^block4)() = ^{ printf("%c %#lx", ch, fourByte); NSLog(@"%@", strong); };
 
   // Test5
-  // CHECK: Inline block variable layout: 0x0100, BL_STRONG:1, BL_OPERATOR:0
+  // Nothing gets printed here since the descriptor of this block is merged with
+  // the descriptor of Test3's block.
   void (^block5)() = ^{ NSLog(@"%@", strong); printf("%c %#llx", ch, eightByte); };
 
   // Test6

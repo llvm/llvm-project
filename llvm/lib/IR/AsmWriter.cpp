@@ -2850,22 +2850,6 @@ static std::string getLinkageNameWithSpace(GlobalValue::LinkageTypes LT) {
   return getLinkageName(LT) + " ";
 }
 
-static const char *getHotnessName(CalleeInfo::HotnessType HT) {
-  switch (HT) {
-  case CalleeInfo::HotnessType::Unknown:
-    return "unknown";
-  case CalleeInfo::HotnessType::Cold:
-    return "cold";
-  case CalleeInfo::HotnessType::None:
-    return "none";
-  case CalleeInfo::HotnessType::Hot:
-    return "hot";
-  case CalleeInfo::HotnessType::Critical:
-    return "critical";
-  }
-  llvm_unreachable("invalid hotness");
-}
-
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
 

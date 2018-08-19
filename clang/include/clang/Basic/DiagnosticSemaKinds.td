@@ -867,8 +867,8 @@ def err_protocol_has_circular_dependency : Error<
   "protocol has circular dependency">;
 def err_undeclared_protocol : Error<"cannot find protocol declaration for %0">;
 def warn_undef_protocolref : Warning<"cannot find protocol definition for %0">;
-def warn_atprotocol_protocol : Warning<
-  "@protocol is using a forward protocol declaration of %0">, InGroup<AtProtocol>;
+def err_atprotocol_protocol : Error<
+  "@protocol is using a forward protocol declaration of %0">;
 def warn_readonly_property : Warning<
   "attribute 'readonly' of property %0 restricts attribute "
   "'readwrite' of property inherited from %1">,

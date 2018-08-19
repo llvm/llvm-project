@@ -202,7 +202,7 @@ private:
                                           std::move(ExtractedFunctionsModule));
   }
 
-  void discard(const VSO &V, SymbolStringPtr Name) override {
+  void discard(const JITDylib &V, SymbolStringPtr Name) override {
     // All original symbols were materialized by the CODLayer and should be
     // final. The function bodies provided by M should never be overridden.
     llvm_unreachable("Discard should never be called on an "
@@ -221,7 +221,7 @@ CompileOnDemandLayer2::CompileOnDemandLayer2(
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)),
       GetAvailableContext(std::move(GetAvailableContext)) {}
 
-Error CompileOnDemandLayer2::add(VSO &V, VModuleKey K,
+Error CompileOnDemandLayer2::add(JITDylib &V, VModuleKey K,
                                  std::unique_ptr<Module> M) {
   return IRLayer::add(V, K, std::move(M));
 }
@@ -245,7 +245,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
   // rest, and build the compile callbacks.
   std::map<SymbolStringPtr, std::pair<JITTargetAddress, JITSymbolFlags>>
       StubCallbacksAndLinkages;
-  auto &TargetVSO = R.getTargetVSO();
+  auto &TargetJD = R.getTargetJITDylib();
 
   for (auto &F : M->functions()) {
     if (F.isDeclaration())
@@ -269,8 +269,8 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     auto StubName = Mangle(StubUnmangledName);
     auto BodyName = Mangle(F.getName());
     if (auto CallbackAddr = CCMgr.getCompileCallback(
-            [BodyName, &TargetVSO, &ES]() -> JITTargetAddress {
-              if (auto Sym = lookup({&TargetVSO}, BodyName))
+            [BodyName, &TargetJD, &ES]() -> JITTargetAddress {
+              if (auto Sym = lookup({&TargetJD}, BodyName))
                 return Sym->getAddress();
               else {
                 ES.reportError(Sym.takeError());
@@ -294,7 +294,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     StubInits[*KV.first] = KV.second;
 
   // Build the function-body-extracting materialization unit.
-  if (auto Err = R.getTargetVSO().define(
+  if (auto Err = R.getTargetJITDylib().define(
           llvm::make_unique<ExtractingIRMaterializationUnit>(ES, *this,
                                                              std::move(M)))) {
     ES.reportError(std::move(Err));
@@ -304,7 +304,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
 
   // Build the stubs.
   // FIXME: Remove function bodies materialization unit if stub creation fails.
-  auto &StubsMgr = getStubsManager(TargetVSO);
+  auto &StubsMgr = getStubsManager(TargetJD);
   if (auto Err = StubsMgr.createStubs(StubInits)) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
@@ -325,7 +325,8 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
   BaseLayer.emit(std::move(R), std::move(K), std::move(GlobalsModule));
 }
 
-IndirectStubsManager &CompileOnDemandLayer2::getStubsManager(const VSO &V) {
+IndirectStubsManager &
+CompileOnDemandLayer2::getStubsManager(const JITDylib &V) {
   std::lock_guard<std::mutex> Lock(CODLayerMutex);
   StubManagersMap::iterator I = StubsMgrs.find(&V);
   if (I == StubsMgrs.end())

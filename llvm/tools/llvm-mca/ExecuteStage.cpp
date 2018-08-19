@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteStage.h"
-#include "Scheduler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 
@@ -26,11 +25,29 @@ namespace mca {
 
 using namespace llvm;
 
+HWStallEvent::GenericEventType toHWStallEventType(Scheduler::StallKind Event) {
+  switch (Event) {
+  case Scheduler::LoadQueueFull:
+    return HWStallEvent::LoadQueueFull;
+  case Scheduler::StoreQueueFull:
+    return HWStallEvent::StoreQueueFull;
+  case Scheduler::SchedulerQueueFull:
+    return HWStallEvent::SchedulerQueueFull;
+  case Scheduler::DispatchGroupStall:
+    return HWStallEvent::DispatchGroupStall;
+  case Scheduler::NoStall:
+    return HWStallEvent::Invalid;
+  }
+
+  llvm_unreachable("Don't know how to process this StallKind!");
+}
+
 bool ExecuteStage::isAvailable(const InstRef &IR) const {
-  HWStallEvent::GenericEventType Event;
+  Scheduler::StallKind Event = Scheduler::NoStall;
   if (HWS.canBeDispatched(IR, Event))
     return true;
-  notifyEvent<HWStallEvent>(HWStallEvent(Event, IR));
+  HWStallEvent::GenericEventType ET = toHWStallEventType(Event);
+  notifyEvent<HWStallEvent>(HWStallEvent(ET, IR));
   return false;
 }
 

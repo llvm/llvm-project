@@ -80,7 +80,7 @@ void use_pointers() {
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
-// HIP: @__[[PREFIX]]_gpubin_handle = linkonce global i8** null
+// HIP: @__[[PREFIX]]_gpubin_handle = linkonce hidden global i8** null
 // * constant unnamed string with NVModuleID
 // RDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32

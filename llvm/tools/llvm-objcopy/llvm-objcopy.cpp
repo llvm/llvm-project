@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
@@ -128,41 +129,52 @@ struct SectionRename {
 };
 
 struct CopyConfig {
-  StringRef OutputFilename;
+  // Main input/output options
   StringRef InputFilename;
-  StringRef OutputFormat;
   StringRef InputFormat;
-  StringRef BinaryArch;
+  StringRef OutputFilename;
+  StringRef OutputFormat;
 
-  StringRef SplitDWO;
+  // Only applicable for --input-format=Binary
+  MachineInfo BinaryArch;
+
+  // Advanced options
   StringRef AddGnuDebugLink;
+  StringRef SplitDWO;
   StringRef SymbolsPrefix;
-  std::vector<StringRef> ToRemove;
-  std::vector<StringRef> Keep;
-  std::vector<StringRef> OnlyKeep;
+
+  // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> SymbolsToLocalize;
+  std::vector<StringRef> Keep;
+  std::vector<StringRef> OnlyKeep;
   std::vector<StringRef> SymbolsToGlobalize;
-  std::vector<StringRef> SymbolsToWeaken;
-  std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToKeep;
+  std::vector<StringRef> SymbolsToLocalize;
+  std::vector<StringRef> SymbolsToRemove;
+  std::vector<StringRef> SymbolsToWeaken;
+  std::vector<StringRef> ToRemove;
+  std::vector<std::string> SymbolsToKeepGlobal;
+
+  // Map options
   StringMap<SectionRename> SectionsToRename;
   StringMap<StringRef> SymbolsToRename;
+
+  // Boolean options
+  bool DiscardAll = false;
+  bool ExtractDWO = false;
+  bool KeepFileSymbols = false;
+  bool LocalizeHidden = false;
+  bool OnlyKeepDebug = false;
+  bool PreserveDates = false;
   bool StripAll = false;
   bool StripAllGNU = false;
-  bool StripDebug = false;
-  bool StripSections = false;
-  bool StripNonAlloc = false;
   bool StripDWO = false;
+  bool StripDebug = false;
+  bool StripNonAlloc = false;
+  bool StripSections = false;
   bool StripUnneeded = false;
-  bool ExtractDWO = false;
-  bool LocalizeHidden = false;
   bool Weaken = false;
-  bool DiscardAll = false;
-  bool OnlyKeepDebug = false;
-  bool KeepFileSymbols = false;
-  bool PreserveDates = false;
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
@@ -295,6 +307,45 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
+static const StringMap<MachineInfo> ArchMap{
+    // Name, {EMachine, 64bit, LittleEndian}
+    {"aarch64", {EM_AARCH64, true, true}},
+    {"arm", {EM_ARM, false, true}},
+    {"i386", {EM_386, false, true}},
+    {"i386:x86-64", {EM_X86_64, true, true}},
+    {"powerpc:common64", {EM_PPC64, true, true}},
+    {"sparc", {EM_SPARC, false, true}},
+    {"x86-64", {EM_X86_64, true, true}},
+};
+
+static const MachineInfo &getMachineInfo(StringRef Arch) {
+  auto Iter = ArchMap.find(Arch);
+  if (Iter == std::end(ArchMap))
+    error("Invalid architecture: '" + Arch + "'");
+  return Iter->getValue();
+}
+
+static ElfType getOutputElfType(const Binary &Bin) {
+  // Infer output ELF type from the input ELF object
+  if (isa<ELFObjectFile<ELF32LE>>(Bin))
+    return ELFT_ELF32LE;
+  if (isa<ELFObjectFile<ELF64LE>>(Bin))
+    return ELFT_ELF64LE;
+  if (isa<ELFObjectFile<ELF32BE>>(Bin))
+    return ELFT_ELF32BE;
+  if (isa<ELFObjectFile<ELF64BE>>(Bin))
+    return ELFT_ELF64BE;
+  llvm_unreachable("Invalid ELFType");
+}
+
+static ElfType getOutputElfType(const MachineInfo &MI) {
+  // Infer output ELF type from the binary arch specified
+  if (MI.Is64Bit)
+    return MI.IsLittleEndian ? ELFT_ELF64LE : ELFT_ELF64BE;
+  else
+    return MI.IsLittleEndian ? ELFT_ELF32LE : ELFT_ELF32BE;
+}
+
 static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
                                             Object &Obj, Buffer &Buf,
                                             ElfType OutputElfType) {
@@ -376,6 +427,20 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
           (!Config.SymbolsToLocalize.empty() &&
            is_contained(Config.SymbolsToLocalize, Sym.Name)))
+        Sym.Binding = STB_LOCAL;
+
+      // Note: these two globalize flags have very similar names but different
+      // meanings:
+      //
+      // --globalize-symbol: promote a symbol to global
+      // --keep-global-symbol: all symbols except for these should be made local
+      //
+      // If --globalize-symbol is specified for a given symbol, it will be
+      // global in the output file even if it is not included via
+      // --keep-global-symbol. Because of that, make sure to check
+      // --globalize-symbol second.
+      if (!Config.SymbolsToKeepGlobal.empty() &&
+          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name))
         Sym.Binding = STB_LOCAL;
 
       if (!Config.SymbolsToGlobalize.empty() &&
@@ -603,15 +668,14 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 }
 
-static void executeElfObjcopyOnBinary(const CopyConfig &Config, Binary &Binary,
-                                      Buffer &Out) {
-  ELFReader Reader(&Binary);
+static void executeElfObjcopyOnBinary(const CopyConfig &Config, Reader &Reader,
+                                      Buffer &Out, ElfType OutputElfType) {
   std::unique_ptr<Object> Obj = Reader.create();
 
-  handleArgs(Config, *Obj, Reader, Reader.getElfType());
+  handleArgs(Config, *Obj, Reader, OutputElfType);
 
   std::unique_ptr<Writer> Writer =
-      createWriter(Config, *Obj, Out, Reader.getElfType());
+      createWriter(Config, *Obj, Out, OutputElfType);
   Writer->finalize();
   Writer->write();
 }
@@ -653,12 +717,15 @@ static void executeElfObjcopyOnArchive(const CopyConfig &Config,
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
       reportError(Ar.getFileName(), ChildOrErr.takeError());
+    Binary *Bin = ChildOrErr->get();
+
     Expected<StringRef> ChildNameOrErr = Child.getName();
     if (!ChildNameOrErr)
       reportError(Ar.getFileName(), ChildNameOrErr.takeError());
 
     MemBuffer MB(ChildNameOrErr.get());
-    executeElfObjcopyOnBinary(Config, **ChildOrErr, MB);
+    ELFReader Reader(Bin);
+    executeElfObjcopyOnBinary(Config, Reader, MB, getOutputElfType(*Bin));
 
     Expected<NewArchiveMember> Member =
         NewArchiveMember::getOldMember(Child, true);
@@ -698,22 +765,52 @@ static void executeElfObjcopy(const CopyConfig &Config) {
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
       reportError(Config.InputFilename, EC);
 
-  Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
-      createBinary(Config.InputFilename);
-  if (!BinaryOrErr)
-    reportError(Config.InputFilename, BinaryOrErr.takeError());
+  if (Config.InputFormat == "binary") {
+    auto BufOrErr = MemoryBuffer::getFile(Config.InputFilename);
+    if (!BufOrErr)
+      reportError(Config.InputFilename, BufOrErr.getError());
 
-  if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
-    executeElfObjcopyOnArchive(Config, *Ar);
-  } else {
     FileBuffer FB(Config.OutputFilename);
-    executeElfObjcopyOnBinary(Config, *BinaryOrErr.get().getBinary(), FB);
+    BinaryReader Reader(Config.BinaryArch, BufOrErr->get());
+    executeElfObjcopyOnBinary(Config, Reader, FB,
+                              getOutputElfType(Config.BinaryArch));
+  } else {
+    Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
+        createBinary(Config.InputFilename);
+    if (!BinaryOrErr)
+      reportError(Config.InputFilename, BinaryOrErr.takeError());
+
+    if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
+      executeElfObjcopyOnArchive(Config, *Ar);
+    } else {
+      FileBuffer FB(Config.OutputFilename);
+      Binary *Bin = BinaryOrErr.get().getBinary();
+      ELFReader Reader(Bin);
+      executeElfObjcopyOnBinary(Config, Reader, FB, getOutputElfType(*Bin));
+    }
   }
 
   if (Config.PreserveDates) {
     restoreDateOnFile(Config.OutputFilename, Stat);
     if (!Config.SplitDWO.empty())
       restoreDateOnFile(Config.SplitDWO, Stat);
+  }
+}
+
+static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
+                                     StringRef Filename) {
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    reportError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  for (StringRef Line : Lines) {
+    // Ignore everything after '#', trim whitespace, and only add the symbol if
+    // it's not empty.
+    auto TrimmedLine = Line.split('#').first.trim();
+    if (!TrimmedLine.empty())
+      Symbols.push_back(TrimmedLine.str());
   }
 }
 
@@ -755,7 +852,12 @@ static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
   Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
   Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
-  Config.BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
+  if (Config.InputFormat == "binary") {
+    auto BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
+    if (BinaryArch.empty())
+      error("Specified binary input without specifiying an architecture");
+    Config.BinaryArch = getMachineInfo(BinaryArch);
+  }
 
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
@@ -800,6 +902,10 @@ static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
+    Config.SymbolsToKeepGlobal.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
+    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     Config.SymbolsToGlobalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))

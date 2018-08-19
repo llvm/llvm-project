@@ -57,7 +57,7 @@ public:
   ///                            process to be used if a compile callback fails.
   JITCompileCallbackManager(ExecutionSession &ES,
                             JITTargetAddress ErrorHandlerAddress)
-      : ES(ES), CallbacksVSO(ES.createVSO("<Callbacks>")),
+      : ES(ES), CallbacksJD(ES.createJITDylib("<Callbacks>")),
         ErrorHandlerAddress(ErrorHandlerAddress) {}
 
   virtual ~JITCompileCallbackManager() = default;
@@ -91,7 +91,7 @@ private:
 
   std::mutex CCMgrMutex;
   ExecutionSession &ES;
-  VSO &CallbacksVSO;
+  JITDylib &CallbacksJD;
   JITTargetAddress ErrorHandlerAddress;
   std::map<JITTargetAddress, SymbolStringPtr> AddrToSymbol;
   size_t NextCallbackId = 0;

@@ -513,21 +513,6 @@ def G_FLOG2 : GenericInstruction {
 }
 
 //------------------------------------------------------------------------------
-// Opcodes for LLVM Intrinsics
-//------------------------------------------------------------------------------
-def G_INTRINSIC_TRUNC : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
-}
-
-def G_INTRINSIC_ROUND : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
-}
-
-//------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
 

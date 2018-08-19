@@ -177,15 +177,16 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
   auto PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS, PCHs](Path File, Callback<SignatureHelp> CB,
-                                llvm::Expected<InputsAndPreamble> IP) {
+  auto *Index = this->Index;
+  auto Action = [Pos, FS, PCHs, Index](Path File, Callback<SignatureHelp> CB,
+                                       llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
     CB(clangd::signatureHelp(File, IP->Command,
                              PreambleData ? &PreambleData->Preamble : nullptr,
-                             IP->Contents, Pos, FS, PCHs));
+                             IP->Contents, Pos, FS, PCHs, Index));
   };
 
   WorkScheduler.runWithPreamble("SignatureHelp", File,
