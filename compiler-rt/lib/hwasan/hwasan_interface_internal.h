@@ -137,6 +137,12 @@ void __hwasan_enable_allocator_tagging();
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_disable_allocator_tagging();
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_thread_enter();
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_thread_exit();
+
 }  // extern "C"
 
 #endif  // HWASAN_INTERFACE_INTERNAL_H

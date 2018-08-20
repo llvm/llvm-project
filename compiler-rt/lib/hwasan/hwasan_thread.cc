@@ -65,11 +65,6 @@ void HwasanThread::Init() {
   }
 }
 
-void HwasanThread::TSDDtor(void *tsd) {
-  HwasanThread *t = (HwasanThread*)tsd;
-  t->Destroy();
-}
-
 void HwasanThread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
     TagMemory(stack_bottom_, stack_top_ - stack_bottom_, 0);
@@ -86,18 +81,7 @@ void HwasanThread::Destroy() {
 }
 
 thread_return_t HwasanThread::ThreadStart() {
-  Init();
-
-  if (!start_routine_) {
-    // start_routine_ == 0 if we're on the main thread or on one of the
-    // OS X libdispatch worker threads. But nobody is supposed to call
-    // ThreadStart() for the worker threads.
-    return 0;
-  }
-
-  thread_return_t res = start_routine_(arg_);
-
-  return res;
+  return start_routine_(arg_);
 }
 
 static u32 xorshift(u32 state) {
