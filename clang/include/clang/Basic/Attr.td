@@ -501,10 +501,7 @@ class Attr {
 }
 
 /// A type attribute is not processed on a declaration or a statement.
-class TypeAttr : Attr {
-  // By default, type attributes do not get an AST node.
-  let ASTNode = 0;
-}
+class TypeAttr : Attr;
 
 /// A stmt attribute is not processed on a declaration or a type.
 class StmtAttr : Attr;
@@ -574,6 +571,8 @@ def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
   let Documentation = [Undocumented];
+  // Represented as a qualifier or DependentAddressSpaceType instead.
+  let ASTNode = 0;
 }
 
 def Alias : Attr {
@@ -1232,7 +1231,7 @@ def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Documentation = [LayoutVersionDocs];
 }
 
-def LifetimeBound : InheritableAttr {
+def LifetimeBound : DeclOrTypeAttr {
   let Spellings = [Clang<"lifetimebound", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
@@ -1335,12 +1334,16 @@ def NeonPolyVectorType : TypeAttr {
   let Spellings = [Clang<"neon_polyvector_type">];
   let Args = [IntArgument<"NumElements">];
   let Documentation = [Undocumented];
+  // Represented as VectorType instead.
+  let ASTNode = 0;
 }
 
 def NeonVectorType : TypeAttr {
   let Spellings = [Clang<"neon_vector_type">];
   let Args = [IntArgument<"NumElements">];
   let Documentation = [Undocumented];
+  // Represented as VectorType instead.
+  let ASTNode = 0;
 }
 
 def ReturnsTwice : InheritableAttr {
@@ -1515,6 +1518,14 @@ def TypeNullUnspecified : TypeAttr {
   let Documentation = [TypeNullUnspecifiedDocs];
 }
 
+// This is a marker used to indicate that an __unsafe_unretained qualifier was
+// ignored because ARC is not enabled. The usual representation for this
+// qualifier is as an ObjCOwnership attribute with Kind == "none".
+def ObjCInertUnsafeUnretained : TypeAttr {
+  let Spellings = [Keyword<"__unsafe_unretained">];
+  let Documentation = [Undocumented];
+}
+
 def ObjCKindOf : TypeAttr {
   let Spellings = [Keyword<"__kindof">];
   let Documentation = [Undocumented];
@@ -1608,7 +1619,7 @@ def NSErrorDomain : Attr {
   let Documentation = [NSErrorDomainDocs];
 }
 
-def NSReturnsRetained : InheritableAttr {
+def NSReturnsRetained : DeclOrTypeAttr {
   let Spellings = [Clang<"ns_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
   let Documentation = [Undocumented];
@@ -1799,6 +1810,8 @@ def Regparm : TypeAttr {
   let Spellings = [GCC<"regparm">];
   let Args = [UnsignedArgument<"NumParams">];
   let Documentation = [RegparmDocs];
+  // Represented as part of the enclosing function type.
+  let ASTNode = 0;
 }
 
 def SwiftBridge : Attr {
@@ -2182,10 +2195,9 @@ def ObjCGC : TypeAttr {
   let Documentation = [Undocumented];
 }
 
-def ObjCOwnership : InheritableAttr {
+def ObjCOwnership : DeclOrTypeAttr {
   let Spellings = [Clang<"objc_ownership">];
   let Args = [IdentifierArgument<"Kind">];
-  let ASTNode = 0;
   let Documentation = [Undocumented];
 }
 
@@ -2223,6 +2235,8 @@ def VectorSize : TypeAttr {
   let Spellings = [GCC<"vector_size">];
   let Args = [ExprArgument<"NumBytes">];
   let Documentation = [Undocumented];
+  // Represented as VectorType instead.
+  let ASTNode = 0;
 }
 
 def VecTypeHint : InheritableAttr {
@@ -2317,7 +2331,7 @@ def AnyX86NoCallerSavedRegisters : InheritableAttr,
   let Documentation = [AnyX86NoCallerSavedRegistersDocs];
 }
 
-def AnyX86NoCfCheck : InheritableAttr, TargetSpecificAttr<TargetAnyX86>{
+def AnyX86NoCfCheck : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86>{
   let Spellings = [GCC<"nocf_check">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [AnyX86NoCfCheckDocs];
