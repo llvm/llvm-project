@@ -1252,6 +1252,21 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   return Res;
 }
 
+RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
+  llvm::Value *Src = EmitScalarExpr(E->getArg(0));
+  llvm::Value *ShiftAmt = EmitScalarExpr(E->getArg(1));
+
+  // The builtin's shift arg may have a different type than the source arg and
+  // result, but the LLVM intrinsic uses the same type for all values.
+  llvm::Type *Ty = Src->getType();
+  ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+
+  // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
+  unsigned IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
+  Value *F = CGM.getIntrinsic(IID, Ty);
+  return RValue::get(Builder.CreateCall(F, { Src, Src, ShiftAmt }));
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -1741,6 +1756,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_bitreverse64: {
     return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::bitreverse));
   }
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+    return emitRotate(E, false);
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+    return emitRotate(E, true);
+
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
         E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();

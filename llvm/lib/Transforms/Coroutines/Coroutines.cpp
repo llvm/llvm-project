@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines.h"
+#include "llvm-c/Transforms/Coroutines.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/SmallVector.h"
@@ -343,4 +344,20 @@ void coro::Shape::buildFrom(Function &F) {
   // Remove orphaned coro.saves.
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
+}
+
+void LLVMAddCoroEarlyPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroEarlyPass());
+}
+
+void LLVMAddCoroSplitPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroSplitPass());
+}
+
+void LLVMAddCoroElidePass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroElidePass());
+}
+
+void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroCleanupPass());
 }

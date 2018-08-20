@@ -3681,6 +3681,8 @@ public:
                          unsigned BuiltinID, const CallExpr *E,
                          ReturnValueSlot ReturnValue);
 
+  RValue emitRotate(const CallExpr *E, bool IsRotateRight);
+
   /// Emit IR for __builtin_os_log_format.
   RValue emitBuiltinOSLogFormat(const CallExpr &E);
 
