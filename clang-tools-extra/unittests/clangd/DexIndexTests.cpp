@@ -28,22 +28,22 @@ TEST(DexIndexIterators, DocumentIterator) {
   auto DocIterator = create(L);
 
   EXPECT_EQ(DocIterator->peek(), 4U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advance();
   EXPECT_EQ(DocIterator->peek(), 7U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(20);
   EXPECT_EQ(DocIterator->peek(), 20U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(65);
   EXPECT_EQ(DocIterator->peek(), 100U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(420);
-  EXPECT_EQ(DocIterator->reachedEnd(), true);
+  EXPECT_TRUE(DocIterator->reachedEnd());
 }
 
 TEST(DexIndexIterators, AndWithEmpty) {
@@ -51,10 +51,10 @@ TEST(DexIndexIterators, AndWithEmpty) {
   const PostingList L1 = {0, 5, 7, 10, 42, 320, 9000};
 
   auto AndEmpty = createAnd(create(L0));
-  EXPECT_EQ(AndEmpty->reachedEnd(), true);
+  EXPECT_TRUE(AndEmpty->reachedEnd());
 
   auto AndWithEmpty = createAnd(create(L0), create(L1));
-  EXPECT_EQ(AndWithEmpty->reachedEnd(), true);
+  EXPECT_TRUE(AndWithEmpty->reachedEnd());
 
   EXPECT_THAT(consume(*AndWithEmpty), ElementsAre());
 }
@@ -65,7 +65,7 @@ TEST(DexIndexIterators, AndTwoLists) {
 
   auto And = createAnd(create(L1), create(L0));
 
-  EXPECT_EQ(And->reachedEnd(), false);
+  EXPECT_FALSE(And->reachedEnd());
   EXPECT_THAT(consume(*And), ElementsAre(0U, 7U, 10U, 320U, 9000U));
 
   And = createAnd(create(L0), create(L1));
@@ -94,7 +94,7 @@ TEST(DexIndexIterators, AndThreeLists) {
   EXPECT_EQ(And->peek(), 320U);
   And->advanceTo(100000);
 
-  EXPECT_EQ(And->reachedEnd(), true);
+  EXPECT_TRUE(And->reachedEnd());
 }
 
 TEST(DexIndexIterators, OrWithEmpty) {
@@ -102,10 +102,10 @@ TEST(DexIndexIterators, OrWithEmpty) {
   const PostingList L1 = {0, 5, 7, 10, 42, 320, 9000};
 
   auto OrEmpty = createOr(create(L0));
-  EXPECT_EQ(OrEmpty->reachedEnd(), true);
+  EXPECT_TRUE(OrEmpty->reachedEnd());
 
   auto OrWithEmpty = createOr(create(L0), create(L1));
-  EXPECT_EQ(OrWithEmpty->reachedEnd(), false);
+  EXPECT_FALSE(OrWithEmpty->reachedEnd());
 
   EXPECT_THAT(consume(*OrWithEmpty),
               ElementsAre(0U, 5U, 7U, 10U, 42U, 320U, 9000U));
@@ -117,7 +117,7 @@ TEST(DexIndexIterators, OrTwoLists) {
 
   auto Or = createOr(create(L0), create(L1));
 
-  EXPECT_EQ(Or->reachedEnd(), false);
+  EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
   Or->advance();
   EXPECT_EQ(Or->peek(), 4U);
@@ -136,7 +136,7 @@ TEST(DexIndexIterators, OrTwoLists) {
   Or->advanceTo(9000);
   EXPECT_EQ(Or->peek(), 9000U);
   Or->advanceTo(9001);
-  EXPECT_EQ(Or->reachedEnd(), true);
+  EXPECT_TRUE(Or->reachedEnd());
 
   Or = createOr(create(L0), create(L1));
 
@@ -151,7 +151,7 @@ TEST(DexIndexIterators, OrThreeLists) {
 
   auto Or = createOr(create(L0), create(L1), create(L2));
 
-  EXPECT_EQ(Or->reachedEnd(), false);
+  EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
 
   Or->advance();
@@ -166,7 +166,7 @@ TEST(DexIndexIterators, OrThreeLists) {
   EXPECT_EQ(Or->peek(), 60U);
 
   Or->advanceTo(9001);
-  EXPECT_EQ(Or->reachedEnd(), true);
+  EXPECT_TRUE(Or->reachedEnd());
 }
 
 // FIXME(kbobyrev): The testcase below is similar to what is expected in real
@@ -208,7 +208,7 @@ TEST(DexIndexIterators, QueryTree) {
       // Lower Or Iterator: [0, 1, 5]
       createOr(create(L2), create(L3), create(L4)));
 
-  EXPECT_EQ(Root->reachedEnd(), false);
+  EXPECT_FALSE(Root->reachedEnd());
   EXPECT_EQ(Root->peek(), 1U);
   Root->advanceTo(0);
   // Advance multiple times. Shouldn't do anything.
@@ -220,7 +220,7 @@ TEST(DexIndexIterators, QueryTree) {
   Root->advanceTo(5);
   EXPECT_EQ(Root->peek(), 5U);
   Root->advanceTo(9000);
-  EXPECT_EQ(Root->reachedEnd(), true);
+  EXPECT_TRUE(Root->reachedEnd());
 }
 
 TEST(DexIndexIterators, StringRepresentation) {
@@ -264,14 +264,14 @@ TEST(DexIndexIterators, Limit) {
 
 TEST(DexIndexIterators, True) {
   auto TrueIterator = createTrue(0U);
-  EXPECT_THAT(TrueIterator->reachedEnd(), true);
+  EXPECT_TRUE(TrueIterator->reachedEnd());
   EXPECT_THAT(consume(*TrueIterator), ElementsAre());
 
   PostingList L0 = {1, 2, 5, 7};
   TrueIterator = createTrue(7U);
   EXPECT_THAT(TrueIterator->peek(), 0);
   auto AndIterator = createAnd(create(L0), move(TrueIterator));
-  EXPECT_THAT(AndIterator->reachedEnd(), false);
+  EXPECT_FALSE(AndIterator->reachedEnd());
   EXPECT_THAT(consume(*AndIterator), ElementsAre(1, 2, 5));
 }
 

@@ -46,6 +46,7 @@ public:
     return *Index;
   }
 
+private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << '[';
     auto Separator = "";
@@ -66,7 +67,6 @@ public:
     return OS;
   }
 
-private:
   PostingListRef Documents;
   PostingListRef::const_iterator Index;
 };
@@ -103,6 +103,7 @@ public:
 
   DocID peek() const override { return Children.front()->peek(); }
 
+private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(& ";
     auto Separator = "";
@@ -114,7 +115,6 @@ public:
     return OS;
   }
 
-private:
   /// Restores class invariants: each child will point to the same element after
   /// sync.
   void sync() {
@@ -180,7 +180,7 @@ public:
   /// Moves each child pointing to the smallest DocID to the next item.
   void advance() override {
     assert(!reachedEnd() &&
-           "OrIterator must have at least one child to advance().");
+           "OrIterator can't call advance() after it reached the end.");
     const auto SmallestID = peek();
     for (const auto &Child : Children)
       if (!Child->reachedEnd() && Child->peek() == SmallestID)
@@ -199,7 +199,7 @@ public:
   /// value.
   DocID peek() const override {
     assert(!reachedEnd() &&
-           "OrIterator must have at least one child to peek().");
+           "OrIterator can't peek() after it reached the end.");
     DocID Result = std::numeric_limits<DocID>::max();
 
     for (const auto &Child : Children)
@@ -209,6 +209,7 @@ public:
     return Result;
   }
 
+private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
     auto Separator = "";
@@ -220,7 +221,6 @@ public:
     return OS;
   }
 
-private:
   // FIXME(kbobyrev): Would storing Children in min-heap be faster?
   std::vector<std::unique_ptr<Iterator>> Children;
 };
