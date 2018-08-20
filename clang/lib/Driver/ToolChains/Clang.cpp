@@ -3060,11 +3060,18 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       CmdArgs.push_back("-debug-info-macro");
 
   // -ggnu-pubnames turns on gnu style pubnames in the backend.
-  if (Args.hasFlag(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
-                   false))
-    if (checkDebugInfoOption(Args.getLastArg(options::OPT_ggnu_pubnames), Args,
-                             D, TC))
-      CmdArgs.push_back("-ggnu-pubnames");
+  const auto *PubnamesArg =
+      Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+                      options::OPT_gpubnames, options::OPT_gno_pubnames);
+  if (SplitDWARFArg ||
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC)))
+    if (!PubnamesArg ||
+        (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
+         !PubnamesArg->getOption().matches(options::OPT_gno_pubnames)))
+      CmdArgs.push_back(PubnamesArg && PubnamesArg->getOption().matches(
+                                           options::OPT_gpubnames)
+                            ? "-gpubnames"
+                            : "-ggnu-pubnames");
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.

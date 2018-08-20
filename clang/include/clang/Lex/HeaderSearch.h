@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/DirectoryLookup.h"
+#include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -38,7 +39,6 @@ class DirectoryEntry;
 class ExternalPreprocessorSource;
 class FileEntry;
 class FileManager;
-class HeaderMap;
 class HeaderSearchOptions;
 class IdentifierInfo;
 class LangOptions;
@@ -226,9 +226,8 @@ class HeaderSearch {
       llvm::StringMap<std::string, llvm::BumpPtrAllocator>;
   std::unique_ptr<IncludeAliasMap> IncludeAliases;
 
-  /// This is a mapping from FileEntry -> HeaderMap, uniquing
-  /// headermaps.  This vector owns the headermap.
-  std::vector<std::pair<const FileEntry *, const HeaderMap *>> HeaderMaps;
+  /// This is a mapping from FileEntry -> HeaderMap, uniquing headermaps.
+  std::vector<std::pair<const FileEntry *, std::unique_ptr<HeaderMap>>> HeaderMaps;
 
   /// The mapping between modules and headers.
   mutable ModuleMap ModMap;
@@ -264,7 +263,6 @@ public:
                const LangOptions &LangOpts, const TargetInfo *Target);
   HeaderSearch(const HeaderSearch &) = delete;
   HeaderSearch &operator=(const HeaderSearch &) = delete;
-  ~HeaderSearch();
 
   /// Retrieve the header-search options with which this header search
   /// was initialized.
