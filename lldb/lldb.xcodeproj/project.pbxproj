@@ -9012,6 +9012,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -9140,6 +9141,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -10876,6 +10878,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -11887,6 +11890,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -12583,6 +12587,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -13450,159 +13455,130 @@
 			};
 			name = BuildAndIntegration;
 		};
-		94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */ = {
+		94DF55CC1ADDBF240030B937 /* BuildAndIntegration */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
- 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
- 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
- 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
- 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_WARN_ASSIGN_ENUM = YES;
- 				CLANG_WARN_BOOL_CONVERSION = YES;
- 				CLANG_WARN_CONSTANT_CONVERSION = YES;
- 				CLANG_WARN_EMPTY_BODY = YES;
- 				CLANG_WARN_ENUM_CONVERSION = YES;
- 				CLANG_WARN_INT_CONVERSION = YES;
- 				CLANG_WARN_UNREACHABLE_CODE = YES;
- 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
- 				COPY_PHASE_STRIP = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CURRENT_PROJECT_VERSION = 360.0.0;
+				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
- 				ENABLE_STRICT_OBJC_MSGSEND = YES;
- 				GCC_C_LANGUAGE_STANDARD = c99;
- 				GCC_OPTIMIZATION_LEVEL = 0;
- 				GCC_PREPROCESSOR_DEFINITIONS = (
- 					__STDC_CONSTANT_MACROS,
- 					__STDC_LIMIT_MACROS,
- 					LLDB_CONFIGURATION_DEBUG,
- 				);
- 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
- 					__STDC_CONSTANT_MACROS,
- 					__STDC_LIMIT_MACROS,
- 					LLDB_CONFIGURATION_DEBUG,
- 					LLDB_DISABLE_PYTHON,
- 					NO_XPC_SERVICES,
- 				);
- 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
- 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
- 				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
- 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
- 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
- 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
- 				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
- 				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
- 				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
- 				GCC_WARN_MISSING_PARENTHESES = YES;
- 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
- 				GCC_WARN_UNDECLARED_SELECTOR = YES;
- 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
- 				GCC_WARN_UNUSED_FUNCTION = YES;
- 				GCC_WARN_UNUSED_LABEL = YES;
- 				GCC_WARN_UNUSED_VALUE = YES;
- 				GCC_WARN_UNUSED_VARIABLE = YES;
- 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
- 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
- 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
- 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
- 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
- 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
- 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
- 				LLDB_DISABLE_PYTHON = 0;
- 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
- 				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
- 				LLDB_GUI_CFLAGS = "";
- 				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
- 				"LLDB_GUI_CFLAGS[sdk=iphoneos*]" = "-DLLDB_DISABLE_CURSES=1";
- 				"LLDB_GUI_CFLAGS[sdk=watchos*]" = "-DLLDB_DISABLE_CURSES=1";
- 				LLDB_GUI_LDFLAGS = "-lpanel";
- 				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
- 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
- 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
- 				LLDB_IS_BUILDBOT_BUILD = 0;
- 				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
- 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
- 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
- 				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
- 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
- 				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
- 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
- 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
- 				LLDB_USE_OSS_VERSION_SCHEME = 1;
- 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
- 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
- 				LLDB_ZLIB_LDFLAGS = "-lz";
- 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
- 				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
- 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
- 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
- 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
- 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
- 				LLVM_CONFIGURATION = DebugAssert;
- 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
- 				MACOSX_DEPLOYMENT_TARGET = 10.9;
- 				OBJROOT = "$(SYMROOT)";
- 				ONLY_ACTIVE_ARCH = YES;
- 				OTHER_CFLAGS = (
- 					"-fno-rtti",
- 					"-flimit-debug-info",
- 					"-Wparentheses",
- 					"$(LLDB_ZLIB_CFLAGS)",
- 					"$(LLDB_COMPRESSION_CFLAGS)",
- 					"$(LLDB_GUI_CFLAGS)",
- 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
- 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
- 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
- 				);
-				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
-					"$(inherited)",
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
-					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-  				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"$(inherited)",
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
-					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks/",
-					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
-					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
-					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_DEBUG,
 				);
- 				OTHER_LDFLAGS = (
- 					"$(LLDB_ZLIB_LDFLAGS)",
- 					"$(LLDB_COMPRESSION_LDFLAGS)",
- 				);
- 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
- 				PYTHON_VERSION_MAJOR = 2;
- 				PYTHON_VERSION_MINOR = 7;
- 				SDKROOT = macosx;
- 				"SDKROOT[arch=x86_64]" = macosx;
- 				"SDKROOT[arch=x86_64h]" = macosx;
- 				STRIP_INSTALLED_PRODUCT = NO;
- 				STRIP_STYLE = debugging;
- 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
- 				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
- 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
- 				WARNING_CFLAGS = (
- 					"-Wreorder",
- 					"-Wno-newline-eof",
- 				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_DEBUG,
+					LLDB_DISABLE_PYTHON,
+					NO_XPC_SERVICES,
+				);
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
+				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
+				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
+				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
+				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
+				LLDB_DISABLE_PYTHON = 0;
+				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
+				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
+				LLDB_GUI_CFLAGS = "";
+				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
+				"LLDB_GUI_CFLAGS[sdk=iphoneos*]" = "-DLLDB_DISABLE_CURSES=1";
+				"LLDB_GUI_CFLAGS[sdk=watchos*]" = "-DLLDB_DISABLE_CURSES=1";
+				LLDB_GUI_LDFLAGS = "-lpanel";
+				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
+				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
+				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
+				LLDB_IS_BUILDBOT_BUILD = 0;
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
+				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
+				LLDB_USE_OSS_VERSION_SCHEME = 1;
+				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_CONFIGURATION = DebugAssert;
+				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
+				OBJROOT = "$(SYMROOT)";
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-fno-rtti",
+					"-flimit-debug-info",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_GUI_CFLAGS)",
+					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
+					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
+					"$(LLDB_VERSION_SCHEME_CFLAGS)",
+				);
+				OTHER_LDFLAGS = (
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+				);
+				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
+				PYTHON_VERSION_MAJOR = 2;
+				PYTHON_VERSION_MINOR = 7;
+				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
+				"SDKROOT[arch=x86_64]" = macosx;
+				"SDKROOT[arch=x86_64h]" = macosx;
+				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_STYLE = debugging;
+				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
+				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+				WARNING_CFLAGS = (
+					"-Wreorder",
+					"-Wno-newline-eof",
+				);
 			};
-			name = "CustomSwift-Debug";
+			name = BuildAndIntegration;
 		};
 		94DF55CD1ADDBF240030B937 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
@@ -13806,7 +13782,7 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/swift";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR) $(LLDB_PATH_TO_LLVM_BUILD)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Debug";
@@ -13889,7 +13865,7 @@
 				STRIP_INSTALLED_PRODUCT = YES;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR) $(LLDB_PATH_TO_LLVM_BUILD)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = "CustomSwift-Debug";
 		};
@@ -13996,7 +13972,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Debug";
@@ -14064,13 +14040,13 @@
 					Foundation,
 				);
 				PATH = /opt/local/bin;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = lldb;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Debug";
@@ -14190,6 +14166,7 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
+				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -14888,7 +14865,7 @@
 				1DEB91F008733DB70010E9CD /* Debug */,
 				49BB8F341611172B00BDD462 /* DebugClang */,
 				9448C4611B1FC0AD00414490 /* DebugPresubmission */,
-				94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */,
+				94DF55CC1ADDBF240030B937 /* BuildAndIntegration */,
 				1DEB91F108733DB70010E9CD /* Release */,
 				94DF55DE1ADDBF2C0030B937 /* CustomSwift-Release */,
 				237965E71C12369B008D490F /* Debug */,
