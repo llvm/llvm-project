@@ -372,6 +372,19 @@ static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
 
   Status error;
 
+  // If we are in a generic context, here the static type of the object
+  // might end up being generic (i.e. <T>). We want to make sure that
+  // we correctly map the type into context before asking questions or
+  // printing, as IRGen requires a fully realized type to work on.
+  auto frame_sp =
+      process->GetThreadList().GetSelectedThread()->GetSelectedFrame();
+  auto *swift_ast_ctx =
+      llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
+  if (swift_ast_ctx)
+    static_type =
+        swift_ast_ctx->MapIntoContext(frame_sp,
+                                      static_type.GetOpaqueQualType());
+
   lldb::addr_t copy_location = process->AllocateMemory(
       static_type.GetByteStride(), ePermissionsReadable | ePermissionsWritable,
       error);
