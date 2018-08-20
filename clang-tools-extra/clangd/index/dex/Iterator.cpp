@@ -225,6 +225,41 @@ private:
   std::vector<std::unique_ptr<Iterator>> Children;
 };
 
+/// TrueIterator handles PostingLists which contain all items of the index. It
+/// stores size of the virtual posting list, and all operations are performed
+/// in O(1).
+class TrueIterator : public Iterator {
+public:
+  TrueIterator(DocID Size) : Size(Size) {}
+
+  bool reachedEnd() const override { return Index >= Size; }
+
+  void advance() override {
+    assert(!reachedEnd() && "Can't advance iterator after it reached the end.");
+    ++Index;
+  }
+
+  void advanceTo(DocID ID) override {
+    assert(!reachedEnd() && "Can't advance iterator after it reached the end.");
+    Index = std::min(ID, Size);
+  }
+
+  DocID peek() const override {
+    assert(!reachedEnd() && "TrueIterator can't call peek() at the end.");
+    return Index;
+  }
+
+private:
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+    OS << "(TRUE {" << Index << "} out of " << Size << ")";
+    return OS;
+  }
+
+  DocID Index = 0;
+  /// Size of the underlying virtual PostingList.
+  DocID Size;
+};
+
 } // end namespace
 
 std::vector<DocID> consume(Iterator &It, size_t Limit) {
@@ -247,6 +282,10 @@ createAnd(std::vector<std::unique_ptr<Iterator>> Children) {
 std::unique_ptr<Iterator>
 createOr(std::vector<std::unique_ptr<Iterator>> Children) {
   return llvm::make_unique<OrIterator>(move(Children));
+}
+
+std::unique_ptr<Iterator> createTrue(DocID Size) {
+  return llvm::make_unique<TrueIterator>(Size);
 }
 
 } // namespace dex
