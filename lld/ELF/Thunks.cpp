@@ -159,6 +159,31 @@ public:
   void addSymbols(ThunkSection &IS) override;
 };
 
+// Implementations of Thunks for older Arm architectures that do not support
+// the movt/movw instructions. These thunks require at least Architecture v5
+// as used on processors such as the Arm926ej-s. There are no Thumb entry
+// points as there is no Thumb branch instruction on these architecture that
+// can result in a thunk
+class ARMV5ABSLongThunk final : public ARMThunk {
+public:
+  ARMV5ABSLongThunk(Symbol &Dest) : ARMThunk(Dest) {}
+
+  uint32_t sizeLong() override { return 8; }
+  void writeLong(uint8_t *Buf) override;
+  void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
+};
+
+class ARMV5PILongThunk final : public ARMThunk {
+public:
+  ARMV5PILongThunk(Symbol &Dest) : ARMThunk(Dest) {}
+
+  uint32_t sizeLong() override { return 16; }
+  void writeLong(uint8_t *Buf) override;
+  void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
+};
+
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
@@ -433,6 +458,52 @@ void ThumbV7PILongThunk::addSymbols(ThunkSection &IS) {
   addSymbol("$t", STT_NOTYPE, 0, IS);
 }
 
+void ARMV5ABSLongThunk::writeLong(uint8_t *Buf) {
+  const uint8_t Data[] = {
+      0x04, 0xf0, 0x1f, 0xe5, //     ldr pc, [pc,#-4] ; L1
+      0x00, 0x00, 0x00, 0x00, // L1: .word S
+  };
+  memcpy(Buf, Data, sizeof(Data));
+  Target->relocateOne(Buf + 4, R_ARM_ABS32, getARMThunkDestVA(Destination));
+}
+
+void ARMV5ABSLongThunk::addSymbols(ThunkSection &IS) {
+  addSymbol(Saver.save("__ARMv5ABSLongThunk_" + Destination.getName()),
+            STT_FUNC, 0, IS);
+  addSymbol("$a", STT_NOTYPE, 0, IS);
+  addSymbol("$d", STT_NOTYPE, 4, IS);
+}
+
+bool ARMV5ABSLongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // Thumb branch relocations can't use BLX
+  return RelocType != R_ARM_THM_JUMP19 && RelocType != R_ARM_THM_JUMP24;
+}
+
+void ARMV5PILongThunk::writeLong(uint8_t *Buf) {
+  const uint8_t Data[] = {
+      0x04, 0xc0, 0x9f, 0xe5, // P:  ldr ip, [pc,#4] ; L2
+      0x0c, 0xc0, 0x8f, 0xe0, // L1: add ip, pc, ip
+      0x1c, 0xff, 0x2f, 0xe1, //     bx ip
+      0x00, 0x00, 0x00, 0x00, // L2: .word S - (P + (L1 - P) + 8)
+  };
+  uint64_t S = getARMThunkDestVA(Destination);
+  uint64_t P = getThunkTargetSym()->getVA() & ~0x1;
+  memcpy(Buf, Data, sizeof(Data));
+  Target->relocateOne(Buf + 12, R_ARM_REL32, S - P - 12);
+}
+
+void ARMV5PILongThunk::addSymbols(ThunkSection &IS) {
+  addSymbol(Saver.save("__ARMV5PILongThunk_" + Destination.getName()), STT_FUNC,
+            0, IS);
+  addSymbol("$a", STT_NOTYPE, 0, IS);
+  addSymbol("$d", STT_NOTYPE, 12, IS);
+}
+
+bool ARMV5PILongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // Thumb branch relocations can't use BLX
+  return RelocType != R_ARM_THM_JUMP19 && RelocType != R_ARM_THM_JUMP24;
+}
+
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
 void MipsThunk::writeTo(uint8_t *Buf) {
   uint64_t S = Destination.getVA();
@@ -534,10 +605,49 @@ static Thunk *addThunkAArch64(RelType Type, Symbol &S) {
 }
 
 // Creates a thunk for Thumb-ARM interworking.
+// Arm Architectures v5 and v6 do not support Thumb2 technology. This means
+// - MOVT and MOVW instructions cannot be used
+// - Only Thumb relocation that can generate a Thunk is a BL, this can always
+//   be transformed into a BLX
+static Thunk *addThunkPreArmv7(RelType Reloc, Symbol &S) {
+  switch (Reloc) {
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+  case R_ARM_JUMP24:
+  case R_ARM_CALL:
+  case R_ARM_THM_CALL:
+    if (Config->Pic)
+      return make<ARMV5PILongThunk>(S);
+    return make<ARMV5ABSLongThunk>(S);
+  }
+  fatal("relocation " + toString(Reloc) + " to " + toString(S) +
+        " not supported for Armv5 or Armv6 targets");
+}
+
+// Creates a thunk for Thumb-ARM interworking or branch range extension.
 static Thunk *addThunkArm(RelType Reloc, Symbol &S) {
-  // ARM relocations need ARM to Thumb interworking Thunks.
-  // Thumb relocations need Thumb to ARM relocations.
-  // Use position independent Thunks if we require position independent code.
+  // Decide which Thunk is needed based on:
+  // Available instruction set
+  // - An Arm Thunk can only be used if Arm state is available.
+  // - A Thumb Thunk can only be used if Thumb state is available.
+  // - Can only use a Thunk if it uses instructions that the Target supports.
+  // Relocation is branch or branch and link
+  // - Branch instructions cannot change state, can only select Thunk that
+  //   starts in the same state as the caller.
+  // - Branch and link relocations can change state, can select Thunks from
+  //   either Arm or Thumb.
+  // Position independent Thunks if we require position independent code.
+
+  if (!Config->ARMHasMovtMovw) {
+    if (!Config->ARMJ1J2BranchEncoding)
+      return addThunkPreArmv7(Reloc, S);
+    else
+      // The Armv6-m architecture (Cortex-M0) does not have Arm instructions or
+      // support the MOVT MOVW instructions so it cannot use any of the Thunks
+      // currently implemented.
+      fatal("thunks not supported for architecture Armv6-m");
+  }
+
   switch (Reloc) {
   case R_ARM_PC24:
   case R_ARM_PLT32:

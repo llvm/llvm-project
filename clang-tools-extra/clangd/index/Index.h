@@ -17,6 +17,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/StringSaver.h"
 #include <array>
 #include <string>
 
@@ -257,6 +258,8 @@ public:
   // The frozen SymbolSlab will use less memory.
   class Builder {
   public:
+    Builder() : UniqueStrings(Arena) {}
+
     // Adds a symbol, overwriting any existing one with the same ID.
     // This is a deep copy: underlying strings will be owned by the slab.
     void insert(const Symbol &S);
@@ -273,7 +276,7 @@ public:
   private:
     llvm::BumpPtrAllocator Arena;
     // Intern table for strings. Contents are on the arena.
-    llvm::DenseSet<llvm::StringRef> Strings;
+    llvm::UniqueStringSaver UniqueStrings;
     std::vector<Symbol> Symbols;
     // Values are indices into Symbols vector.
     llvm::DenseMap<SymbolID, size_t> SymbolIndex;
