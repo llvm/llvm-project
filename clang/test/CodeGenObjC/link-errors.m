@@ -10,7 +10,7 @@
 -(id) init;
 @end
 
-@protocol P @end
+@protocol P;
 
 @interface A : Root
 @end
