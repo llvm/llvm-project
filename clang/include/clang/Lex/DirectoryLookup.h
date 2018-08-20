@@ -191,7 +191,7 @@ private:
       SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,
-      bool &InUserSpecifiedSystemHeader) const;
+      bool &InUserSpecifiedSystemFramework) const;
 
 };
 
