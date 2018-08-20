@@ -27,6 +27,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <new>
@@ -449,46 +450,100 @@ public:
   static bool const value = (sizeof(test<DocumentListTraits<T>>(nullptr))==1);
 };
 
-inline bool isNumber(StringRef S) {
-  static const char OctalChars[] = "01234567";
-  if (S.startswith("0") &&
-      S.drop_front().find_first_not_of(OctalChars) == StringRef::npos)
-    return true;
-
-  if (S.startswith("0o") &&
-      S.drop_front(2).find_first_not_of(OctalChars) == StringRef::npos)
-    return true;
-
-  static const char HexChars[] = "0123456789abcdefABCDEF";
-  if (S.startswith("0x") &&
-      S.drop_front(2).find_first_not_of(HexChars) == StringRef::npos)
-    return true;
-
-  static const char DecChars[] = "0123456789";
-  if (S.find_first_not_of(DecChars) == StringRef::npos)
-    return true;
-
-  if (S.equals(".inf") || S.equals(".Inf") || S.equals(".INF"))
-    return true;
-
-  Regex FloatMatcher("^(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?$");
-  if (FloatMatcher.match(S))
-    return true;
-
-  return false;
-}
-
 inline bool isNumeric(StringRef S) {
-  if ((S.front() == '-' || S.front() == '+') && isNumber(S.drop_front()))
-    return true;
+  const static auto skipDigits = [](StringRef Input) {
+    return Input.drop_front(
+        std::min(Input.find_first_not_of("0123456789"), Input.size()));
+  };
 
-  if (isNumber(S))
-    return true;
+  // Make S.front() and S.drop_front().front() (if S.front() is [+-]) calls
+  // safe.
+  if (S.empty() || S.equals("+") || S.equals("-"))
+    return false;
 
   if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
     return true;
 
-  return false;
+  // Infinity and decimal numbers can be prefixed with sign.
+  StringRef Tail = (S.front() == '-' || S.front() == '+') ? S.drop_front() : S;
+
+  // Check for infinity first, because checking for hex and oct numbers is more
+  // expensive.
+  if (Tail.equals(".inf") || Tail.equals(".Inf") || Tail.equals(".INF"))
+    return true;
+
+  // Section 10.3.2 Tag Resolution
+  // YAML 1.2 Specification prohibits Base 8 and Base 16 numbers prefixed with
+  // [-+], so S should be used instead of Tail.
+  if (S.startswith("0o"))
+    return S.size() > 2 &&
+           S.drop_front(2).find_first_not_of("01234567") == StringRef::npos;
+
+  if (S.startswith("0x"))
+    return S.size() > 2 && S.drop_front(2).find_first_not_of(
+                               "0123456789abcdefABCDEF") == StringRef::npos;
+
+  // Parse float: [-+]? (\. [0-9]+ | [0-9]+ (\. [0-9]* )?) ([eE] [-+]? [0-9]+)?
+  S = Tail;
+
+  // Handle cases when the number starts with '.' and hence needs at least one
+  // digit after dot (as opposed by number which has digits before the dot), but
+  // doesn't have one.
+  if (S.startswith(".") &&
+      (S.equals(".") ||
+       (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
+    return false;
+
+  if (S.startswith("E") || S.startswith("e"))
+    return false;
+
+  enum ParseState {
+    Default,
+    FoundDot,
+    FoundExponent,
+  };
+  ParseState State = Default;
+
+  S = skipDigits(S);
+
+  // Accept decimal integer.
+  if (S.empty())
+    return true;
+
+  if (S.front() == '.') {
+    State = FoundDot;
+    S = S.drop_front();
+  } else if (S.front() == 'e' || S.front() == 'E') {
+    State = FoundExponent;
+    S = S.drop_front();
+  } else {
+    return false;
+  }
+
+  if (State == FoundDot) {
+    S = skipDigits(S);
+    if (S.empty())
+      return true;
+
+    if (S.front() == 'e' || S.front() == 'E') {
+      State = FoundExponent;
+      S = S.drop_front();
+    } else {
+      return false;
+    }
+  }
+
+  assert(FoundExponent && "Should have found exponent at this point.");
+  if (S.empty())
+    return false;
+
+  if (S.front() == '+' || S.front() == '-') {
+    S = S.drop_front();
+    if (S.empty())
+      return false;
+  }
+
+  return skipDigits(S).empty();
 }
 
 inline bool isNull(StringRef S) {

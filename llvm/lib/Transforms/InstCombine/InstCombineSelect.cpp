@@ -1766,7 +1766,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (Instruction *FoldI = foldSelectIntoOp(SI, TrueVal, FalseVal))
       return FoldI;
 
-    Value *LHS, *RHS, *LHS2, *RHS2;
+    Value *LHS, *RHS;
     Instruction::CastOps CastOp;
     SelectPatternResult SPR = matchSelectPattern(&SI, LHS, RHS, &CastOp);
     auto SPF = SPR.Flavor;
@@ -1825,6 +1825,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // MIN(MAX(a, b), a) -> a
       // ABS(ABS(a)) -> ABS(a)
       // NABS(NABS(a)) -> NABS(a)
+      Value *LHS2, *RHS2;
       if (SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor)
         if (Instruction *R = foldSPFofSPF(cast<Instruction>(LHS),SPF2,LHS2,RHS2,
                                           SI, SPF, RHS))

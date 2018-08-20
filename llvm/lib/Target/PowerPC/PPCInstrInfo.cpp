@@ -2088,11 +2088,9 @@ bool PPCInstrInfo::expandVSXMemPseudo(MachineInstr &MI) const {
     return true;
 }
 
-#ifndef NDEBUG
 static bool isAnImmediateOperand(const MachineOperand &MO) {
   return MO.isCPI() || MO.isGlobal() || MO.isImm();
 }
-#endif
 
 bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   auto &MBB = *MI.getParent();
@@ -2256,10 +2254,11 @@ void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
       .addImm(LII.Imm);
 }
 
-MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
-                                             unsigned &ConstOp,
-                                             bool &SeenIntermediateUse) const {
-  ConstOp = ~0U;
+MachineInstr *PPCInstrInfo::getForwardingDefMI(
+  MachineInstr &MI,
+  unsigned &OpNoForForwarding,
+  bool &SeenIntermediateUse) const {
+  OpNoForForwarding = ~0U;
   MachineInstr *DefMI = nullptr;
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -2276,7 +2275,7 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
       if (TargetRegisterInfo::isVirtualRegister(TrueReg)) {
         DefMI = MRI->getVRegDef(TrueReg);
         if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8) {
-          ConstOp = i;
+          OpNoForForwarding = i;
           break;
         }
       }
@@ -2319,15 +2318,22 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
         if (PPC::G8RCRegClass.contains(Reg))
           Reg = Reg - PPC::X0 + PPC::R0;
 
-        // Is this register defined by a load-immediate in this block?
+        // Is this register defined by some form of add-immediate (including
+        // load-immediate) within this basic block?
         for ( ; It != E; ++It) {
           if (It->modifiesRegister(Reg, &getRegisterInfo())) {
-            if (It->getOpcode() == PPC::LI || It->getOpcode() == PPC::LI8) {
-              ConstOp = i;
+            switch (It->getOpcode()) {
+            default: break;
+            case PPC::LI:
+            case PPC::LI8:
+            case PPC::ADDItocL:
+            case PPC::ADDI:
+            case PPC::ADDI8:
+              OpNoForForwarding = i;
               return &*It;
-            } else
-              break;
-          } else if (It->readsRegister(Reg, &getRegisterInfo()))
+            }
+            break;
+          } else if (It->readsRegister(Reg, &getRegisterInfo())) 
             // If we see another use of this reg between the def and the MI,
             // we want to flat it so the def isn't deleted.
             SeenIntermediateUse = true;
@@ -2335,7 +2341,7 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
       }
     }
   }
-  return ConstOp == ~0U ? nullptr : DefMI;
+  return OpNoForForwarding == ~0U ? nullptr : DefMI;
 }
 
 const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {
@@ -2371,35 +2377,48 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
 }
 
 // If this instruction has an immediate form and one of its operands is a
-// result of a load-immediate, convert it to the immediate form if the constant
-// is in range.
+// result of a load-immediate or an add-immediate, convert it to
+// the immediate form if the constant is in range.
 bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
                                           MachineInstr **KilledDef) const {
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   bool PostRA = !MRI->isSSA();
   bool SeenIntermediateUse = true;
-  unsigned ConstantOperand = ~0U;
-  MachineInstr *DefMI = getConstantDefMI(MI, ConstantOperand,
-                                         SeenIntermediateUse);
-  if (!DefMI || !DefMI->getOperand(1).isImm())
+  unsigned ForwardingOperand = ~0U;
+  MachineInstr *DefMI = getForwardingDefMI(MI, ForwardingOperand,
+                                           SeenIntermediateUse);
+  if (!DefMI)
     return false;
-  assert(ConstantOperand < MI.getNumOperands() &&
-         "The constant operand needs to be valid at this point");
+  assert(ForwardingOperand < MI.getNumOperands() &&
+         "The forwarding operand needs to be valid at this point");
+  bool KillFwdDefMI = !SeenIntermediateUse &&
+    MI.getOperand(ForwardingOperand).isKill();
+  if (KilledDef && KillFwdDefMI)
+    *KilledDef = DefMI;
+
+  ImmInstrInfo III;
+  bool HasImmForm = instrHasImmForm(MI, III);
+  // If this is a reg+reg instruction that has a reg+imm form,
+  // and one of the operands is produced by an add-immediate,
+  // try to convert it.
+  if (HasImmForm && transformToImmFormFedByAdd(MI, III, ForwardingOperand,
+                                               *DefMI, KillFwdDefMI))
+    return true;
+
+  if ((DefMI->getOpcode() != PPC::LI && DefMI->getOpcode() != PPC::LI8) ||
+      !DefMI->getOperand(1).isImm())
+    return false;
 
   int64_t Immediate = DefMI->getOperand(1).getImm();
   // Sign-extend to 64-bits.
   int64_t SExtImm = ((uint64_t)Immediate & ~0x7FFFuLL) != 0 ?
     (Immediate | 0xFFFFFFFFFFFF0000) : Immediate;
 
-  if (KilledDef && MI.getOperand(ConstantOperand).isKill() &&
-      !SeenIntermediateUse)
-    *KilledDef = DefMI;
-
-  // If this is a reg+reg instruction that has a reg+imm form, convert it now.
-  ImmInstrInfo III;
-  if (instrHasImmForm(MI, III))
-    return transformToImmForm(MI, III, ConstantOperand, SExtImm);
+  // If this is a reg+reg instruction that has a reg+imm form,
+  // and one of the operands is produced by LI, convert it now.
+  if (HasImmForm)
+    return transformToImmFormFedByLI(MI, III, ForwardingOperand, SExtImm);
 
   bool ReplaceWithLI = false;
   bool Is64BitLI = false;
@@ -2610,10 +2629,11 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
   // are the update form loads/stores for which a constant operand 2 would need
   // to turn into a displacement and move operand 1 to the operand 2 position.
   III.ImmOpNo = 2;
-  III.ConstantOpNo = 2;
+  III.OpNoForForwarding = 2;
   III.ImmWidth = 16;
   III.ImmMustBeMultipleOf = 1;
   III.TruncateImmTo = 0;
+  III.IsSummingOperands = false;
   switch (Opc) {
   default: return false;
   case PPC::ADD4:
@@ -2622,6 +2642,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 1;
     III.IsCommutative = true;
+    III.IsSummingOperands = true;
     III.ImmOpcode = Opc == PPC::ADD4 ? PPC::ADDI : PPC::ADDI8;
     break;
   case PPC::ADDC:
@@ -2630,6 +2651,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 0;
     III.IsCommutative = true;
+    III.IsSummingOperands = true;
     III.ImmOpcode = Opc == PPC::ADDC ? PPC::ADDIC : PPC::ADDIC8;
     break;
   case PPC::ADDCo:
@@ -2637,6 +2659,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 0;
     III.IsCommutative = true;
+    III.IsSummingOperands = true;
     III.ImmOpcode = PPC::ADDICo;
     break;
   case PPC::SUBFC:
@@ -2809,8 +2832,9 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 1;
     III.ZeroIsSpecialNew = 2;
     III.IsCommutative = true;
+    III.IsSummingOperands = true;
     III.ImmOpNo = 1;
-    III.ConstantOpNo = 2;
+    III.OpNoForForwarding = 2;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::LBZX: III.ImmOpcode = PPC::LBZ; break;
@@ -2866,8 +2890,9 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 2;
     III.ZeroIsSpecialNew = 3;
     III.IsCommutative = false;
+    III.IsSummingOperands = true;
     III.ImmOpNo = 2;
-    III.ConstantOpNo = 3;
+    III.OpNoForForwarding = 3;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::LBZUX: III.ImmOpcode = PPC::LBZU; break;
@@ -2911,8 +2936,9 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.ZeroIsSpecialOrig = 1;
     III.ZeroIsSpecialNew = 2;
     III.IsCommutative = true;
+    III.IsSummingOperands = true;
     III.ImmOpNo = 1;
-    III.ConstantOpNo = 2;
+    III.OpNoForForwarding = 2;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::LXVX:
@@ -2984,13 +3010,256 @@ static void swapMIOperands(MachineInstr &MI, unsigned Op1, unsigned Op2) {
   }
 }
 
-bool PPCInstrInfo::transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
-                                      unsigned ConstantOpNo,
-                                      int64_t Imm) const {
+// Check if the 'MI' that has the index OpNoForForwarding 
+// meets the requirement described in the ImmInstrInfo.
+bool PPCInstrInfo::isUseMIElgibleForForwarding(MachineInstr &MI,
+                                               const ImmInstrInfo &III,
+                                               unsigned OpNoForForwarding
+                                               ) const {
+  // As the algorithm of checking for PPC::ZERO/PPC::ZERO8
+  // would not work pre-RA, we can only do the check post RA.
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA())
+    return false;
+
+  // Cannot do the transform if MI isn't summing the operands.
+  if (!III.IsSummingOperands)
+    return false;
+
+  // The instruction we are trying to replace must have the ZeroIsSpecialOrig set.
+  if (!III.ZeroIsSpecialOrig)
+    return false;
+
+  // We cannot do the transform if the operand we are trying to replace
+  // isn't the same as the operand the instruction allows.
+  if (OpNoForForwarding != III.OpNoForForwarding)
+    return false;
+
+  // Check if the instruction we are trying to transform really has
+  // the special zero register as its operand.
+  if (MI.getOperand(III.ZeroIsSpecialOrig).getReg() != PPC::ZERO &&
+      MI.getOperand(III.ZeroIsSpecialOrig).getReg() != PPC::ZERO8)
+    return false;
+
+  // This machine instruction is convertible if it is,
+  // 1. summing the operands.
+  // 2. one of the operands is special zero register.
+  // 3. the operand we are trying to replace is allowed by the MI.
+  return true;
+}
+
+// Check if the DefMI is the add inst and set the ImmMO and RegMO
+// accordingly.
+bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
+                                               const ImmInstrInfo &III,
+                                               MachineOperand *&ImmMO,
+                                               MachineOperand *&RegMO) const {
+  unsigned Opc = DefMI.getOpcode();
+  if (Opc != PPC::ADDItocL && Opc != PPC::ADDI && Opc != PPC::ADDI8)
+    return false; 
+
+  assert(DefMI.getNumOperands() >= 3 &&
+         "Add inst must have at least three operands");
+  RegMO = &DefMI.getOperand(1);
+  ImmMO = &DefMI.getOperand(2);
+
+  // This DefMI is elgible for forwarding if it is:
+  // 1. add inst
+  // 2. one of the operands is Imm/CPI/Global.
+  return isAnImmediateOperand(*ImmMO);
+}
+
+bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
+                                             const MachineInstr &DefMI,
+                                             const MachineInstr &MI,
+                                             bool KillDefMI
+                                             ) const {
+  // x = addi y, imm
+  // ...
+  // z = lfdx 0, x   -> z = lfd imm(y)
+  // The Reg "y" can be forwarded to the MI(z) only when there is no DEF
+  // of "y" between the DEF of "x" and "z".
+  // The query is only valid post RA.
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA())
+    return false;
+
+  // MachineInstr::readsRegister only returns true if the machine
+  // instruction reads the exact register or its super-register. It
+  // does not consider uses of sub-registers which seems like strange
+  // behaviour. Nonetheless, if we end up with a 64-bit register here,
+  // get the corresponding 32-bit register to check.
+  unsigned Reg = RegMO.getReg();
+  if (PPC::G8RCRegClass.contains(Reg))
+    Reg = Reg - PPC::X0 + PPC::R0;
+
+  // Walking the inst in reverse(MI-->DefMI) to get the last DEF of the Reg.
+  MachineBasicBlock::const_reverse_iterator It = MI;
+  MachineBasicBlock::const_reverse_iterator E = MI.getParent()->rend();
+  It++;
+  for (; It != E; ++It) {
+    if (It->modifiesRegister(Reg, &getRegisterInfo()) && (&*It) != &DefMI)
+      return false;
+    // Made it to DefMI without encountering a clobber.
+    if ((&*It) == &DefMI)
+      break;
+  }
+  assert((&*It) == &DefMI && "DefMI is missing");
+
+  // If DefMI also uses the register to be forwarded, we can only forward it
+  // if DefMI is being erased.
+  if (DefMI.readsRegister(Reg, &getRegisterInfo()))
+    return KillDefMI;
+
+  return true;
+}
+
+bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
+                                             const MachineInstr &DefMI,
+                                             const ImmInstrInfo &III,
+                                             int64_t &Imm) const {
+  assert(isAnImmediateOperand(ImmMO) && "ImmMO is NOT an immediate");
+  if (DefMI.getOpcode() == PPC::ADDItocL) {
+    // The operand for ADDItocL is CPI, which isn't imm at compiling time,
+    // However, we know that, it is 16-bit width, and has the alignment of 4.
+    // Check if the instruction met the requirement.
+    if (III.ImmMustBeMultipleOf > 4 ||
+       III.TruncateImmTo || III.ImmWidth != 16)
+      return false;
+
+    return true;
+  }
+
+  if (ImmMO.isImm()) {
+    // It is Imm, we need to check if the Imm fit the range.
+    int64_t Immediate = ImmMO.getImm();
+    // Sign-extend to 64-bits.
+    Imm = ((uint64_t)Immediate & ~0x7FFFuLL) != 0 ?
+      (Immediate | 0xFFFFFFFFFFFF0000) : Immediate;
+
+    if (Imm % III.ImmMustBeMultipleOf)
+      return false;
+    if (III.TruncateImmTo)
+      Imm &= ((1 << III.TruncateImmTo) - 1);
+    if (III.SignedImm) {
+      APInt ActualValue(64, Imm, true);
+      if (!ActualValue.isSignedIntN(III.ImmWidth))
+        return false;
+    } else {
+      uint64_t UnsignedMax = (1 << III.ImmWidth) - 1;
+      if ((uint64_t)Imm > UnsignedMax)
+        return false;
+    }
+  }
+  else
+    return false;
+
+  // This ImmMO is forwarded if it meets the requriement describle
+  // in ImmInstrInfo
+  return true;
+}
+
+// If an X-Form instruction is fed by an add-immediate and one of its operands
+// is the literal zero, attempt to forward the source of the add-immediate to
+// the corresponding D-Form instruction with the displacement coming from
+// the immediate being added.
+bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
+                                              const ImmInstrInfo &III,
+                                              unsigned OpNoForForwarding,
+                                              MachineInstr &DefMI,
+                                              bool KillDefMI) const {
+  //         RegMO ImmMO
+  //           |    |
+  // x = addi reg, imm  <----- DefMI
+  // y = op    0 ,  x   <----- MI
+  //                |
+  //         OpNoForForwarding
+  // Check if the MI meet the requirement described in the III.
+  if (!isUseMIElgibleForForwarding(MI, III, OpNoForForwarding))
+    return false;
+
+  // Check if the DefMI meet the requirement
+  // described in the III. If yes, set the ImmMO and RegMO accordingly.
+  MachineOperand *ImmMO = nullptr;
+  MachineOperand *RegMO = nullptr;
+  if (!isDefMIElgibleForForwarding(DefMI, III, ImmMO, RegMO))
+    return false;
+  assert(ImmMO && RegMO && "Imm and Reg operand must have been set");
+
+  // As we get the Imm operand now, we need to check if the ImmMO meet
+  // the requirement described in the III. If yes set the Imm.
+  int64_t Imm = 0;
+  if (!isImmElgibleForForwarding(*ImmMO, DefMI, III, Imm))
+    return false;
+
+  // Check if the RegMO can be forwarded to MI.
+  if (!isRegElgibleForForwarding(*RegMO, DefMI, MI, KillDefMI))
+    return false;
+
+  // We know that, the MI and DefMI both meet the pattern, and
+  // the Imm also meet the requirement with the new Imm-form.
+  // It is safe to do the transformation now.
+  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "Fed by:\n");
+  LLVM_DEBUG(DefMI.dump());
+
+  // Update the base reg first.
+  MI.getOperand(III.OpNoForForwarding).ChangeToRegister(RegMO->getReg(),
+                                                        false, false,
+                                                        RegMO->isKill());
+
+  // Then, update the imm.
+  if (ImmMO->isImm()) {
+    // If the ImmMO is Imm, change the operand that has ZERO to that Imm
+    // directly.
+    MI.getOperand(III.ZeroIsSpecialOrig).ChangeToImmediate(Imm);
+  }
+  else {
+    // Otherwise, it is Constant Pool Index(CPI) or Global,
+    // which is relocation in fact. We need to replace the special zero
+    // register with ImmMO.
+    // Before that, we need to fixup the target flags for imm. 
+    // For some reason, we miss to set the flag for the ImmMO if it is CPI.
+    if (DefMI.getOpcode() == PPC::ADDItocL)
+      ImmMO->setTargetFlags(PPCII::MO_TOC_LO);
+
+    // MI didn't have the interface such as MI.setOperand(i) though
+    // it has MI.getOperand(i). To repalce the ZERO MachineOperand with
+    // ImmMO, we need to remove ZERO operand and all the operands behind it,
+    // and, add the ImmMO, then, move back all the operands behind ZERO.
+    SmallVector<MachineOperand, 2> MOps;
+    for (unsigned i = MI.getNumOperands() - 1; i >= III.ZeroIsSpecialOrig; i--) {
+      MOps.push_back(MI.getOperand(i));
+      MI.RemoveOperand(i);
+    }
+
+    // Remove the last MO in the list, which is ZERO operand in fact.
+    MOps.pop_back();
+    // Add the imm operand.
+    MI.addOperand(*ImmMO);
+    // Now add the rest back.
+    for (auto &MO : MOps)
+      MI.addOperand(MO);
+  }
+
+  // Update the opcode.
+  MI.setDesc(get(III.ImmOpcode));
+
+  LLVM_DEBUG(dbgs() << "With:\n");
+  LLVM_DEBUG(MI.dump());
+
+  return true;
+}
+
+bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
+                                             const ImmInstrInfo &III,
+                                             unsigned ConstantOpNo,
+                                             int64_t Imm) const {
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   bool PostRA = !MRI.isSSA();
   // Exit early if we can't convert this.
-  if ((ConstantOpNo != III.ConstantOpNo) && !III.IsCommutative)
+  if ((ConstantOpNo != III.OpNoForForwarding) && !III.IsCommutative)
     return false;
   if (Imm % III.ImmMustBeMultipleOf)
     return false;
@@ -3035,7 +3304,7 @@ bool PPCInstrInfo::transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
     Opc == PPC::SRW || Opc == PPC::SRWo || Opc == PPC::SRD || Opc == PPC::SRDo;
 
   MI.setDesc(get(III.ImmOpcode));
-  if (ConstantOpNo == III.ConstantOpNo) {
+  if (ConstantOpNo == III.OpNoForForwarding) {
     // Converting shifts to immediate form is a bit tricky since they may do
     // one of three things:
     // 1. If the shift amount is between OpSize and 2*OpSize, the result is zero
@@ -3063,14 +3332,14 @@ bool PPCInstrInfo::transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
           uint64_t SH = RightShift ? 32 - ShAmt : ShAmt;
           uint64_t MB = RightShift ? ShAmt : 0;
           uint64_t ME = RightShift ? 31 : 31 - ShAmt;
-          MI.getOperand(III.ConstantOpNo).ChangeToImmediate(SH);
+          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(MB)
             .addImm(ME);
         } else {
           // Left shifts use (N, 63-N), right shifts use (64-N, N).
           uint64_t SH = RightShift ? 64 - ShAmt : ShAmt;
           uint64_t ME = RightShift ? ShAmt : 63 - ShAmt;
-          MI.getOperand(III.ConstantOpNo).ChangeToImmediate(SH);
+          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(ME);
         }
       }
@@ -3081,14 +3350,14 @@ bool PPCInstrInfo::transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
   // desired one to an immediate.
   else if (III.IsCommutative) {
     MI.getOperand(ConstantOpNo).ChangeToImmediate(Imm);
-    swapMIOperands(MI, ConstantOpNo, III.ConstantOpNo);
+    swapMIOperands(MI, ConstantOpNo, III.OpNoForForwarding);
   } else
     llvm_unreachable("Should have exited early!");
 
   // For instructions for which the constant register replaces a different
   // operand than where the immediate goes, we need to swap them.
-  if (III.ConstantOpNo != III.ImmOpNo)
-    swapMIOperands(MI, III.ConstantOpNo, III.ImmOpNo);
+  if (III.OpNoForForwarding != III.ImmOpNo)
+    swapMIOperands(MI, III.OpNoForForwarding, III.ImmOpNo);
 
   // If the R0/X0 register is special for the original instruction and not for
   // the new instruction (or vice versa), we need to fix up the register class.
