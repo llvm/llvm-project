@@ -6838,9 +6838,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     return Entry;
 
   // Use the protocol definition, if there is one.
-  assert(PD->hasDefinition() &&
-         "emitting protocol metadata without definition");
-  PD = PD->getDefinition();
+  if (const ObjCProtocolDecl *Def = PD->getDefinition())
+    PD = Def;
 
   auto methodLists = ProtocolMethodLists::get(PD);
 
