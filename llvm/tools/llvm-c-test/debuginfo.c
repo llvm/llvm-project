@@ -68,7 +68,7 @@ int llvm_test_dibuilder(void) {
                                               NULL, 0);
 
   LLVMMetadataRef Int64Ty =
-    LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);
+    LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0, LLVMDIFlagZero);
   LLVMMetadataRef Int64TypeDef =
     LLVMDIBuilderCreateTypedef(DIB, Int64Ty, "int64_t", 7, File, 42, File);
 

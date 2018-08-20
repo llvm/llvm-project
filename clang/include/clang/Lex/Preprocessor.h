@@ -1160,7 +1160,7 @@ public:
   void createPreprocessingRecord();
 
   /// Returns true if the FileEntry is the PCH through header.
-  bool isPCHThroughHeader(const FileEntry *File);
+  bool isPCHThroughHeader(const FileEntry *FE);
 
   /// True if creating a PCH with a through header.
   bool creatingPCHWithThroughHeader();
@@ -1186,7 +1186,7 @@ public:
   /// start lexing tokens from it instead of the current buffer.
   ///
   /// Emits a diagnostic, doesn't enter the file, and returns true on error.
-  bool EnterSourceFile(FileID CurFileID, const DirectoryLookup *Dir,
+  bool EnterSourceFile(FileID FID, const DirectoryLookup *Dir,
                        SourceLocation Loc);
 
   /// Add a Macro to the top of the include stack and start lexing
@@ -1195,7 +1195,7 @@ public:
   /// \param Args specifies the tokens input to a function-like macro.
   /// \param ILEnd specifies the location of the ')' for a function-like macro
   /// or the identifier for an object-like macro.
-  void EnterMacro(Token &Identifier, SourceLocation ILEnd, MacroInfo *Macro,
+  void EnterMacro(Token &Tok, SourceLocation ILEnd, MacroInfo *Macro,
                   MacroArgs *Args);
 
   /// Add a "macro" context to the top of the include stack,
@@ -1749,7 +1749,7 @@ public:
   void SetPoisonReason(IdentifierInfo *II, unsigned DiagID);
 
   /// Display reason for poisoned identifier.
-  void HandlePoisonedIdentifier(Token & Tok);
+  void HandlePoisonedIdentifier(Token & Identifier);
 
   void MaybeHandlePoisonedIdentifier(Token & Identifier) {
     if(IdentifierInfo * II = Identifier.getIdentifierInfo()) {
@@ -1814,7 +1814,7 @@ public:
   /// If not, emit a diagnostic and consume up until the eod.
   /// If \p EnableMacros is true, then we consider macros that expand to zero
   /// tokens as being ok.
-  void CheckEndOfDirective(const char *Directive, bool EnableMacros = false);
+  void CheckEndOfDirective(const char *DirType, bool EnableMacros = false);
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found.
@@ -1843,7 +1843,7 @@ public:
   ///
   /// \returns true if the input filename was in <>'s or false if it was
   /// in ""'s.
-  bool GetIncludeFilenameSpelling(SourceLocation Loc,StringRef &Filename);
+  bool GetIncludeFilenameSpelling(SourceLocation Loc,StringRef &Buffer);
 
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///
@@ -1886,7 +1886,7 @@ public:
 
   /// Lex an on-off-switch (C99 6.10.6p2) and verify that it is
   /// followed by EOD.  Return true if the token is not a valid on-off-switch.
-  bool LexOnOffSwitch(tok::OnOffSwitch &OOS);
+  bool LexOnOffSwitch(tok::OnOffSwitch &Result);
 
   bool CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
                       bool *ShadowFlag = nullptr);
@@ -2006,7 +2006,7 @@ private:
   /// If an identifier token is read that is to be expanded as a macro, handle
   /// it and return the next token as 'Tok'.  If we lexed a token, return true;
   /// otherwise the caller should lex again.
-  bool HandleMacroExpandedIdentifier(Token &Tok, const MacroDefinition &MD);
+  bool HandleMacroExpandedIdentifier(Token &Identifier, const MacroDefinition &MD);
 
   /// Cache macro expanded tokens for TokenLexers.
   //
@@ -2026,7 +2026,7 @@ private:
   /// After reading "MACRO(", this method is invoked to read all of the formal
   /// arguments specified for the macro invocation.  Returns null on error.
   MacroArgs *ReadMacroCallArgumentList(Token &MacroName, MacroInfo *MI,
-                                       SourceLocation &ExpansionEnd);
+                                       SourceLocation &MacroEnd);
 
   /// If an identifier token is read that is to be expanded
   /// as a builtin macro, handle it and return the next token as 'Tok'.
@@ -2177,17 +2177,17 @@ private:
   void replayPreambleConditionalStack();
 
   // Macro handling.
-  void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterTopLevelIfndef);
+  void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterHeaderGuard);
   void HandleUndefDirective();
 
   // Conditional Inclusion.
-  void HandleIfdefDirective(Token &Tok, const Token &HashToken,
+  void HandleIfdefDirective(Token &Result, const Token &HashToken,
                             bool isIfndef, bool ReadAnyTokensBeforeDirective);
-  void HandleIfDirective(Token &Tok, const Token &HashToken,
+  void HandleIfDirective(Token &IfToken, const Token &HashToken,
                          bool ReadAnyTokensBeforeDirective);
-  void HandleEndifDirective(Token &Tok);
-  void HandleElseDirective(Token &Tok, const Token &HashToken);
-  void HandleElifDirective(Token &Tok, const Token &HashToken);
+  void HandleEndifDirective(Token &EndifToken);
+  void HandleElseDirective(Token &Result, const Token &HashToken);
+  void HandleElifDirective(Token &ElifToken, const Token &HashToken);
 
   // Pragmas.
   void HandlePragmaDirective(SourceLocation IntroducerLoc,
@@ -2207,7 +2207,7 @@ public:
 
   // Return true and store the first token only if any CommentHandler
   // has inserted some tokens and getCommentRetentionState() is false.
-  bool HandleComment(Token &Token, SourceRange Comment);
+  bool HandleComment(Token &result, SourceRange Comment);
 
   /// A macro is used, update information about macros that need unused
   /// warnings.

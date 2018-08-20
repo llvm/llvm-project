@@ -580,7 +580,7 @@ public:
   /// getContainingModuleMapFile().
   const FileEntry *getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModuleMap);
+  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
 
   /// Get any module map files other than getModuleMapFileForUniquing(M)
   /// that define submodules of a top-level module \p M. This is cheaper than

@@ -3245,7 +3245,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     // Requires handling of DemandedElts and Endianness.
     if ((SrcBits % VTBits) == 0) {
       assert(Op.getValueType().isVector() && "Expected bitcast to vector");
-      Tmp = ComputeNumSignBits(N0, Depth + 1);
+
+      unsigned Scale = SrcBits / VTBits;
+      APInt SrcDemandedElts(NumElts / Scale, 0);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SrcDemandedElts.setBit(i / Scale);
+
+      Tmp = ComputeNumSignBits(N0, SrcDemandedElts, Depth + 1);
       if (Tmp == SrcBits)
         return VTBits;
     }
