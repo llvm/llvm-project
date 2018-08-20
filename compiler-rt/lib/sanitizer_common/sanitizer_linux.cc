@@ -117,6 +117,9 @@ struct kernel_timeval {
 // <linux/futex.h> is broken on some linux distributions.
 const int FUTEX_WAIT = 0;
 const int FUTEX_WAKE = 1;
+const int FUTEX_PRIVATE_FLAG = 128;
+const int FUTEX_WAIT_PRIVATE = FUTEX_WAIT | FUTEX_PRIVATE_FLAG;
+const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 #endif  // SANITIZER_LINUX
 
 // Are we using 32-bit or 64-bit Linux syscalls?
@@ -686,7 +689,8 @@ void BlockingMutex::Lock() {
 #elif SANITIZER_NETBSD
     sched_yield(); /* No userspace futex-like synchronization */
 #else
-    internal_syscall(SYSCALL(futex), (uptr)m, FUTEX_WAIT, MtxSleeping, 0, 0, 0);
+    internal_syscall(SYSCALL(futex), (uptr)m, FUTEX_WAIT_PRIVATE, MtxSleeping,
+                     0, 0, 0);
 #endif
   }
 }
@@ -701,7 +705,7 @@ void BlockingMutex::Unlock() {
 #elif SANITIZER_NETBSD
                    /* No userspace futex-like synchronization */
 #else
-    internal_syscall(SYSCALL(futex), (uptr)m, FUTEX_WAKE, 1, 0, 0, 0);
+    internal_syscall(SYSCALL(futex), (uptr)m, FUTEX_WAKE_PRIVATE, 1, 0, 0, 0);
 #endif
   }
 }
