@@ -30,6 +30,7 @@ add_extra_unittest(ClangdTests
   SyncAPI.cpp
   TUSchedulerTests.cpp
   TestFS.cpp
+  TestIndex.cpp
   TestTU.cpp
   ThreadingTests.cpp
   TraceTests.cpp
