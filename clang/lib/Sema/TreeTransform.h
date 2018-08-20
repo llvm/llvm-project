@@ -6058,6 +6058,12 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   if (modifiedType.isNull())
     return QualType();
 
+  // oldAttr can be null if we started with a QualType rather than a TypeLoc.
+  const Attr *oldAttr = TL.getAttr();
+  const Attr *newAttr = oldAttr ? getDerived().TransformAttr(oldAttr) : nullptr;
+  if (oldAttr && !newAttr)
+    return QualType();
+
   QualType result = TL.getType();
 
   // FIXME: dependent operand expressions?
@@ -6074,26 +6080,20 @@ QualType TreeTransform<Derived>::TransformAttributedType(
     // type sugar, and therefore cannot be diagnosed in any other way.
     if (auto nullability = oldType->getImmediateNullability()) {
       if (!modifiedType->canHaveNullability()) {
-        SemaRef.Diag(TL.getAttrNameLoc(), diag::err_nullability_nonpointer)
-          << DiagNullabilityKind(*nullability, false) << modifiedType;
+        SemaRef.Diag(TL.getAttr()->getLocation(),
+                     diag::err_nullability_nonpointer)
+            << DiagNullabilityKind(*nullability, false) << modifiedType;
         return QualType();
       }
     }
 
-    result = SemaRef.Context.getAttributedType(oldType->getAttrKind(),
+    result = SemaRef.Context.getAttributedType(TL.getAttrKind(),
                                                modifiedType,
                                                equivalentType);
   }
 
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
-  newTL.setAttrNameLoc(TL.getAttrNameLoc());
-  if (TL.hasAttrOperand())
-    newTL.setAttrOperandParensRange(TL.getAttrOperandParensRange());
-  if (TL.hasAttrExprOperand())
-    newTL.setAttrExprOperand(TL.getAttrExprOperand());
-  else if (TL.hasAttrEnumOperand())
-    newTL.setAttrEnumOperandLoc(TL.getAttrEnumOperandLoc());
-
+  newTL.setAttr(newAttr);
   return result;
 }
 
