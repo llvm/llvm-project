@@ -262,6 +262,19 @@ TEST(DexIndexIterators, Limit) {
   EXPECT_THAT(consume(*DocIterator, 0), ElementsAre());
 }
 
+TEST(DexIndexIterators, True) {
+  auto TrueIterator = createTrue(0U);
+  EXPECT_THAT(TrueIterator->reachedEnd(), true);
+  EXPECT_THAT(consume(*TrueIterator), ElementsAre());
+
+  PostingList L0 = {1, 2, 5, 7};
+  TrueIterator = createTrue(7U);
+  EXPECT_THAT(TrueIterator->peek(), 0);
+  auto AndIterator = createAnd(create(L0), move(TrueIterator));
+  EXPECT_THAT(AndIterator->reachedEnd(), false);
+  EXPECT_THAT(consume(*AndIterator), ElementsAre(1, 2, 5));
+}
+
 testing::Matcher<std::vector<Token>>
 trigramsAre(std::initializer_list<std::string> Trigrams) {
   std::vector<Token> Tokens;

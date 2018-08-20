@@ -129,6 +129,10 @@ createAnd(std::vector<std::unique_ptr<Iterator>> Children);
 std::unique_ptr<Iterator>
 createOr(std::vector<std::unique_ptr<Iterator>> Children);
 
+/// Returns TRUE Iterator which iterates over "virtual" PostingList containing
+/// all items in range [0, Size) in an efficient manner.
+std::unique_ptr<Iterator> createTrue(DocID Size);
+
 /// This allows createAnd(create(...), create(...)) syntax.
 template <typename... Args> std::unique_ptr<Iterator> createAnd(Args... args) {
   std::vector<std::unique_ptr<Iterator>> Children;
