@@ -1598,7 +1598,8 @@ Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
   if (!TargetLookupError.empty())
-    return make_error<StringError>(TargetLookupError, inconvertibleErrorCode());
+    return createStringError(errc::invalid_argument,
+                             TargetLookupError.c_str());
   RegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
   return Error::success();
 }

@@ -49,7 +49,6 @@ public:
   };
 
   LegalizerHelper(MachineFunction &MF);
-  LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -112,8 +111,6 @@ private:
   /// registers created are appended to Ops, starting at bit 0 of Reg.
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
                     SmallVectorImpl<unsigned> &VRegs);
-
-  LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;

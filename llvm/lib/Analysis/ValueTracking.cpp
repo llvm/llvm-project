@@ -2930,9 +2930,6 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     if (FPMathOp->hasNoNaNs())
       return true;
 
-  // TODO: Handle instructions and potentially recurse like other 'isKnown'
-  // functions. For example, the result of sitofp is never NaN.
-
   // Handle scalar constants.
   if (auto *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->isNaN();
@@ -2940,11 +2937,44 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   if (Depth == MaxDepth)
     return false;
 
+  if (auto *Inst = dyn_cast<Instruction>(V)) {
+    switch (Inst->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FMul:
+    case Instruction::FSub:
+    case Instruction::FDiv:
+    case Instruction::FRem: {
+      // TODO: Need isKnownNeverInfinity
+      return false;
+    }
+    case Instruction::Select: {
+      return isKnownNeverNaN(Inst->getOperand(1), TLI, Depth + 1) &&
+             isKnownNeverNaN(Inst->getOperand(2), TLI, Depth + 1);
+    }
+    case Instruction::SIToFP:
+    case Instruction::UIToFP:
+      return true;
+    case Instruction::FPTrunc:
+    case Instruction::FPExt:
+      return isKnownNeverNaN(Inst->getOperand(0), TLI, Depth + 1);
+    default:
+      break;
+    }
+  }
+
   if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::canonicalize:
     case Intrinsic::fabs:
     case Intrinsic::copysign:
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::trunc:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1);
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&

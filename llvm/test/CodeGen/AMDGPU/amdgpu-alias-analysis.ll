@@ -7,3 +7,9 @@ define void @test(i8 addrspace(5)* %p, i8 addrspace(1)* %p1) {
   ret void
 }
 
+; CHECK: NoAlias:      i8 addrspace(1)* %p1, i8 addrspace(6)* %p
+
+define void @test_32bit_addr_space(i8 addrspace(6)* %p, i8 addrspace(1)* %p1) {
+  ret void
+}
+

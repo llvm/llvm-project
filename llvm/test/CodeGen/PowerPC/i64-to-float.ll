@@ -20,7 +20,7 @@ entry:
 
 ; CHECK-VSX: @foo
 ; CHECK-VSX: std 3,
-; CHECK-VSX: lfdx [[REG:[0-9]+]],
+; CHECK-VSX: lfd [[REG:[0-9]+]],
 ; CHECK-VSX: fcfids 1, [[REG]]
 ; CHECK-VSX: blr
 
@@ -44,7 +44,7 @@ entry:
 
 ; CHECK-VSX: @goo
 ; CHECK-VSX: std 3,
-; CHECK-VSX: lfdx [[REG:[0-9]+]],
+; CHECK-VSX: lfd [[REG:[0-9]+]],
 ; CHECK-VSX: xscvsxddp 1, [[REG]]
 ; CHECK-VSX: blr
 
@@ -68,7 +68,7 @@ entry:
 
 ; CHECK-VSX: @foou
 ; CHECK-VSX: std 3,
-; CHECK-VSX: lfdx [[REG:[0-9]+]],
+; CHECK-VSX: lfd [[REG:[0-9]+]],
 ; CHECK-VSX: fcfidus 1, [[REG]]
 ; CHECK-VSX: blr
 
@@ -92,7 +92,7 @@ entry:
 
 ; CHECK-VSX: @goou
 ; CHECK-VSX: std 3,
-; CHECK-VSX: lfdx [[REG:[0-9]+]],
+; CHECK-VSX: lfd [[REG:[0-9]+]],
 ; CHECK-VSX: xscvuxddp 1, [[REG]]
 ; CHECK-VSX: blr
 
