@@ -11,14 +11,14 @@
 // symbol, such as high fuzzy matching score, scope, type etc. The lists of all
 // symbols matching some criteria (e.g. belonging to "clang::clangd::" scope)
 // are expressed in a form of Search Tokens which are stored in the inverted
-// index.  Inverted index maps these tokens to the posting lists - sorted ( by
-// symbol quality) sequences of symbol IDs matching the token, e.g.  scope token
+// index. Inverted index maps these tokens to the posting lists - sorted (by
+// symbol quality) sequences of symbol IDs matching the token, e.g. scope token
 // "clangd::clangd::" is mapped to the list of IDs of all symbols which are
 // declared in this namespace. Search queries are build from a set of
 // requirements which can be combined with each other forming the query trees.
 // The leafs of such trees are posting lists, and the nodes are operations on
-// these posting lists, e.g. intersection or union.  Efficient processing of
-// these multi-level queries is handled by Iterators.  Iterators advance through
+// these posting lists, e.g. intersection or union. Efficient processing of
+// these multi-level queries is handled by Iterators. Iterators advance through
 // all leaf posting lists producing the result of search query, which preserves
 // the sorted order of IDs. Having the resulting IDs sorted is important,
 // because it allows receiving a certain number of the most valuable items (e.g.
