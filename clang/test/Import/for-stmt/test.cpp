@@ -17,6 +17,18 @@
 // CHECK-NEXT: ContinueStmt
 
 // CHECK: ForStmt
+// CHECK-NEXT: <<NULL>>
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl
+// CHECK-NEXT: CXXBoolLiteralExpr
+// CHECK-NEXT: ImplicitCastExpr
+// CHECK-NEXT: DeclRefExpr
+// CHECK-SAME: 'j'
+// CHECK-SAME: 'bool'
+// CHECK-NEXT: <<NULL>>
+// CHECK-NEXT: ContinueStmt
+
+// CHECK: ForStmt
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: VarDecl
 // CHECK-NEXT: IntegerLiteral

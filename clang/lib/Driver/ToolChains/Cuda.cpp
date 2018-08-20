@@ -621,7 +621,7 @@ void CudaToolChain::addClangTargetOptions(
     return;
   }
 
-  CC1Args.push_back("-mlink-cuda-bitcode");
+  CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
   // Libdevice in CUDA-7.0 requires PTX version that's more recent than LLVM
@@ -667,7 +667,7 @@ void CudaToolChain::addClangTargetOptions(
       SmallString<128> LibOmpTargetFile(LibraryPath);
       llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
       if (llvm::sys::fs::exists(LibOmpTargetFile)) {
-        CC1Args.push_back("-mlink-cuda-bitcode");
+        CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
         FoundBCLibrary = true;
         break;
