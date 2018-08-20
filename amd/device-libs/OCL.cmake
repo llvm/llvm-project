@@ -6,7 +6,7 @@
 ##===--------------------------------------------------------------------------
 
 # -Wno-error=atomic-alignment was added to workaround build problems due to potential mis-aligned atomic ops detected by clang
-set (CLANG_OCL_FLAGS "-Werror -Wno-error=atomic-alignment -x cl -Xclang -cl-std=CL2.0 -fblocks -target ${AMDGPU_TARGET_TRIPLE} -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics -Xclang -finclude-default-header ${CLANG_OPTIONS_APPEND}")
+set (CLANG_OCL_FLAGS "-Werror -Wno-error=atomic-alignment -x cl -Xclang -cl-std=CL2.0 -target ${AMDGPU_TARGET_TRIPLE} -Xclang -finclude-default-header ${CLANG_OPTIONS_APPEND}")
 set (CLANG_OCL_LINK_FLAGS "-target ${AMDGPU_TARGET_TRIPLE} -mcpu=fiji")
 
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
