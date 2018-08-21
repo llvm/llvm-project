@@ -223,8 +223,17 @@ static cl::opt<bool>
 
 namespace {
 
+enum ExtType {
+  ZeroExtension,   // Zero extension has been seen.
+  SignExtension,   // Sign extension has been seen.
+  BothExtension    // This extension type is used if we saw sext after
+                   // ZeroExtension had been set, or if we saw zext after
+                   // SignExtension had been set. It makes the type
+                   // information of a promoted instruction invalid.
+};
+
 using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
-using TypeIsSExt = PointerIntPair<Type *, 1, bool>;
+using TypeIsSExt = PointerIntPair<Type *, 2, ExtType>;
 using InstrToOrigTy = DenseMap<Instruction *, TypeIsSExt>;
 using SExts = SmallVector<Instruction *, 16>;
 using ValueToSExts = DenseMap<Value *, SExts>;
@@ -3277,6 +3286,41 @@ namespace {
 
 /// Hepler class to perform type promotion.
 class TypePromotionHelper {
+  /// Utility function to add a promoted instruction \p ExtOpnd to
+  /// \p PromotedInsts and record the type of extension we have seen.
+  static void addPromotedInst(InstrToOrigTy &PromotedInsts,
+                              Instruction *ExtOpnd,
+                              bool IsSExt) {
+    ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
+    InstrToOrigTy::iterator It = PromotedInsts.find(ExtOpnd);
+    if (It != PromotedInsts.end()) {
+      // If the new extension is same as original, the information in
+      // PromotedInsts[ExtOpnd] is still correct.
+      if (It->second.getInt() == ExtTy)
+        return;
+
+      // Now the new extension is different from old extension, we make
+      // the type information invalid by setting extension type to
+      // BothExtension.
+      ExtTy = BothExtension;
+    }
+    PromotedInsts[ExtOpnd] = TypeIsSExt(ExtOpnd->getType(), ExtTy);
+  }
+
+  /// Utility function to query the original type of instruction \p Opnd
+  /// with a matched extension type. If the extension doesn't match, we
+  /// cannot use the information we had on the original type.
+  /// BothExtension doesn't match any extension type.
+  static const Type *getOrigType(const InstrToOrigTy &PromotedInsts,
+                                 Instruction *Opnd,
+                                 bool IsSExt) {
+    ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
+    InstrToOrigTy::const_iterator It = PromotedInsts.find(Opnd);
+    if (It != PromotedInsts.end() && It->second.getInt() == ExtTy)
+      return It->second.getPointer();
+    return nullptr;
+  }
+
   /// Utility function to check whether or not a sign or zero extension
   /// of \p Inst with \p ConsideredExtType can be moved through \p Inst by
   /// either using the operands of \p Inst or promoting \p Inst.
@@ -3465,10 +3509,9 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
   // I.e., check that trunc just drops extended bits of the same kind of
   // the extension.
   // #1 get the type of the operand and check the kind of the extended bits.
-  const Type *OpndType;
-  InstrToOrigTy::const_iterator It = PromotedInsts.find(Opnd);
-  if (It != PromotedInsts.end() && It->second.getInt() == IsSExt)
-    OpndType = It->second.getPointer();
+  const Type *OpndType = getOrigType(PromotedInsts, Opnd, IsSExt);
+  if (OpndType)
+    ;
   else if ((IsSExt && isa<SExtInst>(Opnd)) || (!IsSExt && isa<ZExtInst>(Opnd)))
     OpndType = Opnd->getOperand(0)->getType();
   else
@@ -3596,8 +3639,7 @@ Value *TypePromotionHelper::promoteOperandForOther(
 
   // Remember the original type of the instruction before promotion.
   // This is useful to know that the high bits are sign extended bits.
-  PromotedInsts.insert(std::pair<Instruction *, TypeIsSExt>(
-      ExtOpnd, TypeIsSExt(ExtOpnd->getType(), IsSExt)));
+  addPromotedInst(PromotedInsts, ExtOpnd, IsSExt);
   // Step #1.
   TPT.mutateType(ExtOpnd, Ext->getType());
   // Step #2.
