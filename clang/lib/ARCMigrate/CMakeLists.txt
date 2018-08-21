@@ -35,4 +35,5 @@ add_clang_library(clangARCMigrate
   clangSema
   clangSerialization
   clangStaticAnalyzerCheckers
+  clangStaticAnalyzerCore
   )
