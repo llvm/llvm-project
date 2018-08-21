@@ -9012,7 +9012,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -9141,7 +9140,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -10878,7 +10876,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -11890,7 +11887,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -12587,7 +12583,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -13570,7 +13565,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -14172,7 +14166,6 @@
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				SDKROOT = macosx;
-				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
