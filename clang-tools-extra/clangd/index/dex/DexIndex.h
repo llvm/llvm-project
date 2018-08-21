@@ -43,6 +43,9 @@ public:
   /// accessible as long as `Symbols` is kept alive.
   void build(std::shared_ptr<std::vector<const Symbol *>> Symbols);
 
+  /// \brief Build index from a symbol slab.
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab);
+
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;

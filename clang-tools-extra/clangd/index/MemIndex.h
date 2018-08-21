@@ -47,6 +47,11 @@ private:
   mutable std::mutex Mutex;
 };
 
+// Returns pointers to the symbols in given slab and bundles slab lifetime with
+// returned symbol pointers so that the pointers are never invalid.
+std::shared_ptr<std::vector<const Symbol *>>
+getSymbolsFromSlab(SymbolSlab Slab);
+
 } // namespace clangd
 } // namespace clang
 
