@@ -10361,6 +10361,27 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
                                llvm::SyncScope::System);
   }
+  case X86::BI__shiftleft128:
+  case X86::BI__shiftright128: {
+    // FIXME: Once fshl/fshr no longer add an unneeded and and cmov, do this:
+    // llvm::Function *F = CGM.getIntrinsic(
+    //   BuiltinID == X86::BI__shiftleft128 ? Intrinsic::fshl : Intrinsic::fshr,
+    //   Int64Ty);
+    // Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
+    // return Builder.CreateCall(F, Ops);
+    llvm::Type *Int128Ty = Builder.getInt128Ty();
+    Value *Val = Builder.CreateOr(
+        Builder.CreateShl(Builder.CreateZExt(Ops[1], Int128Ty), 64),
+        Builder.CreateZExt(Ops[0], Int128Ty));
+    Value *Amt = Builder.CreateAnd(Builder.CreateZExt(Ops[2], Int128Ty),
+                                   llvm::ConstantInt::get(Int128Ty, 0x3f));
+    Value *Res;
+    if (BuiltinID == X86::BI__shiftleft128)
+      Res = Builder.CreateLShr(Builder.CreateShl(Val, Amt), 64);
+    else
+      Res = Builder.CreateLShr(Val, Amt);
+    return Builder.CreateTrunc(Res, Int64Ty);
+  }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
   case X86::BI_WriteBarrier: {
