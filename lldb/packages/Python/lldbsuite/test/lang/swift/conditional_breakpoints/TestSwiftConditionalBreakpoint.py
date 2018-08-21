@@ -24,6 +24,7 @@ class TestSwiftConditionalBreakpoint(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIfLinux
     def test_swift_conditional_breakpoint(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
         self.build()
