@@ -3982,7 +3982,7 @@ public:
   void setIsConversionFromLambda(bool val) { IsConversionFromLambda = val; }
 
   bool doesNotEscape() const { return DoesNotEscape; }
-  void setDoesNotEscape() { DoesNotEscape = true; }
+  void setDoesNotEscape(bool B = true) { DoesNotEscape = B; }
 
   bool capturesVariable(const VarDecl *var) const;
 
