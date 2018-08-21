@@ -83,7 +83,7 @@ def int_wasm_atomic_wait_i64 :
              IntrHasSideEffects],
              "", [SDNPMemOperand]>;
 def int_wasm_atomic_notify:
-  Intrinsic<[llvm_i64_ty], [LLVMPointerType<llvm_i32_ty>, llvm_i64_ty],
+  Intrinsic<[llvm_i32_ty], [LLVMPointerType<llvm_i32_ty>, llvm_i32_ty],
             [IntrInaccessibleMemOnly, NoCapture<0>, IntrHasSideEffects], "",
             [SDNPMemOperand]>;
 

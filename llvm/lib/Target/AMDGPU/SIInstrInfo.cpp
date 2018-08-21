@@ -1933,7 +1933,7 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
 }
 
 unsigned SIInstrInfo::getAddressSpaceForPseudoSourceKind(
-    PseudoSourceValue::PSVKind Kind) const {
+    unsigned Kind) const {
   switch(Kind) {
   case PseudoSourceValue::Stack:
   case PseudoSourceValue::FixedStack:

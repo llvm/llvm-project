@@ -124,9 +124,9 @@ public:
   /// |------|        |------|
   void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
                                Instruction *Start);
-  /// BasicBlock Old had New, an empty BasicBlock, added directly before it,
-  /// and the predecessors in Preds that used to point to Old, now point to
-  /// New. If New is the only predecessor, move Old's Phi, if present, to New.
+  /// A new empty BasicBlock (New) now branches directly to Old. Some of
+  /// Old's predecessors (Preds) are now branching to New instead of Old.
+  /// If New is the only predecessor, move Old's Phi, if present, to New.
   /// Otherwise, add a new Phi in New with appropriate incoming values, and
   /// update the incoming values in Old's Phi node too, if present.
   void

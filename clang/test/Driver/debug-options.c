@@ -133,9 +133,18 @@
 // RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GIGNORE %s
 //
-// RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GOPT %s
-// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOGOPT %s
-// RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOGOPT %s
+// RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GPUB %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -ggnu-pubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+//
+// RUN: %clang -### -c -gpubnames %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gpubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gpubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+//
+// RUN: %clang -### -c -gsplit-dwarf %s 2>&1 | FileCheck -check-prefix=GPUB %s
+// RUN: %clang -### -c -gsplit-dwarf -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
 //
@@ -229,8 +238,11 @@
 //
 // GIGNORE-NOT: "argument unused during compilation"
 //
-// GOPT: -ggnu-pubnames
-// NOGOPT-NOT: -ggnu-pubnames
+// GPUB: -ggnu-pubnames
+// NOPUB-NOT: -ggnu-pubnames
+// NOPUB-NOT: -gpubnames
+//
+// PUB: -gpubnames
 //
 // GARANGE: -generate-arange-section
 //

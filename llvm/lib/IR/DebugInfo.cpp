@@ -948,9 +948,11 @@ LLVMDIBuilderCreateVectorType(LLVMDIBuilderRef Builder, uint64_t Size,
 LLVMMetadataRef
 LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
                              size_t NameLen, uint64_t SizeInBits,
-                             LLVMDWARFTypeEncoding Encoding) {
+                             LLVMDWARFTypeEncoding Encoding,
+                             LLVMDIFlags Flags) {
   return wrap(unwrap(Builder)->createBasicType({Name, NameLen},
-                                               SizeInBits, Encoding));
+                                               SizeInBits, Encoding,
+                                               map_from_llvmDIFlags(Flags)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(

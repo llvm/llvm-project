@@ -145,8 +145,8 @@
 
 // COMMON: "-triple" "nvptx-nvidia-cuda"
 // COMMON-SAME: "-fcuda-is-device"
-// LIBDEVICE-SAME: "-mlink-cuda-bitcode"
-// NOLIBDEVICE-NOT: "-mlink-cuda-bitcode"
+// LIBDEVICE-SAME: "-mlink-builtin-bitcode"
+// NOLIBDEVICE-NOT: "-mlink-builtin-bitcode"
 // LIBDEVICE20-SAME: libdevice.compute_20.10.bc
 // LIBDEVICE30-SAME: libdevice.compute_30.10.bc
 // LIBDEVICE35-SAME: libdevice.compute_35.10.bc

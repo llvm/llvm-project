@@ -326,7 +326,7 @@ CODEGENOPT(DebugInfoForProfiling, 1, 0)
 CODEGENOPT(PreserveVec3Type, 1, 0)
 
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
-CODEGENOPT(GnuPubnames, 1, 0)
+CODEGENOPT(DebugNameTable, 2, 0)
 
 CODEGENOPT(NoPLT, 1, 0)
 

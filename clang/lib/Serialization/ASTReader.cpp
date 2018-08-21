@@ -6455,6 +6455,10 @@ class TypeLocReader : public TypeLocVisitor<TypeLocReader> {
     return Reader->ReadNestedNameSpecifierLoc(*F, Record, Idx);
   }
 
+  Attr *ReadAttr() {
+    return Reader->ReadAttr(*F, Record, Idx);
+  }
+
 public:
   TypeLocReader(ModuleFile &F, ASTReader &Reader,
                 const ASTReader::RecordData &Record, unsigned &Idx)
@@ -6646,20 +6650,7 @@ void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) {
 }
 
 void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-  TL.setAttrNameLoc(ReadSourceLocation());
-  if (TL.hasAttrOperand()) {
-    SourceRange range;
-    range.setBegin(ReadSourceLocation());
-    range.setEnd(ReadSourceLocation());
-    TL.setAttrOperandParensRange(range);
-  }
-  if (TL.hasAttrExprOperand()) {
-    if (Record[Idx++])
-      TL.setAttrExprOperand(Reader->ReadExpr(*F));
-    else
-      TL.setAttrExprOperand(nullptr);
-  } else if (TL.hasAttrEnumOperand())
-    TL.setAttrEnumOperandLoc(ReadSourceLocation());
+  TL.setAttr(ReadAttr());
 }
 
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {

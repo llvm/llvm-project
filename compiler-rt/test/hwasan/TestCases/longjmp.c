@@ -9,8 +9,8 @@
 
 __attribute__((noinline))
 int f(void *caller_frame) {
-  char z[32] = {};
-  char *volatile p = z;
+  int z = 0;
+  int *volatile p = &z;
   // Tag of local is never zero.
   assert(__hwasan_tag_pointer(p, 0) != p);
 #ifndef NEGATIVE

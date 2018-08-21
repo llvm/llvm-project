@@ -77,16 +77,10 @@ SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
 }
 
 // Copy the underlying data of the symbol into the owned arena.
-static void own(Symbol &S, DenseSet<StringRef> &Strings,
+static void own(Symbol &S, llvm::UniqueStringSaver &Strings,
                 BumpPtrAllocator &Arena) {
   // Intern replaces V with a reference to the same string owned by the arena.
-  auto Intern = [&](StringRef &V) {
-    auto R = Strings.insert(V);
-    if (R.second) { // New entry added to the table, copy the string.
-      *R.first = V.copy(Arena);
-    }
-    V = *R.first;
-  };
+  auto Intern = [&](StringRef &V) { V = Strings.save(V); };
 
   // We need to copy every StringRef field onto the arena.
   Intern(S.Name);
@@ -114,10 +108,10 @@ void SymbolSlab::Builder::insert(const Symbol &S) {
   auto R = SymbolIndex.try_emplace(S.ID, Symbols.size());
   if (R.second) {
     Symbols.push_back(S);
-    own(Symbols.back(), Strings, Arena);
+    own(Symbols.back(), UniqueStrings, Arena);
   } else {
     auto &Copy = Symbols[R.first->second] = S;
-    own(Copy, Strings, Arena);
+    own(Copy, UniqueStrings, Arena);
   }
 }
 
@@ -128,7 +122,7 @@ SymbolSlab SymbolSlab::Builder::build() && {
             [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
   // We may have unused strings from overwritten symbols. Build a new arena.
   BumpPtrAllocator NewArena;
-  DenseSet<StringRef> Strings;
+  llvm::UniqueStringSaver Strings(NewArena);
   for (auto &S : Symbols)
     own(S, Strings, NewArena);
   return SymbolSlab(std::move(NewArena), std::move(Symbols));

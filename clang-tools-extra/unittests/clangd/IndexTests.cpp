@@ -7,32 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestIndex.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::UnorderedElementsAre;
 using testing::Pointee;
+using testing::UnorderedElementsAre;
 
 namespace clang {
 namespace clangd {
 namespace {
-
-Symbol symbol(llvm::StringRef QName) {
-  Symbol Sym;
-  Sym.ID = SymbolID(QName.str());
-  size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos) {
-    Sym.Name = QName;
-    Sym.Scope = "";
-  } else {
-    Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos + 2);
-  }
-  return Sym;
-}
 
 MATCHER_P(Named, N, "") { return arg.Name == N; }
 
@@ -50,59 +37,6 @@ TEST(SymbolSlab, FindAndIterate) {
   EXPECT_EQ(S.end(), S.find(SymbolID("W")));
   for (const char *Sym : {"X", "Y", "Z"})
     EXPECT_THAT(*S.find(SymbolID(Sym)), Named(Sym));
-}
-
-struct SlabAndPointers {
-  SymbolSlab Slab;
-  std::vector<const Symbol *> Pointers;
-};
-
-// Create a slab of symbols with the given qualified names as both IDs and
-// names. The life time of the slab is managed by the returned shared pointer.
-// If \p WeakSymbols is provided, it will be pointed to the managed object in
-// the returned shared pointer.
-std::shared_ptr<std::vector<const Symbol *>>
-generateSymbols(std::vector<std::string> QualifiedNames,
-                std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr) {
-  SymbolSlab::Builder Slab;
-  for (llvm::StringRef QName : QualifiedNames)
-    Slab.insert(symbol(QName));
-
-  auto Storage = std::make_shared<SlabAndPointers>();
-  Storage->Slab = std::move(Slab).build();
-  for (const auto &Sym : Storage->Slab)
-    Storage->Pointers.push_back(&Sym);
-  if (WeakSymbols)
-    *WeakSymbols = Storage;
-  auto *Pointers = &Storage->Pointers;
-  return {std::move(Storage), Pointers};
-}
-
-// Create a slab of symbols with IDs and names [Begin, End], otherwise identical
-// to the `generateSymbols` above.
-std::shared_ptr<std::vector<const Symbol *>>
-generateNumSymbols(int Begin, int End,
-                   std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr) {
-  std::vector<std::string> Names;
-  for (int i = Begin; i <= End; i++)
-    Names.push_back(std::to_string(i));
-  return generateSymbols(Names, WeakSymbols);
-}
-
-std::string getQualifiedName(const Symbol &Sym) {
-  return (Sym.Scope + Sym.Name).str();
-}
-
-std::vector<std::string> match(const SymbolIndex &I,
-                               const FuzzyFindRequest &Req,
-                               bool *Incomplete = nullptr) {
-  std::vector<std::string> Matches;
-  bool IsIncomplete = I.fuzzyFind(Req, [&](const Symbol &Sym) {
-    Matches.push_back(getQualifiedName(Sym));
-  });
-  if (Incomplete)
-    *Incomplete = IsIncomplete;
-  return Matches;
 }
 
 TEST(MemIndexTest, MemIndexSymbolsRecycled) {
@@ -212,18 +146,6 @@ TEST(MemIndexTest, IgnoreCases) {
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
 }
 
-// Returns qualified names of symbols with any of IDs in the index.
-std::vector<std::string> lookup(const SymbolIndex &I,
-                                llvm::ArrayRef<SymbolID> IDs) {
-  LookupRequest Req;
-  Req.IDs.insert(IDs.begin(), IDs.end());
-  std::vector<std::string> Results;
-  I.lookup(Req, [&](const Symbol &Sym) {
-    Results.push_back(getQualifiedName(Sym));
-  });
-  return Results;
-}
-
 TEST(MemIndexTest, Lookup) {
   MemIndex I;
   I.build(generateSymbols({"ns::abc", "ns::xyz"}));
@@ -269,7 +191,7 @@ TEST(MergeIndexTest, FuzzyFind) {
 TEST(MergeTest, Merge) {
   Symbol L, R;
   L.ID = R.ID = SymbolID("hello");
-  L.Name = R.Name = "Foo";                    // same in both
+  L.Name = R.Name = "Foo";                           // same in both
   L.CanonicalDeclaration.FileURI = "file:///left.h"; // differs
   R.CanonicalDeclaration.FileURI = "file:///right.h";
   L.References = 1;

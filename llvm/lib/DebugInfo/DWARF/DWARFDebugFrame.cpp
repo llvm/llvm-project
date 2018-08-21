@@ -16,6 +16,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -47,9 +48,9 @@ Error CFIProgram::parse(DataExtractor Data, uint32_t *Offset,
       uint64_t Op1 = Opcode & DWARF_CFI_PRIMARY_OPERAND_MASK;
       switch (Primary) {
       default:
-        return make_error<StringError>(
-            "Invalid primary CFI opcode",
-            std::make_error_code(std::errc::illegal_byte_sequence));
+        return createStringError(errc::illegal_byte_sequence,
+                                 "Invalid primary CFI opcode 0x%" PRIx8,
+                                 Primary);
       case DW_CFA_advance_loc:
       case DW_CFA_restore:
         addInstruction(Primary, Op1);
@@ -62,9 +63,9 @@ Error CFIProgram::parse(DataExtractor Data, uint32_t *Offset,
       // Extended opcode - its value is Opcode itself.
       switch (Opcode) {
       default:
-        return make_error<StringError>(
-            "Invalid extended CFI opcode",
-            std::make_error_code(std::errc::illegal_byte_sequence));
+        return createStringError(errc::illegal_byte_sequence,
+                                 "Invalid extended CFI opcode 0x%" PRIx8,
+                                 Opcode);
       case DW_CFA_nop:
       case DW_CFA_remember_state:
       case DW_CFA_restore_state:

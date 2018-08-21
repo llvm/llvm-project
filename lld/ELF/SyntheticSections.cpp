@@ -1948,7 +1948,8 @@ static uint32_t getSymSectionIndex(Symbol *Sym) {
   if (!isa<Defined>(Sym) || Sym->NeedsPltAddr)
     return SHN_UNDEF;
   if (const OutputSection *OS = Sym->getOutputSection())
-    return OS->SectionIndex >= SHN_LORESERVE ? SHN_XINDEX : OS->SectionIndex;
+    return OS->SectionIndex >= SHN_LORESERVE ? (uint32_t)SHN_XINDEX
+                                             : OS->SectionIndex;
   return SHN_ABS;
 }
 

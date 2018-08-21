@@ -25,17 +25,17 @@ namespace mca {
 
 using namespace llvm;
 
-HWStallEvent::GenericEventType toHWStallEventType(Scheduler::StallKind Event) {
-  switch (Event) {
-  case Scheduler::LoadQueueFull:
+HWStallEvent::GenericEventType toHWStallEventType(Scheduler::Status Status) {
+  switch (Status) {
+  case Scheduler::SC_LOAD_QUEUE_FULL:
     return HWStallEvent::LoadQueueFull;
-  case Scheduler::StoreQueueFull:
+  case Scheduler::SC_STORE_QUEUE_FULL:
     return HWStallEvent::StoreQueueFull;
-  case Scheduler::SchedulerQueueFull:
+  case Scheduler::SC_BUFFERS_FULL:
     return HWStallEvent::SchedulerQueueFull;
-  case Scheduler::DispatchGroupStall:
+  case Scheduler::SC_DISPATCH_GROUP_STALL:
     return HWStallEvent::DispatchGroupStall;
-  case Scheduler::NoStall:
+  case Scheduler::SC_AVAILABLE:
     return HWStallEvent::Invalid;
   }
 
@@ -43,15 +43,15 @@ HWStallEvent::GenericEventType toHWStallEventType(Scheduler::StallKind Event) {
 }
 
 bool ExecuteStage::isAvailable(const InstRef &IR) const {
-  Scheduler::StallKind Event = Scheduler::NoStall;
-  if (HWS.canBeDispatched(IR, Event))
-    return true;
-  HWStallEvent::GenericEventType ET = toHWStallEventType(Event);
-  notifyEvent<HWStallEvent>(HWStallEvent(ET, IR));
-  return false;
+  if (Scheduler::Status S = HWS.isAvailable(IR)) {
+    HWStallEvent::GenericEventType ET = toHWStallEventType(S);
+    notifyEvent<HWStallEvent>(HWStallEvent(ET, IR));
+    return false;
+  }
+
+  return true;
 }
 
-// Reclaim the simulated resources used by the scheduler.
 void ExecuteStage::reclaimSchedulerResources() {
   SmallVector<ResourceRef, 8> ResourcesFreed;
   HWS.reclaimSimulatedResources(ResourcesFreed);
@@ -59,7 +59,6 @@ void ExecuteStage::reclaimSchedulerResources() {
     notifyResourceAvailable(RR);
 }
 
-// Update the scheduler's instruction queues.
 Error ExecuteStage::updateSchedulerQueues() {
   SmallVector<InstRef, 4> InstructionIDs;
   HWS.updateIssuedSet(InstructionIDs);
@@ -77,7 +76,6 @@ Error ExecuteStage::updateSchedulerQueues() {
   return ErrorSuccess();
 }
 
-// Issue instructions that are waiting in the scheduler's ready queue.
 Error ExecuteStage::issueReadyInstructions() {
   SmallVector<InstRef, 4> InstructionIDs;
   InstRef IR = HWS.select();
@@ -145,39 +143,20 @@ Error ExecuteStage::execute(InstRef &IR) {
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  HWS.reserveBuffers(Desc.Buffers);
+  HWS.dispatch(IR);
   notifyReservedBuffers(Desc.Buffers);
-
-  // Obtain a slot in the LSU.  If we cannot reserve resources, return true, so
-  // that succeeding stages can make progress.
-  if (!HWS.reserveResources(IR))
+  if (!HWS.isReady(IR))
     return ErrorSuccess();
 
   // If we did not return early, then the scheduler is ready for execution.
   notifyInstructionReady(IR);
 
-  // Don't add a zero-latency instruction to the Wait or Ready queue.
-  // A zero-latency instruction doesn't consume any scheduler resources. That is
-  // because it doesn't need to be executed, and it is often removed at register
-  // renaming stage. For example, register-register moves are often optimized at
-  // register renaming stage by simply updating register aliases. On some
-  // targets, zero-idiom instructions (for example: a xor that clears the value
-  // of a register) are treated specially, and are often eliminated at register
-  // renaming stage.
-  //
-  // Instructions that use an in-order dispatch/issue processor resource must be
-  // issued immediately to the pipeline(s). Any other in-order buffered
-  // resources (i.e. BufferSize=1) is consumed.
-  //
   // If we cannot issue immediately, the HWS will add IR to its ready queue for
   // execution later, so we must return early here.
-  if (!HWS.issueImmediately(IR))
+  if (!HWS.mustIssueImmediately(IR))
     return ErrorSuccess();
 
-  LLVM_DEBUG(dbgs() << "[SCHEDULER] Instruction #" << IR
-                    << " issued immediately\n");
-
-  // Issue IR.  The resources for this issuance will be placed in 'Used.'
+  // Issue IR to the underlying pipelines.
   SmallVector<std::pair<ResourceRef, double>, 4> Used;
   HWS.issueInstruction(IR, Used);
 
@@ -193,7 +172,6 @@ Error ExecuteStage::execute(InstRef &IR) {
 }
 
 void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) {
-  HWS.onInstructionExecuted(IR);
   LLVM_DEBUG(dbgs() << "[E] Instruction Executed: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
       HWInstructionEvent(HWInstructionEvent::Executed, IR));

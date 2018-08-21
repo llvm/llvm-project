@@ -174,7 +174,8 @@ void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
   // but don't actually modify any specific memory location.
   using namespace PatternMatch;
   bool MayWriteMemory = I->mayWriteToMemory() &&
-                        !match(I, m_Intrinsic<Intrinsic::experimental_guard>());
+    !match(I, m_Intrinsic<Intrinsic::experimental_guard>()) &&
+    !(I->use_empty() && match(I, m_Intrinsic<Intrinsic::invariant_start>()));
   if (!MayWriteMemory) {
     Alias = SetMayAlias;
     Access |= RefAccess;

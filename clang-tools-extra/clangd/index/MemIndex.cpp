@@ -64,6 +64,7 @@ bool MemIndex::fuzzyFind(
 
 void MemIndex::lookup(const LookupRequest &Req,
                       llvm::function_ref<void(const Symbol &)> Callback) const {
+  std::lock_guard<std::mutex> Lock(Mutex);
   for (const auto &ID : Req.IDs) {
     auto I = Index.find(ID);
     if (I != Index.end())
