@@ -17,10 +17,7 @@
 
 #include "../ClangSACheckers.h"
 #include "../AllocationDiagnostics.h"
-#include "../SelectorExtras.h"
-#include "RetainCountSummaries.h"
 #include "RetainCountDiagnostics.h"
-#include "clang/Analysis/ObjCRetainCount.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -28,6 +25,7 @@
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Analysis/SelectorExtras.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -36,6 +34,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/StaticAnalyzer/Core/RetainSummaryManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
@@ -46,7 +45,6 @@
 #include <cstdarg>
 #include <utility>
 
-using namespace objc_retain;
 using llvm::StrInStrNoCase;
 
 namespace clang {

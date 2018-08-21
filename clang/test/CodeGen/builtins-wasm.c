@@ -63,8 +63,8 @@ int f9(long long *addr, long long expected, long long timeout) {
 // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
 }
 
-unsigned long long f10(int *addr, long long count) {
+unsigned int f10(int *addr, int count) {
   return __builtin_wasm_atomic_notify(addr, count);
-// WEBASSEMBLY32: call i64 @llvm.wasm.atomic.notify(i32* %{{.*}}, i64 %{{.*}})
-// WEBASSEMBLY64: call i64 @llvm.wasm.atomic.notify(i32* %{{.*}}, i64 %{{.*}})
+// WEBASSEMBLY32: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
+// WEBASSEMBLY64: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
 }
