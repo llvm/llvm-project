@@ -64,8 +64,8 @@ entry:
   %6 = mul nuw i64 %5, %3, !dbg !40
   %vla = alloca i32, i64 %6, align 16, !dbg !40
   call void @llvm.dbg.declare(metadata i32* %vla, metadata !25, metadata !DIExpression()), !dbg !40
-  call void @llvm.dbg.declare(metadata i32* %vla4, metadata !13, metadata !DIExpression()), !dbg !40
   %vla4 = alloca i32, i64 %6, align 16, !dbg !40
+  call void @llvm.dbg.declare(metadata i32* %vla4, metadata !13, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %i, metadata !29, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %j, metadata !31, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %k, metadata !33, metadata !DIExpression()), !dbg !40
