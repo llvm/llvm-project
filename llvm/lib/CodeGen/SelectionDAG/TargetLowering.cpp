@@ -3524,27 +3524,35 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   if (N->getFlags().hasExact())
     return BuildExactSDIV(*this, N, dl, DAG, Created);
 
-  SmallVector<SDValue, 16> MagicFactors, Factors, Shifts;
+  SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
-    // TODO: Handle sdiv by one and neg-one.
-    if (C->isNullValue() || C->isOne() || C->isAllOnesValue())
+    if (C->isNullValue())
       return false;
 
     const APInt &Divisor = C->getAPIntValue();
     APInt::ms magics = Divisor.magic();
     int NumeratorFactor = 0;
+    int ShiftMask = -1;
 
-    // If d > 0 and m < 0, add the numerator.
-    if (Divisor.isStrictlyPositive() && magics.m.isNegative())
+    if (Divisor.isOneValue() || Divisor.isAllOnesValue()) {
+      // If d is +1/-1, we just multiply the numerator by +1/-1.
+      NumeratorFactor = Divisor.getSExtValue();
+      magics.m = 0;
+      magics.s = 0;
+      ShiftMask = 0;
+    } else if (Divisor.isStrictlyPositive() && magics.m.isNegative()) {
+      // If d > 0 and m < 0, add the numerator.
       NumeratorFactor = 1;
-    // If d < 0 and m > 0, subtract the numerator.
-    else if (Divisor.isNegative() && magics.m.isStrictlyPositive())
+    } else if (Divisor.isNegative() && magics.m.isStrictlyPositive()) {
+      // If d < 0 and m > 0, subtract the numerator.
       NumeratorFactor = -1;
+    }
 
     MagicFactors.push_back(DAG.getConstant(magics.m, dl, SVT));
     Factors.push_back(DAG.getConstant(NumeratorFactor, dl, SVT));
     Shifts.push_back(DAG.getConstant(magics.s, dl, ShSVT));
+    ShiftMasks.push_back(DAG.getConstant(ShiftMask, dl, SVT));
     return true;
   };
 
@@ -3555,19 +3563,21 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   if (!ISD::matchUnaryPredicate(N1, BuildSDIVPattern))
     return SDValue();
 
-  SDValue MagicFactor, Factor, Shift;
+  SDValue MagicFactor, Factor, Shift, ShiftMask;
   if (VT.isVector()) {
     MagicFactor = DAG.getBuildVector(VT, dl, MagicFactors);
     Factor = DAG.getBuildVector(VT, dl, Factors);
     Shift = DAG.getBuildVector(ShVT, dl, Shifts);
+    ShiftMask = DAG.getBuildVector(VT, dl, ShiftMasks);
   } else {
     MagicFactor = MagicFactors[0];
     Factor = Factors[0];
     Shift = Shifts[0];
+    ShiftMask = ShiftMasks[0];
   }
 
-  // Multiply the numerator (operand 0) by the magic value
-  // FIXME: We should support doing a MUL in a wider type
+  // Multiply the numerator (operand 0) by the magic value.
+  // FIXME: We should support doing a MUL in a wider type.
   SDValue Q;
   if (IsAfterLegalization ? isOperationLegal(ISD::MULHS, VT)
                           : isOperationLegalOrCustom(ISD::MULHS, VT))
@@ -3578,7 +3588,7 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), N0, MagicFactor);
     Q = SDValue(LoHi.getNode(), 1);
   } else
-    return SDValue(); // No mulhs or equivalent
+    return SDValue(); // No mulhs or equivalent.
   Created.push_back(Q.getNode());
 
   // (Optionally) Add/subtract the numerator using Factor.
@@ -3591,9 +3601,11 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   Q = DAG.getNode(ISD::SRA, dl, VT, Q, Shift);
   Created.push_back(Q.getNode());
 
-  // Extract the sign bit and add it to the quotient
-  SDValue T =
-      DAG.getNode(ISD::SRL, dl, VT, Q, DAG.getConstant(EltBits - 1, dl, ShVT));
+  // Extract the sign bit, mask it and add it to the quotient.
+  SDValue SignShift = DAG.getConstant(EltBits - 1, dl, ShVT);
+  SDValue T = DAG.getNode(ISD::SRL, dl, VT, Q, SignShift);
+  Created.push_back(T.getNode());
+  T = DAG.getNode(ISD::AND, dl, VT, T, ShiftMask);
   Created.push_back(T.getNode());
   return DAG.getNode(ISD::ADD, dl, VT, Q, T);
 }

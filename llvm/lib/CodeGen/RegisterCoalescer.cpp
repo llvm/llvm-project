@@ -902,9 +902,11 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       IntB.createSubRangeFrom(Allocator, Mask, IntB);
     }
     SlotIndex AIdx = CopyIdx.getRegSlot(true);
+    LaneBitmask MaskA;
     for (LiveInterval::SubRange &SA : IntA.subranges()) {
       VNInfo *ASubValNo = SA.getVNInfoAt(AIdx);
       assert(ASubValNo != nullptr);
+      MaskA |= SA.LaneMask;
 
       IntB.refineSubRanges(Allocator, SA.LaneMask,
           [&Allocator,&SA,CopyIdx,ASubValNo,&ShrinkB]
@@ -918,6 +920,16 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
         if (P.first)
           BSubValNo->def = ASubValNo->def;
       });
+    }
+    // Go over all subranges of IntB that have not been covered by IntA,
+    // and delete the segments starting at CopyIdx. This can happen if
+    // IntA has undef lanes that are defined in IntB.
+    for (LiveInterval::SubRange &SB : IntB.subranges()) {
+      if ((SB.LaneMask & MaskA).any())
+        continue;
+      if (LiveRange::Segment *S = SB.getSegmentContaining(CopyIdx))
+        if (S->start.getBaseIndex() == CopyIdx.getBaseIndex())
+          SB.removeSegment(*S, true);
     }
   }
 
@@ -1424,7 +1436,10 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     for (MachineOperand &UseMO : MRI->use_operands(SrcReg)) {
       MachineInstr *UseMI = UseMO.getParent();
       if (UseMI->isDebugValue()) {
-        UseMO.setReg(DstReg);
+        if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+          UseMO.substPhysReg(DstReg, *TRI);
+        else
+          UseMO.setReg(DstReg);
         // Move the debug value directly after the def of the rematerialized
         // value in DstReg.
         MBB->splice(std::next(NewMI.getIterator()), UseMI->getParent(), UseMI);

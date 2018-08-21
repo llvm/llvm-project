@@ -193,6 +193,7 @@ enum class PrimTy : uint8_t {
   Double,
   Ldouble,
   Nullptr,
+  Custom,
   Vftable,
   Vbtable,
   LocalStaticGuard
@@ -271,8 +272,17 @@ enum class OperatorTy : uint8_t {
   LocalVftableCtorClosure,      // ?_T # local vftable constructor closure
   ArrayNew,                     // ?_U operator new[]
   ArrayDelete,                  // ?_V operator delete[]
+  ManVectorCtorIter,            // ?__A managed vector ctor iterator
+  ManVectorDtorIter,            // ?__B managed vector dtor iterator
+  EHVectorCopyCtorIter,         // ?__C EH vector copy ctor iterator
+  EHVectorVbaseCopyCtorIter,    // ?__D EH vector vbase copy ctor iterator
   DynamicInitializer,           // ?__E dynamic initializer for `T'
   DynamicAtexitDestructor,      // ?__F dynamic atexit destructor for `T'
+  VectorCopyCtorIter,           // ?__G vector copy constructor iterator
+  VectorVbaseCopyCtorIter,      // ?__H vector vbase copy constructor iterator
+  ManVectorVbaseCopyCtorIter,   // ?__I managed vector vbase copy constructor
+                                // iterator
+  LocalStaticThreadGuard,       // ?__J local static thread guard
   LiteralOperator,              // ?__K operator ""_name
   CoAwait,                      // ?__L co_await
   Spaceship,                    // operator<=>
@@ -362,8 +372,19 @@ OperatorMapEntry OperatorMap[] = {
     {"_T", "`local vftable ctor closure'", OperatorTy::LocalVftableCtorClosure},
     {"_U", "operator new[]", OperatorTy::ArrayNew},
     {"_V", "operator delete[]", OperatorTy::ArrayDelete},
+    {"__A", "managed vector ctor iterator", OperatorTy::ManVectorCtorIter},
+    {"__B", "managed vector dtor iterator", OperatorTy::ManVectorDtorIter},
+    {"__C", "EH vector copy ctor iterator", OperatorTy::EHVectorCopyCtorIter},
+    {"__D", "EH vector vbase copy ctor iterator",
+     OperatorTy::EHVectorVbaseCopyCtorIter},
     {"__E", "dynamic initializer", OperatorTy::DynamicInitializer},
     {"__F", "dynamic atexit destructor", OperatorTy::DynamicAtexitDestructor},
+    {"__G", "vector copy ctor iterator", OperatorTy::VectorCopyCtorIter},
+    {"__H", "vector vbase copy constructor iterator",
+     OperatorTy::VectorVbaseCopyCtorIter},
+    {"__I", "managed vector vbase copy constructor iterator",
+     OperatorTy::ManVectorVbaseCopyCtorIter},
+    {"__J", "local static thread guard", OperatorTy::LocalStaticThreadGuard},
     {"__K", "operator \"\"", OperatorTy::LiteralOperator},
     {"__L", "co_await", OperatorTy::CoAwait},
 };
@@ -467,6 +488,7 @@ struct Type {
   PrimTy Prim = PrimTy::Unknown;
 
   Qualifiers Quals = Q_None;
+  StringView Custom;
   StorageClass Storage = StorageClass::None; // storage class
 };
 
@@ -498,6 +520,19 @@ struct OperatorInfo : public Name {
       : OperatorInfo(OperatorMap[(int)OpType]) {}
 
   const OperatorMapEntry *Info = nullptr;
+  bool IsIndirectTable = false;
+};
+
+struct IndirectTable : public OperatorInfo {
+  explicit IndirectTable(const OperatorMapEntry &Info) : OperatorInfo(Info) {
+    this->IsOperator = true;
+    this->IsIndirectTable = true;
+  }
+  explicit IndirectTable(OperatorTy OpType)
+      : IndirectTable(OperatorMap[(int)OpType]) {}
+
+  const Name *TableLocation = nullptr;
+  const Name *TableTarget = nullptr;
 };
 
 struct StringLiteral : public OperatorInfo {
@@ -889,6 +924,14 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty) {
   const VirtualMemberPtrThunk *Thunk = nullptr;
   bool PrintLastScopeSeparator = true;
   if (Operator) {
+    if (Operator->IsIndirectTable) {
+      const IndirectTable *Table = static_cast<const IndirectTable *>(Operator);
+      outputName(OS, Table->TableLocation, nullptr);
+      OS << "{for `";
+      outputName(OS, Table->TableTarget, nullptr);
+      OS << "'}";
+      return;
+    }
     if (Operator->Info->Operator == OperatorTy::Vcall) {
       Thunk = static_cast<const VirtualMemberPtrThunk *>(Operator);
       OS << "[thunk]: ";
@@ -1115,6 +1158,9 @@ void Type::outputPre(OutputStream &OS) {
     break;
   case PrimTy::Nullptr:
     OS << "std::nullptr_t";
+    break;
+  case PrimTy::Custom:
+    OS << Custom;
     break;
   case PrimTy::Vbtable:
   case PrimTy::Vftable:
@@ -1479,11 +1525,16 @@ Symbol *Demangler::parseOperator(StringView &MangledName) {
     S->Category = SymbolCategory::UnnamedVariable;
     switch (MangledName.popFront()) {
     case '6':
-    case '7':
+    case '7': {
       std::tie(S->SymbolQuals, IsMember) = demangleQualifiers(MangledName);
-      if (!MangledName.consumeFront('@'))
-        Error = true;
+      if (!MangledName.consumeFront('@')) {
+        IndirectTable *Table = Arena.alloc<IndirectTable>(OTy);
+        Table->TableTarget = demangleFullyQualifiedTypeName(MangledName);
+        Table->TableLocation = S->SymbolName;
+        S->SymbolName = Table;
+      }
       break;
+    }
     default:
       Error = true;
       break;
@@ -1754,8 +1805,9 @@ Demangler::demangleOperatorName(StringView &MangledName, bool FullyQualified) {
   case OperatorTy::LocalVftable:           // Foo@@6B@
   case OperatorTy::RttiCompleteObjLocator: // Foo@@6B@
   case OperatorTy::Vbtable: {              // Foo@@7B@
-    OperatorInfo *Oper = Arena.alloc<OperatorInfo>(*Entry);
-    N = (FullyQualified) ? demangleNameScopeChain(MangledName, Oper) : Oper;
+    N = Arena.alloc<OperatorInfo>(*Entry);
+    if (FullyQualified)
+      N = demangleNameScopeChain(MangledName, N);
     break;
   }
 
@@ -2515,25 +2567,18 @@ Type *Demangler::demangleType(StringView &MangledName,
                               QualifierMangleMode QMM) {
   Qualifiers Quals = Q_None;
   bool IsMember = false;
-  bool IsMemberKnown = false;
   if (QMM == QualifierMangleMode::Mangle) {
     std::tie(Quals, IsMember) = demangleQualifiers(MangledName);
-    IsMemberKnown = true;
   } else if (QMM == QualifierMangleMode::Result) {
-    if (MangledName.consumeFront('?')) {
+    if (MangledName.consumeFront('?'))
       std::tie(Quals, IsMember) = demangleQualifiers(MangledName);
-      IsMemberKnown = true;
-    }
   }
 
   Type *Ty = nullptr;
   if (isTagType(MangledName))
     Ty = demangleClassType(MangledName);
   else if (isPointerType(MangledName)) {
-    if (!IsMemberKnown)
-      IsMember = isMemberPointer(MangledName);
-
-    if (IsMember)
+    if (isMemberPointer(MangledName))
       Ty = demangleMemberPointerType(MangledName);
     else
       Ty = demanglePointerType(MangledName);
@@ -2646,6 +2691,15 @@ Type *Demangler::demangleBasicType(StringView &MangledName) {
 
   if (MangledName.consumeFront("$$T")) {
     Ty->Prim = PrimTy::Nullptr;
+    return Ty;
+  }
+  if (MangledName.consumeFront("?")) {
+    Ty->Prim = PrimTy::Custom;
+    Ty->Custom = demangleSimpleString(MangledName, false);
+    if (!MangledName.consumeFront('@')) {
+      Error = true;
+      return nullptr;
+    }
     return Ty;
   }
 
@@ -2955,10 +3009,7 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
     if (MangledName.consumeFront("$S") || MangledName.consumeFront("$$V") ||
         MangledName.consumeFront("$$$V")) {
       TP.IsEmptyParameterPack = true;
-      break;
-    }
-
-    if (MangledName.consumeFront("$$Y")) {
+    } else if (MangledName.consumeFront("$$Y")) {
       // Template alias
       TP.IsTemplateTemplate = true;
       TP.IsAliasTemplate = true;

@@ -134,7 +134,7 @@ namespace llvm {
     /// \param SplitDebugInlining    Whether to emit inline debug info.
     /// \param DebugInfoForProfiling Whether to emit extra debug info for
     ///                              profile collection.
-    /// \param nameTableKind  Whether to emit .debug_gnu_pubnames,
+    /// \param NameTableKind  Whether to emit .debug_gnu_pubnames,
     ///                      .debug_pubnames, or no pubnames at all.
     DICompileUnit *
     createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,

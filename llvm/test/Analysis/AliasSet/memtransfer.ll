@@ -61,7 +61,7 @@ entry:
 ; CHECK: Alias Set Tracker: 3 alias sets for 4 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK-NOT:    1 Unknown instructions
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   [volatile] Pointers: (i8* %s, 1), (i8* %d, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (i8* %s, 1), (i8* %d, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test2(i8* %s, i8* %d) {
 entry:
@@ -109,7 +109,7 @@ entry:
 ; CHECK: Alias Set Tracker: 3 alias sets for 4 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
 ; CHECK-NOT:    1 Unknown instructions
-; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   [volatile] Pointers: (i8* %s, 1), (i8* %d, 1)
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (i8* %s, 1), (i8* %d, 1)
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, 1)
 define void @test4(i8* %s, i8* %d) {
 entry:

@@ -265,3 +265,150 @@ for.end:                                          ; preds = %for.body, %entry
   %x.0.lcssa = phi i32 [ 0, %entry ], [ %tmp17 , %latch ]
   ret i32 %x.0.lcssa
 }
+
+
+; CHECK-LABEL: @outside_user_non_phi(
+; CHECK: %vec.ind = phi <2 x i32>
+; CHECK: [[CMP:%[a-zA-Z0-9.]+]] = icmp sgt <2 x i32> %vec.ind, <i32 10, i32 10>
+; CHECK: %predphi = select <2 x i1> [[CMP]], <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
+; CHECK: [[TRUNC:%[a-zA-Z0-9.]+]] = trunc <2 x i32> %predphi to <2 x i8>
+
+; CHECK-LABEL: middle.block:
+; CHECK:          [[E1:%[a-zA-Z0-9.]+]] = extractelement <2 x i8> [[TRUNC]], i32 1
+
+; CHECK-LABEL: f1.exit.loopexit:
+; CHECK:          %.lcssa = phi i8 [ %tmp17.trunc, %bb16 ], [ [[E1]], %middle.block ]
+define i8 @outside_user_non_phi()  {
+bb:
+  %b.promoted = load i32, i32* @b, align 4
+  br label %.lr.ph.i
+
+.lr.ph.i:
+  %tmp8 = phi i32 [ %tmp18, %bb16 ], [ %b.promoted, %bb ]
+  %tmp2 = icmp sgt i32 %tmp8, 10
+  br i1 %tmp2, label %bb16, label %bb10
+
+bb10:
+  br label %bb16
+
+bb16:
+  %tmp17 = phi i32 [ 0, %bb10 ], [ 1, %.lr.ph.i ]
+  %tmp17.trunc = trunc i32 %tmp17 to i8
+  %tmp18 = add nsw i32 %tmp8, 1
+  %tmp19 = icmp slt i32 %tmp18, 4
+  br i1 %tmp19, label %.lr.ph.i, label %f1.exit.loopexit
+
+f1.exit.loopexit:
+  %.lcssa = phi i8 [ %tmp17.trunc, %bb16 ]
+  ret i8 %.lcssa
+}
+
+; CHECK-LABEL: no_vectorize_reduction_with_outside_use(
+; CHECK-NOT: <2 x i32>
+define i32 @no_vectorize_reduction_with_outside_use(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
+entry:
+  %cmp7 = icmp sgt i32 %n, 0
+  br i1 %cmp7, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %result.08 = phi i32 [ %or, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %1 = load i32, i32* %arrayidx2, align 4
+  %add = add nsw i32 %1, %0
+  %or = or i32 %add, %result.08
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %result.0.lcssa = phi i32 [ 0, %entry ], [ %1, %for.body ]
+  ret i32 %result.0.lcssa
+}
+
+
+; vectorize c[i] = a[i] + b[i] loop where result of c[i] is used outside the
+; loop
+; CHECK-LABEL: sum_arrays_outside_use(
+; CHECK-LABEL: vector.memcheck:
+; CHECK:         br i1 %memcheck.conflict, label %scalar.ph, label %vector.ph  
+
+; CHECK-LABEL: vector.body:
+; CHECK:          %wide.load = load <2 x i32>, <2 x i32>*
+; CHECK:          %wide.load16 = load <2 x i32>, <2 x i32>* 
+; CHECK:          [[ADD:%[a-zA-Z0-9.]+]] = add nsw <2 x i32> %wide.load, %wide.load16
+; CHECK:          store <2 x i32>
+
+; CHECK-LABEL: middle.block:
+; CHECK:          [[E1:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 1
+
+; CHECK-LABEL: f1.exit.loopexit:
+; CHECK:          %.lcssa = phi i32 [ %sum, %.lr.ph.i ], [ [[E1]], %middle.block ]
+define i32 @sum_arrays_outside_use(i32* %B, i32* %A, i32* %C, i32 %N)  {
+bb:
+  %b.promoted = load i32, i32* @b, align 4
+  br label %.lr.ph.i
+
+.lr.ph.i:
+  %iv = phi i32 [ %ivnext, %.lr.ph.i ], [ %b.promoted, %bb ]
+  %indvars.iv = sext i32 %iv to i64
+  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %Bload = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %Aload = load i32, i32* %arrayidx, align 4
+  %sum = add nsw i32 %Bload, %Aload
+  %arrayidx3 = getelementptr inbounds i32, i32* %C, i64 %indvars.iv
+  store i32 %sum, i32* %arrayidx3, align 4
+  %ivnext = add nsw i32 %iv, 1
+  %tmp19 = icmp slt i32 %ivnext, %N
+  br i1 %tmp19, label %.lr.ph.i, label %f1.exit.loopexit
+
+f1.exit.loopexit:
+  %.lcssa = phi i32 [ %sum, %.lr.ph.i ]
+  ret i32 %.lcssa
+}
+
+@tab = common global [32 x i8] zeroinitializer, align 1
+
+; CHECK-LABEL: non_uniform_live_out()
+; CHECK-LABEL:   vector.body:
+; CHECK:           %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, <i32 7, i32 7> 
+; CHECK:           [[EE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 0 
+; CHECK:           [[GEP:%[a-zA-Z0-9.]+]] = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 [[EE]]
+; CHECK-NEXT:      [[GEP2:%[a-zA-Z0-9.]+]] = getelementptr inbounds i8, i8* [[GEP]], i32 0
+; CHECK-NEXT:      [[BC:%[a-zA-Z0-9.]+]] = bitcast i8* [[GEP2]] to <2 x i8>*
+; CHECK-NEXT:      %wide.load = load <2 x i8>, <2 x i8>* [[BC]]
+; CHECK-NEXT:      [[ADD2:%[a-zA-Z0-9.]+]] = add <2 x i8> %wide.load, <i8 1, i8 1> 
+; CHECK:           store <2 x i8> [[ADD2]], <2 x i8>*
+
+; CHECK-LABEL:  middle.block:
+; CHECK:           [[ADDEE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 1
+
+; CHECK-LABEL:  for.end:
+; CHECK:           %lcssa = phi i32 [ %i.09, %for.body ], [ [[ADDEE]], %middle.block ]
+; CHECK:           %arrayidx.out = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %lcssa
+define i32 @non_uniform_live_out() {
+entry:
+ br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+ %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+ %i.09 = add i32 %i.08, 7
+ %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %i.09
+ %0 = load i8, i8* %arrayidx, align 1
+ %bump = add i8 %0, 1
+ store i8 %bump, i8* %arrayidx, align 1
+ %inc = add nsw i32 %i.08, 1
+ %exitcond = icmp eq i32 %i.08, 20000
+ br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+ %lcssa = phi i32 [%i.09, %for.body]
+ %arrayidx.out = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 %lcssa
+ store i8 42, i8* %arrayidx.out, align 1
+ ret i32 0
+}

@@ -662,6 +662,8 @@ void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
       if (Status == 0 && DemangledSymbol) {
         outs() << " (" << StringRef(DemangledSymbol) << ")";
         std::free(DemangledSymbol);
+      } else {
+        outs() << " (invalid mangled name)";
       }
     }
     outs() << "\n";

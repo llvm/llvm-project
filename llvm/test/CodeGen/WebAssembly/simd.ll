@@ -10,6 +10,19 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 ; 16 x i8
 ; ==============================================================================
+; CHECK-LABEL: const_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=,
+; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <16 x i8> @const_v16i8() {
+  ret <16 x i8> <i8 00, i8 01, i8 02, i8 03, i8 04, i8 05, i8 06, i8 07,
+                 i8 08, i8 09, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
+}
+
 ; CHECK-LABEL: splat_v16i8:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128: .param i32{{$}}
@@ -73,6 +86,18 @@ define <16 x i8> @replace_v16i8(<16 x i8> %v, i8 %x) {
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
+; CHECK-LABEL: const_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=, 256, 770, 1284, 1798, 2312, 2826, 3340, 3854
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <8 x i16> @const_v8i16() {
+  ret <8 x i16> <i16 256, i16 770, i16 1284, i16 1798,
+                 i16 2312, i16 2826, i16 3340, i16 3854>
+}
+
 ; CHECK-LABEL: splat_v8i16:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128: .param i32{{$}}
@@ -135,6 +160,17 @@ define <8 x i16> @replace_v8i16(<8 x i16> %v, i16 %x) {
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
+; CHECK-LABEL: const_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=, 50462976, 117835012, 185207048, 252579084
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <4 x i32> @const_v4i32() {
+  ret <4 x i32> <i32 50462976, i32 117835012, i32 185207048, i32 252579084>
+}
+
 ; CHECK-LABEL: splat_v4i32:
 ; NO-SIMD128-NOT: i32x4
 ; SIMD128: .param i32{{$}}
@@ -173,6 +209,18 @@ define <4 x i32> @replace_v4i32(<4 x i32> %v, i32 %x) {
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
+; CHECK-LABEL: const_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-VM-NOT: i64x2
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=, 506097522914230528, 1084818905618843912
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <2 x i64> @const_v2i64() {
+  ret <2 x i64> <i64 506097522914230528, i64 1084818905618843912>
+}
+
 ; CHECK-LABEL: splat_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
@@ -213,6 +261,19 @@ define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
 ; ==============================================================================
 ; 4 x f32
 ; ==============================================================================
+; CHECK-LABEL: const_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=,
+; SIMD128-SAME: 0x1.0402p-121, 0x1.0c0a08p-113, 0x1.14121p-105, 0x1.1c1a18p-97
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <4 x float> @const_v4f32() {
+  ret <4 x float> <float 0x3860402000000000, float 0x38e0c0a080000000,
+                   float 0x3961412100000000, float 0x39e1c1a180000000>
+}
+
 ; CHECK-LABEL: splat_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128: .param f32{{$}}
@@ -251,6 +312,17 @@ define <4 x float> @replace_v4f32(<4 x float> %v, float %x) {
 ; ==============================================================================
 ; 2 x f64
 ; ==============================================================================
+; CHECK-LABEL: const_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.const $push0=, 0x1.60504030201p-911, 0x1.e0d0c0b0a0908p-783
+; SIMD128-SAME: # encoding: [0xfd,0x00,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]{{$}}
+define <2 x double> @const_v2f64() {
+  ret <2 x double> <double 0x0706050403020100, double 0x0F0E0D0C0B0A0908>
+}
+
 ; CHECK-LABEL: splat_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2

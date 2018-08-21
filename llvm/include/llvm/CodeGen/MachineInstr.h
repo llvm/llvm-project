@@ -616,6 +616,12 @@ public:
     return hasProperty(MCID::Return, Type);
   }
 
+  /// Return true if this is an instruction that marks the end of an EH scope,
+  /// i.e., a catchpad or a cleanuppad instruction.
+  bool isEHScopeReturn(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::EHScopeReturn, Type);
+  }
+
   bool isCall(QueryType Type = AnyInBundle) const {
     return hasProperty(MCID::Call, Type);
   }

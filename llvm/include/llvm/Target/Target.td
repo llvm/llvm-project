@@ -439,6 +439,7 @@ class Instruction {
   // instruction.
   bit isReturn     = 0;     // Is this instruction a return instruction?
   bit isBranch     = 0;     // Is this instruction a branch instruction?
+  bit isEHScopeReturn = 0;  // Does this instruction end an EH scope?
   bit isIndirectBranch = 0; // Is this instruction an indirect branch?
   bit isCompare    = 0;     // Is this instruction a comparison instruction?
   bit isMoveImm    = 0;     // Is this instruction a move immediate instruction?

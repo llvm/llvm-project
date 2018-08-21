@@ -166,7 +166,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
   if (RRI.RenameAs && RRI.RenameAs != RegID) {
     RegID = RRI.RenameAs;
-    const WriteRef &OtherWrite = RegisterMappings[RegID].first;
+    WriteRef &OtherWrite = RegisterMappings[RegID].first;
 
     if (!WS.clearsSuperRegisters()) {
       // The processor keeps the definition of `RegID` together with register
@@ -174,7 +174,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       // register is allocated.
       ShouldAllocatePhysRegs = false;
 
-      if (OtherWrite.getSourceIndex() != Write.getSourceIndex()) {
+      if (OtherWrite.getWriteState() &&
+          (OtherWrite.getSourceIndex() != Write.getSourceIndex())) {
         // This partial write has a false dependency on RenameAs.
         WS.setDependentWrite(OtherWrite.getWriteState());
       }

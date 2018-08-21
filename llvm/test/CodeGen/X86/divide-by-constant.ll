@@ -384,39 +384,18 @@ define { i64, i32 } @PR38622(i64) nounwind {
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 ;
-; X64-FAST-LABEL: PR38622:
-; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    movq %rdi, %rax
-; X64-FAST-NEXT:    shrq $11, %rax
-; X64-FAST-NEXT:    movabsq $4835703278458517, %rcx # imm = 0x112E0BE826D695
-; X64-FAST-NEXT:    mulq %rcx
-; X64-FAST-NEXT:    shrq $9, %rdx
-; X64-FAST-NEXT:    imull $-294967296, %edx, %eax # imm = 0xEE6B2800
-; X64-FAST-NEXT:    subl %eax, %edi
-; X64-FAST-NEXT:    movq %rdx, %rax
-; X64-FAST-NEXT:    movl %edi, %edx
-; X64-FAST-NEXT:    retq
-;
-; X64-SLOW-LABEL: PR38622:
-; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    movl $4000000000, %ecx # imm = 0xEE6B2800
-; X64-SLOW-NEXT:    movq %rdi, %rax
-; X64-SLOW-NEXT:    shrq $32, %rax
-; X64-SLOW-NEXT:    je .LBB14_1
-; X64-SLOW-NEXT:  # %bb.2:
-; X64-SLOW-NEXT:    xorl %edx, %edx
-; X64-SLOW-NEXT:    movq %rdi, %rax
-; X64-SLOW-NEXT:    divq %rcx
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx killed $rdx
-; X64-SLOW-NEXT:    retq
-; X64-SLOW-NEXT:  .LBB14_1:
-; X64-SLOW-NEXT:    xorl %edx, %edx
-; X64-SLOW-NEXT:    movl %edi, %eax
-; X64-SLOW-NEXT:    divl %ecx
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-SLOW-NEXT:    # kill: def $eax killed $eax def $rax
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx killed $rdx
-; X64-SLOW-NEXT:    retq
+; X64-LABEL: PR38622:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $11, %rax
+; X64-NEXT:    movabsq $4835703278458517, %rcx # imm = 0x112E0BE826D695
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    shrq $9, %rdx
+; X64-NEXT:    imull $-294967296, %edx, %eax # imm = 0xEE6B2800
+; X64-NEXT:    subl %eax, %edi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    retq
   %2 = udiv i64 %0, 4000000000
   %3 = urem i64 %0, 4000000000
   %4 = trunc i64 %3 to i32
@@ -459,41 +438,20 @@ define { i64, i32 } @PR38622_signed(i64) nounwind {
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 ;
-; X64-FAST-LABEL: PR38622_signed:
-; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    movabsq $1237940039285380275, %rcx # imm = 0x112E0BE826D694B3
-; X64-FAST-NEXT:    movq %rdi, %rax
-; X64-FAST-NEXT:    imulq %rcx
-; X64-FAST-NEXT:    movq %rdx, %rcx
-; X64-FAST-NEXT:    shrq $63, %rcx
-; X64-FAST-NEXT:    sarq $28, %rdx
-; X64-FAST-NEXT:    leaq (%rdx,%rcx), %rax
-; X64-FAST-NEXT:    addl %ecx, %edx
-; X64-FAST-NEXT:    imull $-294967296, %edx, %ecx # imm = 0xEE6B2800
-; X64-FAST-NEXT:    subl %ecx, %edi
-; X64-FAST-NEXT:    movl %edi, %edx
-; X64-FAST-NEXT:    retq
-;
-; X64-SLOW-LABEL: PR38622_signed:
-; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    movl $4000000000, %ecx # imm = 0xEE6B2800
-; X64-SLOW-NEXT:    movq %rdi, %rax
-; X64-SLOW-NEXT:    shrq $32, %rax
-; X64-SLOW-NEXT:    je .LBB15_1
-; X64-SLOW-NEXT:  # %bb.2:
-; X64-SLOW-NEXT:    movq %rdi, %rax
-; X64-SLOW-NEXT:    cqto
-; X64-SLOW-NEXT:    idivq %rcx
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx killed $rdx
-; X64-SLOW-NEXT:    retq
-; X64-SLOW-NEXT:  .LBB15_1:
-; X64-SLOW-NEXT:    xorl %edx, %edx
-; X64-SLOW-NEXT:    movl %edi, %eax
-; X64-SLOW-NEXT:    divl %ecx
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-SLOW-NEXT:    # kill: def $eax killed $eax def $rax
-; X64-SLOW-NEXT:    # kill: def $edx killed $edx killed $rdx
-; X64-SLOW-NEXT:    retq
+; X64-LABEL: PR38622_signed:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $1237940039285380275, %rcx # imm = 0x112E0BE826D694B3
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    imulq %rcx
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    shrq $63, %rcx
+; X64-NEXT:    sarq $28, %rdx
+; X64-NEXT:    leaq (%rdx,%rcx), %rax
+; X64-NEXT:    addl %ecx, %edx
+; X64-NEXT:    imull $-294967296, %edx, %ecx # imm = 0xEE6B2800
+; X64-NEXT:    subl %ecx, %edi
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    retq
   %2 = sdiv i64 %0, 4000000000
   %3 = srem i64 %0, 4000000000
   %4 = trunc i64 %3 to i32

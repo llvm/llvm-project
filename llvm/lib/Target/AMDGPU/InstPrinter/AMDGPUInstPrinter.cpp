@@ -236,21 +236,12 @@ void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
     O << " vm";
 }
 
-void AMDGPUInstPrinter::printDFMT(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI,
-                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " dfmt:";
-    printU8ImmDecOperand(MI, OpNo, O);
-  }
-}
-
-void AMDGPUInstPrinter::printNFMT(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI,
-                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm()) {
-    O << " nfmt:";
-    printU8ImmDecOperand(MI, OpNo, O);
+void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  if (unsigned Val = MI->getOperand(OpNo).getImm()) {
+    O << " dfmt:" << (Val & 15);
+    O << ", nfmt:" << (Val >> 4);
   }
 }
 

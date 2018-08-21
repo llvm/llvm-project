@@ -1351,7 +1351,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::QBFLT:           return "PPCISD::QBFLT";
   case PPCISD::QVLFSb:          return "PPCISD::QVLFSb";
   case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
-  case PPCISD::EXTSWSLI:        return "PPCISD::EXTSWSLI";
   }
   return nullptr;
 }
@@ -14132,30 +14131,7 @@ SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
 
-  SDValue N0 = N->getOperand(0);
-  ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!Subtarget.isISA3_0() ||
-      N0.getOpcode() != ISD::SIGN_EXTEND ||
-      N0.getOperand(0).getValueType() != MVT::i32 ||
-      CN1 == nullptr)
-    return SDValue();
-
-  // We can't save an operation here if the value is already extended, and
-  // the existing shift is easier to combine.
-  SDValue ExtsSrc = N0.getOperand(0);
-  if (ExtsSrc.getOpcode() == ISD::TRUNCATE &&
-      ExtsSrc.getOperand(0).getOpcode() == ISD::AssertSext)
-    return SDValue();
-
-  SDLoc DL(N0);
-  SDValue ShiftBy = SDValue(CN1, 0);
-  // We want the shift amount to be i32 on the extswli, but the shift could
-  // have an i64.
-  if (ShiftBy.getValueType() == MVT::i64)
-    ShiftBy = DCI.DAG.getConstant(CN1->getZExtValue(), DL, MVT::i32);
-
-  return DCI.DAG.getNode(PPCISD::EXTSWSLI, DL, MVT::i64, N0->getOperand(0),
-                         ShiftBy);
+  return SDValue();
 }
 
 SDValue PPCTargetLowering::combineSRA(SDNode *N, DAGCombinerInfo &DCI) const {
