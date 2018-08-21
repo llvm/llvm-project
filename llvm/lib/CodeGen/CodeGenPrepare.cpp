@@ -417,11 +417,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // unconditional branch.
   EverMadeChange |= eliminateMostlyEmptyBlocks(F);
 
-  // llvm.dbg.value is far away from the value then iSel may not be able
-  // handle it properly. iSel will drop llvm.dbg.value if it can not
-  // find a node corresponding to the value.
-  EverMadeChange |= placeDbgValues(F);
-
   if (!DisableBranchOpts)
     EverMadeChange |= splitBranchCondition(F);
 
@@ -508,6 +503,10 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     for (auto &I : Statepoints)
       EverMadeChange |= simplifyOffsetableRelocate(*I);
   }
+
+  // Do this last to clean up use-before-def scenarios introduced by other
+  // preparatory transforms.
+  EverMadeChange |= placeDbgValues(F);
 
   return EverMadeChange;
 }
