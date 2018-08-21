@@ -91,5 +91,19 @@ int baz2() {
   return 2 + baz3();
 }
 
+extern int create() throw();
+
+static __typeof(create) __t_create __attribute__((__weakref__("__create")));
+
+int baz5() {
+  bool a;
+// CHECK-DAG: define weak void @__omp_offloading_{{.*}}baz5{{.*}}_l[[@LINE+1]](i64 {{.*}})
+#pragma omp target
+  a = __extension__(void *) & __t_create != 0;
+  return a;
+}
+
+// CHECK-DAG: declare extern_weak signext i32 @__create()
+
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1}}
 #endif // HEADER
