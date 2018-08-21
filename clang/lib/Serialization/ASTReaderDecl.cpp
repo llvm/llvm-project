@@ -1379,6 +1379,12 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     }
   }
 
+  if (VD->hasAttr<BlocksAttr>() && VD->getType()->getAsCXXRecordDecl()) {
+    Expr *CopyExpr = Record.readExpr();
+    if (CopyExpr)
+      Reader.getContext().setBlockVarCopyInit(VD, CopyExpr, Record.readInt());
+  }
+
   if (VD->getStorageDuration() == SD_Static && Record.readInt())
     Reader.DefinitionSource[VD] = Loc.F->Kind == ModuleKind::MK_MainFile;
 
@@ -1468,6 +1474,7 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setIsVariadic(Record.readInt());
   BD->setBlockMissingReturnType(Record.readInt());
   BD->setIsConversionFromLambda(Record.readInt());
+  BD->setDoesNotEscape(Record.readInt());
 
   bool capturesCXXThis = Record.readInt();
   unsigned numCaptures = Record.readInt();

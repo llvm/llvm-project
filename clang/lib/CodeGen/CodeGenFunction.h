@@ -1636,6 +1636,9 @@ public:
                                         bool IsLambdaConversionToBlock,
                                         bool BuildGlobalBlock);
 
+  /// Check if \p T is a C++ class that has a destructor that can throw.
+  static bool cxxDestructorCanThrow(QualType T);
+
   llvm::Constant *GenerateCopyHelperFunction(const CGBlockInfo &blockInfo);
   llvm::Constant *GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo);
   llvm::Constant *GenerateObjCAtomicSetterCopyHelperFunction(
@@ -1644,7 +1647,8 @@ public:
                                              const ObjCPropertyImplDecl *PID);
   llvm::Value *EmitBlockCopyAndAutorelease(llvm::Value *Block, QualType Ty);
 
-  void BuildBlockRelease(llvm::Value *DeclPtr, BlockFieldFlags flags);
+  void BuildBlockRelease(llvm::Value *DeclPtr, BlockFieldFlags flags,
+                         bool CanThrow);
 
   class AutoVarEmission;
 
@@ -1667,7 +1671,7 @@ public:
   /// \param LoadBlockVarAddr Indicates whether we need to emit a load from
   /// \p Addr to get the address of the __block structure.
   void enterByrefCleanup(CleanupKind Kind, Address Addr, BlockFieldFlags Flags,
-                         bool LoadBlockVarAddr);
+                         bool LoadBlockVarAddr, bool CanThrow);
 
   void setBlockContextParameter(const ImplicitParamDecl *D, unsigned argNum,
                                 llvm::Value *ptr);
@@ -1690,6 +1694,11 @@ public:
 
   void GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                     const CGFunctionInfo &FnInfo);
+
+  /// Annotate the function with an attribute that disables TSan checking at
+  /// runtime.
+  void markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn);
+
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
   /// \param StartLoc  The location of the function body.
@@ -3467,6 +3476,19 @@ public:
   CGCallee BuildAppleKextVirtualDestructorCall(const CXXDestructorDecl *DD,
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
+
+  // Return the copy constructor name with the prefix "__copy_constructor_"
+  // removed.
+  static std::string getNonTrivialCopyConstructorStr(QualType QT,
+                                                     CharUnits Alignment,
+                                                     bool IsVolatile,
+                                                     ASTContext &Ctx);
+
+  // Return the destructor name with the prefix "__destructor_" removed.
+  static std::string getNonTrivialDestructorStr(QualType QT,
+                                                CharUnits Alignment,
+                                                bool IsVolatile,
+                                                ASTContext &Ctx);
 
   // These functions emit calls to the special functions of non-trivial C
   // structs.

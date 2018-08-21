@@ -54,6 +54,7 @@ enum BlockByrefFlags {
 };
 
 enum BlockLiteralFlags {
+  BLOCK_IS_NOESCAPE      =  (1 << 23),
   BLOCK_HAS_COPY_DISPOSE =  (1 << 25),
   BLOCK_HAS_CXX_OBJ =       (1 << 26),
   BLOCK_IS_GLOBAL =         (1 << 28),
@@ -130,6 +131,9 @@ public:
   }
   friend bool operator&(BlockFieldFlags l, BlockFieldFlags r) {
     return (l.flags & r.flags);
+  }
+  bool operator==(BlockFieldFlags Other) const {
+    return flags == Other.flags;
   }
 };
 inline BlockFieldFlags operator|(BlockFieldFlag_t l, BlockFieldFlag_t r) {
@@ -214,7 +218,8 @@ public:
   /// no non-constant captures.
   bool CanBeGlobal : 1;
 
-  /// True if the block needs a custom copy or dispose function.
+  /// True if the block has captures that would necessitate custom copy or
+  /// dispose helper functions if the block were escaping.
   bool NeedsCopyDispose : 1;
 
   /// HasCXXObject - True if the block's custom copy/dispose functions
@@ -228,6 +233,11 @@ public:
   /// HasCapturedVariableLayout : True if block has captured variables
   /// and their layout meta-data has been generated.
   bool HasCapturedVariableLayout : 1;
+
+  /// Indicates whether an object of a non-external C++ class is captured. This
+  /// bit is used to determine the linkage of the block copy/destroy helper
+  /// functions.
+  bool CapturesNonExternalType : 1;
 
   /// The mapping of allocated indexes within the block.
   llvm::DenseMap<const VarDecl*, Capture> Captures;  
@@ -276,6 +286,11 @@ public:
   }
 
   CGBlockInfo(const BlockDecl *blockDecl, StringRef Name);
+
+  // Indicates whether the block needs a custom copy or dispose function.
+  bool needsCopyDisposeHelpers() const {
+    return NeedsCopyDispose && !Block->doesNotEscape();
+  }
 };
 
 }  // end namespace CodeGen
