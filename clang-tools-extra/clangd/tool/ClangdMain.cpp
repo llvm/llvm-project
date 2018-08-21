@@ -29,6 +29,11 @@
 using namespace clang;
 using namespace clang::clangd;
 
+static llvm::cl::opt<bool>
+    UseDex("use-dex-index",
+           llvm::cl::desc("Use experimental Dex static index."),
+           llvm::cl::init(false), llvm::cl::Hidden);
+
 namespace {
 
 enum class PCHStorageFlag { Disk, Memory };
@@ -47,7 +52,7 @@ std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
   for (auto Sym : Slab)
     SymsBuilder.insert(Sym);
 
-  return UseDex ? DexIndex::build(std::move(SymsBuilder).build())
+  return UseDex ? dex::DexIndex::build(std::move(SymsBuilder).build())
                 : MemIndex::build(std::move(SymsBuilder).build());
 }
 
@@ -188,11 +193,6 @@ static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
                                 "All compile commands come from the "
                                 "'compile_commands.json' files")),
     llvm::cl::init(FilesystemCompileArgs), llvm::cl::Hidden);
-
-static llvm::cl::opt<bool>
-    UseDex("use-dex-index",
-           llvm::cl::desc("Use experimental Dex static index."),
-           llvm::cl::init(false), llvm::cl::Hidden);
 
 int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
