@@ -25,6 +25,7 @@ class TestSwiftStructInit(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIfLinux
     def test_swift_struct_init(self):
         """Test that we display self correctly for an inline-initialized struct"""
         self.build()
