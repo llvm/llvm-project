@@ -895,6 +895,10 @@ protected:
 #ifndef NDEBUG
   void traceCandidate(const SchedCandidate &Cand);
 #endif
+
+private:
+  bool shouldReduceLatency(const CandPolicy &Policy, SchedBoundary &CurrZone,
+                           bool ComputeRemLatency, unsigned &RemLatency) const;
 };
 
 // Utility functions used by heuristics in tryCandidate().
