@@ -95,6 +95,12 @@ public:
 /// known, and thus FD can not be analyzed.
 static bool isVoidPointer(QualType T);
 
+/// Dereferences \p V and returns the value and dynamic type of the pointee, as
+/// well as wether \p FR needs to be casted back to that type. If for whatever
+/// reason dereferencing fails, returns with None.
+static llvm::Optional<std::tuple<SVal, QualType, bool>>
+dereference(ProgramStateRef State, const FieldRegion *FR);
+
 //===----------------------------------------------------------------------===//
 //                   Methods for FindUninitializedFields.
 //===----------------------------------------------------------------------===//
@@ -126,67 +132,22 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     return false;
   }
 
-  assert(V.getAs<loc::MemRegionVal>() &&
-         "At this point V must be loc::MemRegionVal!");
-  auto L = V.castAs<loc::MemRegionVal>();
-
-  // We can't reason about symbolic regions, assume its initialized.
-  // Note that this also avoids a potential infinite recursion, because
-  // constructors for list-like classes are checked without being called, and
-  // the Static Analyzer will construct a symbolic region for Node *next; or
-  // similar code snippets.
-  if (L.getRegion()->getSymbolicBase()) {
-    IsAnyFieldInitialized = true;
-    return false;
-  }
-
-  DynamicTypeInfo DynTInfo = getDynamicTypeInfo(State, L.getRegion());
-  if (!DynTInfo.isValid()) {
-    IsAnyFieldInitialized = true;
-    return false;
-  }
-
-  QualType DynT = DynTInfo.getType();
-
-  // If the static type of the field is a void pointer, we need to cast it back
-  // to the dynamic type before dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType());
-
-  if (isVoidPointer(DynT)) {
-    IsAnyFieldInitialized = true;
-    return false;
-  }
-
   // At this point the pointer itself is initialized and points to a valid
   // location, we'll now check the pointee.
-  SVal DerefdV = State->getSVal(V.castAs<Loc>(), DynT);
-
-  // If DerefdV is still a pointer value, we'll dereference it again (e.g.:
-  // int** -> int*).
-  while (auto Tmp = DerefdV.getAs<loc::MemRegionVal>()) {
-    if (Tmp->getRegion()->getSymbolicBase()) {
-      IsAnyFieldInitialized = true;
-      return false;
-    }
-
-    DynTInfo = getDynamicTypeInfo(State, Tmp->getRegion());
-    if (!DynTInfo.isValid()) {
-      IsAnyFieldInitialized = true;
-      return false;
-    }
-
-    DynT = DynTInfo.getType();
-    if (isVoidPointer(DynT)) {
-      IsAnyFieldInitialized = true;
-      return false;
-    }
-
-    DerefdV = State->getSVal(*Tmp, DynT);
+  llvm::Optional<std::tuple<SVal, QualType, bool>> DerefInfo =
+      dereference(State, FR);
+  if (!DerefInfo) {
+    IsAnyFieldInitialized = true;
+    return false;
   }
+
+  V = std::get<0>(*DerefInfo);
+  QualType DynT = std::get<1>(*DerefInfo);
+  bool NeedsCastBack = std::get<2>(*DerefInfo);
 
   // If FR is a pointer pointing to a non-primitive type.
   if (Optional<nonloc::LazyCompoundVal> RecordV =
-          DerefdV.getAs<nonloc::LazyCompoundVal>()) {
+          V.getAs<nonloc::LazyCompoundVal>()) {
 
     const TypedValueRegion *R = RecordV->getRegion();
 
@@ -220,7 +181,7 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
          "At this point FR must either have a primitive dynamic type, or it "
          "must be a null, undefined, unknown or concrete pointer!");
 
-  if (isPrimitiveUninit(DerefdV)) {
+  if (isPrimitiveUninit(V)) {
     if (NeedsCastBack)
       return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
     return addFieldToUninits(LocalChain.add(LocField(FR)));
@@ -241,4 +202,49 @@ static bool isVoidPointer(QualType T) {
     T = T->getPointeeType();
   }
   return false;
+}
+
+static llvm::Optional<std::tuple<SVal, QualType, bool>>
+dereference(ProgramStateRef State, const FieldRegion *FR) {
+
+  DynamicTypeInfo DynTInfo;
+  QualType DynT;
+
+  // If the static type of the field is a void pointer, we need to cast it back
+  // to the dynamic type before dereferencing.
+  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType());
+
+  SVal V = State->getSVal(FR);
+  assert(V.getAs<loc::MemRegionVal>() && "V must be loc::MemRegionVal!");
+
+  // If V is multiple pointer value, we'll dereference it again (e.g.: int** ->
+  // int*).
+  // TODO: Dereference according to the dynamic type to avoid infinite loop for
+  // these kind of fields:
+  //   int **ptr = reinterpret_cast<int **>(&ptr);
+  while (auto Tmp = V.getAs<loc::MemRegionVal>()) {
+    // We can't reason about symbolic regions, assume its initialized.
+    // Note that this also avoids a potential infinite recursion, because
+    // constructors for list-like classes are checked without being called, and
+    // the Static Analyzer will construct a symbolic region for Node *next; or
+    // similar code snippets.
+    if (Tmp->getRegion()->getSymbolicBase()) {
+      return None;
+    }
+
+    DynTInfo = getDynamicTypeInfo(State, Tmp->getRegion());
+    if (!DynTInfo.isValid()) {
+      return None;
+    }
+
+    DynT = DynTInfo.getType();
+
+    if (isVoidPointer(DynT)) {
+      return None;
+    }
+
+    V = State->getSVal(*Tmp, DynT);
+  }
+
+  return std::make_tuple(V, DynT, NeedsCastBack);
 }
