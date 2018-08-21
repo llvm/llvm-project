@@ -57,7 +57,7 @@ L.LB38_2452:
 }
 
 ; CHECK-LABEL: @aercalc_
-; CHECK: lfsx
+; CHECK: lfs
 ; CHECK: xxspltd
 ; CHECK: stxvd2x
 ; CHECK-NOT: xxswapd

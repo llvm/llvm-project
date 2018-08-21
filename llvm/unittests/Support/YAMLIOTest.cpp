@@ -16,16 +16,17 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using llvm::yaml::Input;
-using llvm::yaml::Output;
-using llvm::yaml::IO;
-using llvm::yaml::MappingTraits;
-using llvm::yaml::MappingNormalization;
-using llvm::yaml::ScalarTraits;
-using llvm::yaml::Hex8;
 using llvm::yaml::Hex16;
 using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
+using llvm::yaml::Hex8;
+using llvm::yaml::Input;
+using llvm::yaml::IO;
+using llvm::yaml::isNumeric;
+using llvm::yaml::MappingNormalization;
+using llvm::yaml::MappingTraits;
+using llvm::yaml::Output;
+using llvm::yaml::ScalarTraits;
 using ::testing::StartsWith;
 
 
@@ -2568,4 +2569,74 @@ TEST(YAMLIO, TestEscaped) {
                                       0x0};
     TestEscaped((char const *)foobar, "\"foo\\u200Bbar\"");
   }
+}
+
+TEST(YAMLIO, Numeric) {
+  EXPECT_TRUE(isNumeric(".inf"));
+  EXPECT_TRUE(isNumeric(".INF"));
+  EXPECT_TRUE(isNumeric(".Inf"));
+  EXPECT_TRUE(isNumeric("-.inf"));
+  EXPECT_TRUE(isNumeric("+.inf"));
+
+  EXPECT_TRUE(isNumeric(".nan"));
+  EXPECT_TRUE(isNumeric(".NaN"));
+  EXPECT_TRUE(isNumeric(".NAN"));
+
+  EXPECT_TRUE(isNumeric("0"));
+  EXPECT_TRUE(isNumeric("0."));
+  EXPECT_TRUE(isNumeric("0.0"));
+  EXPECT_TRUE(isNumeric("-0.0"));
+  EXPECT_TRUE(isNumeric("+0.0"));
+
+  EXPECT_TRUE(isNumeric("12345"));
+  EXPECT_TRUE(isNumeric("012345"));
+  EXPECT_TRUE(isNumeric("+12.0"));
+  EXPECT_TRUE(isNumeric(".5"));
+  EXPECT_TRUE(isNumeric("+.5"));
+  EXPECT_TRUE(isNumeric("-1.0"));
+
+  EXPECT_TRUE(isNumeric("2.3e4"));
+  EXPECT_TRUE(isNumeric("-2E+05"));
+  EXPECT_TRUE(isNumeric("+12e03"));
+  EXPECT_TRUE(isNumeric("6.8523015e+5"));
+
+  EXPECT_TRUE(isNumeric("1.e+1"));
+  EXPECT_TRUE(isNumeric(".0e+1"));
+
+  EXPECT_TRUE(isNumeric("0x2aF3"));
+  EXPECT_TRUE(isNumeric("0o01234567"));
+
+  EXPECT_FALSE(isNumeric("not a number"));
+  EXPECT_FALSE(isNumeric("."));
+  EXPECT_FALSE(isNumeric(".e+1"));
+  EXPECT_FALSE(isNumeric(".1e"));
+  EXPECT_FALSE(isNumeric(".1e+"));
+  EXPECT_FALSE(isNumeric(".1e++1"));
+
+  EXPECT_FALSE(isNumeric("ABCD"));
+  EXPECT_FALSE(isNumeric("+0x2AF3"));
+  EXPECT_FALSE(isNumeric("-0x2AF3"));
+  EXPECT_FALSE(isNumeric("0x2AF3Z"));
+  EXPECT_FALSE(isNumeric("0o012345678"));
+  EXPECT_FALSE(isNumeric("0xZ"));
+  EXPECT_FALSE(isNumeric("-0o012345678"));
+  EXPECT_FALSE(isNumeric("000003A8229434B839616A25C16B0291F77A438B"));
+
+  EXPECT_FALSE(isNumeric(""));
+  EXPECT_FALSE(isNumeric("."));
+  EXPECT_FALSE(isNumeric(".e+1"));
+  EXPECT_FALSE(isNumeric(".e+"));
+  EXPECT_FALSE(isNumeric(".e"));
+  EXPECT_FALSE(isNumeric("e1"));
+
+  // Deprecated formats: as for YAML 1.2 specification, the following are not
+  // valid numbers anymore:
+  //
+  // * Sexagecimal numbers
+  // * Decimal numbers with comma s the delimiter
+  // * "inf", "nan" without '.' prefix
+  EXPECT_FALSE(isNumeric("3:25:45"));
+  EXPECT_FALSE(isNumeric("+12,345"));
+  EXPECT_FALSE(isNumeric("-inf"));
+  EXPECT_FALSE(isNumeric("1,230.15"));
 }

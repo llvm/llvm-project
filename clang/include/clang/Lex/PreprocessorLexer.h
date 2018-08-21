@@ -135,7 +135,7 @@ public:
   ///
   /// If the sequence parsed is not lexically legal, emit a diagnostic and
   /// return a result EOD token.
-  void LexIncludeFilename(Token &Result);
+  void LexIncludeFilename(Token &FilenameTok);
 
   /// Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.

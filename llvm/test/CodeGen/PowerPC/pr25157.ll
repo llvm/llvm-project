@@ -57,6 +57,6 @@ L.LB38_2452:
 }
 
 ; CHECK-LABEL: @aercalc_
-; CHECK: lfsx
+; CHECK: lfs
 ; CHECK-P9-LABEL: @aercalc_
 ; CHECK-P9: lfs

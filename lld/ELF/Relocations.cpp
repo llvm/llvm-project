@@ -1268,6 +1268,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
 // allow for the creation of a short thunk.
 void ThunkCreator::createInitialThunkSections(
     ArrayRef<OutputSection *> OutputSections) {
+  uint32_t ThunkSectionSpacing = Target->getThunkSectionSpacing();
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         if (ISD->Sections.empty())
@@ -1276,18 +1277,18 @@ void ThunkCreator::createInitialThunkSections(
         uint32_t ISDEnd =
             ISD->Sections.back()->OutSecOff + ISD->Sections.back()->getSize();
         uint32_t LastThunkLowerBound = -1;
-        if (ISDEnd - ISDBegin > Target->ThunkSectionSpacing * 2)
-          LastThunkLowerBound = ISDEnd - Target->ThunkSectionSpacing;
+        if (ISDEnd - ISDBegin > ThunkSectionSpacing * 2)
+          LastThunkLowerBound = ISDEnd - ThunkSectionSpacing;
 
         uint32_t ISLimit;
         uint32_t PrevISLimit = ISDBegin;
-        uint32_t ThunkUpperBound = ISDBegin + Target->ThunkSectionSpacing;
+        uint32_t ThunkUpperBound = ISDBegin + ThunkSectionSpacing;
 
         for (const InputSection *IS : ISD->Sections) {
           ISLimit = IS->OutSecOff + IS->getSize();
           if (ISLimit > ThunkUpperBound) {
             addThunkSection(OS, ISD, PrevISLimit);
-            ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
+            ThunkUpperBound = PrevISLimit + ThunkSectionSpacing;
           }
           if (ISLimit > LastThunkLowerBound)
             break;
@@ -1382,7 +1383,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &Rel, uint64_t Src) {
 // relocation out of range error.
 bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   bool AddressesChanged = false;
-  if (Pass == 0 && Target->ThunkSectionSpacing)
+  if (Pass == 0 && Target->getThunkSectionSpacing())
     createInitialThunkSections(OutputSections);
   else if (Pass == 10)
     // With Thunk Size much smaller than branch range we expect to

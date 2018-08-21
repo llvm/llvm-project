@@ -19,12 +19,12 @@ class LegacyAPIsStandardTest : public CoreAPIsBasedStandardTest {};
 namespace {
 
 TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
-  cantFail(V.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
   auto Resolver = createSymbolResolver(
-      [&](const SymbolNameSet &Symbols) { return V.lookupFlags(Symbols); },
+      [&](const SymbolNameSet &Symbols) { return JD.lookupFlags(Symbols); },
       [&](std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Symbols) {
-        return V.legacyLookup(std::move(Q), Symbols);
+        return JD.legacyLookup(std::move(Q), Symbols);
       });
 
   SymbolNameSet Symbols({Foo, Bar, Baz});
@@ -66,22 +66,22 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
   EXPECT_TRUE(OnResolvedRun) << "OnResolved was never run";
 }
 
-TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
+TEST(LegacyAPIInteropTest, QueryAgainstJITDylib) {
 
   ExecutionSession ES(std::make_shared<SymbolStringPool>());
   auto Foo = ES.getSymbolStringPool().intern("foo");
 
-  auto &V = ES.createVSO("V");
+  auto &JD = ES.createJITDylib("JD");
   JITEvaluatedSymbol FooSym(0xdeadbeef, JITSymbolFlags::Exported);
-  cantFail(V.define(absoluteSymbols({{Foo, FooSym}})));
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
   auto LookupFlags = [&](const SymbolNameSet &Names) {
-    return V.lookupFlags(Names);
+    return JD.lookupFlags(Names);
   };
 
   auto Lookup = [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
                     SymbolNameSet Symbols) {
-    return V.legacyLookup(std::move(Query), Symbols);
+    return JD.legacyLookup(std::move(Query), Symbols);
   };
 
   auto UnderlyingResolver =

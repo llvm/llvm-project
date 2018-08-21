@@ -154,6 +154,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToWeaken;
   std::vector<StringRef> ToRemove;
+  std::vector<std::string> SymbolsToKeepGlobal;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
@@ -426,6 +427,20 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
           (!Config.SymbolsToLocalize.empty() &&
            is_contained(Config.SymbolsToLocalize, Sym.Name)))
+        Sym.Binding = STB_LOCAL;
+
+      // Note: these two globalize flags have very similar names but different
+      // meanings:
+      //
+      // --globalize-symbol: promote a symbol to global
+      // --keep-global-symbol: all symbols except for these should be made local
+      //
+      // If --globalize-symbol is specified for a given symbol, it will be
+      // global in the output file even if it is not included via
+      // --keep-global-symbol. Because of that, make sure to check
+      // --globalize-symbol second.
+      if (!Config.SymbolsToKeepGlobal.empty() &&
+          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name))
         Sym.Binding = STB_LOCAL;
 
       if (!Config.SymbolsToGlobalize.empty() &&
@@ -782,6 +797,23 @@ static void executeElfObjcopy(const CopyConfig &Config) {
   }
 }
 
+static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
+                                     StringRef Filename) {
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    reportError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  for (StringRef Line : Lines) {
+    // Ignore everything after '#', trim whitespace, and only add the symbol if
+    // it's not empty.
+    auto TrimmedLine = Line.split('#').first.trim();
+    if (!TrimmedLine.empty())
+      Symbols.push_back(TrimmedLine.str());
+  }
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -870,6 +902,10 @@ static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
+    Config.SymbolsToKeepGlobal.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
+    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     Config.SymbolsToGlobalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))

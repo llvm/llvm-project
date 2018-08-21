@@ -57,14 +57,14 @@ void f() {
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$BA@AE" to i8*), i8** %ptr
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$B3AE" to i8*), i8** %ptr2
 // CHECK32: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$B7AE" to i8*), i8** %ptr3
-// CHECK32: store i8* bitcast (void (%"struct.(anonymous namespace)::D"*, ...)* @"??_9D@?A@@$BA@AE" to i8*), i8** %ptr4
+// CHECK32: store i8* bitcast (void (%"struct.(anonymous namespace)::D"*, ...)* @"??_9D@?A0x{{[^@]*}}@@$BA@AE" to i8*), i8** %ptr4
 // CHECK32: }
 //
 // CHECK64-LABEL: define dso_local void @"?f@@YAXXZ"()
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$BA@AA" to i8*), i8** %ptr
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$B7AA" to i8*), i8** %ptr2
 // CHECK64: store i8* bitcast (void (%struct.C*, ...)* @"??_9C@@$BBA@AA" to i8*), i8** %ptr3
-// CHECK64: store i8* bitcast (void (%"struct.(anonymous namespace)::D"*, ...)* @"??_9D@?A@@$BA@AA" to i8*), i8** %ptr
+// CHECK64: store i8* bitcast (void (%"struct.(anonymous namespace)::D"*, ...)* @"??_9D@?A0x{{[^@]*}}@@$BA@AA" to i8*), i8** %ptr
 // CHECK64: }
 }
 
@@ -125,7 +125,7 @@ void f() {
 // CHECK64: }
 
 // Thunk for calling the virtual function in internal class D.
-// CHECK32-LABEL: define internal x86_thiscallcc void @"??_9D@?A@@$BA@AE"(%"struct.(anonymous namespace)::D"* %this, ...)
+// CHECK32-LABEL: define internal x86_thiscallcc void @"??_9D@?A0x{{[^@]*}}@@$BA@AE"(%"struct.(anonymous namespace)::D"* %this, ...)
 // CHECK32: #[[ATTR]]
 // CHECK32: [[VPTR:%.*]] = getelementptr inbounds void (%"struct.(anonymous namespace)::D"*, ...)*, void (%"struct.(anonymous namespace)::D"*, ...)** %{{.*}}, i64 0
 // CHECK32: [[CALLEE:%.*]] = load void (%"struct.(anonymous namespace)::D"*, ...)*, void (%"struct.(anonymous namespace)::D"*, ...)** [[VPTR]]
@@ -133,7 +133,7 @@ void f() {
 // CHECK32-NEXT: ret void
 // CHECK32: }
 //
-// CHECK64-LABEL: define internal void @"??_9D@?A@@$BA@AA"(%"struct.(anonymous namespace)::D"* %this, ...)
+// CHECK64-LABEL: define internal void @"??_9D@?A0x{{[^@]*}}@@$BA@AA"(%"struct.(anonymous namespace)::D"* %this, ...)
 // CHECK64: #[[ATTR]]
 // CHECK64: [[VPTR:%.*]] = getelementptr inbounds void (%"struct.(anonymous namespace)::D"*, ...)*, void (%"struct.(anonymous namespace)::D"*, ...)** %{{.*}}, i64 0
 // CHECK64: [[CALLEE:%.*]] = load void (%"struct.(anonymous namespace)::D"*, ...)*, void (%"struct.(anonymous namespace)::D"*, ...)** [[VPTR]]

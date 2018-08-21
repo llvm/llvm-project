@@ -1166,7 +1166,7 @@ sortISDBySectionOrder(InputSectionDescription *ISD,
   // we effectively double the amount of code that could potentially call into
   // the hot code without a thunk.
   size_t InsPt = 0;
-  if (Target->ThunkSectionSpacing && !OrderedSections.empty()) {
+  if (Target->getThunkSectionSpacing() && !OrderedSections.empty()) {
     uint64_t UnorderedPos = 0;
     for (; InsPt != UnorderedSections.size(); ++InsPt) {
       UnorderedPos += UnorderedSections[InsPt]->getSize();

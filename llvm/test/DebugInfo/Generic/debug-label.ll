@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel=false -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_label
@@ -12,7 +12,7 @@
 ; CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1] {{.*}}7
 ; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] {{.*}}{{0x[0-9a-f]+}}
 ;
-; RUN: llc -fast-isel=false -O0 -o - %s | FileCheck %s -check-prefix=ASM
+; RUN: llc -O0 -o - %s | FileCheck %s -check-prefix=ASM
 ;
 ; ASM: [[TOP_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:top
 ; ASM: [[DONE_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:done

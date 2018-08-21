@@ -337,48 +337,78 @@ def VSLI_N : WInst<"vsli_n", "dddi",
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.14 Loads and stores of a single vector
 def VLD1      : WInst<"vld1", "dc",
-                      "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VLD1_X2   : WInst<"vld1_x2", "2c",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VLD1_X3   : WInst<"vld1_x3", "3c",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VLD1_X4   : WInst<"vld1_x4", "4c",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VLD1_LANE : WInst<"vld1_lane", "dcdi",
-                      "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VLD1_DUP  : WInst<"vld1_dup", "dc",
-                      "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VST1      : WInst<"vst1", "vpd",
-                      "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VST1_X2   : WInst<"vst1_x2", "vp2",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VST1_X3   : WInst<"vst1_x3", "vp3",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VST1_X4   : WInst<"vst1_x4", "vp4",
-                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VST1_LANE : WInst<"vst1_lane", "vpdi",
-                      "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
+let ArchGuard = "(__ARM_FP & 2)" in {
+def VLD1_F16      : WInst<"vld1", "dc", "hQh">;
+def VLD1_X2_F16   : WInst<"vld1_x2", "2c", "hQh">;
+def VLD1_X3_F16   : WInst<"vld1_x3", "3c", "hQh">;
+def VLD1_X4_F16   : WInst<"vld1_x4", "4c", "hQh">;
+def VLD1_LANE_F16 : WInst<"vld1_lane", "dcdi", "hQh">;
+def VLD1_DUP_F16  : WInst<"vld1_dup", "dc", "hQh">;
+def VST1_F16      : WInst<"vst1", "vpd", "hQh">;
+def VST1_X2_F16   : WInst<"vst1_x2", "vp2", "hQh">;
+def VST1_X3_F16   : WInst<"vst1_x3", "vp3", "hQh">;
+def VST1_X4_F16   : WInst<"vst1_x4", "vp4", "hQh">;
+def VST1_LANE_F16 : WInst<"vst1_lane", "vpdi", "hQh">;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.15 Loads and stores of an N-element structure
-def VLD2 : WInst<"vld2", "2c", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
-def VLD3 : WInst<"vld3", "3c", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
-def VLD4 : WInst<"vld4", "4c", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+def VLD2 : WInst<"vld2", "2c", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VLD3 : WInst<"vld3", "3c", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VLD4 : WInst<"vld4", "4c", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
 def VLD2_DUP  : WInst<"vld2_dup", "2c",
-                      "UcUsUiUlcsilhfPcPsQcQfQhQiQlQsQPcQPsQUcQUiQUlQUs">;
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
 def VLD3_DUP  : WInst<"vld3_dup", "3c",
-                      "UcUsUiUlcsilhfPcPsQcQfQhQiQlQsQPcQPsQUcQUiQUlQUs">;
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
 def VLD4_DUP  : WInst<"vld4_dup", "4c",
-                      "UcUsUiUlcsilhfPcPsQcQfQhQiQlQsQPcQPsQUcQUiQUlQUs">;
-def VLD2_LANE : WInst<"vld2_lane", "2c2i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
-def VLD3_LANE : WInst<"vld3_lane", "3c3i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
-def VLD4_LANE : WInst<"vld4_lane", "4c4i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
-def VST2 : WInst<"vst2", "vp2", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
-def VST3 : WInst<"vst3", "vp3", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
-def VST4 : WInst<"vst4", "vp4", "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
-def VST2_LANE : WInst<"vst2_lane", "vp2i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
-def VST3_LANE : WInst<"vst3_lane", "vp3i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
-def VST4_LANE : WInst<"vst4_lane", "vp4i", "QUsQUiQsQiQhQfQPsUcUsUicsihfPcPs">;
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
+def VLD2_LANE : WInst<"vld2_lane", "2c2i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+def VLD3_LANE : WInst<"vld3_lane", "3c3i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+def VLD4_LANE : WInst<"vld4_lane", "4c4i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+def VST2 : WInst<"vst2", "vp2", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VST3 : WInst<"vst3", "vp3", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VST4 : WInst<"vst4", "vp4", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VST2_LANE : WInst<"vst2_lane", "vp2i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+def VST3_LANE : WInst<"vst3_lane", "vp3i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+def VST4_LANE : WInst<"vst4_lane", "vp4i", "QUsQUiQsQiQfQPsUcUsUicsifPcPs">;
+let ArchGuard = "(__ARM_FP & 2)" in {
+def VLD2_F16      : WInst<"vld2", "2c", "hQh">;
+def VLD3_F16      : WInst<"vld3", "3c", "hQh">;
+def VLD4_F16      : WInst<"vld4", "4c", "hQh">;
+def VLD2_DUP_F16  : WInst<"vld2_dup", "2c", "hQh">;
+def VLD3_DUP_F16  : WInst<"vld3_dup", "3c", "hQh">;
+def VLD4_DUP_F16  : WInst<"vld4_dup", "4c", "hQh">;
+def VLD2_LANE_F16 : WInst<"vld2_lane", "2c2i", "hQh">;
+def VLD3_LANE_F16 : WInst<"vld3_lane", "3c3i", "hQh">;
+def VLD4_LANE_F16 : WInst<"vld4_lane", "4c4i", "hQh">;
+def VST2_F16      : WInst<"vst2", "vp2", "hQh">;
+def VST3_F16      : WInst<"vst3", "vp3", "hQh">;
+def VST4_F16      : WInst<"vst4", "vp4", "hQh">;
+def VST2_LANE_F16 : WInst<"vst2_lane", "vp2i", "hQh">;
+def VST3_LANE_F16 : WInst<"vst3_lane", "vp3i", "hQh">;
+def VST4_LANE_F16 : WInst<"vst4_lane", "vp4i", "hQh">;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.16 Extract lanes from a vector

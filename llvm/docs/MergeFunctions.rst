@@ -10,84 +10,71 @@ Introduction
 Sometimes code contains equal functions, or functions that does exactly the same
 thing even though they are non-equal on the IR level (e.g.: multiplication on 2
 and 'shl 1'). It could happen due to several reasons: mainly, the usage of
-templates and automatic code generators. Though, sometimes user itself could
+templates and automatic code generators. Though, sometimes the user itself could
 write the same thing twice :-)
 
 The main purpose of this pass is to recognize such functions and merge them.
 
-Why would I want to read this document?
----------------------------------------
-Document is the extension to pass comments and describes the pass logic. It
-describes algorithm that is used in order to compare functions, it also
-explains how we could combine equal functions correctly, keeping module valid.
+This document is the extension to pass comments and describes the pass logic. It
+describes the algorithm that is used in order to compare functions and
+explains how we could combine equal functions correctly to keep the module
+valid.
 
-Material is brought in top-down form, so reader could start learn pass from
-ideas and end up with low-level algorithm details, thus preparing him for
-reading the sources.
+Material is brought in a top-down form, so the reader could start to learn pass
+from high level ideas and end with low-level algorithm details, thus preparing
+him or her for reading the sources.
 
-So main goal is do describe algorithm and logic here; the concept. This document
-is good for you, if you *don't want* to read the source code, but want to
-understand pass algorithms. Author tried not to repeat the source-code and
-cover only common cases, and thus avoid cases when after minor code changes we
-need to update this document.
+The main goal is to describe the algorithm and logic here and the concept. If
+you *don't want* to read the source code, but want to understand pass
+algorithms, this document is good for you. The author tries not to repeat the
+source-code and covers only common cases to avoid the cases of needing to
+update this document after any minor code changes.
 
 
 What should I know to be able to follow along with this document?
 -----------------------------------------------------------------
 
-Reader should be familiar with common compile-engineering principles and LLVM
-code fundamentals. In this article we suppose reader is familiar with
-`Single Static Assingment <http://en.wikipedia.org/wiki/Static_single_assignment_form>`_
-concepts. Understanding of
-`IR structure <http://llvm.org/docs/LangRef.html#high-level-structure>`_ is
-also important.
+The reader should be familiar with common compile-engineering principles and
+LLVM code fundamentals. In this article, we assume the reader is familiar with
+`Single Static Assignment
+<http://en.wikipedia.org/wiki/Static_single_assignment_form>`_
+concept and has an understanding of
+`IR structure <http://llvm.org/docs/LangRef.html#high-level-structure>`_.
 
-We will use such terms as
+We will use terms such as
 "`module <http://llvm.org/docs/LangRef.html#high-level-structure>`_",
 "`function <http://llvm.org/docs/ProgrammersManual.html#the-function-class>`_",
 "`basic block <http://en.wikipedia.org/wiki/Basic_block>`_",
 "`user <http://llvm.org/docs/ProgrammersManual.html#the-user-class>`_",
 "`value <http://llvm.org/docs/ProgrammersManual.html#the-value-class>`_",
-"`instruction <http://llvm.org/docs/ProgrammersManual.html#the-instruction-class>`_".
+"`instruction
+<http://llvm.org/docs/ProgrammersManual.html#the-instruction-class>`_".
 
-As a good start point, Kaleidoscope tutorial could be used:
+As a good starting point, the Kaleidoscope tutorial can be used:
 
 :doc:`tutorial/index`
 
-Especially it's important to understand chapter 3 of tutorial:
+It's especially important to understand chapter 3 of tutorial:
 
 :doc:`tutorial/LangImpl03`
 
-Reader also should know how passes work in LLVM, they could use next article as
-a reference and start point here:
+The reader should also know how passes work in LLVM. They could use this
+article as a reference and start point here:
 
 :doc:`WritingAnLLVMPass`
 
-What else? Well perhaps reader also should have some experience in LLVM pass
+What else? Well perhaps the reader should also have some experience in LLVM pass
 debugging and bug-fixing.
-
-What I gain by reading this document?
--------------------------------------
-Main purpose is to provide reader with comfortable form of algorithms
-description, namely the human reading text. Since it could be hard to
-understand algorithm straight from the source code: pass uses some principles
-that have to be explained first.
-
-Author wishes to everybody to avoid case, when you read code from top to bottom
-again and again, and yet you don't understand why we implemented it that way.
-
-We hope that after this article reader could easily debug and improve
-MergeFunctions pass and thus help LLVM project.
 
 Narrative structure
 -------------------
-Article consists of three parts. First part explains pass functionality on the
-top-level. Second part describes the comparison procedure itself. The third
-part describes the merging process.
+The article consists of three parts. The first part explains pass functionality
+on the top-level. The second part describes the comparison procedure itself.
+The third part describes the merging process.
 
-In every part author also tried to put the contents into the top-down form.
-First, the top-level methods will be described, while the terminal ones will be
-at the end, in the tail of each part. If reader will see the reference to the
+In every part, the author tries to put the contents in the top-down form.
+The top-level methods will first be described followed by the terminal ones at
+the end, in the tail of each part. If the reader sees the reference to the
 method that wasn't described yet, they will find its description a bit below.
 
 Basics
@@ -95,46 +82,46 @@ Basics
 
 How to do it?
 -------------
-Do we need to merge functions? Obvious thing is: yes that's a quite possible
-case, since usually we *do* have duplicates. And it would be good to get rid of
-them. But how to detect such a duplicates? The idea is next: we split functions
-onto small bricks (parts), then we compare "bricks" amount, and if it equal,
-compare "bricks" themselves, and then do our conclusions about functions
+Do we need to merge functions? The obvious answer is: Yes, that is quite a
+possible case. We usually *do* have duplicates and it would be good to get rid
+of them. But how do we detect duplicates? This is the idea: we split functions
+into smaller bricks or parts and compare the "bricks" amount. If equal,
+we compare the "bricks" themselves, and then do our conclusions about functions
 themselves.
 
-What the difference it could be? For example, on machine with 64-bit pointers
-(let's assume we have only one address space),  one function stores 64-bit
-integer, while another one stores a pointer. So if the target is a machine
+What could the difference be? For example, on a machine with 64-bit pointers
+(let's assume we have only one address space), one function stores a 64-bit
+integer, while another one stores a pointer. If the target is the machine
 mentioned above, and if functions are identical, except the parameter type (we
-could consider it as a part of function type), then we can treat ``uint64_t``
-and``void*`` as equal.
+could consider it as a part of function type), then we can treat a ``uint64_t``
+and a ``void*`` as equal.
 
-It was just an example; possible details are described a bit below.
+This is just an example; more possible details are described a bit below.
 
-As another example reader may imagine two more functions. First function
-performs multiplication on 2, while the second one performs arithmetic right
-shift on 1.
+As another example, the reader may imagine two more functions. The first
+function performs a multiplication on 2, while the second one performs an
+arithmetic right shift on 1.
 
 Possible solutions
 ^^^^^^^^^^^^^^^^^^
 Let's briefly consider possible options about how and what we have to implement
 in order to create full-featured functions merging, and also what it would
-meant for us.
+mean for us.
 
-Equal functions detection, obviously supposes "detector" method to be
-implemented, latter should answer the question "whether functions are equal".
-This "detector" method consists of tiny "sub-detectors", each of them answers
+Equal function detection obviously supposes that a "detector" method to be
+implemented and latter should answer the question "whether functions are equal".
+This "detector" method consists of tiny "sub-detectors", which each answers
 exactly the same question, but for function parts.
 
 As the second step, we should merge equal functions. So it should be a "merger"
 method. "Merger" accepts two functions *F1* and *F2*, and produces *F1F2*
 function, the result of merging.
 
-Having such a routines in our hands, we can process whole module, and merge all
+Having such routines in our hands, we can process a whole module, and merge all
 equal functions.
 
 In this case, we have to compare every function with every another function. As
-reader could notice, this way seems to be quite expensive. Of course we could
+the reader may notice, this way seems to be quite expensive. Of course we could
 introduce hashing and other helpers, but it is still just an optimization, and
 thus the level of O(N*N) complexity.
 
@@ -143,44 +130,45 @@ access lookup? The answer is: "yes".
 
 Random-access
 """""""""""""
-How it could be done? Just convert each function to number, and gather all of
-them in special hash-table. Functions with equal hash are equal. Good hashing
-means, that every function part must be taken into account. That means we have
-to convert every function part into some number, and then add it into hash.
-Lookup-up time would be small, but such approach adds some delay due to hashing
-routine.
+How it could this be done? Just convert each function to a number, and gather
+all of them in a special hash-table. Functions with equal hashes are equal.
+Good hashing means, that every function part must be taken into account. That
+means we have to convert every function part into some number, and then add it
+into the hash. The lookup-up time would be small, but such a approach adds some
+delay due to the hashing routine.
 
 Logarithmical search
 """"""""""""""""""""
-We could introduce total ordering among the functions set, once we had it we
+We could introduce total ordering among the functions set, once ordered we
 could then implement a logarithmical search. Lookup time still depends on N,
 but adds a little of delay (*log(N)*).
 
 Present state
 """""""""""""
-Both of approaches (random-access and logarithmical) has been implemented and
-tested. And both of them gave a very good improvement. And what was most
-surprising, logarithmical search was faster; sometimes up to 15%. Hashing needs
-some extra CPU time, and it is the main reason why it works slower; in most of
-cases total "hashing" time was greater than total "logarithmical-search" time.
+Both of the approaches (random-access and logarithmical) have been implemented
+and tested and both give a very good improvement. What was most
+surprising is that logarithmical search was faster; sometimes by up to 15%. The
+hashing method needs some extra CPU time, which is the main reason why it works
+slower; in most cases, total "hashing" time is greater than total
+"logarithmical-search" time.
 
 So, preference has been granted to the "logarithmical search".
 
 Though in the case of need, *logarithmical-search* (read "total-ordering") could
 be used as a milestone on our way to the *random-access* implementation.
 
-Every comparison is based either on the numbers or on flags comparison. In
-*random-access* approach we could use the same comparison algorithm. During
-comparison we exit once we find the difference, but here we might have to scan
-whole function body every time (note, it could be slower). Like in
-"total-ordering", we will track every numbers and flags, but instead of
-comparison, we should get numbers sequence and then create the hash number. So,
-once again, *total-ordering* could be considered as a milestone for even faster
-(in theory) random-access approach.
+Every comparison is based either on the numbers or on the flags comparison. In
+the *random-access* approach, we could use the same comparison algorithm.
+During comparison, we exit once we find the difference, but here we might have
+to scan the whole function body every time (note, it could be slower). Like in
+"total-ordering", we will track every number and flag, but instead of
+comparison, we should get the numbers sequence and then create the hash number.
+So, once again, *total-ordering* could be considered as a milestone for even
+faster (in theory) random-access approach.
 
 MergeFunctions, main fields and runOnModule
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-There are two most important fields in class:
+There are two main important fields in the class:
 
 ``FnTree``  – the set of all unique functions. It keeps items that couldn't be
 merged with each other. It is defined as:
@@ -192,8 +180,8 @@ implemented “<” operator among the functions set (below we explain how it wo
 exactly; this is a key point in fast functions comparison).
 
 ``Deferred`` – merging process can affect bodies of functions that are in
-``FnTree`` already. Obviously such functions should be rechecked again. In this
-case we remove them from ``FnTree``, and mark them as to be rescanned, namely
+``FnTree`` already. Obviously, such functions should be rechecked again. In this
+case, we remove them from ``FnTree``, and mark them to be rescanned, namely
 put them into ``Deferred`` list.
 
 runOnModule
@@ -205,28 +193,30 @@ The algorithm is pretty simple:
 2. Scan *worklist*'s functions twice: first enumerate only strong functions and
 then only weak ones:
 
-   2.1. Loop body: take function from *worklist*  (call it *FCur*) and try to
+   2.1. Loop body: take a function from *worklist*  (call it *FCur*) and try to
    insert it into *FnTree*: check whether *FCur* is equal to one of functions
-   in *FnTree*. If there *is* equal function in *FnTree* (call it *FExists*):
-   merge function *FCur* with *FExists*. Otherwise add function from *worklist*
-   to *FnTree*.
+   in *FnTree*. If there *is* an equal function in *FnTree*
+   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise add
+   the function from the *worklist* to *FnTree*.
 
-3. Once *worklist* scanning and merging operations is complete, check *Deferred*
-list. If it is not empty: refill *worklist* contents with *Deferred* list and
-do step 2 again, if *Deferred* is empty, then exit from method.
+3. Once the *worklist* scanning and merging operations are complete, check the
+*Deferred* list. If it is not empty: refill the *worklist* contents with
+*Deferred* list and redo step 2, if the *Deferred* list is empty, then exit
+from method.
 
 Comparison and logarithmical search
 """""""""""""""""""""""""""""""""""
 Let's recall our task: for every function *F* from module *M*, we have to find
-equal functions *F`* in shortest time, and merge them into the single function.
+equal functions *F`* in the shortest time possible , and merge them into a
+single function.
 
-Defining total ordering among the functions set allows to organize functions
-into the binary tree. The lookup procedure complexity would be estimated as
-O(log(N)) in this case. But how to define *total-ordering*?
+Defining total ordering among the functions set allows us to organize
+functions into a binary tree. The lookup procedure complexity would be
+estimated as O(log(N)) in this case. But how do we define *total-ordering*?
 
 We have to introduce a single rule applicable to every pair of functions, and
-following this rule then evaluate which of them is greater. What kind of rule
-it could be? Let's declare it as "compare" method, that returns one of 3
+following this rule, then evaluate which of them is greater. What kind of rule
+could it be? Let's declare it as the "compare" method that returns one of 3
 possible values:
 
 -1, left is *less* than right,
@@ -243,52 +233,52 @@ Of course it means, that we have to maintain
 * transitivity (``a <= b`` and ``b <= c``, then ``a <= c``)
 * asymmetry (if ``a < b``, then ``a > b`` or ``a == b``).
 
-As it was mentioned before, comparison routine consists of
-"sub-comparison-routines", each of them also consists
-"sub-comparison-routines", and so on, finally it ends up with a primitives
+As mentioned before, the comparison routine consists of
+"sub-comparison-routines", with each of them also consisting of
+"sub-comparison-routines", and so on. Finally, it ends up with primitive
 comparison.
 
-Below, we will use the next operations:
+Below, we will use the following operations:
 
-#. ``cmpNumbers(number1, number2)`` is method that returns -1 if left is less
+#. ``cmpNumbers(number1, number2)`` is a method that returns -1 if left is less
    than right; 0, if left and right are equal; and 1 otherwise.
 
-#. ``cmpFlags(flag1, flag2)`` is hypothetical method that compares two flags.
+#. ``cmpFlags(flag1, flag2)`` is a hypothetical method that compares two flags.
    The logic is the same as in ``cmpNumbers``, where ``true`` is 1, and
    ``false`` is 0.
 
-The rest of article is based on *MergeFunctions.cpp* source code
-(*<llvm_dir>/lib/Transforms/IPO/MergeFunctions.cpp*). We would like to ask
-reader to keep this file open nearby, so we could use it as a reference for
-further explanations.
+The rest of the article is based on *MergeFunctions.cpp* source code
+(found in *<llvm_dir>/lib/Transforms/IPO/MergeFunctions.cpp*). We would like
+to ask reader to keep this file open, so we could use it as a reference
+for further explanations.
 
-Now we're ready to proceed to the next chapter and see how it works.
+Now, we're ready to proceed to the next chapter and see how it works.
 
 Functions comparison
 ====================
 At first, let's define how exactly we compare complex objects.
 
-Complex objects comparison (function, basic-block, etc) is mostly based on its
-sub-objects comparison results. So it is similar to the next "tree" objects
+Complex object comparison (function, basic-block, etc) is mostly based on its
+sub-object comparison results. It is similar to the next "tree" objects
 comparison:
 
 #. For two trees *T1* and *T2* we perform *depth-first-traversal* and have
    two sequences as a product: "*T1Items*" and "*T2Items*".
 
-#. Then compare chains "*T1Items*" and "*T2Items*" in
-   most-significant-item-first order. Result of items comparison would be the
-   result of *T1* and *T2* comparison itself.
+#. We then compare chains "*T1Items*" and "*T2Items*" in
+   the most-significant-item-first order. The result of items comparison
+   would be the result of *T1* and *T2* comparison itself.
 
 FunctionComparator::compare(void)
 ---------------------------------
-Brief look at the source code tells us, that comparison starts in
+A brief look at the source code tells us that the comparison starts in the
 “``int FunctionComparator::compare(void)``” method.
 
-1. First parts to be compared are function's attributes and some properties that
-outsides “attributes” term, but still could make function different without
-changing its body. This part of comparison is usually done within simple
-*cmpNumbers* or *cmpFlags* operations (e.g.
-``cmpFlags(F1->hasGC(), F2->hasGC())``). Below is full list of function's
+1. The first parts to be compared are the function's attributes and some
+properties that is outside the “attributes” term, but still could make the
+function different without changing its body. This part of the comparison is
+usually done within simple *cmpNumbers* or *cmpFlags* operations (e.g.
+``cmpFlags(F1->hasGC(), F2->hasGC())``). Below is a full list of function's
 properties to be compared on this stage:
 
   * *Attributes* (those are returned by ``Function::getAttributes()``
@@ -333,7 +323,7 @@ arguments (see ``cmpValues`` method below).
 
 FunctionComparator::cmpType
 ---------------------------
-Consider how types comparison works.
+Consider how type comparison works.
 
 1. Coerce pointer to integer. If left type is a pointer, try to coerce it to the
 integer type. It could be done if its address space is 0, or if address spaces
@@ -343,7 +333,7 @@ are ignored at all. Do the same thing for the right type.
 preference to one of them. So proceed to the next step.
 
 3. If types are of different kind (different type IDs). Return result of type
-IDs comparison, treating them as a numbers (use ``cmpNumbers`` operation).
+IDs comparison, treating them as numbers (use ``cmpNumbers`` operation).
 
 4. If types are vectors or integers, return result of their pointers comparison,
 comparing them as numbers.
@@ -378,21 +368,21 @@ technique (see the very first paragraph of this chapter). Both *left* and
 way. If we get -1 or 1 on some stage, return it. Otherwise return 0.
 
 8. Steps 1-6 describe all the possible cases, if we passed steps 1-6 and didn't
-get any conclusions, then invoke ``llvm_unreachable``, since it's quite
+get any conclusions, then invoke ``llvm_unreachable``, since it's quite an
 unexpectable case.
 
 cmpValues(const Value*, const Value*)
 -------------------------------------
 Method that compares local values.
 
-This method gives us an answer on a very curious quesion: whether we could treat
-local values as equal, and which value is greater otherwise. It's better to
-start from example:
+This method gives us an answer to a very curious question: whether we could
+treat local values as equal, and which value is greater otherwise. It's
+better to start from example:
 
-Consider situation when we're looking at the same place in left function "*FL*"
-and in right function "*FR*". And every part of *left* place is equal to the
-corresponding part of *right* place, and (!) both parts use *Value* instances,
-for example:
+Consider the situation when we're looking at the same place in left
+function "*FL*" and in right function "*FR*". Every part of *left* place is
+equal to the corresponding part of *right* place, and (!) both parts use
+*Value* instances, for example:
 
 .. code-block:: text
 
@@ -401,13 +391,13 @@ for example:
 
 So, now our conclusion depends on *Value* instances comparison.
 
-Main purpose of this method is to determine relation between such values.
+The main purpose of this method is to determine relation between such values.
 
-What we expect from equal functions? At the same place, in functions "*FL*" and
-"*FR*" we expect to see *equal* values, or values *defined* at the same place
-in "*FL*" and "*FR*".
+What can we expect from equal functions? At the same place, in functions
+"*FL*" and "*FR*" we expect to see *equal* values, or values *defined* at
+the same place in "*FL*" and "*FR*".
 
-Consider small example here:
+Consider a small example here:
 
 .. code-block:: text
 
@@ -421,20 +411,20 @@ Consider small example here:
     instr0 i32 %pg0 instr1 i32 %pg0 instr2 i32 123
   }
 
-In this example, *pf0* is associated with *pg0*, *pf1* is associated with *pg1*,
-and we also declare that *pf0* < *pf1*, and thus *pg0* < *pf1*.
+In this example, *pf0* is associated with *pg0*, *pf1* is associated with
+*pg1*, and we also declare that *pf0* < *pf1*, and thus *pg0* < *pf1*.
 
 Instructions with opcode "*instr0*" would be *equal*, since their types and
 opcodes are equal, and values are *associated*.
 
-Instruction with opcode "*instr1*" from *f* is *greater* than instruction with
-opcode "*instr1*" from *g*; here we have equal types and opcodes, but "*pf1* is
-greater than "*pg0*".
+Instructions with opcode "*instr1*" from *f* is *greater* than instructions
+with opcode "*instr1*" from *g*; here we have equal types and opcodes, but
+"*pf1* is greater than "*pg0*".
 
-And instructions with opcode "*instr2*" are equal, because their opcodes and
+Instructions with opcode "*instr2*" are equal, because their opcodes and
 types are equal, and the same constant is used as a value.
 
-What we assiciate in cmpValues?
+What we associate in cmpValues?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Function arguments. *i*-th argument from left function associated with
   *i*-th argument from right function.
@@ -444,23 +434,22 @@ What we assiciate in cmpValues?
 * Instructions.
 * Instruction operands. Note, we can meet *Value* here we have never seen
   before. In this case it is not a function argument, nor *BasicBlock*, nor
-  *Instruction*. It is global value. It is constant, since its the only
-  supposed global here. Method also compares:
-* Constants that are of the same type.
-* If right constant could be losslessly bit-casted to the left one, then we
-  also compare them.
+  *Instruction*. It is a global value. It is a constant, since it's the only
+  supposed global here. The method also compares: Constants that are of the
+  same type and if right constant can be losslessly bit-casted to the left
+  one, then we also compare them.
 
 How to implement cmpValues?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-*Association* is a case of equality for us. We just treat such values as equal.
-But, in general, we need to implement antisymmetric relation. As it was
-mentioned above, to understand what is *less*, we can use order in which we
-meet values. If both of values has the same order in function (met at the same
-time), then treat values as *associated*. Otherwise – it depends on who was
+*Association* is a case of equality for us. We just treat such values as equal,
+but, in general, we need to implement antisymmetric relation. As mentioned
+above, to understand what is *less*, we can use order in which we
+meet values. If both values have the same order in a function (met at the same
+time), we then treat values as *associated*. Otherwise – it depends on who was
 first.
 
-Every time we run top-level compare method, we initialize two identical maps
-(one for the left side, another one for the right side):
+Every time we run the top-level compare method, we initialize two identical
+maps (one for the left side, another one for the right side):
 
 ``map<Value, int> sn_mapL, sn_mapR;``
 
@@ -471,11 +460,11 @@ To add value *V* we need to perform the next procedure:
 
 ``sn_map.insert(std::make_pair(V, sn_map.size()));``
 
-For the first *Value*, map will return *0*, for second *Value* map will return
-*1*, and so on.
+For the first *Value*, map will return *0*, for the second *Value* map will
+return *1*, and so on.
 
-Then we can check whether left and right values met at the same time with simple
-comparison:
+We can then check whether left and right values met at the same time with
+a simple comparison:
 
 ``cmpNumbers(sn_mapL[Left], sn_mapR[Right]);``
 
@@ -490,7 +479,7 @@ Of course, we can combine insertion and comparison:
 
 Let's look, how whole method could be implemented.
 
-1. we have to start from the bad news. Consider function self and
+1. We have to start with the bad news. Consider function self and
 cross-referencing cases:
 
 .. code-block:: c++
@@ -507,7 +496,7 @@ cross-referencing cases:
   This comparison has been implemented in initial *MergeFunctions* pass
   version. But, unfortunately, it is not transitive. And this is the only case
   we can't convert to less-equal-greater comparison. It is a seldom case, 4-5
-  functions of 10000 (checked on test-suite), and, we hope, reader would
+  functions of 10000 (checked in test-suite), and, we hope, the reader would
   forgive us for such a sacrifice in order to get the O(log(N)) pass time.
 
 2. If left/right *Value* is a constant, we have to compare them. Return 0 if it
@@ -518,8 +507,8 @@ comparison.
 
 4. Explicit association of *L* (left value) and *R*  (right value). We need to
 find out whether values met at the same time, and thus are *associated*. Or we
-need to put the rule: when we treat *L* < *R*. Now it is easy: just return
-result of numbers comparison:
+need to put the rule: when we treat *L* < *R*. Now it is easy: we just return
+the result of numbers comparison:
 
 .. code-block:: c++
 
@@ -530,16 +519,16 @@ result of numbers comparison:
    if (LeftRes.first->second < RightRes.first->second) return -1;
    return 1;
 
-Now when *cmpValues* returns 0, we can proceed comparison procedure. Otherwise,
-if we get (-1 or 1), we need to pass this result to the top level, and finish
-comparison procedure.
+Now when *cmpValues* returns 0, we can proceed the comparison procedure.
+Otherwise, if we get (-1 or 1), we need to pass this result to the top level,
+and finish comparison procedure.
 
 cmpConstants
 ------------
 Performs constants comparison as follows:
 
-1. Compare constant types using ``cmpType`` method. If result is -1 or 1, goto
-step 2, otherwise proceed to step 3.
+1. Compare constant types using ``cmpType`` method. If the result is -1 or 1,
+goto step 2, otherwise proceed to step 3.
 
 2. If types are different, we still can check whether constants could be
 losslessly bitcasted to each other. The further explanation is modification of
@@ -581,10 +570,10 @@ bitcastable:
   if (int Res = cmpNumbers(L->getValueID(), R->getValueID()))
     return Res;
 
-5. Compare the contents of constants. The comparison depends on kind of
+5. Compare the contents of constants. The comparison depends on the kind of
 constants, but on this stage it is just a lexicographical comparison. Just see
 how it was described in the beginning of "*Functions comparison*" paragraph.
-Mathematically it is equal to the next case: we encode left constant and right
+Mathematically, it is equal to the next case: we encode left constant and right
 constant (with similar way *bitcode-writer* does). Then compare left code
 sequence and right code sequence.
 
@@ -598,7 +587,7 @@ It enumerates instructions from left *BB* and right *BB*.
 ``cmpValues`` method.
 
 2. If one of left or right is *GEP* (``GetElementPtr``), then treat *GEP* as
-greater than other instructions, if both instructions are *GEPs* use ``cmpGEP``
+greater than other instructions. If both instructions are *GEPs* use ``cmpGEP``
 method for comparison. If result is -1 or 1, pass it to the top-level
 comparison (return it).
 
@@ -618,11 +607,11 @@ comparison (return it).
 4. We can finish instruction enumeration in 3 cases:
 
    4.1. We reached the end of both left and right basic-blocks. We didn't
-   exit on steps 1-3, so contents is equal, return 0.
+   exit on steps 1-3, so contents are equal, return 0.
 
    4.2. We have reached the end of the left basic-block. Return -1.
 
-   4.3. Return 1 (the end of the right basic block).
+   4.3. Return 1 (we reached the end of the right basic block).
 
 cmpGEP
 ------
@@ -652,8 +641,8 @@ method, and compare it like a numbers.
 
 5. Compare operand types.
 
-6. For some particular instructions check equivalence (relation in our case) of
-some significant attributes. For example we have to compare alignment for
+6. For some particular instructions, check equivalence (relation in our case) of
+some significant attributes. For example, we have to compare alignment for
 ``load`` instructions.
 
 O(log(N))
@@ -692,7 +681,7 @@ call wrapper around *F* and replace *G* with that call.
 change the callers: call *F* instead of *G*.  That's what
 ``replaceDirectCallers`` does.
 
-Below is detailed body description.
+Below is a detailed body description.
 
 If “F” may be overridden
 ------------------------
@@ -736,17 +725,17 @@ also have alias to *F*.
 
 No global aliases, replaceDirectCallers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If global aliases are not supported. We call ``replaceDirectCallers`` then. Just
+If global aliases are not supported. We call ``replaceDirectCallers``. Just
 go through all calls of *G* and replace it with calls of *F*. If you look into
-method you will see that it scans all uses of *G* too, and if use is callee (if
-user is call instruction and *G* is used as what to be called), we replace it
-with use of *F*.
+the method you will see that it scans all uses of *G* too, and if use is callee
+(if user is call instruction and *G* is used as what to be called), we replace
+it with use of *F*.
 
 If “F” could not be overridden, fix it!
 """""""""""""""""""""""""""""""""""""""
 
 We call ``writeThunkOrAlias(Function *F, Function *G)``. Here we try to replace
-*G* with alias to *F* first. Next conditions are essential:
+*G* with alias to *F* first. The next conditions are essential:
 
 * target should support global aliases,
 * the address itself of  *G* should be not significant, not named and not
@@ -761,7 +750,7 @@ so *G* could be replaced with this wrapper.
 As follows from *llvm* reference:
 
 “Aliases act as *second name* for the aliasee value”. So we just want to create
-second name for *F* and use it instead of *G*:
+a second name for *F* and use it instead of *G*:
 
 1. create global alias itself (*GA*),
 
@@ -793,10 +782,4 @@ it instead of *G*.
 
 3. Get rid of *G*.
 
-That's it.
-==========
-We have described how to detect equal functions, and how to merge them, and in
-first chapter we have described how it works all-together. Author hopes, reader
-have some picture from now, and it helps him improve and debug ­this pass.
 
-Reader is welcomed to send us any questions and proposals ;-)

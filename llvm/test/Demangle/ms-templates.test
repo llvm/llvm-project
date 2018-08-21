@@ -193,3 +193,6 @@
 
 ?bar@?$UUIDType4@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@QAEXXZ
 ; CHECK: void __thiscall UUIDType4<&struct __s_GUID const _GUID_12345678_1234_1234_1234_1234567890ab>::bar(void)
+
+??$f@US@@$1?g@1@QEAAXXZ@@YAXXZ
+; CHECK: void __cdecl f<struct S, &void __cdecl S::g(void)>(void)

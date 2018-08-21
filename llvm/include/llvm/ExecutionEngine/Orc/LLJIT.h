@@ -37,36 +37,38 @@ public:
   /// Returns a reference to the ExecutionSession for this JIT instance.
   ExecutionSession &getExecutionSession() { return *ES; }
 
-  /// Returns a reference to the VSO representing the JIT'd main program.
-  VSO &getMainVSO() { return Main; }
+  /// Returns a reference to the JITDylib representing the JIT'd main program.
+  JITDylib &getMainJITDylib() { return Main; }
 
   /// Convenience method for defining an absolute symbol.
   Error defineAbsolute(StringRef Name, JITEvaluatedSymbol Address);
 
-  /// Adds an IR module to the given VSO.
-  Error addIRModule(VSO &V, std::unique_ptr<Module> M);
+  /// Adds an IR module to the given JITDylib.
+  Error addIRModule(JITDylib &JD, std::unique_ptr<Module> M);
 
-  /// Adds an IR module to the Main VSO.
+  /// Adds an IR module to the Main JITDylib.
   Error addIRModule(std::unique_ptr<Module> M) {
     return addIRModule(Main, std::move(M));
   }
 
-  /// Look up a symbol in VSO V by the symbol's linker-mangled name (to look up
-  /// symbols based on their IR name use the lookup function instead).
-  Expected<JITEvaluatedSymbol> lookupLinkerMangled(VSO &V, StringRef Name);
-
-  /// Look up a symbol in the main VSO by the symbol's linker-mangled name (to
+  /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
   /// look up symbols based on their IR name use the lookup function instead).
+  Expected<JITEvaluatedSymbol> lookupLinkerMangled(JITDylib &JD,
+                                                   StringRef Name);
+
+  /// Look up a symbol in the main JITDylib by the symbol's linker-mangled name
+  /// (to look up symbols based on their IR name use the lookup function
+  /// instead).
   Expected<JITEvaluatedSymbol> lookupLinkerMangled(StringRef Name) {
     return lookupLinkerMangled(Main, Name);
   }
 
-  /// Look up a symbol in VSO V based on its IR symbol name.
-  Expected<JITEvaluatedSymbol> lookup(VSO &V, StringRef UnmangledName) {
-    return lookupLinkerMangled(V, mangle(UnmangledName));
+  /// Look up a symbol in JITDylib JD based on its IR symbol name.
+  Expected<JITEvaluatedSymbol> lookup(JITDylib &JD, StringRef UnmangledName) {
+    return lookupLinkerMangled(JD, mangle(UnmangledName));
   }
 
-  /// Look up a symbol in the main VSO based on its IR symbol name.
+  /// Look up a symbol in the main JITDylib based on its IR symbol name.
   Expected<JITEvaluatedSymbol> lookup(StringRef UnmangledName) {
     return lookup(Main, UnmangledName);
   }
@@ -90,7 +92,7 @@ protected:
   void recordCtorDtors(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
-  VSO &Main;
+  JITDylib &Main;
 
   std::unique_ptr<TargetMachine> TM;
   DataLayout DL;
@@ -116,10 +118,10 @@ public:
     TransformLayer.setTransform(std::move(Transform));
   }
 
-  /// Add a module to be lazily compiled to VSO V.
-  Error addLazyIRModule(VSO &V, std::unique_ptr<Module> M);
+  /// Add a module to be lazily compiled to JITDylib JD.
+  Error addLazyIRModule(JITDylib &JD, std::unique_ptr<Module> M);
 
-  /// Add a module to be lazily compiled to the main VSO.
+  /// Add a module to be lazily compiled to the main JITDylib.
   Error addLazyIRModule(std::unique_ptr<Module> M) {
     return addLazyIRModule(Main, std::move(M));
   }

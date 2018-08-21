@@ -65,8 +65,7 @@ enum ArgEffect {
   /// if CFRetain has been called on the argument.
   IncRef,
 
-  /// The argument acts as if has been passed to CFMakeCollectable, which
-  /// transfers the object to the Garbage Collector under GC.
+  /// Used to mark an argument as collectible in GC mode, currently a noop.
   MakeCollectable,
 
   /// The argument is a pointer to a retain-counted object; on exit, the new

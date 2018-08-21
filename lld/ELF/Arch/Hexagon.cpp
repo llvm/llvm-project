@@ -129,7 +129,7 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     or32le(Loc, applyMask(0x000007e0, Val));
     break;
   case R_HEX_32:
-    or32le(Loc, applyMask(0xffffffff, Val));
+    or32le(Loc, Val);
     break;
   case R_HEX_32_6_X:
     or32le(Loc, applyMask(0x0fff3fff, Val >> 6));

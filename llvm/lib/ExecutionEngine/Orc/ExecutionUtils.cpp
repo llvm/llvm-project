@@ -131,7 +131,7 @@ void CtorDtorRunner2::add(iterator_range<CtorDtorIterator> CtorDtors) {
     return;
 
   MangleAndInterner Mangle(
-      V.getExecutionSession(),
+      JD.getExecutionSession(),
       (*CtorDtors.begin()).Func->getParent()->getDataLayout());
 
   for (const auto &CtorDtor : CtorDtors) {
@@ -161,7 +161,7 @@ Error CtorDtorRunner2::run() {
     }
   }
 
-  if (auto CtorDtorMap = lookup({&V}, std::move(Names))) {
+  if (auto CtorDtorMap = lookup({&JD}, std::move(Names))) {
     for (auto &KV : CtorDtorsByPriority) {
       for (auto &Name : KV.second) {
         assert(CtorDtorMap->count(Name) && "No entry for Name");
@@ -195,7 +195,8 @@ int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
   return 0;
 }
 
-Error LocalCXXRuntimeOverrides2::enable(VSO &V, MangleAndInterner &Mangle) {
+Error LocalCXXRuntimeOverrides2::enable(JITDylib &JD,
+                                        MangleAndInterner &Mangle) {
   SymbolMap RuntimeInterposes(
       {{Mangle("__dso_handle"),
         JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
@@ -204,7 +205,7 @@ Error LocalCXXRuntimeOverrides2::enable(VSO &V, MangleAndInterner &Mangle) {
         JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
                            JITSymbolFlags::Exported)}});
 
-  return V.define(absoluteSymbols(std::move(RuntimeInterposes)));
+  return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
 
 DynamicLibraryFallbackGenerator::DynamicLibraryFallbackGenerator(
@@ -213,7 +214,7 @@ DynamicLibraryFallbackGenerator::DynamicLibraryFallbackGenerator(
       GlobalPrefix(DL.getGlobalPrefix()) {}
 
 SymbolNameSet DynamicLibraryFallbackGenerator::
-operator()(VSO &V, const SymbolNameSet &Names) {
+operator()(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolMap NewSymbols;
 
@@ -235,11 +236,11 @@ operator()(VSO &V, const SymbolNameSet &Names) {
     }
   }
 
-  // Add any new symbols to V. Since the fallback generator is only called for
+  // Add any new symbols to JD. Since the fallback generator is only called for
   // symbols that are not already defined, this will never trigger a duplicate
   // definition error, so we can wrap this call in a 'cantFail'.
   if (!NewSymbols.empty())
-    cantFail(V.define(absoluteSymbols(std::move(NewSymbols))));
+    cantFail(JD.define(absoluteSymbols(std::move(NewSymbols))));
 
   return Added;
 }

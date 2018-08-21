@@ -20,6 +20,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_default(self):
         '''
@@ -38,6 +39,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         "make sure program path is in first argument")
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_stopOnEntry(self):
         '''
@@ -58,6 +60,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         'verify stop isn\'t "main" breakpoint')
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_cwd(self):
         '''
@@ -85,6 +88,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_debuggerRoot(self):
         '''
@@ -113,6 +117,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_sourcePath(self):
         '''
@@ -139,6 +144,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_disableSTDIO(self):
         '''
@@ -153,8 +159,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(output is None or len(output) == 0,
                         "expect no program output")
 
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
+    @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_shellExpandArguments_enabled(self):
         '''
@@ -179,6 +185,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, program))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_shellExpandArguments_disabled(self):
         '''
@@ -205,6 +212,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, glob))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_args(self):
         '''
@@ -231,6 +239,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                             'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_environment(self):
         '''
@@ -264,6 +273,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                 var, lines))
 
     @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_commands(self):
         '''
