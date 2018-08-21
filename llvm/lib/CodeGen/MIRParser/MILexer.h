@@ -115,6 +115,7 @@ struct MIToken {
     kw_intpred,
     kw_pre_instr_symbol,
     kw_post_instr_symbol,
+    kw_unknown_size,
 
     // Named metadata keywords
     md_tbaa,

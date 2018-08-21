@@ -75,12 +75,6 @@ HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
       FileMgr(SourceMgr.getFileManager()), FrameworkMap(64),
       ModMap(SourceMgr, Diags, LangOpts, Target, *this) {}
 
-HeaderSearch::~HeaderSearch() {
-  // Delete headermaps.
-  for (unsigned i = 0, e = HeaderMaps.size(); i != e; ++i)
-    delete HeaderMaps[i].second;
-}
-
 void HeaderSearch::PrintStats() {
   fprintf(stderr, "\n*** HeaderSearch Stats:\n");
   fprintf(stderr, "%d files tracked.\n", (int)FileInfo.size());
@@ -113,12 +107,12 @@ const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
       // Pointer equality comparison of FileEntries works because they are
       // already uniqued by inode.
       if (HeaderMaps[i].first == FE)
-        return HeaderMaps[i].second;
+        return HeaderMaps[i].second.get();
   }
 
-  if (const HeaderMap *HM = HeaderMap::Create(FE, FileMgr)) {
-    HeaderMaps.push_back(std::make_pair(FE, HM));
-    return HM;
+  if (std::unique_ptr<HeaderMap> HM = HeaderMap::Create(FE, FileMgr)) {
+    HeaderMaps.emplace_back(FE, std::move(HM));
+    return HeaderMaps.back().second.get();
   }
 
   return nullptr;

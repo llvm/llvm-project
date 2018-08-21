@@ -152,7 +152,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
 
-// CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-cuda-bitcode{{.*}}libomptarget-nvptx-sm_20.bc
+// CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-sm_20.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
 
 /// ###########################################################################

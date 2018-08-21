@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -1078,7 +1079,11 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (getFailureOrdering() != AtomicOrdering::NotAtomic)
     OS << toIRString(getFailureOrdering()) << ' ';
 
-  OS << getSize();
+  if (getSize() == MemoryLocation::UnknownSize)
+    OS << "unknown-size";
+  else
+    OS << getSize();
+
   if (const Value *Val = getValue()) {
     OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");
     printIRValueReference(OS, *Val, MST);

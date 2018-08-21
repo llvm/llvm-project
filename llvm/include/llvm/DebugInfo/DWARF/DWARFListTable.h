@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,10 +44,6 @@ protected:
   ListEntries Entries;
 
 public:
-  // FIXME: We need to consolidate the various verions of "createError"
-  // that are used in the DWARF consumer. Until then, this is a workaround.
-  Error createError(const char *, const char *, uint32_t);
-
   const ListEntries &getEntries() const { return Entries; }
   bool empty() const { return Entries.empty(); }
   void clear() { Entries.clear(); }
@@ -213,7 +210,8 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
                                             StringRef SectionName,
                                             StringRef ListTypeString) {
   if (*OffsetPtr < HeaderOffset || *OffsetPtr >= End)
-    return createError("invalid %s list offset 0x%" PRIx32,
+    return createStringError(errc::invalid_argument,
+                       "invalid %s list offset 0x%" PRIx32,
                        ListTypeString.data(), *OffsetPtr);
   Entries.clear();
   while (*OffsetPtr < End) {
@@ -224,7 +222,8 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
     if (Entry.isSentinel())
       return Error::success();
   }
-  return createError("no end of list marker detected at end of %s table "
+  return createStringError(errc::illegal_byte_sequence,
+                     "no end of list marker detected at end of %s table "
                      "starting at offset 0x%" PRIx32,
                      SectionName.data(), HeaderOffset);
 }

@@ -581,9 +581,8 @@ void CGDebugInfo::CreateCompileUnit() {
       0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
       CGM.getTarget().getTriple().isNVPTX()
           ? llvm::DICompileUnit::DebugNameTableKind::None
-          : CGOpts.GnuPubnames
-                ? llvm::DICompileUnit::DebugNameTableKind::GNU
-                : llvm::DICompileUnit::DebugNameTableKind::Default);
+          : static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+                CGOpts.DebugNameTable));
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {

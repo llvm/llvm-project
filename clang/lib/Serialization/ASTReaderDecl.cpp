@@ -2648,19 +2648,72 @@ void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
 // Attribute Reading
 //===----------------------------------------------------------------------===//
 
-/// Reads attributes from the current stream position.
-void ASTReader::ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs) {
-  for (unsigned i = 0, e = Record.readInt(); i != e; ++i) {
-    Attr *New = nullptr;
-    auto Kind = (attr::Kind)Record.readInt();
-    SourceRange Range = Record.readSourceRange();
-    ASTContext &Context = getContext();
+namespace {
+class AttrReader {
+  ModuleFile *F;
+  ASTReader *Reader;
+  const ASTReader::RecordData &Record;
+  unsigned &Idx;
+
+public:
+  AttrReader(ModuleFile &F, ASTReader &Reader,
+             const ASTReader::RecordData &Record, unsigned &Idx)
+      : F(&F), Reader(&Reader), Record(Record), Idx(Idx) {}
+
+  const uint64_t &readInt() { return Record[Idx++]; }
+
+  SourceRange readSourceRange() {
+    return Reader->ReadSourceRange(*F, Record, Idx);
+  }
+
+  Expr *readExpr() { return Reader->ReadExpr(*F); }
+
+  std::string readString() {
+    return Reader->ReadString(Record, Idx);
+  }
+
+  TypeSourceInfo *getTypeSourceInfo() {
+    return Reader->GetTypeSourceInfo(*F, Record, Idx);
+  }
+
+  IdentifierInfo *getIdentifierInfo() {
+    return Reader->GetIdentifierInfo(*F, Record, Idx);
+  }
+
+  VersionTuple readVersionTuple() {
+    return ASTReader::ReadVersionTuple(Record, Idx);
+  }
+
+  template <typename T> T *GetLocalDeclAs(uint32_t LocalID) {
+    return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
+  }
+};
+}
+
+Attr *ASTReader::ReadAttr(ModuleFile &M, const RecordData &Rec,
+                          unsigned &Idx) {
+  AttrReader Record(M, *this, Rec, Idx);
+  auto V = Record.readInt();
+  if (!V)
+    return nullptr;
+
+  Attr *New = nullptr;
+  // Kind is stored as a 1-based integer because 0 is used to indicate a null
+  // Attr pointer.
+  auto Kind = static_cast<attr::Kind>(V - 1);
+  SourceRange Range = Record.readSourceRange();
+  ASTContext &Context = getContext();
 
 #include "clang/Serialization/AttrPCHRead.inc"
 
-    assert(New && "Unable to decode attribute?");
-    Attrs.push_back(New);
-  }
+  assert(New && "Unable to decode attribute?");
+  return New;
+}
+
+/// Reads attributes from the current stream position.
+void ASTReader::ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs) {
+  for (unsigned I = 0, E = Record.readInt(); I != E; ++I)
+    Attrs.push_back(Record.readAttr());
 }
 
 //===----------------------------------------------------------------------===//

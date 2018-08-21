@@ -197,10 +197,6 @@ def dwarf_column_info : Flag<["-"], "dwarf-column-info">,
   HelpText<"Turn on column location information.">;
 def split_dwarf : Flag<["-"], "split-dwarf">,
   HelpText<"Split out the dwarf .dwo sections">;
-def gnu_pubnames : Flag<["-"], "gnu-pubnames">,
-  HelpText<"Emit newer GNU style pubnames">;
-def arange_sections : Flag<["-"], "arange_sections">,
-  HelpText<"Emit DWARF .debug_arange sections">;
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
@@ -287,9 +283,11 @@ def mconstructor_aliases : Flag<["-"], "mconstructor-aliases">,
   HelpText<"Emit complete constructors and destructors as aliases when possible">;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
-def mlink_cuda_bitcode : Separate<["-"], "mlink-cuda-bitcode">,
+def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+def mlink_cuda_bitcode : Separate<["-"], "mlink-cuda-bitcode">,
+  Alias<mlink_builtin_bitcode>;
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,

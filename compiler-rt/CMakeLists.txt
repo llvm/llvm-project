@@ -59,6 +59,9 @@ if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
       -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 endif()
 
+set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS ON CACHE BOOLEAN
+    "Enable libc interceptors in HWASan (testing mode)")
+
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
 

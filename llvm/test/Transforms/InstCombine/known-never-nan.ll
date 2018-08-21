@@ -69,10 +69,7 @@ define i1 @fabs_sqrt_src_maybe_nan(double %arg0, double %arg1) {
 
 define i1 @exp_nnan_src(double %arg) {
 ; CHECK-LABEL: @exp_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.exp.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.exp.f64(double %nnan)
@@ -82,10 +79,7 @@ define i1 @exp_nnan_src(double %arg) {
 
 define i1 @exp2_nnan_src(double %arg) {
 ; CHECK-LABEL: @exp2_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.exp2.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.exp2.f64(double %nnan)
@@ -95,10 +89,7 @@ define i1 @exp2_nnan_src(double %arg) {
 
 define i1 @floor_nnan_src(double %arg) {
 ; CHECK-LABEL: @floor_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.floor.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.floor.f64(double %nnan)
@@ -108,10 +99,7 @@ define i1 @floor_nnan_src(double %arg) {
 
 define i1 @ceil_nnan_src(double %arg) {
 ; CHECK-LABEL: @ceil_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.ceil.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.ceil.f64(double %nnan)
@@ -121,10 +109,7 @@ define i1 @ceil_nnan_src(double %arg) {
 
 define i1 @trunc_nnan_src(double %arg) {
 ; CHECK-LABEL: @trunc_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.trunc.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.trunc.f64(double %nnan)
@@ -134,10 +119,7 @@ define i1 @trunc_nnan_src(double %arg) {
 
 define i1 @rint_nnan_src(double %arg) {
 ; CHECK-LABEL: @rint_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.rint.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.rint.f64(double %nnan)
@@ -147,10 +129,7 @@ define i1 @rint_nnan_src(double %arg) {
 
 define i1 @nearbyint_nnan_src(double %arg) {
 ; CHECK-LABEL: @nearbyint_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.nearbyint.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.nearbyint.f64(double %nnan)
@@ -160,10 +139,7 @@ define i1 @nearbyint_nnan_src(double %arg) {
 
 define i1 @round_nnan_src(double %arg) {
 ; CHECK-LABEL: @round_nnan_src(
-; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan double [[ARG:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.round.f64(double [[NNAN]])
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = fadd nnan double %arg, 1.0
   %op = call double @llvm.round.f64(double %nnan)
@@ -173,11 +149,7 @@ define i1 @round_nnan_src(double %arg) {
 
 define i1 @known_nan_select(i1 %cond, double %arg0, double %arg1) {
 ; CHECK-LABEL: @known_nan_select(
-; CHECK-NEXT:    [[LHS:%.*]] = fadd nnan double [[ARG0:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[RHS:%.*]] = fadd nnan double [[ARG1:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[LHS]], double [[RHS]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %lhs = fadd nnan double %arg0, 1.0
   %rhs = fadd nnan double %arg1, 2.0
@@ -334,10 +306,7 @@ define i1 @fpext_maybe_nan(float %arg0) {
 
 define i1 @fptrunc(double %arg0) {
 ; CHECK-LABEL: @fptrunc(
-; CHECK-NEXT:    [[ARG0_NNAN:%.*]] = fadd nnan double [[ARG0:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = fptrunc double [[ARG0_NNAN]] to float
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord float [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %arg0.nnan = fadd nnan double %arg0, 1.0
   %op = fptrunc double %arg0.nnan to float

@@ -320,6 +320,8 @@ if(LLVM_ENABLE_CRASH_OVERRIDES)
   set(ENABLE_CRASH_OVERRIDES 1)
 endif()
 
+option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")

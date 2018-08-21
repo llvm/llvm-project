@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestIndex.h"
+#include "index/Index.h"
+#include "index/Merge.h"
+#include "index/dex/DexIndex.h"
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
 #include "index/dex/Trigram.h"
@@ -17,33 +21,35 @@
 #include <string>
 #include <vector>
 
+using ::testing::ElementsAre;
+using ::testing::UnorderedElementsAre;
+
 namespace clang {
 namespace clangd {
 namespace dex {
-
-using ::testing::ElementsAre;
+namespace {
 
 TEST(DexIndexIterators, DocumentIterator) {
   const PostingList L = {4, 7, 8, 20, 42, 100};
   auto DocIterator = create(L);
 
   EXPECT_EQ(DocIterator->peek(), 4U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advance();
   EXPECT_EQ(DocIterator->peek(), 7U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(20);
   EXPECT_EQ(DocIterator->peek(), 20U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(65);
   EXPECT_EQ(DocIterator->peek(), 100U);
-  EXPECT_EQ(DocIterator->reachedEnd(), false);
+  EXPECT_FALSE(DocIterator->reachedEnd());
 
   DocIterator->advanceTo(420);
-  EXPECT_EQ(DocIterator->reachedEnd(), true);
+  EXPECT_TRUE(DocIterator->reachedEnd());
 }
 
 TEST(DexIndexIterators, AndWithEmpty) {
@@ -51,10 +57,10 @@ TEST(DexIndexIterators, AndWithEmpty) {
   const PostingList L1 = {0, 5, 7, 10, 42, 320, 9000};
 
   auto AndEmpty = createAnd(create(L0));
-  EXPECT_EQ(AndEmpty->reachedEnd(), true);
+  EXPECT_TRUE(AndEmpty->reachedEnd());
 
   auto AndWithEmpty = createAnd(create(L0), create(L1));
-  EXPECT_EQ(AndWithEmpty->reachedEnd(), true);
+  EXPECT_TRUE(AndWithEmpty->reachedEnd());
 
   EXPECT_THAT(consume(*AndWithEmpty), ElementsAre());
 }
@@ -65,7 +71,7 @@ TEST(DexIndexIterators, AndTwoLists) {
 
   auto And = createAnd(create(L1), create(L0));
 
-  EXPECT_EQ(And->reachedEnd(), false);
+  EXPECT_FALSE(And->reachedEnd());
   EXPECT_THAT(consume(*And), ElementsAre(0U, 7U, 10U, 320U, 9000U));
 
   And = createAnd(create(L0), create(L1));
@@ -94,7 +100,7 @@ TEST(DexIndexIterators, AndThreeLists) {
   EXPECT_EQ(And->peek(), 320U);
   And->advanceTo(100000);
 
-  EXPECT_EQ(And->reachedEnd(), true);
+  EXPECT_TRUE(And->reachedEnd());
 }
 
 TEST(DexIndexIterators, OrWithEmpty) {
@@ -102,10 +108,10 @@ TEST(DexIndexIterators, OrWithEmpty) {
   const PostingList L1 = {0, 5, 7, 10, 42, 320, 9000};
 
   auto OrEmpty = createOr(create(L0));
-  EXPECT_EQ(OrEmpty->reachedEnd(), true);
+  EXPECT_TRUE(OrEmpty->reachedEnd());
 
   auto OrWithEmpty = createOr(create(L0), create(L1));
-  EXPECT_EQ(OrWithEmpty->reachedEnd(), false);
+  EXPECT_FALSE(OrWithEmpty->reachedEnd());
 
   EXPECT_THAT(consume(*OrWithEmpty),
               ElementsAre(0U, 5U, 7U, 10U, 42U, 320U, 9000U));
@@ -117,7 +123,7 @@ TEST(DexIndexIterators, OrTwoLists) {
 
   auto Or = createOr(create(L0), create(L1));
 
-  EXPECT_EQ(Or->reachedEnd(), false);
+  EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
   Or->advance();
   EXPECT_EQ(Or->peek(), 4U);
@@ -136,7 +142,7 @@ TEST(DexIndexIterators, OrTwoLists) {
   Or->advanceTo(9000);
   EXPECT_EQ(Or->peek(), 9000U);
   Or->advanceTo(9001);
-  EXPECT_EQ(Or->reachedEnd(), true);
+  EXPECT_TRUE(Or->reachedEnd());
 
   Or = createOr(create(L0), create(L1));
 
@@ -151,7 +157,7 @@ TEST(DexIndexIterators, OrThreeLists) {
 
   auto Or = createOr(create(L0), create(L1), create(L2));
 
-  EXPECT_EQ(Or->reachedEnd(), false);
+  EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
 
   Or->advance();
@@ -166,7 +172,7 @@ TEST(DexIndexIterators, OrThreeLists) {
   EXPECT_EQ(Or->peek(), 60U);
 
   Or->advanceTo(9001);
-  EXPECT_EQ(Or->reachedEnd(), true);
+  EXPECT_TRUE(Or->reachedEnd());
 }
 
 // FIXME(kbobyrev): The testcase below is similar to what is expected in real
@@ -208,7 +214,7 @@ TEST(DexIndexIterators, QueryTree) {
       // Lower Or Iterator: [0, 1, 5]
       createOr(create(L2), create(L3), create(L4)));
 
-  EXPECT_EQ(Root->reachedEnd(), false);
+  EXPECT_FALSE(Root->reachedEnd());
   EXPECT_EQ(Root->peek(), 1U);
   Root->advanceTo(0);
   // Advance multiple times. Shouldn't do anything.
@@ -220,7 +226,7 @@ TEST(DexIndexIterators, QueryTree) {
   Root->advanceTo(5);
   EXPECT_EQ(Root->peek(), 5U);
   Root->advanceTo(9000);
-  EXPECT_EQ(Root->reachedEnd(), true);
+  EXPECT_TRUE(Root->reachedEnd());
 }
 
 TEST(DexIndexIterators, StringRepresentation) {
@@ -260,6 +266,19 @@ TEST(DexIndexIterators, Limit) {
 
   DocIterator = create(L0);
   EXPECT_THAT(consume(*DocIterator, 0), ElementsAre());
+}
+
+TEST(DexIndexIterators, True) {
+  auto TrueIterator = createTrue(0U);
+  EXPECT_TRUE(TrueIterator->reachedEnd());
+  EXPECT_THAT(consume(*TrueIterator), ElementsAre());
+
+  PostingList L0 = {1, 2, 5, 7};
+  TrueIterator = createTrue(7U);
+  EXPECT_THAT(TrueIterator->peek(), 0);
+  auto AndIterator = createAnd(create(L0), move(TrueIterator));
+  EXPECT_FALSE(AndIterator->reachedEnd());
+  EXPECT_THAT(consume(*AndIterator), ElementsAre(1, 2, 5));
 }
 
 testing::Matcher<std::vector<Token>>
@@ -346,6 +365,175 @@ TEST(DexIndexTrigrams, QueryTrigrams) {
                            "hij", "ijk", "jkl", "klm"}));
 }
 
+TEST(DexIndex, Lookup) {
+  DexIndex I;
+  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
+  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::abc", "ns::xyz"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::xyz"));
+  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+}
+
+TEST(DexIndex, FuzzyFind) {
+  DexIndex Index;
+  Index.build(generateSymbols({"ns::ABC", "ns::BCD", "::ABC", "ns::nested::ABC",
+                               "other::ABC", "other::A"}));
+  FuzzyFindRequest Req;
+  Req.Query = "ABC";
+  Req.Scopes = {"ns::"};
+  EXPECT_THAT(match(Index, Req), UnorderedElementsAre("ns::ABC"));
+  Req.Scopes = {"ns::", "ns::nested::"};
+  EXPECT_THAT(match(Index, Req),
+              UnorderedElementsAre("ns::ABC", "ns::nested::ABC"));
+  Req.Query = "A";
+  Req.Scopes = {"other::"};
+  EXPECT_THAT(match(Index, Req),
+              UnorderedElementsAre("other::A", "other::ABC"));
+  Req.Query = "";
+  Req.Scopes = {};
+  EXPECT_THAT(match(Index, Req),
+              UnorderedElementsAre("ns::ABC", "ns::BCD", "::ABC",
+                                   "ns::nested::ABC", "other::ABC",
+                                   "other::A"));
+}
+
+TEST(DexIndexTest, FuzzyMatchQ) {
+  DexIndex I;
+  I.build(
+      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
+  FuzzyFindRequest Req;
+  Req.Query = "lol";
+  Req.MaxCandidateCount = 2;
+  EXPECT_THAT(match(I, Req),
+              UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
+}
+
+TEST(DexIndexTest, DexIndexSymbolsRecycled) {
+  DexIndex I;
+  std::weak_ptr<SlabAndPointers> Symbols;
+  I.build(generateNumSymbols(0, 10, &Symbols));
+  FuzzyFindRequest Req;
+  Req.Query = "7";
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("7"));
+
+  EXPECT_FALSE(Symbols.expired());
+  // Release old symbols.
+  I.build(generateNumSymbols(0, 0));
+  EXPECT_TRUE(Symbols.expired());
+}
+
+// FIXME(kbobyrev): This test is different for DexIndex and MemIndex: while
+// MemIndex manages response deduplication, DexIndex simply returns all matched
+// symbols which means there might be equivalent symbols in the response.
+// Before drop-in replacement of MemIndex with DexIndex happens, FileIndex
+// should handle deduplication instead.
+TEST(DexIndexTest, DexIndexDeduplicate) {
+  auto Symbols = generateNumSymbols(0, 10);
+
+  // Inject duplicates.
+  auto Sym = symbol("7");
+  Symbols->push_back(&Sym);
+  Symbols->push_back(&Sym);
+  Symbols->push_back(&Sym);
+
+  FuzzyFindRequest Req;
+  Req.Query = "7";
+  DexIndex I;
+  I.build(std::move(Symbols));
+  auto Matches = match(I, Req);
+  EXPECT_EQ(Matches.size(), 4u);
+}
+
+TEST(DexIndexTest, DexIndexLimitedNumMatches) {
+  DexIndex I;
+  I.build(generateNumSymbols(0, 100));
+  FuzzyFindRequest Req;
+  Req.Query = "5";
+  Req.MaxCandidateCount = 3;
+  bool Incomplete;
+  auto Matches = match(I, Req, &Incomplete);
+  EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  EXPECT_TRUE(Incomplete);
+}
+
+TEST(DexIndexTest, FuzzyMatch) {
+  DexIndex I;
+  I.build(
+      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
+  FuzzyFindRequest Req;
+  Req.Query = "lol";
+  Req.MaxCandidateCount = 2;
+  EXPECT_THAT(match(I, Req),
+              UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
+}
+
+TEST(DexIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
+  DexIndex I;
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
+}
+
+TEST(DexIndexTest, MatchQualifiedNamesWithGlobalScope) {
+  DexIndex I;
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  Req.Scopes = {""};
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("y3"));
+}
+
+TEST(DexIndexTest, MatchQualifiedNamesWithOneScope) {
+  DexIndex I;
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  Req.Scopes = {"a::"};
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
+}
+
+TEST(DexIndexTest, MatchQualifiedNamesWithMultipleScopes) {
+  DexIndex I;
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  Req.Scopes = {"a::", "b::"};
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
+}
+
+TEST(DexIndexTest, NoMatchNestedScopes) {
+  DexIndex I;
+  I.build(generateSymbols({"a::y1", "a::b::y2"}));
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  Req.Scopes = {"a::"};
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
+}
+
+TEST(DexIndexTest, IgnoreCases) {
+  DexIndex I;
+  I.build(generateSymbols({"ns::ABC", "ns::abc"}));
+  FuzzyFindRequest Req;
+  Req.Query = "AB";
+  Req.Scopes = {"ns::"};
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
+TEST(DexIndexTest, Lookup) {
+  DexIndex I;
+  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
+  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::abc", "ns::xyz"));
+  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+              UnorderedElementsAre("ns::xyz"));
+  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+}
+
+} // namespace
 } // namespace dex
 } // namespace clangd
 } // namespace clang

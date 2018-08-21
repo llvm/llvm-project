@@ -17,12 +17,11 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+
 
 #define DEBUG_TYPE "legalizer"
 
@@ -34,10 +33,6 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF)
   MIRBuilder.setMF(MF);
 }
 
-LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI)
-    : MRI(MF.getRegInfo()), LI(LI) {
-  MIRBuilder.setMF(MF);
-}
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
@@ -989,12 +984,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 
     return UnableToLegalize;
   }
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
-  case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTPOP:
-    return lowerBitCount(MI, TypeIdx, Ty);
   }
 }
 
@@ -1031,115 +1020,6 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
 
     MIRBuilder.buildMerge(DstReg, DstRegs);
     MI.eraseFromParent();
-    return Legalized;
-  }
-  }
-}
-
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
-  unsigned Opc = MI.getOpcode();
-  auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-  auto isLegalOrCustom = [this](const LegalityQuery &Q) {
-    auto QAction = LI.getAction(Q).Action;
-    return QAction == Legal || QAction == Custom;
-  };
-  switch (Opc) {
-  default:
-    return UnableToLegalize;
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
-    // This trivially expands to CTLZ.
-    MI.setDesc(TII.get(TargetOpcode::G_CTLZ));
-    MIRBuilder.recordInsertion(&MI);
-    return Legalized;
-  }
-  case TargetOpcode::G_CTLZ: {
-    unsigned SrcReg = MI.getOperand(1).getReg();
-    unsigned Len = Ty.getSizeInBits();
-    if (isLegalOrCustom({TargetOpcode::G_CTLZ_ZERO_UNDEF, {Ty}})) {
-      // If CTLZ_ZERO_UNDEF is legal or custom, emit that and a select with
-      // zero.
-      auto MIBCtlzZU =
-          MIRBuilder.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, Ty, SrcReg);
-      auto MIBZero = MIRBuilder.buildConstant(Ty, 0);
-      auto MIBLen = MIRBuilder.buildConstant(Ty, Len);
-      auto MIBICmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                          SrcReg, MIBZero);
-      MIRBuilder.buildSelect(MI.getOperand(0).getReg(), MIBICmp, MIBLen,
-                             MIBCtlzZU);
-      MI.eraseFromParent();
-      return Legalized;
-    }
-    // for now, we do this:
-    // NewLen = NextPowerOf2(Len);
-    // x = x | (x >> 1);
-    // x = x | (x >> 2);
-    // ...
-    // x = x | (x >>16);
-    // x = x | (x >>32); // for 64-bit input
-    // Upto NewLen/2
-    // return Len - popcount(x);
-    //
-    // Ref: "Hacker's Delight" by Henry Warren
-    unsigned Op = SrcReg;
-    unsigned NewLen = PowerOf2Ceil(Len);
-    for (unsigned i = 0; (1U << i) <= (NewLen / 2); ++i) {
-      auto MIBShiftAmt = MIRBuilder.buildConstant(Ty, 1ULL << i);
-      auto MIBOp = MIRBuilder.buildInstr(
-          TargetOpcode::G_OR, Ty, Op,
-          MIRBuilder.buildInstr(TargetOpcode::G_LSHR, Ty, Op, MIBShiftAmt));
-      Op = MIBOp->getOperand(0).getReg();
-    }
-    auto MIBPop = MIRBuilder.buildInstr(TargetOpcode::G_CTPOP, Ty, Op);
-    MIRBuilder.buildInstr(TargetOpcode::G_SUB, MI.getOperand(0).getReg(),
-                          MIRBuilder.buildConstant(Ty, Len), MIBPop);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
-    // This trivially expands to CTTZ.
-    MI.setDesc(TII.get(TargetOpcode::G_CTTZ));
-    MIRBuilder.recordInsertion(&MI);
-    return Legalized;
-  }
-  case TargetOpcode::G_CTTZ: {
-    unsigned SrcReg = MI.getOperand(1).getReg();
-    unsigned Len = Ty.getSizeInBits();
-    if (isLegalOrCustom({TargetOpcode::G_CTTZ_ZERO_UNDEF, {Ty}})) {
-      // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
-      // zero.
-      auto MIBCttzZU =
-          MIRBuilder.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, Ty, SrcReg);
-      auto MIBZero = MIRBuilder.buildConstant(Ty, 0);
-      auto MIBLen = MIRBuilder.buildConstant(Ty, Len);
-      auto MIBICmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                          SrcReg, MIBZero);
-      MIRBuilder.buildSelect(MI.getOperand(0).getReg(), MIBICmp, MIBLen,
-                             MIBCttzZU);
-      MI.eraseFromParent();
-      return Legalized;
-    }
-    // for now, we use: { return popcount(~x & (x - 1)); }
-    // unless the target has ctlz but not ctpop, in which case we use:
-    // { return 32 - nlz(~x & (x-1)); }
-    // Ref: "Hacker's Delight" by Henry Warren
-    auto MIBCstNeg1 = MIRBuilder.buildConstant(Ty, -1);
-    auto MIBNot =
-        MIRBuilder.buildInstr(TargetOpcode::G_XOR, Ty, SrcReg, MIBCstNeg1);
-    auto MIBTmp = MIRBuilder.buildInstr(
-        TargetOpcode::G_AND, Ty, MIBNot,
-        MIRBuilder.buildInstr(TargetOpcode::G_ADD, Ty, SrcReg, MIBCstNeg1));
-    if (!isLegalOrCustom({TargetOpcode::G_CTPOP, {Ty}}) &&
-        isLegalOrCustom({TargetOpcode::G_CTLZ, {Ty}})) {
-      MIRBuilder.buildInstr(
-          TargetOpcode::G_SUB, MI.getOperand(0).getReg(),
-          MIRBuilder.buildConstant(Ty, Len),
-          MIRBuilder.buildInstr(TargetOpcode::G_CTLZ, Ty, MIBTmp));
-      MI.eraseFromParent();
-      return Legalized;
-    }
-    MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
-    MI.getOperand(1).setReg(MIBTmp->getOperand(0).getReg());
     return Legalized;
   }
   }

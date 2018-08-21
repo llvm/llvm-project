@@ -6738,7 +6738,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                   }
                 }
 
-                // Setting this to UINT32_MAX to make sure we don't compute it
+                // Setting this to INT32_MAX to make sure we don't compute it
                 // twice...
                 bit_offset = INT32_MAX;
 
