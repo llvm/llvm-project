@@ -378,6 +378,15 @@ class Scheduler : public HardwareUnit {
       InstRef &IR,
       llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
 
+  // Identify instructions that have finished executing, and remove them from
+  // the IssuedSet. References to executed instructions are added to input
+  // vector 'Executed'.
+  void updateIssuedSet(llvm::SmallVectorImpl<InstRef> &Executed);
+
+  // Try to promote instructions from WaitSet to ReadySet.
+  // Add promoted instructions to the 'Ready' vector in input.
+  void promoteToReadySet(llvm::SmallVectorImpl<InstRef> &Ready);
+
 public:
   Scheduler(const llvm::MCSchedModel &Model, LSUnit *Lsu)
       : SM(Model), LSU(Lsu), Resources(llvm::make_unique<ResourceManager>(SM)) {
@@ -414,39 +423,40 @@ public:
   /// This method assumes that IR has been previously dispatched.
   bool isReady(const InstRef &IR) const;
 
-  /// Issue an instruction.  The Used container is populated with
-  /// the resource objects consumed on behalf of issuing this instruction.
+  /// Issue an instruction and populates a vector of used pipeline resources,
+  /// and a vector of instructions that transitioned to the ready state as a
+  /// result of this event.
   void issueInstruction(InstRef &IR,
-                   llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Used);
+                   llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Used,
+                   llvm::SmallVectorImpl<InstRef> &Ready);
 
   /// Returns true if IR has to be issued immediately, or if IR is a zero
   /// latency instruction.
   bool mustIssueImmediately(const InstRef &IR) const;
 
-  /// Update the resources managed by the scheduler.
-  /// This routine is to be called at the start of a new cycle, and is
-  /// responsible for updating scheduler resources.  Resources are released
-  /// once they have been fully consumed.
-  void reclaimSimulatedResources(llvm::SmallVectorImpl<ResourceRef> &Freed);
+  /// This routine notifies the Scheduler that a new cycle just started.
+  ///
+  /// It notifies the underlying ResourceManager that a new cycle just started.
+  /// Vector `Freed` is populated with resourceRef related to resources that
+  /// have changed in state, and that are now available to new instructions.
+  /// Instructions executed are added to vector Executed, while vector Ready is
+  /// populated with instructions that have become ready in this new cycle.
+  void cycleEvent(llvm::SmallVectorImpl<ResourceRef> &Freed,
+                  llvm::SmallVectorImpl<InstRef> &Ready,
+                  llvm::SmallVectorImpl<InstRef> &Executed);
 
-  /// Move instructions from the WaitSet to the ReadySet if input operands
-  /// are all available.
-  void promoteToReadySet(llvm::SmallVectorImpl<InstRef> &Ready);
-
-  /// Update the ready queue.
-  void updatePendingQueue(llvm::SmallVectorImpl<InstRef> &Ready);
-
-  /// Update the issued queue.
-  void updateIssuedSet(llvm::SmallVectorImpl<InstRef> &Executed);
-
-  /// Obtain the processor's resource identifier for the given
-  /// resource mask.
-  unsigned getResourceID(uint64_t Mask) {
+  /// Convert a resource mask into a valid llvm processor resource identifier.
+  unsigned getResourceID(uint64_t Mask) const {
     return Resources->resolveResourceMask(Mask);
   }
 
   /// Select the next instruction to issue from the ReadySet.
-  /// This method gives priority to older instructions.
+  ///
+  /// The default implementation of this method ranks instructions based on
+  /// their age, and the number of known users. It prioritizes older
+  /// instructions over younger instructions to minimize the pressure on the
+  /// reorder buffer. It also gives a little priority boost to instructions
+  /// with multiple users to better expose ILP.
   InstRef select();
 
 #ifndef NDEBUG

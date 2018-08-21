@@ -58,6 +58,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -465,6 +466,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     // that the next instruction visited is guaranteed to execute if the loop
     // is entered.
     bool IsMustExecute = CurLoop->getHeader() == BB;
+    // Keep track of whether the prefix instructions could have written memory.
+    // TODO: This and IsMustExecute may be done smarter if we keep track of all
+    // throwing and mem-writing operations in every block, e.g. using something
+    // similar to isGuaranteedToExecute.
+    bool IsMemoryNotModified = CurLoop->getHeader() == BB;
 
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
       Instruction &I = *II++;
@@ -523,8 +529,19 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         continue;
       }
 
+      using namespace PatternMatch;
+      if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>()) &&
+          IsMustExecute && IsMemoryNotModified &&
+          CurLoop->hasLoopInvariantOperands(&I)) {
+        hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        Changed = true;
+        continue;
+      }
+
       if (IsMustExecute)
         IsMustExecute = isGuaranteedToTransferExecutionToSuccessor(&I);
+      if (IsMemoryNotModified)
+        IsMemoryNotModified = !I.mayWriteToMemory();
     }
   }
 

@@ -165,6 +165,23 @@ def V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3_Profile<VOP_F16_F16
 defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
+class UDot2Pat<Instruction Inst> : GCNPat <
+  (add (add_oneuse (AMDGPUmul_u24_oneuse (srl i32:$src0, (i32 16)),
+                                         (srl i32:$src1, (i32 16))), i32:$src2),
+       (AMDGPUmul_u24_oneuse (and i32:$src0, (i32 65535)),
+                             (and i32:$src1, (i32 65535)))
+   ),
+  (Inst (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))
+>;
+
+class SDot2Pat<Instruction Inst> : GCNPat <
+  (add (add_oneuse (AMDGPUmul_i24_oneuse (sra i32:$src0, (i32 16)),
+                                         (sra i32:$src1, (i32 16))), i32:$src2),
+       (AMDGPUmul_i24_oneuse (sext_inreg i32:$src0, i16),
+                             (sext_inreg i32:$src1, i16))),
+  (Inst (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))
+>;
+
 let SubtargetPredicate = HasDLInsts in {
 
 def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>>;
@@ -191,6 +208,9 @@ defm : DotPats<int_amdgcn_sdot4, V_DOT4_I32_I8>;
 defm : DotPats<int_amdgcn_udot4, V_DOT4_U32_U8>;
 defm : DotPats<int_amdgcn_sdot8, V_DOT8_I32_I4>;
 defm : DotPats<int_amdgcn_udot8, V_DOT8_U32_U4>;
+
+def : UDot2Pat<V_DOT2_U32_U16>;
+def : SDot2Pat<V_DOT2_I32_I16>;
 
 } // End SubtargetPredicate = HasDLInsts
 

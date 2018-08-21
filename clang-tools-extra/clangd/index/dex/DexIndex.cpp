@@ -69,6 +69,12 @@ void DexIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
   }
 }
 
+std::unique_ptr<SymbolIndex> DexIndex::build(SymbolSlab Slab) {
+  auto Idx = llvm::make_unique<MemIndex>();
+  Idx->build(getSymbolsFromSlab(std::move(Slab)));
+  return std::move(Idx);
+}
+
 /// Constructs iterators over tokens extracted from the query and exhausts it
 /// while applying Callback to each symbol in the order of decreasing quality
 /// of the matched symbols.

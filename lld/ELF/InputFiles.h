@@ -272,8 +272,6 @@ public:
   bool AddedToLink = false;
 
 private:
-  template <class ELFT> void addElfSymbols();
-
   uint64_t OffsetInArchive;
 };
 

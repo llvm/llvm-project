@@ -49,13 +49,13 @@ define void @TestUnionLD1(fp128 %s, i64 %n) #0 {
 ; SSE-LABEL: TestUnionLD1:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movabsq $281474976710655, %rcx # imm = 0xFFFFFFFFFFFF
-; SSE-NEXT:    andq %rdi, %rcx
-; SSE-NEXT:    movabsq $-281474976710656, %rdx # imm = 0xFFFF000000000000
-; SSE-NEXT:    andq -{{[0-9]+}}(%rsp), %rdx
-; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; SSE-NEXT:    shlq $48, %rax
+; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; SSE-NEXT:    movabsq $281474976710655, %rdx # imm = 0xFFFFFFFFFFFF
+; SSE-NEXT:    andq %rdi, %rdx
+; SSE-NEXT:    orq %rax, %rdx
+; SSE-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    jmp foo # TAILCALL
@@ -63,13 +63,13 @@ define void @TestUnionLD1(fp128 %s, i64 %n) #0 {
 ; AVX-LABEL: TestUnionLD1:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    movabsq $281474976710655, %rcx # imm = 0xFFFFFFFFFFFF
-; AVX-NEXT:    andq %rdi, %rcx
-; AVX-NEXT:    movabsq $-281474976710656, %rdx # imm = 0xFFFF000000000000
-; AVX-NEXT:    andq -{{[0-9]+}}(%rsp), %rdx
-; AVX-NEXT:    orq %rcx, %rdx
-; AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; AVX-NEXT:    shlq $48, %rax
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; AVX-NEXT:    movabsq $281474976710655, %rdx # imm = 0xFFFFFFFFFFFF
+; AVX-NEXT:    andq %rdi, %rdx
+; AVX-NEXT:    orq %rax, %rdx
+; AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX-NEXT:    jmp foo # TAILCALL

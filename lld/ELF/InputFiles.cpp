@@ -1261,25 +1261,11 @@ template <class ELFT> void LazyObjFile::parse() {
     return;
   }
 
-  switch (getELFKind(this->MB)) {
-  case ELF32LEKind:
-    addElfSymbols<ELF32LE>();
+  if (getELFKind(this->MB) != Config->EKind) {
+    error("incompatible file: " + this->MB.getBufferIdentifier());
     return;
-  case ELF32BEKind:
-    addElfSymbols<ELF32BE>();
-    return;
-  case ELF64LEKind:
-    addElfSymbols<ELF64LE>();
-    return;
-  case ELF64BEKind:
-    addElfSymbols<ELF64BE>();
-    return;
-  default:
-    llvm_unreachable("getELFKind");
   }
-}
 
-template <class ELFT> void LazyObjFile::addElfSymbols() {
   ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(MB.getBuffer()));
   ArrayRef<typename ELFT::Shdr> Sections = CHECK(Obj.sections(), this);
 

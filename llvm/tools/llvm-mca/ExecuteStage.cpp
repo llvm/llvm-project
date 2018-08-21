@@ -52,57 +52,31 @@ bool ExecuteStage::isAvailable(const InstRef &IR) const {
   return true;
 }
 
-void ExecuteStage::reclaimSchedulerResources() {
-  SmallVector<ResourceRef, 8> ResourcesFreed;
-  HWS.reclaimSimulatedResources(ResourcesFreed);
-  for (const ResourceRef &RR : ResourcesFreed)
-    notifyResourceAvailable(RR);
-}
+Error ExecuteStage::issueInstruction(InstRef &IR) {
+  SmallVector<std::pair<ResourceRef, double>, 4> Used;
+  SmallVector<InstRef, 4> Ready;
+  HWS.issueInstruction(IR, Used, Ready);
 
-Error ExecuteStage::updateSchedulerQueues() {
-  SmallVector<InstRef, 4> InstructionIDs;
-  HWS.updateIssuedSet(InstructionIDs);
-  for (InstRef &IR : InstructionIDs) {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  notifyReleasedBuffers(Desc.Buffers);
+  notifyInstructionIssued(IR, Used);
+  if (IR.getInstruction()->isExecuted()) {
     notifyInstructionExecuted(IR);
     //FIXME: add a buffer of executed instructions.
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
-  InstructionIDs.clear();
 
-  HWS.updatePendingQueue(InstructionIDs);
-  for (const InstRef &IR : InstructionIDs)
-    notifyInstructionReady(IR);
+  for (const InstRef &I : Ready)
+    notifyInstructionReady(I);
   return ErrorSuccess();
 }
 
 Error ExecuteStage::issueReadyInstructions() {
-  SmallVector<InstRef, 4> InstructionIDs;
   InstRef IR = HWS.select();
   while (IR.isValid()) {
-    SmallVector<std::pair<ResourceRef, double>, 4> Used;
-    HWS.issueInstruction(IR, Used);
-
-    // Reclaim instruction resources and perform notifications.
-    const InstrDesc &Desc = IR.getInstruction()->getDesc();
-    notifyReleasedBuffers(Desc.Buffers);
-    notifyInstructionIssued(IR, Used);
-    if (IR.getInstruction()->isExecuted()) {
-      notifyInstructionExecuted(IR);
-      //FIXME: add a buffer of executed instructions.
-      if (Error S = moveToTheNextStage(IR))
-        return S;
-    }
-
-    // Instructions that have been issued during this cycle might have unblocked
-    // other dependent instructions. Dependent instructions may be issued during
-    // this same cycle if operands have ReadAdvance entries.  Promote those
-    // instructions to the ReadySet and tell to the caller that we need
-    // another round of 'issue()'.
-    HWS.promoteToReadySet(InstructionIDs);
-    for (const InstRef &I : InstructionIDs)
-      notifyInstructionReady(I);
-    InstructionIDs.clear();
+    if (Error Err = issueInstruction(IR))
+      return Err;
 
     // Select the next instruction to issue.
     IR = HWS.select();
@@ -111,22 +85,26 @@ Error ExecuteStage::issueReadyInstructions() {
   return ErrorSuccess();
 }
 
-// The following routine is the maintenance routine of the ExecuteStage.
-// It is responsible for updating the hardware scheduler (HWS), including
-// reclaiming the HWS's simulated hardware resources, as well as updating the
-// HWS's queues.
-//
-// This routine also processes the instructions that are ready for issuance.
-// These instructions are managed by the HWS's ready queue and can be accessed
-// via the Scheduler::select() routine.
-//
-// Notifications are issued to this stage's listeners when instructions are
-// moved between the HWS's queues.  In particular, when an instruction becomes
-// ready or executed.
 Error ExecuteStage::cycleStart() {
-  reclaimSchedulerResources();
-  if (Error S = updateSchedulerQueues())
-    return S;
+  llvm::SmallVector<ResourceRef, 8> Freed;
+  llvm::SmallVector<InstRef, 4> Executed;
+  llvm::SmallVector<InstRef, 4> Ready;
+
+  HWS.cycleEvent(Freed, Executed, Ready);
+
+  for (const ResourceRef &RR : Freed)
+    notifyResourceAvailable(RR);
+
+  for (InstRef &IR : Executed) {
+    notifyInstructionExecuted(IR);
+    //FIXME: add a buffer of executed instructions.
+    if (Error S = moveToTheNextStage(IR))
+      return S;
+  }
+
+  for (const InstRef &IR : Ready)
+    notifyInstructionReady(IR);
+
   return issueReadyInstructions();
 }
 
@@ -157,18 +135,7 @@ Error ExecuteStage::execute(InstRef &IR) {
     return ErrorSuccess();
 
   // Issue IR to the underlying pipelines.
-  SmallVector<std::pair<ResourceRef, double>, 4> Used;
-  HWS.issueInstruction(IR, Used);
-
-  // Perform notifications.
-  notifyReleasedBuffers(Desc.Buffers);
-  notifyInstructionIssued(IR, Used);
-  if (IR.getInstruction()->isExecuted()) {
-    notifyInstructionExecuted(IR);
-    //FIXME: add a buffer of executed instructions.
-    return moveToTheNextStage(IR);
-  }
-  return ErrorSuccess();
+  return issueInstruction(IR);
 }
 
 void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) {

@@ -305,10 +305,19 @@ void Scheduler::issueInstructionImpl(
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
     InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  Resources->releaseBuffers(Desc.Buffers);
+    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
+    SmallVectorImpl<InstRef> &ReadyInstructions) {
+  const Instruction &Inst = *IR.getInstruction();
+  bool HasDependentUsers = Inst.hasDependentUsers();
+
+  Resources->releaseBuffers(Inst.getDesc().Buffers);
   issueInstructionImpl(IR, UsedResources);
+  // Instructions that have been issued during this cycle might have unblocked
+  // other dependent instructions. Dependent instructions may be issued during
+  // this same cycle if operands have ReadAdvance entries.  Promote those
+  // instructions to the ReadySet and notify the caller that those are ready.
+  if (HasDependentUsers)
+    promoteToReadySet(ReadyInstructions);
 }
 
 void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
@@ -376,19 +385,10 @@ InstRef Scheduler::select() {
     return InstRef();
 
   // We found an instruction to issue.
-
   InstRef IR = ReadySet[QueueIndex];
   std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
   ReadySet.pop_back();
   return IR;
-}
-
-void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
-  // Notify to instructions in the pending queue that a new cycle just
-  // started.
-  for (InstRef &Entry : WaitSet)
-    Entry.getInstruction()->cycleEvent();
-  promoteToReadySet(Ready);
 }
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
@@ -398,7 +398,6 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
     if (!IR.isValid())
       break;
     Instruction &IS = *IR.getInstruction();
-    IS.cycleEvent();
     if (!IS.isExecuted()) {
       LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                         << " is still executing.\n");
@@ -417,8 +416,22 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   IssuedSet.resize(IssuedSet.size() - RemovedElements);
 }
 
-void Scheduler::reclaimSimulatedResources(SmallVectorImpl<ResourceRef> &Freed) {
+void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
+                           SmallVectorImpl<InstRef> &Executed,
+                           SmallVectorImpl<InstRef> &Ready) {
+  // Release consumed resources.
   Resources->cycleEvent(Freed);
+
+  // Propagate the cycle event to the 'Issued' and 'Wait' sets.
+  for (InstRef &IR : IssuedSet)
+    IR.getInstruction()->cycleEvent();
+
+  updateIssuedSet(Executed);
+
+  for (InstRef &IR : WaitSet)
+    IR.getInstruction()->cycleEvent();
+  
+  promoteToReadySet(Ready);
 }
 
 bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
