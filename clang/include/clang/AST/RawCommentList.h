@@ -101,8 +101,10 @@ public:
   }
 
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   const char *getBriefText(const ASTContext &Context) const {
     if (BriefTextValid)

@@ -233,8 +233,10 @@ public:
 
   /// Retrieves the source range that contains the entire base specifier.
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   /// Get the location at which the base class type was written.
   SourceLocation getBaseTypeLoc() const LLVM_READONLY {
@@ -2884,7 +2886,8 @@ public:
     HasBraces = RBraceLoc.isValid();
   }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
     if (hasBraces())
       return getRBraceLoc();
     // No braces: get the end location of the (only) declaration in context
