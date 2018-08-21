@@ -384,7 +384,7 @@ scope information for the variable ``Z``.
   !19 = !DILocation(line: 5, column: 11, scope: !18)
 
 Here ``!19`` indicates that ``Z`` is declared at line number 5 and column
-number 0 inside of lexical scope ``!18``.  The lexical scope itself resides
+number 11 inside of lexical scope ``!18``.  The lexical scope itself resides
 inside of subprogram ``!4`` described above.
 
 The scope information attached with each instruction provides a straightforward

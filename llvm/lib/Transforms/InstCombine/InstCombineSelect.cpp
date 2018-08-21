@@ -355,7 +355,8 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   Value *Op1 = MatchIsOpZero ? NewSI : MatchOp;
   if (auto *BO = dyn_cast<BinaryOperator>(TI)) {
     BinaryOperator *NewBO = BinaryOperator::Create(BO->getOpcode(), Op0, Op1);
-    NewBO->copyIRFlags(BO);
+    NewBO->copyIRFlags(TI);
+    NewBO->andIRFlags(FI);
     return NewBO;
   }
   if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {

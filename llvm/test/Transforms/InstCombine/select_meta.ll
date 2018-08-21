@@ -7,12 +7,12 @@ define i32 @foo(i32) local_unnamed_addr #0  {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 %0, 2
 ; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP2]], i32 20, i32 -20, !prof ![[$MD1:[0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[DOTV]], %0
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DOTV]], %0
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = icmp sgt i32 %0, 2
   %3 = add nsw i32 %0, 20
-  %4 = add nsw i32 %0, -20
+  %4 = add i32 %0, -20
   select i1 %2, i32 %3, i32 %4, !prof !1
   ret i32 %5
 }

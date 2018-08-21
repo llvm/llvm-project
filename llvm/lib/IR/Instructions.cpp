@@ -2978,12 +2978,14 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
       return false;
 
     // A vector of pointers must have the same number of elements.
-    if (VectorType *SrcVecTy = dyn_cast<VectorType>(SrcTy)) {
-      if (VectorType *DstVecTy = dyn_cast<VectorType>(DstTy))
-        return (SrcVecTy->getNumElements() == DstVecTy->getNumElements());
-
-      return false;
-    }
+    VectorType *SrcVecTy = dyn_cast<VectorType>(SrcTy);
+    VectorType *DstVecTy = dyn_cast<VectorType>(DstTy);
+    if (SrcVecTy && DstVecTy)
+      return (SrcVecTy->getNumElements() == DstVecTy->getNumElements());
+    if (SrcVecTy)
+      return SrcVecTy->getNumElements() == 1;
+    if (DstVecTy)
+      return DstVecTy->getNumElements() == 1;
 
     return true;
   }

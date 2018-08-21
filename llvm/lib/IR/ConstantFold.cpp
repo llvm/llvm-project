@@ -916,13 +916,14 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
   return ConstantVector::get(Result);
 }
 
-
-Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
-                                              Constant *C1, Constant *C2) {
+Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
+                                              Constant *C2) {
   assert(Instruction::isBinaryOp(Opcode) && "Non-binary instruction detected");
 
-  // Handle UndefValue up front.
-  if (isa<UndefValue>(C1) || isa<UndefValue>(C2)) {
+  // Handle scalar UndefValue. Vectors are always evaluated per element.
+  bool HasScalarUndef = !C1->getType()->isVectorTy() &&
+                        (isa<UndefValue>(C1) || isa<UndefValue>(C2));
+  if (HasScalarUndef) {
     switch (static_cast<Instruction::BinaryOps>(Opcode)) {
     case Instruction::Xor:
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
@@ -1024,9 +1025,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     }
   }
 
-  // At this point neither constant should be an UndefValue.
-  assert(!isa<UndefValue>(C1) && !isa<UndefValue>(C2) &&
-         "Unexpected UndefValue");
+  // Neither constant should be UndefValue, unless these are vector constants.
+  assert(!HasScalarUndef && "Unexpected UndefValue");
 
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
@@ -1218,7 +1218,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       }
     }
   } else if (VectorType *VTy = dyn_cast<VectorType>(C1->getType())) {
-    // Perform elementwise folding.
+    // Fold each element and create a vector constant from those constants.
     SmallVector<Constant*, 16> Result;
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {

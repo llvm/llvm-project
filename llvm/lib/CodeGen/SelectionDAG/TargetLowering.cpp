@@ -3527,7 +3527,8 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
-    if (C->isNullValue())
+    // TODO: Handle sdiv by one and neg-one.
+    if (C->isNullValue() || C->isOne() || C->isAllOnesValue())
       return false;
 
     const APInt &Divisor = C->getAPIntValue();
