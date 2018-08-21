@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_SELECTOREXTRAS_H
-#define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_SELECTOREXTRAS_H
+#ifndef LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
+#define LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
 
 #include "clang/AST/ASTContext.h"
 
 namespace clang {
-namespace ento {
 
 template <typename... IdentifierInfos>
 static inline Selector getKeywordSelector(ASTContext &Ctx,
@@ -33,14 +32,6 @@ static inline void lazyInitKeywordSelector(Selector &Sel, ASTContext &Ctx,
   Sel = getKeywordSelector(Ctx, IIs...);
 }
 
-static inline void lazyInitNullarySelector(Selector &Sel, ASTContext &Ctx,
-                                           const char *Name) {
-  if (!Sel.isNull())
-    return;
-  Sel = GetNullarySelector(Name, Ctx);
-}
-
-} // end namespace ento
 } // end namespace clang
 
 #endif
