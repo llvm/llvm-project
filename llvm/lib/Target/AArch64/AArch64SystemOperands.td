@@ -576,6 +576,12 @@ def : ROSysReg<"ICH_VTR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b001>;
 def : ROSysReg<"ICH_EISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b011>;
 def : ROSysReg<"ICH_ELRSR_EL2",      0b11, 0b100, 0b1100, 0b1011, 0b101>;
 
+// SVE control registers
+//                                   Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureSVE} }] in {
+def : ROSysReg<"ID_AA64ZFR0_EL1",    0b11, 0b000, 0b0000, 0b0100, 0b100>;
+}
+
 // v8.1a "Limited Ordering Regions" extension-specific system register
 //                         Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::HasV8_1aOps} }] in
@@ -1310,6 +1316,15 @@ def : RWSysReg<"DIT",              0b11, 0b011, 0b0100, 0b0010, 0b101>;
 def : RWSysReg<"VNCR_EL2",         0b11, 0b100, 0b0010, 0b0010, 0b000>;
 
 } // HasV8_4aOps
+
+// SVE control registers
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureSVE} }] in {
+def : RWSysReg<"ZCR_EL1",          0b11, 0b000, 0b0001, 0b0010, 0b000>;
+def : RWSysReg<"ZCR_EL2",          0b11, 0b100, 0b0001, 0b0010, 0b000>;
+def : RWSysReg<"ZCR_EL3",          0b11, 0b110, 0b0001, 0b0010, 0b000>;
+def : RWSysReg<"ZCR_EL12",         0b11, 0b101, 0b0001, 0b0010, 0b000>;
+}
 
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
