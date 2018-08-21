@@ -65,6 +65,15 @@ private:
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
 
+  // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
+  // (the offset that is included in bounds checking and swizzling, to be split
+  // between the instruction's voffset and immoffset fields) and soffset (the
+  // offset that is excluded from bounds checking and swizzling, to go in the
+  // instruction's soffset field).  This function takes the first kind of
+  // offset and figures out how to split it between voffset and immoffset.
+  std::pair<SDValue, SDValue> splitBufferOffsets(SDValue Offset,
+                                                 SelectionDAG &DAG) const;
+
   SDValue widenLoad(LoadSDNode *Ld, DAGCombinerInfo &DCI) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
@@ -176,6 +185,12 @@ private:
   /// \returns True if PC-relative relocation needs to be emitted for given
   /// global value \p GV, false otherwise.
   bool shouldEmitPCReloc(const GlobalValue *GV) const;
+
+  // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
+  // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
+  // pointed to by Offsets.
+  void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
+                        SDValue *Offsets) const;
 
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);

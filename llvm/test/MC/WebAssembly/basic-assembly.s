@@ -1,17 +1,19 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+sign_ext,+simd128 < %s | FileCheck %s
 
     .text
     .type    test0,@function
 test0:
     # Test all types:
     .param      i32, i64
-    .local      f32, f64  #, i8x16, i16x8, i32x4, f32x4
+    .local      f32, f64, v128, v128
     # Explicit getlocal/setlocal:
     get_local   $push0=, 2
     set_local   2, $pop0=
     # Implicit locals & immediates:
     i32.const   $0=, -1
     f64.const   $3=, 0x1.999999999999ap1
+    v128.const  $4=, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+    v128.const  $5=, 0, 1, 2, 3, 4, 5, 6, 7
     # Indirect addressing:
     get_local   $push1=, 0
     f64.store   0($pop1), $3
@@ -37,6 +39,9 @@ test0:
 .LBB0_2:
     end_loop
     end_block                       # label0:
+    get_local   $push12=, 4
+    get_local   $push13=, 5
+    f32x4.add   $4=, $pop12, $pop13
     end_function
 
 
@@ -48,6 +53,8 @@ test0:
 # CHECK-NEXT:      set_local   2, $pop0
 # CHECK-NEXT:      i32.const   $0=, -1
 # CHECK-NEXT:      f64.const   $3=, 0x1.999999999999ap1
+# CHECK-NEXT:      v128.const  $4=, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+# CHECK-NEXT:      v128.const  $5=, 0, 1, 2, 3, 4, 5, 6, 7
 # CHECK-NEXT:      get_local   $push1=, 0
 # CHECK-NEXT:      f64.store   0($pop1):p2align=0, $3
 # CHECK-NEXT:      block
@@ -71,4 +78,7 @@ test0:
 # CHECK-NEXT:  .LBB0_2:
 # CHECK-NEXT:      end_loop
 # CHECK-NEXT:      end_block                       # label0:
+# CHECK-NEXT:      get_local   $push12=, 4
+# CHECK-NEXT:      get_local   $push13=, 5
+# CHECK-NEXT:      f32x4.add   $4=, $pop12, $pop13
 # CHECK-NEXT:      end_function

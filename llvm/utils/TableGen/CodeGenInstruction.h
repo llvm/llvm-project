@@ -222,6 +222,7 @@ template <typename T> class ArrayRef;
 
     // Various boolean values we track for the instruction.
     bool isReturn : 1;
+    bool isEHScopeReturn : 1;
     bool isBranch : 1;
     bool isIndirectBranch : 1;
     bool isCompare : 1;

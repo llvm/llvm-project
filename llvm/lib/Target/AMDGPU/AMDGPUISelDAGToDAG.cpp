@@ -145,10 +145,6 @@ private:
   bool SelectMUBUFConstant(SDValue Constant,
                            SDValue &SOffset,
                            SDValue &ImmOffset) const;
-  bool SelectMUBUFIntrinsicOffset(SDValue Offset, SDValue &SOffset,
-                                  SDValue &ImmOffset) const;
-  bool SelectMUBUFIntrinsicVOffset(SDValue Offset, SDValue &SOffset,
-                                   SDValue &ImmOffset, SDValue &VOffset) const;
 
   bool SelectFlatAtomic(SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
@@ -1293,93 +1289,17 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
                                              SDValue &SOffset,
                                              SDValue &ImmOffset) const {
   SDLoc DL(Constant);
-  const uint32_t Align = 4;
-  const uint32_t MaxImm = alignDown(4095, Align);
   uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
-  uint32_t Overflow = 0;
-
-  if (Imm > MaxImm) {
-    if (Imm <= MaxImm + 64) {
-      // Use an SOffset inline constant for 4..64
-      Overflow = Imm - MaxImm;
-      Imm = MaxImm;
-    } else {
-      // Try to keep the same value in SOffset for adjacent loads, so that
-      // the corresponding register contents can be re-used.
-      //
-      // Load values with all low-bits (except for alignment bits) set into
-      // SOffset, so that a larger range of values can be covered using
-      // s_movk_i32.
-      //
-      // Atomic operations fail to work correctly when individual address
-      // components are unaligned, even if their sum is aligned.
-      uint32_t High = (Imm + Align) & ~4095;
-      uint32_t Low = (Imm + Align) & 4095;
-      Imm = Low;
-      Overflow = High - Align;
-    }
-  }
-
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 &&
-      Subtarget->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+  uint32_t Overflow;
+  if (!AMDGPU::splitMUBUFOffset(Imm, Overflow, Imm, Subtarget))
     return false;
-
   ImmOffset = CurDAG->getTargetConstant(Imm, DL, MVT::i16);
-
   if (Overflow <= 64)
     SOffset = CurDAG->getTargetConstant(Overflow, DL, MVT::i32);
   else
     SOffset = SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
                       CurDAG->getTargetConstant(Overflow, DL, MVT::i32)),
                       0);
-
-  return true;
-}
-
-bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicOffset(SDValue Offset,
-                                                    SDValue &SOffset,
-                                                    SDValue &ImmOffset) const {
-  SDLoc DL(Offset);
-
-  if (!isa<ConstantSDNode>(Offset))
-    return false;
-
-  return SelectMUBUFConstant(Offset, SOffset, ImmOffset);
-}
-
-bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
-                                                     SDValue &SOffset,
-                                                     SDValue &ImmOffset,
-                                                     SDValue &VOffset) const {
-  SDLoc DL(Offset);
-
-  // Don't generate an unnecessary voffset for constant offsets.
-  if (isa<ConstantSDNode>(Offset)) {
-    SDValue Tmp1, Tmp2;
-
-    // When necessary, use a voffset in <= CI anyway to work around a hardware
-    // bug.
-    if (Subtarget->getGeneration() > AMDGPUSubtarget::SEA_ISLANDS ||
-        SelectMUBUFConstant(Offset, Tmp1, Tmp2))
-      return false;
-  }
-
-  if (CurDAG->isBaseWithConstantOffset(Offset)) {
-    SDValue N0 = Offset.getOperand(0);
-    SDValue N1 = Offset.getOperand(1);
-    if (cast<ConstantSDNode>(N1)->getSExtValue() >= 0 &&
-        SelectMUBUFConstant(N1, SOffset, ImmOffset)) {
-      VOffset = N0;
-      return true;
-    }
-  }
-
-  SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
-  VOffset = Offset;
 
   return true;
 }

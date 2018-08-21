@@ -93,3 +93,5 @@
 ??$ReadField@UV@@$FM@A@@@YAHAAUV@@@Z
 ; CHECK: int __cdecl ReadField<struct V, {12, 0}>(struct V &)
 
+?Q@@3$$QEAP8Foo@@EAAXXZEA
+; CHECK: void (__cdecl Foo::*&&Q)(void)

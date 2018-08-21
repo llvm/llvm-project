@@ -140,6 +140,9 @@
 ??_7Base@@6B@
 ; CHECK: const Base::`vftable'
 
+??_7A@B@@6BC@D@@@
+; CHECK: const B::A::`vftable'{for `D::C'}
+
 ??_8Middle2@@7B@
 ; CHECK: const Middle2::`vbtable'
 

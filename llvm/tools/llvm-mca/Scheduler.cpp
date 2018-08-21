@@ -248,6 +248,10 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
   Resource.clearReserved();
 }
 
+// Anchor the vtable of SchedulerStrategy and DefaultSchedulerStrategy.
+SchedulerStrategy::~SchedulerStrategy() = default;
+DefaultSchedulerStrategy::~DefaultSchedulerStrategy() = default;
+
 #ifndef NDEBUG
 void Scheduler::dump() const {
   dbgs() << "[SCHEDULER]: WaitSet size is: " << WaitSet.size() << '\n';
@@ -259,7 +263,7 @@ void Scheduler::dump() const {
 
 Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
-   
+
   switch (Resources->canBeDispatched(Desc.Buffers)) {
   case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
     return Scheduler::SC_BUFFERS_FULL;
@@ -305,10 +309,19 @@ void Scheduler::issueInstructionImpl(
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
     InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  Resources->releaseBuffers(Desc.Buffers);
+    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
+    SmallVectorImpl<InstRef> &ReadyInstructions) {
+  const Instruction &Inst = *IR.getInstruction();
+  bool HasDependentUsers = Inst.hasDependentUsers();
+
+  Resources->releaseBuffers(Inst.getDesc().Buffers);
   issueInstructionImpl(IR, UsedResources);
+  // Instructions that have been issued during this cycle might have unblocked
+  // other dependent instructions. Dependent instructions may be issued during
+  // this same cycle if operands have ReadAdvance entries.  Promote those
+  // instructions to the ReadySet and notify the caller that those are ready.
+  if (HasDependentUsers)
+    promoteToReadySet(ReadyInstructions);
 }
 
 void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
@@ -326,7 +339,7 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     if (!IS.isReady())
       IS.update();
 
-    // Check f there are still unsolved data dependencies. 
+    // Check if there are still unsolved data dependencies.
     if (!isReady(IR)) {
       ++I;
       continue;
@@ -345,30 +358,13 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
 
 InstRef Scheduler::select() {
   unsigned QueueIndex = ReadySet.size();
-  int Rank = std::numeric_limits<int>::max();
-
   for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
     const InstRef &IR = ReadySet[I];
-    const unsigned IID = IR.getSourceIndex();
-    const Instruction &IS = *IR.getInstruction();
-
-    // Compute a rank value based on the age of an instruction (i.e. its source
-    // index) and its number of users. The lower the rank value, the better.
-    int CurrentRank = IID - IS.getNumUsers();
-
-    // We want to prioritize older instructions over younger instructions to
-    // minimize the pressure on the reorder buffer.  We also want to
-    // rank higher the instructions with more users to better expose ILP.
-    if (CurrentRank == Rank)
-      if (IID > ReadySet[QueueIndex].getSourceIndex())
-        continue;
-
-    if (CurrentRank <= Rank) {
-      const InstrDesc &D = IS.getDesc();
-      if (Resources->canBeIssued(D)) {
-        Rank = CurrentRank;
+    if (QueueIndex == ReadySet.size() ||
+        Strategy->compare(IR, ReadySet[QueueIndex])) {
+      const InstrDesc &D = IR.getInstruction()->getDesc();
+      if (Resources->canBeIssued(D))
         QueueIndex = I;
-      }
     }
   }
 
@@ -376,19 +372,10 @@ InstRef Scheduler::select() {
     return InstRef();
 
   // We found an instruction to issue.
-
   InstRef IR = ReadySet[QueueIndex];
   std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
   ReadySet.pop_back();
   return IR;
-}
-
-void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
-  // Notify to instructions in the pending queue that a new cycle just
-  // started.
-  for (InstRef &Entry : WaitSet)
-    Entry.getInstruction()->cycleEvent();
-  promoteToReadySet(Ready);
 }
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
@@ -398,7 +385,6 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
     if (!IR.isValid())
       break;
     Instruction &IS = *IR.getInstruction();
-    IS.cycleEvent();
     if (!IS.isExecuted()) {
       LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                         << " is still executing.\n");
@@ -417,8 +403,22 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   IssuedSet.resize(IssuedSet.size() - RemovedElements);
 }
 
-void Scheduler::reclaimSimulatedResources(SmallVectorImpl<ResourceRef> &Freed) {
+void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
+                           SmallVectorImpl<InstRef> &Executed,
+                           SmallVectorImpl<InstRef> &Ready) {
+  // Release consumed resources.
   Resources->cycleEvent(Freed);
+
+  // Propagate the cycle event to the 'Issued' and 'Wait' sets.
+  for (InstRef &IR : IssuedSet)
+    IR.getInstruction()->cycleEvent();
+
+  updateIssuedSet(Executed);
+
+  for (InstRef &IR : WaitSet)
+    IR.getInstruction()->cycleEvent();
+
+  promoteToReadySet(Ready);
 }
 
 bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
