@@ -286,18 +286,6 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
   }
 
   // Checking bases.
-  // FIXME: As of now, because of `willObjectBeAnalyzedLater`, objects whose
-  // type is a descendant of another type will emit warnings for uninitalized
-  // inherited members.
-  // This is not the only way to analyze bases of an object -- if we didn't
-  // filter them out, and didn't analyze the bases, this checker would run for
-  // each base of the object in order of base initailization and in theory would
-  // find every uninitalized field. This approach could also make handling
-  // diamond inheritances more easily.
-  //
-  // This rule (that a descendant type's cunstructor is responsible for
-  // initializing inherited data members) is not obvious, and should it should
-  // be.
   const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
   if (!CXXRD)
     return ContainsUninitField;
