@@ -12,6 +12,7 @@
 #include "Path.h"
 #include "Trace.h"
 #include "index/SymbolYAML.h"
+#include "index/dex/DexIndex.h"
 #include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,6 +30,7 @@ using namespace clang;
 using namespace clang::clangd;
 
 namespace {
+
 enum class PCHStorageFlag { Disk, Memory };
 
 // Build an in-memory static index for global symbols from a YAML-format file.
@@ -45,8 +47,10 @@ std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
   for (auto Sym : Slab)
     SymsBuilder.insert(Sym);
 
-  return MemIndex::build(std::move(SymsBuilder).build());
+  return UseDex ? DexIndex::build(std::move(SymsBuilder).build())
+                : MemIndex::build(std::move(SymsBuilder).build());
 }
+
 } // namespace
 
 static llvm::cl::opt<Path> CompileCommandsDir(
@@ -184,6 +188,11 @@ static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
                                 "All compile commands come from the "
                                 "'compile_commands.json' files")),
     llvm::cl::init(FilesystemCompileArgs), llvm::cl::Hidden);
+
+static llvm::cl::opt<bool>
+    UseDex("use-dex-index",
+           llvm::cl::desc("Use experimental Dex static index."),
+           llvm::cl::init(false), llvm::cl::Hidden);
 
 int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);

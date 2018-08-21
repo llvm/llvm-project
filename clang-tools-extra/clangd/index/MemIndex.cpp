@@ -28,6 +28,12 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
   }
 }
 
+std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
+  auto Idx = llvm::make_unique<MemIndex>();
+  Idx->build(getSymbolsFromSlab(std::move(Slab)));
+  return std::move(Idx);
+}
+
 bool MemIndex::fuzzyFind(
     const FuzzyFindRequest &Req,
     llvm::function_ref<void(const Symbol &)> Callback) const {
@@ -72,7 +78,14 @@ void MemIndex::lookup(const LookupRequest &Req,
   }
 }
 
-std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
+void MemIndex::findOccurrences(
+    const OccurrencesRequest &Req,
+    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
+  log("findOccurrences is not implemented.");
+}
+
+std::shared_ptr<std::vector<const Symbol *>>
+getSymbolsFromSlab(SymbolSlab Slab) {
   struct Snapshot {
     SymbolSlab Slab;
     std::vector<const Symbol *> Pointers;
@@ -81,17 +94,8 @@ std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
   Snap->Slab = std::move(Slab);
   for (auto &Sym : Snap->Slab)
     Snap->Pointers.push_back(&Sym);
-  auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
-                                                        &Snap->Pointers);
-  auto MemIdx = llvm::make_unique<MemIndex>();
-  MemIdx->build(std::move(S));
-  return std::move(MemIdx);
-}
-
-void MemIndex::findOccurrences(
-    const OccurrencesRequest &Req,
-    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
-  log("findOccurrences is not implemented.");
+  return std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
+                                                      &Snap->Pointers);
 }
 
 } // namespace clangd
