@@ -508,7 +508,8 @@ static void LongJmp(ThreadState *thr, uptr *env) {
   uptr mangled_sp = env[6];
 #elif SANITIZER_MAC
 # ifdef __aarch64__
-    uptr mangled_sp = env[13];
+  uptr mangled_sp =
+      (GetMacosVersion() >= MACOS_VERSION_MOJAVE) ? env[12] : env[13];
 # else
     uptr mangled_sp = env[2];
 # endif
