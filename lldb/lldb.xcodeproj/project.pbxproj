@@ -13455,7 +13455,7 @@
 			};
 			name = BuildAndIntegration;
 		};
-		94DF55CC1ADDBF240030B937 /* BuildAndIntegration */ = {
+		94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -13560,6 +13560,12 @@
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"$(inherited)",
+					"-lllvmclang",
+					"-framework",
+					Foundation,
+				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -13567,7 +13573,7 @@
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
-				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
 				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
@@ -13578,7 +13584,7 @@
 					"-Wno-newline-eof",
 				);
 			};
-			name = BuildAndIntegration;
+			name = "CustomSwift-Debug";
 		};
 		94DF55CD1ADDBF240030B937 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
@@ -14865,7 +14871,7 @@
 				1DEB91F008733DB70010E9CD /* Debug */,
 				49BB8F341611172B00BDD462 /* DebugClang */,
 				9448C4611B1FC0AD00414490 /* DebugPresubmission */,
-				94DF55CC1ADDBF240030B937 /* BuildAndIntegration */,
+				94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */,
 				1DEB91F108733DB70010E9CD /* Release */,
 				94DF55DE1ADDBF2C0030B937 /* CustomSwift-Release */,
 				237965E71C12369B008D490F /* Debug */,
