@@ -330,3 +330,113 @@ entry:
 	%div = udiv i64 %rem, 7
 	ret i64 %div
 }
+
+define { i64, i32 } @PR38622(i64) nounwind {
+; X32-LABEL: PR38622:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    pushl $0
+; X32-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    calll __udivdi3
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    pushl $0
+; X32-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    calll __umoddi3
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl %edi, %edx
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    retl
+;
+; X64-LABEL: PR38622:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $11, %rax
+; X64-NEXT:    movabsq $4835703278458517, %rcx # imm = 0x112E0BE826D695
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    shrq $9, %rdx
+; X64-NEXT:    imull $-294967296, %edx, %eax # imm = 0xEE6B2800
+; X64-NEXT:    subl %eax, %edi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    retq
+  %2 = udiv i64 %0, 4000000000
+  %3 = urem i64 %0, 4000000000
+  %4 = trunc i64 %3 to i32
+  %5 = insertvalue { i64, i32 } undef, i64 %2, 0
+  %6 = insertvalue { i64, i32 } %5, i32 %4, 1
+  ret { i64, i32 } %6
+}
+
+define { i64, i32 } @PR38622_signed(i64) nounwind {
+; X32-LABEL: PR38622_signed:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    pushl $0
+; X32-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    calll __divdi3
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    pushl $0
+; X32-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    calll __moddi3
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl %edi, %edx
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    retl
+;
+; X64-LABEL: PR38622_signed:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $1237940039285380275, %rcx # imm = 0x112E0BE826D694B3
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    imulq %rcx
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    shrq $63, %rcx
+; X64-NEXT:    sarq $28, %rdx
+; X64-NEXT:    leaq (%rdx,%rcx), %rax
+; X64-NEXT:    addl %ecx, %edx
+; X64-NEXT:    imull $-294967296, %edx, %ecx # imm = 0xEE6B2800
+; X64-NEXT:    subl %ecx, %edi
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    retq
+  %2 = sdiv i64 %0, 4000000000
+  %3 = srem i64 %0, 4000000000
+  %4 = trunc i64 %3 to i32
+  %5 = insertvalue { i64, i32 } undef, i64 %2, 0
+  %6 = insertvalue { i64, i32 } %5, i32 %4, 1
+  ret { i64, i32 } %6
+}
