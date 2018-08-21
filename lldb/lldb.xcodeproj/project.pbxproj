@@ -14046,7 +14046,7 @@
 					Foundation,
 				);
 				PATH = /opt/local/bin;
-				PRODUCT_NAME = lldb;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
