@@ -588,6 +588,8 @@ public:
   virtual bool evaluateAsRelocatableImpl(MCValue &Res,
                                          const MCAsmLayout *Layout,
                                          const MCFixup *Fixup) const = 0;
+  // allow Target Expressions to be checked for equality
+  virtual bool isEqualTo(const MCExpr *x) const { return false; }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }
