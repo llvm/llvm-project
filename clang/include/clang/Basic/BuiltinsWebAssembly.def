@@ -37,6 +37,6 @@ BUILTIN(__builtin_wasm_rethrow, "v", "r")
 // Atomic wait and notify.
 BUILTIN(__builtin_wasm_atomic_wait_i32, "ii*iLLi", "n")
 BUILTIN(__builtin_wasm_atomic_wait_i64, "iLLi*LLiLLi", "n")
-BUILTIN(__builtin_wasm_atomic_notify, "ULLii*LLi", "n")
+BUILTIN(__builtin_wasm_atomic_notify, "Uii*i", "n")
 
 #undef BUILTIN

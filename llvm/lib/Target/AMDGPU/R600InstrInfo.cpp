@@ -1500,7 +1500,7 @@ void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
 }
 
 unsigned R600InstrInfo::getAddressSpaceForPseudoSourceKind(
-    PseudoSourceValue::PSVKind Kind) const {
+    unsigned Kind) const {
   switch (Kind) {
   case PseudoSourceValue::Stack:
   case PseudoSourceValue::FixedStack:

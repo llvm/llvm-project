@@ -955,6 +955,9 @@ public:
     return Writer->AddVersionTuple(Version, *Record);
   }
 
+  // Emit an attribute.
+  void AddAttr(const Attr *A);
+
   /// Emit a list of attributes.
   void AddAttributes(ArrayRef<const Attr*> Attrs);
 };

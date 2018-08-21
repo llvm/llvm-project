@@ -236,9 +236,9 @@ public:
   }
 };
 
-int AssembleInput(const char *ProgName, MCAsmParser &Parser,
-                  const Target *TheTarget, MCSubtargetInfo &STI,
-                  MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
+int AssembleInput(MCAsmParser &Parser, const Target *TheTarget,
+                  MCSubtargetInfo &STI, MCInstrInfo &MCII,
+                  MCTargetOptions &MCOptions) {
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, Parser, MCII, MCOptions));
 
@@ -424,7 +424,7 @@ int main(int argc, char **argv) {
   MCACommentConsumer CC(Regions);
   Lexer.setCommentConsumer(&CC);
 
-  if (AssembleInput(ProgName, *P, TheTarget, *STI, *MCII, MCOptions))
+  if (AssembleInput(*P, TheTarget, *STI, *MCII, MCOptions))
     return 1;
 
   if (Regions.empty()) {

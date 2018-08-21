@@ -95,3 +95,41 @@ loop:
   br label %loop
 }
 
+
+; memcpy doesn't write to it's source argument, so loads to that location
+; can still be hoisted
+define void @test6(i32* noalias %loc, i32* noalias %loc2) {
+; CHECK-LABEL: @test6
+; CHECK: %val = load i32, i32* %loc2
+; CHECK-LABEL: loop:
+; CHECK: @llvm.memcpy
+  br label %loop
+
+loop:
+  %val = load i32, i32* %loc2
+  store i32 %val, i32* %loc
+  %dest = bitcast i32* %loc to i8*
+  %src = bitcast i32* %loc2 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 8, i1 false)
+  br label %loop
+}
+
+; FIXME: argument aliasing should let us do this transform
+define void @test7(i32* noalias %loc, i32* noalias %loc2) {
+; CHECK-LABEL: @test7
+; CHECK-LABEL: loop:
+; CHECK: %val = load i32, i32* %loc2
+; CHECK: @custom_memcpy
+  br label %loop
+
+loop:
+  %val = load i32, i32* %loc2
+  store i32 %val, i32* %loc
+  %dest = bitcast i32* %loc to i8*
+  %src = bitcast i32* %loc2 to i8*
+  call void @custom_memcpy(i8* %dest, i8* %src)
+  br label %loop
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @custom_memcpy(i8* nocapture writeonly, i8* nocapture readonly) argmemonly nounwind

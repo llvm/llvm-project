@@ -61,6 +61,11 @@ public:
                           const InputFile *File, uint64_t BranchAddr,
                           const Symbol &S) const;
 
+  // On systems with range extensions we place collections of Thunks at
+  // regular spacings that enable the majority of branches reach the Thunks.
+  // a value of 0 means range extension thunks are not supported.
+  virtual uint32_t getThunkSectionSpacing() const { return 0; }
+
   // The function with a prologue starting at Loc was compiled with
   // -fsplit-stack and it calls a function compiled without. Adjust the prologue
   // to do the right thing. See https://gcc.gnu.org/wiki/SplitStacks.
@@ -87,10 +92,6 @@ public:
   uint64_t GotBaseSymOff = 0;
   // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
   bool GotBaseSymInGotPlt = true;
-
-  // On systems with range extensions we place collections of Thunks at
-  // regular spacings that enable the majority of branches reach the Thunks.
-  uint32_t ThunkSectionSpacing = 0;
 
   RelType CopyRel;
   RelType GotRel;

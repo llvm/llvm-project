@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include <algorithm>
@@ -268,13 +269,10 @@ parseRngListTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   // We are expected to be called with Offset 0 or pointing just past the table
   // header, which is 12 bytes long for DWARF32.
   if (Offset > 0) {
-    if (Offset < 12U) {
-      std::string Buffer;
-      raw_string_ostream Stream(Buffer);
-      Stream << format(
-          "Did not detect a valid range list table with base = 0x%x", Offset);
-      return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
-    }
+    if (Offset < 12U)
+      return createStringError(errc::invalid_argument, "Did not detect a valid"
+                               " range list table with base = 0x%" PRIu32,
+                               Offset);
     Offset -= 12U;
   }
   llvm::DWARFDebugRnglistTable Table;
@@ -518,8 +516,8 @@ DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
     return RangeListOrError.takeError();
   }
 
-  return make_error<StringError>("missing or invalid range list table",
-                                 inconvertibleErrorCode());
+  return createStringError(errc::invalid_argument,
+                           "missing or invalid range list table");
 }
 
 Expected<DWARFAddressRangesVector>
@@ -527,13 +525,12 @@ DWARFUnit::findRnglistFromIndex(uint32_t Index) {
   if (auto Offset = getRnglistOffset(Index))
     return findRnglistFromOffset(*Offset + RangeSectionBase);
 
-  std::string Buffer;
-  raw_string_ostream Stream(Buffer);
   if (RngListTable)
-    Stream << format("invalid range list table index %d", Index);
+    return createStringError(errc::invalid_argument,
+                             "invalid range list table index %d", Index);
   else
-    Stream << "missing or invalid range list table";
-  return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
+    return createStringError(errc::invalid_argument,
+                             "missing or invalid range list table");
 }
 
 void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {

@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -86,7 +87,7 @@ static const char colorcodes[2][2][8][10] = {
 static bool coreFilesPrevented = false;
 
 bool Process::AreCoreFilesPrevented() {
-  return coreFilesPrevented;
+  return !LLVM_ENABLE_CRASH_DUMPS;
 }
 
 // Include the platform-specific parts of this class.

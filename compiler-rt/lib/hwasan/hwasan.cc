@@ -209,13 +209,13 @@ void __hwasan_init() {
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
-  HwasanTSDInit(HwasanTSDDtor);
+  HwasanTSDInit();
 
   HwasanAllocatorInit();
 
   HwasanThread *main_thread = HwasanThread::Create(nullptr, nullptr);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart();
+  main_thread->Init();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();

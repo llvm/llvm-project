@@ -3876,7 +3876,7 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
-QualType ASTContext::getAttributedType(AttributedType::Kind attrKind,
+QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
                                        QualType equivalentType) {
   llvm::FoldingSetNodeID id;

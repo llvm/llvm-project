@@ -247,6 +247,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("intpred", MIToken::kw_intpred)
       .Case("pre-instr-symbol", MIToken::kw_pre_instr_symbol)
       .Case("post-instr-symbol", MIToken::kw_post_instr_symbol)
+      .Case("unknown-size", MIToken::kw_unknown_size)
       .Default(MIToken::Identifier);
 }
 

@@ -798,6 +798,7 @@ public:
       case ISD::STRICT_FSUB: EqOpc = ISD::FSUB; break;
       case ISD::STRICT_FMUL: EqOpc = ISD::FMUL; break;
       case ISD::STRICT_FDIV: EqOpc = ISD::FDIV; break;
+      case ISD::STRICT_FREM: EqOpc = ISD::FREM; break;
       case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
       case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
       case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;

@@ -74,6 +74,23 @@ Out:    ; preds = %Loop
   ret void
 }
 
+define void @test3b(i32 %i) {
+; CHECK-LABEL: @test3b(
+; CHECK-LABEL: Loop:
+; CHECK: store volatile
+; CHECK-LABEL: Out:
+  br label %Loop
+Loop:
+        ; Should not promote this to a register
+  %x = load i32, i32* @X
+  %x2 = add i32 %x, 1
+  store volatile i32 %x2, i32* @X
+  br i1 true, label %Out, label %Loop
+
+Out:    ; preds = %Loop
+  ret void
+}
+
 ; PR8041
 define void @test4(i8* %x, i8 %n) {
 ; CHECK-LABEL: @test4(

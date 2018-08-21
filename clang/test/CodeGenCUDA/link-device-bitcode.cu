@@ -11,13 +11,19 @@
 //
 // Make sure function in device-code gets linked in and internalized.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
+// RUN:    -mlink-builtin-bitcode %t.bc  -emit-llvm \
+// RUN:    -disable-llvm-passes -o - %s \
+// RUN:    | FileCheck %s -check-prefix CHECK-IR
+
+// Make sure legacy flag name works
+// RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
 // RUN:    -mlink-cuda-bitcode %t.bc  -emit-llvm \
 // RUN:    -disable-llvm-passes -o - %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-IR
 //
 // Make sure we can link two bitcode files.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
-// RUN:    -mlink-cuda-bitcode %t.bc -mlink-cuda-bitcode %t-2.bc \
+// RUN:    -mlink-builtin-bitcode %t.bc -mlink-builtin-bitcode %t-2.bc \
 // RUN:    -emit-llvm -disable-llvm-passes -o - %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-IR -check-prefix CHECK-IR-2
 //
@@ -30,7 +36,7 @@
 //
 // Make sure NVVMReflect pass is enabled in NVPTX back-end.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
-// RUN:    -mlink-cuda-bitcode %t.bc -S -o /dev/null %s \
+// RUN:    -mlink-builtin-bitcode %t.bc -S -o /dev/null %s \
 // RUN:    -mllvm -debug-pass=Structure 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-REFLECT
 
