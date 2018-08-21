@@ -416,14 +416,21 @@ __int64 test_InterlockedCompareExchange64(__int64 volatile *Destination, __int64
 // CHECK: }
 
 #if defined(__x86_64__)
-unsigned char test_InterlockedCompareExchange128(__int64 volatile *Destination, __int64 ExchangeHigh, __int64 ExchangeLow, __int64* ComparandResult) {
-  return _InterlockedCompareExchange128(Destination, ExchangeHigh, ExchangeLow, ComparandResult);
+unsigned char test_InterlockedCompareExchange128(
+    __int64 volatile *Destination, __int64 ExchangeHigh,
+    __int64 ExchangeLow, __int64 *ComparandResult) {
+  return _InterlockedCompareExchange128(++Destination, ++ExchangeHigh,
+                                        ++ExchangeLow, ++ComparandResult);
 }
 // CHECK-X64: define{{.*}}i8 @test_InterlockedCompareExchange128(i64*{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%ExchangeHigh, i64{{[a-z_ ]*}}%ExchangeLow, i64*{{[a-z_ ]*}}%ComparandResult){{.*}}{
-// CHECK-X64: [[DST:%[0-9]+]] = bitcast i64* %Destination to i128*
-// CHECK-X64: [[EH:%[0-9]+]] = zext i64 %ExchangeHigh to i128
-// CHECK-X64: [[EL:%[0-9]+]] = zext i64 %ExchangeLow to i128
-// CHECK-X64: [[CNR:%[0-9]+]] = bitcast i64* %ComparandResult to i128*
+// CHECK-X64: %incdec.ptr = getelementptr inbounds i64, i64* %Destination, i64 1
+// CHECK-X64: %inc = add nsw i64 %ExchangeHigh, 1
+// CHECK-X64: %inc1 = add nsw i64 %ExchangeLow, 1
+// CHECK-X64: %incdec.ptr2 = getelementptr inbounds i64, i64* %ComparandResult, i64 1
+// CHECK-X64: [[DST:%[0-9]+]] = bitcast i64* %incdec.ptr to i128*
+// CHECK-X64: [[EH:%[0-9]+]] = zext i64 %inc to i128
+// CHECK-X64: [[EL:%[0-9]+]] = zext i64 %inc1 to i128
+// CHECK-X64: [[CNR:%[0-9]+]] = bitcast i64* %incdec.ptr2 to i128*
 // CHECK-X64: [[EHS:%[0-9]+]] = shl nuw i128 [[EH]], 64
 // CHECK-X64: [[EXP:%[0-9]+]] = or i128 [[EHS]], [[EL]]
 // CHECK-X64: [[ORG:%[0-9]+]] = load i128, i128* [[CNR]], align 16
