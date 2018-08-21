@@ -7,9 +7,9 @@
 define void @test1(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-LABEL: entry:
+; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; CHECK: %val = load i32, i32* %ptr
 
 ; ALIAS-N2-LABEL: @test1(
 ; ALIAS-N2-LABEL: entry:
@@ -28,14 +28,14 @@ loop:
   br label %loop
 }
 
-;; TODO: By default, despite the loop varying invariant.start, we should be
+;; despite the loop varying invariant.start, we should be
 ;; able to hoist the load
 define void @test2(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test2(
 ; CHECK-LABEL: entry:
+; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %piv)
-; CHECK: %val = load i32, i32* %ptr
 
 ; ALIAS-N2-LABEL: @test2(
 ; ALIAS-N2-LABEL: entry:
@@ -54,13 +54,12 @@ loop:
   br label %loop
 }
 
-; By default, should be able to hoist since store doesn't alias
 define void @test3(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test3(
 ; CHECK-LABEL: entry:
+; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; CHECK: %val = load i32, i32* %ptr
 
 ; ALIAS-N2-LABEL: @test3(
 ; ALIAS-N2-LABEL: entry:

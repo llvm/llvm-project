@@ -69,7 +69,7 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   /* Region   */ {MayAlias, NoAlias , NoAlias , NoAlias,  MayAlias, NoAlias},
   /* Private  */ {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias}
   };
-  static_assert(AMDGPUAS::MAX_COMMON_ADDRESS <= 6, "Addr space out of range");
+  assert(AS.MAX_COMMON_ADDRESS <= 5);
   if (AS.FLAT_ADDRESS == 0) {
     assert(AS.GLOBAL_ADDRESS   == 1 &&
            AS.REGION_ADDRESS   == 2 &&

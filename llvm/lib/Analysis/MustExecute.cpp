@@ -98,19 +98,13 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   return SimpleCst->isAllOnesValue();
 }
 
-
-bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
-                                             const BasicBlock *BB,
-                                             const DominatorTree *DT) const {
+void LoopSafetyInfo::collectTransitivePredecessors(
+    const Loop *CurLoop, const BasicBlock *BB,
+    SmallPtrSetImpl<const BasicBlock *> &Predecessors) const {
+  assert(Predecessors.empty() && "Garbage in predecessors set?");
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
-
-  // Fast path: header is always reached once the loop is entered.
   if (BB == CurLoop->getHeader())
-    return true;
-
-  // Collect all transitive predecessors of BB in the same loop. This set will
-  // be a subset of the blocks within the loop.
-  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+    return;
   SmallVector<const BasicBlock *, 4> WorkList;
   for (auto *Pred : predecessors(BB)) {
     Predecessors.insert(Pred);
@@ -132,6 +126,21 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
       if (Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
+}
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
+                                             const BasicBlock *BB,
+                                             const DominatorTree *DT) const {
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+
+  // Fast path: header is always reached once the loop is entered.
+  if (BB == CurLoop->getHeader())
+    return true;
+
+  // Collect all transitive predecessors of BB in the same loop. This set will
+  // be a subset of the blocks within the loop.
+  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+  collectTransitivePredecessors(CurLoop, BB, Predecessors);
 
   // Make sure that all successors of all predecessors of BB are either:
   // 1) BB,

@@ -3190,8 +3190,8 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {
-      NewMI.dropMemRefs(MF);
-      return;
+      NewMMOs.push_back(
+          MF.getMachineMemOperand(MMO, 0, MemoryLocation::UnknownSize));
     }
   }
   NewMI.setMemRefs(MF, NewMMOs);

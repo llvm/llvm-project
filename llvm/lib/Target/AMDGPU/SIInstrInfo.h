@@ -276,7 +276,7 @@ public:
                           unsigned TrueReg, unsigned FalseReg) const;
 
   unsigned getAddressSpaceForPseudoSourceKind(
-             PseudoSourceValue::PSVKind Kind) const override;
+             unsigned Kind) const override;
 
   bool
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,

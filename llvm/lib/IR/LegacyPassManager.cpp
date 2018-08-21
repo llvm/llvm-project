@@ -677,6 +677,8 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   // available at this point.
   const PassInfo *PI = findAnalysisPassInfo(P->getPassID());
   if (PI && PI->isAnalysis() && findAnalysisPass(P->getPassID())) {
+    // Remove any cached AnalysisUsage information.
+    AnUsageMap.erase(P);
     delete P;
     return;
   }

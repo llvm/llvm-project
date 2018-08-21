@@ -13470,6 +13470,12 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
     }
   }
   SDValue NewV1 = DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  // Ensure we didn't get back the shuffle we started with.
+  // FIXME: This is a hack to make up for some splat handling code in
+  // getVectorShuffle.
+  if (isa<ShuffleVectorSDNode>(NewV1) &&
+      cast<ShuffleVectorSDNode>(NewV1)->getMask() == Mask)
+    return SDValue();
 
   for (int Lane = 0; Lane != NumLanes; ++Lane) {
     int Src = LaneSrcs[Lane][1];
@@ -13481,6 +13487,12 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
     }
   }
   SDValue NewV2 = DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  // Ensure we didn't get back the shuffle we started with.
+  // FIXME: This is a hack to make up for some splat handling code in
+  // getVectorShuffle.
+  if (isa<ShuffleVectorSDNode>(NewV2) &&
+      cast<ShuffleVectorSDNode>(NewV2)->getMask() == Mask)
+    return SDValue();
 
   for (int i = 0; i != Size; ++i) {
     NewMask[i] = RepeatMask[i % LaneSize];
@@ -36795,34 +36807,20 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
 
-  auto IsRepeatedOpOrFreeTruncation = [VT](SDValue Op0, SDValue Op1) {
+  auto IsFreeTruncation = [VT](SDValue Op) {
     unsigned TruncSizeInBits = VT.getScalarSizeInBits();
 
-    // Repeated operand, so we are only trading one output truncation for
-    // one input truncation.
-    if (Op0 == Op1)
-      return true;
-
-    // See if either operand has been extended from a smaller/equal size to
+    // See if this has been extended from a smaller/equal size to
     // the truncation size, allowing a truncation to combine with the extend.
-    unsigned Opcode0 = Op0.getOpcode();
-    if ((Opcode0 == ISD::ANY_EXTEND || Opcode0 == ISD::SIGN_EXTEND ||
-         Opcode0 == ISD::ZERO_EXTEND) &&
-        Op0.getOperand(0).getScalarValueSizeInBits() <= TruncSizeInBits)
+    unsigned Opcode = Op.getOpcode();
+    if ((Opcode == ISD::ANY_EXTEND || Opcode == ISD::SIGN_EXTEND ||
+         Opcode == ISD::ZERO_EXTEND) &&
+        Op.getOperand(0).getScalarValueSizeInBits() <= TruncSizeInBits)
       return true;
 
-    unsigned Opcode1 = Op1.getOpcode();
-    if ((Opcode1 == ISD::ANY_EXTEND || Opcode1 == ISD::SIGN_EXTEND ||
-         Opcode1 == ISD::ZERO_EXTEND) &&
-        Op1.getOperand(0).getScalarValueSizeInBits() <= TruncSizeInBits)
-      return true;
-
-    // See if either operand is a single use constant which can be constant
-    // folded.
-    SDValue BC0 = peekThroughOneUseBitcasts(Op0);
-    SDValue BC1 = peekThroughOneUseBitcasts(Op1);
-    return ISD::isBuildVectorOfConstantSDNodes(BC0.getNode()) ||
-           ISD::isBuildVectorOfConstantSDNodes(BC1.getNode());
+    // See if this is a single use constant which can be constant folded.
+    SDValue BC = peekThroughOneUseBitcasts(Op);
+    return ISD::isBuildVectorOfConstantSDNodes(BC.getNode());
   };
 
   auto TruncateArithmetic = [&](SDValue N0, SDValue N1) {
@@ -36850,7 +36848,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
     if (TLI.isOperationLegalOrPromote(Opcode, VT) &&
-        IsRepeatedOpOrFreeTruncation(Op0, Op1))
+        (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
       return TruncateArithmetic(Op0, Op1);
     break;
   }
@@ -36863,11 +36861,20 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
       return TruncateArithmetic(Src.getOperand(0), Src.getOperand(1));
     LLVM_FALLTHROUGH;
   case ISD::ADD: {
-    // TODO: ISD::SUB should be here but interferes with combineSubToSubus.
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
     if (TLI.isOperationLegal(Opcode, VT) &&
-        IsRepeatedOpOrFreeTruncation(Op0, Op1))
+        (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
+      return TruncateArithmetic(Op0, Op1);
+    break;
+  }
+  case ISD::SUB: {
+    // TODO: ISD::SUB We are conservative and require both sides to be freely
+    // truncatable to avoid interfering with combineSubToSubus.
+    SDValue Op0 = Src.getOperand(0);
+    SDValue Op1 = Src.getOperand(1);
+    if (TLI.isOperationLegal(Opcode, VT) &&
+        (Op0 == Op1 || (IsFreeTruncation(Op0) && IsFreeTruncation(Op1))))
       return TruncateArithmetic(Op0, Op1);
     break;
   }

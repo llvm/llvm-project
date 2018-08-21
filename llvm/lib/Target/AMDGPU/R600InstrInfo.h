@@ -324,7 +324,7 @@ public:
   }
 
   unsigned getAddressSpaceForPseudoSourceKind(
-      PseudoSourceValue::PSVKind Kind) const override;
+      unsigned Kind) const override;
 };
 
 namespace R600 {

@@ -1063,7 +1063,7 @@ public:
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.
   virtual unsigned
-  getAddressSpaceForPseudoSourceKind(PseudoSourceValue::PSVKind Kind) const {
+  getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
     return 0;
   }
 

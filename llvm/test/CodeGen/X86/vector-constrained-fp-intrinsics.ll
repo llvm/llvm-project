@@ -111,7 +111,7 @@ entry:
 
 define <4 x double> @constrained_vector_fdiv_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v4f64:
-; NO-FMA:       # %bb.0:
+; NO-FMA:       # %bb.0: # %entry
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm2 = [1.000000e+01,1.000000e+01]
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.000000e+00,2.000000e+00]
 ; NO-FMA-NEXT:    divpd %xmm2, %xmm0
@@ -120,10 +120,11 @@ define <4 x double> @constrained_vector_fdiv_v4f64() {
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fdiv_v4f64:
-; HAS-FMA:       # %bb.0:
+; HAS-FMA:       # %bb.0: # %entry
 ; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm0 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
 ; HAS-FMA-NEXT:    vdivpd {{.*}}(%rip), %ymm0, %ymm0
 ; HAS-FMA-NEXT:    retq
+entry:
   %div = call <4 x double> @llvm.experimental.constrained.fdiv.v4f64(
            <4 x double> <double 1.000000e+00, double 2.000000e+00,
                          double 3.000000e+00, double 4.000000e+00>,
@@ -132,6 +133,261 @@ define <4 x double> @constrained_vector_fdiv_v4f64() {
            metadata !"round.dynamic",
            metadata !"fpexcept.strict")
   ret <4 x double> %div
+}
+
+define <1 x float> @constrained_vector_frem_v1f32() {
+; NO-FMA-LABEL: constrained_vector_frem_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmodf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_frem_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmodf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %rem = call <1 x float> @llvm.experimental.constrained.frem.v1f32(
+           <1 x float> <float 1.000000e+00>,
+           <1 x float> <float 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <1 x float> %rem
+}
+
+define <2 x double> @constrained_vector_frem_v2f64() {
+; NO-FMA-LABEL: constrained_vector_frem_v2f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_frem_v2f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 32
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    addq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %rem = call <2 x double> @llvm.experimental.constrained.frem.v2f64(
+           <2 x double> <double 1.000000e+00, double 2.000000e+00>,
+           <2 x double> <double 1.000000e+01, double 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <2 x double> %rem
+}
+
+define <3 x float> @constrained_vector_frem_v3f32() {
+; NO-FMA-LABEL: constrained_vector_frem_v3f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmodf
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmodf
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmodf
+; NO-FMA-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm1, %xmm0
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_frem_v3f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmodf
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmodf
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmodf
+; HAS-FMA-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; HAS-FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; HAS-FMA-NEXT:    vinsertps $32, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %rem = call <3 x float> @llvm.experimental.constrained.frem.v3f32(
+           <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>,
+           <3 x float> <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <3 x float> %rem
+}
+
+define <3 x double> @constrained_vector_frem_v3f64() {
+; NO-FMA-LABEL: constrained_vector_frem_v3f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 64
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    addq $56, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_frem_v3f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 64
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    vzeroupper
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; HAS-FMA-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; HAS-FMA-NEXT:    addq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %rem = call <3 x double> @llvm.experimental.constrained.frem.v3f64(
+           <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>,
+           <3 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <3 x double> %rem
+}
+
+define <4 x double> @constrained_vector_frem_v4f64() {
+; NO-FMA-LABEL: constrained_vector_frem_v4f64:
+; NO-FMA:       # %bb.0:
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmod
+; NO-FMA-NEXT:    movaps %xmm0, %xmm1
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_frem_v4f64:
+; HAS-FMA:       # %bb.0:
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmod
+; HAS-FMA-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+  %rem = call <4 x double> @llvm.experimental.constrained.frem.v4f64(
+           <4 x double> <double 1.000000e+00, double 2.000000e+00,
+                         double 3.000000e+00, double 4.000000e+00>,
+           <4 x double> <double 1.000000e+01, double 1.000000e+01,
+                         double 1.000000e+01, double 1.000000e+01>,
+           metadata !"round.dynamic",
+           metadata !"fpexcept.strict")
+  ret <4 x double> %rem
 }
 
 define <1 x float> @constrained_vector_fmul_v1f32() {
@@ -3413,10 +3669,11 @@ entry:
 }
 
 ; Single width declarations
-declare <2 x double> @llvm.experimental.constrained.fdiv.v2f64(<2 x double>, <2 x double>, metadata, metadata)
-declare <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fsub.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.fmul.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.fdiv.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.frem.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double>, metadata, metadata)
@@ -3433,10 +3690,11 @@ declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, met
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
 
 ; Scalar width declarations
-declare <1 x float> @llvm.experimental.constrained.fdiv.v1f32(<1 x float>, <1 x float>, metadata, metadata)
-declare <1 x float> @llvm.experimental.constrained.fmul.v1f32(<1 x float>, <1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float>, <1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.fsub.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fmul.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.fdiv.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.frem.v1f32(<1 x float>, <1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.fma.v1f32(<1 x float>, <1 x float>, <1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.sqrt.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.pow.v1f32(<1 x float>, <1 x float>, metadata, metadata)
@@ -3452,14 +3710,16 @@ declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metad
 declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
 
 ; Illegal width declarations
-declare <3 x float> @llvm.experimental.constrained.fdiv.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.fdiv.v3f64(<3 x double>, <3 x double>, metadata, metadata)
-declare <3 x float> @llvm.experimental.constrained.fmul.v3f32(<3 x float>, <3 x float>, metadata, metadata)
-declare <3 x double> @llvm.experimental.constrained.fmul.v3f64(<3 x double>, <3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fadd.v3f64(<3 x double>, <3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.fsub.v3f32(<3 x float>, <3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fsub.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fmul.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.fmul.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fdiv.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.fdiv.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.frem.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.frem.v3f64(<3 x double>, <3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.fma.v3f32(<3 x float>, <3 x float>, <3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fma.v3f64(<3 x double>, <3 x double>, <3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.sqrt.v3f32(<3 x float>, metadata, metadata)
@@ -3488,10 +3748,11 @@ declare <3 x float> @llvm.experimental.constrained.nearbyint.v3f32(<3 x float>, 
 declare <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(<3 x double>, metadata, metadata)
 
 ; Double width declarations
-declare <4 x double> @llvm.experimental.constrained.fdiv.v4f64(<4 x double>, <4 x double>, metadata, metadata)
-declare <4 x double> @llvm.experimental.constrained.fmul.v4f64(<4 x double>, <4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fadd.v4f64(<4 x double>, <4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fsub.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.fmul.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.fdiv.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.frem.v4f64(<4 x double>, <4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double>, <4 x double>, <4 x double>, metadata, metadata)
 declare <8 x float> @llvm.experimental.constrained.fma.v8f32(<8 x float>, <8 x float>, <8 x float>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.sqrt.v4f64(<4 x double>, metadata, metadata)

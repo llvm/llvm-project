@@ -505,7 +505,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   // Removes:
   if (!Config.ToRemove.empty()) {
     RemovePred = [&Config](const SectionBase &Sec) {
-      return find(Config.ToRemove, Sec.Name) != Config.ToRemove.end();
+      return is_contained(Config.ToRemove, Sec.Name);
     };
   }
 
@@ -573,7 +573,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.OnlyKeep.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (find(Config.OnlyKeep, Sec.Name) != Config.OnlyKeep.end())
+      if (is_contained(Config.OnlyKeep, Sec.Name))
         return false;
 
       // Allow all implicit removes.
@@ -595,7 +595,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.Keep.empty()) {
     RemovePred = [Config, RemovePred](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (find(Config.Keep, Sec.Name) != Config.Keep.end())
+      if (is_contained(Config.Keep, Sec.Name))
         return false;
       // Otherwise defer to RemovePred.
       return RemovePred(Sec);
@@ -930,12 +930,12 @@ static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-strip <input> [ <output> ]", "strip tool");
+    T.PrintHelp(errs(), "llvm-strip", "strip tool");
     exit(1);
   }
 
   if (InputArgs.hasArg(STRIP_help)) {
-    T.PrintHelp(outs(), "llvm-strip <input> [ <output> ]", "strip tool");
+    T.PrintHelp(outs(), "llvm-strip", "strip tool");
     exit(0);
   }
 
@@ -948,7 +948,7 @@ static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   if (Positional.empty())
     error("No input file specified");
 
-  if (Positional.size() > 2)
+  if (Positional.size() > 1)
     error("Support for multiple input files is not implemented yet");
 
   CopyConfig Config;

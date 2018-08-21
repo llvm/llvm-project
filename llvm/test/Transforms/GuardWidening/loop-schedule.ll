@@ -41,8 +41,8 @@ define void @within_loop(i32 %a, i32 %b, i1* %c_p) {
 ; CHECK:  %cond_0 = icmp ult i32 %a, 10
 ; CHECK:  %cond_1 = icmp ult i32 %b, 10
 ; CHECK:  %wide.chk = and i1 %cond_0, %cond_1
-; CHECK-LABEL: loop:
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %wide.chk) [ "deopt"() ]
+; CHECK-LABEL: loop:
 
 entry:
   br label %loop

@@ -1179,10 +1179,13 @@ bool MachineInstr::mayAlias(AliasAnalysis *AA, MachineInstr &Other,
 
   int64_t OffsetA = MMOa->getOffset();
   int64_t OffsetB = MMOb->getOffset();
-
   int64_t MinOffset = std::min(OffsetA, OffsetB);
-  int64_t WidthA = MMOa->getSize();
-  int64_t WidthB = MMOb->getSize();
+
+  uint64_t WidthA = MMOa->getSize();
+  uint64_t WidthB = MMOb->getSize();
+  bool KnownWidthA = WidthA != MemoryLocation::UnknownSize;
+  bool KnownWidthB = WidthB != MemoryLocation::UnknownSize;
+
   const Value *ValA = MMOa->getValue();
   const Value *ValB = MMOb->getValue();
   bool SameVal = (ValA && ValB && (ValA == ValB));
@@ -1198,6 +1201,8 @@ bool MachineInstr::mayAlias(AliasAnalysis *AA, MachineInstr &Other,
   }
 
   if (SameVal) {
+    if (!KnownWidthA || !KnownWidthB)
+      return true;
     int64_t MaxOffset = std::max(OffsetA, OffsetB);
     int64_t LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
     return (MinOffset + LowWidth > MaxOffset);
@@ -1212,13 +1217,15 @@ bool MachineInstr::mayAlias(AliasAnalysis *AA, MachineInstr &Other,
   assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
   assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
 
-  int64_t Overlapa = WidthA + OffsetA - MinOffset;
-  int64_t Overlapb = WidthB + OffsetB - MinOffset;
+  int64_t OverlapA = KnownWidthA ? WidthA + OffsetA - MinOffset
+                                 : MemoryLocation::UnknownSize;
+  int64_t OverlapB = KnownWidthB ? WidthB + OffsetB - MinOffset
+                                 : MemoryLocation::UnknownSize;
 
   AliasResult AAResult = AA->alias(
-      MemoryLocation(ValA, Overlapa,
+      MemoryLocation(ValA, OverlapA,
                      UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
-      MemoryLocation(ValB, Overlapb,
+      MemoryLocation(ValB, OverlapB,
                      UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 
   return (AAResult != NoAlias);
