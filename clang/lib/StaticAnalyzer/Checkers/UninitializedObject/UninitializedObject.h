@@ -32,10 +32,10 @@ class FieldNode {
 protected:
   const FieldRegion *FR;
 
-  ~FieldNode() = default;
+  /* non-virtual */ ~FieldNode() = default;
 
 public:
-  FieldNode(const FieldRegion *FR) : FR(FR) { assert(FR); }
+  FieldNode(const FieldRegion *FR) : FR(FR) {}
 
   FieldNode() = delete;
   FieldNode(const FieldNode &) = delete;
@@ -47,11 +47,21 @@ public:
   /// FoldingSet.
   void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddPointer(this); }
 
-  bool operator<(const FieldNode &Other) const { return FR < Other.FR; }
-  bool isSameRegion(const FieldRegion *OtherFR) const { return FR == OtherFR; }
+  // Helper method for uniqueing.
+  bool isSameRegion(const FieldRegion *OtherFR) const {
+    // Special FieldNode descendants may wrap nullpointers -- we wouldn't like
+    // to unique these objects.
+    if (FR == nullptr)
+      return false;
+
+    return FR == OtherFR;
+  }
 
   const FieldRegion *getRegion() const { return FR; }
-  const FieldDecl *getDecl() const { return FR->getDecl(); }
+  const FieldDecl *getDecl() const {
+    assert(FR);
+    return FR->getDecl();
+  }
 
   // When a fieldchain is printed (a list of FieldNode objects), it will have
   // the following format:
@@ -71,6 +81,8 @@ public:
   /// Print the separator. For example, fields may be separated with '.' or
   /// "->".
   virtual void printSeparator(llvm::raw_ostream &Out) const = 0;
+
+  virtual bool isBase() const { return false; }
 };
 
 /// Returns with Field's name. This is a helper function to get the correct name
@@ -94,15 +106,24 @@ private:
   FieldChain::Factory &ChainFactory;
   FieldChain Chain;
 
+  FieldChainInfo(FieldChain::Factory &F, FieldChain NewChain)
+      : FieldChainInfo(F) {
+    Chain = NewChain;
+  }
+
 public:
   FieldChainInfo() = delete;
   FieldChainInfo(FieldChain::Factory &F) : ChainFactory(F) {}
   FieldChainInfo(const FieldChainInfo &Other) = default;
 
   template <class FieldNodeT> FieldChainInfo add(const FieldNodeT &FN);
+  template <class FieldNodeT> FieldChainInfo replaceHead(const FieldNodeT &FN);
 
   bool contains(const FieldRegion *FR) const;
+  bool isEmpty() const { return Chain.isEmpty(); }
+
   const FieldRegion *getUninitRegion() const;
+  const FieldNode &getHead() { return Chain.getHead(); }
   void printNoteMsg(llvm::raw_ostream &Out) const;
 };
 
@@ -248,6 +269,12 @@ inline FieldChainInfo FieldChainInfo::add(const FieldNodeT &FN) {
   FieldChainInfo NewChain = *this;
   NewChain.Chain = ChainFactory.add(FN, Chain);
   return NewChain;
+}
+
+template <class FieldNodeT>
+inline FieldChainInfo FieldChainInfo::replaceHead(const FieldNodeT &FN) {
+  FieldChainInfo NewChain(ChainFactory, Chain.getTail());
+  return NewChain.add(FN);
 }
 
 } // end of namespace ento
