@@ -457,8 +457,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
                 "  This violates the naming convention rules"
                 " given in the Memory Management Guide for Cocoa";
         }
-      }
-      else {
+      } else {
         const FunctionDecl *FD = cast<FunctionDecl>(D);
         os << "whose name ('" << *FD
            << "') does not contain 'Copy' or 'Create'.  This violates the naming"

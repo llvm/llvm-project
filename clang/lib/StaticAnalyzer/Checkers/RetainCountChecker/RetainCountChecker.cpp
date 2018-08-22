@@ -409,8 +409,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   }
 
   // Evaluate the effect on the message receiver.
-  const ObjCMethodCall *MsgInvocation = dyn_cast<ObjCMethodCall>(&CallOrMsg);
-  if (MsgInvocation) {
+  if (const auto *MsgInvocation = dyn_cast<ObjCMethodCall>(&CallOrMsg)) {
     if (SymbolRef Sym = MsgInvocation->getReceiverSVal().getAsLocSymbol()) {
       if (Summ.getReceiverEffect() == StopTrackingHard) {
         state = removeRefBinding(state, Sym);
@@ -987,7 +986,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   //     does not understand.
   ProgramStateRef state = C.getState();
 
-  if (Optional<loc::MemRegionVal> regionLoc = loc.getAs<loc::MemRegionVal>()) {
+  if (auto regionLoc = loc.getAs<loc::MemRegionVal>()) {
     escapes = !regionLoc->getRegion()->hasStackStorage();
 
     if (!escapes) {
@@ -1011,7 +1010,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   // If we are storing the value into an auto function scope variable annotated
   // with (__attribute__((cleanup))), stop tracking the value to avoid leak
   // false positives.
-  if (const VarRegion *LVR = dyn_cast_or_null<VarRegion>(loc.getAsRegion())) {
+  if (const auto *LVR = dyn_cast_or_null<VarRegion>(loc.getAsRegion())) {
     const VarDecl *VD = LVR->getDecl();
     if (VD->hasAttr<CleanupAttr>()) {
       escapes = true;
@@ -1031,8 +1030,8 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 }
 
 ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
-                                                   SVal Cond,
-                                                   bool Assumption) const {
+                                               SVal Cond,
+                                               bool Assumption) const {
   // FIXME: We may add to the interface of evalAssume the list of symbols
   //  whose assumptions have changed.  For now we just iterate through the
   //  bindings and check if any of the tracked symbols are NULL.  This isn't
@@ -1253,7 +1252,8 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
     if (AE && *AE == DecRef && isISLObjectRef(Ty)) {
-      state = setRefBinding(state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
+      state = setRefBinding(
+          state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
     } else if (isISLObjectRef(Ty)) {
       state = setRefBinding(
           state, Sym,
