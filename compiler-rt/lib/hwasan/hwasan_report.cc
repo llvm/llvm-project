@@ -37,6 +37,7 @@ static StackTrace GetStackTraceFromId(u32 id) {
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() { }
+  const char *Access() { return Blue(); }
   const char *Allocation() const { return Magenta(); }
   const char *Origin() const { return Magenta(); }
   const char *Name() const { return Green(); }
@@ -113,21 +114,46 @@ void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
   ScopedErrorReportLock l;
 
   Decorator d;
-  Printf("%s", d.Warning());
+  Printf("%s", d.Error());
   uptr address = GetAddressFromPointer(addr);
-  Printf("%s of size %zu at %p\n", is_store ? "WRITE" : "READ", access_size,
-         address);
+  // TODO: when possible, try to print heap-use-after-free, etc.
+  const char *bug_type = "tag-mismatch";
+  uptr pc = stack->size ? stack->trace[0] : 0;
+  Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type, address, pc);
 
   tag_t ptr_tag = GetTagFromPointer(addr);
-  tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(address);
-  Printf("pointer tag 0x%x\nmemory tag  0x%x\n", ptr_tag, mem_tag);
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
+  tag_t mem_tag = *tag_ptr;
+  Printf("%s", d.Access());
+  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem)\n",
+         is_store ? "WRITE" : "READ", access_size, address, ptr_tag, mem_tag);
   Printf("%s", d.Default());
 
   stack->Print();
 
   PrintAddressDescription(address, access_size);
 
-  ReportErrorSummary("tag-mismatch", stack);
+  Printf(
+      "Memory tags around the buggy address (one tag corresponds to %zd "
+      "bytes):\n", kShadowAlignment);
+
+  const uptr row_len = 16;  // better be power of two.
+  const uptr num_rows = 11;
+  tag_t *center_row_beg = reinterpret_cast<tag_t *>(
+      RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
+  tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
+  tag_t *end_row = center_row_beg + row_len * (num_rows / 2);
+  for (tag_t *row = beg_row; row < end_row; row += row_len) {
+    Printf("%s", row == center_row_beg ? "=>" : "  ");
+    for (uptr i = 0; i < row_len; i++) {
+      Printf("%s", row + i == tag_ptr ? "[" : " ");
+      Printf("%02x", row[i]);
+      Printf("%s", row + i == tag_ptr ? "]" : " ");
+    }
+    Printf("%s\n", row == center_row_beg ? "<=" : "  ");
+  }
+
+  ReportErrorSummary(bug_type, stack);
 }
 
 }  // namespace __hwasan
