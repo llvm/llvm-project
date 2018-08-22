@@ -2181,11 +2181,11 @@ SDValue SITargetLowering::LowerCallResult(
 // from the explicit user arguments present in the IR.
 void SITargetLowering::passSpecialInputs(
     CallLoweringInfo &CLI,
+    CCState &CCInfo,
     const SIMachineFunctionInfo &Info,
     SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains,
-    SDValue Chain,
-    SDValue StackPtr) const {
+    SDValue Chain) const {
   // If we don't have a call site, this was a call inserted by
   // legalization. These can never use special inputs.
   if (!CLI.CS)
@@ -2253,9 +2253,9 @@ void SITargetLowering::passSpecialInputs(
     if (OutgoingArg->isRegister()) {
       RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
     } else {
-      SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, StackPtr,
-                                              InputReg,
-                                              OutgoingArg->getStackOffset());
+      unsigned SpecialArgOffset = CCInfo.AllocateStack(ArgVT.getStoreSize(), 4);
+      SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
+                                              SpecialArgOffset);
       MemOpChains.push_back(ArgStore);
     }
   }
@@ -2401,8 +2401,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // The first 4 bytes are reserved for the callee's emergency stack slot.
-  const unsigned CalleeUsableStackOffset = 4;
-
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
       Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
@@ -2441,6 +2439,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
+
+  // The first 4 bytes are reserved for the callee's emergency stack slot.
+  CCInfo.AllocateStack(4, 4);
+
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -2488,10 +2490,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  // Stack pointer relative accesses are done by changing the offset SGPR. This
-  // is just the VGPR offset component.
-  SDValue StackPtr = DAG.getConstant(CalleeUsableStackOffset, DL, MVT::i32);
-
   SmallVector<SDValue, 8> MemOpChains;
   MVT PtrVT = MVT::i32;
 
@@ -2535,7 +2533,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset;
 
-      SDValue PtrOff = DAG.getObjectPtrOffset(DL, StackPtr, Offset);
+      SDValue PtrOff = DAG.getConstant(Offset, DL, PtrVT);
 
       if (IsTailCall) {
         ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
@@ -2545,8 +2543,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         Offset = Offset + FPDiff;
         int FI = MFI.CreateFixedObject(OpSize, Offset, true);
 
-        DstAddr = DAG.getObjectPtrOffset(DL, DAG.getFrameIndex(FI, PtrVT),
-                                         StackPtr);
+        DstAddr = DAG.getFrameIndex(FI, PtrVT);
         DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
         // Make sure any stack arguments overlapping with where we're storing
@@ -2581,7 +2578,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Copy special input registers after user input arguments.
-  passSpecialInputs(CLI, *Info, RegsToPass, MemOpChains, Chain, StackPtr);
+  passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
 
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);

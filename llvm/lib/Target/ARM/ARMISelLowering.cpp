@@ -9207,6 +9207,8 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   // IP.
 
   switch (TM.getCodeModel()) {
+  case CodeModel::Tiny:
+    llvm_unreachable("Tiny code model not available on ARM.");
   case CodeModel::Small:
   case CodeModel::Medium:
   case CodeModel::Kernel:

@@ -46,6 +46,8 @@ public:
     return *Index;
   }
 
+  float consume(DocID ID) override { return DEFAULT_BOOST_SCORE; }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << '[';
@@ -102,6 +104,19 @@ public:
   }
 
   DocID peek() const override { return Children.front()->peek(); }
+
+  // If not exhausted and points to the given item, consume() returns the
+  // product of Children->consume(ID). Otherwise, DEFAULT_BOOST_SCORE is
+  // returned.
+  float consume(DocID ID) override {
+    if (reachedEnd() || peek() != ID)
+      return DEFAULT_BOOST_SCORE;
+    return std::accumulate(
+        begin(Children), end(Children), DEFAULT_BOOST_SCORE,
+        [&](float Current, const std::unique_ptr<Iterator> &Child) {
+          return Current * Child->consume(ID);
+        });
+  }
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
@@ -209,6 +224,20 @@ public:
     return Result;
   }
 
+  // Returns the maximum boosting score among all Children when iterator is not
+  // exhausted and points to the given ID, DEFAULT_BOOST_SCORE otherwise.
+  float consume(DocID ID) override {
+    if (reachedEnd() || peek() != ID)
+      return DEFAULT_BOOST_SCORE;
+    return std::accumulate(
+        begin(Children), end(Children), DEFAULT_BOOST_SCORE,
+        [&](float Current, const std::unique_ptr<Iterator> &Child) {
+          return (!Child->reachedEnd() && Child->peek() == ID)
+                     ? std::max(Current, Child->consume(ID))
+                     : Current;
+        });
+  }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
@@ -249,6 +278,8 @@ public:
     return Index;
   }
 
+  float consume(DocID) override { return DEFAULT_BOOST_SCORE; }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(TRUE {" << Index << "} out of " << Size << ")";
@@ -260,13 +291,42 @@ private:
   DocID Size;
 };
 
+/// Boost iterator is a wrapper around its child which multiplies scores of
+/// each retrieved item by a given factor.
+class BoostIterator : public Iterator {
+public:
+  BoostIterator(std::unique_ptr<Iterator> Child, float Factor)
+      : Child(move(Child)), Factor(Factor) {}
+
+  bool reachedEnd() const override { return Child->reachedEnd(); }
+
+  void advance() override { Child->advance(); }
+
+  void advanceTo(DocID ID) override { Child->advanceTo(ID); }
+
+  DocID peek() const override { return Child->peek(); }
+
+  float consume(DocID ID) override { return Child->consume(ID) * Factor; }
+
+private:
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+    OS << "(BOOST " << Factor << ' ' << *Child << ')';
+    return OS;
+  }
+
+  std::unique_ptr<Iterator> Child;
+  float Factor;
+};
+
 } // end namespace
 
-std::vector<DocID> consume(Iterator &It, size_t Limit) {
-  std::vector<DocID> Result;
+std::vector<std::pair<DocID, float>> consume(Iterator &It, size_t Limit) {
+  std::vector<std::pair<DocID, float>> Result;
   for (size_t Retrieved = 0; !It.reachedEnd() && Retrieved < Limit;
-       It.advance(), ++Retrieved)
-    Result.push_back(It.peek());
+       It.advance(), ++Retrieved) {
+    DocID Document = It.peek();
+    Result.push_back(std::make_pair(Document, It.consume(Document)));
+  }
   return Result;
 }
 
@@ -286,6 +346,11 @@ createOr(std::vector<std::unique_ptr<Iterator>> Children) {
 
 std::unique_ptr<Iterator> createTrue(DocID Size) {
   return llvm::make_unique<TrueIterator>(Size);
+}
+
+std::unique_ptr<Iterator> createBoost(std::unique_ptr<Iterator> Child,
+                                      float Factor) {
+  return llvm::make_unique<BoostIterator>(move(Child), Factor);
 }
 
 } // namespace dex

@@ -77,6 +77,8 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
     if (isTargetELF()) {
       switch (TM.getCodeModel()) {
       // 64-bit small code model is simple: All rip-relative.
+      case CodeModel::Tiny:
+        llvm_unreachable("Tiny codesize model not supported on X86");
       case CodeModel::Small:
       case CodeModel::Kernel:
         return X86II::MO_NO_FLAG;

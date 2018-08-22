@@ -62,8 +62,10 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_TLSDESC_LO12:        return ":tlsdesc_lo12:";
   case VK_ABS_PAGE:            return "";
   case VK_ABS_PAGE_NC:         return ":pg_hi21_nc:";
+  case VK_GOT:                 return ":got:";
   case VK_GOT_PAGE:            return ":got:";
   case VK_GOT_LO12:            return ":got_lo12:";
+  case VK_GOTTPREL:            return ":gottprel:";
   case VK_GOTTPREL_PAGE:       return ":gottprel:";
   case VK_GOTTPREL_LO12_NC:    return ":gottprel_lo12:";
   case VK_GOTTPREL_G1:         return ":gottprel_g1:";

@@ -137,6 +137,11 @@ public:
     return {NameData, NameSize};
   }
 
+  void setName(StringRef S) {
+    NameData = S.data();
+    NameSize = S.size();
+  }
+
   void parseSymbolVersion();
 
   bool isInGot() const { return GotIndex != -1U; }

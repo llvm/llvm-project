@@ -65,8 +65,38 @@ public:
 
   Optional<Expected<tooling::AtomicChanges>> Result;
 };
-
 } // namespace
+
+/// Manages dynamic index for open files. Each file might contribute two sets
+/// of symbols to the dynamic index: symbols from the preamble and symbols
+/// from the file itself. Those have different lifetimes and we merge results
+/// from both
+class ClangdServer::DynamicIndex : public ParsingCallbacks {
+public:
+  DynamicIndex(std::vector<std::string> URISchemes)
+      : PreambleIdx(URISchemes), MainFileIdx(URISchemes),
+        MergedIndex(mergeIndex(&MainFileIdx, &PreambleIdx)) {}
+
+  SymbolIndex &index() const { return *MergedIndex; }
+
+  void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                     std::shared_ptr<clang::Preprocessor> PP) override {
+    PreambleIdx.update(Path, &Ctx, PP, /*TopLevelDecls=*/llvm::None);
+  }
+
+  void onMainAST(PathRef Path, ParsedAST &AST) override {
+
+    MainFileIdx.update(Path, &AST.getASTContext(), AST.getPreprocessorPtr(),
+                       AST.getLocalTopLevelDecls());
+  }
+
+private:
+  FileIndex PreambleIdx;
+  FileIndex MainFileIdx;
+  /// Merged view into both indexes. Merges are performed in a similar manner
+  /// to the merges of dynamic and static index.
+  std::unique_ptr<SymbolIndex> MergedIndex;
+};
 
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
@@ -83,32 +113,32 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
                                    : getStandardResourceDir()),
-      FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex(Opts.URISchemes)
-                                           : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new DynamicIndex(Opts.URISchemes)
+                     : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(
-          Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-          FileIdx
-              ? [this](PathRef Path, ASTContext &AST,
-                       std::shared_ptr<Preprocessor>
-                           PP) { FileIdx->update(Path, &AST, std::move(PP)); }
-              : PreambleParsedCallback(),
-          Opts.UpdateDebounce, Opts.RetentionPolicy) {
-  if (FileIdx && Opts.StaticIndex) {
-    MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
+      WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
+                    DynamicIdx ? *DynamicIdx : noopParsingCallbacks(),
+                    Opts.UpdateDebounce, Opts.RetentionPolicy) {
+  if (DynamicIdx && Opts.StaticIndex) {
+    MergedIndex = mergeIndex(&DynamicIdx->index(), Opts.StaticIndex);
     Index = MergedIndex.get();
-  } else if (FileIdx)
-    Index = FileIdx.get();
+  } else if (DynamicIdx)
+    Index = &DynamicIdx->index();
   else if (Opts.StaticIndex)
     Index = Opts.StaticIndex;
   else
     Index = nullptr;
 }
+
+// Destructor has to be in .cpp file to see the definition of
+// ClangdServer::DynamicIndex.
+ClangdServer::~ClangdServer() = default;
 
 void ClangdServer::setRootPath(PathRef RootPath) {
   auto FS = FSProvider.getFileSystem();

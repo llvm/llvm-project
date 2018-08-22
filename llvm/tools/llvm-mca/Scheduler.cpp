@@ -22,6 +22,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "llvm-mca"
 
+ResourceState::ResourceState(const llvm::MCProcResourceDesc &Desc,
+                             unsigned Index, uint64_t Mask)
+    : ProcResourceDescIndex(Index), ResourceMask(Mask) {
+  if (llvm::countPopulation(ResourceMask) > 1)
+    ResourceSizeMask = ResourceMask ^ llvm::PowerOf2Floor(ResourceMask);
+  else
+    ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
+  NextInSequenceMask = ResourceSizeMask;
+  RemovedFromNextInSequence = 0;
+  ReadyMask = ResourceSizeMask;
+  BufferSize = Desc.BufferSize;
+  AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
+  Unavailable = false;
+}
+
+bool ResourceState::isReady(unsigned NumUnits) const {
+  return (!isReserved() || isADispatchHazard()) &&
+         llvm::countPopulation(ReadyMask) >= NumUnits;
+}
+
+ResourceStateEvent ResourceState::isBufferAvailable() const {
+  if (isADispatchHazard() && isReserved())
+    return RS_RESERVED;
+  if (!isBuffered() || AvailableSlots)
+    return RS_BUFFER_AVAILABLE;
+  return RS_BUFFER_UNAVAILABLE;
+}
+
 uint64_t ResourceState::selectNextInSequence() {
   assert(isReady());
   uint64_t Next = getNextInSequence();
@@ -308,8 +336,7 @@ void Scheduler::issueInstructionImpl(
 
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
-    InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
+    InstRef &IR, SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
     SmallVectorImpl<InstRef> &ReadyInstructions) {
   const Instruction &Inst = *IR.getInstruction();
   bool HasDependentUsers = Inst.hasDependentUsers();

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
-#include "SymbolCollector.h"
 #include "../Logger.h"
+#include "SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Preprocessor.h"
 
@@ -17,6 +17,7 @@ namespace clang {
 namespace clangd {
 
 SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                    llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls,
                     llvm::ArrayRef<std::string> URISchemes) {
   SymbolCollector::Options CollectorOpts;
   // FIXME(ioeric): we might also want to collect include headers. We would need
@@ -38,10 +39,14 @@ SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
   IndexOpts.IndexFunctionLocals = false;
 
-  std::vector<const Decl *> TopLevelDecls(
-      AST.getTranslationUnitDecl()->decls().begin(),
-      AST.getTranslationUnitDecl()->decls().end());
-  index::indexTopLevelDecls(AST, TopLevelDecls, Collector, IndexOpts);
+  std::vector<Decl *> DeclsToIndex;
+  if (TopLevelDecls)
+    DeclsToIndex.assign(TopLevelDecls->begin(), TopLevelDecls->end());
+  else
+    DeclsToIndex.assign(AST.getTranslationUnitDecl()->decls().begin(),
+                        AST.getTranslationUnitDecl()->decls().end());
+
+  index::indexTopLevelDecls(AST, DeclsToIndex, Collector, IndexOpts);
 
   return Collector.takeSymbols();
 }
@@ -81,13 +86,14 @@ std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
 }
 
 void FileIndex::update(PathRef Path, ASTContext *AST,
-                       std::shared_ptr<Preprocessor> PP) {
+                       std::shared_ptr<Preprocessor> PP,
+                       llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls) {
   if (!AST) {
     FSymbols.update(Path, nullptr);
   } else {
     assert(PP);
     auto Slab = llvm::make_unique<SymbolSlab>();
-    *Slab = indexAST(*AST, PP, URISchemes);
+    *Slab = indexAST(*AST, PP, TopLevelDecls, URISchemes);
     FSymbols.update(Path, std::move(Slab));
   }
   auto Symbols = FSymbols.allSymbols();

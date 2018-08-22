@@ -426,8 +426,8 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   // new main file.
   if (PreambleBytes.size() != Bounds.Size ||
       PreambleEndsAtStartOfLine != Bounds.PreambleEndsAtStartOfLine ||
-      memcmp(PreambleBytes.data(), MainFileBuffer->getBufferStart(),
-             Bounds.Size) != 0)
+      !std::equal(PreambleBytes.begin(), PreambleBytes.end(),
+                  MainFileBuffer->getBuffer().begin()))
     return false;
   // The preamble has not changed. We may be able to re-use the precompiled
   // preamble.

@@ -2890,6 +2890,22 @@ Decl *ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
       if (Importer.IsStructurallyEquivalent(D->getType(),
                                             FoundField->getType())) {
         Importer.MapImported(D, FoundField);
+        // In case of a FieldDecl of a ClassTemplateSpecializationDecl, the
+        // initializer of a FieldDecl might not had been instantiated in the
+        // "To" context.  However, the "From" context might instantiated that,
+        // thus we have to merge that.
+        if (Expr *FromInitializer = D->getInClassInitializer()) {
+          // We don't have yet the initializer set.
+          if (FoundField->hasInClassInitializer() &&
+              !FoundField->getInClassInitializer()) {
+            Expr *ToInitializer = Importer.Import(FromInitializer);
+            if (!ToInitializer)
+              // We can't return a nullptr here,
+              // since we already mapped D as imported.
+              return FoundField;
+            FoundField->setInClassInitializer(ToInitializer);
+          }
+        }
         return FoundField;
       }
 
@@ -4544,27 +4560,50 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
   // Try to find an existing specialization with these template arguments.
   void *InsertPos = nullptr;
-  ClassTemplateSpecializationDecl *D2
-    = ClassTemplate->findSpecialization(TemplateArgs, InsertPos);
-  if (D2) {
-    // We already have a class template specialization with these template
-    // arguments.
-
-    // FIXME: Check for specialization vs. instantiation errors.
-
-    if (RecordDecl *FoundDef = D2->getDefinition()) {
-      if (!D->isCompleteDefinition() || IsStructuralMatch(D, FoundDef)) {
-        // The record types structurally match, or the "from" translation
-        // unit only had a forward declaration anyway; call it the same
-        // function.
-        return Importer.MapImported(D, FoundDef);
-      }
+  ClassTemplateSpecializationDecl *D2 = nullptr;
+  ClassTemplatePartialSpecializationDecl *PartialSpec =
+            dyn_cast<ClassTemplatePartialSpecializationDecl>(D);
+  if (PartialSpec)
+    D2 = ClassTemplate->findPartialSpecialization(TemplateArgs, InsertPos);
+  else
+    D2 = ClassTemplate->findSpecialization(TemplateArgs, InsertPos);
+  ClassTemplateSpecializationDecl * const PrevDecl = D2;
+  RecordDecl *FoundDef = D2 ? D2->getDefinition() : nullptr;
+  if (FoundDef) {
+    if (!D->isCompleteDefinition()) {
+      // The "From" translation unit only had a forward declaration; call it
+      // the same declaration.
+      // TODO Handle the redecl chain properly!
+      return Importer.MapImported(D, FoundDef);
     }
-  } else {
-    // Create a new specialization.
-    if (auto *PartialSpec =
-            dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
-      // Import TemplateArgumentListInfo
+
+    if (IsStructuralMatch(D, FoundDef)) {
+
+      Importer.MapImported(D, FoundDef);
+
+      // Import those those default field initializers which have been
+      // instantiated in the "From" context, but not in the "To" context.
+      for (auto *FromField : D->fields())
+        Importer.Import(FromField);
+
+      // Import those methods which have been instantiated in the
+      // "From" context, but not in the "To" context.
+      for (CXXMethodDecl *FromM : D->methods())
+        Importer.Import(FromM);
+
+      // TODO Import instantiated default arguments.
+      // TODO Import instantiated exception specifications.
+      //
+      // Generally, ASTCommon.h/DeclUpdateKind enum gives a very good hint what
+      // else could be fused during an AST merge.
+
+      return FoundDef;
+    }
+  } else { // We either couldn't find any previous specialization in the "To"
+           // context,  or we found one but without definition.  Let's create a
+           // new specialization and register that at the class template.
+    if (PartialSpec) {
+      // Import TemplateArgumentListInfo.
       TemplateArgumentListInfo ToTAInfo;
       const auto &ASTTemplateArgs = *PartialSpec->getTemplateArgsAsWritten();
       if (ImportTemplateArgumentListInfo(ASTTemplateArgs, ToTAInfo))
@@ -4585,20 +4624,31 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
               D2, D, Importer.getToContext(), D->getTagKind(), DC, StartLoc,
               IdLoc, ToTPList, ClassTemplate,
               llvm::makeArrayRef(TemplateArgs.data(), TemplateArgs.size()),
-              ToTAInfo, CanonInjType, nullptr))
+              ToTAInfo, CanonInjType,
+              cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
         return D2;
 
-    } else {
+      // Update InsertPos, because preceding import calls may have invalidated
+      // it by adding new specializations.
+      if (!ClassTemplate->findPartialSpecialization(TemplateArgs, InsertPos))
+        // Add this partial specialization to the class template.
+        ClassTemplate->AddPartialSpecialization(
+            cast<ClassTemplatePartialSpecializationDecl>(D2), InsertPos);
+
+    } else { // Not a partial specialization.
       if (GetImportedOrCreateDecl(
               D2, D, Importer.getToContext(), D->getTagKind(), DC, StartLoc,
-              IdLoc, ClassTemplate, TemplateArgs, /*PrevDecl=*/nullptr))
+              IdLoc, ClassTemplate, TemplateArgs, PrevDecl))
         return D2;
+
+      // Update InsertPos, because preceding import calls may have invalidated
+      // it by adding new specializations.
+      if (!ClassTemplate->findSpecialization(TemplateArgs, InsertPos))
+        // Add this specialization to the class template.
+        ClassTemplate->AddSpecialization(D2, InsertPos);
     }
 
     D2->setSpecializationKind(D->getSpecializationKind());
-
-    // Add this specialization to the class template.
-    ClassTemplate->AddSpecialization(D2, InsertPos);
 
     // Import the qualifier, if any.
     D2->setQualifierInfo(Importer.Import(D->getQualifierLoc()));

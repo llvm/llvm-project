@@ -1,4 +1,5 @@
 add_llvm_library(LLVMXRay
+  FileHeaderReader.cpp
   InstrumentationMap.cpp
   Trace.cpp
 

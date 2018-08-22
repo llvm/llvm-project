@@ -112,6 +112,21 @@ static uint32_t findMaskR8(uint32_t Insn) {
   return 0x00001fe0;
 }
 
+static uint32_t findMaskR16(uint32_t Insn) {
+  if ((0xff000000 & Insn) == 0x48000000)
+    return 0x061f20ff;
+  if ((0xff000000 & Insn) == 0x49000000)
+    return 0x061f3fe0;
+  if ((0xff000000 & Insn) == 0x78000000)
+    return 0x00df3fe0;
+  if ((0xff000000 & Insn) == 0xb0000000)
+    return 0x0fe03fe0;
+
+  error("unrecognized instruction for R_HEX_16_X relocation: 0x" +
+        utohexstr(Insn));
+  return 0;
+}
+
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
 void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
@@ -127,6 +142,9 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_HEX_12_X:
     or32le(Loc, applyMask(0x000007e0, Val));
+    break;
+  case R_HEX_16_X:  // This reloc only has 6 effective bits.
+    or32le(Loc, applyMask(findMaskR16(read32le(Loc)), Val & 0x3f));
     break;
   case R_HEX_32:
     or32le(Loc, Val);

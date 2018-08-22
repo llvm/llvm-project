@@ -9,11 +9,12 @@
 
 // <forward_list>
 
-// void clear();
+// void clear() noexcept;
 
 #include <forward_list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../NotConstructible.h"
 #include "min_allocator.h"
 
@@ -23,6 +24,7 @@ int main()
         typedef NotConstructible T;
         typedef std::forward_list<T> C;
         C c;
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(distance(c.begin(), c.end()) == 0);
     }
@@ -32,6 +34,7 @@ int main()
         const T t[] = {0, 1, 2, 3, 4};
         C c(std::begin(t), std::end(t));
 
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(distance(c.begin(), c.end()) == 0);
 
@@ -43,6 +46,7 @@ int main()
         typedef NotConstructible T;
         typedef std::forward_list<T, min_allocator<T>> C;
         C c;
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(distance(c.begin(), c.end()) == 0);
     }
@@ -52,6 +56,7 @@ int main()
         const T t[] = {0, 1, 2, 3, 4};
         C c(std::begin(t), std::end(t));
 
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(distance(c.begin(), c.end()) == 0);
 

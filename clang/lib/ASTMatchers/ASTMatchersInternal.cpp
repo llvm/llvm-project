@@ -573,6 +573,9 @@ const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
 const internal::VariadicDynCastAllOfMatcher<Decl,
                                             ClassTemplateSpecializationDecl>
     classTemplateSpecializationDecl;
+const internal::VariadicDynCastAllOfMatcher<
+    Decl, ClassTemplatePartialSpecializationDecl>
+    classTemplatePartialSpecializationDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
     declaratorDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;

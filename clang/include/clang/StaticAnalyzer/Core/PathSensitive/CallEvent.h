@@ -80,11 +80,27 @@ class CallDescription {
 
   mutable IdentifierInfo *II = nullptr;
   mutable bool IsLookupDone = false;
-  StringRef FuncName;
+  // The list of the qualified names used to identify the specified CallEvent,
+  // e.g. "{a, b}" represent the qualified names, like "a::b".
+  std::vector<StringRef> QualifiedName;
   unsigned RequiredArgs;
 
 public:
   const static unsigned NoArgRequirement = std::numeric_limits<unsigned>::max();
+
+  /// Constructs a CallDescription object.
+  ///
+  /// @param QualifiedName The list of the qualified names of the function that
+  /// will be matched. It does not require the user to provide the full list of
+  /// the qualified name. The more details provided, the more accurate the
+  /// matching.
+  ///
+  /// @param RequiredArgs The number of arguments that is expected to match a
+  /// call. Omit this parameter to match every occurrence of call with a given
+  /// name regardless the number of arguments.
+  CallDescription(std::vector<StringRef> QualifiedName,
+                  unsigned RequiredArgs = NoArgRequirement)
+      : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs) {}
 
   /// Constructs a CallDescription object.
   ///
@@ -94,10 +110,11 @@ public:
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : FuncName(FuncName), RequiredArgs(RequiredArgs) {}
+      : CallDescription(std::vector<StringRef>({FuncName}), NoArgRequirement) {
+  }
 
   /// Get the name of the function that this object matches.
-  StringRef getFunctionName() const { return FuncName; }
+  StringRef getFunctionName() const { return QualifiedName.back(); }
 };
 
 template<typename T = CallEvent>

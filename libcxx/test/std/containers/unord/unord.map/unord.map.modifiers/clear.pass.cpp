@@ -13,12 +13,13 @@
 //           class Alloc = allocator<pair<const Key, T>>>
 // class unordered_map
 
-// void clear()
+// void clear() noexcept;
 
 #include <unordered_map>
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -36,6 +37,7 @@ int main()
             P(2, "four"),
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(c.size() == 0);
     }
@@ -54,6 +56,7 @@ int main()
             P(2, "four"),
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(c.size() == 0);
     }

@@ -1997,6 +1997,10 @@ def : Thumb2DSPPat<(int_arm_sxtb16 rGPR:$Rn),
                    (t2SXTB16 rGPR:$Rn, 0)>;
 def : Thumb2DSPPat<(int_arm_sxtab16 rGPR:$Rn, rGPR:$Rm),
                    (t2SXTAB16 rGPR:$Rn, rGPR:$Rm, 0)>;
+def : Thumb2DSPPat<(int_arm_sxtb16 (rotr rGPR:$Rn, rot_imm:$rot)),
+                   (t2SXTB16 rGPR:$Rn, rot_imm:$rot)>;
+def : Thumb2DSPPat<(int_arm_sxtab16 rGPR:$Rn, (rotr rGPR:$Rm, rot_imm:$rot)),
+                   (t2SXTAB16 rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 
 
 // A simple right-shift can also be used in most cases (the exception is the
@@ -2032,6 +2036,8 @@ def : Thumb2DSPPat<(and (rotr rGPR:$Rm, rot_imm:$rot), 0x00FF00FF),
 
 def : Thumb2DSPPat<(int_arm_uxtb16 rGPR:$Rm),
                    (t2UXTB16 rGPR:$Rm, 0)>;
+def : Thumb2DSPPat<(int_arm_uxtb16 (rotr rGPR:$Rn, rot_imm:$rot)),
+                   (t2UXTB16 rGPR:$Rn, rot_imm:$rot)>;
 
 // FIXME: This pattern incorrectly assumes the shl operator is a rotate.
 //        The transformation should probably be done as a combiner action
@@ -2062,6 +2068,8 @@ def : Thumb2DSPPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot),
                        (t2UXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 def : Thumb2DSPPat<(int_arm_uxtab16 rGPR:$Rn, rGPR:$Rm),
                       (t2UXTAB16 rGPR:$Rn, rGPR:$Rm, 0)>;
+def : Thumb2DSPPat<(int_arm_uxtab16 rGPR:$Rn, (rotr rGPR:$Rm, rot_imm:$rot)),
+                   (t2UXTAB16 rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 }
 
 

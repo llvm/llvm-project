@@ -15,6 +15,7 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/XRay/FileHeaderReader.h"
 #include "llvm/XRay/YAMLXRayRecord.h"
 
 using namespace llvm;
@@ -30,66 +31,6 @@ using XRayRecordStorage =
 // record it is.
 constexpr auto kFDRMetadataBodySize = 15;
 
-// Populates the FileHeader reference by reading the first 32 bytes of the file.
-Error readBinaryFormatHeader(DataExtractor &HeaderExtractor,
-                             uint32_t &OffsetPtr, XRayFileHeader &FileHeader) {
-  // FIXME: Maybe deduce whether the data is little or big-endian using some
-  // magic bytes in the beginning of the file?
-
-  // First 32 bytes of the file will always be the header. We assume a certain
-  // format here:
-  //
-  //   (2)   uint16 : version
-  //   (2)   uint16 : type
-  //   (4)   uint32 : bitfield
-  //   (8)   uint64 : cycle frequency
-  //   (16)  -      : padding
-
-  auto PreReadOffset = OffsetPtr;
-  FileHeader.Version = HeaderExtractor.getU16(&OffsetPtr);
-  if (OffsetPtr == PreReadOffset)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "Failed reading version from file header at offset %d.", OffsetPtr);
-
-  PreReadOffset = OffsetPtr;
-  FileHeader.Type = HeaderExtractor.getU16(&OffsetPtr);
-  if (OffsetPtr == PreReadOffset)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "Failed reading file type from file header at offset %d.", OffsetPtr);
-
-  PreReadOffset = OffsetPtr;
-  uint32_t Bitfield = HeaderExtractor.getU32(&OffsetPtr);
-  if (OffsetPtr == PreReadOffset)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "Failed reading flag bits from file header at offset %d.", OffsetPtr);
-
-  FileHeader.ConstantTSC = Bitfield & 1uL;
-  FileHeader.NonstopTSC = Bitfield & 1uL << 1;
-  PreReadOffset = OffsetPtr;
-  FileHeader.CycleFrequency = HeaderExtractor.getU64(&OffsetPtr);
-  if (OffsetPtr == PreReadOffset)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "Failed reading cycle frequency from file header at offset %d.",
-        OffsetPtr);
-
-  std::memcpy(&FileHeader.FreeFormData,
-              HeaderExtractor.getData().bytes_begin() + OffsetPtr, 16);
-
-  // Manually advance the offset pointer 16 bytes, after getting a raw memcpy
-  // from the underlying data.
-  OffsetPtr += 16;
-  if (FileHeader.Version != 1 && FileHeader.Version != 2 &&
-      FileHeader.Version != 3)
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unsupported XRay file version: %d at offset %d",
-                             FileHeader.Version, OffsetPtr);
-  return Error::success();
-}
-
 Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
                          std::vector<XRayRecord> &Records) {
   if (Data.size() < 32)
@@ -104,8 +45,10 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
 
   DataExtractor Reader(Data, true, 8);
   uint32_t OffsetPtr = 0;
-  if (auto E = readBinaryFormatHeader(Reader, OffsetPtr, FileHeader))
-    return E;
+  auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
+  if (!FileHeaderOrError)
+    return FileHeaderOrError.takeError();
+  FileHeader = std::move(FileHeaderOrError.get());
 
   // Each record after the header will be 32 bytes, in the following format:
   //
@@ -762,6 +705,7 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
 /// EOB: *deprecated*
 Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
                  std::vector<XRayRecord> &Records) {
+
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
@@ -770,8 +714,10 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
   DataExtractor Reader(Data, true, 8);
   uint32_t OffsetPtr = 0;
 
-  if (auto E = readBinaryFormatHeader(Reader, OffsetPtr, FileHeader))
-    return E;
+  auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
+  if (!FileHeaderOrError)
+    return FileHeaderOrError.takeError();
+  FileHeader = std::move(FileHeaderOrError.get());
 
   uint64_t BufferSize = 0;
   {

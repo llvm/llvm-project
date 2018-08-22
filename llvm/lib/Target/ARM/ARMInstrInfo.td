@@ -3521,10 +3521,14 @@ def : ARMV6Pat<(add rGPR:$Rn, (sext_inreg (srl rGPR:$Rm, imm8_or_16:$rot),
 def SXTB16  : AI_ext_rrot_np<0b01101000, "sxtb16">;
 def : ARMV6Pat<(int_arm_sxtb16 GPR:$Src),
                (SXTB16 GPR:$Src, 0)>;
+def : ARMV6Pat<(int_arm_sxtb16 (rotr GPR:$Src, rot_imm:$rot)),
+               (SXTB16 GPR:$Src, rot_imm:$rot)>;
 
 def SXTAB16 : AI_exta_rrot_np<0b01101000, "sxtab16">;
 def : ARMV6Pat<(int_arm_sxtab16 GPR:$LHS, GPR:$RHS),
                (SXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
+def : ARMV6Pat<(int_arm_sxtab16 GPR:$LHS, (rotr GPR:$RHS, rot_imm:$rot)),
+               (SXTAB16 GPR:$LHS, GPR:$RHS, rot_imm:$rot)>;
 
 // Zero extenders
 
@@ -3546,6 +3550,8 @@ def : ARMV6Pat<(and (srl GPR:$Src, (i32 8)), 0xFF00FF),
                (UXTB16 GPR:$Src, 1)>;
 def : ARMV6Pat<(int_arm_uxtb16 GPR:$Src),
                (UXTB16 GPR:$Src, 0)>;
+def : ARMV6Pat<(int_arm_uxtb16 (rotr GPR:$Src, rot_imm:$rot)),
+               (UXTB16 GPR:$Src, rot_imm:$rot)>;
 
 def UXTAB : AI_exta_rrot<0b01101110, "uxtab",
                         BinOpFrag<(add node:$LHS, (and node:$RHS, 0x00FF))>>;
@@ -3562,6 +3568,8 @@ def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot), 0xFFFF)),
 def UXTAB16 : AI_exta_rrot_np<0b01101100, "uxtab16">;
 def : ARMV6Pat<(int_arm_uxtab16 GPR:$LHS, GPR:$RHS),
                (UXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
+def : ARMV6Pat<(int_arm_uxtab16 GPR:$LHS, (rotr GPR:$RHS, rot_imm:$rot)),
+               (UXTAB16 GPR:$LHS, GPR:$RHS, rot_imm:$rot)>;
 
 
 def SBFX  : I<(outs GPRnopc:$Rd),

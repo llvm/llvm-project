@@ -557,6 +557,10 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       CharUnits align = CGM.getPointerAlign();
       maxFieldAlign = std::max(maxFieldAlign, align);
 
+      // Since a __block variable cannot be captured by lambdas, its type and
+      // the capture field type should always match.
+      assert(getCaptureFieldType(*CGF, CI) == variable->getType() &&
+             "capture type differs from the variable type");
       layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
                                         Qualifiers::OCL_None, &CI,
                                         CGM.VoidPtrTy, variable->getType()));
@@ -570,10 +574,11 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       continue;
     }
 
+    QualType VT = getCaptureFieldType(*CGF, CI);
+
     // If we have a lifetime qualifier, honor it for capture purposes.
     // That includes *not* copying it if it's __unsafe_unretained.
-    Qualifiers::ObjCLifetime lifetime =
-      variable->getType().getObjCLifetime();
+    Qualifiers::ObjCLifetime lifetime = VT.getObjCLifetime();
     if (lifetime) {
       switch (lifetime) {
       case Qualifiers::OCL_None: llvm_unreachable("impossible");
@@ -587,10 +592,10 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       }
 
     // Block pointers require copy/dispose.  So do Objective-C pointers.
-    } else if (variable->getType()->isObjCRetainableType()) {
+    } else if (VT->isObjCRetainableType()) {
       // But honor the inert __unsafe_unretained qualifier, which doesn't
       // actually make it into the type system.
-       if (variable->getType()->isObjCInertUnsafeUnretainedType()) {
+       if (VT->isObjCInertUnsafeUnretainedType()) {
         lifetime = Qualifiers::OCL_ExplicitNone;
       } else {
         info.NeedsCopyDispose = true;
@@ -602,21 +607,18 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     } else if (CI.hasCopyExpr()) {
       info.NeedsCopyDispose = true;
       info.HasCXXObject = true;
-      if (!variable->getType()->getAsCXXRecordDecl()->isExternallyVisible())
+      if (!VT->getAsCXXRecordDecl()->isExternallyVisible())
         info.CapturesNonExternalType = true;
 
     // So do C structs that require non-trivial copy construction or
     // destruction.
-    } else if (variable->getType().isNonTrivialToPrimitiveCopy() ==
-                   QualType::PCK_Struct ||
-               variable->getType().isDestructedType() ==
-                   QualType::DK_nontrivial_c_struct) {
+    } else if (VT.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct ||
+               VT.isDestructedType() == QualType::DK_nontrivial_c_struct) {
       info.NeedsCopyDispose = true;
 
     // And so do types with destructors.
     } else if (CGM.getLangOpts().CPlusPlus) {
-      if (const CXXRecordDecl *record =
-            variable->getType()->getAsCXXRecordDecl()) {
+      if (const CXXRecordDecl *record = VT->getAsCXXRecordDecl()) {
         if (!record->hasTrivialDestructor()) {
           info.HasCXXObject = true;
           info.NeedsCopyDispose = true;
@@ -626,7 +628,6 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       }
     }
 
-    QualType VT = getCaptureFieldType(*CGF, CI);
     CharUnits size = C.getTypeSizeInChars(VT);
     CharUnits align = C.getDeclAlign(variable);
 
@@ -1717,10 +1718,9 @@ static void findBlockCapturedManagedEntities(
     if (Capture.isConstant())
       continue;
 
-    auto CopyInfo =
-       computeCopyInfoForBlockCapture(CI, Variable->getType(), LangOpts);
-    auto DisposeInfo =
-       computeDestroyInfoForBlockCapture(CI, Variable->getType(), LangOpts);
+    QualType VT = Capture.fieldType();
+    auto CopyInfo = computeCopyInfoForBlockCapture(CI, VT, LangOpts);
+    auto DisposeInfo = computeDestroyInfoForBlockCapture(CI, VT, LangOpts);
     if (CopyInfo.first != BlockCaptureEntityKind::None ||
         DisposeInfo.first != BlockCaptureEntityKind::None)
       ManagedCaptures.emplace_back(CopyInfo.first, DisposeInfo.first,

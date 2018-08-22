@@ -265,11 +265,11 @@ public:
 
   void passSpecialInputs(
     CallLoweringInfo &CLI,
+    CCState &CCInfo,
     const SIMachineFunctionInfo &Info,
     SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains,
-    SDValue Chain,
-    SDValue StackPtr) const;
+    SDValue Chain) const;
 
   SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
                           CallingConv::ID CallConv, bool isVarArg,
