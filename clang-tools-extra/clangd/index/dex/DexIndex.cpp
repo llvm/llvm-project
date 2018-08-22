@@ -70,7 +70,7 @@ void DexIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
 }
 
 std::unique_ptr<SymbolIndex> DexIndex::build(SymbolSlab Slab) {
-  auto Idx = llvm::make_unique<MemIndex>();
+  auto Idx = llvm::make_unique<DexIndex>();
   Idx->build(getSymbolsFromSlab(std::move(Slab)));
   return std::move(Idx);
 }
