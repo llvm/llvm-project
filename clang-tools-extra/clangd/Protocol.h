@@ -255,6 +255,10 @@ struct PublishDiagnosticsClientCapabilities {
   /// Whether the client accepts diagnostics with fixes attached using the
   /// "clangd_fixes" extension.
   bool clangdFixSupport = false;
+
+  /// Whether the client accepts diagnostics with category attached to it
+  /// using the "category" extension.
+  bool categorySupport = false;
 };
 bool fromJSON(const llvm::json::Value &,
               PublishDiagnosticsClientCapabilities &);
