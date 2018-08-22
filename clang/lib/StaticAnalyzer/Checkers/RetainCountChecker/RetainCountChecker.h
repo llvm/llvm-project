@@ -218,7 +218,6 @@ public:
   }
 
   // Comparison, profiling, and pretty-printing.
-
   bool hasSameState(const RefVal &X) const {
     return getKind() == X.getKind() && Cnt == X.Cnt && ACnt == X.ACnt &&
            getIvarAccessHistory() == X.getIvarAccessHistory();
