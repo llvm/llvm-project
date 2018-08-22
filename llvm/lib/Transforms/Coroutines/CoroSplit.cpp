@@ -56,6 +56,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -1338,7 +1339,26 @@ static void splitCoroutine(Function &F, coro::Shape &Shape,
   llvm_unreachable("bad ABI kind");
 }
 
+namespace {
+  class PrettyStackTraceFunction : public PrettyStackTraceEntry {
+    Function &F;
+  public:
+    PrettyStackTraceFunction(Function &F) : F(F) {}
+    void print(raw_ostream &OS) const override {
+      OS << "While splitting coroutine ";
+      F.printAsOperand(OS, /*print type*/ false, F.getParent());
+      OS << "\n";
+    }
+  };
+}
+
 static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
+  PrettyStackTraceFunction prettyStackTrace(F);
+
+  // The suspend-crossing algorithm in buildCoroutineFrame get tripped
+  // up by uses in unreachable blocks, so remove them as a first pass.
+  removeUnreachableBlocks(F);
+
   coro::Shape Shape(F);
   if (!Shape.CoroBegin)
     return;
