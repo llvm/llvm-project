@@ -125,11 +125,15 @@ bool DexIndex::fuzzyFind(
     // using 100x of the requested number might not be good in practice, e.g.
     // when the requested number of items is small.
     const unsigned ItemsToRetrieve = 100 * Req.MaxCandidateCount;
-    std::vector<DocID> SymbolDocIDs = consume(*QueryIterator, ItemsToRetrieve);
+    // FIXME(kbobyrev): Add boosting to the query and utilize retrieved
+    // boosting scores.
+    std::vector<std::pair<DocID, float>> SymbolDocIDs =
+        consume(*QueryIterator, ItemsToRetrieve);
 
     // Retrieve top Req.MaxCandidateCount items.
     std::priority_queue<std::pair<float, const Symbol *>> Top;
-    for (const auto &SymbolDocID : SymbolDocIDs) {
+    for (const auto &P : SymbolDocIDs) {
+      const DocID SymbolDocID = P.first;
       const auto *Sym = (*Symbols)[SymbolDocID];
       const llvm::Optional<float> Score = Filter.match(Sym->Name);
       if (!Score)
@@ -160,7 +164,6 @@ void DexIndex::lookup(const LookupRequest &Req,
       Callback(*I->second);
   }
 }
-
 
 void DexIndex::findOccurrences(
     const OccurrencesRequest &Req,
