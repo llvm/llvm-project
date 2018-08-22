@@ -5552,9 +5552,10 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
   ASI.push_back(SI);
-  for (BasicBlock::iterator It = ++BasicBlock::iterator(SI);
-       It != SI->getParent()->end(); ++It) {
-    SelectInst *I = dyn_cast<SelectInst>(&*It);
+  for (Instruction *NextInst = SI->getNextNonDebugInstruction();
+       NextInst != SI->getParent()->getTerminator();
+       NextInst = NextInst->getNextNonDebugInstruction()) {
+    SelectInst *I = dyn_cast<SelectInst>(NextInst);
     if (I && SI->getCondition() == I->getCondition()) {
       ASI.push_back(I);
     } else {
