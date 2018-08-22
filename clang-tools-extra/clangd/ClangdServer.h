@@ -223,6 +223,8 @@ private:
   SymbolIndex *Index;
   // If present, an up-to-date of symbols in open files. Read via Index.
   std::unique_ptr<FileIndex> FileIdx;
+  /// Callbacks responsible for updating FileIdx.
+  std::unique_ptr<ParsingCallbacks> FileIdxUpdater;
   // If present, a merged view of FileIdx and an external index. Read via Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
   // If set, this represents the workspace path.

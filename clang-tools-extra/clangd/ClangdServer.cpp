@@ -66,6 +66,24 @@ public:
   Optional<Expected<tooling::AtomicChanges>> Result;
 };
 
+class UpdateFileIndex : public ParsingCallbacks {
+public:
+  UpdateFileIndex(FileIndex *FileIdx) : FileIdx(FileIdx) {}
+
+  void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                     std::shared_ptr<clang::Preprocessor> PP) override {
+    if (FileIdx)
+      FileIdx->update(Path, &Ctx, std::move(PP));
+  }
+
+  void onMainAST(PathRef Path, ParsedAST &AST) override {
+    // FIXME: merge results from the main file into the index too.
+  }
+
+private:
+  FileIndex *FileIdx;
+};
+
 } // namespace
 
 ClangdServer::Options ClangdServer::optsForTest() {
@@ -85,20 +103,16 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                                    : getStandardResourceDir()),
       FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex(Opts.URISchemes)
                                            : nullptr),
+      FileIdxUpdater(llvm::make_unique<UpdateFileIndex>(FileIdx.get())),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(
-          Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-          FileIdx
-              ? [this](PathRef Path, ASTContext &AST,
-                       std::shared_ptr<Preprocessor>
-                           PP) { FileIdx->update(Path, &AST, std::move(PP)); }
-              : PreambleParsedCallback(),
-          Opts.UpdateDebounce, Opts.RetentionPolicy) {
+      WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
+                    *FileIdxUpdater, Opts.UpdateDebounce,
+                    Opts.RetentionPolicy) {
   if (FileIdx && Opts.StaticIndex) {
     MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
     Index = MergedIndex.get();
