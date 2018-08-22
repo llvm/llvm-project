@@ -185,4 +185,161 @@ TEST_F(LegalizerHelperTest, LowerBitCountingCTLZ1) {
   // Check
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
+
+// CTLZ widening.
+TEST_F(LegalizerHelperTest, WidenBitCountingCTLZ) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_CTLZ).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTLZ = B.buildInstr(TargetOpcode::G_CTLZ, s8, MIBTrunc);
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[Ctlz:%[0-9]+]]:_(s16) = G_CTLZ [[Zext]]
+  CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+  CHECK: [[Sub:%[0-9]+]]:_(s16) = G_SUB [[Ctlz]]:_, [[Cst8]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Sub]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
+
+// CTLZ_ZERO_UNDEF widening.
+TEST_F(LegalizerHelperTest, WidenBitCountingCTLZZeroUndef) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTLZ_ZU = B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, s8, MIBTrunc);
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ_ZU, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Zext]]
+  CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+  CHECK: [[Sub:%[0-9]+]]:_(s16) = G_SUB [[CtlzZu]]:_, [[Cst8]]:_
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Sub]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
+
+// CTPOP widening.
+TEST_F(LegalizerHelperTest, WidenBitCountingCTPOP) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_CTPOP).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, s8, MIBTrunc);
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTPOP, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[Ctpop:%[0-9]+]]:_(s16) = G_CTPOP [[Zext]]
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Ctpop]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
+
+// CTTZ_ZERO_UNDEF widening.
+TEST_F(LegalizerHelperTest, WidenBitCountingCTTZ_ZERO_UNDEF) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(
+      A, { getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTTZ_ZERO_UNDEF =
+      B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, s8, MIBTrunc);
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Zext]]
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CttzZu]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
+
+// CTTZ widening.
+TEST_F(LegalizerHelperTest, WidenBitCountingCTTZ) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_CTTZ).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ, s8, MIBTrunc);
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[Cst:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
+  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[Zext]]:_, [[Cst]]
+  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ [[Or]]
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Cttz]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
 } // namespace
