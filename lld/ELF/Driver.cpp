@@ -1325,6 +1325,80 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
   }
 }
 
+// The --wrap option is a feature to rename symbols so that you can write
+// wrappers for existing functions. If you pass `-wrap=foo`, all
+// occurrences of symbol `foo` are resolved to `wrap_foo` (so, you are
+// expected to write `wrap_foo` function as a wrapper). The original
+// symbol becomes accessible as `real_foo`, so you can call that from your
+// wrapper.
+//
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *Sym;
+  Symbol *Real;
+  Symbol *Wrap;
+};
+
+// Handles -wrap option.
+//
+// This function instantiates wrapper symbols. At this point, they seem
+// like they are not being used at all, so we explicitly set some flags so
+// that LTO won't eliminate them.
+template <class ELFT>
+static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
+  std::vector<WrappedSymbol> V;
+  DenseSet<StringRef> Seen;
+
+  for (auto *Arg : Args.filtered(OPT_wrap)) {
+    StringRef Name = Arg->getValue();
+    if (!Seen.insert(Name).second)
+      continue;
+
+    Symbol *Sym = Symtab->find(Name);
+    if (!Sym)
+      continue;
+
+    Symbol *Real = Symtab->addUndefined<ELFT>(Saver.save("__real_" + Name));
+    Symbol *Wrap = Symtab->addUndefined<ELFT>(Saver.save("__wrap_" + Name));
+    V.push_back({Sym, Real, Wrap});
+
+    // We want to tell LTO not to inline symbols to be overwritten
+    // because LTO doesn't know the final symbol contents after renaming.
+    Real->CanInline = false;
+    Sym->CanInline = false;
+
+    // Tell LTO not to eliminate these symbols.
+    Sym->IsUsedInRegularObj = true;
+    Wrap->IsUsedInRegularObj = true;
+  }
+  return V;
+}
+
+// Do renaming for -wrap by updating pointers to symbols.
+//
+// When this function is executed, only InputFiles and symbol table
+// contain pointers to symbol objects. We visit them to replace pointers,
+// so that wrapped symbols are swapped as instructed by the command line.
+template <class ELFT> static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
+  DenseMap<Symbol *, Symbol *> Map;
+  for (const WrappedSymbol &W : Wrapped) {
+    Map[W.Sym] = W.Wrap;
+    Map[W.Real] = W.Sym;
+  }
+
+  // Update pointers in input files.
+  parallelForEach(ObjectFiles, [&](InputFile *File) {
+    std::vector<Symbol *> &Syms = File->getMutableSymbols();
+    for (size_t I = 0, E = Syms.size(); I != E; ++I)
+      if (Symbol *S = Map.lookup(Syms[I]))
+        Syms[I] = S;
+  });
+
+  // Update pointers in the symbol table.
+  for (const WrappedSymbol &W : Wrapped)
+    Symtab->wrap(W.Sym, W.Real, W.Wrap);
+}
+
 static const char *LibcallRoutineNames[] = {
 #define HANDLE_LIBCALL(code, name) name,
 #include "llvm/IR/RuntimeLibcalls.def"
@@ -1456,8 +1530,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
-  for (auto *Arg : Args.filtered(OPT_wrap))
-    Symtab->addSymbolWrap<ELFT>(Arg->getValue());
+  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols<ELFT>(Args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -1475,7 +1548,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     return;
 
   // Apply symbol renames for -wrap.
-  Symtab->applySymbolWrap();
+  if (!Wrapped.empty())
+    wrapSymbols<ELFT>(Wrapped);
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.

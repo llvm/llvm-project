@@ -86,7 +86,9 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() {
+  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
+
+  std::vector<Symbol *> &getMutableSymbols() {
     assert(FileKind == BinaryKind || FileKind == ObjKind ||
            FileKind == BitcodeKind);
     return Symbols;
