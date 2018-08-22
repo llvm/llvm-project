@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <forward_list>
+// <deque>
 
 // void clear() noexcept;
 
-#include <forward_list>
+#include <deque>
 #include <cassert>
 
 #include "test_macros.h"
@@ -22,7 +22,7 @@ int main()
 {
     {
         typedef NotConstructible T;
-        typedef std::forward_list<T> C;
+        typedef std::deque<T> C;
         C c;
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
@@ -30,7 +30,7 @@ int main()
     }
     {
         typedef int T;
-        typedef std::forward_list<T> C;
+        typedef std::deque<T> C;
         const T t[] = {0, 1, 2, 3, 4};
         C c(std::begin(t), std::end(t));
 
@@ -44,7 +44,7 @@ int main()
 #if TEST_STD_VER >= 11
     {
         typedef NotConstructible T;
-        typedef std::forward_list<T, min_allocator<T>> C;
+        typedef std::deque<T, min_allocator<T>> C;
         C c;
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
@@ -52,7 +52,7 @@ int main()
     }
     {
         typedef int T;
-        typedef std::forward_list<T, min_allocator<T>> C;
+        typedef std::deque<T, min_allocator<T>> C;
         const T t[] = {0, 1, 2, 3, 4};
         C c(std::begin(t), std::end(t));
 

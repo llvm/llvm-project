@@ -11,11 +11,12 @@
 
 // class multiset
 
-// void clear();
+// void clear() noexcept;
 
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -36,6 +37,7 @@ int main()
         };
         M m(ar, ar + sizeof(ar)/sizeof(ar[0]));
         assert(m.size() == 8);
+        ASSERT_NOEXCEPT(m.clear());
         m.clear();
         assert(m.size() == 0);
     }
@@ -56,6 +58,7 @@ int main()
         };
         M m(ar, ar + sizeof(ar)/sizeof(ar[0]));
         assert(m.size() == 8);
+        ASSERT_NOEXCEPT(m.clear());
         m.clear();
         assert(m.size() == 0);
     }
