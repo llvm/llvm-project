@@ -40,13 +40,13 @@ define float @fdiv_true_sink(float %a, float %b) {
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]]
-; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%[^,]+]]
+; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !dbg
 ; DEBUG:       select.true.sink:
 ; DEBUG-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[DIV]]
-; DEBUG-NEXT:    br label [[SELECT_END]]
+; DEBUG-NEXT:    br label [[SELECT_END]], !dbg
 ; DEBUG:       select.end:
-; DEBUG-NEXT:    [[SEL:%.*]] = phi float [ [[DIV]], [[SELECT_TRUE_SINK]] ], [ 2.000000e+00, [[ENTRY:%.*]] ]
+; DEBUG-NEXT:    [[SEL:%.*]] = phi float [ [[DIV]], [[SELECT_TRUE_SINK]] ], [ 2.000000e+00, [[ENTRY:%.*]] ], !dbg
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[SEL]]
 ; DEBUG-NEXT:    ret float [[SEL]]
 ;
@@ -68,6 +68,20 @@ define float @fdiv_false_sink(float %a, float %b) {
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[SEL:%.*]] = phi float [ 4.000000e+00, [[ENTRY:%.*]] ], [ [[DIV]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    ret float [[SEL]]
+;
+; DEBUG-LABEL: @fdiv_false_sink(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 3.000000e+00
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]]
+; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_END:%.*]], label [[SELECT_FALSE_SINK:%.*]], !dbg
+; DEBUG:       select.false.sink:
+; DEBUG-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[DIV]]
+; DEBUG-NEXT:    br label [[SELECT_END]], !dbg
+; DEBUG:       select.end:
+; DEBUG-NEXT:    [[SEL:%.*]] = phi float [ 4.000000e+00, [[ENTRY:%.*]] ], [ [[DIV]], [[SELECT_FALSE_SINK]] ], !dbg
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[SEL]]
+; DEBUG-NEXT:    ret float [[SEL]], !dbg
 ;
 entry:
   %div = fdiv float %a, %b
