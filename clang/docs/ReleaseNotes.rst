@@ -265,7 +265,10 @@ These are major API changes that have happened since the 6.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
--  ...
+- The methods ``getLocStart``, ``getStartLoc`` and ``getLocEnd`` in the AST 
+  classes are deprecated.  New APIs ``getBeginLoc`` and ``getEndLoc`` should 
+  be used instead.  While the old methods remain in this release, they will 
+  not be present in the next release of Clang.
 
 AST Matchers
 ------------
