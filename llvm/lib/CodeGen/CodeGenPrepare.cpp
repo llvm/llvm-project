@@ -417,11 +417,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // unconditional branch.
   EverMadeChange |= eliminateMostlyEmptyBlocks(F);
 
-  // llvm.dbg.value is far away from the value then iSel may not be able
-  // handle it properly. iSel will drop llvm.dbg.value if it can not
-  // find a node corresponding to the value.
-  EverMadeChange |= placeDbgValues(F);
-
   if (!DisableBranchOpts)
     EverMadeChange |= splitBranchCondition(F);
 
@@ -508,6 +503,10 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     for (auto &I : Statepoints)
       EverMadeChange |= simplifyOffsetableRelocate(*I);
   }
+
+  // Do this last to clean up use-before-def scenarios introduced by other
+  // preparatory transforms.
+  EverMadeChange |= placeDbgValues(F);
 
   return EverMadeChange;
 }
@@ -1156,11 +1155,15 @@ static bool CombineUAddWithOverflow(CmpInst *CI) {
 
   auto *InsertPt = AddI->hasOneUse() ? CI : AddI;
 
+  DebugLoc Loc = CI->getDebugLoc();
   auto *UAddWithOverflow =
       CallInst::Create(F, {A, B}, "uadd.overflow", InsertPt);
+  UAddWithOverflow->setDebugLoc(Loc);
   auto *UAdd = ExtractValueInst::Create(UAddWithOverflow, 0, "uadd", InsertPt);
+  UAdd->setDebugLoc(Loc);
   auto *Overflow =
       ExtractValueInst::Create(UAddWithOverflow, 1, "overflow", InsertPt);
+  Overflow->setDebugLoc(Loc);
 
   CI->replaceAllUsesWith(Overflow);
   AddI->replaceAllUsesWith(UAdd);
@@ -5545,12 +5548,17 @@ static Value *getTrueOrFalseValue(
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
 bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
+  // If branch conversion isn't desirable, exit early.
+  if (DisableSelectToBranch || OptSize || !TLI)
+    return false;
+
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
   ASI.push_back(SI);
-  for (BasicBlock::iterator It = ++BasicBlock::iterator(SI);
-       It != SI->getParent()->end(); ++It) {
-    SelectInst *I = dyn_cast<SelectInst>(&*It);
+  for (Instruction *NextInst = SI->getNextNonDebugInstruction();
+       NextInst != SI->getParent()->getTerminator();
+       NextInst = NextInst->getNextNonDebugInstruction()) {
+    SelectInst *I = dyn_cast<SelectInst>(NextInst);
     if (I && SI->getCondition() == I->getCondition()) {
       ASI.push_back(I);
     } else {
@@ -5566,8 +5574,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   bool VectorCond = !SI->getCondition()->getType()->isIntegerTy(1);
 
   // Can we convert the 'select' to CF ?
-  if (DisableSelectToBranch || OptSize || !TLI || VectorCond ||
-      SI->getMetadata(LLVMContext::MD_unpredictable))
+  if (VectorCond || SI->getMetadata(LLVMContext::MD_unpredictable))
     return false;
 
   TargetLowering::SelectSupportKind SelectKind;
@@ -5630,6 +5637,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
         TrueBlock = BasicBlock::Create(SI->getContext(), "select.true.sink",
                                        EndBlock->getParent(), EndBlock);
         TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
+        TrueBranch->setDebugLoc(SI->getDebugLoc());
       }
       auto *TrueInst = cast<Instruction>(SI->getTrueValue());
       TrueInst->moveBefore(TrueBranch);
@@ -5639,6 +5647,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
         FalseBlock = BasicBlock::Create(SI->getContext(), "select.false.sink",
                                         EndBlock->getParent(), EndBlock);
         FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+        FalseBranch->setDebugLoc(SI->getDebugLoc());
       }
       auto *FalseInst = cast<Instruction>(SI->getFalseValue());
       FalseInst->moveBefore(FalseBranch);
@@ -5653,7 +5662,8 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 
     FalseBlock = BasicBlock::Create(SI->getContext(), "select.false",
                                     EndBlock->getParent(), EndBlock);
-    BranchInst::Create(EndBlock, FalseBlock);
+    auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+    FalseBranch->setDebugLoc(SI->getDebugLoc());
   }
 
   // Insert the real conditional branch based on the original condition.
@@ -5688,6 +5698,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     PN->takeName(SI);
     PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
     PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);
+    PN->setDebugLoc(SI->getDebugLoc());
 
     SI->replaceAllUsesWith(PN);
     SI->eraseFromParent();
@@ -5799,6 +5810,7 @@ bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
 
   auto *ExtInst = CastInst::Create(ExtType, Cond, NewType);
   ExtInst->insertBefore(SI);
+  ExtInst->setDebugLoc(SI->getDebugLoc());
   SI->setCondition(ExtInst);
   for (auto Case : SI->cases()) {
     APInt NarrowConst = Case.getCaseValue()->getValue();
