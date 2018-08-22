@@ -55,6 +55,7 @@ There are currently the following groups of checks:
 ====================== =========================================================
 Name prefix            Description
 ====================== =========================================================
+``abseil-``            Checks related to Abseil library.
 ``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
 ``bugprone-``          Checks that target bugprone code constructs.
