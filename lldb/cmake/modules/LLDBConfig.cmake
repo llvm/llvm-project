@@ -336,14 +336,13 @@ if (APPLE)
        ${CORE_SERVICES_LIBRARY}
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
-
+  include_directories(${LIBXML2_INCLUDE_DIR})
 else()
   if (LIBXML2_FOUND)
     add_definitions( -DLIBXML2_DEFINED )
     list(APPEND system_libs ${LIBXML2_LIBRARIES})
     include_directories(${LIBXML2_INCLUDE_DIR})
   endif()
-
 endif()
 
 if( WIN32 AND NOT CYGWIN )
