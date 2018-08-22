@@ -6,7 +6,6 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "category": "Semantic Issue",
 # CHECK-NEXT:        "message": "Return type of 'main' is not 'int'",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
