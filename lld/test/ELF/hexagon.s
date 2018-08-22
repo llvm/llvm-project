@@ -177,3 +177,20 @@ r1:0=combine(r2,##_start);
 r_hex_32:
 .word _start
 # CHECK: 00011000
+
+# R_HEX_16_X has 4 relocation mask variations
+# 0x48000000
+memw(##_start) = r0
+# CHECK: 4880c000   memw(##69632) = r0 }
+
+# 0x49000000
+r0 = memw(##_start)
+# CHECK: 4980c000   r0 = memw(##69632)
+
+# 0x78000000
+r0 = ##_start
+# CHECK: 7800c000   r0 = ##69632 }
+
+# 0xb0000000
+r0 = add(r1, ##_start)
+# CHECK: b001c000   r0 = add(r1,##69632) }
