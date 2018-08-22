@@ -38,12 +38,12 @@ define float @fdiv_true_sink(float %a, float %b) {
 ;
 ; DEBUG-LABEL: @fdiv_true_sink(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[DIV:%[^,]+]]
 ; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]]
 ; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%[^,]+]]
 ; DEBUG:       select.true.sink:
-; DEBUG-NEXT:    [[DIV]] = fdiv float [[A]], [[B:%.*]]
+; DEBUG-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[DIV]]
 ; DEBUG-NEXT:    br label [[SELECT_END]]
 ; DEBUG:       select.end:
 ; DEBUG-NEXT:    [[SEL:%.*]] = phi float [ [[DIV]], [[SELECT_TRUE_SINK]] ], [ 2.000000e+00, [[ENTRY:%.*]] ]
