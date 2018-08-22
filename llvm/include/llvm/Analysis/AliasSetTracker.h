@@ -220,17 +220,7 @@ public:
 
   /// If this alias set is known to contain a single instruction and *only* a
   /// single unique instruction, return it.  Otherwise, return nullptr.
-  Instruction* getUniqueInstruction() {
-    if (size() != 0)
-      // Can't track source of pointer, might be many instruction
-      return nullptr;
-    if (AliasAny)
-      // May have collapses alias set
-      return nullptr;
-    if (1 != UnknownInsts.size())
-      return nullptr;
-    return cast<Instruction>(UnknownInsts[0]);
-  }
+  Instruction* getUniqueInstruction();
 
   void print(raw_ostream &OS) const;
   void dump() const;

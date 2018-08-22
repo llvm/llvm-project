@@ -969,7 +969,20 @@ static void outputName(OutputStream &OS, const Name *TheName, const Type *Ty) {
     OS << "~";
     LLVM_FALLTHROUGH;
   case OperatorTy::Ctor:
+    // Output the class name with template arguments a second time.
     outputNameComponent(OS, *Previous);
+
+    // Structors don't have a name, so outputting the name here actually is a
+    // no-op.  But for template constructors, it needs to output the template
+    // argument list.  e.g.
+    //
+    // template<typename T>
+    // struct Foo {
+    //    template<typename U>
+    //    Foo(U);
+    // };
+    // should demangle as -- for example -- Foo<int><double>(double);
+    outputNameComponent(OS, *TheName);
     break;
   case OperatorTy::Conversion:
     OS << "operator";

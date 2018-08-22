@@ -99,8 +99,9 @@ bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF,
 }
 
 /// Returns true if the local user-space stack pointer needs to be written back
-/// to memory by this function (this is not meaningful if needsSP is false). If
-/// false, the stack red zone can be used and only a local SP is needed.
+/// to __stack_pointer global by this function (this is not meaningful if
+/// needsSP is false). If false, the stack red zone can be used and only a local
+/// SP is needed.
 bool WebAssemblyFrameLowering::needsSPWriteback(
     const MachineFunction &MF, const MachineFrameInfo &MFI) const {
   assert(needsSP(MF, MFI));

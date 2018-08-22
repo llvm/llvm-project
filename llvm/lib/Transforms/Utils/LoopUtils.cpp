@@ -1174,7 +1174,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       return false;
 
     auto *NewExitBB = SplitBlockPredecessors(
-        BB, InLoopPredecessors, ".loopexit", DT, LI, PreserveLCSSA);
+        BB, InLoopPredecessors, ".loopexit", DT, LI, nullptr, PreserveLCSSA);
 
     if (!NewExitBB)
       LLVM_DEBUG(

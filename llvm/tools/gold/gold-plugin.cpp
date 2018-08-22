@@ -667,13 +667,9 @@ static void getThinLTOOldAndNewSuffix(std::string &OldSuffix,
 /// suffix matching \p OldSuffix with \p NewSuffix.
 static std::string getThinLTOObjectFileName(StringRef Path, StringRef OldSuffix,
                                             StringRef NewSuffix) {
-  if (OldSuffix.empty() && NewSuffix.empty())
-    return Path;
-  StringRef NewPath = Path;
-  NewPath.consume_back(OldSuffix);
-  std::string NewNewPath = NewPath;
-  NewNewPath += NewSuffix;
-  return NewNewPath;
+  if (Path.consume_back(OldSuffix))
+    return (Path + NewSuffix).str();
+  return Path;
 }
 
 // Returns true if S is valid as a C language identifier.

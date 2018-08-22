@@ -93,11 +93,11 @@ public:
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                    MemorySSA::InsertionPlace Where);
-  /// `From` block was spliced into `From` and `To`.
-  /// Move all accesses from `From` to `To` starting at instruction `Start`.
-  /// `To` is newly created BB, so empty of MemorySSA::MemoryAccesses.
-  /// Edges are already updated, so successors of `To` with MPhi nodes need to
-  /// update incoming block.
+  /// `From` block was spliced into `From` and `To`. There is a CFG edge from
+  /// `From` to `To`. Move all accesses from `From` to `To` starting at
+  /// instruction `Start`. `To` is newly created BB, so empty of
+  /// MemorySSA::MemoryAccesses. Edges are already updated, so successors of
+  /// `To` with MPhi nodes need to update incoming block.
   /// |------|        |------|
   /// | From |        | From |
   /// |      |        |------|
@@ -108,12 +108,12 @@ public:
   /// |------|        |------|
   void moveAllAfterSpliceBlocks(BasicBlock *From, BasicBlock *To,
                                 Instruction *Start);
-  /// `From` block was merged into `To`. All instructions were moved and
-  /// `From` is an empty block with successor edges; `From` is about to be
-  /// deleted. Move all accesses from `From` to `To` starting at instruction
-  /// `Start`. `To` may have multiple successors, `From` has a single
-  /// predecessor. `From` may have successors with MPhi nodes, replace their
-  /// incoming block with `To`.
+  /// `From` block was merged into `To`. There is a CFG edge from `To` to
+  /// `From`.`To` still branches to `From`, but all instructions were moved and
+  /// `From` is now an empty block; `From` is about to be deleted. Move all
+  /// accesses from `From` to `To` starting at instruction `Start`. `To` may
+  /// have multiple successors, `From` has a single predecessor. `From` may have
+  /// successors with MPhi nodes, replace their incoming block with `To`.
   /// |------|        |------|
   /// |  To  |        |  To  |
   /// |------|        |      |

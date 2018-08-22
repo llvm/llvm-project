@@ -962,7 +962,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
            "Expect all predecessors are in the loop");
     if (PN->getBasicBlockIndex(PredBB) >= 0) {
       BasicBlock *NewPred = SplitBlockPredecessors(
-          ExitBB, PredBB, ".split.loop.exit", DT, LI, true);
+          ExitBB, PredBB, ".split.loop.exit", DT, LI, nullptr, true);
       // Since we do not allow splitting EH-block with BlockColors in
       // canSplitPredecessors(), we can simply assign predecessor's color to
       // the new block.
