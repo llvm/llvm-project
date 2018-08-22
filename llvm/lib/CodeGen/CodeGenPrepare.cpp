@@ -5806,6 +5806,7 @@ bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
 
   auto *ExtInst = CastInst::Create(ExtType, Cond, NewType);
   ExtInst->insertBefore(SI);
+  ExtInst->setDebugLoc(SI->getDebugLoc());
   SI->setCondition(ExtInst);
   for (auto Case : SI->cases()) {
     APInt NarrowConst = Case.getCaseValue()->getValue();
