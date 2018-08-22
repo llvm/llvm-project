@@ -21,4 +21,4 @@
 // CHECK: ParmDecl=j:5:49 (Definition) [Out,] [type=short *] [typekind=Pointer] [isPOD=1] [pointeetype=short] [pointeekind=Short]
 // CHECK: ParmDecl=p:6:36 (Definition) [type=__kindof Foo *] [typekind=ObjCObjectPointer] [canonicaltype=__kindof Foo *] [canonicaltypekind=ObjCObjectPointer] [basetype=Foo] [basekind=ObjCInterface] [isPOD=1] [pointeetype=Foo] [pointeekind=ObjCInterface]
 // CHECK: ObjCPropertyDecl=classProp:7:23 [class,] [type=int] [typekind=Int] [isPOD=1]
-// CHECK: ObjCInstanceMethodDecl=generic:11:12 [type=] [typekind=Invalid] [resulttype=SomeType] [resulttypekind=ObjCTypeParam] [isPOD=0]
+// CHECK: ObjCInstanceMethodDecl=generic:11:12 [type=] [typekind=Invalid] [resulttype=SomeType] [resulttypekind=Typedef] [isPOD=0]
