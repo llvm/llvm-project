@@ -10528,14 +10528,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     llvm::Type *Int128PtrTy = Int128Ty->getPointerTo();
 
     Value *Destination =
-        Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)), Int128PtrTy);
-    Value *ExchangeHigh128 =
-        Builder.CreateZExt(EmitScalarExpr(E->getArg(1)), Int128Ty);
-    Value *ExchangeLow128 =
-        Builder.CreateZExt(EmitScalarExpr(E->getArg(2)), Int128Ty);
-    Address ComparandResult(
-        Builder.CreateBitCast(EmitScalarExpr(E->getArg(3)), Int128PtrTy),
-        getContext().toCharUnitsFromBits(128));
+        Builder.CreateBitCast(Ops[0], Int128PtrTy);
+    Value *ExchangeHigh128 = Builder.CreateZExt(Ops[1], Int128Ty);
+    Value *ExchangeLow128 = Builder.CreateZExt(Ops[2], Int128Ty);
+    Address ComparandResult(Builder.CreateBitCast(Ops[3], Int128PtrTy),
+                            getContext().toCharUnitsFromBits(128));
 
     Value *Exchange = Builder.CreateOr(
         Builder.CreateShl(ExchangeHigh128, 64, "", false, false),
@@ -10586,8 +10583,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__readfsdword:
   case X86::BI__readfsqword: {
     llvm::Type *IntTy = ConvertType(E->getType());
-    Value *Ptr = Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
-                                        llvm::PointerType::get(IntTy, 257));
+    Value *Ptr =
+        Builder.CreateIntToPtr(Ops[0], llvm::PointerType::get(IntTy, 257));
     LoadInst *Load = Builder.CreateAlignedLoad(
         IntTy, Ptr, getContext().getTypeAlignInChars(E->getType()));
     Load->setVolatile(true);
@@ -10598,8 +10595,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__readgsdword:
   case X86::BI__readgsqword: {
     llvm::Type *IntTy = ConvertType(E->getType());
-    Value *Ptr = Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
-                                        llvm::PointerType::get(IntTy, 256));
+    Value *Ptr =
+        Builder.CreateIntToPtr(Ops[0], llvm::PointerType::get(IntTy, 256));
     LoadInst *Load = Builder.CreateAlignedLoad(
         IntTy, Ptr, getContext().getTypeAlignInChars(E->getType()));
     Load->setVolatile(true);

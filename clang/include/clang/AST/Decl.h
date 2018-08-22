@@ -1469,6 +1469,9 @@ public:
   // has no definition within this source file.
   bool isKnownToBeDefined() const;
 
+  /// Do we need to emit an exit-time destructor for this variable?
+  bool isNoDestroy(const ASTContext &) const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }

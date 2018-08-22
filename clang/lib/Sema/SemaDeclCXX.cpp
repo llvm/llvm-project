@@ -12910,6 +12910,9 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (ClassDecl->hasIrrelevantDestructor()) return;
   if (ClassDecl->isDependentContext()) return;
 
+  if (VD->isNoDestroy(getASTContext()))
+    return;
+
   CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
   MarkFunctionReferenced(VD->getLocation(), Destructor);
   CheckDestructorAccess(VD->getLocation(), Destructor,

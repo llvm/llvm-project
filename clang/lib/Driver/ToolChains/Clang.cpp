@@ -4832,6 +4832,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_complete_member_pointers, false))
     CmdArgs.push_back("-fcomplete-member-pointers");
 
+  if (!Args.hasFlag(options::OPT_fcxx_static_destructors,
+                    options::OPT_fno_cxx_static_destructors, true))
+    CmdArgs.push_back("-fno-c++-static-destructors");
+
   if (Arg *A = Args.getLastArg(options::OPT_moutline,
                                options::OPT_mno_outline)) {
     if (A->getOption().matches(options::OPT_moutline)) {

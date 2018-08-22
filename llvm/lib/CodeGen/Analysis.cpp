@@ -650,7 +650,7 @@ static void collectEHScopeMembers(
 
     // Returns are boundaries where scope transfer can occur, don't follow
     // successors.
-    if (Visiting->isReturnBlock())
+    if (Visiting->isEHScopeReturnBlock())
       continue;
 
     for (const MachineBasicBlock *Succ : Visiting->successors())

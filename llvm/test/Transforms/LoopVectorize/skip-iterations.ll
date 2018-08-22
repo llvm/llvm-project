@@ -4,6 +4,14 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; tests skipping iterations within a VF through break/continue/gotos.
 
+; The main difficulty in vectorizing these loops in test1,test2 and test3 is
+; safely speculating that the widened load of A[i] should not fault if the
+; scalarized loop does not fault. For example, the
+; original load in the scalar loop may not fault, but the last iteration of the
+; vectorized load can fault (if it crosses a page boudary for example).
+; This last vector iteration is where *one* of the
+; scalar iterations lead to the early exit.
+
 ; int test(int *A, int Length) {
 ;   for (int i = 0; i < Length; i++) {
 ;     if (A[i] > 10.0) goto end;
@@ -51,7 +59,10 @@ end:                                              ; preds = %end.loopexit, %entr
 ;   }
 ;   return false;
 ; }
-; TODO: Today we do not vectorize this, but we could teach the vectorizer.
+; TODO: Today we do not vectorize this, but we could teach the vectorizer, once
+; the hard part of proving/speculating A[i:VF - 1] loads does not fault is handled by the
+; compiler/hardware.
+
 ; CHECK-LABEL: test2(
 ; CHECK-NOT: <4 x i32>
 define i32 @test2(i32* nocapture %A, i32 %Length, i32 %K) {
@@ -92,7 +103,8 @@ end:                                              ; preds = %end.loopexit, %entr
 ;   }
 ;   return -1;
 ; }
-; TODO: Today we do not vectorize this, but we could teach the vectorizer.
+; TODO: Today we do not vectorize this, but we could teach the vectorizer (once
+; we handle the speculation safety of the widened load).
 ; CHECK-LABEL: test3(
 ; CHECK-NOT: <4 x i32>
 define i32 @test3(i32* nocapture %A, i32 %Length, i32 %K) {

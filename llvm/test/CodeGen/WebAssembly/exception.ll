@@ -19,9 +19,11 @@ define void @test_throw() {
 }
 
 ; CHECK-LABEL: test_catch_rethrow:
+; CHECK:   get_global  $push{{.+}}=, __stack_pointer@GLOBAL
 ; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   i32.catch     $push{{.+}}=, 0
+; CHECK:   set_global  __stack_pointer@GLOBAL
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
 ; CHECK-DAG:   i32.store  __wasm_lpad_context+4
 ; CHECK:   i32.call  $push{{.+}}=, _Unwind_CallPersonality@FUNCTION
@@ -63,6 +65,7 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   catch_all
+; CHECK:   set_global  __stack_pointer@GLOBAL
 ; CHECK:   i32.call  $push{{.+}}=, _ZN7CleanupD1Ev@FUNCTION
 ; CHECK:   rethrow
 ; CHECK:   end_try
@@ -150,7 +153,72 @@ terminate10:                                      ; preds = %ehcleanup7
   unreachable
 }
 
+; Tests prologues and epilogues are not generated within EH scopes.
+; They should not be treated as funclets; BBs starting with a catch instruction
+; should not have a prologue, and BBs ending with a catchret/cleanupret should
+; not have an epilogue. This is separate from __stack_pointer restoring
+; instructions after a catch instruction.
+
+; CHECK-LABEL: test_no_prolog_epilog_in_ehpad
+; CHECK:  try
+; CHECK:  call      foo@FUNCTION
+; CHECK:  i32.catch
+; CHECK-NOT:  get_global  $push{{.+}}=, __stack_pointer@GLOBAL
+; CHECK:  set_global  __stack_pointer@GLOBAL
+; CHECK:  try
+; CHECK:  call      foo@FUNCTION
+; CHECK:  catch_all
+; CHECK-NOT:  get_global  $push{{.+}}=, __stack_pointer@GLOBAL
+; CHECK:  set_global  __stack_pointer@GLOBAL
+; CHECK:  call      __cxa_end_catch@FUNCTION
+; CHECK-NOT:  set_global  __stack_pointer@GLOBAL, $pop{{.+}}
+; CHECK:  end_try
+; CHECK-NOT:  set_global  __stack_pointer@GLOBAL, $pop{{.+}}
+; CHECK:  end_try
+define void @test_no_prolog_epilog_in_ehpad() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %stack_var = alloca i32, align 4
+  call void @bar(i32* %stack_var)
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %matches = icmp eq i32 %3, %4
+  br i1 %matches, label %catch, label %rethrow
+
+catch:                                            ; preds = %catch.start
+  %5 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %6 = bitcast i8* %5 to float*
+  %7 = load float, float* %6, align 4
+  invoke void @foo() [ "funclet"(token %1) ]
+          to label %invoke.cont1 unwind label %ehcleanup
+
+invoke.cont1:                                     ; preds = %catch
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont
+
+rethrow:                                          ; preds = %catch.start
+  call void @__cxa_rethrow() [ "funclet"(token %1) ]
+  unreachable
+
+try.cont:                                         ; preds = %entry, %invoke.cont1
+  ret void
+
+ehcleanup:                                        ; preds = %catch
+  %8 = cleanuppad within %1 []
+  call void @__cxa_end_catch() [ "funclet"(token %8) ]
+  cleanupret from %8 unwind to caller
+}
+
 declare void @foo()
+declare void @bar(i32*)
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)

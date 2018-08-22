@@ -1809,6 +1809,10 @@ def err_destructor_expr_type_mismatch : Error<
 def note_destructor_type_here : Note<
   "type %0 is declared here">;
 
+def err_destroy_attr_on_non_static_var : Error<
+  "%select{no_destroy|always_destroy}0 attribute can only be applied to a"
+  " variable with static or thread storage duration">;
+
 def err_destructor_template : Error<
   "destructor cannot be declared as a template">;
 

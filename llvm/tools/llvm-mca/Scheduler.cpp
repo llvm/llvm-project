@@ -248,6 +248,10 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
   Resource.clearReserved();
 }
 
+// Anchor the vtable of SchedulerStrategy and DefaultSchedulerStrategy.
+SchedulerStrategy::~SchedulerStrategy() = default;
+DefaultSchedulerStrategy::~DefaultSchedulerStrategy() = default;
+
 #ifndef NDEBUG
 void Scheduler::dump() const {
   dbgs() << "[SCHEDULER]: WaitSet size is: " << WaitSet.size() << '\n';
@@ -259,7 +263,7 @@ void Scheduler::dump() const {
 
 Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
-   
+
   switch (Resources->canBeDispatched(Desc.Buffers)) {
   case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
     return Scheduler::SC_BUFFERS_FULL;
@@ -335,7 +339,7 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     if (!IS.isReady())
       IS.update();
 
-    // Check f there are still unsolved data dependencies. 
+    // Check if there are still unsolved data dependencies.
     if (!isReady(IR)) {
       ++I;
       continue;
@@ -354,30 +358,13 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
 
 InstRef Scheduler::select() {
   unsigned QueueIndex = ReadySet.size();
-  int Rank = std::numeric_limits<int>::max();
-
   for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
     const InstRef &IR = ReadySet[I];
-    const unsigned IID = IR.getSourceIndex();
-    const Instruction &IS = *IR.getInstruction();
-
-    // Compute a rank value based on the age of an instruction (i.e. its source
-    // index) and its number of users. The lower the rank value, the better.
-    int CurrentRank = IID - IS.getNumUsers();
-
-    // We want to prioritize older instructions over younger instructions to
-    // minimize the pressure on the reorder buffer.  We also want to
-    // rank higher the instructions with more users to better expose ILP.
-    if (CurrentRank == Rank)
-      if (IID > ReadySet[QueueIndex].getSourceIndex())
-        continue;
-
-    if (CurrentRank <= Rank) {
-      const InstrDesc &D = IS.getDesc();
-      if (Resources->canBeIssued(D)) {
-        Rank = CurrentRank;
+    if (QueueIndex == ReadySet.size() ||
+        Strategy->compare(IR, ReadySet[QueueIndex])) {
+      const InstrDesc &D = IR.getInstruction()->getDesc();
+      if (Resources->canBeIssued(D))
         QueueIndex = I;
-      }
     }
   }
 
@@ -430,7 +417,7 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
 
   for (InstRef &IR : WaitSet)
     IR.getInstruction()->cycleEvent();
-  
+
   promoteToReadySet(Ready);
 }
 
