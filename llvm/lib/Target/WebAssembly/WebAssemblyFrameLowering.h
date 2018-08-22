@@ -24,7 +24,8 @@ class MachineFrameInfo;
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
  public:
   /// Size of the red zone for the user stack (leaf functions can use this much
-  /// space below the stack pointer without writing it back to memory).
+  /// space below the stack pointer without writing it back to __stack_pointer
+  /// global).
   // TODO: (ABI) Revisit and decide how large it should be.
   static const size_t RedZoneSize = 128;
 

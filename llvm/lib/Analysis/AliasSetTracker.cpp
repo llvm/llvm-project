@@ -252,6 +252,18 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   return false;
 }
 
+Instruction* AliasSet::getUniqueInstruction() {
+  if (AliasAny)
+    // May have collapses alias set
+    return nullptr;
+  if (size() != 0)
+    // Can't track source of pointer, might be many instruction
+    return nullptr;
+  if (1 != UnknownInsts.size())
+    return nullptr;
+  return cast<Instruction>(UnknownInsts[0]);
+}
+
 void AliasSetTracker::clear() {
   // Delete all the PointerRec entries.
   for (PointerMapType::iterator I = PointerMap.begin(), E = PointerMap.end();

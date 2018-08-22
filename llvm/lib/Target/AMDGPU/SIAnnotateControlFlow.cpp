@@ -372,7 +372,8 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
         Preds.push_back(Pred);
     }
 
-    BB = SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, false);
+    BB = SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, nullptr,
+                                false);
   }
 
   Value *Exec = popSaved();

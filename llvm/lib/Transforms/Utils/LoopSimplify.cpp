@@ -137,7 +137,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
   // Split out the loop pre-header.
   BasicBlock *PreheaderBB;
   PreheaderBB = SplitBlockPredecessors(Header, OutsideBlocks, ".preheader", DT,
-                                       LI, PreserveLCSSA);
+                                       LI, nullptr, PreserveLCSSA);
   if (!PreheaderBB)
     return nullptr;
 
@@ -251,7 +251,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     SE->forgetLoop(L);
 
   BasicBlock *NewBB = SplitBlockPredecessors(Header, OuterLoopPreds, ".outer",
-                                             DT, LI, PreserveLCSSA);
+                                             DT, LI, nullptr, PreserveLCSSA);
 
   // Make sure that NewBB is put someplace intelligent, which doesn't mess up
   // code layout too horribly.

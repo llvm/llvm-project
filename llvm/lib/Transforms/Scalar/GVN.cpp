@@ -1992,7 +1992,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ) {
     BasicBlock *BB = &*FI++;
 
-    bool removedBlock = MergeBlockIntoPredecessor(BB, &DTU, LI, MD);
+    bool removedBlock = MergeBlockIntoPredecessor(BB, &DTU, LI, nullptr, MD);
     if (removedBlock)
       ++NumGVNBlocks;
 

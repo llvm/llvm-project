@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -198,6 +199,10 @@ llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
   // If we have nothing to update, just return.
   auto *DT = Options.DT;
   auto *LI = Options.LI;
+  auto *MSSAU = Options.MSSAU;
+  if (MSSAU)
+    MSSAU->wireOldPredecessorsToNewImmediatePredecessor(DestBB, NewBB, {TIBB});
+
   if (!DT && !LI)
     return NewBB;
 
@@ -283,7 +288,7 @@ llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
         if (!LoopPreds.empty()) {
           assert(!DestBB->isEHPad() && "We don't split edges to EH pads!");
           BasicBlock *NewExitBB = SplitBlockPredecessors(
-              DestBB, LoopPreds, "split", DT, LI, Options.PreserveLCSSA);
+              DestBB, LoopPreds, "split", DT, LI, MSSAU, Options.PreserveLCSSA);
           if (Options.PreserveLCSSA)
             createPHIsForSplitLoopExit(LoopPreds, NewExitBB, DestBB);
         }
