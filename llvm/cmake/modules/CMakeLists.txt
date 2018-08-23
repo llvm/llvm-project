@@ -132,7 +132,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN LLVM-Config.cmake EXCLUDE
     PATTERN GetHostTriple.cmake EXCLUDE)
 
-  if (NOT CMAKE_CONFIGURATION_TYPES)
+  if (NOT LLVM_ENABLE_IDE)
     # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
     add_custom_target(cmake-exports)
     add_llvm_install_targets(install-cmake-exports

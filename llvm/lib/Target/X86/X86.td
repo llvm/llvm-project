@@ -362,17 +362,30 @@ def FeaturePrefer256Bit
     : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
                        "Prefer 256-bit AVX instructions">;
 
-// Enable mitigation of some aspects of speculative execution related
-// vulnerabilities by removing speculatable indirect branches. This disables
-// jump-table formation, rewrites explicit `indirectbr` instructions into
-// `switch` instructions, and uses a special construct called a "retpoline" to
-// prevent speculation of the remaining indirect branches (indirect calls and
-// tail calls).
+// Lower indirect calls using a special construct called a `retpoline` to
+// mitigate potential Spectre v2 attacks against them.
+def FeatureRetpolineIndirectCalls
+    : SubtargetFeature<
+          "retpoline-indirect-calls", "UseRetpolineIndirectCalls", "true",
+          "Remove speculation of indirect calls from the generated code.">;
+
+// Lower indirect branches and switches either using conditional branch trees
+// or using a special construct called a `retpoline` to mitigate potential
+// Spectre v2 attacks against them.
+def FeatureRetpolineIndirectBranches
+    : SubtargetFeature<
+          "retpoline-indirect-branches", "UseRetpolineIndirectBranches", "true",
+          "Remove speculation of indirect branches from the generated code.">;
+
+// Deprecated umbrella feature for enabling both `retpoline-indirect-calls` and
+// `retpoline-indirect-branches` above.
 def FeatureRetpoline
-    : SubtargetFeature<"retpoline", "UseRetpoline", "true",
+    : SubtargetFeature<"retpoline", "DeprecatedUseRetpoline", "true",
                        "Remove speculation of indirect branches from the "
                        "generated code, either by avoiding them entirely or "
-                       "lowering them with a speculation blocking construct.">;
+                       "lowering them with a speculation blocking construct.",
+                       [FeatureRetpolineIndirectCalls,
+                        FeatureRetpolineIndirectBranches]>;
 
 // Rely on external thunks for the emitted retpoline calls. This allows users
 // to provide their own custom thunk definitions in highly specialized
@@ -380,8 +393,10 @@ def FeatureRetpoline
 def FeatureRetpolineExternalThunk
     : SubtargetFeature<
           "retpoline-external-thunk", "UseRetpolineExternalThunk", "true",
-          "Enable retpoline, but with an externally provided thunk.",
-          [FeatureRetpoline]>;
+          "When lowering an indirect call or branch using a `retpoline`, rely "
+          "on the specified user provided thunk rather than emitting one "
+          "ourselves. Only has effect when combined with some other retpoline "
+          "feature.", [FeatureRetpolineIndirectCalls]>;
 
 // Direct Move instructions.
 def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",

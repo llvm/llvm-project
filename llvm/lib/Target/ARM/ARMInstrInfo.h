@@ -38,13 +38,6 @@ public:
   ///
   const ARMRegisterInfo &getRegisterInfo() const override { return RI; }
 
-  std::pair<unsigned, unsigned>
-  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
-  ArrayRef<std::pair<unsigned, const char *>>
-  getSerializableDirectMachineOperandTargetFlags() const override;
-  ArrayRef<std::pair<unsigned, const char *>>
-  getSerializableBitmaskMachineOperandTargetFlags() const override;
-
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };

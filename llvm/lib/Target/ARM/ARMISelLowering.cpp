@@ -850,8 +850,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-  if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only())
+  if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
+  }
 
   // @llvm.readcyclecounter requires the Performance Monitors extension.
   // Default to the 0 expansion on unsupported platforms.
@@ -9207,6 +9209,8 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   // IP.
 
   switch (TM.getCodeModel()) {
+  case CodeModel::Tiny:
+    llvm_unreachable("Tiny code model not available on ARM.");
   case CodeModel::Small:
   case CodeModel::Medium:
   case CodeModel::Kernel:
@@ -13645,13 +13649,20 @@ ARMTargetLowering::targetShrinkDemandedConstant(SDValue Op,
 
   unsigned Mask = C->getZExtValue();
 
-  // If mask is zero, nothing to do.
-  if (!Mask)
-    return false;
-
   unsigned Demanded = DemandedAPInt.getZExtValue();
   unsigned ShrunkMask = Mask & Demanded;
   unsigned ExpandedMask = Mask | ~Demanded;
+
+  // If the mask is all zeros, let the target-independent code replace the
+  // result with zero.
+  if (ShrunkMask == 0)
+    return false;
+
+  // If the mask is all ones, erase the AND. (Currently, the target-independent
+  // code won't do this, so we have to do it explicitly to avoid an infinite
+  // loop in obscure cases.)
+  if (ExpandedMask == ~0U)
+    return TLO.CombineTo(Op, Op.getOperand(0));
 
   auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
     return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;

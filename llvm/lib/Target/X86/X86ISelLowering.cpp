@@ -22904,7 +22904,7 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // With SSE41 we can use sign/zero extend, but for pre-SSE41 we unpack
   // and then ashr/lshr the upper bits down to the lower bits before multiply.
   unsigned Opcode = Op.getOpcode();
-  unsigned ExShift = (ISD::MULHU == Opcode ? ISD::SRL : ISD::SRA);
+  unsigned ExShift = (ISD::MULHU == Opcode ? X86ISD::VSRLI : X86ISD::VSRAI);
   unsigned ExAVX = (ISD::MULHU == Opcode ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
 
   // For 512-bit vectors, split into 256-bit vectors to allow the
@@ -22920,36 +22920,36 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
     if (VT == MVT::v32i8) {
       if (Subtarget.canExtendTo512BW()) {
-        SDValue ExA = DAG.getNode(ExAVX, dl, MVT::v32i16, A);
-        SDValue ExB = DAG.getNode(ExAVX, dl, MVT::v32i16, B);
-        SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v32i16, ExA, ExB);
-        Mul = DAG.getNode(ISD::SRL, dl, MVT::v32i16, Mul,
-                          DAG.getConstant(8, dl, MVT::v32i16));
+        MVT ExVT = MVT::v32i16;
+        SDValue ExA = DAG.getNode(ExAVX, dl, ExVT, A);
+        SDValue ExB = DAG.getNode(ExAVX, dl, ExVT, B);
+        SDValue Mul = DAG.getNode(ISD::MUL, dl, ExVT, ExA, ExB);
+        Mul = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Mul, 8, DAG);
         return DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
       }
+      MVT ExVT = MVT::v16i16;
       SDValue ALo = extract128BitVector(A, 0, DAG, dl);
       SDValue BLo = extract128BitVector(B, 0, DAG, dl);
       SDValue AHi = extract128BitVector(A, NumElems / 2, DAG, dl);
       SDValue BHi = extract128BitVector(B, NumElems / 2, DAG, dl);
-      ALo = DAG.getNode(ExAVX, dl, MVT::v16i16, ALo);
-      BLo = DAG.getNode(ExAVX, dl, MVT::v16i16, BLo);
-      AHi = DAG.getNode(ExAVX, dl, MVT::v16i16, AHi);
-      BHi = DAG.getNode(ExAVX, dl, MVT::v16i16, BHi);
-      Lo = DAG.getNode(ISD::SRL, dl, MVT::v16i16,
-                       DAG.getNode(ISD::MUL, dl, MVT::v16i16, ALo, BLo),
-                       DAG.getConstant(8, dl, MVT::v16i16));
-      Hi = DAG.getNode(ISD::SRL, dl, MVT::v16i16,
-                       DAG.getNode(ISD::MUL, dl, MVT::v16i16, AHi, BHi),
-                       DAG.getConstant(8, dl, MVT::v16i16));
-      // The ymm variant of PACKUS treats the 128-bit lanes separately, so before
-      // using PACKUS we need to permute the inputs to the correct lo/hi xmm lane.
+      ALo = DAG.getNode(ExAVX, dl, ExVT, ALo);
+      BLo = DAG.getNode(ExAVX, dl, ExVT, BLo);
+      AHi = DAG.getNode(ExAVX, dl, ExVT, AHi);
+      BHi = DAG.getNode(ExAVX, dl, ExVT, BHi);
+      Lo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
+      Hi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
+      Lo = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Lo, 8, DAG);
+      Hi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Hi, 8, DAG);
+      // The ymm variant of PACKUS treats the 128-bit lanes separately, so
+      // before using PACKUS we need to permute the inputs to the correct lo/hi
+      // xmm lane.
       const int LoMask[] = {0,  1,  2,  3,  4,  5,  6,  7,
                             16, 17, 18, 19, 20, 21, 22, 23};
       const int HiMask[] = {8,  9,  10, 11, 12, 13, 14, 15,
                             24, 25, 26, 27, 28, 29, 30, 31};
       return DAG.getNode(X86ISD::PACKUS, dl, VT,
-                         DAG.getVectorShuffle(MVT::v16i16, dl, Lo, Hi, LoMask),
-                         DAG.getVectorShuffle(MVT::v16i16, dl, Lo, Hi, HiMask));
+                         DAG.getVectorShuffle(ExVT, dl, Lo, Hi, LoMask),
+                         DAG.getVectorShuffle(ExVT, dl, Lo, Hi, HiMask));
     }
 
     assert(VT == MVT::v16i8 && "Unexpected VT");
@@ -22957,8 +22957,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     SDValue ExA = DAG.getNode(ExAVX, dl, MVT::v16i16, A);
     SDValue ExB = DAG.getNode(ExAVX, dl, MVT::v16i16, B);
     SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v16i16, ExA, ExB);
-    Mul = DAG.getNode(ISD::SRL, dl, MVT::v16i16, Mul,
-                      DAG.getConstant(8, dl, MVT::v16i16));
+    Mul =
+        getTargetVShiftByConstNode(X86ISD::VSRLI, dl, MVT::v16i16, Mul, 8, DAG);
     // If we have BWI we can use truncate instruction.
     if (Subtarget.hasBWI())
       return DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
@@ -22985,8 +22985,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     BLo = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
     ALo = DAG.getBitcast(ExVT, ALo);
     BLo = DAG.getBitcast(ExVT, BLo);
-    ALo = DAG.getNode(ExShift, dl, ExVT, ALo, DAG.getConstant(8, dl, ExVT));
-    BLo = DAG.getNode(ExShift, dl, ExVT, BLo, DAG.getConstant(8, dl, ExVT));
+    ALo = getTargetVShiftByConstNode(ExShift, dl, ExVT, ALo, 8, DAG);
+    BLo = getTargetVShiftByConstNode(ExShift, dl, ExVT, BLo, 8, DAG);
   }
 
   // Extract the hi parts and zero/sign extend to i16.
@@ -23005,16 +23005,16 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
     AHi = DAG.getBitcast(ExVT, AHi);
     BHi = DAG.getBitcast(ExVT, BHi);
-    AHi = DAG.getNode(ExShift, dl, ExVT, AHi, DAG.getConstant(8, dl, ExVT));
-    BHi = DAG.getNode(ExShift, dl, ExVT, BHi, DAG.getConstant(8, dl, ExVT));
+    AHi = getTargetVShiftByConstNode(ExShift, dl, ExVT, AHi, 8, DAG);
+    BHi = getTargetVShiftByConstNode(ExShift, dl, ExVT, BHi, 8, DAG);
   }
 
   // Multiply, lshr the upper 8bits to the lower 8bits of the lo/hi results and
   // pack back to v16i8.
   SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
   SDValue RHi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
-  RLo = DAG.getNode(ISD::SRL, dl, ExVT, RLo, DAG.getConstant(8, dl, ExVT));
-  RHi = DAG.getNode(ISD::SRL, dl, ExVT, RHi, DAG.getConstant(8, dl, ExVT));
+  RLo = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, RLo, 8, DAG);
+  RHi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, RHi, 8, DAG);
   return DAG.getNode(X86ISD::PACKUS, dl, VT, RLo, RHi);
 }
 
@@ -26649,7 +26649,7 @@ bool X86TargetLowering::isVectorClearMaskLegal(ArrayRef<int> Mask,
 
 bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
   // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpoline())
+  if (Subtarget.useRetpolineIndirectBranches())
     return false;
 
   // Otherwise, fallback on the generic logic.
@@ -39132,45 +39132,53 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
 
   // We know N is a reduction add, which means one of its operands is a phi.
   // To match SAD, we need the other operand to be a vector select.
-  SDValue SelectOp, Phi;
-  if (Op0.getOpcode() == ISD::VSELECT) {
-    SelectOp = Op0;
-    Phi = Op1;
-  } else if (Op1.getOpcode() == ISD::VSELECT) {
-    SelectOp = Op1;
-    Phi = Op0;
-  } else
+  if (Op0.getOpcode() != ISD::VSELECT)
+    std::swap(Op0, Op1);
+  if (Op0.getOpcode() != ISD::VSELECT)
     return SDValue();
+
+  auto BuildPSADBW = [&](SDValue Op0, SDValue Op1) {
+    // SAD pattern detected. Now build a SAD instruction and an addition for
+    // reduction. Note that the number of elements of the result of SAD is less
+    // than the number of elements of its input. Therefore, we could only update
+    // part of elements in the reduction vector.
+    SDValue Sad = createPSADBW(DAG, Op0, Op1, DL, Subtarget);
+
+    // The output of PSADBW is a vector of i64.
+    // We need to turn the vector of i64 into a vector of i32.
+    // If the reduction vector is at least as wide as the psadbw result, just
+    // bitcast. If it's narrower, truncate - the high i32 of each i64 is zero
+    // anyway.
+    MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
+    if (VT.getSizeInBits() >= ResVT.getSizeInBits())
+      Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
+    else
+      Sad = DAG.getNode(ISD::TRUNCATE, DL, VT, Sad);
+
+    if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
+      // Fill the upper elements with zero to match the add width.
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      Sad = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Zero, Sad,
+                        DAG.getIntPtrConstant(0, DL));
+    }
+
+    return Sad;
+  };
 
   // Check whether we have an abs-diff pattern feeding into the select.
-  if(!detectZextAbsDiff(SelectOp, Op0, Op1))
+  SDValue SadOp0, SadOp1;
+  if (!detectZextAbsDiff(Op0, SadOp0, SadOp1))
     return SDValue();
 
-  // SAD pattern detected. Now build a SAD instruction and an addition for
-  // reduction. Note that the number of elements of the result of SAD is less
-  // than the number of elements of its input. Therefore, we could only update
-  // part of elements in the reduction vector.
-  SDValue Sad = createPSADBW(DAG, Op0, Op1, DL, Subtarget);
+  Op0 = BuildPSADBW(SadOp0, SadOp1);
 
-  // The output of PSADBW is a vector of i64.
-  // We need to turn the vector of i64 into a vector of i32.
-  // If the reduction vector is at least as wide as the psadbw result, just
-  // bitcast. If it's narrower, truncate - the high i32 of each i64 is zero
-  // anyway.
-  MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
-  if (VT.getSizeInBits() >= ResVT.getSizeInBits())
-    Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
-  else
-    Sad = DAG.getNode(ISD::TRUNCATE, DL, VT, Sad);
-
-  if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
-    // Fill the upper elements with zero to match the add width.
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    Sad = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Zero, Sad,
-                      DAG.getIntPtrConstant(0, DL));
+  // It's possible we have a sad on the other side too.
+  if (Op1.getOpcode() == ISD::VSELECT &&
+      detectZextAbsDiff(Op1, SadOp0, SadOp1)) {
+    Op1 = BuildPSADBW(SadOp0, SadOp1);
   }
 
-  return DAG.getNode(ISD::ADD, DL, VT, Sad, Phi);
+  return DAG.getNode(ISD::ADD, DL, VT, Op0, Op1);
 }
 
 /// Convert vector increment or decrement to sub/add with an all-ones constant:

@@ -3222,8 +3222,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       (CalledFn && CalledFn->hasFnAttribute("no_caller_saved_registers")))
     return false;
 
-  // Functions using retpoline should use SDISel for calls.
-  if (Subtarget->useRetpoline())
+  // Functions using retpoline for indirect calls need to use SDISel.
+  if (Subtarget->useRetpolineIndirectCalls())
     return false;
 
   // Handle only C, fastcc, and webkit_js calling conventions for now.

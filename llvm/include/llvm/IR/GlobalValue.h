@@ -189,6 +189,7 @@ public:
   GlobalValue(const GlobalValue &) = delete;
 
   unsigned getAlignment() const;
+  unsigned getAddressSpace() const;
 
   enum class UnnamedAddr {
     None,

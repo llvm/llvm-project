@@ -12,6 +12,39 @@
 ///
 //===----------------------------------------------------------------------===//
 
+multiclass UnaryFP<SDNode node, string name, bits<32> f32Inst,
+                   bits<32> f64Inst> {
+  defm _F32 : I<(outs F32:$dst), (ins F32:$src), (outs), (ins),
+                [(set F32:$dst, (node F32:$src))],
+                !strconcat("f32.", !strconcat(name, "\t$dst, $src")),
+                !strconcat("f32.", name), f32Inst>;
+  defm _F64 : I<(outs F64:$dst), (ins F64:$src), (outs), (ins),
+                [(set F64:$dst, (node F64:$src))],
+                !strconcat("f64.", !strconcat(name, "\t$dst, $src")),
+                !strconcat("f64.", name), f64Inst>;
+}
+multiclass BinaryFP<SDNode node, string name, bits<32> f32Inst,
+                    bits<32> f64Inst> {
+  defm _F32 : I<(outs F32:$dst), (ins F32:$lhs, F32:$rhs), (outs), (ins),
+                [(set F32:$dst, (node F32:$lhs, F32:$rhs))],
+                !strconcat("f32.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("f32.", name), f32Inst>;
+  defm _F64 : I<(outs F64:$dst), (ins F64:$lhs, F64:$rhs), (outs), (ins),
+                [(set F64:$dst, (node F64:$lhs, F64:$rhs))],
+                !strconcat("f64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("f64.", name), f64Inst>;
+}
+multiclass ComparisonFP<CondCode cond, string name, bits<32> f32Inst, bits<32> f64Inst> {
+  defm _F32 : I<(outs I32:$dst), (ins F32:$lhs, F32:$rhs), (outs), (ins),
+                [(set I32:$dst, (setcc F32:$lhs, F32:$rhs, cond))],
+                !strconcat("f32.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("f32.", name), f32Inst>;
+  defm  _F64 : I<(outs I32:$dst), (ins F64:$lhs, F64:$rhs), (outs), (ins),
+                [(set I32:$dst, (setcc F64:$lhs, F64:$rhs, cond))],
+                !strconcat("f64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("f64.", name), f64Inst>;
+}
+
 let Defs = [ARGUMENTS] in {
 
 let isCommutable = 1 in

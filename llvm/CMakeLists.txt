@@ -2,13 +2,6 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
-# CMake 3.1 and higher include generator expressions of the form
-# $<TARGETLIB:obj> in the SOURCES property.  These need to be
-# stripped everywhere that access the SOURCES property, so we just
-# defer to the OLD behavior of not including generator expressions
-# in the output for now.
-cmake_policy(SET CMP0051 OLD)
-
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
@@ -976,7 +969,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   add_custom_target(llvm-headers DEPENDS intrinsics_gen)
   set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
 
-  if (NOT CMAKE_CONFIGURATION_TYPES)
+  if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-llvm-headers
                              DEPENDS llvm-headers
                              COMPONENT llvm-headers)
@@ -986,7 +979,7 @@ endif()
 # This must be at the end of the LLVM root CMakeLists file because it must run
 # after all targets are created.
 if(LLVM_DISTRIBUTION_COMPONENTS)
-  if(CMAKE_CONFIGURATION_TYPES)
+  if(LLVM_ENABLE_IDE)
     message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
   endif()
 

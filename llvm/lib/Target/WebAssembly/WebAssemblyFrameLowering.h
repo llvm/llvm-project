@@ -56,9 +56,9 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
 
 private:
   bool hasBP(const MachineFunction &MF) const;
-  bool needsSP(const MachineFunction &MF, const MachineFrameInfo &MFI) const;
-  bool needsSPWriteback(const MachineFunction &MF,
-                        const MachineFrameInfo &MFI) const;
+  bool needsSPForLocalFrame(const MachineFunction &MF) const;
+  bool needsSP(const MachineFunction &MF) const;
+  bool needsSPWriteback(const MachineFunction &MF) const;
 };
 
 }  // end namespace llvm

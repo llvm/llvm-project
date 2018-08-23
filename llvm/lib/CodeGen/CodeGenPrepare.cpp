@@ -1164,11 +1164,15 @@ static bool CombineUAddWithOverflow(CmpInst *CI) {
 
   auto *InsertPt = AddI->hasOneUse() ? CI : AddI;
 
+  DebugLoc Loc = CI->getDebugLoc();
   auto *UAddWithOverflow =
       CallInst::Create(F, {A, B}, "uadd.overflow", InsertPt);
+  UAddWithOverflow->setDebugLoc(Loc);
   auto *UAdd = ExtractValueInst::Create(UAddWithOverflow, 0, "uadd", InsertPt);
+  UAdd->setDebugLoc(Loc);
   auto *Overflow =
       ExtractValueInst::Create(UAddWithOverflow, 1, "overflow", InsertPt);
+  Overflow->setDebugLoc(Loc);
 
   CI->replaceAllUsesWith(Overflow);
   AddI->replaceAllUsesWith(UAdd);

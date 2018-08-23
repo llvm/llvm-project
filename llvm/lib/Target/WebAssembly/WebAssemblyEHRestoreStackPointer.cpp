@@ -68,6 +68,11 @@ bool WebAssemblyEHRestoreStackPointer::runOnMachineFunction(
     // pad, after the catch instruction. (Catch instructions may have been
     // reordered, and catch_all instructions have not been inserted yet, but
     // those cases are handled in LateEHPrepare).
+    //
+    // Here it is safe to assume that SP32 holds the latest value of
+    // __stack_pointer, because the only exception for this case is when a
+    // function uses the red zone, but that only happens with leaf functions,
+    // and we don't restore __stack_pointer in leaf functions anyway.
     auto InsertPos = MBB.begin();
     if (WebAssembly::isCatch(*MBB.begin()))
       InsertPos++;

@@ -1264,7 +1264,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // FUNCTION:  [strtab offset, strtab size, type, callingconv, isproto,
     //             linkage, paramattrs, alignment, section, visibility, gc,
     //             unnamed_addr, prologuedata, dllstorageclass, comdat,
-    //             prefixdata, personalityfn, DSO_Local]
+    //             prefixdata, personalityfn, DSO_Local, addrspace]
     Vals.push_back(addToStrtab(F.getName()));
     Vals.push_back(F.getName().size());
     Vals.push_back(VE.getTypeID(F.getFunctionType()));
@@ -1287,6 +1287,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         F.hasPersonalityFn() ? (VE.getValueID(F.getPersonalityFn()) + 1) : 0);
 
     Vals.push_back(F.isDSOLocal());
+    Vals.push_back(F.getAddressSpace());
+
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_FUNCTION, Vals, AbbrevToUse);
     Vals.clear();

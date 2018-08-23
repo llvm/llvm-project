@@ -56,7 +56,7 @@ Configuration *Config;
 LinkerDriver *Driver;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
-  errorHandler().LogName = sys::path::filename(Args[0]);
+  errorHandler().LogName = args::FilenameWithoutExe(Args[0]);
   errorHandler().ErrorOS = &Diag;
   errorHandler().ColorDiagnostics = Diag.has_colors();
   errorHandler().ErrorLimitExceededMsg =

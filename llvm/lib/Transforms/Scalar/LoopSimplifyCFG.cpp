@@ -24,6 +24,8 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -40,7 +42,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-simplifycfg"
 
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
-                            ScalarEvolution &SE) {
+                            ScalarEvolution &SE, MemorySSAUpdater *MSSAU) {
   bool Changed = false;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Copy blocks into a temporary array to avoid iterator invalidation issues
@@ -59,7 +61,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
       continue;
 
     // Merge Succ into Pred and delete it.
-    MergeBlockIntoPredecessor(Succ, &DTU, &LI);
+    MergeBlockIntoPredecessor(Succ, &DTU, &LI, MSSAU);
 
     SE.forgetTopmostLoop(&L);
 
@@ -72,7 +74,11 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
 PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &) {
-  if (!simplifyLoopCFG(L, AR.DT, AR.LI, AR.SE))
+  Optional<MemorySSAUpdater> MSSAU;
+  if (EnableMSSALoopDependency && AR.MSSA)
+    MSSAU = MemorySSAUpdater(AR.MSSA);
+  if (!simplifyLoopCFG(L, AR.DT, AR.LI, AR.SE,
+                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr))
     return PreservedAnalyses::all();
 
   return getLoopPassPreservedAnalyses();
@@ -93,10 +99,22 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    return simplifyLoopCFG(*L, DT, LI, SE);
+    Optional<MemorySSAUpdater> MSSAU;
+    if (EnableMSSALoopDependency) {
+      MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+      MSSAU = MemorySSAUpdater(MSSA);
+      if (VerifyMemorySSA)
+        MSSA->verifyMemorySSA();
+    }
+    return simplifyLoopCFG(*L, DT, LI, SE,
+                           MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (EnableMSSALoopDependency) {
+      AU.addRequired<MemorySSAWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
+    }
     AU.addPreserved<DependenceAnalysisWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
@@ -107,6 +125,7 @@ char LoopSimplifyCFGLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
                       "Simplify loop CFG", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
                     "Simplify loop CFG", false, false)
 

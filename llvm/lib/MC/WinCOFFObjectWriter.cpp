@@ -36,6 +36,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JamCRC.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -145,6 +146,10 @@ public:
 
   bool UseBigObj;
 
+  bool EmitAddrsigSection = false;
+  MCSectionCOFF *AddrsigSection;
+  std::vector<const MCSymbol *> AddrsigSyms;
+
   WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS);
 
@@ -203,6 +208,11 @@ public:
   void createFileSymbols(MCAssembler &Asm);
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
+
+  void emitAddrsigSection() override { EmitAddrsigSection = true; }
+  void addAddrsigSymbol(const MCSymbol *Sym) override {
+    AddrsigSyms.push_back(Sym);
+  }
 
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
@@ -610,13 +620,8 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
 
   // Write the section contents.
   if (Sec.Header.PointerToRawData != 0) {
-    assert(W.OS.tell() <= Sec.Header.PointerToRawData &&
+    assert(W.OS.tell() == Sec.Header.PointerToRawData &&
            "Section::PointerToRawData is insane!");
-
-    unsigned PaddingSize = Sec.Header.PointerToRawData - W.OS.tell();
-    assert(PaddingSize < 4 &&
-           "Should only need at most three bytes of padding!");
-    W.OS.write_zeros(PaddingSize);
 
     uint32_t CRC = writeSectionContents(Asm, Layout, MCSec);
 
@@ -657,6 +662,13 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
 
 void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                    const MCAsmLayout &Layout) {
+  if (EmitAddrsigSection) {
+    AddrsigSection = Asm.getContext().getCOFFSection(
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*AddrsigSection);
+  }
+
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm)
@@ -895,10 +907,7 @@ void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
     Sec->Header.SizeOfRawData = Layout.getSectionAddressSize(&Section);
 
     if (IsPhysicalSection(Sec)) {
-      // Align the section data to a four byte boundary.
-      Offset = alignTo(Offset, 4);
       Sec->Header.PointerToRawData = Offset;
-
       Offset += Sec->Header.SizeOfRawData;
     }
 
@@ -1022,6 +1031,25 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
       continue;
 
     Section->Symbol->Aux[0].Aux.SectionDefinition.Number = AssocSec->Number;
+  }
+
+  // Create the contents of the .llvm_addrsig section.
+  if (EmitAddrsigSection) {
+    auto Frag = new MCDataFragment(AddrsigSection);
+    Frag->setLayoutOrder(0);
+    raw_svector_ostream OS(Frag->getContents());
+    for (const MCSymbol *S : AddrsigSyms) {
+      if (!S->isTemporary()) {
+        encodeULEB128(S->getIndex(), OS);
+        continue;
+      }
+
+      MCSection *TargetSection = &S->getSection();
+      assert(SectionMap.find(TargetSection) != SectionMap.end() &&
+             "Section must already have been defined in "
+             "executePostLayoutBinding!");
+      encodeULEB128(SectionMap[TargetSection]->Symbol->getIndex(), OS);
+    }
   }
 
   assignFileOffsets(Asm, Layout);

@@ -287,7 +287,6 @@ public:
   SDValue storeStackInputValue(SelectionDAG &DAG,
                                const SDLoc &SL,
                                SDValue Chain,
-                               SDValue StackPtr,
                                SDValue ArgVal,
                                int64_t Offset) const;
 

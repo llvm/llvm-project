@@ -1143,7 +1143,7 @@ static void createFiles(MachOLinkingContext &ctx, bool Implicit) {
 /// This is where the link is actually performed.
 bool link(llvm::ArrayRef<const char *> args, bool CanExitEarly,
           raw_ostream &Error) {
-  errorHandler().LogName = llvm::sys::path::filename(args[0]);
+  errorHandler().LogName = args::FilenameWithoutExe(args[0]);
   errorHandler().ErrorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "'-error-limit 0' to see all errors)";

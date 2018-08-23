@@ -172,7 +172,7 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 // Catching an exception: catch / catch_all
-let hasCtrlDep = 1 in {
+let hasCtrlDep = 1, hasSideEffects = 1 in {
 defm CATCH_I32 : I<(outs I32:$dst), (ins i32imm:$tag),
                    (outs), (ins i32imm:$tag),
                    [(set I32:$dst, (int_wasm_catch imm:$tag))],

@@ -12,6 +12,40 @@
 ///
 //===----------------------------------------------------------------------===//
 
+multiclass UnaryInt<SDNode node, string name, bits<32> i32Inst,
+                    bits<32> i64Inst> {
+  defm _I32 : I<(outs I32:$dst), (ins I32:$src), (outs), (ins),
+                [(set I32:$dst, (node I32:$src))],
+                !strconcat("i32.", !strconcat(name, "\t$dst, $src")),
+                !strconcat("i32.", name), i32Inst>;
+  defm _I64 : I<(outs I64:$dst), (ins I64:$src), (outs), (ins),
+                [(set I64:$dst, (node I64:$src))],
+                !strconcat("i64.", !strconcat(name, "\t$dst, $src")),
+                !strconcat("i64.", name), i64Inst>;
+}
+multiclass BinaryInt<SDNode node, string name, bits<32> i32Inst,
+                     bits<32> i64Inst> {
+  defm _I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs), (outs), (ins),
+                [(set I32:$dst, (node I32:$lhs, I32:$rhs))],
+                !strconcat("i32.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("i32.", name), i32Inst>;
+  defm _I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs), (outs), (ins),
+                [(set I64:$dst, (node I64:$lhs, I64:$rhs))],
+                !strconcat("i64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("i64.", name), i64Inst>;
+}
+multiclass ComparisonInt<CondCode cond, string name, bits<32> i32Inst, bits<32> i64Inst> {
+  defm _I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs), (outs), (ins),
+                [(set I32:$dst, (setcc I32:$lhs, I32:$rhs, cond))],
+                !strconcat("i32.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("i32.", name), i32Inst>;
+  defm _I64 : I<(outs I32:$dst), (ins I64:$lhs, I64:$rhs), (outs), (ins),
+                [(set I32:$dst, (setcc I64:$lhs, I64:$rhs, cond))],
+                !strconcat("i64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
+                !strconcat("i64.", name), i64Inst>;
+}
+
+
 let Defs = [ARGUMENTS] in {
 
 // The spaces after the names are for aesthetic purposes only, to make

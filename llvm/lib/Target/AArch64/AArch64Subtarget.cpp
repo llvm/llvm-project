@@ -204,7 +204,9 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
 
   // The small code model's direct accesses use ADRP, which cannot
   // necessarily produce the value 0 (if the code is above 4GB).
-  if (useSmallAddressing() && GV->hasExternalWeakLinkage())
+  // Same for the tiny code model, where we have a pc relative LDR.
+  if ((useSmallAddressing() || TM.getCodeModel() == CodeModel::Tiny) &&
+      GV->hasExternalWeakLinkage())
     return AArch64II::MO_GOT | Flags;
 
   return Flags;
