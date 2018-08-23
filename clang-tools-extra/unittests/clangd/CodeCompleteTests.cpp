@@ -1680,6 +1680,31 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
   }
 }
 
+TEST(CompletionTest, SuggestOverrides) {
+  constexpr const char *const Text(R"cpp(
+  class A {
+   public:
+    virtual void vfunc(bool param);
+    virtual void vfunc(bool param, int p);
+    void func(bool param);
+  };
+  class B : public A {
+  virtual void ttt(bool param) const;
+  void vfunc(bool param, int p) override;
+  };
+  class C : public B {
+   public:
+    void vfunc(bool param) override;
+    ^
+  };
+  )cpp");
+  const auto Results = completions(Text);
+  EXPECT_THAT(Results.Completions,
+              AllOf(Contains(Labeled("void vfunc(bool param, int p) override")),
+                    Contains(Labeled("void ttt(bool param) const override")),
+                    Not(Contains(Labeled("void vfunc(bool param) override")))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
