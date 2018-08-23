@@ -12,6 +12,7 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/ADT/ScopeExit.h"
 // Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
@@ -23,6 +24,7 @@
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ProcessStructReader.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -53,6 +55,226 @@ bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
   stream.Printf(" Has Value=%s ", engaged_as_cstring.data());
 
   return true;
+}
+
+bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+
+  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
+
+  if (!valobj_sp)
+    return false;
+
+  // Member __f_ has type __base*, the contents of which will hold:
+  // 1) a vtable entry which may hold type information needed to discover the
+  //    lambda being called
+  // 2) possibly hold a pointer to the callable object
+  // e.g.
+  //
+  // (lldb) frame var -R  f_display
+  // (std::__1::function<void (int)>) f_display = {
+  //  __buf_ = {
+  //  …
+  // }
+  //  __f_ = 0x00007ffeefbffa00
+  // }
+  // (lldb) memory read -fA 0x00007ffeefbffa00
+  // 0x7ffeefbffa00: ... `vtable for std::__1::__function::__func<void (*) ...
+  // 0x7ffeefbffa08: ... `print_num(int) at std_function_cppreference_exam ...
+  //
+  // We will be handling five cases below, std::function is wrapping:
+  //
+  // 1) a lambda we know at compile time. We will obtain the name of the lambda
+  //    from the first template pameter from __func's vtable. We will look up
+  //    the lambda's operator()() and obtain the line table entry.
+  // 2) a lambda we know at runtime. A pointer to the lambdas __invoke method
+  //    will be stored after the vtable. We will obtain the lambdas name from
+  //    this entry and lookup operator()() and obtain the line table entry.
+  // 3) a callable object via operator()(). We will obtain the name of the
+  //    object from the first template parameter from __func's vtable. We will
+  //    look up the objectc operator()() and obtain the line table entry.
+  // 4) a member function. A pointer to the function will stored after the
+  //    we will obtain the name from this pointer.
+  // 5) a free function. A pointer to the function will stored after the vtable
+  //    we will obtain the name from this pointer.
+  ValueObjectSP member__f_(
+      valobj_sp->GetChildMemberWithName(ConstString("__f_"), true));
+  lldb::addr_t member__f_pointer_value = member__f_->GetValueAsUnsigned(0);
+
+  ExecutionContext exe_ctx(valobj_sp->GetExecutionContextRef());
+  Process *process = exe_ctx.GetProcessPtr();
+
+  if (process == nullptr)
+    return false;
+
+  uint32_t address_size = process->GetAddressByteSize();
+  Status status;
+
+  // First item pointed to by __f_ should be the pointer to the vtable for
+  // a __base object.
+  lldb::addr_t vtable_address =
+      process->ReadPointerFromMemory(member__f_pointer_value, status);
+
+  if (status.Fail())
+    return false;
+
+  bool found_wrapped_function = false;
+
+  // Using scoped exit so we can use early return and still execute the default
+  // action in case we don't find the wrapper function. Otherwise we can't use
+  // early exit without duplicating code.
+  auto default_print_on_exit = llvm::make_scope_exit(
+      [&found_wrapped_function, &stream, &member__f_pointer_value]() {
+        if (!found_wrapped_function)
+          stream.Printf(" __f_ = %llu", member__f_pointer_value);
+      });
+
+  lldb::addr_t address_after_vtable = member__f_pointer_value + address_size;
+  // As commened above we may not have a function pointer but if we do we will
+  // need it.
+  lldb::addr_t possible_function_address =
+      process->ReadPointerFromMemory(address_after_vtable, status);
+
+  if (status.Fail())
+    return false;
+
+  Target &target = process->GetTarget();
+
+  if (target.GetSectionLoadList().IsEmpty())
+    return false;
+
+  Address vtable_addr_resolved;
+  SymbolContext sc;
+  Symbol *symbol;
+
+  if (!target.GetSectionLoadList().ResolveLoadAddress(vtable_address,
+                                                      vtable_addr_resolved))
+    return false;
+
+  target.GetImages().ResolveSymbolContextForAddress(
+      vtable_addr_resolved, eSymbolContextEverything, sc);
+  symbol = sc.symbol;
+
+  if (symbol == NULL)
+    return false;
+
+  llvm::StringRef vtable_name(symbol->GetName().GetCString());
+  bool found_expected_start_string =
+      vtable_name.startswith("vtable for std::__1::__function::__func<");
+
+  if (!found_expected_start_string)
+    return false;
+
+  // Given case 1 or 3 we have a vtable name, we are want to extract the first
+  // template parameter
+  //
+  //  ... __func<main::$_0, std::__1::allocator<main::$_0> ...
+  //             ^^^^^^^^^
+  //
+  // We do this by find the first < and , and extracting in between.
+  //
+  // This covers the case of the lambda known at compile time.
+  //
+  size_t first_open_angle_bracket = vtable_name.find('<') + 1;
+  size_t first_comma = vtable_name.find_first_of(',');
+
+  llvm::StringRef first_template_parameter =
+      vtable_name.slice(first_open_angle_bracket, first_comma);
+
+  Address function_address_resolved;
+
+  // Setup for cases 2, 4 and 5 we have a pointer to a function after the
+  // vtable. We will use a process of elimination to drop through each case
+  // and obtain the data we need.
+  if (target.GetSectionLoadList().ResolveLoadAddress(
+          possible_function_address, function_address_resolved)) {
+    target.GetImages().ResolveSymbolContextForAddress(
+        function_address_resolved, eSymbolContextEverything, sc);
+    symbol = sc.symbol;
+  }
+
+  auto get_name = [&first_template_parameter, &symbol]() {
+    // Given case 1:
+    //
+    //    main::$_0
+    //
+    // we want to append ::operator()()
+    if (first_template_parameter.contains("$_"))
+      return llvm::Regex::escape(first_template_parameter.str()) +
+             R"(::operator\(\)\(.*\))";
+
+    if (symbol != NULL &&
+        symbol->GetName().GetStringRef().contains("__invoke")) {
+
+      llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+      size_t pos2 = symbol_name.find_last_of(':');
+
+      // Given case 2:
+      //
+      //    main::$_1::__invoke(...)
+      //
+      // We want to slice off __invoke(...) and append operator()()
+      std::string lambda_operator =
+          llvm::Regex::escape(symbol_name.slice(0, pos2 + 1).str()) +
+          R"(operator\(\)\(.*\))";
+
+      return lambda_operator;
+    }
+
+    // Case 3
+    return first_template_parameter.str() + R"(::operator\(\)\(.*\))";
+    ;
+  };
+
+  std::string func_to_match = get_name();
+
+  SymbolContextList scl;
+
+  target.GetImages().FindFunctions(RegularExpression{func_to_match}, true, true,
+                                   true, scl);
+
+  // Case 1,2 or 3
+  if (scl.GetSize() >= 1) {
+    SymbolContext sc2 = scl[0];
+
+    AddressRange range;
+    sc2.GetAddressRange(eSymbolContextEverything, 0, false, range);
+
+    Address address = range.GetBaseAddress();
+
+    Address addr;
+    if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
+                                  addr)) {
+      LineEntry line_entry;
+      addr.CalculateSymbolContextLineEntry(line_entry);
+
+      found_wrapped_function = true;
+      if (first_template_parameter.contains("$_") ||
+          (symbol != NULL &&
+           symbol->GetName().GetStringRef().contains("__invoke"))) {
+        // Case 1 and 2
+        stream.Printf(" Lambda in File %s at Line %u",
+                      line_entry.file.GetFilename().GetCString(),
+                      line_entry.line);
+      } else {
+        // Case 3
+        stream.Printf(" Function in File %s at Line %u",
+                      line_entry.file.GetFilename().GetCString(),
+                      line_entry.line);
+      }
+
+      return true;
+    }
+  }
+
+  // Case 4 or 5
+  if (!symbol->GetName().GetStringRef().startswith("vtable for")) {
+    found_wrapped_function = true;
+    stream.Printf(" Function = %s ", symbol->GetName().GetCString());
+    return true;
+  }
+
+  return false;
 }
 
 bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
@@ -587,23 +809,4 @@ bool lldb_private::formatters::LibcxxStringSummaryProvider(
       StringPrinter::StringElementType::ASCII>(options);
 
   return true;
-}
-
-class LibcxxFunctionFrontEnd : public SyntheticValueProviderFrontEnd {
-public:
-  LibcxxFunctionFrontEnd(ValueObject &backend)
-      : SyntheticValueProviderFrontEnd(backend) {}
-
-  lldb::ValueObjectSP GetSyntheticValue() override {
-    static ConstString g___f_("__f_");
-    return m_backend.GetChildMemberWithName(g___f_, true);
-  }
-};
-
-SyntheticChildrenFrontEnd *
-lldb_private::formatters::LibcxxFunctionFrontEndCreator(
-    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (valobj_sp)
-    return new LibcxxFunctionFrontEnd(*valobj_sp);
-  return nullptr;
 }
