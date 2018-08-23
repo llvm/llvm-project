@@ -904,30 +904,12 @@ public:
   }
 }; // end class Z3Solver
 
-class Z3ConstraintManager : public SMTConstraintManager {
+class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
   SMTSolverRef Solver = CreateZ3Solver();
 
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
       : SMTConstraintManager(SE, SB, Solver) {}
-
-  void addStateConstraints(ProgramStateRef State) const override {
-    // TODO: Don't add all the constraints, only the relevant ones
-    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
-    ConstraintZ3Ty::iterator I = CZ.begin(), IE = CZ.end();
-
-    // Construct the logical AND of all the constraints
-    if (I != IE) {
-      std::vector<SMTExprRef> ASTs;
-
-      SMTExprRef Constraint = Solver->newExprRef(I++->second);
-      while (I != IE) {
-        Constraint = Solver->mkAnd(Constraint, Solver->newExprRef(I++->second));
-      }
-
-      Solver->addConstraint(Constraint);
-    }
-  }
 
   bool canReasonAbout(SVal X) const override {
     const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
@@ -970,45 +952,6 @@ public:
     }
 
     llvm_unreachable("Unsupported expression to reason about!");
-  }
-
-  ProgramStateRef removeDeadBindings(ProgramStateRef State,
-                                     SymbolReaper &SymReaper) override {
-    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
-    ConstraintZ3Ty::Factory &CZFactory = State->get_context<ConstraintZ3>();
-
-    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      if (SymReaper.maybeDead(I->first))
-        CZ = CZFactory.remove(CZ, *I);
-    }
-
-    return State->set<ConstraintZ3>(CZ);
-  }
-
-  ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
-                             const SMTExprRef &Exp) override {
-    // Check the model, avoid simplifying AST to save time
-    if (checkModel(State, Exp).isConstrainedTrue())
-      return State->add<ConstraintZ3>(std::make_pair(Sym, toZ3Expr(*Exp)));
-
-    return nullptr;
-  }
-
-  //==------------------------------------------------------------------------==/
-  // Pretty-printing.
-  //==------------------------------------------------------------------------==/
-
-  void print(ProgramStateRef St, raw_ostream &OS, const char *nl,
-             const char *sep) override {
-
-    ConstraintZ3Ty CZ = St->get<ConstraintZ3>();
-
-    OS << nl << sep << "Constraints:";
-    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      OS << nl << ' ' << I->first << " : ";
-      I->second.print(OS);
-    }
-    OS << nl;
   }
 }; // end class Z3ConstraintManager
 
