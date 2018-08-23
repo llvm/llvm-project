@@ -10,6 +10,8 @@
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/EndianStream.h"
@@ -71,7 +73,12 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
-    assert(Value == 0);
+    if (Value) {
+      MCContext &Ctx = Asm.getContext();
+      Ctx.reportError(Fixup.getLoc(),
+                      "Unsupported relocation: try to compile with -O2 or above, "
+                      "or check your static variable usage");
+    }
   } else if (Fixup.getKind() == FK_Data_4) {
     support::endian::write<uint32_t>(&Data[Fixup.getOffset()], Value, Endian);
   } else if (Fixup.getKind() == FK_Data_8) {

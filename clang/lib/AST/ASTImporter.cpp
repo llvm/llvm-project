@@ -6088,38 +6088,6 @@ Expr *ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
             TInfo, SubExpr);
   }
   default:
-    break; // just fall through
-  }
-
-  auto *Named = cast<CXXNamedCastExpr>(E);
-  SourceLocation ExprLoc = Importer.Import(Named->getOperatorLoc()),
-      RParenLoc = Importer.Import(Named->getRParenLoc());
-  SourceRange Brackets = Importer.Import(Named->getAngleBrackets());
-
-  switch (E->getStmtClass()) {
-  case Stmt::CXXStaticCastExprClass:
-    return CXXStaticCastExpr::Create(Importer.getToContext(), T,
-                                     E->getValueKind(), E->getCastKind(),
-                                     SubExpr, &BasePath, TInfo,
-                                     ExprLoc, RParenLoc, Brackets);
-
-  case Stmt::CXXDynamicCastExprClass:
-    return CXXDynamicCastExpr::Create(Importer.getToContext(), T,
-                                      E->getValueKind(), E->getCastKind(),
-                                      SubExpr, &BasePath, TInfo,
-                                      ExprLoc, RParenLoc, Brackets);
-
-  case Stmt::CXXReinterpretCastExprClass:
-    return CXXReinterpretCastExpr::Create(Importer.getToContext(), T,
-                                          E->getValueKind(), E->getCastKind(),
-                                          SubExpr, &BasePath, TInfo,
-                                          ExprLoc, RParenLoc, Brackets);
-
-  case Stmt::CXXConstCastExprClass:
-    return CXXConstCastExpr::Create(Importer.getToContext(), T,
-                                    E->getValueKind(), SubExpr, TInfo, ExprLoc,
-                                    RParenLoc, Brackets);
-  default:
     llvm_unreachable("Cast expression of unsupported type!");
     return nullptr;
   }

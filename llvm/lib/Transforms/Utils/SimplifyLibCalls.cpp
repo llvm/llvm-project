@@ -1244,7 +1244,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B) {
     return nullptr;
 
   // If errno is never set, then use the intrinsic for sqrt().
-  if (Pow->hasFnAttr(Attribute::ReadNone)) {
+  if (Pow->doesNotAccessMemory()) {
     Function *SqrtFn = Intrinsic::getDeclaration(Pow->getModule(),
                                                  Intrinsic::sqrt, Ty);
     Sqrt = B.CreateCall(SqrtFn, Base, "sqrt");

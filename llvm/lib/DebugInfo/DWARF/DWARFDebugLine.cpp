@@ -1112,9 +1112,3 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint32_t OldOffset,
     Done = true;
   }
 }
-
-void DWARFDebugLine::warn(Error Err) {
-  handleAllErrors(std::move(Err), [](ErrorInfoBase &Info) {
-    WithColor::warning() << Info.message() << '\n';
-  });
-}

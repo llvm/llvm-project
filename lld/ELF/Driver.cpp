@@ -74,7 +74,7 @@ static void setConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
-  errorHandler().LogName = sys::path::filename(Args[0]);
+  errorHandler().LogName = args::FilenameWithoutExe(Args[0]);
   errorHandler().ErrorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";

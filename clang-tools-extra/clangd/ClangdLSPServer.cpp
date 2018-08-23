@@ -84,6 +84,8 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
       Params.capabilities.textDocument.completion.completionItem.snippetSupport;
   DiagOpts.EmbedFixesInDiagnostics =
       Params.capabilities.textDocument.publishDiagnostics.clangdFixSupport;
+  DiagOpts.SendDiagnosticCategory =
+      Params.capabilities.textDocument.publishDiagnostics.categorySupport;
 
   if (Params.capabilities.workspace && Params.capabilities.workspace->symbol &&
       Params.capabilities.workspace->symbol->symbolKind) {
@@ -506,7 +508,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
         }
         LSPDiag["clangd_fixes"] = std::move(ClangdFixes);
       }
-      if (!Diag.category.empty())
+      if (DiagOpts.SendDiagnosticCategory && !Diag.category.empty())
         LSPDiag["category"] = Diag.category;
       DiagnosticsJSON.push_back(std::move(LSPDiag));
 

@@ -341,6 +341,9 @@ CODEGENOPT(Addrsig, 1, 0)
 
 ENUM_CODEGENOPT(SignReturnAddress, SignReturnAddressScope, 2, None)
 
+/// Whether to emit unused static constants.
+CODEGENOPT(KeepStaticConsts, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

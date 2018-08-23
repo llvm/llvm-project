@@ -1145,6 +1145,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << A->getValue();
   }
 
+  Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
+
   return Success;
 }
 

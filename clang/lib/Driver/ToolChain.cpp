@@ -74,10 +74,17 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
-  SmallString<128> P(D.ResourceDir);
+  SmallString<128> P;
+
+  P.assign(D.ResourceDir);
   llvm::sys::path::append(P, D.getTargetTriple(), "lib");
   if (getVFS().exists(P))
-    getFilePaths().push_back(P.str());
+    getLibraryPaths().push_back(P.str());
+
+  P.assign(D.ResourceDir);
+  llvm::sys::path::append(P, Triple.str(), "lib");
+  if (getVFS().exists(P))
+    getLibraryPaths().push_back(P.str());
 
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
@@ -362,12 +369,11 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
 
-  const Driver &D = getDriver();
-  SmallString<128> P(D.ResourceDir);
-  llvm::sys::path::append(P, D.getTargetTriple(), "lib");
-  if (getVFS().exists(P)) {
+  for (const auto &LibPath : getLibraryPaths()) {
+    SmallString<128> P(LibPath);
     llvm::sys::path::append(P, Prefix + Twine("clang_rt.") + Component + Suffix);
-    return P.str();
+    if (getVFS().exists(P))
+      return P.str();
   }
 
   StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
@@ -762,6 +768,10 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 
 void ToolChain::AddFilePathLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
+  for (const auto &LibPath : getLibraryPaths())
+    if(LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+
   for (const auto &LibPath : getFilePaths())
     if(LibPath.length() > 0)
       CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));

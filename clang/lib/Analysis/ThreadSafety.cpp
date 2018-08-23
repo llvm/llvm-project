@@ -86,8 +86,8 @@ static void warnInvalidLock(ThreadSafetyHandler &Handler,
 
 namespace {
 
-/// A set of CapabilityInfo objects, which are compiled from the
-/// requires attributes on a function.
+/// A set of CapabilityExpr objects, which are compiled from thread safety
+/// attributes on a function.
 class CapExprSet : public SmallVector<CapabilityExpr, 4> {
 public:
   /// Push M onto list, but discard duplicates.
@@ -142,6 +142,9 @@ public:
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
                                 SourceLocation JoinLoc, LockErrorKind LEK,
                                 ThreadSafetyHandler &Handler) const = 0;
+  virtual void handleLock(FactSet &FSet, FactManager &FactMan,
+                          const FactEntry &entry, ThreadSafetyHandler &Handler,
+                          StringRef DiagKind) const = 0;
   virtual void handleUnlock(FactSet &FSet, FactManager &FactMan,
                             const CapabilityExpr &Cp, SourceLocation UnlockLoc,
                             bool FullyRemove, ThreadSafetyHandler &Handler,
@@ -873,6 +876,12 @@ public:
     }
   }
 
+  void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
+                  ThreadSafetyHandler &Handler,
+                  StringRef DiagKind) const override {
+    Handler.handleDoubleLock(DiagKind, entry.toString(), entry.loc());
+  }
+
   void handleUnlock(FactSet &FSet, FactManager &FactMan,
                     const CapabilityExpr &Cp, SourceLocation UnlockLoc,
                     bool FullyRemove, ThreadSafetyHandler &Handler,
@@ -909,6 +918,23 @@ public:
         // mutex is still held, then warn about the underlying mutex.
         Handler.handleMutexHeldEndOfScope(
             "mutex", sx::toString(UnderlyingMutex), loc(), JoinLoc, LEK);
+      }
+    }
+  }
+
+  void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
+                  ThreadSafetyHandler &Handler,
+                  StringRef DiagKind) const override {
+    for (const auto *UnderlyingMutex : UnderlyingMutexes) {
+      CapabilityExpr UnderCp(UnderlyingMutex, false);
+
+      // We're relocking the underlying mutexes. Warn on double locking.
+      if (FSet.findLock(FactMan, UnderCp))
+        Handler.handleDoubleLock(DiagKind, UnderCp.toString(), entry.loc());
+      else {
+        FSet.removeLock(FactMan, !UnderCp);
+        FSet.addLock(FactMan, llvm::make_unique<LockableFactEntry>(
+                                  UnderCp, entry.kind(), entry.loc()));
       }
     }
   }
@@ -1251,9 +1277,9 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
   }
 
   // FIXME: Don't always warn when we have support for reentrant locks.
-  if (FSet.findLock(FactMan, *Entry)) {
+  if (FactEntry *Cp = FSet.findLock(FactMan, *Entry)) {
     if (!Entry->asserted())
-      Handler.handleDoubleLock(DiagKind, Entry->toString(), Entry->loc());
+      Cp->handleLock(FSet, FactMan, *Entry, Handler, DiagKind);
   } else {
     FSet.addLock(FactMan, std::move(Entry));
   }

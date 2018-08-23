@@ -50,6 +50,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Win64EH.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -98,6 +99,7 @@ public:
   mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
                      llvm::codeview::MergingTypeTableBuilder &CVTypes) override;
   void printStackMap() const override;
+  void printAddrsig() override;
 private:
   void printSymbol(const SymbolRef &Sym);
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc,
@@ -1828,6 +1830,49 @@ void COFFDumper::printStackMap() const {
   else
     prettyPrintStackMap(W,
                         StackMapV2Parser<support::big>(StackMapContentsArray));
+}
+
+void COFFDumper::printAddrsig() {
+  object::SectionRef AddrsigSection;
+  for (auto Sec : Obj->sections()) {
+    StringRef Name;
+    Sec.getName(Name);
+    if (Name == ".llvm_addrsig") {
+      AddrsigSection = Sec;
+      break;
+    }
+  }
+
+  if (AddrsigSection == object::SectionRef())
+    return;
+
+  StringRef AddrsigContents;
+  AddrsigSection.getContents(AddrsigContents);
+  ArrayRef<uint8_t> AddrsigContentsArray(
+      reinterpret_cast<const uint8_t*>(AddrsigContents.data()),
+      AddrsigContents.size());
+
+  ListScope L(W, "Addrsig");
+  auto *Cur = reinterpret_cast<const uint8_t *>(AddrsigContents.begin());
+  auto *End = reinterpret_cast<const uint8_t *>(AddrsigContents.end());
+  while (Cur != End) {
+    unsigned Size;
+    const char *Err;
+    uint64_t SymIndex = decodeULEB128(Cur, &Size, End, &Err);
+    if (Err)
+      reportError(Err);
+
+    Expected<COFFSymbolRef> Sym = Obj->getSymbol(SymIndex);
+    StringRef SymName;
+    std::error_code EC = errorToErrorCode(Sym.takeError());
+    if (EC || (EC = Obj->getSymbolName(*Sym, SymName))) {
+      SymName = "";
+      error(EC);
+    }
+
+    W.printNumber("Sym", SymName, SymIndex);
+    Cur += Size;
+  }
 }
 
 void llvm::dumpCodeViewMergedTypes(

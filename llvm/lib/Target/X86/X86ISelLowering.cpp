@@ -26649,7 +26649,7 @@ bool X86TargetLowering::isVectorClearMaskLegal(ArrayRef<int> Mask,
 
 bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
   // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpoline())
+  if (Subtarget.useRetpolineIndirectBranches())
     return false;
 
   // Otherwise, fallback on the generic logic.
@@ -39132,45 +39132,53 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
 
   // We know N is a reduction add, which means one of its operands is a phi.
   // To match SAD, we need the other operand to be a vector select.
-  SDValue SelectOp, Phi;
-  if (Op0.getOpcode() == ISD::VSELECT) {
-    SelectOp = Op0;
-    Phi = Op1;
-  } else if (Op1.getOpcode() == ISD::VSELECT) {
-    SelectOp = Op1;
-    Phi = Op0;
-  } else
+  if (Op0.getOpcode() != ISD::VSELECT)
+    std::swap(Op0, Op1);
+  if (Op0.getOpcode() != ISD::VSELECT)
     return SDValue();
+
+  auto BuildPSADBW = [&](SDValue Op0, SDValue Op1) {
+    // SAD pattern detected. Now build a SAD instruction and an addition for
+    // reduction. Note that the number of elements of the result of SAD is less
+    // than the number of elements of its input. Therefore, we could only update
+    // part of elements in the reduction vector.
+    SDValue Sad = createPSADBW(DAG, Op0, Op1, DL, Subtarget);
+
+    // The output of PSADBW is a vector of i64.
+    // We need to turn the vector of i64 into a vector of i32.
+    // If the reduction vector is at least as wide as the psadbw result, just
+    // bitcast. If it's narrower, truncate - the high i32 of each i64 is zero
+    // anyway.
+    MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
+    if (VT.getSizeInBits() >= ResVT.getSizeInBits())
+      Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
+    else
+      Sad = DAG.getNode(ISD::TRUNCATE, DL, VT, Sad);
+
+    if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
+      // Fill the upper elements with zero to match the add width.
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      Sad = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Zero, Sad,
+                        DAG.getIntPtrConstant(0, DL));
+    }
+
+    return Sad;
+  };
 
   // Check whether we have an abs-diff pattern feeding into the select.
-  if(!detectZextAbsDiff(SelectOp, Op0, Op1))
+  SDValue SadOp0, SadOp1;
+  if (!detectZextAbsDiff(Op0, SadOp0, SadOp1))
     return SDValue();
 
-  // SAD pattern detected. Now build a SAD instruction and an addition for
-  // reduction. Note that the number of elements of the result of SAD is less
-  // than the number of elements of its input. Therefore, we could only update
-  // part of elements in the reduction vector.
-  SDValue Sad = createPSADBW(DAG, Op0, Op1, DL, Subtarget);
+  Op0 = BuildPSADBW(SadOp0, SadOp1);
 
-  // The output of PSADBW is a vector of i64.
-  // We need to turn the vector of i64 into a vector of i32.
-  // If the reduction vector is at least as wide as the psadbw result, just
-  // bitcast. If it's narrower, truncate - the high i32 of each i64 is zero
-  // anyway.
-  MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
-  if (VT.getSizeInBits() >= ResVT.getSizeInBits())
-    Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
-  else
-    Sad = DAG.getNode(ISD::TRUNCATE, DL, VT, Sad);
-
-  if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
-    // Fill the upper elements with zero to match the add width.
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    Sad = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Zero, Sad,
-                      DAG.getIntPtrConstant(0, DL));
+  // It's possible we have a sad on the other side too.
+  if (Op1.getOpcode() == ISD::VSELECT &&
+      detectZextAbsDiff(Op1, SadOp0, SadOp1)) {
+    Op1 = BuildPSADBW(SadOp0, SadOp1);
   }
 
-  return DAG.getNode(ISD::ADD, DL, VT, Sad, Phi);
+  return DAG.getNode(ISD::ADD, DL, VT, Op0, Op1);
 }
 
 /// Convert vector increment or decrement to sub/add with an all-ones constant:
