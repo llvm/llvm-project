@@ -60,7 +60,7 @@ class LLDBTest(TestFormat):
         # The macOS system integrity protection (SIP) doesn't allow injecting
         # libraries into system binaries, but this can be worked around by
         # copying the binary into a different location.
-        if test.config.environment['DYLD_INSERT_LIBRARIES'] and \
+        if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
                 sys.executable.startswith('/System/'):
             builddir = getBuildDir(cmd)
             assert(builddir)
