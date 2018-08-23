@@ -430,6 +430,15 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
          << ").compare(RHS." << Field.Name << ");\n";
       OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
       OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
+    } else if (Field.Enum) {
+      // Explicitly cast to unsigned, because the signedness of enums is
+      // compiler-dependent.
+      OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
+         << Field.Name << ")\n";
+      OS << "        return true;\n";
+      OS << "      if ((unsigned)LHS." << Field.Name << " > (unsigned)RHS."
+         << Field.Name << ")\n";
+      OS << "        return false;\n";
     } else {
       OS << "      if (LHS." << Field.Name << " < RHS." << Field.Name << ")\n";
       OS << "        return true;\n";

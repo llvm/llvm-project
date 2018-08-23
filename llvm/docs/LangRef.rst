@@ -719,7 +719,7 @@ an optional ``unnamed_addr`` attribute, a return type, an optional
 :ref:`parameter attribute <paramattrs>` for the return type, a function
 name, a (possibly empty) argument list (each with optional :ref:`parameter
 attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
-an optional section, an optional alignment,
+an optional address space, an optional section, an optional alignment,
 an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
@@ -731,8 +731,8 @@ LLVM function declarations consist of the "``declare``" keyword, an
 optional :ref:`linkage type <linkage>`, an optional :ref:`visibility style
 <visibility>`, an optional :ref:`DLL storage class <dllstorageclass>`, an
 optional :ref:`calling convention <callingconv>`, an optional ``unnamed_addr``
-or ``local_unnamed_addr`` attribute, a return type, an optional :ref:`parameter
-attribute <paramattrs>` for the return type, a function name, a possibly
+or ``local_unnamed_addr`` attribute, an optional address space, a return type,
+an optional :ref:`parameter attribute <paramattrs>` for the return type, a function name, a possibly
 empty list of arguments, an optional alignment, an optional :ref:`garbage
 collector name <gc>`, an optional :ref:`prefix <prefixdata>`, and an optional
 :ref:`prologue <prologuedata>`.
@@ -769,13 +769,16 @@ be significant and two identical functions can be merged.
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
 
+If an explicit address space is not given, it will default to the program
+address space from the :ref:`datalayout string<langref_datalayout>`.
+
 Syntax::
 
     define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
            [cconv] [ret attrs]
            <ResultType> @<FunctionName> ([argument list])
-           [(unnamed_addr|local_unnamed_addr)] [fn Attrs] [section "name"]
-           [comdat [($name)]] [align N] [gc] [prefix Constant]
+           [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
+           [section "name"] [comdat [($name)]] [align N] [gc] [prefix Constant]
            [prologue Constant] [personality Constant] (!name !N)* { ... }
 
 The argument list is a comma separated sequence of arguments where each
@@ -6452,7 +6455,7 @@ Syntax:
 
 ::
 
-      <result> = invoke [cconv] [ret attrs] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs]
+      <result> = invoke [cconv] [ret attrs] [addrspace(<num>)] [<ty>|<fnty> <fnptrval>(<function args>) [fn attrs]
                     [operand bundles] to label <normal label> unwind label <exception label>
 
 Overview:
@@ -6488,6 +6491,9 @@ This instruction requires several arguments:
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
    values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
    are valid here.
+#. The optional addrspace attribute can be used to indicate the adress space
+   of the called function. If it is not specified, the program address space
+   from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
    type of the return value. Functions that return no value are marked
    ``void``.
@@ -9503,8 +9509,8 @@ Syntax:
 
 ::
 
-      <result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs]
-                   [ operand bundles ]
+      <result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] [addrspace(<num>)]
+                 [<ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [ operand bundles ]
 
 Overview:
 """""""""
@@ -9575,6 +9581,9 @@ This instruction requires several arguments:
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
    values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
    are valid here.
+#. The optional addrspace attribute can be used to indicate the adress space
+   of the called function. If it is not specified, the program address space
+   from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
    type of the return value. Functions that return no value are marked
    ``void``.

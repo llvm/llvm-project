@@ -464,7 +464,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       // the end of the name. Change name from llvm.arm.neon.vclz.* to
       //  llvm.ctlz.*
       FunctionType* fType = FunctionType::get(F->getReturnType(), args, false);
-      NewFn = Function::Create(fType, F->getLinkage(),
+      NewFn = Function::Create(fType, F->getLinkage(), F->getAddressSpace(),
                                "llvm.ctlz." + Name.substr(14), F->getParent());
       return true;
     }
@@ -480,7 +480,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       // Can't use Intrinsic::getDeclaration here as the return types might
       // then only be structurally equal.
       FunctionType* fType = FunctionType::get(F->getReturnType(), Tys, false);
-      NewFn = Function::Create(fType, F->getLinkage(),
+      NewFn = Function::Create(fType, F->getLinkage(), F->getAddressSpace(),
                                "llvm." + Name + ".p0i8", F->getParent());
       return true;
     }

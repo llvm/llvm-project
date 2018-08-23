@@ -1095,14 +1095,14 @@ def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
           (TCRETURNri ptr_rc_tailcall:$dst, imm:$off)>,
-          Requires<[Not64BitMode, NotUseRetpoline]>;
+          Requires<[Not64BitMode, NotUseRetpolineIndirectCalls]>;
 
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
 def : Pat<(X86tcret (load addr:$dst), imm:$off),
           (TCRETURNmi addr:$dst, imm:$off)>,
-          Requires<[Not64BitMode, IsNotPIC, NotUseRetpoline]>;
+          Requires<[Not64BitMode, IsNotPIC, NotUseRetpolineIndirectCalls]>;
 
 def : Pat<(X86tcret (i32 tglobaladdr:$dst), imm:$off),
           (TCRETURNdi tglobaladdr:$dst, imm:$off)>,
@@ -1114,21 +1114,21 @@ def : Pat<(X86tcret (i32 texternalsym:$dst), imm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
           (TCRETURNri64 ptr_rc_tailcall:$dst, imm:$off)>,
-          Requires<[In64BitMode, NotUseRetpoline]>;
+          Requires<[In64BitMode, NotUseRetpolineIndirectCalls]>;
 
 // Don't fold loads into X86tcret requiring more than 6 regs.
 // There wouldn't be enough scratch registers for base+index.
 def : Pat<(X86tcret_6regs (load addr:$dst), imm:$off),
           (TCRETURNmi64 addr:$dst, imm:$off)>,
-          Requires<[In64BitMode, NotUseRetpoline]>;
+          Requires<[In64BitMode, NotUseRetpolineIndirectCalls]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
           (RETPOLINE_TCRETURN64 ptr_rc_tailcall:$dst, imm:$off)>,
-          Requires<[In64BitMode, UseRetpoline]>;
+          Requires<[In64BitMode, UseRetpolineIndirectCalls]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
           (RETPOLINE_TCRETURN32 ptr_rc_tailcall:$dst, imm:$off)>,
-          Requires<[Not64BitMode, UseRetpoline]>;
+          Requires<[Not64BitMode, UseRetpolineIndirectCalls]>;
 
 def : Pat<(X86tcret (i64 tglobaladdr:$dst), imm:$off),
           (TCRETURNdi64 tglobaladdr:$dst, imm:$off)>,

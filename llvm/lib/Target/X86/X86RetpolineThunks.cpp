@@ -115,7 +115,9 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
     // FIXME: It's a little silly to look at every function just to enumerate
     // the subtargets, but eventually we'll want to look at them for indirect
     // calls, so maybe this is OK.
-    if (!STI->useRetpoline() || STI->useRetpolineExternalThunk())
+    if ((!STI->useRetpolineIndirectCalls() &&
+         !STI->useRetpolineIndirectBranches()) ||
+        STI->useRetpolineExternalThunk())
       return false;
 
     // Otherwise, we need to insert the thunk.

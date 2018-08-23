@@ -123,3 +123,21 @@ entry:
 declare void @my_memset(i8* nocapture writeonly, i8, i64) argmemonly
 declare void @my_memcpy(i8* nocapture writeonly, i8* nocapture readonly, i64) argmemonly
 declare void @my_memmove(i8* nocapture, i8* nocapture readonly, i64) argmemonly
+
+
+; CHECK: Alias sets for function 'test_attribute_intersect':
+; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 1 pointer values.
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Mod/Ref
+; CHECK-NEXT: 1 Unknown instructions:   call void @attribute_intersect(i8* %a)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
+define i8 @test_attribute_intersect(i8* noalias %a) {
+entry:
+  ;; This call is effectively readnone since the argument is readonly
+  ;; and the function is declared writeonly.  
+  call void @attribute_intersect(i8* %a)
+  %val = load i8, i8* %a
+  ret i8 %val
+}
+
+declare void @attribute_intersect(i8* readonly) argmemonly writeonly
+
