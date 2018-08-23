@@ -269,7 +269,8 @@ struct CodeCompletionBuilder {
                         CodeCompletionString *SemaCCS,
                         const IncludeInserter &Includes, StringRef FileName,
                         const CodeCompleteOptions &Opts)
-      : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
+      : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments),
+        EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets) {
     add(C, SemaCCS);
     if (C.SemaResult) {
       Completion.Origin |= SymbolOrigin::AST;
@@ -385,10 +386,17 @@ private:
   }
 
   std::string summarizeSnippet() const {
-    if (auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>())
-      return *Snippet;
-    // All bundles are function calls.
-    return "(${0})";
+    auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
+    if (!Snippet)
+      // All bundles are function calls.
+      return "($0)";
+    if (!Snippet->empty() && !EnableFunctionArgSnippets &&
+        ((Completion.Kind == CompletionItemKind::Function) ||
+         (Completion.Kind == CompletionItemKind::Method)) &&
+        (Snippet->front() == '(') && (Snippet->back() == ')'))
+      // Check whether function has any parameters or not.
+      return Snippet->size() > 2 ? "($0)" : "()";
+    return *Snippet;
   }
 
   std::string summarizeSignature() const {
@@ -402,6 +410,7 @@ private:
   CodeCompletion Completion;
   SmallVector<BundledEntry, 1> Bundled;
   bool ExtractDocumentation;
+  bool EnableFunctionArgSnippets;
 };
 
 // Determine the symbol ID for a Sema code completion result, if possible.
@@ -1413,16 +1422,8 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
       LSP.additionalTextEdits.push_back(FixIt);
     }
   }
-  if (Opts.EnableSnippets && !SnippetSuffix.empty()) {
-    if (!Opts.EnableFunctionArgSnippets &&
-        ((Kind == CompletionItemKind::Function) ||
-         (Kind == CompletionItemKind::Method)) &&
-        (SnippetSuffix.front() == '(') && (SnippetSuffix.back() == ')'))
-      // Check whether function has any parameters or not.
-      LSP.textEdit->newText += SnippetSuffix.size() > 2 ? "(${0})" : "()";
-    else
-      LSP.textEdit->newText += SnippetSuffix;
-  }
+  if (Opts.EnableSnippets)
+    LSP.textEdit->newText += SnippetSuffix;
 
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
