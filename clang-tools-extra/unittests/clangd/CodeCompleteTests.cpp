@@ -1140,7 +1140,7 @@ TEST(CompletionTest, OverloadBundling) {
   // For now we just return one of the doc strings arbitrarily.
   EXPECT_THAT(A.Documentation, AnyOf(HasSubstr("Overload with int"),
                                      HasSubstr("Overload with bool")));
-  EXPECT_EQ(A.SnippetSuffix, "(${0})");
+  EXPECT_EQ(A.SnippetSuffix, "($0)");
 }
 
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {
@@ -1648,55 +1648,35 @@ TEST(SignatureHelpTest, IndexDocumentation) {
                         SigDoc("Doc from sema"))));
 }
 
-TEST(CompletionTest, RenderWithSnippetsForFunctionArgsDisabled) {
+TEST(CompletionTest, CompletionFunctionArgsDisabled) {
   CodeCompleteOptions Opts;
-  Opts.EnableFunctionArgSnippets = true;
-  {
-    CodeCompletion C;
-    C.RequiredQualifier = "Foo::";
-    C.Name = "x";
-    C.SnippetSuffix = "()";
-
-    auto R = C.render(Opts);
-    EXPECT_EQ(R.textEdit->newText, "Foo::x");
-    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
-  }
-
   Opts.EnableSnippets = true;
   Opts.EnableFunctionArgSnippets = false;
+  const std::string Header =
+      R"cpp(
+      void xfoo();
+      void xfoo(int x, int y);
+      void xbar();
+      void f() {
+    )cpp";
   {
-    CodeCompletion C;
-    C.RequiredQualifier = "Foo::";
-    C.Name = "x";
-    C.SnippetSuffix = "";
-
-    auto R = C.render(Opts);
-    EXPECT_EQ(R.textEdit->newText, "Foo::x");
-    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+    auto Results = completions(Header + "\nxfo^", {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(Named("xfoo"), SnippetSuffix("()")),
+                             AllOf(Named("xfoo"), SnippetSuffix("($0)"))));
   }
-
   {
-    CodeCompletion C;
-    C.RequiredQualifier = "Foo::";
-    C.Name = "x";
-    C.SnippetSuffix = "()";
-    C.Kind = CompletionItemKind::Method;
-
-    auto R = C.render(Opts);
-    EXPECT_EQ(R.textEdit->newText, "Foo::x()");
-    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+    auto Results = completions(Header + "\nxba^", {}, Opts);
+    EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
+                                         Named("xbar"), SnippetSuffix("()"))));
   }
-
   {
-    CodeCompletion C;
-    C.RequiredQualifier = "Foo::";
-    C.Name = "x";
-    C.SnippetSuffix = "(${0:bool})";
-    C.Kind = CompletionItemKind::Function;
-
-    auto R = C.render(Opts);
-    EXPECT_EQ(R.textEdit->newText, "Foo::x(${0})");
-    EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+    Opts.BundleOverloads = true;
+    auto Results = completions(Header + "\nxfo^", {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(Named("xfoo"), SnippetSuffix("($0)"))));
   }
 }
 
