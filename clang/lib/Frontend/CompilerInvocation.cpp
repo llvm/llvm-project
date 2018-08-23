@@ -370,7 +370,7 @@ static StringRef getCodeModel(ArgList &Args, DiagnosticsEngine &Diags) {
   if (Arg *A = Args.getLastArg(OPT_mcode_model)) {
     StringRef Value = A->getValue();
     if (Value == "small" || Value == "kernel" || Value == "medium" ||
-        Value == "large")
+        Value == "large" || Value == "tiny")
       return Value;
     Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Value;
   }
@@ -1144,6 +1144,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
   }
+
+  Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
   return Success;
 }

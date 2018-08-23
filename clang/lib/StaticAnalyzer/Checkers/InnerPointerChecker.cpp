@@ -86,14 +86,20 @@ public:
   };
 
   InnerPointerChecker()
-      : AppendFn("append"), AssignFn("assign"), ClearFn("clear"),
-        CStrFn("c_str"), DataFn("data"), EraseFn("erase"), InsertFn("insert"),
-        PopBackFn("pop_back"), PushBackFn("push_back"), ReplaceFn("replace"),
-        ReserveFn("reserve"), ResizeFn("resize"),
-        ShrinkToFitFn("shrink_to_fit"), SwapFn("swap") {}
-
-  /// Check if the object of this member function call is a `basic_string`.
-  bool isCalledOnStringObject(const CXXInstanceCall *ICall) const;
+      : AppendFn({"std", "basic_string", "append"}),
+        AssignFn({"std", "basic_string", "assign"}),
+        ClearFn({"std", "basic_string", "clear"}),
+        CStrFn({"std", "basic_string", "c_str"}),
+        DataFn({"std", "basic_string", "data"}),
+        EraseFn({"std", "basic_string", "erase"}),
+        InsertFn({"std", "basic_string", "insert"}),
+        PopBackFn({"std", "basic_string", "pop_back"}),
+        PushBackFn({"std", "basic_string", "push_back"}),
+        ReplaceFn({"std", "basic_string", "replace"}),
+        ReserveFn({"std", "basic_string", "reserve"}),
+        ResizeFn({"std", "basic_string", "resize"}),
+        ShrinkToFitFn({"std", "basic_string", "shrink_to_fit"}),
+        SwapFn({"std", "basic_string", "swap"}) {}
 
   /// Check whether the called member function potentially invalidates
   /// pointers referring to the container object's inner buffer.
@@ -121,21 +127,6 @@ public:
 };
 
 } // end anonymous namespace
-
-bool InnerPointerChecker::isCalledOnStringObject(
-        const CXXInstanceCall *ICall) const {
-  const auto *ObjRegion =
-    dyn_cast_or_null<TypedValueRegion>(ICall->getCXXThisVal().getAsRegion());
-  if (!ObjRegion)
-    return false;
-
-  QualType ObjTy = ObjRegion->getValueType();
-  if (ObjTy.isNull())
-    return false;
-
-  CXXRecordDecl *Decl = ObjTy->getAsCXXRecordDecl();
-  return Decl && Decl->getName() == "basic_string";
-}
 
 bool InnerPointerChecker::isInvalidatingMemberFunction(
         const CallEvent &Call) const {
@@ -220,33 +211,31 @@ void InnerPointerChecker::checkPostCall(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   if (const auto *ICall = dyn_cast<CXXInstanceCall>(&Call)) {
-    if (isCalledOnStringObject(ICall)) {
-      const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(
-              ICall->getCXXThisVal().getAsRegion());
+    const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(
+        ICall->getCXXThisVal().getAsRegion());
 
-      if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
-        SVal RawPtr = Call.getReturnValue();
-        if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-          // Start tracking this raw pointer by adding it to the set of symbols
-          // associated with this container object in the program state map.
+    if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
+      SVal RawPtr = Call.getReturnValue();
+      if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
+        // Start tracking this raw pointer by adding it to the set of symbols
+        // associated with this container object in the program state map.
 
-          PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
-          const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
-          PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
-          assert(C.wasInlined || !Set.contains(Sym));
-          Set = F.add(Set, Sym);
+        PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
+        const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
+        PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
+        assert(C.wasInlined || !Set.contains(Sym));
+        Set = F.add(Set, Sym);
 
-          State = State->set<RawPtrMap>(ObjRegion, Set);
-          C.addTransition(State);
-        }
-        return;
+        State = State->set<RawPtrMap>(ObjRegion, Set);
+        C.addTransition(State);
       }
+      return;
+    }
 
-      // Check [string.require] / second point.
-      if (isInvalidatingMemberFunction(Call)) {
-        markPtrSymbolsReleased(Call, State, ObjRegion, C);
-        return;
-      }
+    // Check [string.require] / second point.
+    if (isInvalidatingMemberFunction(Call)) {
+      markPtrSymbolsReleased(Call, State, ObjRegion, C);
+      return;
     }
   }
 
