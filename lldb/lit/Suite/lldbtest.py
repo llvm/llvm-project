@@ -9,6 +9,14 @@ import lit.TestRunner
 import lit.util
 from lit.formats.base import TestFormat
 
+def getBuildDir(cmd):
+    found = False
+    for arg in cmd:
+        if found:
+            return arg
+        if arg == '--build-dir':
+            found = True
+    return None
 
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
@@ -44,10 +52,22 @@ class LLDBTest(TestFormat):
             return (lit.Test.UNSUPPORTED, 'Test is unsupported')
 
         testPath, testFile = os.path.split(test.getSourcePath())
-        # On Windows, the system does not always correctly interpret shebang lines.
-        # To make sure we can execute the tests, add python exe as the first parameter
-        # of the command.
+        # On Windows, the system does not always correctly interpret
+        # shebang lines.  To make sure we can execute the tests, add
+        # python exe as the first parameter of the command.
         cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
+
+        # The macOS system integrity protection (SIP) doesn't allow injecting
+        # libraries into system binaries, but this can be worked around by
+        # copying the binary into a different location.
+        if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
+                sys.executable.startswith('/System/'):
+            builddir = getBuildDir(cmd)
+            assert(builddir)
+            copied_python = os.path.join(builddir, 'copied-system-python')
+            import shutil
+            shutil.copy(sys.executable, os.path.join(builddir, copied_python))
+            cmd[0] = copied_python
 
         try:
             out, err, exitCode = lit.util.executeCommand(
