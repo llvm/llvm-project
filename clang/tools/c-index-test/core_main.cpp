@@ -735,9 +735,9 @@ static void printSymbol(indexstore::IndexRecordSymbol Sym, raw_ostream &OS) {
     OS << Sym.getCodegenName();
   OS << " | ";
 
-  printSymbolRoles(Sym.getRoles(), OS);
+  printSymbolRoles(getSymbolRoles(Sym.getRoles()), OS);
   OS << " - ";
-  printSymbolRoles(Sym.getRelatedRoles(), OS);
+  printSymbolRoles(getSymbolRoles(Sym.getRelatedRoles()), OS);
   OS << '\n';
 }
 
@@ -764,12 +764,12 @@ static void printSymbol(indexstore::IndexRecordOccurrence Occur, raw_ostream &OS
     return true;
   });
 
-  printSymbolRoles(Occur.getRoles(), OS);
+  printSymbolRoles(getSymbolRoles(Occur.getRoles()), OS);
   OS << " | ";
   OS << "rel: " << NumRelations << '\n';
   Occur.foreachRelation([&](indexstore::IndexSymbolRelation Rel) {
     OS << '\t';
-    printSymbolRoles(Rel.getRoles(), OS);
+    printSymbolRoles(getSymbolRoles(Rel.getRoles()), OS);
     OS << " | ";
     auto Sym = Rel.getSymbol();
     if (Sym.getUSR().empty())
