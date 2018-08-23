@@ -3863,81 +3863,81 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                                             Status &error) {
   VALID_OR_RETURN(CompilerType());
 
-  if (mangled_typename 
-      && SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-    if (log)
-      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
-                  this, mangled_typename);
-
-    swift::ASTContext *ast_ctx = GetASTContext();
-    if (!ast_ctx) {
-      if (log)
-        log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                    "-- null Swift AST Context",
-                    this, mangled_typename);
-      error.SetErrorString("null Swift AST Context");
-      return CompilerType();
-    }
-
-    error.Clear();
-
-    // If we were to crash doing this, remember what type caused it
-    llvm::PrettyStackTraceFormat PST("error finding type for %s",
-                                        mangled_typename);
-    ConstString mangled_name(mangled_typename);
-    swift::TypeBase *found_type =
-        m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
-    if (found_type) {
-      if (log)
-        log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                    "-- found in the positive cache",
-                    this, mangled_typename);
-      return CompilerType(ast_ctx, found_type);
-    }
-
-    if (m_negative_type_cache.Lookup(mangled_name.GetCString())) {
-      if (log)
-        log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                    "-- found in the negative cache",
-                    this, mangled_typename);
-      return CompilerType();
-    }
-
-    if (log)
-      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') -- "
-                  "not cached, searching",
-                  this, mangled_typename);
-
-    std::string swift_error;
-    found_type = swift::ide::getTypeFromMangledSymbolname(
-                     *ast_ctx, mangled_typename, swift_error)
-                     .getPointer();
-
-    if (found_type) {
-      CacheDemangledType(mangled_name.GetCString(), found_type);
-      CompilerType result_type(ast_ctx, found_type);
-      if (log)
-        log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                    "-- found %s",
-                    this, mangled_typename,
-                    result_type.GetTypeName().GetCString());
-      return result_type;
-    } else {
-      if (log)
-        log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                    "-- error: %s",
-                    this, mangled_typename, swift_error.c_str());
-
-      error.SetErrorStringWithFormat("type for typename '%s' was not found",
-                                     mangled_typename);
-      CacheDemangledTypeFailure(mangled_name.GetCString());
-      return CompilerType();
-    }
+  if (!mangled_typename ||
+      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
+    error.SetErrorStringWithFormat("typename '%s' is not a valid Swift mangled "
+                                   "typename, it should begin with $S",
+                                   mangled_typename);
+    return CompilerType();
   }
-  error.SetErrorStringWithFormat("typename '%s' is not a valid Swift mangled "
-                                 "typename, it should begin with _T",
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  if (log)
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
+                this, mangled_typename);
+
+  swift::ASTContext *ast_ctx = GetASTContext();
+  if (!ast_ctx) {
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
+                  "-- null Swift AST Context",
+                  this, mangled_typename);
+    error.SetErrorString("null Swift AST Context");
+    return CompilerType();
+  }
+
+  error.Clear();
+
+  // If we were to crash doing this, remember what type caused it
+  llvm::PrettyStackTraceFormat PST("error finding type for %s",
+                                   mangled_typename);
+  ConstString mangled_name(mangled_typename);
+  swift::TypeBase *found_type =
+      m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
+  if (found_type) {
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
+                  "-- found in the positive cache",
+                  this, mangled_typename);
+    return CompilerType(ast_ctx, found_type);
+  }
+
+  if (m_negative_type_cache.Lookup(mangled_name.GetCString())) {
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
+                  "-- found in the negative cache",
+                  this, mangled_typename);
+    return CompilerType();
+  }
+
+  if (log)
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') -- "
+                "not cached, searching",
+                this, mangled_typename);
+
+  std::string swift_error;
+  found_type = swift::ide::getTypeFromMangledSymbolname(
+                   *ast_ctx, mangled_typename, swift_error)
+                   .getPointer();
+
+  if (found_type) {
+    CacheDemangledType(mangled_name.GetCString(), found_type);
+    CompilerType result_type(ast_ctx, found_type);
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
+                  "-- found %s",
+                  this, mangled_typename,
+                  result_type.GetTypeName().GetCString());
+    return result_type;
+  }
+  if (log)
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
+                "-- error: %s",
+                this, mangled_typename, swift_error.c_str());
+
+  error.SetErrorStringWithFormat("type for typename '%s' was not found",
                                  mangled_typename);
+  CacheDemangledTypeFailure(mangled_name.GetCString());
   return CompilerType();
 }
 
