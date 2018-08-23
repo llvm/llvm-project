@@ -11,9 +11,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTExpr.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSort.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
 #include "clang/Config/config.h"
 
@@ -749,12 +747,6 @@ public:
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
   }
 
-  SMTExprRef fromData(const SymbolID ID, const QualType &Ty,
-                      uint64_t BitWidth) override {
-    llvm::Twine Name = "$" + llvm::Twine(ID);
-    return mkSymbol(Name.str().c_str(), mkSort(Ty, BitWidth));
-  }
-
   SMTExprRef fromBoolean(const bool Bool) override {
     Z3_ast AST =
         Bool ? Z3_mk_true(Context.Context) : Z3_mk_false(Context.Context);
@@ -872,7 +864,7 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  ConditionTruthVal check() const override {
+  Optional<bool> check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -880,7 +872,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return ConditionTruthVal();
+    return Optional<bool>();
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }
@@ -959,7 +951,7 @@ public:
 
 #endif
 
-std::unique_ptr<SMTSolver> clang::ento::CreateZ3Solver() {
+SMTSolverRef clang::ento::CreateZ3Solver() {
 #if CLANG_ANALYZER_WITH_Z3
   return llvm::make_unique<Z3Solver>();
 #else

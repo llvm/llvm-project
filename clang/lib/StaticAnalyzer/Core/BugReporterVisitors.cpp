@@ -42,10 +42,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -2504,7 +2504,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   VisitNode(EndPathNode, nullptr, BRC, BR);
 
   // Create a refutation manager
-  std::unique_ptr<SMTSolver> RefutationSolver = CreateZ3Solver();
+  SMTSolverRef RefutationSolver = CreateZ3Solver();
   ASTContext &Ctx = BRC.getASTContext();
 
   // Add constraints to the solver
@@ -2514,15 +2514,19 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     SMTExprRef Constraints = RefutationSolver->fromBoolean(false);
     for (const auto &Range : I.second) {
       Constraints = RefutationSolver->mkOr(
-          Constraints,
-          RefutationSolver->getRangeExpr(Ctx, Sym, Range.From(), Range.To(),
-                                         /*InRange=*/true));
+          Constraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
+                                             Range.From(), Range.To(),
+                                             /*InRange=*/true));
     }
     RefutationSolver->addConstraint(Constraints);
   }
 
   // And check for satisfiability
-  if (RefutationSolver->check().isConstrainedFalse())
+  Optional<bool> isSat = RefutationSolver->check();
+  if (!isSat.hasValue())
+    return;
+
+  if (!isSat.getValue())
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 
