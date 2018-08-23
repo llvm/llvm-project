@@ -1014,11 +1014,13 @@ TEST(GoToInclude, All) {
 
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("5"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
-  EXPECT_THAT(*Locations, IsEmpty());
+  EXPECT_THAT(*Locations,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
 
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("7"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
-  EXPECT_THAT(*Locations, IsEmpty());
+  EXPECT_THAT(*Locations,
+              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
 }
 
 TEST(GoToDefinition, WithPreamble) {
