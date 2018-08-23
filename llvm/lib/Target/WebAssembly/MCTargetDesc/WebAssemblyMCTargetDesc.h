@@ -59,6 +59,14 @@ enum OperandType {
   OPERAND_F32IMM,
   /// 64-bit floating-point immediates.
   OPERAND_F64IMM,
+  /// 8-bit vector lane immediate
+  OPERAND_VEC_I8IMM,
+  /// 16-bit vector lane immediate
+  OPERAND_VEC_I16IMM,
+  /// 32-bit vector lane immediate
+  OPERAND_VEC_I32IMM,
+  /// 64-bit vector lane immediate
+  OPERAND_VEC_I64IMM,
   /// 32-bit unsigned function indices.
   OPERAND_FUNCTION32,
   /// 32-bit unsigned memory offsets.

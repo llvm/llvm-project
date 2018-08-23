@@ -10,12 +10,12 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // aligned allocation functions are not provided prior to macosx10.13
-// XFAIL: macosx10.12
-// XFAIL: macosx10.11
-// XFAIL: macosx10.10
-// XFAIL: macosx10.9
-// XFAIL: macosx10.8
-// XFAIL: macosx10.7
+// UNSUPPORTED: macosx10.12
+// UNSUPPORTED: macosx10.11
+// UNSUPPORTED: macosx10.10
+// UNSUPPORTED: macosx10.9
+// UNSUPPORTED: macosx10.8
+// UNSUPPORTED: macosx10.7
 
 #include <new>
 

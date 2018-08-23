@@ -120,6 +120,7 @@ enum Flag {
   HasOptionalDef,
   Pseudo,
   Return,
+  EHScopeReturn,
   Call,
   Barrier,
   Terminator,

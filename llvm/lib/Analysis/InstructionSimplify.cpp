@@ -3511,13 +3511,11 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (Pred == FCmpInst::FCMP_TRUE)
     return getTrue(RetTy);
 
-  // UNO/ORD predicates can be trivially folded if NaNs are ignored.
-  if (FMF.noNaNs()) {
-    if (Pred == FCmpInst::FCMP_UNO)
-      return getFalse(RetTy);
-    if (Pred == FCmpInst::FCMP_ORD)
-      return getTrue(RetTy);
-  }
+  // Fold (un)ordered comparison if we can determine there are no NaNs.
+  if (Pred == FCmpInst::FCMP_UNO || Pred == FCmpInst::FCMP_ORD)
+    if (FMF.noNaNs() ||
+        (isKnownNeverNaN(LHS, Q.TLI) && isKnownNeverNaN(RHS, Q.TLI)))
+      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
 
   // NaN is unordered; NaN is not ordered.
   assert((FCmpInst::isOrdered(Pred) || FCmpInst::isUnordered(Pred)) &&

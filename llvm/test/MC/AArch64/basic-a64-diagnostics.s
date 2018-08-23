@@ -3315,10 +3315,15 @@
 //------------------------------------------------------------------------------
 
         adr sp, loc             // expects xzr
+        adr x0, :got:loc        // bad relocation type
         adrp x3, #20            // Immediate unaligned
         adrp w2, loc            // 64-bit register needed
+        adrp x5, :got_lo12:loc  // bad relocation type
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         adr sp, loc
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: unexpected adr label
+// CHECK-ERROR-NEXT:         adr x0, :got:loc
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
 // CHECK-ERROR-NEXT:         adrp x3, #20
@@ -3326,6 +3331,9 @@
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         adrp w2, loc
 // CHECK-ERROR-NEXT:              ^
+// CHECK-ERROR-NEXT: error: page or gotpage label reference expected
+// CHECK-ERROR-NEXT:         adrp x5, :got_lo12:loc
+// CHECK-ERROR-NEXT:             ^
 
         adr x9, #1048576
         adr x2, #-1048577

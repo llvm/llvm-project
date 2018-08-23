@@ -222,12 +222,17 @@ class LinuxLocalTI(DefaultTargetInfo):
                           self.full_config.config.available_features)
         llvm_unwinder = self.full_config.get_lit_bool('llvm_unwinder', False)
         shared_libcxx = self.full_config.get_lit_bool('enable_shared', True)
+        # FIXME: Remove the need to link -lrt in all the tests, and instead
+        # limit it only to the filesystem tests. This ensures we don't cause an
+        # implicit dependency on librt except when filesystem is needed.
+        enable_fs = self.full_config.get_lit_bool('enable_filesystem',
+                                                  default=False)
         flags += ['-lm']
         if not llvm_unwinder:
             flags += ['-lgcc_s', '-lgcc']
         if enable_threads:
             flags += ['-lpthread']
-            if not shared_libcxx:
+            if not shared_libcxx or enable_fs:
               flags += ['-lrt']
         flags += ['-lc']
         if llvm_unwinder:

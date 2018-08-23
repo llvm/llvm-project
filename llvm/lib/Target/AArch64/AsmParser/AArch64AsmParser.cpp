@@ -2453,17 +2453,34 @@ AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Expr;
 
-  const AsmToken &Tok = getParser().getTok();
-  if (parseOptionalToken(AsmToken::Hash) || Tok.is(AsmToken::Integer)) {
-    if (getParser().parseExpression(Expr))
+  // Leave anything with a bracket to the default for SVE
+  if (getParser().getTok().is(AsmToken::LBrac))
+    return MatchOperand_NoMatch;
+
+  if (getParser().getTok().is(AsmToken::Hash))
+    getParser().Lex(); // Eat hash token.
+
+  if (parseSymbolicImmVal(Expr))
+    return MatchOperand_ParseFail;
+
+  AArch64MCExpr::VariantKind ELFRefKind;
+  MCSymbolRefExpr::VariantKind DarwinRefKind;
+  int64_t Addend;
+  if (classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
+    if (DarwinRefKind == MCSymbolRefExpr::VK_None &&
+        ELFRefKind == AArch64MCExpr::VK_INVALID) {
+      // No modifier was specified at all; this is the syntax for an ELF basic
+      // ADR relocation (unfortunately).
+      Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
+    } else {
+      Error(S, "unexpected adr label");
       return MatchOperand_ParseFail;
-
-    SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-    Operands.push_back(AArch64Operand::CreateImm(Expr, S, E, getContext()));
-
-    return MatchOperand_Success;
+    }
   }
-  return MatchOperand_NoMatch;
+
+  SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
+  Operands.push_back(AArch64Operand::CreateImm(Expr, S, E, getContext()));
+  return MatchOperand_Success;
 }
 
 /// tryParseFPImm - A floating point immediate expression operand.

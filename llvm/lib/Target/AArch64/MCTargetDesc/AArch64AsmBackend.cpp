@@ -10,6 +10,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -375,6 +376,14 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // section isn't 0x1000-aligned, we therefore need to delegate this decision
   // to the linker -- a relocation!
   if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
+    return true;
+
+  AArch64MCExpr::VariantKind RefKind =
+      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+  AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+  // LDR GOT relocations need a relocation
+  if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_ldr_pcrel_imm19 &&
+      SymLoc == AArch64MCExpr::VK_GOT)
     return true;
   return false;
 }

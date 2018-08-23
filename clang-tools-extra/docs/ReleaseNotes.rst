@@ -64,6 +64,12 @@ Improvements to clang-tidy
   floating-point context, and recommends the use of a function that
   returns a floating-point value.
 
+- New :doc:`abseil-faster-strsplit-delimiter
+  <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
+
+  Finds instances of ``absl::StrSplit()`` or ``absl::MaxSplits()`` where the
+  delimiter is a single character string literal and replaces with a character.
+
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 

@@ -23,6 +23,8 @@ using namespace llvm;
 using namespace clang;
 
 enum ActionType {
+  PrintRecords,
+  DumpJSON,
   GenClangAttrClasses,
   GenClangAttrParserStringSwitches,
   GenClangAttrSubjectMatchRulesParserStringSwitches,
@@ -66,6 +68,10 @@ namespace {
 cl::opt<ActionType> Action(
     cl::desc("Action to perform:"),
     cl::values(
+        clEnumValN(PrintRecords, "print-records",
+                   "Print all records to stdout (default)"),
+        clEnumValN(DumpJSON, "dump-json",
+                   "Dump all records as machine-readable JSON"),
         clEnumValN(GenClangAttrClasses, "gen-clang-attr-classes",
                    "Generate clang attribute clases"),
         clEnumValN(GenClangAttrParserStringSwitches,
@@ -164,6 +170,12 @@ ClangComponent("clang-component",
 
 bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
+  case PrintRecords:
+    OS << Records;           // No argument, dump all contents
+    break;
+  case DumpJSON:
+    EmitJSON(Records, OS);
+    break;
   case GenClangAttrClasses:
     EmitClangAttrClass(Records, OS);
     break;

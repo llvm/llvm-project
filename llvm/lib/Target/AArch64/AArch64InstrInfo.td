@@ -176,6 +176,7 @@ def SDT_AArch64WrapperLarge : SDTypeProfile<1, 4,
 
 // Node definitions.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
+def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
 def AArch64addlow        : SDNode<"AArch64ISD::ADDlow", SDTIntBinOp, []>;
 def AArch64LOADgot       : SDNode<"AArch64ISD::LOADgot", SDTIntUnaryOp>;
 def AArch64callseq_start : SDNode<"ISD::CALLSEQ_START",
@@ -1385,7 +1386,8 @@ def : InstAlias<"cneg $dst, $src, $cc",
 //===----------------------------------------------------------------------===//
 let isReMaterializable = 1 in {
 let hasSideEffects = 0, mayStore = 0, mayLoad = 0 in {
-def ADR  : ADRI<0, "adr", adrlabel, []>;
+def ADR  : ADRI<0, "adr", adrlabel,
+                [(set GPR64:$Xd, (AArch64adr tglobaladdr:$label))]>;
 } // hasSideEffects = 0
 
 def ADRP : ADRI<1, "adrp", adrplabel,
@@ -1393,6 +1395,10 @@ def ADRP : ADRI<1, "adrp", adrplabel,
 } // isReMaterializable = 1
 
 // page address of a constant pool entry, block address
+def : Pat<(AArch64adr tconstpool:$cp), (ADR tconstpool:$cp)>;
+def : Pat<(AArch64adr tblockaddress:$cp), (ADR tblockaddress:$cp)>;
+def : Pat<(AArch64adr texternalsym:$sym), (ADR texternalsym:$sym)>;
+def : Pat<(AArch64adr tjumptable:$sym), (ADR tjumptable:$sym)>;
 def : Pat<(AArch64adrp tconstpool:$cp), (ADRP tconstpool:$cp)>;
 def : Pat<(AArch64adrp tblockaddress:$cp), (ADRP tblockaddress:$cp)>;
 def : Pat<(AArch64adrp texternalsym:$sym), (ADRP texternalsym:$sym)>;

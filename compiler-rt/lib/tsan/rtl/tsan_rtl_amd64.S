@@ -196,6 +196,7 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
 #elif defined(__APPLE__)
   lea 16(%rsp), %rdi
   mov %rdi, %rsi
+  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
 #elif defined(__linux__)
   lea 16(%rsp), %rdi
   mov %rdi, %rsi
@@ -244,6 +245,7 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
 #elif defined(__APPLE__)
   lea 16(%rsp), %rdi
   mov %rdi, %rsi
+  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
 #elif defined(__linux__)
   lea 16(%rsp), %rdi
   mov %rdi, %rsi
@@ -299,6 +301,7 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
 #elif defined(__APPLE__)
   lea 32(%rsp), %rdi
   mov %rdi, %rsi
+  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
 #elif defined(__linux__)
   lea 32(%rsp), %rdi
   mov %rdi, %rsi

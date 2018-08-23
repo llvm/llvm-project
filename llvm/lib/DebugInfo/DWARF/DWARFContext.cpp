@@ -248,19 +248,12 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
 static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
                             DIDumpOptions DumpOpts, uint16_t Version,
                             uint8_t AddrSize) {
-  // TODO: Make this more general: add callback types to Error.h, create
-  // implementation and make all DWARF classes use them.
-  static auto WarnCallback = [](Error Warn) {
-    handleAllErrors(std::move(Warn), [](ErrorInfoBase &Info) {
-      WithColor::warning() << Info.message() << '\n';
-    });
-  };
   uint32_t Offset = 0;
   while (AddrData.isValidOffset(Offset)) {
     DWARFDebugAddrTable AddrTable;
     uint32_t TableOffset = Offset;
-    if (Error Err = AddrTable.extract(AddrData, &Offset, Version,
-                                      AddrSize, WarnCallback)) {
+    if (Error Err = AddrTable.extract(AddrData, &Offset, Version, AddrSize,
+                                      DWARFContext::dumpWarning)) {
       WithColor::error() << toString(std::move(Err)) << '\n';
       // Keep going after an error, if we can, assuming that the length field
       // could be read. If it couldn't, stop reading the section.
@@ -404,14 +397,15 @@ void DWARFContext::dump(
                              DIDumpOptions DumpOpts) {
     while (!Parser.done()) {
       if (DumpOffset && Parser.getOffset() != *DumpOffset) {
-        Parser.skip();
+        Parser.skip(dumpWarning);
         continue;
       }
       OS << "debug_line[" << format("0x%8.8x", Parser.getOffset()) << "]\n";
       if (DumpOpts.Verbose) {
-        Parser.parseNext(DWARFDebugLine::warn, DWARFDebugLine::warn, &OS);
+        Parser.parseNext(dumpWarning, dumpWarning, &OS);
       } else {
-        DWARFDebugLine::LineTable LineTable = Parser.parseNext();
+        DWARFDebugLine::LineTable LineTable =
+            Parser.parseNext(dumpWarning, dumpWarning);
         LineTable.dump(OS, DumpOpts);
       }
     }
@@ -799,9 +793,9 @@ const AppleAcceleratorTable &DWARFContext::getAppleObjC() {
 const DWARFDebugLine::LineTable *
 DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   Expected<const DWARFDebugLine::LineTable *> ExpectedLineTable =
-      getLineTableForUnit(U, DWARFDebugLine::warn);
+      getLineTableForUnit(U, dumpWarning);
   if (!ExpectedLineTable) {
-    DWARFDebugLine::warn(ExpectedLineTable.takeError());
+    dumpWarning(ExpectedLineTable.takeError());
     return nullptr;
   }
   return *ExpectedLineTable;
@@ -1616,4 +1610,10 @@ uint8_t DWARFContext::getCUAddrSize() {
     break;
   }
   return Addr;
+}
+
+void DWARFContext::dumpWarning(Error Warning) {
+  handleAllErrors(std::move(Warning), [](ErrorInfoBase &Info) {
+      WithColor::warning() << Info.message() << '\n';
+  });
 }

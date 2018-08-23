@@ -1261,25 +1261,11 @@ template <class ELFT> void LazyObjFile::parse() {
     return;
   }
 
-  switch (getELFKind(this->MB)) {
-  case ELF32LEKind:
-    addElfSymbols<ELF32LE>();
+  if (getELFKind(this->MB) != Config->EKind) {
+    error("incompatible file: " + this->MB.getBufferIdentifier());
     return;
-  case ELF32BEKind:
-    addElfSymbols<ELF32BE>();
-    return;
-  case ELF64LEKind:
-    addElfSymbols<ELF64LE>();
-    return;
-  case ELF64BEKind:
-    addElfSymbols<ELF64BE>();
-    return;
-  default:
-    llvm_unreachable("getELFKind");
   }
-}
 
-template <class ELFT> void LazyObjFile::addElfSymbols() {
   ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(MB.getBuffer()));
   ArrayRef<typename ELFT::Shdr> Sections = CHECK(Obj.sections(), this);
 
@@ -1304,12 +1290,9 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
   StringRef Suffix = Config->ThinLTOObjectSuffixReplace.first;
   StringRef Repl = Config->ThinLTOObjectSuffixReplace.second;
 
-  if (!Path.endswith(Suffix)) {
-    error("-thinlto-object-suffix-replace=" + Suffix + ";" + Repl +
-          " was given, but " + Path + " does not end with the suffix");
-    return "";
-  }
-  return (Path.drop_back(Suffix.size()) + Repl).str();
+  if (Path.consume_back(Suffix))
+    return (Path + Repl).str();
+  return Path;
 }
 
 template void ArchiveFile::parse<ELF32LE>();

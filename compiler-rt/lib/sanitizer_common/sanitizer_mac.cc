@@ -511,6 +511,10 @@ MacosVersion GetMacosVersionInternal() {
         case '2': return MACOS_VERSION_MOUNTAIN_LION;
         case '3': return MACOS_VERSION_MAVERICKS;
         case '4': return MACOS_VERSION_YOSEMITE;
+        case '5': return MACOS_VERSION_EL_CAPITAN;
+        case '6': return MACOS_VERSION_SIERRA;
+        case '7': return MACOS_VERSION_HIGH_SIERRA;
+        case '8': return MACOS_VERSION_MOJAVE;
         default:
           if (IsDigit(version[1]))
             return MACOS_VERSION_UNKNOWN_NEWER;

@@ -29,6 +29,7 @@
 # SHELL = /bin/sh -x
 
 SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
+BUILDDIR := $(shell pwd)
 THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
@@ -239,7 +240,7 @@ ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
 endif
 
-CLANG_MODULE_CACHE_DIR := module-cache
+CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
 
 MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 

@@ -1086,6 +1086,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:      break;
   case AArch64ISD::CALL:              return "AArch64ISD::CALL";
   case AArch64ISD::ADRP:              return "AArch64ISD::ADRP";
+  case AArch64ISD::ADR:               return "AArch64ISD::ADR";
   case AArch64ISD::ADDlow:            return "AArch64ISD::ADDlow";
   case AArch64ISD::LOADgot:           return "AArch64ISD::LOADgot";
   case AArch64ISD::RET_FLAG:          return "AArch64ISD::RET_FLAG";
@@ -3912,6 +3913,17 @@ SDValue AArch64TargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   return DAG.getNode(AArch64ISD::ADDlow, DL, Ty, ADRP, Lo);
 }
 
+// (adr sym)
+template <class NodeTy>
+SDValue AArch64TargetLowering::getAddrTiny(NodeTy *N, SelectionDAG &DAG,
+                                           unsigned Flags) const {
+  LLVM_DEBUG(dbgs() << "AArch64TargetLowering::getAddrTiny\n");
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  SDValue Sym = getTargetNode(N, Ty, DAG, Flags);
+  return DAG.getNode(AArch64ISD::ADR, DL, Ty, Sym);
+}
+
 SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
                                                   SelectionDAG &DAG) const {
   GlobalAddressSDNode *GN = cast<GlobalAddressSDNode>(Op);
@@ -3926,7 +3938,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
     assert(cast<GlobalAddressSDNode>(Op)->getOffset() == 0 &&
            "unexpected offset in global node");
 
-  // This also catches the large code model case for Darwin.
+  // This also catches the large code model case for Darwin, and tiny code
+  // model with got relocations.
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
     return getGOT(GN, DAG, TargetFlags);
   }
@@ -3934,6 +3947,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   SDValue Result;
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     Result = getAddrLarge(GN, DAG, TargetFlags);
+  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    Result = getAddrTiny(GN, DAG, TargetFlags);
   } else {
     Result = getAddr(GN, DAG, TargetFlags);
   }
@@ -4055,13 +4070,15 @@ SDValue
 AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   assert(Subtarget->isTargetELF() && "This function expects an ELF target");
-  assert(Subtarget->useSmallAddressing() &&
-         "ELF TLS only supported in small memory model");
+  if (getTargetMachine().getCodeModel() == CodeModel::Large)
+    report_fatal_error("ELF TLS only supported in small memory model");
   // Different choices can be made for the maximum size of the TLS area for a
   // module. For the small address model, the default TLS size is 16MiB and the
   // maximum TLS size is 4GiB.
   // FIXME: add -mtls-size command line option and make it control the 16MiB
   // vs. 4GiB code sequence generation.
+  // FIXME: add tiny codemodel support. We currently generate the same code as
+  // small, which may be larger than needed.
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
 
   TLSModel::Model Model = getTargetMachine().getTLSModel(GA->getGlobal());
@@ -4779,6 +4796,8 @@ SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
   if (getTargetMachine().getCodeModel() == CodeModel::Large &&
       !Subtarget->isTargetMachO()) {
     return getAddrLarge(JT, DAG);
+  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    return getAddrTiny(JT, DAG);
   }
   return getAddr(JT, DAG);
 }
@@ -4793,6 +4812,8 @@ SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
       return getGOT(CP, DAG);
     }
     return getAddrLarge(CP, DAG);
+  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    return getAddrTiny(CP, DAG);
   } else {
     return getAddr(CP, DAG);
   }
@@ -4804,9 +4825,10 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
   if (getTargetMachine().getCodeModel() == CodeModel::Large &&
       !Subtarget->isTargetMachO()) {
     return getAddrLarge(BA, DAG);
-  } else {
-    return getAddr(BA, DAG);
+  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    return getAddrTiny(BA, DAG);
   }
+  return getAddr(BA, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerDarwin_VASTART(SDValue Op,

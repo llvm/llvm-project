@@ -207,8 +207,10 @@ unsigned HexagonTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
 unsigned HexagonTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode,
       Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       unsigned Alignment, unsigned AddressSpace) {
-  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace);
+  if (Indices.size() != Factor)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace);
+  return getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, nullptr);
 }
 
 unsigned HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,

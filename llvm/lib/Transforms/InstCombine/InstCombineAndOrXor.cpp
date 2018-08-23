@@ -2919,12 +2919,10 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   //   %res = select i1 %cmp2, i32 %x, i32 %noty
   //
   // Same is applicable for smin/umax/umin.
-  {
+  if (match(Op1, m_AllOnes()) && Op0->hasOneUse()) {
     Value *LHS, *RHS;
     SelectPatternFlavor SPF = matchSelectPattern(Op0, LHS, RHS).Flavor;
-    if (Op0->hasOneUse() && SelectPatternResult::isMinOrMax(SPF) &&
-        match(Op1, m_AllOnes())) {
-
+    if (SelectPatternResult::isMinOrMax(SPF)) {
       Value *X;
       if (match(RHS, m_Not(m_Value(X))))
         std::swap(RHS, LHS);

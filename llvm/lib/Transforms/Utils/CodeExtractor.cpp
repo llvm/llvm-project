@@ -670,10 +670,9 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
                                     AllowVarArgs && oldFunction->isVarArg());
 
   // Create the new function
-  Function *newFunction = Function::Create(funcType,
-                                           GlobalValue::InternalLinkage,
-                                           oldFunction->getName() + "_" +
-                                           header->getName(), M);
+  Function *newFunction = Function::Create(
+      funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
+      oldFunction->getName() + "_" + header->getName(), M);
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
@@ -925,8 +924,16 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
     auto *OutI = dyn_cast<Instruction>(outputs[i]);
     if (!OutI)
       continue;
+
     // Find proper insertion point.
-    Instruction *InsertPt = OutI->getNextNode();
+    Instruction *InsertPt;
+    // In case OutI is an invoke, we insert the store at the beginning in the
+    // 'normal destination' BB. Otherwise we insert the store right after OutI.
+    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+      InsertPt = InvokeI->getNormalDest()->getFirstNonPHI();
+    else
+      InsertPt = OutI->getNextNode();
+
     // Let's assume that there is no other guy interleave non-PHI in PHIs.
     if (isa<PHINode>(InsertPt))
       InsertPt = InsertPt->getParent()->getFirstNonPHI();

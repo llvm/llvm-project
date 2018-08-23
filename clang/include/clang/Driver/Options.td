@@ -893,11 +893,19 @@ def fforce_enable_int128 : Flag<["-"], "fforce-enable-int128">,
 def fno_force_enable_int128 : Flag<["-"], "fno-force-enable-int128">,
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Disable support for int128_t type">;
-
+def fkeep_static_consts : Flag<["-"], "fkeep-static-consts">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Keep static const variables even if unused">;
 def ffixed_point : Flag<["-"], "ffixed-point">, Group<f_Group>,
                    Flags<[CC1Option]>, HelpText<"Enable fixed point types">;
 def fno_fixed_point : Flag<["-"], "fno-fixed-point">, Group<f_Group>,
                       HelpText<"Disable fixed point types">;
+def fcxx_static_destructors : Flag<["-"], "fc++-static-destructors">,
+  Group<f_Group>,
+  HelpText<"Enable C++ static destructor registration (the default)">;
+def fno_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">,
+  Group<f_Group>,
+  Flags<[CC1Option]>,
+  HelpText<"Disable C++ static destructor registration">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -1991,6 +1999,9 @@ def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;
 def mno_stackrealign : Flag<["-"], "mno-stackrealign">, Group<m_Group>;
 
+def mretpoline : Flag<["-"], "mretpoline">, Group<m_Group>, Flags<[CoreOption,DriverOption]>;
+def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_Group>, Flags<[CoreOption,DriverOption]>;
+
 def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
   HelpText<"Enable linker relaxation">;
 def mno_relax : Flag<["-"], "mno-relax">, Group<m_riscv_Features_Group>,
@@ -2816,8 +2827,6 @@ def mxsaves : Flag<["-"], "mxsaves">, Group<m_x86_Features_Group>;
 def mno_xsaves : Flag<["-"], "mno-xsaves">, Group<m_x86_Features_Group>;
 def mshstk : Flag<["-"], "mshstk">, Group<m_x86_Features_Group>;
 def mno_shstk : Flag<["-"], "mno-shstk">, Group<m_x86_Features_Group>;
-def mretpoline : Flag<["-"], "mretpoline">, Group<m_x86_Features_Group>;
-def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_x86_Features_Group>;
 def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 

@@ -1,12 +1,15 @@
-; RUN: llvm-as %s -data-layout=P200 -o /dev/null
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as %s -data-layout=P200 -o - | llvm-dis - -o - | FileCheck %s -check-prefix PROGAS200
+
 
 ; Check that variables in a nonzero program address space 200 can be used in a invoke instruction
 
-define i8 @test_invoke(i8(i32)* %fnptr0, i8(i32) addrspace(200)* %fnptr200) personality i32 (...)* @__gxx_personality_v0 {
-  %first = invoke i8 %fnptr0(i32 0) to label %ok unwind label %lpad ; this is fine
-  %second = invoke i8 %fnptr200(i32 0) to label %ok unwind label %lpad ; this is also fine if it's the program AS
-  ; CHECK: invoke-nonzero-program-addrspace.ll:[[@LINE-1]]:23: error: '%fnptr200' defined with type 'i8 (i32) addrspace(200)*'
+define i8 @test_invoke(i8(i32)* %fnptr0, i8(i32) addrspace(200)* %fnptr200) personality i32 (...) addrspace(200)* @__gxx_personality_v0 {
+  %explicit_as_0 = invoke addrspace(0) i8 %fnptr0(i32 0) to label %ok unwind label %lpad
+  %explicit_as_42 = invoke addrspace(200) i8 %fnptr200(i32 0) to label %ok unwind label %lpad
+  ; The following is only okay if the program address space is 200:
+  %no_as = invoke i8 %fnptr200(i32 0) to label %ok unwind label %lpad
+  ; CHECK: invoke-nonzero-program-addrspace.ll:[[@LINE-1]]:22: error: '%fnptr200' defined with type 'i8 (i32) addrspace(200)*' but expected 'i8 (i32)*'
 ok:
   ret i8 0
 lpad:
@@ -16,3 +19,12 @@ lpad:
 }
 
 declare i32 @__gxx_personality_v0(...)
+
+
+; PROGAS200:  target datalayout = "P200"
+; PROGAS200:  define i8 @test_invoke(i8 (i32)* %fnptr0, i8 (i32) addrspace(200)* %fnptr200) addrspace(200) personality i32 (...) addrspace(200)* @__gxx_personality_v0 {
+; PROGAS200:    %explicit_as_0 = invoke addrspace(0) i8 %fnptr0(i32 0)
+; PROGAS200:    %explicit_as_42 = invoke addrspace(200) i8 %fnptr200(i32 0)
+; PROGAS200:    %no_as = invoke addrspace(200) i8 %fnptr200(i32 0)
+; PROGAS200:    ret i8 0
+; PROGAS200:  }

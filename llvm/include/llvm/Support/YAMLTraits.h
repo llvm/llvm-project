@@ -533,7 +533,7 @@ inline bool isNumeric(StringRef S) {
     }
   }
 
-  assert(FoundExponent && "Should have found exponent at this point.");
+  assert(State == FoundExponent && "Should have found exponent at this point.");
   if (S.empty())
     return false;
 

@@ -2711,16 +2711,17 @@ Command Prompt or a regular Command Prompt where the environment has been set
 up using e.g. `vcvarsall.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
 
 clang-cl can also be used from inside Visual Studio by selecting the LLVM
-Platform Toolset. The toolset is installed by the LLVM installer, which can be
-downloaded from the `LLVM release <http://releases.llvm.org/download.html>`_ or
-`snapshot build <http://llvm.org/builds/>`_ web pages. To use the toolset,
-select a project in Solution Explorer, open its Property Page (Alt+F7), and in
-the "General" section of "Configuration Properties" change "Platform Toolset"
-to e.g. LLVM-vs2014.
+Platform Toolset. The toolset is not part of the installer, but may be installed
+separately from the
+`Visual Studio Marketplace <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_.
+To use the toolset, select a project in Solution Explorer, open its Property
+Page (Alt+F7), and in the "General" section of "Configuration Properties"
+change "Platform Toolset" to LLVM.  Doing so enables an additional Property
+Page for selecting the clang-cl executable to use for builds.
 
 To use the toolset with MSBuild directly, invoke it with e.g.
-``/p:PlatformToolset=LLVM-vs2014``. This allows trying out the clang-cl
-toolchain without modifying your project files.
+``/p:PlatformToolset=LLVM``. This allows trying out the clang-cl toolchain
+without modifying your project files.
 
 It's also possible to point MSBuild at clang-cl without changing toolset by
 passing ``/p:CLToolPath=c:\llvm\bin /p:CLToolExe=clang-cl.exe``.
@@ -2729,7 +2730,7 @@ When using CMake and the Visual Studio generators, the toolset can be set with t
 
   ::
 
-    cmake -G"Visual Studio 15 2017" -T LLVM-vs2014 ..
+    cmake -G"Visual Studio 15 2017" -T LLVM ..
 
 When using CMake with the Ninja generator, set the ``CMAKE_C_COMPILER`` and
 ``CMAKE_CXX_COMPILER`` variables to clang-cl:

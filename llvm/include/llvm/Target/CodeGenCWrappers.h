@@ -31,6 +31,8 @@ inline Optional<CodeModel::Model> unwrap(LLVMCodeModel Model, bool &JIT) {
     LLVM_FALLTHROUGH;
   case LLVMCodeModelDefault:
     return None;
+  case LLVMCodeModelTiny:
+    return CodeModel::Tiny;
   case LLVMCodeModelSmall:
     return CodeModel::Small;
   case LLVMCodeModelKernel:
@@ -45,6 +47,8 @@ inline Optional<CodeModel::Model> unwrap(LLVMCodeModel Model, bool &JIT) {
 
 inline LLVMCodeModel wrap(CodeModel::Model Model) {
   switch (Model) {
+  case CodeModel::Tiny:
+    return LLVMCodeModelTiny;
   case CodeModel::Small:
     return LLVMCodeModelSmall;
   case CodeModel::Kernel:

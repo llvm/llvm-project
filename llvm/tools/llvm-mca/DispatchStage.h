@@ -85,7 +85,6 @@ public:
   bool hasWorkToComplete() const override { return false; }
   llvm::Error cycleStart() override;
   llvm::Error execute(InstRef &IR) override;
-  void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 
 #ifndef NDEBUG
   void dump() const;

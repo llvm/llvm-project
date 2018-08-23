@@ -997,7 +997,7 @@ void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R) {
       A.getAsTemplate().dump(OS);
       break;
     case TemplateArgument::TemplateExpansion:
-      OS << " template expansion";
+      OS << " template expansion ";
       A.getAsTemplateOrTemplatePattern().dump(OS);
       break;
     case TemplateArgument::Expression:

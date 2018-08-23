@@ -689,8 +689,13 @@ public:
   /// access associated with it. If passed a basic block gets the memory phi
   /// node that exists for that block, if there is one. Otherwise, this will get
   /// a MemoryUseOrDef.
-  MemoryUseOrDef *getMemoryAccess(const Instruction *) const;
-  MemoryPhi *getMemoryAccess(const BasicBlock *BB) const;
+  MemoryUseOrDef *getMemoryAccess(const Instruction *I) const {
+    return cast_or_null<MemoryUseOrDef>(ValueToMemoryAccess.lookup(I));
+  }
+
+  MemoryPhi *getMemoryAccess(const BasicBlock *BB) const {
+    return cast_or_null<MemoryPhi>(ValueToMemoryAccess.lookup(cast<Value>(BB)));
+  }
 
   void dump() const;
   void print(raw_ostream &) const;
@@ -806,6 +811,7 @@ private:
   void buildMemorySSA();
   void optimizeUses();
 
+  void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;

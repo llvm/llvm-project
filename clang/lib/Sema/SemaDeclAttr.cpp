@@ -5917,6 +5917,19 @@ static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
 }
 
+static void handleDestroyAttr(Sema &S, Decl *D, const ParsedAttr &A) {
+  if (!cast<VarDecl>(D)->hasGlobalStorage()) {
+    S.Diag(D->getLocation(), diag::err_destroy_attr_on_non_static_var)
+        << (A.getKind() == ParsedAttr::AT_AlwaysDestroy);
+    return;
+  }
+
+  if (A.getKind() == ParsedAttr::AT_AlwaysDestroy)
+    handleSimpleAttributeWithExclusions<AlwaysDestroyAttr, NoDestroyAttr>(S, D, A);
+  else
+    handleSimpleAttributeWithExclusions<NoDestroyAttr, AlwaysDestroyAttr>(S, D, A);
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -6586,6 +6599,11 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   // Move semantics attribute.
   case ParsedAttr::AT_Reinitializes:
     handleSimpleAttribute<ReinitializesAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_AlwaysDestroy:
+  case ParsedAttr::AT_NoDestroy:
+    handleDestroyAttr(S, D, AL);
     break;
   }
 }

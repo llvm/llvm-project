@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -t -sd -elf-addrsig | FileCheck %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -split-dwarf-file %t.dwo -o - | llvm-readobj -s -t -sd -elf-addrsig | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s -t -sd -addrsig | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -split-dwarf-file %t.dwo -o - | llvm-readobj -s -t -sd -addrsig | FileCheck %s
 // RUN: llvm-readobj -s %t.dwo | FileCheck --check-prefix=DWO %s
 
 // CHECK:        Name: .llvm_addrsig

@@ -13,16 +13,63 @@ define float @powf_expf(float %x, float %y) {
   ret float %pow
 }
 
+; TODO: Should result in expf(x * y).
+define float @powf_expf_libcall(float %x, float %y) {
+; CHECK-LABEL: @powf_expf_libcall(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast float @expf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[CALL]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %call = call fast float @expf(float %x)
+  %pow = call fast float @powf(float %call, float %y)
+  ret float %pow
+}
+
 ; TODO: Should result in intrinsic call to exp().
 define double @pow_exp(double %x, double %y) {
 ; CHECK-LABEL: @pow_exp(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[EXP:%.*]] = call fast double @exp(double [[MUL]])
+; CHECK-NEXT:    [[EXP:%.*]] = call fast double @exp(double [[MUL]]) #1
 ; CHECK-NEXT:    ret double [[EXP]]
 ;
   %call = call fast double @exp(double %x) nounwind readnone
   %pow = call fast double @llvm.pow.f64(double %call, double %y)
   ret double %pow
+}
+
+; TODO: Should result in intrinsic call to exp().
+define double @pow_exp_not_intrinsic(double %x, double %y) {
+; CHECK-LABEL: @pow_exp_not_intrinsic(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EXP:%.*]] = call fast double @exp(double [[MUL]])
+; CHECK-NEXT:    ret double [[EXP]]
+;
+  %call = call fast double @exp(double %x) nounwind readnone
+  %pow = call fast double @pow(double %call, double %y) nounwind readnone
+  ret double %pow
+}
+
+; TODO: Should result in expl(x * y).
+define fp128 @powl_expl(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @powl_expl(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast fp128 @expl(fp128 [[X:%.*]]) #1
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %call = call fast fp128 @expl(fp128 %x) nounwind readnone
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
+}
+
+define fp128 @powl_expl_not_fast(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @powl_expl_not_fast(
+; CHECK-NEXT:    [[CALL:%.*]] = call fp128 @expl(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %call = call fp128 @expl(fp128 %x)
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
 }
 
 ; TODO: Should result in exp2f(x * y).
@@ -37,16 +84,64 @@ define float @powf_exp2f(float %x, float %y) {
   ret float %pow
 }
 
+; TODO: Should result in exp2f(x * y).
+define float @powf_exp2f_not_intrinsic(float %x, float %y) {
+; CHECK-LABEL: @powf_exp2f_not_intrinsic(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast float @exp2f(float [[X:%.*]]) #1
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[CALL]], float [[Y:%.*]]) #1
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %call = call fast float @exp2f(float %x) nounwind readnone
+  %pow = call fast float @powf(float %call, float %y) nounwind readnone
+  ret float %pow
+}
+
 ; TODO: Should result in intrinsic call to exp2().
 define double @pow_exp2(double %x, double %y) {
 ; CHECK-LABEL: @pow_exp2(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[EXP2:%.*]] = call fast double @exp2(double [[MUL]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call fast double @exp2(double [[MUL]]) #1
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %call = call fast double @exp2(double %x) nounwind readnone
   %pow = call fast double @llvm.pow.f64(double %call, double %y)
   ret double %pow
+}
+
+; FIXME: Should not result in two calls to exp2().
+define double @pow_exp2_libcall(double %x, double %y) {
+; CHECK-LABEL: @pow_exp2_libcall(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast double @exp2(double [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[EXP2:%.*]] = call fast double @exp2(double [[MUL]])
+; CHECK-NEXT:    ret double [[EXP2]]
+;
+  %call = call fast double @exp2(double %x)
+  %pow = call fast double @pow(double %call, double %y)
+  ret double %pow
+}
+
+; TODO: Should result in intrinsic call to exp2l().
+define fp128 @powl_exp2l(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @powl_exp2l(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast fp128 @exp2l(fp128 [[X:%.*]]) #1
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %call = call fast fp128 @exp2l(fp128 %x) nounwind readnone
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
+}
+
+define fp128 @powl_exp2l_not_fast(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @powl_exp2l_not_fast(
+; CHECK-NEXT:    [[CALL:%.*]] = call fp128 @exp2l(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %call = call fp128 @exp2l(fp128 %x)
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
 }
 
 ; TODO: exp10() is not widely enabled by many targets yet.
@@ -73,15 +168,15 @@ define double @pow_exp10(double %x, double %y) {
   ret double %pow
 }
 
-define double @pow_exp_not_fast(double %x, double %y) {
-; CHECK-LABEL: @pow_exp_not_fast(
-; CHECK-NEXT:    [[CALL:%.*]] = call double @exp(double [[X:%.*]])
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[CALL]], double [[Y:%.*]])
-; CHECK-NEXT:    ret double [[POW]]
+define fp128 @pow_exp10l(fp128 %x, fp128 %y) {
+; CHECK-LABEL: @pow_exp10l(
+; CHECK-NEXT:    [[CALL:%.*]] = call fast fp128 @exp10l(fp128 [[X:%.*]]) #1
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[CALL]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    ret fp128 [[POW]]
 ;
-  %call = call double @exp(double %x)
-  %pow = call fast double @llvm.pow.f64(double %call, double %y)
-  ret double %pow
+  %call = call fast fp128 @exp10l(fp128 %x) nounwind readnone
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
 }
 
 define double @function_pointer(double ()* %fptr, double %p1) {
@@ -95,11 +190,18 @@ define double @function_pointer(double ()* %fptr, double %p1) {
   ret double %pow
 }
 
-declare double @exp(double)
 declare float @expf(float)
-declare double @exp2(double)
+declare double @exp(double)
+declare fp128 @expl(fp128)
 declare float @exp2f(float)
-declare double @exp10(double)
+declare double @exp2(double)
+declare fp128 @exp2l(fp128)
 declare float @exp10f(float)
-declare double @llvm.pow.f64(double, double)
+declare double @exp10(double)
+declare fp128 @exp10l(fp128)
+declare float @powf(float, float)
+declare double @pow(double, double)
+declare fp128 @powl(fp128, fp128)
 declare float @llvm.pow.f32(float, float)
+declare double @llvm.pow.f64(double, double)
+declare fp128 @llvm.pow.f128(fp128, fp128)

@@ -124,6 +124,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
 
+  // There is no i64x2.mul instruction
+  setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);

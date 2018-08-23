@@ -6785,7 +6785,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   if (CCOld != CC) {
     // Error out on when there's already an attribute on the type
     // and the CCs don't match.
-    if (const AttributedType *AT = S.getCallingConvAttributedType(type)) {
+    if (S.getCallingConvAttributedType(type)) {
       S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
         << FunctionType::getNameForCallConv(CC)
         << FunctionType::getNameForCallConv(CCOld);

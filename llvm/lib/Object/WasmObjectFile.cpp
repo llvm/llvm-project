@@ -602,10 +602,15 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
   WasmSection& Section = Sections[SectionIndex];
   uint32_t RelocCount = readVaruint32(Ctx);
   uint32_t EndOffset = Section.Content.size();
+  uint32_t PreviousOffset = 0;
   while (RelocCount--) {
     wasm::WasmRelocation Reloc = {};
     Reloc.Type = readVaruint32(Ctx);
     Reloc.Offset = readVaruint32(Ctx);
+    if (Reloc.Offset < PreviousOffset)
+      return make_error<GenericBinaryError>("Relocations not in offset order",
+                                            object_error::parse_failed);
+    PreviousOffset = Reloc.Offset;
     Reloc.Index = readVaruint32(Ctx);
     switch (Reloc.Type) {
     case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:

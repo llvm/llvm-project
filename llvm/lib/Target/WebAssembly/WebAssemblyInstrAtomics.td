@@ -16,6 +16,14 @@
 // Atomic loads
 //===----------------------------------------------------------------------===//
 
+multiclass ATOMIC_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
+                    list<dag> pattern_r, string asmstr_r = "",
+                    string asmstr_s = "", bits<32> inst = -1> {
+  defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
+              inst>,
+            Requires<[HasAtomics]>;
+}
+
 let Defs = [ARGUMENTS] in {
 defm ATOMIC_LOAD_I32 : WebAssemblyLoad<I32, "i32.atomic.load", 0xfe10>;
 defm ATOMIC_LOAD_I64 : WebAssemblyLoad<I64, "i64.atomic.load", 0xfe11>;

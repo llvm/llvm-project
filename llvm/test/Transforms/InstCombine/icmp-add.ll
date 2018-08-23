@@ -281,3 +281,46 @@ define i1 @slt_zero_add_nuw_signbit(i8 %x) {
   ret i1 %z
 }
 
+define i1 @reduce_add_ult(i32 %in) {
+; CHECK-LABEL: @reduce_add_ult(
+; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[A6]], 12
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ult i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_ugt(i32 %in) {
+; CHECK-LABEL: @reduce_add_ugt(
+; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 12
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ugt i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_ule(i32 %in) {
+; CHECK-LABEL: @reduce_add_ule(
+; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[A6]], 13
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ule i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_uge(i32 %in) {
+; CHECK-LABEL: @reduce_add_uge(
+; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 11
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp uge i32 %a6, 12
+  ret i1 %a18
+}

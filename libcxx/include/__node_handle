@@ -26,7 +26,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
 
-#define __cpp_lib_node_extract 201606L
+// FIXME: Uncomment this when we support the 'merge' functionality.
+// #define __cpp_lib_node_extract 201606L
 
 // Specialized in __tree & __hash_table for their _NodeType.
 template <class _NodeType, class _Alloc>
