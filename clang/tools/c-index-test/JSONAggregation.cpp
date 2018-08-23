@@ -223,17 +223,17 @@ std::unique_ptr<RecordInfo> Aggregator::processRecord(StringRef recordFile) {
   recordReader.foreachOccurrence([&](IndexRecordOccurrence idxOccur) -> bool {
     SymbolIndex symIdx = getSymbolIndex(idxOccur.getSymbol());
     SymbolInfo &symInfo = Symbols[symIdx];
-    symInfo.Roles |= idxOccur.getRoles();
+    symInfo.Roles |= getSymbolRoles(idxOccur.getRoles());
     SymbolOccurrenceInfo occurInfo;
     occurInfo.Symbol = symIdx;
     idxOccur.foreachRelation([&](IndexSymbolRelation rel) -> bool {
       SymbolIndex relsymIdx = getSymbolIndex(rel.getSymbol());
       SymbolInfo &relsymInfo = Symbols[relsymIdx];
-      relsymInfo.RelatedRoles |= rel.getRoles();
-      occurInfo.Relations.emplace_back(relsymIdx, rel.getRoles());
+      relsymInfo.RelatedRoles |= getSymbolRoles(rel.getRoles());
+      occurInfo.Relations.emplace_back(relsymIdx, getSymbolRoles(rel.getRoles()));
       return true;
     });
-    occurInfo.Roles = idxOccur.getRoles();
+    occurInfo.Roles = getSymbolRoles(idxOccur.getRoles());
     std::tie(occurInfo.Line, occurInfo.Column) = idxOccur.getLineCol();
     record->Occurrences.push_back(std::move(occurInfo));
     return true;
