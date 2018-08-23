@@ -120,6 +120,9 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
       if (CurrV.getObjKind() == RetEffect::CF) {
         os << " returns a Core Foundation object of type "
            << Sym->getType().getAsString() << " with a ";
+      } else if (CurrV.getObjKind() == RetEffect::OS) {
+        os << " returns an OSObject of type "
+           << Sym->getType().getAsString() << " with a ";
       } else if (CurrV.getObjKind() == RetEffect::Generalized) {
         os << " returns an object of type " << Sym->getType().getAsString()
            << " with a ";

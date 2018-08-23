@@ -907,6 +907,12 @@ bool Linux::isPIEDefault() const {
           getTriple().isMusl() || getSanitizerArgs().requiresPIE();
 }
 
+bool Linux::IsMathErrnoDefault() const {
+  if (getTriple().isAndroid())
+    return false;
+  return Generic_ELF::IsMathErrnoDefault();
+}
+
 SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;

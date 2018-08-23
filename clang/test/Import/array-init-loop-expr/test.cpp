@@ -6,6 +6,5 @@
 // CHECK: ArrayInitIndexExpr
 
 void expr() {
-  S s;
-  S copy = s;
+  f();
 }

@@ -191,7 +191,7 @@ private:
   /// them into a string.  \p VCtx is used to determine which token represents
   /// the first __VA_OPT__ replacement token.
   ///
-  /// \param[in,out] ReplacementToks - Contains the current Replacement Tokens
+  /// \param[in,out] ResultToks - Contains the current Replacement Tokens
   /// (prior to rescanning and token pasting), the tail end of which represents
   /// the tokens just expanded through __VA_OPT__ processing.  These (sub)
   /// sequence of tokens are folded into one stringified token.

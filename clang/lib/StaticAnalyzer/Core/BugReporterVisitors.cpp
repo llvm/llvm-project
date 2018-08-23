@@ -759,10 +759,14 @@ class ReturnVisitor : public BugReporterVisitor {
 
   bool EnableNullFPSuppression;
   bool ShouldInvalidate = true;
+  AnalyzerOptions& Options;
 
 public:
-  ReturnVisitor(const StackFrameContext *Frame, bool Suppressed)
-      : StackFrame(Frame), EnableNullFPSuppression(Suppressed) {}
+  ReturnVisitor(const StackFrameContext *Frame,
+                bool Suppressed,
+                AnalyzerOptions &Options)
+      : StackFrame(Frame), EnableNullFPSuppression(Suppressed),
+        Options(Options) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -790,10 +794,10 @@ public:
 
     // First, find when we processed the statement.
     do {
-      if (Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>())
+      if (auto CEE = Node->getLocationAs<CallExitEnd>())
         if (CEE->getCalleeContext()->getCallSite() == S)
           break;
-      if (Optional<StmtPoint> SP = Node->getLocationAs<StmtPoint>())
+      if (auto SP = Node->getLocationAs<StmtPoint>())
         if (SP->getStmt() == S)
           break;
 
@@ -834,13 +838,8 @@ public:
 
     BR.markInteresting(CalleeContext);
     BR.addVisitor(llvm::make_unique<ReturnVisitor>(CalleeContext,
-                                                   EnableNullFPSuppression));
-  }
-
-  /// Returns true if any counter-suppression heuristics are enabled for
-  /// ReturnVisitor.
-  static bool hasCounterSuppression(AnalyzerOptions &Options) {
-    return Options.shouldAvoidSuppressingNullArgumentPaths();
+                                                   EnableNullFPSuppression,
+                                                   Options));
   }
 
   std::shared_ptr<PathDiagnosticPiece>
@@ -888,15 +887,6 @@ public:
 
     RetE = RetE->IgnoreParenCasts();
 
-    // If we can't prove the return value is 0, just mark it interesting, and
-    // make sure to track it into any further inner functions.
-    if (!State->isNull(V).isConstrainedTrue()) {
-      BR.markInteresting(V);
-      ReturnVisitor::addVisitorIfNecessary(N, RetE, BR,
-                                           EnableNullFPSuppression);
-      return nullptr;
-    }
-
     // If we're returning 0, we should track where that 0 came from.
     bugreporter::trackNullOrUndefValue(N, RetE, BR, /*IsArg*/ false,
                                        EnableNullFPSuppression);
@@ -905,20 +895,33 @@ public:
     SmallString<64> Msg;
     llvm::raw_svector_ostream Out(Msg);
 
-    if (V.getAs<Loc>()) {
-      // If we have counter-suppression enabled, make sure we keep visiting
-      // future nodes. We want to emit a path note as well, in case
-      // the report is resurrected as valid later on.
-      AnalyzerOptions &Options = BRC.getAnalyzerOptions();
-      if (EnableNullFPSuppression && hasCounterSuppression(Options))
-        Mode = MaybeUnsuppress;
+    if (State->isNull(V).isConstrainedTrue()) {
+      if (V.getAs<Loc>()) {
 
-      if (RetE->getType()->isObjCObjectPointerType())
-        Out << "Returning nil";
-      else
-        Out << "Returning null pointer";
+        // If we have counter-suppression enabled, make sure we keep visiting
+        // future nodes. We want to emit a path note as well, in case
+        // the report is resurrected as valid later on.
+        if (EnableNullFPSuppression &&
+            Options.shouldAvoidSuppressingNullArgumentPaths())
+          Mode = MaybeUnsuppress;
+
+        if (RetE->getType()->isObjCObjectPointerType()) {
+          Out << "Returning nil";
+        } else {
+          Out << "Returning null pointer";
+        }
+      } else {
+        Out << "Returning zero";
+      }
+
     } else {
-      Out << "Returning zero";
+      if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
+        Out << "Returning the value " << CI->getValue();
+      } else if (V.getAs<Loc>()) {
+        Out << "Returning pointer";
+      } else {
+        Out << "Returning value";
+      }
     }
 
     if (LValue) {
@@ -947,8 +950,7 @@ public:
   visitNodeMaybeUnsuppress(const ExplodedNode *N, const ExplodedNode *PrevN,
                            BugReporterContext &BRC, BugReport &BR) {
 #ifndef NDEBUG
-    AnalyzerOptions &Options = BRC.getAnalyzerOptions();
-    assert(hasCounterSuppression(Options));
+    assert(Options.shouldAvoidSuppressingNullArgumentPaths());
 #endif
 
     // Are we at the entry node for this call?
@@ -1264,10 +1266,9 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         InitE = InitE->IgnoreParenCasts();
       bugreporter::trackNullOrUndefValue(StoreSite, InitE, BR, IsParam,
                                          EnableNullFPSuppression);
-    } else {
-      ReturnVisitor::addVisitorIfNecessary(StoreSite, InitE->IgnoreParenCasts(),
-                                           BR, EnableNullFPSuppression);
     }
+    ReturnVisitor::addVisitorIfNecessary(StoreSite, InitE->IgnoreParenCasts(),
+                                         BR, EnableNullFPSuppression);
   }
 
   // Okay, we've found the binding. Emit an appropriate message.
