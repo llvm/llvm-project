@@ -95,7 +95,8 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.expect(re.compile(r"stop reason = breakpoint"))
 
     def runCmd(self, cmd):
-        self.child.sendline(cmd)
+        if self.child:
+            self.child.sendline(cmd)
 
     def expect_prompt(self, exactly=True):
         self.expect(self.child_prompt, exactly=exactly)
