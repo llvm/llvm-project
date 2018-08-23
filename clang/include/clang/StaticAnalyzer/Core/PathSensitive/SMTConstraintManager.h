@@ -86,29 +86,15 @@ public:
     SMTExprRef NotExp =
         SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
 
-    Solver->reset();
-    addStateConstraints(State);
-
-    Solver->push();
-    Solver->addConstraint(Exp);
-
-    Optional<bool> isSat = Solver->check();
-    if (!isSat.hasValue())
-      return ConditionTruthVal();
-
-    Solver->pop();
-    Solver->addConstraint(NotExp);
-
-    Optional<bool> isNotSat = Solver->check();
-    if (!isNotSat.hasValue())
-      return ConditionTruthVal();
+    ConditionTruthVal isSat = checkModel(State, Sym, Exp);
+    ConditionTruthVal isNotSat = checkModel(State, Sym, NotExp);
 
     // Zero is the only possible solution
-    if (isSat.getValue() && !isNotSat.getValue())
+    if (isSat.isConstrainedTrue() && isNotSat.isConstrainedFalse())
       return true;
 
     // Zero is not a solution
-    if (!isSat.getValue() && isNotSat.getValue())
+    if (isSat.isConstrainedFalse() && isNotSat.isConstrainedTrue())
       return false;
 
     // Zero may be a solution
@@ -125,6 +111,10 @@ public:
       assert(!Ty->isRealFloatingType());
       llvm::APSInt Value(Ctx.getTypeSize(Ty),
                          !Ty->isSignedIntegerOrEnumerationType());
+
+      // TODO: this should call checkModel so we can use the cache, however,
+      // this method tries to get the interpretation (the actual value) from
+      // the solver, which is currently not cached.
 
       SMTExprRef Exp =
           SMTConv::fromData(Solver, SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
@@ -236,7 +226,7 @@ protected:
   virtual ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
                                      const SMTExprRef &Exp) {
     // Check the model, avoid simplifying AST to save time
-    if (checkModel(State, Exp).isConstrainedTrue())
+    if (checkModel(State, Sym, Exp).isConstrainedTrue())
       return State->add<ConstraintSMT>(
           std::make_pair(Sym, static_cast<const SMTExprTy &>(*Exp)));
 
@@ -264,18 +254,34 @@ protected:
   }
 
   // Generate and check a Z3 model, using the given constraint.
-  ConditionTruthVal checkModel(ProgramStateRef State,
+  ConditionTruthVal checkModel(ProgramStateRef State, SymbolRef Sym,
                                const SMTExprRef &Exp) const {
+    ProgramStateRef NewState = State->add<ConstraintSMT>(
+        std::make_pair(Sym, static_cast<const SMTExprTy &>(*Exp)));
+
+    llvm::FoldingSetNodeID ID;
+    NewState->get<ConstraintSMT>().Profile(ID);
+
+    unsigned hash = ID.ComputeHash();
+    auto I = Cached.find(hash);
+    if (I != Cached.end())
+      return I->second;
+
     Solver->reset();
-    Solver->addConstraint(Exp);
-    addStateConstraints(State);
+    addStateConstraints(NewState);
 
     Optional<bool> res = Solver->check();
     if (!res.hasValue())
-      return ConditionTruthVal();
+      Cached[hash] = ConditionTruthVal();
+    else
+      Cached[hash] = ConditionTruthVal(res.getValue());
 
-    return ConditionTruthVal(res.getValue());
+    return Cached[hash];
   }
+
+  // Cache the result of an SMT query (true, false, unknown). The key is the
+  // hash of the constraints in a state
+  mutable llvm::DenseMap<unsigned, ConditionTruthVal> Cached;
 }; // end class SMTConstraintManager
 
 } // namespace ento
