@@ -98,7 +98,7 @@ private:
   /// The kind of object being tracked (CF or ObjC), if known.
   ///
   /// See the RetEffect::ObjKind enum for possible values.
-  unsigned RawObjectKind : 2;
+  unsigned RawObjectKind : 3;
 
   /// True if the current state and/or retain count may turn out to not be the
   /// best possible approximation of the reference counting state.
@@ -268,6 +268,8 @@ class RetainCountChecker
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable SummaryLogTy SummaryLog;
+
+  AnalyzerOptions &Options;
   mutable bool ShouldResetSummaryLog;
 
   /// Optional setting to indicate if leak reports should include
@@ -275,11 +277,16 @@ class RetainCountChecker
   mutable bool IncludeAllocationLine;
 
 public:
-  RetainCountChecker(AnalyzerOptions &AO)
-    : ShouldResetSummaryLog(false),
-      IncludeAllocationLine(shouldIncludeAllocationSiteInLeakDiagnostics(AO)) {}
+  RetainCountChecker(AnalyzerOptions &Options)
+      : Options(Options), ShouldResetSummaryLog(false),
+        IncludeAllocationLine(
+            shouldIncludeAllocationSiteInLeakDiagnostics(Options)) {}
 
   ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
+
+  bool shouldCheckOSObjectRetainCount() const {
+    return Options.getBooleanOption("CheckOSObject", false, this);
+  }
 
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                         ExprEngine &Eng) const {
@@ -333,10 +340,12 @@ public:
     // FIXME: We don't support ARC being turned on and off during one analysis.
     // (nor, for that matter, do we support changing ASTContexts)
     bool ARCEnabled = (bool)Ctx.getLangOpts().ObjCAutoRefCount;
-    if (!Summaries)
-      Summaries.reset(new RetainSummaryManager(Ctx, ARCEnabled));
-    else
+    if (!Summaries) {
+      Summaries.reset(new RetainSummaryManager(
+          Ctx, ARCEnabled, shouldCheckOSObjectRetainCount()));
+    } else {
       assert(Summaries->isARCEnabled() == ARCEnabled);
+    }
     return *Summaries;
   }
 

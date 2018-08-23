@@ -53,6 +53,31 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
   return Summ;
 }
 
+static bool isOSObjectSubclass(QualType T);
+
+static bool isOSObjectSubclass(const CXXRecordDecl *RD) {
+  if (RD->getDeclName().getAsString() == "OSObject")
+    return true;
+
+  const CXXRecordDecl *RDD = RD->getDefinition();
+  if (!RDD)
+    return false;
+
+  for (const CXXBaseSpecifier Spec : RDD->bases()) {
+    if (isOSObjectSubclass(Spec.getType()))
+      return true;
+  }
+  return false;
+}
+
+/// \return Whether type represents an OSObject successor.
+static bool isOSObjectSubclass(QualType T) {
+  if (const auto *RD = T->getAsCXXRecordDecl()) {
+    return isOSObjectSubclass(RD);
+  }
+  return false;
+}
+
 static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
   for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
     if (Ann->getAnnotation() == rcAnnotation)
@@ -196,6 +221,17 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   }
 
   if (RetTy->isPointerType()) {
+    if (TrackOSObjects && isOSObjectSubclass(RetTy->getPointeeType())) {
+      if (const IdentifierInfo *II = FD->getIdentifier()) {
+        StringRef FuncName = II->getName();
+        if (FuncName.contains_lower("with")
+            || FuncName.contains_lower("create")
+            || FuncName.contains_lower("copy"))
+          return getOSSummaryCreateRule(FD);
+      }
+      return getOSSummaryGetRule(FD);
+    }
+
     // For CoreFoundation ('CF') types.
     if (cocoa::isRefType(RetTy, "CF", FName)) {
       if (isRetain(FD, FName)) {
@@ -241,6 +277,17 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     }
   }
 
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    const CXXRecordDecl *Parent = MD->getParent();
+    if (TrackOSObjects && isOSObjectSubclass(Parent)) {
+      if (isRelease(FD, FName))
+        return getOSSummaryReleaseRule(FD);
+
+      if (isRetain(FD, FName))
+        return getOSSummaryRetainRule(FD);
+    }
+  }
+
   // Check for release functions, the only kind of functions that we care
   // about that don't return a pointer type.
   if (FName.size() >= 2 && FName[0] == 'C' &&
@@ -277,6 +324,14 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
       return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, E);
     }
+  }
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+
+    // Stop tracking arguments passed to C++ methods, as those might be
+    // wrapping smart pointers.
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, StopTracking,
+                                DoNothing);
   }
 
   return getDefaultSummary();
@@ -411,6 +466,8 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
     Summ = getFunctionSummary(cast<SimpleFunctionCall>(Call).getDecl());
     break;
   case CE_CXXMember:
+    Summ = getFunctionSummary(cast<CXXMemberCall>(Call).getDecl());
+    break;
   case CE_CXXMemberOperator:
   case CE_Block:
   case CE_CXXConstructor:
@@ -511,6 +568,32 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
 
   ScratchArgs = AF.add(ScratchArgs, 0, Effect);
   return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryRetainRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeNoRet(),
+                              /*ReceiverEff=*/DoNothing,
+                              /*DefaultEff=*/DoNothing,
+                              /*ThisEff=*/IncRef);
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryReleaseRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeNoRet(),
+                              /*ReceiverEff=*/DoNothing,
+                              /*DefaultEff=*/DoNothing,
+                              /*ThisEff=*/DecRef);
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryCreateRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::OS));
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryGetRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::OS));
 }
 
 const RetainSummary *
@@ -877,7 +960,7 @@ void RetainSummaryManager::InitializeMethodSummaries() {
 CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
   ASTContext &Ctx = MD->getASTContext();
   LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);
+  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount, /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getMethodSummary(MD);
   CallEffects CE(S->getRetEffect());
   CE.Receiver = S->getReceiverEffect();
@@ -891,7 +974,7 @@ CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
 CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
   ASTContext &Ctx = FD->getASTContext();
   LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);
+  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount, /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getFunctionSummary(FD);
   CallEffects CE(S->getRetEffect());
   unsigned N = FD->param_size();
