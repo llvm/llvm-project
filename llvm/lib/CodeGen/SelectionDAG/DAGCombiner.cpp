@@ -9063,6 +9063,8 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   if (VT.isVector())
     return SDValue();
 
+  unsigned ShAmt = 0;
+  bool HasShiftedOffset = false;
   // Special case: SIGN_EXTEND_INREG is basically truncating to ExtVT then
   // extended to VT.
   if (Opc == ISD::SIGN_EXTEND_INREG) {
@@ -9090,15 +9092,25 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   } else if (Opc == ISD::AND) {
     // An AND with a constant mask is the same as a truncate + zero-extend.
     auto AndC = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!AndC || !AndC->getAPIntValue().isMask())
+    if (!AndC)
       return SDValue();
 
-    unsigned ActiveBits = AndC->getAPIntValue().countTrailingOnes();
+    const APInt &Mask = AndC->getAPIntValue();
+    unsigned ActiveBits = 0;
+    if (Mask.isMask()) {
+      ActiveBits = Mask.countTrailingOnes();
+    } else if (Mask.isShiftedMask()) {
+      ShAmt = Mask.countTrailingZeros();
+      APInt ShiftedMask = Mask.lshr(ShAmt);
+      ActiveBits = ShiftedMask.countTrailingOnes();
+      HasShiftedOffset = true;
+    } else
+      return SDValue();
+
     ExtType = ISD::ZEXTLOAD;
     ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   }
 
-  unsigned ShAmt = 0;
   if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
     SDValue SRL = N0;
     if (auto *ConstShift = dyn_cast<ConstantSDNode>(SRL.getOperand(1))) {
@@ -9167,13 +9179,16 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   if (!isLegalNarrowLdSt(LN0, ExtType, ExtVT, ShAmt))
     return SDValue();
 
-  // For big endian targets, we need to adjust the offset to the pointer to
-  // load the correct bytes.
-  if (DAG.getDataLayout().isBigEndian()) {
+  auto AdjustBigEndianShift = [&](unsigned ShAmt) {
     unsigned LVTStoreBits = LN0->getMemoryVT().getStoreSizeInBits();
     unsigned EVTStoreBits = ExtVT.getStoreSizeInBits();
-    ShAmt = LVTStoreBits - EVTStoreBits - ShAmt;
-  }
+    return LVTStoreBits - EVTStoreBits - ShAmt;
+  };
+
+  // For big endian targets, we need to adjust the offset to the pointer to
+  // load the correct bytes.
+  if (DAG.getDataLayout().isBigEndian())
+    ShAmt = AdjustBigEndianShift(ShAmt);
 
   EVT PtrType = N0.getOperand(1).getValueType();
   uint64_t PtrOff = ShAmt / 8;
@@ -9221,6 +9236,24 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
                           Result, DAG.getConstant(ShLeftAmt, DL, ShImmTy));
   }
 
+  if (HasShiftedOffset) {
+    // Recalculate the shift amount after it has been altered to calculate
+    // the offset.
+    if (DAG.getDataLayout().isBigEndian())
+      ShAmt = AdjustBigEndianShift(ShAmt);
+
+    // We're using a shifted mask, so the load now has an offset. This means we
+    // now need to shift right the mask to match the new load and then shift
+    // right the result of the AND.
+    const APInt &Mask = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+    APInt ShiftedMask = Mask.lshr(ShAmt);
+    DAG.UpdateNodeOperands(N, Result, DAG.getConstant(ShiftedMask, DL, VT));
+    SDValue ShiftC = DAG.getConstant(ShAmt, DL, VT);
+    SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, SDValue(N, 0),
+                                  ShiftC);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Shifted);
+    DAG.UpdateNodeOperands(Shifted.getNode(), SDValue(N, 0), ShiftC);
+  }
   // Return the new loaded value.
   return Result;
 }

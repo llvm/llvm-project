@@ -77,7 +77,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   RetainCountChecker/RetainCountChecker.cpp
-  RetainCountChecker/RetainCountSummaries.cpp
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
@@ -103,9 +102,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   VLASizeChecker.cpp
   ValistChecker.cpp
   VirtualCallChecker.cpp
-
-  DEPENDS
-  ClangSACheckers
 
   LINK_LIBS
   clangAST

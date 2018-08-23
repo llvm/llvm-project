@@ -114,10 +114,6 @@ def SDT_PPCqvlfsb : SDTypeProfile<1, 1, [
   SDTCisVec<0>, SDTCisPtrTy<1>
 ]>;
 
-def SDT_PPCextswsli : SDTypeProfile<1, 2, [  // extswsli
-  SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisInt<2>
-]>;
-
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -221,8 +217,6 @@ def PPCcmpb     : SDNode<"PPCISD::CMPB", SDTIntBinOp, []>;
 def PPCsrl        : SDNode<"PPCISD::SRL"       , SDTIntShiftOp>;
 def PPCsra        : SDNode<"PPCISD::SRA"       , SDTIntShiftOp>;
 def PPCshl        : SDNode<"PPCISD::SHL"       , SDTIntShiftOp>;
-
-def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
 
 // Move 2 i64 values into a VSX register
 def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",

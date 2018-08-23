@@ -51,6 +51,30 @@ struct ASTRetentionPolicy {
   unsigned MaxRetainedASTs = 3;
 };
 
+class ParsingCallbacks {
+public:
+  virtual ~ParsingCallbacks() = default;
+
+  /// Called on the AST that was built for emitting the preamble. The built AST
+  /// contains only AST nodes from the #include directives at the start of the
+  /// file. AST node in the current file should be observed on onMainAST call.
+  virtual void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                             std::shared_ptr<clang::Preprocessor> PP) {}
+  /// Called on the AST built for the file itself. Note that preamble AST nodes
+  /// are not deserialized and should be processed in the onPreambleAST call
+  /// instead.
+  /// The \p AST always contains all AST nodes for the main file itself, and
+  /// only a portion of the AST nodes deserialized from the preamble. Note that
+  /// some nodes from the preamble may have been deserialized and may also be
+  /// accessed from the main file AST, e.g. redecls of functions from preamble,
+  /// etc. Clients are expected to process only the AST nodes from the main file
+  /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
+  /// optimal performance.
+  virtual void onMainAST(PathRef Path, ParsedAST &AST) {}
+};
+
+ParsingCallbacks &noopParsingCallbacks();
+
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
 /// preambles and ASTs) for opened files.
 /// TUScheduler is not thread-safe, only one thread should be providing updates
@@ -61,7 +85,7 @@ struct ASTRetentionPolicy {
 class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
-              PreambleParsedCallback PreambleCallback,
+              ParsingCallbacks &ASTCallbacks,
               std::chrono::steady_clock::duration UpdateDebounce,
               ASTRetentionPolicy RetentionPolicy);
   ~TUScheduler();
@@ -132,7 +156,7 @@ public:
 private:
   const bool StorePreamblesInMemory;
   const std::shared_ptr<PCHContainerOperations> PCHOps;
-  const PreambleParsedCallback PreambleCallback;
+  ParsingCallbacks &Callbacks;
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;

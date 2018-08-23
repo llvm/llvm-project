@@ -7,14 +7,14 @@
 # CHECK-NEXT: >>>               {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by file1.cpp:2
 # CHECK-NEXT: >>>               {{.*}}.obj:(main)
-
-# CHECK: error: undefined symbol: ?bar@@YAHXZ
+# CHECK-EMPTY:
+# CHECK-NEXT: error: undefined symbol: ?bar@@YAHXZ
 # CHECK-NEXT: >>> referenced by file2.cpp:3
 # CHECK-NEXT: >>>               {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by file1.cpp:4
 # CHECK-NEXT: >>>               {{.*}}.obj:(f1)
-
-# CHECK: error: undefined symbol: ?baz@@YAHXZ
+# CHECK-EMPTY:
+# CHECK-NEXT: error: undefined symbol: ?baz@@YAHXZ
 # CHECK-NEXT: >>> referenced by file1.cpp:5
 # CHECK-NEXT: >>>               {{.*}}.obj:(f2)
 

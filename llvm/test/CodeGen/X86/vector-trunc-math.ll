@@ -1321,6 +1321,23 @@ define <16 x i8> @trunc_sub_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
   ret <16 x i8> %2
 }
 
+define <16 x i8> @trunc_ext_sub_v16i16_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; SSE-LABEL: trunc_ext_sub_v16i16_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubb %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: trunc_ext_sub_v16i16_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a = zext <16 x i8> %x to <16 x i16>
+  %b = zext <16 x i8> %y to <16 x i16>
+  %c = sub <16 x i16> %a, %b
+  %d = trunc <16 x i16> %c to <16 x i8>
+  ret <16 x i8> %d
+}
+
 ;
 ; sub to constant
 ;
@@ -1768,6 +1785,41 @@ define <16 x i8> @trunc_sub_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
   %1 = sub <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
   ret <16 x i8> %2
+}
+
+define <16 x i8> @trunc_ext_sub_const_rhs_v16i16_v16i8(<16 x i8> %x) {
+; SSE-LABEL: trunc_ext_sub_const_rhs_v16i16_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: trunc_ext_sub_const_rhs_v16i16_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a = zext <16 x i8> %x to <16 x i16>
+  %b = sub <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+  %c = trunc <16 x i16> %b to <16 x i8>
+  ret <16 x i8> %c
+}
+
+define <16 x i8> @trunc_ext_sub_const_lhs_v16i16_v16i8(<16 x i8> %x) {
+; SSE-LABEL: trunc_ext_sub_const_lhs_v16i16_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSE-NEXT:    psubb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: trunc_ext_sub_const_lhs_v16i16_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %a = zext <16 x i8> %x to <16 x i16>
+  %b = sub <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, %a
+  %c = trunc <16 x i16> %b to <16 x i8>
+  ret <16 x i8> %c
 }
 
 ;

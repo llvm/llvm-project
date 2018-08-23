@@ -16,7 +16,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace objc_retain;
 using namespace retaincountchecker;
 using llvm::StrInStrNoCase;
 
@@ -331,7 +330,19 @@ void RetainCountChecker::checkPostStmt(const ObjCIvarRefExpr *IRE,
 void RetainCountChecker::checkPostCall(const CallEvent &Call,
                                        CheckerContext &C) const {
   RetainSummaryManager &Summaries = getSummaryManager(C);
-  const RetainSummary *Summ = Summaries.getSummary(Call, C.getState());
+
+  // Leave null if no receiver.
+  QualType ReceiverType;
+  if (const auto *MC = dyn_cast<ObjCMethodCall>(&Call)) {
+    if (MC->isInstanceMessage()) {
+      SVal ReceiverV = MC->getReceiverSVal();
+      if (SymbolRef Sym = ReceiverV.getAsLocSymbol())
+        if (const RefVal *T = getRefBinding(C.getState(), Sym))
+          ReceiverType = T->getType();
+    }
+  }
+
+  const RetainSummary *Summ = Summaries.getSummary(Call, ReceiverType);
 
   if (C.wasInlined) {
     processSummaryOfInlined(*Summ, Call, C);
@@ -368,6 +379,17 @@ static QualType GetReturnType(const Expr *RetE, ASTContext &Ctx) {
   return RetTy;
 }
 
+static Optional<RefVal> refValFromRetEffect(RetEffect RE,
+                                            QualType ResultTy) {
+  if (RE.isOwned()) {
+    return RefVal::makeOwned(RE.getObjKind(), ResultTy);
+  } else if (RE.notOwned()) {
+    return RefVal::makeNotOwned(RE.getObjKind(), ResultTy);
+  }
+
+  return None;
+}
+
 // We don't always get the exact modeling of the function with regards to the
 // retain count checker even when the function is inlined. For example, we need
 // to stop tracking the symbols which were marked with StopTrackingHard.
@@ -387,8 +409,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   }
 
   // Evaluate the effect on the message receiver.
-  const ObjCMethodCall *MsgInvocation = dyn_cast<ObjCMethodCall>(&CallOrMsg);
-  if (MsgInvocation) {
+  if (const auto *MsgInvocation = dyn_cast<ObjCMethodCall>(&CallOrMsg)) {
     if (SymbolRef Sym = MsgInvocation->getReceiverSVal().getAsLocSymbol()) {
       if (Summ.getReceiverEffect() == StopTrackingHard) {
         state = removeRefBinding(state, Sym);
@@ -504,43 +525,15 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       RE = RetEffect::MakeNoRet();
   }
 
-  switch (RE.getKind()) {
-    default:
-      llvm_unreachable("Unhandled RetEffect.");
-
-    case RetEffect::NoRet:
-    case RetEffect::NoRetHard:
-      // No work necessary.
-      break;
-
-    case RetEffect::OwnedSymbol: {
-      SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
-      if (!Sym)
-        break;
-
-      // Use the result type from the CallEvent as it automatically adjusts
-      // for methods/functions that return references.
-      QualType ResultTy = CallOrMsg.getResultType();
-      state = setRefBinding(state, Sym, RefVal::makeOwned(RE.getObjKind(),
-                                                          ResultTy));
-
-      // FIXME: Add a flag to the checker where allocations are assumed to
-      // *not* fail.
-      break;
-    }
-
-    case RetEffect::NotOwnedSymbol: {
+  if (SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol()) {
+    QualType ResultTy = CallOrMsg.getResultType();
+    if (RE.notOwned()) {
       const Expr *Ex = CallOrMsg.getOriginExpr();
-      SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
-      if (!Sym)
-        break;
       assert(Ex);
-      // Use GetReturnType in order to give [NSFoo alloc] the type NSFoo *.
-      QualType ResultTy = GetReturnType(Ex, C.getASTContext());
-      state = setRefBinding(state, Sym, RefVal::makeNotOwned(RE.getObjKind(),
-                                                             ResultTy));
-      break;
+      ResultTy = GetReturnType(Ex, C.getASTContext());
     }
+    if (Optional<RefVal> updatedRefVal = refValFromRetEffect(RE, ResultTy))
+      state = setRefBinding(state, Sym, *updatedRefVal);
   }
 
   // This check is actually necessary; otherwise the statement builder thinks
@@ -993,7 +986,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   //     does not understand.
   ProgramStateRef state = C.getState();
 
-  if (Optional<loc::MemRegionVal> regionLoc = loc.getAs<loc::MemRegionVal>()) {
+  if (auto regionLoc = loc.getAs<loc::MemRegionVal>()) {
     escapes = !regionLoc->getRegion()->hasStackStorage();
 
     if (!escapes) {
@@ -1017,7 +1010,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   // If we are storing the value into an auto function scope variable annotated
   // with (__attribute__((cleanup))), stop tracking the value to avoid leak
   // false positives.
-  if (const VarRegion *LVR = dyn_cast_or_null<VarRegion>(loc.getAsRegion())) {
+  if (const auto *LVR = dyn_cast_or_null<VarRegion>(loc.getAsRegion())) {
     const VarDecl *VD = LVR->getDecl();
     if (VD->hasAttr<CleanupAttr>()) {
       escapes = true;
@@ -1037,8 +1030,8 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 }
 
 ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
-                                                   SVal Cond,
-                                                   bool Assumption) const {
+                                               SVal Cond,
+                                               bool Assumption) const {
   // FIXME: We may add to the interface of evalAssume the list of symbols
   //  whose assumptions have changed.  For now we just iterate through the
   //  bindings and check if any of the tracked symbols are NULL.  This isn't
@@ -1259,7 +1252,8 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
     if (AE && *AE == DecRef && isISLObjectRef(Ty)) {
-      state = setRefBinding(state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
+      state = setRefBinding(
+          state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
     } else if (isISLObjectRef(Ty)) {
       state = setRefBinding(
           state, Sym,
@@ -1386,45 +1380,6 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
     Out << NL;
   }
 }
-
-//===----------------------------------------------------------------------===//
-// Implementation of the CallEffects API.
-//===----------------------------------------------------------------------===//
-
-namespace clang {
-namespace ento {
-namespace objc_retain {
-
-// This is a bit gross, but it allows us to populate CallEffects without
-// creating a bunch of accessors.  This kind is very localized, so the
-// damage of this macro is limited.
-#define createCallEffect(D, KIND)\
-  ASTContext &Ctx = D->getASTContext();\
-  LangOptions L = Ctx.getLangOpts();\
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);\
-  const RetainSummary *S = M.get ## KIND ## Summary(D);\
-  CallEffects CE(S->getRetEffect());\
-  CE.Receiver = S->getReceiverEffect();\
-  unsigned N = D->param_size();\
-  for (unsigned i = 0; i < N; ++i) {\
-    CE.Args.push_back(S->getArg(i));\
-  }
-
-CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
-  createCallEffect(MD, Method);
-  return CE;
-}
-
-CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
-  createCallEffect(FD, Function);
-  return CE;
-}
-
-#undef createCallEffect
-
-} // end namespace objc_retain
-} // end namespace ento
-} // end namespace clang
 
 //===----------------------------------------------------------------------===//
 // Checker registration.

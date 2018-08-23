@@ -225,7 +225,7 @@ INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
   asm volatile("mov %0,x8" : "=r" (r8));
   sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
 #endif
-  REAL(memset)(sret, 0, sizeof(*sret));
+  internal_memset(sret, 0, sizeof(*sret));
 }
 #define HWASAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 #else
@@ -287,27 +287,13 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
   return hwasan_malloc(size, &stack);
 }
 
-template <class Mmap>
-static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T sz, int prot,
-                              int flags, int fd, OFF64_T off) {
-  if (addr && !MEM_IS_APP(addr)) {
-    if (flags & map_fixed) {
-      errno = errno_EINVAL;
-      return (void *)-1;
-    } else {
-      addr = nullptr;
-    }
-  }
-  return real_mmap(addr, sz, prot, flags, fd, off);
-}
-
+#if HWASAN_WITH_INTERCEPTORS
 extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 
 static void *HwasanThreadStartFunc(void *arg) {
-  HwasanThread *t = (HwasanThread *)arg;
-  SetCurrentThread(t);
-  return t->ThreadStart();
+  __hwasan_thread_enter();
+  return ((HwasanThread *)arg)->ThreadStart();
 }
 
 INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
@@ -329,6 +315,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
     pthread_attr_destroy(&myattr);
   return res;
 }
+#endif // HWASAN_WITH_INTERCEPTORS
 
 static void BeforeFork() {
   StackDepotLockAll();
@@ -360,134 +347,14 @@ int OnExit() {
 
 } // namespace __hwasan
 
-// A version of CHECK_UNPOISONED using a saved scope value. Used in common
-// interceptors.
-#define CHECK_UNPOISONED_CTX(ctx, x, n)                         \
-  do {                                                          \
-    if (!((HwasanInterceptorContext *)ctx)->in_interceptor_scope) \
-      CHECK_UNPOISONED_0(x, n);                                 \
-  } while (0)
-
-#define HWASAN_INTERCEPT_FUNC(name)                                       \
-  do {                                                                  \
-    if ((!INTERCEPT_FUNCTION(name) || !REAL(name)))                     \
-      VReport(1, "HWAddressSanitizer: failed to intercept '" #name "'\n"); \
-  } while (0)
-
-#define HWASAN_INTERCEPT_FUNC_VER(name, ver)                                    \
-  do {                                                                        \
-    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
-      VReport(                                                                \
-          1, "HWAddressSanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
-  } while (0)
-
-#define COMMON_INTERCEPT_FUNCTION(name) HWASAN_INTERCEPT_FUNC(name)
-#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
-  HWASAN_INTERCEPT_FUNC_VER(name, ver)
-#define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-  CHECK_UNPOISONED_CTX(ctx, ptr, size)
-#define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-  CHECK_UNPOISONED_CTX(ctx, ptr, size)
-#define COMMON_INTERCEPTOR_INITIALIZE_RANGE(ptr, size) \
-  HWASAN_WRITE_RANGE(ctx, ptr, size)
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                  \
-  if (hwasan_init_is_running) return REAL(func)(__VA_ARGS__);       \
-  ENSURE_HWASAN_INITED();                                           \
-  HwasanInterceptorContext hwasan_ctx = {IsInInterceptorScope()};     \
-  ctx = (void *)&hwasan_ctx;                                        \
-  (void)ctx;                                                      \
-  InterceptorScope interceptor_scope;
-#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
-  do {                                            \
-  } while (false)
-#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
-  do {                                         \
-  } while (false)
-#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
-  do {                                         \
-  } while (false)
-#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
-  do {                                                      \
-  } while (false)
-#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
-  do {                                                \
-  } while (false)  // FIXME
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  do {                                                         \
-  } while (false)  // FIXME
-#define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
-#define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
-
-#define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
-  if (HwasanThread *t = GetCurrentThread()) {                                    \
-    *begin = t->tls_begin();                                                   \
-    *end = t->tls_end();                                                       \
-  } else {                                                                     \
-    *begin = *end = 0;                                                         \
-  }
-
-// AArch64 has TBI and can (and must!) pass the pointer to system memset as-is.
-// Other platforms need to remove the tag.
-#if defined(__aarch64__)
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)     \
-  {                                                           \
-    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);      \
-    if (common_flags()->intercept_intrin &&                   \
-        MEM_IS_APP(GetAddressFromPointer(dst)))               \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);         \
-    return REAL(memset)(dst, v, size); \
-  }
-#else
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size)     \
-  {                                                           \
-    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);      \
-    if (common_flags()->intercept_intrin &&                   \
-        MEM_IS_APP(GetAddressFromPointer(dst)))               \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);         \
-    return REAL(memset)(GetAddressFromPointer(dst), v, size); \
-  }
-#endif
-
-#define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, fd, \
-                                     offset)                                   \
-  do {                                                                         \
-    return mmap_interceptor(REAL(mmap), addr, length, prot, flags, fd,         \
-                            offset);                                           \
-  } while (false)
-
-#include "sanitizer_common/sanitizer_platform_interceptors.h"
-#include "sanitizer_common/sanitizer_common_interceptors.inc"
-#include "sanitizer_common/sanitizer_signal_interceptors.inc"
-
-#define COMMON_SYSCALL_PRE_READ_RANGE(p, s) CHECK_UNPOISONED(p, s)
-#define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
-  do {                                       \
-    (void)(p);                               \
-    (void)(s);                               \
-  } while (false)
-#define COMMON_SYSCALL_POST_READ_RANGE(p, s) \
-  do {                                       \
-    (void)(p);                               \
-    (void)(s);                               \
-  } while (false)
-#define COMMON_SYSCALL_POST_WRITE_RANGE(p, s) \
-  do {                                        \
-    (void)(p);                                \
-    (void)(s);                                \
-  } while (false)
-#include "sanitizer_common/sanitizer_common_syscalls.inc"
-#include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
-
-
-
 namespace __hwasan {
 
 void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
-  InitializeCommonInterceptors();
-  InitializeSignalInterceptors();
 
+  // FIXME: disable interceptors for allocator functions, keep only __sanitizer
+  // aliases unless HWASAN_WITH_INTERCEPTORS=1.
   INTERCEPT_FUNCTION(posix_memalign);
   HWASAN_MAYBE_INTERCEPT_MEMALIGN;
   INTERCEPT_FUNCTION(__libc_memalign);
@@ -502,8 +369,11 @@ void InitializeInterceptors() {
   HWASAN_MAYBE_INTERCEPT_MALLINFO;
   HWASAN_MAYBE_INTERCEPT_MALLOPT;
   HWASAN_MAYBE_INTERCEPT_MALLOC_STATS;
-  INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(fork);
+
+#if HWASAN_WITH_INTERCEPTORS
+  INTERCEPT_FUNCTION(pthread_create);
+#endif
 
   inited = 1;
 }

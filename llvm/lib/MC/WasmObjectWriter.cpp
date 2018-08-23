@@ -306,7 +306,7 @@ private:
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection();
   void writeRelocSection(uint32_t SectionIndex, StringRef Name,
-                         ArrayRef<WasmRelocationEntry> Relocations);
+                         std::vector<WasmRelocationEntry>& Relocations);
   void writeLinkingMetaDataSection(
       ArrayRef<wasm::WasmSymbolInfo> SymbolInfos,
       ArrayRef<std::pair<uint16_t, uint32_t>> InitFuncs,
@@ -892,19 +892,31 @@ void WasmObjectWriter::writeDataSection() {
 
 void WasmObjectWriter::writeRelocSection(
     uint32_t SectionIndex, StringRef Name,
-    ArrayRef<WasmRelocationEntry> Relocations) {
+    std::vector<WasmRelocationEntry>& Relocs) {
   // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
   // for descriptions of the reloc sections.
 
-  if (Relocations.empty())
+  if (Relocs.empty())
     return;
+
+  // First, ensure the relocations are sorted in offset order.  In general they
+  // should already be sorted since `recordRelocation` is called in offset
+  // order, but for the code section we combine many MC sections into single
+  // wasm section, and this order is determined by the order of Asm.Symbols()
+  // not the sections order.
+  std::stable_sort(
+      Relocs.begin(), Relocs.end(),
+      [](const WasmRelocationEntry &A, const WasmRelocationEntry &B) {
+        return (A.Offset + A.FixupSection->getSectionOffset()) <
+               (B.Offset + B.FixupSection->getSectionOffset());
+      });
 
   SectionBookkeeping Section;
   startCustomSection(Section, std::string("reloc.") + Name.str());
 
   encodeULEB128(SectionIndex, W.OS);
-  encodeULEB128(Relocations.size(), W.OS);
-  for (const WasmRelocationEntry& RelEntry : Relocations) {
+  encodeULEB128(Relocs.size(), W.OS);
+  for (const WasmRelocationEntry& RelEntry : Relocs) {
     uint64_t Offset = RelEntry.Offset +
                       RelEntry.FixupSection->getSectionOffset();
     uint32_t Index = getRelocationIndexValue(RelEntry);

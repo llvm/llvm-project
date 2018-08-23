@@ -420,6 +420,25 @@ extern const internal::VariadicDynCastAllOfMatcher<
     Decl, ClassTemplateSpecializationDecl>
     classTemplateSpecializationDecl;
 
+/// Matches C++ class template partial specializations.
+///
+/// Given
+/// \code
+///   template<class T1, class T2, int I>
+///   class A {};
+///
+///   template<class T, int I>
+///   class A<T, T*, I> {};
+///
+///   template<>
+///   class A<int, int, 1> {};
+/// \endcode
+/// classTemplatePartialSpecializationDecl()
+///   matches the specialization \c A<T,T*,I> but not \c A<int,int,1>
+extern const internal::VariadicDynCastAllOfMatcher<
+    Decl, ClassTemplatePartialSpecializationDecl>
+    classTemplatePartialSpecializationDecl;
+
 /// Matches declarator declarations (field, variable, function
 /// and non-type template parameter declarations).
 ///

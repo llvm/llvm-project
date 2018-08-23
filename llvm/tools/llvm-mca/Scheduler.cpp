@@ -22,6 +22,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "llvm-mca"
 
+ResourceState::ResourceState(const llvm::MCProcResourceDesc &Desc,
+                             unsigned Index, uint64_t Mask)
+    : ProcResourceDescIndex(Index), ResourceMask(Mask) {
+  if (llvm::countPopulation(ResourceMask) > 1)
+    ResourceSizeMask = ResourceMask ^ llvm::PowerOf2Floor(ResourceMask);
+  else
+    ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
+  NextInSequenceMask = ResourceSizeMask;
+  RemovedFromNextInSequence = 0;
+  ReadyMask = ResourceSizeMask;
+  BufferSize = Desc.BufferSize;
+  AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
+  Unavailable = false;
+}
+
+bool ResourceState::isReady(unsigned NumUnits) const {
+  return (!isReserved() || isADispatchHazard()) &&
+         llvm::countPopulation(ReadyMask) >= NumUnits;
+}
+
+ResourceStateEvent ResourceState::isBufferAvailable() const {
+  if (isADispatchHazard() && isReserved())
+    return RS_RESERVED;
+  if (!isBuffered() || AvailableSlots)
+    return RS_BUFFER_AVAILABLE;
+  return RS_BUFFER_UNAVAILABLE;
+}
+
 uint64_t ResourceState::selectNextInSequence() {
   assert(isReady());
   uint64_t Next = getNextInSequence();
@@ -171,7 +199,7 @@ bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
 
 // Returns true if all resources are in-order, and there is at least one
 // resource which is a dispatch hazard (BufferSize = 0).
-bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
+bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) const {
   if (!canBeIssued(Desc))
     return false;
   bool AllInOrderResources = all_of(Desc.Buffers, [&](uint64_t BufferMask) {
@@ -248,6 +276,10 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
   Resource.clearReserved();
 }
 
+// Anchor the vtable of SchedulerStrategy and DefaultSchedulerStrategy.
+SchedulerStrategy::~SchedulerStrategy() = default;
+DefaultSchedulerStrategy::~DefaultSchedulerStrategy() = default;
+
 #ifndef NDEBUG
 void Scheduler::dump() const {
   dbgs() << "[SCHEDULER]: WaitSet size is: " << WaitSet.size() << '\n';
@@ -257,29 +289,29 @@ void Scheduler::dump() const {
 }
 #endif
 
-bool Scheduler::canBeDispatched(const InstRef &IR,
-                                Scheduler::StallKind &Event) const {
-  Event = StallKind::NoStall;
+Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
-  // Give lower priority to these stall events.
-  if (Desc.MayStore && LSU->isSQFull())
-    Event = StallKind::StoreQueueFull;
-  if (Desc.MayLoad && LSU->isLQFull())
-    Event = StallKind::LoadQueueFull;
-    
   switch (Resources->canBeDispatched(Desc.Buffers)) {
   case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
-    Event = StallKind::SchedulerQueueFull;
-    break;
+    return Scheduler::SC_BUFFERS_FULL;
   case ResourceStateEvent::RS_RESERVED:
-    Event = StallKind::DispatchGroupStall;
-    break;
-  default:
+    return Scheduler::SC_DISPATCH_GROUP_STALL;
+  case ResourceStateEvent::RS_BUFFER_AVAILABLE:
     break;
   }
 
-  return Event == StallKind::NoStall;
+  // Give lower priority to LSUnit stall events.
+  switch (LSU->isAvailable(IR)) {
+  case LSUnit::LSU_LQUEUE_FULL:
+    return Scheduler::SC_LOAD_QUEUE_FULL;
+  case LSUnit::LSU_SQUEUE_FULL:
+    return Scheduler::SC_STORE_QUEUE_FULL;
+  case LSUnit::LSU_AVAILABLE:
+    return Scheduler::SC_AVAILABLE;
+  }
+
+  llvm_unreachable("Don't know how to process this LSU state result!");
 }
 
 void Scheduler::issueInstructionImpl(
@@ -298,15 +330,25 @@ void Scheduler::issueInstructionImpl(
 
   if (IS->isExecuting())
     IssuedSet.emplace_back(IR);
+  else if (IS->isExecuted())
+    LSU->onInstructionExecuted(IR);
 }
 
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
-    InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  releaseBuffers(Desc.Buffers);
+    InstRef &IR, SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
+    SmallVectorImpl<InstRef> &ReadyInstructions) {
+  const Instruction &Inst = *IR.getInstruction();
+  bool HasDependentUsers = Inst.hasDependentUsers();
+
+  Resources->releaseBuffers(Inst.getDesc().Buffers);
   issueInstructionImpl(IR, UsedResources);
+  // Instructions that have been issued during this cycle might have unblocked
+  // other dependent instructions. Dependent instructions may be issued during
+  // this same cycle if operands have ReadAdvance entries.  Promote those
+  // instructions to the ReadySet and notify the caller that those are ready.
+  if (HasDependentUsers)
+    promoteToReadySet(ReadyInstructions);
 }
 
 void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
@@ -324,9 +366,8 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     if (!IS.isReady())
       IS.update();
 
-    const InstrDesc &Desc = IS.getDesc();
-    bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-    if (!IS.isReady() || (IsMemOp && !LSU->isReady(IR))) {
+    // Check if there are still unsolved data dependencies.
+    if (!isReady(IR)) {
       ++I;
       continue;
     }
@@ -344,30 +385,13 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
 
 InstRef Scheduler::select() {
   unsigned QueueIndex = ReadySet.size();
-  int Rank = std::numeric_limits<int>::max();
-
   for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
     const InstRef &IR = ReadySet[I];
-    const unsigned IID = IR.getSourceIndex();
-    const Instruction &IS = *IR.getInstruction();
-
-    // Compute a rank value based on the age of an instruction (i.e. its source
-    // index) and its number of users. The lower the rank value, the better.
-    int CurrentRank = IID - IS.getNumUsers();
-
-    // We want to prioritize older instructions over younger instructions to
-    // minimize the pressure on the reorder buffer.  We also want to
-    // rank higher the instructions with more users to better expose ILP.
-    if (CurrentRank == Rank)
-      if (IID > ReadySet[QueueIndex].getSourceIndex())
-        continue;
-
-    if (CurrentRank <= Rank) {
-      const InstrDesc &D = IS.getDesc();
-      if (Resources->canBeIssued(D)) {
-        Rank = CurrentRank;
+    if (QueueIndex == ReadySet.size() ||
+        Strategy->compare(IR, ReadySet[QueueIndex])) {
+      const InstrDesc &D = IR.getInstruction()->getDesc();
+      if (Resources->canBeIssued(D))
         QueueIndex = I;
-      }
     }
   }
 
@@ -375,19 +399,10 @@ InstRef Scheduler::select() {
     return InstRef();
 
   // We found an instruction to issue.
-
   InstRef IR = ReadySet[QueueIndex];
   std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
   ReadySet.pop_back();
   return IR;
-}
-
-void Scheduler::updatePendingQueue(SmallVectorImpl<InstRef> &Ready) {
-  // Notify to instructions in the pending queue that a new cycle just
-  // started.
-  for (InstRef &Entry : WaitSet)
-    Entry.getInstruction()->cycleEvent();
-  promoteToReadySet(Ready);
 }
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
@@ -397,7 +412,6 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
     if (!IR.isValid())
       break;
     Instruction &IS = *IR.getInstruction();
-    IS.cycleEvent();
     if (!IS.isExecuted()) {
       LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                         << " is still executing.\n");
@@ -405,6 +419,8 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
       continue;
     }
 
+    // Instruction IR has completed execution.
+    LSU->onInstructionExecuted(IR);
     Executed.emplace_back(IR);
     ++RemovedElements;
     IR.invalidate();
@@ -414,33 +430,65 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
   IssuedSet.resize(IssuedSet.size() - RemovedElements);
 }
 
-void Scheduler::onInstructionExecuted(const InstRef &IR) {
-  LSU->onInstructionExecuted(IR);
-}
-
-void Scheduler::reclaimSimulatedResources(SmallVectorImpl<ResourceRef> &Freed) {
+void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
+                           SmallVectorImpl<InstRef> &Executed,
+                           SmallVectorImpl<InstRef> &Ready) {
+  // Release consumed resources.
   Resources->cycleEvent(Freed);
+
+  // Propagate the cycle event to the 'Issued' and 'Wait' sets.
+  for (InstRef &IR : IssuedSet)
+    IR.getInstruction()->cycleEvent();
+
+  updateIssuedSet(Executed);
+
+  for (InstRef &IR : WaitSet)
+    IR.getInstruction()->cycleEvent();
+
+  promoteToReadySet(Ready);
 }
 
-bool Scheduler::reserveResources(InstRef &IR) {
+bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
+  // Instructions that use an in-order dispatch/issue processor resource must be
+  // issued immediately to the pipeline(s). Any other in-order buffered
+  // resources (i.e. BufferSize=1) is consumed.
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  return Desc.isZeroLatency() || Resources->mustIssueImmediately(Desc);
+}
+
+void Scheduler::dispatch(const InstRef &IR) {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  Resources->reserveBuffers(Desc.Buffers);
+
   // If necessary, reserve queue entries in the load-store unit (LSU).
-  const bool Reserved = LSU->reserve(IR);
-  if (!IR.getInstruction()->isReady() || (Reserved && !LSU->isReady(IR))) {
+  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
+  if (IsMemOp)
+    LSU->dispatch(IR);
+
+  if (!isReady(IR)) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
     WaitSet.push_back(IR);
-    return false;
+    return;
   }
-  return true;
-}
 
-bool Scheduler::issueImmediately(InstRef &IR) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  if (!Desc.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
+  // Don't add a zero-latency instruction to the Ready queue.
+  // A zero-latency instruction doesn't consume any scheduler resources. That is
+  // because it doesn't need to be executed, and it is often removed at register
+  // renaming stage. For example, register-register moves are often optimized at
+  // register renaming stage by simply updating register aliases. On some
+  // targets, zero-idiom instructions (for example: a xor that clears the value
+  // of a register) are treated specially, and are often eliminated at register
+  // renaming stage.
+  if (!mustIssueImmediately(IR)) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the ReadySet\n");
     ReadySet.push_back(IR);
-    return false;
   }
-  return true;
+}
+
+bool Scheduler::isReady(const InstRef &IR) const {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
+  return IR.getInstruction()->isReady() && (!IsMemOp || LSU->isReady(IR));
 }
 
 } // namespace mca

@@ -1132,6 +1132,10 @@ static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
 
 /// Check if \p G has been created by a trusted compiler pass.
 static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
+  // Do not instrument @llvm.global_ctors, @llvm.used, etc.
+  if (G->getName().startswith("llvm."))
+    return true;
+
   // Do not instrument asan globals.
   if (G->getName().startswith(kAsanGenPrefix) ||
       G->getName().startswith(kSanCovGenPrefix) ||
@@ -1653,20 +1657,39 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
-  // Touch only those globals that will not be defined in other modules.
-  // Don't handle ODR linkage types and COMDATs since other modules may be built
-  // without ASan.
-  if (G->getLinkage() != GlobalVariable::ExternalLinkage &&
-      G->getLinkage() != GlobalVariable::PrivateLinkage &&
-      G->getLinkage() != GlobalVariable::InternalLinkage)
-    return false;
-  if (G->hasComdat()) return false;
   // Two problems with thread-locals:
   //   - The address of the main thread's copy can't be computed at link-time.
   //   - Need to poison all copies, not just the main thread's one.
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
   if (G->getAlignment() > MinRedzoneSizeForGlobal()) return false;
+
+  // For non-COFF targets, only instrument globals known to be defined by this
+  // TU.
+  // FIXME: We can instrument comdat globals on ELF if we are using the
+  // GC-friendly metadata scheme.
+  if (!TargetTriple.isOSBinFormatCOFF()) {
+    if (!G->hasExactDefinition() || G->hasComdat())
+      return false;
+  } else {
+    // On COFF, don't instrument non-ODR linkages.
+    if (G->isInterposable())
+      return false;
+  }
+
+  // If a comdat is present, it must have a selection kind that implies ODR
+  // semantics: no duplicates, any, or exact match.
+  if (Comdat *C = G->getComdat()) {
+    switch (C->getSelectionKind()) {
+    case Comdat::Any:
+    case Comdat::ExactMatch:
+    case Comdat::NoDuplicates:
+      break;
+    case Comdat::Largest:
+    case Comdat::SameSize:
+      return false;
+    }
+  }
 
   if (G->hasSection()) {
     StringRef Section = G->getSection();
@@ -2121,6 +2144,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
         new GlobalVariable(M, NewTy, G->isConstant(), Linkage, NewInitializer,
                            "", G, G->getThreadLocalMode());
     NewGlobal->copyAttributesFrom(G);
+    NewGlobal->setComdat(G->getComdat());
     NewGlobal->setAlignment(MinRZ);
 
     // Move null-terminated C strings to "__asan_cstring" section on Darwin.

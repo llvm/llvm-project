@@ -93,11 +93,11 @@ public:
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                    MemorySSA::InsertionPlace Where);
-  /// `From` block was spliced into `From` and `To`.
-  /// Move all accesses from `From` to `To` starting at instruction `Start`.
-  /// `To` is newly created BB, so empty of MemorySSA::MemoryAccesses.
-  /// Edges are already updated, so successors of `To` with MPhi nodes need to
-  /// update incoming block.
+  /// `From` block was spliced into `From` and `To`. There is a CFG edge from
+  /// `From` to `To`. Move all accesses from `From` to `To` starting at
+  /// instruction `Start`. `To` is newly created BB, so empty of
+  /// MemorySSA::MemoryAccesses. Edges are already updated, so successors of
+  /// `To` with MPhi nodes need to update incoming block.
   /// |------|        |------|
   /// | From |        | From |
   /// |      |        |------|
@@ -108,12 +108,12 @@ public:
   /// |------|        |------|
   void moveAllAfterSpliceBlocks(BasicBlock *From, BasicBlock *To,
                                 Instruction *Start);
-  /// `From` block was merged into `To`. All instructions were moved and
-  /// `From` is an empty block with successor edges; `From` is about to be
-  /// deleted. Move all accesses from `From` to `To` starting at instruction
-  /// `Start`. `To` may have multiple successors, `From` has a single
-  /// predecessor. `From` may have successors with MPhi nodes, replace their
-  /// incoming block with `To`.
+  /// `From` block was merged into `To`. There is a CFG edge from `To` to
+  /// `From`.`To` still branches to `From`, but all instructions were moved and
+  /// `From` is now an empty block; `From` is about to be deleted. Move all
+  /// accesses from `From` to `To` starting at instruction `Start`. `To` may
+  /// have multiple successors, `From` has a single predecessor. `From` may have
+  /// successors with MPhi nodes, replace their incoming block with `To`.
   /// |------|        |------|
   /// |  To  |        |  To  |
   /// |------|        |      |
@@ -124,9 +124,9 @@ public:
   /// |------|        |------|
   void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
                                Instruction *Start);
-  /// BasicBlock Old had New, an empty BasicBlock, added directly before it,
-  /// and the predecessors in Preds that used to point to Old, now point to
-  /// New. If New is the only predecessor, move Old's Phi, if present, to New.
+  /// A new empty BasicBlock (New) now branches directly to Old. Some of
+  /// Old's predecessors (Preds) are now branching to New instead of Old.
+  /// If New is the only predecessor, move Old's Phi, if present, to New.
   /// Otherwise, add a new Phi in New with appropriate incoming values, and
   /// update the incoming values in Old's Phi node too, if present.
   void

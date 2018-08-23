@@ -711,16 +711,15 @@ private:
 
   bool isHexaLiteral(const char *Start, const LangOptions &LangOpts);
 
-
   /// Read a universal character name.
   ///
-  /// \param CurPtr The position in the source buffer after the initial '\'.
-  ///               If the UCN is syntactically well-formed (but not necessarily
-  ///               valid), this parameter will be updated to point to the
-  ///               character after the UCN.
+  /// \param StartPtr The position in the source buffer after the initial '\'.
+  ///                 If the UCN is syntactically well-formed (but not 
+  ///                 necessarily valid), this parameter will be updated to
+  ///                 point to the character after the UCN.
   /// \param SlashLoc The position in the source buffer of the '\'.
-  /// \param Tok The token being formed. Pass \c nullptr to suppress diagnostics
-  ///            and handle token formation in the caller.
+  /// \param Result   The token being formed. Pass \c nullptr to suppress
+  ///                 diagnostics and handle token formation in the caller.
   ///
   /// \return The Unicode codepoint specified by the UCN, or 0 if the UCN is
   ///         invalid.

@@ -145,13 +145,13 @@ define <2 x i64> @sub_v2i64(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %a
 }
 
+; v2i64.mul is not in spec
 ; CHECK-LABEL: mul_v2i64
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
-; SIMD128: .param v128, v128{{$}}
-; SIMD128: .result v128{{$}}
-; SIMD128: i64x2.mul $push0=, $0, $1 # encoding: [0xfd,0x23]{{$}}
-; SIMD128: return $pop0 #
+; SIMD128-NOT: i64x2.mul
+; SIMD128: i64x2.extract_lane
+; SIMD128: i64.mul
 define <2 x i64> @mul_v2i64(<2 x i64> %x, <2 x i64> %y) {
   %a = mul <2 x i64> %x, %y
   ret <2 x i64> %a

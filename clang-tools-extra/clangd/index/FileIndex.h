@@ -64,7 +64,11 @@ public:
   /// nullptr, this removes all symbols in the file.
   /// If \p AST is not null, \p PP cannot be null and it should be the
   /// preprocessor that was used to build \p AST.
-  void update(PathRef Path, ASTContext *AST, std::shared_ptr<Preprocessor> PP);
+  /// If \p TopLevelDecls is set, only these decls are indexed. Otherwise, all
+  /// top level decls obtained from \p AST are indexed.
+  void
+  update(PathRef Path, ASTContext *AST, std::shared_ptr<Preprocessor> PP,
+         llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -86,8 +90,12 @@ private:
 /// Retrieves namespace and class level symbols in \p AST.
 /// Exposed to assist in unit tests.
 /// If URISchemes is empty, the default schemes in SymbolCollector will be used.
-SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                    llvm::ArrayRef<std::string> URISchemes = {});
+/// If \p TopLevelDecls is set, only these decls are indexed. Otherwise, all top
+/// level decls obtained from \p AST are indexed.
+SymbolSlab
+indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+         llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None,
+         llvm::ArrayRef<std::string> URISchemes = {});
 
 } // namespace clangd
 } // namespace clang

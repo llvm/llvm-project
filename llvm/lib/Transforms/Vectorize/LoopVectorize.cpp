@@ -3721,11 +3721,18 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
   for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
     if (LCSSAPhi.getNumIncomingValues() == 1) {
       auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
+      // Non-instruction incoming values will have only one value.
+      unsigned LastLane = 0;
+      if (isa<Instruction>(IncomingValue)) 
+          LastLane = Cost->isUniformAfterVectorization(
+                         cast<Instruction>(IncomingValue), VF)
+                         ? 0
+                         : VF - 1;
       // Can be a loop invariant incoming value or the last scalar value to be
       // extracted from the vectorized loop.
       Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
       Value *lastIncomingValue =
-          getOrCreateScalarValue(IncomingValue, {UF - 1, VF - 1});
+          getOrCreateScalarValue(IncomingValue, { UF - 1, LastLane });
       LCSSAPhi.addIncoming(lastIncomingValue, LoopMiddleBlock);
     }
   }
@@ -4504,20 +4511,22 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
     }
 
   // Expand Worklist in topological order: whenever a new instruction
-  // is added , its users should be either already inside Worklist, or
-  // out of scope. It ensures a uniform instruction will only be used
-  // by uniform instructions or out of scope instructions.
+  // is added , its users should be already inside Worklist.  It ensures
+  // a uniform instruction will only be used by uniform instructions.
   unsigned idx = 0;
   while (idx != Worklist.size()) {
     Instruction *I = Worklist[idx++];
 
     for (auto OV : I->operand_values()) {
+      // isOutOfScope operands cannot be uniform instructions.
       if (isOutOfScope(OV))
         continue;
+      // If all the users of the operand are uniform, then add the
+      // operand into the uniform worklist.
       auto *OI = cast<Instruction>(OV);
       if (llvm::all_of(OI->users(), [&](User *U) -> bool {
             auto *J = cast<Instruction>(U);
-            return !TheLoop->contains(J) || Worklist.count(J) ||
+            return Worklist.count(J) ||
                    (OI == getLoadStorePointerOperand(J) &&
                     isUniformDecision(J, VF));
           })) {

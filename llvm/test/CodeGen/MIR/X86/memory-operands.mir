@@ -189,6 +189,8 @@
 
   define void @dummy0() { ret void }
   define void @dummy1() { ret void }
+  define void @dummy2() { ret void }
+  define void @dummy3() { ret void }
 ...
 ---
 name:            test
@@ -532,5 +534,30 @@ body: |
   bb.0:
     $rax = MOV64rm $rsp, 1, _, 0, _ :: (load 8 from %stack.0)
     RETQ $rax
-
+...
+---
+# Test parsing of unknown size in machine memory operands without alignment.
+# CHECK-LABEL: name: dummy2
+# CHECK: $rax = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load unknown-size from %stack.0, align 1)
+name: dummy2
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    $rax = MOV64rm $rsp, 1, _, 0, _ :: (load unknown-size from %stack.0)
+    RETQ $rax
+...
+---
+# Test parsing of unknown size in machine memory operands with alignment.
+# CHECK-LABEL: name: dummy3
+# CHECK: $rax = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load unknown-size from %stack.0, align 4)
+name: dummy3
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    $rax = MOV64rm $rsp, 1, _, 0, _ :: (load unknown-size from %stack.0, align 4)
+    RETQ $rax
 ...

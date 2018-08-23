@@ -194,14 +194,27 @@ void fCharPointerTest() {
   CharPointerTest();
 }
 
-struct CyclicPointerTest {
+struct CyclicPointerTest1 {
   int *ptr;
-  CyclicPointerTest() : ptr(reinterpret_cast<int *>(&ptr)) {}
+  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {}
 };
 
-void fCyclicPointerTest() {
-  CyclicPointerTest();
+void fCyclicPointerTest1() {
+  CyclicPointerTest1();
 }
+
+// TODO: Currently, the checker ends up in an infinite loop for the following
+// test case.
+/*
+struct CyclicPointerTest2 {
+  int **pptr;
+  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {}
+};
+
+void fCyclicPointerTest2() {
+  CyclicPointerTest2();
+}
+*/
 
 //===----------------------------------------------------------------------===//
 // Void pointer tests.

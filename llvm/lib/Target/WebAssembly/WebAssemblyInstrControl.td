@@ -172,7 +172,7 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 // Catching an exception: catch / catch_all
-let hasCtrlDep = 1 in {
+let hasCtrlDep = 1, hasSideEffects = 1 in {
 defm CATCH_I32 : I<(outs I32:$dst), (ins i32imm:$tag),
                    (outs), (ins i32imm:$tag),
                    [(set I32:$dst, (int_wasm_catch imm:$tag))],
@@ -185,10 +185,8 @@ defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
 }
 
 // Pseudo instructions: cleanupret / catchret
-// They are not return instructions in wasm, but setting 'isReturn' to true as
-// in X86 is necessary for computing EH scope membership.
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
-    isCodeGenOnly = 1, isReturn = 1 in {
+    isCodeGenOnly = 1, isEHScopeReturn = 1 in {
   defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "", 0>;
   defm CATCHRET : NRI<(outs), (ins bb_op:$dst, bb_op:$from),
                    [(catchret bb:$dst, bb:$from)], "", 0>;

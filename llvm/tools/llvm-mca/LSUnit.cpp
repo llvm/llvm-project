@@ -51,33 +51,42 @@ void LSUnit::assignSQSlot(unsigned Index) {
   StoreQueue.insert(Index);
 }
 
-bool LSUnit::reserve(const InstRef &IR) {
+void LSUnit::dispatch(const InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  unsigned MayLoad = Desc.MayLoad;
-  unsigned MayStore = Desc.MayStore;
   unsigned IsMemBarrier = Desc.HasSideEffects;
-  if (!MayLoad && !MayStore)
-    return false;
+  assert((Desc.MayLoad || Desc.MayStore) && "Not a memory operation!");
 
   const unsigned Index = IR.getSourceIndex();
-  if (MayLoad) {
+  if (Desc.MayLoad) {
     if (IsMemBarrier)
       LoadBarriers.insert(Index);
     assignLQSlot(Index);
   }
-  if (MayStore) {
+
+  if (Desc.MayStore) {
     if (IsMemBarrier)
       StoreBarriers.insert(Index);
     assignSQSlot(Index);
   }
-  return true;
+}
+
+LSUnit::Status LSUnit::isAvailable(const InstRef &IR) const {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  if (Desc.MayLoad && isLQFull())
+    return LSUnit::LSU_LQUEUE_FULL;
+  if (Desc.MayStore && isSQFull())
+    return LSUnit::LSU_SQUEUE_FULL;
+  return LSUnit::LSU_AVAILABLE;
 }
 
 bool LSUnit::isReady(const InstRef &IR) const {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
   const unsigned Index = IR.getSourceIndex();
-  bool IsALoad = LoadQueue.count(Index) != 0;
-  bool IsAStore = StoreQueue.count(Index) != 0;
-  assert((IsALoad || IsAStore) && "Instruction is not in queue!");
+  bool IsALoad = Desc.MayLoad;
+  bool IsAStore = Desc.MayStore;
+  assert((IsALoad || IsAStore) && "Not a memory operation!");
+  assert((!IsALoad || LoadQueue.count(Index) == 1) && "Load not in queue!");
+  assert((!IsAStore || StoreQueue.count(Index) == 1) && "Store not in queue!");
 
   if (IsALoad && !LoadBarriers.empty()) {
     unsigned LoadBarrierIndex = *LoadBarriers.begin();

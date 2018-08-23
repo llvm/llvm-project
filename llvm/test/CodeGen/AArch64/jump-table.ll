@@ -1,6 +1,7 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 ; RUN: llc -code-model=large -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck --check-prefix=CHECK-LARGE %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -relocation-model=pic -aarch64-enable-atomic-cfg-tidy=0 -o - %s | FileCheck --check-prefix=CHECK-PIC %s
+; RUN: llc -code-model=tiny -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck --check-prefix=CHECK-TINY %s
 
 define i32 @test_jumptable(i32 %in) {
 ; CHECK: test_jumptable
@@ -28,6 +29,10 @@ define i32 @test_jumptable(i32 %in) {
 ; CHECK-PIC: ldrsw [[DEST:x[0-9]+]], [x[[JT]], {{x[0-9]+}}, lsl #2]
 ; CHECK-PIC: add [[TABLE:x[0-9]+]], [[DEST]], x[[JT]]
 ; CHECK-PIC: br [[TABLE]]
+
+; CHECK-TINY: adr x[[JT:[0-9]+]], .LJTI0_0
+; CHECK-TINY: ldr [[DEST:x[0-9]+]], [x[[JT]], {{x[0-9]+}}, lsl #3]
+; CHECK-TINY: br [[DEST]]
 
 def:
   ret i32 0

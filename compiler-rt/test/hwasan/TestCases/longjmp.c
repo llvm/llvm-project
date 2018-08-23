@@ -9,8 +9,8 @@
 
 __attribute__((noinline))
 int f(void *caller_frame) {
-  char z[32] = {};
-  char *volatile p = z;
+  int z = 0;
+  int *volatile p = &z;
   // Tag of local is never zero.
   assert(__hwasan_tag_pointer(p, 0) != p);
 #ifndef NEGATIVE
@@ -22,7 +22,5 @@ int f(void *caller_frame) {
 
 int main() {
   return f(__builtin_frame_address(0));
-  // CHECK: READ of size 8
-  // CHECK: pointer tag
-  // CHECK: memory tag 0x0
+  // CHECK: READ of size 8 at {{.*}} tags: {{.*}}/00 (ptr/mem)
 }

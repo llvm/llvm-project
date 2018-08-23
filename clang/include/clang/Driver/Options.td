@@ -893,11 +893,19 @@ def fforce_enable_int128 : Flag<["-"], "fforce-enable-int128">,
 def fno_force_enable_int128 : Flag<["-"], "fno-force-enable-int128">,
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Disable support for int128_t type">;
-
+def fkeep_static_consts : Flag<["-"], "fkeep-static-consts">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Keep static const variables even if unused">;
 def ffixed_point : Flag<["-"], "ffixed-point">, Group<f_Group>,
                    Flags<[CC1Option]>, HelpText<"Enable fixed point types">;
 def fno_fixed_point : Flag<["-"], "fno-fixed-point">, Group<f_Group>,
                       HelpText<"Disable fixed point types">;
+def fcxx_static_destructors : Flag<["-"], "fc++-static-destructors">,
+  Group<f_Group>,
+  HelpText<"Enable C++ static destructor registration (the default)">;
+def fno_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">,
+  Group<f_Group>,
+  Flags<[CC1Option]>,
+  HelpText<"Disable C++ static destructor registration">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -1807,6 +1815,8 @@ def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flag
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
 def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
+def gpubnames : Flag<["-"], "gpubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
+def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"

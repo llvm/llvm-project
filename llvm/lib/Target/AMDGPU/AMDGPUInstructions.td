@@ -167,6 +167,9 @@ def shl_oneuse : HasOneUseBinOp<shl>;
 
 def select_oneuse : HasOneUseTernaryOp<select>;
 
+def AMDGPUmul_u24_oneuse : HasOneUseBinOp<AMDGPUmul_u24>;
+def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
+
 def srl_16 : PatFrag<
   (ops node:$src0), (srl_oneuse node:$src0, (i32 16))
 >;

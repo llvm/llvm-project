@@ -4003,13 +4003,12 @@ SDValue AMDGPUTargetLowering::loadStackInputValue(SelectionDAG &DAG,
 SDValue AMDGPUTargetLowering::storeStackInputValue(SelectionDAG &DAG,
                                                    const SDLoc &SL,
                                                    SDValue Chain,
-                                                   SDValue StackPtr,
                                                    SDValue ArgVal,
                                                    int64_t Offset) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachinePointerInfo DstInfo = MachinePointerInfo::getStack(MF, Offset);
 
-  SDValue Ptr = DAG.getObjectPtrOffset(SL, StackPtr, Offset);
+  SDValue Ptr = DAG.getConstant(Offset, SL, MVT::i32);
   SDValue Store = DAG.getStore(Chain, SL, ArgVal, Ptr, DstInfo, 4,
                                MachineMemOperand::MODereferenceable);
   return Store;

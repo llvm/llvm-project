@@ -27,6 +27,12 @@ struct ClangdDiagnosticOptions {
   /// If true, Clangd uses an LSP extension to embed the fixes with the
   /// diagnostics that are sent to the client.
   bool EmbedFixesInDiagnostics = false;
+
+  /// If true, Clangd uses an LSP extension to send the diagnostic's
+  /// category to the client. The category typically describes the compilation
+  /// stage during which the issue was produced, e.g. "Semantic Issue" or "Parse
+  /// Issue".
+  bool SendDiagnosticCategory = false;
 };
 
 /// Contains basic information about a diagnostic.

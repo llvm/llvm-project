@@ -184,6 +184,7 @@ bool fromJSON(const llvm::json::Value &Params,
   if (!O)
     return false;
   O.map("clangdFixSupport", R.clangdFixSupport);
+  O.map("categorySupport", R.categorySupport);
   return true;
 }
 

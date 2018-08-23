@@ -1262,6 +1262,16 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
         !isTemplateInstantiation(FD->getTemplateSpecializationKind()))
       return LinkageInfo::none();
 
+    // If a function is hidden by -fvisibility-inlines-hidden option and
+    // is not explicitly attributed as a hidden function,
+    // we should not make static local variables in the function hidden.
+    if (isa<VarDecl>(D) && useInlineVisibilityHidden(FD) &&
+        !(!hasExplicitVisibilityAlready(computation) &&
+          getExplicitVisibility(FD, computation))) {
+      assert(cast<VarDecl>(D)->isStaticLocal());
+      return LinkageInfo(VisibleNoLinkage, DefaultVisibility, false);
+    }
+
     LV = getLVForDecl(FD, computation);
   }
   if (!isExternallyVisible(LV.getLinkage()))
@@ -2447,6 +2457,12 @@ bool VarDecl::isKnownToBeDefined() const {
     return true;
 
   return hasDefinition();
+}
+
+bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
+  return hasGlobalStorage() && (hasAttr<NoDestroyAttr>() ||
+                                (!Ctx.getLangOpts().RegisterStaticDestructors &&
+                                 !hasAttr<AlwaysDestroyAttr>()));
 }
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {

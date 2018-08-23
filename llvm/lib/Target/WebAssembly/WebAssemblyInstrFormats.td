@@ -119,7 +119,7 @@ multiclass BinaryFP<SDNode node, string name, bits<32> f32Inst,
                 !strconcat("f64.", !strconcat(name, "\t$dst, $lhs, $rhs")),
                 !strconcat("f64.", name), f64Inst>;
 }
-multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryIntNoI64x2<SDNode node, string name, bits<32> baseInst> {
   defm _I8x16 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
                        [(set (v16i8 V128:$dst), (node V128:$lhs, V128:$rhs))],
@@ -138,6 +138,9 @@ multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
                        !strconcat("i32x4.",
                          !strconcat(name, "\t$dst, $lhs, $rhs")),
                        !strconcat("i32x4.", name), !add(baseInst, 2)>;
+}
+multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
+  defm "" : SIMDBinaryIntNoI64x2<node, name, baseInst>;
   defm _I64x2 : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                        (outs), (ins),
                        [(set (v2i64 V128:$dst), (node V128:$lhs, V128:$rhs))],

@@ -1,4 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -fms-extensions -verify -triple i686-pc-win32 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -fms-extensions -verify -triple x86_64-pc-win32 %s
+
+// FIXME: Extend this portion of the test to cover the 64-bit case.
+#if !_M_X64
 
 // Pointers to free functions
 void            free_func_default();
@@ -244,11 +248,16 @@ void call_member_inheritance() {
 }
 } // end namespace NonVariadic
 
+#endif  // !_M_X64
+
 namespace Variadic {
 struct A {
   void            member_default(int, ...);
   void __cdecl    member_cdecl(int, ...);
-  void __thiscall member_thiscall(int, ...); // expected-error {{variadic function cannot use thiscall calling convention}}
+  void __thiscall member_thiscall(int, ...);
+#if !_M_X64
+  // expected-error@-2 {{variadic function cannot use thiscall calling convention}}
+#endif
 };
 
 struct B : public A {
@@ -319,7 +328,10 @@ mptr_t __stdcall return_mptr_std(short) {
 }
 
 void (A::*(*return_fptr_std_mptr(char))(short))(int) {
-  return return_mptr_std; // expected-error {{cannot initialize return object of type 'void (MultiChunkDecls::A::*(*)(short))(int) __attribute__((thiscall))' with an lvalue of type 'MultiChunkDecls::mptr_t (short) __attribute__((stdcall))'}}
+  return return_mptr_std;
+#if !_M_X64
+  // expected-error@-2 {{cannot initialize return object of type 'void (MultiChunkDecls::A::*(*)(short))(int) __attribute__((thiscall))' with an lvalue of type 'MultiChunkDecls::mptr_t (short) __attribute__((stdcall))'}}
+#endif
 }
 
 void call_return() {
@@ -387,15 +399,32 @@ Y<decltype(&A::method_thiscall)>::p tmpl9 = &f_cdecl;
 
 // Test that lambdas that capture nothing convert to cdecl function pointers.
 namespace Lambdas {
-
 void pass_fptr_cdecl   (void (__cdecl    *fp)());
-void pass_fptr_stdcall (void (__stdcall  *fp)()); // expected-note {{candidate function not viable}}
-void pass_fptr_fastcall(void (__fastcall *fp)()); // expected-note {{candidate function not viable}}
+void pass_fptr_stdcall (void (__stdcall  *fp)());
+void pass_fptr_fastcall(void (__fastcall *fp)());
 
 void conversion_to_fptr() {
   pass_fptr_cdecl   ([]() { } );
-  pass_fptr_stdcall ([]() { } ); // expected-error {{no matching function for call}}
-  pass_fptr_fastcall([]() { } ); // expected-error {{no matching function for call}}
+
+  pass_fptr_stdcall ([]() { } );
+#if !_M_X64
+  // expected-error@-2 {{no matching function for call}}
+  // expected-note@-9 {{candidate function not viable}}
+#endif
+
+  pass_fptr_fastcall([]() { } );
+#if !_M_X64
+  // expected-error@-2 {{no matching function for call}}
+  // expected-note@-14 {{candidate function not viable}}
+#endif
+}
 }
 
+namespace D50526 {
+  template<typename T, T (__stdcall f)()> void g();
+  void h() { g<void, h>(); }
+#if !_M_X64
+  // expected-error@-2 {{no matching function for call to}}
+  // expected-note@-4 {{invalid explicitly-specified argument}}
+#endif
 }

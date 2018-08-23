@@ -138,7 +138,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       } else
         return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
-      assert(SymLoc == AArch64MCExpr::VK_NONE && "unexpected ADR relocation");
+      if (SymLoc != AArch64MCExpr::VK_ABS)
+        Ctx.reportError(Fixup.getLoc(),
+                        "invalid symbol kind for ADR relocation");
       return R_CLS(ADR_PREL_LO21);
     case AArch64::fixup_aarch64_pcrel_adrp_imm21:
       if (SymLoc == AArch64MCExpr::VK_ABS && !IsNC)

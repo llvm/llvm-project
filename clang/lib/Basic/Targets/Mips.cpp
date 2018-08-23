@@ -59,6 +59,16 @@ void MipsTargetInfo::fillValidCPUList(
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
+unsigned MipsTargetInfo::getISARev() const {
+  return llvm::StringSwitch<unsigned>(getCPU())
+             .Cases("mips32", "mips64", 1)
+             .Cases("mips32r2", "mips64r2", 2)
+             .Cases("mips32r3", "mips64r3", 3)
+             .Cases("mips32r5", "mips64r5", 5)
+             .Cases("mips32r6", "mips64r6", 6)
+             .Default(0);
+}
+
 void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
                                       MacroBuilder &Builder) const {
   if (BigEndian) {
@@ -84,13 +94,8 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS64");
   }
 
-  const std::string ISARev = llvm::StringSwitch<std::string>(getCPU())
-                                 .Cases("mips32", "mips64", "1")
-                                 .Cases("mips32r2", "mips64r2", "2")
-                                 .Cases("mips32r3", "mips64r3", "3")
-                                 .Cases("mips32r5", "mips64r5", "5")
-                                 .Cases("mips32r6", "mips64r6", "6")
-                                 .Default("");
+  const std::string ISARev = std::to_string(getISARev());
+
   if (!ISARev.empty())
     Builder.defineMacro("__mips_isa_rev", ISARev);
 
@@ -129,9 +134,22 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (IsSingleFloat)
     Builder.defineMacro("__mips_single_float", Twine(1));
 
-  Builder.defineMacro("__mips_fpr", HasFP64 ? Twine(64) : Twine(32));
-  Builder.defineMacro("_MIPS_FPSET",
-                      Twine(32 / (HasFP64 || IsSingleFloat ? 1 : 2)));
+  switch (FPMode) {
+  case FPXX:
+    Builder.defineMacro("__mips_fpr", Twine(0));
+    break;
+  case FP32:
+    Builder.defineMacro("__mips_fpr", Twine(32));
+    break;
+  case FP64:
+    Builder.defineMacro("__mips_fpr", Twine(64));
+    break;
+}
+
+  if (FPMode == FP64 || IsSingleFloat)
+    Builder.defineMacro("_MIPS_FPSET", Twine(32));
+  else
+    Builder.defineMacro("_MIPS_FPSET", Twine(16));
 
   if (IsMips16)
     Builder.defineMacro("__mips16", Twine(1));
@@ -189,7 +207,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
 bool MipsTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("mips", true)
-      .Case("fp64", HasFP64)
+      .Case("fp64", FPMode == FP64)
       .Default(false);
 }
 
@@ -232,6 +250,31 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   if (getTriple().isMIPS32() && (ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_abi_for_triple)
         << ABI << getTriple().str();
+    return false;
+  }
+
+  // -fpxx is valid only for the o32 ABI
+  if (FPMode == FPXX && (ABI == "n32" || ABI == "n64")) {
+    Diags.Report(diag::err_unsupported_abi_for_opt) << "-mfpxx" << "o32";
+    return false;
+  }
+
+  // -mfp32 and n32/n64 ABIs are incompatible
+  if (FPMode != FP64 && FPMode != FPXX && !IsSingleFloat &&
+      (ABI == "n32" || ABI == "n64")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx" << CPU;
+    return false;
+  }
+  // Mips revision 6 and -mfp32 are incompatible
+  if (FPMode != FP64 && FPMode != FPXX && (CPU == "mips32r6" ||
+      CPU == "mips64r6")) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfp32" << CPU;
+    return false;
+  }
+  // Option -mfp64 permitted on Mips32 iff revision 2 or higher is present
+  if (FPMode == FP64 && (CPU == "mips1" || CPU == "mips2" ||
+      getISARev() < 2) && ABI == "o32") {
+    Diags.Report(diag::err_mips_fp64_req) << "-mfp64";
     return false;
   }
 

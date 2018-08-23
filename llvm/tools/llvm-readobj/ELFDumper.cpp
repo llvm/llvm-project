@@ -4379,7 +4379,7 @@ void LLVMStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
   while (Cur != End) {
     unsigned Size;
     const char *Err;
-    uint64_t SymIndex = decodeULEB128(Cur, &Size, Contents.end(), &Err);
+    uint64_t SymIndex = decodeULEB128(Cur, &Size, End, &Err);
     if (Err)
       reportError(Err);
     W.printNumber("Sym", this->dumper()->getStaticSymbolName(SymIndex),

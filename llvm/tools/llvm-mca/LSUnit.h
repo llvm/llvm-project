@@ -16,6 +16,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_LSUNIT_H
 #define LLVM_TOOLS_LLVM_MCA_LSUNIT_H
 
+#include "HardwareUnit.h"
 #include <set>
 
 namespace mca {
@@ -86,7 +87,7 @@ struct InstrDesc;
 /// A load/store barrier is "executed" when it becomes the oldest entry in
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
-class LSUnit {
+class LSUnit : public HardwareUnit {
   // Load queue size.
   // LQ_Size == 0 means that there are infinite slots in the load queue.
   unsigned LQ_Size;
@@ -115,6 +116,11 @@ class LSUnit {
   // before newer loads are issued.
   std::set<unsigned> LoadBarriers;
 
+  bool isSQEmpty() const { return StoreQueue.empty(); }
+  bool isLQEmpty() const { return LoadQueue.empty(); }
+  bool isSQFull() const { return SQ_Size != 0 && StoreQueue.size() == SQ_Size; }
+  bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
+
 public:
   LSUnit(unsigned LQ = 0, unsigned SQ = 0, bool AssumeNoAlias = false)
       : LQ_Size(LQ), SQ_Size(SQ), NoAlias(AssumeNoAlias) {}
@@ -123,22 +129,30 @@ public:
   void dump() const;
 #endif
 
-  bool isSQEmpty() const { return StoreQueue.empty(); }
-  bool isLQEmpty() const { return LoadQueue.empty(); }
-  bool isSQFull() const { return SQ_Size != 0 && StoreQueue.size() == SQ_Size; }
-  bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
+  enum Status {
+    LSU_AVAILABLE = 0,
+    LSU_LQUEUE_FULL,
+    LSU_SQUEUE_FULL
+  };
 
-  // Returns true if this instruction has been successfully enqueued.
-  bool reserve(const InstRef &IR);
+  // Returns LSU_AVAILABLE if there are enough load/store queue entries to serve
+  // IR. It also returns LSU_AVAILABLE if IR is not a memory operation.
+  Status isAvailable(const InstRef &IR) const;
 
-  // The rules are:
+  // Allocates load/store queue resources for IR.
+  //
+  // This method assumes that a previous call to `isAvailable(IR)` returned
+  // LSU_AVAILABLE, and that IR is a memory operation.
+  void dispatch(const InstRef &IR);
+
+  // By default, rules are:
   // 1. A store may not pass a previous store.
   // 2. A load may not pass a previous store unless flag 'NoAlias' is set.
   // 3. A load may pass a previous load.
   // 4. A store may not pass a previous load (regardless of flag 'NoAlias').
   // 5. A load has to wait until an older load barrier is fully executed.
   // 6. A store has to wait until an older store barrier is fully executed.
-  bool isReady(const InstRef &IR) const;
+  virtual bool isReady(const InstRef &IR) const;
   void onInstructionExecuted(const InstRef &IR);
 };
 

@@ -2209,6 +2209,34 @@ bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth,
   return Mask.isSubsetOf(Known.Zero);
 }
 
+// Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
+// Returns the input and lower/upper bounds.
+static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
+                                const APInt *&CLow, const APInt *&CHigh) {
+  assert(isa<SelectInst>(Select) && "Input should be a SelectInst!");
+
+  const Value *LHS, *RHS, *LHS2, *RHS2;
+  SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
+  if (SPF != SPF_SMAX && SPF != SPF_SMIN)
+    return false;
+
+  if (!match(RHS, m_APInt(CLow)))
+    return false;
+
+  SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
+  if (getInverseMinMaxFlavor(SPF) != SPF2)
+    return false;
+
+  if (!match(RHS2, m_APInt(CHigh)))
+    return false;
+
+  if (SPF == SPF_SMIN)
+    std::swap(CLow, CHigh);
+
+  In = LHS2;
+  return CLow->sle(*CHigh);
+}
+
 /// For vector constants, loop over the elements and find the constant with the
 /// minimum number of sign bits. Return 0 if the value is not a vector constant
 /// or if any element was not analyzed; otherwise, return the count for the
@@ -2370,11 +2398,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     }
     break;
 
-  case Instruction::Select:
+  case Instruction::Select: {
+    // If we have a clamp pattern, we know that the number of sign bits will be
+    // the minimum of the clamp min/max range.
+    const Value *X;
+    const APInt *CLow, *CHigh;
+    if (isSignedMinMaxClamp(U, X, CLow, CHigh))
+      return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+
     Tmp = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
     if (Tmp == 1) break;
     Tmp2 = ComputeNumSignBits(U->getOperand(2), Depth + 1, Q);
     return std::min(Tmp, Tmp2);
+  }
 
   case Instruction::Add:
     // Add can have at most one carry bit.  Thus we know that the output
@@ -2930,9 +2966,6 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     if (FPMathOp->hasNoNaNs())
       return true;
 
-  // TODO: Handle instructions and potentially recurse like other 'isKnown'
-  // functions. For example, the result of sitofp is never NaN.
-
   // Handle scalar constants.
   if (auto *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->isNaN();
@@ -2940,11 +2973,44 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   if (Depth == MaxDepth)
     return false;
 
+  if (auto *Inst = dyn_cast<Instruction>(V)) {
+    switch (Inst->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FMul:
+    case Instruction::FSub:
+    case Instruction::FDiv:
+    case Instruction::FRem: {
+      // TODO: Need isKnownNeverInfinity
+      return false;
+    }
+    case Instruction::Select: {
+      return isKnownNeverNaN(Inst->getOperand(1), TLI, Depth + 1) &&
+             isKnownNeverNaN(Inst->getOperand(2), TLI, Depth + 1);
+    }
+    case Instruction::SIToFP:
+    case Instruction::UIToFP:
+      return true;
+    case Instruction::FPTrunc:
+    case Instruction::FPExt:
+      return isKnownNeverNaN(Inst->getOperand(0), TLI, Depth + 1);
+    default:
+      break;
+    }
+  }
+
   if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::canonicalize:
     case Intrinsic::fabs:
     case Intrinsic::copysign:
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::trunc:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1);
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&

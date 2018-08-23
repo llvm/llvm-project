@@ -109,7 +109,7 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   }
 
   if (Locations.empty())
-    return "\n>>> referenced by " + toString(File) + "\n";
+    return "\n>>> referenced by " + toString(File);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -122,7 +122,6 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
     if (!Loc.SymName.empty())
       OS << ":(" << Loc.SymName << ')';
   }
-  OS << '\n';
   return OS.str();
 }
 

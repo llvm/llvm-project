@@ -56,7 +56,7 @@ Configuration *Config;
 LinkerDriver *Driver;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
-  errorHandler().LogName = sys::path::filename(Args[0]);
+  errorHandler().LogName = args::FilenameWithoutExe(Args[0]);
   errorHandler().ErrorOS = &Diag;
   errorHandler().ColorDiagnostics = Diag.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -449,9 +449,19 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
-  if (findUnderscoreMangle("main") || findUnderscoreMangle("wmain"))
+  bool HaveMain = findUnderscoreMangle("main");
+  bool HaveWMain = findUnderscoreMangle("wmain");
+  bool HaveWinMain = findUnderscoreMangle("WinMain");
+  bool HaveWWinMain = findUnderscoreMangle("wWinMain");
+  if (HaveMain || HaveWMain) {
+    if (HaveWinMain || HaveWWinMain) {
+      warn(std::string("found ") + (HaveMain ? "main" : "wmain") + " and " +
+           (HaveWinMain ? "WinMain" : "wWinMain") +
+           "; defaulting to /subsystem:console");
+    }
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
-  if (findUnderscoreMangle("WinMain") || findUnderscoreMangle("wWinMain"))
+  }
+  if (HaveWinMain || HaveWWinMain)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
   return IMAGE_SUBSYSTEM_UNKNOWN;
 }

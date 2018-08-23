@@ -98,6 +98,9 @@ public:
   bool prefersVectorizedAddressing() {
     return false;
   }
+  bool enableInterleavedAccessVectorization() {
+    return true;
+  }
 
   unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract);
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value*> Args,

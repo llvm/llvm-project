@@ -229,7 +229,7 @@ struct AMDGPUAS {
 
   enum : unsigned {
     // The maximum value for flat, generic, local, private, constant and region.
-    MAX_COMMON_ADDRESS = 5,
+    MAX_AMDGPU_ADDRESS = 6,
 
     GLOBAL_ADDRESS = 1,   ///< Address space for global memory (RAT0, VTX0).
     CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2)

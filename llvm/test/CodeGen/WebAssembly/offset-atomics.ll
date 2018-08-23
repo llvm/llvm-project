@@ -1701,38 +1701,38 @@ define i32 @wait_i64_with_unfolded_gep_offset(i64* %p, i64 %exp, i64 %timeout) {
 ; Notifies
 ;===----------------------------------------------------------------------------
 
-declare i64 @llvm.wasm.atomic.notify(i32*, i64)
+declare i32 @llvm.wasm.atomic.notify(i32*, i32)
 
 ; Basic notify.
 
 ; CHECK-LABEL: notify_no_offset:
 ; CHECK: atomic.notify $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i64 @notify_no_offset(i32* %p, i64 %notify_count) {
-  %v = call i64 @llvm.wasm.atomic.notify(i32* %p, i64 %notify_count)
-  ret i64 %v
+define i32 @notify_no_offset(i32* %p, i32 %notify_count) {
+  %v = call i32 @llvm.wasm.atomic.notify(i32* %p, i32 %notify_count)
+  ret i32 %v
 }
 
 ; With an nuw add, we can fold an offset.
 
 ; CHECK-LABEL: notify_with_folded_offset:
 ; CHECK: atomic.notify $push0=, 24($0), $1{{$}}
-define i64 @notify_with_folded_offset(i32* %p, i64 %notify_count) {
+define i32 @notify_with_folded_offset(i32* %p, i32 %notify_count) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
   %s = inttoptr i32 %r to i32*
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; With an inbounds gep, we can fold an offset.
 
 ; CHECK-LABEL: notify_with_folded_gep_offset:
 ; CHECK: atomic.notify $push0=, 24($0), $1{{$}}
-define i64 @notify_with_folded_gep_offset(i32* %p, i64 %notify_count) {
+define i32 @notify_with_folded_gep_offset(i32* %p, i32 %notify_count) {
   %s = getelementptr inbounds i32, i32* %p, i32 6
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; We can't fold a negative offset though, even with an inbounds gep.
@@ -1741,10 +1741,10 @@ define i64 @notify_with_folded_gep_offset(i32* %p, i64 %notify_count) {
 ; CHECK: i32.const $push0=, -24{{$}}
 ; CHECK: i32.add $push1=, $0, $pop0{{$}}
 ; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
-define i64 @notify_with_unfolded_gep_negative_offset(i32* %p, i64 %notify_count) {
+define i32 @notify_with_unfolded_gep_negative_offset(i32* %p, i32 %notify_count) {
   %s = getelementptr inbounds i32, i32* %p, i32 -6
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; Without nuw, and even with nsw, we can't fold an offset.
@@ -1753,12 +1753,12 @@ define i64 @notify_with_unfolded_gep_negative_offset(i32* %p, i64 %notify_count)
 ; CHECK: i32.const $push0=, 24{{$}}
 ; CHECK: i32.add $push1=, $0, $pop0{{$}}
 ; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
-define i64 @notify_with_unfolded_offset(i32* %p, i64 %notify_count) {
+define i32 @notify_with_unfolded_offset(i32* %p, i32 %notify_count) {
   %q = ptrtoint i32* %p to i32
   %r = add nsw i32 %q, 24
   %s = inttoptr i32 %r to i32*
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; Without inbounds, we can't fold a gep offset.
@@ -1767,10 +1767,10 @@ define i64 @notify_with_unfolded_offset(i32* %p, i64 %notify_count) {
 ; CHECK: i32.const $push0=, 24{{$}}
 ; CHECK: i32.add $push1=, $0, $pop0{{$}}
 ; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
-define i64 @notify_with_unfolded_gep_offset(i32* %p, i64 %notify_count) {
+define i32 @notify_with_unfolded_gep_offset(i32* %p, i32 %notify_count) {
   %s = getelementptr i32, i32* %p, i32 6
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; When notifying from a fixed address, materialize a zero.
@@ -1778,16 +1778,16 @@ define i64 @notify_with_unfolded_gep_offset(i32* %p, i64 %notify_count) {
 ; CHECK-LABEL: notify_from_numeric_address
 ; CHECK: i32.const $push0=, 0{{$}}
 ; CHECK: atomic.notify $push1=, 42($pop0), $0{{$}}
-define i64 @notify_from_numeric_address(i64 %notify_count) {
+define i32 @notify_from_numeric_address(i32 %notify_count) {
   %s = inttoptr i32 42 to i32*
-  %t = call i64 @llvm.wasm.atomic.notify(i32* %s, i64 %notify_count)
-  ret i64 %t
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
 }
 
 ; CHECK-LABEL: notify_from_global_address
 ; CHECK: i32.const $push0=, 0{{$}}
 ; CHECK: atomic.notify $push1=, gv($pop0), $0{{$}}
-define i64 @notify_from_global_address(i64 %notify_count) {
-  %t = call i64 @llvm.wasm.atomic.notify(i32* @gv, i64 %notify_count)
-  ret i64 %t
+define i32 @notify_from_global_address(i32 %notify_count) {
+  %t = call i32 @llvm.wasm.atomic.notify(i32* @gv, i32 %notify_count)
+  ret i32 %t
 }
