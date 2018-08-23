@@ -334,7 +334,7 @@ indexstore_occurrence_relations_apply(indexstore_occurrence_t occur,
 
 uint64_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t occur) {
-  return static_cast<IndexRecordOccurrence*>(occur)->Roles;
+  return getIndexStoreRoles(static_cast<IndexRecordOccurrence*>(occur)->Roles);
 }
 
 void
