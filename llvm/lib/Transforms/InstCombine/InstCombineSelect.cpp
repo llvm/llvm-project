@@ -56,19 +56,26 @@ static Value *createMinMax(InstCombiner::BuilderTy &Builder,
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
-static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
+static Instruction *foldSelectBinOpIdentity(SelectInst &Sel, const TargetLibraryInfo &TLI) {
   // The select condition must be an equality compare with a constant operand.
-  // TODO: Support FP compares.
   Value *X;
   Constant *C;
   CmpInst::Predicate Pred;
-  if (!match(Sel.getCondition(), m_ICmp(Pred, m_Value(X), m_Constant(C))) ||
-      !ICmpInst::isEquality(Pred))
+  if (!match(Sel.getCondition(), m_Cmp(Pred, m_Value(X), m_Constant(C))))
+    return nullptr;
+
+  bool IsEq;
+  if (ICmpInst::isEquality(Pred))
+    IsEq = Pred == ICmpInst::ICMP_EQ;
+  else if (Pred == FCmpInst::FCMP_OEQ)
+    IsEq = true;
+  else if (Pred == FCmpInst::FCMP_UNE)
+    IsEq = false;
+  else
     return nullptr;
 
   // A select operand must be a binop, and the compare constant must be the
   // identity constant for that binop.
-  bool IsEq = Pred == ICmpInst::ICMP_EQ;
   BinaryOperator *BO;
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
       ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), true) != C)
@@ -80,6 +87,12 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel) {
     return nullptr;
   if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
     return nullptr;
+
+  // +0.0 compares equal to -0.0, and so it does not behave as required for this
+  // transform. Bail out if we can not exclude that possibility.
+  if (isa<FPMathOperator>(BO))
+    if (!BO->hasNoSignedZeros() && !CannotBeNegativeZero(Y, &TLI))
+      return nullptr;
 
   // BO = binop Y, X
   // S = { select (cmp eq X, C), BO, ? } or { select (cmp ne X, C), ?, BO }
@@ -2000,7 +2013,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *Select = foldSelectCmpXchg(SI))
     return Select;
 
-  if (Instruction *Select = foldSelectBinOpIdentity(SI))
+  if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI))
     return Select;
 
   return nullptr;

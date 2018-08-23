@@ -175,9 +175,6 @@ class AliasSet : public ilist_node<AliasSet> {
   };
   unsigned Alias : 1;
 
-  /// True if this alias set contains volatile loads or stores.
-  unsigned Volatile : 1;
-
   unsigned SetSize = 0;
 
   void addRef() { ++RefCount; }
@@ -203,9 +200,6 @@ public:
   bool isMustAlias() const { return Alias == SetMustAlias; }
   bool isMayAlias()  const { return Alias == SetMayAlias; }
 
-  /// Return true if this alias set contains volatile loads or stores.
-  bool isVolatile() const { return Volatile; }
-
   /// Return true if this alias set should be ignored as part of the
   /// AliasSetTracker object.
   bool isForwardingAliasSet() const { return Forward; }
@@ -226,17 +220,7 @@ public:
 
   /// If this alias set is known to contain a single instruction and *only* a
   /// single unique instruction, return it.  Otherwise, return nullptr.
-  Instruction* getUniqueInstruction() {
-    if (size() != 0)
-      // Can't track source of pointer, might be many instruction
-      return nullptr;
-    if (AliasAny)
-      // May have collapses alias set
-      return nullptr;
-    if (1 != UnknownInsts.size())
-      return nullptr;
-    return cast<Instruction>(UnknownInsts[0]);
-  }
+  Instruction* getUniqueInstruction();
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -278,7 +262,7 @@ private:
   // Can only be created by AliasSetTracker.
   AliasSet()
       : PtrListEnd(&PtrList), RefCount(0),  AliasAny(false), Access(NoAccess),
-        Alias(SetMustAlias), Volatile(false) {}
+        Alias(SetMustAlias) {}
 
   PointerRec *getSomePointer() const {
     return PtrList;
@@ -316,8 +300,6 @@ private:
     if (!WasEmpty && UnknownInsts.empty())
       dropRef(AST);
   }
-
-  void setVolatile() { Volatile = true; }
 
 public:
   /// Return true if the specified pointer "may" (or must) alias one of the

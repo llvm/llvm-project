@@ -69,36 +69,34 @@ def SIatomic_fmax : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMAX", SDTAtomic2_f32,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
-def SDTbuffer_load : SDTypeProfile<1, 9,
+def SDTtbuffer_load : SDTypeProfile<1, 8,
   [                     // vdata
    SDTCisVT<1, v4i32>,  // rsrc
    SDTCisVT<2, i32>,    // vindex(VGPR)
    SDTCisVT<3, i32>,    // voffset(VGPR)
    SDTCisVT<4, i32>,    // soffset(SGPR)
    SDTCisVT<5, i32>,    // offset(imm)
-   SDTCisVT<6, i32>,    // dfmt(imm)
-   SDTCisVT<7, i32>,    // nfmt(imm)
-   SDTCisVT<8, i32>,    // glc(imm)
-   SDTCisVT<9, i32>     // slc(imm)
+   SDTCisVT<6, i32>,    // format(imm)
+   SDTCisVT<7, i32>,    // cachecontrol(imm)
+   SDTCisVT<8, i1>      // idxen(imm)
   ]>;
 
-def SItbuffer_load :   SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT", SDTbuffer_load,
+def SItbuffer_load :   SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT", SDTtbuffer_load,
                               [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 def SItbuffer_load_d16 : SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT_D16",
-                                SDTbuffer_load,
+                                SDTtbuffer_load,
                                 [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
-def SDTtbuffer_store : SDTypeProfile<0, 10,
+def SDTtbuffer_store : SDTypeProfile<0, 9,
     [                     // vdata
      SDTCisVT<1, v4i32>,  // rsrc
      SDTCisVT<2, i32>,    // vindex(VGPR)
      SDTCisVT<3, i32>,    // voffset(VGPR)
      SDTCisVT<4, i32>,    // soffset(SGPR)
      SDTCisVT<5, i32>,    // offset(imm)
-     SDTCisVT<6, i32>,    // dfmt(imm)
-     SDTCisVT<7, i32>,    // nfmt(imm)
-     SDTCisVT<8, i32>,    // glc(imm)
-     SDTCisVT<9, i32>     // slc(imm)
+     SDTCisVT<6, i32>,    // format(imm)
+     SDTCisVT<7, i32>,    // cachecontrol(imm)
+     SDTCisVT<8, i1>      // idxen(imm)
     ]>;
 
 def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT", SDTtbuffer_store,
@@ -110,13 +108,15 @@ def SItbuffer_store_d16 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_D16",
                                 SDTtbuffer_store,
                                 [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
-def SDTBufferLoad : SDTypeProfile<1, 5,
+def SDTBufferLoad : SDTypeProfile<1, 7,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
-     SDTCisVT<2, i32>,   // vindex
-     SDTCisVT<3, i32>,   // offset
-     SDTCisVT<4, i1>,    // glc
-     SDTCisVT<5, i1>]>;  // slc
+     SDTCisVT<2, i32>,   // vindex(VGPR)
+     SDTCisVT<3, i32>,   // voffset(VGPR)
+     SDTCisVT<4, i32>,   // soffset(SGPR)
+     SDTCisVT<5, i32>,   // offset(imm)
+     SDTCisVT<6, i32>,   // cachepolicy(imm)
+     SDTCisVT<7, i1>]>;  // idxen(imm)
 
 def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
@@ -126,13 +126,15 @@ def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
-def SDTBufferStore : SDTypeProfile<0, 6,
+def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
-     SDTCisVT<2, i32>,   // vindex
-     SDTCisVT<3, i32>,   // offset
-     SDTCisVT<4, i1>,    // glc
-     SDTCisVT<5, i1>]>;  // slc
+     SDTCisVT<2, i32>,   // vindex(VGPR)
+     SDTCisVT<3, i32>,   // voffset(VGPR)
+     SDTCisVT<4, i32>,   // soffset(SGPR)
+     SDTCisVT<5, i32>,   // offset(imm)
+     SDTCisVT<6, i32>,   // cachepolicy(imm)
+     SDTCisVT<7, i1>]>;  // idxen(imm)
 
 def SIbuffer_store : SDNode <"AMDGPUISD::BUFFER_STORE", SDTBufferStore,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
@@ -144,13 +146,16 @@ def SIbuffer_store_format_d16 : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT_D16",
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
 class SDBufferAtomic<string opcode> : SDNode <opcode,
-  SDTypeProfile<1, 5,
+  SDTypeProfile<1, 8,
       [SDTCisVT<0, i32>,   // dst
        SDTCisVT<1, i32>,   // vdata
        SDTCisVT<2, v4i32>, // rsrc
-       SDTCisVT<3, i32>,   // vindex
-       SDTCisVT<4, i32>,   // offset
-       SDTCisVT<5, i1>]>,  // slc
+       SDTCisVT<3, i32>,   // vindex(VGPR)
+       SDTCisVT<4, i32>,   // voffset(VGPR)
+       SDTCisVT<5, i32>,   // soffset(SGPR)
+       SDTCisVT<6, i32>,   // offset(imm)
+       SDTCisVT<7, i32>,   // cachepolicy(imm)
+       SDTCisVT<8, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
@@ -166,14 +171,17 @@ def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
 def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
-  SDTypeProfile<1, 6,
+  SDTypeProfile<1, 9,
     [SDTCisVT<0, i32>,   // dst
      SDTCisVT<1, i32>,   // src
      SDTCisVT<2, i32>,   // cmp
      SDTCisVT<3, v4i32>, // rsrc
-     SDTCisVT<4, i32>,   // vindex
-     SDTCisVT<5, i32>,   // offset
-     SDTCisVT<6, i1>]>,  // slc
+     SDTCisVT<4, i32>,   // vindex(VGPR)
+     SDTCisVT<5, i32>,   // voffset(VGPR)
+     SDTCisVT<6, i32>,   // soffset(SGPR)
+     SDTCisVT<7, i32>,   // offset(imm)
+     SDTCisVT<8, i32>,   // cachepolicy(imm)
+     SDTCisVT<9, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
@@ -752,8 +760,7 @@ def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
-def DFMT : NamedOperandU8<"DFMT", NamedMatchClass<"DFMT">>;
-def NFMT : NamedOperandU8<"NFMT", NamedMatchClass<"NFMT">>;
+def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT">>;
 
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 

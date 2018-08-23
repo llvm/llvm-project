@@ -2398,6 +2398,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::min_element requires a ForwardIterator");
     if (__first != __last)
     {
         _ForwardIterator __i = __first;
@@ -2462,6 +2464,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::max_element requires a ForwardIterator");
     if (__first != __last)
     {
         _ForwardIterator __i = __first;
@@ -2548,6 +2552,8 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11
 std::pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+  static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::minmax_element requires a ForwardIterator");
   std::pair<_ForwardIterator, _ForwardIterator> __result(__first, __first);
   if (__first != __last)
   {

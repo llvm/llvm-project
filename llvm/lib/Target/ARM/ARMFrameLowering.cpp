@@ -526,6 +526,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlags(MachineInstr::FrameSetup);
 
     switch (TM.getCodeModel()) {
+    case CodeModel::Tiny:
+      llvm_unreachable("Tiny code model not available on ARM.");
     case CodeModel::Small:
     case CodeModel::Medium:
     case CodeModel::Kernel:

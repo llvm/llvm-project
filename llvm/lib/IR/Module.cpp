@@ -145,7 +145,8 @@ Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
   GlobalValue *F = getNamedValue(Name);
   if (!F) {
     // Nope, add it
-    Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage, Name);
+    Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
+                                     DL.getProgramAddressSpace(), Name);
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
     FunctionList.push_back(New);
@@ -154,8 +155,9 @@ Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
 
   // If the function exists but has the wrong type, return a bitcast to the
   // right type.
-  if (F->getType() != PointerType::getUnqual(Ty))
-    return ConstantExpr::getBitCast(F, PointerType::getUnqual(Ty));
+  auto *PTy = PointerType::get(Ty, F->getAddressSpace());
+  if (F->getType() != PTy)
+    return ConstantExpr::getBitCast(F, PTy);
 
   // Otherwise, we just found the existing function or a prototype.
   return F;

@@ -1632,6 +1632,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(Reg, RegState::Kill)
         .addImm(0)
         .addMemOperand(*MI.memoperands_begin());
+  } else if (TM.getCodeModel() == CodeModel::Tiny) {
+    BuildMI(MBB, MI, DL, get(AArch64::ADR), Reg)
+        .addGlobalAddress(GV, 0, OpFlags);
   } else {
     BuildMI(MBB, MI, DL, get(AArch64::ADRP), Reg)
         .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);

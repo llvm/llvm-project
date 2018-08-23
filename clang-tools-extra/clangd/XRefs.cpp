@@ -211,7 +211,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
   std::vector<Location> Result;
   // Handle goto definition for #include.
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-    if (!Inc.Resolved.empty() && Inc.R.contains(Pos))
+    if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line)
       Result.push_back(Location{URIForFile{Inc.Resolved}, {}});
   }
   if (!Result.empty())

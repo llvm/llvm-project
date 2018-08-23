@@ -159,8 +159,6 @@ public:
   unsigned isAvailable(llvm::ArrayRef<unsigned> Regs) const;
   void collectWrites(llvm::SmallVectorImpl<WriteRef> &Writes,
                      unsigned RegID) const;
-  void updateOnRead(ReadState &RS, unsigned RegID);
-
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
 #ifndef NDEBUG

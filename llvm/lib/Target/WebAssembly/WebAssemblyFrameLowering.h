@@ -24,7 +24,8 @@ class MachineFrameInfo;
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
  public:
   /// Size of the red zone for the user stack (leaf functions can use this much
-  /// space below the stack pointer without writing it back to memory).
+  /// space below the stack pointer without writing it back to __stack_pointer
+  /// global).
   // TODO: (ABI) Revisit and decide how large it should be.
   static const size_t RedZoneSize = 128;
 
@@ -45,11 +46,19 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
- private:
+  bool needsPrologForEH(const MachineFunction &MF) const;
+
+  /// Write SP back to __stack_pointer global.
+  void writeSPToGlobal(unsigned SrcReg, MachineFunction &MF,
+                       MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator &InsertStore,
+                       const DebugLoc &DL) const;
+
+private:
   bool hasBP(const MachineFunction &MF) const;
-  bool needsSP(const MachineFunction &MF, const MachineFrameInfo &MFI) const;
-  bool needsSPWriteback(const MachineFunction &MF,
-                        const MachineFrameInfo &MFI) const;
+  bool needsSPForLocalFrame(const MachineFunction &MF) const;
+  bool needsSP(const MachineFunction &MF) const;
+  bool needsSPWriteback(const MachineFunction &MF) const;
 };
 
 }  // end namespace llvm

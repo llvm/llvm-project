@@ -11,7 +11,7 @@
 /// This file defines a class for holding ownership of various simulated
 /// hardware units.  A Context also provides a utility routine for constructing
 /// a default out-of-order pipeline with fetch, dispatch, execute, and retire
-/// stages).
+/// stages.
 ///
 //===----------------------------------------------------------------------===//
 

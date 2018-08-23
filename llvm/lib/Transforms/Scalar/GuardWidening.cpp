@@ -347,6 +347,12 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
     Instruction *GuardInst, const df_iterator<DomTreeNode *> &DFSI,
     const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
         GuardsInBlock, bool InvertCondition) {
+  // Ignore trivial true or false conditions. These instructions will be
+  // trivially eliminated by any cleanup pass. Do not erase them because other
+  // guards can possibly be widened into them.
+  if (isa<ConstantInt>(getCondition(GuardInst)))
+    return false;
+
   Instruction *BestSoFar = nullptr;
   auto BestScoreSoFar = WS_IllegalOrNegative;
   auto *GuardInstLoop = LI.getLoopFor(GuardInst->getParent());

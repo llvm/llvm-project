@@ -796,8 +796,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLDEMOTE = true;
     } else if (Feature == "+rdpid") {
       HasRDPID = true;
-    } else if (Feature == "+retpoline") {
-      HasRetpoline = true;
     } else if (Feature == "+retpoline-external-thunk") {
       HasRetpolineExternalThunk = true;
     } else if (Feature == "+sahf") {
@@ -1397,7 +1395,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdpid", HasRDPID)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
-      .Case("retpoline", HasRetpoline)
       .Case("retpoline-external-thunk", HasRetpolineExternalThunk)
       .Case("rtm", HasRTM)
       .Case("sahf", HasLAHFSAHF)

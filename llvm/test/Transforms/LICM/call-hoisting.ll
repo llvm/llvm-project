@@ -1,19 +1,20 @@
 ; RUN: opt -S -basicaa -licm %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
 
-declare i32 @load(i32* %p) argmemonly readonly
+declare i32 @load(i32* %p) argmemonly readonly nounwind
 
-define void @test_load(i32* %loc) {
+define void @test_load(i32* noalias %loc, i32* noalias %sink) {
 ; CHECK-LABEL: @test_load
-; CHECK-LABEL: loop:
+; CHECK-LABEL: entry:
 ; CHECK: call i32 @load
-; CHECK-LABEL: exit:
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
-  call i32 @load(i32* %loc)
+  %ret = call i32 @load(i32* %loc)
+  store volatile i32 %ret, i32* %sink
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit
@@ -23,7 +24,7 @@ exit:
 }
 
 
-declare void @store(i32 %val, i32* %p) argmemonly writeonly
+declare void @store(i32 %val, i32* %p) argmemonly writeonly nounwind
 
 define void @test(i32* %loc) {
 ; CHECK-LABEL: @test
@@ -195,8 +196,28 @@ exit:
   ret void
 }
 
-declare void @not_argmemonly(i32 %v, i32* %p) writeonly
-declare void @not_writeonly(i32 %v, i32* %p) argmemonly
+declare void @not_nounwind(i32 %v, i32* %p) writeonly argmemonly
+declare void @not_argmemonly(i32 %v, i32* %p) writeonly nounwind
+declare void @not_writeonly(i32 %v, i32* %p) argmemonly nounwind
+
+define void @neg_not_nounwind(i32* %loc) {
+; CHECK-LABEL: @neg_not_nounwind
+; CHECK-LABEL: loop:
+; CHECK: call void @not_nounwind
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @not_nounwind(i32 0, i32* %loc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
 
 define void @neg_not_argmemonly(i32* %loc) {
 ; CHECK-LABEL: @neg_not_argmemonly

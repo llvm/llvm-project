@@ -70,14 +70,14 @@ main_body:
 ; VERDE: s_waitcnt expcnt(0)
 ; GCN: buffer_load_format_xyzw v[0:3], v5, s[0:3], 0 idxen
 ; GCN: s_waitcnt vmcnt(0)
-; GCN: tbuffer_store_format_xyzw v[0:3], v6, s[0:3], dfmt:16, nfmt:2, 0 idxen
+; GCN: tbuffer_store_format_xyzw v[0:3], v6, s[0:3], dfmt:14, nfmt:2, 0 idxen
 define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float> %vdata, i32 %vindex.1, i32 %vindex.2, i32 %vindex.3) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %vindex.1, i32 0, i32 0, i32 0, i32 15, i32 3, i1 0, i1 0)
   %data = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %0, i32 %vindex.2, i32 0, i1 0, i1 0)
   %data.i = bitcast <4 x float> %data to <4 x i32>
-  call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %data.i, <4 x i32> %0, i32 %vindex.3, i32 0, i32 0, i32 0, i32 16, i32 2, i1 0, i1 0)
+  call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %data.i, <4 x i32> %0, i32 %vindex.3, i32 0, i32 0, i32 0, i32 14, i32 2, i1 0, i1 0)
   ret void
 }
 

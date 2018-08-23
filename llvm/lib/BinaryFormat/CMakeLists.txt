@@ -1,6 +1,8 @@
 add_llvm_library(LLVMBinaryFormat
   Dwarf.cpp
   Magic.cpp
+  MsgPackReader.cpp
+  MsgPackWriter.cpp
   Wasm.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -28,9 +28,10 @@ namespace mca {
 class ExecuteStage final : public Stage {
   Scheduler &HWS;
 
-  // The following routines are used to maintain the HWS.
-  void reclaimSchedulerResources();
-  llvm::Error updateSchedulerQueues();
+  llvm::Error issueInstruction(InstRef &IR);
+
+  // Called at the beginning of each cycle to issue already dispatched
+  // instructions to the underlying pipelines.
   llvm::Error issueReadyInstructions();
 
   ExecuteStage(const ExecuteStage &Other) = delete;
@@ -47,6 +48,14 @@ public:
   // are still instructions in-flight in the out-of-order backend.
   bool hasWorkToComplete() const override { return false; }
   bool isAvailable(const InstRef &IR) const override;
+
+  // Notifies the scheduler that a new cycle just started.
+  //
+  // This method notifies the scheduler that a new cycle started.
+  // This method is also responsible for notifying listeners about instructions
+  // state changes, and processor resources freed by the scheduler.
+  // Instructions that transitioned to the 'Executed' state are automatically
+  // moved to the next stage (i.e. RetireStage).
   llvm::Error cycleStart() override;
   llvm::Error execute(InstRef &IR) override;
 

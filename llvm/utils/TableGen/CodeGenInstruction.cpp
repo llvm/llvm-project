@@ -302,6 +302,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   AsmString = R->getValueAsString("AsmString");
 
   isReturn     = R->getValueAsBit("isReturn");
+  isEHScopeReturn = R->getValueAsBit("isEHScopeReturn");
   isBranch     = R->getValueAsBit("isBranch");
   isIndirectBranch = R->getValueAsBit("isIndirectBranch");
   isCompare    = R->getValueAsBit("isCompare");

@@ -46,7 +46,9 @@ static unsigned MVTToWasmReg(MVT::SimpleValueType Type) {
     case MVT::v16i8: return WebAssembly::V128_0;
     case MVT::v8i16: return WebAssembly::V128_0;
     case MVT::v4i32: return WebAssembly::V128_0;
+    case MVT::v2i64: return WebAssembly::V128_0;
     case MVT::v4f32: return WebAssembly::V128_0;
+    case MVT::v2f64: return WebAssembly::V128_0;
     default: return MVT::INVALID_SIMPLE_VALUE_TYPE;
   }
 }
@@ -194,6 +196,7 @@ public:
                        const MCInstrInfo &mii, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, mii), Parser(Parser),
         Lexer(Parser.getLexer()), LastLabel(nullptr) {
+    setAvailableFeatures(ComputeAvailableFeatures(sti.getFeatureBits()));
   }
 
 #define GET_ASSEMBLER_HEADER
@@ -232,7 +235,13 @@ public:
         .Case("i8x16", MVT::v16i8)
         .Case("i16x8", MVT::v8i16)
         .Case("i32x4", MVT::v4i32)
+        .Case("i64x2", MVT::v2i64)
         .Case("f32x4", MVT::v4f32)
+        .Case("f64x2", MVT::v2f64)
+        // arbitrarily chosen vector type to associate with "v128"
+        // FIXME: should these be EVTs to avoid this arbitrary hack? Do we want
+        // to accept more specific SIMD register types?
+        .Case("v128", MVT::v16i8)
         .Default(MVT::INVALID_SIMPLE_VALUE_TYPE);
   }
 

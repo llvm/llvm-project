@@ -22,7 +22,5 @@ int f(void *caller_frame) {
 
 int main() {
   return f(__builtin_frame_address(0));
-  // CHECK: READ of size 8
-  // CHECK: pointer tag
-  // CHECK: memory tag 0x0
+  // CHECK: READ of size 8 at {{.*}} tags: {{.*}}/00 (ptr/mem)
 }

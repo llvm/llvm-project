@@ -196,3 +196,6 @@
 
 ??$f@US@@$1?g@1@QEAAXXZ@@YAXXZ
 ; CHECK: void __cdecl f<struct S, &void __cdecl S::g(void)>(void)
+
+??$?0N@?$Foo@H@@QEAA@N@Z
+; CHECK: __cdecl Foo<int>::Foo<int><double>(double)

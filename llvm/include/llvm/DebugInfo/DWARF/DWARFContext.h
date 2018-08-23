@@ -347,6 +347,9 @@ public:
   /// TODO: refactor compile_units() to make this const.
   uint8_t getCUAddrSize();
 
+  /// Dump Error as warning message to stderr.
+  static void dumpWarning(Error Warning);
+
 private:
   /// Return the compile unit which contains instruction with provided
   /// address.

@@ -66,11 +66,9 @@ using PostingListRef = llvm::ArrayRef<DocID>;
 /// (their children) to form a multi-level Query Tree. The interface is designed
 /// to be extensible in order to support multiple types of iterators.
 class Iterator {
-  // FIXME(kbobyrev): Provide callback for matched documents.
-  // FIXME(kbobyrev): Implement new types of iterators: Label, Boost (with
-  // scoring), Limit.
   // FIXME(kbobyrev): Implement iterator cost, an estimate of advance() calls
   // before iterator exhaustion.
+  // FIXME(kbobyrev): Implement Limit iterator.
 public:
   /// Returns true if all valid DocIDs were processed and hence the iterator is
   /// exhausted.
@@ -89,6 +87,13 @@ public:
   ///
   /// Note: reachedEnd() must be false.
   virtual DocID peek() const = 0;
+  /// Retrieves boosting score. Query tree root should pass Root->peek() to this
+  /// function, the parameter is needed to propagate through the tree. Given ID
+  /// should be compared against BOOST iterator peek()s: some of the iterators
+  /// would not point to the item which was propagated to the top of the query
+  /// tree (e.g. if these iterators are branches of OR iterator) and hence
+  /// shouldn't apply any boosting to the consumed item.
+  virtual float consume(DocID ID) = 0;
 
   virtual ~Iterator() {}
 
@@ -107,31 +112,58 @@ public:
     return Iterator.dump(OS);
   }
 
+  constexpr static float DEFAULT_BOOST_SCORE = 1;
+
 private:
   virtual llvm::raw_ostream &dump(llvm::raw_ostream &OS) const = 0;
 };
 
 /// Advances the iterator until it is either exhausted or the number of
-/// requested items is reached. The result contains sorted DocumentIDs.
-std::vector<DocID> consume(Iterator &It,
-                           size_t Limit = std::numeric_limits<size_t>::max());
+/// requested items is reached. Returns pairs of document IDs with the
+/// corresponding boosting score.
+///
+/// Boosting can be seen as a compromise between retrieving too many items and
+/// calculating finals score for each of them (which might be very expensive)
+/// and not retrieving enough items so that items with very high final score
+/// would not be processed. Boosting score is a computationally efficient way
+/// to acquire preliminary scores of requested items.
+std::vector<std::pair<DocID, float>>
+consume(Iterator &It, size_t Limit = std::numeric_limits<size_t>::max());
 
 /// Returns a document iterator over given PostingList.
+///
+/// DocumentIterator returns DEFAULT_BOOST_SCORE for each processed item.
 std::unique_ptr<Iterator> create(PostingListRef Documents);
 
 /// Returns AND Iterator which performs the intersection of the PostingLists of
 /// its children.
+///
+/// consume(): AND Iterator returns the product of Childrens' boosting scores
+/// when not exhausted and DEFAULT_BOOST_SCORE otherwise.
 std::unique_ptr<Iterator>
 createAnd(std::vector<std::unique_ptr<Iterator>> Children);
 
 /// Returns OR Iterator which performs the union of the PostingLists of its
 /// children.
+///
+/// consume(): OR Iterator returns the highest boost value among children
+/// pointing to requested item when not exhausted and DEFAULT_BOOST_SCORE
+/// otherwise.
 std::unique_ptr<Iterator>
 createOr(std::vector<std::unique_ptr<Iterator>> Children);
 
 /// Returns TRUE Iterator which iterates over "virtual" PostingList containing
 /// all items in range [0, Size) in an efficient manner.
+///
+/// TRUE returns DEFAULT_BOOST_SCORE for each processed item.
 std::unique_ptr<Iterator> createTrue(DocID Size);
+
+/// Returns BOOST iterator which multiplies the score of each item by given
+/// factor. Boosting can be used as a computationally inexpensive filtering.
+/// Users can return significantly more items using consumeAndBoost() and then
+/// trim Top K using retrieval score.
+std::unique_ptr<Iterator> createBoost(std::unique_ptr<Iterator> Child,
+                                      float Factor);
 
 /// This allows createAnd(create(...), create(...)) syntax.
 template <typename... Args> std::unique_ptr<Iterator> createAnd(Args... args) {

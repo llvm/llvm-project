@@ -983,6 +983,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       materializeLargeCMVal(I, GV, OpFlags);
       I.eraseFromParent();
       return true;
+    } else if (TM.getCodeModel() == CodeModel::Tiny) {
+      I.setDesc(TII.get(AArch64::ADR));
+      I.getOperand(1).setTargetFlags(OpFlags);
     } else {
       I.setDesc(TII.get(AArch64::MOVaddr));
       I.getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_PAGE);

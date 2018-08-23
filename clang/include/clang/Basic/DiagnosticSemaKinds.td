@@ -1809,6 +1809,10 @@ def err_destructor_expr_type_mismatch : Error<
 def note_destructor_type_here : Note<
   "type %0 is declared here">;
 
+def err_destroy_attr_on_non_static_var : Error<
+  "%select{no_destroy|always_destroy}0 attribute can only be applied to a"
+  " variable with static or thread storage duration">;
+
 def err_destructor_template : Error<
   "destructor cannot be declared as a template">;
 
@@ -6468,7 +6472,7 @@ def warn_overaligned_type : Warning<
 def err_aligned_allocation_unavailable : Error<
   "aligned %select{allocation|deallocation}0 function of type '%1' is only "
   "available on %2 %3 or newer">;
-def note_silence_unligned_allocation_unavailable : Note<
+def note_silence_aligned_allocation_unavailable : Note<
   "if you supply your own aligned allocation functions, use "
   "-faligned-allocation to silence this diagnostic">;
 

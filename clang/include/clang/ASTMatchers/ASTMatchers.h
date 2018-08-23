@@ -420,6 +420,25 @@ extern const internal::VariadicDynCastAllOfMatcher<
     Decl, ClassTemplateSpecializationDecl>
     classTemplateSpecializationDecl;
 
+/// Matches C++ class template partial specializations.
+///
+/// Given
+/// \code
+///   template<class T1, class T2, int I>
+///   class A {};
+///
+///   template<class T, int I>
+///   class A<T, T*, I> {};
+///
+///   template<>
+///   class A<int, int, 1> {};
+/// \endcode
+/// classTemplatePartialSpecializationDecl()
+///   matches the specialization \c A<T,T*,I> but not \c A<int,int,1>
+extern const internal::VariadicDynCastAllOfMatcher<
+    Decl, ClassTemplatePartialSpecializationDecl>
+    classTemplatePartialSpecializationDecl;
+
 /// Matches declarator declarations (field, variable, function
 /// and non-type template parameter declarations).
 ///
@@ -4806,8 +4825,17 @@ AST_MATCHER_P(MemberExpr, member,
 ///   matches "x.m" and "m"
 /// with hasObjectExpression(...)
 ///   matching "x" and the implicit object expression of "m" which has type X*.
-AST_MATCHER_P(MemberExpr, hasObjectExpression,
-              internal::Matcher<Expr>, InnerMatcher) {
+AST_POLYMORPHIC_MATCHER_P(
+    hasObjectExpression,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, UnresolvedMemberExpr,
+                                    CXXDependentScopeMemberExpr),
+    internal::Matcher<Expr>, InnerMatcher) {
+  if (const auto *E = dyn_cast<UnresolvedMemberExpr>(&Node))
+    if (E->isImplicitAccess())
+      return false;
+  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node))
+    if (E->isImplicitAccess())
+      return false;
   return InnerMatcher.matches(*Node.getBase(), Finder, Builder);
 }
 

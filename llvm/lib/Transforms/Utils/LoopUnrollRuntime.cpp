@@ -124,7 +124,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PrologExitPreds.push_back(PredBB);
 
     SplitBlockPredecessors(PrologExit, PrologExitPreds, ".unr-lcssa", DT, LI,
-                           PreserveLCSSA);
+                           nullptr, PreserveLCSSA);
   }
 
   // Create a branch around the original loop, which is taken if there are no
@@ -143,7 +143,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Split the exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock *, 4> Preds(predecessors(OriginalLoopLatchExit));
   SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", DT, LI,
-                         PreserveLCSSA);
+                         nullptr, PreserveLCSSA);
   // Add the branch to the exit block (around the unrolled loop)
   B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
   InsertPt->eraseFromParent();
@@ -257,7 +257,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   assert(Exit && "Loop must have a single exit block only");
   // Split the epilogue exit to maintain loop canonicalization guarantees
   SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
-  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI,
+  SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the unrolling loop)
   B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit);
@@ -267,7 +267,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 
   // Split the main loop exit to maintain canonicalization guarantees.
   SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
-  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI,
+  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI, nullptr,
                          PreserveLCSSA);
 }
 
@@ -636,8 +636,8 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
     NewPreHeader->setName(PreHeader->getName() + ".new");
     // Split LatchExit to create phi nodes from branch above.
     SmallVector<BasicBlock*, 4> Preds(predecessors(LatchExit));
-    NewExit = SplitBlockPredecessors(LatchExit, Preds, ".unr-lcssa",
-                                     DT, LI, PreserveLCSSA);
+    NewExit = SplitBlockPredecessors(LatchExit, Preds, ".unr-lcssa", DT, LI,
+                                     nullptr, PreserveLCSSA);
     // NewExit gets its DebugLoc from LatchExit, which is not part of the
     // original Loop.
     // Fix this by setting Loop's DebugLoc to NewExit.

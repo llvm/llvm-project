@@ -5060,3 +5060,31 @@ bool ARMBaseInstrInfo::getInsertSubregLikeInputs(
   }
   llvm_unreachable("Target dependent opcode missing");
 }
+
+std::pair<unsigned, unsigned>
+ARMBaseInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  const unsigned Mask = ARMII::MO_OPTION_MASK;
+  return std::make_pair(TF & Mask, TF & ~Mask);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+ARMBaseInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace ARMII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_LO16, "arm-lo16"}, {MO_HI16, "arm-hi16"}};
+  return makeArrayRef(TargetFlags);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
+  using namespace ARMII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_GOT, "arm-got"},
+      {MO_SBREL, "arm-sbrel"},
+      {MO_DLLIMPORT, "arm-dllimport"},
+      {MO_SECREL, "arm-secrel"},
+      {MO_NONLAZY, "arm-nonlazy"}};
+  return makeArrayRef(TargetFlags);
+}

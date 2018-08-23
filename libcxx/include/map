@@ -1884,7 +1884,7 @@ public:
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
-    void clear() {__tree_.clear();}
+    void clear() _NOEXCEPT {__tree_.clear();}
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(multimap& __m)
