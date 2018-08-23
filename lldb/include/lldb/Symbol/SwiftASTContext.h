@@ -403,10 +403,6 @@ public:
 
   DWARFASTParser *GetDWARFParser() override;
 
-  CompilerType GetIntTypeFromBitSize(size_t bit_size, bool is_signed);
-
-  CompilerType GetFloatTypeFromBitSize(size_t bit_size);
-
   //----------------------------------------------------------------------
   // CompilerDecl functions
   //----------------------------------------------------------------------

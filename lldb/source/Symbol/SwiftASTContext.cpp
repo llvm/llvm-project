@@ -5873,15 +5873,6 @@ CompilerType SwiftASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::GetIntTypeFromBitSize(size_t bit_size,
-                                                    bool is_signed) {
-  return CompilerType();
-}
-
-CompilerType SwiftASTContext::GetFloatTypeFromBitSize(size_t bit_size) {
-  return CompilerType();
-}
-
 //----------------------------------------------------------------------
 // Exploring the type
 //----------------------------------------------------------------------
