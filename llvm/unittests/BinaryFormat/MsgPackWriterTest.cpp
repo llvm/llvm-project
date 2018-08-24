@@ -129,7 +129,7 @@ TEST_F(MsgPackWriter, TestWriteFixNegativeInt) {
     MPWriter.write(i);
     std::string Output = OStream.str();
     EXPECT_EQ(Output.size(), 1u);
-    EXPECT_EQ(Output.data()[0], static_cast<int8_t>(i));
+    EXPECT_EQ(static_cast<int8_t>(Output.data()[0]), static_cast<int8_t>(i));
   }
 }
 

@@ -81,6 +81,9 @@ public:
   void findOccurrences(const OccurrencesRequest &Req,
                        llvm::function_ref<void(const SymbolOccurrence &)>
                            Callback) const override;
+
+  size_t estimateMemoryUsage() const override;
+
 private:
   FileSymbols FSymbols;
   MemIndex Index;

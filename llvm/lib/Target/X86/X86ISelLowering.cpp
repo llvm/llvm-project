@@ -26649,7 +26649,7 @@ bool X86TargetLowering::isVectorClearMaskLegal(ArrayRef<int> Mask,
 
 bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
   // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpoline())
+  if (Subtarget.useRetpolineIndirectBranches())
     return false;
 
   // Otherwise, fallback on the generic logic.

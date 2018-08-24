@@ -154,7 +154,10 @@ public:
     /// Indicates that the tracked object could be a CF or Objective-C object.
     AnyObj,
     /// Indicates that the tracked object is a generalized object.
-    Generalized
+    Generalized,
+
+    /// A descendant of OSObject.
+    OS
   };
 
 private:
@@ -318,14 +321,21 @@ class RetainSummary {
   ///  this is the effect applied to the state of the receiver.
   ArgEffect Receiver;
 
+  /// Effect on "this" pointer - applicable only to C++ method calls.
+  ArgEffect This;
+
   /// Ret - The effect on the return value.  Used to indicate if the
   ///  function/method call returns a new tracked symbol.
   RetEffect Ret;
 
 public:
-  RetainSummary(ArgEffects A, RetEffect R, ArgEffect defaultEff,
-                ArgEffect ReceiverEff)
-    : Args(A), DefaultArgEffect(defaultEff), Receiver(ReceiverEff), Ret(R) {}
+  RetainSummary(ArgEffects A,
+                RetEffect R,
+                ArgEffect defaultEff,
+                ArgEffect ReceiverEff,
+                ArgEffect ThisEff)
+    : Args(A), DefaultArgEffect(defaultEff), Receiver(ReceiverEff),
+      This(ThisEff), Ret(R) {}
 
   /// getArg - Return the argument effect on the argument specified by
   ///  idx (starting from 0).
@@ -359,12 +369,20 @@ public:
   ///  This is only meaningful if the summary applies to an ObjCMessageExpr*.
   ArgEffect getReceiverEffect() const { return Receiver; }
 
+  ArgEffect getThisEffect() const { return This; }
+
+  bool isNoop() const {
+    return Ret == RetEffect::MakeNoRet() && Receiver == DoNothing
+      && DefaultArgEffect == MayEscape && This == DoNothing
+      && Args.isEmpty();
+  }
+
   /// Test if two retain summaries are identical. Note that merely equivalent
   /// summaries are not necessarily identical (for example, if an explicit
   /// argument effect matches the default effect).
   bool operator==(const RetainSummary &Other) const {
     return Args == Other.Args && DefaultArgEffect == Other.DefaultArgEffect &&
-           Receiver == Other.Receiver && Ret == Other.Ret;
+           Receiver == Other.Receiver && This == Other.This && Ret == Other.Ret;
   }
 
   /// Profile this summary for inclusion in a FoldingSet.
@@ -372,6 +390,7 @@ public:
     ID.Add(Args);
     ID.Add(DefaultArgEffect);
     ID.Add(Receiver);
+    ID.Add(This);
     ID.Add(Ret);
   }
 
@@ -460,6 +479,9 @@ class RetainSummaryManager {
   /// Records whether or not the analyzed code runs in ARC mode.
   const bool ARCEnabled;
 
+  /// Track sublcasses of OSObject
+  const bool TrackOSObjects;
+
   /// FuncSummaries - A map from FunctionDecls to summaries.
   FuncSummariesTy FuncSummaries;
 
@@ -496,6 +518,19 @@ class RetainSummaryManager {
   ///  data in ScratchArgs.
   ArgEffects getArgEffects();
 
+  /// Create an OS object at +1.
+  const RetainSummary *getOSSummaryCreateRule(const FunctionDecl *FD);
+
+  /// Get an OS object at +0.
+  const RetainSummary *getOSSummaryGetRule(const FunctionDecl *FD);
+
+  /// Increment the reference count on OS object.
+  const RetainSummary *getOSSummaryRetainRule(const FunctionDecl *FD);
+
+  /// Decrement the reference count on OS object.
+  const RetainSummary *getOSSummaryReleaseRule(const FunctionDecl *FD);
+
+
   enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
 
   const RetainSummary *getUnarySummary(const FunctionType* FT,
@@ -509,8 +544,10 @@ class RetainSummaryManager {
 
   const RetainSummary *getPersistentSummary(RetEffect RetEff,
                                             ArgEffect ReceiverEff = DoNothing,
-                                            ArgEffect DefaultEff = MayEscape) {
-    RetainSummary Summ(getArgEffects(), RetEff, DefaultEff, ReceiverEff);
+                                            ArgEffect DefaultEff = MayEscape,
+                                            ArgEffect ThisEff = DoNothing) {
+    RetainSummary Summ(getArgEffects(), RetEff, DefaultEff, ReceiverEff,
+                       ThisEff);
     return getPersistentSummary(Summ);
   }
 
@@ -584,9 +621,12 @@ class RetainSummaryManager {
                                         bool &AllowAnnotations);
 
 public:
-  RetainSummaryManager(ASTContext &ctx, bool usesARC)
+  RetainSummaryManager(ASTContext &ctx,
+                       bool usesARC,
+                       bool trackOSObject)
    : Ctx(ctx),
      ARCEnabled(usesARC),
+     TrackOSObjects(trackOSObject),
      AF(BPAlloc), ScratchArgs(AF.getEmptyMap()),
      ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
                                : RetEffect::MakeOwned(RetEffect::ObjC)),

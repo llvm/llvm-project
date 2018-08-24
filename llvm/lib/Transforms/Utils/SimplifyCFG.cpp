@@ -1316,7 +1316,7 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
                              LLVMContext::MD_dereferenceable,
                              LLVMContext::MD_dereferenceable_or_null,
                              LLVMContext::MD_mem_parallel_loop_access};
-      combineMetadata(I1, I2, KnownIDs);
+      combineMetadata(I1, I2, KnownIDs, true);
 
       // I1 and I2 are being combined into a single instruction.  Its debug
       // location is the merged locations of the original instructions.
@@ -1582,7 +1582,7 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       // However, as N-way merge for CallInst is rare, so we use simplified API
       // instead of using complex API for N-way merge.
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
-      combineMetadataForCSE(I0, I);
+      combineMetadataForCSE(I0, I, true);
       I0->andIRFlags(I);
     }
 

@@ -357,6 +357,8 @@ endif()
 
 list(APPEND system_libs ${CMAKE_DL_LIBS})
 
+SET(SKIP_LLDB_SERVER_BUILD OFF CACHE BOOL "Skip building lldb-server")
+
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
 if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD")

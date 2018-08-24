@@ -88,10 +88,11 @@ void Writer::write(uint64_t u) {
 
 void Writer::write(double d) {
   // If no loss of precision, encode as a Float32.
-  float f = static_cast<float>(d);
-  if (static_cast<double>(f) == d) {
+  double a = std::fabs(d);
+  if (a >= std::numeric_limits<float>::min() &&
+      a <= std::numeric_limits<float>::max()) {
     EW.write(FirstByte::Float32);
-    EW.write(f);
+    EW.write(static_cast<float>(d));
   } else {
     EW.write(FirstByte::Float64);
     EW.write(d);

@@ -84,6 +84,10 @@ class MergedIndex : public SymbolIndex {
     log("findOccurrences is not implemented.");
   }
 
+  size_t estimateMemoryUsage() const override {
+    return Dynamic->estimateMemoryUsage() + Static->estimateMemoryUsage();
+  }
+
 private:
   const SymbolIndex *Dynamic, *Static;
 };

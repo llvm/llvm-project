@@ -59,6 +59,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
     textual header "BinaryFormat/WasmRelocs.def"
+    textual header "BinaryFormat/MsgPack.def"
 }
 
 module LLVM_Config { requires cplusplus umbrella "Config" module * { export * } }

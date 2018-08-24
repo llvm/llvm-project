@@ -600,12 +600,16 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                       decltype(MinCmp)>
       HottestFuncs(MinCmp);
 
+  // Add marker so that IR-level instrumentation round-trips properly.
+  if (TextFormat && IsIRInstr)
+    OS << ":ir\n";
+
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
                              Func.Name.find(ShowFunction) != Func.Name.npos);
 
-    bool doTextFormatDump = (Show && ShowCounts && TextFormat);
+    bool doTextFormatDump = (Show && TextFormat);
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
@@ -679,7 +683,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (Reader->hasError())
     exitWithError(Reader->getError(), Filename);
 
-  if (ShowCounts && TextFormat)
+  if (TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   OS << "Instrumentation level: "

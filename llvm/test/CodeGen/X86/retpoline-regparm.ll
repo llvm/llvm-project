@@ -38,5 +38,5 @@ entry:
 ; CHECK: popl %edi
 ; CHECK: retl
 
-attributes #0 = { "target-features"="+retpoline" }
-attributes #1 = { "target-features"="+retpoline-external-thunk" }
+attributes #0 = { "target-features"="+retpoline-indirect-calls" }
+attributes #1 = { "target-features"="+retpoline-indirect-calls,+retpoline-external-thunk" }

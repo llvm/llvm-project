@@ -41,6 +41,10 @@ using namespace llvm;
 
 STATISTIC(NumLoadMoved, "Number of loads moved below TokenFactor");
 
+static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
+    cl::desc("Enable setting constant bits to reduce size of mask immediates"),
+    cl::Hidden);
+
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
 //===----------------------------------------------------------------------===//
@@ -725,7 +729,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     if (OptLevel != CodeGenOpt::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.
-        !Subtarget->useRetpoline() &&
+        !Subtarget->useRetpolineIndirectCalls() &&
         ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps()) ||
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
@@ -2927,7 +2931,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::AND:
     if (matchBEXTRFromAnd(Node))
       return;
-    if (shrinkAndImmediate(Node))
+    if (AndImmShrink && shrinkAndImmediate(Node))
       return;
 
     LLVM_FALLTHROUGH;

@@ -1517,6 +1517,26 @@ TEST(HasObjectExpression, MatchesBaseOfVariable) {
     "struct X { int m; }; void f(X* x) { x->m; }",
     memberExpr(hasObjectExpression(
       hasType(pointsTo(recordDecl(hasName("X"))))))));
+  EXPECT_TRUE(matches("template <class T> struct X { void f() { T t; t.m; } };",
+                      cxxDependentScopeMemberExpr(hasObjectExpression(
+                          declRefExpr(to(namedDecl(hasName("t"))))))));
+  EXPECT_TRUE(
+      matches("template <class T> struct X { void f() { T t; t->m; } };",
+              cxxDependentScopeMemberExpr(hasObjectExpression(
+                  declRefExpr(to(namedDecl(hasName("t"))))))));
+}
+
+TEST(HasObjectExpression, MatchesBaseOfMemberFunc) {
+  EXPECT_TRUE(matches(
+      "struct X { void f(); }; void g(X x) { x.f(); }",
+      memberExpr(hasObjectExpression(hasType(recordDecl(hasName("X")))))));
+  EXPECT_TRUE(matches("struct X { template <class T> void f(); };"
+                      "template <class T> void g(X x) { x.f<T>(); }",
+                      unresolvedMemberExpr(hasObjectExpression(
+                          hasType(recordDecl(hasName("X")))))));
+  EXPECT_TRUE(matches("template <class T> void f(T t) { t.g(); }",
+                      cxxDependentScopeMemberExpr(hasObjectExpression(
+                          declRefExpr(to(namedDecl(hasName("t"))))))));
 }
 
 TEST(HasObjectExpression,

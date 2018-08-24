@@ -862,7 +862,11 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
         Twine("Cannot read log from '") + Filename + "'", EC);
   }
   auto Data = StringRef(MappedFile.data(), MappedFile.size());
+  DataExtractor DE(Data, true, 8);
+  return loadTrace(DE, Sort);
+}
 
+Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   // Attempt to detect the file type using file magic. We have a slight bias
   // towards the binary format, and we do this by making sure that the first 4
   // bytes of the binary file is some combination of the following byte
@@ -877,8 +881,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   //
   // Only if we can't load either the binary or the YAML format will we yield an
   // error.
-  StringRef Magic(MappedFile.data(), 4);
-  DataExtractor HeaderExtractor(Magic, true, 8);
+  DataExtractor HeaderExtractor(DE.getData(), true, 8);
   uint32_t OffsetPtr = 0;
   uint16_t Version = HeaderExtractor.getU16(&OffsetPtr);
   uint16_t Type = HeaderExtractor.getU16(&OffsetPtr);
@@ -889,7 +892,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   switch (Type) {
   case NAIVE_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadNaiveFormatLog(Data, T.FileHeader, T.Records))
+      if (auto E = loadNaiveFormatLog(DE.getData(), T.FileHeader, T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(
@@ -900,7 +903,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
     break;
   case FLIGHT_DATA_RECORDER_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadFDRLog(Data, T.FileHeader, T.Records))
+      if (auto E = loadFDRLog(DE.getData(), T.FileHeader, T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(
@@ -909,7 +912,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
     }
     break;
   default:
-    if (auto E = loadYAMLLog(Data, T.FileHeader, T.Records))
+    if (auto E = loadYAMLLog(DE.getData(), T.FileHeader, T.Records))
       return std::move(E);
   }
 

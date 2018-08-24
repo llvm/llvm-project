@@ -55,6 +55,7 @@ public:
   virtual void onDocumentHighlight(TextDocumentPositionParams &Params) = 0;
   virtual void onHover(TextDocumentPositionParams &Params) = 0;
   virtual void onChangeConfiguration(DidChangeConfigurationParams &Params) = 0;
+  virtual void onCancelRequest(CancelParams &Params) = 0;
 };
 
 void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,

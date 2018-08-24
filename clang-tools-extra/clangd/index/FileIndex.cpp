@@ -118,5 +118,9 @@ void FileIndex::findOccurrences(
   log("findOccurrences is not implemented.");
 }
 
+size_t FileIndex::estimateMemoryUsage() const {
+  return Index.estimateMemoryUsage();
+}
+
 } // namespace clangd
 } // namespace clang

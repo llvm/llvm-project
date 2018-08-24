@@ -163,4 +163,4 @@ define void @direct_tail() #0 {
 ; X86FAST-NOT: __{{.*}}_retpoline_{{.*}}:
 
 
-attributes #0 = { "target-features"="+retpoline-external-thunk" }
+attributes #0 = { "target-features"="+retpoline-indirect-calls,+retpoline-external-thunk" }

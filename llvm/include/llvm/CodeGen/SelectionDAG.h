@@ -1434,15 +1434,27 @@ public:
   /// every vector element.
   /// Targets can implement the computeKnownBitsForTargetNode method in the
   /// TargetLowering class to allow target nodes to be understood.
-  void computeKnownBits(SDValue Op, KnownBits &Known, unsigned Depth = 0) const;
+  KnownBits computeKnownBits(SDValue Op, unsigned Depth = 0) const;
 
   /// Determine which bits of Op are known to be either zero or one and return
   /// them in Known. The DemandedElts argument allows us to only collect the
   /// known bits that are shared by the requested vector elements.
   /// Targets can implement the computeKnownBitsForTargetNode method in the
   /// TargetLowering class to allow target nodes to be understood.
+  KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
+                             unsigned Depth = 0) const;
+
+  /// \copydoc SelectionDAG::computeKnownBits(SDValue,unsigned)
+  void computeKnownBits(SDValue Op, KnownBits &Known,
+                        unsigned Depth = 0) const {
+    Known = computeKnownBits(Op, Depth);
+  }
+
+  /// \copydoc SelectionDAG::computeKnownBits(SDValue,const APInt&,unsigned)
   void computeKnownBits(SDValue Op, KnownBits &Known, const APInt &DemandedElts,
-                        unsigned Depth = 0) const;
+                        unsigned Depth = 0) const {
+    Known = computeKnownBits(Op, DemandedElts, Depth);
+  }
 
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.

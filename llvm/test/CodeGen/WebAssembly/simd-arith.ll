@@ -46,6 +46,39 @@ define <16 x i8> @mul_v16i8(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: and_v16i8
+; NO-SIMD128-NOT: i8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.and $push0=, $0, $1 # encoding: [0xfd,0x3b]{{$}}
+; SIMD128: return $pop0 #
+define <16 x i8> @and_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = and <16 x i8> %x, %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: or_v16i8
+; NO-SIMD128-NOT: i8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.or $push0=, $0, $1 # encoding: [0xfd,0x3c]{{$}}
+; SIMD128: return $pop0 #
+define <16 x i8> @or_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = or <16 x i8> %x, %y
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: xor_v16i8
+; NO-SIMD128-NOT: i8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.xor $push0=, $0, $1 # encoding: [0xfd,0x3d]{{$}}
+; SIMD128: return $pop0 #
+define <16 x i8> @xor_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %a = xor <16 x i8> %x, %y
+  ret <16 x i8> %a
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -79,6 +112,39 @@ define <8 x i16> @sub_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SIMD128: return $pop0 #
 define <8 x i16> @mul_v8i16(<8 x i16> %x, <8 x i16> %y) {
   %a = mul <8 x i16> %x, %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: and_v8i16
+; NO-SIMD128-NOT: i16x8
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.and $push0=, $0, $1 # encoding: [0xfd,0x3b]{{$}}
+; SIMD128: return $pop0 #
+define <8 x i16> @and_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = and <8 x i16> %x, %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: or_v8i16
+; NO-SIMD128-NOT: i16x8
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.or $push0=, $0, $1 # encoding: [0xfd,0x3c]{{$}}
+; SIMD128: return $pop0 #
+define <8 x i16> @or_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = or <8 x i16> %x, %y
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: xor_v8i16
+; NO-SIMD128-NOT: i16x8
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.xor $push0=, $0, $1 # encoding: [0xfd,0x3d]{{$}}
+; SIMD128: return $pop0 #
+define <8 x i16> @xor_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = xor <8 x i16> %x, %y
   ret <8 x i16> %a
 }
 
@@ -118,6 +184,39 @@ define <4 x i32> @mul_v4i32(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %a
 }
 
+; CHECK-LABEL: and_v4i32
+; NO-SIMD128-NOT: i32x4
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.and $push0=, $0, $1 # encoding: [0xfd,0x3b]{{$}}
+; SIMD128: return $pop0 #
+define <4 x i32> @and_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %a = and <4 x i32> %x, %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: or_v4i32
+; NO-SIMD128-NOT: i32x4
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.or $push0=, $0, $1 # encoding: [0xfd,0x3c]{{$}}
+; SIMD128: return $pop0 #
+define <4 x i32> @or_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %a = or <4 x i32> %x, %y
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: xor_v4i32
+; NO-SIMD128-NOT: i32x4
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.xor $push0=, $0, $1 # encoding: [0xfd,0x3d]{{$}}
+; SIMD128: return $pop0 #
+define <4 x i32> @xor_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %a = xor <4 x i32> %x, %y
+  ret <4 x i32> %a
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
@@ -154,6 +253,39 @@ define <2 x i64> @sub_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SIMD128: i64.mul
 define <2 x i64> @mul_v2i64(<2 x i64> %x, <2 x i64> %y) {
   %a = mul <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: and_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.and $push0=, $0, $1 # encoding: [0xfd,0x3b]{{$}}
+; SIMD128: return $pop0 #
+define <2 x i64> @and_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = and <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: or_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.or $push0=, $0, $1 # encoding: [0xfd,0x3c]{{$}}
+; SIMD128: return $pop0 #
+define <2 x i64> @or_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = or <2 x i64> %x, %y
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: xor_v2i64
+; NO-SIMD128-NOT: i64x2
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v128.xor $push0=, $0, $1 # encoding: [0xfd,0x3d]{{$}}
+; SIMD128: return $pop0 #
+define <2 x i64> @xor_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %a = xor <2 x i64> %x, %y
   ret <2 x i64> %a
 }
 

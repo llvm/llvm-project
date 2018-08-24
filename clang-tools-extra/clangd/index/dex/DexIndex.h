@@ -57,7 +57,10 @@ public:
                        llvm::function_ref<void(const SymbolOccurrence &)>
                            Callback) const override;
 
+  size_t estimateMemoryUsage() const override;
+
 private:
+
   mutable std::mutex Mutex;
 
   std::shared_ptr<std::vector<const Symbol *>> Symbols /*GUARDED_BY(Mutex)*/;

@@ -66,6 +66,7 @@ using namespace llvm;
 
 STATISTIC(NumReadNone, "Number of functions marked readnone");
 STATISTIC(NumReadOnly, "Number of functions marked readonly");
+STATISTIC(NumWriteOnly, "Number of functions marked writeonly");
 STATISTIC(NumNoCapture, "Number of arguments marked nocapture");
 STATISTIC(NumReturned, "Number of arguments marked returned");
 STATISTIC(NumReadNoneArg, "Number of arguments marked readnone");
@@ -113,12 +114,16 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (AliasAnalysis::onlyReadsMemory(MRB))
       return MAK_ReadOnly;
 
-    // Conservatively assume it writes to memory.
+    if (AliasAnalysis::doesNotReadMemory(MRB))
+      return MAK_WriteOnly;
+
+    // Conservatively assume it reads and writes to memory.
     return MAK_MayWrite;
   }
 
   // Scan the function body for instructions that may read or write memory.
   bool ReadsMemory = false;
+  bool WritesMemory = false;
   for (inst_iterator II = inst_begin(F), E = inst_end(F); II != E; ++II) {
     Instruction *I = &*II;
 
@@ -141,9 +146,9 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
         continue;
 
       if (!AliasAnalysis::onlyAccessesArgPointees(MRB)) {
-        // The call could access any memory. If that includes writes, give up.
+        // The call could access any memory. If that includes writes, note it.
         if (isModSet(MRI))
-          return MAK_MayWrite;
+          WritesMemory = true;
         // If it reads, note it.
         if (isRefSet(MRI))
           ReadsMemory = true;
@@ -168,8 +173,8 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
           continue;
 
         if (isModSet(MRI))
-          // Writes non-local memory.  Give up.
-          return MAK_MayWrite;
+          // Writes non-local memory.
+          WritesMemory = true;
         if (isRefSet(MRI))
           // Ok, it reads non-local memory.
           ReadsMemory = true;
@@ -198,12 +203,19 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
     // Any remaining instructions need to be taken seriously!  Check if they
     // read or write memory.
-    if (I->mayWriteToMemory())
-      // Writes memory.  Just give up.
-      return MAK_MayWrite;
+    //
+    // Writes memory, remember that.
+    WritesMemory |= I->mayWriteToMemory();
 
     // If this instruction may read memory, remember that.
     ReadsMemory |= I->mayReadFromMemory();
+  }
+
+  if (WritesMemory) { 
+    if (!ReadsMemory)
+      return MAK_WriteOnly;
+    else
+      return MAK_MayWrite;
   }
 
   return ReadsMemory ? MAK_ReadOnly : MAK_ReadNone;
@@ -220,6 +232,7 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
   // Check if any of the functions in the SCC read or write memory.  If they
   // write memory then they can't be marked readnone or readonly.
   bool ReadsMemory = false;
+  bool WritesMemory = false;
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
@@ -234,6 +247,9 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
     case MAK_ReadOnly:
       ReadsMemory = true;
       break;
+    case MAK_WriteOnly:
+      WritesMemory = true;
+      break;
     case MAK_ReadNone:
       // Nothing to do!
       break;
@@ -243,6 +259,9 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
   // Success!  Functions in this SCC do not access memory, or only read memory.
   // Give them the appropriate attribute.
   bool MadeChange = false;
+
+  assert(!(ReadsMemory && WritesMemory) &&
+          "Function marked read-only and write-only");
   for (Function *F : SCCNodes) {
     if (F->doesNotAccessMemory())
       // Already perfect!
@@ -252,16 +271,25 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
       // No change.
       continue;
 
+    if (F->doesNotReadMemory() && WritesMemory)
+      continue;
+
     MadeChange = true;
 
     // Clear out any existing attributes.
     F->removeFnAttr(Attribute::ReadOnly);
     F->removeFnAttr(Attribute::ReadNone);
+    F->removeFnAttr(Attribute::WriteOnly);
 
     // Add in the new attribute.
-    F->addFnAttr(ReadsMemory ? Attribute::ReadOnly : Attribute::ReadNone);
+    if (WritesMemory && !ReadsMemory)
+      F->addFnAttr(Attribute::WriteOnly);
+    else
+      F->addFnAttr(ReadsMemory ? Attribute::ReadOnly : Attribute::ReadNone);
 
-    if (ReadsMemory)
+    if (WritesMemory && !ReadsMemory)
+      ++NumWriteOnly;
+    else if (ReadsMemory)
       ++NumReadOnly;
     else
       ++NumReadNone;
