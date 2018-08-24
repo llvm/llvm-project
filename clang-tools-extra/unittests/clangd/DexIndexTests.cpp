@@ -29,9 +29,8 @@ namespace clangd {
 namespace dex {
 namespace {
 
-std::vector<DocID>
-consumeIDs(Iterator &It, size_t Limit = std::numeric_limits<size_t>::max()) {
-  auto IDAndScore = consume(It, Limit);
+std::vector<DocID> consumeIDs(Iterator &It) {
+  auto IDAndScore = consume(It);
   std::vector<DocID> IDs(IDAndScore.size());
   for (size_t I = 0; I < IDAndScore.size(); ++I)
     IDs[I] = IDAndScore[I].first;
@@ -234,13 +233,13 @@ TEST(DexIndexIterators, QueryTree) {
   Root->advanceTo(1);
   Root->advanceTo(0);
   EXPECT_EQ(Root->peek(), 1U);
-  auto ElementBoost = Root->consume(Root->peek());
+  auto ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 6);
   Root->advance();
   EXPECT_EQ(Root->peek(), 5U);
   Root->advanceTo(5);
   EXPECT_EQ(Root->peek(), 5U);
-  ElementBoost = Root->consume(Root->peek());
+  ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 8);
   Root->advanceTo(9000);
   EXPECT_TRUE(Root->reachedEnd());
@@ -265,24 +264,23 @@ TEST(DexIndexIterators, StringRepresentation) {
 }
 
 TEST(DexIndexIterators, Limit) {
-  const PostingList L0 = {4, 7, 8, 20, 42, 100};
-  const PostingList L1 = {1, 3, 5, 8, 9};
-  const PostingList L2 = {1, 5, 7, 9};
-  const PostingList L3 = {0, 5};
-  const PostingList L4 = {0, 1, 5};
-  const PostingList L5;
+  const PostingList L0 = {3, 6, 7, 20, 42, 100};
+  const PostingList L1 = {1, 3, 5, 6, 7, 30, 100};
+  const PostingList L2 = {0, 3, 5, 7, 8, 100};
 
-  auto DocIterator = create(L0);
-  EXPECT_THAT(consumeIDs(*DocIterator, 42), ElementsAre(4, 7, 8, 20, 42, 100));
+  auto DocIterator = createLimit(create(L0), 42);
+  EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre(3, 6, 7, 20, 42, 100));
 
-  DocIterator = create(L0);
-  EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre(4, 7, 8, 20, 42, 100));
+  DocIterator = createLimit(create(L0), 3);
+  EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre(3, 6, 7));
 
-  DocIterator = create(L0);
-  EXPECT_THAT(consumeIDs(*DocIterator, 3), ElementsAre(4, 7, 8));
+  DocIterator = createLimit(create(L0), 0);
+  EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre());
 
-  DocIterator = create(L0);
-  EXPECT_THAT(consumeIDs(*DocIterator, 0), ElementsAre());
+  auto AndIterator =
+      createAnd(createLimit(createTrue(9000), 343), createLimit(create(L0), 2),
+                createLimit(create(L1), 3), createLimit(create(L2), 42));
+  EXPECT_THAT(consumeIDs(*AndIterator), ElementsAre(3, 7));
 }
 
 TEST(DexIndexIterators, True) {
@@ -301,7 +299,7 @@ TEST(DexIndexIterators, True) {
 TEST(DexIndexIterators, Boost) {
   auto BoostIterator = createBoost(createTrue(5U), 42U);
   EXPECT_FALSE(BoostIterator->reachedEnd());
-  auto ElementBoost = BoostIterator->consume(BoostIterator->peek());
+  auto ElementBoost = BoostIterator->consume();
   EXPECT_THAT(ElementBoost, 42U);
 
   const PostingList L0 = {2, 4};
@@ -309,20 +307,20 @@ TEST(DexIndexIterators, Boost) {
   auto Root = createOr(createTrue(5U), createBoost(create(L0), 2U),
                        createBoost(create(L1), 3U));
 
-  ElementBoost = Root->consume(Root->peek());
+  ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, Iterator::DEFAULT_BOOST_SCORE);
   Root->advance();
   EXPECT_THAT(Root->peek(), 1U);
-  ElementBoost = Root->consume(Root->peek());
+  ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 3);
 
   Root->advance();
   EXPECT_THAT(Root->peek(), 2U);
-  ElementBoost = Root->consume(Root->peek());
+  ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 2);
 
   Root->advanceTo(4);
-  ElementBoost = Root->consume(Root->peek());
+  ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 3);
 }
 
