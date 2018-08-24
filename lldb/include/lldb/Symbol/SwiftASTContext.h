@@ -294,6 +294,7 @@ public:
   CompilerType GetTypeFromMangledTypename(const char *mangled_typename,
                                           Status &error);
 
+  // Retrieve the Swift.AnyObject type.
   CompilerType GetAnyObjectType();
 
   // Get a function type that returns nothing and take no parameters
