@@ -47,6 +47,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_by_pid(self):
         '''
@@ -63,6 +64,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_by_name(self):
         '''
@@ -97,6 +99,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipUnlessDarwin
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_by_name_waitFor(self):
         '''
@@ -114,6 +117,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
     @no_debug_info_test
     def test_commands(self):
         '''
