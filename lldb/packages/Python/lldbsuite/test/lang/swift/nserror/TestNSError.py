@@ -24,7 +24,6 @@ class SwiftNSErrorTest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.skipUnlessDarwin
-    @decorators.skipIfDarwin
     @decorators.swiftTest
     @decorators.expectedFailureAll(
         bugnumber="https://bugs.swift.org/browse/SR-782")
