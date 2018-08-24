@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
+#include "Cancellation.h"
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
@@ -124,9 +125,9 @@ public:
   /// while returned future is not yet ready.
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  void codeComplete(PathRef File, Position Pos,
-                    const clangd::CodeCompleteOptions &Opts,
-                    Callback<CodeCompleteResult> CB);
+  TaskHandle codeComplete(PathRef File, Position Pos,
+                          const clangd::CodeCompleteOptions &Opts,
+                          Callback<CodeCompleteResult> CB);
 
   /// Provide signature help for \p File at \p Pos.  This method should only be
   /// called for tracked files.
