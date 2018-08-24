@@ -294,6 +294,8 @@ public:
   CompilerType GetTypeFromMangledTypename(const char *mangled_typename,
                                           Status &error);
 
+  CompilerType GetAnyObjectType();
+
   // Get a function type that returns nothing and take no parameters
   CompilerType GetVoidFunctionType();
 

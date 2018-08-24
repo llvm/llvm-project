@@ -3929,6 +3929,12 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
   return CompilerType();
 }
 
+CompilerType SwiftASTContext::GetAnyObjectType() {
+  VALID_OR_RETURN(CompilerType());
+  swift::ASTContext *ast = GetASTContext();
+  return CompilerType(ast, ast->getAnyObjectType());
+}
+
 CompilerType SwiftASTContext::GetVoidFunctionType() {
   VALID_OR_RETURN(CompilerType());
 

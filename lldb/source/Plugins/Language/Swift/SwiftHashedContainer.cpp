@@ -292,7 +292,7 @@ HashedCollectionConfig::SwiftObjectAtAddress(
   if (error.Fail())
     return nullptr;
 
-  CompilerType anyObject_type = ast_ctx->FindQualifiedType("Swift.AnyObject");
+  CompilerType anyObject_type = ast_ctx->GetAnyObjectType();
   if (!anyObject_type)
     return nullptr;
 
