@@ -129,16 +129,9 @@ namespace Chunk {
             computeChecksum(Ptr, &NewUnpackedHeader));
   }
 
-  // Nulls out a chunk header. When returning the chunk to the backend, there
-  // is no need to store a valid ChunkAvailable header, as this would be
-  // computationally expensive. Zeroing out serves the same purpose by making
-  // the header invalid. In the extremely rare event where 0 would be a valid
-  // checksum for the chunk, the state of the chunk is ChunkAvailable anyway.
+  // Ensure that ChunkAvailable is 0, so that if a 0 checksum is ever valid
+  // for a fully nulled out header, its state will be available anyway.
   COMPILER_CHECK(ChunkAvailable == 0);
-  static INLINE void eraseHeader(void *Ptr) {
-    const PackedHeader NullPackedHeader = 0;
-    atomic_store_relaxed(getAtomicHeader(Ptr), NullPackedHeader);
-  }
 
   // Loads and unpacks the header, verifying the checksum in the process.
   static INLINE
@@ -185,7 +178,9 @@ struct QuarantineCallback {
     Chunk::loadHeader(Ptr, &Header);
     if (UNLIKELY(Header.State != ChunkQuarantine))
       dieWithMessage("invalid chunk state when recycling address %p\n", Ptr);
-    Chunk::eraseHeader(Ptr);
+    UnpackedHeader NewHeader = Header;
+    NewHeader.State = ChunkAvailable;
+    Chunk::compareExchangeHeader(Ptr, &NewHeader, &Header);
     void *BackendPtr = Chunk::getBackendPtr(Ptr, &Header);
     if (Header.ClassId)
       getBackend().deallocatePrimary(Cache_, BackendPtr, Header.ClassId);
