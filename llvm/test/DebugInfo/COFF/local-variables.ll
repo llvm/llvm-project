@@ -60,7 +60,7 @@
 ; ASM:         leaq    36(%rsp), %rcx
 ; ASM: [[else_end:\.Ltmp.*]]:
 ; ASM: .LBB0_3:                                # %if.end
-; ASM:         .cv_loc 0 1 17 1                # t.cpp:17:1
+; ASM:         .cv_loc 0 1 0 0                # t.cpp:0:0
 ; ASM:         callq   capture
 ; ASM:         nop
 ; ASM:         addq    $56, %rsp

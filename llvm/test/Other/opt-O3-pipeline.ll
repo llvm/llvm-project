@@ -30,6 +30,7 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Call-site splitting
 ; CHECK-NEXT:     Interprocedural Sparse Conditional Constant Propagation
+; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
 ; CHECK-NEXT:     Called Value Propagation
 ; CHECK-NEXT:     Global Variable Optimizer
 ; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
@@ -280,6 +281,9 @@
 ; CHECK-NEXT:       Simplify the CFG
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
+; CHECK-NEXT: Pass Arguments:
+; CHECK-NEXT:  FunctionPass Manager
+; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT:   FunctionPass Manager
