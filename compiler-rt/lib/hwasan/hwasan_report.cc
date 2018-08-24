@@ -109,30 +109,7 @@ void ReportInvalidAccessInsideAddressRange(const char *what, const void *start,
   //   DescribeMemoryRange(start, size);
 }
 
-void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
-                       bool is_store) {
-  ScopedErrorReportLock l;
-
-  Decorator d;
-  Printf("%s", d.Error());
-  uptr address = GetAddressFromPointer(addr);
-  // TODO: when possible, try to print heap-use-after-free, etc.
-  const char *bug_type = "tag-mismatch";
-  uptr pc = stack->size ? stack->trace[0] : 0;
-  Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type, address, pc);
-
-  tag_t ptr_tag = GetTagFromPointer(addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
-  tag_t mem_tag = *tag_ptr;
-  Printf("%s", d.Access());
-  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem)\n",
-         is_store ? "WRITE" : "READ", access_size, address, ptr_tag, mem_tag);
-  Printf("%s", d.Default());
-
-  stack->Print();
-
-  PrintAddressDescription(address, access_size);
-
+static void PrintTagsAroundAddr(tag_t *tag_ptr) {
   Printf(
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n", kShadowAlignment);
@@ -152,6 +129,60 @@ void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
     }
     Printf("%s\n", row == center_row_beg ? "<=" : "  ");
   }
+}
+
+void ReportInvalidFree(StackTrace *stack, uptr addr) {
+  ScopedErrorReportLock l;
+  uptr address = GetAddressFromPointer(addr);
+  tag_t ptr_tag = GetTagFromPointer(addr);
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
+  tag_t mem_tag = *tag_ptr;
+  Decorator d;
+  Printf("%s", d.Error());
+  uptr pc = stack->size ? stack->trace[0] : 0;
+  const char *bug_type = "invalid-free";
+  Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
+         address, pc);
+  Printf("%s", d.Access());
+  Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
+  Printf("%s", d.Default());
+
+  stack->Print();
+
+  PrintAddressDescription(address, 0);
+
+  PrintTagsAroundAddr(tag_ptr);
+
+  ReportErrorSummary(bug_type, stack);
+  Die();
+}
+
+void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
+                       bool is_store) {
+  ScopedErrorReportLock l;
+
+  Decorator d;
+  Printf("%s", d.Error());
+  uptr address = GetAddressFromPointer(addr);
+  // TODO: when possible, try to print heap-use-after-free, etc.
+  const char *bug_type = "tag-mismatch";
+  uptr pc = stack->size ? stack->trace[0] : 0;
+  Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
+         address, pc);
+
+  tag_t ptr_tag = GetTagFromPointer(addr);
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
+  tag_t mem_tag = *tag_ptr;
+  Printf("%s", d.Access());
+  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem)\n",
+         is_store ? "WRITE" : "READ", access_size, address, ptr_tag, mem_tag);
+  Printf("%s", d.Default());
+
+  stack->Print();
+
+  PrintAddressDescription(address, access_size);
+
+  PrintTagsAroundAddr(tag_ptr);
 
   ReportErrorSummary(bug_type, stack);
 }

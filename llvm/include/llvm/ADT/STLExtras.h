@@ -677,18 +677,20 @@ class concat_iterator
   /// Note that something like iterator_range seems nice at first here, but the
   /// range properties are of little benefit and end up getting in the way
   /// because we need to do mutation on the current iterators.
-  std::tuple<std::pair<IterTs, IterTs>...> IterPairs;
+  std::tuple<IterTs...> Begins;
+  std::tuple<IterTs...> Ends;
 
   /// Attempts to increment a specific iterator.
   ///
   /// Returns true if it was able to increment the iterator. Returns false if
   /// the iterator is already at the end iterator.
   template <size_t Index> bool incrementHelper() {
-    auto &IterPair = std::get<Index>(IterPairs);
-    if (IterPair.first == IterPair.second)
+    auto &Begin = std::get<Index>(Begins);
+    auto &End = std::get<Index>(Ends);
+    if (Begin == End)
       return false;
 
-    ++IterPair.first;
+    ++Begin;
     return true;
   }
 
@@ -712,11 +714,12 @@ class concat_iterator
   /// dereferences the iterator and returns the address of the resulting
   /// reference.
   template <size_t Index> ValueT *getHelper() const {
-    auto &IterPair = std::get<Index>(IterPairs);
-    if (IterPair.first == IterPair.second)
+    auto &Begin = std::get<Index>(Begins);
+    auto &End = std::get<Index>(Ends);
+    if (Begin == End)
       return nullptr;
 
-    return &*IterPair.first;
+    return &*Begin;
   }
 
   /// Finds the first non-end iterator, dereferences, and returns the resulting
@@ -743,7 +746,7 @@ public:
   /// iterators.
   template <typename... RangeTs>
   explicit concat_iterator(RangeTs &&... Ranges)
-      : IterPairs({std::begin(Ranges), std::end(Ranges)}...) {}
+      : Begins(std::begin(Ranges)...), Ends(std::end(Ranges)...) {}
 
   using BaseT::operator++;
 
@@ -755,7 +758,7 @@ public:
   ValueT &operator*() const { return get(index_sequence_for<IterTs...>()); }
 
   bool operator==(const concat_iterator &RHS) const {
-    return IterPairs == RHS.IterPairs;
+    return Begins == RHS.Begins && Ends == RHS.Ends;
   }
 };
 

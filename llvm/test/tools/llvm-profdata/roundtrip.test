@@ -1,0 +1,6 @@
+RUN: llvm-profdata merge -o %t.0.profdata %S/Inputs/IR_profile.proftext
+RUN: llvm-profdata show -o %t.0.proftext -all-functions -text %t.0.profdata 
+RUN: diff %t.0.proftext %S/Inputs/IR_profile.proftext
+RUN: llvm-profdata merge -o %t.1.profdata %t.0.proftext
+RUN: llvm-profdata show -o %t.1.proftext -all-functions -text %t.1.profdata 
+RUN: diff %t.1.proftext %S/Inputs/IR_profile.proftext

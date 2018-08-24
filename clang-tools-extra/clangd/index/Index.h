@@ -20,6 +20,7 @@
 #include "llvm/Support/StringSaver.h"
 #include <array>
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -343,6 +344,14 @@ struct FuzzyFindRequest {
   /// Contextually relevant files (e.g. the file we're code-completing in).
   /// Paths should be absolute.
   std::vector<std::string> ProximityPaths;
+
+  bool operator==(const FuzzyFindRequest &Req) const {
+    return std::tie(Query, Scopes, MaxCandidateCount, RestrictForCodeCompletion,
+                    ProximityPaths) ==
+           std::tie(Req.Query, Req.Scopes, Req.MaxCandidateCount,
+                    Req.RestrictForCodeCompletion, Req.ProximityPaths);
+  }
+  bool operator!=(const FuzzyFindRequest &Req) const { return !(*this == Req); }
 };
 
 struct LookupRequest {
@@ -385,6 +394,12 @@ public:
   virtual void findOccurrences(
       const OccurrencesRequest &Req,
       llvm::function_ref<void(const SymbolOccurrence &)> Callback) const = 0;
+
+  /// Returns estimated size of index (in bytes).
+  // FIXME(kbobyrev): Currently, this only returns the size of index itself
+  // excluding the size of actual symbol slab index refers to. We should include
+  // both.
+  virtual size_t estimateMemoryUsage() const = 0;
 };
 
 } // namespace clangd

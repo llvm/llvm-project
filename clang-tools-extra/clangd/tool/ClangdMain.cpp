@@ -308,6 +308,7 @@ int main(int argc, char *argv[]) {
     CCOpts.IncludeIndicator.Insert.clear();
     CCOpts.IncludeIndicator.NoInsert.clear();
   }
+  CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(

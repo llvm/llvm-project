@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/XRay/XRayRecord.h"
 
 namespace llvm {
@@ -50,7 +50,7 @@ class Trace {
 
   typedef std::vector<XRayRecord>::const_iterator citerator;
 
-  friend Expected<Trace> loadTraceFile(StringRef, bool);
+  friend Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:
   /// Provides access to the loaded XRay trace file header.
@@ -58,12 +58,17 @@ public:
 
   citerator begin() const { return Records.begin(); }
   citerator end() const { return Records.end(); }
+  bool empty() const { return Records.empty(); }
   size_t size() const { return Records.size(); }
 };
 
 /// This function will attempt to load XRay trace records from the provided
 /// |Filename|.
 Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
+
+/// This function will attempt to load XRay trace records from the provided
+/// DataExtractor.
+Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
 
 } // namespace xray
 } // namespace llvm

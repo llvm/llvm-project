@@ -391,13 +391,16 @@ bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr,
 ///
 /// Metadata not listed as known via KnownIDs is removed
 void combineMetadata(Instruction *K, const Instruction *J,
-                     ArrayRef<unsigned> KnownIDs, bool DoesKMove = true);
+                     ArrayRef<unsigned> KnownIDs, bool DoesKMove);
 
 /// Combine the metadata of two instructions so that K can replace J. This
-/// specifically handles the case of CSE-like transformations.
+/// specifically handles the case of CSE-like transformations. Some
+/// metadata can only be kept if K dominates J. For this to be correct,
+/// K cannot be hoisted.
 ///
 /// Unknown metadata is removed.
-void combineMetadataForCSE(Instruction *K, const Instruction *J);
+void combineMetadataForCSE(Instruction *K, const Instruction *J,
+                           bool DoesKMove);
 
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from

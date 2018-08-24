@@ -37,6 +37,13 @@ define <16 x i8> @splat_v16i8(i8 %x) {
   ret <16 x i8> %res
 }
 
+; CHECK-LABEL: const_splat_v16i8
+; SIMD128; i8x16.splat
+define <16 x i8> @const_splat_v16i8() {
+  ret <16 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42,
+                 i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
+}
+
 ; CHECK-LABEL: extract_v16i8_s:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128: .param v128{{$}}
@@ -155,6 +162,12 @@ define <8 x i16> @splat_v8i16(i16 %x) {
   ret <8 x i16> %res
 }
 
+; CHECK-LABEL: const_splat_v8i16
+; SIMD128; i16x8.splat
+define <8 x i16> @const_splat_v8i16() {
+  ret <8 x i16> <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
+}
+
 ; CHECK-LABEL: extract_v8i16_s:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128: .param v128{{$}}
@@ -254,6 +267,12 @@ define <4 x i32> @splat_v4i32(i32 %x) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: const_splat_v4i32
+; SIMD128; i32x4.splat
+define <4 x i32> @const_splat_v4i32() {
+  ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+}
+
 ; CHECK-LABEL: extract_v4i32:
 ; NO-SIMD128-NOT: i32x4
 ; SIMD128: .param v128{{$}}
@@ -345,6 +364,10 @@ define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
   ret <2 x i64> %res
 }
 
+define <2 x i64> @const_splat_v2i64() {
+  ret <2 x i64> <i64 42, i64 42>
+}
+
 ; CHECK-LABEL: build_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
@@ -386,6 +409,12 @@ define <4 x float> @splat_v4f32(float %x) {
   %res = shufflevector <4 x float> %v, <4 x float> undef,
     <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x float> %res
+}
+
+; CHECK-LABEL: const_splat_v4f32
+; SIMD128; f32x4.splat
+define <4 x float> @const_splat_v4f32() {
+  ret <4 x float> <float 42., float 42., float 42., float 42.>
 }
 
 ; CHECK-LABEL: extract_v4f32:
@@ -452,6 +481,12 @@ define <2 x double> @splat_v2f64(double %x) {
   %t1 = insertelement <2 x double> zeroinitializer, double %x, i3 0
   %res = insertelement <2 x double> %t1, double %x, i32 1
   ret <2 x double> %res
+}
+
+; CHECK-LABEL: const_splat_v2f64:
+; SIMD128; f64x2.splat
+define <2 x double> @const_splat_v2f64() {
+  ret <2 x double> <double 42., double 42.>
 }
 
 ; CHECK-LABEL: extract_v2f64:

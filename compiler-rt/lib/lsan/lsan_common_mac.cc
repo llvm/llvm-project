@@ -142,12 +142,6 @@ void ProcessGlobalRegions(Frontier *frontier) {
 }
 
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  mach_port_name_t port;
-  if (task_for_pid(mach_task_self(), internal_getpid(), &port)
-      != KERN_SUCCESS) {
-    return;
-  }
-
   unsigned depth = 1;
   vm_size_t size = 0;
   vm_address_t address = 0;
@@ -158,7 +152,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
 
   while (err == KERN_SUCCESS) {
     struct vm_region_submap_info_64 info;
-    err = vm_region_recurse_64(port, &address, &size, &depth,
+    err = vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
                                (vm_region_info_t)&info, &count);
 
     uptr end_address = address + size;

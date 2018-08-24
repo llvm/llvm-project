@@ -1300,7 +1300,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LoadI) {
 
     if (IsLoadCSE) {
       LoadInst *NLoadI = cast<LoadInst>(AvailableVal);
-      combineMetadataForCSE(NLoadI, LoadI);
+      combineMetadataForCSE(NLoadI, LoadI, false);
     };
 
     // If the returned value is the load itself, replace with an undef. This can
@@ -1490,7 +1490,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   }
 
   for (LoadInst *PredLoadI : CSELoads) {
-    combineMetadataForCSE(PredLoadI, LoadI);
+    combineMetadataForCSE(PredLoadI, LoadI, true);
   }
 
   LoadI->replaceAllUsesWith(PN);

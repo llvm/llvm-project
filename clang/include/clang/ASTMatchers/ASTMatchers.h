@@ -4825,8 +4825,17 @@ AST_MATCHER_P(MemberExpr, member,
 ///   matches "x.m" and "m"
 /// with hasObjectExpression(...)
 ///   matching "x" and the implicit object expression of "m" which has type X*.
-AST_MATCHER_P(MemberExpr, hasObjectExpression,
-              internal::Matcher<Expr>, InnerMatcher) {
+AST_POLYMORPHIC_MATCHER_P(
+    hasObjectExpression,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, UnresolvedMemberExpr,
+                                    CXXDependentScopeMemberExpr),
+    internal::Matcher<Expr>, InnerMatcher) {
+  if (const auto *E = dyn_cast<UnresolvedMemberExpr>(&Node))
+    if (E->isImplicitAccess())
+      return false;
+  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node))
+    if (E->isImplicitAccess())
+      return false;
   return InnerMatcher.matches(*Node.getBase(), Finder, Builder);
 }
 

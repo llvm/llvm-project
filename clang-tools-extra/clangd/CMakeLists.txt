@@ -9,6 +9,7 @@ endif()
 
 add_clang_library(clangDaemon
   AST.cpp
+  Cancellation.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
   ClangdUnit.cpp
