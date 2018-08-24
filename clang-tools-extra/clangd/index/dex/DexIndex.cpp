@@ -128,10 +128,10 @@ bool DexIndex::fuzzyFind(
     // using 100x of the requested number might not be good in practice, e.g.
     // when the requested number of items is small.
     const unsigned ItemsToRetrieve = 100 * Req.MaxCandidateCount;
+    auto Root = createLimit(move(QueryIterator), ItemsToRetrieve);
     // FIXME(kbobyrev): Add boosting to the query and utilize retrieved
     // boosting scores.
-    std::vector<std::pair<DocID, float>> SymbolDocIDs =
-        consume(*QueryIterator, ItemsToRetrieve);
+    std::vector<std::pair<DocID, float>> SymbolDocIDs = consume(*Root);
 
     // Retrieve top Req.MaxCandidateCount items.
     std::priority_queue<std::pair<float, const Symbol *>> Top;
