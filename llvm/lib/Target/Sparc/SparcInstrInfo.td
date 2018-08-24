@@ -914,8 +914,17 @@ let Defs = [ICC], hasPostISelHook = true in
 let Uses = [ICC] in
   defm SUBC   : F3_12np <"subx", 0b001100>;
 
-def : Pat<(SPcmpicc i32:$lhs, i32:$rhs), (SUBCCrr $lhs, $rhs)>;
-def : Pat<(SPcmpicc i32:$lhs, (i32 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
+// cmp (from Section A.3) is a specialized alias for subcc
+let Defs = [ICC], rd = 0, isCompare = 1 in {
+  def CMPrr   : F3_1<2, 0b010100,
+                     (outs), (ins IntRegs:$rs1, IntRegs:$rs2),
+                     "cmp $rs1, $rs2",
+                     [(SPcmpicc i32:$rs1, i32:$rs2)]>;
+  def CMPri   : F3_2<2, 0b010100,
+                     (outs), (ins IntRegs:$rs1, simm13Op:$simm13),
+                     "cmp $rs1, $simm13",
+                     [(SPcmpicc i32:$rs1, (i32 simm13:$simm13))]>;
+}
 
 // Section B.18 - Multiply Instructions, p. 113
 let Defs = [Y] in {

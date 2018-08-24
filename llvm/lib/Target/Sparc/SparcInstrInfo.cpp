@@ -640,6 +640,149 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   return get(Opcode).getSize();
 }
 
+bool SparcInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                    Register &SrcReg2, int64_t &CmpMask,
+                                    int64_t &CmpValue) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case SP::CMPri:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = 0;
+    CmpMask = ~0;
+    CmpValue = MI.getOperand(1).getImm();
+    return (CmpValue == 0);
+  case SP::CMPrr:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = MI.getOperand(1).getReg();
+    CmpMask = ~0;
+    CmpValue = 0;
+    return SrcReg2 == SP::G0;
+  }
+
+  return false;
+}
+
+bool SparcInstrInfo::optimizeCompareInstr(
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
+
+  // Get the unique definition of SrcReg.
+  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
+  if (!MI)
+    return false;
+
+  // Only optimize if defining and comparing instruction in same block.
+  if (MI->getParent() != CmpInstr.getParent())
+    return false;
+
+  unsigned newOpcode;
+  switch (MI->getOpcode()) {
+  case SP::ANDNrr:
+    newOpcode = SP::ANDNCCrr;
+    break;
+  case SP::ANDNri:
+    newOpcode = SP::ANDNCCri;
+    break;
+  case SP::ANDrr:
+    newOpcode = SP::ANDCCrr;
+    break;
+  case SP::ANDri:
+    newOpcode = SP::ANDCCri;
+    break;
+  case SP::ORrr:
+    newOpcode = SP::ORCCrr;
+    break;
+  case SP::ORri:
+    newOpcode = SP::ORCCri;
+    break;
+  case SP::ORNCCrr:
+    newOpcode = SP::ORNCCrr;
+    break;
+  case SP::ORNri:
+    newOpcode = SP::ORNCCri;
+    break;
+  case SP::XORrr:
+    newOpcode = SP::XORCCrr;
+    break;
+  case SP::XNORri:
+    newOpcode = SP::XNORCCri;
+    break;
+  case SP::XNORrr:
+    newOpcode = SP::XNORCCrr;
+    break;
+  case SP::ADDrr:
+    newOpcode = SP::ADDCCrr;
+    break;
+  case SP::ADDri:
+    newOpcode = SP::ADDCCri;
+    break;
+  case SP::SUBrr:
+    newOpcode = SP::SUBCCrr;
+    break;
+  case SP::SUBri:
+    newOpcode = SP::SUBCCri;
+    break;
+  default:
+    return false;
+  }
+
+  bool isSafe = false;
+  bool isRegUsed = false;
+  MachineBasicBlock::iterator I = MI;
+  MachineBasicBlock::iterator C = CmpInstr;
+  MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  // If ICC is used or modified between MI and CmpInstr we cannot optimize.
+  while (++I != C) {
+    if (I->modifiesRegister(SP::ICC, TRI) || I->readsRegister(SP::ICC, TRI))
+      return false;
+    if (I->readsRegister(SrcReg, TRI))
+      isRegUsed = true;
+  }
+
+  while (++I != E) {
+    // Only allow conditionals on equality.
+    if (I->readsRegister(SP::ICC, TRI)) {
+      bool IsICCBranch = (I->getOpcode() == SP::BCOND) ||
+                         (I->getOpcode() == SP::BPICC) ||
+                         (I->getOpcode() == SP::BPXCC);
+      bool IsICCMove = (I->getOpcode() == SP::MOVICCrr) ||
+                       (I->getOpcode() == SP::MOVICCri) ||
+                       (I->getOpcode() == SP::MOVXCCrr) ||
+                       (I->getOpcode() == SP::MOVXCCri);
+      bool IsICCConditional = IsICCBranch || IsICCMove;
+      if (!IsICCConditional ||
+          (I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_E &&
+           I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_NE))
+        return false;
+    } else if (I->modifiesRegister(SP::ICC, TRI)) {
+      isSafe = true;
+      break;
+    }
+  }
+
+  if (!isSafe) {
+    MachineBasicBlock *MBB = CmpInstr.getParent();
+    for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
+                                          SE = MBB->succ_end();
+         SI != SE; ++SI)
+      if ((*SI)->isLiveIn(SP::ICC))
+        return false;
+  }
+
+  // If the result is not needed use the %g0 register.
+  if (!isRegUsed && CmpInstr.getOperand(0).isKill())
+    MI->getOperand(0).setReg(SP::G0);
+
+  MI->setDesc(get(newOpcode));
+  MI->addRegisterDefined(SP::ICC);
+  CmpInstr.eraseFromParent();
+
+  return true;
+}
+
 bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::LOAD_STACK_GUARD: {
