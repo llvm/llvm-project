@@ -77,7 +77,7 @@ class SizeClassAllocator64 {
     } else {
       NonConstSpaceBeg = address_range.Init(TotalSpaceSize,
                                             PrimaryAllocatorName);
-      CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
+      CHECK(NonConstSpaceBeg);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
     MapWithCallbackOrDie(SpaceEnd(), AdditionalSize());

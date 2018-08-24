@@ -1,0 +1,5 @@
+// RUN: llvm-objdump -d %p/Inputs/cfi.elf-aarch64 | FileCheck %s
+
+# CHECK: Disassembly of section .plt:
+# CHECK: __cfi_slowpath@plt:
+# CHECK: bl {{.*}} <__cfi_slowpath@plt>

@@ -126,7 +126,7 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   auto default_print_on_exit = llvm::make_scope_exit(
       [&found_wrapped_function, &stream, &member__f_pointer_value]() {
         if (!found_wrapped_function)
-          stream.Printf(" __f_ = %llu", member__f_pointer_value);
+          stream.Printf(" __f_ = %" PRIu64, member__f_pointer_value);
       });
 
   lldb::addr_t address_after_vtable = member__f_pointer_value + address_size;

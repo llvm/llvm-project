@@ -64,6 +64,13 @@ void reply(llvm::json::Value &&Result);
 /// Sends an error response to the client, and logs it.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void replyError(ErrorCode Code, const llvm::StringRef &Message);
+/// Implements ErrorCode and message extraction from a given llvm::Error. It
+/// fetches the related message from error's message method. If error doesn't
+/// match any known errors, uses ErrorCode::InvalidParams for the error.
+void replyError(llvm::Error E);
+/// Returns the request-id of the current request. Should not be used directly
+/// for replying to requests, use the above mentioned methods for that case.
+const llvm::json::Value *getRequestId();
 /// Sends a request to the client.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void call(llvm::StringRef Method, llvm::json::Value &&Params);
@@ -110,7 +117,6 @@ enum JSONStreamStyle {
 void runLanguageServerLoop(std::FILE *In, JSONOutput &Out,
                            JSONStreamStyle InputStyle,
                            JSONRPCDispatcher &Dispatcher, bool &IsDone);
-
 } // namespace clangd
 } // namespace clang
 

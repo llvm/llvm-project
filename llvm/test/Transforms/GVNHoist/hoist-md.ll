@@ -93,6 +93,29 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: %[[phi:.*]] = phi i32 [ %[[load]], %{{.*}} ], [ %[[load]], %{{.*}} ]
 ; CHECK: ret i32 %[[phi]]
 
+define i32* @test5(i1 %b, i32** %y) {
+entry:
+  br i1 %b, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %0 = load i32*, i32** %y, align 4, !nonnull !9
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %1 = load i32*, i32** %y, align 4
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval.0 = phi i32* [ %0, %if.then ], [ %1, %if.end ]
+  ret i32* %retval.0
+}
+; CHECK-LABEL: define i32* @test5(
+; CHECK: %[[load:.*]] = load i32*, i32** %y, align 4
+; CHECK-NOT: !nonnull
+; CHECK: %[[phi:.*]] = phi i32* [ %[[load]], %{{.*}} ], [ %[[load]], %{{.*}} ]
+; CHECK: ret i32* %[[phi]]
+
 !7 = !{i32 0, i32 2}
 !8 = !{i32 3, i32 4}
+!9 = !{}
 ; CHECK: ![[range_md]] = !{i32 0, i32 2, i32 3, i32 4}

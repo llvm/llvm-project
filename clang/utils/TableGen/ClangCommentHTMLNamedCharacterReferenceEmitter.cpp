@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This tablegen backend emits an fficient function to translate HTML named
+// This tablegen backend emits an efficient function to translate HTML named
 // character references to UTF-8 sequences.
 //
 //===----------------------------------------------------------------------===//
