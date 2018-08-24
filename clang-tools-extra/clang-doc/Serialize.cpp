@@ -361,7 +361,7 @@ std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
     I->USR = Func.Namespace[0].USR;
   else
     I->USR = SymbolID();
-  I->ChildFunctions.push_back(std::move(Func));
+  I->ChildFunctions.emplace_back(std::move(Func));
   return std::unique_ptr<Info>{std::move(I)};
 }
 
@@ -382,7 +382,7 @@ std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
   // Wrap in enclosing scope
   auto I = llvm::make_unique<RecordInfo>();
   I->USR = ParentUSR;
-  I->ChildFunctions.push_back(std::move(Func));
+  I->ChildFunctions.emplace_back(std::move(Func));
   return std::unique_ptr<Info>{std::move(I)};
 }
 
@@ -402,13 +402,13 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
     case InfoType::IT_namespace: {
       auto I = llvm::make_unique<NamespaceInfo>();
       I->USR = Enum.Namespace[0].USR;
-      I->ChildEnums.push_back(std::move(Enum));
+      I->ChildEnums.emplace_back(std::move(Enum));
       return std::unique_ptr<Info>{std::move(I)};
     }
     case InfoType::IT_record: {
       auto I = llvm::make_unique<RecordInfo>();
       I->USR = Enum.Namespace[0].USR;
-      I->ChildEnums.push_back(std::move(Enum));
+      I->ChildEnums.emplace_back(std::move(Enum));
       return std::unique_ptr<Info>{std::move(I)};
     }
     default:
@@ -419,7 +419,7 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
   // Put in global namespace
   auto I = llvm::make_unique<NamespaceInfo>();
   I->USR = SymbolID();
-  I->ChildEnums.push_back(std::move(Enum));
+  I->ChildEnums.emplace_back(std::move(Enum));
   return std::unique_ptr<Info>{std::move(I)};
 }
 
