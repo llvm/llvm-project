@@ -387,13 +387,18 @@ void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   unsigned flags = MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE;
   if (fd == -1) flags |= MAP_ANON;
 
-  return (void *)internal_mmap((void *)fixed_addr, size, PROT_NONE, flags, fd,
-                               0);
+  uptr p = internal_mmap((void *)fixed_addr, size, PROT_NONE, flags, fd, 0);
+  if (internal_iserror(p))
+    return nullptr;
+  return (void *)p;
 }
 
 void *MmapNoAccess(uptr size) {
   unsigned flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
-  return (void *)internal_mmap(nullptr, size, PROT_NONE, flags, -1, 0);
+  uptr p = internal_mmap(nullptr, size, PROT_NONE, flags, -1, 0);
+  if (internal_iserror(p))
+    return nullptr;
+  return (void *)p;
 }
 
 // This function is defined elsewhere if we intercepted pthread_attr_getstack.

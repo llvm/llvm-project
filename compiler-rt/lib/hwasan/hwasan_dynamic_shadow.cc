@@ -46,7 +46,7 @@ static uptr MapDynamicShadow(uptr shadow_size_bytes) {
   const uptr map_size = shadow_size + left_padding + alignment;
 
   const uptr map_start = (uptr)MmapNoAccess(map_size);
-  CHECK_NE(map_start, ~(uptr)0);
+  CHECK(map_start);
 
   const uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
 

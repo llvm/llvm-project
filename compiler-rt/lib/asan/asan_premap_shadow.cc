@@ -40,7 +40,7 @@ uptr PremapShadow() {
   uptr map_size = shadow_size + left_padding + alignment;
 
   uptr map_start = (uptr)MmapNoAccess(map_size);
-  CHECK_NE(map_start, ~(uptr)0);
+  CHECK(map_start);
 
   uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
   uptr shadow_end = shadow_start + shadow_size;
