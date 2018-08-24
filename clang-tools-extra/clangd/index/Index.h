@@ -385,6 +385,12 @@ public:
   virtual void findOccurrences(
       const OccurrencesRequest &Req,
       llvm::function_ref<void(const SymbolOccurrence &)> Callback) const = 0;
+
+  /// Returns estimated size of index (in bytes).
+  // FIXME(kbobyrev): Currently, this only returns the size of index itself
+  // excluding the size of actual symbol slab index refers to. We should include
+  // both.
+  virtual size_t estimateMemoryUsage() const = 0;
 };
 
 } // namespace clangd
