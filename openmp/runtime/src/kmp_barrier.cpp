@@ -1458,8 +1458,8 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
     if (__kmp_tasking_mode != tskm_immediate_exec) {
 #if OMP_45_ENABLED
       if (this_thr->th.th_task_team != NULL) {
-        void *itt_sync_obj = NULL;
 #if USE_ITT_NOTIFY
+        void *itt_sync_obj = NULL;
         if (__itt_sync_create_ptr || KMP_ITT_DEBUG) {
           itt_sync_obj = __kmp_itt_barrier_object(gtid, bt, 1);
           __kmp_itt_barrier_starting(gtid, itt_sync_obj);
