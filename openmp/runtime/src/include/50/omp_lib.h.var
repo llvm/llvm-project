@@ -506,19 +506,16 @@
           integer (kind=omp_lock_hint_kind), value :: hint
         end subroutine omp_init_nest_lock_with_hint
 
-        function omp_control_tool(command, modifier, arg) bind(c)
+        function omp_control_tool(command, modifier) bind(c)
           import
           integer (kind=omp_integer_kind) omp_control_tool
           integer (kind=omp_control_tool_kind), value :: command
           integer (kind=omp_control_tool_kind), value :: modifier
-          integer (kind=kmp_pointer_kind), optional :: arg
         end function omp_control_tool
 
       end interface
 
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)
-
-!DIR$ IF(__INTEL_COMPILER.LT.1900)
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_num_threads
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_dynamic
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_nested
@@ -589,7 +586,6 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_warnings_off
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock_with_hint
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_nest_lock_with_hint
-!DIR$ ENDIF
 
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !$omp declare target(omp_set_num_threads )
@@ -664,3 +660,4 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
+

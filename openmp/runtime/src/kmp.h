@@ -586,7 +586,7 @@ extern size_t __kmp_affin_mask_size;
 #define KMP_AFFINITY_DISABLE() (__kmp_affin_mask_size = 0)
 #define KMP_AFFINITY_ENABLE(mask_size) (__kmp_affin_mask_size = mask_size)
 #define KMP_CPU_SET_ITERATE(i, mask)                                           \
-  for (i = (mask)->begin(); (int)i != (mask)->end(); i = (mask)->next(i))
+  for (i = (mask)->begin(); i != (mask)->end(); i = (mask)->next(i))
 #define KMP_CPU_SET(i, mask) (mask)->set(i)
 #define KMP_CPU_ISSET(i, mask) (mask)->is_set(i)
 #define KMP_CPU_CLR(i, mask) (mask)->clear(i)
@@ -830,6 +830,36 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 #define KMP_GTID_UNKNOWN (-5) /* Is not known */
 #define KMP_GTID_MIN (-6) /* Minimal gtid for low bound check in DEBUG */
 
+#define __kmp_get_gtid() __kmp_get_global_thread_id()
+#define __kmp_entry_gtid() __kmp_get_global_thread_id_reg()
+
+#define __kmp_tid_from_gtid(gtid)                                              \
+  (KMP_DEBUG_ASSERT((gtid) >= 0), __kmp_threads[(gtid)]->th.th_info.ds.ds_tid)
+
+#define __kmp_get_tid() (__kmp_tid_from_gtid(__kmp_get_gtid()))
+#define __kmp_gtid_from_tid(tid, team)                                         \
+  (KMP_DEBUG_ASSERT((tid) >= 0 && (team) != NULL),                             \
+   team->t.t_threads[(tid)]->th.th_info.ds.ds_gtid)
+
+#define __kmp_get_team() (__kmp_threads[(__kmp_get_gtid())]->th.th_team)
+#define __kmp_team_from_gtid(gtid)                                             \
+  (KMP_DEBUG_ASSERT((gtid) >= 0), __kmp_threads[(gtid)]->th.th_team)
+
+#define __kmp_thread_from_gtid(gtid)                                           \
+  (KMP_DEBUG_ASSERT((gtid) >= 0), __kmp_threads[(gtid)])
+#define __kmp_get_thread() (__kmp_thread_from_gtid(__kmp_get_gtid()))
+
+// Returns current thread (pointer to kmp_info_t). In contrast to
+// __kmp_get_thread(), it works with registered and not-yet-registered threads.
+#define __kmp_gtid_from_thread(thr)                                            \
+  (KMP_DEBUG_ASSERT((thr) != NULL), (thr)->th.th_info.ds.ds_gtid)
+
+// AT: Which way is correct?
+// AT: 1. nproc = __kmp_threads[ ( gtid ) ] -> th.th_team -> t.t_nproc;
+// AT: 2. nproc = __kmp_threads[ ( gtid ) ] -> th.th_team_nproc;
+#define __kmp_get_team_num_threads(gtid)                                       \
+  (__kmp_threads[(gtid)]->th.th_team->t.t_nproc)
+
 /* ------------------------------------------------------------------------ */
 
 #define KMP_UINT64_MAX                                                         \
@@ -983,6 +1013,11 @@ extern kmp_uint64 __kmp_now_nsec();
 
 #define KMP_MASTER_GTID(gtid) (__kmp_tid_from_gtid((gtid)) == 0)
 #define KMP_WORKER_GTID(gtid) (__kmp_tid_from_gtid((gtid)) != 0)
+#define KMP_UBER_GTID(gtid)                                                    \
+  (KMP_DEBUG_ASSERT((gtid) >= KMP_GTID_MIN),                                   \
+   KMP_DEBUG_ASSERT((gtid) < __kmp_threads_capacity),                          \
+   (gtid) >= 0 && __kmp_root[(gtid)] && __kmp_threads[(gtid)] &&               \
+       (__kmp_threads[(gtid)] == __kmp_root[(gtid)]->r.r_uber_thread))
 #define KMP_INITIAL_GTID(gtid) ((gtid) == 0)
 
 #ifndef TRUE
@@ -1030,9 +1065,9 @@ extern void __kmp_x86_pause(void);
 // regression after removal of extra PAUSE from KMP_YIELD_SPIN(). Changing
 // the delay from 100 to 300 showed even better performance than double PAUSE
 // on Spec OMP2001 and LCPC tasking tests, no regressions on EPCC.
-static inline void __kmp_x86_pause(void) { _mm_delay_32(300); }
+static void __kmp_x86_pause(void) { _mm_delay_32(300); }
 #else
-static inline void __kmp_x86_pause(void) { _mm_pause(); }
+static void __kmp_x86_pause(void) { _mm_pause(); }
 #endif
 #define KMP_CPU_PAUSE() __kmp_x86_pause()
 #elif KMP_ARCH_PPC64
@@ -3013,52 +3048,6 @@ extern std::atomic<int> __kmp_thread_pool_active_nth;
 
 extern kmp_root_t **__kmp_root; /* root of thread hierarchy */
 /* end data protected by fork/join lock */
-/* ------------------------------------------------------------------------- */
-
-#define __kmp_get_gtid() __kmp_get_global_thread_id()
-#define __kmp_entry_gtid() __kmp_get_global_thread_id_reg()
-#define __kmp_get_tid() (__kmp_tid_from_gtid(__kmp_get_gtid()))
-#define __kmp_get_team() (__kmp_threads[(__kmp_get_gtid())]->th.th_team)
-#define __kmp_get_thread() (__kmp_thread_from_gtid(__kmp_get_gtid()))
-
-// AT: Which way is correct?
-// AT: 1. nproc = __kmp_threads[ ( gtid ) ] -> th.th_team -> t.t_nproc;
-// AT: 2. nproc = __kmp_threads[ ( gtid ) ] -> th.th_team_nproc;
-#define __kmp_get_team_num_threads(gtid)                                       \
-  (__kmp_threads[(gtid)]->th.th_team->t.t_nproc)
-
-static inline bool KMP_UBER_GTID(int gtid) {
-  KMP_DEBUG_ASSERT(gtid >= KMP_GTID_MIN);
-  KMP_DEBUG_ASSERT(gtid < __kmp_threads_capacity);
-  return (gtid >= 0 && __kmp_root[gtid] && __kmp_threads[gtid] &&
-          __kmp_threads[gtid] == __kmp_root[gtid]->r.r_uber_thread);
-}
-
-static inline int __kmp_tid_from_gtid(int gtid) {
-  KMP_DEBUG_ASSERT(gtid >= 0);
-  return __kmp_threads[gtid]->th.th_info.ds.ds_tid;
-}
-
-static inline int __kmp_gtid_from_tid(int tid, const kmp_team_t *team) {
-  KMP_DEBUG_ASSERT(tid >= 0 && team);
-  return team->t.t_threads[tid]->th.th_info.ds.ds_gtid;
-}
-
-static inline int __kmp_gtid_from_thread(const kmp_info_t *thr) {
-  KMP_DEBUG_ASSERT(thr);
-  return thr->th.th_info.ds.ds_gtid;
-}
-
-static inline kmp_info_t *__kmp_thread_from_gtid(int gtid) {
-  KMP_DEBUG_ASSERT(gtid >= 0);
-  return __kmp_threads[gtid];
-}
-
-static inline kmp_team_t *__kmp_team_from_gtid(int gtid) {
-  KMP_DEBUG_ASSERT(gtid >= 0);
-  return __kmp_threads[gtid]->th.th_team;
-}
-
 /* ------------------------------------------------------------------------- */
 
 extern kmp_global_t __kmp_global; /* global status */

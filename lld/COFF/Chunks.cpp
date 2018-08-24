@@ -58,8 +58,7 @@ static bool checkSecRel(const SectionChunk *Sec, OutputSection *OS) {
     return true;
   if (Sec->isCodeView())
     return false;
-  error("SECREL relocation cannot be applied to absolute symbols");
-  return false;
+  fatal("SECREL relocation cannot be applied to absolute symbols");
 }
 
 static void applySecRel(const SectionChunk *Sec, uint8_t *Off,
@@ -99,7 +98,7 @@ void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_AMD64_SECTION:  applySecIdx(Off, OS); break;
   case IMAGE_REL_AMD64_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
-    error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
   }
 }
@@ -114,7 +113,7 @@ void SectionChunk::applyRelX86(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_I386_SECTION:  applySecIdx(Off, OS); break;
   case IMAGE_REL_I386_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
-    error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
   }
 }
@@ -142,7 +141,7 @@ void applyMOV32T(uint8_t *Off, uint32_t V) {
 
 static void applyBranch20T(uint8_t *Off, int32_t V) {
   if (!isInt<21>(V))
-    error("relocation out of range");
+    fatal("relocation out of range");
   uint32_t S = V < 0 ? 1 : 0;
   uint32_t J1 = (V >> 19) & 1;
   uint32_t J2 = (V >> 18) & 1;
@@ -152,7 +151,7 @@ static void applyBranch20T(uint8_t *Off, int32_t V) {
 
 void applyBranch24T(uint8_t *Off, int32_t V) {
   if (!isInt<25>(V))
-    error("relocation out of range");
+    fatal("relocation out of range");
   uint32_t S = V < 0 ? 1 : 0;
   uint32_t J1 = ((~V >> 23) & 1) ^ S;
   uint32_t J2 = ((~V >> 22) & 1) ^ S;
@@ -177,7 +176,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM_SECTION:   applySecIdx(Off, OS); break;
   case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, OS, S); break;
   default:
-    error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
   }
 }
@@ -222,7 +221,7 @@ static void applyArm64Ldr(uint8_t *Off, uint64_t Imm) {
   if ((Orig & 0x4800000) == 0x4800000)
     Size += 4;
   if ((Imm & ((1 << Size) - 1)) != 0)
-    error("misaligned ldr/str offset");
+    fatal("misaligned ldr/str offset");
   applyArm64Imm(Off, Imm >> Size, Size);
 }
 
@@ -253,19 +252,19 @@ static void applySecRelLdr(const SectionChunk *Sec, uint8_t *Off,
 
 static void applyArm64Branch26(uint8_t *Off, int64_t V) {
   if (!isInt<28>(V))
-    error("relocation out of range");
+    fatal("relocation out of range");
   or32(Off, (V & 0x0FFFFFFC) >> 2);
 }
 
 static void applyArm64Branch19(uint8_t *Off, int64_t V) {
   if (!isInt<21>(V))
-    error("relocation out of range");
+    fatal("relocation out of range");
   or32(Off, (V & 0x001FFFFC) << 3);
 }
 
 static void applyArm64Branch14(uint8_t *Off, int64_t V) {
   if (!isInt<16>(V))
-    error("relocation out of range");
+    fatal("relocation out of range");
   or32(Off, (V & 0x0000FFFC) << 3);
 }
 
@@ -288,7 +287,7 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECTION:        applySecIdx(Off, OS); break;
   default:
-    error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
   }
 }
@@ -308,13 +307,14 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     // we don't have the relocation size, which is only known after checking the
     // machine and relocation type. As a result, a relocation may overwrite the
     // beginning of the following input section.
-    if (Rel.VirtualAddress >= InputSize) {
-      error("relocation points beyond the end of its parent section");
-      continue;
-    }
+    if (Rel.VirtualAddress >= InputSize)
+      fatal("relocation points beyond the end of its parent section");
 
     uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
 
+    // Get the output section of the symbol for this relocation.  The output
+    // section is needed to compute SECREL and SECTION relocations used in debug
+    // info.
     auto *Sym =
         dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
     if (!Sym) {
@@ -326,12 +326,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
           check(File->getCOFFObj()->getSymbol(Rel.SymbolTableIndex));
       StringRef Name;
       File->getCOFFObj()->getSymbolName(Sym, Name);
-      error("relocation against symbol in discarded section: " + Name);
-      continue;
+      fatal("relocation against symbol in discarded section: " + Name);
     }
-    // Get the output section of the symbol for this relocation.  The output
-    // section is needed to compute SECREL and SECTION relocations used in debug
-    // info.
     Chunk *C = Sym->getChunk();
     OutputSection *OS = C ? C->getOutputSection() : nullptr;
 
@@ -343,9 +339,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     if (!OS && !isa<DefinedAbsolute>(Sym) && !isa<DefinedSynthetic>(Sym)) {
       if (isCodeView() || isDWARF())
         continue;
-      error("relocation against symbol in discarded section: " +
+      fatal("relocation against symbol in discarded section: " +
             Sym->getName());
-      continue;
     }
     uint64_t S = Sym->getRVA();
 

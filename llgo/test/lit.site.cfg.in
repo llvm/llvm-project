@@ -1,4 +1,0 @@
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-
-lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

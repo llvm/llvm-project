@@ -93,11 +93,7 @@ bool ICF::isEligible(SectionChunk *C) {
     return true;
 
   // So are vtables.
-  if (C->Sym && C->Sym->getName().startswith("??_7"))
-    return true;
-
-  // Anything else not in an address-significance table is eligible.
-  return !C->KeepUnique;
+  return C->Sym && C->Sym->getName().startswith("??_7");
 }
 
 // Split an equivalence class into smaller classes.

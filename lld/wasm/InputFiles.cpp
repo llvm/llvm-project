@@ -159,39 +159,6 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   }
 }
 
-template <class T>
-static void setRelocs(const std::vector<T *> &Chunks,
-                      const WasmSection *Section) {
-  if (!Section)
-    return;
-
-  ArrayRef<WasmRelocation> Relocs = Section->Relocations;
-  assert(std::is_sorted(
-      Relocs.begin(), Relocs.end(),
-      [](const WasmRelocation &R1, const WasmRelocation &R2) {
-        return R1.Offset < R2.Offset;
-      }));
-  assert(std::is_sorted(
-      Chunks.begin(), Chunks.end(),
-      [](InputChunk *C1, InputChunk *C2) {
-        return C1->getInputSectionOffset() < C2->getInputSectionOffset();
-      }));
-
-  auto RelocsNext = Relocs.begin();
-  auto RelocsEnd = Relocs.end();
-  auto RelocLess = [](const WasmRelocation &R, uint32_t Val) {
-    return R.Offset < Val;
-  };
-  for (InputChunk *C : Chunks) {
-    auto RelocsStart = std::lower_bound(RelocsNext, RelocsEnd,
-                                        C->getInputSectionOffset(), RelocLess);
-    RelocsNext = std::lower_bound(RelocsStart, RelocsEnd,
-                                  C->getInputSectionOffset() + C->getInputSize(),
-                                  RelocLess);
-    C->setRelocations(ArrayRef<WasmRelocation>(RelocsStart, RelocsNext));
-  }
-}
-
 void ObjFile::parse() {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
@@ -233,7 +200,7 @@ void ObjFile::parse() {
       DataSection = &Section;
     } else if (Section.Type == WASM_SEC_CUSTOM) {
       CustomSections.emplace_back(make<InputSection>(Section, this));
-      CustomSections.back()->setRelocations(Section.Relocations);
+      CustomSections.back()->copyRelocations(Section);
       CustomSectionsByIndex[SectionIndex] = CustomSections.back();
     }
     SectionIndex++;
@@ -248,9 +215,11 @@ void ObjFile::parse() {
     UsedComdats[I] = Symtab->addComdat(Comdats[I]);
 
   // Populate `Segments`.
-  for (const WasmSegment &S : WasmObj->dataSegments())
-    Segments.emplace_back(make<InputSegment>(S, this));
-  setRelocs(Segments, DataSection);
+  for (const WasmSegment &S : WasmObj->dataSegments()) {
+    InputSegment *Seg = make<InputSegment>(S, this);
+    Seg->copyRelocations(*DataSection);
+    Segments.emplace_back(Seg);
+  }
 
   // Populate `Functions`.
   ArrayRef<WasmFunction> Funcs = WasmObj->functions();
@@ -258,9 +227,12 @@ void ObjFile::parse() {
   ArrayRef<WasmSignature> Types = WasmObj->types();
   Functions.reserve(Funcs.size());
 
-  for (size_t I = 0, E = Funcs.size(); I != E; ++I)
-    Functions.emplace_back(make<InputFunction>(Types[FuncTypes[I]], &Funcs[I], this));
-  setRelocs(Functions, CodeSection);
+  for (size_t I = 0, E = Funcs.size(); I != E; ++I) {
+    InputFunction *F =
+        make<InputFunction>(Types[FuncTypes[I]], &Funcs[I], this);
+    F->copyRelocations(*CodeSection);
+    Functions.emplace_back(F);
+  }
 
   // Populate `Globals`.
   for (const WasmGlobal &G : WasmObj->globals())

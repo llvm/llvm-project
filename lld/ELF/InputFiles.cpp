@@ -125,7 +125,11 @@ std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   Dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
-  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
+  const DWARFObject &Obj = Dwarf->getDWARFObj();
+  DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
+                              Config->Wordsize);
+
+  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units()) {
     auto Report = [](Error Err) {
       handleAllErrors(std::move(Err),
                       [](ErrorInfoBase &Info) { warn(Info.message()); });
@@ -438,10 +442,6 @@ void ObjFile<ELFT>::initializeSections(
       bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       this->Sections[I] = &InputSection::Discarded;
 
-      // We only support GRP_COMDAT type of group. Get the all entries of the
-      // section here to let getShtGroupEntries to check the type early for us.
-      ArrayRef<Elf_Word> Entries = getShtGroupEntries(Sec);
-
       // If it is a new section group, we want to keep group members.
       // Group leader sections, which contain indices of group members, are
       // discarded because they are useless beyond this point. The only
@@ -454,7 +454,7 @@ void ObjFile<ELFT>::initializeSections(
       }
 
       // Otherwise, discard group members.
-      for (uint32_t SecIndex : Entries) {
+      for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           fatal(toString(this) +
                 ": invalid section index in group: " + Twine(SecIndex));
@@ -940,7 +940,8 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
     unsigned VerdefIndex = CurVerdef->vd_ndx;
-    Verdefs.resize(VerdefIndex + 1);
+    if (Verdefs.size() <= VerdefIndex)
+      Verdefs.resize(VerdefIndex + 1);
     Verdefs[VerdefIndex] = CurVerdef;
   }
 
@@ -1261,11 +1262,25 @@ template <class ELFT> void LazyObjFile::parse() {
     return;
   }
 
-  if (getELFKind(this->MB) != Config->EKind) {
-    error("incompatible file: " + this->MB.getBufferIdentifier());
+  switch (getELFKind(this->MB)) {
+  case ELF32LEKind:
+    addElfSymbols<ELF32LE>();
     return;
+  case ELF32BEKind:
+    addElfSymbols<ELF32BE>();
+    return;
+  case ELF64LEKind:
+    addElfSymbols<ELF64LE>();
+    return;
+  case ELF64BEKind:
+    addElfSymbols<ELF64BE>();
+    return;
+  default:
+    llvm_unreachable("getELFKind");
   }
+}
 
+template <class ELFT> void LazyObjFile::addElfSymbols() {
   ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(MB.getBuffer()));
   ArrayRef<typename ELFT::Shdr> Sections = CHECK(Obj.sections(), this);
 
@@ -1290,9 +1305,12 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
   StringRef Suffix = Config->ThinLTOObjectSuffixReplace.first;
   StringRef Repl = Config->ThinLTOObjectSuffixReplace.second;
 
-  if (Path.consume_back(Suffix))
-    return (Path + Repl).str();
-  return Path;
+  if (!Path.endswith(Suffix)) {
+    error("-thinlto-object-suffix-replace=" + Suffix + ";" + Repl +
+          " was given, but " + Path + " does not end with the suffix");
+    return "";
+  }
+  return (Path.drop_back(Suffix.size()) + Repl).str();
 }
 
 template void ArchiveFile::parse<ELF32LE>();
