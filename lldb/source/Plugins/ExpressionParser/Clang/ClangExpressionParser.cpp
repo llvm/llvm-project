@@ -269,7 +269,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
                                              Expression &expr,
                                              bool generate_debug_info)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
-      m_selector_table(), m_code_generator(),
+      m_code_generator(),
       m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
