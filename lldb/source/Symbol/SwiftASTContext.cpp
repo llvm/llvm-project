@@ -1304,9 +1304,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   if (log)
     log->Printf("SwiftASTContext::CreateInstance(Target)");
-  
-  if (!arch.IsValid())
+
+  auto logError = [&](const char *message) {
+    if (log)
+      log->Printf("((Target*)%p)->GetSwiftASTContext() returning NULL - %s",
+                  &target, message);
+  };
+
+  if (!arch.IsValid()) {
+    logError("invalid target architecture");
     return TypeSystemSP();
+  }
 
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
@@ -1632,12 +1640,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // This needs to happen once all the import paths are set, or otherwise no
   // modules will be found.
   if (!swift_ast_sp->GetClangImporter()) {
-    if (log) {
-      log->Printf("((Target*)%p)->GetSwiftASTContext() returning NULL - "
-                  "couldn't create a ClangImporter",
-                  &target);
-    }
-
+    logError("couldn't create a ClangImporter");
     return TypeSystemSP();
   }
 
@@ -1648,18 +1651,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   if (swift_ast_sp->HasFatalErrors()) {
+    const char *errors = swift_ast_sp->GetFatalErrors().AsCString();
     swift_ast_sp->m_error.SetErrorStringWithFormat(
-        "Error creating target Swift AST context: %s",
-        swift_ast_sp->GetFatalErrors().AsCString());
+        "Error creating target Swift AST context: %s", errors);
+    logError(errors);
     return lldb::TypeSystemSP();
   }
 
-  {
-    const bool can_create = true;
-    if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
-      // We need to be able to load the standard library!
-      return lldb::TypeSystemSP();
-    }
+  const bool can_create = true;
+  if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
+    logError("couldn't load the Swift stdlib");
+    return lldb::TypeSystemSP();
   }
 
   return swift_ast_sp;
