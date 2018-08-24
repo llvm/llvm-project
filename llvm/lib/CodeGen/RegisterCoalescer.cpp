@@ -1131,6 +1131,20 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     assert(BValNo && "All sublanes should be live");
     LIS->pruneValue(SR, CopyIdx.getRegSlot(), &EndPoints);
     BValNo->markUnused();
+    // We can have a situation where the result of the original copy is live,
+    // but is immediately dead in this subrange, e.g. [336r,336d:0). That makes
+    // the copy appear as an endpoint from pruneValue(), but we don't want it
+    // to because the copy has been removed.  We can go ahead and remove that
+    // endpoint; there is no other situation here that there could be a use at
+    // the same place as we know that the copy is a full copy.
+    for (unsigned I = 0; I != EndPoints.size(); ) {
+      if (SlotIndex::isSameInstr(EndPoints[I], CopyIdx)) {
+        EndPoints[I] = EndPoints.back();
+        EndPoints.pop_back();
+        continue;
+      }
+      ++I;
+    }
     LIS->extendToIndices(SR, EndPoints);
   }
   // If any dead defs were extended, truncate them.

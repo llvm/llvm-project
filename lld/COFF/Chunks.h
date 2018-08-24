@@ -114,6 +114,10 @@ protected:
 public:
   // The offset from beginning of the output section. The writer sets a value.
   uint64_t OutputSectionOff = 0;
+
+  // Whether this section needs to be kept distinct from other sections during
+  // ICF. This is set by the driver using address-significance tables.
+  bool KeepUnique = false;
 };
 
 // A chunk corresponding a section of an input file.

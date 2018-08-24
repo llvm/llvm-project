@@ -2215,7 +2215,7 @@ static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
                                 const APInt *&CLow, const APInt *&CHigh) {
   assert(isa<Operator>(Select) &&
          cast<Operator>(Select)->getOpcode() == Instruction::Select &&
-         "Input should be a SelectInst!");
+         "Input should be a Select!");
 
   const Value *LHS, *RHS, *LHS2, *RHS2;
   SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;

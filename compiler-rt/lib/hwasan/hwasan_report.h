@@ -27,6 +27,7 @@ void ReportInvalidAccessInsideAddressRange(const char *what, const void *start,
                                            uptr size, uptr offset);
 void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
                        bool is_store);
+void ReportInvalidFree(StackTrace *stack, uptr addr);
 
 void ReportAtExitStatistics();
 

@@ -36,7 +36,7 @@ Treat source input files as Objective-C inputs
 
 Treat source input files as Objective-C++ inputs
 
-.. option:: -Qn
+.. option:: -Qn, -fno-ident
 
 Do not emit metadata containing compiler name and version
 
@@ -44,7 +44,7 @@ Do not emit metadata containing compiler name and version
 
 Don't emit warning for unused driver arguments
 
-.. option:: -Qy
+.. option:: -Qy, -fident
 
 Emit metadata containing compiler name and version
 
@@ -214,9 +214,13 @@ Flush denormal floating point values to zero in CUDA device mode.
 
 Generate relocatable device code, also known as separate compilation mode.
 
+.. option:: -fcuda-short-ptr, -fno-cuda-short-ptr
+
+Use 32-bit pointers for accessing const/local/shared address spaces.
+
 .. option:: -ffixed-r19
 
-Reserve the r19 register (Hexagon only)
+Reserve register r19 (Hexagon only)
 
 .. option:: -fheinous-gnu-extensions
 
@@ -259,6 +263,10 @@ Display available options
 .. option:: --help-hidden
 
 Display help for hidden options
+
+.. option:: --hip-link
+
+Link clang-offload-bundler bundles for HIP
 
 .. option:: -image\_base <arg>
 
@@ -452,6 +460,10 @@ Use pipes between commands, when possible
 
 .. option:: --print-diagnostic-categories
 
+.. option:: -print-effective-triple, --print-effective-triple
+
+Print the effective target triple
+
 .. option:: -print-file-name=<file>, --print-file-name=<file>, --print-file-name <arg>
 
 Print the full library path of <file>
@@ -479,6 +491,10 @@ Print the resource directory pathname
 .. option:: -print-search-dirs, --print-search-dirs
 
 Print the paths used for finding libraries and programs
+
+.. option:: -print-target-triple, --print-target-triple
+
+Print the normalized target triple
 
 .. option:: -private\_bundle
 
@@ -558,6 +574,8 @@ Serialize compiler diagnostics to a file
 
 .. option:: -shared-libsan, -shared-libasan
 
+Dynamically link the sanitizer runtime
+
 .. option:: -single\_module
 
 .. option:: -specs=<arg>, --specs=<arg>
@@ -567,6 +585,8 @@ Serialize compiler diagnostics to a file
 .. option:: -static-libgcc
 
 .. option:: -static-libsan
+
+Statically link the sanitizer runtime
 
 .. option:: -static-libstdc++
 
@@ -712,6 +732,12 @@ Attempt to match the ABI of Clang <version>
 
 Treat each comma separated argument in <arg> as a documentation comment block command
 
+.. option:: -fcomplete-member-pointers, -fno-complete-member-pointers
+
+Require member pointer base types to be complete if they would be significant under the Microsoft ABI
+
+.. option:: -fcrash-diagnostics-dir=<arg>
+
 .. option:: -fdeclspec, -fno-declspec
 
 Allow \_\_declspec as a keyword
@@ -746,7 +772,7 @@ Enables an experimental new pass manager in LLVM.
 
 .. option:: -ffine-grained-bitfield-accesses, -fno-fine-grained-bitfield-accesses
 
-Use separate accesses for bitfields with legal widths and alignments.
+Use separate accesses for consecutive bitfield runs with legal widths and alignments.
 
 .. option:: -finline-functions, -fno-inline-functions
 
@@ -853,6 +879,10 @@ Strip (or keep only, if negative) a given number of path components when emittin
 .. option:: -fsanitize=<check>,<arg2>..., -fno-sanitize=<arg1>,<arg2>...
 
 Turn on runtime checks for various forms of undefined or suspicious behavior. See user manual for available checks
+
+.. option:: -moutline, -mno-outline
+
+Enable function outlining (AArch64 only)
 
 .. option:: --param <arg>, --param=<arg>
 
@@ -1151,6 +1181,10 @@ Target-independent compilation options
 
 .. option:: -faccess-control, -fno-access-control
 
+.. option:: -faddrsig, -fno-addrsig
+
+Emit an address-significance table
+
 .. option:: -falign-functions, -fno-align-functions
 
 .. program:: clang1
@@ -1223,11 +1257,19 @@ Accept non-standard constructs supported by the Borland compiler
 
 Load the clang builtins module map file.
 
+.. option:: -fc++-static-destructors, -fno-c++-static-destructors
+
+Enable C++ static destructor registration (the default)
+
 .. option:: -fcaret-diagnostics, -fno-caret-diagnostics
 
 .. option:: -fcf-protection=<arg>, -fcf-protection (equivalent to -fcf-protection=full)
 
 Instrument control-flow architecture protection. Options: return, branch, full, none.
+
+.. option:: -fchar8\_t, -fno-char8\_t
+
+Enable C++ builtin type char8\_t
 
 .. option:: -fclasspath=<arg>, --CLASSPATH <arg>, --CLASSPATH=<arg>, --classpath <arg>, --classpath=<arg>
 
@@ -1293,6 +1335,10 @@ Place debug types in their own section (ELF Only)
 
 Parse templated function definitions at the end of the translation unit
 
+.. option:: -fdelete-null-pointer-checks, -fno-delete-null-pointer-checks
+
+Treat usage of null pointers as undefined behavior.
+
 .. option:: -fdenormal-fp-math=<arg>
 
 .. option:: -fdiagnostics-absolute-paths
@@ -1324,6 +1370,10 @@ Print option name with mappable diagnostics
 .. option:: -fdiagnostics-show-template-tree
 
 Print a template comparison tree for differing templates
+
+.. option:: -fdigraphs, -fno-digraphs
+
+Enable alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:' (default)
 
 .. option:: -fdollars-in-identifiers, -fno-dollars-in-identifiers
 
@@ -1375,7 +1425,15 @@ Allow aggressive, lossy floating-point optimizations
 
 .. option:: -ffinite-math-only, -fno-finite-math-only
 
+.. option:: -ffixed-point, -fno-fixed-point
+
+Enable fixed point types
+
 .. option:: -ffor-scope, -fno-for-scope
+
+.. option:: -fforce-emit-vtables, -fno-force-emit-vtables
+
+Emits more virtual tables to improve devirtualization
 
 .. option:: -fforce-enable-int128, -fno-force-enable-int128
 
@@ -1438,6 +1496,10 @@ Like -finstrument-functions, but insert the calls after inlining
 Enable the integrated assembler
 
 .. option:: -fjump-tables, -fno-jump-tables
+
+.. option:: -fkeep-static-consts
+
+Keep static const variables even if unused
 
 .. option:: -flax-vector-conversions, -fno-lax-vector-conversions
 
@@ -1542,14 +1604,6 @@ Specifies the largest alignment guaranteed by '::operator new(size\_t)'
 .. option:: -fno-builtin-<arg>
 
 Disable implicit builtin knowledge of a specific function
-
-.. option:: -fdelete-null-pointer-checks, -fno-delete-null-pointer-checks
-
-When enabled, treat null pointer dereference, creation of a reference to null,
-or passing a null pointer to a function parameter annotated with the "nonnull"
-attribute as undefined behavior. (And, thus the optimizer may assume that any
-pointer used in such a way must not have been null and optimize away the
-branches accordingly.) On by default.
 
 .. option:: -fno-elide-type
 
@@ -1834,6 +1888,10 @@ Emit full debug info for all types used by the program
 
 Enable optimizations based on the strict definition of an enum's value range
 
+.. option:: -fstrict-float-cast-overflow, -fno-strict-float-cast-overflow
+
+Assume that overflowing float-to-int casts are undefined (default)
+
 .. option:: -fstrict-overflow, -fno-strict-overflow
 
 .. option:: -fstrict-return, -fno-strict-return
@@ -1941,12 +1999,6 @@ Set the default symbol visibility for all global declarations
 .. option:: -fwhole-program-vtables, -fno-whole-program-vtables
 
 Enables whole-program vtable optimization. Requires -flto
-
-.. option:: -fforce-emit-vtables, -fno-force-emit-vtables
-
-In order to improve devirtualization, forces emitting of vtables even in
-modules where it isn't necessary. It causes more inline virtual functions
-to be emitted.
 
 .. option:: -fwrapv, -fno-wrapv
 
@@ -2078,12 +2130,6 @@ Put objects of at most <size> bytes into small data section (MIPS / Hexagon)
 
 .. option:: -mabi=<arg>
 
-.. option:: -mabicalls, -mno-abicalls
-
-Enable SVR4-style position-independent code (Mips only)
-
-.. option:: -mabs=<arg>
-
 .. option:: -malign-double
 
 Align doubles to two words in structs (x86 only)
@@ -2096,25 +2142,19 @@ Align doubles to two words in structs (x86 only)
 
 Link stack frames through backchain on System Z
 
-.. option:: -mcheck-zero-division, -mno-check-zero-division
-
 .. option:: -mcmodel=<arg>
-
-.. option:: -mcompact-branches=<arg>
 
 .. option:: -mconsole<arg>
 
 .. option:: -mcpu=<arg>, -mv4 (equivalent to -mcpu=hexagonv4), -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62), -mv65 (equivalent to -mcpu=hexagonv65)
 
+.. option:: -mcrc, -mno-crc
+
+Allow use of CRC instructions (ARM/Mips only)
+
 .. option:: -mdefault-build-attributes<arg>, -mno-default-build-attributes<arg>
 
 .. option:: -mdll<arg>
-
-.. option:: -mdouble-float
-
-.. option:: -mdsp, -mno-dsp
-
-.. option:: -mdspr2, -mno-dspr2
 
 .. option:: -mdynamic-no-pic<arg>
 
@@ -2122,27 +2162,11 @@ Link stack frames through backchain on System Z
 
 Set EABI type, e.g. 4, 5 or gnu (default depends on triple)
 
-.. option:: -membedded-data, -mno-embedded-data
-
-Place constants in the .rodata section instead of the .sdata section even if they meet the -G <size> threshold (MIPS)
-
-.. option:: -mextern-sdata, -mno-extern-sdata
-
-Assume that externally defined data is in the small data if it meets the -G <size> threshold (MIPS)
-
 .. option:: -mfentry
 
 Insert calls to fentry at function entry (x86 only)
 
 .. option:: -mfloat-abi=<arg>
-
-.. option:: -mfp32
-
-Use 32-bit floating point registers (MIPS only)
-
-.. option:: -mfp64
-
-Use 64-bit floating point registers (MIPS only)
 
 .. option:: -mfpmath=<arg>
 
@@ -2151,10 +2175,6 @@ Use 64-bit floating point registers (MIPS only)
 .. option:: -mglobal-merge, -mno-global-merge
 
 Enable merging of globals
-
-.. option:: -mgpopt, -mno-gpopt
-
-Use GP relative accesses for symbols known to be in a small data section (MIPS)
 
 .. option:: -mhard-float
 
@@ -2172,21 +2192,9 @@ Use Intel MCU ABI
 
 (integrated-as) Emit an object file which can be used with an incremental linker
 
-.. option:: -mindirect-jump=<arg>
-
-Change indirect jump instructions to inhibit speculation
-
 .. option:: -miphoneos-version-min=<arg>, -mios-version-min=<arg>
 
-.. option:: -mips16
-
 .. option:: -mkernel
-
-.. option:: -mldc1-sdc1, -mno-ldc1-sdc1
-
-.. option:: -mlocal-sdata, -mno-local-sdata
-
-Extend the -G behaviour to object local data (MIPS)
 
 .. option:: -mlong-calls, -mno-long-calls
 
@@ -2196,29 +2204,11 @@ Generate branches with extended addressability, usually via indirect jumps.
 
 Set Mac OS X deployment target
 
-.. option:: -mmadd4, -mno-madd4
-
-Enable the generation of 4-operand madd.s, madd.d and related instructions.
-
 .. option:: -mmcu=<arg>
-
-.. option:: -mmicromips, -mno-micromips
 
 .. option:: -mms-bitfields, -mno-ms-bitfields
 
 Set the default structure layout to be compatible with the Microsoft compiler standard
-
-.. option:: -mmsa, -mno-msa
-
-Enable MSA ASE (MIPS only)
-
-.. option:: -mmt, -mno-mt
-
-Enable MT ASE (MIPS only)
-
-.. option:: -mnan=<arg>
-
-.. option:: -mno-mips16
 
 .. option:: -momit-leaf-frame-pointer, -mno-omit-leaf-frame-pointer
 
@@ -2252,11 +2242,15 @@ Enable hexagon-qdsp6 backward compatibility
 
 (integrated-as) Relax all machine instructions
 
+.. option:: -mretpoline, -mno-retpoline
+
 .. option:: -mrtd, -mno-rtd
 
 Make StdCall calling convention the default
 
-.. option:: -msingle-float
+.. option:: -msign-return-address=<arg>
+
+Select return address signing scope
 
 .. option:: -msoft-float, -mno-soft-float
 
@@ -2302,8 +2296,6 @@ The thread model to use, e.g. posix, single (posix by default)
 
 .. option:: -mx32
 
-.. option:: -mxgot, -mno-xgot
-
 AARCH64
 -------
 .. option:: -ffixed-x18
@@ -2333,10 +2325,6 @@ ARM
 .. option:: -ffixed-r9
 
 Reserve the r9 register (ARM only)
-
-.. option:: -mcrc
-
-Allow use of CRC instructions (ARM only)
 
 .. option:: -mexecute-only, -mno-execute-only, -mpure-code
 
@@ -2370,6 +2358,18 @@ Hexagon
 -------
 .. option:: -mieee-rnd-near
 
+.. option:: -mmemops, -mno-memops
+
+Enable generation of memop instructions
+
+.. option:: -mnvj, -mno-nvj
+
+Enable generation of new-value jumps
+
+.. option:: -mnvs, -mno-nvs
+
+Enable generation of new-value stores
+
 .. option:: -mpackets, -mno-packets
 
 Enable generation of instruction packets
@@ -2389,6 +2389,82 @@ Set Hexagon Vector Length
 .. program:: clang
 
 Enable Hexagon Vector eXtensions
+
+MIPS
+----
+.. option:: -mabicalls, -mno-abicalls
+
+Enable SVR4-style position-independent code (Mips only)
+
+.. option:: -mabs=<arg>
+
+.. option:: -mcheck-zero-division, -mno-check-zero-division
+
+.. option:: -mcompact-branches=<arg>
+
+.. option:: -mdouble-float
+
+.. option:: -mdsp, -mno-dsp
+
+.. option:: -mdspr2, -mno-dspr2
+
+.. option:: -membedded-data, -mno-embedded-data
+
+Place constants in the .rodata section instead of the .sdata section even if they meet the -G <size> threshold (MIPS)
+
+.. option:: -mextern-sdata, -mno-extern-sdata
+
+Assume that externally defined data is in the small data if it meets the -G <size> threshold (MIPS)
+
+.. option:: -mfp32
+
+Use 32-bit floating point registers (MIPS only)
+
+.. option:: -mfp64
+
+Use 64-bit floating point registers (MIPS only)
+
+.. option:: -mginv, -mno-ginv
+
+.. option:: -mgpopt, -mno-gpopt
+
+Use GP relative accesses for symbols known to be in a small data section (MIPS)
+
+.. option:: -mindirect-jump=<arg>
+
+Change indirect jump instructions to inhibit speculation
+
+.. option:: -mips16
+
+.. option:: -mldc1-sdc1, -mno-ldc1-sdc1
+
+.. option:: -mlocal-sdata, -mno-local-sdata
+
+Extend the -G behaviour to object local data (MIPS)
+
+.. option:: -mmadd4, -mno-madd4
+
+Enable the generation of 4-operand madd.s, madd.d and related instructions.
+
+.. option:: -mmicromips, -mno-micromips
+
+.. option:: -mmsa, -mno-msa
+
+Enable MSA ASE (MIPS only)
+
+.. option:: -mmt, -mno-mt
+
+Enable MT ASE (MIPS only)
+
+.. option:: -mnan=<arg>
+
+.. option:: -mno-mips16
+
+.. option:: -msingle-float
+
+.. option:: -mvirt, -mno-virt
+
+.. option:: -mxgot, -mno-xgot
 
 PowerPC
 -------
@@ -2504,6 +2580,8 @@ X86
 
 .. option:: -mgfni, -mno-gfni
 
+.. option:: -minvpcid, -mno-invpcid
+
 .. option:: -mlwp, -mno-lwp
 
 .. option:: -mlzcnt, -mno-lzcnt
@@ -2512,15 +2590,17 @@ X86
 
 .. option:: -mmovbe, -mno-movbe
 
-.. option:: -mmovdiri, -mno-movdiri
-
 .. option:: -mmovdir64b, -mno-movdir64b
+
+.. option:: -mmovdiri, -mno-movdiri
 
 .. option:: -mmpx, -mno-mpx
 
 .. option:: -mmwaitx, -mno-mwaitx
 
 .. option:: -mpclmul, -mno-pclmul
+
+.. option:: -mpconfig, -mno-pconfig
 
 .. option:: -mpku, -mno-pku
 
@@ -2530,13 +2610,13 @@ X86
 
 .. option:: -mprfchw, -mno-prfchw
 
+.. option:: -mptwrite, -mno-ptwrite
+
 .. option:: -mrdpid, -mno-rdpid
 
 .. option:: -mrdrnd, -mno-rdrnd
 
 .. option:: -mrdseed, -mno-rdseed
-
-.. option:: -mretpoline, -mno-retpoline
 
 .. option:: -mretpoline-external-thunk, -mno-retpoline-external-thunk
 
@@ -2587,6 +2667,12 @@ X86
 .. option:: -mxsaveopt, -mno-xsaveopt
 
 .. option:: -mxsaves, -mno-xsaves
+
+RISCV
+-----
+.. option:: -mrelax, -mno-relax
+
+Enable linker relaxation
 
 Optimization level
 ~~~~~~~~~~~~~~~~~~
@@ -2671,7 +2757,9 @@ Debug information flags
 
 Embed source text in DWARF debug sections
 
-.. option:: -ggnu-pubnames
+.. option:: -ggnu-pubnames, -gno-gnu-pubnames
+
+.. option:: -gpubnames, -gno-pubnames
 
 .. option:: -grecord-gcc-switches, -gno-record-gcc-switches
 
@@ -2885,6 +2973,14 @@ Pass <arg> to the linker
 .. option:: -e<arg>, --entry
 
 .. option:: -filelist <arg>
+
+.. option:: --hip-device-lib-path=<arg>
+
+HIP device library path
+
+.. option:: --hip-device-lib=<arg>
+
+HIP device library
 
 .. option:: -l<arg>
 

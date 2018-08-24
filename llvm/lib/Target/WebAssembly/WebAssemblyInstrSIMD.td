@@ -85,6 +85,8 @@ def splat16 : PatFrag<(ops node:$x), (build_vector
                         node:$x, node:$x, node:$x, node:$x)>;
 multiclass Splat<ValueType vec_t, string vec, WebAssemblyRegClass reg_t,
                  PatFrag splat_pat, bits<32> simdop> {
+  // Prefer splats over v128.const for const splats (65 is lowest that works)
+  let AddedComplexity = 65 in
   defm SPLAT_#vec_t : SIMD_I<(outs V128:$dst), (ins reg_t:$x), (outs), (ins),
                              [(set (vec_t V128:$dst), (splat_pat reg_t:$x))],
                              vec#".splat\t$dst, $x", vec#".splat", simdop>;

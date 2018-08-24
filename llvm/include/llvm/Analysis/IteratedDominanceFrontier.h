@@ -50,7 +50,7 @@ class IDFCalculator {
        : DT(DT), GD(nullptr), useLiveIn(false) {}
 
    IDFCalculator(DominatorTreeBase<BasicBlock, IsPostDom> &DT,
-                 GraphDiff<BasicBlock *, IsPostDom> *GD)
+                 const GraphDiff<BasicBlock *, IsPostDom> *GD)
        : DT(DT), GD(GD), useLiveIn(false) {}
 
    /// Give the IDF calculator the set of blocks in which the value is

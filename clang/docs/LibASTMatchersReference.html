@@ -4668,6 +4668,20 @@ with withInitializer matching (1)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXDependentScopeMemberExpr.html">CXXDependentScopeMemberExpr</a>&gt;</td><td class="name" onclick="toggle('hasObjectExpression2')"><a name="hasObjectExpression2Anchor">hasObjectExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasObjectExpression2"><pre>Matches a member expression where the object expression is
+matched by a given matcher.
+
+Given
+  struct X { int m; };
+  void f(X x) { x.m; m; }
+memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))))
+  matches "x.m" and "m"
+with hasObjectExpression(...)
+  matching "x" and the implicit object expression of "m" which has type X*.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody3')"><a name="hasBody3Anchor">hasBody</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'do while' statement or a function
 definition that has a given body.
@@ -6689,6 +6703,20 @@ unaryExprOrTypeTraitExpr(hasArgumentOfType(asString("int"))
 Example matches true (matcher = hasUnaryOperand(
                                   cxxBoolLiteral(equals(true))))
   !true
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedMemberExpr.html">UnresolvedMemberExpr</a>&gt;</td><td class="name" onclick="toggle('hasObjectExpression1')"><a name="hasObjectExpression1Anchor">hasObjectExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasObjectExpression1"><pre>Matches a member expression where the object expression is
+matched by a given matcher.
+
+Given
+  struct X { int m; };
+  void f(X x) { x.m; m; }
+memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))))
+  matches "x.m" and "m"
+with hasObjectExpression(...)
+  matching "x" and the implicit object expression of "m" which has type X*.
 </pre></td></tr>
 
 

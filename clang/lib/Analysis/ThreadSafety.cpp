@@ -422,7 +422,7 @@ private:
   Context::Factory ContextFactory;
   std::vector<VarDefinition> VarDefinitions;
   std::vector<unsigned> CtxIndices;
-  std::vector<std::pair<Stmt *, Context>> SavedContexts;
+  std::vector<std::pair<const Stmt *, Context>> SavedContexts;
 
 public:
   LocalVariableMap() {
@@ -463,7 +463,7 @@ public:
   /// Return the next context after processing S.  This function is used by
   /// clients of the class to get the appropriate context when traversing the
   /// CFG.  It must be called for every assignment or DeclStmt.
-  Context getNextContext(unsigned &CtxIndex, Stmt *S, Context C) {
+  Context getNextContext(unsigned &CtxIndex, const Stmt *S, Context C) {
     if (SavedContexts[CtxIndex+1].first == S) {
       CtxIndex++;
       Context Result = SavedContexts[CtxIndex].second;
@@ -525,7 +525,7 @@ protected:
   unsigned getContextIndex() { return SavedContexts.size()-1; }
 
   // Save the current context for later replay
-  void saveContext(Stmt *S, Context C) {
+  void saveContext(const Stmt *S, Context C) {
     SavedContexts.push_back(std::make_pair(S, C));
   }
 
@@ -595,7 +595,7 @@ CFGBlockInfo CFGBlockInfo::getEmptyBlockInfo(LocalVariableMap &M) {
 namespace {
 
 /// Visitor which builds a LocalVariableMap
-class VarMapBuilder : public StmtVisitor<VarMapBuilder> {
+class VarMapBuilder : public ConstStmtVisitor<VarMapBuilder> {
 public:
   LocalVariableMap* VMap;
   LocalVariableMap::Context Ctx;
@@ -603,16 +603,16 @@ public:
   VarMapBuilder(LocalVariableMap *VM, LocalVariableMap::Context C)
       : VMap(VM), Ctx(C) {}
 
-  void VisitDeclStmt(DeclStmt *S);
-  void VisitBinaryOperator(BinaryOperator *BO);
+  void VisitDeclStmt(const DeclStmt *S);
+  void VisitBinaryOperator(const BinaryOperator *BO);
 };
 
 } // namespace
 
 // Add new local variables to the variable map
-void VarMapBuilder::VisitDeclStmt(DeclStmt *S) {
+void VarMapBuilder::VisitDeclStmt(const DeclStmt *S) {
   bool modifiedCtx = false;
-  DeclGroupRef DGrp = S->getDeclGroup();
+  const DeclGroupRef DGrp = S->getDeclGroup();
   for (const auto *D : DGrp) {
     if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
       const Expr *E = VD->getInit();
@@ -630,7 +630,7 @@ void VarMapBuilder::VisitDeclStmt(DeclStmt *S) {
 }
 
 // Update local variable definitions in variable map
-void VarMapBuilder::VisitBinaryOperator(BinaryOperator *BO) {
+void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
 
@@ -783,7 +783,7 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
       switch (BI.getKind()) {
         case CFGElement::Statement: {
           CFGStmt CS = BI.castAs<CFGStmt>();
-          VMapBuilder.Visit(const_cast<Stmt *>(CS.getStmt()));
+          VMapBuilder.Visit(CS.getStmt());
           break;
         }
         default:
@@ -929,9 +929,9 @@ public:
       CapabilityExpr UnderCp(UnderlyingMutex, false);
 
       // We're relocking the underlying mutexes. Warn on double locking.
-      if (FSet.findLock(FactMan, UnderCp))
+      if (FSet.findLock(FactMan, UnderCp)) {
         Handler.handleDoubleLock(DiagKind, UnderCp.toString(), entry.loc());
-      else {
+      } else {
         FSet.removeLock(FactMan, !UnderCp);
         FSet.addLock(FactMan, llvm::make_unique<LockableFactEntry>(
                                   UnderCp, entry.kind(), entry.loc()));
@@ -1002,11 +1002,11 @@ public:
                   StringRef DiagKind);
 
   template <typename AttrType>
-  void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, Expr *Exp,
+  void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
                    const NamedDecl *D, VarDecl *SelfDecl = nullptr);
 
   template <class AttrType>
-  void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, Expr *Exp,
+  void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
                    const NamedDecl *D,
                    const CFGBlock *PredBlock, const CFGBlock *CurrBlock,
                    Expr *BrE, bool Neg);
@@ -1315,7 +1315,7 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 /// and push them onto Mtxs, discarding any duplicates.
 template <typename AttrType>
 void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
-                                       Expr *Exp, const NamedDecl *D,
+                                       const Expr *Exp, const NamedDecl *D,
                                        VarDecl *SelfDecl) {
   if (Attr->args_size() == 0) {
     // The mutex held is the "this" object.
@@ -1347,7 +1347,7 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
 /// any duplicates.
 template <class AttrType>
 void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
-                                       Expr *Exp, const NamedDecl *D,
+                                       const Expr *Exp, const NamedDecl *D,
                                        const CFGBlock *PredBlock,
                                        const CFGBlock *CurrBlock,
                                        Expr *BrE, bool Neg) {
@@ -1460,7 +1460,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   const LocalVarContext &LVarCtx = PredBlockInfo->ExitContext;
   StringRef CapDiagKind = "mutex";
 
-  auto *Exp = const_cast<CallExpr *>(getTrylockCallExpr(Cond, LVarCtx, Negate));
+  const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
   if (!Exp)
     return;
 
@@ -1520,7 +1520,7 @@ namespace {
 /// An expression may cause us to add or remove locks from the lockset, or else
 /// output error messages related to missing locks.
 /// FIXME: In future, we may be able to not inherit from a visitor.
-class BuildLockset : public StmtVisitor<BuildLockset> {
+class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   friend class ThreadSafetyAnalyzer;
 
   ThreadSafetyAnalyzer *Analyzer;
@@ -1540,19 +1540,19 @@ class BuildLockset : public StmtVisitor<BuildLockset> {
   void checkPtAccess(const Expr *Exp, AccessKind AK,
                      ProtectedOperationKind POK = POK_VarAccess);
 
-  void handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD = nullptr);
+  void handleCall(const Expr *Exp, const NamedDecl *D, VarDecl *VD = nullptr);
 
 public:
   BuildLockset(ThreadSafetyAnalyzer *Anlzr, CFGBlockInfo &Info)
-      : StmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
+      : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
         LVarCtx(Info.EntryContext), CtxIndex(Info.EntryIndex) {}
 
-  void VisitUnaryOperator(UnaryOperator *UO);
-  void VisitBinaryOperator(BinaryOperator *BO);
-  void VisitCastExpr(CastExpr *CE);
-  void VisitCallExpr(CallExpr *Exp);
-  void VisitCXXConstructExpr(CXXConstructExpr *Exp);
-  void VisitDeclStmt(DeclStmt *S);
+  void VisitUnaryOperator(const UnaryOperator *UO);
+  void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitCastExpr(const CastExpr *CE);
+  void VisitCallExpr(const CallExpr *Exp);
+  void VisitCXXConstructExpr(const CXXConstructExpr *Exp);
+  void VisitDeclStmt(const DeclStmt *S);
 };
 
 } // namespace
@@ -1744,7 +1744,8 @@ void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
 /// and check that the appropriate locks are held. Non-const method calls with
 /// the same signature as const method calls can be also treated as reads.
 ///
-void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
+void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
+                              VarDecl *VD) {
   SourceLocation Loc = Exp->getExprLoc();
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
@@ -1902,7 +1903,7 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
 /// For unary operations which read and write a variable, we need to
 /// check whether we hold any required mutexes. Reads are checked in
 /// VisitCastExpr.
-void BuildLockset::VisitUnaryOperator(UnaryOperator *UO) {
+void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
   switch (UO->getOpcode()) {
     case UO_PostDec:
     case UO_PostInc:
@@ -1918,7 +1919,7 @@ void BuildLockset::VisitUnaryOperator(UnaryOperator *UO) {
 /// For binary operations which assign to a variable (writes), we need to check
 /// whether we hold any required mutexes.
 /// FIXME: Deal with non-primitive types.
-void BuildLockset::VisitBinaryOperator(BinaryOperator *BO) {
+void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
 
@@ -1931,13 +1932,13 @@ void BuildLockset::VisitBinaryOperator(BinaryOperator *BO) {
 /// Whenever we do an LValue to Rvalue cast, we are reading a variable and
 /// need to ensure we hold any required mutexes.
 /// FIXME: Deal with non-primitive types.
-void BuildLockset::VisitCastExpr(CastExpr *CE) {
+void BuildLockset::VisitCastExpr(const CastExpr *CE) {
   if (CE->getCastKind() != CK_LValueToRValue)
     return;
   checkAccess(CE->getSubExpr(), AK_Read);
 }
 
-void BuildLockset::VisitCallExpr(CallExpr *Exp) {
+void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   bool ExamineArgs = true;
   bool OperatorFun = false;
 
@@ -1993,7 +1994,7 @@ void BuildLockset::VisitCallExpr(CallExpr *Exp) {
   }
 
   if (ExamineArgs) {
-    if (FunctionDecl *FD = Exp->getDirectCallee()) {
+    if (const FunctionDecl *FD = Exp->getDirectCallee()) {
       // NO_THREAD_SAFETY_ANALYSIS does double duty here.  Normally it
       // only turns off checking within the body of a function, but we also
       // use it to turn off checking in arguments to the function.  This
@@ -2020,8 +2021,8 @@ void BuildLockset::VisitCallExpr(CallExpr *Exp) {
         unsigned n = (Fn < Cn) ? Fn : Cn;
 
         for (; i < n; ++i) {
-          ParmVarDecl* Pvd = FD->getParamDecl(i);
-          Expr* Arg = Exp->getArg(i+Skip);
+          const ParmVarDecl *Pvd = FD->getParamDecl(i);
+          const Expr *Arg = Exp->getArg(i + Skip);
           QualType Qt = Pvd->getType();
           if (Qt->isReferenceType())
             checkAccess(Arg, AK_Read, POK_PassByRef);
@@ -2036,7 +2037,7 @@ void BuildLockset::VisitCallExpr(CallExpr *Exp) {
   handleCall(Exp, D);
 }
 
-void BuildLockset::VisitCXXConstructExpr(CXXConstructExpr *Exp) {
+void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
   const CXXConstructorDecl *D = Exp->getConstructor();
   if (D && D->isCopyConstructor()) {
     const Expr* Source = Exp->getArg(0);
@@ -2072,7 +2073,7 @@ static Expr *buildFakeCtorCall(CXXConstructorDecl *CD, ArrayRef<Expr *> Args,
                                   SourceRange(Loc, Loc));
 }
 
-void BuildLockset::VisitDeclStmt(DeclStmt *S) {
+void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   // adjust the context
   LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
 
@@ -2408,14 +2409,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       switch (BI.getKind()) {
         case CFGElement::Statement: {
           CFGStmt CS = BI.castAs<CFGStmt>();
-          LocksetBuilder.Visit(const_cast<Stmt *>(CS.getStmt()));
+          LocksetBuilder.Visit(CS.getStmt());
           break;
         }
         // Ignore BaseDtor, MemberDtor, and TemporaryDtor for now.
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
-          auto *DD = const_cast<CXXDestructorDecl *>(
-              AD.getDestructorDecl(AC.getASTContext()));
+          const auto *DD = AD.getDestructorDecl(AC.getASTContext());
           if (!DD->hasAttrs())
             break;
 
