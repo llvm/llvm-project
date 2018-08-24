@@ -316,14 +316,18 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   UFE.File = std::move(F);
   UFE.IsValid = true;
 
-  llvm::SmallString<128> AbsPath(InterndFileName);
-  // This is not the same as `VFS::getRealPath()`, which resolves symlinks but
-  // can be very expensive on real file systems.
-  // FIXME: the semantic of RealPathName is unclear, and the name might be
-  // misleading. We need to clean up the interface here.
-  makeAbsolutePath(AbsPath);
-  llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-  UFE.RealPathName = AbsPath.str();
+  if (UFE.File) {
+    if (auto PathName = UFE.File->getName()) {
+      llvm::SmallString<128> AbsPath(*PathName);
+      // This is not the same as `VFS::getRealPath()`, which resolves symlinks
+      // but can be very expensive on real file systems.
+      // FIXME: the semantic of RealPathName is unclear, and the name might be
+      // misleading. We need to clean up the interface here.
+      makeAbsolutePath(AbsPath);
+      llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+      UFE.RealPathName = AbsPath.str();
+    }
+  }
   return &UFE;
 }
 
