@@ -8,6 +8,7 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "Cancellation.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Headers.h"
@@ -173,14 +174,16 @@ void ClangdServer::removeDocument(PathRef File) {
   WorkScheduler.remove(File);
 }
 
-void ClangdServer::codeComplete(PathRef File, Position Pos,
-                                const clangd::CodeCompleteOptions &Opts,
-                                Callback<CodeCompleteResult> CB) {
+TaskHandle ClangdServer::codeComplete(PathRef File, Position Pos,
+                                      const clangd::CodeCompleteOptions &Opts,
+                                      Callback<CodeCompleteResult> CB) {
   // Copy completion options for passing them to async task handler.
   auto CodeCompleteOpts = Opts;
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
+  TaskHandle TH = Task::createHandle();
+  WithContext ContextWithCancellation(setCurrentTask(TH));
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
@@ -188,6 +191,9 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   auto Task = [PCHs, Pos, FS, CodeCompleteOpts,
                this](Path File, Callback<CodeCompleteResult> CB,
                      llvm::Expected<InputsAndPreamble> IP) {
+    if (isCancelled())
+      return CB(llvm::make_error<CancelledError>());
+
     if (!IP)
       return CB(IP.takeError());
 
@@ -226,6 +232,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 
   WorkScheduler.runWithPreamble("CodeComplete", File,
                                 Bind(Task, File.str(), std::move(CB)));
+  return TH;
 }
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,

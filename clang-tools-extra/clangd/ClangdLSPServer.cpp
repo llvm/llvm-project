@@ -8,10 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
+#include "Cancellation.h"
 #include "Diagnostics.h"
 #include "JSONRPCDispatcher.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -69,6 +71,11 @@ SymbolKindBitset defaultSymbolKinds() {
   return Defaults;
 }
 
+std::string NormalizeRequestID(const json::Value &ID) {
+  auto NormalizedID = parseNumberOrString(&ID);
+  assert(NormalizedID && "Was not able to parse request id.");
+  return std::move(*NormalizedID);
+}
 } // namespace
 
 void ClangdLSPServer::onInitialize(InitializeParams &Params) {
@@ -339,17 +346,21 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
 }
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
-  Server.codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
-                      [this](llvm::Expected<CodeCompleteResult> List) {
-                        if (!List)
-                          return replyError(ErrorCode::InvalidParams,
-                                            llvm::toString(List.takeError()));
-                        CompletionList LSPList;
-                        LSPList.isIncomplete = List->HasMore;
-                        for (const auto &R : List->Completions)
-                          LSPList.items.push_back(R.render(CCOpts));
-                        reply(std::move(LSPList));
-                      });
+  CreateSpaceForTaskHandle();
+  TaskHandle TH = Server.codeComplete(
+      Params.textDocument.uri.file(), Params.position, CCOpts,
+      [this](llvm::Expected<CodeCompleteResult> List) {
+        auto _ = llvm::make_scope_exit([this]() { CleanupTaskHandle(); });
+
+        if (!List)
+          return replyError(List.takeError());
+        CompletionList LSPList;
+        LSPList.isIncomplete = List->HasMore;
+        for (const auto &R : List->Completions)
+          LSPList.items.push_back(R.render(CCOpts));
+        return reply(std::move(LSPList));
+      });
+  StoreTaskHandle(std::move(TH));
 }
 
 void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams &Params) {
@@ -364,14 +375,14 @@ void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams &Params) {
 }
 
 void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams &Params) {
-  Server.findDefinitions(
-      Params.textDocument.uri.file(), Params.position,
-      [](llvm::Expected<std::vector<Location>> Items) {
-        if (!Items)
-          return replyError(ErrorCode::InvalidParams,
-                            llvm::toString(Items.takeError()));
-        reply(json::Array(*Items));
-      });
+  Server.findDefinitions(Params.textDocument.uri.file(), Params.position,
+                         [](llvm::Expected<std::vector<Location>> Items) {
+                           if (!Items)
+                             return replyError(
+                                 ErrorCode::InvalidParams,
+                                 llvm::toString(Items.takeError()));
+                           reply(json::Array(*Items));
+                         });
 }
 
 void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier &Params) {
@@ -605,4 +616,50 @@ GlobalCompilationDatabase &ClangdLSPServer::CompilationDB::getCDB() {
   if (CachingCDB)
     return *CachingCDB;
   return *CDB;
+}
+
+void ClangdLSPServer::onCancelRequest(CancelParams &Params) {
+  std::lock_guard<std::mutex> Lock(TaskHandlesMutex);
+  const auto &It = TaskHandles.find(Params.ID);
+  if (It == TaskHandles.end())
+    return;
+  if (It->second)
+    It->second->cancel();
+  TaskHandles.erase(It);
+}
+
+void ClangdLSPServer::CleanupTaskHandle() {
+  const json::Value *ID = getRequestId();
+  if (!ID)
+    return;
+  std::string NormalizedID = NormalizeRequestID(*ID);
+  std::lock_guard<std::mutex> Lock(TaskHandlesMutex);
+  TaskHandles.erase(NormalizedID);
+}
+
+void ClangdLSPServer::CreateSpaceForTaskHandle() {
+  const json::Value *ID = getRequestId();
+  if (!ID)
+    return;
+  std::string NormalizedID = NormalizeRequestID(*ID);
+  std::lock_guard<std::mutex> Lock(TaskHandlesMutex);
+  if (!TaskHandles.insert({NormalizedID, nullptr}).second)
+    elog("Creation of space for task handle: {0} failed.", NormalizedID);
+}
+
+void ClangdLSPServer::StoreTaskHandle(TaskHandle TH) {
+  const json::Value *ID = getRequestId();
+  if (!ID)
+    return;
+  std::string NormalizedID = NormalizeRequestID(*ID);
+  std::lock_guard<std::mutex> Lock(TaskHandlesMutex);
+  auto It = TaskHandles.find(NormalizedID);
+  if (It == TaskHandles.end()) {
+    elog("CleanupTaskHandle called before store can happen for request:{0}.",
+         NormalizedID);
+    return;
+  }
+  if (It->second != nullptr)
+    elog("TaskHandle didn't get cleared for: {0}.", NormalizedID);
+  It->second = std::move(TH);
 }
