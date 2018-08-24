@@ -292,7 +292,7 @@ HashedCollectionConfig::SwiftObjectAtAddress(
   if (error.Fail())
     return nullptr;
 
-  CompilerType anyObject_type = ast_ctx->FindQualifiedType("Swift.AnyObject");
+  CompilerType anyObject_type = ast_ctx->GetAnyObjectType();
   if (!anyObject_type)
     return nullptr;
 
@@ -543,8 +543,10 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   ValueObjectSP valobj_sp = valobj.GetSP();
   if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
       valobj_sp->IsPointerType()) {
-    valobj_sp = SwiftObjectAtAddress(valobj_sp->GetExecutionContextRef(),
-                                     valobj_sp->GetPointerValue());
+    if (auto swiftval_sp = SwiftObjectAtAddress(
+          valobj_sp->GetExecutionContextRef(),
+          valobj_sp->GetPointerValue()))
+      valobj_sp = swiftval_sp;
   }
   valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
     lldb::eDynamicCanRunTarget, false);
