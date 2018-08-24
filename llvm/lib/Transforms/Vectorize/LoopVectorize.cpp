@@ -856,7 +856,7 @@ public:
     int Key = Index + SmallestKey;
 
     // Skip if there is already a member with the same index.
-    if (Members.count(Key))
+    if (Members.find(Key) != Members.end())
       return false;
 
     if (Key > LargestKey) {
@@ -884,10 +884,11 @@ public:
   /// \returns nullptr if contains no such member.
   Instruction *getMember(unsigned Index) const {
     int Key = SmallestKey + Index;
-    if (!Members.count(Key))
+    auto Member = Members.find(Key);
+    if (Member == Members.end())
       return nullptr;
 
-    return Members.find(Key)->second;
+    return Member->second;
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -971,16 +972,17 @@ public:
 
   /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {
-    return InterleaveGroupMap.count(Instr);
+    return InterleaveGroupMap.find(Instr) != InterleaveGroupMap.end();
   }
 
   /// Get the interleave group that \p Instr belongs to.
   ///
   /// \returns nullptr if doesn't have such group.
   InterleaveGroup *getInterleaveGroup(Instruction *Instr) const {
-    if (InterleaveGroupMap.count(Instr))
-      return InterleaveGroupMap.find(Instr)->second;
-    return nullptr;
+    auto Group = InterleaveGroupMap.find(Instr);
+    if (Group == InterleaveGroupMap.end())
+      return nullptr;
+    return Group->second;
   }
 
   /// Returns true if an interleaved group that may access memory
@@ -1040,8 +1042,7 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup *createInterleaveGroup(Instruction *Instr, int Stride,
                                          unsigned Align) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
+    assert(!isInterleaved(Instr) && "Already in an interleaved access group");
     InterleaveGroupMap[Instr] = new InterleaveGroup(Instr, Stride, Align);
     return InterleaveGroupMap[Instr];
   }
@@ -1121,7 +1122,8 @@ private:
 
     // If we know there is a dependence from source to sink, assume the
     // instructions can't be reordered. Otherwise, reordering is legal.
-    return !Dependences.count(Src) || !Dependences.lookup(Src).count(Sink);
+    return Dependences.find(Src) == Dependences.end() ||
+           !Dependences.lookup(Src).count(Sink);
   }
 
   /// Collect the dependences from LoopAccessInfo.
@@ -1250,31 +1252,34 @@ public:
     auto Scalars = InstsToScalarize.find(VF);
     assert(Scalars != InstsToScalarize.end() &&
            "VF not yet analyzed for scalarization profitability");
-    return Scalars->second.count(I);
+    return Scalars->second.find(I) != Scalars->second.end();
   }
 
   /// Returns true if \p I is known to be uniform after vectorization.
   bool isUniformAfterVectorization(Instruction *I, unsigned VF) const {
     if (VF == 1)
       return true;
-    assert(Uniforms.count(VF) && "VF not yet analyzed for uniformity");
     auto UniformsPerVF = Uniforms.find(VF);
-    return UniformsPerVF->second.count(I);
+    assert(UniformsPerVF != Uniforms.end() &&
+           "VF not yet analyzed for uniformity");
+    return UniformsPerVF->second.find(I) != UniformsPerVF->second.end();
   }
 
   /// Returns true if \p I is known to be scalar after vectorization.
   bool isScalarAfterVectorization(Instruction *I, unsigned VF) const {
     if (VF == 1)
       return true;
-    assert(Scalars.count(VF) && "Scalar values are not calculated for VF");
     auto ScalarsPerVF = Scalars.find(VF);
-    return ScalarsPerVF->second.count(I);
+    assert(ScalarsPerVF != Scalars.end() &&
+           "Scalar values are not calculated for VF");
+    return ScalarsPerVF->second.find(I) != ScalarsPerVF->second.end();
   }
 
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, unsigned VF) const {
-    return VF > 1 && MinBWs.count(I) && !isProfitableToScalarize(I, VF) &&
+    return VF > 1 && MinBWs.find(I) != MinBWs.end() &&
+           !isProfitableToScalarize(I, VF) &&
            !isScalarAfterVectorization(I, VF);
   }
 
@@ -1330,7 +1335,8 @@ public:
   unsigned getWideningCost(Instruction *I, unsigned VF) {
     assert(VF >= 2 && "Expected VF >=2");
     std::pair<Instruction *, unsigned> InstOnVF = std::make_pair(I, VF);
-    assert(WideningDecisions.count(InstOnVF) && "The cost is not calculated");
+    assert(WideningDecisions.find(InstOnVF) != WideningDecisions.end() &&
+           "The cost is not calculated");
     return WideningDecisions[InstOnVF].second;
   }
 
@@ -1369,7 +1375,7 @@ public:
   /// that may be vectorized as interleave, gather-scatter or scalarized.
   void collectUniformsAndScalars(unsigned VF) {
     // Do the analysis once.
-    if (VF == 1 || Uniforms.count(VF))
+    if (VF == 1 || Uniforms.find(VF) != Uniforms.end())
       return;
     setCostBasedWideningDecision(VF);
     collectLoopUniforms(VF);
@@ -3212,7 +3218,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
       continue;
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *I = getOrCreateVectorValue(KV.first, Part);
-      if (Erased.count(I) || I->use_empty() || !isa<Instruction>(I))
+      if (Erased.find(I) != Erased.end() || I->use_empty() ||
+          !isa<Instruction>(I))
         continue;
       Type *OriginalTy = I->getType();
       Type *ScalarTruncatedTy =
@@ -4178,7 +4185,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   // We should not collect Scalars more than once per VF. Right now, this
   // function is called from collectUniformsAndScalars(), which already does
   // this check. Collecting Scalars for VF=1 does not make any sense.
-  assert(VF >= 2 && !Scalars.count(VF) &&
+  assert(VF >= 2 && Scalars.find(VF) == Scalars.end() &&
          "This function should not be visited twice for the same VF");
 
   SmallSetVector<Instruction *, 8> Worklist;
@@ -4264,7 +4271,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
       }
     }
   for (auto *I : ScalarPtrs)
-    if (!PossibleNonScalarPtrs.count(I)) {
+    if (PossibleNonScalarPtrs.find(I) == PossibleNonScalarPtrs.end()) {
       LLVM_DEBUG(dbgs() << "LV: Found scalar instruction: " << *I << "\n");
       Worklist.insert(I);
     }
@@ -4290,8 +4297,9 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   // Insert the forced scalars.
   // FIXME: Currently widenPHIInstruction() often creates a dead vector
   // induction variable when the PHI user is scalarized.
-  if (ForcedScalars.count(VF))
-    for (auto *I : ForcedScalars.find(VF)->second)
+  auto ForcedScalar = ForcedScalars.find(VF);
+  if (ForcedScalar != ForcedScalars.end())
+    for (auto *I : ForcedScalar->second)
       Worklist.insert(I);
 
   // Expand the worklist by looking through any bitcasts and getelementptr
@@ -4418,7 +4426,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
   // already does this check. Collecting Uniforms for VF=1 does not make any
   // sense.
 
-  assert(VF >= 2 && !Uniforms.count(VF) &&
+  assert(VF >= 2 && Uniforms.find(VF) == Uniforms.end() &&
          "This function should not be visited twice for the same VF");
 
   // Visit the list of Uniforms. If we'll not find any uniform value, we'll
@@ -4505,7 +4513,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
   // Add to the Worklist all consecutive and consecutive-like pointers that
   // aren't also identified as possibly non-uniform.
   for (auto *V : ConsecutiveLikePtrs)
-    if (!PossibleNonUniformPtrs.count(V)) {
+    if (PossibleNonUniformPtrs.find(V) == PossibleNonUniformPtrs.end()) {
       LLVM_DEBUG(dbgs() << "LV: Found uniform instruction: " << *V << "\n");
       Worklist.insert(V);
     }
@@ -5097,7 +5105,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       Type *T = I.getType();
 
       // Skip ignored values.
-      if (ValuesToIgnore.count(&I))
+      if (ValuesToIgnore.find(&I) != ValuesToIgnore.end())
         continue;
 
       // Only examine Loads, Stores and PHINodes.
@@ -5395,11 +5403,11 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
       OpenIntervals.erase(ToRemove);
 
     // Ignore instructions that are never used within the loop.
-    if (!Ends.count(I))
+    if (Ends.find(I) == Ends.end())
       continue;
 
     // Skip ignored values.
-    if (ValuesToIgnore.count(I))
+    if (ValuesToIgnore.find(I) != ValuesToIgnore.end())
       continue;
 
     // For each VF find the maximum usage of registers.
@@ -5413,7 +5421,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
       unsigned RegUsage = 0;
       for (auto Inst : OpenIntervals) {
         // Skip ignored values for VF > 1.
-        if (VecValuesToIgnore.count(Inst) ||
+        if (VecValuesToIgnore.find(Inst) != VecValuesToIgnore.end() ||
             isScalarAfterVectorization(Inst, VFs[j]))
           continue;
         RegUsage += GetRegUsage(Inst->getType(), VFs[j]);
@@ -5471,7 +5479,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(unsigned VF) {
   // instructions to scalarize, there's nothing to do. Collection may already
   // have occurred if we have a user-selected VF and are now computing the
   // expected cost for interleaving.
-  if (VF < 2 || InstsToScalarize.count(VF))
+  if (VF < 2 || InstsToScalarize.find(VF) != InstsToScalarize.end())
     return;
 
   // Initialize a mapping for VF in InstsToScalalarize. If we find that it's
@@ -5566,7 +5574,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     Instruction *I = Worklist.pop_back_val();
 
     // If we've already analyzed the instruction, there's nothing to do.
-    if (ScalarCosts.count(I))
+    if (ScalarCosts.find(I) != ScalarCosts.end())
       continue;
 
     // Compute the cost of the vector instruction. Note that this cost already
@@ -5625,8 +5633,8 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
     // For each instruction in the old loop.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       // Skip ignored values.
-      if (ValuesToIgnore.count(&I) ||
-          (VF > 1 && VecValuesToIgnore.count(&I)))
+      if (ValuesToIgnore.find(&I) != ValuesToIgnore.end() ||
+          (VF > 1 && VecValuesToIgnore.find(&I) != VecValuesToIgnore.end()))
         continue;
 
       VectorizationCostTy C = getInstructionCost(&I, VF);
@@ -5839,9 +5847,12 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
     return VectorizationCostTy(InstsToScalarize[VF][I], false);
 
   // Forced scalars do not have any scalarization overhead.
-  if (VF > 1 && ForcedScalars.count(VF) &&
-      ForcedScalars.find(VF)->second.count(I))
-    return VectorizationCostTy((getInstructionCost(I, 1).first * VF), false);
+  auto ForcedScalar = ForcedScalars.find(VF);
+  if (VF > 1 && ForcedScalar != ForcedScalars.end()) {
+    auto InstSet = ForcedScalar->second;
+    if (InstSet.find(I) != InstSet.end())
+      return VectorizationCostTy((getInstructionCost(I, 1).first * VF), false);
+  }
 
   Type *VectorTy;
   unsigned C = getInstructionCost(I, VF, VectorTy);
@@ -6014,8 +6025,10 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF > 1 && BI->isConditional() &&
-        (PredicatedBBsAfterVectorization.count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization.count(BI->getSuccessor(1))))
+        (PredicatedBBsAfterVectorization.find(BI->getSuccessor(0)) !=
+             PredicatedBBsAfterVectorization.end() ||
+         PredicatedBBsAfterVectorization.find(BI->getSuccessor(1)) !=
+             PredicatedBBsAfterVectorization.end()))
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
@@ -6421,7 +6434,8 @@ void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
     PHINode *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
     if (llvm::all_of(IndUpdate->users(), [&](User *U) -> bool {
-          return U == Ind || DeadInstructions.count(cast<Instruction>(U));
+          return U == Ind || DeadInstructions.find(cast<Instruction>(U)) !=
+                                 DeadInstructions.end();
         }))
       DeadInstructions.insert(IndUpdate);
 
@@ -6982,7 +6996,8 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
       // First filter out irrelevant instructions, to ensure no recipes are
       // built for them.
-      if (isa<BranchInst>(Instr) || DeadInstructions.count(Instr))
+      if (isa<BranchInst>(Instr) ||
+          DeadInstructions.find(Instr) != DeadInstructions.end())
         continue;
 
       // I is a member of an InterleaveGroup for Range.Start. If it's an adjunct
@@ -6992,8 +7007,9 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           Range.Start >= 2 && // Query is illegal for VF == 1
           CM.getWideningDecision(Instr, Range.Start) ==
               LoopVectorizationCostModel::CM_Interleave) {
-        if (SinkAfterInverse.count(Instr))
-          Ingredients.push_back(SinkAfterInverse.find(Instr)->second);
+        auto SinkCandidate = SinkAfterInverse.find(Instr);
+        if (SinkCandidate != SinkAfterInverse.end())
+          Ingredients.push_back(SinkCandidate->second);
         continue;
       }
 

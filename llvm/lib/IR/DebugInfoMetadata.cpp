@@ -14,7 +14,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
@@ -69,28 +69,40 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
 }
 
 const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
-                                                const DILocation *LocB,
-                                                bool GenerateLocation) {
+                                                const DILocation *LocB) {
   if (!LocA || !LocB)
     return nullptr;
 
-  if (LocA == LocB || !LocA->canDiscriminate(*LocB))
+  if (LocA == LocB)
     return LocA;
-
-  if (!GenerateLocation)
-    return nullptr;
 
   SmallPtrSet<DILocation *, 5> InlinedLocationsA;
   for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
     InlinedLocationsA.insert(L);
-  const DILocation *Result = LocB;
-  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt()) {
-    Result = L;
-    if (InlinedLocationsA.count(L))
-      break;
+  SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
+  DIScope *S = LocA->getScope();
+  DILocation *L = LocA->getInlinedAt();
+  while (S) {
+    Locations.insert(std::make_pair(S, L));
+    S = S->getScope().resolve();
+    if (!S && L) {
+      S = L->getScope();
+      L = L->getInlinedAt();
+    }
   }
-  return DILocation::get(Result->getContext(), 0, 0, Result->getScope(),
-                         Result->getInlinedAt());
+  const DILocation *Result = LocB;
+  S = LocB->getScope();
+  L = LocB->getInlinedAt();
+  while (S) {
+    if (Locations.count(std::make_pair(S, L)))
+      break;
+    S = S->getScope().resolve();
+    if (!S && L) {
+      S = L->getScope();
+      L = L->getInlinedAt();
+    }
+  }
+  return DILocation::get(Result->getContext(), 0, 0, S, L);
 }
 
 DINode::DIFlags DINode::getFlag(StringRef Flag) {
@@ -491,7 +503,7 @@ const char *DICompileUnit::emissionKindString(DebugEmissionKind EK) {
   case NoDebug:        return "NoDebug";
   case FullDebug:      return "FullDebug";
   case LineTablesOnly: return "LineTablesOnly";
-  case DebugDirectivesOnly: return "DebugDirectviesOnly";
+  case DebugDirectivesOnly: return "DebugDirectivesOnly";
   }
   return nullptr;
 }

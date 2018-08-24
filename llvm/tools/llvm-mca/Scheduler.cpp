@@ -22,17 +22,48 @@ using namespace llvm;
 
 #define DEBUG_TYPE "llvm-mca"
 
+ResourceStrategy::~ResourceStrategy() = default;
+
+void Scheduler::initializeStrategy(std::unique_ptr<SchedulerStrategy> S) {
+  // Ensure we have a valid (non-null) strategy object.
+  Strategy = S ? std::move(S) : llvm::make_unique<DefaultSchedulerStrategy>();
+}
+
+void DefaultResourceStrategy::skipMask(uint64_t Mask) {
+  NextInSequenceMask &= (~Mask);
+  if (!NextInSequenceMask) {
+    NextInSequenceMask = ResourceUnitMask ^ RemovedFromNextInSequence;
+    RemovedFromNextInSequence = 0;
+  }
+}
+
+uint64_t DefaultResourceStrategy::select(uint64_t ReadyMask) {
+  // This method assumes that ReadyMask cannot be zero.
+  uint64_t CandidateMask = llvm::PowerOf2Floor(NextInSequenceMask);
+  while (!(ReadyMask & CandidateMask)) {
+    skipMask(CandidateMask);
+    CandidateMask = llvm::PowerOf2Floor(NextInSequenceMask);
+  }
+  return CandidateMask;
+}
+
+void DefaultResourceStrategy::used(uint64_t Mask) {
+  if (Mask > NextInSequenceMask) {
+    RemovedFromNextInSequence |= Mask;
+    return;
+  }
+  skipMask(Mask);
+}
+
 ResourceState::ResourceState(const llvm::MCProcResourceDesc &Desc,
                              unsigned Index, uint64_t Mask)
-    : ProcResourceDescIndex(Index), ResourceMask(Mask) {
+    : ProcResourceDescIndex(Index), ResourceMask(Mask),
+      BufferSize(Desc.BufferSize) {
   if (llvm::countPopulation(ResourceMask) > 1)
     ResourceSizeMask = ResourceMask ^ llvm::PowerOf2Floor(ResourceMask);
   else
     ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
-  NextInSequenceMask = ResourceSizeMask;
-  RemovedFromNextInSequence = 0;
   ReadyMask = ResourceSizeMask;
-  BufferSize = Desc.BufferSize;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;
 }
@@ -50,28 +81,47 @@ ResourceStateEvent ResourceState::isBufferAvailable() const {
   return RS_BUFFER_UNAVAILABLE;
 }
 
-uint64_t ResourceState::selectNextInSequence() {
-  assert(isReady());
-  uint64_t Next = getNextInSequence();
-  while (!isSubResourceReady(Next)) {
-    updateNextInSequence();
-    Next = getNextInSequence();
-  }
-  return Next;
-}
-
 #ifndef NDEBUG
 void ResourceState::dump() const {
   dbgs() << "MASK: " << ResourceMask << ", SIZE_MASK: " << ResourceSizeMask
-         << ", NEXT: " << NextInSequenceMask << ", RDYMASK: " << ReadyMask
-         << ", BufferSize=" << BufferSize
+         << ", RDYMASK: " << ReadyMask << ", BufferSize=" << BufferSize
          << ", AvailableSlots=" << AvailableSlots
          << ", Reserved=" << Unavailable << '\n';
 }
 #endif
 
-unsigned getResourceStateIndex(uint64_t Mask) {
+static unsigned getResourceStateIndex(uint64_t Mask) {
   return std::numeric_limits<uint64_t>::digits - llvm::countLeadingZeros(Mask);
+}
+
+static std::unique_ptr<ResourceStrategy>
+getStrategyFor(const ResourceState &RS) {
+  if (RS.isAResourceGroup() || RS.getNumUnits() > 1)
+    return llvm::make_unique<DefaultResourceStrategy>(RS.getReadyMask());
+  return std::unique_ptr<ResourceStrategy>(nullptr);
+}
+
+ResourceManager::ResourceManager(const llvm::MCSchedModel &SM)
+    : ProcResID2Mask(SM.getNumProcResourceKinds()) {
+  computeProcResourceMasks(SM, ProcResID2Mask);
+  Resources.resize(SM.getNumProcResourceKinds());
+  Strategies.resize(SM.getNumProcResourceKinds());
+
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    uint64_t Mask = ProcResID2Mask[I];
+    unsigned Index = getResourceStateIndex(Mask);
+    Resources[Index] =
+        llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+    Strategies[Index] = getStrategyFor(*Resources[Index]);
+  }
+}
+
+void ResourceManager::setCustomStrategyImpl(std::unique_ptr<ResourceStrategy> S,
+                                            uint64_t ResourceMask) {
+  unsigned Index = getResourceStateIndex(ResourceMask);
+  assert(Index < Resources.size() && "Invalid processor resource index!");
+  assert(S && "Unexpected null strategy in input!");
+  Strategies[Index] = std::move(S);
 }
 
 unsigned ResourceManager::resolveResourceMask(uint64_t Mask) const {
@@ -82,40 +132,23 @@ unsigned ResourceManager::getNumUnits(uint64_t ResourceID) const {
   return Resources[getResourceStateIndex(ResourceID)]->getNumUnits();
 }
 
-void ResourceManager::initialize(const llvm::MCSchedModel &SM) {
-  computeProcResourceMasks(SM, ProcResID2Mask);
-  Resources.resize(SM.getNumProcResourceKinds());
-
-  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    uint64_t Mask = ProcResID2Mask[I];
-    Resources[getResourceStateIndex(Mask)] =
-        llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
-  }
-}
-
 // Returns the actual resource consumed by this Use.
 // First, is the primary resource ID.
 // Second, is the specific sub-resource ID.
-std::pair<uint64_t, uint64_t> ResourceManager::selectPipe(uint64_t ResourceID) {
-  ResourceState &RS = *Resources[getResourceStateIndex(ResourceID)];
-  uint64_t SubResourceID = RS.selectNextInSequence();
+ResourceRef ResourceManager::selectPipe(uint64_t ResourceID) {
+  unsigned Index = getResourceStateIndex(ResourceID);
+  ResourceState &RS = *Resources[Index];
+  assert(RS.isReady() && "No available units to select!");
+
+  // Special case where RS is not a group, and it only declares a single
+  // resource unit.
+  if (!RS.isAResourceGroup() && RS.getNumUnits() == 1)
+    return std::make_pair(ResourceID, RS.getReadyMask());
+
+  uint64_t SubResourceID = Strategies[Index]->select(RS.getReadyMask());
   if (RS.isAResourceGroup())
     return selectPipe(SubResourceID);
   return std::make_pair(ResourceID, SubResourceID);
-}
-
-void ResourceState::removeFromNextInSequence(uint64_t ID) {
-  assert(NextInSequenceMask);
-  assert(countPopulation(ID) == 1);
-  if (ID > getNextInSequence())
-    RemovedFromNextInSequence |= ID;
-  NextInSequenceMask = NextInSequenceMask & (~ID);
-  if (!NextInSequenceMask) {
-    NextInSequenceMask = ResourceSizeMask;
-    assert(NextInSequenceMask != RemovedFromNextInSequence);
-    NextInSequenceMask ^= RemovedFromNextInSequence;
-    RemovedFromNextInSequence = 0;
-  }
 }
 
 void ResourceManager::use(const ResourceRef &RR) {
@@ -128,14 +161,15 @@ void ResourceManager::use(const ResourceRef &RR) {
     return;
 
   // Notify to other resources that RR.first is no longer available.
-  for (UniqueResourceState &Res : Resources) {
+  for (std::unique_ptr<ResourceState> &Res : Resources) {
     ResourceState &Current = *Res;
     if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
       continue;
 
     if (Current.containsResource(RR.first)) {
+      unsigned Index = getResourceStateIndex(Current.getResourceMask());
       Current.markSubResourceAsUsed(RR.first);
-      Current.removeFromNextInSequence(RR.first);
+      Strategies[Index]->used(RR.first);
     }
   }
 }
@@ -147,7 +181,7 @@ void ResourceManager::release(const ResourceRef &RR) {
   if (!WasFullyUsed)
     return;
 
-  for (UniqueResourceState &Res : Resources) {
+  for (std::unique_ptr<ResourceState> &Res : Resources) {
     ResourceState &Current = *Res;
     if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
       continue;

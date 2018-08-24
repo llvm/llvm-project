@@ -1695,8 +1695,8 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
-                              &Unit.getOrigUnit());
-  DWARFDebugLine::warn(std::move(Err));
+                              &Unit.getOrigUnit(), DWARFContext::dumpWarning);
+  DWARFContext::dumpWarning(std::move(Err));
 
   // This vector is the output line table.
   std::vector<DWARFDebugLine::Row> NewRows;

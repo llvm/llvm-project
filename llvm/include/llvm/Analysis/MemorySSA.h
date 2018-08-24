@@ -280,9 +280,10 @@ protected:
   friend class MemorySSAUpdater;
 
   MemoryUseOrDef(LLVMContext &C, MemoryAccess *DMA, unsigned Vty,
-                 DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB)
-      : MemoryAccess(C, Vty, DeleteValue, BB, 1), MemoryInstruction(MI),
-        OptimizedAccessAlias(MayAlias) {
+                 DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB,
+                 unsigned NumOperands)
+      : MemoryAccess(C, Vty, DeleteValue, BB, NumOperands),
+        MemoryInstruction(MI), OptimizedAccessAlias(MayAlias) {
     setDefiningAccess(DMA);
   }
 
@@ -308,11 +309,6 @@ private:
   Optional<AliasResult> OptimizedAccessAlias;
 };
 
-template <>
-struct OperandTraits<MemoryUseOrDef>
-    : public FixedNumOperandTraits<MemoryUseOrDef, 1> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUseOrDef, MemoryAccess)
-
 /// Represents read-only accesses to memory
 ///
 /// In particular, the set of Instructions that will be represented by
@@ -323,7 +319,8 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
 
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
-      : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB) {}
+      : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB,
+                       /*NumOperands=*/1) {}
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
@@ -381,27 +378,28 @@ public:
 
   MemoryDef(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB,
             unsigned Ver)
-      : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB), ID(Ver) {}
+      : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB,
+                       /*NumOperands=*/2),
+        ID(Ver) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t s) { return User::operator new(s, 1); }
+  // allocate space for exactly two operands
+  void *operator new(size_t s) { return User::operator new(s, 2); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
   }
 
   void setOptimized(MemoryAccess *MA) {
-    Optimized = MA;
-    OptimizedID = getDefiningAccess()->getID();
+    setOperand(1, MA);
+    OptimizedID = MA->getID();
   }
 
   MemoryAccess *getOptimized() const {
-    return cast_or_null<MemoryAccess>(Optimized);
+    return cast_or_null<MemoryAccess>(getOperand(1));
   }
 
   bool isOptimized() const {
-    return getOptimized() && getDefiningAccess() &&
-           OptimizedID == getDefiningAccess()->getID();
+    return getOptimized() && OptimizedID == getOptimized()->getID();
   }
 
   void resetOptimized() {
@@ -417,12 +415,33 @@ private:
 
   const unsigned ID;
   unsigned OptimizedID = INVALID_MEMORYACCESS_ID;
-  WeakVH Optimized;
 };
 
 template <>
-struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 1> {};
+struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryDef, MemoryAccess)
+
+template <>
+struct OperandTraits<MemoryUseOrDef> {
+  static Use *op_begin(MemoryUseOrDef *MUD) {
+    if (auto *MU = dyn_cast<MemoryUse>(MUD))
+      return OperandTraits<MemoryUse>::op_begin(MU);
+    return OperandTraits<MemoryDef>::op_begin(cast<MemoryDef>(MUD));
+  }
+
+  static Use *op_end(MemoryUseOrDef *MUD) {
+    if (auto *MU = dyn_cast<MemoryUse>(MUD))
+      return OperandTraits<MemoryUse>::op_end(MU);
+    return OperandTraits<MemoryDef>::op_end(cast<MemoryDef>(MUD));
+  }
+
+  static unsigned operands(const MemoryUseOrDef *MUD) {
+    if (const auto *MU = dyn_cast<MemoryUse>(MUD))
+      return OperandTraits<MemoryUse>::operands(MU);
+    return OperandTraits<MemoryDef>::operands(cast<MemoryDef>(MUD));
+  }
+};
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUseOrDef, MemoryAccess)
 
 /// Represents phi nodes for memory accesses.
 ///

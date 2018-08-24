@@ -1265,3 +1265,131 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
       MSSA.getWalker()->getClobberingMemoryAccess(BarAccess);
   EXPECT_EQ(BarClobber, LifetimeStartAccess);
 }
+
+TEST_F(MemorySSATest, DefOptimizationsAreInvalidatedOnMoving) {
+  IRBuilder<> B(C);
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getInt1Ty()}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+
+  // Make a CFG like
+  //     entry
+  //      / \
+  //     a   b
+  //      \ /
+  //       c
+  //
+  // Put a def in A and a def in B, move the def from A -> B, observe as the
+  // optimization is invalidated.
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  BasicBlock *BlockA = BasicBlock::Create(C, "a", F);
+  BasicBlock *BlockB = BasicBlock::Create(C, "b", F);
+  BasicBlock *BlockC = BasicBlock::Create(C, "c", F);
+
+  B.SetInsertPoint(Entry);
+  Type *Int8 = Type::getInt8Ty(C);
+  Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "alloc");
+  StoreInst *StoreEntry = B.CreateStore(B.getInt8(0), Alloca);
+  B.CreateCondBr(B.getTrue(), BlockA, BlockB);
+
+  B.SetInsertPoint(BlockA);
+  StoreInst *StoreA = B.CreateStore(B.getInt8(1), Alloca);
+  B.CreateBr(BlockC);
+
+  B.SetInsertPoint(BlockB);
+  StoreInst *StoreB = B.CreateStore(B.getInt8(2), Alloca);
+  B.CreateBr(BlockC);
+
+  B.SetInsertPoint(BlockC);
+  B.CreateUnreachable();
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+
+  auto *AccessEntry = cast<MemoryDef>(MSSA.getMemoryAccess(StoreEntry));
+  auto *StoreAEntry = cast<MemoryDef>(MSSA.getMemoryAccess(StoreA));
+  auto *StoreBEntry = cast<MemoryDef>(MSSA.getMemoryAccess(StoreB));
+
+  ASSERT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(StoreAEntry),
+            AccessEntry);
+  ASSERT_TRUE(StoreAEntry->isOptimized());
+
+  ASSERT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(StoreBEntry),
+            AccessEntry);
+  ASSERT_TRUE(StoreBEntry->isOptimized());
+
+  // Note that if we did InsertionPlace::Beginning, we don't go out of our way
+  // to invalidate the cache for StoreBEntry. If the user wants to actually do
+  // moves like these, it's up to them to ensure that nearby cache entries are
+  // correctly invalidated (which, in general, requires walking all instructions
+  // that the moved instruction dominates. So we probably shouldn't be doing
+  // moves like this in general. Still, works as a test-case. ;) )
+  MemorySSAUpdater(&MSSA).moveToPlace(StoreAEntry, BlockB,
+                                      MemorySSA::InsertionPlace::End);
+  ASSERT_FALSE(StoreAEntry->isOptimized());
+  ASSERT_EQ(MSSA.getWalker()->getClobberingMemoryAccess(StoreAEntry),
+            StoreBEntry);
+}
+
+TEST_F(MemorySSATest, TestOptimizedDefsAreProperUses) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(),
+                                         {B.getInt8PtrTy(), B.getInt8PtrTy()},
+                                         false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  Value *AllocA = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  Value *AllocB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
+
+  StoreInst *StoreA = B.CreateStore(ConstantInt::get(Int8, 0), AllocA);
+  StoreInst *StoreB = B.CreateStore(ConstantInt::get(Int8, 1), AllocB);
+  StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 2), AllocA);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  // If these don't hold, there's no chance of the test result being useful.
+  ASSERT_EQ(Walker->getClobberingMemoryAccess(StoreA),
+            MSSA.getLiveOnEntryDef());
+  ASSERT_EQ(Walker->getClobberingMemoryAccess(StoreB),
+            MSSA.getLiveOnEntryDef());
+  auto *StoreAAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreA));
+  auto *StoreA2Access = cast<MemoryDef>(MSSA.getMemoryAccess(StoreA2));
+  ASSERT_EQ(Walker->getClobberingMemoryAccess(StoreA2), StoreAAccess);
+  ASSERT_EQ(StoreA2Access->getOptimized(), StoreAAccess);
+
+  auto *StoreBAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreB));
+  ASSERT_LT(StoreAAccess->getID(), StoreBAccess->getID());
+  ASSERT_LT(StoreBAccess->getID(), StoreA2Access->getID());
+
+  auto SortVecByID = [](std::vector<const MemoryDef *> &Defs) {
+    llvm::sort(Defs.begin(), Defs.end(),
+               [](const MemoryDef *LHS, const MemoryDef *RHS) {
+                 return LHS->getID() < RHS->getID();
+               });
+  };
+
+  auto SortedUserList = [&](const MemoryDef *MD) {
+    std::vector<const MemoryDef *> Result;
+    transform(MD->users(), std::back_inserter(Result),
+              [](const User *U) { return cast<MemoryDef>(U); });
+    SortVecByID(Result);
+    return Result;
+  };
+
+  // Use std::vectors, since they have nice pretty-printing if the test fails.
+  // Parens are necessary because EXPECT_EQ is a macro, and we have commas in
+  // our init lists...
+  EXPECT_EQ(SortedUserList(StoreAAccess),
+            (std::vector<const MemoryDef *>{StoreBAccess, StoreA2Access}));
+
+  EXPECT_EQ(SortedUserList(StoreBAccess),
+            std::vector<const MemoryDef *>{StoreA2Access});
+
+  // StoreAAccess should be present twice, since it uses liveOnEntry for both
+  // its defining and optimized accesses. This is a bit awkward, and is not
+  // relied upon anywhere at the moment. If this is painful, we can fix it.
+  EXPECT_EQ(SortedUserList(cast<MemoryDef>(MSSA.getLiveOnEntryDef())),
+            (std::vector<const MemoryDef *>{StoreAAccess, StoreAAccess,
+                                            StoreBAccess}));
+}
