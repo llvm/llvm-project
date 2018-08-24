@@ -569,8 +569,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 8. Most of this we get from the CompilerInstance, but we also want to give
   // the context an ExternalASTSource.
-  m_selector_table.reset(new SelectorTable());
-
   // We enable all builtin functions beside the builtins from libc/libm (e.g.
   // 'fopen'). Those libc functions are already correctly handled by LLDB, and
   // additionally enabling them as expandable builtins is breaking Clang.
@@ -584,7 +582,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   std::unique_ptr<clang::ASTContext> ast_context(
       new ASTContext(m_compiler->getLangOpts(), m_compiler->getSourceManager(),
                      m_compiler->getPreprocessor().getIdentifierTable(),
-                     *m_selector_table.get(), builtin_context));
+                     PP.getSelectorTable(), builtin_context));
 
   ast_context->InitBuiltinTypes(m_compiler->getTarget());
 
