@@ -923,6 +923,10 @@ public:
                        llvm::function_ref<void(const SymbolOccurrence &)>
                            Callback) const override {}
 
+  // This is incorrect, but IndexRequestCollector is not an actual index and it
+  // isn't used in production code.
+  size_t estimateMemoryUsage() const override { return 0; }
+
   const std::vector<FuzzyFindRequest> allRequests() const { return Requests; }
 
 private:

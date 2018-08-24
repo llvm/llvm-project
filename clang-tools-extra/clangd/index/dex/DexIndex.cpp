@@ -67,6 +67,9 @@ void DexIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
     InvertedIndex = std::move(TempInvertedIndex);
     SymbolQuality = std::move(TempSymbolQuality);
   }
+
+  vlog("Built DexIndex with estimated memory usage {0} bytes.",
+       estimateMemoryUsage());
 }
 
 std::unique_ptr<SymbolIndex> DexIndex::build(SymbolSlab Slab) {
@@ -169,6 +172,20 @@ void DexIndex::findOccurrences(
     const OccurrencesRequest &Req,
     llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
   log("findOccurrences is not implemented.");
+}
+
+size_t DexIndex::estimateMemoryUsage() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  size_t Bytes =
+      LookupTable.size() * sizeof(std::pair<SymbolID, const Symbol *>);
+  Bytes += SymbolQuality.size() * sizeof(std::pair<const Symbol *, float>);
+  Bytes += InvertedIndex.size() * sizeof(Token);
+
+  for (const auto &P : InvertedIndex) {
+    Bytes += P.second.size() * sizeof(DocID);
+  }
+  return Bytes;
 }
 
 } // namespace dex
