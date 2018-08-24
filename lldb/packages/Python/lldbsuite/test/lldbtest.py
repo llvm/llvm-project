@@ -740,6 +740,11 @@ class Base(unittest2.TestCase):
         else:
             self.lldbMiExec = None
 
+        if "LLDBVSCODE_EXEC" in os.environ:
+            self.lldbVSCodeExec = os.environ["LLDBVSCODE_EXEC"]
+        else:
+            self.lldbVSCodeExec = None
+
         # If we spawn an lldb process for test (via pexpect), do not load the
         # init file unless told otherwise.
         if "NO_LLDBINIT" in os.environ and "NO" == os.environ["NO_LLDBINIT"]:

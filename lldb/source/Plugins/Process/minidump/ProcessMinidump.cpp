@@ -16,7 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -199,12 +199,6 @@ Status ProcessMinidump::DoLoadCore() {
   SetID(pid.getValue());
 
   return error;
-}
-
-DynamicLoader *ProcessMinidump::GetDynamicLoader() {
-  if (m_dyld_ap.get() == nullptr)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(this, nullptr));
-  return m_dyld_ap.get();
 }
 
 ConstString ProcessMinidump::GetPluginName() { return GetPluginNameStatic(); }
@@ -400,4 +394,15 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
                            add_exe_file_as_first_arg);
   }
   return true;
+}
+
+// For minidumps there's no runtime generated code so we don't need JITLoader(s)
+// Avoiding them will also speed up minidump loading since JITLoaders normally
+// try to set up symbolic breakpoints, which in turn may force loading more
+// debug information than needed.
+JITLoaderList &ProcessMinidump::GetJITLoaders() {
+  if (!m_jit_loaders_ap) {
+    m_jit_loaders_ap = llvm::make_unique<JITLoaderList>();
+  }
+  return *m_jit_loaders_ap;
 }

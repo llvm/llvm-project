@@ -31,6 +31,20 @@
 ; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy prune_after=0s:cache_size=0%:cache_size_files=1:prune_interval=0s -o %t3 %t2.o %t.o
 ; RUN: ls %t.cache | count 3
 
+; Check that we remove the least recently used file first.
+; RUN: rm -fr %t.cache
+; RUN: mkdir %t.cache
+; RUN: echo xyz > %t.cache/llvmcache-old
+; RUN: touch -t 198002011200 %t.cache/llvmcache-old
+; RUN: echo xyz > %t.cache/llvmcache-newer
+; RUN: touch -t 198002021200 %t.cache/llvmcache-newer
+; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy prune_after=0s:cache_size=0%:cache_size_files=3:prune_interval=0s -o %t3 %t2.o %t.o
+; RUN: ls %t.cache | FileCheck %s
+
+; CHECK-NOT: llvmcache-old
+; CHECK: llvmcache-newer
+; CHECK-NOT: llvmcache-old
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

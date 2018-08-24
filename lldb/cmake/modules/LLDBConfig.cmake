@@ -347,7 +347,6 @@ if (APPLE)
        ${CORE_SERVICES_LIBRARY}
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
-
   include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
 else()
   if (LIBXML2_FOUND)
@@ -355,7 +354,6 @@ else()
     list(APPEND system_libs ${LIBXML2_LIBRARIES})
     include_directories(${LIBXML2_INCLUDE_DIR})
   endif()
-
 endif()
 
 if( WIN32 AND NOT CYGWIN )
@@ -369,6 +367,8 @@ if(NOT PURE_WINDOWS)
 endif()
 
 list(APPEND system_libs ${CMAKE_DL_LIBS})
+
+SET(SKIP_LLDB_SERVER_BUILD OFF CACHE BOOL "Skip building lldb-server")
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.

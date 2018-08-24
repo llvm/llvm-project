@@ -11,4 +11,3 @@ To build the documents into html configure libunwind with the following cmake op
 
 After configuring libunwind with these options the make rule `docs-libunwind-html`
 should be available.
-

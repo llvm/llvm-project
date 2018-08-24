@@ -211,7 +211,10 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
     @expectedFlakeyLinux("llvm.org/pr25470")
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
+<<<<<<< HEAD
     @skipIfLinux
+=======
+>>>>>>> public/master
     def test_lldbmi_thread_continue(self):
         """Test that 'lldb-mi --interpreter' can continue execution by "thread continue" command."""
 

@@ -151,8 +151,6 @@ private:
       m_file_manager; ///< The Clang file manager object used by the compiler
   std::unique_ptr<clang::CompilerInstance>
       m_compiler; ///< The Clang compiler used to parse expressions into IR
-  std::unique_ptr<clang::Builtin::Context>
-      m_builtin_context; ///< Context for Clang built-ins
   std::unique_ptr<clang::SelectorTable>
       m_selector_table; ///< Selector table for Objective-C methods
   std::unique_ptr<clang::CodeGenerator>

@@ -1136,8 +1136,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
   // any other pointer. This cannot be handled at the moment.
   AAMDNodes AATags;
   Inst->getAAMetadata(AATags);
-  AliasSet &AS = Context.AST.getAliasSetForPointer(
-      BP->getValue(), MemoryLocation::UnknownSize, AATags);
+  AliasSet &AS = Context.AST.getAliasSetFor(
+      MemoryLocation(BP->getValue(), MemoryLocation::UnknownSize, AATags));
 
   if (!AS.isMustAlias()) {
     if (PollyUseRuntimeAliasChecks) {

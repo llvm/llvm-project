@@ -1,0 +1,1 @@
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_pown(__CLC_GENTYPE a, __CLC_INTN b);

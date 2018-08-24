@@ -24,7 +24,7 @@ extern int target_data_begin(DeviceTy &Device, int32_t arg_num,
 extern int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
     void **args, int64_t *arg_sizes, int64_t *arg_types);
 
-extern void target_data_update(DeviceTy &Device, int32_t arg_num,
+extern int target_data_update(DeviceTy &Device, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types);
 
 extern int target(int64_t device_id, void *host_ptr, int32_t arg_num,
@@ -33,15 +33,28 @@ extern int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
 extern int CheckDeviceAndCtors(int64_t device_id);
 
+// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
+enum kmp_target_offload_kind {
+  tgt_disabled = 0,
+  tgt_default = 1,
+  tgt_mandatory = 2
+};
+typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
+extern kmp_target_offload_kind_t TargetOffloadPolicy;
+
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
 extern "C" {
 #endif
+// functions that extract info from libomp; keep in sync
 int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_omp_taskwait(void *loc_ref, int32_t gtid) __attribute__((weak));
+int __kmpc_get_target_offload(void) __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif
+
+void FatalMessage(const int errorNum, const char *fmt, ...);
 
 #ifdef OMPTARGET_DEBUG
 extern int DebugLevel;
