@@ -1242,18 +1242,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         }
       }
     }
-
-    FileSpecList loaded_modules;
-
-    sym_vendor->GetLoadedModules(lldb::eLanguageTypeSwift, loaded_modules);
-
-    for (size_t mi = 0, me = loaded_modules.GetSize(); mi != me; ++mi) {
-      const FileSpec &loaded_module = loaded_modules.GetFileSpecAtIndex(mi);
-
-      if (loaded_module.Exists())
-        swift_ast_sp->AddModuleSearchPath(
-            loaded_module.GetDirectory().GetCString());
-    }
   }
 
   if (!set_triple) {
