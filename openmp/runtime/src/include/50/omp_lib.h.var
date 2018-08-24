@@ -517,6 +517,8 @@
       end interface
 
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)
+
+!DIR$ IF(__INTEL_COMPILER.LT.1900)
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_num_threads
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_dynamic
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_nested
@@ -587,6 +589,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_warnings_off
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock_with_hint
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_nest_lock_with_hint
+!DIR$ ENDIF
 
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !$omp declare target(omp_set_num_threads )
@@ -661,4 +664,3 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
-
