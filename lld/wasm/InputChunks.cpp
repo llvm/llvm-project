@@ -43,16 +43,6 @@ StringRef InputChunk::getComdatName() const {
   return File->getWasmObj()->linkingData().Comdats[Index];
 }
 
-void InputChunk::copyRelocations(const WasmSection &Section) {
-  if (Section.Relocations.empty())
-    return;
-  size_t Start = getInputSectionOffset();
-  size_t Size = getInputSize();
-  for (const WasmRelocation &R : Section.Relocations)
-    if (R.Offset >= Start && R.Offset < Start + Size)
-      Relocations.push_back(R);
-}
-
 void InputChunk::verifyRelocTargets() const {
   for (const WasmRelocation &Rel : Relocations) {
     uint32_t ExistingValue;
@@ -242,7 +232,7 @@ void InputFunction::calculateSize() {
   uint32_t End = Start + Function->Size;
 
   uint32_t LastRelocEnd = Start + FunctionSizeLength;
-  for (WasmRelocation &Rel : Relocations) {
+  for (const WasmRelocation &Rel : Relocations) {
     LLVM_DEBUG(dbgs() << "  region: " << (Rel.Offset - LastRelocEnd) << "\n");
     CompressedFuncSize += Rel.Offset - LastRelocEnd;
     CompressedFuncSize += getRelocWidth(Rel, File->calcNewValue(Rel));

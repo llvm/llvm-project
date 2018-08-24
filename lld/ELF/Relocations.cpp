@@ -270,12 +270,15 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
-  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC>(Expr) &&
+  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC, R_GOT_OFF,
+                     R_TLSIE_HINT>(Expr) &&
       !Config->Shared && !Sym.IsPreemptible) {
     C.Relocations.push_back({R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Sym});
     return 1;
   }
 
+  if (Expr == R_TLSIE_HINT)
+    return 1;
   return 0;
 }
 
@@ -358,7 +361,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
           R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
           R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
           R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
-          R_TLSLD_HINT>(E))
+          R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -1268,6 +1271,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
 // allow for the creation of a short thunk.
 void ThunkCreator::createInitialThunkSections(
     ArrayRef<OutputSection *> OutputSections) {
+  uint32_t ThunkSectionSpacing = Target->getThunkSectionSpacing();
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         if (ISD->Sections.empty())
@@ -1276,18 +1280,18 @@ void ThunkCreator::createInitialThunkSections(
         uint32_t ISDEnd =
             ISD->Sections.back()->OutSecOff + ISD->Sections.back()->getSize();
         uint32_t LastThunkLowerBound = -1;
-        if (ISDEnd - ISDBegin > Target->ThunkSectionSpacing * 2)
-          LastThunkLowerBound = ISDEnd - Target->ThunkSectionSpacing;
+        if (ISDEnd - ISDBegin > ThunkSectionSpacing * 2)
+          LastThunkLowerBound = ISDEnd - ThunkSectionSpacing;
 
         uint32_t ISLimit;
         uint32_t PrevISLimit = ISDBegin;
-        uint32_t ThunkUpperBound = ISDBegin + Target->ThunkSectionSpacing;
+        uint32_t ThunkUpperBound = ISDBegin + ThunkSectionSpacing;
 
         for (const InputSection *IS : ISD->Sections) {
           ISLimit = IS->OutSecOff + IS->getSize();
           if (ISLimit > ThunkUpperBound) {
             addThunkSection(OS, ISD, PrevISLimit);
-            ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
+            ThunkUpperBound = PrevISLimit + ThunkSectionSpacing;
           }
           if (ISLimit > LastThunkLowerBound)
             break;
@@ -1382,7 +1386,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &Rel, uint64_t Src) {
 // relocation out of range error.
 bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   bool AddressesChanged = false;
-  if (Pass == 0 && Target->ThunkSectionSpacing)
+  if (Pass == 0 && Target->getThunkSectionSpacing())
     createInitialThunkSections(OutputSections);
   else if (Pass == 10)
     // With Thunk Size much smaller than branch range we expect to

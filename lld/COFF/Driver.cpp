@@ -32,6 +32,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
@@ -56,7 +57,7 @@ Configuration *Config;
 LinkerDriver *Driver;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
-  errorHandler().LogName = sys::path::filename(Args[0]);
+  errorHandler().LogName = args::FilenameWithoutExe(Args[0]);
   errorHandler().ErrorOS = &Diag;
   errorHandler().ColorDiagnostics = Diag.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -449,9 +450,19 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
-  if (findUnderscoreMangle("main") || findUnderscoreMangle("wmain"))
+  bool HaveMain = findUnderscoreMangle("main");
+  bool HaveWMain = findUnderscoreMangle("wmain");
+  bool HaveWinMain = findUnderscoreMangle("WinMain");
+  bool HaveWWinMain = findUnderscoreMangle("wWinMain");
+  if (HaveMain || HaveWMain) {
+    if (HaveWinMain || HaveWWinMain) {
+      warn(std::string("found ") + (HaveMain ? "main" : "wmain") + " and " +
+           (HaveWinMain ? "WinMain" : "wWinMain") +
+           "; defaulting to /subsystem:console");
+    }
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
-  if (findUnderscoreMangle("WinMain") || findUnderscoreMangle("wWinMain"))
+  }
+  if (HaveWinMain || HaveWWinMain)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
   return IMAGE_SUBSYSTEM_UNKNOWN;
 }
@@ -728,6 +739,46 @@ static void parseOrderFile(StringRef Arg) {
     }
     else
       Config->Order[S] = INT_MIN + Config->Order.size();
+  }
+}
+
+static void markAddrsig(Symbol *S) {
+  if (auto *D = dyn_cast_or_null<Defined>(S))
+    if (Chunk *C = D->getChunk())
+      C->KeepUnique = true;
+}
+
+static void findKeepUniqueSections() {
+  // Exported symbols could be address-significant in other executables or DSOs,
+  // so we conservatively mark them as address-significant.
+  for (Export &R : Config->Exports)
+    markAddrsig(R.Sym);
+
+  // Visit the address-significance table in each object file and mark each
+  // referenced symbol as address-significant.
+  for (ObjFile *Obj : ObjFile::Instances) {
+    ArrayRef<Symbol *> Syms = Obj->getSymbols();
+    if (Obj->AddrsigSec) {
+      ArrayRef<uint8_t> Contents;
+      Obj->getCOFFObj()->getSectionContents(Obj->AddrsigSec, Contents);
+      const uint8_t *Cur = Contents.begin();
+      while (Cur != Contents.end()) {
+        unsigned Size;
+        const char *Err;
+        uint64_t SymIndex = decodeULEB128(Cur, &Size, Contents.end(), &Err);
+        if (Err)
+          fatal(toString(Obj) + ": could not decode addrsig section: " + Err);
+        if (SymIndex >= Syms.size())
+          fatal(toString(Obj) + ": invalid symbol index in addrsig section");
+        markAddrsig(Syms[SymIndex]);
+        Cur += Size;
+      }
+    } else {
+      // If an object file does not have an address-significance table,
+      // conservatively mark all of its symbols as address-significant.
+      for (Symbol *S : Syms)
+        markAddrsig(S);
+    }
   }
 }
 
@@ -1442,8 +1493,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     markLive(Symtab->getChunks());
 
   // Identify identical COMDAT sections to merge them.
-  if (Config->DoICF)
+  if (Config->DoICF) {
+    findKeepUniqueSections();
     doICF(Symtab->getChunks());
+  }
 
   // Write the result.
   writeResult();

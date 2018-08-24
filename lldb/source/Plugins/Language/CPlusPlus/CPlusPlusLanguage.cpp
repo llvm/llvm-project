@@ -542,6 +542,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       ConstString("^(std::__(ndk)?1::)weak_ptr<.+>(( )?&)?$"), stl_synth_flags,
       true);
 
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::LibcxxFunctionSummaryProvider,
+      "libc++ std::function summary provider",
+      ConstString("^std::__(ndk)?1::function<.+>$"), stl_summary_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
   AddCXXSummary(cpp_category_sp,
@@ -638,11 +643,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::map iterator synthetic children",
       ConstString("^std::__(ndk)?1::__map_iterator<.+>$"), stl_synth_flags,
       true);
-
-  AddCXXSynthetic(
-      cpp_category_sp, lldb_private::formatters::LibcxxFunctionFrontEndCreator,
-      "std::function synthetic value provider",
-      ConstString("^std::__(ndk)?1::function<.+>$"), stl_synth_flags, true);
 #endif
 }
 
