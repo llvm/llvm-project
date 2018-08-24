@@ -79,10 +79,14 @@
 #DSO-NEXT:  10044: {{.*}} nop
 #DSO-NEXT:  10048: {{.*}} nop
 #DSO-NEXT:  1004c: {{.*}} nop
+#DSO-EMPTY:
+#DSO-NEXT:   _foo@plt:
 #DSO-NEXT:  10050: {{.*}} adrp x16, #65536
 #DSO-NEXT:  10054: {{.*}} ldr x17, [x16, #24]
 #DSO-NEXT:  10058: {{.*}} add x16, x16, #24
 #DSO-NEXT:  1005c: {{.*}} br x17
+#DSO-EMPTY:
+#DSO-NEXT:   _bar@plt:
 #DSO-NEXT:  10060: {{.*}} adrp x16, #65536
 #DSO-NEXT:  10064: {{.*}} ldr x17, [x16, #32]
 #DSO-NEXT:  10068: {{.*}} add x16, x16, #32
