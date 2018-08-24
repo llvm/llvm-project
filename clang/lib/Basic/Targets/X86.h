@@ -350,11 +350,9 @@ public:
          (1 << TargetInfo::LongDouble));
 
     // x86-32 has atomics up to 8 bytes
-    CPUKind Kind = getCPUKind(Opts.CPU);
-    if (Kind >= CK_i586 || Kind == CK_Generic)
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    else if (Kind >= CK_i486)
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
+    // FIXME: Check that we actually have cmpxchg8b before setting
+    // MaxAtomicInlineWidth. (cmpxchg8b is an i586 instruction.)
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
