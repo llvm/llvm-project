@@ -20,6 +20,7 @@
 #include "llvm/Support/StringSaver.h"
 #include <array>
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -343,6 +344,14 @@ struct FuzzyFindRequest {
   /// Contextually relevant files (e.g. the file we're code-completing in).
   /// Paths should be absolute.
   std::vector<std::string> ProximityPaths;
+
+  bool operator==(const FuzzyFindRequest &Req) const {
+    return std::tie(Query, Scopes, MaxCandidateCount, RestrictForCodeCompletion,
+                    ProximityPaths) ==
+           std::tie(Req.Query, Req.Scopes, Req.MaxCandidateCount,
+                    Req.RestrictForCodeCompletion, Req.ProximityPaths);
+  }
+  bool operator!=(const FuzzyFindRequest &Req) const { return !(*this == Req); }
 };
 
 struct LookupRequest {
