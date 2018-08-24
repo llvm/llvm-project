@@ -14,6 +14,7 @@
 #include "Function.h"
 #include "Threading.h"
 #include "llvm/ADT/StringMap.h"
+#include <future>
 
 namespace clang {
 namespace clangd {
@@ -166,6 +167,18 @@ private:
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
   std::chrono::steady_clock::duration UpdateDebounce;
 };
+
+/// Runs \p Action asynchronously with a new std::thread. The context will be
+/// propogated.
+template <typename T>
+std::future<T> runAsync(llvm::unique_function<T()> Action) {
+  return std::async(std::launch::async,
+                    [](llvm::unique_function<T()> &&Action, Context Ctx) {
+                      WithContext WithCtx(std::move(Ctx));
+                      return Action();
+                    },
+                    std::move(Action), Context::current().clone());
+}
 
 } // namespace clangd
 } // namespace clang

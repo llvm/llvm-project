@@ -29,6 +29,7 @@
 #include "Logger.h"
 #include "Quality.h"
 #include "SourceCode.h"
+#include "TUScheduler.h"
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
@@ -42,6 +43,8 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1077,6 +1080,32 @@ bool allowIndex(CodeCompletionContext &CC) {
   llvm_unreachable("invalid NestedNameSpecifier kind");
 }
 
+std::future<SymbolSlab> startAsyncFuzzyFind(const SymbolIndex &Index,
+                                            const FuzzyFindRequest &Req) {
+  return runAsync<SymbolSlab>([&Index, Req]() {
+    trace::Span Tracer("Async fuzzyFind");
+    SymbolSlab::Builder Syms;
+    Index.fuzzyFind(Req, [&Syms](const Symbol &Sym) { Syms.insert(Sym); });
+    return std::move(Syms).build();
+  });
+}
+
+// Creates a `FuzzyFindRequest` based on the cached index request from the
+// last completion, if any, and the speculated completion filter text in the
+// source code.
+llvm::Optional<FuzzyFindRequest> speculativeFuzzyFindRequestForCompletion(
+    FuzzyFindRequest CachedReq, PathRef File, StringRef Content, Position Pos) {
+  auto Filter = speculateCompletionFilter(Content, Pos);
+  if (!Filter) {
+    elog("Failed to speculate filter text for code completion at Pos "
+         "{0}:{1}: {2}",
+         Pos.line, Pos.character, Filter.takeError());
+    return llvm::None;
+  }
+  CachedReq.Query = *Filter;
+  return CachedReq;
+}
+
 } // namespace
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
@@ -1131,7 +1160,9 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
 class CodeCompleteFlow {
   PathRef FileName;
   IncludeStructure Includes; // Complete once the compiler runs.
+  SpeculativeFuzzyFind *SpecFuzzyFind; // Can be nullptr.
   const CodeCompleteOptions &Opts;
+
   // Sema takes ownership of Recorder. Recorder is valid until Sema cleanup.
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
@@ -1142,15 +1173,29 @@ class CodeCompleteFlow {
   // This is available after Sema has run.
   llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
   llvm::Optional<URIDistance> FileProximity; // Initialized once Sema runs.
+  /// Speculative request based on the cached request and the filter text before
+  /// the cursor.
+  /// Initialized right before sema run. This is only set if `SpecFuzzyFind` is
+  /// set and contains a cached request.
+  llvm::Optional<FuzzyFindRequest> SpecReq;
 
 public:
   // A CodeCompleteFlow object is only useful for calling run() exactly once.
   CodeCompleteFlow(PathRef FileName, const IncludeStructure &Includes,
+                   SpeculativeFuzzyFind *SpecFuzzyFind,
                    const CodeCompleteOptions &Opts)
-      : FileName(FileName), Includes(Includes), Opts(Opts) {}
+      : FileName(FileName), Includes(Includes), SpecFuzzyFind(SpecFuzzyFind),
+        Opts(Opts) {}
 
   CodeCompleteResult run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
+    if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq.hasValue()) {
+      assert(!SpecFuzzyFind->Result.valid());
+      if ((SpecReq = speculativeFuzzyFindRequestForCompletion(
+               *SpecFuzzyFind->CachedReq, SemaCCInput.FileName,
+               SemaCCInput.Contents, SemaCCInput.Pos)))
+        SpecFuzzyFind->Result = startAsyncFuzzyFind(*Opts.Index, *SpecReq);
+    }
 
     // We run Sema code completion first. It builds an AST and calculates:
     //   - completion results based on the AST.
@@ -1205,6 +1250,7 @@ public:
     });
 
     Recorder = RecorderOwner.get();
+
     semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
                      SemaCCInput, &Includes);
 
@@ -1256,6 +1302,7 @@ private:
     auto IndexResults = (Opts.Index && allowIndex(Recorder->CCContext))
                             ? queryIndex()
                             : SymbolSlab();
+    trace::Span Tracer("Populate CodeCompleteResult");
     // Merge Sema, Index and Override results, score them, and pick the
     // winners.
     const auto Overrides = getNonOverridenMethodCompletionResults(
@@ -1279,7 +1326,6 @@ private:
     trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", int64_t(Opts.Limit));
 
-    SymbolSlab::Builder ResultsBuilder;
     // Build the query.
     FuzzyFindRequest Req;
     if (Opts.Limit)
@@ -1291,7 +1337,22 @@ private:
     Req.ProximityPaths.push_back(FileName);
     vlog("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])", Req.Query,
          llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ","));
+
+    if (SpecFuzzyFind)
+      SpecFuzzyFind->NewReq = Req;
+    if (SpecFuzzyFind && SpecFuzzyFind->Result.valid() && (*SpecReq == Req)) {
+      vlog("Code complete: speculative fuzzy request matches the actual index "
+           "request. Waiting for the speculative index results.");
+      SPAN_ATTACH(Tracer, "Speculative results", true);
+
+      trace::Span WaitSpec("Wait speculative results");
+      return SpecFuzzyFind->Result.get();
+    }
+
+    SPAN_ATTACH(Tracer, "Speculative results", false);
+
     // Run the query against the index.
+    SymbolSlab::Builder ResultsBuilder;
     if (Opts.Index->fuzzyFind(
             Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); }))
       Incomplete = true;
@@ -1437,15 +1498,39 @@ private:
   }
 };
 
-CodeCompleteResult codeComplete(PathRef FileName,
-                                const tooling::CompileCommand &Command,
-                                PrecompiledPreamble const *Preamble,
-                                const IncludeStructure &PreambleInclusions,
-                                StringRef Contents, Position Pos,
-                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                                std::shared_ptr<PCHContainerOperations> PCHs,
-                                CodeCompleteOptions Opts) {
-  return CodeCompleteFlow(FileName, PreambleInclusions, Opts)
+llvm::Expected<llvm::StringRef>
+speculateCompletionFilter(llvm::StringRef Content, Position Pos) {
+  auto Offset = positionToOffset(Content, Pos);
+  if (!Offset)
+    return llvm::make_error<llvm::StringError>(
+        "Failed to convert position to offset in content.",
+        llvm::inconvertibleErrorCode());
+  if (*Offset == 0)
+    return "";
+
+  // Start from the character before the cursor.
+  int St = *Offset - 1;
+  // FIXME(ioeric): consider UTF characters?
+  auto IsValidIdentifierChar = [](char c) {
+    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+            (c >= '0' && c <= '9') || (c == '_'));
+  };
+  size_t Len = 0;
+  for (; (St >= 0) && IsValidIdentifierChar(Content[St]); --St, ++Len) {
+  }
+  if (Len > 0)
+    St++; // Shift to the first valid character.
+  return Content.substr(St, Len);
+}
+
+CodeCompleteResult
+codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
+             PrecompiledPreamble const *Preamble,
+             const IncludeStructure &PreambleInclusions, StringRef Contents,
+             Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+             std::shared_ptr<PCHContainerOperations> PCHs,
+             CodeCompleteOptions Opts, SpeculativeFuzzyFind *SpecFuzzyFind) {
+  return CodeCompleteFlow(FileName, PreambleInclusions, SpecFuzzyFind, Opts)
       .run({FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
 }
 

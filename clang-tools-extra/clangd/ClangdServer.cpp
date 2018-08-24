@@ -12,6 +12,7 @@
 #include "FindSymbols.h"
 #include "Headers.h"
 #include "SourceCode.h"
+#include "Trace.h"
 #include "XRefs.h"
 #include "index/Merge.h"
 #include "clang/Format/Format.h"
@@ -22,6 +23,7 @@
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -29,6 +31,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
+#include <mutex>
 
 using namespace clang;
 using namespace clang::clangd;
@@ -181,21 +184,44 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
-  auto Task = [PCHs, Pos, FS,
-               CodeCompleteOpts](Path File, Callback<CodeCompleteResult> CB,
-                                 llvm::Expected<InputsAndPreamble> IP) {
+
+  auto Task = [PCHs, Pos, FS, CodeCompleteOpts,
+               this](Path File, Callback<CodeCompleteResult> CB,
+                     llvm::Expected<InputsAndPreamble> IP) {
     if (!IP)
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
+
+    llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
+    if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
+      SpecFuzzyFind.emplace();
+      {
+        std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
+        SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
+      }
+    }
 
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
         File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
         PreambleData ? PreambleData->Includes : IncludeStructure(),
-        IP->Contents, Pos, FS, PCHs, CodeCompleteOpts);
-    CB(std::move(Result));
+        IP->Contents, Pos, FS, PCHs, CodeCompleteOpts,
+        SpecFuzzyFind ? SpecFuzzyFind.getPointer() : nullptr);
+    {
+      clang::clangd::trace::Span Tracer("Completion results callback");
+      CB(std::move(Result));
+    }
+    if (SpecFuzzyFind && SpecFuzzyFind->NewReq.hasValue()) {
+      std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
+      CachedCompletionFuzzyFindRequestByFile[File] =
+          SpecFuzzyFind->NewReq.getValue();
+    }
+    // SpecFuzzyFind is only destroyed after speculative fuzzy find finishes.
+    // We don't want `codeComplete` to wait for the async call if it doesn't use
+    // the result (e.g. non-index completion, speculation fails), so that `CB`
+    // is called as soon as results are available.
   };
 
   WorkScheduler.runWithPreamble("CodeComplete", File,
