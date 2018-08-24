@@ -1,4 +1,5 @@
-; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MEMCPY
+; RUN: opt -debug-pass=Executions -memdep -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK
 
 ; Check that phi values is not run when it's not already available, and that
 ; basicaa is freed after a pass that preserves CFG.
@@ -6,17 +7,21 @@
 ; CHECK: Executing Pass 'Phi Values Analysis'
 ; CHECK: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK: Executing Pass 'Memory Dependence Analysis'
-; CHECK: Executing Pass 'MemCpy Optimization'
-; CHECK-DAG: Freeing Pass 'MemCpy Optimization'
+; CHECK-MEMCPY: Executing Pass 'MemCpy Optimization'
+; CHECK-MEMCPY-DAG: Freeing Pass 'MemCpy Optimization'
 ; CHECK-DAG: Freeing Pass 'Phi Values Analysis'
 ; CHECK-DAG: Freeing Pass 'Memory Dependence Analysis'
 ; CHECK-DAG: Freeing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK-NOT: Executing Pass 'Phi Values Analysis'
-; CHECK: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
+; CHECK-MEMCPY: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
 ; CHECK: Executing Pass 'Combine redundant instructions'
+
+target datalayout = "p:8:8-n8"
 
 declare void @otherfn([4 x i8]*)
 declare i32 @__gxx_personality_v0(...)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+@c = external global i8*, align 1
 
 ; This function is one where if we didn't free basicaa after memcpyopt then the
 ; usage of basicaa in instcombine would cause a segfault due to stale phi-values
@@ -47,4 +52,29 @@ lpad:
      catch i8* null
   call void @otherfn([4 x i8]* nonnull %arr)
   unreachable
+}
+
+; When running instcombine after memdep, the basicaa used by instcombine uses
+; the phivalues that memdep used. This would then cause a segfault due to
+; instcombine deleting a phi whose values had been cached.
+define void @fn2() {
+entry:
+  %a = alloca i8, align 1
+  %0 = load i8*, i8** @c, align 1
+  %1 = bitcast i8* %0 to i8**
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %d.0 = phi i8** [ %1, %entry ], [ null, %for.body ]
+  br i1 undef, label %for.body, label %for.cond.cleanup
+
+for.body:                                         ; preds = %for.cond
+  store volatile i8 undef, i8* %a, align 1
+  br label %for.cond
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %a)
+  %2 = load i8*, i8** %d.0, align 1
+  store i8* %2, i8** @c, align 1
+  ret void
 }

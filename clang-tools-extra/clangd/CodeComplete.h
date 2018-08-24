@@ -25,6 +25,10 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include <future>
 
 namespace clang {
 class NamedDecl;
@@ -71,6 +75,16 @@ struct CodeCompleteOptions {
 
   /// Expose origins of completion items in the label (for debugging).
   bool ShowOrigins = false;
+
+  /// If set to true, this will send an asynchronous speculative index request,
+  /// based on the index request for the last code completion on the same file
+  /// and the filter text typed before the cursor, before sema code completion
+  /// is invoked. This can reduce the code completion latency (by roughly
+  /// latency of sema code completion) if the speculative request is the same as
+  /// the one generated for the ongoing code completion from sema. As a sequence
+  /// of code completions often have the same scopes and proximity paths etc,
+  /// this should be effective for a number of code completions.
+  bool SpeculativeIndexRequest = false;
 
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
@@ -165,7 +179,27 @@ struct CodeCompleteResult {
 };
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 
+/// A speculative and asynchronous fuzzy find index request (based on cached
+/// request) that can be sent before parsing sema. This would reduce completion
+/// latency if the speculation succeeds.
+struct SpeculativeFuzzyFind {
+  /// A cached request from past code completions.
+  /// Set by caller of `codeComplete()`.
+  llvm::Optional<FuzzyFindRequest> CachedReq;
+  /// The actual request used by `codeComplete()`.
+  /// Set by `codeComplete()`. This can be used by callers to update cache.
+  llvm::Optional<FuzzyFindRequest> NewReq;
+  /// The result is consumed by `codeComplete()` if speculation succeeded.
+  /// NOTE: the destructor will wait for the async call to finish.
+  std::future<SymbolSlab> Result;
+};
+
 /// Get code completions at a specified \p Pos in \p FileName.
+/// If \p SpecFuzzyFind is set, a speculative and asynchronous fuzzy find index
+/// request (based on cached request) will be run before parsing sema. In case
+/// the speculative result is used by code completion (e.g. speculation failed),
+/// the speculative result is not consumed, and `SpecFuzzyFind` is only
+/// destroyed when the async request finishes.
 CodeCompleteResult codeComplete(PathRef FileName,
                                 const tooling::CompileCommand &Command,
                                 PrecompiledPreamble const *Preamble,
@@ -173,7 +207,8 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 StringRef Contents, Position Pos,
                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                                 std::shared_ptr<PCHContainerOperations> PCHs,
-                                CodeCompleteOptions Opts);
+                                CodeCompleteOptions Opts,
+                                SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
 
 /// Get signature help at a specified \p Pos in \p FileName.
 SignatureHelp
@@ -193,6 +228,12 @@ signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
 // like workspace/symbols or textDocument/definition, but are not used for code
 // completion.
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
+
+/// Retrives a speculative code completion filter text before the cursor.
+/// Exposed for testing only.
+llvm::Expected<llvm::StringRef>
+speculateCompletionFilter(llvm::StringRef Content, Position Pos);
+
 } // namespace clangd
 } // namespace clang
 

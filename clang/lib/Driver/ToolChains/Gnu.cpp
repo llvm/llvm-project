@@ -2554,7 +2554,9 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
       getTriple().getOS() == llvm::Triple::NaCl ||
       (getTriple().getVendor() == llvm::Triple::MipsTechnologies &&
        !getTriple().hasEnvironment()) ||
-      getTriple().getOS() == llvm::Triple::Solaris;
+      getTriple().getOS() == llvm::Triple::Solaris ||
+      getTriple().getArch() == llvm::Triple::riscv32 ||
+      getTriple().getArch() == llvm::Triple::riscv64;
 
   if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
                          options::OPT_fno_use_init_array, UseInitArrayDefault))

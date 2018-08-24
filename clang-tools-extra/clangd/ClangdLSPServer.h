@@ -75,6 +75,7 @@ private:
   void onRename(RenameParams &Parames) override;
   void onHover(TextDocumentPositionParams &Params) override;
   void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
+  void onCancelRequest(CancelParams &Params) override;
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
@@ -167,8 +168,22 @@ private:
   // the worker thread that may otherwise run an async callback on partially
   // destructed instance of ClangdLSPServer.
   ClangdServer Server;
-};
 
+  // Holds task handles for running requets. Key of the map is a serialized
+  // request id.
+  llvm::StringMap<TaskHandle> TaskHandles;
+  std::mutex TaskHandlesMutex;
+
+  // Following three functions are for managing TaskHandles map. They store or
+  // remove a task handle for the request-id stored in current Context.
+  // FIXME(kadircet): Wrap the following three functions in a RAII object to
+  // make sure these do not get misused. The object might be stored in the
+  // Context of the thread or moved around until a reply is generated for the
+  // request.
+  void CleanupTaskHandle();
+  void CreateSpaceForTaskHandle();
+  void StoreTaskHandle(TaskHandle TH);
+};
 } // namespace clangd
 } // namespace clang
 

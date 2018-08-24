@@ -26,6 +26,9 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
     Index = std::move(TempIndex);
     Symbols = std::move(Syms); // Relase old symbols.
   }
+
+  vlog("Built MemIndex with estimated memory usage {0} bytes.",
+       estimateMemoryUsage());
 }
 
 std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
@@ -96,6 +99,11 @@ getSymbolsFromSlab(SymbolSlab Slab) {
     Snap->Pointers.push_back(&Sym);
   return std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
                                                       &Snap->Pointers);
+}
+
+size_t MemIndex::estimateMemoryUsage() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return Index.getMemorySize();
 }
 
 } // namespace clangd

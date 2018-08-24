@@ -237,6 +237,7 @@ attributes #5 = { nounwind readonly ssp uwtable "split-stack" }
 ; CHECK: push
 ;
 ; Jump to throw_exception:
+; CHECK-NEXT: .cfi_def_cfa_offset
 ; CHECK-NEXT: testb $1, %dil
 ; CHECK-NEXT: jne [[THROW_LABEL:LBB[0-9_]+]]
 ; Else return exit

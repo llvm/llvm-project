@@ -179,10 +179,7 @@ __assoc_sub_state::__execute()
 future<void>::future(__assoc_sub_state* __state)
     : __state_(__state)
 {
-    if (__state_->__has_future_attached())
-        __throw_future_error(future_errc::future_already_retrieved);
-    __state_->__add_shared();
-    __state_->__set_future_attached();
+    __state_->__attach_future();
 }
 
 future<void>::~future()
