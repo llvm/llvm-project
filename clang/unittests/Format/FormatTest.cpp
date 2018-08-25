@@ -1145,6 +1145,22 @@ TEST_F(FormatTest, ShortCaseLabels) {
                "  break;\n"
                "}",
                Style);
+  Style.ColumnLimit = 80;
+  Style.AllowShortCaseLabelsOnASingleLine = false;
+  Style.IndentCaseLabels = true;
+  EXPECT_EQ("switch (n) {\n"
+            "  default /*comments*/:\n"
+            "    return true;\n"
+            "  case 0:\n"
+            "    return false;\n"
+            "}",
+            format("switch (n) {\n"
+                   "default/*comments*/:\n"
+                   "  return true;\n"
+                   "case 0:\n"
+                   "  return false;\n"
+                   "}",
+                   Style));
 }
 
 TEST_F(FormatTest, FormatsLabels) {

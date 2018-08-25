@@ -30,7 +30,7 @@
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
 #include "SourceMgr.h"
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/raw_ostream.h"

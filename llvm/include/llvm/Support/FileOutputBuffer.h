@@ -76,6 +76,10 @@ public:
   /// deallocates the buffer and the target file is never written.
   virtual ~FileOutputBuffer() {}
 
+  /// This removes the temporary file (unless it already was committed)
+  /// but keeps the memory mapping alive.
+  virtual void discard() {}
+
 protected:
   FileOutputBuffer(StringRef Path) : FinalPath(Path) {}
 

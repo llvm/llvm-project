@@ -1542,7 +1542,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Emit address-significance attributes for all globals.
     OutStreamer->EmitAddrsig();
     for (const GlobalValue &GV : M.global_values())
-      if (!GV.isThreadLocal() && !GV.getName().startswith("llvm.") &&
+      if (!GV.use_empty() && !GV.isThreadLocal() &&
+          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
           !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->EmitAddrsigSym(getSymbol(&GV));
   }

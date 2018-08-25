@@ -10,33 +10,33 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-mca
+  llvm-mca.cpp
   CodeRegion.cpp
   Context.cpp
   DispatchStage.cpp
-  DispatchStatistics.cpp
   ExecuteStage.cpp
   FetchStage.cpp
   HWEventListener.cpp
   HardwareUnit.cpp
   InstrBuilder.cpp
   Instruction.cpp
-  InstructionInfoView.cpp
   InstructionTables.cpp
   LSUnit.cpp
-  llvm-mca.cpp
   Pipeline.cpp
   PipelinePrinter.cpp
   RegisterFile.cpp
-  RegisterFileStatistics.cpp
-  ResourcePressureView.cpp
   RetireControlUnit.cpp
-  RetireControlUnitStatistics.cpp
   RetireStage.cpp
   Scheduler.cpp
-  SchedulerStatistics.cpp
   Stage.cpp
   Support.cpp
-  SummaryView.cpp
-  TimelineView.cpp
-  View.cpp
+  Views/DispatchStatistics.cpp
+  Views/InstructionInfoView.cpp
+  Views/RegisterFileStatistics.cpp
+  Views/ResourcePressureView.cpp
+  Views/RetireControlUnitStatistics.cpp
+  Views/SchedulerStatistics.cpp
+  Views/SummaryView.cpp
+  Views/TimelineView.cpp
+  Views/View.cpp
   )

@@ -2024,7 +2024,7 @@ bool DwarfLinker::registerModuleReference(
     const DWARFDie &CUDie, const DWARFUnit &Unit, DebugMap &ModuleMap,
     const DebugMapObject &DMO, RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    unsigned &UnitID, unsigned Indent) {
+    unsigned &UnitID, unsigned Indent, bool Quiet) {
   std::string PCMfile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
@@ -2036,11 +2036,12 @@ bool DwarfLinker::registerModuleReference(
 
   std::string Name = dwarf::toString(CUDie.find(dwarf::DW_AT_name), "");
   if (Name.empty()) {
-    reportWarning("Anonymous module skeleton CU for " + PCMfile, DMO);
+    if (!Quiet)
+      reportWarning("Anonymous module skeleton CU for " + PCMfile, DMO);
     return true;
   }
 
-  if (Options.Verbose) {
+  if (!Quiet && Options.Verbose) {
     outs().indent(Indent);
     outs() << "Found clang module reference " << PCMfile;
   }
@@ -2050,16 +2051,16 @@ bool DwarfLinker::registerModuleReference(
     // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
     // fixed in clang, only warn about DWO_id mismatches in verbose mode.
     // ASTFileSignatures will change randomly when a module is rebuilt.
-    if (Options.Verbose && (Cached->second != DwoId))
+    if (!Quiet && Options.Verbose && (Cached->second != DwoId))
       reportWarning(Twine("hash mismatch: this object file was built against a "
                           "different version of the module ") +
                         PCMfile,
                     DMO);
-    if (Options.Verbose)
+    if (!Quiet && Options.Verbose)
       outs() << " [cached].\n";
     return true;
   }
-  if (Options.Verbose)
+  if (!Quiet && Options.Verbose)
     outs() << " ...\n";
 
   // Cyclic dependencies are disallowed by Clang, but we still
@@ -2067,7 +2068,7 @@ bool DwarfLinker::registerModuleReference(
   ClangModules.insert({PCMfile, DwoId});
   if (Error E = loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO,
                                 Ranges, StringPool, UniquingStringPool,
-                                ODRContexts, UnitID, Indent + 2)) {
+                                ODRContexts, UnitID, Indent + 2, Quiet)) {
     consumeError(std::move(E));
     return false;
   }
@@ -2096,14 +2097,12 @@ DwarfLinker::loadObject(const DebugMapObject &Obj, const DebugMap &Map) {
   return *Object;
 }
 
-Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
-                                   StringRef ModuleName, uint64_t DwoId,
-                                   DebugMap &ModuleMap,
-                                   const DebugMapObject &DMO, RangesTy &Ranges,
-                                   OffsetsStringPool &StringPool,
-                                   UniquingStringPool &UniquingStringPool,
-                                   DeclContextTree &ODRContexts,
-                                   unsigned &UnitID, unsigned Indent) {
+Error DwarfLinker::loadClangModule(
+    StringRef Filename, StringRef ModulePath, StringRef ModuleName,
+    uint64_t DwoId, DebugMap &ModuleMap, const DebugMapObject &DMO,
+    RangesTy &Ranges, OffsetsStringPool &StringPool,
+    UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
+    unsigned &UnitID, unsigned Indent, bool Quiet) {
   SmallString<80> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
     sys::path::append(Path, ModulePath, Filename);
@@ -2165,7 +2164,7 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
       continue;
     if (!registerModuleReference(CUDie, *CU, ModuleMap, DMO, Ranges, StringPool,
                                  UniquingStringPool, ODRContexts, UnitID,
-                                 Indent)) {
+                                 Indent, Quiet)) {
       if (Unit) {
         std::string Err =
             (Filename +
@@ -2179,7 +2178,7 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
       // ASTFileSignatures will change randomly when a module is rebuilt.
       uint64_t PCMDwoId = getDwoId(CUDie, *CU);
       if (PCMDwoId != DwoId) {
-        if (Options.Verbose)
+        if (!Quiet && Options.Verbose)
           reportWarning(
               Twine("hash mismatch: this object file was built against a "
                     "different version of the module ") +
@@ -2201,7 +2200,7 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   }
   if (!Unit->getOrigUnit().getUnitDIE().hasChildren())
     return Error::success();
-  if (Options.Verbose) {
+  if (!Quiet && Options.Verbose) {
     outs().indent(Indent);
     outs() << "cloning .debug_info from " << Filename << "\n";
   }
@@ -2466,14 +2465,10 @@ bool DwarfLinker::link(const DebugMap &Map) {
         DumpOpts.Verbose = Options.Verbose;
         CUDie.dump(outs(), 0, DumpOpts);
       }
-
-      if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
-          !registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
-                                   LinkContext.Ranges, OffsetsStringPool,
-                                   UniquingStringPool, ODRContexts, UnitID)) {
-        LinkContext.CompileUnits.push_back(llvm::make_unique<CompileUnit>(
-            *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
-      }
+      if (CUDie && !LLVM_UNLIKELY(Options.Update))
+        registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
+                                LinkContext.Ranges, OffsetsStringPool,
+                                UniquingStringPool, ODRContexts, UnitID);
     }
   }
 
@@ -2492,13 +2487,32 @@ bool DwarfLinker::link(const DebugMap &Map) {
     for (unsigned i = 0, e = NumObjects; i != e; ++i) {
       auto &LinkContext = ObjectContexts[i];
 
-      if (!LinkContext.ObjectFile) {
+      if (!LinkContext.ObjectFile || !LinkContext.DwarfContext) {
         std::unique_lock<std::mutex> LockGuard(ProcessedFilesMutex);
         ProcessedFiles.set(i);
         ProcessedFilesConditionVariable.notify_one();
         continue;
       }
 
+      for (const auto &CU : LinkContext.DwarfContext->compile_units()) {
+        updateDwarfVersion(CU->getVersion());
+        // The !registerModuleReference() condition effectively skips
+        // over fully resolved skeleton units. This second pass of
+        // registerModuleReferences doesn't do any new work, but it
+        // will collect top-level errors, which are suppressed. Module
+        // warnings were already displayed in the first iteration.
+        bool Quiet = true;
+        auto CUDie = CU->getUnitDIE(false);
+        if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
+            !registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
+                                     LinkContext.Ranges, OffsetsStringPool,
+                                     UniquingStringPool, ODRContexts, UnitID,
+                                     Quiet)) {
+          LinkContext.CompileUnits.push_back(llvm::make_unique<CompileUnit>(
+              *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
+        }
+      }
+      
       // Now build the DIE parent links that we will use during the next phase.
       for (auto &CurrentUnit : LinkContext.CompileUnits) {
         auto CUDie = CurrentUnit->getOrigUnit().getUnitDIE();

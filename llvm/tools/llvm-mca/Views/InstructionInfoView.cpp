@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "InstructionInfoView.h"
+#include "Views/InstructionInfoView.h"
 
 namespace mca {
 

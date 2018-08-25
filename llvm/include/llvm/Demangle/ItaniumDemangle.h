@@ -1118,6 +1118,24 @@ public:
   }
 };
 
+/// A forward-reference to a template argument that was not known at the point
+/// where the template parameter name was parsed in a mangling.
+///
+/// This is created when demangling the name of a specialization of a
+/// conversion function template:
+///
+/// \code
+/// struct A {
+///   template<typename T> operator T*();
+/// };
+/// \endcode
+///
+/// When demangling a specialization of the conversion function template, we
+/// encounter the name of the template (including the \c T) before we reach
+/// the template argument list, so we cannot substitute the parameter name
+/// for the corresponding argument while parsing. Instead, we create a
+/// \c ForwardTemplateReference node that is resolved after we parse the
+/// template arguments.
 struct ForwardTemplateReference : Node {
   size_t Index;
   Node *Ref = nullptr;
@@ -1266,10 +1284,11 @@ public:
   void printLeft(OutputStream &S) const override {
     switch (SSK) {
     case SpecialSubKind::allocator:
-      S += "std::basic_string<char, std::char_traits<char>, "
-           "std::allocator<char> >";
+      S += "std::allocator";
       break;
     case SpecialSubKind::basic_string:
+      S += "std::basic_string";
+      break;
     case SpecialSubKind::string:
       S += "std::basic_string<char, std::char_traits<char>, "
            "std::allocator<char> >";
@@ -2160,7 +2179,7 @@ struct Db {
     ASTAllocator.reset();
   }
 
-  template <class T, class... Args> T *make(Args &&... args) {
+  template <class T, class... Args> Node *make(Args &&... args) {
     return ASTAllocator.template makeNode<T>(std::forward<Args>(args)...);
   }
 
@@ -4948,8 +4967,11 @@ template<typename Alloc> Node *Db<Alloc>::parseTemplateParam() {
   // <template-arg> further ahead in the mangled name (currently just conversion
   // operator types), then we should only look it up in the right context.
   if (PermitForwardTemplateReferences) {
-    ForwardTemplateRefs.push_back(make<ForwardTemplateReference>(Index));
-    return ForwardTemplateRefs.back();
+    Node *ForwardRef = make<ForwardTemplateReference>(Index);
+    assert(ForwardRef->getKind() == Node::KForwardTemplateReference);
+    ForwardTemplateRefs.push_back(
+        static_cast<ForwardTemplateReference *>(ForwardRef));
+    return ForwardRef;
   }
 
   if (Index >= TemplateParams.size())

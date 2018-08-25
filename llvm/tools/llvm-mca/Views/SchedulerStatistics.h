@@ -31,7 +31,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SCHEDULERSTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_SCHEDULERSTATISTICS_H
 
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>

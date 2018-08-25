@@ -350,7 +350,10 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       break;
     case tok::kw_default: {
       unsigned StoredPosition = Tokens->getPosition();
-      FormatToken *Next = Tokens->getNextToken();
+      FormatToken *Next;
+      do {
+        Next = Tokens->getNextToken();
+      } while (Next && Next->is(tok::comment));
       FormatTok = Tokens->setPosition(StoredPosition);
       if (Next && Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like

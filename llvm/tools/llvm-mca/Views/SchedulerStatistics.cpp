@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SchedulerStatistics.h"
+#include "Views/SchedulerStatistics.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;

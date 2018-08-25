@@ -5503,3 +5503,11 @@ namespace ReturnScopedLockable {
     return ptr->f();
   }
 }
+
+namespace PR38640 {
+void f() {
+  // Self-referencing assignment previously caused an infinite loop when thread
+  // safety analysis was enabled.
+  int &i = i; // expected-warning {{reference 'i' is not yet bound to a value when used within its own initialization}}
+}
+}

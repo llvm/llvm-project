@@ -818,7 +818,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     break;
 
   case Backend_EmitBC:
-    if (CodeGenOpts.PrepareForThinLTO) {
+    if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
         ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
         if (!ThinLinkOS)
@@ -831,6 +831,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
       // targets
       bool EmitLTOSummary =
           (CodeGenOpts.PrepareForLTO &&
+           !CodeGenOpts.DisableLLVMPasses &&
            llvm::Triple(TheModule->getTargetTriple()).getVendor() !=
                llvm::Triple::Apple);
       if (EmitLTOSummary && !TheModule->getModuleFlag("ThinLTO"))
@@ -1066,7 +1067,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     break;
 
   case Backend_EmitBC:
-    if (CodeGenOpts.PrepareForThinLTO) {
+    if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
         ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
         if (!ThinLinkOS)
@@ -1079,6 +1080,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // targets
       bool EmitLTOSummary =
           (CodeGenOpts.PrepareForLTO &&
+           !CodeGenOpts.DisableLLVMPasses &&
            llvm::Triple(TheModule->getTargetTriple()).getVendor() !=
                llvm::Triple::Apple);
       if (EmitLTOSummary && !TheModule->getModuleFlag("ThinLTO"))

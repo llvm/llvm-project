@@ -603,3 +603,45 @@ exit:
 exit2:
   ret i1 false
 }
+
+define i1 @slt(i8 %a, i8 %b) {
+; CHECK-LABEL: @slt(
+; CHECK: ret i1 true
+entry:
+  %cmp = icmp slt i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %res = icmp slt i8 %a, 127
+  ret i1 %res
+}
+
+define i1 @sgt(i8 %a, i8 %b) {
+; CHECK-LABEL: @sgt(
+; CHECK: ret i1 true
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %res = icmp sgt i8 %a, -128
+  ret i1 %res
+}
+
+define i1 @ult(i8 %a, i8 %b) {
+; CHECK-LABEL: @ult(
+; CHECK: ret i1 true
+entry:
+  %cmp = icmp ult i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %res = icmp ult i8 %a, 255
+  ret i1 %res
+}
+
+define i1 @ugt(i8 %a, i8 %b) {
+; CHECK-LABEL: @ugt(
+; CHECK: ret i1 true
+entry:
+  %cmp = icmp ugt i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %res = icmp ugt i8 %a, 0
+  ret i1 %res
+}
+
+declare void @llvm.assume(i1)
