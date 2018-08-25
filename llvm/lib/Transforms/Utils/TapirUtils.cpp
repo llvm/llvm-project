@@ -760,6 +760,185 @@ bool llvm::canDetach(const Function *F) {
   return false;
 }
 
+
+void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
+                          SmallPtrSetImpl<BasicBlock *> &TaskBlocks,
+                          SmallPtrSetImpl<BasicBlock *> &EHBlocks,
+                          SmallPtrSetImpl<BasicBlock *> &TaskReturns) {
+  SmallVector<BasicBlock *, 32> Todo;
+  SmallVector<BasicBlock *, 4> WorkListEH;
+
+  DEBUG(dbgs() << "Finding CFG detached by " << DI << "\n");
+
+  BasicBlock *Detached = DI.getDetached();
+  BasicBlock *Continue = DI.getContinue();
+  Value *SyncRegion = DI.getSyncRegion();
+  BasicBlockEdge DetachEdge(DI.getParent(), Detached);
+
+  Todo.push_back(Detached);
+  while (!Todo.empty()) {
+    BasicBlock *BB = Todo.pop_back_val();
+
+    if (!TaskBlocks.insert(BB).second) continue;
+
+    DEBUG(dbgs() << "  Found block " << BB->getName() << "\n");
+
+    TerminatorInst *Term = BB->getTerminator();
+    if (nullptr == Term)
+      llvm_unreachable("BB with null terminator found.");
+
+    if (ReattachInst *RI = dyn_cast<ReattachInst>(Term)) {
+      // Either a reattach instruction terminates the detached CFG or it
+      // terminates a nested detached CFG.  If it terminates a nested detached
+      // CFG, it can simply be ignored, because the corresponding nested detach
+      // instruction will be processed later.
+      if (RI->getDetachContinue() != Continue) continue;
+      assert(RI->getSyncRegion() == SyncRegion &&
+             "Reattach terminating detached CFG has nonmatching sync region.");
+      TaskReturns.insert(BB);
+      continue;
+    } else if (DetachInst *NestedDI = dyn_cast<DetachInst>(Term)) {
+      assert(NestedDI != &DI && "Found recursive Detach");
+      // Add the successors of the nested detach instruction for searching.
+      Todo.push_back(NestedDI->getDetached());
+      Todo.push_back(NestedDI->getContinue());
+      if (NestedDI->hasUnwindDest())
+        Todo.push_back(NestedDI->getUnwindDest());
+      continue;
+    } else if (SyncInst *SI = dyn_cast<SyncInst>(Term)) {
+      // A sync instruction should only apply to nested detaches within this
+      // task.  Hence it can be treated like a branch.
+      assert(SI->getSyncRegion() != SyncRegion &&
+             "Sync in detached task applies to parent parallel context.");
+      Todo.push_back(SI->getSuccessor(0));
+      continue;
+    } else if (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
+               isa<InvokeInst>(Term)) {
+      if (isDetachedRethrow(Term, SyncRegion)) {
+        // A detached rethrow terminates this task and is included in the set of
+        // exception-handling blocks that might not be unique to this task.
+        DEBUG(dbgs() << "  Exit block " << BB->getName() << "\n");
+        TaskReturns.insert(BB);
+        EHBlocks.insert(BB);
+      } else {
+        for (BasicBlock *Succ : successors(BB)) {
+          if (DT.dominates(DetachEdge, Succ)) {
+            DEBUG(dbgs() << "Adding successor " << Succ->getName() << "\n");
+            Todo.push_back(Succ);
+          } else {
+            // We assume that this block is an exception-handling block and save
+            // it for later processing.
+            DEBUG(dbgs() << "  Exit block to search " << Succ->getName() << "\n");
+            EHBlocks.insert(Succ);
+            WorkListEH.push_back(Succ);
+          }
+        }
+      }
+      continue;
+    } else if (isa<UnreachableInst>(Term)) {
+      // We don't bother cloning unreachable exits from the detached CFG at this
+      // point.  We're cloning the entire detached CFG anyway when we outline
+      // the function.
+      continue;
+    } else {
+      llvm_unreachable("Detached task does not absolutely terminate in reattach");
+    }
+  }
+
+  // Find the exception-handling exit blocks.
+  {
+    SmallPtrSet<BasicBlock *, 4> Visited;
+    while (!WorkListEH.empty()) {
+      BasicBlock *BB = WorkListEH.pop_back_val();
+      if (!Visited.insert(BB).second)
+        continue;
+
+      // Make sure that the control flow through these exception-handling blocks
+      // cannot re-enter the blocks being outlined.
+      assert(!TaskBlocks.count(BB) &&
+             "EH blocks for a detached task reenter that task.");
+
+      // Make sure that the control flow through these exception-handling blocks
+      // doesn't perform an ordinary return or resume.
+      assert(!isa<ReturnInst>(BB->getTerminator()) &&
+             "EH block terminated by return.");
+      assert(!isa<ResumeInst>(BB->getTerminator()) &&
+             "EH block terminated by resume.");
+
+      // Make sure that the control flow through these exception-handling blocks
+      // doesn't reattach to the detached CFG's continuation.
+      DEBUG({
+          if (ReattachInst *RI = dyn_cast<ReattachInst>(BB->getTerminator()))
+            assert(RI->getSuccessor(0) != Continue &&
+                   "Exit block reaches a reattach to the continuation.");
+        });
+
+      // Stop searching down this path upon finding a detached rethrow.
+      if (isDetachedRethrow(BB->getTerminator(), SyncRegion)) {
+        TaskReturns.insert(BB);
+        continue;
+      }
+
+      for (BasicBlock *Succ : successors(BB)) {
+        EHBlocks.insert(Succ);
+        WorkListEH.push_back(Succ);
+      }
+    }
+
+    // Visited now contains exception-handling blocks that we want to clone as
+    // part of outlining.
+    for (BasicBlock *EHBlock : Visited)
+      TaskBlocks.insert(EHBlock);
+  }
+
+  DEBUG({
+      dbgs() << "Exit blocks:";
+      for (BasicBlock *Exit : EHBlocks) {
+        if (DT.dominates(DetachEdge, Exit))
+          dbgs() << "(dominated)";
+        else
+          dbgs() << "(shared)";
+        dbgs() << *Exit;
+      }
+      dbgs() << "\n";
+    });
+}
+
+
+// Helper function to find PHI nodes that depend on the landing pad in the
+// unwind destination of this task's detach.
+void llvm::getDetachUnwindPHIUses(DetachInst *DI,
+                                  SmallPtrSetImpl<BasicBlock *> &UnwindPHIs) {
+  // Get the landing pad of the unwind destination of the detach.
+  LandingPadInst *LPad = nullptr;
+  if (DI && DI->hasUnwindDest()) {
+    BasicBlock *UnwindDest = DI->getUnwindDest();
+    LPad = UnwindDest->getLandingPadInst();
+    assert(LPad && "Unwind of detach is not a landing pad.");
+  }
+  if (!LPad) return;
+
+  // Walk the chain of uses of this landing pad to find all PHI nodes that
+  // depend on it, directly or indirectly.
+  SmallVector<User *, 8> WorkList;
+  SmallPtrSet<User *, 8> Visited;
+  for (User *U : LPad->users())
+    WorkList.push_back(U);
+
+  while (!WorkList.empty()) {
+    User *Curr = WorkList.pop_back_val();
+    if (!Visited.insert(Curr).second) continue;
+
+    // If we find a PHI-node user, add it to UnwindPHIs
+    if (PHINode *PN = dyn_cast<PHINode>(Curr))
+      UnwindPHIs.insert(PN->getParent());
+
+    // Queue the successors for processing
+    for (User *U : Curr->users())
+      WorkList.push_back(U);
+  }
+}
+
 /// Find hints specified in the loop metadata and update local values.
 void llvm::TapirLoopHints::getHintsFromMetadata() {
   MDNode *LoopID = TheLoop->getLoopID();

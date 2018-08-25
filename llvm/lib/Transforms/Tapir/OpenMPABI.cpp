@@ -360,7 +360,7 @@ Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   return StaticGrainsize;
 }
 
-void llvm::OpenMPABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
+void llvm::OpenMPABI::createSync(SyncInst &SI) {
   std::vector<Value *> Args = {DefaultOpenMPLocation,
                             getThreadID(SI.getParent()->getParent())};
   IRBuilder<> builder(&SI);
@@ -575,8 +575,16 @@ Function* formatFunctionToTask(Function* extracted, Instruction* CallSite) {
   return OutlinedFn;
 }
 
+void OpenMPABI::processOutlinedTask(Function &F) {}
+void OpenMPABI::processSpawner(Function &F) {}
+
+void OpenMPABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
+  Function *Outline = TOI.Outline;
+  Instruction *ReplCall = TOI.ReplCall;
+  TOI.Outline = formatFunctionToTask(Outline, ReplCall);
+}
+
 Function *llvm::OpenMPABI::createDetach(DetachInst &detach,
-                                        ValueToValueMapTy &DetachCtxToStackFrame,
                                         DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *detB = detach.getParent();
   Function &F = *(detB->getParent());

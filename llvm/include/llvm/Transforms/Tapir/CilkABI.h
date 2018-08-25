@@ -35,40 +35,35 @@ public:
   virtual ~CilkABILoopSpawning() {}
 
 protected:
-  // PHINode* canonicalizeIVs(Type *Ty);
   Value *canonicalizeLoopLatch(PHINode *IV, Value *Limit);
 
   unsigned SpecifiedGrainsize;
-// private:
-//   /// Report an analysis message to assist the user in diagnosing loops that are
-//   /// not transformed.  These are handled as LoopAccessReport rather than
-//   /// VectorizationReport because the << operator of LoopSpawningReport returns
-//   /// LoopAccessReport.
-//   void emitAnalysis(const LoopAccessReport &Message) const {
-//     emitAnalysisDiag(OrigLoop, *ORE, Message);
-//   }
 };
 
 class CilkABI : public TapirTarget {
+  ValueToValueMapTy DetachCtxToStackFrame;
 public:
-  CilkABI();
+  CilkABI() {};
+  ~CilkABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
-  void createSync(SyncInst &inst, ValueToValueMapTy &DetachCtxToStackFrame)
-    override final;
+  void createSync(SyncInst &inst) override final;
 
   Function *createDetach(DetachInst &Detach,
-                         ValueToValueMapTy &DetachCtxToStackFrame,
                          DominatorTree &DT, AssumptionCache &AC) override final;
   void preProcessFunction(Function &F) override final;
   void postProcessFunction(Function &F) override final;
   void postProcessHelper(Function &F) override final;
+
+  void processOutlinedTask(Function &F) override final;
+  void processSpawner(Function &F) override final;
+  void processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT)
+    override final;
 
   struct __cilkrts_pedigree {};
   struct __cilkrts_stack_frame {};
   struct __cilkrts_worker {};
 
 };
-
 }  // end of llvm namespace
 
 #endif

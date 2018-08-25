@@ -1,4 +1,4 @@
-//===- TapirTypes.h - Tapir types ------------------------------*- C++ -*--===//
+//===- TapirTargetIDs.h - Tapir target ID's --------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,18 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TAPIR_TYPES_H_
-#define TAPIR_TYPES_H_
+#ifndef TAPIR_TARGET_IDS_H_
+#define TAPIR_TARGET_IDS_H_
 
 namespace llvm {
 
-enum class TapirTargetType {
+enum class TapirTargetID {
   None,    // Perform no lowering
   Serial,  // FIXME: Make this option useful.  Perhaps only outline tasks?
   Cilk,    // Lower to the Cilk Plus ABI
   OpenMP,  // Lower to OpenMP
   CilkR,   // Lower to the CilkR ABI
-  Last_TapirTargetType
+  Cheetah, // Lower to the Cheetah ABI
+  Last_TapirTargetID
 };
 
 } // end namespace llvm

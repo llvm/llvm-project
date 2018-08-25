@@ -46,7 +46,10 @@ void CloneIntoFunction(
     std::vector<BasicBlock *> Blocks, ValueToValueMapTy &VMap,
     bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
     const StringRef NameSuffix,
-    SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    // SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *ReattachBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *DetachedRethrowBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *SharedEHEntries = nullptr,
     DISubprogram *SP = nullptr, ClonedCodeInfo *CodeInfo = nullptr,
     ValueMapTypeRemapper *TypeMapper = nullptr,
     ValueMaterializer *Materializer = nullptr);
@@ -61,7 +64,10 @@ Function *CreateHelper(
     const BasicBlock *OldEntry, const BasicBlock *OldExit,
     ValueToValueMapTy &VMap, Module *DestM, bool ModuleLevelChanges,
     SmallVectorImpl<ReturnInst *> &Returns, const StringRef NameSuffix,
-    SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    // SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *ReattachBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *DetachedRethrowBlocks = nullptr,
+    SmallPtrSetImpl<BasicBlock *> *SharedEHEntries = nullptr,
     const BasicBlock *OldUnwind = nullptr,
     const Instruction *InputSyncRegion = nullptr,
     ClonedCodeInfo *CodeInfo = nullptr,
@@ -71,7 +77,7 @@ Function *CreateHelper(
 // Add alignment assumptions to parameters of outlined function, based on known
 // alignment data in the caller.
 void AddAlignmentAssumptions(
-    const Function *Caller, const ValueSet &Inputs, ValueToValueMapTy &VMap,
+    const Function *Caller, const ValueSet &Args, ValueToValueMapTy &VMap,
     const Instruction *CallSite, AssumptionCache *AC, DominatorTree *DT);
 
 } // End llvm namespace

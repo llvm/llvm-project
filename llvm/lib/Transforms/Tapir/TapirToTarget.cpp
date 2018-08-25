@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Tapir/TapirToTarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -21,68 +22,68 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Tapir.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 
 #define DEBUG_TYPE "tapir2target"
 
 using namespace llvm;
 
-static cl::opt<TapirTargetType> ClTapirTarget(
+static cl::opt<TapirTargetID> ClTapirTarget(
     "tapir-target", cl::desc("Target runtime for Tapir"),
-    cl::init(TapirTargetType::Cilk),
-    cl::values(clEnumValN(TapirTargetType::None,
+    cl::init(TapirTargetID::Cilk),
+    cl::values(clEnumValN(TapirTargetID::None,
                           "none", "None"),
-               clEnumValN(TapirTargetType::Serial,
+               clEnumValN(TapirTargetID::Serial,
                           "serial", "Serial code"),
-               clEnumValN(TapirTargetType::Cilk,
+               clEnumValN(TapirTargetID::Cilk,
                           "cilk", "Cilk Plus"),
-               clEnumValN(TapirTargetType::OpenMP,
+               clEnumValN(TapirTargetID::OpenMP,
                           "openmp", "OpenMP"),
-               clEnumValN(TapirTargetType::CilkR,
-                          "cilkr", "CilkR")));
+               clEnumValN(TapirTargetID::CilkR,
+                          "cilkr", "CilkR"),
+	       clEnumValN(TapirTargetID::Cheetah,
+                          "cheetah", "Cheetah")));
 
-namespace {
-
-struct LowerTapirToTarget : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-  TapirTarget* tapirTarget;
-  explicit LowerTapirToTarget(TapirTarget* tapirTarget = nullptr)
-      : ModulePass(ID), tapirTarget(tapirTarget) {
-    if (!this->tapirTarget)
-      this->tapirTarget = getTapirTargetFromType(ClTapirTarget);
-    assert(this->tapirTarget);
-    initializeLowerTapirToTargetPass(*PassRegistry::getPassRegistry());
+class TapirToTargetImpl {
+public:
+  TapirToTargetImpl(Module &M,
+                    function_ref<DominatorTree &(Function &)> GetDT,
+                    function_ref<TaskInfo &(Function &)> GetTI,
+                    function_ref<AssumptionCache &(Function &)> GetAC,
+                    TapirTarget *Target = getTapirTargetFromID(ClTapirTarget))
+      : Target(Target), M(M), GetDT(GetDT), GetTI(GetTI), GetAC(GetAC) {
+    assert(this->Target);
+  }
+  ~TapirToTargetImpl() {
+    if (Target)
+      delete Target;
   }
 
-  StringRef getPassName() const override {
-    return "Simple Lowering of Tapir to Target ABI";
-  }
+  bool run();
 
-  bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TaskInfoWrapperPass>();
-  }
 private:
-  ValueToValueMapTy DetachCtxToStackFrame;
   bool unifyReturns(Function &F);
-  SmallVectorImpl<Function *> *processFunction(Function &F, DominatorTree &DT,
-                                               AssumptionCache &AC);
+  void processFunction(Function &F, SmallVectorImpl<Function *> &NewHelpers);
+  TaskOutlineMapTy outlineAllTasks(Function &F, DominatorTree &DT,
+                                   AssumptionCache &AC, TaskInfo &TI);
+  bool processSimpleABI(Function &F);
+  bool processRootTask(Function &F, TaskOutlineMapTy &TaskToOutline,
+                       DominatorTree &DT, AssumptionCache &AC, TaskInfo &TI);
+  bool processOutlinedTask(
+      Task *T, TaskOutlineMapTy &TaskToOutline, DominatorTree &DT,
+      AssumptionCache &AC, TaskInfo &TI);
+
+private:
+  TapirTarget *Target = nullptr;
+
+  Module &M;
+
+  function_ref<DominatorTree &(Function &)> GetDT;
+  function_ref<TaskInfo &(Function &)> GetTI;
+  function_ref<AssumptionCache &(Function &)> GetAC;
 };
-}  // End of anonymous namespace
 
-char LowerTapirToTarget::ID = 0;
-INITIALIZE_PASS_BEGIN(LowerTapirToTarget, "tapir2target",
-                      "Lower Tapir to Target ABI", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
-INITIALIZE_PASS_END(LowerTapirToTarget, "tapir2target",
-                    "Lower Tapir to Target ABI", false, false)
-
-
-bool LowerTapirToTarget::unifyReturns(Function &F) {
+bool TapirToTargetImpl::unifyReturns(Function &F) {
   SmallVector<BasicBlock *, 4> ReturningBlocks;
   for (BasicBlock &BB : F)
     if (isa<ReturnInst>(BB.getTerminator()))
@@ -120,134 +121,280 @@ bool LowerTapirToTarget::unifyReturns(Function &F) {
   return true;
 }
 
-SmallVectorImpl<Function *> *LowerTapirToTarget::processFunction(
-    Function &F, DominatorTree &DT, AssumptionCache &AC) {
-  if (unifyReturns(F))
-    DT.recalculate(F);
+// Outline all tasks in this function in post order.
+TaskOutlineMapTy
+TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
+                                   AssumptionCache &AC, TaskInfo &TI) {
+  TaskOutlineMapTy TaskToOutline;
 
-  DEBUG(dbgs() << "Tapir: Processing function " << F.getName() << "\n");
+  // Determine the inputs for all tasks.
+  DenseMap<Task *, ValueSet> TaskInputs = findAllTaskInputs(F, DT, TI);
+  // Traverse the tasks in this function in post order.
+  for (Task *T : post_order(TI.getRootTask())) {
+    // At this point, all subtasks of T must have been processed.  Replace their
+    // detaches with calls.
+    for (Task *SubT : T->subtasks())
+      TaskToOutline[SubT].replaceReplCall(
+          replaceDetachWithCallToOutline(SubT, TaskToOutline[SubT]));
 
-  tapirTarget->preProcessFunction(F);
+    // Outline the task, if necessary, and add the outlined function to the
+    // mapping.
+    if (T->isRootTask())
+      break;
 
-  // Get the detaches and syncs to process
-  SmallVector<DetachInst *, 8> Detaches;
+    // If task T tracks any exception-handling spindles for its subtasks, remove
+    // any dependencies from those shared-EH spindles to T.
+    for (Spindle *SharedEH : T->shared_eh_spindles()) {
+      // Remove blocks in shared-EH spindles from PHI's in T.
+      for (Spindle::SpindleEdge &SuccEdge : SharedEH->out_edges()) {
+        Spindle *Succ = SuccEdge.first;
+        BasicBlock *Exit = SuccEdge.second;
+        if (Succ->getParentTask() != T || T->containsSharedEH(Succ))
+          continue;
+        Succ->getEntry()->removePredecessor(Exit);
+      }
+    }
+
+    ValueToValueMapTy VMap;
+    TaskToOutline[T] = outlineTask(T, TaskInputs[T], VMap, &AC, &DT);
+    // Update subtask outline info to reflect the fact that their spawner was
+    // outlined.
+    for (Task *SubT : T->subtasks())
+      TaskToOutline[SubT].remapOutlineInfo(VMap);
+  }
+
+  return TaskToOutline;
+}
+
+bool TapirToTargetImpl::processSimpleABI(Function &F) {
+  // Get the simple Tapir instructions to process, including syncs and
+  // loop-grainsize calls.
   SmallVector<SyncInst *, 8> Syncs;
   SmallVector<CallInst *, 8> GrainsizeCalls;
-  {
-    SmallVector<BasicBlock *, 32> WorkList;
-    SmallPtrSet<BasicBlock *, 32> Visited;
-    WorkList.push_back(&(F.getEntryBlock()));
-    while (!WorkList.empty()) {
-      BasicBlock *CurBB = WorkList.pop_back_val();
-      if (!Visited.insert(CurBB).second)
-        continue;
-
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
       // Record calls to get Tapir-loop grainsizes.
-      for (Instruction &I : *CurBB)
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
-          if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
-            GrainsizeCalls.push_back(II);
-
-      // Record detach instructions in this function.
-      if (DetachInst *DI = dyn_cast<DetachInst>(CurBB->getTerminator())) {
-        Detaches.push_back(DI);
-        // Skip pushing the detached task onto the work list.  Any nested tasks
-        // will be handled on a subsequent run of processFunction() on the
-        // generated helper.
-        WorkList.push_back(DI->getContinue());
-        if (DI->hasUnwindDest())
-          WorkList.push_back(DI->getUnwindDest());
-        continue;
-      }
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+        if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
+          GrainsizeCalls.push_back(II);
 
       // Record sync instructions in this function.
-      if (SyncInst *SI = dyn_cast<SyncInst>(CurBB->getTerminator()))
+      if (SyncInst *SI = dyn_cast<SyncInst>(&I))
         Syncs.push_back(SI);
-
-      for (BasicBlock *Succ : successors(CurBB))
-        WorkList.push_back(Succ);
     }
   }
 
-  // Lower Tapir instructions in this function.  Collect the set of helper
-  // functions generated by this process.
+  // Lower simple Tapir instructions in this function.  Collect the set of
+  // helper functions generated by this process.
   bool Changed = false;
 
   // Lower calls to get Tapir-loop grainsizes.
   while (!GrainsizeCalls.empty()) {
     CallInst *GrainsizeCall = GrainsizeCalls.pop_back_val();
     DEBUG(dbgs() << "Lowering grainsize call " << *GrainsizeCall << "\n");
-    tapirTarget->lowerGrainsizeCall(GrainsizeCall);
-    Changed = true;
-  }
-
-  SmallVector<Function *, 4> *NewHelpers = new SmallVector<Function *, 4>();
-  // Process the set of detaches backwards, in order to process the innermost
-  // detached tasks first.
-  while (!Detaches.empty()) {
-    DetachInst *DI = Detaches.pop_back_val();
-    // Lower a detach instruction, and collect the helper function generated in
-    // this process for executing the detached task.
-    Function *Helper = tapirTarget->createDetach(*DI, DetachCtxToStackFrame,
-                                                 DT, AC);
-    NewHelpers->push_back(Helper);
+    Target->lowerGrainsizeCall(GrainsizeCall);
     Changed = true;
   }
 
   // Process the set of syncs.
   while (!Syncs.empty()) {
     SyncInst *SI = Syncs.pop_back_val();
-    tapirTarget->createSync(*SI, DetachCtxToStackFrame);
+    Target->createSync(*SI);
     Changed = true;
   }
 
-  if (!Changed) return NewHelpers;
+  return Changed;
+}
+
+bool TapirToTargetImpl::processRootTask(
+    Function &F, TaskOutlineMapTy &TaskToOutline, DominatorTree &DT,
+    AssumptionCache &AC, TaskInfo &TI) {
+  bool Changed = false;
+  if (!TI.isSerial()) {
+    Changed = true;
+    Target->processSpawner(F);
+
+    for (Task *SubT : TI.getRootTask()->subtasks())
+      Target->processSubTaskCall(TaskToOutline[SubT], DT);
+  }
+  Changed |= processSimpleABI(F);
+  return Changed;
+}
+
+bool TapirToTargetImpl::processOutlinedTask(
+    Task *T, TaskOutlineMapTy &TaskToOutline, DominatorTree &DT,
+    AssumptionCache &AC, TaskInfo &TI) {
+  Function &F = *TaskToOutline[T].Outline;
+  Target->processOutlinedTask(F);
+  if (!T->isSerial()) {
+    Target->processSpawner(F);
+
+    for (Task *SubT : T->subtasks())
+      Target->processSubTaskCall(TaskToOutline[SubT], DT);
+  }
+  processSimpleABI(F);
+  return true;
+}
+
+void TapirToTargetImpl::processFunction(
+    Function &F, SmallVectorImpl<Function *> &NewHelpers) {
+  unifyReturns(F);
+
+  DEBUG(dbgs() << "Tapir: Processing function " << F.getName() << "\n");
+
+  Target->preProcessFunction(F);
+
+  // Get the necessary analysis results.
+  DominatorTree &DT = GetDT(F);
+  TaskInfo &TI = GetTI(F);
+  AssumptionCache &AC = GetAC(F);
+
+  // Outline all tasks in a target-oblivious manner.
+  TaskOutlineMapTy TaskToOutline = outlineAllTasks(F, DT, AC, TI);
+
+  if (verifyFunction(F, &errs()))
+    llvm_unreachable("Outlining tasks produced bad IR!");
+
+  // Perform target-specific processing of this function and all newly created
+  // helpers.
+  for (Task *T : post_order(TI.getRootTask())) {
+    if (T->isRootTask())
+      processRootTask(F, TaskToOutline, DT, AC, TI);
+    else {
+      processOutlinedTask(T, TaskToOutline, DT, AC, TI);
+      NewHelpers.push_back(TaskToOutline[T].Outline);
+    }
+  }
+  Target->postProcessFunction(F);
+  for (Function *H : NewHelpers)
+    Target->postProcessHelper(*H);
 
   if (verifyFunction(F, &errs()))
     llvm_unreachable("Tapir lowering produced bad IR!");
 
-  tapirTarget->postProcessFunction(F);
-  for (Function *H : *NewHelpers)
-    tapirTarget->postProcessHelper(*H);
-
-  return NewHelpers;
+  return;
 }
 
-bool LowerTapirToTarget::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
+bool TapirToTargetImpl::run() {
   // Add functions that detach to the work list.
   SmallVector<Function *, 4> WorkList;
   for (Function &F : M)
-    if (tapirTarget->shouldProcessFunction(F))
+    if (Target->shouldProcessFunction(F))
       WorkList.push_back(&F);
 
   if (WorkList.empty())
     return false;
 
   bool Changed = false;
-  std::unique_ptr<SmallVectorImpl<Function *>> NewHelpers;
   while (!WorkList.empty()) {
     // Process the next function.
     Function *F = WorkList.pop_back_val();
-    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(*F).getDomTree();
-    AssumptionCacheTracker &ACT = getAnalysis<AssumptionCacheTracker>();
-    NewHelpers.reset(processFunction(*F, DT, ACT.getAssumptionCache(*F)));
-    Changed |= !NewHelpers->empty();
+    SmallVector<Function *, 4> NewHelpers;
+    processFunction(*F, NewHelpers);
+    Changed |= !NewHelpers.empty();
     // Check the generated helper functions to see if any need to be processed,
     // that is, to see if any of them themselves detach a subtask.
-    for (Function *Helper : *NewHelpers)
-      if (tapirTarget->shouldProcessFunction(*Helper))
+    for (Function *Helper : NewHelpers)
+      if (Target->shouldProcessFunction(*Helper))
         WorkList.push_back(Helper);
   }
+  return Changed;
+}
+
+PreservedAnalyses TapirToTargetPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM =
+    AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetDT =
+    [&FAM](Function &F) -> DominatorTree & {
+      return FAM.getResult<DominatorTreeAnalysis>(F);
+    };
+  auto GetTI =
+    [&FAM](Function &F) -> TaskInfo & {
+      return FAM.getResult<TaskAnalysis>(F);
+    };
+  auto GetAC =
+    [&FAM](Function &F) -> AssumptionCache & {
+      return FAM.getResult<AssumptionAnalysis>(F);
+    };
+
+  bool Changed = false;
+  if (TapirTargetID::Last_TapirTargetID == TargetID)
+    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC).run();
+  else
+    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
+                                 getTapirTargetFromID(TargetID)).run();
+
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+namespace {
+struct LowerTapirToTarget : public ModulePass {
+  static char ID; // Pass identification, replacement for typeid
+  explicit LowerTapirToTarget(TapirTargetID TargetID =
+                              TapirTargetID::Last_TapirTargetID)
+      : ModulePass(ID), TargetID(TargetID) {
+    initializeLowerTapirToTargetPass(*PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    return "LowerTapirToTarget";
+  }
+
+  bool runOnModule(Module &M) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TaskInfoWrapperPass>();
+  }
+private:
+  TapirTargetID TargetID = TapirTargetID::Last_TapirTargetID;
+};
+}  // End of anonymous namespace
+
+char LowerTapirToTarget::ID = 0;
+INITIALIZE_PASS_BEGIN(LowerTapirToTarget, "tapir2target",
+                      "Lower Tapir to Target ABI", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
+INITIALIZE_PASS_END(LowerTapirToTarget, "tapir2target",
+                    "Lower Tapir to Target ABI", false, false)
+
+bool LowerTapirToTarget::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
+  auto GetDT =
+    [this](Function &F) -> DominatorTree & {
+      return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    };
+  auto GetTI =
+    [this](Function &F) -> TaskInfo & {
+      return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
+    };
+  AssumptionCacheTracker *ACT = &getAnalysis<AssumptionCacheTracker>();
+  auto GetAC =
+    [&ACT](Function &F) -> AssumptionCache & {
+      return ACT->getAssumptionCache(F);
+    };
+
+  bool Changed = false;
+  if (TapirTargetID::Last_TapirTargetID == TargetID)
+    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC).run();
+  else
+    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
+                                 getTapirTargetFromID(TargetID)).run();
   return Changed;
 }
 
 // createLowerTapirToTargetPass - Provide an entry point to create this pass.
 //
 namespace llvm {
-ModulePass *createLowerTapirToTargetPass(TapirTarget* tapirTarget) {
-  return new LowerTapirToTarget(tapirTarget);
+ModulePass *createLowerTapirToTargetPass(TapirTargetID TargetID =
+                                         TapirTargetID::Last_TapirTargetID) {
+  return new LowerTapirToTarget(TargetID);
 }
 }

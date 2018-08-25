@@ -1032,7 +1032,7 @@ Value *CilkRABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   return Grainsize;
 }
 
-void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
+void CilkRABI::createSync(SyncInst &SI) {
   Function &Fn = *(SI.getParent()->getParent());
   Module &M = *(Fn.getParent());
 
@@ -1050,8 +1050,54 @@ void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame
   Fn.addFnAttr(Attribute::Stealable);
 }
 
+void CilkRABI::processOutlinedTask(Function &F) {
+  makeFunctionDetachable(F, DetachCtxToStackFrame);
+}
+
+void CilkRABI::processSpawner(Function &F) {
+  GetOrInitCilkStackFrame(F, DetachCtxToStackFrame,
+                          /*isFast=*/false);
+
+  // Mark this function as stealable.
+  F.addFnAttr(Attribute::Stealable);
+}
+
+void CilkRABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
+  Instruction *ReplStart = TOI.ReplStart;
+  Instruction *ReplCall = TOI.ReplCall;
+
+  Function &F = *ReplCall->getParent()->getParent();
+  Module &M = *F.getParent();
+  Value *SF = DetachCtxToStackFrame[&F];
+  assert(SF && "No frame found for spawning task");
+
+  // Split the basic block containing the detach replacement just before the
+  // start of the detach-replacement instructions.
+  BasicBlock *DetBlock = ReplStart->getParent();
+  BasicBlock *CallBlock = SplitBlock(DetBlock, ReplStart, &DT);
+
+  // Emit a Cilk setjmp at the end of the block preceding the split-off detach
+  // replacement.
+  Instruction *SetJmpPt = DetBlock->getTerminator();
+  IRBuilder<> B(SetJmpPt);
+  Value *SetJmpRes = EmitCilkSetJmp(B, SF, M);
+
+  // Get the ordinary continuation of the detach.
+  BasicBlock *CallCont;
+  if (InvokeInst *II = dyn_cast<InvokeInst>(ReplCall))
+    CallCont = II->getNormalDest();
+  else // isa<CallInst>(CallSite)
+    CallCont = CallBlock->getSingleSuccessor();
+
+  // Insert a conditional branch, based on the result of the setjmp, to either
+  // the detach replacement or the continuation.
+  SetJmpRes = B.CreateICmpEQ(SetJmpRes,
+                             ConstantInt::get(SetJmpRes->getType(), 0));
+  B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
+  SetJmpPt->eraseFromParent();
+}
+
 Function *CilkRABI::createDetach(DetachInst &Detach,
-                                 ValueToValueMapTy &DetachCtxToStackFrame,
                                  DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *Detacher = Detach.getParent();
   Function &F = *(Detacher->getParent());

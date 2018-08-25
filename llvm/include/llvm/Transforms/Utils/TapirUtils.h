@@ -80,12 +80,28 @@ BasicBlock *GetDetachedCtx(BasicBlock *BB);
 /// - even after ignoring all reattach edges.
 bool isCriticalContinueEdge(const TerminatorInst *TI, unsigned SuccNum);
 
+/// GetDetachedCFG - Get the set of basic blocks in the CFG of the parallel task
+/// spawned by detach instruction DI.  The CFG will include the
+/// exception-handling blocks that are separately identified in EHBlocks, which
+/// might not be unique to the task.  TaskReturns will store the set of basic
+/// blocks that terminate the CFG of the parallel task.
+void GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
+                    SmallPtrSetImpl<BasicBlock *> &TaskBlocks,
+                    SmallPtrSetImpl<BasicBlock *> &EHBlocks,
+                    SmallPtrSetImpl<BasicBlock *> &TaskReturns);
+
 /// canDetach - Return true if the given function can perform a detach, false
 /// otherwise.
 bool canDetach(const Function *F);
 
+/// getDetachUnwindPHIUses - Collect all PHI nodes that directly or indirectly
+/// use the landing pad for the unwind destination of detach DI.
+void getDetachUnwindPHIUses(DetachInst *DI,
+                            SmallPtrSetImpl<BasicBlock *> &UnwindPHIs);
+
 /// Utility class for getting and setting Tapir-related loop hints in the form
 /// of loop metadata.
+///
 /// This class keeps a number of loop annotations locally (as member variables)
 /// and can, upon request, write them back as metadata on the loop. It will
 /// initially scan the loop for existing metadata, and will update the local

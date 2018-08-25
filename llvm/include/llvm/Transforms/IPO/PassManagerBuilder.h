@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
+#include "llvm/Transforms/Tapir/TapirTargetIDs.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -22,7 +23,6 @@
 namespace llvm {
 class ModuleSummaryIndex;
 class Pass;
-class TapirTarget;
 class TargetLibraryInfoImpl;
 class TargetMachine;
 
@@ -137,8 +137,8 @@ public:
   ///    0 = none, 1 = -Os, 2 = -Oz
   unsigned SizeLevel;
 
-  /// What runtime tapir instructions should be lowered to (nullptr if no lowering)
-  TapirTarget* tapirTarget;
+  /// What runtime ABI to lower Tapir instructions to.  None if no lowering.
+  TapirTargetID TapirTarget;
 
   /// LibraryInfo - Specifies information about the runtime library for the
   /// optimizer.  If this is non-null, it is added to both the function and

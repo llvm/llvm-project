@@ -19,7 +19,7 @@ namespace llvm {
 class Pass;
 class ModulePass;
 class FunctionPass;
-class TapirTarget;
+enum class TapirTargetID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -61,11 +61,10 @@ FunctionPass *createSpawnUnswitchPass();
 //
 // LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
 //
-ModulePass *createLowerTapirToTargetPass(TapirTarget*);
+ModulePass *createLowerTapirToTargetPass(TapirTargetID);
 
 //===----------------------------------------------------------------------===//
 //
-// LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
 //
 FunctionPass *createAnalyzeTapirPass();
 

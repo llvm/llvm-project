@@ -13,6 +13,7 @@ add_llvm_library(LLVMTapirOpts
   SyncElimination.cpp
   Tapir.cpp
   TapirToTarget.cpp
+  TapirLoopInfo.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

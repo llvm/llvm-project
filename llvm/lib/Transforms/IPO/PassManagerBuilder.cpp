@@ -149,7 +149,7 @@ cl::opt<bool> EnableOrderFileInstrumentation(
     cl::desc("Enable order file instrumentation (default = off)"));
 
 PassManagerBuilder::PassManagerBuilder() {
-    tapirTarget = nullptr;
+    TapirTarget = TapirTargetID::None;
     DisableTapirOpts = false;
     Rhino = false;
     OptLevel = 2;
@@ -427,7 +427,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createControlHeightReductionLegacyPass());
 }
 
-// void PassManagerBuilder::prepopulateModulePassManager(
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
   // Whether this is a default or *LTO pre-link pipeline. The FullLTO post-link
@@ -458,12 +457,12 @@ void PassManagerBuilder::populateModulePassManager(
     // Add passes to run just before Tapir lowering.
     addExtensionsToPM(EP_TapirLate, MPM);
 
-    if (tapirTarget) {
-      MPM.add(createInferFunctionAttrsLegacyPass());
-      MPM.add(createLowerTapirToTargetPass(tapirTarget));
+    if (TapirTargetID::None != TapirTarget) {
+      // MPM.add(createInferFunctionAttrsLegacyPass());
+      MPM.add(createLowerTapirToTargetPass(TapirTarget));
       // The lowering pass may leave cruft around.  Clean it up.
       MPM.add(createCFGSimplificationPass());
-      MPM.add(createInferFunctionAttrsLegacyPass());
+      // MPM.add(createInferFunctionAttrsLegacyPass());
     }
 
     // FIXME: The BarrierNoopPass is a HACK! The inliner pass above implicitly
@@ -523,16 +522,18 @@ void PassManagerBuilder::populateModulePassManager(
     DisableUnrollLoops = true;
 
   bool RerunAfterTapirLowering = false;
-  bool TapirHasBeenLowered = (tapirTarget == nullptr);
+  bool TapirHasBeenLowered = (TapirTargetID::None == TapirTarget);
 
-  if (tapirTarget && DisableTapirOpts) { // -fdetach
-    MPM.add(createLowerTapirToTargetPass(tapirTarget));
+  if ((TapirTargetID::None != TapirTarget) && DisableTapirOpts) { // -fdetach
+    MPM.add(createAnalyzeTapirPass());
+    MPM.add(createLowerTapirToTargetPass(TapirTarget));
     TapirHasBeenLowered = true;
   }
 
   do {
     RerunAfterTapirLowering =
-       !TapirHasBeenLowered && tapirTarget && !PrepareForThinLTO;
+      !TapirHasBeenLowered && (TapirTargetID::None != TapirTarget) &&
+      !PrepareForThinLTO;
 
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
@@ -804,7 +805,7 @@ void PassManagerBuilder::populateModulePassManager(
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   MPM.add(createCFGSimplificationPass());
 
-  if (RerunAfterTapirLowering || (tapirTarget == nullptr))
+  if (RerunAfterTapirLowering || (TapirTargetID::None == TapirTarget))
     // Add passes to run just before Tapir lowering.
     addExtensionsToPM(EP_TapirLate, MPM);
 
@@ -824,12 +825,13 @@ void PassManagerBuilder::populateModulePassManager(
 
     // Now lower Tapir to Target runtime calls.
     //
-    // TODO: Make this sequence of passes check the library info for the Cilk
-    // RTS.
+    // TODO: Make this sequence of passes check the library info for the target
+    // parallel RTS.
 
-    MPM.add(createInferFunctionAttrsLegacyPass());
-    MPM.add(createLowerTapirToTargetPass(tapirTarget));
-    // The lowering pass may leave cruft around.  Clean it up.
+    // MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createLowerTapirToTargetPass(TapirTarget));
+    // The lowering pass introduces new functions and may leave cruft around.
+    // Clean it up.
     MPM.add(createCFGSimplificationPass());
     MPM.add(createInferFunctionAttrsLegacyPass());
     MPM.add(createMergeFunctionsPass());

@@ -99,15 +99,17 @@ void llvm::CloneIntoFunction(
     Function *NewFunc, const Function *OldFunc,
     std::vector<BasicBlock *> Blocks, ValueToValueMapTy &VMap,
     bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const StringRef NameSuffix, SmallPtrSetImpl<BasicBlock *> *ExitBlocks,
+    const StringRef NameSuffix, SmallPtrSetImpl<BasicBlock *> *ReattachBlocks,
+    SmallPtrSetImpl<BasicBlock *> *DetachedRethrowBlocks,
+    SmallPtrSetImpl<BasicBlock *> *SharedEHEntries,
     DISubprogram *SP, ClonedCodeInfo *CodeInfo,
     ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   // Get the predecessors of the exit blocks
-  SmallPtrSet<const BasicBlock *, 4> ExitBlockPreds, ClonedEBPreds;
-  if (ExitBlocks)
-    for (BasicBlock *EB : *ExitBlocks)
-      for (BasicBlock *Pred : predecessors(EB))
-        ExitBlockPreds.insert(Pred);
+  SmallPtrSet<const BasicBlock *, 4> EHEntryPreds, ClonedEHEntryPreds;
+  if (SharedEHEntries)
+    for (BasicBlock *EHEntry : *SharedEHEntries)
+      for (BasicBlock *Pred : predecessors(EHEntry))
+        EHEntryPreds.insert(Pred);
 
   // When we remap instructions, we want to avoid duplicating inlined
   // DISubprograms, so record all subprograms we find as we duplicate
@@ -118,8 +120,8 @@ void llvm::CloneIntoFunction(
   // appropriate.
   for (const BasicBlock *BB : Blocks) {
     // Record all exit block predecessors that are cloned.
-    if (ExitBlockPreds.count(BB))
-      ClonedEBPreds.insert(BB);
+    if (EHEntryPreds.count(BB))
+      ClonedEHEntryPreds.insert(BB);
 
     // Create a new basic block and copy instructions into it!
     BasicBlock *CBB = CloneBasicBlock(BB, VMap, NameSuffix, NewFunc, CodeInfo,
@@ -146,34 +148,56 @@ void llvm::CloneIntoFunction(
   }
 
   // For each exit block, clean up its phi nodes to exclude predecessors that
-  // were not cloned.  Also remove detached_rethrow invokes with resumes.
-  if (ExitBlocks) {
-    for (BasicBlock *EB : *ExitBlocks) {
+  // were not cloned.  Also replace detached_rethrow invokes with resumes.
+  if (SharedEHEntries) {
+    for (BasicBlock *EHEntry : *SharedEHEntries) {
       // Get the predecessors of this exit block that were not cloned.
       SmallVector<BasicBlock *, 4> PredNotCloned;
-      for (BasicBlock *Pred : predecessors(EB))
-        if (!ClonedEBPreds.count(Pred))
+      for (BasicBlock *Pred : predecessors(EHEntry))
+        if (!ClonedEHEntryPreds.count(Pred))
           PredNotCloned.push_back(Pred);
 
       // Iterate over the phi nodes in the cloned exit block and remove incoming
       // values from predecessors that were not cloned.
-      BasicBlock *ClonedEB = cast<BasicBlock>(VMap[EB]);
-      BasicBlock::iterator BI = ClonedEB->begin();
+      BasicBlock *ClonedEHEntry = cast<BasicBlock>(VMap[EHEntry]);
+      BasicBlock::iterator BI = ClonedEHEntry->begin();
       while (PHINode *PN = dyn_cast<PHINode>(BI)) {
         for (BasicBlock *DeadPred : PredNotCloned)
           if (PN->getBasicBlockIndex(DeadPred) > -1)
             PN->removeIncomingValue(DeadPred);
         ++BI;
       }
+    }
+  }
+  if (ReattachBlocks) {
+    for (BasicBlock *ReattachBlk : *ReattachBlocks) {
+      BasicBlock *ClonedRB = cast<BasicBlock>(VMap[ReattachBlk]);
+      // Don't get the remapped name of this successor yet.  Subsequent
+      // remapping will take correct the name.
+      BasicBlock *Succ = ClonedRB->getSingleSuccessor();
+      ReplaceInstWithInst(ClonedRB->getTerminator(),
+                          BranchInst::Create(Succ));
+    }
+  }
+  if (DetachedRethrowBlocks) {
+    for (BasicBlock *DetRethrowBlk : *DetachedRethrowBlocks) {
+      // Skip blocks that are not terminated by a detached-rethrow.
+      if (!isDetachedRethrow(DetRethrowBlk->getTerminator()))
+        continue;
 
+      BasicBlock *ClonedDRB = cast<BasicBlock>(VMap[DetRethrowBlk]);
       // If this exit block terminates in a detached_rethrow, replace the
       // terminator with a resume.
-      if (isDetachedRethrow(EB->getTerminator())) {
-        InvokeInst *II = cast<InvokeInst>(ClonedEB->getTerminator());
-        Value *RethrowArg = II->getArgOperand(1);
-        ReplaceInstWithInst(ClonedEB->getTerminator(),
-                            ResumeInst::Create(RethrowArg));
-      }
+      InvokeInst *II = cast<InvokeInst>(ClonedDRB->getTerminator());
+      Value *RethrowArg = II->getArgOperand(1);
+      ReplaceInstWithInst(ClonedDRB->getTerminator(),
+                          ResumeInst::Create(RethrowArg));
+      // if (isDetachedRethrow(EB->getTerminator())) {
+      //   InvokeInst *II = cast<InvokeInst>(ClonedEB->getTerminator());
+      //   Value *RethrowArg = II->getArgOperand(1);
+      //   ReplaceInstWithInst(ClonedEB->getTerminator(),
+      //                       ResumeInst::Create(RethrowArg));
+      // }
     }
   }
 
@@ -205,7 +229,10 @@ Function *llvm::CreateHelper(
     const BasicBlock *OldEntry, const BasicBlock *OldExit,
     ValueToValueMapTy &VMap, Module *DestM, bool ModuleLevelChanges,
     SmallVectorImpl<ReturnInst *> &Returns, const StringRef NameSuffix,
-    SmallPtrSetImpl<BasicBlock *> *ExitBlocks, const BasicBlock *OldUnwind,
+    SmallPtrSetImpl<BasicBlock *> *ReattachBlocks,
+    SmallPtrSetImpl<BasicBlock *> *DetachRethrowBlocks,
+    SmallPtrSetImpl<BasicBlock *> *SharedEHEntries,
+    const BasicBlock *OldUnwind,
     const Instruction *InputSyncRegion, ClonedCodeInfo *CodeInfo,
     ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer) {
   DEBUG(dbgs() << "inputs: " << Inputs.size() << "\n");
@@ -366,8 +393,8 @@ Function *llvm::CreateHelper(
 
   // Clone Blocks into the new function.
   CloneIntoFunction(NewFunc, OldFunc, Blocks, VMap, ModuleLevelChanges,
-                    Returns, NameSuffix, ExitBlocks, SP, CodeInfo,
-                    TypeMapper, Materializer);
+                    Returns, NameSuffix, ReattachBlocks, DetachRethrowBlocks,
+                    SharedEHEntries, SP, CodeInfo, TypeMapper, Materializer);
 
   // Add a branch in the new function to the cloned Header.
   BranchInst::Create(cast<BasicBlock>(VMap[Header]), NewEntry);
@@ -391,10 +418,10 @@ Function *llvm::CreateHelper(
 // Add alignment assumptions to parameters of outlined function, based on known
 // alignment data in the caller.
 void llvm::AddAlignmentAssumptions(
-    const Function *Caller, const ValueSet &Inputs, ValueToValueMapTy &VMap,
+    const Function *Caller, const ValueSet &Args, ValueToValueMapTy &VMap,
     const Instruction *CallSite, AssumptionCache *AC, DominatorTree *DT) {
   auto &DL = Caller->getParent()->getDataLayout();
-  for (Value *ArgVal : Inputs) {
+  for (Value *ArgVal : Args) {
     // Ignore arguments to non-pointer types
     if (!ArgVal->getType()->isPointerTy()) continue;
     Argument *Arg = cast<Argument>(VMap[ArgVal]);

@@ -1196,13 +1196,18 @@ static AllocaInst *CreateStackFrame(Function &F) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   Type *SFTy = StackFrameBuilder::get(Ctx);
 
-  Instruction *I = F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime();
+  // Instruction *I = F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime();
 
-  AllocaInst *SF = new AllocaInst(SFTy, DL.getAllocaAddrSpace(),
-                                  /*size*/nullptr, 8,
-                                  /*name*/stack_frame_name, /*insert before*/I);
-  if (!I)
-    F.getEntryBlock().getInstList().push_back(SF);
+  // AllocaInst *SF = new AllocaInst(SFTy, DL.getAllocaAddrSpace(),
+  //                                 /*ArraySize*/nullptr, /*Align*/8,
+  //                                 /*Name*/stack_frame_name, /*InsertBefore*/I);
+  // if (!I)
+  //   F.getEntryBlock().getInstList().push_back(SF);
+  IRBuilder<> B(&*F.getEntryBlock().getFirstInsertionPt());
+  AllocaInst *SF = B.CreateAlloca(SFTy, DL.getAllocaAddrSpace(),
+                                  /*ArraySize*/nullptr,
+                                  /*Name*/stack_frame_name);
+  SF->setAlignment(8);
 
   return SF;
 }
@@ -1210,8 +1215,10 @@ static AllocaInst *CreateStackFrame(Function &F) {
 static Value *GetOrInitCilkStackFrame(
     Function &F, ValueToValueMapTy &DetachCtxToStackFrame,
     bool Helper, bool instrument = false) {
-  if (Value *V = DetachCtxToStackFrame[&F])
-    return V;
+  if (DetachCtxToStackFrame.count(&F))
+    return DetachCtxToStackFrame[&F];
+  // if (Value *V = DetachCtxToStackFrame[&F])
+  //   return V;
 
   Module *M = F.getParent();
 
@@ -1382,7 +1389,7 @@ static bool makeFunctionDetachable(
   return true;
 }
 
-CilkABI::CilkABI() {}
+// CilkABI::CilkABI() {}
 
 /// \brief Lower a call to get the grainsize of this Tapir loop.
 ///
@@ -1417,8 +1424,7 @@ Value *CilkABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   return Grainsize;
 }
 
-void CilkABI::createSync(SyncInst &SI,
-                         ValueToValueMapTy &DetachCtxToStackFrame) {
+void CilkABI::createSync(SyncInst &SI) {
   Function &Fn = *(SI.getParent()->getParent());
   Module &M = *(Fn.getParent());
 
@@ -1442,8 +1448,56 @@ void CilkABI::createSync(SyncInst &SI,
   Fn.addFnAttr(Attribute::Stealable);
 }
 
+void CilkABI::processOutlinedTask(Function &F) {
+  makeFunctionDetachable(F, DetachCtxToStackFrame, false);
+}
+
+void CilkABI::processSpawner(Function &F) {
+  GetOrInitCilkStackFrame(F, DetachCtxToStackFrame,
+                          /*isFast=*/false, false);
+
+  // Mark this function as stealable.
+  F.addFnAttr(Attribute::Stealable);
+}
+
+void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
+  Instruction *ReplStart = TOI.ReplStart;
+  Instruction *ReplCall = TOI.ReplCall;
+
+  Function &F = *ReplCall->getParent()->getParent();
+  Module &M = *F.getParent();
+  assert(DetachCtxToStackFrame.count(&F) &&
+         "No frame found for spawning task.");
+  Value *SF = DetachCtxToStackFrame[&F];
+  // assert(SF && "No frame found for spawning task");
+
+  // Split the basic block containing the detach replacement just before the
+  // start of the detach-replacement instructions.
+  BasicBlock *DetBlock = ReplStart->getParent();
+  BasicBlock *CallBlock = SplitBlock(DetBlock, ReplStart, &DT);
+
+  // Emit a Cilk setjmp at the end of the block preceding the split-off detach
+  // replacement.
+  Instruction *SetJmpPt = DetBlock->getTerminator();
+  IRBuilder<> B(SetJmpPt);
+  Value *SetJmpRes = EmitCilkSetJmp(B, SF, M);
+
+  // Get the ordinary continuation of the detach.
+  BasicBlock *CallCont;
+  if (InvokeInst *II = dyn_cast<InvokeInst>(ReplCall))
+    CallCont = II->getNormalDest();
+  else // isa<CallInst>(CallSite)
+    CallCont = CallBlock->getSingleSuccessor();
+
+  // Insert a conditional branch, based on the result of the setjmp, to either
+  // the detach replacement or the continuation.
+  SetJmpRes = B.CreateICmpEQ(SetJmpRes,
+                             ConstantInt::get(SetJmpRes->getType(), 0));
+  B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
+  SetJmpPt->eraseFromParent();
+}
+
 Function *CilkABI::createDetach(DetachInst &Detach,
-                                ValueToValueMapTy &DetachCtxToStackFrame,
                                 DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *Detacher = Detach.getParent();
   Function &F = *(Detacher->getParent());
@@ -1528,7 +1582,7 @@ static inline void inlineCilkFunctions(Function &F) {
 }
 
 void CilkABI::preProcessFunction(Function &F) {
-  DEBUG(dbgs() << "Processing function " << F.getName() << "\n");
+  DEBUG(dbgs() << "CilkABI processing function " << F.getName() << "\n");
   if (fastCilk && F.getName() == "main") {
     IRBuilder<> B(F.getEntryBlock().getTerminator());
     B.CreateCall(CILKRTS_FUNC(init, *F.getParent()));
@@ -1957,8 +2011,8 @@ bool CilkABILoopSpawning::processLoop() {
                           Header, Preheader, ExitBlock,
                           VMap, M,
                           F->getSubprogram() != nullptr, Returns, ".ls",
-                          &HandledExits, DetachUnwind, InputSyncRegion,
-                          nullptr, nullptr, nullptr);
+                          nullptr, &HandledExits, &HandledExits, DetachUnwind,
+                          InputSyncRegion, nullptr, nullptr, nullptr);
 
     assert(Returns.empty() && "Returns cloned when cloning loop.");
 
