@@ -473,25 +473,33 @@ define i32 @ossfuzz6883() {
 ; CHECK-LABEL: ossfuzz6883:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rax), %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    cltd
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    movl %eax, %esi
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %edi
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    divl %edi
-; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %B17 = or i32 0, 2147483647
   %L6 = load i32, i32* undef
-  %B11 = sdiv i32 %L6, %L6
-  %B13 = udiv i32 %B17, %B17
+  %B11 = sdiv i32 %B17, %L6
+  %B13 = udiv i32 %B17, %L6
   %B14 = srem i32 %B11, %B13
-  %B16 = srem i32 %L6, %L6
+  %B16 = srem i32 %L6, %B14
   %B10 = udiv i32 %L6, %B14
   %B6 = and i32 %B16, %B10
   ret i32 %B6

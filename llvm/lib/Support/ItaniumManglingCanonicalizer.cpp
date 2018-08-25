@@ -82,7 +82,7 @@ struct ProfileNode {
 
 template<> void ProfileNode::operator()(const ForwardTemplateReference *N) {
   llvm_unreachable("should never canonicalize a ForwardTemplateReference");
-};
+}
 
 void profileNode(llvm::FoldingSetNodeID &ID, const Node *N) {
   N->visit(ProfileNode{ID});
