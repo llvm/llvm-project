@@ -74,6 +74,12 @@ ModulePass *createLowerTapirToTargetPass(TapirTargetID);
 //
 FunctionPass *createAnalyzeTapirPass();
 
+//===----------------------------------------------------------------------===//
+//
+// TaskSimplify - Simplify Tapir tasks
+//
+FunctionPass *createTaskSimplifyPass();
+
 } // End llvm namespace
 
 #endif
