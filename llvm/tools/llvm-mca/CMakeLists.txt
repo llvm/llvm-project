@@ -25,6 +25,7 @@ add_llvm_tool(llvm-mca
   Pipeline.cpp
   PipelinePrinter.cpp
   RegisterFile.cpp
+  ResourceManager.cpp
   RetireControlUnit.cpp
   RetireStage.cpp
   Scheduler.cpp

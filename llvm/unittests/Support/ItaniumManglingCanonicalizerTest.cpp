@@ -7,9 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdlib>
 #include "llvm/Support/ItaniumManglingCanonicalizer.h"
+
 #include "gtest/gtest.h"
+
+#include <cstdlib>
+#include <map>
 
 using EquivalenceError = llvm::ItaniumManglingCanonicalizer::EquivalenceError;
 using FragmentKind = llvm::ItaniumManglingCanonicalizer::FragmentKind;
@@ -222,7 +225,9 @@ static std::initializer_list<Testcase> Testcases = {
     },
     {}
   },
+};
 
+static std::initializer_list<Testcase> ForwardTemplateReferenceTestcases = {
   // ForwardTemplateReference does not support canonicalization.
   // FIXME: We should consider ways of fixing this, perhaps by eliminating
   // the ForwardTemplateReference node with a tree transformation.
@@ -245,7 +250,8 @@ static std::initializer_list<Testcase> Testcases = {
   },
 };
 
-TEST(ItaniumManglingCanonicalizerTest, TestTestcases) {
+template<bool CanonicalizeFirst>
+static void testTestcases(std::initializer_list<Testcase> Testcases) {
   for (const auto &Testcase : Testcases) {
     llvm::ItaniumManglingCanonicalizer Canonicalizer;
     for (const auto &Equiv : Testcase.Equivalences) {
@@ -257,11 +263,21 @@ TEST(ItaniumManglingCanonicalizerTest, TestTestcases) {
     }
 
     using CanonKey = llvm::ItaniumManglingCanonicalizer::Key;
+
+    std::map<const EquivalenceClass*, CanonKey> Keys;
+    if (CanonicalizeFirst)
+      for (const auto &Class : Testcase.Classes)
+        Keys.insert({&Class, Canonicalizer.canonicalize(*Class.begin())});
+
     std::map<CanonKey, llvm::StringRef> Found;
     for (const auto &Class : Testcase.Classes) {
-      CanonKey ClassKey = {};
+      CanonKey ClassKey = Keys[&Class];
       for (llvm::StringRef Str : Class) {
-        CanonKey ThisKey = Canonicalizer.canonicalize(Str);
+        // Force a copy to be made when calling lookup to test that it doesn't
+        // retain any part of the provided string.
+        CanonKey ThisKey = CanonicalizeFirst
+                               ? Canonicalizer.lookup(std::string(Str))
+                               : Canonicalizer.canonicalize(Str);
         EXPECT_NE(ThisKey, CanonKey()) << "couldn't canonicalize " << Str;
         if (ClassKey) {
           EXPECT_EQ(ThisKey, ClassKey)
@@ -275,6 +291,21 @@ TEST(ItaniumManglingCanonicalizerTest, TestTestcases) {
     }
   }
 }
+
+TEST(ItaniumManglingCanonicalizerTest, TestCanonicalize) {
+  testTestcases<false>(Testcases);
+}
+
+TEST(ItaniumManglingCanonicalizerTest, TestLookup) {
+  testTestcases<true>(Testcases);
+}
+
+TEST(ItaniumManglingCanonicalizerTest, TestForwardTemplateReference) {
+  // lookup(...) after canonicalization (intentionally) returns different
+  // values for this testcase.
+  testTestcases<false>(ForwardTemplateReferenceTestcases);
+}
+
 
 TEST(ItaniumManglingCanonicalizerTest, TestInvalidManglings) {
   llvm::ItaniumManglingCanonicalizer Canonicalizer;

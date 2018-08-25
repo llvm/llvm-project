@@ -1123,6 +1123,24 @@ public:
   }
 };
 
+/// A forward-reference to a template argument that was not known at the point
+/// where the template parameter name was parsed in a mangling.
+///
+/// This is created when demangling the name of a specialization of a
+/// conversion function template:
+///
+/// \code
+/// struct A {
+///   template<typename T> operator T*();
+/// };
+/// \endcode
+///
+/// When demangling a specialization of the conversion function template, we
+/// encounter the name of the template (including the \c T) before we reach
+/// the template argument list, so we cannot substitute the parameter name
+/// for the corresponding argument while parsing. Instead, we create a
+/// \c ForwardTemplateReference node that is resolved after we parse the
+/// template arguments.
 struct ForwardTemplateReference : Node {
   size_t Index;
   Node *Ref = nullptr;
@@ -1271,10 +1289,11 @@ public:
   void printLeft(OutputStream &S) const override {
     switch (SSK) {
     case SpecialSubKind::allocator:
-      S += "std::basic_string<char, std::char_traits<char>, "
-           "std::allocator<char> >";
+      S += "std::allocator";
       break;
     case SpecialSubKind::basic_string:
+      S += "std::basic_string";
+      break;
     case SpecialSubKind::string:
       S += "std::basic_string<char, std::char_traits<char>, "
            "std::allocator<char> >";
@@ -2165,7 +2184,7 @@ struct Db {
     ASTAllocator.reset();
   }
 
-  template <class T, class... Args> T *make(Args &&... args) {
+  template <class T, class... Args> Node *make(Args &&... args) {
     return ASTAllocator.template makeNode<T>(std::forward<Args>(args)...);
   }
 
@@ -2358,7 +2377,10 @@ template<typename Alloc> Node *Db<Alloc>::parseLocalName(NameState *State) {
 
   if (consumeIf('s')) {
     First = parse_discriminator(First, Last);
-    return make<LocalName>(Encoding, make<NameType>("string literal"));
+    auto *StringLitName = make<NameType>("string literal");
+    if (!StringLitName)
+      return nullptr;
+    return make<LocalName>(Encoding, StringLitName);
   }
 
   if (consumeIf('d')) {
@@ -2772,6 +2794,8 @@ Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
     case SpecialSubKind::ostream:
     case SpecialSubKind::iostream:
       SoFar = make<ExpandedSpecialSubstitution>(SSK);
+      if (!SoFar)
+        return nullptr;
     default:
       break;
     }
@@ -2833,13 +2857,18 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
   Node *SoFar = nullptr;
   auto PushComponent = [&](Node *Comp) {
+    if (!Comp) return false;
     if (SoFar) SoFar = make<NestedName>(SoFar, Comp);
     else       SoFar = Comp;
     if (State) State->EndsWithTemplateArgs = false;
+    return SoFar != nullptr;
   };
 
-  if (consumeIf("St"))
+  if (consumeIf("St")) {
     SoFar = make<NameType>("std");
+    if (!SoFar)
+      return nullptr;
+  }
 
   while (!consumeIf('E')) {
     consumeIf('L'); // extension
@@ -2853,10 +2882,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <template-param>
     if (look() == 'T') {
-      Node *TP = parseTemplateParam();
-      if (TP == nullptr)
+      if (!PushComponent(parseTemplateParam()))
         return nullptr;
-      PushComponent(TP);
       Subs.push_back(SoFar);
       continue;
     }
@@ -2867,6 +2894,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
       if (TA == nullptr || SoFar == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
+      if (!SoFar)
+        return nullptr;
       if (State) State->EndsWithTemplateArgs = true;
       Subs.push_back(SoFar);
       continue;
@@ -2874,10 +2903,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <decltype>
     if (look() == 'D' && (look(1) == 't' || look(1) == 'T')) {
-      Node *DT = parseDecltype();
-      if (DT == nullptr)
+      if (!PushComponent(parseDecltype()))
         return nullptr;
-      PushComponent(DT);
       Subs.push_back(SoFar);
       continue;
     }
@@ -2885,9 +2912,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
     //          ::= <substitution>
     if (look() == 'S' && look(1) != 't') {
       Node *S = parseSubstitution();
-      if (S == nullptr)
+      if (!PushComponent(S))
         return nullptr;
-      PushComponent(S);
       if (SoFar != S)
         Subs.push_back(S);
       continue;
@@ -2897,10 +2923,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
     if (look() == 'C' || (look() == 'D' && look(1) != 'C')) {
       if (SoFar == nullptr)
         return nullptr;
-      Node *CtorDtor = parseCtorDtorName(SoFar, State);
-      if (CtorDtor == nullptr)
+      if (!PushComponent(parseCtorDtorName(SoFar, State)))
         return nullptr;
-      PushComponent(CtorDtor);
       SoFar = parseAbiTags(SoFar);
       if (SoFar == nullptr)
         return nullptr;
@@ -2909,10 +2933,8 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
     }
 
     //          ::= <prefix> <unqualified-name>
-    Node *N = parseUnqualifiedName(State);
-    if (N == nullptr)
+    if (!PushComponent(parseUnqualifiedName(State)))
       return nullptr;
-    PushComponent(N);
     Subs.push_back(SoFar);
   }
 
@@ -3025,6 +3047,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
       if (TA == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
+      if (!SoFar)
+        return nullptr;
     }
 
     while (!consumeIf('E')) {
@@ -3032,6 +3056,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
       if (Qual == nullptr)
         return nullptr;
       SoFar = make<QualifiedName>(SoFar, Qual);
+      if (!SoFar)
+        return nullptr;
     }
 
     Node *Base = parseBaseUnresolvedName();
@@ -3064,6 +3090,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
         SoFar = make<GlobalQualifiedName>(Qual);
       else
         SoFar = Qual;
+      if (!SoFar)
+        return nullptr;
     } while (!consumeIf('E'));
   }
   //      sr <unresolved-type>                 <base-unresolved-name>
@@ -3078,6 +3106,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
       if (TA == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
+      if (!SoFar)
+        return nullptr;
     }
   }
 
@@ -3097,6 +3127,8 @@ template<typename Alloc> Node *Db<Alloc>::parseAbiTags(Node *N) {
     if (SN.empty())
       return nullptr;
     N = make<AbiTagAttr>(N, SN);
+    if (!N)
+      return nullptr;
   }
   return N;
 }
@@ -3149,11 +3181,15 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
   Node *ExceptionSpec = nullptr;
   if (consumeIf("Do")) {
     ExceptionSpec = make<NameType>("noexcept");
+    if (!ExceptionSpec)
+      return nullptr;
   } else if (consumeIf("DO")) {
     Node *E = parseExpr();
     if (E == nullptr || !consumeIf('E'))
       return nullptr;
     ExceptionSpec = make<NoexceptSpec>(E);
+    if (!ExceptionSpec)
+      return nullptr;
   } else if (consumeIf("Dw")) {
     size_t SpecsBegin = Names.size();
     while (!consumeIf('E')) {
@@ -3164,6 +3200,8 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
     }
     ExceptionSpec =
       make<DynamicExceptionSpec>(popTrailingNodeArray(SpecsBegin));
+    if (!ExceptionSpec)
+      return nullptr;
   }
 
   consumeIf("Dx"); // transaction safe
@@ -4503,9 +4541,10 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
           return nullptr;
         Names.push_back(Arg);
       }
-      return make<EnclosingExpr>(
-          "sizeof... (", make<NodeArrayNode>(popTrailingNodeArray(ArgsBegin)),
-          ")");
+      auto *Pack = make<NodeArrayNode>(popTrailingNodeArray(ArgsBegin));
+      if (!Pack)
+        return nullptr;
+      return make<EnclosingExpr>("sizeof... (", Pack, ")");
     }
     }
     return nullptr;
@@ -4757,6 +4796,8 @@ template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
       Names.push_back(Arg);
     }
     Attrs = make<EnableIfAttr>(popTrailingNodeArray(BeforeArgs));
+    if (!Attrs)
+      return nullptr;
   }
 
   Node *ReturnType = nullptr;
@@ -4901,6 +4942,8 @@ template<typename Alloc> Node *Db<Alloc>::parseSubstitution() {
     default:
       return nullptr;
     }
+    if (!SpecialSub)
+      return nullptr;
     // Itanium C++ ABI 5.1.2: If a name that would use a built-in <substitution>
     // has ABI tags, the tags are appended to the substitution; the result is a
     // substitutable component.
@@ -4953,8 +4996,13 @@ template<typename Alloc> Node *Db<Alloc>::parseTemplateParam() {
   // <template-arg> further ahead in the mangled name (currently just conversion
   // operator types), then we should only look it up in the right context.
   if (PermitForwardTemplateReferences) {
-    ForwardTemplateRefs.push_back(make<ForwardTemplateReference>(Index));
-    return ForwardTemplateRefs.back();
+    Node *ForwardRef = make<ForwardTemplateReference>(Index);
+    if (!ForwardRef)
+      return nullptr;
+    assert(ForwardRef->getKind() == Node::KForwardTemplateReference);
+    ForwardTemplateRefs.push_back(
+        static_cast<ForwardTemplateReference *>(ForwardRef));
+    return ForwardRef;
   }
 
   if (Index >= TemplateParams.size())
@@ -5030,6 +5078,8 @@ Node *Db<Alloc>::parseTemplateArgs(bool TagTemplates) {
       if (Arg->getKind() == Node::KTemplateArgumentPack) {
         TableEntry = make<ParameterPack>(
             static_cast<TemplateArgumentPack*>(TableEntry)->getElements());
+        if (!TableEntry)
+          return nullptr;
       }
       TemplateParams.push_back(TableEntry);
     } else {

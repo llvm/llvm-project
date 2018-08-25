@@ -105,13 +105,16 @@ public:
   void reset() {}
 
   template<typename T, typename ...Args>
-  std::pair<Node*, bool> getOrCreateNode(Args &&...As) {
+  std::pair<Node*, bool> getOrCreateNode(bool CreateNewNodes, Args &&...As) {
     llvm::FoldingSetNodeID ID;
     profileCtor(ID, NodeKind<T>::Kind, As...);
 
     void *InsertPos;
     if (NodeHeader *Existing = Nodes.FindNodeOrInsertPos(ID, InsertPos))
       return {static_cast<T*>(Existing->getNode()), false};
+
+    if (!CreateNewNodes)
+      return {nullptr, true};
 
     static_assert(alignof(T) <= alignof(NodeHeader),
                   "underaligned node header for specific node kind");
@@ -125,7 +128,7 @@ public:
 
   template<typename T, typename... Args>
   Node *makeNode(Args &&...As) {
-    return getOrCreateNode<T>(std::forward<Args>(As)...).first;
+    return getOrCreateNode<T>(true, std::forward<Args>(As)...).first;
   }
 
   void *allocateNodeArray(size_t sz) {
@@ -138,7 +141,8 @@ public:
 // of creation.
 template<>
 std::pair<Node *, bool>
-FoldingNodeAllocator::getOrCreateNode<ForwardTemplateReference>(size_t &Index) {
+FoldingNodeAllocator::getOrCreateNode<ForwardTemplateReference>(bool,
+                                                                size_t &Index) {
   return {new (RawAlloc.Allocate(sizeof(ForwardTemplateReference),
                                  alignof(ForwardTemplateReference)))
               ForwardTemplateReference(Index),
@@ -149,15 +153,16 @@ class CanonicalizerAllocator : public FoldingNodeAllocator {
   Node *MostRecentlyCreated = nullptr;
   Node *TrackedNode = nullptr;
   bool TrackedNodeIsUsed = false;
+  bool CreateNewNodes = true;
   llvm::SmallDenseMap<Node*, Node*, 32> Remappings;
 
   template<typename T, typename ...Args> Node *makeNodeSimple(Args &&...As) {
     std::pair<Node *, bool> Result =
-        getOrCreateNode<T>(std::forward<Args>(As)...);
+        getOrCreateNode<T>(CreateNewNodes, std::forward<Args>(As)...);
     if (Result.second) {
       // Node is new. Make a note of that.
       MostRecentlyCreated = Result.first;
-    } else {
+    } else if (Result.first) {
       // Node is pre-existing; check if it's in our remapping table.
       if (auto *N = Remappings.lookup(Result.first)) {
         Result.first = N;
@@ -184,6 +189,8 @@ public:
   }
 
   void reset() { MostRecentlyCreated = nullptr; }
+
+  void setCreateNewNodes(bool CNN) { CreateNewNodes = CNN; }
 
   void addRemapping(Node *A, Node *B) {
     // Note, we don't need to check whether B is also remapped, because if it
@@ -230,6 +237,7 @@ ItaniumManglingCanonicalizer::EquivalenceError
 ItaniumManglingCanonicalizer::addEquivalence(FragmentKind Kind, StringRef First,
                                              StringRef Second) {
   auto &Alloc = P->Demangler.ASTAllocator;
+  Alloc.setCreateNewNodes(true);
 
   auto Parse = [&](StringRef Str) {
     P->Demangler.reset(Str.begin(), Str.end());
@@ -302,6 +310,14 @@ ItaniumManglingCanonicalizer::addEquivalence(FragmentKind Kind, StringRef First,
 
 ItaniumManglingCanonicalizer::Key
 ItaniumManglingCanonicalizer::canonicalize(StringRef Mangling) {
+  P->Demangler.ASTAllocator.setCreateNewNodes(true);
+  P->Demangler.reset(Mangling.begin(), Mangling.end());
+  return reinterpret_cast<Key>(P->Demangler.parse());
+}
+
+ItaniumManglingCanonicalizer::Key
+ItaniumManglingCanonicalizer::lookup(StringRef Mangling) {
+  P->Demangler.ASTAllocator.setCreateNewNodes(false);
   P->Demangler.reset(Mangling.begin(), Mangling.end());
   return reinterpret_cast<Key>(P->Demangler.parse());
 }

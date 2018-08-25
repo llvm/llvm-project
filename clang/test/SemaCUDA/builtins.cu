@@ -12,8 +12,8 @@
 // RUN:     -aux-triple x86_64-unknown-unknown \
 // RUN:     -fsyntax-only -verify %s
 
-#if !(defined(__amd64__) && defined(__PTX__))
-#error "Expected to see preprocessor macros from both sides of compilation."
+#if !defined(__x86_64__)
+#error "Expected to see preprocessor macros from the host."
 #endif
 
 void hf() {

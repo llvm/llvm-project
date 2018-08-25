@@ -76,7 +76,13 @@ public:
   ///
   /// Returns Key() if (and only if) the mangling is not a valid Itanium C++
   /// ABI mangling.
+  ///
+  /// The string denoted by Mangling must live as long as the canonicalizer.
   Key canonicalize(StringRef Mangling);
+
+  /// Find a canonical key for the specified mangling, if one has already been
+  /// formed. Otherwise returns Key().
+  Key lookup(StringRef Mangling);
 
 private:
   struct Impl;
