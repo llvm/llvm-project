@@ -818,10 +818,19 @@ void PassManagerBuilder::populateModulePassManager(
     // relies on the rotated form.  Disable header duplication at -Oz.
     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
 
-    MPM.add(createLoopSpawningPass());
+    MPM.add(createLoopSpawningTIPass());
 
     // The LoopSpawning pass may leave cruft around.  Clean it up.
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    if (OptLevel > 2)
+      MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
     addFunctionSimplificationPasses(MPM);
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    if (MergeFunctions)
+      MPM.add(createMergeFunctionsPass());
+    MPM.add(createBarrierNoopPass());
+    // addFunctionSimplificationPasses(MPM);
 
     // Now lower Tapir to Target runtime calls.
     //
@@ -833,8 +842,13 @@ void PassManagerBuilder::populateModulePassManager(
     // The lowering pass introduces new functions and may leave cruft around.
     // Clean it up.
     MPM.add(createCFGSimplificationPass());
-    MPM.add(createInferFunctionAttrsLegacyPass());
-    MPM.add(createMergeFunctionsPass());
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    if (OptLevel > 2)
+      MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
+    addFunctionSimplificationPasses(MPM);
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    if (MergeFunctions)
+      MPM.add(createMergeFunctionsPass());
     MPM.add(createBarrierNoopPass());
 
     TapirHasBeenLowered = true;

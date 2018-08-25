@@ -29,6 +29,12 @@ Pass *createLoopSpawningPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopSpawningTI - Create a loop spawning pass that uses Task Info.
+//
+Pass *createLoopSpawningTIPass();
+
+//===----------------------------------------------------------------------===//
+//
 // SmallBlock - Do SmallBlock Pass
 //
 FunctionPass *createSmallBlockPass();
