@@ -859,7 +859,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   // Update metadata and IR flags.
   for (auto *I : Insts)
     if (I != I0) {
-      combineMetadataForCSE(I0, I);
+      combineMetadataForCSE(I0, I, true);
       I0->andIRFlags(I);
     }
 

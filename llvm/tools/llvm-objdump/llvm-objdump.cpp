@@ -56,6 +56,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1235,6 +1236,37 @@ addDynamicElfSymbols(const ObjectFile *Obj,
     llvm_unreachable("Unsupported binary format");
 }
 
+static void addPltEntries(const ObjectFile *Obj,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
+                          StringSaver &Saver) {
+  Optional<SectionRef> Plt = None;
+  for (const SectionRef &Section : Obj->sections()) {
+    StringRef Name;
+    if (Section.getName(Name))
+      continue;
+    if (Name == ".plt")
+      Plt = Section;
+  }
+  if (!Plt)
+    return;
+  if (auto *ElfObj = dyn_cast<ELFObjectFileBase>(Obj)) {
+    for (auto PltEntry : ElfObj->getPltAddresses()) {
+      SymbolRef Symbol(PltEntry.first, ElfObj);
+
+      uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
+
+      Expected<StringRef> NameOrErr = Symbol.getName();
+      if (!NameOrErr)
+        report_error(Obj->getFileName(), NameOrErr.takeError());
+      if (NameOrErr->empty())
+        continue;
+      StringRef Name = Saver.save((*NameOrErr + "@plt").str());
+
+      AllSymbols[*Plt].emplace_back(PltEntry.second, Name, SymbolType);
+    }
+  }
+}
+
 static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   if (StartAddress > StopAddress)
     error("Start address should be less than stop address");
@@ -1341,6 +1373,10 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   }
   if (AllSymbols.empty() && Obj->isELF())
     addDynamicElfSymbols(Obj, AllSymbols);
+
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  addPltEntries(Obj, AllSymbols, Saver);
 
   // Create a mapping from virtual address to section.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;

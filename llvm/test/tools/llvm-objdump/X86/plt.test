@@ -1,0 +1,14 @@
+// RUN: llvm-objdump -d %p/Inputs/stripped-elf.so | FileCheck -check-prefix=64 %s
+// RUN: llvm-objdump -d %p/Inputs/hello.exe.elf-i386 | FileCheck -check-prefix=32 %s
+// RUN: llvm-objdump -d %p/Inputs/hello.exe.nopie.elf-i386 | FileCheck -check-prefix=32 %s
+
+# 64: Disassembly of section .plt:
+# 64: __gmon_start__@plt:
+# 64: __cxa_finalize@plt:
+# 64: callq {{.*}} <__cxa_finalize@plt>
+
+# 32: Disassembly of section .plt:
+# 32: puts@plt:
+# 32: __libc_start_main@plt:
+# 32: calll {{.*}} <puts@plt>
+# 32: calll {{.*}} <__libc_start_main@plt>

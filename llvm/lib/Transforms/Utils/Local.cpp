@@ -2354,7 +2354,8 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       K->setMetadata(LLVMContext::MD_invariant_group, JMD);
 }
 
-void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J) {
+void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
+                                 bool KDominatesJ) {
   unsigned KnownIDs[] = {
       LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
       LLVMContext::MD_noalias,         LLVMContext::MD_range,
@@ -2362,7 +2363,7 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J) {
       LLVMContext::MD_invariant_group, LLVMContext::MD_align,
       LLVMContext::MD_dereferenceable,
       LLVMContext::MD_dereferenceable_or_null};
-  combineMetadata(K, J, KnownIDs);
+  combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
 void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {

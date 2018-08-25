@@ -154,7 +154,7 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-DAG:     lwz r3, 96(r1)
 ; CHECK:         add r4, r7, r9
-; CHECK-NEXT:    xxlor v[[REG0:[0-9]+]], f1, f1
+; CHECK-NEXT:    xscpsgndp v[[REG0:[0-9]+]], f1, f1
 ; CHECK-DAG:     add r4, r4, r10
 ; CHECK:         xscvdpqp v[[REG0]], v[[REG0]]
 ; CHECK-NEXT:    add r3, r4, r3
@@ -186,7 +186,7 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-LABEL: mixParam_02f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add r4, r4, r6
-; CHECK-NEXT:    xxlor v[[REG0:[0-9]+]], f1, f1
+; CHECK-NEXT:    xscpsgndp v[[REG0:[0-9]+]], f1, f1
 ; CHECK-NEXT:    add r4, r4, r7
 ; CHECK-NEXT:    xscvdpqp v[[REG0]], v[[REG0]]
 ; CHECK-NEXT:    add r4, r4, r8

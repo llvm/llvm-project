@@ -5443,6 +5443,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &AArch64::GPR64commonRegClass);
       return std::make_pair(0U, &AArch64::GPR32commonRegClass);
     case 'w':
+      if (!Subtarget->hasFPARMv8())
+        break;
       if (VT.getSizeInBits() == 16)
         return std::make_pair(0U, &AArch64::FPR16RegClass);
       if (VT.getSizeInBits() == 32)
@@ -5455,6 +5457,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     // The instructions that this constraint is designed for can
     // only take 128-bit registers so just use that regclass.
     case 'x':
+      if (!Subtarget->hasFPARMv8())
+        break;
       if (VT.getSizeInBits() == 128)
         return std::make_pair(0U, &AArch64::FPR128_loRegClass);
       break;
@@ -5489,6 +5493,11 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       }
     }
   }
+
+  if (Res.second && !Subtarget->hasFPARMv8() &&
+      !AArch64::GPR32allRegClass.hasSubClassEq(Res.second) &&
+      !AArch64::GPR64allRegClass.hasSubClassEq(Res.second))
+    return std::make_pair(0U, nullptr);
 
   return Res;
 }

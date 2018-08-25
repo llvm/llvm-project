@@ -101,7 +101,7 @@
 #define LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 
 #include "SourceMgr.h"
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
