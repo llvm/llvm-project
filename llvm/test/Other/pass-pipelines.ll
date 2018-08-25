@@ -59,6 +59,11 @@
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Combine redundant instructions
 ; CHECK-O2-NOT: Manager
+; To handle Tapir, we now check the task information and try to
+; simplify induction variables.
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NOT: Manager
+; CHECK-O2: Induction Variable Simplification
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: It isn't clear that we need yet another loop pass pipeline

@@ -5,6 +5,7 @@
 ; test.
 ;
 ; RUN: opt < %s -tapir2target -tapir-target=cilk -S | FileCheck %s
+; RUN: opt < %s -passes=tapir2target -tapir-target=cilk -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -54,9 +55,9 @@ if.end7:                                          ; preds = %if.end4
   %call8 = tail call i64 @binary_search(i64* %source_2.tr, i64 %size_2.tr, i64 %3)
   %add9 = add nsw i64 %call8, 1
   detach within %syncreg, label %det.achd, label %det.cont
-; CHECK: define internal fastcc void @cilk_merge_det.achd.cilk(i64* align 1 %source_1.tr.cilk, i64 %div.cilk, i64* align 1 %source_2.tr.cilk, i64 %add9.cilk, i64*
+; CHECK: define internal fastcc void @cilk_merge_det.achd.otd1(i64* align 1 %source_1.tr.otd1, i64 %div.otd1, i64* align 1 %source_2.tr.otd1, i64 %add9.otd1, i64*
 ; CHECK-NOT: returned
-; CHECK: %target.cilk) local_unnamed_addr
+; CHECK: %target.otd1) local_unnamed_addr
 det.achd:                                         ; preds = %if.end7
   %call10 = tail call i64* @cilk_merge(i64* nonnull %source_1.tr, i64 %div, i64* %source_2.tr, i64 %add9, i64* %target)
   reattach within %syncreg, label %det.cont

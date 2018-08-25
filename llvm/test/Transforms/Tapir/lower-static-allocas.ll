@@ -1,5 +1,7 @@
 ; RUN: opt < %s -tapir2target -tapir-target=cilk -debug-abi-calls -S | FileCheck %s --check-prefix=TT
-; RUN: opt < %s -loop-spawning -S | FileCheck %s --check-prefix=LS
+; RUN: opt < %s -passes=tapir2target -tapir-target=cilk -debug-abi-calls -S | FileCheck %s --check-prefix=TT
+; RUN: opt < %s -loop-spawning-ti -S | FileCheck %s --check-prefix=LS
+; RUN: opt < %s -passes=loop-spawning -S | FileCheck %s --check-prefix=LS
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -28,13 +30,13 @@ sync.continue:                                    ; preds = %det.cont
   ret void
 }
 
-; TT-LABEL: define internal fastcc void @detach_test_det.achd.cilk(
-; TT: %y.cilk = alloca
-; TT-LABEL: det.achd.cilk:
-; TT: %[[YCILKPTRSTART:.+]] = bitcast [16 x i32]* %y.cilk to i8*
+; TT-LABEL: define internal fastcc void @detach_test_det.achd.otd1(
+; TT: %y.otd1 = alloca
+; TT-LABEL: det.achd.otd1:
+; TT: %[[YCILKPTRSTART:.+]] = bitcast [16 x i32]* %y.otd1 to i8*
 ; TT-NEXT: call void @llvm.lifetime.start.p0i8(i64 64, i8* %[[YCILKPTRSTART]])
 ; TT: call void @baz(
-; TT: %[[YCILKPTREND:.+]] = bitcast [16 x i32]* %y.cilk to i8*
+; TT: %[[YCILKPTREND:.+]] = bitcast [16 x i32]* %y.otd1 to i8*
 ; TT-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* %[[YCILKPTREND]])
 
 ; Function Attrs: argmemonly nounwind
@@ -117,22 +119,22 @@ sync.continue28:                                  ; preds = %pfor.cond.cleanup16
   ret void
 }
 
-; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach.ls(
-; LS: %y.ls = alloca
-; LS: pfor.body.ls:
-; LS: %[[YLSPTRSTART:.+]] = bitcast [16 x i32]* %y.ls to i8*
-; LS-NEXT: call void @llvm.lifetime.start.p0i8(i64 64, i8* nonnull %[[YLSPTRSTART]])
-; LS: call void @baz(
-; LS-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* nonnull %[[YLSPTRSTART]])
-
-; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach17.ls(
+; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach17.ls1(
 ; LS: %[[ALLOCACALLPTR:.+]] = alloca
-; LS: pfor.body22.ls:
+; LS: pfor.body22.ls1:
 ; LS: %[[ALLOCACALLPTRSTART:.+]] = bitcast [16 x i32]* %[[ALLOCACALLPTR]] to i8*
 ; LS-NEXT: call void @llvm.lifetime.start.p0i8(i64 64, i8* %[[ALLOCACALLPTRSTART]])
 ; LS: call void @baz(
 ; LS: %[[ALLOCACALLPTREND:.+]] = bitcast [16 x i32]* %[[ALLOCACALLPTR]] to i8*
 ; LS-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* %[[ALLOCACALLPTREND]])
+
+; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach.ls1(
+; LS: %y.ls1 = alloca
+; LS: pfor.body.ls1:
+; LS: %[[YLSPTRSTART:.+]] = bitcast [16 x i32]* %y.ls1 to i8*
+; LS-NEXT: call void @llvm.lifetime.start.p0i8(i64 64, i8* nonnull %[[YLSPTRSTART]])
+; LS: call void @baz(
+; LS-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* nonnull %[[YLSPTRSTART]])
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
