@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace lld;
@@ -63,4 +64,10 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef MB) {
       Ret.push_back(S);
   }
   return Ret;
+}
+
+StringRef lld::args::FilenameWithoutExe(StringRef Path) {
+  if (Path.endswith_lower(".exe"))
+    return sys::path::stem(Path);
+  return sys::path::filename(Path);
 }

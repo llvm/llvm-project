@@ -1,5 +1,9 @@
-# RUN: yaml2obj < %s > %t.obj
-# RUN: not lld-link /out:%t.exe %t.obj /verbose /nodefaultlib > %t.log 2>&1
+# RUN: sed -e s/ENTRYNAME/mainCRTStartup/ %s | yaml2obj > %t.obj
+# RUN: lld-link /subsystem:console /out:%t.exe %t.obj /verbose /nodefaultlib > %t.log 2>&1
+# RUN: FileCheck %s < %t.log
+
+# RUN: sed -e s/ENTRYNAME/?mainCRTStartup@@YAHXZ/ %s | yaml2obj > %t.obj
+# RUN: lld-link /subsystem:console /out:%t.exe %t.obj /verbose /nodefaultlib > %t.log 2>&1
 # RUN: FileCheck %s < %t.log
 
 # CHECK: Entry name inferred: mainCRTStartup
@@ -26,7 +30,7 @@ symbols:
       NumberOfLinenumbers: 0
       CheckSum:        0
       Number:          0
-  - Name:            mainCRTStartup
+  - Name:            "ENTRYNAME"
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL

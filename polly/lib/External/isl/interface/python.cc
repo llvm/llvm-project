@@ -106,17 +106,28 @@ void python_generator::print_type_check(const string &type, int pos,
 		printf("            raise\n");
 }
 
-/* Construct a wrapper for a callback argument (at position "arg").
+/* Print a call to the *_copy function corresponding to "type".
+ */
+void python_generator::print_copy(QualType type)
+{
+	string type_s = extract_type(type);
+
+	printf("isl.%s_copy", type_s.c_str());
+}
+
+/* Construct a wrapper for callback argument "param" (at position "arg").
  * Assign the wrapper to "cb".  We assume here that a function call
  * has at most one callback argument.
  *
- * The wrapper converts the arguments of the callback to python types.
+ * The wrapper converts the arguments of the callback to python types,
+ * taking a copy if the C callback does not take its arguments.
  * If any exception is thrown, the wrapper keeps track of it in exc_info[0]
  * and returns -1.  Otherwise the wrapper returns 0.
  */
-void python_generator::print_callback(QualType type, int arg)
+void python_generator::print_callback(ParmVarDecl *param, int arg)
 {
-	const FunctionProtoType *fn = type->getAs<FunctionProtoType>();
+	QualType type = param->getOriginalType();
+	const FunctionProtoType *fn = extract_prototype(type);
 	unsigned n_arg = fn->getNumArgs();
 
 	printf("        exc_info = [None]\n");
@@ -137,8 +148,11 @@ void python_generator::print_callback(QualType type, int arg)
 	for (unsigned i = 0; i < n_arg - 1; ++i) {
 		string arg_type;
 		arg_type = type2python(extract_type(fn->getArgType(i)));
-		printf("            cb_arg%d = %s(ctx=arg0.ctx, "
-			"ptr=cb_arg%d)\n", i, arg_type.c_str(), i);
+		printf("            cb_arg%d = %s(ctx=arg0.ctx, ptr=",
+			i, arg_type.c_str());
+		if (!callback_takes_argument(param, i))
+			print_copy(fn->getArgType(i));
+		printf("(cb_arg%d))\n", i);
 	}
 	printf("            try:\n");
 	printf("                arg%d(", arg);
@@ -175,8 +189,8 @@ void python_generator::print_arg_in_call(FunctionDecl *fd, int arg, int skip)
 	if (is_callback(type)) {
 		printf("cb");
 	} else if (takes(param)) {
-		string type_s = extract_type(type);
-		printf("isl.%s_copy(arg%d.ptr)", type_s.c_str(), arg - skip);
+		print_copy(type);
+		printf("(arg%d.ptr)", arg - skip);
 	} else if (type->isPointerType()) {
 		printf("arg%d.ptr", arg - skip);
 	} else {
@@ -256,7 +270,7 @@ void python_generator::print_method(const isl_class &clazz,
 	FunctionDecl *method, vector<string> super)
 {
 	string fullname = method->getName();
-	string cname = fullname.substr(clazz.name.length() + 1);
+	string cname = clazz.method_name(method);
 	int num_params = method->getNumParams();
 	int drop_user = 0;
 	int drop_ctx = first_arg_is_isl_ctx(method);
@@ -289,7 +303,7 @@ void python_generator::print_method(const isl_class &clazz,
 		QualType type = param->getOriginalType();
 		if (!is_callback(type))
 			continue;
-		print_callback(type->getPointeeType(), i - drop_ctx);
+		print_callback(param, i - drop_ctx);
 	}
 	if (drop_ctx)
 		printf("        ctx = Context.getDefaultInstance()\n");
@@ -383,7 +397,7 @@ void python_generator::print_method(const isl_class &clazz,
 		return;
 	}
 
-	cname = fullname.substr(clazz.name.length() + 1);
+	cname = clazz.method_name(any_method);
 	num_params = any_method->getNumParams();
 
 	print_method_header(is_static(clazz, any_method), cname, num_params);
@@ -409,7 +423,7 @@ void python_generator::print_constructor(const isl_class &clazz,
 	FunctionDecl *cons)
 {
 	string fullname = cons->getName();
-	string cname = fullname.substr(clazz.name.length() + 1);
+	string cname = clazz.method_name(cons);
 	int num_params = cons->getNumParams();
 	int drop_ctx = first_arg_is_isl_ctx(cons);
 
@@ -439,13 +453,9 @@ void python_generator::print_constructor(const isl_class &clazz,
 		if (i)
 			printf(", ");
 		if (is_isl_type(type)) {
-			if (takes(param)) {
-				string type;
-				type = extract_type(param->getOriginalType());
-				printf("isl.%s_copy(args[%d].ptr)",
-					type.c_str(), i - drop_ctx);
-			} else
-				printf("args[%d].ptr", i - drop_ctx);
+			if (takes(param))
+				print_copy(param->getOriginalType());
+			printf("(args[%d].ptr)", i - drop_ctx);
 		} else if (is_string(type)) {
 			printf("args[%d].encode('ascii')", i - drop_ctx);
 		} else {

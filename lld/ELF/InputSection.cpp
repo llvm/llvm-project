@@ -259,9 +259,6 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 //
 //  Returns an empty string if there's no way to get line info.
 std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
-  // Synthetic sections don't have input files.
-  if (!File)
-    return "";
   return File->getSrcMsg(Sym, *this, Offset);
 }
 
@@ -275,9 +272,6 @@ std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
 std::string InputSectionBase::getObjMsg(uint64_t Off) {
-  // Synthetic sections don't have input files.
-  if (!File)
-    return ("<internal>:(" + Name + "+0x" + utohexstr(Off) + ")").str();
   std::string Filename = File->getName();
 
   std::string Archive;
@@ -487,6 +481,33 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
   return OS->PtLoad->FirstSec->Addr;
 }
 
+// For R_RISCV_PC_INDIRECT (R_RISCV_PCREL_LO12_{I,S}), the symbol actually
+// points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
+// is calculated using PCREL_HI20's symbol.
+//
+// This function returns the R_RISCV_PCREL_HI20 relocation from
+// R_RISCV_PCREL_LO12's symbol and addend.
+Relocation *lld::elf::getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
+  const Defined *D = cast<Defined>(Sym);
+  InputSection *IS = cast<InputSection>(D->Section);
+
+  if (Addend != 0)
+    warn("Non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
+         IS->getObjMsg(D->Value) + " is ignored");
+
+  // Relocations are sorted by offset, so we can use std::equal_range to do
+  // binary search.
+  auto Range = std::equal_range(IS->Relocations.begin(), IS->Relocations.end(),
+                                D->Value, RelocationOffsetComparator{});
+  for (auto It = std::get<0>(Range); It != std::get<1>(Range); ++It)
+    if (isRelExprOneOf<R_PC>(It->Expr))
+      return &*It;
+
+  error("R_RISCV_PCREL_LO12 relocation points to " + IS->getObjMsg(D->Value) +
+        " without an associated R_RISCV_PCREL_HI20 relocation");
+  return nullptr;
+}
+
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
@@ -524,11 +545,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return Sym.getGotVA() + A - P;
-  case R_HINT:
-  case R_NONE:
-  case R_TLSDESC_CALL:
-  case R_TLSLD_HINT:
-    llvm_unreachable("cannot relocate hint relocs");
   case R_MIPS_GOTREL:
     return Sym.getVA(A) - InX::MipsGot->getGp(File);
   case R_MIPS_GOT_GP:
@@ -577,6 +593,13 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     else
       Dest = getAArch64Page(Sym.getVA(A));
     return Dest - getAArch64Page(P);
+  }
+  case R_RISCV_PC_INDIRECT: {
+    const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A);
+    if (!HiRel)
+      return 0;
+    return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
+                            *HiRel->Sym, HiRel->Expr);
   }
   case R_PC: {
     uint64_t Dest;
@@ -674,8 +697,9 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return InX::Got->getTlsIndexOff() + A;
   case R_TLSLD_PC:
     return InX::Got->getTlsIndexVA() + A - P;
+  default:
+    llvm_unreachable("invalid expression");
   }
-  llvm_unreachable("Invalid expression");
 }
 
 // This function applies relocations to sections without SHF_ALLOC bit.
@@ -848,6 +872,11 @@ static void switchMorestackCallsToMorestackNonSplit(
   // __morestack inside that function should be switched to
   // __morestack_non_split.
   Symbol *MoreStackNonSplit = Symtab->find("__morestack_non_split");
+  if (!MoreStackNonSplit) {
+    error("Mixing split-stack objects requires a definition of "
+          "__morestack_non_split");
+    return;
+  }
 
   // Sort both collections to compare addresses efficiently.
   llvm::sort(MorestackCalls.begin(), MorestackCalls.end(),
@@ -872,8 +901,8 @@ static void switchMorestackCallsToMorestackNonSplit(
   }
 }
 
-static bool enclosingPrologueAdjusted(uint64_t Offset,
-                                      const DenseSet<Defined *> &Prologues) {
+static bool enclosingPrologueAttempted(uint64_t Offset,
+                                       const DenseSet<Defined *> &Prologues) {
   for (Defined *F : Prologues)
     if (F->Value <= Offset && Offset < F->Value + F->Size)
       return true;
@@ -889,7 +918,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
                                                          uint8_t *End) {
   if (!getFile<ELFT>()->SplitStack)
     return;
-  DenseSet<Defined *> AdjustedPrologues;
+  DenseSet<Defined *> Prologues;
   std::vector<Relocation *> MorestackCalls;
 
   for (Relocation &Rel : Relocations) {
@@ -898,15 +927,9 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     if (Rel.Sym->isLocal())
       continue;
 
-    Defined *D = dyn_cast<Defined>(Rel.Sym);
-    // A reference to an undefined symbol was an error, and should not
-    // have gotten to this point.
-    if (!D)
-      continue;
-
     // Ignore calls into the split-stack api.
-    if (D->getName().startswith("__morestack")) {
-      if (D->getName().equals("__morestack"))
+    if (Rel.Sym->getName().startswith("__morestack")) {
+      if (Rel.Sym->getName().equals("__morestack"))
         MorestackCalls.push_back(&Rel);
       continue;
     }
@@ -914,24 +937,34 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     // A relocation to non-function isn't relevant. Sometimes
     // __morestack is not marked as a function, so this check comes
     // after the name check.
-    if (D->Type != STT_FUNC)
+    if (Rel.Sym->Type != STT_FUNC)
       continue;
 
-    if (enclosingPrologueAdjusted(Rel.Offset, AdjustedPrologues))
+    // If the callee's-file was compiled with split stack, nothing to do.  In
+    // this context, a "Defined" symbol is one "defined by the binary currently
+    // being produced". So an "undefined" symbol might be provided by a shared
+    // library. It is not possible to tell how such symbols were compiled, so be
+    // conservative.
+    if (Defined *D = dyn_cast<Defined>(Rel.Sym))
+      if (InputSection *IS = cast_or_null<InputSection>(D->Section))
+        if (!IS || IS->getFile<ELFT>()->SplitStack)
+          continue;
+
+    if (enclosingPrologueAttempted(Rel.Offset, Prologues))
       continue;
 
     if (Defined *F = getEnclosingFunction<ELFT>(Rel.Offset)) {
-      if (Target->adjustPrologueForCrossSplitStack(Buf + F->Value, End)) {
-        AdjustedPrologues.insert(F);
+      Prologues.insert(F);
+      if (Target->adjustPrologueForCrossSplitStack(Buf + getOffset(F->Value),
+                                                   End))
         continue;
-      }
+      if (!getFile<ELFT>()->SomeNoSplitStack)
+        error(lld::toString(this) + ": " + F->getName() +
+              " (with -fsplit-stack) calls " + Rel.Sym->getName() +
+              " (without -fsplit-stack), but couldn't adjust its prologue");
     }
-    if (!getFile<ELFT>()->SomeNoSplitStack)
-      error("function call at " + getErrorLocation(Buf + Rel.Offset) +
-            "crosses a split-stack boundary, but unable " +
-            "to adjust the enclosing function's prologue");
   }
-  switchMorestackCallsToMorestackNonSplit(AdjustedPrologues, MorestackCalls);
+  switchMorestackCallsToMorestackNonSplit(Prologues, MorestackCalls);
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {

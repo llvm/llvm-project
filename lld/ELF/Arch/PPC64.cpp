@@ -23,6 +23,32 @@ using namespace lld::elf;
 static uint64_t PPC64TocOffset = 0x8000;
 static uint64_t DynamicThreadPointerOffset = 0x8000;
 
+// The instruction encoding of bits 21-30 from the ISA for the Xform and Dform
+// instructions that can be used as part of the initial exec TLS sequence.
+enum XFormOpcd {
+  LBZX = 87,
+  LHZX = 279,
+  LWZX = 23,
+  LDX = 21,
+  STBX = 215,
+  STHX = 407,
+  STWX = 151,
+  STDX = 149,
+  ADD = 266,
+};
+
+enum DFormOpcd {
+  LBZ = 34,
+  LHZ = 40,
+  LWZ = 32,
+  LD = 58,
+  STB = 38,
+  STH = 44,
+  STW = 36,
+  STD = 62,
+  ADDI = 14
+};
+
 uint64_t elf::getPPC64TocBase() {
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
   // TOC starts where the first of these sections starts. We always create a
@@ -56,6 +82,7 @@ public:
   void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -212,6 +239,80 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
 }
 
+static unsigned getDFormOp(unsigned SecondaryOp) {
+  switch (SecondaryOp) {
+  case LBZX:
+    return LBZ;
+  case LHZX:
+    return LHZ;
+  case LWZX:
+    return LWZ;
+  case LDX:
+    return LD;
+  case STBX:
+    return STB;
+  case STHX:
+    return STH;
+  case STWX:
+    return STW;
+  case STDX:
+    return STD;
+  case ADD:
+    return ADDI;
+  default:
+    error("unrecognized instruction for IE to LE R_PPC64_TLS");
+    return 0;
+  }
+}
+
+void PPC64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
+  // The initial exec code sequence for a global `x` will look like:
+  // Instruction                    Relocation                Symbol
+  // addis r9, r2, x@got@tprel@ha   R_PPC64_GOT_TPREL16_HA      x
+  // ld    r9, x@got@tprel@l(r9)    R_PPC64_GOT_TPREL16_LO_DS   x
+  // add r9, r9, x@tls              R_PPC64_TLS                 x
+
+  // Relaxing to local exec entails converting:
+  // addis r9, r2, x@got@tprel@ha       into        nop
+  // ld r9, x@got@tprel@l(r9)           into        addis r9, r13, x@tprel@ha
+  // add r9, r9, x@tls                  into        addi r9, r9, x@tprel@l
+
+  // x@tls R_PPC64_TLS is a relocation which does not compute anything,
+  // it is replaced with r13 (thread pointer).
+
+  // The add instruction in the initial exec sequence has multiple variations
+  // that need to be handled. If we are building an address it will use an add
+  // instruction, if we are accessing memory it will use any of the X-form
+  // indexed load or store instructions.
+
+  unsigned Offset = (Config->EKind == ELF64BEKind) ? 2 : 0;
+  switch (Type) {
+  case R_PPC64_GOT_TPREL16_HA:
+    write32(Loc - Offset, 0x60000000); // nop
+    break;
+  case R_PPC64_GOT_TPREL16_LO_DS:
+  case R_PPC64_GOT_TPREL16_DS: {
+    uint32_t RegNo = read32(Loc - Offset) & 0x03E00000; // bits 6-10
+    write32(Loc - Offset, 0x3C0D0000 | RegNo);          // addis RegNo, r13
+    relocateOne(Loc, R_PPC64_TPREL16_HA, Val);
+    break;
+  }
+  case R_PPC64_TLS: {
+    uint32_t PrimaryOp = (read32(Loc) & 0xFC000000) >> 26; // bits 0-5
+    if (PrimaryOp != 31)
+      error("unrecognized instruction for IE to LE R_PPC64_TLS");
+    uint32_t SecondaryOp = (read32(Loc) & 0x000007FE) >> 1; // bits 21-30
+    uint32_t DFormOp = getDFormOp(SecondaryOp);
+    write32(Loc, ((DFormOp << 26) | (read32(Loc) & 0x03FFFFFF)));
+    relocateOne(Loc + Offset, R_PPC64_TPREL16_LO, Val);
+    break;
+  }
+  default:
+    llvm_unreachable("unknown relocation for IE to LE");
+    break;
+  }
+}
+
 RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
                           const uint8_t *Loc) const {
   switch (Type) {
@@ -279,7 +380,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_TLSLD:
     return R_TLSLD_HINT;
   case R_PPC64_TLS:
-    return R_HINT;
+    return R_TLSIE_HINT;
   default:
     return R_ABS;
   }

@@ -331,8 +331,8 @@ private:
   Chunk *Data;
 };
 
-// If you have a symbol "__imp_foo" in your object file, a symbol name
-// "foo" becomes automatically available as a pointer to "__imp_foo".
+// If you have a symbol "foo" in your object file, a symbol name
+// "__imp_foo" becomes automatically available as a pointer to "foo".
 // This class is for such automatically-created symbols.
 // Yes, this is an odd feature. We didn't intend to implement that.
 // This is here just for compatibility with MSVC.

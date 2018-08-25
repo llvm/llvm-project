@@ -39,6 +39,7 @@ Defined *ElfSym::MipsGp;
 Defined *ElfSym::MipsGpDisp;
 Defined *ElfSym::MipsLocalGp;
 Defined *ElfSym::RelaIpltEnd;
+Defined *ElfSym::RISCVGlobalPointer;
 
 static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   switch (Sym.kind()) {
@@ -203,6 +204,15 @@ void Symbol::parseSymbolVersion() {
 }
 
 InputFile *LazyArchive::fetch() { return cast<ArchiveFile>(File)->fetch(Sym); }
+
+MemoryBufferRef LazyArchive::getMemberBuffer() {
+  Archive::Child C = CHECK(
+      Sym.getMember(), "could not get the member for symbol " + Sym.getName());
+
+  return CHECK(C.getMemoryBufferRef(),
+               "could not get the buffer for the member defining symbol " +
+                   Sym.getName());
+}
 
 uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)
