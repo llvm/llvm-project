@@ -771,6 +771,7 @@ bool DACLoopSpawning::processLoop() {
   // ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "LoopLimit", L->getStartLoc(),
   //                                     Header)
   //          << "loop limit: " << NV("Limit", Limit));
+
   /// Determine the type of the canonical IV.
   Type *CanonicalIVTy = Limit->getType();
   {
@@ -1069,8 +1070,8 @@ bool DACLoopSpawning::processLoop() {
                           Header, Preheader, ExitBlock,
                           VMap, M,
                           F->getSubprogram() != nullptr, Returns, ".ls",
-                          &HandledExits, DetachUnwind, InputSyncRegion,
-                          nullptr, nullptr, nullptr);
+                          nullptr, &HandledExits, &HandledExits, DetachUnwind,
+                          InputSyncRegion, nullptr, nullptr, nullptr);
 
     assert(Returns.empty() && "Returns cloned when cloning loop.");
 
@@ -1436,7 +1437,7 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
 /// pre-order traversal of the tree of loops and pushes each Tapir loop found
 /// onto the end of the vector.
 void LoopSpawningImpl::addTapirLoop(Loop *L, SmallVectorImpl<Loop *> &V) {
-  TapirLoopHints Hints(L, ORE);
+  TapirLoopHints Hints(L);
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())
@@ -1482,9 +1483,8 @@ static std::string getDebugLocString(const Loop *L) {
 #endif
 
 bool LoopSpawningImpl::run() {
-  // Build up a worklist of inner-loops to vectorize. This is necessary as
-  // the act of vectorizing or partially unrolling a loop creates new loops
-  // and can invalidate iterators across the loops.
+  // Build up a worklist of loops to transform.  This is necessary as the act of
+  // transforming loops can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
   bool Changed = false;
 
@@ -1520,7 +1520,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
                << L->getHeader()->getParent()->getName() << "\" from "
         << DebugLocStr << ": " << *L << "\n");
 
-  TapirLoopHints Hints(L, ORE);
+  TapirLoopHints Hints(L);
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())

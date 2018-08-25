@@ -142,10 +142,10 @@ public:
     }
   }
 
-  TapirLoopHints(const Loop *L, OptimizationRemarkEmitter &ORE)
+  TapirLoopHints(const Loop *L)
       : Strategy("spawn.strategy", ST_SEQ, HK_STRATEGY),
         Grainsize("grainsize", 0, HK_GRAINSIZE),
-        TheLoop(L), ORE(ORE) {
+        TheLoop(L) {
     // Populate values with existing loop metadata.
     getHintsFromMetadata();
   }
@@ -166,6 +166,13 @@ public:
     return Grainsize.Value;
   }
 
+  /// Mark the loop L as already vectorized by setting the width to 1.
+  void clearStrategy() {
+    Strategy.Value = ST_SEQ;
+    Hint Hints[] = {Strategy};
+    writeHintsToMetadata(Hints);
+  }
+
 private:
   /// Find hints specified in the loop metadata and update local values.
   void getHintsFromMetadata();
@@ -184,9 +191,6 @@ private:
 
   /// The loop these hints belong to.
   const Loop *TheLoop;
-
-  /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter &ORE;
 };
 
 /// Returns true if Tapir-loop hints require loop outlining during lowering.
