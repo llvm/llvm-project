@@ -64,6 +64,26 @@ bool Spindle::isTaskContinuation() const {
   return false;
 }
 
+/// Return true if the successor spindle Succ is part of the same task as this
+/// spindle.
+bool Spindle::succInSameTask(const Spindle *Succ) const {
+  // If this spindle is a shared EH spindle, the successor must be a shared EH
+  // spindle tracked by the same task.
+  if (isSharedEH())
+    return (Succ->isSharedEH() && (getParentTask() == Succ->getParentTask()));
+
+  // Otherwise we have an ordinary spindle.  If this spindle and Succ are both
+  // properly contained in ParentTask, return true;
+  if (getParentTask()->contains(Succ))
+    return true;
+  else {
+    // Otherwise, check if Succ is a shared EH spindle tracked by the parent of
+    // ParentTask.
+    const Task *GrandParent = getParentTask()->getParentTask();
+    return (GrandParent && GrandParent->containsSharedEH(Succ));
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Task implementation
 //
@@ -76,6 +96,77 @@ LLVM_DUMP_METHOD void Task::dumpVerbose() const {
 }
 #endif
 
+// Get the shared EH spindles that this task can exit to and append them to
+// SpindleVec.
+void Task::getSharedEHExits(SmallVectorImpl<Spindle *> &SpindleVec) const {
+  if (isRootTask()) return;
+  if (!getParentTask()->tracksSharedEHSpindles()) return;
+
+  // Scan the successors of the spindles in this task to find shared EH exits.
+  SmallVector<Spindle *, 4> WorkList;
+  SmallPtrSet<Spindle *, 4> Visited;
+  for (Spindle *S : getSpindles())
+    for (Spindle *Succ : successors(S))
+      if (getParentTask()->containsSharedEH(Succ))
+        WorkList.push_back(Succ);
+
+  // Perform a DFS of the shared EH exits to push each one onto SpindleVec and
+  // continue searching for more shared EH exits.
+  while (!WorkList.empty()) {
+    Spindle *EHExit = WorkList.pop_back_val();
+    if (!Visited.insert(EHExit).second) continue;
+
+    // Push EHExit onto SpindleVec.
+    SpindleVec.push_back(EHExit);
+
+    // Scan the successors of EHExit for more shared EH exits.
+    for (Spindle *Succ : successors(EHExit))
+      if (getParentTask()->containsSharedEH(Succ))
+        WorkList.push_back(Succ);
+  }
+}
+
+// Get the shared EH spindles that this task can exit to and append them to
+// SpindleVec.
+bool Task::isSharedEHExit(const Spindle *SharedEH) const {
+  if (isRootTask()) return false;
+  // Quickly confirm that the given spindle is a shared EH spindle tracked by
+  // the parent.
+  if (!getParentTask()->containsSharedEH(SharedEH)) return false;
+
+  // Scan the successors of the spindles in this task to find shared EH exits.
+  SmallVector<Spindle *, 4> WorkList;
+  SmallPtrSet<Spindle *, 4> Visited;
+  for (Spindle *S : getSpindles())
+    for (Spindle *Succ : successors(S))
+      if (SharedEH == Succ)
+        return true;
+      else if (getParentTask()->containsSharedEH(Succ))
+        WorkList.push_back(Succ);
+
+  // Perform a DFS of the shared EH exits to push each one onto SpindleVec and
+  // continue searching for more shared EH exits.
+  while (!WorkList.empty()) {
+    Spindle *EHExit = WorkList.pop_back_val();
+    if (!Visited.insert(EHExit).second) continue;
+
+    // Check if this exit is the shared EH exit we're looking for.
+    if (SharedEH == EHExit)
+      return true;
+
+    // Scan the successors of EHExit for more shared EH exits.
+    for (Spindle *Succ : successors(EHExit))
+      if (getParentTask()->containsSharedEH(Succ))
+        WorkList.push_back(Succ);
+  }
+
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// TaskInfo implementation
+//
+
 // Add the unassociated spindles to the task T in order of a DFS CFG traversal
 // starting at the entry block of T.
 static void
@@ -85,8 +176,8 @@ AssociateWithTask(TaskInfo *TI, Task *T,
   SmallPtrSet<Spindle *, 8> Visited;
   // Add the successor spindles of the entry block of T to the worklist.
   Spindle *Entry = T->getEntrySpindle();
-  for (auto &Exit : Entry->exits())
-    for (auto Child : successors(&Exit))
+  for (BasicBlock *Exit : Entry->spindle_exits())
+    for (BasicBlock *Child : successors(Exit))
       if (Spindle *S = TI->getSpindleFor(Child))
         if (UnassocSpindles.count(S))
           WorkList.push_back(S);
@@ -102,8 +193,8 @@ AssociateWithTask(TaskInfo *TI, Task *T,
 
     // Add the successor spindles of S that are associated with T to the
     // worklist.
-    for (auto &Exit : S->exits())
-      for (auto Child : successors(&Exit))
+    for (BasicBlock *Exit : S->spindle_exits())
+      for (BasicBlock *Child : successors(Exit))
         if (Spindle *S = TI->getSpindleFor(Child))
           if (UnassocSpindles.count(S))
             WorkList.push_back(S);
@@ -153,20 +244,26 @@ AssociateWithSpindle(TaskInfo *TI, Spindle *S,
          "Not all unassociated blocks were associated with spindle.");
 }
 
+// Helper function to add spindle edges to spindles.
 static void computeSpindleEdges(TaskInfo *TI) {
+  // Walk all spindles in the CFG to find all spindle edges.
   SmallVector<Spindle *, 8> WorkList;
   SmallPtrSet<Spindle *, 8> Visited;
+
   WorkList.push_back(TI->getRootTask()->getEntrySpindle());
   while (!WorkList.empty()) {
     Spindle *S = WorkList.pop_back_val();
 
     if (!Visited.insert(S).second) continue;
 
-    for (BasicBlock &Exit : S->exits()) {
-      for (BasicBlock *SB : successors(&Exit)) {
+    // Examine all outgoing CFG edges from this spindle and create a spindle
+    // edge for each one.  Filter out self-edges.
+    for (BasicBlock *Exit : S->spindle_exits()) {
+      for (BasicBlock *SB : successors(Exit)) {
         Spindle *Succ = TI->getSpindleFor(SB);
         if (Succ != S) {
-          S->addSpindleEdgeTo(Succ, &Exit);
+          S->addSpindleEdgeTo(Succ, Exit);
+          // Add this successor spindle for processing.
           WorkList.push_back(Succ);
         }
       }
@@ -174,7 +271,7 @@ static void computeSpindleEdges(TaskInfo *TI) {
   }
 }
 
-void TaskInfo::analyze(Function &F) {
+void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   // We first compute defining blocks and IDFs based on the detach and sync
   // instructions.
   DenseMap<const BasicBlock *, unsigned int> BBNumbers;
@@ -188,13 +285,14 @@ void TaskInfo::analyze(Function &F) {
       DefiningBlocks.insert(&B);
       // Create a spindle and root task for the entry block.
       Spindle *S = createSpindleWithEntry(&B, Spindle::SPType::Entry);
-      RootTask = createTaskWithEntry(S);
-    } else if (DetachInst *DI = dyn_cast<DetachInst>(B.getTerminator())) {
+      RootTask = createTaskWithEntry(S, DomTree);
+    }
+    if (DetachInst *DI = dyn_cast<DetachInst>(B.getTerminator())) {
       BasicBlock *TaskEntry = DI->getDetached();
       DefiningBlocks.insert(TaskEntry);
       // Create a new spindle and task.
       Spindle *S = createSpindleWithEntry(TaskEntry, Spindle::SPType::Detach);
-      createTaskWithEntry(S);
+      createTaskWithEntry(S, DomTree);
     } else if (isa<SyncInst>(B.getTerminator())) {
       BasicBlock *SPEntry = B.getSingleSuccessor();
       // For sync instructions, we mark the block containing the sync
@@ -238,23 +336,23 @@ void TaskInfo::analyze(Function &F) {
   // into spindles, partition the spindles into tasks, and compute the tree of
   // tasks in this function.
   //
-  //   -) A post-order traversal of the dominator tree looks for a spindle entry
-  //   and creates a stack of blocks it finds along the way.
+  // -) A post-order traversal of the dominator tree looks for a spindle entry
+  // and creates a stack of blocks it finds along the way.
   //
-  //   -) Once a spindle entry is encountered, the blocks belonging to that
-  //   spindle equal the suffix of the stack of found blocks that are all
-  //   dominated by the spindle's entry.  These blocks are removed from the
-  //   stack and added to the spindle according to a DFS CFG traversal starting
-  //   at the spindle's entry.
+  // -) Once a spindle entry is encountered, the blocks belonging to that
+  // spindle equal the suffix of the stack of found blocks that are all
+  // dominated by the spindle's entry.  These blocks are removed from the stack
+  // and added to the spindle according to a DFS CFG traversal starting at the
+  // spindle's entry.
   //
-  //   -) Similarly, the post-order travesal of the dominator tree finds the set
-  //   of spindles that make up each task.  These spindles are collected and
-  //   added to their enclosing task using the same algorithm as above.
+  // -) Similarly, the post-order travesal of the dominator tree finds the set
+  // of spindles that make up each task.  These spindles are collected and added
+  // to their enclosing task using the same algorithm as above.
   //
-  //   -) Finally, the post-order traversal of the dominator tree deduces the
-  //   hierarchical nesting of tasks within the function.  Subtasks are
-  //   associated with their parent task whenever a task entry that dominates
-  //   the previous task entry is encountered.
+  // -) Finally, the post-order traversal of the dominator tree deduces the
+  // hierarchical nesting of tasks within the function.  Subtasks are associated
+  // with their parent task whenever a task entry that dominates the previous
+  // task entry is encountered.
   std::vector<BasicBlock *> FoundBlocks;
   SmallVector<Spindle *, 8> FoundSpindles;
   SmallVector<Task *, 4> UnassocTasks;
@@ -317,13 +415,12 @@ void TaskInfo::analyze(Function &F) {
 
     // If the last task is dominated by this task, add the unassociated tasks as
     // children of this task.
-    if (!UnassocTasks.empty()) {
+    while (!UnassocTasks.empty()) {
       Task *LastTask = UnassocTasks.back();
-      if (DomTree.dominates(T->getEntry(), LastTask->getEntry())) {
-        for (Task *UnassocTask : UnassocTasks)
-          T->addSubTask(UnassocTask);
-        UnassocTasks.clear();
-      }
+      if (!DomTree.dominates(T->getEntry(), LastTask->getEntry()))
+        break;
+      T->addSubTask(LastTask);
+      UnassocTasks.pop_back();
     }
     UnassocTasks.push_back(T);
   }
@@ -420,7 +517,6 @@ static bool needPhiInTaskContinue(
     for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
          PI != E; ++PI) {
       const BasicBlock *P = *PI;
-      // if (isa<ReattachInst>(P->getTerminator())) {
       if (TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
         DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
               P->getName() << "\n");
@@ -431,10 +527,11 @@ static bool needPhiInTaskContinue(
   return false;
 }
 
-/// Check if a alloca AI is promotable based on task structure.
+/// Check if a alloca AI is promotable based on uses in subtasks.
 bool TaskInfo::isAllocaParallelPromotable(const AllocaInst *AIP) const {
   if (getTaskFor(AIP->getParent())->isSerial()) return true;
 
+  DominatorTree &DomTree = getRootTask()->DomTree;
   AllocaInst *AI = const_cast<AllocaInst *>(AIP);
   SmallPtrSet<BasicBlock *, 32> DefBlocks;
   SmallVector<BasicBlock *, 32> UsingBlocks;
@@ -462,6 +559,8 @@ bool TaskInfo::isAllocaParallelPromotable(const AllocaInst *AIP) const {
     }
   }
 
+  // A spindle is guaranteed to execute as a serial unit.  Hence, if an alloca
+  // is only used in a single spindle, it is safe to promote.
   if (OnlyUsedInOneSpindle) return true;
 
   ForwardIDFCalculator IDF(DomTree);
@@ -494,8 +593,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Spindle &S) {
   return OS;
 }
 
-// TaskInfo::TaskInfo(const DomTreeBase<BasicBlock> &DomTree) { analyze(DomTree); }
-
 bool TaskInfo::invalidate(Function &F, const PreservedAnalyses &PA,
                           FunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
@@ -504,65 +601,6 @@ bool TaskInfo::invalidate(Function &F, const PreservedAnalyses &PA,
   return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
            PAC.preservedSet<CFGAnalyses>());
 }
-
-// void TaskInfo::erase(Task *Untask) {
-//   assert(!Untask->isInvalid() && "Task has already been erased!");
-
-//   auto InvalidateOnExit = make_scope_exit([&]() { destroy(Untask); });
-
-//   // First handle the special case of no parent task to simplify the algorithm.
-//   if (!Untask->getParentTask()) {
-//     // Since BBTask had no parent, Untask blocks are no longer in a task.
-//     for (Task::block_iterator I = Untask->block_begin(),
-//                               E = Untask->block_end();
-//          I != E; ++I) {
-
-//       // Don't reparent blocks in subtasks.
-//       if (getTaskFor(*I) != Untask)
-//         continue;
-
-//       // Blocks no longer have a parent but are still referenced by Untask until
-//       // the Untask object is deleted.
-//       changeTaskFor(*I, nullptr);
-//     }
-
-//     // Remove the task from the top-level TaskInfo object.
-//     for (iterator I = begin();; ++I) {
-//       assert(I != end() && "Couldn't find task");
-//       if (*I == Untask) {
-//         removeTask(I);
-//         break;
-//       }
-//     }
-
-//     // Move all of the subtasks to the top-level.
-//     while (!Untask->empty())
-//       addTopLevelTask(Untask->removeChildTask(std::prev(Untask->end())));
-
-//     return;
-//   }
-
-//   // Update the parent task for all blocks within the task. Blocks within
-//   // subtasks will not change parents.
-//   UntaskUpdater Updater(Untask, this);
-//   Updater.updateBlockParents();
-
-//   // Remove blocks from former ancestor tasks.
-//   Updater.removeBlocksFromAncestors();
-
-//   // Add direct subtasks as children in their new parent task.
-//   Updater.updateSubtaskParents();
-
-//   // Remove untask from its parent task.
-//   Task *ParentTask = Untask->getParentTask();
-//   for (Task::iterator I = ParentTask->begin();; ++I) {
-//     assert(I != ParentTask->end() && "Couldn't find task");
-//     if (*I == Untask) {
-//       ParentTask->removeChildTask(I);
-//       break;
-//     }
-//   }
-// }
 
 /// Print spindle with all the BBs inside it.
 void Spindle::print(raw_ostream &OS, bool Verbose) const {
@@ -604,43 +642,22 @@ void Spindle::print(raw_ostream &OS, bool Verbose) const {
   }
 }
 
-// Helper routine to print the shared exception-handling spindles reached by
-// spindle S.
-static void printSharedEHSucc(const Spindle *S, const Task *ParentTask,
-                              SmallPtrSetImpl<const Spindle *> &Visited,
-                              raw_ostream &OS, bool Verbose) {
-  for (const auto &Exit : S->exits())
-    for (const BasicBlock *Succ : successors(&Exit))
-      if (const Spindle *EH = ParentTask->getSharedEHContaining(Succ)) {
-        if (!Visited.insert(EH).second) continue;
-        EH->print(OS, Verbose);
-      }
-}
-
 /// Print task with all the BBs inside it.
 void Task::print(raw_ostream &OS, unsigned Depth, bool Verbose) const {
   OS.indent(Depth * 2) << "task at depth " << Depth << " containing: ";
 
   // Print the spindles in this task.
-  SmallPtrSet<const Spindle *, 1> VisitedSharedEHSpindles;
-  for (const Spindle *S : spindles()) {
+  for (const Spindle *S :
+         depth_first<InTask<const Spindle *>>(getEntrySpindle()))
     S->print(OS, Verbose);
-    // If this spindle exits to a shared EH spindle, print those shared EH
-    // spindles.
-    if (Task *Parent = getParentTask())
-      if (Parent->hasSharedEHSpindles())
-        printSharedEHSucc(S, Parent, VisitedSharedEHSpindles, OS, Verbose);
-  }
   OS << "\n";
 
   // If this task contains tracks any shared EH spindles for its subtasks, print
   // those shared EH spindles.
-  if (hasSharedEHSpindles()) {
-    for (const Spindle *S : shared_eh_spindles()) {
-      OS << "<shared EH>";
-      S->print(OS, Verbose);
-      OS << "\n";
-    }
+  for (const Spindle *S : shared_eh_spindles()) {
+    OS << "<shared EH>";
+    S->print(OS, Verbose);
+    OS << "\n";
   }
 
   // Print the subtasks of this task.
@@ -676,8 +693,8 @@ TaskInfo TaskAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // point it may prove worthwhile to use a freelist and recycle TaskInfo
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
-  TaskInfo TI(AM.getResult<DominatorTreeAnalysis>(F));
-  TI.analyze(F);
+  TaskInfo TI;
+  TI.analyze(F, AM.getResult<DominatorTreeAnalysis>(F));
   return TI;
 }
 
@@ -725,7 +742,8 @@ void Task::verify(const TaskInfo *TI, const BasicBlock *Entry,
     assert(TI->getTaskFor(S) == this &&
            "TaskInfo associates spindle with different task");
     for (BasicBlock *B : S->blocks()) {
-      assert(contains(B) && "Task spindles contain a block not in the task");
+      assert(encloses(B) &&
+             "Task spindle contains a block not enclosed by task");
       assert(DT.dominates(Entry, B) &&
              "Task entry does not dominate all task blocks");
       assert(TI->getSpindleFor(B) == S &&
@@ -765,7 +783,7 @@ void Task::verify(const TaskInfo *TI, const BasicBlock *Entry,
 
     // Check that detach edge dominates all blocks in subtask.
     SmallVector<BasicBlock *, 32> TaskBlocks;
-    T->getBlocks(TaskBlocks);
+    T->getDominatedBlocks(TaskBlocks);
     BasicBlockEdge DetachEdge(TPred, TEntry);
     for (BasicBlock *B : TaskBlocks)
       assert(DT.dominates(DetachEdge, B) &&
@@ -783,7 +801,7 @@ void TaskInfo::verify(const DominatorTree &DT) const {
   // Test the set of blocks extracted by getBlocks(), which uses the Task's
   // associated dominator tree.
   SmallVector<BasicBlock *, 32> TaskBlocks;
-  RootTask->getBlocks(TaskBlocks);
+  RootTask->getDominatedBlocks(TaskBlocks);
   for (BasicBlock *B : TaskBlocks) {
     Spindle *S = getSpindleFor(B);
     assert(S && "TaskInfo does not associate this block with a spindle");
@@ -805,30 +823,28 @@ INITIALIZE_PASS_END(TaskInfoWrapperPass, "tasks", "Tapir Task Information",
                     true, true)
 
 bool TaskInfoWrapperPass::runOnFunction(Function &F) {
-  TI.reset(new TaskInfo(getAnalysis<DominatorTreeWrapperPass>().getDomTree()));
-  TI->analyze(F);
+  releaseMemory();
+  TI.analyze(F, getAnalysis<DominatorTreeWrapperPass>().getDomTree());
   return false;
 }
 
 void TaskInfoWrapperPass::verifyAnalysis() const {
   // TaskInfoWrapperPass is a FunctionPass, but verifying every task in the
   // function each time verifyAnalysis is called is very expensive. The
-  // -verify-task-info option can enable this. In order to perform some
-  // checking by default, TaskPass has been taught to call verifyTask manually
-  // during task pass sequences.
+  // -verify-task-info option can enable this.
   if (VerifyTaskInfo) {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    TI->verify(DT);
+    TI.verify(DT);
   }
 }
 
 void TaskInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
 }
 
 void TaskInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  TI->print(OS);
+  TI.print(OS);
 }
 
 PreservedAnalyses TaskVerifierPass::run(Function &F,

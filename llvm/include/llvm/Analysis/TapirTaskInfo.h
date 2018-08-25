@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CFG.h"
@@ -101,12 +102,15 @@ public:
   bool predInDifferentTask(const Spindle *Pred) const {
     return (getParentTask() != Pred->getParentTask()) && !isSharedEH();
   }
+  /// Return true if the successor spindle Succ is part of the same task as this
+  /// spindle.
+  bool succInSameTask(const Spindle *Succ) const;
 
   /// Get a list of the basic blocks which make up this task.
   ArrayRef<BasicBlock *> getBlocks() const {
     return Blocks;
   }
-  using iterator = ArrayRef<BasicBlock *>::const_iterator;
+  using iterator = typename ArrayRef<BasicBlock *>::const_iterator;
   iterator block_begin() const { return getBlocks().begin(); }
   iterator block_end() const { return getBlocks().end(); }
   inline iterator_range<iterator> blocks() const {
@@ -140,78 +144,32 @@ public:
     return false;
   }
 
-  /// Iterator to walk just the exiting basic blocks of the spindle.
-  template<typename SpindleT = Spindle *>
-  class exitblock_iterator_impl
-    : public iterator_facade_base<exitblock_iterator_impl<SpindleT>,
-                                  std::forward_iterator_tag, BasicBlock> {
-    SpindleT S;
-    unsigned i;
-
-    void findNextExit() {
-      while (!atEnd() && !S->isSpindleExiting(S->getBlocks()[i])) ++i;
-    }
-
+  /// Helper class for iterator to walk just the exiting basic blocks of the
+  /// spindle.
+  class SpindleExitingFilter {
+    const Spindle *S = nullptr;
   public:
-    explicit exitblock_iterator_impl(SpindleT S, unsigned i = 0) : S(S), i(i) {
-      findNextExit();
-    }
-
-    // Allow default construction to build variables, but this doesn't build
-    // a useful iterator.
-    exitblock_iterator_impl() = default;
-
-    // Allow conversion between instantiations where valid.
-    exitblock_iterator_impl(const exitblock_iterator_impl<SpindleT> &Arg)
-        : S(Arg.S), i(Arg.i) {}
-
-    static exitblock_iterator_impl end(SpindleT S) {
-      return exitblock_iterator_impl(S, S->getNumBlocks());
-    }
-
-    bool operator==(const exitblock_iterator_impl &Arg) const {
-      return (S == Arg.S) && (i == Arg.i);
-    }
-    bool operator!=(const exitblock_iterator_impl &Arg) const {
-      return !operator==(Arg);
-    }
-    bool atEnd() const { return i >= S->getNumBlocks(); }
-
-    BasicBlock *operator->() const { return &operator*(); }
-    BasicBlock &operator*() const {
-      assert(!atEnd() && "exitblock_iterator out of range");
-      return *S->getBlocks()[i];
-    }
-
-    // using exitblock_iterator_impl::iterator_facade_base::operator++;
-    inline exitblock_iterator_impl<SpindleT> &operator++() {
-      assert(!atEnd() && "Cannot increment the end iterator!");
-      ++i;
-      findNextExit();
-      return *this;
-    }
-    inline exitblock_iterator_impl<SpindleT> operator++(int) { // Postincrement
-      exitblock_iterator_impl tmp = *this;
-      ++*this;
-      return tmp;
+    SpindleExitingFilter() {}
+    SpindleExitingFilter(const Spindle *S) : S(S) {}
+    bool operator()(const BasicBlock *B) const {
+      return S->isSpindleExiting(B);
     }
   };
-  using exitblock_iterator = exitblock_iterator_impl<>;
-  using const_exitblock_iterator = exitblock_iterator_impl<const Spindle *>;
-
-  /// Returns a range that iterates over the exit blocks in the spindle.
-  inline iterator_range<const_exitblock_iterator> exits() const {
-    return make_range<const_exitblock_iterator>(
-        const_exitblock_iterator(this), const_exitblock_iterator::end(this));
+  inline iterator_range<
+    filter_iterator<ArrayRef<BasicBlock *>::iterator,
+                    SpindleExitingFilter>> spindle_exits() {
+    return make_filter_range(blocks(), SpindleExitingFilter(this));
   }
-  inline iterator_range<exitblock_iterator> exits() {
-    return make_range<exitblock_iterator>(
-        exitblock_iterator(this), exitblock_iterator::end(this));
+  inline iterator_range<
+    filter_iterator<ArrayRef<BasicBlock *>::const_iterator,
+                    SpindleExitingFilter>> spindle_exits() const {
+    return make_filter_range(blocks(), SpindleExitingFilter(this));
   }
 
   // Iterators for the incoming and outgoing edges of this spindle.
-  using spedge_iterator = SmallVectorImpl<SpindleEdge>::iterator;
-  using spedge_const_iterator = SmallVectorImpl<SpindleEdge>::const_iterator;
+  using spedge_iterator = typename SmallVectorImpl<SpindleEdge>::iterator;
+  using spedge_const_iterator =
+    typename SmallVectorImpl<SpindleEdge>::const_iterator;
   using spedge_range = iterator_range<spedge_iterator>;
   using spedge_const_range = iterator_range<spedge_const_iterator>;
 
@@ -302,8 +260,7 @@ protected:
   /// This creates an empty spindle.
   Spindle() : ParentTask(nullptr) {}
 
-  explicit Spindle(BasicBlock *BB, SPType Ty)
-      : Ty(Ty), ParentTask(nullptr) {
+  explicit Spindle(BasicBlock *BB, SPType Ty) : Ty(Ty), ParentTask(nullptr) {
     Blocks.push_back(BB);
     DenseBlockSet.insert(BB);
   }
@@ -328,22 +285,23 @@ protected:
 
 raw_ostream &operator<<(raw_ostream &OS, const Spindle &S);
 
-using pred_spindle_iterator = Spindle::adj_iterator;
-using const_pred_spindle_iterator = Spindle::adj_const_iterator;
+// Iterators for the predecessors of a Spindle, using the Spindle edges.
+using pred_spindle_iterator = typename Spindle::adj_iterator;
+using pred_spindle_const_iterator = typename Spindle::adj_const_iterator;
 using pred_spindle_range = iterator_range<pred_spindle_iterator>;
-using pred_spindle_const_range = iterator_range<const_pred_spindle_iterator>;
+using pred_spindle_const_range = iterator_range<pred_spindle_const_iterator>;
 
 inline pred_spindle_iterator pred_begin(Spindle *S) {
   return pred_spindle_iterator(S->in_begin());
 }
-inline const_pred_spindle_iterator pred_begin(const Spindle *S) {
-  return const_pred_spindle_iterator(S->in_begin());
+inline pred_spindle_const_iterator pred_begin(const Spindle *S) {
+  return pred_spindle_const_iterator(S->in_begin());
 }
 inline pred_spindle_iterator pred_end(Spindle *S) {
   return pred_spindle_iterator(S->in_end());
 }
-inline const_pred_spindle_iterator pred_end(const Spindle *S) {
-  return const_pred_spindle_iterator(S->in_end());
+inline pred_spindle_const_iterator pred_end(const Spindle *S) {
+  return pred_spindle_const_iterator(S->in_end());
 }
 inline pred_spindle_range predecessors(Spindle *S) {
   return pred_spindle_range(pred_begin(S), pred_end(S));
@@ -352,22 +310,23 @@ inline pred_spindle_const_range predecessors(const Spindle *S) {
   return pred_spindle_const_range(pred_begin(S), pred_end(S));
 }
 
-using succ_spindle_iterator = Spindle::adj_iterator;
-using const_succ_spindle_iterator = Spindle::adj_const_iterator;
+// Iterators for the successors of a Spindle, using the Spindle edges.
+using succ_spindle_iterator = typename Spindle::adj_iterator;
+using succ_spindle_const_iterator = typename Spindle::adj_const_iterator;
 using succ_spindle_range = iterator_range<succ_spindle_iterator>;
-using succ_spindle_const_range = iterator_range<const_succ_spindle_iterator>;
+using succ_spindle_const_range = iterator_range<succ_spindle_const_iterator>;
 
 inline succ_spindle_iterator succ_begin(Spindle *S) {
   return succ_spindle_iterator(S->out_begin());
 }
-inline const_succ_spindle_iterator succ_begin(const Spindle *S) {
-  return const_succ_spindle_iterator(S->out_begin());
+inline succ_spindle_const_iterator succ_begin(const Spindle *S) {
+  return succ_spindle_const_iterator(S->out_begin());
 }
 inline succ_spindle_iterator succ_end(Spindle *S) {
   return succ_spindle_iterator(S->out_end());
 }
-inline const_succ_spindle_iterator succ_end(const Spindle *S) {
-  return const_succ_spindle_iterator(S->out_end());
+inline succ_spindle_const_iterator succ_end(const Spindle *S) {
+  return succ_spindle_const_iterator(S->out_end());
 }
 inline succ_spindle_range successors(Spindle *S) {
   return succ_spindle_range(succ_begin(S), succ_end(S));
@@ -375,6 +334,17 @@ inline succ_spindle_range successors(Spindle *S) {
 inline succ_spindle_const_range successors(const Spindle *S) {
   return succ_spindle_const_range(succ_begin(S), succ_end(S));
 }
+
+// Helper class for iterating over spindles within the same task.
+class InTaskFilter {
+  const Spindle *S = nullptr;
+public:
+  InTaskFilter() {}
+  InTaskFilter(const Spindle *S) : S(S) {}
+  bool operator()(const Spindle *Succ) const {
+    return S->succInSameTask(Succ);
+  }
+};
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for spindle graphs
@@ -394,7 +364,7 @@ template <> struct GraphTraits<Spindle *> {
 
 template <> struct GraphTraits<const Spindle *> {
   using NodeRef = const Spindle *;
-  using ChildIteratorType = const_succ_spindle_iterator;
+  using ChildIteratorType = succ_spindle_const_iterator;
 
   static NodeRef getEntryNode(const Spindle *S) { return S; }
   static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
@@ -417,13 +387,80 @@ template <> struct GraphTraits<Inverse<Spindle *>> {
 
 template <> struct GraphTraits<Inverse<const Spindle *>> {
   using NodeRef = const Spindle *;
-  using ChildIteratorType = const_pred_spindle_iterator;
+  using ChildIteratorType = pred_spindle_const_iterator;
 
   static NodeRef getEntryNode(Inverse<const Spindle *> G) { return G.Graph; }
   static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
   static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
+// Special type of GraphTrait that uses a filter on the successors of a spindle.
+// This GraphTrait is used to build the InTask and UnderTask GraphTraits.
+
+template <typename SpindlePtrT, typename Filter>
+using FilteredSuccessorSpindles = std::pair<SpindlePtrT, Filter>;
+
+template <typename Filter>
+struct GraphTraits<FilteredSuccessorSpindles<Spindle *, Filter>> {
+  using NodeRef = Spindle *;
+  using ChildIteratorType = filter_iterator<succ_spindle_iterator, Filter>;
+
+  static NodeRef getEntryNode(FilteredSuccessorSpindles<Spindle *, Filter> S) {
+    return S.first;
+  }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return make_filter_range(successors(N), Filter(N)).begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return make_filter_range(successors(N), Filter(N)).end();
+  }
+};
+
+template <typename Filter>
+struct GraphTraits<FilteredSuccessorSpindles<const Spindle *, Filter>> {
+  using NodeRef = const Spindle *;
+  using ChildIteratorType =
+    filter_iterator<succ_spindle_const_iterator, Filter>;
+
+  static NodeRef getEntryNode(
+      FilteredSuccessorSpindles<const Spindle *, Filter> S) {
+    return S.first;
+  }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return make_filter_range(successors(N), Filter(N)).begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return make_filter_range(successors(N), Filter(N)).end();
+  }
+};
+
+// Wrapper to allow traversal of only those spindles within a task, excluding
+// all subtasks of that task.
+template <typename SpindlePtrT>
+struct InTask
+  : public FilteredSuccessorSpindles<SpindlePtrT,
+                                     InTaskFilter> {
+  inline InTask(SpindlePtrT S)
+      : FilteredSuccessorSpindles<SpindlePtrT, InTaskFilter>
+      (S, InTaskFilter(S)) {}
+};
+
+template<> struct GraphTraits<InTask<Spindle *>> :
+    public GraphTraits<FilteredSuccessorSpindles<
+                         Spindle *, InTaskFilter>> {
+  using NodeRef = Spindle *;
+  static NodeRef getEntryNode(InTask<Spindle *> G) {
+    return G.first;
+  }
+};
+template<> struct GraphTraits<InTask<const Spindle *>> :
+    public GraphTraits<FilteredSuccessorSpindles<
+                         const Spindle *, InTaskFilter>> {
+  using NodeRef = const Spindle *;
+  static NodeRef getEntryNode(InTask<const Spindle *> G) {
+    return G.first;
+  }
+};
 
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent Tapir tasks that are detected
@@ -442,7 +479,7 @@ class Task {
 
   // List of shared exception-handling spindles associated with this task.
   SmallVector<Spindle *, 1> SharedSubTaskEH;
-  SmallPtrSet<const Spindle *, 8> DenseEHSpindleSet;
+  SmallPtrSet<const Spindle *, 1> DenseEHSpindleSet;
 
   Task(const Task &) = delete;
   const Task &operator=(const Task &) = delete;
@@ -507,10 +544,10 @@ public:
   }
 
   /// Return the tasks contained entirely within this task.
-  const std::vector<Task *> &getSubTasks() const {
+  ArrayRef<Task *> getSubTasks() const {
     return SubTasks;
   }
-  std::vector<Task *> &getSubTasks() {
+  std::vector<Task *> &getSubTasksVector() {
     return SubTasks;
   }
   using iterator = typename std::vector<Task *>::const_iterator;
@@ -518,11 +555,11 @@ public:
   using reverse_iterator =
                        typename std::vector<Task *>::const_reverse_iterator;
   using const_reverse_iterator = reverse_iterator;
-  inline iterator begin() const { return getSubTasks().begin(); }
-  inline iterator end() const { return getSubTasks().end(); }
-  inline reverse_iterator rbegin() const { return getSubTasks().rbegin(); }
-  inline reverse_iterator rend() const { return getSubTasks().rend(); }
-  inline bool empty() const { return getSubTasks().empty(); }
+  inline iterator begin() const { return SubTasks.begin(); }
+  inline iterator end() const { return SubTasks.end(); }
+  inline reverse_iterator rbegin() const { return SubTasks.rbegin(); }
+  inline reverse_iterator rend() const { return SubTasks.rend(); }
+  inline bool empty() const { return SubTasks.empty(); }
   inline iterator_range<iterator> subtasks() const {
     return make_range(begin(), end());
   }
@@ -533,24 +570,49 @@ public:
   }
 
   /// Return the spindles contained within this task and no subtask.
-  const std::vector<Spindle *> &getSpindles() const {
+  ArrayRef<Spindle *> getSpindles() const {
     return Spindles;
   }
-  std::vector<Spindle *> &getSpindles() {
+  std::vector<Spindle *> &getSpindlesVector() {
     return Spindles;
+  }
+  SmallPtrSetImpl<const Spindle *> &getSpindlesSet() {
+    return DenseSpindleSet;
   }
 
   using spindle_iterator = typename std::vector<Spindle *>::const_iterator;
   inline spindle_iterator spindle_begin() const {
-    return getSpindles().begin();
+    return Spindles.begin();
   }
-  inline spindle_iterator spindle_end() const { return getSpindles().end(); }
+  inline spindle_iterator spindle_end() const {
+    return Spindles.end();
+  }
   inline iterator_range<spindle_iterator> spindles() const {
     return make_range(spindle_begin(), spindle_end());
   }
 
+  /// Returns true if this task exits to a shared EH spindle.
+  bool hasSharedEHExit() const {
+    if (isRootTask()) return false;
+    if (!getParentTask()->tracksSharedEHSpindles()) return false;
+
+    for (Spindle *S : getSpindles())
+      for (Spindle *Succ : successors(S))
+        if (getParentTask()->containsSharedEH(Succ))
+          return true;
+
+    return false;
+  }
+
+  /// Returns true if SharedEH is a shared EH exit of this task.
+  bool isSharedEHExit(const Spindle *SharedEH) const;
+
+  /// Get the shared EH spindles that this task can exit to and append them to
+  /// SpindleVec.
+  void getSharedEHExits(SmallVectorImpl<Spindle *> &SpindleVec) const;
+
   /// Returns true if this task tracks any shared EH spindles for its subtasks.
-  bool hasSharedEHSpindles() const {
+  bool tracksSharedEHSpindles() const {
     return !SharedSubTaskEH.empty();
   }
   /// Get the number of shared EH spindles in this task in constant time.
@@ -565,14 +627,14 @@ public:
   SmallVectorImpl<Spindle *> &getSharedEHSpindles() {
     return SharedSubTaskEH;
   }
-  // Get the shared EH spindle containing basic block B, if it exists.
+  /// Get the shared EH spindle containing basic block B, if it exists.
   const Spindle *getSharedEHContaining(const BasicBlock *B) const {
     for (const Spindle *S : SharedSubTaskEH)
       if (S->contains(B))
         return S;
     return nullptr;
   }
-  Spindle *getSharedEHContaining(const BasicBlock *B) {
+  Spindle *getSharedEHContaining(BasicBlock *B) const {
     for (Spindle *S : SharedSubTaskEH)
       if (S->contains(B))
         return S;
@@ -594,16 +656,23 @@ public:
 
   /// Get a list of all basic blocks in this task, including blocks in
   /// descendant tasks.
-  void getBlocks(SmallVectorImpl<BasicBlock *> &Blocks) const {
+  void getDominatedBlocks(SmallVectorImpl<BasicBlock *> &Blocks) const {
     DomTree.getDescendants(getEntry(), Blocks);
   }
 
-  /// Return true if specified task contains the specified basic block.
-  bool contains(const BasicBlock *BB) const {
-    if (DomTree.dominates(getEntry(), BB))
+  /// Returns true if this task encloses basic block BB simply, that is, without
+  /// checking any shared EH exits of this task.
+  bool simplyEncloses(const BasicBlock *BB) const {
+    return DomTree.dominates(getEntry(), BB);
+  }
+
+  /// Return true if specified task encloses basic block BB.
+  bool encloses(const BasicBlock *BB) const {
+    if (simplyEncloses(BB))
       return true;
-    if (ParentTask && ParentTask->hasSharedEHSpindles())
-      return ParentTask->containsSharedEH(BB);
+    if (ParentTask && ParentTask->tracksSharedEHSpindles())
+      if (const Spindle *SharedEH = ParentTask->getSharedEHContaining(BB))
+        return isSharedEHExit(SharedEH);
     return false;
   }
 
@@ -612,20 +681,26 @@ public:
   bool isTaskExiting(const BasicBlock *BB) const {
     if (BB->getTerminator()->getNumSuccessors() == 0)
       return true;
-    for (const auto &Succ : children<const BasicBlock *>(BB)) {
-      if (!contains(Succ))
+    for (const auto &Succ : children<const BasicBlock *>(BB))
+      if (!encloses(Succ))
         return true;
-    }
     return false;
   }
 
   /// True if the spindle can exit to a block that is outside of the current
   /// task.
   bool isTaskExiting(const Spindle *S) const {
-    for (const auto &Exit : S->exits()) {
-      if (isTaskExiting(&Exit))
+    for (const BasicBlock *Exit : S->spindle_exits())
+      if (isTaskExiting(Exit))
         return true;
-    }
+    return false;
+  }
+
+  // Returns true if the specified value is defined in the parent of this task.
+  bool definedInParent(const Value *V) const {
+    if (isa<Argument>(V)) return true;
+    if (const Instruction *I = dyn_cast<Instruction>(V))
+      return !encloses(I->getParent());
     return false;
   }
 
@@ -718,10 +793,49 @@ template <> struct GraphTraits<Task *> {
   static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
+// Filter for spindle successors in the same task or a subtask.
+class UnderTaskFilter {
+  const Spindle *S = nullptr;
+public:
+  UnderTaskFilter() {}
+  UnderTaskFilter(const Spindle *S) : S(S) {}
+  bool operator()(const Spindle *Succ) const {
+    return S->succInSameTask(Succ) ||
+      (Succ->getParentTask()->getParentTask() == S->getParentTask());
+  }
+};
+
+// Wrapper to allow traversal of only those spindles within a task, including
+// all subtasks of that task.
+template <typename SpindlePtrT>
+struct UnderTask
+  : public FilteredSuccessorSpindles<SpindlePtrT,
+                                     UnderTaskFilter> {
+  inline UnderTask(SpindlePtrT S)
+      : FilteredSuccessorSpindles<SpindlePtrT, UnderTaskFilter>
+      (S, UnderTaskFilter(S)) {}
+};
+
+template<> struct GraphTraits<UnderTask<Spindle *>> :
+    public GraphTraits<FilteredSuccessorSpindles<
+                         Spindle *, UnderTaskFilter>> {
+  using NodeRef = Spindle *;
+  static NodeRef getEntryNode(UnderTask<Spindle *> G) {
+    return G.first;
+  }
+};
+template<> struct GraphTraits<UnderTask<const Spindle *>> :
+    public GraphTraits<FilteredSuccessorSpindles<
+                         const Spindle *, UnderTaskFilter>> {
+  using NodeRef = const Spindle *;
+  static NodeRef getEntryNode(UnderTask<const Spindle *> G) {
+    return G.first;
+  }
+};
 
 //===----------------------------------------------------------------------===//
-/// This class builds and contains all of the top-level task
-/// structures in the specified function.
+/// This class builds and contains all of the top-level task structures in the
+/// specified function.
 ///
 class TaskInfo {
   // BBMap - Mapping of basic blocks to the innermost spindle they occur in
@@ -729,9 +843,7 @@ class TaskInfo {
   // SpindleMap - Mapping of spindles to the innermost task they occur in
   DenseMap<const Spindle *, Task *> SpindleMap;
 
-  Task *RootTask;
-  // Dominator tree
-  DominatorTree &DomTree;
+  Task *RootTask = nullptr;
 
   BumpPtrAllocator TaskAllocator;
 
@@ -739,14 +851,13 @@ class TaskInfo {
   TaskInfo(const TaskInfo &) = delete;
 
 public:
-  explicit TaskInfo(DominatorTree &DomTree) : DomTree(DomTree) {}
+  TaskInfo() {}
   ~TaskInfo() { releaseMemory(); }
 
   TaskInfo(TaskInfo &&Arg)
       : BBMap(std::move(Arg.BBMap)),
         SpindleMap(std::move(Arg.SpindleMap)),
         RootTask(std::move(Arg.RootTask)),
-        DomTree(Arg.DomTree),
         TaskAllocator(std::move(Arg.TaskAllocator)) {
     Arg.RootTask = nullptr;
   }
@@ -757,7 +868,6 @@ public:
       RootTask->~Task();
     RootTask = std::move(RHS.RootTask);
     TaskAllocator = std::move(RHS.TaskAllocator);
-    DomTree = std::move(RHS.DomTree);
     RHS.RootTask = nullptr;
     return *this;
   }
@@ -767,6 +877,7 @@ public:
     SpindleMap.clear();
     if (RootTask)
       RootTask->~Task();
+    RootTask = nullptr;
     TaskAllocator.Reset();
   }
 
@@ -784,15 +895,15 @@ public:
   /// Return true if this function is "serial," meaning it does not itself
   /// perform a detach.  This method does not preclude functions called by this
   /// function from performing a detach.
-  bool isSerial() const { return getRootTask()->SubTasks.empty(); }
+  bool isSerial() const { return getRootTask()->isSerial(); }
 
   /// iterator/begin/end - The interface to the top-level tasks in the current
   /// function.
   ///
-  using iterator = Task::iterator;
-  using const_iterator = Task::const_iterator;
-  using reverse_iterator = Task::reverse_iterator;
-  using const_reverse_iterator = Task::const_reverse_iterator;
+  using iterator = typename Task::iterator;
+  using const_iterator = typename Task::const_iterator;
+  using reverse_iterator = typename Task::reverse_iterator;
+  using const_reverse_iterator = typename Task::const_reverse_iterator;
   inline iterator begin() const { return getRootTask()->begin(); }
   inline iterator end() const { return getRootTask()->end(); }
   inline reverse_iterator rbegin() const { return getRootTask()->rbegin(); }
@@ -800,9 +911,6 @@ public:
   inline bool empty() const { return getRootTask()->empty(); }
 
   /// Return the innermost spindle that BB lives in.
-  // const Spindle *getSpindleFor(const BasicBlock *BB) const {
-  //   return const_cast<Spindle *>(getSpindleFor(BB));
-  // }
   Spindle *getSpindleFor(const BasicBlock *BB) const {
     return BBMap.lookup(BB);
   }
@@ -821,32 +929,31 @@ public:
 
   /// Return the innermost task that encompases both basic blocks BB1 and BB2.
   Task *getEnclosingTask(const BasicBlock *BB1, const BasicBlock *BB2) const {
-    return getTaskFor(DomTree.findNearestCommonDominator(BB1, BB2));
+    return getTaskFor(
+        getRootTask()->DomTree.findNearestCommonDominator(BB1, BB2));
   }
 
   /// Return the innermost task that encompases both spindles S1 and S2.
   Task *getEnclosingTask(const Spindle *S1, const Spindle *S2) const {
-    return getTaskFor(DomTree.findNearestCommonDominator(
+    return getTaskFor(getRootTask()->DomTree.findNearestCommonDominator(
                           S1->getEntry(), S2->getEntry()));
   }
 
-  /// Return true if task T1 contains task T2.
-  bool contains(const Task *T1, const Task *T2) const {
+  /// Return true if task T1 encloses task T2.
+  bool encloses(const Task *T1, const Task *T2) const {
     if (!T1 || !T2) return false;
-    return DomTree.dominates(T1->getEntry(), T2->getEntry());
+    return getRootTask()->DomTree.dominates(T1->getEntry(), T2->getEntry());
   }
 
-  /// Return true if specified task contains the specified basic block.
-  bool contains(const Task *T, const BasicBlock *BB) const {
+  /// Return true if specified task encloses the specified basic block.
+  bool encloses(const Task *T, const BasicBlock *BB) const {
     if (!T) return false;
-    assert(&DomTree == &(T->DomTree) &&
-           "Task's DomTree does not match TaskInfo DomTree.");
-    return T->contains(BB);
+    return T->encloses(BB);
   }
 
   /// Return true if the specified instruction is in this task.
-  bool contains(const Task *T, const Instruction *Inst) const {
-    return contains(T, Inst->getParent());
+  bool encloses(const Task *T, const Instruction *Inst) const {
+    return encloses(T, Inst->getParent());
   }
 
   /// Return the task nesting level of the specified block. A depth of 0 means
@@ -912,7 +1019,7 @@ public:
   bool isAllocaParallelPromotable(const AllocaInst *AI) const;
 
   /// Create the task forest using a stable algorithm.
-  void analyze(Function &F);
+  void analyze(Function &F, DominatorTree &DomTree);
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -945,23 +1052,23 @@ public:
   // Create a spindle with entry block B and type Ty.
   Spindle *createSpindleWithEntry(BasicBlock *B, Spindle::SPType Ty) {
     Spindle *S = AllocateSpindle(B, Ty);
-    assert(!BBMap[B] && "BasicBlock already in a spindle!");
+    assert(!BBMap.count(B) && "BasicBlock already in a spindle!");
     BBMap[B] = S;
     return S;
   }
 
   // Create a task with spindle entry S.
-  Task *createTaskWithEntry(Spindle *S) {
+  Task *createTaskWithEntry(Spindle *S, DominatorTree &DomTree) {
     Task *T = AllocateTask(*S, DomTree);
     S->setParentTask(T);
-    assert(!SpindleMap[S] && "Spindle already in a task!");
+    assert(!SpindleMap.count(S) && "Spindle already in a task!");
     SpindleMap[S] = T;
     return T;
   }
 
   // Add spindle S to task T.
   void addSpindleToTask(Spindle *S, Task *T) {
-    assert(!SpindleMap[S] && "Spindle already mapped to a task.");
+    assert(!SpindleMap.count(S) && "Spindle already mapped to a task.");
     T->addSpindle(*S);
     S->setParentTask(T);
     SpindleMap[S] = T;
@@ -970,7 +1077,7 @@ public:
   // Add spindle S to task T, where S is a shared exception-handling spindle
   // among subtasks of T.
   void addEHSpindleToTask(Spindle *S, Task *T) {
-    assert(!SpindleMap[S] && "Spindle already mapped to a task.");
+    assert(!SpindleMap.count(S) && "Spindle already mapped to a task.");
     T->addEHSpindle(*S);
     S->setParentTask(T);
     SpindleMap[S] = T;
@@ -978,7 +1085,7 @@ public:
 
   // Add basic block B to spindle S.
   void addBlockToSpindle(BasicBlock &B, Spindle *S) {
-    assert(!BBMap[&B] && "Block already mapped to a spindle.");
+    assert(!BBMap.count(&B) && "Block already mapped to a spindle.");
     S->addBlock(B);
     BBMap[&B] = S;
   }
@@ -1011,7 +1118,7 @@ struct TaskVerifierPass : public PassInfoMixin<TaskVerifierPass> {
 
 /// \brief The legacy pass manager's analysis pass to compute task information.
 class TaskInfoWrapperPass : public FunctionPass {
-  std::unique_ptr<TaskInfo> TI;
+  TaskInfo TI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -1020,15 +1127,15 @@ public:
     initializeTaskInfoWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 
-  TaskInfo &getTaskInfo() { return *TI; }
-  const TaskInfo &getTaskInfo() const { return *TI; }
+  TaskInfo &getTaskInfo() { return TI; }
+  const TaskInfo &getTaskInfo() const { return TI; }
 
   /// \brief Calculate the natural task information for a given function.
   bool runOnFunction(Function &F) override;
 
   void verifyAnalysis() const override;
 
-  void releaseMemory() override { TI.reset(); }
+  void releaseMemory() override { TI.releaseMemory(); }
 
   void print(raw_ostream &O, const Module *M = nullptr) const override;
 

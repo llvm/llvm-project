@@ -542,7 +542,7 @@ void llvm::AnalyzeTaskForSerialization(
         EHBlocksToClone.push_back(BB);
         if (S->getEntry() == BB)
           for (BasicBlock *Pred : predecessors(BB))
-            if (T->simplyContains(Pred))
+            if (T->simplyEncloses(Pred))
               EHBlockPreds.insert(Pred);
       }
       if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
@@ -928,7 +928,7 @@ Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
   // All predecessors of the latch other than the header must be in the task.
   for (const BasicBlock *Pred : predecessors(Latch)) {
     if (Header == Pred) continue;
-    if (!T->contains(Pred)) {
+    if (!T->encloses(Pred)) {
       DEBUG(dbgs() << "Latch has predecessor outside of spawned body.\n");
       return nullptr;
     }
@@ -959,7 +959,8 @@ Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
   for (const BasicBlock *BB : L->blocks()) {
     if (BB == Header) continue;
     if (BB == Latch) continue;
-    assert(T->contains(BB) && "Loop contains block not in detached task.\n");
+    assert(T->encloses(BB) &&
+           "Loop contains block not enclosed by detached task.\n");
   }
 #endif
 
