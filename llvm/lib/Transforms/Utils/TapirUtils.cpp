@@ -19,7 +19,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
 
@@ -206,15 +208,391 @@ bool llvm::MoveStaticAllocasInBlock(
       }
 
       Builder.CreateLifetimeStart(AI, AllocaSize);
-      for (Instruction *ExitPoint : ExitPoints) {
+      for (Instruction *ExitPoint : ExitPoints)
         IRBuilder<>(ExitPoint).CreateLifetimeEnd(AI, AllocaSize);
-      }
     }
   }
 
   return ContainsDynamicAllocas;
 }
 
+
+namespace {
+/// A class for recording information about inlining a landing pad.
+class LandingPadInliningInfo {
+  /// Destination of the invoke's unwind.
+  BasicBlock *OuterResumeDest;
+
+  /// Destination for the callee's resume.
+  BasicBlock *InnerResumeDest = nullptr;
+
+  /// LandingPadInst associated with the invoke.
+  LandingPadInst *SpawnerLPad = nullptr;
+
+  /// PHI for EH values from landingpad insts.
+  PHINode *InnerEHValuesPHI = nullptr;
+
+  SmallVector<Value*, 8> UnwindDestPHIValues;
+
+public:
+  LandingPadInliningInfo(DetachInst *DI)
+      : OuterResumeDest(DI->getUnwindDest()) {
+    // If there are PHI nodes in the unwind destination block, we need to keep
+    // track of which values came into them from the detach before removing the
+    // edge from this block.
+    BasicBlock *DetachBB = DI->getParent();
+    BasicBlock::iterator I = OuterResumeDest->begin();
+    for (; isa<PHINode>(I); ++I) {
+      // Save the value to use for this edge.
+      PHINode *PHI = cast<PHINode>(I);
+      UnwindDestPHIValues.push_back(PHI->getIncomingValueForBlock(DetachBB));
+    }
+
+    SpawnerLPad = cast<LandingPadInst>(I);
+  }
+
+  /// The outer unwind destination is the target of unwind edges introduced for
+  /// calls within the inlined function.
+  BasicBlock *getOuterResumeDest() const {
+    return OuterResumeDest;
+  }
+
+  BasicBlock *getInnerResumeDest();
+
+  LandingPadInst *getLandingPadInst() const { return SpawnerLPad; }
+
+  /// Forward the 'detached_rethrow' instruction to the spawner's landing pad
+  /// block.  When the landing pad block has only one predecessor, this is a
+  /// simple branch. When there is more than one predecessor, we need to split
+  /// the landing pad block after the landingpad instruction and jump to there.
+  void forwardDetachedRethrow(InvokeInst *DR);
+
+  /// Add incoming-PHI values to the unwind destination block for the given
+  /// basic block, using the values for the original invoke's source block.
+  void addIncomingPHIValuesFor(BasicBlock *BB) const {
+    addIncomingPHIValuesForInto(BB, OuterResumeDest);
+  }
+
+  void addIncomingPHIValuesForInto(BasicBlock *Src, BasicBlock *Dest) const {
+    BasicBlock::iterator I = Dest->begin();
+    for (unsigned i = 0, e = UnwindDestPHIValues.size(); i != e; ++i, ++I) {
+      PHINode *Phi = cast<PHINode>(I);
+      Phi->addIncoming(UnwindDestPHIValues[i], Src);
+    }
+  }
+};
+} // end anonymous namespace
+
+/// Get or create a target for the branch from ResumeInsts.
+BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
+  if (InnerResumeDest) return InnerResumeDest;
+
+  // Split the landing pad.
+  BasicBlock::iterator SplitPoint = ++SpawnerLPad->getIterator();
+  InnerResumeDest =
+    OuterResumeDest->splitBasicBlock(SplitPoint,
+                                     OuterResumeDest->getName() + ".body");
+
+  // The number of incoming edges we expect to the inner landing pad.
+  const unsigned PHICapacity = 2;
+
+  // Create corresponding new PHIs for all the PHIs in the outer landing pad.
+  Instruction *InsertPoint = &InnerResumeDest->front();
+  BasicBlock::iterator I = OuterResumeDest->begin();
+  for (unsigned i = 0, e = UnwindDestPHIValues.size(); i != e; ++i, ++I) {
+    PHINode *OuterPHI = cast<PHINode>(I);
+    PHINode *InnerPHI = PHINode::Create(OuterPHI->getType(), PHICapacity,
+                                        OuterPHI->getName() + ".lpad-body",
+                                        InsertPoint);
+    OuterPHI->replaceAllUsesWith(InnerPHI);
+    InnerPHI->addIncoming(OuterPHI, OuterResumeDest);
+  }
+
+  // Create a PHI for the exception values.
+  InnerEHValuesPHI = PHINode::Create(SpawnerLPad->getType(), PHICapacity,
+                                     "eh.lpad-body", InsertPoint);
+  SpawnerLPad->replaceAllUsesWith(InnerEHValuesPHI);
+  InnerEHValuesPHI->addIncoming(SpawnerLPad, OuterResumeDest);
+
+  // All done.
+  return InnerResumeDest;
+}
+
+/// Forward the 'detached_rethrow' instruction to the spawner's landing pad
+/// block.  When the landing pad block has only one predecessor, this is a
+/// simple branch. When there is more than one predecessor, we need to split the
+/// landing pad block after the landingpad instruction and jump to there.
+void LandingPadInliningInfo::forwardDetachedRethrow(InvokeInst *DR) {
+  BasicBlock *Dest = getInnerResumeDest();
+  BasicBlock *Src = DR->getParent();
+
+  BranchInst::Create(Dest, Src);
+
+  // Update the PHIs in the destination. They were inserted in an order which
+  // makes this work.
+  addIncomingPHIValuesForInto(Src, Dest);
+
+  InnerEHValuesPHI->addIncoming(DR->getOperand(1), Src);
+  DR->eraseFromParent();
+}
+
+static void handleDetachedLandingPads(
+    DetachInst *DI, SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
+    SmallVectorImpl<Instruction *> &DetachedRethrows) {
+  LandingPadInliningInfo DetUnwind(DI);
+
+  // Append the clauses from the outer landing pad instruction into the inlined
+  // landing pad instructions.
+  LandingPadInst *OuterLPad = DI->getLandingPadInst();
+  for (LandingPadInst *InlinedLPad : InlinedLPads) {
+    unsigned OuterNum = OuterLPad->getNumClauses();
+    InlinedLPad->reserveClauses(OuterNum);
+    for (unsigned OuterIdx = 0; OuterIdx != OuterNum; ++OuterIdx)
+      InlinedLPad->addClause(OuterLPad->getClause(OuterIdx));
+    if (OuterLPad->isCleanup())
+      InlinedLPad->setCleanup(true);
+  }
+
+  // Forward the detached rethrows.
+  for (Instruction *DR : DetachedRethrows)
+    DetUnwind.forwardDetachedRethrow(cast<InvokeInst>(DR));
+}
+
+static void cloneEHBlocks(Function *F, Value *SyncRegion,
+                          SmallVectorImpl<BasicBlock *> &EHBlocksToClone,
+                          SmallPtrSetImpl<BasicBlock *> &EHBlockPreds,
+                          SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
+                          SmallVectorImpl<Instruction *> *DetachedRethrows) {
+  ValueToValueMapTy VMap;
+  SmallVector<BasicBlock *, 8> NewBlocks;
+  SmallPtrSet<BasicBlock *, 8> NewBlocksSet;
+  SmallPtrSet<LandingPadInst *, 4> NewInlinedLPads;
+  SmallPtrSet<Instruction *, 4> NewDetachedRethrows;
+  for (BasicBlock *BB : EHBlocksToClone) {
+    BasicBlock *New = CloneBasicBlock(BB, VMap, ".sd", F);
+    VMap[BB] = New;
+    NewBlocks.push_back(New);
+    NewBlocksSet.insert(New);
+  }
+
+  SmallPtrSet<BasicBlock *, 8> NewSuccSet;
+  // For all old successors, remove the predecessors in EHBlockPreds.
+  for (BasicBlock *EHPred : EHBlockPreds)
+    for (BasicBlock *OldSucc : successors(EHPred))
+      if (VMap.count(OldSucc)) {
+        OldSucc->removePredecessor(EHPred);
+        NewSuccSet.insert(cast<BasicBlock>(VMap[OldSucc]));
+      }
+
+  // For all new successors, remove the predecessors not in EHBlockPreds.
+  for (BasicBlock *NewSucc : NewSuccSet) {
+    for (BasicBlock::iterator I = NewSucc->begin(); isa<PHINode>(I); ) {
+      PHINode *PN = cast<PHINode>(I++);
+
+      // NOTE! This loop walks backwards for a reason! First off, this minimizes
+      // the cost of removal if we end up removing a large number of values, and
+      // second off, this ensures that the indices for the incoming values
+      // aren't invalidated when we remove one.
+      for (int64_t i = PN->getNumIncomingValues() - 1; i >= 0; --i)
+        if (!EHBlockPreds.count(PN->getIncomingBlock(i)))
+          PN->removeIncomingValue(i, false);
+    }
+  }
+
+  for (BasicBlock *EHBlock : EHBlocksToClone) {
+    BasicBlock *NewEHBlock = cast<BasicBlock>(VMap[EHBlock]);
+    // Move the edges from Preds to point to NewBB instead of BB.
+    for (BasicBlock *Pred : EHBlockPreds) {
+      // This is slightly more strict than necessary; the minimum requirement is
+      // that there be no more than one indirectbr branching to BB. And all
+      // BlockAddress uses would need to be updated.
+      assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
+             "Cannot split an edge from an IndirectBrInst");
+      Pred->getTerminator()->replaceUsesOfWith(EHBlock, NewEHBlock);
+    }
+  }
+
+  // Remap instructions in the cloned blocks based on VMap.
+  remapInstructionsInBlocks(NewBlocks, VMap);
+
+  // Update all successors of the cloned EH blocks.
+  for (BasicBlock *BB : EHBlocksToClone) {
+    for (BasicBlock *Succ : successors(BB)) {
+      if (NewBlocksSet.count(Succ)) continue;
+      // Update the PHI's in the successor of the cloned EH block.
+      for (PHINode &PN : Succ->phis()) {
+        Value *Val = PN.getIncomingValueForBlock(BB);
+        Value *NewVal = VMap.count(Val) ? cast<Value>(VMap[Val]) : Val;
+        PN.addIncoming(NewVal, cast<BasicBlock>(VMap[BB]));
+      }
+    }
+  }
+
+  // Move the new InlinedLPads and DetachedRethrows to the appropriate
+  // set/vector.
+  if (InlinedLPads) {
+    for (LandingPadInst *LPad : *InlinedLPads) {
+      if (VMap.count(LPad))
+        NewInlinedLPads.insert(cast<LandingPadInst>(VMap[LPad]));
+      else
+        NewInlinedLPads.insert(LPad);
+    }
+    InlinedLPads->clear();
+    for (LandingPadInst *LPad : NewInlinedLPads)
+      InlinedLPads->insert(LPad);
+  }
+  if (DetachedRethrows) {
+    for (Instruction *DR : *DetachedRethrows) {
+      if (VMap.count(DR))
+        NewDetachedRethrows.insert(cast<Instruction>(VMap[DR]));
+      else
+        NewDetachedRethrows.insert(DR);
+    }
+    DetachedRethrows->clear();
+    for (Instruction *DR : NewDetachedRethrows)
+      DetachedRethrows->push_back(DR);
+  }
+}
+
+void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
+                           SmallVectorImpl<Instruction *> &Reattaches,
+                           SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
+                           SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,
+                           SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
+                           SmallVectorImpl<Instruction *> *DetachedRethrows) {
+  BasicBlock *Spawner = DI->getParent();
+  BasicBlock *TaskEntry = DI->getDetached();
+  BasicBlock *Continue = DI->getContinue();
+  Value *SyncRegion = DI->getSyncRegion();
+
+  // Clone any EH blocks that need cloning.
+  if (EHBlocksToClone) {
+    assert(EHBlockPreds &&
+           "Given EH blocks to clone, but not blocks exiting to them.");
+    cloneEHBlocks(Spawner->getParent(), SyncRegion, *EHBlocksToClone,
+                  *EHBlockPreds, InlinedLPads, DetachedRethrows);
+  }
+
+  // Collect the exit points into a single vector.
+  SmallVector<Instruction *, 8> ExitPoints;
+  for (Instruction *Exit : Reattaches)
+    ExitPoints.push_back(Exit);
+  if (DetachedRethrows)
+    for (Instruction *Exit : *DetachedRethrows)
+      ExitPoints.push_back(Exit);
+
+  // Move static alloca instructions in the task entry to the appropriate entry
+  // block.
+  bool ContainsDynamicAllocas =
+    MoveStaticAllocasInBlock(ParentEntry, TaskEntry, ExitPoints);
+  // If the cloned loop contained dynamic alloca instructions, wrap the inlined
+  // code with llvm.stacksave/llvm.stackrestore intrinsics.
+  if (ContainsDynamicAllocas) {
+    Module *M = Spawner->getParent()->getParent();
+    // Get the two intrinsics we care about.
+    Function *StackSave = Intrinsic::getDeclaration(M, Intrinsic::stacksave);
+    Function *StackRestore =
+      Intrinsic::getDeclaration(M,Intrinsic::stackrestore);
+
+    // Insert the llvm.stacksave.
+    CallInst *SavedPtr = IRBuilder<>(TaskEntry, TaskEntry->begin())
+      .CreateCall(StackSave, {}, "savedstack");
+
+    // Insert a call to llvm.stackrestore before the reattaches in the original
+    // Tapir loop.
+    for (Instruction *Exit : ExitPoints)
+      IRBuilder<>(Exit).CreateCall(StackRestore, SavedPtr);
+  }
+
+  // Handle any detached-rethrows in the task.
+  if (DI->hasUnwindDest()) {
+    assert(InlinedLPads && "Missing set of landing pads in task.");
+    assert(DetachedRethrows && "Missing set of detached rethrows in task.");
+    handleDetachedLandingPads(DI, *InlinedLPads, *DetachedRethrows);
+  }
+
+  // Replace reattaches with unconditional branches to the continuation.
+  for (Instruction *I : Reattaches) {
+    assert(isa<ReattachInst>(I) && "Recorded reattach is not a reattach");
+    assert(cast<ReattachInst>(I)->getSyncRegion() == SyncRegion &&
+           "Reattach does not match sync region of detach.");
+    ReplaceInstWithInst(I, BranchInst::Create(Continue));
+  }
+
+  // Replace the detach with an unconditional branch to the task entry.
+  Continue->removePredecessor(Spawner);
+  ReplaceInstWithInst(DI, BranchInst::Create(TaskEntry));
+}
+
+/// Analyze a task for serialization
+void llvm::AnalyzeTaskForSerialization(
+    Task *T, SmallVectorImpl<Instruction *> &Reattaches,
+    SmallVectorImpl<BasicBlock *> &EHBlocksToClone,
+    SmallPtrSetImpl<BasicBlock *> &EHBlockPreds,
+    SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
+    SmallVectorImpl<Instruction *> &DetachedRethrows) {
+  assert(!T->isRootTask() && "Cannot serialize root task.");
+  Value *SyncRegion = T->getDetach()->getSyncRegion();
+  for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
+    // Look for landing pads in the task (and no subtask) to be merged with a
+    // spawner landing pad.
+    for (BasicBlock *BB : S->blocks()) {
+      // Record any shared-EH blocks that need to be cloned.
+      if (S->isSharedEH()) {
+        EHBlocksToClone.push_back(BB);
+        if (S->getEntry() == BB)
+          for (BasicBlock *Pred : predecessors(BB))
+            if (T->simplyContains(Pred))
+              EHBlockPreds.insert(Pred);
+      }
+      if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
+        if (!isDetachedRethrow(BB->getTerminator(), SyncRegion)) {
+          assert(!isDetachedRethrow(BB->getTerminator()) &&
+                 "Detached rethrow in task does not match sync region.");
+          // Record this landing pad to merge with DI's landing pad.
+          InlinedLPads.insert(II->getLandingPadInst());
+        }
+      } else if (DetachInst *SubDI = dyn_cast<DetachInst>(BB->getTerminator()))
+        if (SubDI->hasUnwindDest())
+          // Record this landing pad to merge with DI's landing pad.
+          InlinedLPads.insert(SubDI->getLandingPadInst());
+    }
+
+    if (!T->isTaskExiting(S))
+      continue;
+
+    // Find the reattach and detached-rethrow exits from this task.
+    for (BasicBlock *BB : S->blocks()) {
+      if (isa<ReattachInst>(BB->getTerminator())) {
+        assert(cast<ReattachInst>(BB->getTerminator())->getSyncRegion() ==
+               SyncRegion &&
+               "Reattach in task does not match sync region with detach.");
+        Reattaches.push_back(BB->getTerminator());
+      } else if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
+        if (isDetachedRethrow(II, SyncRegion))
+          // Get detached rethrows in the task to forward.
+          DetachedRethrows.push_back(II);
+      }
+    }
+  }
+}
+
+/// Serialize the detach DI that spawns task T.
+void llvm::SerializeDetach(DetachInst *DI, Task *T) {
+  assert(DI && "SerializeDetach given nullptr for detach.");
+  assert(DI == T->getDetach() && "Task and detach arguments do not match.");
+  SmallVector<BasicBlock *, 4> EHBlocksToClone;
+  SmallPtrSet<BasicBlock *, 4> EHBlockPreds;
+  SmallVector<Instruction *, 4> Reattaches;
+  SmallPtrSet<LandingPadInst *, 4> InlinedLPads;
+  SmallVector<Instruction *, 4> DetachedRethrows;
+
+  AnalyzeTaskForSerialization(T, Reattaches, EHBlocksToClone, EHBlockPreds,
+                              InlinedLPads, DetachedRethrows);
+  SerializeDetach(DI, T->getParentTask()->getEntry(), Reattaches,
+                  &EHBlocksToClone, &EHBlockPreds, &InlinedLPads,
+                  &DetachedRethrows);
+}
 
 /// SerializeDetachedCFG - Serialize the sub-CFG detached by the specified
 /// detach instruction.  Removes the detach instruction and returns a pointer to

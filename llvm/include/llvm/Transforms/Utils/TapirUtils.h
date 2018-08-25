@@ -40,6 +40,30 @@ bool ReattachMatchesDetach(const ReattachInst *RI, const DetachInst *DI,
 bool MoveStaticAllocasInBlock(BasicBlock *Entry, BasicBlock *Block,
                               SmallVectorImpl<Instruction *> &ExitPoints);
 
+/// Serialize the detach DI.  \p ParentEntry should be the entry block of the
+/// task that contains DI.  \p Reattaches, \p InlinedLPads, and \p
+/// DetachedRethrows identify the reattaches, landing pads, and detached
+/// rethrows in the task DI spawns that need special handling during
+/// serialization.
+void SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
+                     SmallVectorImpl<Instruction *> &Reattaches,
+                     SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
+                     SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,
+                     SmallPtrSetImpl<LandingPadInst *> *InlinedLPads,
+                     SmallVectorImpl<Instruction *> *DetachedRethrows);
+
+/// Analyze a task T for serialization.  Gets the reattaches, landing pads, and
+/// detached rethrows that need special handling during serialization.
+void AnalyzeTaskForSerialization(
+    Task *T, SmallVectorImpl<Instruction *> &Reattaches,
+    SmallVectorImpl<BasicBlock *> &EHBlocksToClone,
+    SmallPtrSetImpl<BasicBlock *> &EHBlockPreds,
+    SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
+    SmallVectorImpl<Instruction *> &DetachedRethrows);
+
+/// Serialize the detach DI that spawns task T.
+void SerializeDetach(DetachInst *DI, Task *T);
+
 /// Serialize the sub-CFG detached by the specified detach
 /// instruction.  Removes the detach instruction and returns a pointer
 /// to the branch instruction that replaces it.
