@@ -85,7 +85,7 @@ void CodeGenFunction::DetachedRethrowHandler::emitIfUsed(
   llvm::Function *DetachedRethrow =
     CGF.CGM.getIntrinsic(llvm::Intrinsic::detached_rethrow,
                          { LPadVal->getType() });
-  llvm::InvokeInst *II = CGF.Builder.CreateInvoke(
+  CGF.Builder.CreateInvoke(
       DetachedRethrow, DetachedRethrowResumeBlock, InvokeDest,
       { SyncRegion, LPadVal });
 
