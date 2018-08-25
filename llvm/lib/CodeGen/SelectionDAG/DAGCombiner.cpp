@@ -14684,7 +14684,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       ST->isUnindexed()) {
     EVT SVT = Value.getOperand(0).getValueType();
     if (((!LegalOperations && !ST->isVolatile()) ||
-         TLI.isOperationLegalOrCustom(ISD::STORE, SVT)) &&
+         TLI.isOperationLegal(ISD::STORE, SVT)) &&
         TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT)) {
       unsigned OrigAlign = ST->getAlignment();
       bool Fast = false;

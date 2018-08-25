@@ -525,7 +525,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       }
 
       using namespace PatternMatch;
-      if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>()) &&
+      if (((I.use_empty() &&
+            match(&I, m_Intrinsic<Intrinsic::invariant_start>())) ||
+           match(&I, m_Intrinsic<Intrinsic::experimental_guard>())) &&
           IsMustExecute && IsMemoryNotModified &&
           CurLoop->hasLoopInvariantOperands(&I)) {
         hoist(I, DT, CurLoop, SafetyInfo, ORE);

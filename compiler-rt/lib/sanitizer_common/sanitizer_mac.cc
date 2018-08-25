@@ -1064,14 +1064,16 @@ void CheckNoDeepBind(const char *filename, int flag) {
   // Do nothing.
 }
 
-// FIXME: implement on this platform.
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  UNIMPLEMENTED();
+  if (!buffer || !length || length > 256)
+    return false;
+  // arc4random never fails.
+  arc4random_buf(buffer, length);
+  return true;
 }
 
-// FIXME: implement on this platform.
 u32 GetNumberOfCPUs() {
-  UNIMPLEMENTED();
+  return (u32)sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 }  // namespace __sanitizer

@@ -571,7 +571,7 @@ public:
 
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {
-    return hasUWTable() || !doesNotThrow() || hasPersonalityFn();
+    return hasUWTable() || !doesNotThrow();
   }
 
   /// Determine if the function returns a structure through first
