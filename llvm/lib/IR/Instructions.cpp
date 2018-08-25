@@ -1200,6 +1200,12 @@ DetachInst::DetachInst(const DetachInst &DI)
     assert(DI.getNumOperands() == 3 && "Detach must have 3 operands!");
 }
 
+LandingPadInst *DetachInst::getLandingPadInst() const {
+  if (!hasUnwindDest())
+    return nullptr;
+  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
 BasicBlock *DetachInst::getSuccessorV(unsigned idx) const {
   return getSuccessor(idx);
 }
