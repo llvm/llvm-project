@@ -192,12 +192,6 @@ void llvm::CloneIntoFunction(
       Value *RethrowArg = II->getArgOperand(1);
       ReplaceInstWithInst(ClonedDRB->getTerminator(),
                           ResumeInst::Create(RethrowArg));
-      // if (isDetachedRethrow(EB->getTerminator())) {
-      //   InvokeInst *II = cast<InvokeInst>(ClonedEB->getTerminator());
-      //   Value *RethrowArg = II->getArgOperand(1);
-      //   ReplaceInstWithInst(ClonedEB->getTerminator(),
-      //                       ResumeInst::Create(RethrowArg));
-      // }
     }
   }
 
