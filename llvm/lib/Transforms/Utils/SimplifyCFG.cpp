@@ -6021,7 +6021,7 @@ static bool serializeDetachToImmediateSync(BasicBlock *BB) {
     for (BasicBlock *PredBB : predecessors(BB)) {
       if (DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator())) {
         // This transformation gets too complicated the detached task might
-        // throw, so just punt.
+        // throw, so abort.
         if (DI->hasUnwindDest())
           return false;
         DetachPreds.insert(DI);
@@ -6101,9 +6101,12 @@ static bool serializeDetachOfUnreachable(BasicBlock *BB) {
     for (BasicBlock *PredBB : predecessors(Continue))
       if (isa<ReattachInst>(PredBB->getTerminator()))
         return false;
-    // TODO: Add stronger checks to make sure the detached CFG is valid.
-    // Remove the predecessor through the detach from the continue
-    // block.
+
+    if (DI->hasUnwindDest())
+      // These detaches are too complicated for SimplifyCFG to handle.  Abort.
+      return false;
+
+    // Remove the predecessor through the detach from the continue block.
     Continue->removePredecessor(BB);
     // Replace the detach with a branch to the detached block.
     ReplaceInstWithInst(DI, BranchInst::Create(DI->getDetached()));
