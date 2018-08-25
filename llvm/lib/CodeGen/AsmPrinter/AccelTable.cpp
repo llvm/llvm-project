@@ -554,10 +554,13 @@ void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
   std::vector<MCSymbol *> CompUnits;
+  SmallVector<unsigned, 1> CUIndex(CUs.size());
+  int Count = 0;
   for (const auto &CU : enumerate(CUs)) {
     if (CU.value()->getCUNode()->getNameTableKind() ==
         DICompileUnit::DebugNameTableKind::None)
       continue;
+    CUIndex[CU.index()] = Count++;
     assert(CU.index() == CU.value()->getUniqueID());
     const DwarfCompileUnit *MainCU =
         DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
@@ -573,9 +576,9 @@ void llvm::emitDWARF5AccelTable(
   Contents.finalize(Asm, "names");
   Dwarf5AccelTableWriter<DWARF5AccelTableData>(
       Asm, Contents, CompUnits,
-      [&DD](const DWARF5AccelTableData &Entry) {
+      [&](const DWARF5AccelTableData &Entry) {
         const DIE *CUDie = Entry.getDie().getUnitDie();
-        return DD.lookupCU(CUDie)->getUniqueID();
+        return CUIndex[DD.lookupCU(CUDie)->getUniqueID()];
       })
       .emit();
 }

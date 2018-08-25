@@ -83,6 +83,7 @@ add_llvm_library(LLVMSupport
   InitLLVM.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
+  ItaniumManglingCanonicalizer.cpp
   JamCRC.cpp
   JSON.cpp
   KnownBits.cpp

@@ -414,7 +414,7 @@ define double @qpConv2dp(fp128* nocapture readonly %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpdp v2, v2
-; CHECK-NEXT:    xxlor f1, v2, v2
+; CHECK-NEXT:    xscpsgndp f1, v2, v2
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -559,7 +559,7 @@ entry:
 define fp128 @dpConv2qp(double %a) {
 ; CHECK-LABEL: dpConv2qp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    blr
 entry:
@@ -608,7 +608,7 @@ entry:
 define void @dpConv2qp_03(fp128* nocapture %res, i32 signext %idx, double %a) {
 ; CHECK-LABEL: dpConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    sldi r4, r4, 4
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    stxvx v2, r3, r4
@@ -625,7 +625,7 @@ entry:
 define void @dpConv2qp_04(double %a, fp128* nocapture %res) {
 ; CHECK-LABEL: dpConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    stxv v2, 0(r4)
 ; CHECK-NEXT:    blr
@@ -639,7 +639,7 @@ entry:
 define fp128 @spConv2qp(float %a) {
 ; CHECK-LABEL: spConv2qp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    blr
 entry:
@@ -688,7 +688,7 @@ entry:
 define void @spConv2qp_03(fp128* nocapture %res, i32 signext %idx, float %a) {
 ; CHECK-LABEL: spConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    sldi r4, r4, 4
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    stxvx v2, r3, r4
@@ -705,7 +705,7 @@ entry:
 define void @spConv2qp_04(float %a, fp128* nocapture %res) {
 ; CHECK-LABEL: spConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlor v2, f1, f1
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    stxv v2, 0(r4)
 ; CHECK-NEXT:    blr

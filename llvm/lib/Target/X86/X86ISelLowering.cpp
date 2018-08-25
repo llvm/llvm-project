@@ -39059,17 +39059,8 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  SDValue MulOp = N->getOperand(0);
-  SDValue Phi = N->getOperand(1);
-
-  if (MulOp.getOpcode() != ISD::MUL)
-    std::swap(MulOp, Phi);
-  if (MulOp.getOpcode() != ISD::MUL)
-    return SDValue();
-
-  ShrinkMode Mode;
-  if (!canReduceVMulWidth(MulOp.getNode(), DAG, Mode) || Mode == MULU16)
-    return SDValue();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
 
   EVT VT = N->getValueType(0);
 
@@ -39078,15 +39069,20 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
   if (VT.getVectorNumElements() < 8)
     return SDValue();
 
+  if (Op0.getOpcode() != ISD::MUL)
+    std::swap(Op0, Op1);
+  if (Op0.getOpcode() != ISD::MUL)
+    return SDValue();
+
+  ShrinkMode Mode;
+  if (!canReduceVMulWidth(Op0.getNode(), DAG, Mode) || Mode == MULU16)
+    return SDValue();
+
   SDLoc DL(N);
   EVT ReducedVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                    VT.getVectorNumElements());
   EVT MAddVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                 VT.getVectorNumElements() / 2);
-
-  // Shrink the operands of mul.
-  SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, MulOp->getOperand(0));
-  SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, MulOp->getOperand(1));
 
   // Madd vector size is half of the original vector size
   auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
@@ -39094,12 +39090,28 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
     MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
     return DAG.getNode(X86ISD::VPMADDWD, DL, VT, Ops);
   };
-  SDValue Madd = SplitOpsAndApply(DAG, Subtarget, DL, MAddVT, { N0, N1 },
-                                  PMADDWDBuilder);
-  // Fill the rest of the output with 0
-  SDValue Zero = getZeroVector(Madd.getSimpleValueType(), Subtarget, DAG, DL);
-  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Madd, Zero);
-  return DAG.getNode(ISD::ADD, DL, VT, Concat, Phi);
+
+  auto BuildPMADDWD = [&](SDValue Mul) {
+    // Shrink the operands of mul.
+    SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, Mul.getOperand(0));
+    SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, Mul.getOperand(1));
+
+    SDValue Madd = SplitOpsAndApply(DAG, Subtarget, DL, MAddVT, { N0, N1 },
+                                   PMADDWDBuilder);
+    // Fill the rest of the output with 0
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Madd,
+                       DAG.getConstant(0, DL, MAddVT));
+  };
+
+  Op0 = BuildPMADDWD(Op0);
+
+  // It's possible that Op1 is also a mul we can reduce.
+  if (Op1.getOpcode() == ISD::MUL &&
+      canReduceVMulWidth(Op1.getNode(), DAG, Mode) && Mode != MULU16) {
+    Op1 = BuildPMADDWD(Op1);
+  }
+
+  return DAG.getNode(ISD::ADD, DL, VT, Op0, Op1);
 }
 
 static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,

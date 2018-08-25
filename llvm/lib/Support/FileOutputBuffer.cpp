@@ -61,6 +61,12 @@ public:
     consumeError(Temp.discard());
   }
 
+  void discard() override {
+    // Delete the temp file if it still was open, but keeping the mapping
+    // active.
+    consumeError(Temp.discard());
+  }
+
 private:
   std::unique_ptr<fs::mapped_file_region> Buffer;
   fs::TempFile Temp;

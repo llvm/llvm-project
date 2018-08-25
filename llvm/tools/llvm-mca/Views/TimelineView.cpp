@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "TimelineView.h"
+#include "Views/TimelineView.h"
 
 using namespace llvm;
 

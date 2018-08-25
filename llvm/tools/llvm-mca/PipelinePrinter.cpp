@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PipelinePrinter.h"
-#include "View.h"
+#include "Views/View.h"
 
 namespace mca {
 
