@@ -269,7 +269,8 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
-               << "Cannot promote indirect call: target not found";
+               << "Cannot promote indirect call: target with md5sum "
+               << ore::NV("target md5sum", Target) << " not found";
       });
       break;
     }

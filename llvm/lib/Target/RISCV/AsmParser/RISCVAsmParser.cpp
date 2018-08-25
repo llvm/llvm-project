@@ -322,6 +322,8 @@ public:
   }
 
   bool isSImm6() const {
+    if (!isImm())
+      return false;
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
     bool IsValid;
@@ -335,6 +337,8 @@ public:
   }
 
   bool isSImm6NonZero() const {
+    if (!isImm())
+      return false;
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
     bool IsValid;
@@ -348,6 +352,8 @@ public:
   }
 
   bool isCLUIImm() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -357,6 +363,8 @@ public:
   }
 
   bool isUImm7Lsb00() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -365,6 +373,8 @@ public:
   }
 
   bool isUImm8Lsb00() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -373,6 +383,8 @@ public:
   }
 
   bool isUImm8Lsb000() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -383,6 +395,8 @@ public:
   bool isSImm9Lsb0() const { return isBareSimmNLsb0<9>(); }
 
   bool isUImm9Lsb000() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -391,6 +405,8 @@ public:
   }
 
   bool isUImm10Lsb00NonZero() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
@@ -428,6 +444,8 @@ public:
   bool isSImm13Lsb0() const { return isBareSimmNLsb0<13>(); }
 
   bool isSImm10Lsb0000NonZero() const {
+    if (!isImm())
+      return false;
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);

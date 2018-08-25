@@ -987,7 +987,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = PPC::XXLOR;
   else if (PPC::VSFRCRegClass.contains(DestReg, SrcReg) ||
            PPC::VSSRCRegClass.contains(DestReg, SrcReg))
-    Opc = PPC::XXLORf;
+    Opc = (Subtarget.hasP9Vector()) ? PPC::XSCPSGNDP : PPC::XXLORf;
   else if (PPC::QFRCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::QVFMR;
   else if (PPC::QSRCRegClass.contains(DestReg, SrcReg))

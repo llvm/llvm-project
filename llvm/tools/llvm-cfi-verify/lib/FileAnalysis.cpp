@@ -105,6 +105,9 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   if (auto SectionParseResponse = Analysis.parseCodeSections())
     return std::move(SectionParseResponse);
 
+  if (auto SymbolTableParseResponse = Analysis.parseSymbolTable())
+    return std::move(SymbolTableParseResponse);
+
   return std::move(Analysis);
 }
 
@@ -165,7 +168,18 @@ const Instr &FileAnalysis::getInstructionOrDie(uint64_t Address) const {
 
 bool FileAnalysis::isCFITrap(const Instr &InstrMeta) const {
   const auto &InstrDesc = MII->get(InstrMeta.Instruction.getOpcode());
-  return InstrDesc.isTrap();
+  return InstrDesc.isTrap() || willTrapOnCFIViolation(InstrMeta);
+}
+
+bool FileAnalysis::willTrapOnCFIViolation(const Instr &InstrMeta) const {
+  const auto &InstrDesc = MII->get(InstrMeta.Instruction.getOpcode());
+  if (!InstrDesc.isCall())
+    return false;
+  uint64_t Target;
+  if (!MIA->evaluateBranch(InstrMeta.Instruction, InstrMeta.VMAddress,
+                           InstrMeta.InstructionSize, Target))
+    return false;
+  return TrapOnFailFunctionAddresses.count(Target) > 0;
 }
 
 bool FileAnalysis::canFallThrough(const Instr &InstrMeta) const {
@@ -431,6 +445,12 @@ Error FileAnalysis::parseCodeSections() {
     if (!(object::ELFSectionRef(Section).getFlags() & ELF::SHF_EXECINSTR))
       continue;
 
+    // Avoid checking the PLT since it produces spurious failures on AArch64
+    // when ignoring DWARF data.
+    StringRef SectionName;
+    if (!Section.getName(SectionName) && SectionName == ".plt")
+      continue;
+
     StringRef SectionContents;
     if (Section.getContents(SectionContents))
       return make_error<StringError>("Failed to retrieve section contents",
@@ -516,6 +536,40 @@ void FileAnalysis::addInstruction(const Instr &Instruction) {
            << ": Instruction at this address already exists.\n";
     exit(EXIT_FAILURE);
   }
+}
+
+Error FileAnalysis::parseSymbolTable() {
+  // Functions that will trap on CFI violations.
+  SmallSet<StringRef, 4> TrapOnFailFunctions;
+  TrapOnFailFunctions.insert("__cfi_slowpath");
+  TrapOnFailFunctions.insert("__cfi_slowpath_diag");
+  TrapOnFailFunctions.insert("abort");
+
+  // Look through the list of symbols for functions that will trap on CFI
+  // violations.
+  for (auto &Sym : Object->symbols()) {
+    auto SymNameOrErr = Sym.getName();
+    if (!SymNameOrErr)
+      consumeError(SymNameOrErr.takeError());
+    else if (TrapOnFailFunctions.count(*SymNameOrErr) > 0) {
+      auto AddrOrErr = Sym.getAddress();
+      if (!AddrOrErr)
+        consumeError(AddrOrErr.takeError());
+      else
+        TrapOnFailFunctionAddresses.insert(*AddrOrErr);
+    }
+  }
+  if (auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Object)) {
+    for (const auto &Addr : ElfObject->getPltAddresses()) {
+      object::SymbolRef Sym(Addr.first, Object);
+      auto SymNameOrErr = Sym.getName();
+      if (!SymNameOrErr)
+        consumeError(SymNameOrErr.takeError());
+      else if (TrapOnFailFunctions.count(*SymNameOrErr) > 0)
+        TrapOnFailFunctionAddresses.insert(Addr.second);
+    }
+  }
+  return Error::success();
 }
 
 UnsupportedDisassembly::UnsupportedDisassembly(StringRef Text) : Text(Text) {}

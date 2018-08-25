@@ -111,7 +111,8 @@ entry:
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The non-variable portion should be unaffected.
-; O32-DAG:           sw $4, 4([[R2]])
+; O32-DAG:           mtc1 $4, $f0
+; O32-DAG:           swc1 $f0, 4([[R2]])
 ; NEW-DAG:           swc1 $f12, 4([[R2]])
 
 ; The varargs portion is dumped to stack
