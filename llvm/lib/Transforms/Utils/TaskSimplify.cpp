@@ -19,6 +19,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 
@@ -173,9 +174,9 @@ struct MaybeParallelTasks {
             DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
             if (S->predInDifferentTask(Pred))
               TaskList[S].insert(Pred->getParentTask());
-            // If we have a Phi predecessor of this spindle, we'll want to
-            // re-evaluate it.
-            if (Pred->isPhi())
+            // If we have a Phi or Sync predecessor of this spindle, we'll want
+            // to re-evaluate it.
+            if (Pred->isPhi() || Pred->isSync())
               Complete = false;
           }
           DEBUG({
@@ -229,6 +230,109 @@ struct MaybeParallelTasks {
   }
 };
 
+static bool syncMatchesReachingTask(const Value *SyncSR,
+                                    SmallPtrSetImpl<const Task *> &MPTasks) {
+  if (MPTasks.empty())
+    return false;
+  for (const Task *MPTask : MPTasks)
+    if (SyncSR == MPTask->getDetach()->getSyncRegion())
+      return true;
+  return false;
+}
+
+static bool removeRedundantSyncs(MaybeParallelTasks &MPTasks, Task *T) {
+  // Skip tasks with no subtasks.
+  if (T->isSerial())
+    return false;
+
+  bool Changed = false;
+  SmallPtrSet<SyncInst *, 1> RedundantSyncs;
+  for (Spindle *S : T->spindles())
+    // Iterate over outgoing edges of S to find redundant syncs.
+    for (Spindle::SpindleEdge &Edge : S->out_edges())
+      if (SyncInst *Y = dyn_cast<SyncInst>(Edge.second->getTerminator()))
+        if (!syncMatchesReachingTask(Y->getSyncRegion(), MPTasks.TaskList[S]))
+          RedundantSyncs.insert(Y);
+
+  // Replace all unnecesary syncs with unconditional branches.
+  for (SyncInst *Y : RedundantSyncs)
+    ReplaceInstWithInst(Y, BranchInst::Create(Y->getSuccessor(0)));
+
+  Changed |= !RedundantSyncs.empty();
+
+  return Changed;
+}
+
+static bool syncIsDiscriminating(const Value *SyncSR,
+                                 SmallPtrSetImpl<const Task *> &MPTasks) {
+  for (const Task *MPTask : MPTasks)
+    if (SyncSR != MPTask->getDetach()->getSyncRegion())
+      return true;
+  return false;
+}
+
+static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
+  if (T->isSerial())
+    return false;
+
+  // Find the unique sync regions in this task.
+  SmallPtrSet<Value *, 1> UniqueSyncRegs;
+  Value *FirstSyncRegion = nullptr;
+  for (Task *SubT : T->subtasks()) {
+    UniqueSyncRegs.insert(SubT->getDetach()->getSyncRegion());
+    if (!FirstSyncRegion)
+      FirstSyncRegion = SubT->getDetach()->getSyncRegion();
+  }
+  // Skip this task if there's only one unique sync region.
+  if (UniqueSyncRegs.size() < 2)
+    return false;
+
+  bool Changed = false;
+  SmallPtrSet<Value *, 1> NonRedundantSyncRegs;
+  for (Spindle *S : T->spindles()) {
+    // Only consider spindles that might have tasks in parallel.
+    if (MPTasks.TaskList[S].empty()) continue;
+
+    // Iterate over outgoing edges of S to find discriminating syncs.
+    for (Spindle::SpindleEdge &Edge : S->out_edges())
+      if (const SyncInst *Y = dyn_cast<SyncInst>(Edge.second->getTerminator()))
+        if (syncIsDiscriminating(Y->getSyncRegion(), MPTasks.TaskList[S]))
+          NonRedundantSyncRegs.insert(Y->getSyncRegion());
+
+    // Replace all redundant sync regions with the first sync region.
+    for (Value *SR : UniqueSyncRegs) {
+      if (!NonRedundantSyncRegs.count(SR) && SR != FirstSyncRegion) {
+        Changed = true;
+        SR->replaceAllUsesWith(FirstSyncRegion);
+      }
+    }
+  }
+  return Changed;
+}
+
+bool llvm::simplifySyncs(Task *T, TaskInfo &TI) {
+  bool Changed = false;
+
+  DEBUG(dbgs() << "Simplifying syncs in task @ " << T->getEntry()->getName()
+        << "\n");
+
+  // Evaluate the tasks that might be in parallel with each spindle, and
+  // determine number of discriminating syncs: syncs that sync a subset of the
+  // detached tasks, based on sync regions.
+  MaybeParallelTasks MPTasks;
+  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
+
+  // Remove redundant syncs.  This optimization might not be necessary here,
+  // because SimplifyCFG seems to do a good job removing syncs that cannot sync
+  // anything.
+  Changed |= removeRedundantSyncs(MPTasks, T);
+
+  // Remove redundant sync regions.
+  Changed |= removeRedundantSyncRegions(MPTasks, T);
+
+  return Changed;
+}  
+
 static bool taskCanThrow(const Task *T) {
   for (const Spindle *S : T->spindles())
     for (const BasicBlock *BB : S->blocks())
@@ -258,15 +362,12 @@ static bool detachImmediatelySyncs(DetachInst *DI) {
 }
 
 bool llvm::simplifyTask(Task *T, TaskInfo &TI) {
-  bool Changed = false;
+  if (T->isRootTask())
+    return false;
 
   DEBUG(dbgs() << "Simplifying task @ " << T->getEntry()->getName() << "\n");
 
-  // TODO: Remove unnecessary sync regions.
-
-  if (T->isRootTask())
-    return Changed;
-
+  bool Changed = false;
   DetachInst *DI = T->getDetach();
 
   // If T's detach has an unwind dest and T cannot throw, remove the unwind
@@ -343,6 +444,10 @@ bool TaskSimplify::runOnFunction(Function &F) {
     return false;
 
   bool Changed = false;
+  // Simplify syncs in each task in the function.
+  for (Task *T : post_order(TI.getRootTask()))
+    Changed |= simplifySyncs(T, TI);
+
   // Simplify each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
     Changed |= simplifyTask(T, TI);
@@ -360,6 +465,10 @@ PreservedAnalyses TaskSimplifyPass::run(Function &F,
     return PreservedAnalyses::all();
 
   bool Changed = false;
+  // Simplify syncs in each task in the function.
+  for (Task *T : post_order(TI.getRootTask()))
+    Changed |= simplifySyncs(T, TI);
+
   // Simplify each task in the function.
   for (Task *T : post_order(TI.getRootTask()))
     Changed |= simplifyTask(T, TI);

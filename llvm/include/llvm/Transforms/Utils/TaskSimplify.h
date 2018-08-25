@@ -26,6 +26,9 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+/// \brief Simplify syncs in the specified task T.
+bool simplifySyncs(Task *T, TaskInfo &TI);
+
 /// \brief Simplify the specified task T.
 bool simplifyTask(Task *T, TaskInfo &TI);
 
