@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_TAPIR_H
 #define LLVM_CLANG_BASIC_TAPIR_H
 
-#include "llvm/Transforms/Tapir/TapirTypes.h"
+#include "llvm/Transforms/Tapir/TapirTargetIDs.h"
 
 namespace llvm {
 namespace opt {
@@ -25,8 +25,8 @@ namespace opt {
 
 namespace clang {
 
-using TapirTargetType = llvm::TapirTargetType;
-TapirTargetType parseTapirTarget(const llvm::opt::ArgList &Args);
+using TapirTargetID = llvm::TapirTargetID;
+TapirTargetID parseTapirTarget(const llvm::opt::ArgList &Args);
 
 } // end namespace clang
 

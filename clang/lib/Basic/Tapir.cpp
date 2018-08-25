@@ -21,26 +21,26 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
-TapirTargetType clang::parseTapirTarget(const ArgList &Args) {
+TapirTargetID clang::parseTapirTarget(const ArgList &Args) {
   // Use Cilk if -ftapir is not specified but either -fcilkplus or -fdetach is
   // specified.
   if (!Args.hasArg(options::OPT_ftapir_EQ)) {
     if (Args.hasArg(options::OPT_fcilkplus) ||
         Args.hasArg(options::OPT_fdetach))
-      return TapirTargetType::Cilk;
-    return TapirTargetType::None;
+      return TapirTargetID::Cilk;
+    return TapirTargetID::None;
   }
 
   // Otherwise use the runtime specified by -ftapir.
-  TapirTargetType TapirTarget = TapirTargetType::None;
+  TapirTargetID TapirTarget = TapirTargetID::None;
   if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
-    TapirTarget = llvm::StringSwitch<TapirTargetType>(A->getValue())
-      .Case("none", TapirTargetType::None)
-      .Case("serial", TapirTargetType::Serial)
-      .Case("cilk", TapirTargetType::Cilk)
-      .Case("openmp", TapirTargetType::OpenMP)
-      .Case("cilkr", TapirTargetType::CilkR)
-      .Default(TapirTargetType::Last_TapirTargetType);
+    TapirTarget = llvm::StringSwitch<TapirTargetID>(A->getValue())
+      .Case("none", TapirTargetID::None)
+      .Case("serial", TapirTargetID::Serial)
+      .Case("cilk", TapirTargetID::Cilk)
+      .Case("openmp", TapirTargetID::OpenMP)
+      .Case("cilkr", TapirTargetID::CilkR)
+      .Default(TapirTargetID::Last_TapirTargetID);
 
   return TapirTarget;
 }

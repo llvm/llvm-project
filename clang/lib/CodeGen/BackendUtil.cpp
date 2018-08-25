@@ -67,7 +67,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
-#include "llvm/Transforms/Tapir/LoweringUtils.h"
+#include "llvm/Transforms/Tapir/TapirTargetIDs.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
@@ -602,7 +602,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   if (LangOpts.Detach) PMBuilder.DisableTapirOpts = true;
   if (LangOpts.Rhino) PMBuilder.Rhino = true;
-  PMBuilder.tapirTarget = getTapirTargetFromType(LangOpts.TapirTarget);
+  PMBuilder.TapirTarget = LangOpts.TapirTarget;
 
   PMBuilder.SizeLevel = CodeGenOpts.OptimizeSize;
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;

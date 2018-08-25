@@ -1046,20 +1046,20 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
 
 void ToolChain::AddTapirRuntimeLibArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) const {
-  TapirTargetType TapirTarget = parseTapirTarget(Args);
-  if (TapirTarget == TapirTargetType::Last_TapirTargetType)
+  TapirTargetID TapirTarget = parseTapirTarget(Args);
+  if (TapirTarget == TapirTargetID::Last_TapirTargetID)
     if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
       getDriver().Diag(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                     << A->getValue();
 
   switch (TapirTarget) {
-  case TapirTargetType::Cilk:
+  case TapirTargetID::Cilk:
     CmdArgs.push_back("-lcilkrts");
     break;
-  case TapirTargetType::OpenMP:
+  case TapirTargetID::OpenMP:
     CmdArgs.push_back("-lomp");
     break;
-  case TapirTargetType::CilkR:
+  case TapirTargetID::CilkR:
     CmdArgs.push_back("-lcilkr");
     CmdArgs.push_back("-lpthread");
     break;
