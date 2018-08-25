@@ -2264,6 +2264,10 @@ void Verifier::visitFunction(const Function &F) {
       if (!Seen.insert(DL).second)
         continue;
 
+      Metadata *Parent = DL->getRawScope();
+      AssertDI(Parent && isa<DILocalScope>(Parent),
+               "DILocation's scope must be a DILocalScope", N, &F, &I, DL,
+               Parent);
       DILocalScope *Scope = DL->getInlinedAtScope();
       if (Scope && !Seen.insert(Scope).second)
         continue;

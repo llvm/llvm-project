@@ -162,6 +162,8 @@ struct Info {
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
 
+  virtual ~Info() = default;
+
   SymbolID USR =
       SymbolID(); // Unique identifier for the decl described by this Info.
   const InfoType IT = InfoType::IT_default; // InfoType of this particular Info.

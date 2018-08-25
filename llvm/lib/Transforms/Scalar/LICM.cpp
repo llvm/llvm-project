@@ -681,14 +681,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (CI->mayThrow())
       return false;
 
-    if (Function *F = CI->getCalledFunction())
-        switch (F->getIntrinsicID()) {
-        default: break;
-        // TODO: support invariant.start, and experimental.guard here
-        case Intrinsic::assume:
-          // Assumes don't actually alias anything or throw
-          return true;
-        };
+    using namespace PatternMatch;
+    if (match(CI, m_Intrinsic<Intrinsic::assume>()))
+      // Assumes don't actually alias anything or throw
+      return true;
     
     // Handle simple cases by querying alias analysis.
     FunctionModRefBehavior Behavior = AA->getModRefBehavior(CI);

@@ -351,7 +351,9 @@ ELFObjectFileBase::getPltAddresses() const {
     default:
       return {};
   }
-  const auto *MIA = T->createMCInstrAnalysis(T->createMCInstrInfo());
+  std::unique_ptr<const MCInstrInfo> MII(T->createMCInstrInfo());
+  std::unique_ptr<const MCInstrAnalysis> MIA(
+      T->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     return {};
   Optional<SectionRef> Plt = None, RelaPlt = None, GotPlt = None;

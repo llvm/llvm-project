@@ -96,7 +96,7 @@ entry:
   ret double %0
 ; CHECK-LABEL: testTruncOdd
 ; CHECK: xscvqpdpo v2, v2
-; CHECK: xxlor f1, v2, v2
+; CHECK: xscpsgndp f1, v2, v2
 ; CHECK: blr
 }
 

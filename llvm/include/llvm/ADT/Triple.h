@@ -182,7 +182,8 @@ public:
     Mesa3D,
     Contiki,
     AMDPAL,     // AMD PAL Runtime
-    LastOSType = AMDPAL
+    HermitCore, // HermitCore Unikernel/Multikernel
+    LastOSType = HermitCore
   };
   enum EnvironmentType {
     UnknownEnvironment,

@@ -354,7 +354,8 @@ TEST(SanitizerCommon, InternalScopedString) {
   EXPECT_STREQ("012345678", str.data());
 }
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || \
+  SANITIZER_OPENBSD || SANITIZER_MAC || SANITIZER_IOS
 TEST(SanitizerCommon, GetRandom) {
   u8 buffer_1[32], buffer_2[32];
   for (bool blocking : { false, true }) {

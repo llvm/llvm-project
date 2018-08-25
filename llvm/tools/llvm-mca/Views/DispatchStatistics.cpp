@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "DispatchStatistics.h"
+#include "Views/DispatchStatistics.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
