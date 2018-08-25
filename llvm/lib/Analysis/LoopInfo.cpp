@@ -58,6 +58,42 @@ static cl::opt<bool, true>
 // Loop implementation
 //
 
+static bool succIsDetachUnwind(BasicBlock *BB, BasicBlock *Succ) {
+  if (DetachInst *DI = dyn_cast<DetachInst>(BB->getTerminator()))
+    return Succ == DI->getUnwindDest();
+  return false;
+}
+
+/// getExitingBlocks - Return all blocks inside the loop that have successors
+/// outside of the loop.  These are the blocks _inside of the current loop_
+/// which branch out.  The returned list is always unique.
+///
+void Loop::getExitingBlocks(
+    SmallVectorImpl<BasicBlock *> &ExitingBlocks,
+    bool IgnoreDetachUnwind) const {
+  assert(!isInvalid() && "Loop not in a valid state!");
+  for (const auto BB : blocks())
+    for (const auto &Succ : children<BasicBlock *>(BB))
+      if (!contains(Succ)) {
+        if (IgnoreDetachUnwind && succIsDetachUnwind(BB, Succ))
+          continue;
+        // Not in current loop? It must be an exit block.
+        ExitingBlocks.push_back(BB);
+        break;
+      }
+}
+
+/// getExitingBlock - If getExitingBlocks would return exactly one block,
+/// return that block. Otherwise return null.
+BasicBlock *Loop::getExitingBlock(bool IgnoreDetachUnwind) const {
+  assert(!isInvalid() && "Loop not in a valid state!");
+  SmallVector<BasicBlock *, 8> ExitingBlocks;
+  getExitingBlocks(ExitingBlocks, IgnoreDetachUnwind);
+  if (ExitingBlocks.size() == 1)
+    return ExitingBlocks[0];
+  return nullptr;
+}
+
 bool Loop::isLoopInvariant(const Value *V) const {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return !contains(I);

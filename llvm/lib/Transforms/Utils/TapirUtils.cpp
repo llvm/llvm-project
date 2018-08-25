@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -494,4 +495,95 @@ void llvm::TapirLoopHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
   NewLoopID->replaceOperandWith(0, NewLoopID);
 
   TheLoop->setLoopID(NewLoopID);
+}
+
+/// Returns true if Tapir-loop hints require loop outlining during lowering.
+bool llvm::hintsDemandOutlining(const TapirLoopHints &Hints) {
+  switch (Hints.getStrategy()) {
+  case TapirLoopHints::ST_DAC: return true;
+  default: return false;
+  }
+}
+
+/// Examine a given loop to determine if its a Tapir loop that can and should be
+/// processed.  Returns the Task that encodes the loop body if so, or nullptr if
+/// not.
+Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
+  if (!L || !TI)
+    return nullptr;
+
+  const BasicBlock *Header = L->getHeader();
+  const BasicBlock *Latch = L->getLoopLatch();
+
+  DEBUG(dbgs() << "Analyzing loop: " << *L);
+
+  TapirLoopHints Hints(L);
+
+  DEBUG(dbgs() << "Loop hints:"
+               << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+               << " grainsize = " << Hints.getGrainsize()
+               << "\n");
+
+  // Header must be terminated by a detach.
+  const DetachInst *DI = dyn_cast<DetachInst>(Header->getTerminator());
+  if (!DI) {
+    DEBUG(dbgs() << "Loop header does not detach.\n");
+    return nullptr;
+  }
+
+  // Loop must have a unique latch.
+  if (!Latch) {
+    DEBUG(dbgs() << "Loop does not have a unique latch.\n");
+    return nullptr;
+  }
+
+  // The loop latch must be the continuation of the detach in the header.
+  if (Latch != DI->getContinue()) {
+    DEBUG(dbgs() << "Continuation of detach in header is not the latch.\n");
+    return nullptr;
+  }
+
+  Task *T = TI->getTaskFor(DI->getDetached());
+  assert(T && "Detached block not mapped to a task.");
+  assert(T->getDetach() == DI && "Task mapped to unexpected detach.");
+
+  // All predecessors of the latch other than the header must be in the task.
+  for (const BasicBlock *Pred : predecessors(Latch)) {
+    if (Header == Pred) continue;
+    if (!T->contains(Pred)) {
+      DEBUG(dbgs() << "Latch has predecessor outside of spawned body.\n");
+      return nullptr;
+    }
+  }
+
+  // For each exit from the latch, any predecessor of that exit inside the loop
+  // must be the header or the latch.
+  for (const BasicBlock *Exit : successors(Latch)) {
+    for (const BasicBlock *ExitPred : predecessors(Exit)) {
+      if (!L->contains(ExitPred)) continue;
+      if (Header != ExitPred && Latch != ExitPred) {
+        DEBUG(dbgs() << "Loop branches to an exit of the latch from a block "
+              << "other than the header or latch.\n");
+        return nullptr;
+      }
+    }
+  }
+
+  // Check that the loop hints require this loop to be outlined.
+  if (!hintsDemandOutlining(Hints))
+    return nullptr;
+
+#ifndef NDEBUG
+  // EXPENSIVE CHECK for verification.
+  //
+  // The blocks in this loop can only be the header, the latch, or a block
+  // contained in the task.
+  for (const BasicBlock *BB : L->blocks()) {
+    if (BB == Header) continue;
+    if (BB == Latch) continue;
+    assert(T->contains(BB) && "Loop contains block not in detached task.\n");
+  }
+#endif
+
+  return T;
 }

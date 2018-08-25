@@ -20,11 +20,10 @@
 namespace llvm {
 
 class BasicBlock;
-class DetachInst;
 class DominatorTree;
 class Loop;
-class OptimizationRemarkEmitter;
-class TerminatorInst;
+class Task;
+class TaskInfo;
 
 /// Returns true if the given instruction performs a detached rethrow, false
 /// otherwise.
@@ -165,6 +164,14 @@ private:
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
 };
+
+/// Returns true if Tapir-loop hints require loop outlining during lowering.
+bool hintsDemandOutlining(const TapirLoopHints &Hints);
+
+/// Examine a given loop to determine if its a Tapir loop that can and should be
+/// processed.  Returns the Task that encodes the loop body if so, or nullptr if
+/// not.
+Task *getTaskIfTapirLoop(const Loop *L, TaskInfo *TI);
 
 } // End llvm namespace
 
