@@ -93,15 +93,15 @@ like as follows:
 
     $LLVM_BUILD/bin/clang -x cl -Xclang -finclude-default-header \
         -nogpulib -target amdgcn-amd-amdhsa -mcpu=gfx900 \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/opencl/opencl.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/ocml/ocml.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/ockl/ockl.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_daz_opt_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_finite_only_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_unsafe_math_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_wavefrontsize64_on.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_isa_version_900.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/opencl/opencl.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/ocml/ocml.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/ockl/ockl.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_correctly_rounded_sqrt_off.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_daz_opt_off.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_finite_only_off.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_unsafe_math_off.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_wavefrontsize64_on.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_isa_version_900.bc \
         test.cl -o test.so
 
 ### USING FROM CMAKE

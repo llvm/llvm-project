@@ -32,7 +32,7 @@ endif()
 set (BC_EXT .bc)
 set (LIB_SUFFIX ".lib${BC_EXT}")
 set (STRIP_SUFFIX ".strip${BC_EXT}")
-set (FINAL_SUFFIX ".amdgcn${BC_EXT}")
+set (FINAL_SUFFIX "${BC_EXT}")
 
 # Set `inc_options` to contain Clang command-line for include directories for
 # current source directory.
@@ -149,7 +149,7 @@ macro(opencl_bc_lib)
     ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")
 
   install(FILES "${OUT_NAME}${FINAL_SUFFIX}"
-    DESTINATION lib
+    DESTINATION amdgcn/bitcode
     COMPONENT device-libs)
 endmacro()
 

@@ -14,4 +14,3 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
 opencl_bc_lib(NAME ockl SOURCES ${sources})
-
