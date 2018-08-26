@@ -2925,7 +2925,7 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
               PHINodeUses.insert(UInst);
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.
-      if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
+      if (I.isTerminator() && I.getType()->isVoidTy())
         continue;
       TOPClass->insert(&I);
       ValueToClass[&I] = TOPClass;

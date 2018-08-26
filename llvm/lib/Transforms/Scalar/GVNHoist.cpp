@@ -365,7 +365,7 @@ private:
 
   // Return true when a successor of BB dominates A.
   bool successorDominate(const BasicBlock *BB, const BasicBlock *A) {
-    for (const BasicBlock *Succ : BB->getTerminator()->successors())
+    for (const BasicBlock *Succ : successors(BB))
       if (DT->dominates(Succ, A))
         return true;
 
@@ -584,8 +584,8 @@ private:
     for (auto CHI : C) {
       BasicBlock *Dest = CHI.Dest;
       // Find if all the edges have values flowing out of BB.
-      bool Found = llvm::any_of(TI->successors(), [Dest](const BasicBlock *BB) {
-          return BB == Dest; });
+      bool Found = llvm::any_of(
+          successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
       if (!Found)
         return false;
     }
@@ -1100,7 +1100,7 @@ private:
           break;
 
         // Do not value number terminator instructions.
-        if (isa<TerminatorInst>(&I1))
+        if (I1.isTerminator())
           break;
 
         if (auto *Load = dyn_cast<LoadInst>(&I1))

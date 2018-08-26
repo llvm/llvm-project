@@ -1572,7 +1572,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   ReverseDepMapType::iterator ReverseDepIt = ReverseLocalDeps.find(RemInst);
   if (ReverseDepIt != ReverseLocalDeps.end()) {
     // RemInst can't be the terminator if it has local stuff depending on it.
-    assert(!ReverseDepIt->second.empty() && !isa<TerminatorInst>(RemInst) &&
+    assert(!ReverseDepIt->second.empty() && !RemInst->isTerminator() &&
            "Nothing can locally depend on a terminator");
 
     for (Instruction *InstDependingOnRemInst : ReverseDepIt->second) {

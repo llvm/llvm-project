@@ -331,7 +331,7 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
       return false;
     return true;
   }
-  if (!isa<TerminatorInst>(I))
+  if (!I.isTerminator())
     return false;
   if (RemoveControlFlowFlag && (isa<BranchInst>(I) || isa<SwitchInst>(I)))
     return false;

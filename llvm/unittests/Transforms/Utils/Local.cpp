@@ -552,7 +552,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
       auto DI = dyn_cast<DbgValueInst>(&I);
       if (!DI) {
         // The function should only contain debug values and a terminator.
-        ASSERT_TRUE(isa<TerminatorInst>(&I));
+        ASSERT_TRUE(I.isTerminator());
         continue;
       }
       EXPECT_EQ(DI->getVariable()->getName(), "x");
