@@ -1099,6 +1099,44 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   TI.getTargetDefines(LangOpts, Builder);
 }
 
+/// Initialize macros based on AuxTargetInfo.
+static void InitializePredefinedAuxMacros(const TargetInfo &AuxTI,
+                                          const LangOptions &LangOpts,
+                                          MacroBuilder &Builder) {
+  auto AuxTriple = AuxTI.getTriple();
+
+  // Define basic target macros needed by at least bits/wordsize.h and
+  // bits/mathinline.h
+  switch (AuxTriple.getArch()) {
+  case llvm::Triple::x86_64:
+    Builder.defineMacro("__x86_64__");
+    break;
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    Builder.defineMacro("__powerpc64__");
+    break;
+  default:
+    break;
+  }
+
+  // libc++ needs to find out the object file format and threading API.
+  if (AuxTriple.getOS() == llvm::Triple::Linux) {
+    Builder.defineMacro("__ELF__");
+    Builder.defineMacro("__linux__");
+    // Used in features.h. If this is omitted, math.h doesn't declare float
+    // versions of the functions in bits/mathcalls.h.
+    if (LangOpts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  } else if (AuxTriple.isOSDarwin()) {
+    Builder.defineMacro("__APPLE__");
+    Builder.defineMacro("__MACH__");
+  } else if (AuxTriple.isOSWindows()) {
+    Builder.defineMacro("_WIN32");
+    if (AuxTriple.isWindowsGNUEnvironment())
+      Builder.defineMacro("__MINGW32__");
+  }
+}
+
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file. This returns true on error.
 ///
@@ -1120,13 +1158,9 @@ void clang::InitializePreprocessor(
 
   // Install things like __POWERPC__, __GNUC__, etc into the macro table.
   if (InitOpts.UsePredefines) {
-    // FIXME: This will create multiple definitions for most of the predefined
-    // macros. This is not the right way to handle this.
-    if ((LangOpts.CUDA || LangOpts.OpenMPIsDevice) && PP.getAuxTargetInfo())
-      InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
-                                 Builder);
-
     InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts, Builder);
+    if ((LangOpts.CUDA || LangOpts.OpenMPIsDevice) && PP.getAuxTargetInfo())
+      InitializePredefinedAuxMacros(*PP.getAuxTargetInfo(), LangOpts, Builder);
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.
