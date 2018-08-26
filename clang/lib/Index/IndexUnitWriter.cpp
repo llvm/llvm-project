@@ -450,8 +450,13 @@ void IndexUnitWriter::writeDependencies(llvm::BitstreamWriter &Stream,
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 10)); // PathIndex (1-based, 0 = none)
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // ModuleIndex (1-based, 0 = none)
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32)); // time_t
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // file size
+  // Reserved. These used to be time_t & file size but we decided against
+  // writing these in order to get reproducible build products (index data
+  // output being the same with the same inputs). Keep these reserved for the
+  // future, for coming up with a better scheme to track state of dependencies
+  // without using modification time.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 0)); // Reserved
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 0)); // Reserved
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
   unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
 
@@ -472,13 +477,8 @@ void IndexUnitWriter::writeDependencies(llvm::BitstreamWriter &Stream,
     } else {
       Record.push_back(0);
     }
-    if (Data.FileIndex != -1) {
-      Record.push_back(Files[Data.FileIndex].File->getModificationTime());
-      Record.push_back(Files[Data.FileIndex].File->getSize());
-    } else {
-      Record.push_back(0);
-      Record.push_back(0);
-    }
+    Record.push_back(0); // Reserved.
+    Record.push_back(0); // Reserved.
     Stream.EmitRecordWithBlob(AbbrevCode, Record, Data.Name);
   };
 
@@ -504,8 +504,8 @@ void IndexUnitWriter::writeDependencies(llvm::BitstreamWriter &Stream,
     } else {
       Record.push_back(0);
     }
-    Record.push_back(File.File->getModificationTime());
-    Record.push_back(File.File->getSize());
+    Record.push_back(0); // Reserved.
+    Record.push_back(0); // Reserved.
     Stream.EmitRecordWithBlob(AbbrevCode, Record, StringRef());
   }
 
