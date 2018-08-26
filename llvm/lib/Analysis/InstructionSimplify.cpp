@@ -5165,7 +5165,7 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
 
     // Gracefully handle edge cases where the instruction is not wired into any
     // parent block.
-    if (I->getParent() && !I->isEHPad() && !isa<TerminatorInst>(I) &&
+    if (I->getParent() && !I->isEHPad() && !I->isTerminator() &&
         !I->mayHaveSideEffects())
       I->eraseFromParent();
   } else {
@@ -5194,7 +5194,7 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
 
     // Gracefully handle edge cases where the instruction is not wired into any
     // parent block.
-    if (I->getParent() && !I->isEHPad() && !isa<TerminatorInst>(I) &&
+    if (I->getParent() && !I->isEHPad() && !I->isTerminator() &&
         !I->mayHaveSideEffects())
       I->eraseFromParent();
   }

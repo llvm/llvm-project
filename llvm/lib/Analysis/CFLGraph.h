@@ -594,7 +594,7 @@ template <typename CFLAA> class CFLGraphBuilder {
   // Determines whether or not we an instruction is useless to us (e.g.
   // FenceInst)
   static bool hasUsefulEdges(Instruction *Inst) {
-    bool IsNonInvokeRetTerminator = isa<TerminatorInst>(Inst) &&
+    bool IsNonInvokeRetTerminator = Inst->isTerminator() &&
                                     !isa<InvokeInst>(Inst) &&
                                     !isa<ReturnInst>(Inst);
     return !isa<CmpInst>(Inst) && !isa<FenceInst>(Inst) &&

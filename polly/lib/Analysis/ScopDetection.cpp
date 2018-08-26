@@ -1214,7 +1214,8 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
         for (User *U : PHI->users()) {
-          if (!isa<TerminatorInst>(U))
+          auto *UI = dyn_cast<Instruction>(U);
+          if (!UI || !UI->isTerminator())
             return false;
         }
       } else {

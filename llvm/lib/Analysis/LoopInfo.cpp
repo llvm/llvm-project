@@ -226,7 +226,7 @@ MDNode *Loop::getLoopID() const {
       MDNode *MD = nullptr;
 
       // Check if this terminator branches to the loop header.
-      for (BasicBlock *Successor : TI->successors()) {
+      for (BasicBlock *Successor : successors(TI)) {
         if (Successor == H) {
           MD = TI->getMetadata(LLVMContext::MD_loop);
           break;
@@ -262,7 +262,7 @@ void Loop::setLoopID(MDNode *LoopID) const {
   BasicBlock *H = getHeader();
   for (BasicBlock *BB : this->blocks()) {
     TerminatorInst *TI = BB->getTerminator();
-    for (BasicBlock *Successor : TI->successors()) {
+    for (BasicBlock *Successor : successors(TI)) {
       if (Successor == H)
         TI->setMetadata(LLVMContext::MD_loop, LoopID);
     }

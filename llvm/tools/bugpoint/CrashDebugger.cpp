@@ -703,7 +703,7 @@ bool ReduceCrashingInstructions::TestInsts(
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction *, 32> Instructions;
   for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
-    assert(!isa<TerminatorInst>(Insts[i]));
+    assert(!Insts[i]->isTerminator());
     Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
   }
 
@@ -717,7 +717,7 @@ bool ReduceCrashingInstructions::TestInsts(
     for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
       for (BasicBlock::iterator I = FI->begin(), E = FI->end(); I != E;) {
         Instruction *Inst = &*I++;
-        if (!Instructions.count(Inst) && !isa<TerminatorInst>(Inst) &&
+        if (!Instructions.count(Inst) && !Inst->isTerminator() &&
             !Inst->isEHPad() && !Inst->getType()->isTokenTy() &&
             !Inst->isSwiftError()) {
           if (!Inst->getType()->isVoidTy())
@@ -950,7 +950,7 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
     for (const Function &F : BD.getProgram())
       for (const BasicBlock &BB : F)
         for (const Instruction &I : BB)
-          if (!isa<TerminatorInst>(&I))
+          if (!I.isTerminator())
             Insts.push_back(&I);
 
     Expected<bool> Result =

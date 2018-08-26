@@ -145,9 +145,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSet<unsigned, 8> KilledUseSet;
   SmallSet<unsigned, 8> UndefUseSet;
   SmallVector<MachineOperand*, 4> Defs;
-  for (; FirstMI != LastMI; ++FirstMI) {
-    for (unsigned i = 0, e = FirstMI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = FirstMI->getOperand(i);
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    for (unsigned i = 0, e = MII->getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MII->getOperand(i);
       if (!MO.isReg())
         continue;
       if (MO.isDef()) {
@@ -224,6 +224,15 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     bool isUndef = UndefUseSet.count(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
                getImplRegState(true));
+  }
+
+  // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions got
+  // the property, then also set it on the bundle.
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (MII->getFlag(MachineInstr::FrameSetup))
+      MIB.setMIFlag(MachineInstr::FrameSetup);
+    if (MII->getFlag(MachineInstr::FrameDestroy))
+      MIB.setMIFlag(MachineInstr::FrameDestroy);
   }
 }
 

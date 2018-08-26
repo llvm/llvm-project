@@ -500,8 +500,6 @@ struct Name {
   bool IsOperator = false;
   bool IsBackReference = false;
 
-  bool isStringLiteralOperatorInfo() const;
-
   // Name read from an MangledName string.
   StringView Str;
 
@@ -1072,13 +1070,6 @@ static void outputSpecialOperator(OutputStream &OS, const Name *OuterName) {
 }
 
 namespace {
-
-bool Name::isStringLiteralOperatorInfo() const {
-  if (!IsOperator)
-    return false;
-  const OperatorInfo &O = static_cast<const OperatorInfo &>(*this);
-  return O.Info->Operator == OperatorTy::StringLiteral;
-}
 
 Type *Type::clone(ArenaAllocator &Arena) const {
   return Arena.alloc<Type>(*this);
