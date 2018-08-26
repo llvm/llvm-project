@@ -592,7 +592,7 @@ bool Instruction::mayThrow() const {
 
 bool Instruction::isSafeToRemove() const {
   return (!isa<CallInst>(this) || !this->mayHaveSideEffects()) &&
-         !isa<TerminatorInst>(this);
+         !this->isTerminator();
 }
 
 const Instruction *Instruction::getNextNonDebugInstruction() const {
@@ -615,6 +615,42 @@ bool Instruction::isAssociative() const {
   default:
     return false;
   }
+}
+
+unsigned Instruction::getNumSuccessors() const {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<const CLASS *>(this)->getNumSuccessors();
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
+}
+
+BasicBlock *Instruction::getSuccessor(unsigned idx) const {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<const CLASS *>(this)->getSuccessor(idx);
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
+}
+
+void Instruction::setSuccessor(unsigned idx, BasicBlock *B) {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<CLASS *>(this)->setSuccessor(idx, B);
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
 }
 
 Instruction *Instruction::cloneImpl() const {

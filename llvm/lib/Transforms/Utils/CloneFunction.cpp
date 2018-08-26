@@ -415,7 +415,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
 
     // Recursively clone any reachable successor blocks.
     const TerminatorInst *TI = BB->getTerminator();
-    for (const BasicBlock *Succ : TI->successors())
+    for (const BasicBlock *Succ : successors(TI))
       ToClone.push_back(Succ);
   }
 

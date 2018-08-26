@@ -580,7 +580,7 @@ void MemorySSAUpdater::removeBlocks(
   for (BasicBlock *BB : DeadBlocks) {
     TerminatorInst *TI = BB->getTerminator();
     assert(TI && "Basic block expected to have a terminator instruction");
-    for (BasicBlock *Succ : TI->successors())
+    for (BasicBlock *Succ : successors(TI))
       if (!DeadBlocks.count(Succ))
         if (MemoryPhi *MP = MSSA->getMemoryAccess(Succ)) {
           MP->unorderedDeleteIncomingBlock(BB);

@@ -355,7 +355,7 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
     MIRBuilder.buildBr(TgtBB);
 
   // Link successors.
-  for (const BasicBlock *Succ : BrInst.successors())
+  for (const BasicBlock *Succ : successors(&BrInst))
     CurBB.addSuccessor(&getMBB(*Succ));
   return true;
 }
@@ -415,7 +415,7 @@ bool IRTranslator::translateIndirectBr(const User &U,
 
   // Link successors.
   MachineBasicBlock &CurBB = MIRBuilder.getMBB();
-  for (const BasicBlock *Succ : BrInst.successors())
+  for (const BasicBlock *Succ : successors(&BrInst))
     CurBB.addSuccessor(&getMBB(*Succ));
 
   return true;

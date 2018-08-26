@@ -132,6 +132,9 @@ public:
   bool isShift() { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
+  bool isExceptionalTerminator() const {
+    return isExceptionalTerminator(getOpcode());
+  }
 
   static const char* getOpcodeName(unsigned OpCode);
 
@@ -180,6 +183,20 @@ public:
   /// Determine if the OpCode is one of the FuncletPadInst instructions.
   static inline bool isFuncletPad(unsigned OpCode) {
     return OpCode >= FuncletPadOpsBegin && OpCode < FuncletPadOpsEnd;
+  }
+
+  /// Returns true if the OpCode is a terminator related to exception handling.
+  static inline bool isExceptionalTerminator(unsigned OpCode) {
+    switch (OpCode) {
+    case Instruction::CatchSwitch:
+    case Instruction::CatchRet:
+    case Instruction::CleanupRet:
+    case Instruction::Invoke:
+    case Instruction::Resume:
+      return true;
+    default:
+      return false;
+    }
   }
 
   //===--------------------------------------------------------------------===//
@@ -611,6 +628,16 @@ public:
   /// operands in the corresponding predecessor block.
   bool isUsedOutsideOfBlock(const BasicBlock *BB) const;
 
+  /// Return the number of successors that this instruction has. The instruction
+  /// must be a terminator.
+  unsigned getNumSuccessors() const;
+
+  /// Return the specified successor. This instruction must be a terminator.
+  BasicBlock *getSuccessor(unsigned Idx) const;
+
+  /// Update the specified successor to point at the provided block. This
+  /// instruction must be a terminator.
+  void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

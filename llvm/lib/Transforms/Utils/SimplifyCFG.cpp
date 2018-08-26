@@ -1270,7 +1270,7 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
   do {
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
-    if (isa<TerminatorInst>(I1))
+    if (I1->isTerminator())
       goto HoistTerminator;
 
     // If we're going to hoist a call, make sure that the two instructions we're
@@ -2336,8 +2336,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     IfBlock1 = nullptr;
   } else {
     DomBlock = *pred_begin(IfBlock1);
-    for (BasicBlock::iterator I = IfBlock1->begin(); !isa<TerminatorInst>(I);
-         ++I)
+    for (BasicBlock::iterator I = IfBlock1->begin(); !I->isTerminator(); ++I)
       if (!AggressiveInsts.count(&*I) && !isa<DbgInfoIntrinsic>(I)) {
         // This is not an aggressive instruction that we can promote.
         // Because of this, we won't be able to get rid of the control flow, so
@@ -2350,8 +2349,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     IfBlock2 = nullptr;
   } else {
     DomBlock = *pred_begin(IfBlock2);
-    for (BasicBlock::iterator I = IfBlock2->begin(); !isa<TerminatorInst>(I);
-         ++I)
+    for (BasicBlock::iterator I = IfBlock2->begin(); !I->isTerminator(); ++I)
       if (!AggressiveInsts.count(&*I) && !isa<DbgInfoIntrinsic>(I)) {
         // This is not an aggressive instruction that we can promote.
         // Because of this, we won't be able to get rid of the control flow, so
@@ -2922,7 +2920,7 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
           isa<StoreInst>(I))
         ++N;
       // Free instructions.
-      else if (isa<TerminatorInst>(I) || IsaBitcastOfPointerType(I))
+      else if (I.isTerminator() || IsaBitcastOfPointerType(I))
         continue;
       else
         return false;
@@ -3414,7 +3412,7 @@ static bool SimplifyTerminatorOnSelect(TerminatorInst *OldTerm, Value *Cond,
   BasicBlock *KeepEdge2 = TrueBB != FalseBB ? FalseBB : nullptr;
 
   // Then remove the rest.
-  for (BasicBlock *Succ : OldTerm->successors()) {
+  for (BasicBlock *Succ : successors(OldTerm)) {
     // Make sure only to keep exactly one copy of each edge.
     if (Succ == KeepEdge1)
       KeepEdge1 = nullptr;
@@ -4637,7 +4635,7 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   for (Instruction &I :CaseDest->instructionsWithoutDebug()) {
     if (TerminatorInst *T = dyn_cast<TerminatorInst>(&I)) {
       // If the terminator is a simple branch, continue to the next block.
-      if (T->getNumSuccessors() != 1 || T->isExceptional())
+      if (T->getNumSuccessors() != 1 || T->isExceptionalTerminator())
         return false;
       Pred = CaseDest;
       CaseDest = T->getSuccessor(0);

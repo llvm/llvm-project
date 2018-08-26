@@ -3354,6 +3354,33 @@ protected:
   BranchInst *cloneImpl() const;
 
 public:
+  /// Iterator type that casts an operand to a basic block.
+  ///
+  /// This only makes sense because the successors are stored as adjacent
+  /// operands for branch instructions.
+  struct succ_op_iterator
+      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
+                              std::random_access_iterator_tag, BasicBlock *,
+                              ptrdiff_t, BasicBlock *, BasicBlock *> {
+    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
+
+    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    BasicBlock *operator->() const { return operator*(); }
+  };
+
+  /// The const version of `succ_op_iterator`.
+  struct const_succ_op_iterator
+      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
+                              std::random_access_iterator_tag,
+                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
+                              const BasicBlock *> {
+    explicit const_succ_op_iterator(const_value_op_iterator I)
+        : iterator_adaptor_base(I) {}
+
+    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    const BasicBlock *operator->() const { return operator*(); }
+  };
+
   static BranchInst *Create(BasicBlock *IfTrue,
                             Instruction *InsertBefore = nullptr) {
     return new(1) BranchInst(IfTrue, InsertBefore);
@@ -3407,6 +3434,18 @@ public:
   /// branch weight metadata associated with the instruction so that it
   /// continues to map correctly to each operand.
   void swapSuccessors();
+
+  iterator_range<succ_op_iterator> successors() {
+    return make_range(
+        succ_op_iterator(std::next(value_op_begin(), isConditional() ? 1 : 0)),
+        succ_op_iterator(value_op_end()));
+  }
+
+  iterator_range<const_succ_op_iterator> successors() const {
+    return make_range(const_succ_op_iterator(
+                          std::next(value_op_begin(), isConditional() ? 1 : 0)),
+                      const_succ_op_iterator(value_op_end()));
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -3821,6 +3860,33 @@ protected:
   IndirectBrInst *cloneImpl() const;
 
 public:
+  /// Iterator type that casts an operand to a basic block.
+  ///
+  /// This only makes sense because the successors are stored as adjacent
+  /// operands for indirectbr instructions.
+  struct succ_op_iterator
+      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
+                              std::random_access_iterator_tag, BasicBlock *,
+                              ptrdiff_t, BasicBlock *, BasicBlock *> {
+    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
+
+    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    BasicBlock *operator->() const { return operator*(); }
+  };
+
+  /// The const version of `succ_op_iterator`.
+  struct const_succ_op_iterator
+      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
+                              std::random_access_iterator_tag,
+                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
+                              const BasicBlock *> {
+    explicit const_succ_op_iterator(const_value_op_iterator I)
+        : iterator_adaptor_base(I) {}
+
+    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
+    const BasicBlock *operator->() const { return operator*(); }
+  };
+
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
                                 Instruction *InsertBefore = nullptr) {
     return new IndirectBrInst(Address, NumDests, InsertBefore);
@@ -3861,6 +3927,16 @@ public:
   }
   void setSuccessor(unsigned i, BasicBlock *NewSucc) {
     setOperand(i + 1, NewSucc);
+  }
+
+  iterator_range<succ_op_iterator> successors() {
+    return make_range(succ_op_iterator(std::next(value_op_begin())),
+                      succ_op_iterator(value_op_end()));
+  }
+
+  iterator_range<const_succ_op_iterator> successors() const {
+    return make_range(const_succ_op_iterator(std::next(value_op_begin())),
+                      const_succ_op_iterator(value_op_end()));
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:

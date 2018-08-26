@@ -3860,7 +3860,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
-  assert((OpNo == 2 || OpNo == 3) &&
+  assert((OpNo == 1 || OpNo == 3) &&
          "Can widen only data or mask operand of mstore");
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
@@ -3868,8 +3868,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   SDValue StVal = MST->getValue();
   SDLoc dl(N);
 
-  if (OpNo == 3) {
-    // Widen the value
+  if (OpNo == 1) {
+    // Widen the value.
     StVal = GetWidenedVector(StVal);
 
     // The mask should be widened as well.
@@ -3879,18 +3879,15 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
                                       WideVT.getVectorNumElements());
     Mask = ModifyToType(Mask, WideMaskVT, true);
   } else {
+    // Widen the mask.
     EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
     Mask = ModifyToType(Mask, WideMaskVT, true);
 
     EVT ValueVT = StVal.getValueType();
-    if (getTypeAction(ValueVT) == TargetLowering::TypeWidenVector)
-      StVal = GetWidenedVector(StVal);
-    else {
-      EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
-                                    ValueVT.getVectorElementType(),
-                                    WideMaskVT.getVectorNumElements());
-      StVal = ModifyToType(StVal, WideVT);
-    }
+    EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
+                                  ValueVT.getVectorElementType(),
+                                  WideMaskVT.getVectorNumElements());
+    StVal = ModifyToType(StVal, WideVT);
   }
 
   assert(Mask.getValueType().getVectorNumElements() ==

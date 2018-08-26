@@ -6580,11 +6580,11 @@ SDValue SelectionDAG::getIndexedStore(SDValue OrigStore, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
-                                    SDValue Ptr, SDValue Mask, SDValue Src0,
+                                    SDValue Ptr, SDValue Mask, SDValue PassThru,
                                     EVT MemVT, MachineMemOperand *MMO,
                                     ISD::LoadExtType ExtTy, bool isExpanding) {
   SDVTList VTs = getVTList(VT, MVT::Other);
-  SDValue Ops[] = { Chain, Ptr, Mask, Src0 };
+  SDValue Ops[] = { Chain, Ptr, Mask, PassThru };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MLOAD, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
@@ -6615,7 +6615,7 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
         "Invalid chain type");
   EVT VT = Val.getValueType();
   SDVTList VTs = getVTList(MVT::Other);
-  SDValue Ops[] = { Chain, Ptr, Mask, Val };
+  SDValue Ops[] = { Chain, Val, Ptr, Mask };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MSTORE, VTs, Ops);
   ID.AddInteger(VT.getRawBits());

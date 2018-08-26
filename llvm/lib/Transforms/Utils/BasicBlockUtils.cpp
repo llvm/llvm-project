@@ -59,7 +59,7 @@ void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
   // of their predecessors is going away.
   if (DTU)
     Updates.reserve(BBTerm->getNumSuccessors());
-  for (BasicBlock *Succ : BBTerm->successors()) {
+  for (BasicBlock *Succ : successors(BBTerm)) {
     Succ->removePredecessor(BB);
     if (DTU)
       Updates.push_back({DominatorTree::Delete, BB, Succ});
@@ -136,7 +136,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Don't break self-loops.
   if (PredBB == BB) return false;
   // Don't break unwinding instructions.
-  if (PredBB->getTerminator()->isExceptional())
+  if (PredBB->getTerminator()->isExceptionalTerminator())
     return false;
 
   // Can't merge if there are multiple distinct successors.
