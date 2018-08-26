@@ -96,6 +96,9 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   if (isFunctionLocalSymbol(D)) {
     Info.Properties |= (SymbolPropertySet)SymbolProperty::Local;
   }
+  if (isa<ObjCProtocolDecl>(D->getDeclContext())) {
+    Info.Properties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
+  }
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
@@ -536,6 +539,7 @@ void index::applyForEachSymbolProperty(SymbolPropertySet Props,
   APPLY_FOR_PROPERTY(IBOutletCollection);
   APPLY_FOR_PROPERTY(GKInspectable);
   APPLY_FOR_PROPERTY(Local);
+  APPLY_FOR_PROPERTY(ProtocolInterface);
 
 #undef APPLY_FOR_PROPERTY
 }
@@ -556,6 +560,7 @@ void index::printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS) {
     case SymbolProperty::IBOutletCollection: OS << "IBColl"; break;
     case SymbolProperty::GKInspectable: OS << "GKI"; break;
     case SymbolProperty::Local: OS << "local"; break;
+    case SymbolProperty::ProtocolInterface: OS << "protocol"; break;
     }
   });
 }

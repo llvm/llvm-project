@@ -474,12 +474,12 @@ void testImplicitProperties(ImplicitProperties *c) {
 @end
 
 @protocol Prot3 // CHECK: [[@LINE]]:11 | protocol/ObjC | Prot3 | [[PROT3_USR:.*]] | <no-cgname> | Decl |
--(void)meth;
+-(void)meth; // CHECK: [[@LINE]]:8 | instance-method(protocol)/ObjC | meth | [[PROT3_meth_USR:.*]] | -[Prot3 meth] | Decl,Dyn,RelChild |
 @end
 
 void test_rec1() {
   id<Prot3, Prot1> o1;
-  [o1 meth]; // CHECK: [[@LINE]]:7 | instance-method/ObjC | meth | {{.*}} | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 3
+  [o1 meth]; // CHECK: [[@LINE]]:7 | instance-method(protocol)/ObjC | meth | [[PROT3_meth_USR]] | {{.*}} | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 3
     // CHECK-NEXT: RelCall,RelCont | test_rec1 |
     // CHECK-NEXT: RelRec | Prot3 | [[PROT3_USR]]
     // CHECK-NEXT: RelRec | Prot1 | [[PROT1_USR]]

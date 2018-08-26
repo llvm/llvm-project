@@ -87,7 +87,7 @@ void test2(I3 *i3, id<ExtProt2> prot2, SomeEnum some) {
   [i3 meth2];
   // CHECK: [[@LINE-1]]:7 | instance-method/Swift | meth2 | c:@CM@modname@objc(cs)I3(im)meth2 |
   [prot2 meth];
-  // CHECK: [[@LINE-1]]:10 | instance-method/Swift | meth | c:@M@modname@objc(pl)ExtProt2(im)meth |
+  // CHECK: [[@LINE-1]]:10 | instance-method(protocol)/Swift | meth | c:@M@modname@objc(pl)ExtProt2(im)meth |
   some = SomeEnumFirst;
   // CHECK: [[@LINE-1]]:10 | enumerator/Swift | SomeEnumFirst | c:@M@modname@E@SomeEnum@SomeEnumFirst |
 }
