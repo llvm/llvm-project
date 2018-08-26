@@ -628,18 +628,6 @@ indexstore_unit_dependency_get_name(indexstore_unit_dependency_t c_dep) {
   return toIndexStoreString(dep->UnitOrRecordName);
 }
 
-time_t
-indexstore_unit_dependency_get_modification_time(indexstore_unit_dependency_t c_dep) {
-  auto dep = static_cast<const IndexUnitReader::DependencyInfo*>(c_dep);
-  return dep->ModTime;
-}
-
-size_t
-indexstore_unit_dependency_get_file_size(indexstore_unit_dependency_t c_dep) {
-  auto dep = static_cast<const IndexUnitReader::DependencyInfo*>(c_dep);
-  return dep->FileSize;
-}
-
 indexstore_string_ref_t
 indexstore_unit_include_get_source_path(indexstore_unit_include_t c_inc) {
   auto inc = static_cast<const IndexUnitReader::IncludeInfo*>(c_inc);

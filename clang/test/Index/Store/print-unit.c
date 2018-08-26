@@ -27,7 +27,7 @@ void foo(int i);
 // CHECK: Record | user | {{.*}}/Inputs/using-overlay.h | using-overlay.h-
 // CHECK: Record | system | {{.*}}/Inputs/sys/syshead.h | syshead.h-
 // CHECK: Record | system | {{.*}}/Inputs/sys/another.h | another.h-
-// CHECK: File | user | {{.*}}/Inputs/print-unit.h | | {{[0-9]*$}}
+// CHECK: File | user | {{.*}}/Inputs/print-unit.h{{$}}
 // CHECK: DEPEND END (6)
 // CHECK: INCLUDE START
 // CHECK: {{.*}}/print-unit.c:3 | {{.*}}/Inputs/print-unit.h

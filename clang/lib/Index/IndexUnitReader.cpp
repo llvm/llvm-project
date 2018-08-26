@@ -299,8 +299,8 @@ bool IndexUnitReaderImpl::foreachDependency(DependencyReceiver Receiver) {
     bool IsSystem = Record[I++];
     int PathIndex = (int)Record[I++] - 1;
     int ModuleIndex = (int)Record[I++] - 1;
-    time_t ModTime = (time_t)Record[I++];
-    size_t FileSize = Record[I++];
+    I++; // Reserved field.
+    I++; // Reserved field.
     StringRef Name = Blob;
 
     IndexUnitReader::DependencyKind DepKind;
@@ -318,7 +318,7 @@ bool IndexUnitReaderImpl::foreachDependency(DependencyReceiver Receiver) {
     StringRef ModuleName = this->getModuleName(ModuleIndex);
 
     return Receiver(IndexUnitReader::DependencyInfo{DepKind, IsSystem, Name,
-      PathBuf.str(), ModuleName, FileSize, ModTime});
+      PathBuf.str(), ModuleName});
   });
 
   std::string Error;
