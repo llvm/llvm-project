@@ -26,7 +26,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_RETIRECONTROLUNITSTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_RETIRECONTROLUNITSTATISTICS_H
 
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 

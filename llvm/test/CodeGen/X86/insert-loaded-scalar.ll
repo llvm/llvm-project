@@ -10,11 +10,16 @@ define <16 x i8> @load8_ins_elt0_v16i8(i8* %p) nounwind {
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: load8_ins_elt0_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: load8_ins_elt0_v16i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load8_ins_elt0_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb (%rdi), %xmm0
+; AVX2-NEXT:    retq
   %x = load i8, i8* %p
   %ins = insertelement <16 x i8> undef, i8 %x, i32 0
   ret <16 x i8> %ins
@@ -27,11 +32,16 @@ define <8 x i16> @load16_ins_elt0_v8i16(i16* %p) nounwind {
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: load16_ins_elt0_v8i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: load16_ins_elt0_v8i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzwl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load16_ins_elt0_v8i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastw (%rdi), %xmm0
+; AVX2-NEXT:    retq
   %x = load i16, i16* %p
   %ins = insertelement <8 x i16> undef, i16 %x, i32 0
   ret <8 x i16> %ins
@@ -105,12 +115,17 @@ define <16 x i8> @load8_ins_eltc_v16i8(i8* %p) nounwind {
 ; SSE-NEXT:    pslld $24, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: load8_ins_eltc_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpslld $24, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: load8_ins_eltc_v16i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpslld $24, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load8_ins_eltc_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb (%rdi), %xmm0
+; AVX2-NEXT:    retq
   %x = load i8, i8* %p
   %ins = insertelement <16 x i8> undef, i8 %x, i32 3
   ret <16 x i8> %ins
@@ -147,17 +162,10 @@ define <4 x i32> @load32_ins_eltc_v4i32(i32* %p) nounwind {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load32_ins_eltc_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load32_ins_eltc_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load32_ins_eltc_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss (%rdi), %xmm0
+; AVX-NEXT:    retq
   %x = load i32, i32* %p
   %ins = insertelement <4 x i32> undef, i32 %x, i32 2
   ret <4 x i32> %ins
@@ -223,11 +231,16 @@ define <32 x i8> @load8_ins_elt0_v32i8(i8* %p) nounwind {
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: load8_ins_elt0_v32i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: load8_ins_elt0_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load8_ins_elt0_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb (%rdi), %ymm0
+; AVX2-NEXT:    retq
   %x = load i8, i8* %p
   %ins = insertelement <32 x i8> undef, i8 %x, i32 0
   ret <32 x i8> %ins
@@ -240,11 +253,16 @@ define <16 x i16> @load16_ins_elt0_v16i16(i16* %p) nounwind {
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: load16_ins_elt0_v16i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: load16_ins_elt0_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzwl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load16_ins_elt0_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastw (%rdi), %ymm0
+; AVX2-NEXT:    retq
   %x = load i16, i16* %p
   %ins = insertelement <16 x i16> undef, i16 %x, i32 0
   ret <16 x i16> %ins
@@ -328,10 +346,7 @@ define <32 x i8> @load8_ins_eltc_v32i8(i8* %p) nounwind {
 ;
 ; AVX2-LABEL: load8_ins_eltc_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzbl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpsllq $40, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastb (%rdi), %ymm0
 ; AVX2-NEXT:    retq
   %x = load i8, i8* %p
   %ins = insertelement <32 x i8> undef, i8 %x, i32 21
@@ -356,10 +371,7 @@ define <16 x i16> @load16_ins_eltc_v16i16(i16* %p) nounwind {
 ;
 ; AVX2-LABEL: load16_ins_eltc_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; AVX2-NEXT:    retq
   %x = load i16, i16* %p
   %ins = insertelement <16 x i16> undef, i16 %x, i32 11
@@ -373,18 +385,10 @@ define <8 x i32> @load32_ins_eltc_v8i32(i32* %p) nounwind {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,2,0]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load32_ins_eltc_v8i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,2,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load32_ins_eltc_v8i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss (%rdi), %xmm0
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load32_ins_eltc_v8i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss (%rdi), %ymm0
+; AVX-NEXT:    retq
   %x = load i32, i32* %p
   %ins = insertelement <8 x i32> undef, i32 %x, i32 7
   ret <8 x i32> %ins
@@ -397,17 +401,10 @@ define <4 x i64> @load64_ins_eltc_v4i64(i64* %p) nounwind {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load64_ins_eltc_v4i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load64_ins_eltc_v4i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load64_ins_eltc_v4i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX-NEXT:    retq
   %x = load i64, i64* %p
   %ins = insertelement <4 x i64> undef, i64 %x, i32 3
   ret <4 x i64> %ins
@@ -420,18 +417,10 @@ define <8 x float> @load32_ins_eltc_v8f32(float* %p) nounwind {
 ; SSE-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load32_ins_eltc_v8f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load32_ins_eltc_v8f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss (%rdi), %xmm0
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load32_ins_eltc_v8f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss (%rdi), %ymm0
+; AVX-NEXT:    retq
   %x = load float, float* %p
   %ins = insertelement <8 x float> undef, float %x, i32 5
   ret <8 x float> %ins
@@ -443,16 +432,10 @@ define <4 x double> @load64_ins_eltc_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load64_ins_eltc_v4f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load64_ins_eltc_v4f64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load64_ins_eltc_v4f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX-NEXT:    retq
   %x = load double, double* %p
   %ins = insertelement <4 x double> undef, double %x, i32 3
   ret <4 x double> %ins

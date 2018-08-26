@@ -860,6 +860,84 @@ TEST_F(DILocationTest, Overflow) {
   }
 }
 
+TEST_F(DILocationTest, Merge) {
+  DISubprogram *N = getSubprogram();
+  DIScope *S = DILexicalBlock::get(Context, N, getFile(), 3, 4);
+
+  {
+    // Identical.
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *B = DILocation::get(Context, 2, 7, N);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Identical, different scopes.
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *B = DILocation::get(Context, 2, 7, S);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine()); // FIXME: Should this be 2?
+    EXPECT_EQ(0u, M->getColumn()); // FIXME: Should this be 7?
+    EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Different lines, same scopes.
+    auto *A = DILocation::get(Context, 1, 6, N);
+    auto *B = DILocation::get(Context, 2, 7, N);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Twisty locations, all different, same function.
+    auto *A = DILocation::get(Context, 1, 6, N);
+    auto *B = DILocation::get(Context, 2, 7, S);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Different function, same inlined-at.
+    auto *F = getFile();
+    auto *SP1 = DISubprogram::getDistinct(Context, F, "a", "a", F, 0, nullptr,
+                                          false, false, 0, nullptr, 0, 0, 0,
+                                          DINode::FlagZero, false, nullptr);
+    auto *SP2 = DISubprogram::getDistinct(Context, F, "b", "b", F, 0, nullptr,
+                                          false, false, 0, nullptr, 0, 0, 0,
+                                          DINode::FlagZero, false, nullptr);
+
+    auto *I = DILocation::get(Context, 2, 7, N);
+    auto *A = DILocation::get(Context, 1, 6, SP1, I);
+    auto *B = DILocation::get(Context, 2, 7, SP2, I);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(I, M->getInlinedAt());
+  }
+
+   {
+    // Completely different.
+    auto *I = DILocation::get(Context, 2, 7, N);
+    auto *A = DILocation::get(Context, 1, 6, S, I);
+    auto *B = DILocation::get(Context, 2, 7, getSubprogram());
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(S, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+}
+
 TEST_F(DILocationTest, getDistinct) {
   MDNode *N = getSubprogram();
   DILocation *L0 = DILocation::getDistinct(Context, 2, 7, N);

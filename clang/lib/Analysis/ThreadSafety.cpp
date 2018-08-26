@@ -1656,6 +1656,9 @@ void BuildLockset::checkAccess(const Expr *Exp, AccessKind AK,
     const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()->getCanonicalDecl());
     if (VD && VD->isLocalVarDecl() && VD->getType()->isReferenceType()) {
       if (const auto *E = VD->getInit()) {
+        // Guard against self-initialization. e.g., int &i = i;
+        if (E == Exp)
+          break;
         Exp = E;
         continue;
       }

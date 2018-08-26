@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "RetireControlUnitStatistics.h"
+#include "Views/RetireControlUnitStatistics.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;

@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "RegisterFileStatistics.h"
+#include "Views/RegisterFileStatistics.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;

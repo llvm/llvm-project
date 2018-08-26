@@ -59,7 +59,7 @@
 #define LLVM_TOOLS_LLVM_MCA_RESOURCEPRESSUREVIEW_H
 
 #include "SourceMgr.h"
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"

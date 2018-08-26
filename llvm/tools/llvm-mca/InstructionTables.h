@@ -20,7 +20,6 @@
 #include "InstrBuilder.h"
 #include "Scheduler.h"
 #include "Stage.h"
-#include "View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 

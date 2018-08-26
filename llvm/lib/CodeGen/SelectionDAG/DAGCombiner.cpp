@@ -7031,6 +7031,16 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   return SDValue();
 }
 
+// FIXME: This should be checking for no signed zeros on individual operands, as
+// well as no nans.
+static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS, SDValue RHS) {
+  const TargetOptions &Options = DAG.getTarget().Options;
+  EVT VT = LHS.getValueType();
+
+  return Options.NoSignedZerosFPMath && VT.isFloatingPoint() &&
+         DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS);
+}
+
 /// Generate Min/Max node
 static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                    SDValue RHS, SDValue True, SDValue False,
@@ -7047,7 +7057,7 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETULT:
   case ISD::SETULE: {
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (TLI.isOperationLegal(Opcode, VT))
+    if (TLI.isOperationLegalOrCustom(Opcode, VT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
@@ -7058,7 +7068,7 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETUGT:
   case ISD::SETUGE: {
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
-    if (TLI.isOperationLegal(Opcode, VT))
+    if (TLI.isOperationLegalOrCustom(Opcode, VT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
@@ -7291,12 +7301,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // This is OK if we don't care about what happens if either operand is a
     // NaN.
     //
-
-    // FIXME: This should be checking for no signed zeros on individual
-    // operands, as well as no nans.
-    const TargetOptions &Options = DAG.getTarget().Options;
-    if (Options.NoSignedZerosFPMath && VT.isFloatingPoint() && N0.hasOneUse() &&
-        DAG.isKnownNeverNaN(N1) && DAG.isKnownNeverNaN(N2)) {
+    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2)) {
       ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
 
       if (SDValue FMinMax = combineMinNumMaxNum(
@@ -7769,6 +7774,20 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
       AddToWorklist(Shift.getNode());
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::XOR, DL, VT, Add, Shift);
+    }
+
+    // vselect x, y (fcmp lt x, y) -> fminnum x, y
+    // vselect x, y (fcmp gt x, y) -> fmaxnum x, y
+    //
+    // This is OK if we don't care about what happens if either operand is a
+    // NaN.
+    //
+    EVT VT = N->getValueType(0);
+    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N0.getOperand(0), N0.getOperand(1))) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+      if (SDValue FMinMax = combineMinNumMaxNum(
+            DL, VT, N0.getOperand(0), N0.getOperand(1), N1, N2, CC, TLI, DAG))
+        return FMinMax;
     }
 
     // If this select has a condition (setcc) with narrower operands than the
