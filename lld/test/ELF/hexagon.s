@@ -194,3 +194,15 @@ r0 = ##_start
 # 0xb0000000
 r0 = add(r1, ##_start)
 # CHECK: b001c000   r0 = add(r1,##69632) }
+
+# R_HEX_B9_PCREL:
+{r0=#1 ; jump #_start}
+# CHECK: jump 0x11000
+
+# R_HEX_B9_PCREL_X:
+{r0=#1 ; jump ##_start}
+# CHECK: jump 0x11000
+
+# R_HEX_B13_PCREL
+if (r0 == #0) jump:t #_start
+# CHECK: if (r0==#0) jump:t 0x11000
