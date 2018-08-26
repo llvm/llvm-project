@@ -387,8 +387,6 @@ public:
   StringRef getName() { return stringFromIndexStoreStringRef(indexstore_unit_dependency_get_name(obj)); }
   StringRef getFilePath() { return stringFromIndexStoreStringRef(indexstore_unit_dependency_get_filepath(obj)); }
   StringRef getModuleName() { return stringFromIndexStoreStringRef(indexstore_unit_dependency_get_modulename(obj)); }
-  time_t getModificationTime() { return indexstore_unit_dependency_get_modification_time(obj); }
-  size_t getFileSize() { return indexstore_unit_dependency_get_file_size(obj); }
 
 };
 
