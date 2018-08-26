@@ -2113,12 +2113,15 @@ public:
                         MachineMemOperand *MMO)
       : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {}
 
-  // In the both nodes address is Op1, mask is Op2:
-  // MaskedLoadSDNode (Chain, ptr, mask, src0), src0 is a passthru value
-  // MaskedStoreSDNode (Chain, ptr, mask, data)
+  // MaskedLoadSDNode (Chain, ptr, mask, passthru)
+  // MaskedStoreSDNode (Chain, data, ptr, mask)
   // Mask is a vector of i1 elements
-  const SDValue &getBasePtr() const { return getOperand(1); }
-  const SDValue &getMask() const    { return getOperand(2); }
+  const SDValue &getBasePtr() const {
+    return getOperand(getOpcode() == ISD::MLOAD ? 1 : 2);
+  }
+  const SDValue &getMask() const {
+    return getOperand(getOpcode() == ISD::MLOAD ? 2 : 3);
+  }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MLOAD ||
@@ -2143,7 +2146,10 @@ public:
     return static_cast<ISD::LoadExtType>(LoadSDNodeBits.ExtTy);
   }
 
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const    { return getOperand(2); }
   const SDValue &getPassThru() const { return getOperand(3); }
+
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MLOAD;
   }
@@ -2175,7 +2181,9 @@ public:
   /// memory at base_addr.
   bool isCompressingStore() const { return StoreSDNodeBits.IsCompressing; }
 
-  const SDValue &getValue() const { return getOperand(3); }
+  const SDValue &getValue() const   { return getOperand(1); }
+  const SDValue &getBasePtr() const { return getOperand(2); }
+  const SDValue &getMask() const    { return getOperand(3); }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSTORE;

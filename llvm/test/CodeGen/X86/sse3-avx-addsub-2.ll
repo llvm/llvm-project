@@ -274,13 +274,21 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test11:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: test11:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test11:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
   %2 = extractelement <4 x float> %B, i32 2
   %sub = fsub float %1, %2

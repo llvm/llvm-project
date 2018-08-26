@@ -217,7 +217,7 @@ def SDTIStore : SDTypeProfile<1, 3, [       // indexed store
 ]>;
 
 def SDTMaskedStore: SDTypeProfile<0, 3, [       // masked store
-  SDTCisPtrTy<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>
+  SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 
 def SDTMaskedLoad: SDTypeProfile<1, 3, [       // masked load
