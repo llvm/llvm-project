@@ -507,8 +507,10 @@ static int printUnit(StringRef Filename, raw_ostream &OS) {
     OS << " | ";
     if (!Dep.ModuleName.empty())
       OS << Dep.ModuleName << " | ";
-    OS << Dep.FilePath << " | " << Dep.UnitOrRecordName << " | ";
-    OS << Dep.ModTime << " | " << Dep.FileSize << '\n';
+    OS << Dep.FilePath;
+    if (!Dep.UnitOrRecordName.empty())
+      OS << " | " << Dep.UnitOrRecordName;
+    OS << '\n';
     ++NumDepends;
     return true;
   });
@@ -564,8 +566,10 @@ static bool printStoreUnit(indexstore::IndexStore &Store, StringRef UnitName,
     OS << " | ";
     if (!Dep.getModuleName().empty())
       OS << Dep.getModuleName() << " | ";
-    OS << Dep.getFilePath() << " | " << Dep.getName() << " | ";
-    OS << Dep.getModificationTime() << '\n';
+    OS << Dep.getFilePath();
+    if (!Dep.getName().empty())
+      OS << " | " << Dep.getName();
+    OS << '\n';
     ++NumDepends;
     return true;
   });

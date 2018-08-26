@@ -463,12 +463,6 @@ indexstore_unit_dependency_get_modulename(indexstore_unit_dependency_t);
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_dependency_get_name(indexstore_unit_dependency_t);
 
-INDEXSTORE_PUBLIC time_t
-indexstore_unit_dependency_get_modification_time(indexstore_unit_dependency_t);
-
-INDEXSTORE_PUBLIC size_t
-indexstore_unit_dependency_get_file_size(indexstore_unit_dependency_t);
-
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_include_get_source_path(indexstore_unit_include_t);
 
