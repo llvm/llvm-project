@@ -24,7 +24,7 @@
  * INDEXSTORE_VERSION_MAJOR is intended for "major" source/ABI breaking changes.
  */
 #define INDEXSTORE_VERSION_MAJOR 0
-#define INDEXSTORE_VERSION_MINOR 9
+#define INDEXSTORE_VERSION_MINOR 10
 
 #define INDEXSTORE_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                           \
@@ -250,6 +250,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_PROPERTY_IBOUTLETCOLLECTION               = 1 << 5,
   INDEXSTORE_SYMBOL_PROPERTY_GKINSPECTABLE                    = 1 << 6,
   INDEXSTORE_SYMBOL_PROPERTY_LOCAL                            = 1 << 7,
+  INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE               = 1 << 8,
 } indexstore_symbol_property_t;
 
 typedef enum {

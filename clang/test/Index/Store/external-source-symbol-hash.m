@@ -29,7 +29,7 @@ EXT_DECL("some_module")
 @protocol P1
 // CHECK: [[@LINE-1]]:11 | protocol/Swift | c:@M@some_module@objc(pl)P1 | Decl | rel: 0
 -(void)method;
-// CHECK: [[@LINE-1]]:8 | instance-method/Swift | c:@M@some_module@objc(pl)P1(im)method | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE-1]]:8 | instance-method(protocol)/Swift | c:@M@some_module@objc(pl)P1(im)method | Decl,Dyn,RelChild | rel: 1
 @end
 
 EXT_DECL("other_module")
