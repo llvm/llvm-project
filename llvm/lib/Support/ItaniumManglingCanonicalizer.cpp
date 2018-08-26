@@ -104,8 +104,19 @@ class FoldingNodeAllocator {
 public:
   void reset() {}
 
-  template<typename T, typename ...Args>
-  std::pair<Node*, bool> getOrCreateNode(bool CreateNewNodes, Args &&...As) {
+  template <typename T, typename... Args>
+  std::pair<Node *, bool> getOrCreateNode(bool CreateNewNodes, Args &&... As) {
+    // FIXME: Don't canonicalize forward template references for now, because
+    // they contain state (the resolved template node) that's not known at their
+    // point of creation.
+    if (std::is_same<T, ForwardTemplateReference>::value) {
+      // Note that we don't use if-constexpr here and so we must still write
+      // this code in a generic form.
+      return {new (RawAlloc.Allocate(sizeof(T), alignof(T)))
+                  T(std::forward<Args>(As)...),
+              true};
+    }
+
     llvm::FoldingSetNodeID ID;
     profileCtor(ID, NodeKind<T>::Kind, As...);
 
@@ -135,19 +146,6 @@ public:
     return RawAlloc.Allocate(sizeof(Node *) * sz, alignof(Node *));
   }
 };
-
-// FIXME: Don't canonicalize forward template references for now, because they
-// contain state (the resolved template node) that's not known at their point
-// of creation.
-template<>
-std::pair<Node *, bool>
-FoldingNodeAllocator::getOrCreateNode<ForwardTemplateReference>(bool,
-                                                                size_t &Index) {
-  return {new (RawAlloc.Allocate(sizeof(ForwardTemplateReference),
-                                 alignof(ForwardTemplateReference)))
-              ForwardTemplateReference(Index),
-          true};
-}
 
 class CanonicalizerAllocator : public FoldingNodeAllocator {
   Node *MostRecentlyCreated = nullptr;

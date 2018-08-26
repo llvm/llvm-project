@@ -1074,7 +1074,7 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
   AllocaInst *SpillSlot = nullptr;
   Instruction *EHPad = PHIBlock->getFirstNonPHI();
 
-  if (!isa<TerminatorInst>(EHPad)) {
+  if (!EHPad->isTerminator()) {
     // If the EHPad isn't a terminator, then we can insert a load in this block
     // that will dominate all uses.
     SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
@@ -1148,8 +1148,7 @@ void WinEHPrepare::insertPHIStore(
     BasicBlock *PredBlock, Value *PredVal, AllocaInst *SpillSlot,
     SmallVectorImpl<std::pair<BasicBlock *, Value *>> &Worklist) {
 
-  if (PredBlock->isEHPad() &&
-      isa<TerminatorInst>(PredBlock->getFirstNonPHI())) {
+  if (PredBlock->isEHPad() && PredBlock->getFirstNonPHI()->isTerminator()) {
     // Pred is unsplittable, so we need to queue it on the worklist.
     Worklist.push_back({PredBlock, PredVal});
     return;

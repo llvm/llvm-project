@@ -988,7 +988,7 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   // predecessors of our predecessor block.
   if (BasicBlock *SinglePred = BB->getSinglePredecessor()) {
     const TerminatorInst *TI = SinglePred->getTerminator();
-    if (!TI->isExceptional() && TI->getNumSuccessors() == 1 &&
+    if (!TI->isExceptionalTerminator() && TI->getNumSuccessors() == 1 &&
         SinglePred != BB && !hasAddressTakenAndUsed(BB)) {
       // If SinglePred was a loop header, BB becomes one.
       if (LoopHeaders.erase(SinglePred))
@@ -1978,7 +1978,7 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
 
   // Clone the non-phi instructions of BB into NewBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
-  for (; !isa<TerminatorInst>(BI); ++BI) {
+  for (; !BI->isTerminator(); ++BI) {
     Instruction *New = BI->clone();
     New->setName(BI->getName());
     NewBB->getInstList().push_back(New);

@@ -5444,7 +5444,7 @@ bool LLParser::ParseBasicBlock(PerFunctionState &PFS) {
 
     // Set the name on the instruction.
     if (PFS.SetInstName(NameID, NameStr, NameLoc, Inst)) return true;
-  } while (!isa<TerminatorInst>(Inst));
+  } while (!Inst->isTerminator());
 
   return false;
 }

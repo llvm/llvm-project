@@ -955,7 +955,7 @@ exit from a function, consider this "bad" code:
 .. code-block:: c++
 
   Value *doSomething(Instruction *I) {
-    if (!isa<TerminatorInst>(I) &&
+    if (!I->isTerminator() &&
         I->hasOneUse() && doOtherThing(I)) {
       ... some long code ....
     }
@@ -980,7 +980,7 @@ It is much preferred to format the code like this:
 
   Value *doSomething(Instruction *I) {
     // Terminators never need 'something' done to them because ... 
-    if (isa<TerminatorInst>(I))
+    if (I->isTerminator())
       return 0;
 
     // We conservatively avoid transforming instructions with multiple uses
