@@ -128,13 +128,12 @@ define <4 x i32> @test_div7_4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_div7_4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -422,13 +421,12 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_rem7_4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [613566757,613566757,613566757,613566757]
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpsrld $1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm2, %xmm1

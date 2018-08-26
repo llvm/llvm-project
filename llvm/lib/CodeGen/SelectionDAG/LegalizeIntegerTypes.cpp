@@ -1219,28 +1219,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSTORE(MaskedStoreSDNode *N,
   SDLoc dl(N);
 
   bool TruncateStore = false;
-  if (OpNo == 2) {
-    // Mask comes before the data operand. If the data operand is legal, we just
-    // promote the mask.
-    // When the data operand has illegal type, we should legalize the data
-    // operand first. The mask will be promoted/splitted/widened according to
-    // the data operand type.
-    if (TLI.isTypeLegal(DataVT)) {
-      Mask = PromoteTargetBoolean(Mask, DataVT);
-      // Update in place.
-      SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
-      NewOps[2] = Mask;
-      return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
-    }
-
-    if (getTypeAction(DataVT) == TargetLowering::TypePromoteInteger)
-      return PromoteIntOp_MSTORE(N, 3);
-    if (getTypeAction(DataVT) == TargetLowering::TypeWidenVector)
-      return WidenVecOp_MSTORE(N, 3);
-    assert (getTypeAction(DataVT) == TargetLowering::TypeSplitVector);
-    return SplitVecOp_MSTORE(N, 3);
+  if (OpNo == 3) {
+    Mask = PromoteTargetBoolean(Mask, DataVT);
+    // Update in place.
+    SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+    NewOps[3] = Mask;
+    return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
   } else { // Data operand
-    assert(OpNo == 3 && "Unexpected operand for promotion");
+    assert(OpNo == 1 && "Unexpected operand for promotion");
     DataOp = GetPromotedInteger(DataOp);
     TruncateStore = true;
   }

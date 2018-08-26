@@ -3474,7 +3474,7 @@ multiclass avx512_store<bits<8> opc, string OpcodeStr, string BaseName,
                [], _.ExeDomain>, EVEX, EVEX_K, Sched<[Sched.MR]>,
                NotMemoryFoldable;
 
-  def: Pat<(mstore addr:$ptr, _.KRCWM:$mask, (_.VT _.RC:$src)),
+  def: Pat<(mstore (_.VT _.RC:$src), addr:$ptr, _.KRCWM:$mask),
            (!cast<Instruction>(BaseName#_.ZSuffix#mrk) addr:$ptr,
                                                         _.KRCWM:$mask, _.RC:$src)>;
 
@@ -4029,10 +4029,10 @@ def : Pat<(_.VT (OpNode _.RC:$src0,
 multiclass avx512_store_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,
                                         dag Mask, RegisterClass MaskRC> {
 
-def : Pat<(masked_store addr:$dst, Mask,
+def : Pat<(masked_store
              (_.info512.VT (insert_subvector undef,
                                (_.info128.VT _.info128.RC:$src),
-                               (iPTR 0)))),
+                               (iPTR 0))), addr:$dst, Mask),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS MaskRC:$mask, VK1WM),
                       (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
@@ -4044,10 +4044,10 @@ multiclass avx512_store_scalar_lowering_subreg<string InstrStr,
                                                dag Mask, RegisterClass MaskRC,
                                                SubRegIndex subreg> {
 
-def : Pat<(masked_store addr:$dst, Mask,
+def : Pat<(masked_store
              (_.info512.VT (insert_subvector undef,
                                (_.info128.VT _.info128.RC:$src),
-                               (iPTR 0)))),
+                               (iPTR 0))), addr:$dst, Mask),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
                       (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
@@ -4064,16 +4064,16 @@ multiclass avx512_store_scalar_lowering_subreg2<string InstrStr,
                                                SubRegIndex subreg> {
 
 // AVX512F pattern.
-def : Pat<(masked_store addr:$dst, Mask512,
+def : Pat<(masked_store
              (_.info512.VT (insert_subvector undef,
                                (_.info128.VT _.info128.RC:$src),
-                               (iPTR 0)))),
+                               (iPTR 0))), addr:$dst, Mask512),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
                       (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
 
 // AVX512VL pattern.
-def : Pat<(masked_store addr:$dst, Mask128, (_.info128.VT _.info128.RC:$src)),
+def : Pat<(masked_store (_.info128.VT _.info128.RC:$src), addr:$dst, Mask128),
           (!cast<Instruction>(InstrStr#mrk) addr:$dst,
                       (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
                       (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
@@ -8992,8 +8992,8 @@ multiclass avx512_trunc_mr_lowering<X86VectorVTInfo SrcInfo,
             (!cast<Instruction>(Name#SrcInfo.ZSuffix##mr)
                                     addr:$dst, SrcInfo.RC:$src)>;
 
-  def : Pat<(mtruncFrag addr:$dst, SrcInfo.KRCWM:$mask,
-                                               (SrcInfo.VT SrcInfo.RC:$src)),
+  def : Pat<(mtruncFrag (SrcInfo.VT SrcInfo.RC:$src), addr:$dst,
+                        SrcInfo.KRCWM:$mask),
             (!cast<Instruction>(Name#SrcInfo.ZSuffix##mrk)
                             addr:$dst, SrcInfo.KRCWM:$mask, SrcInfo.RC:$src)>;
 }
@@ -9714,8 +9714,7 @@ multiclass compress_by_vec_width_common<bits<8> opc, X86VectorVTInfo _,
 }
 
 multiclass compress_by_vec_width_lowering<X86VectorVTInfo _, string Name> {
-  def : Pat<(X86mCompressingStore addr:$dst, _.KRCWM:$mask,
-                                               (_.VT _.RC:$src)),
+  def : Pat<(X86mCompressingStore (_.VT _.RC:$src), addr:$dst, _.KRCWM:$mask),
             (!cast<Instruction>(Name#_.ZSuffix##mrk)
                             addr:$dst, _.KRCWM:$mask, _.RC:$src)>;
 }
