@@ -192,6 +192,8 @@ SymbolPropertySet index::getSymbolProperties(uint64_t Props) {
     SymbolProperties |= (SymbolPropertySet)SymbolProperty::GKInspectable;
   if (Props & INDEXSTORE_SYMBOL_PROPERTY_LOCAL)
     SymbolProperties |= (SymbolPropertySet)SymbolProperty::Local;
+  if (Props & INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE)
+    SymbolProperties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
 
   return SymbolProperties;
 }
@@ -402,6 +404,9 @@ uint64_t index::getIndexStoreProperties(SymbolPropertySet Props) {
       break;
     case SymbolProperty::Local:
       storeProp |= INDEXSTORE_SYMBOL_PROPERTY_LOCAL;
+      break;
+    case SymbolProperty::ProtocolInterface:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE;
       break;
     }
   });
