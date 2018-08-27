@@ -956,7 +956,7 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
 }
 
 /// Retrieve the serialized AST data blobs and initialize the compiler
-/// invocation with it the concatenated search paths form the blobs.
+/// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
 static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         Module &module,
