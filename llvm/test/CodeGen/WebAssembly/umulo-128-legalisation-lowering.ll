@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=wasm32 | FileCheck %s --check-prefixes=WASM32
+; RUN: llc < %s -mtriple=wasm32 -wasm-keep-registers | FileCheck %s --check-prefixes=WASM32
 ; NOTE: did not compile on wasm64 at the time the test was created!
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {

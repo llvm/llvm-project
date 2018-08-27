@@ -45,9 +45,15 @@ add %eax, %eax
 # FULL-NEXT:  1,          100  (97.1%)
 
 # FULL:      Scheduler's queue usage:
-# FULL-NEXT: JALU01,  20/20
-# FULL-NEXT: JFPU01,  0/18
-# FULL-NEXT: JLSAGU,  0/12
+# FULL-NEXT: [1] Resource name.
+# FULL-NEXT: [2] Average number of used buffer entries.
+# FULL-NEXT: [3] Maximum number of used buffer entries.
+# FULL-NEXT: [4] Total number of buffer entries.
+
+# FULL:       [1]            [2]        [3]        [4]
+# FULL-NEXT: JALU01           15         20         20
+# FULL-NEXT: JFPU01           0          0          18
+# FULL-NEXT: JLSAGU           0          0          12
 
 # FULL:      Retire Control Unit - number of cycles where we saw N instructions retired:
 # FULL-NEXT: [# retired], [# cycles]

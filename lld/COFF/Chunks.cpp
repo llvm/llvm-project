@@ -124,16 +124,22 @@ static void applyMOV(uint8_t *Off, uint16_t V) {
   write16le(Off + 2, (read16le(Off + 2) & 0x8f00) | ((V & 0x700) << 4) | (V & 0xff));
 }
 
-static uint16_t readMOV(uint8_t *Off) {
+static uint16_t readMOV(uint8_t *Off, bool MOVT) {
   uint16_t Op1 = read16le(Off);
+  if ((Op1 & 0xfbf0) != (MOVT ? 0xf2c0 : 0xf240))
+    error("unexpected instruction in " + Twine(MOVT ? "MOVT" : "MOVW") +
+          " instruction in MOV32T relocation");
   uint16_t Op2 = read16le(Off + 2);
+  if ((Op2 & 0x8000) != 0)
+    error("unexpected instruction in " + Twine(MOVT ? "MOVT" : "MOVW") +
+          " instruction in MOV32T relocation");
   return (Op2 & 0x00ff) | ((Op2 >> 4) & 0x0700) | ((Op1 << 1) & 0x0800) |
          ((Op1 & 0x000f) << 12);
 }
 
 void applyMOV32T(uint8_t *Off, uint32_t V) {
-  uint16_t ImmW = readMOV(Off);     // read MOVW operand
-  uint16_t ImmT = readMOV(Off + 4); // read MOVT operand
+  uint16_t ImmW = readMOV(Off, false);    // read MOVW operand
+  uint16_t ImmT = readMOV(Off + 4, true); // read MOVT operand
   uint32_t Imm = ImmW | (ImmT << 16);
   V += Imm;                         // add the immediate offset
   applyMOV(Off, V);           // set MOVW operand
@@ -415,6 +421,111 @@ void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
   }
 }
 
+// MinGW specific.
+// Check whether a static relocation of type Type can be deferred and
+// handled at runtime as a pseudo relocation (for references to a module
+// local variable, which turned out to actually need to be imported from
+// another DLL) This returns the size the relocation is supposed to update,
+// in bits, or 0 if the relocation cannot be handled as a runtime pseudo
+// relocation.
+static int getRuntimePseudoRelocSize(uint16_t Type) {
+  // Relocations that either contain an absolute address, or a plain
+  // relative offset, since the runtime pseudo reloc implementation
+  // adds 8/16/32/64 bit values to a memory address.
+  //
+  // Given a pseudo relocation entry,
+  //
+  // typedef struct {
+  //   DWORD sym;
+  //   DWORD target;
+  //   DWORD flags;
+  // } runtime_pseudo_reloc_item_v2;
+  //
+  // the runtime relocation performs this adjustment:
+  //     *(base + .target) += *(base + .sym) - (base + .sym)
+  //
+  // This works for both absolute addresses (IMAGE_REL_*_ADDR32/64,
+  // IMAGE_REL_I386_DIR32, where the memory location initially contains
+  // the address of the IAT slot, and for relative addresses (IMAGE_REL*_REL32),
+  // where the memory location originally contains the relative offset to the
+  // IAT slot.
+  //
+  // This requires the target address to be writable, either directly out of
+  // the image, or temporarily changed at runtime with VirtualProtect.
+  // Since this only operates on direct address values, it doesn't work for
+  // ARM/ARM64 relocations, other than the plain ADDR32/ADDR64 relocations.
+  switch (Config->Machine) {
+  case AMD64:
+    switch (Type) {
+    case IMAGE_REL_AMD64_ADDR64:
+      return 64;
+    case IMAGE_REL_AMD64_ADDR32:
+    case IMAGE_REL_AMD64_REL32:
+    case IMAGE_REL_AMD64_REL32_1:
+    case IMAGE_REL_AMD64_REL32_2:
+    case IMAGE_REL_AMD64_REL32_3:
+    case IMAGE_REL_AMD64_REL32_4:
+    case IMAGE_REL_AMD64_REL32_5:
+      return 32;
+    default:
+      return 0;
+    }
+  case I386:
+    switch (Type) {
+    case IMAGE_REL_I386_DIR32:
+    case IMAGE_REL_I386_REL32:
+      return 32;
+    default:
+      return 0;
+    }
+  case ARMNT:
+    switch (Type) {
+    case IMAGE_REL_ARM_ADDR32:
+      return 32;
+    default:
+      return 0;
+    }
+  case ARM64:
+    switch (Type) {
+    case IMAGE_REL_ARM64_ADDR64:
+      return 64;
+    case IMAGE_REL_ARM64_ADDR32:
+      return 32;
+    default:
+      return 0;
+    }
+  default:
+    llvm_unreachable("unknown machine type");
+  }
+}
+
+// MinGW specific.
+// Append information to the provided vector about all relocations that
+// need to be handled at runtime as runtime pseudo relocations (references
+// to a module local variable, which turned out to actually need to be
+// imported from another DLL).
+void SectionChunk::getRuntimePseudoRelocs(
+    std::vector<RuntimePseudoReloc> &Res) {
+  for (const coff_relocation &Rel : Relocs) {
+    auto *Target = dyn_cast_or_null<DefinedImportData>(
+        File->getSymbol(Rel.SymbolTableIndex));
+    if (!Target || !Target->IsRuntimePseudoReloc)
+      continue;
+    int SizeInBits = getRuntimePseudoRelocSize(Rel.Type);
+    if (SizeInBits == 0) {
+      error("unable to automatically import from " + Target->getName() +
+            " with relocation type " +
+            File->getCOFFObj()->getRelocationTypeName(Rel.Type) + " in " +
+            toString(File));
+      continue;
+    }
+    // SizeInBits is used to initialize the Flags field; currently no
+    // other flags are defined.
+    Res.emplace_back(
+        RuntimePseudoReloc(Target, this, Rel.VirtualAddress, SizeInBits));
+  }
+}
+
 bool SectionChunk::hasData() const {
   return !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
 }
@@ -531,6 +642,34 @@ void RVATableChunk::writeTo(uint8_t *Buf) const {
   std::sort(Begin, Begin + Cnt);
   assert(std::unique(Begin, Begin + Cnt) == Begin + Cnt &&
          "RVA tables should be de-duplicated");
+}
+
+// MinGW specific, for the "automatic import of variables from DLLs" feature.
+size_t PseudoRelocTableChunk::getSize() const {
+  if (Relocs.empty())
+    return 0;
+  return 12 + 12 * Relocs.size();
+}
+
+// MinGW specific.
+void PseudoRelocTableChunk::writeTo(uint8_t *Buf) const {
+  if (Relocs.empty())
+    return;
+
+  ulittle32_t *Table = reinterpret_cast<ulittle32_t *>(Buf + OutputSectionOff);
+  // This is the list header, to signal the runtime pseudo relocation v2
+  // format.
+  Table[0] = 0;
+  Table[1] = 0;
+  Table[2] = 1;
+
+  size_t Idx = 3;
+  for (const RuntimePseudoReloc &RPR : Relocs) {
+    Table[Idx + 0] = RPR.Sym->getRVA();
+    Table[Idx + 1] = RPR.Target->getRVA() + RPR.TargetOffset;
+    Table[Idx + 2] = RPR.Flags;
+    Idx += 3;
+  }
 }
 
 // Windows-specific. This class represents a block in .reloc section.

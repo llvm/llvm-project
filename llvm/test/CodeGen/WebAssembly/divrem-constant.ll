@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck %s
 
 ; Test that integer div and rem by constant are optimized appropriately.
 
