@@ -15045,12 +15045,19 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
 
-  // We must know which element is being inserted for folds below here.
   auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
-  if (!IndexC)
+  if (!IndexC) {
+    // If this is variable insert to undef vector, it might be better to splat:
+    // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
+    if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT)) {
+      SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
+      return DAG.getBuildVector(VT, DL, Ops);
+    }
     return SDValue();
-  unsigned Elt = IndexC->getZExtValue();
+  }
 
+  // We must know which element is being inserted for folds below here.
+  unsigned Elt = IndexC->getZExtValue();
   if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
     return Shuf;
 

@@ -833,6 +833,8 @@ namespace llvm {
       return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
     }
 
+    bool shouldSplatInsEltVarIndex(EVT VT) const override;
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }
