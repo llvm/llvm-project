@@ -235,7 +235,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         Updates.reserve(SI->getNumSuccessors() - 1);
 
       // Remove entries from PHI nodes which we no longer branch to...
-      for (BasicBlock *Succ : SI->successors()) {
+      for (BasicBlock *Succ : successors(SI)) {
         // Found case matching a constant operand?
         if (Succ == TheOnlyDest) {
           TheOnlyDest = nullptr; // Don't modify the first branch to TheOnlyDest
@@ -354,7 +354,7 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
 
 bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
                                            const TargetLibraryInfo *TLI) {
-  if (isa<TerminatorInst>(I))
+  if (I->isTerminator())
     return false;
 
   // We don't want the landingpad-like instructions removed by anything this

@@ -545,6 +545,12 @@ public:
     return false;
   }
 
+  /// Return true if inserting a scalar into a variable element of an undef
+  /// vector is more efficiently handled by splatting the scalar instead.
+  virtual bool shouldSplatInsEltVarIndex(EVT) const {
+    return false;
+  }
+
   /// Return true if target supports floating point exceptions.
   bool hasFloatingPointExceptions() const {
     return HasFloatingPointExceptions;

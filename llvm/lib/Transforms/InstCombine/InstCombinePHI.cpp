@@ -222,8 +222,11 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
   // instruction, do not do it.
   if (std::any_of(AvailablePtrVals.begin(), AvailablePtrVals.end(),
                   [&](Value *V) {
-                    return (V->getType() != IntToPtr->getType()) &&
-                           isa<TerminatorInst>(V);
+                    if (V->getType() == IntToPtr->getType())
+                      return false;
+
+                    auto *Inst = dyn_cast<Instruction>(V);
+                    return Inst && Inst->isTerminator();
                   }))
     return nullptr;
 

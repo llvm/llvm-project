@@ -662,7 +662,7 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   if (!OuterLoopHeaderBI)
     return false;
 
-  for (BasicBlock *Succ : OuterLoopHeaderBI->successors())
+  for (BasicBlock *Succ : successors(OuterLoopHeaderBI))
     if (Succ != InnerLoopPreHeader && Succ != OuterLoopLatch)
       return false;
 
@@ -1336,7 +1336,7 @@ void LoopInterchangeTransform::updateIncomingBlock(BasicBlock *CurrBlock,
 static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,
                             std::vector<DominatorTree::UpdateType> &DTUpdates) {
-  assert(llvm::count_if(BI->successors(),
+  assert(llvm::count_if(successors(BI),
                         [OldBB](BasicBlock *BB) { return BB == OldBB; }) < 2 &&
          "BI must jump to OldBB at most once.");
   for (unsigned i = 0, e = BI->getNumSuccessors(); i < e; ++i) {

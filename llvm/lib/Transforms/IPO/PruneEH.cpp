@@ -255,7 +255,7 @@ static void DeleteBasicBlock(BasicBlock *BB, CallGraph &CG) {
   }
 
   if (TokenInst) {
-    if (!isa<TerminatorInst>(TokenInst))
+    if (!TokenInst->isTerminator())
       changeToUnreachable(TokenInst->getNextNode(), /*UseLLVMTrap=*/false);
   } else {
     // Get the list of successors of this block.

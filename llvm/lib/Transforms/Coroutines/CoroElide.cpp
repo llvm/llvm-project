@@ -157,7 +157,7 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   SmallPtrSet<Instruction *, 8> Terminators;
   for (BasicBlock &B : *F) {
     auto *TI = B.getTerminator();
-    if (TI->getNumSuccessors() == 0 && !TI->isExceptional() &&
+    if (TI->getNumSuccessors() == 0 && !TI->isExceptionalTerminator() &&
         !isa<UnreachableInst>(TI))
       Terminators.insert(TI);
   }

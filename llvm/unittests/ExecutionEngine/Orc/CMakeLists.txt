@@ -26,9 +26,4 @@ add_llvm_unittest(OrcJITTests
   SymbolStringPoolTest.cpp
   )
 
-set(ORC_JIT_TEST_LIBS ${LLVM_PTHREAD_LIB})
-if(NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
-  list(APPEND ORC_JIT_TEST_LIBS atomic)
-endif()
-
 target_link_libraries(OrcJITTests PRIVATE ${ORC_JIT_TEST_LIBS})

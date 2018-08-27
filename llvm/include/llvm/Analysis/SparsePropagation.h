@@ -330,7 +330,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     return;
   }
 
-  if (TI.isExceptional()) {
+  if (TI.isExceptionalTerminator()) {
     Succs.assign(Succs.size(), true);
     return;
   }

@@ -542,7 +542,9 @@ public:
 
   bool hasX87() const { return HasX87; }
   bool hasNOPL() const { return HasNOPL; }
-  bool hasCMov() const { return HasCMov; }
+  // SSE codegen depends on cmovs, and all SSE1+ processors support them.
+  // All 64-bit processors support cmov.
+  bool hasCMov() const { return HasCMov || X86SSELevel >= SSE1 || is64Bit(); }
   bool hasSSE1() const { return X86SSELevel >= SSE1; }
   bool hasSSE2() const { return X86SSELevel >= SSE2; }
   bool hasSSE3() const { return X86SSELevel >= SSE3; }
