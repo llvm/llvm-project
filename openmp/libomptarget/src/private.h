@@ -42,6 +42,23 @@ enum kmp_target_offload_kind {
 typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 extern kmp_target_offload_kind_t TargetOffloadPolicy;
 
+////////////////////////////////////////////////////////////////////////////////
+// implemtation for fatal messages
+////////////////////////////////////////////////////////////////////////////////
+
+#define FATAL_MESSAGE0(_num, _str)                                    \
+  do {                                                                \
+    fprintf(stderr, "Libomptarget fatal error %d: %s\n", _num, _str); \
+    exit(1);                                                          \
+  } while (0)
+
+#define FATAL_MESSAGE(_num, _str, ...)                              \
+  do {                                                              \
+    fprintf(stderr, "Libomptarget fatal error %d:" _str "\n", _num, \
+            __VA_ARGS__);                                           \
+    exit(1);                                                        \
+  } while (0)
+
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
 extern "C" {
@@ -53,8 +70,6 @@ int __kmpc_get_target_offload(void) __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif
-
-void FatalMessage(const int errorNum, const char *fmt, ...);
 
 #ifdef OMPTARGET_DEBUG
 extern int DebugLevel;

@@ -29,9 +29,6 @@
 
 namespace __sanitizer {
 
-// TODO(phosek): remove this and replace it with ZX_TIME_INFINITE
-#define ZX_TIME_INFINITE_OLD INT64_MAX
-
 void NORETURN internal__exit(int exitcode) { _zx_process_exit(exitcode); }
 
 uptr internal_sched_yield() {
@@ -123,7 +120,7 @@ void BlockingMutex::Lock() {
     return;
   while (atomic_exchange(m, MtxSleeping, memory_order_acquire) != MtxUnlocked) {
     zx_status_t status = _zx_futex_wait(reinterpret_cast<zx_futex_t *>(m),
-                                        MtxSleeping, ZX_TIME_INFINITE_OLD);
+                                        MtxSleeping, ZX_TIME_INFINITE);
     if (status != ZX_ERR_BAD_STATE)  // Normal race.
       CHECK_EQ(status, ZX_OK);
   }

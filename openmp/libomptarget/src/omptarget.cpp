@@ -26,23 +26,6 @@
 int DebugLevel = 0;
 #endif // OMPTARGET_DEBUG
 
-////////////////////////////////////////////////////////////////////////////////
-/// support for fatal messages
-
-// mutex
-std::mutex LibomptargetPrintMtx;
-
-void FatalMessage(const int errorNum, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  LibomptargetPrintMtx.lock();
-  fprintf(stderr, "Libomptarget error %d:", errorNum);
-  vfprintf(stderr, fmt, args);
-  fprintf(stderr, "\n");
-  LibomptargetPrintMtx.unlock();
-  va_end(args);
-  exit(1);
-}
 
 
 /* All begin addresses for partially mapped structs must be 8-aligned in order
