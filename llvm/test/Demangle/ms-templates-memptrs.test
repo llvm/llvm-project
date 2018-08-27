@@ -2,21 +2,20 @@
 
 ; CHECK-NOT: Invalid mangled name
 
-; There's a back-referencing problem here
 ??$CallMethod@UC@NegativeNVOffset@@$I??_912@$BA@AEPPPPPPPM@A@@@YAXAAUC@NegativeNVOffset@@@Z
-; FIXME: void __cdecl CallMethod<struct NegativeNVOffset::C, {[thunk]: __thiscall NegativeNVOffset::C::`vcall'{0, {flat}}, 4294967292, 0}>(struct NegativeNVOffset::C &)
+; CHECK: void __cdecl CallMethod<struct NegativeNVOffset::C, {[thunk]: __thiscall NegativeNVOffset::C::`vcall'{0, {flat}}, 4294967292, 0}>(struct NegativeNVOffset::C &)
 
 ??$CallMethod@UM@@$0A@@@YAXAAUM@@@Z
 ; CHECK: void __cdecl CallMethod<struct M, 0>(struct M &)
 
 ??$CallMethod@UM@@$H??_91@$BA@AEA@@@YAXAAUM@@@Z
-; FIXME: void __cdecl CallMethod<struct M, {[thunk]: __thiscall M::`vcall'{0, {flat}}', 0}>(struct M &)
+; CHECK: void __cdecl CallMethod<struct M, {[thunk]: __thiscall M::`vcall'{0, {flat}}, 0}>(struct M &)
 
 ??$CallMethod@UM@@$H?f@1@QAEXXZA@@@YAXAAUM@@@Z
-; FIXME: void __cdecl CallMethod<struct M, {void __thiscall M::f(void), 0}>(struct M &)
+; CHECK: void __cdecl CallMethod<struct M, {void __thiscall M::f(void), 0}>(struct M &)
 
 ??$CallMethod@UO@@$H??_91@$BA@AE3@@YAXAAUO@@@Z
-; FIXME: void __cdecl CallMethod<struct O, {[thunk]: __thiscall O::`vcall'{0, {flat}}, 4}>(struct O &)
+; CHECK: void __cdecl CallMethod<struct O, {[thunk]: __thiscall O::`vcall'{0, {flat}}, 4}>(struct O &)
 
 ??$CallMethod@US@@$0A@@@YAXAAUS@@@Z
 ; CHECK: void __cdecl CallMethod<struct S, 0>(struct S &)

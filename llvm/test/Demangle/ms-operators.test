@@ -219,10 +219,10 @@
 ; CHECK: const Base::`RTTI Complete Object Locator'
 
 ??__EFoo@@YAXXZ
-void __cdecl `dynamic initializer for 'Foo''(void)
+; CHECK: void __cdecl `dynamic initializer for 'Foo''(void)
 
 ??__FFoo@@YAXXZ
-void __cdecl `dynamic atexit destructor for 'Foo''(void)
+; CHECK: void __cdecl `dynamic atexit destructor for 'Foo''(void)
 
 ??__K_deg@@YAHO@Z
 ; CHECK: int __cdecl operator ""_deg(long double)
