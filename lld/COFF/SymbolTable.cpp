@@ -125,6 +125,53 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   return OS.str();
 }
 
+void SymbolTable::loadMinGWAutomaticImports() {
+  for (auto &I : SymMap) {
+    Symbol *Sym = I.second;
+    auto *Undef = dyn_cast<Undefined>(Sym);
+    if (!Undef)
+      continue;
+    if (!Sym->IsUsedInRegularObj)
+      continue;
+
+    StringRef Name = Undef->getName();
+
+    if (Name.startswith("__imp_"))
+      continue;
+    // If we have an undefined symbol, but we have a Lazy representing a
+    // symbol we could load from file, make sure to load that.
+    Lazy *L = dyn_cast_or_null<Lazy>(find(("__imp_" + Name).str()));
+    if (!L || L->PendingArchiveLoad)
+      continue;
+
+    log("Loading lazy " + L->getName() + " from " + L->File->getName() +
+        " for automatic import");
+    L->PendingArchiveLoad = true;
+    L->File->addMember(&L->Sym);
+  }
+}
+
+bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
+  if (Name.startswith("__imp_"))
+    return false;
+  DefinedImportData *Imp =
+      dyn_cast_or_null<DefinedImportData>(find(("__imp_" + Name).str()));
+  if (!Imp)
+    return false;
+
+  log("Automatically importing " + Name + " from " + Imp->getDLLName());
+
+  // Replace the reference directly to a variable with a reference
+  // to the import address table instead. This obviously isn't right,
+  // but we mark the symbol as IsRuntimePseudoReloc, and a later pass
+  // will add runtime pseudo relocations for every relocation against
+  // this Symbol. The runtime pseudo relocation framework expects the
+  // reference itself to point at the IAT entry.
+  Sym->replaceKeepingName(Imp, sizeof(DefinedImportData));
+  cast<DefinedImportData>(Sym)->IsRuntimePseudoReloc = true;
+  return true;
+}
+
 void SymbolTable::reportRemainingUndefines() {
   SmallPtrSet<Symbol *, 8> Undefs;
   DenseMap<Symbol *, Symbol *> LocalImports;
@@ -167,6 +214,9 @@ void SymbolTable::reportRemainingUndefines() {
         continue;
       }
     }
+
+    if (Config->MinGW && handleMinGWAutomaticImport(Sym, Name))
+      continue;
 
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
