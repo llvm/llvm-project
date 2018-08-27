@@ -175,6 +175,7 @@ typedef enum
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512 __attribute__((__always_inline__, __nodebug__, __target__("avx512f"), __min_vector_width__(512)))
 #define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx512f"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512f")))
 
 /* Create vectors with repeated elements */
 
@@ -508,13 +509,13 @@ _mm512_castsi512_si256 (__m512i __A)
   return (__m256i)__builtin_shufflevector(__A, __A , 0, 1, 2, 3);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_int2mask(int __a)
 {
   return (__mmask16)__a;
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS512
+static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask2int(__mmask16 __a)
 {
   return (int)__a;
@@ -4580,7 +4581,7 @@ _mm512_store_epi64 (void *__P, __m512i __A)
 
 /* Mask ops */
 
-static __inline __mmask16 __DEFAULT_FN_ATTRS512
+static __inline __mmask16 __DEFAULT_FN_ATTRS
 _mm512_knot(__mmask16 __M)
 {
   return __builtin_ia32_knothi(__M);
@@ -5622,7 +5623,7 @@ _mm_maskz_getexp_ss (__mmask8 __U, __m128 __A, __m128 __B)
                                               (__v4sf)_mm_setzero_ps(), \
                                               (__mmask8)(U), (int)(R))
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kmov (__mmask16 __A)
 {
   return  __A;
@@ -8320,53 +8321,60 @@ _mm512_mask_permutexvar_epi32 (__m512i __W, __mmask16 __M, __m512i __X,
 
 #define _mm512_mask_permutevar_epi32 _mm512_mask_permutexvar_epi32
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kand (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kandhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kandn (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kandnhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kor (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_korhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS512
+static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_kortestc (__mmask16 __A, __mmask16 __B)
 {
   return __builtin_ia32_kortestchi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS512
+static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_kortestz (__mmask16 __A, __mmask16 __B)
 {
   return __builtin_ia32_kortestzhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kunpackb (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kunpckhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kxnor (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kxnorhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS512
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kxor (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kxorhi ((__mmask16) __A, (__mmask16) __B);
 }
+
+#define _kand_mask16 _mm512_kand
+#define _kandn_mask16 _mm512_kandn
+#define _knot_mask16 _mm512_knot
+#define _kor_mask16 _mm512_kor
+#define _kxnor_mask16 _mm512_kxnor
+#define _kxor_mask16 _mm512_kxor
 
 static __inline__ void __DEFAULT_FN_ATTRS512
 _mm512_stream_si512 (__m512i * __P, __m512i __A)
@@ -9594,5 +9602,6 @@ _mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __V) {
 
 #undef __DEFAULT_FN_ATTRS512
 #undef __DEFAULT_FN_ATTRS128
+#undef __DEFAULT_FN_ATTRS
 
 #endif /* __AVX512FINTRIN_H */

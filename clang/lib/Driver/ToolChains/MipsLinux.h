@@ -49,7 +49,7 @@ public:
   }
 
   const char *getDefaultLinker() const override {
-    return "lld";
+    return "ld.lld";
   }
 
 private:

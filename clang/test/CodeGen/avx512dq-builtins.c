@@ -3,6 +3,71 @@
 
 #include <immintrin.h>
 
+__mmask8 test_knot_mask8(__mmask8 a) {
+  // CHECK-LABEL: @test_knot_mask8
+  // CHECK: [[IN:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[NOT:%.*]] = xor <8 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: bitcast <8 x i1> [[NOT]] to i8
+  return _knot_mask8(a);
+}
+
+__mmask8 test_kand_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kand_mask8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RES:%.*]] = and <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <8 x i1> [[RES]] to i8
+  return _mm512_mask_cmpneq_epu64_mask(_kand_mask8(_mm512_cmpneq_epu64_mask(__A, __B),
+                                                   _mm512_cmpneq_epu64_mask(__C, __D)),
+                                                   __E, __F);
+}
+
+__mmask8 test_kandn_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kandn_mask8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[NOT:%.*]] = xor <8 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[RES:%.*]] = and <8 x i1> [[NOT]], [[RHS]]
+  // CHECK: bitcast <8 x i1> [[RES]] to i8
+  return _mm512_mask_cmpneq_epu64_mask(_kandn_mask8(_mm512_cmpneq_epu64_mask(__A, __B),
+                                                    _mm512_cmpneq_epu64_mask(__C, __D)),
+                                                    __E, __F);
+}
+
+__mmask8 test_kor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kor_mask8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RES:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <8 x i1> [[RES]] to i8
+  return _mm512_mask_cmpneq_epu64_mask(_kor_mask8(_mm512_cmpneq_epu64_mask(__A, __B),
+                                                  _mm512_cmpneq_epu64_mask(__C, __D)),
+                                                  __E, __F);
+}
+
+__mmask8 test_kxnor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kxnor_mask8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[NOT:%.*]] = xor <8 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[RES:%.*]] = xor <8 x i1> [[NOT]], [[RHS]]
+  // CHECK: bitcast <8 x i1> [[RES]] to i8
+  return _mm512_mask_cmpneq_epu64_mask(_kxnor_mask8(_mm512_cmpneq_epu64_mask(__A, __B),
+                                                    _mm512_cmpneq_epu64_mask(__C, __D)),
+                                                    __E, __F);
+}
+
+__mmask8 test_kxor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kxor_mask8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RES:%.*]] = xor <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <8 x i1> [[RES]] to i8
+  return _mm512_mask_cmpneq_epu64_mask(_kxor_mask8(_mm512_cmpneq_epu64_mask(__A, __B),
+                                                   _mm512_cmpneq_epu64_mask(__C, __D)),
+                                                   __E, __F);
+}
+
 __m512i test_mm512_mullo_epi64 (__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mullo_epi64
   // CHECK: mul <8 x i64>

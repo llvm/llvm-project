@@ -8603,8 +8603,9 @@ static Value *EmitX86CompressStore(CodeGenFunction &CGF,
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
-                              unsigned NumElts, ArrayRef<Value *> Ops,
+                              ArrayRef<Value *> Ops,
                               bool InvertLHS = false) {
+  unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
   Value *LHS = getMaskVecValue(CGF, Ops[0], NumElts);
   Value *RHS = getMaskVecValue(CGF, Ops[1], NumElts);
 
@@ -10013,7 +10014,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   case X86::BI__builtin_ia32_kortestchi:
   case X86::BI__builtin_ia32_kortestzhi: {
-    Value *Or = EmitX86MaskLogic(*this, Instruction::Or, 16, Ops);
+    Value *Or = EmitX86MaskLogic(*this, Instruction::Or, Ops);
     Value *C;
     if (BuiltinID == X86::BI__builtin_ia32_kortestchi)
       C = llvm::Constant::getAllOnesValue(Builder.getInt16Ty());
@@ -10023,26 +10024,45 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
   }
 
+  case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
-    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops);
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi:
+    return EmitX86MaskLogic(*this, Instruction::And, Ops);
+  case X86::BI__builtin_ia32_kandnqi:
   case X86::BI__builtin_ia32_kandnhi:
-    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops, true);
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi:
+    return EmitX86MaskLogic(*this, Instruction::And, Ops, true);
+  case X86::BI__builtin_ia32_korqi:
   case X86::BI__builtin_ia32_korhi:
-    return EmitX86MaskLogic(*this, Instruction::Or, 16, Ops);
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi:
+    return EmitX86MaskLogic(*this, Instruction::Or, Ops);
+  case X86::BI__builtin_ia32_kxnorqi:
   case X86::BI__builtin_ia32_kxnorhi:
-    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops, true);
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi:
+    return EmitX86MaskLogic(*this, Instruction::Xor, Ops, true);
+  case X86::BI__builtin_ia32_kxorqi:
   case X86::BI__builtin_ia32_kxorhi:
-    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops);
-  case X86::BI__builtin_ia32_knothi: {
-    Ops[0] = getMaskVecValue(*this, Ops[0], 16);
-    return Builder.CreateBitCast(Builder.CreateNot(Ops[0]),
-                                 Builder.getInt16Ty());
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi:
+    return EmitX86MaskLogic(*this, Instruction::Xor,  Ops);
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi: {
+    unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
+    Value *Res = getMaskVecValue(*this, Ops[0], NumElts);
+    return Builder.CreateBitCast(Builder.CreateNot(Res),
+                                 Ops[0]->getType());
   }
 
   case X86::BI__builtin_ia32_kunpckdi:
   case X86::BI__builtin_ia32_kunpcksi:
   case X86::BI__builtin_ia32_kunpckhi: {
-    unsigned NumElts = Ops[0]->getType()->getScalarSizeInBits();
+    unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
     Value *LHS = getMaskVecValue(*this, Ops[0], NumElts);
     Value *RHS = getMaskVecValue(*this, Ops[1], NumElts);
     uint32_t Indices[64];
