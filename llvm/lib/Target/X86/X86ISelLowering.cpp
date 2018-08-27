@@ -4801,6 +4801,12 @@ bool X86TargetLowering::preferShiftsToClearExtremeBits(SDValue Y) const {
   return true;
 }
 
+bool X86TargetLowering::shouldSplatInsEltVarIndex(EVT VT) const {
+  // Any legal vector type can be splatted more efficiently than
+  // loading/spilling from memory.
+  return isTypeLegal(VT);
+}
+
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
   MVT VT = MVT::getIntegerVT(NumBits);
   if (isTypeLegal(VT))

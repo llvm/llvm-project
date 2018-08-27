@@ -59,10 +59,7 @@ def FeatureXSAVES  : SubtargetFeature<"xsaves", "HasXSAVES", "true",
                                        "Support xsaves instructions">;
 
 def FeatureSSE1    : SubtargetFeature<"sse", "X86SSELevel", "SSE1",
-                                      "Enable SSE instructions",
-                                      // SSE codegen depends on cmovs, and all
-                                      // SSE1+ processors support them.
-                                      [FeatureCMOV]>;
+                                      "Enable SSE instructions">;
 def FeatureSSE2    : SubtargetFeature<"sse2", "X86SSELevel", "SSE2",
                                       "Enable SSE2 instructions",
                                       [FeatureSSE1]>;
@@ -93,8 +90,7 @@ def Feature3DNowA  : SubtargetFeature<"3dnowa", "X863DNowLevel", "ThreeDNowA",
 // feature, because SSE2 can be disabled (e.g. for compiling OS kernels)
 // without disabling 64-bit mode.
 def Feature64Bit   : SubtargetFeature<"64bit", "HasX86_64", "true",
-                                      "Support 64-bit instructions",
-                                      [FeatureCMOV]>;
+                                      "Support 64-bit instructions">;
 def FeatureCMPXCHG16B : SubtargetFeature<"cx16", "HasCmpxchg16b", "true",
                                       "64-bit with cmpxchg16b",
                                       [Feature64Bit]>;
@@ -481,7 +477,7 @@ def : Proc<"pentium2",        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
 
 foreach P = ["pentium3", "pentium3m"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE1,
-                 FeatureFXSR, FeatureNOPL]>;
+                 FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
 }
 
 // Enable the PostRAScheduler for SSE2 and SSE3 class cpus.
@@ -496,12 +492,12 @@ foreach P = ["pentium3", "pentium3m"] in {
 
 def : ProcessorModel<"pentium-m", GenericPostRAModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                      FeatureSSE2, FeatureFXSR, FeatureNOPL]>;
+                      FeatureSSE2, FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
 
 foreach P = ["pentium4", "pentium4m"] in {
   def : ProcessorModel<P, GenericPostRAModel,
                        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                        FeatureSSE2, FeatureFXSR, FeatureNOPL]>;
+                        FeatureSSE2, FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
 }
 
 // Intel Quark.
@@ -510,15 +506,16 @@ def : Proc<"lakemont",        []>;
 // Intel Core Duo.
 def : ProcessorModel<"yonah", SandyBridgeModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
-                      FeatureFXSR, FeatureNOPL]>;
+                      FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
 
 // NetBurst.
 def : ProcessorModel<"prescott", GenericPostRAModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
-                      FeatureFXSR, FeatureNOPL]>;
+                      FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
 def : ProcessorModel<"nocona", GenericPostRAModel, [
   FeatureX87,
   FeatureSlowUAMem16,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE3,
   FeatureFXSR,
@@ -530,6 +527,7 @@ def : ProcessorModel<"nocona", GenericPostRAModel, [
 def : ProcessorModel<"core2", SandyBridgeModel, [
   FeatureX87,
   FeatureSlowUAMem16,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSSE3,
   FeatureFXSR,
@@ -541,6 +539,7 @@ def : ProcessorModel<"core2", SandyBridgeModel, [
 def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureX87,
   FeatureSlowUAMem16,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE41,
   FeatureFXSR,
@@ -555,6 +554,7 @@ class BonnellProc<string Name> : ProcessorModel<Name, AtomModel, [
   ProcIntelAtom,
   FeatureX87,
   FeatureSlowUAMem16,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSSE3,
   FeatureFXSR,
@@ -575,6 +575,7 @@ def : BonnellProc<"atom">; // Pin the generic name to the baseline.
 class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   ProcIntelSLM,
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
@@ -609,6 +610,7 @@ class ProcModel<string Name, SchedMachineModel Model,
 
 def GLMFeatures : ProcessorFeatures<[], [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
@@ -668,6 +670,7 @@ def : TremontProc<"tremont">;
 // "Arrandale" along with corei3 and corei5
 class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
@@ -684,6 +687,7 @@ def : NehalemProc<"corei7">;
 // Westmere is the corei3/i5/i7 path from nehalem to sandybridge
 class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
@@ -701,6 +705,7 @@ def : WestmereProc<"westmere">;
 // rather than a superset.
 def SNBFeatures : ProcessorFeatures<[], [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
@@ -904,34 +909,37 @@ def : Proc<"k6-2",            [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 def : Proc<"k6-3",            [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 
 foreach P = ["athlon", "athlon-tbird"] in {
-  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureCMOV, Feature3DNowA,
                  FeatureNOPL, FeatureSlowSHLD]>;
 }
 
 foreach P = ["athlon-4", "athlon-xp", "athlon-mp"] in {
-  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE1,
+  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureCMOV, FeatureSSE1,
                  Feature3DNowA, FeatureFXSR, FeatureNOPL, FeatureSlowSHLD]>;
 }
 
 foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE2, Feature3DNowA,
-                 FeatureFXSR, FeatureNOPL, Feature64Bit, FeatureSlowSHLD]>;
+                 FeatureFXSR, FeatureNOPL, Feature64Bit, FeatureSlowSHLD,
+                 FeatureCMOV]>;
 }
 
 foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE3, Feature3DNowA,
-                 FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureSlowSHLD]>;
+                 FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureSlowSHLD,
+                 FeatureCMOV]>;
 }
 
 foreach P = ["amdfam10", "barcelona"] in {
   def : Proc<P, [FeatureX87, FeatureSSE4A, Feature3DNowA, FeatureFXSR,
                  FeatureNOPL, FeatureCMPXCHG16B, FeatureLZCNT, FeaturePOPCNT,
-                 FeatureSlowSHLD, FeatureLAHFSAHF]>;
+                 FeatureSlowSHLD, FeatureLAHFSAHF, FeatureCMOV]>;
 }
 
 // Bobcat
 def : Proc<"btver1", [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSSE3,
   FeatureSSE4A,
@@ -949,6 +957,7 @@ def : Proc<"btver1", [
 // Jaguar
 def : ProcessorModel<"btver2", BtVer2Model, [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
@@ -975,6 +984,7 @@ def : ProcessorModel<"btver2", BtVer2Model, [
 // Bulldozer
 def : Proc<"bdver1", [
   FeatureX87,
+  FeatureCMOV,
   FeatureXOP,
   FeatureFMA4,
   FeatureCMPXCHG16B,
@@ -998,6 +1008,7 @@ def : Proc<"bdver1", [
 // Piledriver
 def : Proc<"bdver2", [
   FeatureX87,
+  FeatureCMOV,
   FeatureXOP,
   FeatureFMA4,
   FeatureCMPXCHG16B,
@@ -1026,6 +1037,7 @@ def : Proc<"bdver2", [
 // Steamroller
 def : Proc<"bdver3", [
   FeatureX87,
+  FeatureCMOV,
   FeatureXOP,
   FeatureFMA4,
   FeatureCMPXCHG16B,
@@ -1056,6 +1068,7 @@ def : Proc<"bdver3", [
 // Excavator
 def : Proc<"bdver4", [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureAVX2,
   FeatureFXSR,
@@ -1093,6 +1106,7 @@ def: ProcessorModel<"znver1", Znver1Model, [
   FeatureBMI2,
   FeatureCLFLUSHOPT,
   FeatureCLZERO,
+  FeatureCMOV,
   FeatureCMPXCHG16B,
   FeatureF16C,
   FeatureFMA,
@@ -1127,7 +1141,7 @@ def : Proc<"winchip-c6",      [FeatureX87, FeatureSlowUAMem16, FeatureMMX]>;
 def : Proc<"winchip2",        [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 def : Proc<"c3",              [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 def : Proc<"c3-2",            [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                               FeatureSSE1, FeatureFXSR]>;
+                               FeatureSSE1, FeatureFXSR, FeatureCMOV]>;
 
 // We also provide a generic 64-bit specific x86 processor model which tries to
 // be good for modern chips without enabling instruction set encodings past the
@@ -1141,6 +1155,7 @@ def : Proc<"c3-2",            [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
 // forming a common base for them.
 def : ProcessorModel<"x86-64", SandyBridgeModel, [
   FeatureX87,
+  FeatureCMOV,
   FeatureMMX,
   FeatureSSE2,
   FeatureFXSR,
