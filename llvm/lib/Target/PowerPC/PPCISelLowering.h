@@ -149,6 +149,10 @@ namespace llvm {
       /// For vector types, only the last n bits are used. See vsld.
       SRL, SRA, SHL,
 
+      /// EXTSWSLI = The PPC extswsli instruction, which does an extend-sign
+      /// word and shift left immediate.
+      EXTSWSLI,
+
       /// The combination of sra[wd]i and addze used to implemented signed
       /// integer division by a power of 2. The first operand is the dividend,
       /// and the second is the constant shift amount (representing the

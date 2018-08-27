@@ -18,10 +18,10 @@ add_llvm_library(LLVMTransformUtils
   FunctionComparator.cpp
   FunctionImportUtils.cpp
   GlobalStatus.cpp
-  ImplicitControlFlowTracking.cpp
   InlineFunction.cpp
   ImportedFunctionsInliningStatistics.cpp
   InstructionNamer.cpp
+  InstructionPrecedenceTracking.cpp
   IntegerDivision.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp

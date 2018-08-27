@@ -586,8 +586,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType (ISD::LOAD  , VT, MVT::v4i32);
       setOperationAction(ISD::SELECT, VT, Promote);
       AddPromotedToType (ISD::SELECT, VT, MVT::v4i32);
-      setOperationAction(ISD::VSELECT, VT, Promote);
-      AddPromotedToType (ISD::VSELECT, VT, MVT::v4i32);
       setOperationAction(ISD::SELECT_CC, VT, Promote);
       AddPromotedToType (ISD::SELECT_CC, VT, MVT::v4i32);
       setOperationAction(ISD::STORE, VT, Promote);
@@ -628,6 +626,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::BSWAP, VT, Expand);
+      setOperationAction(ISD::VSELECT, VT, Expand);
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
       setOperationAction(ISD::ROTL, VT, Expand);
       setOperationAction(ISD::ROTR, VT, Expand);
@@ -650,7 +649,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::LOAD  , MVT::v4i32, Legal);
     setOperationAction(ISD::SELECT, MVT::v4i32,
                        Subtarget.useCRBits() ? Legal : Expand);
-    setOperationAction(ISD::VSELECT, MVT::v4i32, Legal);
     setOperationAction(ISD::STORE , MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_SINT, MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT, MVT::v4i32, Legal);
@@ -728,6 +726,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       setOperationAction(ISD::FDIV, MVT::v2f64, Legal);
       setOperationAction(ISD::FSQRT, MVT::v2f64, Legal);
+
+      setOperationAction(ISD::VSELECT, MVT::v16i8, Legal);
+      setOperationAction(ISD::VSELECT, MVT::v8i16, Legal);
+      setOperationAction(ISD::VSELECT, MVT::v4i32, Legal);
+      setOperationAction(ISD::VSELECT, MVT::v4f32, Legal);
+      setOperationAction(ISD::VSELECT, MVT::v2f64, Legal);
 
       // Share the Altivec comparison restrictions.
       setCondCodeAction(ISD::SETUO, MVT::v2f64, Expand);
@@ -1351,6 +1355,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::QBFLT:           return "PPCISD::QBFLT";
   case PPCISD::QVLFSb:          return "PPCISD::QVLFSb";
   case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
+  case PPCISD::EXTSWSLI:        return "PPCISD::EXTSWSLI";
   }
   return nullptr;
 }
@@ -14131,7 +14136,30 @@ SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
 
-  return SDValue();
+  SDValue N0 = N->getOperand(0);
+  ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!Subtarget.isISA3_0() ||
+      N0.getOpcode() != ISD::SIGN_EXTEND ||
+      N0.getOperand(0).getValueType() != MVT::i32 ||
+      CN1 == nullptr || N->getValueType(0) != MVT::i64)
+    return SDValue();
+
+  // We can't save an operation here if the value is already extended, and
+  // the existing shift is easier to combine.
+  SDValue ExtsSrc = N0.getOperand(0);
+  if (ExtsSrc.getOpcode() == ISD::TRUNCATE &&
+      ExtsSrc.getOperand(0).getOpcode() == ISD::AssertSext)
+    return SDValue();
+
+  SDLoc DL(N0);
+  SDValue ShiftBy = SDValue(CN1, 0);
+  // We want the shift amount to be i32 on the extswli, but the shift could
+  // have an i64.
+  if (ShiftBy.getValueType() == MVT::i64)
+    ShiftBy = DCI.DAG.getConstant(CN1->getZExtValue(), DL, MVT::i32);
+
+  return DCI.DAG.getNode(PPCISD::EXTSWSLI, DL, MVT::i64, N0->getOperand(0),
+                         ShiftBy);
 }
 
 SDValue PPCTargetLowering::combineSRA(SDNode *N, DAGCombinerInfo &DCI) const {

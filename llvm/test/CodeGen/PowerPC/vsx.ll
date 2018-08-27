@@ -525,8 +525,8 @@ entry:
   ret <2 x double> %v
 
 ; CHECK-LABEL: @test25
-; CHECK: xvcmpeqdp v4, v4, v5
-; CHECK: xxsel v2, v3, v2, v4
+; CHECK: xvcmpeqdp vs0, v4, v5
+; CHECK: xxsel v2, v3, v2, vs0
 ; CHECK: blr
 
 ; CHECK-LE-LABEL: @test25

@@ -28,7 +28,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Utils/ImplicitControlFlowTracking.h"
+#include "llvm/Transforms/Utils/InstructionPrecedenceTracking.h"
 #include <cstdint>
 #include <utility>
 #include <vector>

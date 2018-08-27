@@ -36,6 +36,7 @@ class DefinedImportData;
 class DefinedRegular;
 class ObjFile;
 class OutputSection;
+class RuntimePseudoReloc;
 class Symbol;
 
 // Mask for permissions (discardable, writable, readable, executable, etc).
@@ -160,6 +161,8 @@ public:
                    uint64_t P) const;
   void applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS, uint64_t S,
                      uint64_t P) const;
+
+  void getRuntimePseudoRelocs(std::vector<RuntimePseudoReloc> &Res);
 
   // Called if the garbage collector decides to not include this chunk
   // in a final output. It's supposed to print out a log message to stdout.
@@ -416,6 +419,53 @@ public:
 
   uint32_t RVA;
   uint8_t Type;
+};
+
+// This is a placeholder Chunk, to allow attaching a DefinedSynthetic to a
+// specific place in a section, without any data. This is used for the MinGW
+// specific symbol __RUNTIME_PSEUDO_RELOC_LIST_END__, even though the concept
+// of an empty chunk isn't MinGW specific.
+class EmptyChunk : public Chunk {
+public:
+  EmptyChunk() {}
+  size_t getSize() const override { return 0; }
+  void writeTo(uint8_t *Buf) const override {}
+};
+
+// MinGW specific, for the "automatic import of variables from DLLs" feature.
+// This provides the table of runtime pseudo relocations, for variable
+// references that turned out to need to be imported from a DLL even though
+// the reference didn't use the dllimport attribute. The MinGW runtime will
+// process this table after loading, before handling control over to user
+// code.
+class PseudoRelocTableChunk : public Chunk {
+public:
+  PseudoRelocTableChunk(std::vector<RuntimePseudoReloc> &Relocs)
+      : Relocs(std::move(Relocs)) {
+    Alignment = 4;
+  }
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) const override;
+
+private:
+  std::vector<RuntimePseudoReloc> Relocs;
+};
+
+// MinGW specific; information about one individual location in the image
+// that needs to be fixed up at runtime after loading. This represents
+// one individual element in the PseudoRelocTableChunk table.
+class RuntimePseudoReloc {
+public:
+  RuntimePseudoReloc(Defined *Sym, SectionChunk *Target, uint32_t TargetOffset,
+                     int Flags)
+      : Sym(Sym), Target(Target), TargetOffset(TargetOffset), Flags(Flags) {}
+
+  Defined *Sym;
+  SectionChunk *Target;
+  uint32_t TargetOffset;
+  // The Flags field contains the size of the relocation, in bits. No other
+  // flags are currently defined.
+  int Flags;
 };
 
 void applyMOV32T(uint8_t *Off, uint32_t V);
