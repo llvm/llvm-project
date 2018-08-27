@@ -804,6 +804,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   const char *term = getenv("TERM");
   if (term && !strcmp(term, "dumb"))
     SetUseColor(false);
+  // Turn off use-color if we don't write to a terminal with color support.
+  if (!m_output_file_sp->GetFile().GetIsTerminalWithColors())
+    SetUseColor(false);
 }
 
 Debugger::~Debugger() { Clear(); }

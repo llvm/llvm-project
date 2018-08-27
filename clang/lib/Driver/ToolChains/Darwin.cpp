@@ -1105,6 +1105,13 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   if (Sanitize.needsEsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "esan");
 
+  const XRayArgs &XRay = getXRayArgs();
+  if (XRay.needsXRayRt()) {
+    AddLinkRuntimeLib(Args, CmdArgs, "xray");
+    AddLinkRuntimeLib(Args, CmdArgs, "xray-basic");
+    AddLinkRuntimeLib(Args, CmdArgs, "xray-fdr");
+  }
+
   // Otherwise link libSystem, then the dynamic runtime library, and finally any
   // target specific static runtime library.
   CmdArgs.push_back("-lSystem");

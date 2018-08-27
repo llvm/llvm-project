@@ -2444,6 +2444,18 @@ namespace ISD {
       cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   }
 
+  /// Return true if the node is a math/logic binary operator. This corresponds
+  /// to the IR function of the same name.
+  inline bool isBinaryOp(const SDNode *N) {
+    auto Op = N->getOpcode();
+    return (Op == ISD::ADD || Op == ISD::SUB || Op == ISD::MUL ||
+            Op == ISD::AND || Op == ISD::OR || Op == ISD::XOR ||
+            Op == ISD::SHL || Op == ISD::SRL || Op == ISD::SRA ||
+            Op == ISD::SDIV || Op == ISD::UDIV || Op == ISD::SREM ||
+            Op == ISD::UREM || Op == ISD::FADD || Op == ISD::FSUB ||
+            Op == ISD::FMUL || Op == ISD::FDIV || Op == ISD::FREM);
+  }
+
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
   bool matchUnaryPredicate(SDValue Op,

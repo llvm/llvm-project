@@ -22901,6 +22901,10 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
                          SelectionDAG &DAG) {
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
+  bool IsSigned = Op->getOpcode() == ISD::MULHS;
+  unsigned NumElts = VT.getVectorNumElements();
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
 
   // Decompose 256-bit ops into smaller 128-bit ops.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
@@ -22910,9 +22914,6 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     assert((VT == MVT::v4i32 && Subtarget.hasSSE2()) ||
            (VT == MVT::v8i32 && Subtarget.hasInt256()) ||
            (VT == MVT::v16i32 && Subtarget.hasAVX512()));
-    SDValue Op0 = Op.getOperand(0), Op1 = Op.getOperand(1);
-
-    int NumElts = VT.getVectorNumElements();
 
     // PMULxD operations multiply each even value (starting at 0) of LHS with
     // the related value of RHS and produce a widen result.
@@ -22929,23 +22930,22 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     const int Mask[] = {1, -1,  3, -1,  5, -1,  7, -1,
                         9, -1, 11, -1, 13, -1, 15, -1};
     // <a|b|c|d> => <b|undef|d|undef>
-    SDValue Odd0 = DAG.getVectorShuffle(VT, dl, Op0, Op0,
+    SDValue Odd0 = DAG.getVectorShuffle(VT, dl, A, A,
                                         makeArrayRef(&Mask[0], NumElts));
     // <e|f|g|h> => <f|undef|h|undef>
-    SDValue Odd1 = DAG.getVectorShuffle(VT, dl, Op1, Op1,
+    SDValue Odd1 = DAG.getVectorShuffle(VT, dl, B, B,
                                         makeArrayRef(&Mask[0], NumElts));
 
     // Emit two multiplies, one for the lower 2 ints and one for the higher 2
     // ints.
     MVT MulVT = MVT::getVectorVT(MVT::i64, NumElts / 2);
-    bool IsSigned = Op->getOpcode() == ISD::MULHS;
     unsigned Opcode =
-        (!IsSigned || !Subtarget.hasSSE41()) ? X86ISD::PMULUDQ : X86ISD::PMULDQ;
+        (IsSigned && Subtarget.hasSSE41()) ? X86ISD::PMULDQ : X86ISD::PMULUDQ;
     // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h>
     // => <2 x i64> <ae|cg>
     SDValue Mul1 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
-                                                  DAG.getBitcast(MulVT, Op0),
-                                                  DAG.getBitcast(MulVT, Op1)));
+                                                  DAG.getBitcast(MulVT, A),
+                                                  DAG.getBitcast(MulVT, B)));
     // PMULUDQ <4 x i32> <b|undef|d|undef>, <4 x i32> <f|undef|h|undef>
     // => <2 x i64> <bf|dh>
     SDValue Mul2 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
@@ -22954,7 +22954,7 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
     // Shuffle it back into the right order.
     SmallVector<int, 16> ShufMask(NumElts);
-    for (int i = 0; i != NumElts; ++i)
+    for (int i = 0; i != (int)NumElts; ++i)
       ShufMask[i] = (i / 2) * 2 + ((i % 2) * NumElts) + 1;
 
     SDValue Res = DAG.getVectorShuffle(VT, dl, Mul1, Mul2, ShufMask);
@@ -22964,9 +22964,9 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     if (IsSigned && !Subtarget.hasSSE41()) {
       SDValue ShAmt = DAG.getConstant(31, dl, VT);
       SDValue T1 = DAG.getNode(ISD::AND, dl, VT,
-                               DAG.getNode(ISD::SRA, dl, VT, Op0, ShAmt), Op1);
+                               DAG.getNode(ISD::SRA, dl, VT, A, ShAmt), B);
       SDValue T2 = DAG.getNode(ISD::AND, dl, VT,
-                               DAG.getNode(ISD::SRA, dl, VT, Op1, ShAmt), Op0);
+                               DAG.getNode(ISD::SRA, dl, VT, B, ShAmt), A);
 
       SDValue Fixup = DAG.getNode(ISD::ADD, dl, VT, T1, T2);
       Res = DAG.getNode(ISD::SUB, dl, VT, Res, Fixup);
@@ -22982,14 +22982,11 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   // Lower v16i8/v32i8 as extension to v8i16/v16i16 vector pairs, multiply,
   // logical shift down the upper half and pack back to i8.
-  SDValue A = Op.getOperand(0);
-  SDValue B = Op.getOperand(1);
 
   // With SSE41 we can use sign/zero extend, but for pre-SSE41 we unpack
   // and then ashr/lshr the upper bits down to the lower bits before multiply.
-  unsigned Opcode = Op.getOpcode();
-  unsigned ExShift = (ISD::MULHU == Opcode ? X86ISD::VSRLI : X86ISD::VSRAI);
-  unsigned ExAVX = (ISD::MULHU == Opcode ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
+  unsigned ExShift = IsSigned ? X86ISD::VSRAI : X86ISD::VSRLI;
+  unsigned ExAVX = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
 
   // For 512-bit vectors, split into 256-bit vectors to allow the
   // sign-extension to occur.
@@ -22998,9 +22995,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   // AVX2 implementations - extend xmm subvectors to ymm.
   if (Subtarget.hasInt256()) {
-    unsigned NumElems = VT.getVectorNumElements();
     SDValue Lo = DAG.getIntPtrConstant(0, dl);
-    SDValue Hi = DAG.getIntPtrConstant(NumElems / 2, dl);
+    SDValue Hi = DAG.getIntPtrConstant(NumElts / 2, dl);
 
     if (VT == MVT::v32i8) {
       if (Subtarget.canExtendTo512BW()) {
@@ -23014,8 +23010,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
       MVT ExVT = MVT::v16i16;
       SDValue ALo = extract128BitVector(A, 0, DAG, dl);
       SDValue BLo = extract128BitVector(B, 0, DAG, dl);
-      SDValue AHi = extract128BitVector(A, NumElems / 2, DAG, dl);
-      SDValue BHi = extract128BitVector(B, NumElems / 2, DAG, dl);
+      SDValue AHi = extract128BitVector(A, NumElts / 2, DAG, dl);
+      SDValue BHi = extract128BitVector(B, NumElts / 2, DAG, dl);
       ALo = DAG.getNode(ExAVX, dl, ExVT, ALo);
       BLo = DAG.getNode(ExAVX, dl, ExVT, BLo);
       AHi = DAG.getNode(ExAVX, dl, ExVT, AHi);
@@ -23024,16 +23020,13 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
       Hi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
       Lo = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Lo, 8, DAG);
       Hi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, Hi, 8, DAG);
-      // The ymm variant of PACKUS treats the 128-bit lanes separately, so
-      // before using PACKUS we need to permute the inputs to the correct lo/hi
-      // xmm lane.
-      const int LoMask[] = {0,  1,  2,  3,  4,  5,  6,  7,
-                            16, 17, 18, 19, 20, 21, 22, 23};
-      const int HiMask[] = {8,  9,  10, 11, 12, 13, 14, 15,
-                            24, 25, 26, 27, 28, 29, 30, 31};
-      return DAG.getNode(X86ISD::PACKUS, dl, VT,
-                         DAG.getVectorShuffle(ExVT, dl, Lo, Hi, LoMask),
-                         DAG.getVectorShuffle(ExVT, dl, Lo, Hi, HiMask));
+
+      SDValue Res = DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
+      // The ymm variant of PACKUS treats the 128-bit lanes separately, so we
+      // need to permute the final result into place.
+      Res = DAG.getBitcast(MVT::v4i64, Res);
+      Res = DAG.getVectorShuffle(MVT::v4i64, dl, Res, Res, { 0, 2, 1, 3 });
+      return DAG.getBitcast(VT, Res);
     }
 
     assert(VT == MVT::v16i8 && "Unexpected VT");
@@ -23054,8 +23047,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   assert(VT == MVT::v16i8 &&
          "Pre-AVX2 support only supports v16i8 multiplication");
   MVT ExVT = MVT::v8i16;
-  unsigned ExSSE41 = ISD::MULHU == Opcode ? ISD::ZERO_EXTEND_VECTOR_INREG
-                                          : ISD::SIGN_EXTEND_VECTOR_INREG;
+  unsigned ExSSE41 = IsSigned ? ISD::SIGN_EXTEND_VECTOR_INREG
+                              : ISD::ZERO_EXTEND_VECTOR_INREG;
 
   // Extract the lo parts and zero/sign extend to i16.
   SDValue ALo, BLo;
@@ -23076,7 +23069,7 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // Extract the hi parts and zero/sign extend to i16.
   SDValue AHi, BHi;
   if (Subtarget.hasSSE41()) {
-    const int ShufMask[] = {8,  9,  10, 11, 12, 13, 14, 15,
+    const int ShufMask[] = { 8,  9, 10, 11, 12, 13, 14, 15,
                             -1, -1, -1, -1, -1, -1, -1, -1};
     AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
     BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
@@ -33129,6 +33122,20 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           (OpLHS == CondLHS || OpRHS == CondLHS))
         return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
                                 ADDUSBuilder);
+
+      if (isa<BuildVectorSDNode>(OpRHS) && isa<BuildVectorSDNode>(CondRHS) &&
+          CondLHS == OpLHS) {
+        // If the RHS is a constant we have to reverse the const
+        // canonicalization.
+        // x > ~C ? x+C : ~0 --> addus x, C
+        auto MatchADDUS = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
+          return Cond->getAPIntValue() == ~Op->getAPIntValue();
+        };
+        if (CC == ISD::SETULE &&
+            ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchADDUS))
+          return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
+                                  ADDUSBuilder);
+      }
     }
   }
 

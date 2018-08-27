@@ -44,6 +44,17 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
   def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
+multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
+  def : Pat<(StoreOp GPR:$rs1, StTy:$rs2), (Inst StTy:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp AddrFI:$rs1, StTy:$rs2), (Inst StTy:$rs2, AddrFI:$rs1, 0)>;
+  def : Pat<(StoreOp (add GPR:$rs1, simm12:$imm12), StTy:$rs2),
+            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (add AddrFI:$rs1, simm12:$imm12), StTy:$rs2),
+            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (IsOrAdd AddrFI:$rs1, simm12:$imm12), StTy:$rs2),
+            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -91,7 +102,7 @@ defm : LdPat<atomic_load_8,  LB>;
 defm : LdPat<atomic_load_16, LH>;
 defm : LdPat<atomic_load_32, LW>;
 
-defm : StPat<atomic_store_8,  SB, GPR>;
-defm : StPat<atomic_store_16,  SH, GPR>;
-defm : StPat<atomic_store_32, SW, GPR>;
-} // Predicates = [HasStdExtF]
+defm : AtomicStPat<atomic_store_8,  SB, GPR>;
+defm : AtomicStPat<atomic_store_16, SH, GPR>;
+defm : AtomicStPat<atomic_store_32, SW, GPR>;
+} // Predicates = [HasStdExtA]

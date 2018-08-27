@@ -14,6 +14,7 @@
 
 #include "Views/SchedulerStatistics.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 
@@ -26,69 +27,101 @@ void SchedulerStatistics::onEvent(const HWInstructionEvent &Event) {
 
 void SchedulerStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
   for (const unsigned Buffer : Buffers) {
-    if (BufferedResources.find(Buffer) != BufferedResources.end()) {
-      BufferUsage &BU = BufferedResources[Buffer];
-      BU.SlotsInUse++;
-      BU.MaxUsedSlots = std::max(BU.MaxUsedSlots, BU.SlotsInUse);
-      continue;
-    }
-
-    BufferedResources.insert(
-        std::pair<unsigned, BufferUsage>(Buffer, {1U, 1U}));
+    BufferUsage &BU = Usage[Buffer];
+    BU.SlotsInUse++;
+    BU.MaxUsedSlots = std::max(BU.MaxUsedSlots, BU.SlotsInUse);
   }
 }
 
 void SchedulerStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
-  for (const unsigned Buffer : Buffers) {
-    assert(BufferedResources.find(Buffer) != BufferedResources.end() &&
-           "Buffered resource not in map?");
-    BufferUsage &BU = BufferedResources[Buffer];
-    BU.SlotsInUse--;
-  }
+  for (const unsigned Buffer : Buffers)
+    Usage[Buffer].SlotsInUse--;
 }
 
-void SchedulerStatistics::printSchedulerStatistics(
-    llvm::raw_ostream &OS) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nSchedulers - number of cycles where we saw N instructions "
-                "issued:\n";
-  TempStream << "[# issued], [# cycles]\n";
-  for (const std::pair<unsigned, unsigned> &Entry : IssuedPerCycle) {
-    TempStream << " " << Entry.first << ",          " << Entry.second << "  ("
-               << format("%.1f", ((double)Entry.second / NumCycles) * 100)
-               << "%)\n";
-  }
+void SchedulerStatistics::updateHistograms() {
+  for (BufferUsage &BU : Usage)
+    BU.CumulativeNumUsedSlots += BU.SlotsInUse;
+  IssuedPerCycle[NumIssued]++;
+  NumIssued = 0;
+}
 
-  TempStream.flush();
-  OS << Buffer;
+void SchedulerStatistics::printSchedulerStats(raw_ostream &OS) const {
+  OS << "\n\nSchedulers - "
+     << "number of cycles where we saw N instructions issued:\n";
+  OS << "[# issued], [# cycles]\n";
+
+  const auto It =
+      std::max_element(IssuedPerCycle.begin(), IssuedPerCycle.end());
+  unsigned Index = std::distance(IssuedPerCycle.begin(), It);
+
+  bool HasColors = OS.has_colors();
+  for (unsigned I = 0, E = IssuedPerCycle.size(); I < E; ++I) {
+    unsigned IPC = IssuedPerCycle[I];
+    if (!IPC)
+      continue;
+
+    if (I == Index && HasColors)
+      OS.changeColor(raw_ostream::SAVEDCOLOR, true, false);
+
+    OS << " " << I << ",          " << IPC << "  ("
+       << format("%.1f", ((double)IPC / NumCycles) * 100) << "%)\n";
+    if (HasColors)
+      OS.resetColor();
+  }
 }
 
 void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  TempStream << "\n\nScheduler's queue usage:\n";
-  // Early exit if no buffered resources were consumed.
-  if (BufferedResources.empty()) {
-    TempStream << "No scheduler resources used.\n";
-    TempStream.flush();
-    OS << Buffer;
+  assert(NumCycles && "Unexpected number of cycles!");
+
+  OS << "\nScheduler's queue usage:\n";
+  if (all_of(Usage, [](const BufferUsage &BU) { return !BU.MaxUsedSlots; })) {
+    OS << "No scheduler resources used.\n";
     return;
   }
 
+  OS << "[1] Resource name.\n"
+     << "[2] Average number of used buffer entries.\n"
+     << "[3] Maximum number of used buffer entries.\n"
+     << "[4] Total number of buffer entries.\n\n"
+     << " [1]            [2]        [3]        [4]\n";
+
+  formatted_raw_ostream FOS(OS);
+  bool HasColors = FOS.has_colors();
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
     if (ProcResource.BufferSize <= 0)
       continue;
 
-    const auto It = BufferedResources.find(I);
-    unsigned MaxUsedSlots =
-        It == BufferedResources.end() ? 0 : It->second.MaxUsedSlots;
-    TempStream << ProcResource.Name << ",  " << MaxUsedSlots << '/'
-               << ProcResource.BufferSize << '\n';
+    const BufferUsage &BU = Usage[I];
+    double AvgUsage = (double)BU.CumulativeNumUsedSlots / NumCycles;
+    double AlmostFullThreshold = (double)(ProcResource.BufferSize * 4) / 5;
+    unsigned NormalizedAvg = floor((AvgUsage * 10) + 0.5) / 10;
+    unsigned NormalizedThreshold = floor((AlmostFullThreshold * 10) + 0.5) / 10;
+
+    FOS << ProcResource.Name;
+    FOS.PadToColumn(17);
+    if (HasColors && NormalizedAvg >= NormalizedThreshold)
+      FOS.changeColor(raw_ostream::YELLOW, true, false);
+    FOS << NormalizedAvg;
+    if (HasColors)
+      FOS.resetColor();
+    FOS.PadToColumn(28);
+    if (HasColors &&
+        BU.MaxUsedSlots == static_cast<unsigned>(ProcResource.BufferSize))
+      FOS.changeColor(raw_ostream::RED, true, false);
+    FOS << BU.MaxUsedSlots;
+    if (HasColors)
+      FOS.resetColor();
+    FOS.PadToColumn(39);
+    FOS << ProcResource.BufferSize << '\n';
   }
 
-  TempStream.flush();
-  OS << Buffer;
+  FOS.flush();
 }
+
+void SchedulerStatistics::printView(llvm::raw_ostream &OS) const {
+  printSchedulerStats(OS);
+  printSchedulerUsage(OS);
+}
+
 } // namespace mca

@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MicrosoftDemangleNodes.h"
-
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/Utility.h"
+#include <cctype>
 
 using namespace llvm;
 using namespace ms_demangle;
@@ -30,7 +30,7 @@ static void outputSpaceIfNecessary(OutputStream &OS) {
     return;
 
   char C = OS.back();
-  if (isalnum(C) || C == '>')
+  if (std::isalnum(C) || C == '>')
     OS << " ";
 }
 

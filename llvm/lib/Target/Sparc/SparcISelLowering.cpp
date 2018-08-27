@@ -852,12 +852,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       if (VA.getLocVT() == MVT::f64) {
         // Move from the float value from float registers into the
         // integer registers.
-
-        // TODO: The f64 -> v2i32 conversion is super-inefficient for
-        // constants: it sticks them in the constant pool, then loads
-        // to a fp register, then stores to temp memory, then loads to
-        // integer registers.
-        Arg = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, Arg);
+        if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Arg))
+          Arg = bitcastConstantFPToInt(C, dl, DAG);
+        else
+          Arg = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, Arg);
       }
 
       SDValue Part0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
@@ -1800,6 +1798,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasNoFMULS()) {
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
+
+  // Custom combine bitcast between f64 and v2i32
+  if (!Subtarget->is64Bit())
+    setTargetDAGCombine(ISD::BITCAST);
+
+  if (Subtarget->hasLeonCycleCounter())
+    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
@@ -3075,6 +3080,40 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
+SDValue SparcTargetLowering::bitcastConstantFPToInt(ConstantFPSDNode *C,
+                                                    const SDLoc &DL,
+                                                    SelectionDAG &DAG) const {
+  APInt V = C->getValueAPF().bitcastToAPInt();
+  SDValue Lo = DAG.getConstant(V.zextOrTrunc(32), DL, MVT::i32);
+  SDValue Hi = DAG.getConstant(V.lshr(32).zextOrTrunc(32), DL, MVT::i32);
+  if (DAG.getDataLayout().isLittleEndian())
+    std::swap(Lo, Hi);
+  return DAG.getBuildVector(MVT::v2i32, DL, {Hi, Lo});
+}
+
+SDValue SparcTargetLowering::PerformBITCASTCombine(SDNode *N,
+                                                   DAGCombinerInfo &DCI) const {
+  SDLoc dl(N);
+  SDValue Src = N->getOperand(0);
+
+  if (isa<ConstantFPSDNode>(Src) && N->getSimpleValueType(0) == MVT::v2i32 &&
+      Src.getSimpleValueType() == MVT::f64)
+    return bitcastConstantFPToInt(cast<ConstantFPSDNode>(Src), dl, DCI.DAG);
+
+  return SDValue();
+}
+
+SDValue SparcTargetLowering::PerformDAGCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case ISD::BITCAST:
+    return PerformBITCASTCombine(N, DCI);
+  }
+  return SDValue();
+}
+
 MachineBasicBlock *
 SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
@@ -3542,7 +3581,16 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
                                   getLibcallName(libCall),
                                   1));
     return;
-
+  case ISD::READCYCLECOUNTER: {
+    assert(Subtarget->hasLeonCycleCounter());
+    SDValue Lo = DAG.getCopyFromReg(N->getOperand(0), dl, SP::ASR23, MVT::i32);
+    SDValue Hi = DAG.getCopyFromReg(Lo, dl, SP::G0, MVT::i32);
+    SDValue Ops[] = { Lo, Hi };
+    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Ops);
+    Results.push_back(Pair);
+    Results.push_back(N->getOperand(0));
+    return;
+  }
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     // Custom lower only if it involves f128 or i64.
