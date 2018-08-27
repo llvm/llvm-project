@@ -111,7 +111,10 @@ extension to the protocol.
 Getting Involved
 ==================
 
-A good place for interested contributors is the `Clang developer mailing list
+A good place for interested contributors is the `Clangd developer mailing list
+<http://lists.llvm.org/mailman/listinfo/clangd-dev>`_. For discussions with the
+broader community on topics not only related to Clangd, use
+`Clang developer mailing list
 <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
 If you're also interested in contributing patches to :program:`Clangd`, take a
 look at the `LLVM Developer Policy
