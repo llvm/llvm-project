@@ -66,6 +66,8 @@ public:
   // Returns the symbol name.
   StringRef getName();
 
+  void replaceKeepingName(Symbol *Other, size_t Size);
+
   // Returns the file from which this symbol was created.
   InputFile *getFile();
 
@@ -307,6 +309,8 @@ public:
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
   ImportFile *File;
+
+  bool IsRuntimePseudoReloc = false;
 };
 
 // This class represents a symbol for a jump table entry which jumps
