@@ -12,6 +12,7 @@
 
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -31,12 +32,70 @@
 using namespace clang;
 using namespace llvm;
 
-static Optional<llvm::sys::TimePoint<>> getModTime(StringRef path) {
+static Optional<sys::fs::file_status> getFileStatus(StringRef path) {
   sys::fs::file_status Status;
   std::error_code EC = status(path, Status);
   if (EC)
     return None;
-  return Status.getLastModificationTime();
+  return Status;
+}
+
+namespace llvm {
+// Specialize DenseMapInfo for sys::fs::UniqueID.
+template <> struct DenseMapInfo<sys::fs::UniqueID> {
+  static sys::fs::UniqueID getEmptyKey() {
+    return sys::fs::UniqueID{DenseMapInfo<uint64_t>::getEmptyKey(),
+                             DenseMapInfo<uint64_t>::getEmptyKey()};
+  }
+
+  static sys::fs::UniqueID getTombstoneKey() {
+    return sys::fs::UniqueID{DenseMapInfo<uint64_t>::getTombstoneKey(),
+                             DenseMapInfo<uint64_t>::getEmptyKey()};
+  }
+
+  static unsigned getHashValue(const sys::fs::UniqueID &val) {
+    return DenseMapInfo<std::pair<uint64_t, uint64_t>>::getHashValue(
+        std::make_pair(val.getDevice(), val.getFile()));
+  }
+
+  static bool isEqual(const sys::fs::UniqueID &LHS, const sys::fs::UniqueID &RHS) {
+    return LHS == RHS;
+  }
+};
+}
+
+namespace {
+/// Used for initial directory scan.
+///
+/// Note that it is only accessed while inside the serial queue so it is thread
+/// safe to access it without additional protection.
+struct DirectoryScan {
+  DenseSet<sys::fs::UniqueID> FileIDSet;
+  std::vector<std::tuple<std::string, sys::TimePoint<>>> Files;
+
+  void scanDirectory(StringRef Path) {
+    using namespace llvm::sys;
+
+    std::error_code EC;
+    for (auto It = fs::directory_iterator(Path, EC), End = fs::directory_iterator();
+           !EC && It != End; It.increment(EC)) {
+      auto status = getFileStatus(It->path());
+      if (!status.hasValue())
+        continue;
+      Files.push_back(std::make_tuple(It->path(), status->getLastModificationTime()));
+      FileIDSet.insert(status->getUniqueID());
+    }
+  }
+
+  std::vector<DirectoryWatcher::Event> getAsFileEvents() const {
+    std::vector<DirectoryWatcher::Event> Events;
+    for (const auto &info : Files) {
+      DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added, std::get<0>(info), std::get<1>(info)};
+      Events.push_back(std::move(Event));
+    }
+    return Events;
+  }
+};
 }
 
 struct DirectoryWatcher::Implementation {
@@ -44,7 +103,8 @@ struct DirectoryWatcher::Implementation {
   FSEventStreamRef EventStream = nullptr;
 
   bool setupFSEventStream(StringRef path, EventReceiver receiver,
-                          dispatch_queue_t queue);
+                          dispatch_queue_t queue,
+                          std::shared_ptr<DirectoryScan> initialScanPtr);
   void stopFSEventStream();
 
   ~Implementation() {
@@ -58,9 +118,13 @@ namespace {
 struct EventStreamContextData {
   std::string WatchedPath;
   DirectoryWatcher::EventReceiver Receiver;
+  std::shared_ptr<DirectoryScan> InitialScan;
 
-  EventStreamContextData(std::string watchedPath, DirectoryWatcher::EventReceiver receiver)
-  : WatchedPath(std::move(watchedPath)), Receiver(std::move(receiver)) {
+  EventStreamContextData(std::string watchedPath, DirectoryWatcher::EventReceiver receiver,
+                         std::shared_ptr<DirectoryScan> initialScanPtr)
+  : WatchedPath(std::move(watchedPath)),
+    Receiver(std::move(receiver)),
+    InitialScan(std::move(initialScanPtr)) {
   }
 
   static void dispose(const void *ctx) {
@@ -91,28 +155,58 @@ static void eventStreamCallback(
       continue;
     }
     DirectoryWatcher::EventKind K = DirectoryWatcher::EventKind::Modified;
-    if ((flags & kFSEventStreamEventFlagItemCreated) ||
-        (flags & kFSEventStreamEventFlagItemRenamed))
-      K = DirectoryWatcher::EventKind::Added;
-    if (flags & kFSEventStreamEventFlagItemRemoved)
+    bool hasAddedFlag = flags & (kFSEventStreamEventFlagItemCreated |
+                                 kFSEventStreamEventFlagItemRenamed);
+    bool hasRemovedFlag = flags & kFSEventStreamEventFlagItemRemoved;
+    Optional<sys::fs::file_status> statusOpt;
+    // NOTE: With low latency sometimes for a file that is moved inside the
+    // directory, or for a file that is removed from the directory, the flags
+    // have both 'renamed' and 'removed'. We use getting the file status as a
+    // way to distinguish between the two.
+    if (hasAddedFlag) {
+      statusOpt = getFileStatus(path);
+      if (statusOpt.hasValue()) {
+        K = DirectoryWatcher::EventKind::Added;
+      } else {
+        K = DirectoryWatcher::EventKind::Removed;
+      }
+    } else if (hasRemovedFlag) {
       K = DirectoryWatcher::EventKind::Removed;
-    llvm::sys::TimePoint<> modTime{};
-    if (K != DirectoryWatcher::EventKind::Removed) {
-      auto modTimeOpt = getModTime(path);
-      if (!modTimeOpt.hasValue())
-        continue;
-      modTime = modTimeOpt.getValue();
+    } else {
+      statusOpt = getFileStatus(path);
+      if (!statusOpt.hasValue()) {
+        K = DirectoryWatcher::EventKind::Removed;
+      }
     }
+
+    if (ctx->InitialScan && K == DirectoryWatcher::EventKind::Added) {
+      // For the first time we get the events, check that we haven't already
+      // sent the 'added' event at the initial scan.
+      if (ctx->InitialScan->FileIDSet.count(statusOpt->getUniqueID())) {
+        // Already reported this event at the initial directory scan.
+        continue;
+      }
+    }
+
+    llvm::sys::TimePoint<> modTime{};
+    if (statusOpt.hasValue())
+      modTime = statusOpt->getLastModificationTime();
     DirectoryWatcher::Event Evt{K, path, modTime};
     Events.push_back(Evt);
   }
 
-  ctx->Receiver(Events, /*isInitial=*/false);
+  // We won't need to check again later on.
+  ctx->InitialScan.reset();
+
+  if (!Events.empty()) {
+    ctx->Receiver(Events, /*isInitial=*/false);
+  }
 }
 
 bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
                                                           EventReceiver receiver,
-                                                          dispatch_queue_t queue) {
+                                                          dispatch_queue_t queue,
+                                                          std::shared_ptr<DirectoryScan> initialScanPtr) {
   if (path.empty())
     return true;
 
@@ -120,7 +214,7 @@ bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
   CFStringRef cfPathStr = CFStringCreateWithBytes(nullptr, (const UInt8 *)path.data(), path.size(), kCFStringEncodingUTF8, false);
   CFArrayAppendValue(pathsToWatch, cfPathStr);
   CFRelease(cfPathStr);
-  CFAbsoluteTime latency = 0.2; // Latency in seconds.
+  CFAbsoluteTime latency = 0.0; // Latency in seconds.
 
   std::string realPath;
   {
@@ -134,7 +228,9 @@ bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
       realPath = path;
   }
 
-  EventStreamContextData *ctxData = new EventStreamContextData(std::move(realPath), std::move(receiver));
+  EventStreamContextData *ctxData =
+    new EventStreamContextData(std::move(realPath), std::move(receiver),
+                               std::move(initialScanPtr));
   FSEventStreamContext context;
   context.version = 0;
   context.info = ctxData;
@@ -176,24 +272,6 @@ DirectoryWatcher::~DirectoryWatcher() {
   delete &Impl;
 }
 
-#if HAVE_CORESERVICES
-static std::vector<DirectoryWatcher::Event> scanDirectory(StringRef Path) {
-  using namespace llvm::sys;
-
-  std::vector<DirectoryWatcher::Event> Events;
-  std::error_code EC;
-  for (auto It = fs::directory_iterator(Path, EC), End = fs::directory_iterator();
-         !EC && It != End; It.increment(EC)) {
-    auto modTime = getModTime(It->path());
-    if (!modTime.hasValue())
-      continue;
-    DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added, It->path(), modTime.getValue()};
-    Events.push_back(std::move(Event));
-  }
-  return Events;
-}
-#endif
-
 std::unique_ptr<DirectoryWatcher> DirectoryWatcher::create(StringRef Path,
         EventReceiver Receiver, bool waitInitialSync, std::string &Error) {
 #if HAVE_CORESERVICES
@@ -224,6 +302,8 @@ std::unique_ptr<DirectoryWatcher> DirectoryWatcher::create(StringRef Path,
   DirWatch.reset(new DirectoryWatcher());
   auto &Impl = DirWatch->Impl;
 
+  auto initialScan = std::make_shared<DirectoryScan>();
+
   dispatch_queue_t queue = dispatch_queue_create("DirectoryWatcher", DISPATCH_QUEUE_SERIAL);
   dispatch_semaphore_t initScanSema = dispatch_semaphore_create(0);
   dispatch_semaphore_t setupFSEventsSema = dispatch_semaphore_create(0);
@@ -235,13 +315,13 @@ std::unique_ptr<DirectoryWatcher> DirectoryWatcher::create(StringRef Path,
     // Wait for the event stream to be setup before doing the initial scan,
     // to make sure we won't miss any events.
     dispatch_semaphore_wait(setupFSEventsSema, DISPATCH_TIME_FOREVER);
-    auto events = scanDirectory(copiedPath);
-    Receiver(events, /*isInitial=*/true);
+    initialScan->scanDirectory(copiedPath);
+    Receiver(initialScan->getAsFileEvents(), /*isInitial=*/true);
     dispatch_semaphore_signal(initScanSema);
     dispatch_release(setupFSEventsSema);
     dispatch_release(initScanSema);
   });
-  bool fsErr = Impl.setupFSEventStream(Path, Receiver, queue);
+  bool fsErr = Impl.setupFSEventStream(Path, Receiver, queue, initialScan);
   dispatch_semaphore_signal(setupFSEventsSema);
 
   if (waitInitialSync) {

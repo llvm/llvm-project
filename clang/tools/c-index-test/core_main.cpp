@@ -799,6 +799,7 @@ static int printStoreRecords(StringRef StorePath, raw_ostream &OS) {
 static int watchDirectory(StringRef dirPath) {
   raw_ostream &OS = outs();
   auto receiver = [&](ArrayRef<DirectoryWatcher::Event> Events, bool isInitial) {
+    OS << "-- " << Events.size() << " :\n";
     for (auto evt : Events) {
       switch (evt.Kind) {
         case DirectoryWatcher::EventKind::Added:
