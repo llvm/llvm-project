@@ -158,6 +158,7 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable();
+  void createRuntimePseudoRelocs();
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *File,
                               ArrayRef<SectionChunk *> SymIdxChunks,
@@ -524,6 +525,9 @@ void Writer::createMiscChunks() {
   // Create /guard:cf tables if requested.
   if (Config->GuardCF != GuardCFLevel::Off)
     createGuardCFTables();
+
+  if (Config->MinGW)
+    createRuntimePseudoRelocs();
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1138,6 +1142,33 @@ void Writer::maybeAddRVATable(SymbolRVASet TableSymbols, StringRef TableSym,
   Symbol *C = Symtab->findUnderscore(CountSym);
   replaceSymbol<DefinedSynthetic>(T, T->getName(), TableChunk);
   cast<DefinedAbsolute>(C)->setVA(TableChunk->getSize() / 4);
+}
+
+// MinGW specific. Gather all relocations that are imported from a DLL even
+// though the code didn't expect it to, produce the table that the runtime
+// uses for fixing them up, and provide the synthetic symbols that the
+// runtime uses for finding the table.
+void Writer::createRuntimePseudoRelocs() {
+  std::vector<RuntimePseudoReloc> Rels;
+
+  for (Chunk *C : Symtab->getChunks()) {
+    auto *SC = dyn_cast<SectionChunk>(C);
+    if (!SC || !SC->isLive())
+      continue;
+    SC->getRuntimePseudoRelocs(Rels);
+  }
+
+  if (!Rels.empty())
+    log("Writing " + Twine(Rels.size()) + " runtime pseudo relocations");
+  PseudoRelocTableChunk *Table = make<PseudoRelocTableChunk>(Rels);
+  RdataSec->addChunk(Table);
+  EmptyChunk *EndOfList = make<EmptyChunk>();
+  RdataSec->addChunk(EndOfList);
+
+  Symbol *HeadSym = Symtab->findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
+  Symbol *EndSym = Symtab->findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
+  replaceSymbol<DefinedSynthetic>(HeadSym, HeadSym->getName(), Table);
+  replaceSymbol<DefinedSynthetic>(EndSym, EndSym->getName(), EndOfList);
 }
 
 // Handles /section options to allow users to overwrite

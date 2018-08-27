@@ -63,6 +63,13 @@ bool Symbol::isLive() const {
   return true;
 }
 
+// MinGW specific.
+void Symbol::replaceKeepingName(Symbol *Other, size_t Size) {
+  StringRef OrigName = Name;
+  memcpy(this, Other, Size);
+  Name = OrigName;
+}
+
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
   size_t SymSize = cast<ObjFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))

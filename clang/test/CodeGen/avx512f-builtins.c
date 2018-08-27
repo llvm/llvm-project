@@ -8185,6 +8185,71 @@ __mmask16 test_mm512_kxor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
+__mmask16 test_knot_mask16(__mmask16 a) {
+  // CHECK-LABEL: @test_knot_mask16
+  // CHECK: [[IN:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[NOT:%.*]] = xor <16 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: bitcast <16 x i1> [[NOT]] to i16
+  return _knot_mask16(a);
+}
+
+__mmask16 test_kand_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kand_mask16
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RES:%.*]] = and <16 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_mask_cmpneq_epu32_mask(_kand_mask16(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                    _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                    __E, __F);
+}
+
+__mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kandn_mask16
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[NOT:%.*]] = xor <16 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[RES:%.*]] = and <16 x i1> [[NOT]], [[RHS]]
+  // CHECK: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_mask_cmpneq_epu32_mask(_kandn_mask16(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                     _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                     __E, __F);
+}
+
+__mmask16 test_kor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kor_mask16
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RES:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_mask_cmpneq_epu32_mask(_kor_mask16(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                   _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                   __E, __F);
+}
+
+__mmask16 test_kxnor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kxnor_mask16
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[NOT:%.*]] = xor <16 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[RES:%.*]] = xor <16 x i1> [[NOT]], [[RHS]]
+  // CHECK: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_mask_cmpneq_epu32_mask(_kxnor_mask16(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                     _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                     __E, __F);
+}
+
+__mmask16 test_kxor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kxor_mask16
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RES:%.*]] = xor <16 x i1> [[LHS]], [[RHS]]
+  // CHECK: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_mask_cmpneq_epu32_mask(_kxor_mask16(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                    _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                    __E, __F);
+}
+
 void test_mm512_stream_si512(__m512i * __P, __m512i __A) {
   // CHECK-LABEL: @test_mm512_stream_si512
   // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal

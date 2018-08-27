@@ -1577,7 +1577,7 @@ bool FastISel::selectInstruction(const Instruction *I) {
   MachineInstr *SavedLastLocalValue = getLastLocalValue();
   // Just before the terminator instruction, insert instructions to
   // feed PHI nodes in successor blocks.
-  if (isa<TerminatorInst>(I)) {
+  if (I->isTerminator()) {
     if (!handlePHINodesInSuccessorBlocks(I->getParent())) {
       // PHI node handling may have generated local value instructions,
       // even though it failed to handle all PHI nodes.
@@ -1641,7 +1641,7 @@ bool FastISel::selectInstruction(const Instruction *I) {
 
   DbgLoc = DebugLoc();
   // Undo phi node updates, because they will be added again by SelectionDAG.
-  if (isa<TerminatorInst>(I)) {
+  if (I->isTerminator()) {
     // PHI node handling may have generated local value instructions.
     // We remove them because SelectionDAGISel will generate them again.
     removeDeadLocalValueCode(SavedLastLocalValue);

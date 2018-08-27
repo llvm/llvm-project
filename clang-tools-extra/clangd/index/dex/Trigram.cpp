@@ -67,10 +67,6 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
     UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
   };
 
-  // FIXME(kbobyrev): Instead of producing empty trigram for each identifier,
-  // just use True Iterator on the query side when the query string is empty.
-  add({{END_MARKER, END_MARKER, END_MARKER}});
-
   if (TwoHeads.size() == 2)
     add({{TwoHeads.front(), TwoHeads.back(), END_MARKER}});
 

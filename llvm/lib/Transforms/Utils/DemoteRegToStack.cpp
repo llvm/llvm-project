@@ -90,7 +90,7 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   // careful if I is an invoke instruction, because we can't insert the store
   // AFTER the terminator instruction.
   BasicBlock::iterator InsertPt;
-  if (!isa<TerminatorInst>(I)) {
+  if (!I.isTerminator()) {
     InsertPt = ++I.getIterator();
     for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
       /* empty */;   // Don't insert before PHI nodes or landingpad instrs.

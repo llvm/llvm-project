@@ -57,7 +57,7 @@ Configuration *Config;
 LinkerDriver *Driver;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
-  errorHandler().LogName = args::FilenameWithoutExe(Args[0]);
+  errorHandler().LogName = args::getFilenameWithoutExe(Args[0]);
   errorHandler().ErrorOS = &Diag;
   errorHandler().ColorDiagnostics = Diag.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -1367,6 +1367,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Needed for MSVC 2017 15.5 CRT.
   Symtab->addAbsolute(mangle("__enclave_config"), 0);
 
+  if (Config->MinGW) {
+    Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
+    Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+  }
+
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
   // converge.
@@ -1410,6 +1415,24 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // link those files.
   Symtab->addCombinedLTOObjects();
   run();
+
+  if (Config->MinGW) {
+    // Load any further object files that might be needed for doing automatic
+    // imports.
+    //
+    // For cases with no automatically imported symbols, this iterates once
+    // over the symbol table and doesn't do anything.
+    //
+    // For the normal case with a few automatically imported symbols, this
+    // should only need to be run once, since each new object file imported
+    // is an import library and wouldn't add any new undefined references,
+    // but there's nothing stopping the __imp_ symbols from coming from a
+    // normal object file as well (although that won't be used for the
+    // actual autoimport later on). If this pass adds new undefined references,
+    // we won't iterate further to resolve them.
+    Symtab->loadMinGWAutomaticImports();
+    run();
+  }
 
   // Make sure we have resolved all symbols.
   Symtab->reportRemainingUndefines();

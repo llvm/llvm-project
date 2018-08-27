@@ -459,7 +459,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   DenseMap<Value *, Value *> ResolvedValues;
 
   Instruction *I = InitialInst;
-  while (isa<TerminatorInst>(I)) {
+  while (I->isTerminator()) {
     if (isa<ReturnInst>(I)) {
       if (I != InitialInst)
         ReplaceInstWithInst(InitialInst, I->clone());

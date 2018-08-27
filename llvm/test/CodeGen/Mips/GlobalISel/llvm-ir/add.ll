@@ -10,3 +10,79 @@ entry:
   %z = add i32 %x, %y
   ret i32 %z
 }
+
+define signext i8 @add_i8_sext(i8 signext %a, i8 signext %b) {
+; MIPS32-LABEL: add_i8_sext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    sll $4, $4, 24
+; MIPS32-NEXT:    sra $2, $4, 24
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i8 %b, %a
+  ret i8 %add
+}
+
+define zeroext i8 @add_i8_zext(i8 zeroext %a, i8 zeroext %b) {
+; MIPS32-LABEL: add_i8_zext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    lui $5, 0
+; MIPS32-NEXT:    ori $5, $5, 255
+; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i8 %b, %a
+  ret i8 %add
+}
+
+define i8 @add_i8_aext(i8 %a, i8 %b) {
+; MIPS32-LABEL: add_i8_aext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $2, $5, $4
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i8 %b, %a
+  ret i8 %add
+}
+
+define signext i16 @add_i16_sext(i16 signext %a, i16 signext %b) {
+; MIPS32-LABEL: add_i16_sext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    sll $4, $4, 16
+; MIPS32-NEXT:    sra $2, $4, 16
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i16 %b, %a
+  ret i16 %add
+}
+
+define zeroext i16 @add_i16_zext(i16 zeroext %a, i16 zeroext %b) {
+; MIPS32-LABEL: add_i16_zext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    lui $5, 0
+; MIPS32-NEXT:    ori $5, $5, 65535
+; MIPS32-NEXT:    and $2, $4, $5
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i16 %b, %a
+  ret i16 %add
+}
+
+define i16 @add_i16_aext(i16 %a, i16 %b) {
+; MIPS32-LABEL: add_i16_aext:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $2, $5, $4
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i16 %b, %a
+  ret i16 %add
+}

@@ -11,6 +11,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "clang/Driver/XRayArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 

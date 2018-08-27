@@ -10,19 +10,19 @@
 ; CHECK: struct K<struct M, -1> m2
 
 ?n@@3U?$J@UN@@$HA@@@A
-; CHECK: struct J<struct N, nullptr> n
+; CHECK: struct J<struct N, {0}> n
 
 ?n2@@3U?$K@UN@@$0?0@@A
 ; CHECK: struct K<struct N, -1> n2
 
 ?o@@3U?$J@UO@@$IA@A@@@A
-; CHECK: struct J<struct O, nullptr> o
+; CHECK: struct J<struct O, {0, 0}> o
 
 ?o2@@3U?$K@UO@@$FA@?0@@A
 ; CHECK: struct K<struct O, {0, -1}> o2
 
 ?p@@3U?$J@UP@@$JA@A@?0@@A
-; CHECK: struct J<struct P, nullptr> p
+; CHECK: struct J<struct P, {0, 0, -1}> p
 
 ?p2@@3U?$K@UP@@$GA@A@?0@@A
 ; CHECK: struct K<struct P, {0, 0, -1}> p2

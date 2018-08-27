@@ -115,17 +115,22 @@ Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
 
   SymbolFlagsMap SymbolFlags;
   for (auto &Sym : (*Obj)->symbols()) {
-    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
-        (Sym.getFlags() & object::BasicSymbolRef::SF_Exported)) {
-      auto Name = Sym.getName();
-      if (!Name)
-        return Name.takeError();
-      auto InternedName = ES.getSymbolStringPool().intern(*Name);
-      auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
-      if (!SymFlags)
-        return SymFlags.takeError();
-      SymbolFlags[InternedName] = std::move(*SymFlags);
-    }
+    // Skip symbols not defined in this object file.
+    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+      continue;
+
+    // Skip symbols that are not global.
+    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global))
+      continue;
+
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+    auto InternedName = ES.getSymbolStringPool().intern(*Name);
+    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+    if (!SymFlags)
+      return SymFlags.takeError();
+    SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
   return SymbolFlags;
