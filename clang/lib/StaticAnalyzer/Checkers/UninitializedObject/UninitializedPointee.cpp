@@ -96,7 +96,7 @@ public:
 static bool isVoidPointer(QualType T);
 
 /// Dereferences \p V and returns the value and dynamic type of the pointee, as
-/// well as wether \p FR needs to be casted back to that type. If for whatever
+/// well as whether \p FR needs to be casted back to that type. If for whatever
 /// reason dereferencing fails, returns with None.
 static llvm::Optional<std::tuple<SVal, QualType, bool>>
 dereference(ProgramStateRef State, const FieldRegion *FR);
