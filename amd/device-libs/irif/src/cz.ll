@@ -1,6 +1,6 @@
 ; ===--------------------------------------------------------------------------
 ;                    ROCm Device Libraries
-; 
+;
 ;  This file is distributed under the University of Illinois Open Source
 ;  License. See LICENSE.TXT for details.
 ; ===--------------------------------------------------------------------------
@@ -18,42 +18,42 @@ declare i16 @llvm.cttz.i16(i16, i1)
 declare i32 @llvm.cttz.i32(i32, i1)
 declare i64 @llvm.cttz.i64(i64, i1)
 
-define i8 @__llvm_ctlz_i8(i8) #0 {
+define protected i8 @__llvm_ctlz_i8(i8) #0 {
     %2 = call i8 @llvm.ctlz.i8(i8 %0, i1 0)
     ret i8 %2
 }
 
-define i16 @__llvm_ctlz_i16(i16) #0 {
+define protected i16 @__llvm_ctlz_i16(i16) #0 {
     %2 = call i16 @llvm.ctlz.i16(i16 %0, i1 0)
     ret i16 %2
 }
 
-define i32 @__llvm_ctlz_i32(i32) #0 {
+define protected i32 @__llvm_ctlz_i32(i32) #0 {
     %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 0)
     ret i32 %2
 }
 
-define i64 @__llvm_ctlz_i64(i64) #0 {
+define protected i64 @__llvm_ctlz_i64(i64) #0 {
     %2 = call i64 @llvm.ctlz.i64(i64 %0, i1 0)
     ret i64 %2
 }
 
-define i8 @__llvm_cttz_i8(i8) #0 {
+define protected i8 @__llvm_cttz_i8(i8) #0 {
     %2 = call i8 @llvm.cttz.i8(i8 %0, i1 0)
     ret i8 %2
 }
 
-define i16 @__llvm_cttz_i16(i16) #0 {
+define protected i16 @__llvm_cttz_i16(i16) #0 {
     %2 = call i16 @llvm.cttz.i16(i16 %0, i1 0)
     ret i16 %2
 }
 
-define i32 @__llvm_cttz_i32(i32) #0 {
+define protected i32 @__llvm_cttz_i32(i32) #0 {
     %2 = call i32 @llvm.cttz.i32(i32 %0, i1 0)
     ret i32 %2
 }
 
-define i64 @__llvm_cttz_i64(i64) #0 {
+define protected i64 @__llvm_cttz_i64(i64) #0 {
     %2 = call i64 @llvm.cttz.i64(i64 %0, i1 0)
     ret i64 %2
 }

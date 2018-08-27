@@ -19,13 +19,16 @@ set (CMAKE_OCL_COMPILER_ENV_VAR OCL)
 set (CMAKE_OCL_OUTPUT_EXTENTION ${BC_EXT})
 set (CMAKE_OCL_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
 set (CMAKE_OCL_COMPILE_OBJECT "${CMAKE_OCL_COMPILER} <INCLUDES> -o <OBJECT> <FLAGS> -c <SOURCE>")
-set (CMAKE_OCL_LINK_EXECUTABLE "${LLVM_LINK} -o <TARGET> <LINK_LIBRARIES>")
+set (CMAKE_OCL_LINK_EXECUTABLE "${CMAKE_COMMAND} -E copy <OBJECTS> <TARGET>")
 set (CMAKE_OCL_CREATE_STATIC_LIBRARY "${LLVM_LINK} -o <TARGET> <OBJECTS>")
 set (CMAKE_OCL_SOURCE_FILE_EXTENSIONS "cl")
 set (CMAKE_EXECUTABLE_SUFFIX_OCL ".co")
 
 macro(opencl_bc_lib name)
+  get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
+
   set(lib_tgt ${name}_lib)
+
   list(APPEND AMDGCN_LIB_LIST ${lib_tgt})
   set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
   foreach(file ${ARGN})
@@ -33,7 +36,7 @@ macro(opencl_bc_lib name)
     #mark files as OCL source
     if (fext STREQUAL ".cl")
       set_source_files_properties(${file} PROPERTIES
-        OBJECT_DEPENDS ${CMAKE_OCL_COMPILER}
+        OBJECT_DEPENDS "${CMAKE_OCL_COMPILER}"
         LANGUAGE "OCL")
     endif()
     #mark files as OCL object to add them to link
@@ -43,6 +46,7 @@ macro(opencl_bc_lib name)
   endforeach()
 
   add_library(${lib_tgt} STATIC ${ARGN})
+  add_dependencies(${lib_tgt} irif_lib)
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
     add_dependencies(${lib_tgt} llvm-link clang)
@@ -52,7 +56,7 @@ macro(opencl_bc_lib name)
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     ARCHIVE_OUTPUT_NAME "${name}"
     PREFIX "" SUFFIX ${LIB_SUFFIX}
-    COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm"
+    COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang ${irif_lib_output}"
     LINK_DEPENDS ${LLVM_LINK}
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
   set(output_name "${name}.amdgcn${BC_EXT}")
@@ -83,7 +87,6 @@ macro(clang_opencl_code name dir)
   endforeach()
   set(CMAKE_OCL_FLAGS "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
   #dummy link since clang already generated CodeObject file
-  set(CMAKE_OCL_LINK_EXECUTABLE "${CMAKE_COMMAND} -E copy <OBJECTS> <TARGET>")
   set_target_properties(${tgt_name} PROPERTIES
     COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${CMAKE_OCL_FLAGS}"
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
@@ -99,7 +102,7 @@ set (oclc_default_libs
 )
 
 macro(clang_opencl_test name dir)
-  clang_opencl_code(${name} ${dir} opencl ocml ockl ${oclc_default_libs} irif)
+  clang_opencl_code(${name} ${dir} opencl ocml ockl ${oclc_default_libs})
   add_test(
     NAME ${name}:llvm-objdump
     COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji $<TARGET_FILE:${name}_code>
