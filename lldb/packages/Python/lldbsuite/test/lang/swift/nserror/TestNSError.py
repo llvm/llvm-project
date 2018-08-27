@@ -25,8 +25,6 @@ class SwiftNSErrorTest(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(
-        bugnumber="https://bugs.swift.org/browse/SR-782")
     def test_swift_nserror(self):
         """Tests that Swift displays NSError correctly"""
         self.build()
@@ -48,12 +46,21 @@ class SwiftNSErrorTest(TestBase):
             "thread list", STOPPED_DUE_TO_BREAKPOINT,
             substrs=['stopped', 'stop reason = breakpoint'])
 
-        self.expect("frame variable -d run --ptr-depth=2", substrs=[
-            '0 = " "', '1 = 0x', 'domain: "lldbrocks" - code: 3133079277 {',
-            '_userInfo = ', '2 key/value pairs {',
-            '0 = ', ' "x"', '1 = ', ' Int64(0)', '0 = ', ' "y"', '1 = ',
-            ' Int64(0)', '0 = "x+y"', 'domain: "lldbrocks" - code: 0 {',
-            '1 = ', ' Int64(3)', '1 = ', ' Int64(4)'])
+        self.expect(
+            "frame variable -d run --ptr-depth=2",
+            substrs=[
+              '0 = " "',
+              '0 = "x+y"',
+              '1 = 0x', 'domain: "lldbrocks" - code: 3133079277 {',
+                        'domain: "lldbrocks" - code: 0 {',
+                '_userInfo = 2 key/value pairs {',
+                  '[0] = {',
+                  '[1] = {',
+                    'key = "x"',
+                    'key = "y"',
+                    'value = 0',
+                    'value = 3',
+                    'value = 4'])
 
 if __name__ == '__main__':
     import atexit
