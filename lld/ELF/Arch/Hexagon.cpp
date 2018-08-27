@@ -53,6 +53,9 @@ static uint32_t applyMask(uint32_t Mask, uint32_t Data) {
 RelExpr Hexagon::getRelExpr(RelType Type, const Symbol &S,
                             const uint8_t *Loc) const {
   switch (Type) {
+  case R_HEX_B9_PCREL:
+  case R_HEX_B9_PCREL_X:
+  case R_HEX_B13_PCREL:
   case R_HEX_B15_PCREL:
   case R_HEX_B15_PCREL_X:
   case R_HEX_B22_PCREL:
@@ -112,6 +115,12 @@ static uint32_t findMaskR8(uint32_t Insn) {
   return 0x00001fe0;
 }
 
+static uint32_t findMaskR11(uint32_t Insn) {
+  if ((0xff000000 & Insn) == 0xa1000000)
+    return 0x060020ff;
+  return 0x06003fe0;
+}
+
 static uint32_t findMaskR16(uint32_t Insn) {
   if ((0xff000000 & Insn) == 0x48000000)
     return 0x061f20ff;
@@ -140,6 +149,15 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_HEX_8_X:
     or32le(Loc, applyMask(findMaskR8(read32le(Loc)), Val));
     break;
+  case R_HEX_9_X:
+    or32le(Loc, applyMask(0x00003fe0, Val & 0x3f));
+    break;
+  case R_HEX_10_X:
+    or32le(Loc, applyMask(0x00203fe0, Val & 0x3f));
+    break;
+  case R_HEX_11_X:
+    or32le(Loc, applyMask(findMaskR11(read32le(Loc)), Val & 0x3f));
+    break;
   case R_HEX_12_X:
     or32le(Loc, applyMask(0x000007e0, Val));
     break;
@@ -151,6 +169,15 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_HEX_32_6_X:
     or32le(Loc, applyMask(0x0fff3fff, Val >> 6));
+    break;
+  case R_HEX_B9_PCREL:
+    or32le(Loc, applyMask(0x003000fe, Val >> 2));
+    break;
+  case R_HEX_B9_PCREL_X:
+    or32le(Loc, applyMask(0x003000fe, Val & 0x3f));
+    break;
+  case R_HEX_B13_PCREL:
+    or32le(Loc, applyMask(0x00202ffe, Val >> 2));
     break;
   case R_HEX_B15_PCREL:
     or32le(Loc, applyMask(0x00df20fe, Val >> 2));
