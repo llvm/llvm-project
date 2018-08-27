@@ -1176,16 +1176,12 @@ COFFObjectFile::getRelocations(const coff_section *Sec) const {
 
 #define LLVM_COFF_SWITCH_RELOC_TYPE_NAME(reloc_type)                           \
   case COFF::reloc_type:                                                       \
-    Res = #reloc_type;                                                         \
-    break;
+    return #reloc_type;
 
-void COFFObjectFile::getRelocationTypeName(
-    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
-  const coff_relocation *Reloc = toRel(Rel);
-  StringRef Res;
+StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
   switch (getMachine()) {
   case COFF::IMAGE_FILE_MACHINE_AMD64:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR64);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32);
@@ -1204,11 +1200,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_PAIR);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SSPAN32);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32NB);
@@ -1225,11 +1221,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24T);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX23T);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32NB);
@@ -1248,11 +1244,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH19);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH14);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_I386:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR16);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL16);
@@ -1265,16 +1261,22 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL7);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL32);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   default:
-    Res = "Unknown";
+    return "Unknown";
   }
-  Result.append(Res.begin(), Res.end());
 }
 
 #undef LLVM_COFF_SWITCH_RELOC_TYPE_NAME
+
+void COFFObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  const coff_relocation *Reloc = toRel(Rel);
+  StringRef Res = getRelocationTypeName(Reloc->Type);
+  Result.append(Res.begin(), Res.end());
+}
 
 bool COFFObjectFile::isRelocatableObject() const {
   return !DataDirectory;

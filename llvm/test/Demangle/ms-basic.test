@@ -65,14 +65,11 @@
 ?x@@3PEATty@@EA
 ; CHECK: union ty *x
 
-?x@@3PEAUty@@EA
-; CHECK: struct ty *x
+?x@@3PEAVty@@EA
+; CHECK: class ty *x
 
 ?x@@3PEAW4ty@@EA
 ; CHECK: enum ty *x
-
-?x@@3PEAVty@@EA
-; CHECK: class ty *x
 
 ?x@@3PEAV?$tmpl@H@@EA
 ; CHECK: class tmpl<int> *x
