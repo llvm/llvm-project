@@ -1053,6 +1053,9 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   switch (T.getArch()) {
   case Triple::aarch64:
     return EM_AARCH64;
+  case Triple::amdgcn:
+  case Triple::r600:
+    return EM_AMDGPU;
   case Triple::arm:
   case Triple::thumb:
     return EM_ARM;
