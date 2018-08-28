@@ -152,17 +152,13 @@ public:
                          Type *type) {
     size_t type_size = m_target_data.getTypeStoreSize(type);
 
-    switch (type_size) {
-    case 1:
-    case 2:
-    case 4:
-    case 8:
-      scalar = llvm::APInt(type_size*8, u64value);
-      break;
-    default:
+    if (type_size > 8)
       return false;
-    }
 
+    if (type_size != 1)
+      type_size = PowerOf2Ceil(type_size);
+
+    scalar = llvm::APInt(type_size*8, u64value);
     return true;
   }
 
@@ -192,8 +188,7 @@ public:
         return false;
 
       lldb::offset_t offset = 0;
-      if (value_size == 1 || value_size == 2 || value_size == 4 ||
-          value_size == 8) {
+      if (value_size <= 8) {
         uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
         return AssignToMatchType(scalar, u64value, value->getType());
       }
