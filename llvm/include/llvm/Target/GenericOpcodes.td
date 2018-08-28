@@ -311,6 +311,14 @@ def G_PTR_MASK : GenericInstruction {
 // Overflow ops
 //------------------------------------------------------------------------------
 
+// Generic unsigned addition producing a carry flag.
+def G_UADDO : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 // Generic unsigned addition consuming and producing a carry flag.
 def G_UADDE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -326,6 +334,19 @@ def G_SADDO : GenericInstruction {
   let isCommutable = 1;
 }
 
+// Generic signed addition consuming and producing a carry flag.
+def G_SADDE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
+  let hasSideEffects = 0;
+}
+
+// Generic unsigned subtraction producing a carry flag.
+def G_USUBO : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
 // Generic unsigned subtraction consuming and producing a carry flag.
 def G_USUBE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -333,10 +354,17 @@ def G_USUBE : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Generic unsigned subtraction producing a carry flag.
+// Generic signed subtraction producing a carry flag.
 def G_SSUBO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic signed subtraction consuming and producing a carry flag.
+def G_SSUBE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
   let hasSideEffects = 0;
 }
 

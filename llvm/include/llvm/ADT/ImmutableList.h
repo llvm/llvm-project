@@ -31,8 +31,9 @@ class ImmutableListImpl : public FoldingSetNode {
   T Head;
   const ImmutableListImpl* Tail;
 
-  ImmutableListImpl(const T& head, const ImmutableListImpl* tail = nullptr)
-    : Head(head), Tail(tail) {}
+  template <typename ElemT>
+  ImmutableListImpl(ElemT &&head, const ImmutableListImpl *tail = nullptr)
+    : Head(std::forward<ElemT>(head)), Tail(tail) {}
 
 public:
   ImmutableListImpl(const ImmutableListImpl &) = delete;
@@ -65,6 +66,9 @@ class ImmutableList {
 public:
   using value_type = T;
   using Factory = ImmutableListFactory<T>;
+
+  static_assert(std::is_trivially_destructible<T>::value,
+                "T must be trivially destructible!");
 
 private:
   const ImmutableListImpl<T>* X;
@@ -166,7 +170,8 @@ public:
     if (ownsAllocator()) delete &getAllocator();
   }
 
-  LLVM_NODISCARD ImmutableList<T> concat(const T &Head, ImmutableList<T> Tail) {
+  template <typename ElemT>
+  LLVM_NODISCARD ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
     void* InsertPos;
@@ -179,7 +184,7 @@ public:
       // The list does not exist in our cache.  Create it.
       BumpPtrAllocator& A = getAllocator();
       L = (ListTy*) A.Allocate<ListTy>();
-      new (L) ListTy(Head, TailImpl);
+      new (L) ListTy(std::forward<ElemT>(Head), TailImpl);
 
       // Insert the new list into the cache.
       Cache.InsertNode(L, InsertPos);
@@ -188,16 +193,24 @@ public:
     return L;
   }
 
-  LLVM_NODISCARD ImmutableList<T> add(const T& D, ImmutableList<T> L) {
-    return concat(D, L);
+  template <typename ElemT>
+  LLVM_NODISCARD ImmutableList<T> add(ElemT &&Data, ImmutableList<T> L) {
+    return concat(std::forward<ElemT>(Data), L);
+  }
+
+  template <typename ...CtorArgs>
+  LLVM_NODISCARD ImmutableList<T> emplace(ImmutableList<T> Tail,
+                                          CtorArgs &&...Args) {
+    return concat(T(std::forward<CtorArgs>(Args)...), Tail);
   }
 
   ImmutableList<T> getEmptyList() const {
     return ImmutableList<T>(nullptr);
   }
 
-  ImmutableList<T> create(const T& X) {
-    return concat(X, getEmptyList());
+  template <typename ElemT>
+  ImmutableList<T> create(ElemT &&Data) {
+    return concat(std::forward<ElemT>(Data), getEmptyList());
   }
 };
 

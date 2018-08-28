@@ -23,10 +23,10 @@ namespace orc {
 
 class NullResolver : public SymbolResolver {
 public:
-  SymbolFlagsMap lookupFlags(const SymbolNameSet &Symbols) override;
+  SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) final;
 
   SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
-                       SymbolNameSet Symbols) override;
+                       SymbolNameSet Symbols) final;
 };
 
 /// SymbolResolver impliementation that rejects all resolution requests.

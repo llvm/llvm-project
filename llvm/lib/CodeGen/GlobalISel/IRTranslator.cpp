@@ -717,17 +717,11 @@ void IRTranslator::getStackGuard(unsigned DstReg,
 bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                               MachineIRBuilder &MIRBuilder) {
   ArrayRef<unsigned> ResRegs = getOrCreateVRegs(CI);
-  auto MIB = MIRBuilder.buildInstr(Op)
-                 .addDef(ResRegs[0])
-                 .addDef(ResRegs[1])
-                 .addUse(getOrCreateVReg(*CI.getOperand(0)))
-                 .addUse(getOrCreateVReg(*CI.getOperand(1)));
-
-  if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
-    unsigned Zero = getOrCreateVReg(
-        *Constant::getNullValue(Type::getInt1Ty(CI.getContext())));
-    MIB.addUse(Zero);
-  }
+  MIRBuilder.buildInstr(Op)
+      .addDef(ResRegs[0])
+      .addDef(ResRegs[1])
+      .addUse(getOrCreateVReg(*CI.getOperand(0)))
+      .addUse(getOrCreateVReg(*CI.getOperand(1)));
 
   return true;
 }
@@ -819,11 +813,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::uadd_with_overflow:
-    return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDE, MIRBuilder);
+    return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SADDO, MIRBuilder);
   case Intrinsic::usub_with_overflow:
-    return translateOverflowIntrinsic(CI, TargetOpcode::G_USUBE, MIRBuilder);
+    return translateOverflowIntrinsic(CI, TargetOpcode::G_USUBO, MIRBuilder);
   case Intrinsic::ssub_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SSUBO, MIRBuilder);
   case Intrinsic::umul_with_overflow:

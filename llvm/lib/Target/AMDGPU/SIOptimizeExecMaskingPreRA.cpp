@@ -119,7 +119,14 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     // Try to remove unneeded instructions before s_endpgm.
     if (MBB.succ_empty()) {
-      if (MBB.empty() || MBB.back().getOpcode() != AMDGPU::S_ENDPGM)
+      if (MBB.empty())
+        continue;
+
+      // Skip this if the endpgm has any implicit uses, otherwise we would need
+      // to be careful to update / remove them.
+      MachineInstr &Term = MBB.back();
+      if (Term.getOpcode() != AMDGPU::S_ENDPGM ||
+          Term.getNumOperands() != 0)
         continue;
 
       SmallVector<MachineBasicBlock*, 4> Blocks({&MBB});

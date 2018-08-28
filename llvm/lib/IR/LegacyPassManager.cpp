@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -493,65 +494,6 @@ void PassManagerImpl::anchor() {}
 char PassManagerImpl::ID = 0;
 } // End of legacy namespace
 } // End of llvm namespace
-
-namespace {
-
-//===----------------------------------------------------------------------===//
-/// TimingInfo Class - This class is used to calculate information about the
-/// amount of time each pass takes to execute.  This only happens when
-/// -time-passes is enabled on the command line.
-///
-
-static ManagedStatic<sys::SmartMutex<true> > TimingInfoMutex;
-
-class TimingInfo {
-  DenseMap<Pass*, Timer*> TimingData;
-  TimerGroup TG;
-public:
-  // Use 'create' member to get this.
-  TimingInfo() : TG("pass", "... Pass execution timing report ...") {}
-
-  // TimingDtor - Print out information about timing information
-  ~TimingInfo() {
-    // Delete all of the timers, which accumulate their info into the
-    // TimerGroup.
-    for (auto &I : TimingData)
-      delete I.second;
-    // TimerGroup is deleted next, printing the report.
-  }
-
-  // createTheTimeInfo - This method either initializes the TheTimeInfo pointer
-  // to a non-null value (if the -time-passes option is enabled) or it leaves it
-  // null.  It may be called multiple times.
-  static void createTheTimeInfo();
-
-  // print - Prints out timing information and then resets the timers.
-  void print() {
-    TG.print(*CreateInfoOutputFile());
-  }
-
-  /// getPassTimer - Return the timer for the specified pass if it exists.
-  Timer *getPassTimer(Pass *P) {
-    if (P->getAsPMDataManager())
-      return nullptr;
-
-    sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
-    Timer *&T = TimingData[P];
-    if (!T) {
-      StringRef PassName = P->getPassName();
-      StringRef PassArgument;
-      if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
-        PassArgument = PI->getPassArgument();
-      T = new Timer(PassArgument.empty() ? PassName : PassArgument, PassName,
-                    TG);
-    }
-    return T;
-  }
-};
-
-} // End of anon namespace
-
-static TimingInfo *TheTimeInfo;
 
 //===----------------------------------------------------------------------===//
 // PMTopLevelManager implementation
@@ -1527,7 +1469,6 @@ void FunctionPassManagerImpl::releaseMemoryOnTheFly() {
 // Return true if any function is modified by a pass.
 bool FunctionPassManagerImpl::run(Function &F) {
   bool Changed = false;
-  TimingInfo::createTheTimeInfo();
 
   initializeAllAnalysisInfo();
   for (unsigned Index = 0; Index < getNumContainedManagers(); ++Index) {
@@ -1763,7 +1704,6 @@ Pass* MPPassManager::getOnTheFlyPass(Pass *MP, AnalysisID PI, Function &F){
 /// whether any of the passes modifies the module, and if so, return true.
 bool PassManagerImpl::run(Module &M) {
   bool Changed = false;
-  TimingInfo::createTheTimeInfo();
 
   dumpArguments();
   dumpPasses();
@@ -1805,41 +1745,6 @@ void PassManager::add(Pass *P) {
 /// whether any of the passes modifies the module, and if so, return true.
 bool PassManager::run(Module &M) {
   return PM->run(M);
-}
-
-//===----------------------------------------------------------------------===//
-// TimingInfo implementation
-
-bool llvm::TimePassesIsEnabled = false;
-static cl::opt<bool, true> EnableTiming(
-    "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
-    cl::desc("Time each pass, printing elapsed time for each on exit"));
-
-// createTheTimeInfo - This method either initializes the TheTimeInfo pointer to
-// a non-null value (if the -time-passes option is enabled) or it leaves it
-// null.  It may be called multiple times.
-void TimingInfo::createTheTimeInfo() {
-  if (!TimePassesIsEnabled || TheTimeInfo) return;
-
-  // Constructed the first time this is called, iff -time-passes is enabled.
-  // This guarantees that the object will be constructed before static globals,
-  // thus it will be destroyed before them.
-  static ManagedStatic<TimingInfo> TTI;
-  TheTimeInfo = &*TTI;
-}
-
-/// If TimingInfo is enabled then start pass timer.
-Timer *llvm::getPassTimer(Pass *P) {
-  if (TheTimeInfo)
-    return TheTimeInfo->getPassTimer(P);
-  return nullptr;
-}
-
-/// If timing is enabled, report the times collected up to now and then reset
-/// them.
-void llvm::reportAndResetTimings() {
-  if (TheTimeInfo)
-    TheTimeInfo->print();
 }
 
 //===----------------------------------------------------------------------===//

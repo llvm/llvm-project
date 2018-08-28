@@ -204,7 +204,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
   // First, collect all weak and common symbols. We need to know if stronger
   // definitions occur elsewhere.
-  JITSymbolResolver::LookupFlagsResult SymbolFlags;
+  JITSymbolResolver::LookupSet ResponsibilitySet;
   {
     JITSymbolResolver::LookupSet Symbols;
     for (auto &Sym : Obj.symbols()) {
@@ -218,10 +218,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       }
     }
 
-    if (auto FlagsResultOrErr = Resolver.lookupFlags(Symbols))
-      SymbolFlags = std::move(*FlagsResultOrErr);
+    if (auto ResultOrErr = Resolver.getResponsibilitySet(Symbols))
+      ResponsibilitySet = std::move(*ResultOrErr);
     else
-      return FlagsResultOrErr.takeError();
+      return ResultOrErr.takeError();
   }
 
   // Parse symbols
@@ -259,29 +259,26 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     // strong.
     if (JITSymFlags->isWeak() || JITSymFlags->isCommon()) {
       // First check whether there's already a definition in this instance.
-      // FIXME: Override existing weak definitions with strong ones.
       if (GlobalSymbolTable.count(Name))
         continue;
 
-      // Then check whether we found flags for an existing symbol during the
-      // flags lookup earlier.
-      auto FlagsI = SymbolFlags.find(Name);
-      if (FlagsI == SymbolFlags.end() ||
-          (JITSymFlags->isWeak() && !FlagsI->second.isStrong()) ||
-          (JITSymFlags->isCommon() && FlagsI->second.isCommon())) {
-        if (JITSymFlags->isWeak())
-          *JITSymFlags &= ~JITSymbolFlags::Weak;
-        if (JITSymFlags->isCommon()) {
-          *JITSymFlags &= ~JITSymbolFlags::Common;
-          uint32_t Align = I->getAlignment();
-          uint64_t Size = I->getCommonSize();
-          if (!CommonAlign)
-            CommonAlign = Align;
-          CommonSize = alignTo(CommonSize, Align) + Size;
-          CommonSymbolsToAllocate.push_back(*I);
-        }
-      } else
+      // If we're not responsible for this symbol, skip it.
+      if (!ResponsibilitySet.count(Name))
         continue;
+
+      // Otherwise update the flags on the symbol to make this definition
+      // strong.
+      if (JITSymFlags->isWeak())
+        *JITSymFlags &= ~JITSymbolFlags::Weak;
+      if (JITSymFlags->isCommon()) {
+        *JITSymFlags &= ~JITSymbolFlags::Common;
+        uint32_t Align = I->getAlignment();
+        uint64_t Size = I->getCommonSize();
+        if (!CommonAlign)
+          CommonAlign = Align;
+        CommonSize = alignTo(CommonSize, Align) + Size;
+        CommonSymbolsToAllocate.push_back(*I);
+      }
     }
 
     if (Flags & SymbolRef::SF_Absolute &&

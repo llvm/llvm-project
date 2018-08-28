@@ -18,41 +18,64 @@ using namespace llvm;
 
 namespace mca {
 
-void TimelineView::initialize(unsigned MaxIterations) {
-  unsigned NumInstructions =
-      AsmSequence.getNumIterations() * AsmSequence.size();
+TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
+                           const SourceMgr &S, unsigned MaxIterations,
+                           unsigned Cycles)
+    : STI(sti), MCIP(Printer), AsmSequence(S), CurrentCycle(0),
+      MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0), WaitTime(S.size()),
+      UsedBuffer(S.size()) {
+  unsigned NumInstructions = AsmSequence.size();
   if (!MaxIterations)
     MaxIterations = DEFAULT_ITERATIONS;
-  unsigned NumEntries =
-      std::min(NumInstructions, MaxIterations * AsmSequence.size());
-  Timeline.resize(NumEntries);
-  TimelineViewEntry NullTVEntry = {0, 0, 0, 0, 0};
-  std::fill(Timeline.begin(), Timeline.end(), NullTVEntry);
+  NumInstructions *= std::min(MaxIterations, AsmSequence.getNumIterations());
+  Timeline.resize(NumInstructions);
 
-  WaitTime.resize(AsmSequence.size());
-  WaitTimeEntry NullWTEntry = {0, 0, 0, 0};
+  WaitTimeEntry NullWTEntry = {0, 0, 0};
   std::fill(WaitTime.begin(), WaitTime.end(), NullWTEntry);
+
+  std::pair<unsigned, int> NullUsedBufferEntry = {/* Invalid resource ID*/ 0,
+                                                  /* unknown buffer size */ -1};
+  std::fill(UsedBuffer.begin(), UsedBuffer.end(), NullUsedBufferEntry);
+}
+
+void TimelineView::onReservedBuffers(const InstRef &IR,
+                                     ArrayRef<unsigned> Buffers) {
+  if (IR.getSourceIndex() >= AsmSequence.size())
+    return;
+
+  const MCSchedModel &SM = STI.getSchedModel();
+  std::pair<unsigned, int> BufferInfo = {0, -1};
+  for (const unsigned Buffer : Buffers) {
+    const MCProcResourceDesc &MCDesc = *SM.getProcResource(Buffer);
+    if (!BufferInfo.first || BufferInfo.second > MCDesc.BufferSize) {
+      BufferInfo.first = Buffer;
+      BufferInfo.second = MCDesc.BufferSize;
+    }
+  }
+
+  UsedBuffer[IR.getSourceIndex()] = BufferInfo;
 }
 
 void TimelineView::onEvent(const HWInstructionEvent &Event) {
   const unsigned Index = Event.IR.getSourceIndex();
-  if (CurrentCycle >= MaxCycle || Index >= Timeline.size())
+  if (Index >= Timeline.size())
     return;
+
   switch (Event.Type) {
   case HWInstructionEvent::Retired: {
     TimelineViewEntry &TVEntry = Timeline[Index];
-    TVEntry.CycleRetired = CurrentCycle;
+    if (CurrentCycle < MaxCycle)
+      TVEntry.CycleRetired = CurrentCycle;
 
     // Update the WaitTime entry which corresponds to this Index.
     WaitTimeEntry &WTEntry = WaitTime[Index % AsmSequence.size()];
-    WTEntry.Executions++;
     WTEntry.CyclesSpentInSchedulerQueue +=
         TVEntry.CycleIssued - TVEntry.CycleDispatched;
     assert(TVEntry.CycleDispatched <= TVEntry.CycleReady);
     WTEntry.CyclesSpentInSQWhileReady +=
         TVEntry.CycleIssued - TVEntry.CycleReady;
     WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
-        (TVEntry.CycleRetired - 1) - TVEntry.CycleExecuted;
+        (CurrentCycle - 1) - TVEntry.CycleExecuted;
     break;
   }
   case HWInstructionEvent::Ready:
@@ -70,57 +93,83 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
   default:
     return;
   }
-  LastCycle = std::max(LastCycle, CurrentCycle);
+  if (CurrentCycle < MaxCycle)
+    LastCycle = std::max(LastCycle, CurrentCycle);
+}
+
+static raw_ostream::Colors chooseColor(unsigned CumulativeCycles,
+                                       unsigned Executions, int BufferSize) {
+  if (CumulativeCycles && BufferSize < 0)
+    return raw_ostream::MAGENTA;
+  unsigned Size = static_cast<unsigned>(BufferSize);
+  if (CumulativeCycles >= Size * Executions)
+    return raw_ostream::RED;
+  if ((CumulativeCycles * 2) >= Size * Executions)
+    return raw_ostream::YELLOW;
+  return raw_ostream::SAVEDCOLOR;
+}
+
+static void tryChangeColor(raw_ostream &OS, unsigned Cycles,
+                           unsigned Executions, int BufferSize) {
+  if (!OS.has_colors())
+    return;
+
+  raw_ostream::Colors Color = chooseColor(Cycles, Executions, BufferSize);
+  if (Color == raw_ostream::SAVEDCOLOR) {
+    OS.resetColor();
+    return;
+  }
+  OS.changeColor(Color, /* bold */ true, /* BG */ false);
 }
 
 void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
                                       const WaitTimeEntry &Entry,
-                                      unsigned SourceIndex) const {
+                                      unsigned SourceIndex,
+                                      unsigned Executions) const {
   OS << SourceIndex << '.';
   OS.PadToColumn(7);
 
-  if (Entry.Executions == 0) {
-    OS << "-      -      -      -     ";
-  } else {
-    double AverageTime1, AverageTime2, AverageTime3;
-    unsigned Executions = Entry.Executions;
-    AverageTime1 = (double)Entry.CyclesSpentInSchedulerQueue / Executions;
-    AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / Executions;
-    AverageTime3 = (double)Entry.CyclesSpentAfterWBAndBeforeRetire / Executions;
+  double AverageTime1, AverageTime2, AverageTime3;
+  AverageTime1 = (double)Entry.CyclesSpentInSchedulerQueue / Executions;
+  AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / Executions;
+  AverageTime3 = (double)Entry.CyclesSpentAfterWBAndBeforeRetire / Executions;
 
-    OS << Executions;
-    OS.PadToColumn(13);
+  OS << Executions;
+  OS.PadToColumn(13);
+  int BufferSize = UsedBuffer[SourceIndex].second;
+  tryChangeColor(OS, Entry.CyclesSpentInSchedulerQueue, Executions, BufferSize);
+  OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
+  OS.PadToColumn(20);
+  tryChangeColor(OS, Entry.CyclesSpentInSQWhileReady, Executions, BufferSize);
+  OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
+  OS.PadToColumn(27);
+  tryChangeColor(OS, Entry.CyclesSpentAfterWBAndBeforeRetire, Executions,
+                 STI.getSchedModel().MicroOpBufferSize);
+  OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
 
-    OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
-    OS.PadToColumn(20);
-    OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
-    OS.PadToColumn(27);
-    OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
-    OS.PadToColumn(34);
-  }
+  if (OS.has_colors())
+    OS.resetColor();
+  OS.PadToColumn(34);
 }
 
 void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
-  if (WaitTime.empty())
-    return;
+  std::string Header =
+      "\n\nAverage Wait times (based on the timeline view):\n"
+      "[0]: Executions\n"
+      "[1]: Average time spent waiting in a scheduler's queue\n"
+      "[2]: Average time spent waiting in a scheduler's queue while ready\n"
+      "[3]: Average time elapsed from WB until retire stage\n\n"
+      "      [0]    [1]    [2]    [3]\n";
+  OS << Header;
 
-  std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
-  formatted_raw_ostream FOS(TempStream);
-
-  FOS << "\n\nAverage Wait times (based on the timeline view):\n"
-      << "[0]: Executions\n"
-      << "[1]: Average time spent waiting in a scheduler's queue\n"
-      << "[2]: Average time spent waiting in a scheduler's queue while ready\n"
-      << "[3]: Average time elapsed from WB until retire stage\n\n";
-  FOS << "      [0]    [1]    [2]    [3]\n";
-
-  // Use a different string stream for the instruction.
+  // Use a different string stream for printing instructions.
   std::string Instruction;
   raw_string_ostream InstrStream(Instruction);
 
+  formatted_raw_ostream FOS(OS);
+  unsigned Executions = Timeline.size() / AsmSequence.size();
   for (unsigned I = 0, E = WaitTime.size(); I < E; ++I) {
-    printWaitTimeEntry(FOS, WaitTime[I], I);
+    printWaitTimeEntry(FOS, WaitTime[I], I, Executions);
     // Append the instruction info at the end of the line.
     const MCInst &Inst = AsmSequence.getMCInstFromIndex(I);
 
@@ -133,9 +182,6 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
     FOS << "   " << Str << '\n';
     FOS.flush();
     Instruction = "";
-
-    OS << Buffer;
-    Buffer = "";
   }
 }
 
@@ -202,20 +248,15 @@ static void printTimelineHeader(formatted_raw_ostream &OS, unsigned Cycles) {
 }
 
 void TimelineView::printTimeline(raw_ostream &OS) const {
-  std::string Buffer;
-  raw_string_ostream StringStream(Buffer);
-  formatted_raw_ostream FOS(StringStream);
-
+  formatted_raw_ostream FOS(OS);
   printTimelineHeader(FOS, LastCycle);
   FOS.flush();
-  OS << Buffer;
 
   // Use a different string stream for the instruction.
   std::string Instruction;
   raw_string_ostream InstrStream(Instruction);
 
   for (unsigned I = 0, E = Timeline.size(); I < E; ++I) {
-    Buffer = "";
     const TimelineViewEntry &Entry = Timeline[I];
     if (Entry.CycleRetired == 0)
       return;
@@ -234,7 +275,6 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
     FOS << "   " << Str << '\n';
     FOS.flush();
     Instruction = "";
-    OS << Buffer;
   }
 }
 } // namespace mca

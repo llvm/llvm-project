@@ -44,27 +44,13 @@ public:
     return Result;
   }
 
-  Expected<LookupFlagsResult> lookupFlags(const LookupSet &Symbols) {
-    auto &ES = MR.getTargetJITDylib().getExecutionSession();
+  Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) {
+    LookupSet Result;
 
-    SymbolNameSet InternedSymbols;
-
-    for (auto &S : Symbols)
-      InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
-
-    SymbolFlagsMap InternedResult;
-    MR.getTargetJITDylib().withSearchOrderDo([&](const JITDylibList &JDs) {
-      // An empty search order is pathalogical, but allowed.
-      if (JDs.empty())
-        return;
-
-      assert(JDs.front() && "VSOList entry can not be null");
-      InternedResult = JDs.front()->lookupFlags(InternedSymbols);
-    });
-
-    LookupFlagsResult Result;
-    for (auto &KV : InternedResult)
-      Result[*KV.first] = std::move(KV.second);
+    for (auto &KV : MR.getSymbols()) {
+      if (Symbols.count(*KV.first))
+        Result.insert(*KV.first);
+    }
 
     return Result;
   }
