@@ -183,7 +183,10 @@ static void thread_cleanup_handler(void *_iter) {
   thread_stack_ll **stackp = &temp_stacks;
   while (*stackp) {
     thread_stack_ll *stack = *stackp;
-    if (stack->pid != pid || TgKill(stack->pid, stack->tid, 0) == -ESRCH) {
+    int error;
+    if (stack->pid != pid ||
+        (internal_iserror(TgKill(stack->pid, stack->tid, 0), &error) &&
+         error == ESRCH)) {
       UnmapOrDie(stack->stack_base, stack->size);
       *stackp = stack->next;
       free(stack);
