@@ -1,0 +1,22 @@
+// RUN: %lldb --repl < %s | FileCheck %s
+
+enum Patatino {
+  case first
+  case second
+}
+
+struct Test {
+  var a : Int
+  var b : Patatino
+}
+
+let x : Optional<Test> = nil
+
+// CHECK: {{x}}: Test? = nil
+
+let y : Optional<Test> = Test(a: 1, b: Patatino.first)
+
+// CHECK-NEXT: {{y}}: Test? = some {
+// CHECK-NEXT: a = 1
+// CHECK-NEXT: b = first
+// CHECK-NEXT: }
