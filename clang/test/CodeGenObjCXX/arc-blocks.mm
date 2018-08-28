@@ -141,7 +141,7 @@ namespace test1 {
 
 // CHECK: [[LPAD]]:
 // CHECK: invoke void @_ZN5test12S0D1Ev(%[[STRUCT_TEST1_S0]]* %[[V5]])
-// CHECK: to label %[[INVOKE_CONT3:.*]] unwind label %[[TERMINATE_LPAD]]
+// CHECK: to label %[[INVOKE_CONT3:.*]] unwind label %[[TERMINATE_LPAD:.*]]
 
 // CHECK: [[LPAD1]]
 // CHECK: br label %[[EHCLEANUP:.*]]
@@ -154,7 +154,7 @@ namespace test1 {
 // CHECK: %[[V14:.*]] = load i8*, i8** %[[V2]], align 8
 // CHECK: call void @_Block_object_dispose(i8* %[[V14]], i32 8)
 // CHECK: call void @objc_storeStrong(i8** %[[V4]], i8* null)
-// CHECK: br label %[[EH_RESUME]]
+// CHECK: br label %[[EH_RESUME:.*]]
 
 // CHECK: [[EH_RESUME]]:
 // CHECK: resume { i8*, i32 }

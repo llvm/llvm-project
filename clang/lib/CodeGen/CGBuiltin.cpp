@@ -8613,7 +8613,7 @@ static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
     LHS = CGF.Builder.CreateNot(LHS);
 
   return CGF.Builder.CreateBitCast(CGF.Builder.CreateBinOp(Opc, LHS, RHS),
-                                  CGF.Builder.getIntNTy(std::max(NumElts, 8U)));
+                                   Ops[0]->getType());
 }
 
 static Value *EmitX86Select(CodeGenFunction &CGF,
@@ -10031,6 +10031,34 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
   }
 
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_kaddqi:
+      IID = Intrinsic::x86_avx512_kadd_b;
+      break;
+    case X86::BI__builtin_ia32_kaddhi:
+      IID = Intrinsic::x86_avx512_kadd_w;
+      break;
+    case X86::BI__builtin_ia32_kaddsi:
+      IID = Intrinsic::x86_avx512_kadd_d;
+      break;
+    case X86::BI__builtin_ia32_kadddi:
+      IID = Intrinsic::x86_avx512_kadd_q;
+      break;
+    }
+
+    unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
+    Value *LHS = getMaskVecValue(*this, Ops[0], NumElts);
+    Value *RHS = getMaskVecValue(*this, Ops[1], NumElts);
+    Function *Intr = CGM.getIntrinsic(IID);
+    Value *Res = Builder.CreateCall(Intr, {LHS, RHS});
+    return Builder.CreateBitCast(Res, Ops[0]->getType());
+  }
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
