@@ -72,7 +72,7 @@ struct Cluster {
   size_t Size = 0;
   uint64_t Weight = 0;
   uint64_t InitialWeight = 0;
-  std::vector<Edge> Preds;
+  Edge BestPred = {-1, 0};
 };
 
 class CallGraphSort {
@@ -136,8 +136,12 @@ CallGraphSort::CallGraphSort() {
     if (From == To)
       continue;
 
-    // Add an edge
-    Clusters[To].Preds.push_back({From, Weight});
+    // Remember the best edge.
+    Cluster &ToC = Clusters[To];
+    if (ToC.BestPred.From == -1 || ToC.BestPred.Weight < Weight) {
+      ToC.BestPred.From = From;
+      ToC.BestPred.Weight = Weight;
+    }
   }
   for (Cluster &C : Clusters)
     C.InitialWeight = C.Weight;
@@ -181,21 +185,11 @@ void CallGraphSort::groupClusters() {
     // been merged into another cluster yet.
     Cluster &C = Clusters[SI];
 
-    int BestPred = -1;
-    uint64_t BestWeight = 0;
-
-    for (Edge &E : C.Preds) {
-      if (BestPred == -1 || E.Weight > BestWeight) {
-        BestPred = E.From;
-        BestWeight = E.Weight;
-      }
-    }
-
-    // don't consider merging if the edge is unlikely.
-    if (BestWeight * 10 <= C.InitialWeight)
+    // Don't consider merging if the edge is unlikely.
+    if (C.BestPred.From == -1 || C.BestPred.Weight * 10 <= C.InitialWeight)
       continue;
 
-    Cluster *PredC = SecToCluster[BestPred];
+    Cluster *PredC = SecToCluster[C.BestPred.From];
     if (PredC == &C)
       continue;
 
