@@ -29,10 +29,11 @@
 using namespace clang;
 using namespace clang::clangd;
 
+// FIXME: remove this option when Dex is stable enough.
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
            llvm::cl::desc("Use experimental Dex static index."),
-           llvm::cl::init(false), llvm::cl::Hidden);
+           llvm::cl::init(true), llvm::cl::Hidden);
 
 namespace {
 
@@ -259,6 +260,9 @@ int main(int argc, char *argv[]) {
   if (Tracer)
     TracingSession.emplace(*Tracer);
 
+  // Use buffered stream to stderr (we still flush each log message). Unbuffered
+  // stream can cause significant (non-deterministic) latency for the logger.
+  llvm::errs().SetBuffered();
   JSONOutput Out(llvm::outs(), llvm::errs(), LogLevel,
                  InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
                  PrettyPrint);

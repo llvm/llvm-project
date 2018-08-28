@@ -1,0 +1,15 @@
+LLVM notes
+----------
+
+This directory contains the Google Benchmark source code. Currently, the checked
+Benchmark library version is v1.4.1.
+
+This directory is under a different license than LLVM.
+
+Changes:
+
+* Bazel BUILD files are removed from the library
+* https://github.com/google/benchmark/commit/f85304e4e3a0e4e1bf15b91720df4a19e90b589f
+  is applied on top of the v1.4.1 to silence compiler warnings
+* https://github.com/google/benchmark/commit/505be96ab23056580a3a2315abba048f4428b04e
+  is applied to comply with the LLVM's required CMake version

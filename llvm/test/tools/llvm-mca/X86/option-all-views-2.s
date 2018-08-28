@@ -45,9 +45,15 @@ add %eax, %eax
 # ALL-NEXT:         1,          100  (97.1%)
 
 # ALL:             Scheduler's queue usage:
-# ALL-NEXT:        JALU01,  20/20
-# ALL-NEXT:        JFPU01,  0/18
-# ALL-NEXT:        JLSAGU,  0/12
+# ALL-NEXT:        [1] Resource name.
+# ALL-NEXT:        [2] Average number of used buffer entries.
+# ALL-NEXT:        [3] Maximum number of used buffer entries.
+# ALL-NEXT:        [4] Total number of buffer entries.
+
+# ALL:              [1]            [2]        [3]        [4]
+# ALL-NEXT:        JALU01           15         20         20
+# ALL-NEXT:        JFPU01           0          0          18
+# ALL-NEXT:        JLSAGU           0          0          12
 
 # ALL:             Retire Control Unit - number of cycles where we saw N instructions retired:
 # ALL-NEXT:        [# retired], [# cycles]

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9 | not grep non_lazy_ptr
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | not grep non_lazy_ptr
 
 @x = weak hidden global i32 0		; <i32*> [#uses=1]
 

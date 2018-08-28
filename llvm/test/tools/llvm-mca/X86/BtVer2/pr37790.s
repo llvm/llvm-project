@@ -37,5 +37,5 @@ stmxcsr (%rsp)
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0       int3
-# CHECK-NEXT: 1.     1     101.0  0.0    0.0       stmxcsr	(%rsp)
+# CHECK-NEXT: 0.     2     1.0    0.5    0.0       int3
+# CHECK-NEXT: 1.     2     100.5  0.0    0.0       stmxcsr	(%rsp)

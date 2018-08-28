@@ -5597,12 +5597,6 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
   }
 
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
-    if (DependentAddressSpaceTypeLoc DASTL =
-        CurrTL.getAs<DependentAddressSpaceTypeLoc>()) {
-      fillDependentAddressSpaceTypeLoc(DASTL, D.getTypeObject(i).getAttrs());
-      CurrTL = DASTL.getPointeeTypeLoc().getUnqualifiedLoc();
-    }
-
     // An AtomicTypeLoc might be produced by an atomic qualifier in this
     // declarator chunk.
     if (AtomicTypeLoc ATL = CurrTL.getAs<AtomicTypeLoc>()) {
@@ -5613,6 +5607,12 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
       fillAttributedTypeLoc(TL, State);
       CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
+    }
+
+    while (DependentAddressSpaceTypeLoc TL =
+               CurrTL.getAs<DependentAddressSpaceTypeLoc>()) {
+      fillDependentAddressSpaceTypeLoc(TL, D.getTypeObject(i).getAttrs());
+      CurrTL = TL.getPointeeTypeLoc().getUnqualifiedLoc();
     }
 
     // FIXME: Ordering here?
@@ -5767,7 +5767,10 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 /// specified type.  The attribute contains 1 argument, the id of the address
 /// space for the type.
 static void HandleAddressSpaceTypeAttribute(QualType &Type,
-                                            const ParsedAttr &Attr, Sema &S) {
+                                            const ParsedAttr &Attr,
+                                            TypeProcessingState &State) {
+  Sema &S = State.getSema();
+
   // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "A function type shall not be
   // qualified by an address-space qualifier."
   if (Type->isFunctionType()) {
@@ -5809,10 +5812,15 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     // the type.
     QualType T = S.BuildAddressSpaceAttr(Type, ASArgExpr, Attr.getLoc());
 
-    if (!T.isNull())
-      Type = T;
-    else
+    if (!T.isNull()) {
+      ASTContext &Ctx = S.Context;
+      auto *ASAttr = ::new (Ctx) AddressSpaceAttr(
+          Attr.getRange(), Ctx, Attr.getAttributeSpellingListIndex(),
+          static_cast<unsigned>(T.getQualifiers().getAddressSpace()));
+      Type = State.getAttributedType(ASAttr, T, T);
+    } else {
       Attr.setInvalid();
+    }
   } else {
     // The keyword-based type attributes imply which address space to use.
     switch (Attr.getKind()) {
@@ -7282,7 +7290,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
-      HandleAddressSpaceTypeAttribute(type, attr, state.getSema());
+      HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:

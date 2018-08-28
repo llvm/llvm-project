@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=powerpc-apple-darwin < %s -instcombine | \
+; RUN: opt -mtriple=powerpc-unknown-linux-gnu < %s -instcombine | \
 ; RUN:   llc -mtriple=ppc32-- -mcpu=g5 | not grep vperm
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 > %t
 ; RUN: grep vsldoi  %t | count 2

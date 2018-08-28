@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "DurationDivisionCheck.h"
 #include "FasterStrsplitDelimiterCheck.h"
+#include "NoNamespaceCheck.h"
 #include "StringFindStartswithCheck.h"
 
 namespace clang {
@@ -25,6 +26,7 @@ public:
         "abseil-duration-division");
     CheckFactories.registerCheck<FasterStrsplitDelimiterCheck>(
         "abseil-faster-strsplit-delimiter");
+    CheckFactories.registerCheck<NoNamespaceCheck>("abseil-no-namespace");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
   }

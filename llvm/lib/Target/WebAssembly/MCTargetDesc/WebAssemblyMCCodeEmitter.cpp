@@ -72,8 +72,11 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   }
 
   // For br_table instructions, encode the size of the table. In the MCInst,
-  // there's an index operand, one operand for each table entry, and the
-  // default operand.
+  // there's an index operand (if not a stack instruction), one operand for
+  // each table entry, and the default operand.
+  if (MI.getOpcode() == WebAssembly::BR_TABLE_I32_S ||
+      MI.getOpcode() == WebAssembly::BR_TABLE_I64_S)
+    encodeULEB128(MI.getNumOperands() - 1, OS);
   if (MI.getOpcode() == WebAssembly::BR_TABLE_I32 ||
       MI.getOpcode() == WebAssembly::BR_TABLE_I64)
     encodeULEB128(MI.getNumOperands() - 2, OS);

@@ -268,6 +268,30 @@ image_sample  v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
 // GFX9:     image_sample v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]
 
 //===----------------------------------------------------------------------===//
+// Image Sample: a16
+//===----------------------------------------------------------------------===//
+
+image_sample v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16
+// GFX9:   image_sample v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16 ; encoding: [0x00,0x8f,0x80,0xf0,0xed,0xc1,0x27,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
+image_sample_d v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16
+// GFX9:   image_sample_d v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16 ; encoding: [0x00,0x8f,0x88,0xf0,0xed,0xc1,0x27,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
+image_sample_c_d v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16
+// GFX9:   image_sample_c_d v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16 ; encoding: [0x00,0x8f,0xa8,0xf0,0xed,0xc1,0x27,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
+image_sample_c_d_cl v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16
+// GFX9:   image_sample_c_d_cl v[193:196], v[237:240], s[28:35], s[4:7] dmask:0xf a16 ; encoding: [0x00,0x8f,0xac,0xf0,0xed,0xc1,0x27,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
+//===----------------------------------------------------------------------===//
 // Image Atomics
 //===----------------------------------------------------------------------===//
 
@@ -372,3 +396,13 @@ image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1
 // NOGFX8_0: error: image data size does not match dmask and tfe
 // NOGFX8_1: error: image data size does not match dmask and tfe
 // NOGFX9:   error: image data size does not match dmask and tfe
+
+image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 a16
+// GFX9:     image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 a16 ; encoding: [0x00,0x81,0x00,0xf1,0x01,0x05,0x62,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
+image_gather4_b_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 a16
+// GFX9:    image_gather4_b_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x1 a16 ; encoding: [0x00,0x81,0x18,0xf1,0x01,0x05,0x62,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU

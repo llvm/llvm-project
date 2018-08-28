@@ -30,7 +30,7 @@ set(LLDB_TEST_USER_ARGS
   ""
   CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
 
-# The .nodindex suffix is a marker for Spotlight to never index the
+# The .noindex suffix is a marker for Spotlight to never index the
 # build directory.  LLDB queries Spotlight to locate .dSYM bundles
 # based on the UUID embedded in a binary, and because the UUID is a
 # hash of filename and .text section, there *will* be conflicts inside

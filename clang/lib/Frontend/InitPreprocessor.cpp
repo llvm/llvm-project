@@ -1106,14 +1106,19 @@ static void InitializePredefinedAuxMacros(const TargetInfo &AuxTI,
   auto AuxTriple = AuxTI.getTriple();
 
   // Define basic target macros needed by at least bits/wordsize.h and
-  // bits/mathinline.h
+  // bits/mathinline.h.
+  // On PowerPC, explicitely set _CALL_ELF macro needed for gnu/stubs.h.
   switch (AuxTriple.getArch()) {
   case llvm::Triple::x86_64:
     Builder.defineMacro("__x86_64__");
     break;
   case llvm::Triple::ppc64:
+    Builder.defineMacro("__powerpc64__");
+    Builder.defineMacro("_CALL_ELF", "1");
+    break;
   case llvm::Triple::ppc64le:
     Builder.defineMacro("__powerpc64__");
+    Builder.defineMacro("_CALL_ELF", "2");
     break;
   default:
     break;

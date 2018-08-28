@@ -14,7 +14,7 @@
 // RUN: %clang_cc1 -x cuda -E -dM -ffreestanding < /dev/null \
 // RUN:     -triple nvptx64-none-none -aux-triple powerpc64le-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s \
-// RUN:     -check-prefixes NVPTX64,PPC64,LINUX,LINUX-CPP
+// RUN:     -check-prefixes NVPTX64,PPC64LE,LINUX,LINUX-CPP
 // RUN: %clang_cc1 -x cuda -E -dM -ffreestanding < /dev/null \
 // RUN:     -triple nvptx64-none-none -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s \
@@ -24,7 +24,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding < /dev/null \
 // RUN:     -fopenmp -fopenmp-is-device -triple nvptx64-none-none \
 // RUN:     -aux-triple powerpc64le-unknown-linux-gnu \
-// RUN:   | FileCheck -match-full-lines -check-prefixes NVPTX64,PPC64,LINUX %s
+// RUN:   | FileCheck -match-full-lines -check-prefixes NVPTX64,PPC64LE,LINUX %s
 // RUN: %clang_cc1 -E -dM -ffreestanding < /dev/null \
 // RUN:     -fopenmp -fopenmp-is-device -triple nvptx64-none-none \
 // RUN:     -aux-triple x86_64-unknown-linux-gnu \
@@ -33,12 +33,14 @@
 // RUN:     -fopenmp -fopenmp-is-device -triple nvptx64-none-none \
 // RUN:     -aux-triple powerpc64le-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s \
-// RUN:     -check-prefixes NVPTX64,PPC64,LINUX,LINUX-CPP
+// RUN:     -check-prefixes NVPTX64,PPC64LE,LINUX,LINUX-CPP
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding < /dev/null \
 // RUN:     -fopenmp -fopenmp-is-device -triple nvptx64-none-none \
 // RUN:     -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s \
 // RUN:     -check-prefixes NVPTX64,X86_64,LINUX,LINUX-CPP
+
+// PPC64LE:#define _CALL_ELF 2
 
 // NONE-NOT:#define _GNU_SOURCE
 // LINUX-CPP:#define _GNU_SOURCE 1
@@ -56,7 +58,7 @@
 // LINUX:#define __linux__ 1
 
 // NONE-NOT:#define __powerpc64__
-// PPC64:#define __powerpc64__ 1
+// PPC64LE:#define __powerpc64__ 1
 
 // NONE-NOT:#define __x86_64__
 // X86_64:#define __x86_64__ 1

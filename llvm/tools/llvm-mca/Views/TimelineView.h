@@ -106,7 +106,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
 
 namespace mca {
 
@@ -136,22 +135,24 @@ class TimelineView : public View {
   std::vector<TimelineViewEntry> Timeline;
 
   struct WaitTimeEntry {
-    unsigned Executions;
     unsigned CyclesSpentInSchedulerQueue;
     unsigned CyclesSpentInSQWhileReady;
     unsigned CyclesSpentAfterWBAndBeforeRetire;
   };
   std::vector<WaitTimeEntry> WaitTime;
 
+  // This field is used to map instructions to buffered resources.
+  // Elements of this vector are <resourceID, BufferSizer> pairs.
+  std::vector<std::pair<unsigned, int>> UsedBuffer;
+
   void printTimelineViewEntry(llvm::formatted_raw_ostream &OS,
                               const TimelineViewEntry &E, unsigned Iteration,
                               unsigned SourceIndex) const;
   void printWaitTimeEntry(llvm::formatted_raw_ostream &OS,
-                          const WaitTimeEntry &E, unsigned Index) const;
+                          const WaitTimeEntry &E, unsigned Index,
+                          unsigned Executions) const;
 
   const unsigned DEFAULT_ITERATIONS = 10;
-
-  void initialize(unsigned MaxIterations);
 
   // Display characters for the TimelineView report output.
   struct DisplayChar {
@@ -166,15 +167,13 @@ class TimelineView : public View {
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
                const SourceMgr &Sequence, unsigned MaxIterations,
-               unsigned Cycles)
-      : STI(sti), MCIP(Printer), AsmSequence(Sequence), CurrentCycle(0),
-        MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0) {
-    initialize(MaxIterations);
-  }
+               unsigned Cycles);
 
   // Event handlers.
   void onCycleEnd() override { ++CurrentCycle; }
   void onEvent(const HWInstructionEvent &Event) override;
+  void onReservedBuffers(const InstRef &IR,
+                         llvm::ArrayRef<unsigned> Buffers) override;
 
   // print functionalities.
   void printTimeline(llvm::raw_ostream &OS) const;

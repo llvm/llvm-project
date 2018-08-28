@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s  -tailcallopt -mtriple=powerpc-apple-darwin -relocation-model=pic | grep TC_RETURN
+; RUN: llc -verify-machineinstrs < %s  -tailcallopt -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | grep TC_RETURN
 
 
 

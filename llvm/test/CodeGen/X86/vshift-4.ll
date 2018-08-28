@@ -136,16 +136,18 @@ define void @shift3a(<8 x i16> %val, <8 x i16>* %dst, <8 x i16> %amt) nounwind {
 ; X32-LABEL: shift3a:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pextrw $6, %xmm1, %ecx
-; X32-NEXT:    movd %ecx, %xmm1
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; X32-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; X32-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    psllw %xmm1, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shift3a:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pextrw $6, %xmm1, %eax
-; X64-NEXT:    movd %eax, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; X64-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; X64-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    psllw %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq

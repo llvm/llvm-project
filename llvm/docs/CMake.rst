@@ -250,6 +250,12 @@ LLVM-specific variables
   this option to disable the generation of build targets for the LLVM unit
   tests.
 
+**LLVM_BUILD_BENCHMARKS**:BOOL
+  Adds benchmarks to the list of default targets. Defaults to OFF.
+
+**LLVM_INCLUDE_BENCHMARKS**:BOOL
+  Generate build targets for the LLVM benchmarks. Defaults to ON.
+
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (svn revision number or Git revision id).
   The version info is provided by the ``LLVM_REVISION`` macro in

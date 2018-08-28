@@ -108,10 +108,8 @@ define double @pow_exp2(double %x, double %y) {
   ret double %pow
 }
 
-; FIXME: Should not result in two calls to exp2().
 define double @pow_exp2_libcall(double %x, double %y) {
 ; CHECK-LABEL: @pow_exp2_libcall(
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @exp2(double [[X:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
@@ -176,6 +174,32 @@ define fp128 @pow_exp10l(fp128 %x, fp128 %y) {
 ;
   %call = call fast fp128 @exp10l(fp128 %x) nounwind readnone
   %pow = call fast fp128 @llvm.pow.f128(fp128 %call, fp128 %y)
+  ret fp128 %pow
+}
+
+define float @reuse_fast(float %x, float %y, float * %p) {
+; CHECK-LABEL: @reuse_fast(
+; CHECK-NEXT:    [[EXP:%.*]] = call fast float @expf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[EXP]], float [[Y:%.*]])
+; CHECK-NEXT:    store float [[EXP]], float* [[P:%.*]], align 4
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %exp = call fast float @expf(float %x)
+  %pow = call fast float @powf(float %exp, float %y)
+  store float %exp, float *%p, align 4
+  ret float %pow
+}
+
+define fp128 @reuse_libcall(fp128 %x, fp128 %y, fp128 * %p) {
+; CHECK-LABEL: @reuse_libcall(
+; CHECK-NEXT:    [[EXP:%.*]] = call fp128 @expl(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = call fp128 @powl(fp128 [[EXP]], fp128 [[Y:%.*]])
+; CHECK-NEXT:    store fp128 [[EXP]], fp128* [[P:%.*]], align 16
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %exp = call fp128 @expl(fp128 %x)
+  %pow = call fp128 @powl(fp128 %exp, fp128 %y)
+  store fp128 %exp, fp128 *%p, align 16
   ret fp128 %pow
 }
 

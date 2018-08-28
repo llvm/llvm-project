@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 -mattr=stfiwx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 -mattr=-stfiwx | FileCheck -check-prefix=CHECK-LS %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mattr=stfiwx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mattr=-stfiwx | FileCheck -check-prefix=CHECK-LS %s
 
 define void @test1(float %a, i32* %b) nounwind {
 ; CHECK-LABEL: @test1
@@ -8,6 +8,7 @@ define void @test1(float %a, i32* %b) nounwind {
         store i32 %tmp.2, i32* %b
         ret void
 
+; CHECK: stwu
 ; CHECK-NOT: lwz
 ; CHECK-NOT: stw
 ; CHECK: stfiwx
@@ -30,6 +31,7 @@ define void @test2(float %a, i32* %b, i32 %i) nounwind {
         store i32 %tmp.7, i32* %b
         ret void
 
+; CHECK: stwu
 ; CHECK-NOT: lwz
 ; CHECK-NOT: stw
 ; CHECK: stfiwx
@@ -40,4 +42,3 @@ define void @test2(float %a, i32* %b, i32 %i) nounwind {
 ; CHECK-LS-NOT: stfiwx
 ; CHECK-LS: blr
 }
-

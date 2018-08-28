@@ -1533,10 +1533,12 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         // get a report for its operand.
         if (Bad) {
           for (const MachineOperand &MOP : MI->uses()) {
-            if (!MOP.isReg())
+            if (!MOP.isReg() || !MOP.isImplicit())
               continue;
-            if (!MOP.isImplicit())
+
+            if (!TargetRegisterInfo::isPhysicalRegister(MOP.getReg()))
               continue;
+
             for (MCSubRegIterator SubRegs(MOP.getReg(), TRI); SubRegs.isValid();
                  ++SubRegs) {
               if (*SubRegs == Reg) {
