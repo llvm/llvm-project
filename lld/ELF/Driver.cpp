@@ -340,10 +340,10 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
 
 static bool isKnown(StringRef S) {
   return S == "combreloc" || S == "copyreloc" || S == "defs" ||
-         S == "execstack" || S == "hazardplt" || S == "initfirst" ||
-         S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
-         S == "nocombreloc" || S == "nocopyreloc" || S == "nodelete" ||
-         S == "nodlopen" || S == "noexecstack" ||
+         S == "execstack" || S == "global" || S == "hazardplt" ||
+         S == "initfirst" || S == "keep-text-section-prefix" || S == "lazy" ||
+         S == "muldefs" || S == "nocombreloc" || S == "nocopyreloc" ||
+         S == "nodelete" || S == "nodlopen" || S == "noexecstack" ||
          S == "nokeep-text-section-prefix" || S == "norelro" || S == "notext" ||
          S == "now" || S == "origin" || S == "relro" || S == "retpolineplt" ||
          S == "rodynamic" || S == "text" || S == "wxneeded" ||
@@ -833,6 +833,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZCombreloc = getZFlag(Args, "combreloc", "nocombreloc", true);
   Config->ZCopyreloc = getZFlag(Args, "copyreloc", "nocopyreloc", true);
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
+  Config->ZGlobal = hasZOption(Args, "global");
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
   Config->ZInitfirst = hasZOption(Args, "initfirst");
   Config->ZKeepTextSectionPrefix = getZFlag(

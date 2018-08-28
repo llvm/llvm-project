@@ -10012,14 +10012,21 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86MaskedCompare(*this, CC, false, Ops);
   }
 
+  case X86::BI__builtin_ia32_kortestcqi:
   case X86::BI__builtin_ia32_kortestchi:
-  case X86::BI__builtin_ia32_kortestzhi: {
+  case X86::BI__builtin_ia32_kortestcsi:
+  case X86::BI__builtin_ia32_kortestcdi: {
     Value *Or = EmitX86MaskLogic(*this, Instruction::Or, Ops);
-    Value *C;
-    if (BuiltinID == X86::BI__builtin_ia32_kortestchi)
-      C = llvm::Constant::getAllOnesValue(Builder.getInt16Ty());
-    else
-      C = llvm::Constant::getNullValue(Builder.getInt16Ty());
+    Value *C = llvm::Constant::getAllOnesValue(Ops[0]->getType());
+    Value *Cmp = Builder.CreateICmpEQ(Or, C);
+    return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
+  }
+  case X86::BI__builtin_ia32_kortestzqi:
+  case X86::BI__builtin_ia32_kortestzhi:
+  case X86::BI__builtin_ia32_kortestzsi:
+  case X86::BI__builtin_ia32_kortestzdi: {
+    Value *Or = EmitX86MaskLogic(*this, Instruction::Or, Ops);
+    Value *C = llvm::Constant::getNullValue(Ops[0]->getType());
     Value *Cmp = Builder.CreateICmpEQ(Or, C);
     return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
   }
