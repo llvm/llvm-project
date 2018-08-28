@@ -1,4 +1,3 @@
-; REQUIRES: rdar43568594
 ; Verify the emission of accelerator tables for various targets for the DWARF<=4 case
 
 ; Darwin has the apple tables unless we specifically tune for gdb
