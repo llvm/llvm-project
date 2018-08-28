@@ -382,7 +382,7 @@ VerifyPCHJobAction::VerifyPCHJobAction(Action *Input, types::ID Type)
 void OffloadBundlingJobAction::anchor() {}
 
 OffloadBundlingJobAction::OffloadBundlingJobAction(ActionList &Inputs)
-    : JobAction(OffloadBundlingJobClass, Inputs, Inputs.front()->getType()) {}
+    : JobAction(OffloadBundlingJobClass, Inputs, Inputs.back()->getType()) {}
 
 void OffloadUnbundlingJobAction::anchor() {}
 
