@@ -150,6 +150,49 @@ TEST_F(ImmutableListTest, MultiElemIntListTest) {
   EXPECT_TRUE(L5.isEqual(L5));
 }
 
+template <typename Fundamental>
+struct ExplicitCtorWrapper : public Wrapper<Fundamental> {
+  explicit ExplicitCtorWrapper(Fundamental F) : Wrapper<Fundamental>(F) {}
+  ExplicitCtorWrapper(const ExplicitCtorWrapper &) = delete;
+  ExplicitCtorWrapper(ExplicitCtorWrapper &&) = default;
+  ExplicitCtorWrapper &operator=(const ExplicitCtorWrapper &) = delete;
+  ExplicitCtorWrapper &operator=(ExplicitCtorWrapper &&) = default;
+};
+
+TEST_F(ImmutableListTest, EmplaceIntListTest) {
+  ImmutableList<ExplicitCtorWrapper<int>>::Factory f;
+
+  ImmutableList<ExplicitCtorWrapper<int>> L = f.getEmptyList();
+  ImmutableList<ExplicitCtorWrapper<int>> L2 = f.emplace(L, 3);
+
+  ImmutableList<ExplicitCtorWrapper<int>> L3 =
+      f.add(ExplicitCtorWrapper<int>(2), L2);
+
+  ImmutableList<ExplicitCtorWrapper<int>> L4 =
+      f.emplace(L3, ExplicitCtorWrapper<int>(1));
+
+  ImmutableList<ExplicitCtorWrapper<int>> L5 =
+      f.add(ExplicitCtorWrapper<int>(1), L3);
+
+  EXPECT_FALSE(L2.isEmpty());
+  EXPECT_TRUE(L2.getTail().isEmpty());
+  EXPECT_EQ(3, L2.getHead());
+  EXPECT_TRUE(L.isEqual(L2.getTail()));
+  EXPECT_TRUE(L2.getTail().isEqual(L));
+
+  EXPECT_FALSE(L3.isEmpty());
+  EXPECT_FALSE(L2 == L3);
+  EXPECT_EQ(2, L3.getHead());
+  EXPECT_TRUE(L2 == L3.getTail());
+
+  EXPECT_FALSE(L4.isEmpty());
+  EXPECT_EQ(1, L4.getHead());
+  EXPECT_TRUE(L3 == L4.getTail());
+
+  EXPECT_TRUE(L4 == L5);
+  EXPECT_TRUE(L3 == L5.getTail());
+}
+
 TEST_F(ImmutableListTest, CharListOrderingTest) {
   ImmutableList<Wrapper<char>>::Factory f;
   ImmutableList<Wrapper<char>> L = f.getEmptyList();
