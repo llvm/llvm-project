@@ -307,7 +307,8 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
   if (DwarfVersion >= 5)
     return AccelTableKind::Dwarf;
   if (Tuning == DebuggerKind::LLDB)
-    return AccelTableKind::Apple;
+    return TT.isOSBinFormatMachO() ? AccelTableKind::Apple
+                                   : AccelTableKind::Dwarf;
   return AccelTableKind::None;
 }
 
