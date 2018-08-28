@@ -362,9 +362,17 @@ HANDLE_TARGET_OPCODE(G_FCMP)
 /// Generic select.
 HANDLE_TARGET_OPCODE(G_SELECT)
 
+/// Generic unsigned add instruction, consuming the normal operands and
+/// producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_UADDO)
+
 /// Generic unsigned add instruction, consuming the normal operands plus a carry
 /// flag, and similarly producing the result and a carry flag.
 HANDLE_TARGET_OPCODE(G_UADDE)
+
+/// Generic unsigned sub instruction, consuming the normal operands and
+/// producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_USUBO)
 
 /// Generic unsigned subtract instruction, consuming the normal operands plus a
 /// carry flag, and similarly producing the result and a carry flag.
@@ -374,9 +382,17 @@ HANDLE_TARGET_OPCODE(G_USUBE)
 /// flag.
 HANDLE_TARGET_OPCODE(G_SADDO)
 
+/// Generic signed add instruction, consuming the normal operands plus a carry
+/// flag, and similarly producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_SADDE)
+
 /// Generic signed subtract instruction, producing the result and a signed
 /// overflow flag.
 HANDLE_TARGET_OPCODE(G_SSUBO)
+
+/// Generic signed sub instruction, consuming the normal operands plus a carry
+/// flag, and similarly producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_SSUBE)
 
 /// Generic unsigned multiply instruction, producing the result and a signed
 /// overflow flag.
