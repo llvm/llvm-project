@@ -80,6 +80,7 @@ private:
   ByteCommand *readByteCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
+  bool readSectionDirective(OutputSection *Cmd, StringRef Tok1, StringRef Tok2);
   void readSectionAddressType(OutputSection *Cmd);
   OutputSection *readOverlaySectionDescription();
   OutputSection *readOutputSectionDescription(StringRef OutSec);
@@ -699,6 +700,26 @@ uint32_t ScriptParser::readFill() {
   return V;
 }
 
+// Tries to read the special directive for an output section definition which
+// can be one of following: "(NOLOAD)", "(COPY)", "(INFO)" or "(OVERLAY)".
+// Tok1 and Tok2 are next 2 tokens peeked. See comment for readSectionAddressType below.
+bool ScriptParser::readSectionDirective(OutputSection *Cmd, StringRef Tok1, StringRef Tok2) {
+  if (Tok1 != "(")
+    return false;
+  if (Tok2 != "NOLOAD" && Tok2 != "COPY" && Tok2 != "INFO" && Tok2 != "OVERLAY")
+    return false;
+
+  expect("(");
+  if (consume("NOLOAD")) {
+    Cmd->Noload = true;
+  } else {
+    skip(); // This is "COPY", "INFO" or "OVERLAY".
+    Cmd->NonAlloc = true;
+  }
+  expect(")");
+  return true;
+}
+
 // Reads an expression and/or the special directive for an output
 // section definition. Directive is one of following: "(NOLOAD)",
 // "(COPY)", "(INFO)" or "(OVERLAY)".
@@ -711,28 +732,12 @@ uint32_t ScriptParser::readFill() {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *Cmd) {
-  if (consume("(")) {
-    if (consume("NOLOAD")) {
-      expect(")");
-      Cmd->Noload = true;
-      return;
-    }
-    if (consume("COPY") || consume("INFO") || consume("OVERLAY")) {
-      expect(")");
-      Cmd->NonAlloc = true;
-      return;
-    }
-    Cmd->AddrExpr = readExpr();
-    expect(")");
-  } else {
-    Cmd->AddrExpr = readExpr();
-  }
+  if (readSectionDirective(Cmd, peek(), peek2()))
+    return;
 
-  if (consume("(")) {
-    expect("NOLOAD");
-    expect(")");
-    Cmd->Noload = true;
-  }
+  Cmd->AddrExpr = readExpr();
+  if (peek() == "(" && !readSectionDirective(Cmd, "(", peek2()))
+    setError("unknown section directive: " + peek2());
 }
 
 static Expr checkAlignment(Expr E, std::string &Loc) {
