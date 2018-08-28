@@ -571,8 +571,6 @@ def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
   let Documentation = [Undocumented];
-  // Represented as a qualifier or DependentAddressSpaceType instead.
-  let ASTNode = 0;
 }
 
 def Alias : Attr {
