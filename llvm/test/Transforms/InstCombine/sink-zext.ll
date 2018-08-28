@@ -68,4 +68,134 @@ define i64 @test4(i32 %V) {
   ret i64 %zext
 }
 
+define i64 @test5(i32 %V) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw i32 [[ASHR]], 1073741823
+; CHECK-NEXT:    [[ADD:%.*]] = sext i32 [[ADDCONV]] to i64
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %ashr = ashr i32 %V, 1
+  %sext = sext i32 %ashr to i64
+  %add = add i64 %sext, 1073741823
+  ret i64 %add
+}
+
+define <2 x i64> @test5_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test5_splat(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %add = add <2 x i64> %sext, <i64 1073741823, i64 1073741823>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @test5_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test5_vec(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 1, i32 2>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %add = add <2 x i64> %sext, <i64 1, i64 2>
+  ret <2 x i64> %add
+}
+
+define i64 @test6(i32 %V) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw i32 [[ASHR]], -1073741824
+; CHECK-NEXT:    [[ADD:%.*]] = sext i32 [[ADDCONV]] to i64
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %ashr = ashr i32 %V, 1
+  %sext = sext i32 %ashr to i64
+  %add = add i64 %sext, -1073741824
+  ret i64 %add
+}
+
+define <2 x i64> @test6_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test6_splat(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1073741824, i32 -1073741824>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %add = add <2 x i64> %sext, <i64 -1073741824, i64 -1073741824>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @test6_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test6_vec(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1, i32 -2>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %add = add <2 x i64> %sext, <i64 -1, i64 -2>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @test6_vec2(<2 x i32> %V) {
+; CHECK-LABEL: @test6_vec2(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %add = add <2 x i64> %sext, <i64 -1, i64 1>
+  ret <2 x i64> %add
+}
+
+define i64 @test7(i32 %V) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nuw i32 [[LSHR]], 2147483647
+; CHECK-NEXT:    [[ADD:%.*]] = zext i32 [[ADDCONV]] to i64
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %lshr = lshr i32 %V, 1
+  %zext = zext i32 %lshr to i64
+  %add = add i64 %zext, 2147483647
+  ret i64 %add
+}
+
+define <2 x i64> @test7_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test7_splat(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nuw <2 x i32> [[LSHR]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[ADD:%.*]] = zext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %lshr = lshr <2 x i32> %V, <i32 1, i32 1>
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %add = add <2 x i64> %zext, <i64 2147483647, i64 2147483647>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @test7_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test7_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nuw <2 x i32> [[LSHR]], <i32 1, i32 2>
+; CHECK-NEXT:    [[ADD:%.*]] = zext <2 x i32> [[ADDCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %lshr = lshr <2 x i32> %V, <i32 1, i32 1>
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %add = add <2 x i64> %zext, <i64 1, i64 2>
+  ret <2 x i64> %add
+}
+
 !0 = !{ i32 0, i32 2000 }

@@ -86,10 +86,10 @@ define void @single_access_no_preloop_with_offset(i32 *%arr, i32 *%a_len_ptr, i3
 ; CHECK-LABEL: @single_access_no_preloop_with_offset(
 
 ; CHECK: loop.preheader:
-; CHECK: [[not_safe_range_end:[^ ]+]] = sub i32 3, %len
 ; CHECK: [[not_n:[^ ]+]] = sub i32 -1, %n
-; CHECK: [[not_exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp sgt i32 [[not_safe_range_end]], [[not_n]]
-; CHECK: [[not_exit_main_loop_at_hiclamp:[^ ]+]] = select i1 [[not_exit_main_loop_at_hiclamp_cmp]], i32 [[not_safe_range_end]], i32 [[not_n]]
+; CHECK: [[not_safe_range_end:[^ ]+]] = sub i32 3, %len
+; CHECK: [[not_exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp sgt i32 [[not_n]], [[not_safe_range_end]]
+; CHECK: [[not_exit_main_loop_at_hiclamp:[^ ]+]] = select i1 [[not_exit_main_loop_at_hiclamp_cmp]], i32 [[not_n]], i32 [[not_safe_range_end]]
 ; CHECK: [[exit_main_loop_at_hiclamp:[^ ]+]] = sub i32 -1, [[not_exit_main_loop_at_hiclamp]]
 ; CHECK: [[exit_main_loop_at_loclamp_cmp:[^ ]+]] = icmp sgt i32 [[exit_main_loop_at_hiclamp]], 0
 ; CHECK: [[exit_main_loop_at_loclamp:[^ ]+]] = select i1 [[exit_main_loop_at_loclamp_cmp]], i32 [[exit_main_loop_at_hiclamp]], i32 0

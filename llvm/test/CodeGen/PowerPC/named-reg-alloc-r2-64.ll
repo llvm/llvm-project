@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=powerpc64-apple-darwin 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
 ; RUN: not llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
 
 define i64 @get_reg() nounwind {

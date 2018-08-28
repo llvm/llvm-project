@@ -7040,6 +7040,7 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   if (!(LHS == True && RHS == False) && !(LHS == False && RHS == True))
     return SDValue();
 
+  EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -7048,7 +7049,7 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETULT:
   case ISD::SETULE: {
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (TLI.isOperationLegalOrCustom(Opcode, VT))
+    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
@@ -7059,7 +7060,7 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETUGT:
   case ISD::SETUGE: {
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
-    if (TLI.isOperationLegalOrCustom(Opcode, VT))
+    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
@@ -9832,12 +9833,16 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (load x)) -> (load (conv*)x)
   // If the resultant load doesn't need a higher alignment than the original!
   if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
-      // Do not change the width of a volatile load.
-      !cast<LoadSDNode>(N0)->isVolatile() &&
       // Do not remove the cast if the types differ in endian layout.
       TLI.hasBigEndianPartOrdering(N0.getValueType(), DAG.getDataLayout()) ==
           TLI.hasBigEndianPartOrdering(VT, DAG.getDataLayout()) &&
-      (!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)) &&
+      // If the load is volatile, we only want to change the load type if the
+      // resulting load is legal. Otherwise we might increase the number of
+      // memory accesses. We don't care if the original type was legal or not
+      // as we assume software couldn't rely on the number of accesses of an
+      // illegal type.
+      ((!LegalOperations && !cast<LoadSDNode>(N0)->isVolatile()) ||
+       TLI.isOperationLegal(ISD::LOAD, VT)) &&
       TLI.isLoadBitCastBeneficial(N0.getValueType(), VT)) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     unsigned OrigAlign = LN0->getAlignment();
@@ -14693,6 +14698,11 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   if (Value.getOpcode() == ISD::BITCAST && !ST->isTruncatingStore() &&
       ST->isUnindexed()) {
     EVT SVT = Value.getOperand(0).getValueType();
+    // If the store is volatile, we only want to change the store type if the
+    // resulting store is legal. Otherwise we might increase the number of
+    // memory accesses. We don't care if the original type was legal or not
+    // as we assume software couldn't rely on the number of accesses of an
+    // illegal type.
     if (((!LegalOperations && !ST->isVolatile()) ||
          TLI.isOperationLegal(ISD::STORE, SVT)) &&
         TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT)) {

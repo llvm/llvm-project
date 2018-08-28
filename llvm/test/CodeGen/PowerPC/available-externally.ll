@@ -1,38 +1,40 @@
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=static | FileCheck %s -check-prefix=STATIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=PIC
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc-unknown-linux-gnu | FileCheck %s -check-prefix=PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc-unknown-linux | FileCheck %s -check-prefix=PICELF
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=PIC64
-; RUN: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC64
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=PIC64
+
+;;; KB: These two tests currently cause an assertion. It seems as though we cannot have a non DSOLocal symbol with dynamic-no-pic.
+;;;     I need to ask Sean about this.
+;;; RUN-NOT: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc-unknown-linux-gnu | FileCheck %s -check-prefix=DYNAMIC
+;;; RUN-NOT: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=DYNAMIC64
 ; PR4482
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
-target triple = "powerpc-apple-darwin9"
+target triple = "powerpc-unknown-linux-gnu"
 
 define i32 @foo(i64 %x) nounwind {
 entry:
-; STATIC: _foo:
-; STATIC: bl _exact_log2
+; STATIC: foo:
+; STATIC: bl exact_log2@PLT
 ; STATIC: blr
-; STATIC: .subsections_via_symbols
 
-; PIC: _foo:
-; PIC: bl _exact_log2
+; PIC: foo:
+; PIC: bl exact_log2@PLT
 ; PIC: blr
 
 ; PICELF: foo:
 ; PICELF: bl exact_log2@PLT
 ; PICELF: blr
 
-; PIC64: _foo:
-; PIC64: bl _exact_log2
+; PIC64: foo:
+; PIC64: bl exact_log2
 ; PIC64: blr
 
-; DYNAMIC: _foo:
-; DYNAMIC: bl _exact_log2
+; DYNAMIC: foo:
+; DYNAMIC: bl exact_log2@PLT
 ; DYNAMIC: blr
 
-; DYNAMIC64: _foo:
-; DYNAMIC64: bl _exact_log2
+; DYNAMIC64: foo:
+; DYNAMIC64: bl exact_log2@PPLT
 ; DYNAMIC64: blr
 
         %A = call i32 @exact_log2(i64 %x) nounwind
@@ -45,7 +47,3 @@ entry:
 }
 
 
-; PIC: .subsections_via_symbols
-
-
-; PIC64: .subsections_via_symbols

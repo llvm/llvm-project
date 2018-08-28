@@ -1,7 +1,7 @@
 ; RUN: opt < %s -sccp -disable-output
 ; END.
 target datalayout = "E-p:32:32"
-target triple = "powerpc-apple-darwin8.7.0"
+target triple = "powerpc-unknown-linux-gnu"
 	%struct.pat_list = type { i32, %struct.pat_list* }
 @JUMP = external global i32		; <i32*> [#uses=1]
 @old_D_pat = external global [16 x i8]		; <[16 x i8]*> [#uses=0]

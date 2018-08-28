@@ -106,14 +106,6 @@
 // RUN: FileCheck %s -check-prefix=PPC64LE-LINUX
 // PPC64LE-LINUX: target datalayout = "e-m:e-i64:64-n32:64"
 
-// RUN: %clang_cc1 -triple powerpc-darwin -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=PPC32-DARWIN
-// PPC32-DARWIN: target datalayout = "E-m:o-p:32:32-f64:32:64-n32"
-
-// RUN: %clang_cc1 -triple powerpc64-darwin -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=PPC64-DARWIN
-// PPC64-DARWIN: target datalayout = "E-m:o-i64:64-n32:64"
-
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX
 // NVPTX: target datalayout = "e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"

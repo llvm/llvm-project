@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -regalloc=fast -optimize-regalloc=0
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -regalloc=fast -optimize-regalloc=0 | FileCheck %s
 
+; CHECK: @bork
+; CHECK: blr
 define i32 @bork(i64 %foo, i64 %bar) {
 entry:
         %tmp = load i64, i64* null, align 8          ; <i64> [#uses=2]

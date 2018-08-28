@@ -18,6 +18,16 @@ def getBuildDir(cmd):
             found = True
     return None
 
+def mkdir_p(path):
+    import errno
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    if not os.path.isdir(path):
+        raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
+
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
         self.dotest_cmd = dotest_cmd
@@ -61,12 +71,17 @@ class LLDBTest(TestFormat):
         # libraries into system binaries, but this can be worked around by
         # copying the binary into a different location.
         if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                sys.executable.startswith('/System/'):
+                sys.executable.startswith('/System/') or \
+                sys.executable.startswith('/usr/'):
             builddir = getBuildDir(cmd)
-            assert(builddir)
+            mkdir_p(builddir)
             copied_python = os.path.join(builddir, 'copied-system-python')
-            import shutil
-            shutil.copy(sys.executable, os.path.join(builddir, copied_python))
+            if not os.path.isfile(copied_python):
+                import shutil, subprocess
+                python = subprocess.check_output([
+                    '/usr/bin/python2.7', '-c',
+                    'import sys; print sys.executable']).strip()
+                shutil.copy(python, copied_python)
             cmd[0] = copied_python
 
         try:

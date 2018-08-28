@@ -237,7 +237,7 @@ void splitAndWriteThinLTOBitcode(
   // sound because the virtual constant propagation optimizations effectively
   // inline all implementations of the virtual function into each call site,
   // rather than using function attributes to perform local optimization.
-  std::set<const Function *> EligibleVirtualFns;
+  DenseSet<const Function *> EligibleVirtualFns;
   // If any member of a comdat lives in MergedM, put all members of that
   // comdat in MergedM to keep the comdat together.
   DenseSet<const Comdat *> MergedMComdats;
