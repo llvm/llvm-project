@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names < %s -mattr=-vsx -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 define double @fabs(double %f) {
 ; CHECK-LABEL: fabs:
-; CHECK:       ; %bb.0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fabs f1, f1
 ; CHECK-NEXT:    blr
 ;
@@ -12,12 +12,13 @@ define double @fabs(double %f) {
 
 define float @bitcast_fabs(float %x) {
 ; CHECK-LABEL: bitcast_fabs:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    stfs f1, -8(r1)
-; CHECK:         lwz r2, -8(r1)
-; CHECK-NEXT:    clrlwi r2, r2, 1
-; CHECK-NEXT:    stw r2, -4(r1)
-; CHECK-NEXT:    lfs f1, -4(r1)
+; CHECK:       # %bb.0:
+; CHECK:         stfs f1, 8(r1)
+; CHECK:         lwz r3, 8(r1)
+; CHECK-NEXT:    clrlwi r3, r3, 1
+; CHECK-NEXT:    stw r3, 12(r1)
+; CHECK-NEXT:    lfs f1, 12(r1)
+; CHECK-NEXT:    addi r1, r1, 16
 ; CHECK-NEXT:    blr
 ;
   %bc1 = bitcast float %x to i32

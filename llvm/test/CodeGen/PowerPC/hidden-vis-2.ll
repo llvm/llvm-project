@@ -1,11 +1,11 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
-; CHECK: lis r2, ha16(L_x$non_lazy_ptr)
-; CHECK: lis r3, ha16(L_y$non_lazy_ptr)
-; CHECK: lwz r2, lo16(L_x$non_lazy_ptr)(r2)
-; CHECK: lwz r3, lo16(L_y$non_lazy_ptr)(r3)
-; CHECK: L_x$non_lazy_ptr:
-; CHECK: L_y$non_lazy_ptr:
+; CHECK: lis 3, x@ha
+; CHECK: lis 4, y@ha
+; CHECK: lwz 3, x@l(3)
+; CHECK: lwz 4, y@l(4)
+; CHECK: .hidden x
+; CHECK: .hidden y
 
 @x = external hidden global i32
 @y = extern_weak hidden global i32

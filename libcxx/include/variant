@@ -1320,7 +1320,7 @@ constexpr bool holds_alternative(const variant<_Types...>& __v) noexcept {
 
 template <size_t _Ip, class _Vp>
 inline _LIBCPP_INLINE_VISIBILITY
-static constexpr auto&& __generic_get(_Vp&& __v) {
+constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!__holds_alternative<_Ip>(__v)) {
     __throw_bad_variant_access();

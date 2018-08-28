@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8.8.0 | \
-; RUN:   grep align.*3
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 @X = global <{i32, i32}> <{ i32 1, i32 123 }>
+
+; CHECK: align 3

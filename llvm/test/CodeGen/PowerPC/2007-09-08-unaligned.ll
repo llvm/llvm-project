@@ -1,10 +1,8 @@
-; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep stfd | count 3
-; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep stfs | count 1
-; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep lfd | count 2
-; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep lfs | count 2
+; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | FileCheck %s
 ; ModuleID = 'foo.c'
-target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
-target triple = "powerpc-apple-darwin8"
+
+target triple = "powerpc-unknown-linux-gnu"
+
 	%struct.anon = type <{ i8, float }>
 @s = global %struct.anon <{ i8 3, float 0x4014666660000000 }>		; <%struct.anon*> [#uses=1]
 @u = global <{ i8, double }> <{ i8 3, double 5.100000e+00 }>		; <<{ i8, double }>*> [#uses=1]
@@ -12,6 +10,12 @@ target triple = "powerpc-apple-darwin8"
 @v = weak global <{ i8, double }> zeroinitializer		; <<{ i8, double }>*> [#uses=2]
 @.str = internal constant [8 x i8] c"%f %lf\0A\00"		; <[8 x i8]*> [#uses=1]
 
+; CHECK: foo
+; CHECK: lfs
+; CHECK: lfd
+; CHECK: stfs
+; CHECK: stfd
+; CHECK: blr
 define i32 @foo() {
 entry:
 	%retval = alloca i32, align 4		; <i32*> [#uses=1]
@@ -31,6 +35,10 @@ return:		; preds = %entry
 	ret i32 %retval6
 }
 
+; CHECK: main
+; CHECK: lfs
+; CHECK: lfd
+; CHECK: blr
 define i32 @main() {
 entry:
 	%retval = alloca i32, align 4		; <i32*> [#uses=1]
