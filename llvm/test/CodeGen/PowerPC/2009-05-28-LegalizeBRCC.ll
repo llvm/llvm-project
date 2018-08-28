@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin10
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu
 ; PR4280
 
 define i32 @__fixunssfsi(float %a) nounwind readnone {

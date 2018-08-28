@@ -154,11 +154,8 @@ define <3 x half> @test_fmin_legacy_ule_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v3f16:
 ; GFX9-NNAN:       ; %bb.0:
 ; GFX9-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NNAN-NEXT:    v_min_f16_sdwa v4, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v0, v0, v2
-; GFX9-NNAN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v1, v1, v3
-; GFX9-NNAN-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v1, v1, v3
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v0, v0, v2
 ; GFX9-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SAFE-LABEL: test_fmin_legacy_ule_v3f16:
@@ -415,23 +412,10 @@ define <8 x half> @test_fmin_legacy_ule_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; GFX9-NNAN-LABEL: test_fmin_legacy_ule_v8f16:
 ; GFX9-NNAN:       ; %bb.0:
 ; GFX9-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NNAN-NEXT:    v_min_f16_sdwa v8, v3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NNAN-NEXT:    v_min_f16_sdwa v9, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NNAN-NEXT:    v_min_f16_sdwa v10, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NNAN-NEXT:    v_min_f16_sdwa v11, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v0, v0, v4
-; GFX9-NNAN-NEXT:    v_mov_b32_e32 v4, 0xffff
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v3, v3, v7
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v2, v2, v6
-; GFX9-NNAN-NEXT:    v_min_f16_e32 v1, v1, v5
-; GFX9-NNAN-NEXT:    v_and_b32_e32 v0, v4, v0
-; GFX9-NNAN-NEXT:    v_and_b32_e32 v1, v4, v1
-; GFX9-NNAN-NEXT:    v_and_b32_e32 v2, v4, v2
-; GFX9-NNAN-NEXT:    v_and_b32_e32 v3, v4, v3
-; GFX9-NNAN-NEXT:    v_lshl_or_b32 v0, v11, 16, v0
-; GFX9-NNAN-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
-; GFX9-NNAN-NEXT:    v_lshl_or_b32 v2, v9, 16, v2
-; GFX9-NNAN-NEXT:    v_lshl_or_b32 v3, v8, 16, v3
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v0, v0, v4
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v1, v1, v5
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v2, v2, v6
+; GFX9-NNAN-NEXT:    v_pk_min_f16 v3, v3, v7
 ; GFX9-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SAFE-LABEL: test_fmin_legacy_ule_v8f16:

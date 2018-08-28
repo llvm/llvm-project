@@ -56,7 +56,8 @@ static Value *createMinMax(InstCombiner::BuilderTy &Builder,
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
-static Instruction *foldSelectBinOpIdentity(SelectInst &Sel, const TargetLibraryInfo &TLI) {
+static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
+                                            const TargetLibraryInfo &TLI) {
   // The select condition must be an equality compare with a constant operand.
   Value *X;
   Constant *C;

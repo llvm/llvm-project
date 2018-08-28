@@ -1,28 +1,24 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC64
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-NOFP
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC64-NOFP
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32-RS
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-RS-NOFP
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-PPC32
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-PPC64
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-NOFP
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC64-NOFP
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-PPC32
 
-; CHECK-PPC32: stw r31, -4(r1)
-; CHECK-PPC32: lwz r1, 0(r1)
-; CHECK-PPC32: lwz r31, -4(r1)
-; CHECK-PPC32-NOFP: stw r31, -4(r1)
-; CHECK-PPC32-NOFP: lwz r1, 0(r1)
-; CHECK-PPC32-NOFP: lwz r31, -4(r1)
-; CHECK-PPC32-RS: stwu r1, -48(r1)
-; CHECK-PPC32-RS-NOFP: stwu r1, -48(r1)
+; CHECK-PPC32: stwu 1, -32(1)
+; CHECK-PPC32: stw 31, 28(1)
+; CHECK-PPC32: lwz 31, 0(1)
+; CHECK-PPC32-NOFP: stwu 1, -32(1)
+; CHECK-PPC32-NOFP: stw 31, 28(1)
+; CHECK-PPC32-NOFP: lwz 31, 0(1)
 
-; CHECK-PPC64: std r31, -8(r1)
-; CHECK-PPC64: stdu r1, -64(r1)
-; CHECK-PPC64: ld r1, 0(r1)
-; CHECK-PPC64: ld r31, -8(r1)
-; CHECK-PPC64-NOFP: std r31, -8(r1)
-; CHECK-PPC64-NOFP: stdu r1, -64(r1)
-; CHECK-PPC64-NOFP: ld r1, 0(r1)
-; CHECK-PPC64-NOFP: ld r31, -8(r1)
+; CHECK-PPC64: std 31, -8(1)
+; CHECK-PPC64: stdu 1, -64(1)
+; CHECK-PPC64: ld 1, 0(1)
+; CHECK-PPC64: ld 31, -8(1)
+; CHECK-PPC64-NOFP: std 31, -8(1)
+; CHECK-PPC64-NOFP: stdu 1, -64(1)
+; CHECK-PPC64-NOFP: ld 1, 0(1)
+; CHECK-PPC64-NOFP: ld 31, -8(1)
 
 define i32* @f1(i32 %n) nounwind {
 	%tmp = alloca i32, i32 %n		; <i32*> [#uses=1]

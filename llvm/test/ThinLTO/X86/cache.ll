@@ -106,14 +106,14 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
 ; Only 8B and 76B files should stay after pruning.
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-100k', 'w') as file: file.truncate(102400)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-100k', 'w') as file: file.truncate(102400)"
 ; RUN: touch -t 198002011200 %t.cache/llvmcache-foo-100k
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
 ; RUN: touch -t 198002021200 %t.cache/llvmcache-foo-16
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-77k', 'w') as file: file.truncate(78848)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-77k', 'w') as file: file.truncate(78848)"
 ; RUN: touch -t 198002031200 %t.cache/llvmcache-foo-77k
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 78847
 ; RUN: ls %t.cache/llvmcache-foo-8
 ; RUN: ls %t.cache/llvmcache-foo-76
@@ -126,14 +126,14 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
 ; Only 75B and 76B files should stay after pruning.
-; RUN: "%python" -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1023
+; RUN: %python -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1023
 ; RUN: touch -t 198002011200 %t.cache/llvmcache-foo-1023
-; RUN: "%python" -c "print(' ' * 15)" > %t.cache/llvmcache-foo-15
+; RUN: %python -c "print(' ' * 15)" > %t.cache/llvmcache-foo-15
 ; RUN: touch -t 198002021200 %t.cache/llvmcache-foo-15
-; RUN: "%python" -c "print(' ' * 7)" > %t.cache/llvmcache-foo-7
+; RUN: %python -c "print(' ' * 7)" > %t.cache/llvmcache-foo-7
 ; RUN: touch -t 198002031200 %t.cache/llvmcache-foo-7
-; RUN: "%python" -c "print(' ' * 75)" > %t.cache/llvmcache-foo-75
-; RUN: "%python" -c "print(' ' * 76)" > %t.cache/llvmcache-foo-76
+; RUN: %python -c "print(' ' * 75)" > %t.cache/llvmcache-foo-75
+; RUN: %python -c "print(' ' * 76)" > %t.cache/llvmcache-foo-76
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-files 4
 ; RUN: ls %t.cache/llvmcache-foo-75
 ; RUN: ls %t.cache/llvmcache-foo-76

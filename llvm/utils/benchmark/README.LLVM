@@ -1,0 +1,9 @@
+LLVM notes
+----------
+
+This directory contains the Google Benchmark source code. This directory is
+under a different license than LLVM.
+
+Changes:
+
+* Bazel BUILD files are removed from the library

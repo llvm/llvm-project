@@ -474,12 +474,12 @@ define <2 x float> @fmul_const_invalid_constant(<2 x float> %v) {
   ret <2 x float> %r
 }
 
-; TODO: Reduce the width of the binop by moving it ahead of a shuffle.
+; Reduce the width of the binop by moving it ahead of a shuffle.
 
 define <4 x i8> @widening_shuffle_add_1(<2 x i8> %x) {
 ; CHECK-LABEL: @widening_shuffle_add_1(
-; CHECK-NEXT:    [[WIDEX:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = add <4 x i8> [[WIDEX]], <i8 42, i8 43, i8 44, i8 45>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 42, i8 43>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %widex = shufflevector <2 x i8> %x, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -487,12 +487,12 @@ define <4 x i8> @widening_shuffle_add_1(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
-; TODO: Reduce the width of the binop by moving it ahead of a shuffle.
+; Reduce the width of the binop by moving it ahead of a shuffle.
 
 define <4 x i8> @widening_shuffle_add_2(<2 x i8> %x) {
 ; CHECK-LABEL: @widening_shuffle_add_2(
-; CHECK-NEXT:    [[WIDEX:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = add <4 x i8> [[WIDEX]], <i8 42, i8 43, i8 44, i8 45>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 43, i8 42>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %widex = shufflevector <2 x i8> %x, <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
@@ -500,7 +500,7 @@ define <4 x i8> @widening_shuffle_add_2(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
-; Widening shuffles have the same mask/constant constraint as non-size-changing shuffles.
+; Negative test - widening shuffles have the same mask/constant constraint as non-size-changing shuffles.
 
 define <4 x i8> @widening_shuffle_add_invalid_constant(<2 x i8> %x) {
 ; CHECK-LABEL: @widening_shuffle_add_invalid_constant(
@@ -513,7 +513,7 @@ define <4 x i8> @widening_shuffle_add_invalid_constant(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
-; And widening shuffles have an additional constraint - they must not extend with anything but undefs.
+; Negative test - widening shuffles have an additional constraint: they must not extend with anything but undefs.
 
 define <4 x i8> @widening_shuffle_add_invalid_mask(<2 x i8> %x) {
 ; CHECK-LABEL: @widening_shuffle_add_invalid_mask(

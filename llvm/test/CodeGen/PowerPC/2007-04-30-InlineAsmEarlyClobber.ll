@@ -2,13 +2,14 @@
 ; RUN: llc -verify-machineinstrs < %s -regalloc=fast -optimize-regalloc=0 | FileCheck %s
 ; The first argument of subfc must not be the same as any other register.
 
-; CHECK: subfc [[REG:r.]],
+; CHECK: APP
+; CHECK: subfc [[REG:[0-9]+]],
 ; CHECK-NOT: [[REG]]
-; CHECK: InlineAsm End
+; CHECK: NO_APP
 ; PR1357
 
-target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
-target triple = "powerpc-apple-darwin8.8.0"
+;target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
+target triple = "powerpc-unknown-linux-gnu"
 
 ;long long test(int A, int B, int C) {
 ;  unsigned X, Y;
