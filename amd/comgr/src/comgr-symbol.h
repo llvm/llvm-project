@@ -36,7 +36,7 @@
 #ifndef COMGR_SYMBOL_H_
 #define COMGR_SYMBOL_H_
 
-#include "comgr/amd_comgr.h"
+#include "amd_comgr.h"
 #include "llvm/Object/ObjectFile.h"
 
 using namespace llvm::object;

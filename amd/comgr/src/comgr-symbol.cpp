@@ -43,7 +43,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
-#include "comgr/amd_comgr.h"
+#include "amd_comgr.h"
 
 using namespace llvm;
 using namespace llvm::support;

@@ -38,7 +38,7 @@
 
 #include "comgr-msgpack.h"
 #include "comgr-symbol.h"
-#include "comgr/amd_comgr.h"
+#include "amd_comgr.h"
 #include "yaml-cpp/yaml.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"

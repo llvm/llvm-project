@@ -37,57 +37,57 @@ add_definitions(-DTEST_OBJ_DIR=\"${CMAKE_CURRENT_BINARY_DIR}\")
 
 # Test : Data Objects and Data Set
 add_executable(data_test data_test.c)
-target_link_libraries(data_test comgr)
+target_link_libraries(data_test amd_comgr)
 add_test(NAME data_test COMMAND data_test)
 
 # Test : Disassembly of relocatable ELF
 add_executable(disasm_llvm_reloc_test disasm_llvm_reloc_test.c)
-target_link_libraries(disasm_llvm_reloc_test comgr)
+target_link_libraries(disasm_llvm_reloc_test amd_comgr)
 add_test(NAME disasm_llvm_reloc_test COMMAND disasm_llvm_reloc_test)
 
 # Test : Disassembly of shared object ELF
 add_executable(disasm_llvm_so_test disasm_llvm_so_test.c)
-target_link_libraries(disasm_llvm_so_test comgr)
+target_link_libraries(disasm_llvm_so_test amd_comgr)
 add_test(NAME disasm_llvm_so_test COMMAND disasm_llvm_so_test)
 
 # Test : TP-Metadata (Metadata properties for a target)
 add_executable(metadata_tp_test metadata_tp_test.c)
-target_link_libraries(metadata_tp_test comgr)
+target_link_libraries(metadata_tp_test amd_comgr)
 add_test(NAME metadata_tp_test COMMAND metadata_tp_test)
 
 # Test : Metadata YAML (Metadata of a code object)
 add_executable(metadata_yaml_test metadata_yaml_test.c)
-target_link_libraries(metadata_yaml_test comgr)
+target_link_libraries(metadata_yaml_test amd_comgr)
 add_test(NAME metadata_yaml_test COMMAND metadata_yaml_test)
 
 # Test : Symbols
 add_executable(symbols_test symbols_test.c)
-target_link_libraries(symbols_test comgr)
+target_link_libraries(symbols_test amd_comgr)
 add_test(NAME symbols_test COMMAND symbols_test)
 
 # Test : Iterate Symbols
 add_executable(symbols_iterate_test symbols_iterate_test.c)
-target_link_libraries(symbols_iterate_test comgr)
+target_link_libraries(symbols_iterate_test amd_comgr)
 add_test(NAME symbols_iterate_test COMMAND symbols_iterate_test)
 
 # Test : Compile
 add_executable(compile_test compile_test.c)
-target_link_libraries(compile_test comgr)
+target_link_libraries(compile_test amd_comgr)
 add_test(NAME compile_test COMMAND compile_test)
 
 # Test : Compile Minimal
 add_executable(compile_minimal_test compile_minimal_test.c)
-target_link_libraries(compile_minimal_test comgr)
+target_link_libraries(compile_minimal_test amd_comgr)
 add_test(NAME compile_minimal_test COMMAND compile_minimal_test)
 
 # Test : Assemble
 add_executable(assemble_test assemble_test.c)
-target_link_libraries(assemble_test comgr)
+target_link_libraries(assemble_test amd_comgr)
 add_test(NAME assemble_test COMMAND assemble_test)
 
 # Test : Linking
 add_executable(link_test link_test.c)
-target_link_libraries(link_test comgr)
+target_link_libraries(link_test amd_comgr)
 add_test(NAME link_test COMMAND link_test)
 
 # Windows binaries have no equivalent to -rpath, so we must set their PATH to
@@ -105,5 +105,5 @@ if (NOT(UNIX))
     compile_minimal_test
     assemble_test
     link_test
-    PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:comgr>")
+    PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
 endif()

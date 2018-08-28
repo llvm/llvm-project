@@ -37,7 +37,7 @@
 #define COMGR_MSGPACK_H
 
 #include "MsgPackReader.h"
-#include "comgr/amd_comgr.h"
+#include "amd_comgr.h"
 #include "llvm/Support/Casting.h"
 #include <map>
 #include <memory>

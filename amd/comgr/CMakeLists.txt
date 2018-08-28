@@ -38,18 +38,18 @@ endif()
 add_definitions(-DAMD_EXPORT)
 
 file(GLOB SOURCES "src/*.cpp")
-add_library(comgr SHARED ${SOURCES})
+add_library(amd_comgr SHARED ${SOURCES})
 
 install(
   TARGETS
-  comgr
+  amd_comgr
   DESTINATION lib
 )
 
 install(
   FILES
-  "include/comgr/amd_comgr.h"
-  DESTINATION include/comgr
+  "include/amd_comgr.h"
+  DESTINATION include
 )
 
 install(
@@ -57,7 +57,7 @@ install(
   "README.md"
   "LICENSE.txt"
   "NOTICES.txt"
-  DESTINATION comgr
+  DESTINATION share/amd_comgr
 )
 
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
@@ -134,7 +134,7 @@ llvm_map_components_to_libnames(LLVM_LIBS
   Coroutines
 )
 
-target_link_libraries(comgr ${LINKER_OPTS}
+target_link_libraries(amd_comgr ${LINKER_OPTS}
   yaml-cpp
   ${CLANG_LIBS}
   ${LLD_LIBS}
@@ -142,14 +142,14 @@ target_link_libraries(comgr ${LINKER_OPTS}
 )
 
 if (NOT UNIX)
-  target_link_libraries(comgr version)
+  target_link_libraries(amd_comgr version)
 endif()
 
 enable_testing()
 add_subdirectory(test)
 
-# Add packaging directives for comgr
-set(CPACK_PACKAGE_NAME comgr)
+# Add packaging directives for amd_comgr
+set(CPACK_PACKAGE_NAME amd_comgr)
 set(CPACK_PACKAGE_VENDOR "AMD")
 set(CPACK_PACKAGE_VERSION_MAJOR 0)
 set(CPACK_PACKAGE_VERSION_MINOR 0)
