@@ -495,6 +495,7 @@ void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
 }
 
 tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
+  trace::Span Span("GetCompileCommand");
   llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
   if (!C) // FIXME: Suppress diagnostics? Let the user know?
     C = CDB.getFallbackCommand(File);

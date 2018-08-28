@@ -417,6 +417,7 @@ void ASTWorker::update(
     // Note *AST can be still be null if buildAST fails.
     if (*AST) {
       OnUpdated((*AST)->getDiagnostics());
+      trace::Span Span("Running main AST callback");
       Callbacks.onMainAST(FileName, **AST);
       DiagsWereReported = true;
     }
