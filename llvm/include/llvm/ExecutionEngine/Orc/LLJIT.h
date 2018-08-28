@@ -51,6 +51,14 @@ public:
     return addIRModule(Main, std::move(M));
   }
 
+  /// Adds an object file to the given JITDylib.
+  Error addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj);
+
+  /// Adds an object file to the given JITDylib.
+  Error addObjectFile(std::unique_ptr<MemoryBuffer> Obj) {
+    return addObjectFile(Main, std::move(Obj));
+  }
+
   /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
   /// look up symbols based on their IR name use the lookup function instead).
   Expected<JITEvaluatedSymbol> lookupLinkerMangled(JITDylib &JD,

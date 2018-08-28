@@ -754,7 +754,7 @@ def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
 def DA : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
-def R128 : NamedOperandBit<"R128", NamedMatchClass<"R128">>;
+def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
 def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
 def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;

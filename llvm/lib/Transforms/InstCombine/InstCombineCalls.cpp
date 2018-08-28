@@ -3282,6 +3282,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, FCmp);
     }
 
+    // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
+    if (((Mask & S_NAN) || (Mask & Q_NAN)) && isKnownNeverNaN(Src0, &TLI)) {
+      II->setArgOperand(1, ConstantInt::get(Src1->getType(),
+                                            Mask & ~(S_NAN | Q_NAN)));
+      return II;
+    }
+
     const ConstantFP *CVal = dyn_cast<ConstantFP>(Src0);
     if (!CVal) {
       if (isa<UndefValue>(Src0))

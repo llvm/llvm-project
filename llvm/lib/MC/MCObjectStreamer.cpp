@@ -446,12 +446,12 @@ void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
-  // In case we see two .cv_loc directives in a row, make sure the
-  // first one gets a line entry.
-  MCCVLineEntry::Make(this);
-
+  // Unlike dwarf locations, we don't save the MCCVLineEntry until the next
+  // instruction. We create the label exactly where the directive appears in the
+  // assembly.
   this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
                                        PrologueEnd, IsStmt, FileName, Loc);
+  MCCVLineEntry::Make(this);
 }
 
 void MCObjectStreamer::EmitCVLinetableDirective(unsigned FunctionId,

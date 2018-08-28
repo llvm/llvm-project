@@ -240,6 +240,18 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 #define BENCHMARK_GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+#if defined(__GNUC__) || __has_builtin(__builtin_unreachable)
+  #define BENCHMARK_UNREACHABLE() __builtin_unreachable()
+#elif defined(_MSC_VER)
+  #define BENCHMARK_UNREACHABLE() __assume(false)
+#else
+  #define BENCHMARK_UNREACHABLE() ((void)0)
+#endif
+
 namespace benchmark {
 class BenchmarkReporter;
 
@@ -1434,9 +1446,9 @@ inline const char* GetTimeUnitString(TimeUnit unit) {
     case kMicrosecond:
       return "us";
     case kNanosecond:
-    default:
       return "ns";
   }
+  BENCHMARK_UNREACHABLE();
 }
 
 inline double GetTimeUnitMultiplier(TimeUnit unit) {
@@ -1446,9 +1458,9 @@ inline double GetTimeUnitMultiplier(TimeUnit unit) {
     case kMicrosecond:
       return 1e6;
     case kNanosecond:
-    default:
       return 1e9;
   }
+  BENCHMARK_UNREACHABLE();
 }
 
 } // namespace benchmark

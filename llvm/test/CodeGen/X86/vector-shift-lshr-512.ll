@@ -145,51 +145,26 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind 
 define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-LABEL: splatvar_shift_v64i8:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX512DQ-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpsllw $5, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsrlw $2, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm5 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
-; AVX512DQ-NEXT:    vpand %ymm5, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm6
-; AVX512DQ-NEXT:    vpblendvb %ymm6, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsrlw $1, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm7 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512DQ-NEXT:    vpand %ymm7, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpaddb %ymm6, %ymm6, %ymm8
-; AVX512DQ-NEXT:    vpblendvb %ymm8, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsrlw $4, %ymm1, %ymm3
-; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm3, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpsrlw $2, %ymm1, %ymm2
-; AVX512DQ-NEXT:    vpand %ymm5, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpblendvb %ymm6, %ymm2, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpsrlw $1, %ymm1, %ymm2
-; AVX512DQ-NEXT:    vpand %ymm7, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpblendvb %ymm8, %ymm2, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512DQ-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpsrlw %xmm2, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpsrlw $8, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpbroadcastb %xmm3, %ymm3
+; AVX512DQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpsrlw %xmm2, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatvar_shift_v64i8:
 ; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm2, %zmm1
+; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpbroadcastb %xmm1, %zmm1
-; AVX512BW-NEXT:    vpsrlw $4, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
-; AVX512BW-NEXT:    vpsllw $5, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpsrlw $2, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
-; AVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpsrlw $1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
-; AVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
+; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %splat = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
   %shift = lshr <64 x i8> %a, %splat

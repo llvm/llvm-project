@@ -495,7 +495,7 @@ option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build target
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
-option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks can't be built." ON)
+option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks can't be built." OFF)
 
 option (LLVM_BUILD_DOCS "Build the llvm documentation." OFF)
 option (LLVM_INCLUDE_DOCS "Generate build targets for llvm documentation." ON)
@@ -1026,6 +1026,8 @@ if (LLVM_INCLUDE_BENCHMARKS)
   set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Don't install benchmark" FORCE)
   set(BENCHMARK_DOWNLOAD_DEPENDENCIES OFF CACHE BOOL "Don't download dependencies" FORCE)
   set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable Google Test in benchmark" FORCE)
+  # Since LLVM requires C++11 it is safe to assume that std::regex is available.
+  set(HAVE_STD_REGEX ON CACHE BOOL "OK" FORCE)
 
   add_subdirectory(utils/benchmark)
   add_subdirectory(benchmarks)

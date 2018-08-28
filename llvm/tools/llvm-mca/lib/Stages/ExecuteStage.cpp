@@ -57,12 +57,11 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
   SmallVector<InstRef, 4> Ready;
   HWS.issueInstruction(IR, Used, Ready);
 
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  notifyReleasedBuffers(Desc.Buffers);
+  notifyReservedOrReleasedBuffers(IR, /* Reserved */false);
   notifyInstructionIssued(IR, Used);
   if (IR.getInstruction()->isExecuted()) {
     notifyInstructionExecuted(IR);
-    //FIXME: add a buffer of executed instructions.
+    // FIXME: add a buffer of executed instructions.
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
@@ -97,7 +96,7 @@ Error ExecuteStage::cycleStart() {
 
   for (InstRef &IR : Executed) {
     notifyInstructionExecuted(IR);
-    //FIXME: add a buffer of executed instructions.
+    // FIXME: add a buffer of executed instructions.
     if (Error S = moveToTheNextStage(IR))
       return S;
   }
@@ -120,9 +119,8 @@ Error ExecuteStage::execute(InstRef &IR) {
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
   HWS.dispatch(IR);
-  notifyReservedBuffers(Desc.Buffers);
+  notifyReservedOrReleasedBuffers(IR, /* Reserved */true);
   if (!HWS.isReady(IR))
     return ErrorSuccess();
 
@@ -170,26 +168,23 @@ void ExecuteStage::notifyInstructionIssued(
   notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));
 }
 
-void ExecuteStage::notifyReservedBuffers(ArrayRef<uint64_t> Buffers) {
-  if (Buffers.empty())
+void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
+                                                   bool Reserved) {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  if (Desc.Buffers.empty())
     return;
 
-  SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
-  std::transform(Buffers.begin(), Buffers.end(), BufferIDs.begin(),
+  SmallVector<unsigned, 4> BufferIDs(Desc.Buffers.begin(), Desc.Buffers.end());
+  std::transform(Desc.Buffers.begin(), Desc.Buffers.end(), BufferIDs.begin(),
                  [&](uint64_t Op) { return HWS.getResourceID(Op); });
-  for (HWEventListener *Listener : getListeners())
-    Listener->onReservedBuffers(BufferIDs);
-}
-
-void ExecuteStage::notifyReleasedBuffers(ArrayRef<uint64_t> Buffers) {
-  if (Buffers.empty())
+  if (Reserved) {
+    for (HWEventListener *Listener : getListeners())
+      Listener->onReservedBuffers(IR, BufferIDs);
     return;
+  }
 
-  SmallVector<unsigned, 4> BufferIDs(Buffers.begin(), Buffers.end());
-  std::transform(Buffers.begin(), Buffers.end(), BufferIDs.begin(),
-                 [&](uint64_t Op) { return HWS.getResourceID(Op); });
   for (HWEventListener *Listener : getListeners())
-    Listener->onReleasedBuffers(BufferIDs);
+    Listener->onReleasedBuffers(IR, BufferIDs);
 }
 
 } // namespace mca
