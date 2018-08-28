@@ -17,15 +17,21 @@
 ///
 /// Schedulers - number of cycles where we saw N instructions issued:
 /// [# issued], [# cycles]
-///  0,          7  (5.4%)
-///  1,          4  (3.1%)
-///  2,          8  (6.2%)
+///  0,          6  (2.9%)
+///  1,          106  (50.7%)
+///  2,          97  (46.4%)
 ///
 /// Scheduler's queue usage:
-/// JALU01,  0/20
-/// JFPU01,  18/18
-/// JLSAGU,  0/12
+/// [1] Resource name.
+/// [2] Average number of used buffer entries.
+/// [3] Maximum number of used buffer entries.
+/// [4] Total number of buffer entries.
 ///
+///  [1]            [2]        [3]        [4]
+/// JALU01           0          0          20
+/// JFPU01           15         18         18
+/// JLSAGU           0          0          12
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_LLVM_MCA_SCHEDULERSTATISTICS_H
@@ -38,12 +44,8 @@
 
 namespace mca {
 
-class SchedulerStatistics : public View {
+class SchedulerStatistics final : public View {
   const llvm::MCSchedModel &SM;
-
-  using Histogram = std::map<unsigned, unsigned>;
-  Histogram IssuedPerCycle;
-
   unsigned NumIssued;
   unsigned NumCycles;
 
@@ -51,21 +53,21 @@ class SchedulerStatistics : public View {
   struct BufferUsage {
     unsigned SlotsInUse;
     unsigned MaxUsedSlots;
+    uint64_t CumulativeNumUsedSlots;
   };
 
-  std::map<unsigned, BufferUsage> BufferedResources;
+  std::vector<unsigned> IssuedPerCycle;
+  std::vector<BufferUsage> Usage;
 
-  void updateHistograms() {
-    IssuedPerCycle[NumIssued]++;
-    NumIssued = 0;
-  }
-
-  void printSchedulerStatistics(llvm::raw_ostream &OS) const;
+  void updateHistograms();
+  void printSchedulerStats(llvm::raw_ostream &OS) const;
   void printSchedulerUsage(llvm::raw_ostream &OS) const;
 
 public:
   SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
-      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0) {}
+      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0),
+        IssuedPerCycle(STI.getSchedModel().NumProcResourceKinds, 0),
+        Usage(STI.getSchedModel().NumProcResourceKinds, {0, 0, 0}) {}
 
   void onEvent(const HWInstructionEvent &Event) override;
 
@@ -81,10 +83,7 @@ public:
   // buffered resource in the Buffers set.
   void onReleasedBuffers(llvm::ArrayRef<unsigned> Buffers) override;
 
-  void printView(llvm::raw_ostream &OS) const override {
-    printSchedulerStatistics(OS);
-    printSchedulerUsage(OS);
-  }
+  void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca
 

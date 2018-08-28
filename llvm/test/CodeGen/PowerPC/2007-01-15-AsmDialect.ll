@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | \
-; RUN:    grep cntlz
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 define i32 @foo() nounwind {
 entry:
+; CHECK: cntlzw 3, 4
 	%retval = alloca i32, align 4		; <i32*> [#uses=2]
 	%temp = alloca i32, align 4		; <i32*> [#uses=2]
 	%ctz_x = alloca i32, align 4		; <i32*> [#uses=3]

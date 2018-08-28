@@ -208,9 +208,8 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) nounwind {
 ; AVX2NOBW-NEXT:    vpmovsxbw %xmm0, %ymm3
 ; AVX2NOBW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
 ; AVX2NOBW-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX2NOBW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
-; AVX2NOBW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX2NOBW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpackuswb %ymm1, %ymm2, %ymm1
+; AVX2NOBW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2NOBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX2NOBW-NEXT:    vpsrlw $2, %ymm0, %ymm1
 ; AVX2NOBW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -512,9 +511,8 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX2NOBW-NEXT:    vpmovsxbw %xmm0, %ymm3
 ; AVX2NOBW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
 ; AVX2NOBW-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX2NOBW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
-; AVX2NOBW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX2NOBW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpackuswb %ymm1, %ymm2, %ymm1
+; AVX2NOBW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2NOBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vpsrlw $2, %ymm1, %ymm2
 ; AVX2NOBW-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2

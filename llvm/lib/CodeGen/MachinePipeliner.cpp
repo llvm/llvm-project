@@ -2725,7 +2725,7 @@ void SwingSchedulerDAG::generateExistingPhis(
                  VRMap[PrevStage - np + 1].count(Def))
           PhiOp2 = VRMap[PrevStage - np + 1][Def];
         // Use the loop value defined in the kernel.
-        else if ((unsigned)LoopValStage + StageDiffAdj > PrologStage + 1 &&
+        else if (static_cast<unsigned>(LoopValStage) > PrologStage + 1 &&
                  VRMap[PrevStage - StageDiffAdj - np].count(LoopVal))
           PhiOp2 = VRMap[PrevStage - StageDiffAdj - np][LoopVal];
         // Use the value defined by the Phi, unless we're generating the first
@@ -2739,35 +2739,38 @@ void SwingSchedulerDAG::generateExistingPhis(
       // references another Phi, and the other Phi is scheduled in an
       // earlier stage. We can try to reuse an existing Phi up until the last
       // stage of the current Phi.
-      if (LoopDefIsPhi && (int)(PrologStage - np) >= StageScheduled) {
-        int LVNumStages = Schedule.getStagesForPhi(LoopVal);
-        int StageDiff = (StageScheduled - LoopValStage);
-        LVNumStages -= StageDiff;
-        // Make sure the loop value Phi has been processed already.
-        if (LVNumStages > (int)np && VRMap[CurStageNum].count(LoopVal)) {
-          NewReg = PhiOp2;
-          unsigned ReuseStage = CurStageNum;
-          if (Schedule.isLoopCarried(this, *PhiInst))
-            ReuseStage -= LVNumStages;
-          // Check if the Phi to reuse has been generated yet. If not, then
-          // there is nothing to reuse.
-          if (VRMap[ReuseStage - np].count(LoopVal)) {
-            NewReg = VRMap[ReuseStage - np][LoopVal];
+      if (LoopDefIsPhi) {
+        if (static_cast<int>(PrologStage - np) >= StageScheduled) {
+          int LVNumStages = Schedule.getStagesForPhi(LoopVal);
+          int StageDiff = (StageScheduled - LoopValStage);
+          LVNumStages -= StageDiff;
+          // Make sure the loop value Phi has been processed already.
+          if (LVNumStages > (int)np && VRMap[CurStageNum].count(LoopVal)) {
+            NewReg = PhiOp2;
+            unsigned ReuseStage = CurStageNum;
+            if (Schedule.isLoopCarried(this, *PhiInst))
+              ReuseStage -= LVNumStages;
+            // Check if the Phi to reuse has been generated yet. If not, then
+            // there is nothing to reuse.
+            if (VRMap[ReuseStage - np].count(LoopVal)) {
+              NewReg = VRMap[ReuseStage - np][LoopVal];
 
-            rewriteScheduledInstr(NewBB, Schedule, InstrMap, CurStageNum, np,
-                                  &*BBI, Def, NewReg);
-            // Update the map with the new Phi name.
-            VRMap[CurStageNum - np][Def] = NewReg;
-            PhiOp2 = NewReg;
-            if (VRMap[LastStageNum - np - 1].count(LoopVal))
-              PhiOp2 = VRMap[LastStageNum - np - 1][LoopVal];
+              rewriteScheduledInstr(NewBB, Schedule, InstrMap, CurStageNum, np,
+                                    &*BBI, Def, NewReg);
+              // Update the map with the new Phi name.
+              VRMap[CurStageNum - np][Def] = NewReg;
+              PhiOp2 = NewReg;
+              if (VRMap[LastStageNum - np - 1].count(LoopVal))
+                PhiOp2 = VRMap[LastStageNum - np - 1][LoopVal];
 
-            if (IsLast && np == NumPhis - 1)
-              replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS);
-            continue;
+              if (IsLast && np == NumPhis - 1)
+                replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS);
+              continue;
+            }
           }
-        } else if (InKernel && StageDiff > 0 &&
-                   VRMap[CurStageNum - StageDiff - np].count(LoopVal))
+        }
+        if (InKernel && StageDiff > 0 &&
+            VRMap[CurStageNum - StageDiff - np].count(LoopVal))
           PhiOp2 = VRMap[CurStageNum - StageDiff - np][LoopVal];
       }
 

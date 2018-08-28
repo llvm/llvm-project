@@ -61,6 +61,8 @@ protected:
   /// be interested in.
   virtual bool isSpecialInstruction(const Instruction *Insn) const = 0;
 
+  virtual ~InstructionPrecedenceTracking() = default;
+
 public:
   /// Clears cached information about this particular block.
   void invalidateBlock(const BasicBlock *BB);

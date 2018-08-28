@@ -33,7 +33,7 @@ STATISTIC(NumSpeculatedInstructions,
 STATISTIC(NumNewRedundantInstructions,
           "Number of new, redundant instructions inserted");
 
-/// Check wether speculating the users of a PHI node around the PHI
+/// Check whether speculating the users of a PHI node around the PHI
 /// will be safe.
 ///
 /// This checks both that all of the users are safe and also that all of their

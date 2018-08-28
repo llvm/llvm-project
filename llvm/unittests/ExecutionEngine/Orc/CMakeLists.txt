@@ -23,6 +23,7 @@ add_llvm_unittest(OrcJITTests
   RemoteObjectLayerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
+  RTDyldObjectLinkingLayer2Test.cpp
   SymbolStringPoolTest.cpp
   )
 

@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs < %s
 
 target datalayout = "E-p:32:32"
-target triple = "powerpc-apple-darwin8.2.0"
+target triple = "powerpc-unknown-linux-gnu"
 
 define void @bar(i32 %G, i32 %E, i32 %F, i32 %A, i32 %B, i32 %C, i32 %D, i8* %fmt, ...) {
         %ap = alloca i8*                ; <i8**> [#uses=2]

@@ -1,3 +1,5 @@
+include_directories(include)
+
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmPrinters
   AllTargetsAsmParsers
@@ -12,25 +14,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-mca
   llvm-mca.cpp
   CodeRegion.cpp
-  Context.cpp
-  DispatchStage.cpp
-  ExecuteStage.cpp
-  FetchStage.cpp
-  HWEventListener.cpp
-  HardwareUnit.cpp
-  InstrBuilder.cpp
-  Instruction.cpp
-  InstructionTables.cpp
-  LSUnit.cpp
-  Pipeline.cpp
   PipelinePrinter.cpp
-  RegisterFile.cpp
-  ResourceManager.cpp
-  RetireControlUnit.cpp
-  RetireStage.cpp
-  Scheduler.cpp
-  Stage.cpp
-  Support.cpp
   Views/DispatchStatistics.cpp
   Views/InstructionInfoView.cpp
   Views/RegisterFileStatistics.cpp
@@ -41,3 +25,7 @@ add_llvm_tool(llvm-mca
   Views/TimelineView.cpp
   Views/View.cpp
   )
+
+set(LLVM_MCA_SOURCE_DIR ${CURRENT_SOURCE_DIR})
+add_subdirectory(lib)
+target_link_libraries(llvm-mca PRIVATE LLVMMCA)

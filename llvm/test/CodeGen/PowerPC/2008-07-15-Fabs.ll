@@ -1,7 +1,10 @@
-; RUN: llc -verify-machineinstrs < %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
-target triple = "powerpc-apple-darwin9"
+target triple = "powerpc64-unknown-linux-gnu"
 
+; CHECK: __divtc3
+; CHECK: fabs 0, 7
+; CHECK: blr
 define hidden i256 @__divtc3(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind readnone  {
 entry:
 	call ppc_fp128 @fabsl( ppc_fp128 %d ) nounwind readnone 		; <ppc_fp128>:0 [#uses=1]

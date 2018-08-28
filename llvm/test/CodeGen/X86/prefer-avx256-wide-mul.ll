@@ -15,9 +15,8 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) {
 ; AVX256BW-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX256BW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
 ; AVX256BW-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX256BW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
-; AVX256BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX256BW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
+; AVX256BW-NEXT:    vpackuswb %ymm1, %ymm2, %ymm1
+; AVX256BW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX256BW-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX256BW-NEXT:    vpsrlw $1, %ymm0, %ymm0
 ; AVX256BW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0

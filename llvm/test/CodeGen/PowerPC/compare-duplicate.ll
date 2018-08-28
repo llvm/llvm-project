@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8  | not grep slwi
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu  | not grep slwi
 
 define i32 @test(i32 %A, i32 %B) {
 	%C = sub i32 %B, %A
