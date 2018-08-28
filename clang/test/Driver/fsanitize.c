@@ -423,6 +423,15 @@
 // RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
 
+// RUN: %clang -target arm-apple-ios4 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-IOS-OLD
+// CHECK-VPTR-IOS-OLD: unsupported option '-fsanitize=vptr' for target 'arm-apple-ios4'
+
+// RUN: %clang -target aarch64-apple-darwin15.0.0 -fsanitize=vptr %s -### 2>&1
+// OK
+
+// RUN: %clang -target x86_64-apple-darwin15.0.0-simulator -fsanitize=vptr %s -### 2>&1
+// OK
+
 // RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.9 -fsanitize=alignment,vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-NEW
 // CHECK-VPTR-DARWIN-NEW: -fsanitize=alignment,vptr
 
