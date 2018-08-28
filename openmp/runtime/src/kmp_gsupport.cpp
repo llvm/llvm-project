@@ -1001,7 +1001,7 @@ LOOP_NEXT_ULL(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_RUNTIME_NEXT),
           KMP_DISPATCH_NEXT_ULL(&loc, gtid, NULL, (kmp_uint64 *)p_lb,          \
                                 (kmp_uint64 *)p_ub, (kmp_int64 *)&stride);     \
       if (status) {                                                            \
-        KMP_DEBUG_ASSERT((long long)stride == str);                            \
+        KMP_DEBUG_ASSERT(stride == str);                                       \
         *p_ub += (str > 0) ? 1 : -1;                                           \
       }                                                                        \
     } else {                                                                   \

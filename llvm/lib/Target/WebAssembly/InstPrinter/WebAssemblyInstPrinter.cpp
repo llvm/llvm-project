@@ -58,7 +58,8 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       // we have an extra flags operand which is not currently printed, for
       // compatiblity reasons.
       if (i != 0 &&
-          (MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID ||
+          ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
+            MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID_S) ||
            i != Desc.getNumOperands()))
         OS << ", ";
       printOperand(MI, i, OS);

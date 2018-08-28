@@ -55,16 +55,16 @@ static void HandleTargetOutcome(bool success) {
   switch (TargetOffloadPolicy) {
     case tgt_disabled:
       if (success) {
-        FatalMessage(1, "expected no offloading while offloading is disabled");
+        FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
       }
       break;
     case tgt_default:
-      DP("Should never reach this test with target offload set to default\n");
-      assert(false);
+        FATAL_MESSAGE0(1, "default offloading policy must switched to " 
+            "mandatory or disabled");
       break;
     case tgt_mandatory:
       if (!success) {
-        FatalMessage(1, "failure of target construct while offloading is mandatory");
+        FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
       }
       break;
   }

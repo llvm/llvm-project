@@ -517,12 +517,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   builtin_context.initializeBuiltins(PP.getIdentifierTable(),
                                      m_compiler->getLangOpts());
 
-  std::unique_ptr<clang::ASTContext> ast_context(
-      new ASTContext(m_compiler->getLangOpts(), m_compiler->getSourceManager(),
-                     m_compiler->getPreprocessor().getIdentifierTable(),
-                     PP.getSelectorTable(), builtin_context));
-
-  ast_context->InitBuiltinTypes(m_compiler->getTarget());
+  m_compiler->createASTContext();
+  clang::ASTContext &ast_context = m_compiler->getASTContext();
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
@@ -531,14 +527,13 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   if (decl_map) {
     llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source(
         decl_map->CreateProxy());
-    decl_map->InstallASTContext(*ast_context, m_compiler->getFileManager());
-    ast_context->setExternalSource(ast_source);
+    decl_map->InstallASTContext(ast_context, m_compiler->getFileManager());
+    ast_context.setExternalSource(ast_source);
   }
 
   m_ast_context.reset(
       new ClangASTContext(m_compiler->getTargetOpts().Triple.c_str()));
-  m_ast_context->setASTContext(ast_context.get());
-  m_compiler->setASTContext(ast_context.release());
+  m_ast_context->setASTContext(&ast_context);
 
   std::string module_name("$__lldb_module");
 

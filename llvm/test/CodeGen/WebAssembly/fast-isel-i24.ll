@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0
+; RUN: llc < %s -O0 -wasm-keep-registers
 ; PR36564
 ; PR37546
 
