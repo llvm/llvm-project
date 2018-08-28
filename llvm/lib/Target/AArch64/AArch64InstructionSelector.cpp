@@ -21,6 +21,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -93,6 +94,10 @@ private:
   }
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI) const;
+
+  // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
+  void materializeLargeCMVal(MachineInstr &I, const Value *V,
+                             unsigned char OpFlags) const;
 
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
@@ -655,6 +660,45 @@ bool AArch64InstructionSelector::selectVaStartDarwin(
   return true;
 }
 
+void AArch64InstructionSelector::materializeLargeCMVal(
+    MachineInstr &I, const Value *V, unsigned char OpFlags) const {
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineIRBuilder MIB(I);
+
+  auto MovZ = MIB.buildInstr(AArch64::MOVZXi, &AArch64::GPR64RegClass);
+  MovZ->addOperand(MF, I.getOperand(1));
+  MovZ->getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_G0 |
+                                     AArch64II::MO_NC);
+  MovZ->addOperand(MF, MachineOperand::CreateImm(0));
+  constrainSelectedInstRegOperands(*MovZ, TII, TRI, RBI);
+
+  auto BuildMovK = [&](unsigned SrcReg, unsigned char Flags, unsigned Offset,
+                       unsigned ForceDstReg) {
+    unsigned DstReg = ForceDstReg
+                          ? ForceDstReg
+                          : MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    auto MovI = MIB.buildInstr(AArch64::MOVKXi).addDef(DstReg).addUse(SrcReg);
+    if (auto *GV = dyn_cast<GlobalValue>(V)) {
+      MovI->addOperand(MF, MachineOperand::CreateGA(
+                               GV, MovZ->getOperand(1).getOffset(), Flags));
+    } else {
+      MovI->addOperand(
+          MF, MachineOperand::CreateBA(cast<BlockAddress>(V),
+                                       MovZ->getOperand(1).getOffset(), Flags));
+    }
+    MovI->addOperand(MF, MachineOperand::CreateImm(Offset));
+    constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI);
+    return DstReg;
+  };
+  unsigned DstReg = BuildMovK(MovZ->getOperand(0).getReg(),
+                              AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
+  DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
+  BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());
+  return;
+}
+
 bool AArch64InstructionSelector::select(MachineInstr &I,
                                         CodeGenCoverage &CoverageInfo) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
@@ -936,36 +980,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       I.getOperand(1).setTargetFlags(OpFlags);
     } else if (TM.getCodeModel() == CodeModel::Large) {
       // Materialize the global using movz/movk instructions.
-      unsigned MovZDstReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-      auto InsertPt = std::next(I.getIterator());
-      auto MovZ =
-          BuildMI(MBB, InsertPt, I.getDebugLoc(), TII.get(AArch64::MOVZXi))
-              .addDef(MovZDstReg);
-      MovZ->addOperand(MF, I.getOperand(1));
-      MovZ->getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_G0 |
-                                         AArch64II::MO_NC);
-      MovZ->addOperand(MF, MachineOperand::CreateImm(0));
-      constrainSelectedInstRegOperands(*MovZ, TII, TRI, RBI);
-
-      auto BuildMovK = [&](unsigned SrcReg, unsigned char Flags,
-                           unsigned Offset, unsigned ForceDstReg) {
-        unsigned DstReg =
-            ForceDstReg ? ForceDstReg
-                        : MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-        auto MovI = BuildMI(MBB, InsertPt, MovZ->getDebugLoc(),
-                            TII.get(AArch64::MOVKXi))
-                        .addDef(DstReg)
-                        .addReg(SrcReg);
-        MovI->addOperand(MF, MachineOperand::CreateGA(
-                                 GV, MovZ->getOperand(1).getOffset(), Flags));
-        MovI->addOperand(MF, MachineOperand::CreateImm(Offset));
-        constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI);
-        return DstReg;
-      };
-      unsigned DstReg = BuildMovK(MovZ->getOperand(0).getReg(),
-                                  AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
-      DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
-      BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());
+      materializeLargeCMVal(I, GV, OpFlags);
       I.eraseFromParent();
       return true;
     } else {
@@ -1482,7 +1497,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       .addImm(1);
     I.eraseFromParent();
     return true;
-  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_IMPLICIT_DEF: {
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     const unsigned DstReg = I.getOperand(0).getReg();
@@ -1491,6 +1506,25 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
         getRegClassForTypeOnBank(DstTy, DstRB, RBI);
     RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
     return true;
+  }
+  case TargetOpcode::G_BLOCK_ADDR: {
+    if (TM.getCodeModel() == CodeModel::Large) {
+      materializeLargeCMVal(I, I.getOperand(1).getBlockAddress(), 0);
+      I.eraseFromParent();
+      return true;
+    } else {
+      I.setDesc(TII.get(AArch64::MOVaddrBA));
+      auto MovMI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::MOVaddrBA),
+                           I.getOperand(0).getReg())
+                       .addBlockAddress(I.getOperand(1).getBlockAddress(),
+                                        /* Offset */ 0, AArch64II::MO_PAGE)
+                       .addBlockAddress(
+                           I.getOperand(1).getBlockAddress(), /* Offset */ 0,
+                           AArch64II::MO_NC | AArch64II::MO_PAGEOFF);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
+    }
+  }
   }
 
   return false;
