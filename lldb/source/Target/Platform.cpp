@@ -228,16 +228,35 @@ Status Platform::GetSharedModule(const ModuleSpec &module_spec,
         module_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
         did_create_ptr, false);
 
-  return GetRemoteSharedModule(module_spec, process, module_sp,
-                               [&](const ModuleSpec &spec) {
-                                 Status error = ModuleList::GetSharedModule(
-                                     spec, module_sp, module_search_paths_ptr,
-                                     old_module_sp_ptr, did_create_ptr, false);
-                                 if (error.Success() && module_sp)
-                                   module_sp->SetPlatformFileSpec(
-                                       spec.GetFileSpec());
-                                 return error;
-                               },
+  // Module resolver lambda.
+  auto resolver = [&](const ModuleSpec &spec) {
+    Status error(eErrorTypeGeneric);
+    ModuleSpec resolved_spec;
+    // Check if we have sysroot set.
+    if (m_sdk_sysroot) {
+      // Prepend sysroot to module spec.
+      resolved_spec = spec;
+      resolved_spec.GetFileSpec().PrependPathComponent(
+          m_sdk_sysroot.GetStringRef());
+      // Try to get shared module with resolved spec.
+      error = ModuleList::GetSharedModule(
+          resolved_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
+          did_create_ptr, false);
+    }
+    // If we don't have sysroot or it didn't work then
+    // try original module spec.
+    if (!error.Success()) {
+      resolved_spec = spec;
+      error = ModuleList::GetSharedModule(
+          resolved_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
+          did_create_ptr, false);
+    }
+    if (error.Success() && module_sp)
+      module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
+    return error;
+  };
+
+  return GetRemoteSharedModule(module_spec, process, module_sp, resolver,
                                did_create_ptr);
 }
 
