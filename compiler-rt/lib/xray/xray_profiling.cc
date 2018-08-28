@@ -40,42 +40,49 @@ atomic_sint32_t ProfilerLogStatus = {XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
 SpinMutex ProfilerOptionsMutex;
 
 struct alignas(64) ProfilingData {
-  FunctionCallTrie::Allocators *Allocators = nullptr;
-  FunctionCallTrie *FCT = nullptr;
+  FunctionCallTrie::Allocators *Allocators;
+  FunctionCallTrie *FCT;
 };
 
 static pthread_key_t ProfilingKey;
 
+thread_local std::aligned_storage<sizeof(FunctionCallTrie::Allocators)>::type
+    AllocatorsStorage;
+thread_local std::aligned_storage<sizeof(FunctionCallTrie)>::type
+    FunctionCallTrieStorage;
 thread_local std::aligned_storage<sizeof(ProfilingData)>::type ThreadStorage{};
+
 static ProfilingData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
   thread_local auto ThreadOnce = [] {
     new (&ThreadStorage) ProfilingData{};
+    auto *Allocators =
+        reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+    new (Allocators) FunctionCallTrie::Allocators();
+    *Allocators = FunctionCallTrie::InitAllocators();
+    auto *FCT = reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage);
+    new (FCT) FunctionCallTrie(*Allocators);
+    auto &TLD = *reinterpret_cast<ProfilingData *>(&ThreadStorage);
+    TLD.Allocators = Allocators;
+    TLD.FCT = FCT;
     pthread_setspecific(ProfilingKey, &ThreadStorage);
     return false;
   }();
   (void)ThreadOnce;
 
-  auto &TLD = *reinterpret_cast<ProfilingData *>(&ThreadStorage);
+  auto &TLD = *reinterpret_cast<ProfilingData*>(&ThreadStorage);
 
-  // We need to check whether the global flag to finalizing/finalized has been
-  // switched. If it is, then we ought to not actually initialise the data.
-  auto Status = atomic_load(&ProfilerLogStatus, memory_order_acquire);
-  if (Status == XRayLogInitStatus::XRAY_LOG_FINALIZING ||
-      Status == XRayLogInitStatus::XRAY_LOG_FINALIZED)
-    return TLD;
-
-  // If we're live, then we re-initialize TLD if the pointers are not null.
-  if (UNLIKELY(TLD.Allocators == nullptr && TLD.FCT == nullptr)) {
-    TLD.Allocators = reinterpret_cast<FunctionCallTrie::Allocators *>(
-        InternalAlloc(sizeof(FunctionCallTrie::Allocators)));
-    new (TLD.Allocators) FunctionCallTrie::Allocators();
-    *TLD.Allocators = FunctionCallTrie::InitAllocators();
-    TLD.FCT = reinterpret_cast<FunctionCallTrie *>(
-        InternalAlloc(sizeof(FunctionCallTrie)));
-    new (TLD.FCT) FunctionCallTrie(*TLD.Allocators);
+  if (UNLIKELY(TLD.Allocators == nullptr || TLD.FCT == nullptr)) {
+    auto *Allocators =
+        reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+    new (Allocators) FunctionCallTrie::Allocators();
+    *Allocators = FunctionCallTrie::InitAllocators();
+    auto *FCT = reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage);
+    new (FCT) FunctionCallTrie(*Allocators);
+    TLD.Allocators = Allocators;
+    TLD.FCT = FCT;
   }
 
-  return TLD;
+  return *reinterpret_cast<ProfilingData *>(&ThreadStorage);
 }
 
 static void cleanupTLD() XRAY_NEVER_INSTRUMENT {
@@ -83,8 +90,6 @@ static void cleanupTLD() XRAY_NEVER_INSTRUMENT {
   if (TLD.Allocators != nullptr && TLD.FCT != nullptr) {
     TLD.FCT->~FunctionCallTrie();
     TLD.Allocators->~Allocators();
-    InternalFree(TLD.FCT);
-    InternalFree(TLD.Allocators);
     TLD.FCT = nullptr;
     TLD.Allocators = nullptr;
   }
@@ -181,13 +186,14 @@ void profilingHandleArg0(int32_t FuncId,
     return;
 
   auto Status = atomic_load(&ProfilerLogStatus, memory_order_acquire);
-  auto &TLD = getThreadLocalData();
   if (UNLIKELY(Status == XRayLogInitStatus::XRAY_LOG_FINALIZED ||
                Status == XRayLogInitStatus::XRAY_LOG_FINALIZING)) {
+    auto &TLD = getThreadLocalData();
     postCurrentThreadFCT(TLD);
     return;
   }
 
+  auto &TLD = getThreadLocalData();
   switch (Entry) {
   case XRayEntryType::ENTRY:
   case XRayEntryType::LOG_ARGS_ENTRY:

@@ -19,6 +19,7 @@
 
 
 .macro SAVE_REGISTERS
+	pushfq
 	subq $240, %rsp
 	CFI_DEF_CFA_OFFSET(248)
 	movq %rbp, 232(%rsp)
@@ -69,6 +70,7 @@
 	movq  8(%rsp), %r14
 	movq  0(%rsp), %r15
 	addq	$240, %rsp
+	popfq
 	CFI_DEF_CFA_OFFSET(8)
 .endm
 
