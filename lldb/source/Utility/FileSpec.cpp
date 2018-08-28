@@ -27,6 +27,7 @@
 #include <vector>       // for vector
 
 #include <assert.h> // for assert
+#include <limits.h> // for PATH_MAX
 #include <stdio.h>  // for size_t, NULL, snpr...
 #include <string.h> // for strcmp
 
