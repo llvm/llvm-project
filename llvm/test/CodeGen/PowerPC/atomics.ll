@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=PPC32
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -verify-machineinstrs  -ppc-asm-full-reg-names | FileCheck %s --check-prefix=CHECK --check-prefix=PPC32
 ; FIXME: -verify-machineinstrs currently fail on ppc64 (mismatched register/instruction).
 ; This is already checked for in Atomics-64.ll
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | FileCheck %s --check-prefix=CHECK --check-prefix=PPC64
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu  -ppc-asm-full-reg-names | FileCheck %s --check-prefix=CHECK --check-prefix=PPC64
 
 ; FIXME: we don't currently check for the operations themselves with CHECK-NEXT,
 ;   because they are implemented in a very messy way with lwarx/stwcx.

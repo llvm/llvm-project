@@ -1,7 +1,11 @@
-; RUN: llc -verify-machineinstrs < %s | grep "rlwinm r3, r3, 23, 30, 30"
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ; PR1473
-target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
-target triple = "powerpc-apple-darwin8.8.0"
+
+target triple = "powerpc-unknown-linux-gnu"
+
+; CHECK: foo
+; CHECK: rlwinm 3, 3, 23, 30, 30
+; CHECK: blr
 
 define zeroext i8 @foo(i16 zeroext  %a)   {
         %tmp2 = lshr i16 %a, 10         ; <i16> [#uses=1]

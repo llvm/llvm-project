@@ -155,6 +155,7 @@ struct CHIArg {
 
 using CHIIt = SmallVectorImpl<CHIArg>::iterator;
 using CHIArgs = iterator_range<CHIIt>;
+using CHICache = DenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>>;
 using OutValuesType = DenseMap<BasicBlock *, SmallVector<CHIArg, 2>>;
 using InValuesType =
     DenseMap<BasicBlock *, SmallVector<std::pair<VNType, Instruction *>, 2>>;
@@ -766,6 +767,7 @@ private:
     ReverseIDFCalculator IDFs(*PDT);
     OutValuesType OutValue;
     InValuesType InValue;
+    CHICache CachedCHIs;
     for (const auto &R : Ranks) {
       const SmallVecInsn &V = Map.lookup(R);
       if (V.size() < 2)
@@ -792,11 +794,12 @@ private:
       }
       // Insert empty CHI node for this VN. This is used to factor out
       // basic blocks where the ANTIC can potentially change.
-      for (auto IDFB : IDFBlocks) { // TODO: Prune out useless CHI insertions.
+      for (auto IDFB : IDFBlocks) {
         for (unsigned i = 0; i < V.size(); ++i) {
           CHIArg C = {VN, nullptr, nullptr};
            // Ignore spurious PDFs.
-          if (DT->properlyDominates(IDFB, V[i]->getParent())) {
+          if (DT->properlyDominates(IDFB, V[i]->getParent()) &&
+              CachedCHIs[IDFB].insert(V[i]).second) {
             OutValue[IDFB].push_back(C);
             LLVM_DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
                               << ", for Insn: " << *V[i]);

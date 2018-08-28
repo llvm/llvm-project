@@ -313,6 +313,10 @@ def IteratorRangeChecker : Checker<"IteratorRange">,
   HelpText<"Check for iterators used outside their valid ranges">,
   DescFile<"IteratorChecker.cpp">;
 
+def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
+  HelpText<"Check for use of invalidated iterators">,
+  DescFile<"IteratorChecker.cpp">;
+
 def MisusedMovedObjectChecker: Checker<"MisusedMovedObject">,
      HelpText<"Method calls on a moved-from object and copying a moved-from "
               "object will be reported">,

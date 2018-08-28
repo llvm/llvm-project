@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 	%struct.CGLDI = type { %struct.cgli*, i32, i32, i32, i32, i32, i8*, i32, void (%struct.CGLSI*, i32, %struct.CGLDI*)*, i8*, %struct.vv_t }
 	%struct.cgli = type { i32, %struct.cgli*, void (%struct.cgli*, i8*, i8*, i32, i32, i32, i32, i32, i32, i32, i32)*, i32, i8*, i8*, i8*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, i8*, i32*, %struct._cgro*, %struct._cgro*, float, float, float, float, i32, i8*, float, i8*, [16 x i32] }
@@ -8,6 +8,8 @@
 	%struct.vv_t = type { <16 x i8> }
 @llvm.used = appending global [1 x i8*] [ i8* bitcast (void (%struct.CGLSI*, i32, %struct.CGLDI*)* @lb to i8*) ], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]
 
+; CHECK: lb
+; CHECK: blr
 define void @lb(%struct.CGLSI* %src, i32 %n, %struct.CGLDI* %dst) nounwind {
 entry:
 	%0 = load i32, i32* null, align 4		; <i32> [#uses=1]

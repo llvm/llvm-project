@@ -4576,6 +4576,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  const GCNSubtarget* ST = &MF.getSubtarget<GCNSubtarget>();
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
@@ -4585,6 +4587,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
 
   SmallVector<EVT, 2> ResultTypes(Op->value_begin(), Op->value_end());
   bool IsD16 = false;
+  bool IsA16 = false;
   SDValue VData;
   int NumVDataDwords;
   unsigned AddrIdx; // Index of first address argument
@@ -4660,23 +4663,59 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
-  unsigned NumVAddrs = BaseOpcode->NumExtraArgs +
-                       (BaseOpcode->Gradients ? DimInfo->NumGradients : 0) +
-                       (BaseOpcode->Coordinates ? DimInfo->NumCoords : 0) +
-                       (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+  unsigned NumGradients = BaseOpcode->Gradients ? DimInfo->NumGradients : 0;
+  unsigned NumCoords = BaseOpcode->Coordinates ? DimInfo->NumCoords : 0;
+  unsigned NumLCM = BaseOpcode->LodOrClampOrMip ? 1 : 0;
+  unsigned NumVAddrs = BaseOpcode->NumExtraArgs + NumGradients +
+                       NumCoords + NumLCM;
+  unsigned NumMIVAddrs = NumVAddrs;
+
   SmallVector<SDValue, 4> VAddrs;
-  for (unsigned i = 0; i < NumVAddrs; ++i)
-    VAddrs.push_back(Op.getOperand(AddrIdx + i));
 
   // Optimize _L to _LZ when _L is zero
   if (LZMappingInfo) {
     if (auto ConstantLod =
-         dyn_cast<ConstantFPSDNode>(VAddrs[NumVAddrs-1].getNode())) {
+         dyn_cast<ConstantFPSDNode>(Op.getOperand(AddrIdx+NumVAddrs-1))) {
       if (ConstantLod->isZero() || ConstantLod->isNegative()) {
         IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
-        VAddrs.pop_back();               // remove 'lod'
+        NumMIVAddrs--;               // remove 'lod'
       }
     }
+  }
+
+  // Check for 16 bit addresses and pack if true.
+  unsigned DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
+  MVT VAddrVT = Op.getOperand(DimIdx).getSimpleValueType();
+  if (VAddrVT.getScalarType() == MVT::f16 &&
+      ST->hasFeature(AMDGPU::FeatureR128A16)) {
+    IsA16 = true;
+    for (unsigned i = AddrIdx; i < (AddrIdx + NumMIVAddrs); ++i) {
+      SDValue AddrLo, AddrHi;
+      // Push back extra arguments.
+      if (i < DimIdx) {
+        AddrLo = Op.getOperand(i);
+      } else {
+        AddrLo = Op.getOperand(i);
+        // Dz/dh, dz/dv and the last odd coord are packed with undef. Also,
+        // in 1D, derivatives dx/dh and dx/dv are packed with undef.
+        if (((i + 1) >= (AddrIdx + NumMIVAddrs)) ||
+            ((NumGradients / 2) % 2 == 1 && 
+            (i == DimIdx + (NumGradients / 2) - 1 || 
+             i == DimIdx + NumGradients - 1))) {
+          AddrHi = DAG.getUNDEF(MVT::f16);
+        } else {
+          AddrHi = Op.getOperand(i + 1);
+          i++;
+        }
+        AddrLo = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f16,
+                             {AddrLo, AddrHi});
+        AddrLo = DAG.getBitcast(MVT::i32, AddrLo);
+      }
+      VAddrs.push_back(AddrLo);
+    }
+  } else {
+    for (unsigned i = 0; i < NumMIVAddrs; ++i)
+      VAddrs.push_back(Op.getOperand(AddrIdx + i));
   }
 
   SDValue VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
@@ -4725,7 +4764,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   Ops.push_back(Unorm);
   Ops.push_back(GLC);
   Ops.push_back(SLC);
-  Ops.push_back(False); // r128
+  Ops.push_back(IsA16 &&  // a16 or r128
+                ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
   Ops.push_back(False); // tfe
   Ops.push_back(False); // lwe
   Ops.push_back(DimInfo->DA ? True : False);

@@ -358,6 +358,7 @@ protected:
   bool HasSDWAMac;
   bool HasSDWAOutModsVOPC;
   bool HasDPP;
+  bool HasR128A16;
   bool HasDLInsts;
   bool D16PreservesUnusedBits;
   bool FlatAddressSpace;
@@ -789,6 +790,10 @@ public:
 
   bool hasDPP() const {
     return HasDPP;
+  }
+
+  bool hasR128A16() const {
+    return HasR128A16;
   }
 
   bool enableSIScheduler() const {

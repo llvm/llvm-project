@@ -1,20 +1,20 @@
-; RUN: llc -mcpu=g5 < %s | FileCheck %s
+; RUN: llc < %s | FileCheck %s
 ;; Formerly crashed, see PR 1508
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
-target triple = "powerpc64-apple-darwin8"
+target triple = "powerpc64-unknown-linux-gnu"
 	%struct.Range = type { i64, i64 }
 
 ; CHECK: .cfi_startproc
-; CHECK: .cfi_personality 155, L___gxx_personality_v0$non_lazy_ptr
-; CHECK: .cfi_lsda 16, Lexception0
+; CHECK: .cfi_personality 148, DW.ref.__gxx_personality_v0
+; CHECK: .cfi_lsda 20, .Lexception0
 ; CHECK: .cfi_def_cfa_offset 176
 ; CHECK: .cfi_offset r31, -8
 ; CHECK: .cfi_offset lr, 16
 ; CHECK: .cfi_def_cfa_register r31
-; CHECK: .cfi_offset r27, -16
-; CHECK: .cfi_offset r28, -24
-; CHECK: .cfi_offset r29, -32
-; CHECK: .cfi_offset r30, -40
+; CHECK: .cfi_offset r27, -40
+; CHECK: .cfi_offset r28, -32
+; CHECK: .cfi_offset r29, -24
+; CHECK: .cfi_offset r30, -16
 ; CHECK: .cfi_endproc
 
 

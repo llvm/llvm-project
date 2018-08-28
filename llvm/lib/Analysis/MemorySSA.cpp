@@ -1711,6 +1711,7 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
 /// Verify that the order and existence of MemoryAccesses matches the
 /// order and existence of memory affecting instructions.
 void MemorySSA::verifyOrdering(Function &F) const {
+#ifndef NDEBUG
   // Walk all the blocks, comparing what the lookups think and what the access
   // lists think, as well as the order in the blocks vs the order in the access
   // lists.
@@ -1769,6 +1770,7 @@ void MemorySSA::verifyOrdering(Function &F) const {
     }
     ActualDefs.clear();
   }
+#endif
 }
 
 /// Verify the domination properties of MemorySSA by checking that each
@@ -1811,6 +1813,7 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
 /// accesses and verifying that, for each use, it appears in the
 /// appropriate def's use list
 void MemorySSA::verifyDefUses(Function &F) const {
+#ifndef NDEBUG
   for (BasicBlock &B : F) {
     // Phi nodes are attached to basic blocks
     if (MemoryPhi *Phi = getMemoryAccess(&B)) {
@@ -1831,6 +1834,7 @@ void MemorySSA::verifyDefUses(Function &F) const {
       }
     }
   }
+#endif
 }
 
 /// Perform a local numbering on blocks so that instruction ordering can be

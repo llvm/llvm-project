@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin10.0
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu
 ; rdar://7819990
 
 %0 = type { i32 }

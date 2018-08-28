@@ -8351,6 +8351,24 @@ _mm512_kortestz (__mmask16 __A, __mmask16 __B)
   return __builtin_ia32_kortestzhi ((__mmask16) __A, (__mmask16) __B);
 }
 
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_kortestc_mask16_u8(__mmask16 __A, __mmask16 __B)
+{
+  return (unsigned char)__builtin_ia32_kortestchi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_kortestz_mask16_u8(__mmask16 __A, __mmask16 __B)
+{
+  return (unsigned char)__builtin_ia32_kortestzhi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_kortest_mask16_u8(__mmask16 __A, __mmask16 __B, unsigned char *__C) {
+  *__C = (unsigned char)__builtin_ia32_kortestchi(__A, __B);
+  return (unsigned char)__builtin_ia32_kortestzhi(__A, __B);
+}
+
 static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kunpackb (__mmask16 __A, __mmask16 __B)
 {

@@ -707,6 +707,7 @@ TEST_F(InterpolateTest, Nearby) {
 
 TEST_F(InterpolateTest, Language) {
   add("dir/foo.cpp", "-std=c++17");
+  add("dir/bar.c", "");
   add("dir/baz.cee", "-x c");
 
   // .h is ambiguous, so we add explicit language flags
@@ -716,9 +717,11 @@ TEST_F(InterpolateTest, Language) {
   EXPECT_EQ(getCommand("foo.hpp"), "clang -D dir/foo.cpp -std=c++17");
   // respect -x if it's already there.
   EXPECT_EQ(getCommand("baz.h"), "clang -D dir/baz.cee -x c-header");
-  // prefer a worse match with the right language
-  EXPECT_EQ(getCommand("foo.c"), "clang -D dir/baz.cee");
-  Entries.erase(path(StringRef("dir/baz.cee")));
+  // prefer a worse match with the right extension.
+  EXPECT_EQ(getCommand("foo.c"), "clang -D dir/bar.c");
+  // make sure we don't crash on queries with invalid extensions.
+  EXPECT_EQ(getCommand("foo.cce"), "clang -D dir/foo.cpp");
+  Entries.erase(path(StringRef("dir/bar.c")));
   // Now we transfer across languages, so drop -std too.
   EXPECT_EQ(getCommand("foo.c"), "clang -D dir/foo.cpp");
 }

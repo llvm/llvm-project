@@ -6,6 +6,7 @@ Clang-Tidy Checks
 .. toctree::
    abseil-duration-division
    abseil-faster-strsplit-delimiter
+   abseil-no-namespace
    abseil-string-find-startswith
    android-cloexec-accept
    android-cloexec-accept4

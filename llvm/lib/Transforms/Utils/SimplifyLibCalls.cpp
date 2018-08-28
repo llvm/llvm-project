@@ -1194,23 +1194,39 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
 
   // pow(exp(x), y) -> exp(x * y)
   // pow(exp2(x), y) -> exp2(x * y)
-  // Only with fully relaxed math semantics, since, besides rounding
-  // differences, the transformation changes overflow and underflow behavior
-  // quite dramatically.
-  // For example:
+  // If exp{,2}() is used only once, it is better to fold two transcendental
+  // math functions into one.  If used again, exp{,2}() would still have to be
+  // called with the original argument, then keep both original transcendental
+  // functions.  However, this transformation is only safe with fully relaxed
+  // math semantics, since, besides rounding differences, it changes overflow
+  // and underflow behavior quite dramatically.  For example:
   //   pow(exp(1000), 0.001) = pow(inf, 0.001) = inf
   // Whereas:
   //   exp(1000 * 0.001) = exp(1)
   // TODO: Loosen the requirement for fully relaxed math semantics.
   // TODO: Handle exp10() when more targets have it available.
   CallInst *BaseFn = dyn_cast<CallInst>(Base);
-  if (BaseFn && BaseFn->isFast() && Pow->isFast()) {
+  if (BaseFn && BaseFn->hasOneUse() && BaseFn->isFast() && Pow->isFast()) {
     LibFunc LibFn;
+
     Function *CalleeFn = BaseFn->getCalledFunction();
     if (CalleeFn && TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
         (LibFn == LibFunc_exp || LibFn == LibFunc_exp2) && TLI->has(LibFn)) {
+      Value *ExpFn;
+
+      // Create new exp{,2}() with the product as its argument.
       Value *FMul = B.CreateFMul(BaseFn->getArgOperand(0), Expo, "mul");
-      return emitUnaryFloatFnCall(FMul, CalleeFn->getName(), B, Attrs);
+      ExpFn = emitUnaryFloatFnCall(FMul, CalleeFn->getName(), B,
+                                   BaseFn->getAttributes());
+
+      // Since the new exp{,2}() is different from the original one, dead code
+      // elimination cannot be trusted to remove it, since it may have side
+      // effects (e.g., errno).  When the only consumer for the original
+      // exp{,2}() is pow(), then it has to be explicitly erased.
+      BaseFn->replaceAllUsesWith(ExpFn);
+      BaseFn->eraseFromParent();
+
+      return ExpFn;
     }
   }
 
