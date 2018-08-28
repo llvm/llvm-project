@@ -1084,7 +1084,7 @@ function(add_unittest test_suite test_name)
   # Our current version of gtest does not properly recognize C++11 support
   # with MSVC, so it falls back to tr1 / experimental classes.  Since LLVM
   # itself requires C++11, we can safely force it on unconditionally so that
-  # we don't have to fight with the buggy gtest check.  
+  # we don't have to fight with the buggy gtest check.
   add_definitions(-DGTEST_LANG_CXX11=1)
   add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
 
@@ -1118,6 +1118,18 @@ function(add_unittest test_suite test_name)
   if (NOT ${test_suite_folder} STREQUAL "NOTFOUND")
     set_property(TARGET ${test_name} PROPERTY FOLDER "${test_suite_folder}")
   endif ()
+endfunction()
+
+# Generic support for adding a benchmark.
+function(add_benchmark benchmark_name)
+  if( NOT LLVM_BUILD_BENCHMARKS )
+    set(EXCLUDE_FROM_ALL ON)
+  endif()
+
+  add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+  set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
+  target_link_libraries(${benchmark_name} PRIVATE benchmark)
 endfunction()
 
 function(llvm_add_go_executable binary pkgpath)

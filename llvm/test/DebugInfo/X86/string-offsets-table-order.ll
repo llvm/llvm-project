@@ -7,7 +7,9 @@
 ; still wired up correctly.
 
 ; Produced with "clang -S -emit-llvm -gdwarf-5" from source "int X;", copied
-; three times and modified by hand.
+; three times and modified by hand. The modifications consisted of modifying the
+; compilation directory and the variable names to trigger the insertion of names
+; in different order.
 
 ; CHECK: .debug_info contents:
 ; CHECK:   DW_TAG_compile_unit

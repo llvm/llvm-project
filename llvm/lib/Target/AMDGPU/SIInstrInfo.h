@@ -691,6 +691,9 @@ public:
                        unsigned OpName) const;
   bool hasAnyModifiersSet(const MachineInstr &MI) const;
 
+  bool canShrink(const MachineInstr &MI,
+                 const MachineRegisterInfo &MRI) const;
+
   bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 

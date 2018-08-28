@@ -98,16 +98,15 @@ public:
 
   bool DoesBranch() override {
     if (m_does_branch == eLazyBoolCalculate) {
-      std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-      if (disasm_sp) {
-        disasm_sp->Lock(this, NULL);
+      DisassemblerScope disasm(*this);
+      if (disasm) {
         DataExtractor data;
         if (m_opcode.GetData(data)) {
           bool is_alternate_isa;
           lldb::addr_t pc = m_address.GetFileAddress();
 
           DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
-              GetDisasmToUse(is_alternate_isa);
+              GetDisasmToUse(is_alternate_isa, disasm);
           const uint8_t *opcode_data = data.GetDataStart();
           const size_t opcode_data_len = data.GetByteSize();
           llvm::MCInst inst;
@@ -125,7 +124,6 @@ public:
               m_does_branch = eLazyBoolNo;
           }
         }
-        disasm_sp->Unlock();
       }
     }
     return m_does_branch == eLazyBoolYes;
@@ -133,16 +131,15 @@ public:
 
   bool HasDelaySlot() override {
     if (m_has_delay_slot == eLazyBoolCalculate) {
-      std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-      if (disasm_sp) {
-        disasm_sp->Lock(this, NULL);
+      DisassemblerScope disasm(*this);
+      if (disasm) {
         DataExtractor data;
         if (m_opcode.GetData(data)) {
           bool is_alternate_isa;
           lldb::addr_t pc = m_address.GetFileAddress();
 
           DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
-              GetDisasmToUse(is_alternate_isa);
+              GetDisasmToUse(is_alternate_isa, disasm);
           const uint8_t *opcode_data = data.GetDataStart();
           const size_t opcode_data_len = data.GetByteSize();
           llvm::MCInst inst;
@@ -160,27 +157,14 @@ public:
               m_has_delay_slot = eLazyBoolNo;
           }
         }
-        disasm_sp->Unlock();
       }
     }
     return m_has_delay_slot == eLazyBoolYes;
   }
 
   DisassemblerLLVMC::MCDisasmInstance *GetDisasmToUse(bool &is_alternate_isa) {
-    is_alternate_isa = false;
-    std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-    if (disasm_sp) {
-      if (disasm_sp->m_alternate_disasm_up) {
-        const AddressClass address_class = GetAddressClass();
-
-        if (address_class == AddressClass::eCodeAlternateISA) {
-          is_alternate_isa = true;
-          return disasm_sp->m_alternate_disasm_up.get();
-        }
-      }
-      return disasm_sp->m_disasm_up.get();
-    }
-    return nullptr;
+    DisassemblerScope disasm(*this);
+    return GetDisasmToUse(is_alternate_isa, disasm);
   }
 
   size_t Decode(const lldb_private::Disassembler &disassembler,
@@ -189,9 +173,9 @@ public:
     // All we have to do is read the opcode which can be easy for some
     // architectures
     bool got_op = false;
-    std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-    if (disasm_sp) {
-      const ArchSpec &arch = disasm_sp->GetArchitecture();
+    DisassemblerScope disasm(*this);
+    if (disasm) {
+      const ArchSpec &arch = disasm->GetArchitecture();
       const lldb::ByteOrder byte_order = data.GetByteOrder();
 
       const uint32_t min_op_byte_size = arch.GetMinimumOpcodeByteSize();
@@ -232,7 +216,7 @@ public:
       if (!got_op) {
         bool is_alternate_isa = false;
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
-            GetDisasmToUse(is_alternate_isa);
+            GetDisasmToUse(is_alternate_isa, disasm);
 
         const llvm::Triple::ArchType machine = arch.GetMachine();
         if (machine == llvm::Triple::arm || machine == llvm::Triple::thumb) {
@@ -261,10 +245,8 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 
-          disasm_sp->Lock(this, NULL);
           const size_t inst_size =
               mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-          disasm_sp->Unlock();
           if (inst_size == 0)
             m_opcode.Clear();
           else {
@@ -296,19 +278,19 @@ public:
       std::string out_string;
       std::string comment_string;
 
-      std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-      if (disasm_sp) {
+      DisassemblerScope disasm(*this, exe_ctx);
+      if (disasm) {
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr;
 
         if (address_class == AddressClass::eCodeAlternateISA)
-          mc_disasm_ptr = disasm_sp->m_alternate_disasm_up.get();
+          mc_disasm_ptr = disasm->m_alternate_disasm_up.get();
         else
-          mc_disasm_ptr = disasm_sp->m_disasm_up.get();
+          mc_disasm_ptr = disasm->m_disasm_up.get();
 
         lldb::addr_t pc = m_address.GetFileAddress();
         m_using_file_addr = true;
 
-        const bool data_from_file = disasm_sp->m_data_from_file;
+        const bool data_from_file = disasm->m_data_from_file;
         bool use_hex_immediates = true;
         Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
 
@@ -328,8 +310,6 @@ public:
           }
         }
 
-        disasm_sp->Lock(this, exe_ctx);
-
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
@@ -344,8 +324,6 @@ public:
             AppendComment(comment_string);
           }
         }
-
-        disasm_sp->Unlock();
 
         if (inst_size == 0) {
           m_comment.assign("unknown opcode");
@@ -423,9 +401,27 @@ public:
   bool UsingFileAddress() const { return m_using_file_addr; }
   size_t GetByteSize() const { return m_opcode.GetByteSize(); }
 
-  std::shared_ptr<DisassemblerLLVMC> GetDisassembler() {
-    return m_disasm_wp.lock();
-  }
+  /// Grants exclusive access to the disassembler and initializes it with the
+  /// given InstructionLLVMC and an optional ExecutionContext.
+  class DisassemblerScope {
+    std::shared_ptr<DisassemblerLLVMC> m_disasm;
+
+  public:
+    explicit DisassemblerScope(
+        InstructionLLVMC &i,
+        const lldb_private::ExecutionContext *exe_ctx = nullptr)
+        : m_disasm(i.m_disasm_wp.lock()) {
+      m_disasm->m_mutex.lock();
+      m_disasm->m_inst = &i;
+      m_disasm->m_exe_ctx = exe_ctx;
+    }
+    ~DisassemblerScope() { m_disasm->m_mutex.unlock(); }
+
+    /// Evaluates to true if this scope contains a valid disassembler.
+    operator bool() const { return static_cast<bool>(m_disasm); }
+
+    std::shared_ptr<DisassemblerLLVMC> operator->() { return m_disasm; }
+  };
 
   static llvm::StringRef::const_iterator
   ConsumeWhitespace(llvm::StringRef::const_iterator osi,
@@ -876,16 +872,15 @@ public:
 
   bool IsCall() override {
     if (m_is_call == eLazyBoolCalculate) {
-      std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
-      if (disasm_sp) {
-        disasm_sp->Lock(this, NULL);
+      DisassemblerScope disasm(*this);
+      if (disasm) {
         DataExtractor data;
         if (m_opcode.GetData(data)) {
           bool is_alternate_isa;
           lldb::addr_t pc = m_address.GetFileAddress();
 
           DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
-              GetDisasmToUse(is_alternate_isa);
+              GetDisasmToUse(is_alternate_isa, disasm);
           const uint8_t *opcode_data = data.GetDataStart();
           const size_t opcode_data_len = data.GetByteSize();
           llvm::MCInst inst;
@@ -900,7 +895,6 @@ public:
               m_is_call = eLazyBoolNo;
           }
         }
-        disasm_sp->Unlock();
       }
     }
     return m_is_call == eLazyBoolYes;
@@ -913,6 +907,24 @@ protected:
   LazyBool m_is_call;
   bool m_is_valid;
   bool m_using_file_addr;
+
+private:
+  DisassemblerLLVMC::MCDisasmInstance *
+  GetDisasmToUse(bool &is_alternate_isa, DisassemblerScope &disasm) {
+    is_alternate_isa = false;
+    if (disasm) {
+      if (disasm->m_alternate_disasm_up) {
+        const AddressClass address_class = GetAddressClass();
+
+        if (address_class == AddressClass::eCodeAlternateISA) {
+          is_alternate_isa = true;
+          return disasm->m_alternate_disasm_up.get();
+        }
+      }
+      return disasm->m_disasm_up.get();
+    }
+    return nullptr;
+  }
 };
 
 std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>

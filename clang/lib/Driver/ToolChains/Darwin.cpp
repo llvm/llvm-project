@@ -2258,9 +2258,15 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Function;
+
+  // Prior to 10.9, macOS shipped a version of the C++ standard library without
+  // C++11 support. The same is true of iOS prior to version 5. These OS'es are
+  // incompatible with -fsanitize=vptr.
+  if (!(isTargetMacOS() && isMacosxVersionLT(10, 9))
+      && !(isTargetIPhoneOS() && isIPhoneOSVersionLT(5, 0)))
+    Res |= SanitizerKind::Vptr;
+
   if (isTargetMacOS()) {
-    if (!isMacosxVersionLT(10, 9))
-      Res |= SanitizerKind::Vptr;
     if (IsX86_64)
       Res |= SanitizerKind::Thread;
   } else if (isTargetIOSSimulator() || isTargetTvOSSimulator()) {

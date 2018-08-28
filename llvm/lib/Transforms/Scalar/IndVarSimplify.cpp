@@ -625,7 +625,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
             unsigned Opc = UseInstr->getOpcode();
             NumUses++;
             if (L->contains(UseInstr)) {
-              if (Opc == Instruction::Call || Opc == Instruction::Ret)
+              if (Opc == Instruction::Call)
                 NumHardInternalUses++;
             } else {
               if (Opc == Instruction::PHI) {

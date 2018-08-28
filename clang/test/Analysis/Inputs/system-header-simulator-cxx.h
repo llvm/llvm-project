@@ -252,6 +252,15 @@ namespace std {
       return size_t(_finish - _start);
     }
 
+    vector& operator=(const vector &other);
+    vector& operator=(vector &&other);
+    vector& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_back(const T &value);
@@ -301,7 +310,20 @@ namespace std {
     list& operator=(list &&other);
     list& operator=(std::initializer_list<T> ilist);
 
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
+
+    void push_back(const T &value);
+    void push_back(T &&value);
+    void pop_back();
+
+    void push_front(const T &value);
+    void push_front(T &&value);
+    void pop_front();
 
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
@@ -338,6 +360,15 @@ namespace std {
       return size_t(_finish - _start);
     }
     
+    deque& operator=(const deque &other);
+    deque& operator=(deque &&other);
+    deque& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_back(const T &value);
@@ -351,11 +382,11 @@ namespace std {
     T &operator[](size_t n) {
       return _start[n];
     }
-    
+
     const T &operator[](size_t n) const {
       return _start[n];
     }
-    
+
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -367,7 +398,7 @@ namespace std {
     T& back() { return *(end() - 1); }
     const T& back() const { return *(end() - 1); }
   };
-  
+
   template<typename T>
   class forward_list {
     struct __item {
@@ -387,6 +418,15 @@ namespace std {
     forward_list(forward_list &&other);
     ~forward_list();
     
+    forward_list& operator=(const forward_list &other);
+    forward_list& operator=(forward_list &&other);
+    forward_list& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_front(const T &value);

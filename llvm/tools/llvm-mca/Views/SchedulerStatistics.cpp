@@ -25,7 +25,8 @@ void SchedulerStatistics::onEvent(const HWInstructionEvent &Event) {
     ++NumIssued;
 }
 
-void SchedulerStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
+void SchedulerStatistics::onReservedBuffers(const InstRef & /* unused */,
+                                            ArrayRef<unsigned> Buffers) {
   for (const unsigned Buffer : Buffers) {
     BufferUsage &BU = Usage[Buffer];
     BU.SlotsInUse++;
@@ -33,7 +34,8 @@ void SchedulerStatistics::onReservedBuffers(ArrayRef<unsigned> Buffers) {
   }
 }
 
-void SchedulerStatistics::onReleasedBuffers(ArrayRef<unsigned> Buffers) {
+void SchedulerStatistics::onReleasedBuffers(const InstRef & /* unused */,
+                                            ArrayRef<unsigned> Buffers) {
   for (const unsigned Buffer : Buffers)
     Usage[Buffer].SlotsInUse--;
 }

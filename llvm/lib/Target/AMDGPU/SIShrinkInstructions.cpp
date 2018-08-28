@@ -64,59 +64,6 @@ FunctionPass *llvm::createSIShrinkInstructionsPass() {
   return new SIShrinkInstructions();
 }
 
-static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
-                      const SIRegisterInfo &TRI,
-                      const MachineRegisterInfo &MRI) {
-
-  const MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-  // Can't shrink instruction with three operands.
-  // FIXME: v_cndmask_b32 has 3 operands and is shrinkable, but we need to add
-  // a special case for it.  It can only be shrunk if the third operand
-  // is vcc.  We should handle this the same way we handle vopc, by addding
-  // a register allocation hint pre-regalloc and then do the shrinking
-  // post-regalloc.
-  if (Src2) {
-    switch (MI.getOpcode()) {
-      default: return false;
-
-      case AMDGPU::V_ADDC_U32_e64:
-      case AMDGPU::V_SUBB_U32_e64:
-      case AMDGPU::V_SUBBREV_U32_e64: {
-        const MachineOperand *Src1
-          = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-        if (!Src1->isReg() || !TRI.isVGPR(MRI, Src1->getReg()))
-          return false;
-        // Additional verification is needed for sdst/src2.
-        return true;
-      }
-      case AMDGPU::V_MAC_F32_e64:
-      case AMDGPU::V_MAC_F16_e64:
-      case AMDGPU::V_FMAC_F32_e64:
-        if (!Src2->isReg() || !TRI.isVGPR(MRI, Src2->getReg()) ||
-            TII->hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
-          return false;
-        break;
-
-      case AMDGPU::V_CNDMASK_B32_e64:
-        break;
-    }
-  }
-
-  const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Src1 && (!Src1->isReg() || !TRI.isVGPR(MRI, Src1->getReg()) ||
-               TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
-    return false;
-
-  // We don't need to check src0, all input types are legal, so just make sure
-  // src0 isn't using any modifiers.
-  if (TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers))
-    return false;
-
-  // Check output modifiers
-  return !TII->hasModifiersSet(MI, AMDGPU::OpName::omod) &&
-         !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
-}
-
 /// This function checks \p MI for operands defined by a move immediate
 /// instruction and then folds the literal constant into the instruction if it
 /// can. This function assumes that \p MI is a VOP1, VOP2, or VOPC instructions.
@@ -285,7 +232,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
   std::vector<unsigned> I1Defs;
 
@@ -411,11 +357,11 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
         continue;
 
-      if (!canShrink(MI, TII, TRI, MRI)) {
+      if (!TII->canShrink(MI, MRI)) {
         // Try commuting the instruction and see if that enables us to shrink
         // it.
         if (!MI.isCommutable() || !TII->commuteInstruction(MI) ||
-            !canShrink(MI, TII, TRI, MRI))
+            !TII->canShrink(MI, MRI))
           continue;
       }
 

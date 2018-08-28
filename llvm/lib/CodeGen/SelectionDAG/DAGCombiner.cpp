@@ -1859,8 +1859,11 @@ SDValue DAGCombiner::visitMERGE_VALUES(SDNode *N) {
   // can be tried again once they have new operands.
   AddUsersToWorklist(N);
   do {
+    // Do as a single replacement to avoid rewalking use lists.
+    SmallVector<SDValue, 8> Ops;
     for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
-      DAG.ReplaceAllUsesOfValueWith(SDValue(N, i), N->getOperand(i));
+      Ops.push_back(N->getOperand(i));
+    DAG.ReplaceAllUsesWith(N, Ops.data());
   } while (!N->use_empty());
   deleteAndRecombine(N);
   return SDValue(N, 0);   // Return N so it doesn't get rechecked!

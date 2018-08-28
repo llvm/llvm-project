@@ -437,6 +437,79 @@ define void @test_srem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
   ret void
 }
 
+define void @test_udiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwind {
+; X64-LABEL: test_udiv_v2i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    movq %xmm2, %rsi
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divq %rsi
+; X64-NEXT:    movq %rax, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; X64-NEXT:    movq %xmm0, %rsi
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divq %rsi
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X64-NEXT:    movq %xmm0, (%rcx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_udiv_v2i32:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-NEXT:    movdqu %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    movdqa %xmm2, %xmm3
+; X86-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    calll __udivdi3
+; X86-NEXT:    movups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    calll __udivdi3
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X86-NEXT:    movq %xmm0, (%esi)
+; X86-NEXT:    addl $56, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+  %a = load <2 x i32>, <2 x i32>* %x
+  %b = load <2 x i32>, <2 x i32>* %y
+  %c = udiv <2 x i32> %a, %b
+  store <2 x i32> %c, <2 x i32>* %z
+  ret void
+}
+
 define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwind {
 ; X64-LABEL: test_urem_v2i32:
 ; X64:       # %bb.0:
@@ -444,14 +517,19 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    movq %xmm2, %rsi
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divq %rax
+; X64-NEXT:    divq %rsi
 ; X64-NEXT:    movq %rdx, %xmm1
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; X64-NEXT:    movq %xmm0, %rsi
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divq %rax
+; X64-NEXT:    divq %rsi
 ; X64-NEXT:    movq %rdx, %xmm0
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
@@ -461,20 +539,30 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-LABEL: test_urem_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    subl $56, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-NEXT:    movdqu %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    movdqa %xmm2, %xmm3
+; X86-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __umoddi3
 ; X86-NEXT:    movups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-NEXT:    movd %xmm0, (%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movd %eax, %xmm0
@@ -485,11 +573,11 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X86-NEXT:    movq %xmm0, (%esi)
-; X86-NEXT:    addl $40, %esp
+; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
-  %b = load <2 x i32>, <2 x i32>* %x
+  %b = load <2 x i32>, <2 x i32>* %y
   %c = urem <2 x i32> %a, %b
   store <2 x i32> %c, <2 x i32>* %z
   ret void
@@ -498,62 +586,72 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 define void @test_sdiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwind {
 ; X64-LABEL: test_sdiv_v2i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movslq (%rdi), %rsi
-; X64-NEXT:    movslq 4(%rdi), %rdi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    cqto
-; X64-NEXT:    idivq %rdi
-; X64-NEXT:    movq %rax, %xmm0
-; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movslq (%rdi), %rcx
+; X64-NEXT:    movslq 4(%rdi), %rax
+; X64-NEXT:    movslq (%rsi), %rdi
+; X64-NEXT:    movslq 4(%rsi), %rsi
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    cqto
+; X64-NEXT:    idivq %rdi
 ; X64-NEXT:    movq %rax, %xmm1
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X64-NEXT:    movq %xmm0, (%rcx)
+; X64-NEXT:    movq %xmm0, (%r8)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sdiv_v2i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edi
-; X86-NEXT:    movl 4(%eax), %eax
-; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %edi
+; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 4(%ecx), %esi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl (%eax), %ebx
+; X86-NEXT:    movl 4(%eax), %ecx
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    sarl $31, %ebp
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movdqu %xmm0, (%esp) # 16-byte Spill
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movdqu (%esp), %xmm1 # 16-byte Reload
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-NEXT:    movq %xmm0, (%esi)
-; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
-  %b = load <2 x i32>, <2 x i32>* %x
+  %b = load <2 x i32>, <2 x i32>* %y
   %c = sdiv <2 x i32> %a, %b
   store <2 x i32> %c, <2 x i32>* %z
   ret void
@@ -562,62 +660,72 @@ define void @test_sdiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 define void @test_srem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwind {
 ; X64-LABEL: test_srem_v2i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movslq (%rdi), %rsi
-; X64-NEXT:    movslq 4(%rdi), %rdi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    cqto
-; X64-NEXT:    idivq %rdi
-; X64-NEXT:    movq %rax, %xmm0
-; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movslq (%rdi), %rcx
+; X64-NEXT:    movslq 4(%rdi), %rax
+; X64-NEXT:    movslq (%rsi), %rdi
+; X64-NEXT:    movslq 4(%rsi), %rsi
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    cqto
+; X64-NEXT:    idivq %rdi
 ; X64-NEXT:    movq %rax, %xmm1
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X64-NEXT:    movq %xmm0, (%rcx)
+; X64-NEXT:    movq %xmm0, (%r8)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_srem_v2i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edi
-; X86-NEXT:    movl 4(%eax), %eax
-; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %edi
+; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 4(%ecx), %esi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl (%eax), %ebx
+; X86-NEXT:    movl 4(%eax), %ecx
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    sarl $31, %ebp
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movdqu %xmm0, (%esp) # 16-byte Spill
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movdqu (%esp), %xmm1 # 16-byte Reload
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-NEXT:    movq %xmm0, (%esi)
-; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
-  %b = load <2 x i32>, <2 x i32>* %x
+  %b = load <2 x i32>, <2 x i32>* %y
   %c = sdiv <2 x i32> %a, %b
   store <2 x i32> %c, <2 x i32>* %z
   ret void

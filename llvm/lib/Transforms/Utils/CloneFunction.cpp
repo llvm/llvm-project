@@ -636,6 +636,22 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
+    // We need to simplify conditional branches and switches with a constant
+    // operand. We try to prune these out when cloning, but if the
+    // simplification required looking through PHI nodes, those are only
+    // available after forming the full basic block. That may leave some here,
+    // and we still want to prune the dead code as early as possible.
+    //
+    // Do the folding before we check if the block is dead since we want code
+    // like
+    //  bb:
+    //    br i1 undef, label %bb, label %bb
+    // to be simplified to
+    //  bb:
+    //    br label %bb
+    // before we call I->getSinglePredecessor().
+    ConstantFoldTerminator(&*I);
+
     // Check if this block has become dead during inlining or other
     // simplifications. Note that the first block will appear dead, as it has
     // not yet been wired up properly.
@@ -645,13 +661,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       DeleteDeadBlock(DeadBB);
       continue;
     }
-
-    // We need to simplify conditional branches and switches with a constant
-    // operand. We try to prune these out when cloning, but if the
-    // simplification required looking through PHI nodes, those are only
-    // available after forming the full basic block. That may leave some here,
-    // and we still want to prune the dead code as early as possible.
-    ConstantFoldTerminator(&*I);
 
     BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
     if (!BI || BI->isConditional()) { ++I; continue; }

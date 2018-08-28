@@ -235,20 +235,8 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
 
   // Analyze calls.
   if (MI.isCall()) {
-    switch (MI.getOpcode()) {
-    case WebAssembly::CALL_VOID:
-    case WebAssembly::CALL_INDIRECT_VOID:
-      QueryCallee(MI, 0, Read, Write, Effects, StackPointer);
-      break;
-    case WebAssembly::CALL_I32: case WebAssembly::CALL_I64:
-    case WebAssembly::CALL_F32: case WebAssembly::CALL_F64:
-    case WebAssembly::CALL_INDIRECT_I32: case WebAssembly::CALL_INDIRECT_I64:
-    case WebAssembly::CALL_INDIRECT_F32: case WebAssembly::CALL_INDIRECT_F64:
-      QueryCallee(MI, 1, Read, Write, Effects, StackPointer);
-      break;
-    default:
-      llvm_unreachable("unexpected call opcode");
-    }
+    unsigned CalleeOpNo = WebAssembly::getCalleeOpNo(MI);
+    QueryCallee(MI, CalleeOpNo, Read, Write, Effects, StackPointer);
   }
 }
 
