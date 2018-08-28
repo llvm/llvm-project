@@ -131,6 +131,13 @@ def G_ADDRSPACE_CAST : GenericInstruction {
   let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
+
+def G_BLOCK_ADDR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$ba);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
