@@ -77,8 +77,7 @@ class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
   Preprocessor &PP;
 
 public:
-  DeclarationAndMacrosFinder(raw_ostream &OS,
-                             const SourceLocation &SearchedLocation,
+  DeclarationAndMacrosFinder(const SourceLocation &SearchedLocation,
                              ASTContext &AST, Preprocessor &PP)
       : SearchedLocation(SearchedLocation), AST(AST), PP(PP) {}
 
@@ -163,8 +162,8 @@ struct IdentifiedSymbol {
 };
 
 IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
-  auto DeclMacrosFinder = DeclarationAndMacrosFinder(
-      llvm::errs(), Pos, AST.getASTContext(), AST.getPreprocessor());
+  auto DeclMacrosFinder = DeclarationAndMacrosFinder(Pos, AST.getASTContext(),
+                                                     AST.getPreprocessor());
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -324,7 +323,7 @@ class DocumentHighlightsFinder : public index::IndexDataConsumer {
   const ASTContext &AST;
 
 public:
-  DocumentHighlightsFinder(raw_ostream &OS, ASTContext &AST, Preprocessor &PP,
+  DocumentHighlightsFinder(ASTContext &AST, Preprocessor &PP,
                            std::vector<const Decl *> &Decls)
       : Decls(Decls), AST(AST) {}
   std::vector<DocumentHighlight> takeHighlights() {
@@ -389,7 +388,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   std::vector<const Decl *> SelectedDecls = Symbols.Decls;
 
   DocumentHighlightsFinder DocHighlightsFinder(
-      llvm::errs(), AST.getASTContext(), AST.getPreprocessor(), SelectedDecls);
+      AST.getASTContext(), AST.getPreprocessor(), SelectedDecls);
 
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
