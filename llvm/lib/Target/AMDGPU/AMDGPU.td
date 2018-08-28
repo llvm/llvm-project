@@ -242,6 +242,12 @@ def FeatureDPP : SubtargetFeature<"dpp",
   "Support DPP (Data Parallel Primitives) extension"
 >;
 
+def FeatureR128A16 : SubtargetFeature<"r128-a16",
+  "HasR128A16",
+  "true",
+  "Support 16 bit coordindates/gradients/lod/clamp/mip types on gfx9"
+>;
+
 def FeatureIntClamp : SubtargetFeature<"int-clamp-insts",
   "HasIntClamp",
   "true",
@@ -444,7 +450,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
-   FeatureAddNoCarryInsts, FeatureScalarAtomics
+   FeatureAddNoCarryInsts, FeatureScalarAtomics, FeatureR128A16
   ]
 >;
 
@@ -702,6 +708,9 @@ def HasSDWA9 : Predicate<"Subtarget->hasSDWA()">,
 
 def HasDPP : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<"FeatureDPP">;
+
+def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
+  AssemblerPredicate<"FeatureR128A16">;
 
 def HasIntClamp : Predicate<"Subtarget->hasIntClamp()">,
   AssemblerPredicate<"FeatureIntClamp">;

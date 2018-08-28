@@ -181,6 +181,7 @@ struct Configuration {
   bool ZCombreloc;
   bool ZCopyreloc;
   bool ZExecstack;
+  bool ZGlobal;
   bool ZHazardplt;
   bool ZInitfirst;
   bool ZKeepTextSectionPrefix;

@@ -123,8 +123,8 @@ static types::ID foldType(types::ID Lang) {
 struct TransferableCommand {
   // Flags that should not apply to all files are stripped from CommandLine.
   CompileCommand Cmd;
-  // Language detected from -x or the filename.
-  types::ID Type = types::TY_INVALID;
+  // Language detected from -x or the filename. Never TY_INVALID.
+  Optional<types::ID> Type;
   // Standard specified by -std.
   LangStandard::Kind Std = LangStandard::lang_unspecified;
 
@@ -171,7 +171,10 @@ struct TransferableCommand {
 
     if (Std != LangStandard::lang_unspecified) // -std take precedence over -x
       Type = toType(LangStandard::getLangStandardForKind(Std).getLanguage());
-    Type = foldType(Type);
+    Type = foldType(*Type);
+    // The contract is to store None instead of TY_INVALID.
+    if (Type == types::TY_INVALID)
+      Type = llvm::None;
   }
 
   // Produce a CompileCommand for \p filename, based on this one.
@@ -181,10 +184,10 @@ struct TransferableCommand {
     bool TypeCertain;
     auto TargetType = guessType(Filename, &TypeCertain);
     // If the filename doesn't determine the language (.h), transfer with -x.
-    if (!TypeCertain) {
+    if (TargetType != types::TY_INVALID && !TypeCertain && Type) {
       TargetType = types::onlyPrecompileType(TargetType) // header?
-                       ? types::lookupHeaderTypeForSourceType(Type)
-                       : Type;
+                       ? types::lookupHeaderTypeForSourceType(*Type)
+                       : *Type;
       Result.CommandLine.push_back("-x");
       Result.CommandLine.push_back(types::getTypeName(TargetType));
     }
@@ -217,28 +220,31 @@ private:
   }
 };
 
-// CommandIndex does the real work: given a filename, it produces the best
-// matching TransferableCommand by matching filenames. Basic strategy:
+// Given a filename, FileIndex picks the best matching file from the underlying
+// DB. This is the proxy file whose CompileCommand will be reused. The
+// heuristics incorporate file name, extension, and directory structure.
+// Strategy:
 // - Build indexes of each of the substrings we want to look up by.
 //   These indexes are just sorted lists of the substrings.
-// - Forward requests to the inner CDB. If it fails, we must pick a proxy.
 // - Each criterion corresponds to a range lookup into the index, so we only
 //   need O(log N) string comparisons to determine scores.
-// - We then break ties among the candidates with the highest score.
-class CommandIndex {
+//
+// Apart from path proximity signals, also takes file extensions into account
+// when scoring the candidates.
+class FileIndex {
 public:
-  CommandIndex(std::vector<TransferableCommand> AllCommands)
-      : Commands(std::move(AllCommands)), Strings(Arena) {
+  FileIndex(std::vector<std::string> Files)
+      : OriginalPaths(std::move(Files)), Strings(Arena) {
     // Sort commands by filename for determinism (index is a tiebreaker later).
-    llvm::sort(
-        Commands.begin(), Commands.end(),
-        [](const TransferableCommand &Left, const TransferableCommand &Right) {
-          return Left.Cmd.Filename < Right.Cmd.Filename;
-        });
-    for (size_t I = 0; I < Commands.size(); ++I) {
-      StringRef Path =
-          Strings.save(StringRef(Commands[I].Cmd.Filename).lower());
-      Paths.push_back({Path, I});
+    llvm::sort(OriginalPaths.begin(), OriginalPaths.end());
+    Paths.reserve(OriginalPaths.size());
+    Types.reserve(OriginalPaths.size());
+    Stems.reserve(OriginalPaths.size());
+    for (size_t I = 0; I < OriginalPaths.size(); ++I) {
+      StringRef Path = Strings.save(StringRef(OriginalPaths[I]).lower());
+
+      Paths.emplace_back(Path, I);
+      Types.push_back(foldType(guessType(Path)));
       Stems.emplace_back(sys::path::stem(Path), I);
       auto Dir = ++sys::path::rbegin(Path), DirEnd = sys::path::rend(Path);
       for (int J = 0; J < DirectorySegmentsIndexed && Dir != DirEnd; ++J, ++Dir)
@@ -250,29 +256,28 @@ public:
     llvm::sort(Components.begin(), Components.end());
   }
 
-  bool empty() const { return Commands.empty(); }
+  bool empty() const { return Paths.empty(); }
 
-  // Returns the command that best fits OriginalFilename.
-  // Candidates with PreferLanguage will be chosen over others (unless it's
-  // TY_INVALID, or all candidates are bad).
-  const TransferableCommand &chooseProxy(StringRef OriginalFilename,
-                                         types::ID PreferLanguage) const {
+  // Returns the path for the file that best fits OriginalFilename.
+  // Candidates with extensions matching PreferLanguage will be chosen over
+  // others (unless it's TY_INVALID, or all candidates are bad).
+  StringRef chooseProxy(StringRef OriginalFilename,
+                        types::ID PreferLanguage) const {
     assert(!empty() && "need at least one candidate!");
     std::string Filename = OriginalFilename.lower();
     auto Candidates = scoreCandidates(Filename);
     std::pair<size_t, int> Best =
         pickWinner(Candidates, Filename, PreferLanguage);
 
-    DEBUG_WITH_TYPE("interpolate",
-                    llvm::dbgs()
-                        << "interpolate: chose "
-                        << Commands[Best.first].Cmd.Filename << " as proxy for "
-                        << OriginalFilename << " preferring "
-                        << (PreferLanguage == types::TY_INVALID
-                                ? "none"
-                                : types::getTypeName(PreferLanguage))
-                        << " score=" << Best.second << "\n");
-    return Commands[Best.first];
+    DEBUG_WITH_TYPE(
+        "interpolate",
+        llvm::dbgs() << "interpolate: chose " << OriginalPaths[Best.first]
+                     << " as proxy for " << OriginalFilename << " preferring "
+                     << (PreferLanguage == types::TY_INVALID
+                             ? "none"
+                             : types::getTypeName(PreferLanguage))
+                     << " score=" << Best.second << "\n");
+    return OriginalPaths[Best.first];
   }
 
 private:
@@ -338,7 +343,7 @@ private:
       ScoredCandidate S;
       S.Index = Candidate.first;
       S.Preferred = PreferredLanguage == types::TY_INVALID ||
-                    PreferredLanguage == Commands[S.Index].Type;
+                    PreferredLanguage == Types[S.Index];
       S.Points = Candidate.second;
       if (!S.Preferred && Best.Preferred)
         continue;
@@ -371,7 +376,7 @@ private:
   // If Prefix is true, it's instead the range starting with Key.
   template <bool Prefix>
   ArrayRef<SubstringAndIndex>
-  indexLookup(StringRef Key, const std::vector<SubstringAndIndex> &Idx) const {
+  indexLookup(StringRef Key, ArrayRef<SubstringAndIndex> Idx) const {
     // Use pointers as iteratiors to ease conversion of result to ArrayRef.
     auto Range = std::equal_range(Idx.data(), Idx.data() + Idx.size(), Key,
                                   Less<Prefix>());
@@ -379,8 +384,8 @@ private:
   }
 
   // Performs a point lookup into a nonempty index, returning a longest match.
-  SubstringAndIndex
-  longestMatch(StringRef Key, const std::vector<SubstringAndIndex> &Idx) const {
+  SubstringAndIndex longestMatch(StringRef Key,
+                                 ArrayRef<SubstringAndIndex> Idx) const {
     assert(!Idx.empty());
     // Longest substring match will be adjacent to a direct lookup.
     auto It =
@@ -395,22 +400,27 @@ private:
     return Prefix > PrevPrefix ? *It : *--It;
   }
 
-  std::vector<TransferableCommand> Commands; // Indexes point into this.
+  // Original paths, everything else is in lowercase.
+  std::vector<std::string> OriginalPaths;
   BumpPtrAllocator Arena;
   StringSaver Strings;
   // Indexes of candidates by certain substrings.
   // String is lowercase and sorted, index points into OriginalPaths.
   std::vector<SubstringAndIndex> Paths;      // Full path.
+  // Lang types obtained by guessing on the corresponding path. I-th element is
+  // a type for the I-th path.
+  std::vector<types::ID> Types;
   std::vector<SubstringAndIndex> Stems;      // Basename, without extension.
   std::vector<SubstringAndIndex> Components; // Last path components.
 };
 
 // The actual CompilationDatabase wrapper delegates to its inner database.
-// If no match, looks up a command in CommandIndex and transfers it to the file.
+// If no match, looks up a proxy file in FileIndex and transfers its
+// command to the requested file.
 class InterpolatingCompilationDatabase : public CompilationDatabase {
 public:
   InterpolatingCompilationDatabase(std::unique_ptr<CompilationDatabase> Inner)
-      : Inner(std::move(Inner)), Index(allCommands()) {}
+      : Inner(std::move(Inner)), Index(this->Inner->getAllFiles()) {}
 
   std::vector<CompileCommand>
   getCompileCommands(StringRef Filename) const override {
@@ -421,7 +431,11 @@ public:
     auto Lang = guessType(Filename, &TypeCertain);
     if (!TypeCertain)
       Lang = types::TY_INVALID;
-    return {Index.chooseProxy(Filename, foldType(Lang)).transferTo(Filename)};
+    auto ProxyCommands =
+        Inner->getCompileCommands(Index.chooseProxy(Filename, foldType(Lang)));
+    if (ProxyCommands.empty())
+      return {};
+    return {TransferableCommand(ProxyCommands[0]).transferTo(Filename)};
   }
 
   std::vector<std::string> getAllFiles() const override {
@@ -433,18 +447,8 @@ public:
   }
 
 private:
-  std::vector<TransferableCommand> allCommands() {
-    std::vector<TransferableCommand> Result;
-    for (auto Command : Inner->getAllCompileCommands()) {
-      Result.emplace_back(std::move(Command));
-      if (Result.back().Type == types::TY_INVALID)
-        Result.pop_back();
-    }
-    return Result;
-  }
-
   std::unique_ptr<CompilationDatabase> Inner;
-  CommandIndex Index;
+  FileIndex Index;
 };
 
 } // namespace

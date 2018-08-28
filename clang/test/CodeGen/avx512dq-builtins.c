@@ -68,6 +68,52 @@ __mmask8 test_kxor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                    __E, __F);
 }
 
+unsigned char test_kortestz_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
+  // CHECK-LABEL: @test_kortestz_mask8_u8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[OR:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: [[CAST:%.*]] = bitcast <8 x i1> [[OR]] to i8
+  // CHECK: [[CMP:%.*]] = icmp eq i8 [[CAST]], 0
+  // CHECK: [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+  // CHECK: trunc i32 [[ZEXT]] to i8
+  return _kortestz_mask8_u8(_mm512_cmpneq_epu64_mask(__A, __B),
+                            _mm512_cmpneq_epu64_mask(__C, __D));
+}
+
+unsigned char test_kortestc_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
+  // CHECK-LABEL: @test_kortestc_mask8_u8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[OR:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: [[CAST:%.*]] = bitcast <8 x i1> [[OR]] to i8
+  // CHECK: [[CMP:%.*]] = icmp eq i8 [[CAST]], -1
+  // CHECK: [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+  // CHECK: trunc i32 [[ZEXT]] to i8
+  return _kortestc_mask8_u8(_mm512_cmpneq_epu64_mask(__A, __B),
+                            _mm512_cmpneq_epu64_mask(__C, __D));
+}
+
+unsigned char test_kortest_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
+  // CHECK-LABEL: @test_kortest_mask8_u8
+  // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[OR:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+  // CHECK: [[CAST:%.*]] = bitcast <8 x i1> [[OR]] to i8
+  // CHECK: [[CMP:%.*]] = icmp eq i8 [[CAST]], -1
+  // CHECK: [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+  // CHECK: trunc i32 [[ZEXT]] to i8
+  // CHECK: [[LHS2:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[RHS2:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: [[OR2:%.*]] = or <8 x i1> [[LHS2]], [[RHS2]]
+  // CHECK: [[CAST2:%.*]] = bitcast <8 x i1> [[OR2]] to i8
+  // CHECK: [[CMP2:%.*]] = icmp eq i8 [[CAST2]], 0
+  // CHECK: [[ZEXT2:%.*]] = zext i1 [[CMP2]] to i32
+  // CHECK: trunc i32 [[ZEXT2]] to i8
+  return _kortest_mask8_u8(_mm512_cmpneq_epu64_mask(__A, __B),
+                           _mm512_cmpneq_epu64_mask(__C, __D), CF);
+}
+
 __m512i test_mm512_mullo_epi64 (__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mullo_epi64
   // CHECK: mul <8 x i64>

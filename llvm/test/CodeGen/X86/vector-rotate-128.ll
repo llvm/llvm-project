@@ -877,15 +877,15 @@ define <8 x i16> @splatvar_rotate_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE2-LABEL: splatvar_rotate_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[0,0,2,3,4,5,6,7]
+; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; SSE2-NEXT:    pextrw $0, %xmm1, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    psllw %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16]
 ; SSE2-NEXT:    psubw %xmm2, %xmm1
-; SSE2-NEXT:    pextrw $0, %xmm1, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    psrlw %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm3, %xmm0
 ; SSE2-NEXT:    retq
@@ -993,15 +993,15 @@ define <8 x i16> @splatvar_rotate_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; X32-SSE-LABEL: splatvar_rotate_v8i16:
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[0,0,2,3,4,5,6,7]
+; X32-SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; X32-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
-; X32-SSE-NEXT:    pextrw $0, %xmm1, %eax
-; X32-SSE-NEXT:    movd %eax, %xmm1
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm3
 ; X32-SSE-NEXT:    psllw %xmm1, %xmm3
 ; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16]
 ; X32-SSE-NEXT:    psubw %xmm2, %xmm1
-; X32-SSE-NEXT:    pextrw $0, %xmm1, %eax
-; X32-SSE-NEXT:    movd %eax, %xmm1
+; X32-SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
+; X32-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-SSE-NEXT:    psrlw %xmm1, %xmm0
 ; X32-SSE-NEXT:    por %xmm3, %xmm0
 ; X32-SSE-NEXT:    retl

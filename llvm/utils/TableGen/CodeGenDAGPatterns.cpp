@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -4477,6 +4478,16 @@ void CodeGenDAGPatterns::GenerateVariants() {
     LLVM_DEBUG(errs() << "FOUND VARIANTS OF: ";
                PatternsToMatch[i].getSrcPattern()->dump(); errs() << "\n");
 
+    // Cache matching predicates.
+    // TODO: Is it performant to pull this out of the loop entirely?
+    BitVector MatchedPredicates(PatternsToMatch.size(), false);
+    for (unsigned p = 0, e = PatternsToMatch.size(); p != e; ++p)
+      MatchedPredicates[p] = (i == p) || (PatternsToMatch[i].getPredicates() ==
+                                          PatternsToMatch[p].getPredicates());
+
+    unsigned NumMatches = MatchedPredicates.count();
+    (void)NumMatches;
+
     for (unsigned v = 0, e = Variants.size(); v != e; ++v) {
       TreePatternNodePtr Variant = Variants[v];
 
@@ -4487,8 +4498,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
       bool AlreadyExists = false;
       for (unsigned p = 0, e = PatternsToMatch.size(); p != e; ++p) {
         // Skip if the top level predicates do not match.
-        if ((i != p) && (PatternsToMatch[i].getPredicates() !=
-                         PatternsToMatch[p].getPredicates()))
+        if (!MatchedPredicates[p])
           continue;
         // Check to see if this variant already exists.
         if (Variant->isIsomorphicTo(PatternsToMatch[p].getSrcPattern(),
@@ -4507,6 +4517,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID()));
+      MatchedPredicates.resize(PatternsToMatch.size());
+      MatchedPredicates[PatternsToMatch.size() - 1] = true;
     }
 
     LLVM_DEBUG(errs() << "\n");

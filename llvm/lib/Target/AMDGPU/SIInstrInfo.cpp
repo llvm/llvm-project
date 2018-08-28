@@ -2523,6 +2523,58 @@ bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) const {
          hasModifiersSet(MI, AMDGPU::OpName::omod);
 }
 
+bool SIInstrInfo::canShrink(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI) const {
+  const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
+  // Can't shrink instruction with three operands.
+  // FIXME: v_cndmask_b32 has 3 operands and is shrinkable, but we need to add
+  // a special case for it.  It can only be shrunk if the third operand
+  // is vcc.  We should handle this the same way we handle vopc, by addding
+  // a register allocation hint pre-regalloc and then do the shrinking
+  // post-regalloc.
+  if (Src2) {
+    switch (MI.getOpcode()) {
+      default: return false;
+
+      case AMDGPU::V_ADDC_U32_e64:
+      case AMDGPU::V_SUBB_U32_e64:
+      case AMDGPU::V_SUBBREV_U32_e64: {
+        const MachineOperand *Src1
+          = getNamedOperand(MI, AMDGPU::OpName::src1);
+        if (!Src1->isReg() || !RI.isVGPR(MRI, Src1->getReg()))
+          return false;
+        // Additional verification is needed for sdst/src2.
+        return true;
+      }
+      case AMDGPU::V_MAC_F32_e64:
+      case AMDGPU::V_MAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
+        if (!Src2->isReg() || !RI.isVGPR(MRI, Src2->getReg()) ||
+            hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
+          return false;
+        break;
+
+      case AMDGPU::V_CNDMASK_B32_e64:
+        break;
+    }
+  }
+
+  const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
+  if (Src1 && (!Src1->isReg() || !RI.isVGPR(MRI, Src1->getReg()) ||
+               hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
+    return false;
+
+  // We don't need to check src0, all input types are legal, so just make sure
+  // src0 isn't using any modifiers.
+  if (hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers))
+    return false;
+
+  // Check output modifiers
+  return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::clamp);
+
+}
+
 bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
                                   const MachineOperand &MO,
                                   const MCOperandInfo &OpInfo) const {

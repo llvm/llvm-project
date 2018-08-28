@@ -98,6 +98,24 @@ static uint16_t highera(uint64_t V) { return (V + 0x8000) >> 32; }
 static uint16_t highest(uint64_t V) { return V >> 48; }
 static uint16_t highesta(uint64_t V) { return (V + 0x8000) >> 48; }
 
+// Extracts the 'PO' field of an instruction encoding.
+static uint8_t getPrimaryOpCode(uint32_t Encoding) { return (Encoding >> 26); }
+
+static bool isDQFormInstruction(uint32_t Encoding) {
+  switch (getPrimaryOpCode(Encoding)) {
+  default:
+    return false;
+  case 56:
+    // The only instruction with a primary opcode of 56 is `lq`.
+    return true;
+  case 61:
+    // There are both DS and DQ instruction forms with this primary opcode.
+    // Namely `lxv` and `stxv` are the DQ-forms that use it.
+    // The DS 'XO' bits being set to 01 is restricted to DQ form.
+    return (Encoding & 3) == 0x1;
+  }
+}
+
 PPC64::PPC64() {
   GotRel = R_PPC64_GLOB_DAT;
   PltRel = R_PPC64_JMP_SLOT;
@@ -298,7 +316,7 @@ void PPC64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   case R_PPC64_TLS: {
-    uint32_t PrimaryOp = (read32(Loc) & 0xFC000000) >> 26; // bits 0-5
+    uint32_t PrimaryOp = getPrimaryOpCode(read32(Loc));
     if (PrimaryOp != 31)
       error("unrecognized instruction for IE to LE R_PPC64_TLS");
     uint32_t SecondaryOp = (read32(Loc) & 0x000007FE) >> 1; // bits 21-30
@@ -506,10 +524,15 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write16(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
-  case R_PPC64_TPREL16_DS:
+  case R_PPC64_TPREL16_DS: {
     checkInt(Loc, Val, 16, Type);
-    write16(Loc, (read16(Loc) & 3) | (Val & ~3));
-    break;
+    // DQ-form instructions use bits 28-31 as part of the instruction encoding
+    // DS-form instructions only use bits 30-31.
+    uint32_t EndianOffset = Config->EKind == ELF64BEKind ? 2U : 0U;
+    uint16_t Mask = isDQFormInstruction(read32(Loc - EndianOffset)) ? 0xF : 0x3;
+    checkAlignment(Loc, lo(Val), Mask + 1, Type);
+    write16(Loc, (read16(Loc) & Mask) | lo(Val));
+  } break;
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
@@ -542,9 +565,14 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write16(Loc, lo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
-  case R_PPC64_TPREL16_LO_DS:
-    write16(Loc, (read16(Loc) & 3) | (lo(Val) & ~3));
-    break;
+  case R_PPC64_TPREL16_LO_DS: {
+    // DQ-form instructions use bits 28-31 as part of the instruction encoding
+    // DS-form instructions only use bits 30-31.
+    uint32_t EndianOffset = Config->EKind == ELF64BEKind ? 2U : 0U;
+    uint16_t Mask = isDQFormInstruction(read32(Loc - EndianOffset)) ? 0xF : 0x3;
+    checkAlignment(Loc, lo(Val), Mask + 1, Type);
+    write16(Loc, (read16(Loc) & Mask) | lo(Val));
+  } break;
   case R_PPC64_ADDR32:
   case R_PPC64_REL32:
     checkInt(Loc, Val, 32, Type);
