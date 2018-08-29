@@ -304,6 +304,8 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         auto R = llvm::make_unique<BugReport>(*BT, os.str(), N);
         R->addRange(ArgRange);
 
+        if (ArgEx)
+          bugreporter::trackNullOrUndefValue(N, ArgEx, *R);
         // FIXME: enhance track back for uninitialized value for arbitrary
         // memregions
         C.emitReport(std::move(R));
