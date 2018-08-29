@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -analyzer-output=plist-multi-file %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-output=plist-multi-file %s -o %t.plist
 // RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/plist-macros.cpp.plist
 
 

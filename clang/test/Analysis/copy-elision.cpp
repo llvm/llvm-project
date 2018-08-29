@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify -analyzer-config eagerly-assume=false %s
 
 // Copy elision always occurs in C++17, otherwise it's under
 // an on-by-default flag.
