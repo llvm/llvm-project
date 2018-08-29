@@ -629,7 +629,8 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
     lldbassert(sc.module_sp == cu_sp->GetModule());
   }
 
-  if (resolve_scope & eSymbolContextFunction) {
+  if (resolve_scope & eSymbolContextFunction ||
+      resolve_scope & eSymbolContextBlock) {
     addr_t file_vm_addr = so_addr.GetFileAddress();
     auto symbol_up =
         m_session_up->findSymbolByAddress(file_vm_addr, PDB_SymType::Function);
@@ -643,8 +644,11 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
       if (sc.function) {
         resolved_flags |= eSymbolContextFunction;
         if (resolve_scope & eSymbolContextBlock) {
-          Block &block = sc.function->GetBlock(true);
-          sc.block = block.FindBlockByID(sc.function->GetID());
+          auto block_symbol = m_session_up->findSymbolByAddress(
+              file_vm_addr, PDB_SymType::Block);
+          auto block_id = block_symbol ? block_symbol->getSymIndexId()
+                                       : sc.function->GetID();
+          sc.block = sc.function->GetBlock(true).FindBlockByID(block_id);
           if (sc.block)
             resolved_flags |= eSymbolContextBlock;
         }
