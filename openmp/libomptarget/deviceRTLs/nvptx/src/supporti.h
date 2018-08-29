@@ -101,9 +101,14 @@ INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode,
   int rc;
 
   if (isRuntimeUninitialized) {
-    rc = GetThreadIdInBlock();
-    if (!isSPMDExecutionMode && rc >= GetMasterThreadID())
+    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
+            "Uninitialized runtime with non-SPMD mode.");
+    // For level 2 parallelism all parallel regions are executed sequentially.
+    if (omptarget_nvptx_simpleThreadPrivateContext
+            ->InL2OrHigherParallelRegion())
       rc = 0;
+    else
+      rc = GetThreadIdInBlock();
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
@@ -118,8 +123,14 @@ INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
   int rc;
 
   if (isRuntimeUninitialized) {
-    rc = isSPMDExecutionMode ? GetNumberOfThreadsInBlock()
-                             : GetNumberOfThreadsInBlock() - WARPSIZE;
+    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
+            "Uninitialized runtime with non-SPMD mode.");
+    // For level 2 parallelism all parallel regions are executed sequentially.
+    if (omptarget_nvptx_simpleThreadPrivateContext
+            ->InL2OrHigherParallelRegion())
+      rc = 1;
+    else
+      rc = GetNumberOfThreadsInBlock();
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
