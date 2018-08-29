@@ -72,9 +72,8 @@ class DispatchStage final : public Stage {
 
 public:
   DispatchStage(const llvm::MCSubtargetInfo &Subtarget,
-                const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
-                unsigned MaxDispatchWidth, RetireControlUnit &R,
-                RegisterFile &F)
+                const llvm::MCRegisterInfo &MRI, unsigned MaxDispatchWidth,
+                RetireControlUnit &R, RegisterFile &F)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
         CarryOver(0U), STI(Subtarget), RCU(R), PRF(F) {}
 

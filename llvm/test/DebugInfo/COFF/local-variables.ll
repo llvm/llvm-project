@@ -24,7 +24,7 @@
 ; ASM: f:                                      # @f
 ; ASM:         .cv_func_id 0
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
-; ASM:         .cv_loc 0 1 7 0 is_stmt 0       # t.cpp:7:0
+; ASM:         .cv_loc 0 1 7 0       # t.cpp:7:0
 ; ASM: .seh_proc f
 ; ASM: # %bb.0:                                 # %entry
 ; ASM:         subq    $56, %rsp

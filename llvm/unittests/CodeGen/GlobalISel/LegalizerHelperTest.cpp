@@ -342,4 +342,79 @@ TEST_F(LegalizerHelperTest, WidenBitCountingCTTZ) {
   // Check
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
+// UADDO widening.
+TEST_F(LegalizerHelperTest, WidenUADDO) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_ADD).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto MIBUAddO = B.buildInstr(TargetOpcode::G_UADDO, s8)
+                      .addDef(CarryReg)
+                      .addUse(MIBTrunc->getOperand(0).getReg())
+                      .addUse(MIBTrunc->getOperand(0).getReg());
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBUAddO, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[ADD:%[0-9]+]]:_(s16) = G_ADD [[LHS]]:_, [[RHS]]:_
+  CHECK: [[CST:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+  CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[ADD]]:_, [[CST]]:_
+  CHECK: G_ICMP intpred(ne), [[ADD]]:_(s16), [[AND]]:_
+  CHECK: G_TRUNC [[ADD]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
+
+// USUBO widening.
+TEST_F(LegalizerHelperTest, WidenUSUBO) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_SUB).legalFor({s16}); });
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  auto MIBUSUBO = B.buildInstr(TargetOpcode::G_USUBO, s8)
+                      .addDef(CarryReg)
+                      .addUse(MIBTrunc->getOperand(0).getReg())
+                      .addUse(MIBTrunc->getOperand(0).getReg());
+  AInfo Info(MF->getSubtarget());
+  LegalizerHelper Helper(*MF, Info);
+  ASSERT_TRUE(Helper.widenScalar(*MIBUSUBO, 0, s16) ==
+              LegalizerHelper::LegalizeResult::Legalized);
+
+  auto CheckStr = R"(
+  CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
+  CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[SUB:%[0-9]+]]:_(s16) = G_SUB [[LHS]]:_, [[RHS]]:_
+  CHECK: [[CST:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+  CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[SUB]]:_, [[CST]]:_
+  CHECK: G_ICMP intpred(ne), [[SUB]]:_(s16), [[AND]]:_
+  CHECK: G_TRUNC [[SUB]]
+  )";
+
+  // Check
+  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+}
 } // namespace
