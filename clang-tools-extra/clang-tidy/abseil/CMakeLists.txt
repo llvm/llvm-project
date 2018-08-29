@@ -6,6 +6,7 @@ add_clang_library(clangTidyAbseilModule
   FasterStrsplitDelimiterCheck.cpp
   NoNamespaceCheck.cpp
   StringFindStartswithCheck.cpp
+  StrCatAppendCheck.cpp
 
   LINK_LIBS
   clangAST
