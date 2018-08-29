@@ -268,6 +268,12 @@ HANDLE_TARGET_OPCODE(G_INTTOPTR)
 /// COPY is the relevant instruction.
 HANDLE_TARGET_OPCODE(G_BITCAST)
 
+/// INTRINSIC trunc intrinsic.
+HANDLE_TARGET_OPCODE(G_INTRINSIC_TRUNC)
+
+/// INTRINSIC round intrinsic.
+HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUND)
+
 /// Generic load (including anyext load)
 HANDLE_TARGET_OPCODE(G_LOAD)
 
@@ -356,9 +362,17 @@ HANDLE_TARGET_OPCODE(G_FCMP)
 /// Generic select.
 HANDLE_TARGET_OPCODE(G_SELECT)
 
+/// Generic unsigned add instruction, consuming the normal operands and
+/// producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_UADDO)
+
 /// Generic unsigned add instruction, consuming the normal operands plus a carry
 /// flag, and similarly producing the result and a carry flag.
 HANDLE_TARGET_OPCODE(G_UADDE)
+
+/// Generic unsigned sub instruction, consuming the normal operands and
+/// producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_USUBO)
 
 /// Generic unsigned subtract instruction, consuming the normal operands plus a
 /// carry flag, and similarly producing the result and a carry flag.
@@ -368,9 +382,17 @@ HANDLE_TARGET_OPCODE(G_USUBE)
 /// flag.
 HANDLE_TARGET_OPCODE(G_SADDO)
 
+/// Generic signed add instruction, consuming the normal operands plus a carry
+/// flag, and similarly producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_SADDE)
+
 /// Generic signed subtract instruction, producing the result and a signed
 /// overflow flag.
 HANDLE_TARGET_OPCODE(G_SSUBO)
+
+/// Generic signed sub instruction, consuming the normal operands plus a carry
+/// flag, and similarly producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_SSUBE)
 
 /// Generic unsigned multiply instruction, producing the result and a signed
 /// overflow flag.
@@ -464,18 +486,36 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 
+/// Generic count trailing zeroes.
+HANDLE_TARGET_OPCODE(G_CTTZ)
+
+/// Same as above, undefined for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTTZ_ZERO_UNDEF)
+
+/// Generic count leading zeroes.
+HANDLE_TARGET_OPCODE(G_CTLZ)
+
+/// Same as above, undefined for zero inputs.
+HANDLE_TARGET_OPCODE(G_CTLZ_ZERO_UNDEF)
+
+/// Generic count bits.
+HANDLE_TARGET_OPCODE(G_CTPOP)
+
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
 
+/// Generic block address
+HANDLE_TARGET_OPCODE(G_BLOCK_ADDR)
+
 // TODO: Add more generic opcodes as we move along.
 
 /// Marker for the end of the generic opcode.
 /// This is used to check if an opcode is in the range of the
 /// generic opcodes.
-HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_ADDRSPACE_CAST)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_BLOCK_ADDR)
 
 /// BUILTIN_OP_END - This must be the last enum value in this list.
 /// The target-specific post-isel opcode values start here.

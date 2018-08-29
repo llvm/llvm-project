@@ -809,6 +809,15 @@ MachineIRBuilderBase::buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
                         MMO);
 }
 
+MachineInstrBuilder
+MachineIRBuilderBase::buildBlockAddress(unsigned Res, const BlockAddress *BA) {
+#ifndef NDEBUG
+  assert(getMRI()->getType(Res).isPointer() && "invalid res type");
+#endif
+
+  return buildInstr(TargetOpcode::G_BLOCK_ADDR).addDef(Res).addBlockAddress(BA);
+}
+
 void MachineIRBuilderBase::validateTruncExt(unsigned Dst, unsigned Src,
                                             bool IsExtend) {
 #ifndef NDEBUG
