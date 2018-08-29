@@ -76,6 +76,12 @@ Improvements to clang-tidy
   Ensures code does not open ``namespace absl`` as that violates Abseil's
   compatibility guidelines.
 
+- New :doc:`abseil-str-cat-append
+  <clang-tidy/checks/abseil-str-cat-append>` check.
+
+  Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests 
+  ``absl::StrAppend()`` should be used instead.
+
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 

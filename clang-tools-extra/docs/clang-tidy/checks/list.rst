@@ -8,6 +8,7 @@ Clang-Tidy Checks
    abseil-faster-strsplit-delimiter
    abseil-no-namespace
    abseil-string-find-startswith
+   abseil-str-cat-append
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat
