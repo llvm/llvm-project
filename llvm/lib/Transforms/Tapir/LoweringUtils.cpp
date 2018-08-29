@@ -511,6 +511,14 @@ static bool taskInputDefinedOutsideLoop(const Value *V, const Loop *L) {
   return false;
 }
 
+static bool definedOutsideBlocks(const Value *V,
+                                 SmallPtrSetImpl<BasicBlock *> &Blocks) {
+  if (isa<Argument>(V)) return true;
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    return !Blocks.count(I->getParent());
+  return false;
+}
+
 ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
   Loop *L = TL->getLoop();
   Task *T = TL->getTask();
@@ -535,13 +543,14 @@ ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
         // If the operand is the sync region of this task's detach, skip it.
         if (SyncRegion == *OI)
           continue;
+        DEBUG({
+            if (Instruction *OP = dyn_cast<Instruction>(*OI))
+              assert(!T->encloses(OP->getParent()) &&
+                     "Loop control uses value defined in body task.");
+          });
         // If this operand is not defined in the header or latch, it's an input.
-        if (Instruction *OP = dyn_cast<Instruction>(*OI)) {
-          assert(!T->encloses(OP->getParent()) &&
-                 "Loop control uses value defined in body task.");
-          if (!BlocksToCheck.count(OP->getParent()))
-            LoopInputs.insert(*OI);
-        }
+        if (definedOutsideBlocks(*OI, BlocksToCheck))
+          LoopInputs.insert(*OI);
       }
     }
   }
