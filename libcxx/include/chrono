@@ -77,16 +77,18 @@ public:
 
     constexpr common_type<duration>::type  operator+() const;
     constexpr common_type<duration>::type  operator-() const;
-    constexpr duration& operator++();
-    constexpr duration  operator++(int);
-    constexpr duration& operator--();
-    constexpr duration  operator--(int);
+    constexpr duration& operator++();    // constexpr in C++17
+    constexpr duration  operator++(int); // constexpr in C++17
+    constexpr duration& operator--();    // constexpr in C++17
+    constexpr duration  operator--(int); // constexpr in C++17
 
-    constexpr duration& operator+=(const duration& d);
-    constexpr duration& operator-=(const duration& d);
+    constexpr duration& operator+=(const duration& d);  // constexpr in C++17
+    constexpr duration& operator-=(const duration& d);  // constexpr in C++17
 
-    duration& operator*=(const rep& rhs);
-    duration& operator/=(const rep& rhs);
+    duration& operator*=(const rep& rhs);       // constexpr in C++17
+    duration& operator/=(const rep& rhs);       // constexpr in C++17
+    duration& operator%=(const rep& rhs);       // constexpr in C++17
+    duration& operator%=(const duration& rhs);  // constexpr in C++17
 
     // special values
 
@@ -127,8 +129,8 @@ public:
 
     // arithmetic
 
-    time_point& operator+=(const duration& d);
-    time_point& operator-=(const duration& d);
+    time_point& operator+=(const duration& d); // constexpr in C++17
+    time_point& operator-=(const duration& d); // constexpr in C++17
 
     // special values
 
@@ -1355,8 +1357,8 @@ public:
 
     // arithmetic
 
-    _LIBCPP_INLINE_VISIBILITY time_point& operator+=(const duration& __d) {__d_ += __d; return *this;}
-    _LIBCPP_INLINE_VISIBILITY time_point& operator-=(const duration& __d) {__d_ -= __d; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 time_point& operator+=(const duration& __d) {__d_ += __d; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 time_point& operator-=(const duration& __d) {__d_ -= __d; return *this;}
 
     // special values
 
