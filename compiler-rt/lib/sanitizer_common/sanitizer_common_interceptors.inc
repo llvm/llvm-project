@@ -3345,14 +3345,14 @@ INTERCEPTOR(INTMAX_T, strtoimax, const char *nptr, char **endptr, int base) {
   return res;
 }
 
-INTERCEPTOR(INTMAX_T, strtoumax, const char *nptr, char **endptr, int base) {
+INTERCEPTOR(UINTMAX_T, strtoumax, const char *nptr, char **endptr, int base) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strtoumax, nptr, endptr, base);
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   char *real_endptr;
-  INTMAX_T res = REAL(strtoumax)(nptr, &real_endptr, base);
+  UINTMAX_T res = REAL(strtoumax)(nptr, &real_endptr, base);
   StrtolFixAndCheck(ctx, nptr, endptr, real_endptr, base);
   return res;
 }
