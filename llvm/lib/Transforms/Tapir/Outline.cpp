@@ -195,11 +195,12 @@ void llvm::CloneIntoFunction(
     }
   }
 
-  // for (DISubprogram *ISP : DIFinder.subprograms()) {
-  //   if (ISP != SP) {
-  //     VMap.MD()[ISP].reset(ISP);
-  //   }
-  // }
+  for (DISubprogram *ISP : DIFinder.subprograms())
+    if (ISP != SP)
+      VMap.MD()[ISP].reset(ISP);
+
+  for (auto *Type : DIFinder.types())
+    VMap.MD()[Type].reset(Type);
 
   // Loop over all of the instructions in the function, fixing up operand
   // references as we go.  This uses VMap to do all the hard work.
