@@ -196,6 +196,11 @@ private:
     return TapirLoops.back();
   }
 
+  void forgetTapirLoop(TapirLoopInfo *TL) {
+    TaskToTapirLoop.erase(TL->getTask());
+    LoopToTapirLoop.erase(TL->getLoop());
+  }
+
   Task *getTaskIfTapirLoop(const Loop *L);
 
   LoopOutlineProcessor *getOutlineProcessor(TapirLoopInfo *TL);
@@ -992,7 +997,16 @@ LoopSpawningImpl::outlineAllTapirLoops() {
     if (TapirLoopInfo *TL = getTapirLoop(T)) {
       PredicatedScalarEvolution PSE(SE, *TL->getLoop());
       // TODO: Use the boolean return value of prepareForOutlining.
-      TL->prepareForOutlining(DT, LI, TI, PSE, AC, ORE, TTI);
+      bool canOutline = TL->prepareForOutlining(DT, LI, TI, PSE, AC, ORE, TTI);
+      if (!canOutline) {
+        const Loop *L = TL->getLoop();
+        TapirLoopHints Hints(L);
+        ORE.emit(createMissedAnalysis("PrepareFailed", L)
+                 << "Could not process Tapir loop.");
+        emitMissedWarning(L, Hints, &ORE);
+        forgetTapirLoop(TL);
+        continue;
+      }
       OutlineProcessors[TL] =
         std::unique_ptr<LoopOutlineProcessor>(getOutlineProcessor(TL));
     }
@@ -1135,65 +1149,33 @@ PreservedAnalyses LoopSpawningPass::run(Module &M, ModuleAnalysisManager &AM) {
 }
 
 namespace {
-struct LoopSpawningTI : public ModulePass {
+// NB: Technicaly LoopSpawningTI should be a ModulePass, because it changes the
+// contents of the module.  But because a ModulePass cannot use many function
+// analyses -- doing so results in invalid memory accesses -- we have to make
+// LoopSpawningTI a FunctionPass.  This problem is fixed with the new pass
+// manager.
+struct LoopSpawningTI : public FunctionPass {
   /// Pass identification, replacement for typeid
   static char ID;
-  explicit LoopSpawningTI() : ModulePass(ID) {
+  explicit LoopSpawningTI() : FunctionPass(ID) {
     initializeLoopSpawningTIPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnModule(Module &M) {
-    if (skipModule(M))
+  bool runOnFunction(Function &F) {
+    if (skipFunction(F))
       return false;
 
-    auto GetDT =
-      [this](Function &F) -> DominatorTree & {
-        return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-      };
-    auto GetLI =
-      [this](Function &F) -> LoopInfo & {
-        return this->getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-      };
-    auto GetTI =
-      [this](Function &F) -> TaskInfo & {
-        return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
-      };
-    auto GetSE =
-      [this](Function &F) -> ScalarEvolution & {
-        return this->getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
-      };
-    auto &ACT = getAnalysis<AssumptionCacheTracker>();
-    auto &GetTTI = getAnalysis<TargetTransformInfoWrapperPass>();
-    auto GetORE =
-      [this](Function &F) -> OptimizationRemarkEmitter & {
-        return
-          this->getAnalysis<OptimizationRemarkEmitterWrapperPass>(F).getORE();
-      };
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
+    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-    SmallVector<Function *, 8> WorkList;
-    bool Changed = false;
-    for (Function &F : M)
-      if (!F.empty())
-        WorkList.push_back(&F);
-
-    for (Function *F : WorkList) {
-      DEBUG(dbgs() << "LoopSpawningTI on function " << F->getName() << "\n");
-      DominatorTree &DT = GetDT(*F);
-      LoopInfo &LI = GetLI(*F);
-      TaskInfo &TI = GetTI(*F);
-      OptimizationRemarkEmitter &ORE = GetORE(*F);
-      // NB: ScalarEvolutionWrapperPass does not manage memory properly for a
-      // ModulePass.  In particular, if another analysis FunctionPass causes
-      // ScalarEvolution to be rerun, then the pointer to SE becomes invalid.
-      // We accommodate this behavior by getting the ScalarEvolution last.
-      // Eventually we'll switch to use the new pass manager, which doesn't have
-      // this problem.
-      ScalarEvolution &SE = GetSE(*F);
-      Changed |= LoopSpawningImpl(*F, M.getDataLayout(), DT, LI,
-                                  TI, SE, ACT.getAssumptionCache(*F),
-                                  GetTTI.getTTI(*F), ORE).run();
-    }
-    return Changed;
+    DEBUG(dbgs() << "LoopSpawningTI on function " << F.getName() << "\n");
+    return LoopSpawningImpl(F, F.getParent()->getDataLayout(), DT, LI, TI, SE,
+                            AC, TTI, ORE).run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

@@ -255,7 +255,6 @@ void TapirLoopInfo::fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II
   assert(getTripCount() && "Expected valid trip count");
   Loop *L = getLoop();
   Task *T = getTask();
-  // const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   Value *TripCount = getTripCount();
 
   DenseMap<Value *, Value *> MissingVals;
@@ -373,8 +372,10 @@ bool TapirLoopInfo::prepareForOutlining(
 
   // Collect the IVs in this loop.
   collectIVs(PSE, ORE);
-  assert(PrimaryInduction &&
-         "Need to create primary induction variable for Tapir loop.");
+
+  // If no primary induction was found, just bail.
+  if (!PrimaryInduction)
+    return false;
 
   DEBUG(dbgs() << "\tPrimary induction " << *PrimaryInduction << "\n");
 
