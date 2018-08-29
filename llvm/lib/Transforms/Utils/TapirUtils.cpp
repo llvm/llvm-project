@@ -1054,6 +1054,42 @@ void llvm::TapirLoopHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
   TheLoop->setLoopID(NewLoopID);
 }
 
+/// Sets current hints into loop metadata, keeping other values intact.
+void llvm::TapirLoopHints::writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
+                                                      ValueToValueMapTy &VMap) {
+  if (HintTypes.size() == 0)
+    return;
+
+  // Reserve the first element to LoopID (see below).
+  SmallVector<Metadata *, 4> MDs(1);
+  // If the loop already has metadata, then ignore the existing operands.
+  MDNode *LoopID = TheLoop->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
+      // If node in update list, ignore old value.
+      if (!matchesHintMetadataName(Node, HintTypes))
+        MDs.push_back(Node);
+    }
+  }
+
+  // Now, add the missing hints.
+  for (auto H : HintTypes)
+    MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
+
+  // Replace current metadata node with new one.
+  LLVMContext &Context =
+    cast<BasicBlock>(VMap[TheLoop->getHeader()])->getContext();
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+
+  // Set the metadata on the terminator of the cloned loop's latch.
+  BasicBlock *ClonedLatch = cast<BasicBlock>(VMap[TheLoop->getLoopLatch()]);
+  assert(ClonedLatch && "Cloned Tapir loop does not have a single latch.");
+  ClonedLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, NewLoopID);
+}
+
 /// Returns true if Tapir-loop hints require loop outlining during lowering.
 bool llvm::hintsDemandOutlining(const TapirLoopHints &Hints) {
   switch (Hints.getStrategy()) {

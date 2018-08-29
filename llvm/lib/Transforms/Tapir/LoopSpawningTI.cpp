@@ -1056,6 +1056,11 @@ LoopSpawningImpl::outlineAllTapirLoops() {
     // which assumes that functions are synced when they return.
     addSyncToOutlineReturns(*TL, TaskToOutline[T], VMap);
 
+    {
+      TapirLoopHints Hints(L);
+      Hints.clearClonedLoopMetadata(VMap);
+    }
+
     // Update subtask outline info to reflect the fact that their spawner was
     // outlined.
     for (Task *SubT : T->subtasks())

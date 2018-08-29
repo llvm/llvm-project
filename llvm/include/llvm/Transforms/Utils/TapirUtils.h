@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
@@ -182,11 +183,18 @@ public:
     return Grainsize.Value;
   }
 
-  /// Mark the loop L as already vectorized by setting the width to 1.
+  /// Mark the loop L as having no spawning strategy.
   void clearStrategy() {
     Strategy.Value = ST_SEQ;
     Hint Hints[] = {Strategy};
     writeHintsToMetadata(Hints);
+  }
+
+  void clearClonedLoopMetadata(ValueToValueMapTy &VMap) {
+    Hint ClearStrategy = Strategy;
+    ClearStrategy.Value = ST_SEQ;
+    Hint Hints[] = {ClearStrategy};
+    writeHintsToClonedMetadata(Hints, VMap);
   }
 
 private:
@@ -204,6 +212,10 @@ private:
 
   /// Sets current hints into loop metadata, keeping other values intact.
   void writeHintsToMetadata(ArrayRef<Hint> HintTypes);
+
+  /// Sets hints into cloned loop metadata, keeping other values intact.
+  void writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
+                                  ValueToValueMapTy &VMap);
 
   /// The loop these hints belong to.
   const Loop *TheLoop;
