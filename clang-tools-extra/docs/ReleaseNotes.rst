@@ -70,6 +70,11 @@ Improvements to clang-tidy
   Finds instances of ``absl::StrSplit()`` or ``absl::MaxSplits()`` where the
   delimiter is a single character string literal and replaces with a character.
 
+- New :doc:`abseil-no-internal-dependencies
+  <clang-tidy/checks/abseil-no-internal-dependencies>` check.
+  
+  Gives a warning if code using Abseil depends on internal details.
+
 - New :doc:`abseil-no-namespace
   <clang-tidy/checks/abseil-no-namespace>` check.
 
