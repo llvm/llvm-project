@@ -586,9 +586,9 @@ void Writer::writeSections() {
 //  - heap start / unallocated
 //
 // The --stack-first option means that stack is placed before any static data.
-// This can be useful since it means that stack overflow traps immediately rather
-// than overwriting global data, but also increases code size since all static
-// data loads and stores requires larger offsets.
+// This can be useful since it means that stack overflow traps immediately
+// rather than overwriting global data, but also increases code size since all
+// static data loads and stores requires larger offsets.
 void Writer::layoutMemory() {
   createOutputSegments();
 
