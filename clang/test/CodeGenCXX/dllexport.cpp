@@ -43,7 +43,7 @@ __declspec(dllexport) extern int ExternGlobalDecl;
 
 // M64-DAG: @__ImageBase = external dso_local constant i8
 
-// GNU-DAG: @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global
+// GNU-DAG: @_ZTVN10__cxxabiv117__class_type_infoE = external global
 
 // dllexport implies a definition.
 // MSC-DAG: @"?GlobalDef@@3HA" = dso_local dllexport global i32 0, align 4
@@ -137,7 +137,7 @@ class __declspec(dllexport) i : h<> {};
 // Declarations are not exported.
 
 // MSC-DAG: @"??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external dso_local global
-// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external dso_local global
+// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external global
 template<typename T> __declspec(dllexport) extern int VarTmplImplicitDef;
 USEVAR(VarTmplImplicitDef<ImplicitInst_Exported>)
 

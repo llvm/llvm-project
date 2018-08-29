@@ -135,6 +135,15 @@ protected:
   uint64_t Size = 0;
 };
 
+// .note.GNU-stack section.
+class GnuStackSection : public SyntheticSection {
+public:
+  GnuStackSection()
+      : SyntheticSection(0, llvm::ELF::SHT_PROGBITS, 1, ".note.GNU-stack") {}
+  void writeTo(uint8_t *Buf) override {}
+  size_t getSize() const override { return 0; }
+};
+
 // .note.gnu.build-id section.
 class BuildIdSection : public SyntheticSection {
   // First 16 bytes are a header.

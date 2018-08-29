@@ -9862,7 +9862,6 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   case MVT::v8f32:
     return DAG.getNode(X86ISD::BLENDI, DL, VT, V1, V2,
                        DAG.getConstant(BlendMask, DL, MVT::i8));
-
   case MVT::v4i64:
   case MVT::v8i32:
     assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
@@ -9894,7 +9893,6 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
                           DAG.getNode(X86ISD::BLENDI, DL, MVT::v8i16, V1, V2,
                                       DAG.getConstant(BlendMask, DL, MVT::i8)));
   }
-
   case MVT::v16i16: {
     assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
     SmallVector<int, 8> RepeatedMask;
@@ -9907,6 +9905,20 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
           BlendMask |= 1ull << i;
       return DAG.getNode(X86ISD::BLENDI, DL, MVT::v16i16, V1, V2,
                          DAG.getConstant(BlendMask, DL, MVT::i8));
+    }
+    // Use PBLENDW for lower/upper lanes and then blend lanes.
+    // TODO - we should allow 2 PBLENDW here and leave shuffle combine to
+    // merge to VSELECT where useful.
+    uint64_t LoMask = BlendMask & 0xFF;
+    uint64_t HiMask = (BlendMask >> 8) & 0xFF;
+    if (LoMask == 0 || LoMask == 255 || HiMask == 0 || HiMask == 255) {
+      SDValue Lo = DAG.getNode(X86ISD::BLENDI, DL, MVT::v16i16, V1, V2,
+                               DAG.getConstant(LoMask, DL, MVT::i8));
+      SDValue Hi = DAG.getNode(X86ISD::BLENDI, DL, MVT::v16i16, V1, V2,
+                               DAG.getConstant(HiMask, DL, MVT::i8));
+      return DAG.getVectorShuffle(
+          MVT::v16i16, DL, Lo, Hi,
+          {0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31});
     }
     LLVM_FALLTHROUGH;
   }

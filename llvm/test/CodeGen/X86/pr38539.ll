@@ -17,46 +17,46 @@ define void @f() {
 ; X64-NEXT:    .cfi_offset %rbx, -32
 ; X64-NEXT:    .cfi_offset %r14, -24
 ; X64-NEXT:    .cfi_offset %rbp, -16
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
-; X64-NEXT:    movq %rbx, %rcx
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
+; X64-NEXT:    movq %rbp, %rcx
 ; X64-NEXT:    shlq $62, %rcx
 ; X64-NEXT:    sarq $62, %rcx
-; X64-NEXT:    movq (%rsp), %r14
-; X64-NEXT:    movb (%rax), %bpl
+; X64-NEXT:    movq (%rsp), %rbx
+; X64-NEXT:    movb (%rax), %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    # kill: def $eax killed $eax def $ax
+; X64-NEXT:    divb (%rax)
+; X64-NEXT:    movl %eax, %r14d
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    movq %r14, %rdx
+; X64-NEXT:    movq %rbx, %rdx
 ; X64-NEXT:    callq __modti3
 ; X64-NEXT:    andl $3, %edx
-; X64-NEXT:    cmpq %rax, %r14
-; X64-NEXT:    sbbq %rdx, %rbx
-; X64-NEXT:    setb %sil
-; X64-NEXT:    setae %bl
 ; X64-NEXT:    testb %al, %al
-; X64-NEXT:    setne %dl
 ; X64-NEXT:    setne (%rax)
-; X64-NEXT:    movzbl %bpl, %eax
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    subb %sil, %cl
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
-; X64-NEXT:    divb %al
-; X64-NEXT:    negb %bl
-; X64-NEXT:    cmpb %al, %al
+; X64-NEXT:    cmpq %rax, %rbx
+; X64-NEXT:    sbbq %rdx, %rbp
+; X64-NEXT:    setae %dl
+; X64-NEXT:    sbbb %cl, %cl
+; X64-NEXT:    testb %al, %al
+; X64-NEXT:    setne %bl
+; X64-NEXT:    negb %dl
+; X64-NEXT:    cmpb %r14b, %al
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    negb %al
 ; X64-NEXT:    cbtw
-; X64-NEXT:    idivb %bl
+; X64-NEXT:    idivb %dl
 ; X64-NEXT:    movsbl %ah, %eax
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    shlq $4, %rax
 ; X64-NEXT:    negq %rax
-; X64-NEXT:    negb %dl
+; X64-NEXT:    negb %bl
 ; X64-NEXT:    leaq -16(%rsp,%rax), %rax
 ; X64-NEXT:    movq %rax, (%rax)
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    cbtw
-; X64-NEXT:    idivb %dl
+; X64-NEXT:    idivb %bl
 ; X64-NEXT:    movsbl %ah, %eax
 ; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    movb %al, (%rax)
@@ -86,25 +86,28 @@ define void @f() {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll $30, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $30, %ecx
-; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    shll $30, %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $30, %edx
+; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movb (%eax), %dl
-; X86-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    # kill: def $eax killed $eax def $ax
+; X86-NEXT:    divb (%eax)
+; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __modti3
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -119,13 +122,9 @@ define void @f() {
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    setne %ch
 ; X86-NEXT:    setne (%eax)
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
-; X86-NEXT:    movzbl %dh, %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
-; X86-NEXT:    divb %dh
 ; X86-NEXT:    negb %ch
 ; X86-NEXT:    negb %dl
-; X86-NEXT:    cmpb %al, %al
+; X86-NEXT:    cmpb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
 ; X86-NEXT:    setle %al
 ; X86-NEXT:    negb %al
 ; X86-NEXT:    cbtw
@@ -155,8 +154,9 @@ BB:
   %L17 = load i66, i66* %A30
   %B20 = and i66 %L17, -1
   %G2 = getelementptr i66, i66* %A30, i1 true
-  %L10 = load i8, i8* undef
-  %B6 = udiv i8 %L10, %L10
+  %L10 = load volatile i8, i8* undef
+  %L11 = load volatile i8, i8* undef
+  %B6 = udiv i8 %L10, %L11
   %C15 = icmp eq i8 undef, 0
   %B8 = srem i66 0, %B20
   %C2 = icmp ule i66 %B8, %B20
@@ -187,7 +187,7 @@ define void @g() {
 ; X64-NEXT:    movb (%rax), %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax def $ax
-; X64-NEXT:    divb %al
+; X64-NEXT:    divb (%rax)
 ; X64-NEXT:    movl %eax, %r8d
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    xorl %edx, %edx
@@ -239,47 +239,47 @@ define void @g() {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll $30, %eax
-; X86-NEXT:    sarl $30, %eax
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    shll $30, %ecx
+; X86-NEXT:    sarl $30, %ecx
 ; X86-NEXT:    movl (%esp), %edi
-; X86-NEXT:    movb (%eax), %bl
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movb (%eax), %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    # kill: def $eax killed $eax def $ax
+; X86-NEXT:    divb (%eax)
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    calll __moddi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    andl $3, %edx
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    setne (%eax)
 ; X86-NEXT:    cmpl %eax, %edi
 ; X86-NEXT:    sbbl %edx, %esi
-; X86-NEXT:    setb %dl
-; X86-NEXT:    setae %dh
+; X86-NEXT:    setae %dl
+; X86-NEXT:    sbbb %cl, %cl
 ; X86-NEXT:    testb %al, %al
-; X86-NEXT:    setne %bh
-; X86-NEXT:    setne (%eax)
-; X86-NEXT:    movzbl %bl, %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    subb %dl, %cl
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
-; X86-NEXT:    divb %bl
-; X86-NEXT:    negb %dh
-; X86-NEXT:    cmpb %al, %al
+; X86-NEXT:    setne %ch
+; X86-NEXT:    negb %dl
+; X86-NEXT:    cmpb %bl, %al
 ; X86-NEXT:    setle %al
 ; X86-NEXT:    negb %al
 ; X86-NEXT:    cbtw
-; X86-NEXT:    idivb %dh
+; X86-NEXT:    idivb %dl
 ; X86-NEXT:    movsbl %ah, %eax
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    negb %bh
+; X86-NEXT:    negb %ch
 ; X86-NEXT:    leal -8(%esp,%eax), %eax
 ; X86-NEXT:    movl %eax, (%eax)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cbtw
-; X86-NEXT:    idivb %bh
+; X86-NEXT:    idivb %ch
 ; X86-NEXT:    movsbl %ah, %eax
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    movb %al, (%eax)
@@ -295,8 +295,9 @@ BB:
   %L17 = load i34, i34* %A30
   %B20 = and i34 %L17, -1
   %G2 = getelementptr i34, i34* %A30, i1 true
-  %L10 = load i8, i8* undef
-  %B6 = udiv i8 %L10, %L10
+  %L10 = load volatile i8, i8* undef
+  %L11 = load volatile i8, i8* undef
+  %B6 = udiv i8 %L10, %L11
   %C15 = icmp eq i8 undef, 0
   %B8 = srem i34 0, %B20
   %C2 = icmp ule i34 %B8, %B20

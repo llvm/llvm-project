@@ -459,6 +459,10 @@ inline std::unique_ptr<FrontendActionFactory> newFrontendActionFactory(
 /// \param File Either an absolute or relative path.
 std::string getAbsolutePath(StringRef File);
 
+/// An overload of getAbsolutePath that works over the provided \p FS.
+llvm::Expected<std::string> getAbsolutePath(vfs::FileSystem &FS,
+                                            StringRef File);
+
 /// Changes CommandLine to contain implicit flags that would have been
 /// defined had the compiler driver been invoked through the path InvokedAs.
 ///

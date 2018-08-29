@@ -323,14 +323,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
-  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  if (llvm::sys::path::stem(Exec) == "lld") {
-    CmdArgs.push_back("-flavor");
-    CmdArgs.push_back("old-gnu");
-    CmdArgs.push_back("-target");
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
-  }
-
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
@@ -539,6 +531,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddHIPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA,
                      *this);
 
+  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 

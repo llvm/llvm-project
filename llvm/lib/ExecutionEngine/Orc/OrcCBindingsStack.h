@@ -129,20 +129,21 @@ private:
         : Stack(Stack), ExternalResolver(std::move(ExternalResolver)),
           ExternalResolverCtx(std::move(ExternalResolverCtx)) {}
 
-    orc::SymbolFlagsMap
-    lookupFlags(const orc::SymbolNameSet &Symbols) override {
-      orc::SymbolFlagsMap SymbolFlags;
+    orc::SymbolNameSet
+    getResponsibilitySet(const orc::SymbolNameSet &Symbols) override {
+      orc::SymbolNameSet Result;
 
       for (auto &S : Symbols) {
-        if (auto Sym = findSymbol(*S))
-          SymbolFlags[S] = Sym.getFlags();
-        else if (auto Err = Sym.takeError()) {
+        if (auto Sym = findSymbol(*S)) {
+          if (!Sym.getFlags().isStrong())
+            Result.insert(S);
+        } else if (auto Err = Sym.takeError()) {
           Stack.reportError(std::move(Err));
-          return orc::SymbolFlagsMap();
+          return orc::SymbolNameSet();
         }
       }
 
-      return SymbolFlags;
+      return Result;
     }
 
     orc::SymbolNameSet

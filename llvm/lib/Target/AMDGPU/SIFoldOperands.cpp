@@ -35,13 +35,16 @@ struct FoldCandidate {
     uint64_t ImmToFold;
     int FrameIndexToFold;
   };
+  int ShrinkOpcode;
   unsigned char UseOpNo;
   MachineOperand::MachineOperandType Kind;
   bool Commuted;
 
   FoldCandidate(MachineInstr *MI, unsigned OpNo, MachineOperand *FoldOp,
-                bool Commuted_ = false) :
-    UseMI(MI), OpToFold(nullptr), UseOpNo(OpNo), Kind(FoldOp->getType()),
+                bool Commuted_ = false,
+                int ShrinkOp = -1) :
+    UseMI(MI), OpToFold(nullptr), ShrinkOpcode(ShrinkOp), UseOpNo(OpNo),
+    Kind(FoldOp->getType()),
     Commuted(Commuted_) {
     if (FoldOp->isImm()) {
       ImmToFold = FoldOp->getImm();
@@ -67,6 +70,14 @@ struct FoldCandidate {
 
   bool isCommuted() const {
     return Commuted;
+  }
+
+  bool needsShrink() const {
+    return ShrinkOpcode != -1;
+  }
+
+  int getShrinkOpcode() const {
+    return ShrinkOpcode;
   }
 };
 
@@ -154,6 +165,7 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
 }
 
 static bool updateOperand(FoldCandidate &Fold,
+                          const SIInstrInfo &TII,
                           const TargetRegisterInfo &TRI) {
   MachineInstr *MI = Fold.UseMI;
   MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
@@ -189,9 +201,48 @@ static bool updateOperand(FoldCandidate &Fold,
         Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
       }
     }
+
+    if (Fold.needsShrink()) {
+      MachineBasicBlock *MBB = MI->getParent();
+      auto Liveness = MBB->computeRegisterLiveness(&TRI, AMDGPU::VCC, MI);
+      if (Liveness != MachineBasicBlock::LQR_Dead)
+        return false;
+
+      MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+      int Op32 = Fold.getShrinkOpcode();
+      MachineOperand &Dst0 = MI->getOperand(0);
+      MachineOperand &Dst1 = MI->getOperand(1);
+      assert(Dst0.isDef() && Dst1.isDef());
+
+      bool HaveNonDbgCarryUse = !MRI.use_nodbg_empty(Dst1.getReg());
+
+      const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
+      unsigned NewReg0 = MRI.createVirtualRegister(Dst0RC);
+      const TargetRegisterClass *Dst1RC = MRI.getRegClass(Dst1.getReg());
+      unsigned NewReg1 = MRI.createVirtualRegister(Dst1RC);
+
+      MachineInstr *Inst32 = TII.buildShrunkInst(*MI, Op32);
+
+      if (HaveNonDbgCarryUse) {
+        BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), Dst1.getReg())
+          .addReg(AMDGPU::VCC, RegState::Kill);
+      }
+
+      // Keep the old instruction around to avoid breaking iterators, but
+      // replace the outputs with dummy registers.
+      Dst0.setReg(NewReg0);
+      Dst1.setReg(NewReg1);
+
+      if (Fold.isCommuted())
+        TII.commuteInstruction(*Inst32, false);
+      return true;
+    }
+
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;
   }
+
+  assert(!Fold.needsShrink() && "not handled");
 
   if (Fold.isFI()) {
     Old.ChangeToFrameIndex(Fold.FrameIndexToFold);
@@ -261,6 +312,8 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     if (isUseMIInFoldList(FoldList, MI))
       return false;
 
+    unsigned CommuteOpNo = OpNo;
+
     // Operand is not legal, so try to commute the instruction to
     // see if this makes it possible to fold.
     unsigned CommuteIdx0 = TargetInstrInfo::CommuteAnyOperandIndex;
@@ -269,10 +322,11 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 
     if (CanCommute) {
       if (CommuteIdx0 == OpNo)
-        OpNo = CommuteIdx1;
+        CommuteOpNo = CommuteIdx1;
       else if (CommuteIdx1 == OpNo)
-        OpNo = CommuteIdx0;
+        CommuteOpNo = CommuteIdx0;
     }
+
 
     // One of operands might be an Imm operand, and OpNo may refer to it after
     // the call of commuteInstruction() below. Such situations are avoided
@@ -286,12 +340,34 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
         !TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1))
       return false;
 
-    if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
+    if (!TII->isOperandLegal(*MI, CommuteOpNo, OpToFold)) {
+      if ((Opc == AMDGPU::V_ADD_I32_e64 ||
+           Opc == AMDGPU::V_SUB_I32_e64 ||
+           Opc == AMDGPU::V_SUBREV_I32_e64) && // FIXME
+          OpToFold->isImm()) {
+        MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+
+        // Verify the other operand is a VGPR, otherwise we would violate the
+        // constant bus restriction.
+        unsigned OtherIdx = CommuteOpNo == CommuteIdx0 ? CommuteIdx1 : CommuteIdx0;
+        MachineOperand &OtherOp = MI->getOperand(OtherIdx);
+        if (!OtherOp.isReg() ||
+            !TII->getRegisterInfo().isVGPR(MRI, OtherOp.getReg()))
+          return false;
+
+        assert(MI->getOperand(1).isDef());
+
+        int Op32 =  AMDGPU::getVOPe32(Opc);
+        FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true,
+                                         Op32));
+        return true;
+      }
+
       TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1);
       return false;
     }
 
-    FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold, true));
+    FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true));
     return true;
   }
 
@@ -757,7 +833,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     Copy->addImplicitDefUseOperands(*MF);
 
   for (FoldCandidate &Fold : FoldList) {
-    if (updateOperand(Fold, *TRI)) {
+    if (updateOperand(Fold, *TII, *TRI)) {
       // Clear kill flags.
       if (Fold.isReg()) {
         assert(Fold.OpToFold && Fold.OpToFold->isReg());

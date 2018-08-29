@@ -199,7 +199,8 @@ bool runToolOnCodeWithArgs(
                                FileName, ToolName);
 }
 
-std::string getAbsolutePath(StringRef File) {
+llvm::Expected<std::string> getAbsolutePath(vfs::FileSystem &FS,
+                                            StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
   if (RelativePath.startswith("./")) {
@@ -207,11 +208,14 @@ std::string getAbsolutePath(StringRef File) {
   }
 
   SmallString<1024> AbsolutePath = RelativePath;
-  std::error_code EC = llvm::sys::fs::make_absolute(AbsolutePath);
-  assert(!EC);
-  (void)EC;
+  if (auto EC = FS.makeAbsolute(AbsolutePath))
+    return llvm::errorCodeToError(EC);
   llvm::sys::path::native(AbsolutePath);
   return AbsolutePath.str();
+}
+
+std::string getAbsolutePath(StringRef File) {
+  return llvm::cantFail(getAbsolutePath(*vfs::getRealFileSystem(), File));
 }
 
 void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
@@ -411,15 +415,6 @@ int ClangTool::run(ToolAction *Action) {
   // This just needs to be some symbol in the binary.
   static int StaticSymbol;
 
-  std::string InitialDirectory;
-  if (llvm::ErrorOr<std::string> CWD =
-          OverlayFileSystem->getCurrentWorkingDirectory()) {
-    InitialDirectory = std::move(*CWD);
-  } else {
-    llvm::report_fatal_error("Cannot detect current path: " +
-                             Twine(CWD.getError().message()));
-  }
-
   // First insert all absolute paths into the in-memory VFS. These are global
   // for all compile commands.
   if (SeenWorkingDirectories.insert("/").second)
@@ -431,9 +426,22 @@ int ClangTool::run(ToolAction *Action) {
 
   bool ProcessingFailed = false;
   bool FileSkipped = false;
+  // Compute all absolute paths before we run any actions, as those will change
+  // the working directory.
+  std::vector<std::string> AbsolutePaths;
+  AbsolutePaths.reserve(SourcePaths.size());
   for (const auto &SourcePath : SourcePaths) {
-    std::string File(getAbsolutePath(SourcePath));
+    auto AbsPath = getAbsolutePath(*OverlayFileSystem, SourcePath);
+    if (!AbsPath) {
+      llvm::errs() << "Skipping " << SourcePath
+                   << ". Error while getting an absolute path: "
+                   << llvm::toString(AbsPath.takeError()) << "\n";
+      continue;
+    }
+    AbsolutePaths.push_back(std::move(*AbsPath));
+  }
 
+  for (llvm::StringRef File : AbsolutePaths) {
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
     // this method needs to run right before we invoke the tool, as the next
@@ -498,11 +506,6 @@ int ClangTool::run(ToolAction *Action) {
         llvm::errs() << "Error while processing " << File << ".\n";
         ProcessingFailed = true;
       }
-      // Return to the initial directory to correctly resolve next file by
-      // relative path.
-      if (OverlayFileSystem->setCurrentWorkingDirectory(InitialDirectory.c_str()))
-        llvm::report_fatal_error("Cannot chdir into \"" +
-                                 Twine(InitialDirectory) + "\n!");
     }
   }
   return ProcessingFailed ? 1 : (FileSkipped ? 2 : 0);

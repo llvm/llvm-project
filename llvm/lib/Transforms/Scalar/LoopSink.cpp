@@ -152,6 +152,14 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
     }
   }
 
+  // Can't sink into blocks that have no valid insertion point.
+  for (BasicBlock *BB : BBsToSinkInto) {
+    if (BB->getFirstInsertionPt() == BB->end()) {
+      BBsToSinkInto.clear();
+      break;
+    }
+  }
+
   // If the total frequency of BBsToSinkInto is larger than preheader frequency,
   // do not sink.
   if (adjustedSumFreq(BBsToSinkInto, BFI) >

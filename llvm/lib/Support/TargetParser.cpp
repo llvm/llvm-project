@@ -943,7 +943,8 @@ unsigned llvm::AArch64::parseArchVersion(StringRef Arch) {
 }
 
 bool llvm::AArch64::isX18ReservedByDefault(const Triple &TT) {
-  return TT.isOSDarwin() || TT.isOSFuchsia() || TT.isOSWindows();
+  return TT.isAndroid() || TT.isOSDarwin() || TT.isOSFuchsia() ||
+         TT.isOSWindows();
 }
 
 struct GPUInfo {

@@ -625,6 +625,39 @@ define i1 @test_constant_class_snan_test_pinf_f64() nounwind {
   ret i1 %val
 }
 
+; CHECK-LABEL: @test_class_is_snan_nnan_src(
+; CHECK-NEXT: ret i1 false
+define i1 @test_class_is_snan_nnan_src(float %x) {
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.amdgcn.class.f32(float %nnan, i32 1)
+  ret i1 %class
+}
+
+; CHECK-LABEL: @test_class_is_qnan_nnan_src(
+; CHECK-NEXT: ret i1 false
+define i1 @test_class_is_qnan_nnan_src(float %x) {
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.amdgcn.class.f32(float %nnan, i32 2)
+  ret i1 %class
+}
+
+; CHECK-LABEL: @test_class_is_nan_nnan_src(
+; CHECK-NEXT: ret i1 false
+define i1 @test_class_is_nan_nnan_src(float %x) {
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.amdgcn.class.f32(float %nnan, i32 3)
+  ret i1 %class
+}
+
+; CHECK-LABEL: @test_class_is_nan_other_nnan_src(
+; CHECK-NEXT: %nnan = fadd nnan float %x, 1.000000e+00
+; CHECK-NEXT: %class = call i1 @llvm.amdgcn.class.f32(float %nnan, i32 264)
+define i1 @test_class_is_nan_other_nnan_src(float %x) {
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.amdgcn.class.f32(float %nnan, i32 267)
+  ret i1 %class
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cos
 ; --------------------------------------------------------------------

@@ -6664,7 +6664,7 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
   assert(N->getMask().getValueType().getVectorNumElements() ==
              N->getValueType(0).getVectorNumElements() &&
          "Vector width mismatch between mask and data");
-  assert(N->getIndex().getValueType().getVectorNumElements() ==
+  assert(N->getIndex().getValueType().getVectorNumElements() >=
              N->getValueType(0).getVectorNumElements() &&
          "Vector width mismatch between index and data");
   assert(isa<ConstantSDNode>(N->getScale()) &&
@@ -6701,7 +6701,7 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
   assert(N->getMask().getValueType().getVectorNumElements() ==
              N->getValue().getValueType().getVectorNumElements() &&
          "Vector width mismatch between mask and data");
-  assert(N->getIndex().getValueType().getVectorNumElements() ==
+  assert(N->getIndex().getValueType().getVectorNumElements() >=
              N->getValue().getValueType().getVectorNumElements() &&
          "Vector width mismatch between index and data");
   assert(isa<ConstantSDNode>(N->getScale()) &&
@@ -7806,18 +7806,22 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
     // This node is about to morph, remove its old self from the CSE maps.
     RemoveNodeFromCSEMaps(User);
 
-    // A user can appear in a use list multiple times, and when this
-    // happens the uses are usually next to each other in the list.
-    // To help reduce the number of CSE recomputations, process all
-    // the uses of this user that we can find this way.
+    // A user can appear in a use list multiple times, and when this happens the
+    // uses are usually next to each other in the list.  To help reduce the
+    // number of CSE and divergence recomputations, process all the uses of this
+    // user that we can find this way.
+    bool To_IsDivergent = false;
     do {
       SDUse &Use = UI.getUse();
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
-      if (To->getNode()->isDivergent() != From->isDivergent())
-        updateDivergence(User);
+      To_IsDivergent |= ToOp->isDivergent();
     } while (UI != UE && *UI == User);
+
+    if (To_IsDivergent != From->isDivergent())
+      updateDivergence(User);
+
     // Now that we have modified User, add it back to the CSE maps.  If it
     // already exists there, recursively merge the results together.
     AddModifiedNodeToCSEMaps(User);

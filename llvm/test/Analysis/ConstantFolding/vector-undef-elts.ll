@@ -59,3 +59,11 @@ define <3 x float> @fadd_commute() {
   ret <3 x float> %c
 }
 
+define <4 x i32> @shuffle_of_undefs(<4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: @shuffle_of_undefs(
+; CHECK-NEXT:    ret <4 x i32> undef
+;
+  %r = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 5, i32 1, i32 2, i32 3>
+  ret <4 x i32> %r
+}
+
