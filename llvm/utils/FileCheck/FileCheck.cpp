@@ -97,6 +97,13 @@ static cl::opt<bool> VerboseVerbose(
     "vv", cl::init(false),
     cl::desc("Print information helpful in diagnosing internal FileCheck\n"
              "issues.  Implies -v.\n"));
+static const char * DumpInputEnv = "FILECHECK_DUMP_INPUT_ON_FAILURE";
+
+static cl::opt<bool> DumpInputOnFailure(
+    "dump-input-on-failure", cl::init(std::getenv(DumpInputEnv)),
+    cl::desc("Dump original input to stderr before failing.\n"
+             "The value can be also controlled using\n"
+             "FILECHECK_DUMP_INPUT_ON_FAILURE environment variable.\n"));
 
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
@@ -1605,5 +1612,9 @@ int main(int argc, char **argv) {
                             InputFileText, InputFile.getBufferIdentifier()),
                         SMLoc());
 
-  return CheckInput(SM, InputFileText, CheckStrings) ? EXIT_SUCCESS : 1;
+  int ExitCode = CheckInput(SM, InputFileText, CheckStrings) ? EXIT_SUCCESS : 1;
+  if (ExitCode == 1 && DumpInputOnFailure)
+    errs() << "Full input was:\n<<<<<<\n" << InputFileText << "\n>>>>>>\n";
+
+  return ExitCode;
 }
