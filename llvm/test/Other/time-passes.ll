@@ -7,7 +7,7 @@
 ; TIME-LEGACY-DAG:   Dominator Tree Construction
 ; TIME-LEGACY-DAG:   Module Verifier
 ; TIME-LEGACY-DAG:   Target Library Information
-; TIME: 100{{.*}} Total{{$}}
+; TIME: Total{{$}}
 
 define i32 @foo() {
   %res = add i32 5, 4

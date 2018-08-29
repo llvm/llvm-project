@@ -25,7 +25,7 @@
 ; X86-LABEL: _x:
 ; X86:      # %bb.
 ; X86:      .cv_file 1 "D:\\source.c"
-; X86:      .cv_loc 0 1 4 42 is_stmt 0 # source.c:4:42
+; X86:      .cv_loc 0 1 4 42 # source.c:4:42
 ; X86:      calll   _z
 ; X86:      .cv_loc 0 1 5 43 # source.c:5:43
 ; X86:      ret
@@ -286,7 +286,7 @@
 ; X64-LABEL: x:
 ; X64-NEXT: .L{{.*}}:
 ; X64:      .cv_file 1 "D:\\source.c"
-; X64:      .cv_loc 0 1 3 0 is_stmt 0 # source.c:3:0
+; X64:      .cv_loc 0 1 3 0 # source.c:3:0
 ; X64:      # %bb.
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 0 1 4 42 # source.c:4:42

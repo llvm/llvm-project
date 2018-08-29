@@ -270,22 +270,28 @@ bool MCStreamer::EmitCVInlineSiteIdDirective(unsigned FunctionId,
 void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     unsigned Line, unsigned Column,
                                     bool PrologueEnd, bool IsStmt,
-                                    StringRef FileName, SMLoc Loc) {
+                                    StringRef FileName, SMLoc Loc) {}
+
+bool MCStreamer::checkCVLocSection(unsigned FunctionId, unsigned FileNo,
+                                   SMLoc Loc) {
   CodeViewContext &CVC = getContext().getCVContext();
   MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FunctionId);
-  if (!FI)
-    return getContext().reportError(
+  if (!FI) {
+    getContext().reportError(
         Loc, "function id not introduced by .cv_func_id or .cv_inline_site_id");
+    return false;
+  }
 
   // Track the section
   if (FI->Section == nullptr)
     FI->Section = getCurrentSectionOnly();
-  else if (FI->Section != getCurrentSectionOnly())
-    return getContext().reportError(
+  else if (FI->Section != getCurrentSectionOnly()) {
+    getContext().reportError(
         Loc,
         "all .cv_loc directives for a function must be in the same section");
-
-  CVC.setCurrentCVLoc(FunctionId, FileNo, Line, Column, PrologueEnd, IsStmt);
+    return false;
+  }
+  return true;
 }
 
 void MCStreamer::EmitCVLinetableDirective(unsigned FunctionId,

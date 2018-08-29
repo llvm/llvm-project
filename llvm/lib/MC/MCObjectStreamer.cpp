@@ -173,7 +173,6 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
 
   // Avoid fixups when possible.
@@ -270,7 +269,6 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
                                          const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
   flushPendingLabels(nullptr);
-  getContext().clearCVLocSeen();
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
@@ -311,7 +309,6 @@ void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
 
   // Now that a machine instruction has been assembled into this section, make
   // a line entry for any .loc directive that has been seen.
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
 
   // If this instruction doesn't need relaxation, just emit it as data.
@@ -446,12 +443,16 @@ void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
-  // Unlike dwarf locations, we don't save the MCCVLineEntry until the next
-  // instruction. We create the label exactly where the directive appears in the
-  // assembly.
-  this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
-                                       PrologueEnd, IsStmt, FileName, Loc);
-  MCCVLineEntry::Make(this);
+  // Validate the directive.
+  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+    return;
+
+  // Emit a label at the current position and record it in the CodeViewContext.
+  MCSymbol *LineSym = getContext().createTempSymbol();
+  EmitLabel(LineSym);
+  getContext().getCVContext().recordCVLoc(getContext(), LineSym, FunctionId,
+                                          FileNo, Line, Column, PrologueEnd,
+                                          IsStmt);
 }
 
 void MCObjectStreamer::EmitCVLinetableDirective(unsigned FunctionId,
@@ -491,7 +492,6 @@ void MCObjectStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
 }
 
 void MCObjectStreamer::EmitBytes(StringRef Data) {
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
