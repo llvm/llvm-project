@@ -534,7 +534,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   while (1) {
     switch (lhs.getSubKind()) {
     default:
-      return makeSymExprValNN(state, op, lhs, rhs, resultTy);
+      return makeSymExprValNN(op, lhs, rhs, resultTy);
     case nonloc::PointerToMemberKind: {
       assert(rhs.getSubKind() == nonloc::PointerToMemberKind &&
              "Both SVals should have pointer-to-member-type");
@@ -582,7 +582,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               return makeTruthVal(true, resultTy);
             default:
               // This case also handles pointer arithmetic.
-              return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+              return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
           }
       }
     }
@@ -643,9 +643,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // 0<<a and 0>>a
         if (LHSValue == 0)
           return evalCastFromNonLoc(lhs, resultTy);
-        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       default:
-        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       }
     }
     case nonloc::SymbolValKind: {
@@ -757,7 +757,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return *V;
 
       // Give up -- this is not a symbolic expression we can handle.
-      return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
     }
     }
   }
