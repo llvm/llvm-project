@@ -19,6 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang;
 using namespace ento;
@@ -53,29 +54,19 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
   return Summ;
 }
 
-static bool isOSObjectSubclass(QualType T);
-
-static bool isOSObjectSubclass(const CXXRecordDecl *RD) {
-  if (RD->getDeclName().getAsString() == "OSObject")
-    return true;
-
-  const CXXRecordDecl *RDD = RD->getDefinition();
-  if (!RDD)
-    return false;
-
-  for (const CXXBaseSpecifier Spec : RDD->bases()) {
-    if (isOSObjectSubclass(Spec.getType()))
-      return true;
-  }
-  return false;
+static bool isSubclass(const Decl *D,
+                       StringRef ClassName) {
+  using namespace ast_matchers;
+  DeclarationMatcher SubclassM = cxxRecordDecl(isSameOrDerivedFrom(ClassName));
+  return !(match(SubclassM, *D, D->getASTContext()).empty());
 }
 
-/// \return Whether type represents an OSObject successor.
-static bool isOSObjectSubclass(QualType T) {
-  if (const auto *RD = T->getAsCXXRecordDecl()) {
-    return isOSObjectSubclass(RD);
-  }
-  return false;
+static bool isOSObjectSubclass(const Decl *D) {
+  return isSubclass(D, "OSObject");
+}
+
+static bool isOSIteratorSubclass(const Decl *D) {
+  return isSubclass(D, "OSIterator");
 }
 
 static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
@@ -221,15 +212,22 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   }
 
   if (RetTy->isPointerType()) {
-    if (TrackOSObjects && isOSObjectSubclass(RetTy->getPointeeType())) {
+
+    const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
+    if (TrackOSObjects && PD && isOSObjectSubclass(PD)) {
       if (const IdentifierInfo *II = FD->getIdentifier()) {
-        StringRef FuncName = II->getName();
-        if (FuncName.contains_lower("with")
-            || FuncName.contains_lower("create")
-            || FuncName.contains_lower("copy"))
+
+        // All objects returned with functions starting with "get" are getters.
+        if (II->getName().startswith("get")) {
+
+          // ...except for iterators.
+          if (isOSIteratorSubclass(PD))
+            return getOSSummaryCreateRule(FD);
+          return getOSSummaryGetRule(FD);
+        } else {
           return getOSSummaryCreateRule(FD);
+        }
       }
-      return getOSSummaryGetRule(FD);
     }
 
     // For CoreFoundation ('CF') types.
@@ -279,11 +277,11 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     const CXXRecordDecl *Parent = MD->getParent();
-    if (TrackOSObjects && isOSObjectSubclass(Parent)) {
-      if (isRelease(FD, FName))
+    if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
+      if (FName == "release")
         return getOSSummaryReleaseRule(FD);
 
-      if (isRetain(FD, FName))
+      if (FName == "retain")
         return getOSSummaryRetainRule(FD);
     }
   }

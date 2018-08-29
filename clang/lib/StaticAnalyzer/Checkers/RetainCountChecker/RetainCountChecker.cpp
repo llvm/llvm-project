@@ -31,6 +31,7 @@ const RefVal *getRefBinding(ProgramStateRef State, SymbolRef Sym) {
 
 ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
                                      RefVal Val) {
+  assert(Sym != nullptr);
   return State->set<RefBindings>(Sym, Val);
 }
 
@@ -418,17 +419,19 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   }
 
   // Consult the summary for the return value.
-  SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
   RetEffect RE = Summ.getRetEffect();
-  if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
-    if (Optional<RefVal> updatedRefVal =
-            refValFromRetEffect(RE, MCall->getResultType())) {
-      state = setRefBinding(state, Sym, *updatedRefVal);
-    }
-  }
 
-  if (RE.getKind() == RetEffect::NoRetHard && Sym)
-    state = removeRefBinding(state, Sym);
+  if (SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol()) {
+    if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
+      if (Optional<RefVal> updatedRefVal =
+              refValFromRetEffect(RE, MCall->getResultType())) {
+        state = setRefBinding(state, Sym, *updatedRefVal);
+      }
+    }
+
+    if (RE.getKind() == RetEffect::NoRetHard)
+      state = removeRefBinding(state, Sym);
+  }
 
   C.addTransition(state);
 }
