@@ -196,6 +196,45 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   return false;
 }
 
+class FindUninitializedField {
+public:
+  SmallVector<const FieldDecl *, 10> FieldChain;
+
+private:
+  StoreManager &StoreMgr;
+  MemRegionManager &MrMgr;
+  Store store;
+
+public:
+  FindUninitializedField(StoreManager &storeMgr, MemRegionManager &mrMgr,
+                         Store s)
+      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s) {}
+
+  bool Find(const TypedValueRegion *R) {
+    QualType T = R->getValueType();
+    if (const RecordType *RT = T->getAsStructureType()) {
+      const RecordDecl *RD = RT->getDecl()->getDefinition();
+      assert(RD && "Referred record has no definition");
+      for (const auto *I : RD->fields()) {
+        const FieldRegion *FR = MrMgr.getFieldRegion(I, R);
+        FieldChain.push_back(I);
+        T = I->getType();
+        if (T->getAsStructureType()) {
+          if (Find(FR))
+            return true;
+        } else {
+          const SVal &V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
+          if (V.isUndef())
+            return true;
+        }
+        FieldChain.pop_back();
+      }
+    }
+
+    return false;
+  }
+};
+
 bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
                                                SVal V,
                                                SourceRange ArgRange,
@@ -232,47 +271,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
   if (!CheckUninitFields)
     return false;
 
-  if (Optional<nonloc::LazyCompoundVal> LV =
-          V.getAs<nonloc::LazyCompoundVal>()) {
-
-    class FindUninitializedField {
-    public:
-      SmallVector<const FieldDecl *, 10> FieldChain;
-    private:
-      StoreManager &StoreMgr;
-      MemRegionManager &MrMgr;
-      Store store;
-    public:
-      FindUninitializedField(StoreManager &storeMgr,
-                             MemRegionManager &mrMgr, Store s)
-      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s) {}
-
-      bool Find(const TypedValueRegion *R) {
-        QualType T = R->getValueType();
-        if (const RecordType *RT = T->getAsStructureType()) {
-          const RecordDecl *RD = RT->getDecl()->getDefinition();
-          assert(RD && "Referred record has no definition");
-          for (const auto *I : RD->fields()) {
-            const FieldRegion *FR = MrMgr.getFieldRegion(I, R);
-            FieldChain.push_back(I);
-            T = I->getType();
-            if (T->getAsStructureType()) {
-              if (Find(FR))
-                return true;
-            }
-            else {
-              const SVal &V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
-              if (V.isUndef())
-                return true;
-            }
-            FieldChain.pop_back();
-          }
-        }
-
-        return false;
-      }
-    };
-
+  if (auto LV = V.getAs<nonloc::LazyCompoundVal>()) {
     const LazyCompoundValData *D = LV->getCVData();
     FindUninitializedField F(C.getState()->getStateManager().getStoreManager(),
                              C.getSValBuilder().getRegionManager(),
