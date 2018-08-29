@@ -309,7 +309,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class invalidateRegionsWorker;
+class InvalidateRegionsWorker;
 
 class RegionStoreManager : public StoreManager {
 public:
@@ -336,7 +336,7 @@ private:
 
   /// A helper used to populate the work list with the given set of
   /// regions.
-  void populateWorkList(invalidateRegionsWorker &W,
+  void populateWorkList(InvalidateRegionsWorker &W,
                         ArrayRef<SVal> Values,
                         InvalidatedRegions *TopLevelRegions);
 
@@ -946,7 +946,7 @@ RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
 }
 
 namespace {
-class invalidateRegionsWorker : public ClusterAnalysis<invalidateRegionsWorker>
+class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 {
   const Expr *Ex;
   unsigned Count;
@@ -956,7 +956,7 @@ class invalidateRegionsWorker : public ClusterAnalysis<invalidateRegionsWorker>
   StoreManager::InvalidatedRegions *Regions;
   GlobalsFilterKind GlobalsFilter;
 public:
-  invalidateRegionsWorker(RegionStoreManager &rm,
+  InvalidateRegionsWorker(RegionStoreManager &rm,
                           ProgramStateManager &stateMgr,
                           RegionBindingsRef b,
                           const Expr *ex, unsigned count,
@@ -965,7 +965,7 @@ public:
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
                           GlobalsFilterKind GFK)
-     : ClusterAnalysis<invalidateRegionsWorker>(rm, stateMgr, b),
+     : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b),
        Ex(ex), Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
        GlobalsFilter(GFK) {}
 
@@ -986,14 +986,14 @@ public:
 };
 }
 
-bool invalidateRegionsWorker::AddToWorkList(const MemRegion *R) {
+bool InvalidateRegionsWorker::AddToWorkList(const MemRegion *R) {
   bool doNotInvalidateSuperRegion = ITraits.hasTrait(
       R, RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
   const MemRegion *BaseR = doNotInvalidateSuperRegion ? R : R->getBaseRegion();
   return AddToWorkList(WorkListElement(BaseR), getCluster(BaseR));
 }
 
-void invalidateRegionsWorker::VisitBinding(SVal V) {
+void InvalidateRegionsWorker::VisitBinding(SVal V) {
   // A symbol?  Mark it touched by the invalidation.
   if (SymbolRef Sym = V.getAsSymbol())
     IS.insert(Sym);
@@ -1018,7 +1018,7 @@ void invalidateRegionsWorker::VisitBinding(SVal V) {
   }
 }
 
-void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
+void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
                                            const ClusterBindings *C) {
 
   bool PreserveRegionsContents =
@@ -1208,7 +1208,7 @@ void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   B = B.addBinding(baseR, BindingKey::Direct, V);
 }
 
-bool invalidateRegionsWorker::isInitiallyIncludedGlobalRegion(
+bool InvalidateRegionsWorker::isInitiallyIncludedGlobalRegion(
     const MemRegion *R) {
   switch (GlobalsFilter) {
   case GFK_None:
@@ -1222,7 +1222,7 @@ bool invalidateRegionsWorker::isInitiallyIncludedGlobalRegion(
   llvm_unreachable("unknown globals filter");
 }
 
-bool invalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
+bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
   if (isInitiallyIncludedGlobalRegion(Base))
     return true;
 
@@ -1256,7 +1256,7 @@ RegionStoreManager::invalidateGlobalRegion(MemRegion::Kind K,
   return B;
 }
 
-void RegionStoreManager::populateWorkList(invalidateRegionsWorker &W,
+void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
                                           ArrayRef<SVal> Values,
                                           InvalidatedRegions *TopLevelRegions) {
   for (ArrayRef<SVal>::iterator I = Values.begin(),
@@ -1307,7 +1307,7 @@ RegionStoreManager::invalidateRegions(Store store,
   }
 
   RegionBindingsRef B = getRegionBindings(store);
-  invalidateRegionsWorker W(*this, StateMgr, B, Ex, Count, LCtx, IS, ITraits,
+  InvalidateRegionsWorker W(*this, StateMgr, B, Ex, Count, LCtx, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
   // Scan the bindings and generate the clusters.
@@ -2390,24 +2390,24 @@ RegionStoreManager::bindAggregate(RegionBindingsConstRef B,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class removeDeadBindingsWorker :
-  public ClusterAnalysis<removeDeadBindingsWorker> {
-  SmallVector<const SymbolicRegion*, 12> Postponed;
+class RemoveDeadBindingsWorker
+    : public ClusterAnalysis<RemoveDeadBindingsWorker> {
+  SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
   const StackFrameContext *CurrentLCtx;
 
 public:
-  removeDeadBindingsWorker(RegionStoreManager &rm,
+  RemoveDeadBindingsWorker(RegionStoreManager &rm,
                            ProgramStateManager &stateMgr,
                            RegionBindingsRef b, SymbolReaper &symReaper,
                            const StackFrameContext *LCtx)
-    : ClusterAnalysis<removeDeadBindingsWorker>(rm, stateMgr, b),
+    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
       SymReaper(symReaper), CurrentLCtx(LCtx) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C);
-  using ClusterAnalysis<removeDeadBindingsWorker>::VisitCluster;
+  using ClusterAnalysis<RemoveDeadBindingsWorker>::VisitCluster;
 
   using ClusterAnalysis::AddToWorkList;
 
@@ -2418,12 +2418,12 @@ public:
 };
 }
 
-bool removeDeadBindingsWorker::AddToWorkList(const MemRegion *R) {
+bool RemoveDeadBindingsWorker::AddToWorkList(const MemRegion *R) {
   const MemRegion *BaseR = R->getBaseRegion();
   return AddToWorkList(WorkListElement(BaseR), getCluster(BaseR));
 }
 
-void removeDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
+void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
                                                    const ClusterBindings &C) {
 
   if (const VarRegion *VR = dyn_cast<VarRegion>(baseR)) {
@@ -2458,7 +2458,7 @@ void removeDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   }
 }
 
-void removeDeadBindingsWorker::VisitCluster(const MemRegion *baseR,
+void RemoveDeadBindingsWorker::VisitCluster(const MemRegion *baseR,
                                             const ClusterBindings *C) {
   if (!C)
     return;
@@ -2476,7 +2476,7 @@ void removeDeadBindingsWorker::VisitCluster(const MemRegion *baseR,
   }
 }
 
-void removeDeadBindingsWorker::VisitBinding(SVal V) {
+void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
   // Is it a LazyCompoundVal?  All referenced regions are live as well.
   if (Optional<nonloc::LazyCompoundVal> LCS =
           V.getAs<nonloc::LazyCompoundVal>()) {
@@ -2512,7 +2512,7 @@ void removeDeadBindingsWorker::VisitBinding(SVal V) {
     SymReaper.markLive(*SI);
 }
 
-bool removeDeadBindingsWorker::UpdatePostponed() {
+bool RemoveDeadBindingsWorker::UpdatePostponed() {
   // See if any postponed SymbolicRegions are actually live now, after
   // having done a scan.
   bool changed = false;
@@ -2534,7 +2534,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
                                                 const StackFrameContext *LCtx,
                                                 SymbolReaper& SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
-  removeDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
+  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.
