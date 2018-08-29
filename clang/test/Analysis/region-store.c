@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 int printf(const char *restrict,...);
 

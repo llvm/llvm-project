@@ -39,9 +39,9 @@ void init_plus(BaseS1&, const BaseS1&);
 
 // CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, float }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { %{{[^,]+}}, %{{[^,]+}}, i{{[0-9]+}} }
-// CHECK-DAG: [[ATOMIC_REDUCE_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
-// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
+// CHECK-DAG: [[ATOMIC_REDUCE_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
 #pragma omp declare reduction(operator&& : int : omp_out = 111 & omp_in)

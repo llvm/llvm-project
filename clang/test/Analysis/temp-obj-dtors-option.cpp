@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-temp-dtor-inlining=false -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-temp-dtor-inlining=true -DINLINE -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-temp-dtor-inlining=false -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-temp-dtor-inlining=true -DINLINE -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 
