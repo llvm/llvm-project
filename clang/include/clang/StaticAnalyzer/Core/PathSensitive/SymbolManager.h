@@ -309,7 +309,10 @@ protected:
   BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
       : SymExpr(k), Op(op), T(t) {
     assert(classof(this));
-    assert(isValidTypeForSymbol(t));
+    // Binary expressions are results of arithmetic. Pointer arithmetic is not
+    // handled by binary expressions, but it is instead handled by applying
+    // sub-regions to regions.
+    assert(isValidTypeForSymbol(t) && !Loc::isLocType(t));
   }
 
 public:
