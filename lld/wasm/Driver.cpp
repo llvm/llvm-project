@@ -186,8 +186,7 @@ static void readImportFile(StringRef Filename) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> static getArchiveMembers(
-    MemoryBufferRef MB) {
+std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       CHECK(Archive::create(MB),
             MB.getBufferIdentifier() + ": failed to parse archive");
@@ -205,8 +204,8 @@ std::vector<MemoryBufferRef> static getArchiveMembers(
     V.push_back(MBRef);
   }
   if (Err)
-    fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
-          toString(std::move(Err)));
+    fatal(MB.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(Err)));
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())

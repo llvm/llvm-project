@@ -1244,7 +1244,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                     // don't do the work to trap them.
   options.SetTimeout(std::chrono::seconds(2));
-  
+  options.SetIsForUtilityExpr(true);
+
   Value return_value;
   // Fetch the clang types we will need:
   ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();

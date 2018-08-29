@@ -1418,6 +1418,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTimeout(g_utility_function_timeout);
+    options.SetIsForUtilityExpr(true);
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
@@ -1668,6 +1669,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTimeout(g_utility_function_timeout);
+    options.SetIsForUtilityExpr(true);
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
