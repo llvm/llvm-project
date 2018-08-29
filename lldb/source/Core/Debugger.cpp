@@ -1080,7 +1080,8 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
   }
 }
 
-void Debugger::PushIOHandler(const IOHandlerSP &reader_sp) {
+void Debugger::PushIOHandler(const IOHandlerSP &reader_sp,
+                             bool cancel_top_handler) {
   if (!reader_sp)
     return;
 
@@ -1101,7 +1102,8 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp) {
   // this new input reader take over
   if (top_reader_sp) {
     top_reader_sp->Deactivate();
-    top_reader_sp->Cancel();
+    if (cancel_top_handler)
+      top_reader_sp->Cancel();
   }
 }
 

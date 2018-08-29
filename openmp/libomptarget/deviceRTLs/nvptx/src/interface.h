@@ -116,6 +116,8 @@ typedef enum kmp_sched_t {
   kmp_sched_runtime = 37,
   kmp_sched_auto = 38,
 
+  kmp_sched_static_balanced_chunk = 45,
+
   kmp_sched_static_ordered = 65,
   kmp_sched_static_nochunk_ordered = 66,
   kmp_sched_dynamic_ordered = 67,

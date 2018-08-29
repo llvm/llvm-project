@@ -1107,6 +1107,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   parseMerge(".xdata=.rdata");
   parseMerge(".bss=.data");
 
+  if (Config->MinGW) {
+    parseMerge(".ctors=.rdata");
+    parseMerge(".dtors=.rdata");
+    parseMerge(".CRT=.rdata");
+  }
+
   // Handle /section
   for (auto *Arg : Args.filtered(OPT_section))
     parseSection(Arg->getValue());

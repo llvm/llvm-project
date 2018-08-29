@@ -742,8 +742,10 @@ std::unique_ptr<PPCallbacks> PreambleCallbacks::createPPCallbacks() {
   return nullptr;
 }
 
+static llvm::ManagedStatic<BuildPreambleErrorCategory> BuildPreambleErrCategory;
+
 std::error_code clang::make_error_code(BuildPreambleError Error) {
-  return std::error_code(static_cast<int>(Error), BuildPreambleErrorCategory());
+  return std::error_code(static_cast<int>(Error), *BuildPreambleErrCategory);
 }
 
 const char *BuildPreambleErrorCategory::name() const noexcept {

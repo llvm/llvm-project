@@ -375,8 +375,7 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   }
 }
 
-SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op,
+SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
   const SymExpr *symLHS = LHS.getAsSymExpr();

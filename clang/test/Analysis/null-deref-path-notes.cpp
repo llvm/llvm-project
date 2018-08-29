@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w -x c++ -analyzer-checker=core -analyzer-output=text -analyzer-eagerly-assume -verify %s
+// RUN: %clang_analyze_cc1 -w -x c++ -analyzer-checker=core -analyzer-output=text -verify %s
 
 namespace pr34731 {
 int b;

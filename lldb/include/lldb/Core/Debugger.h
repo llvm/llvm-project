@@ -192,7 +192,8 @@ public:
                                        lldb::StreamFileSP &out,
                                        lldb::StreamFileSP &err);
 
-  void PushIOHandler(const lldb::IOHandlerSP &reader_sp);
+  void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
+                     bool cancel_top_handler = true);
 
   bool PopIOHandler(const lldb::IOHandlerSP &reader_sp);
 
