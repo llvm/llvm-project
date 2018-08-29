@@ -86,6 +86,18 @@ _kortest_mask8_u8(__mmask8 __A, __mmask8 __B, unsigned char *__C) {
   return (unsigned char)__builtin_ia32_kortestzqi(__A, __B);
 }
 
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS
+_kadd_mask8(__mmask8 __A, __mmask8 __B)
+{
+  return (__mmask8)__builtin_ia32_kaddqi((__mmask8)__A, (__mmask8)__B);
+}
+
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
+_kadd_mask16(__mmask16 __A, __mmask16 __B)
+{
+  return (__mmask16)__builtin_ia32_kaddhi((__mmask16)__A, (__mmask16)__B);
+}
+
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_mullo_epi64 (__m512i __A, __m512i __B) {
   return (__m512i) ((__v8du) __A * (__v8du) __B);

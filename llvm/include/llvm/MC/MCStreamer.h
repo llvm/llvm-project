@@ -231,6 +231,9 @@ protected:
 
   virtual void EmitRawTextImpl(StringRef String);
 
+  /// Returns true if the the .cv_loc directive is in the right section.
+  bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+
 public:
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;

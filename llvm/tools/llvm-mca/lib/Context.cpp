@@ -40,11 +40,10 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
                                        Opts.AssumeNoAlias);
   auto HWS = llvm::make_unique<Scheduler>(SM, LSU.get());
 
-  // Create the pipeline and its stages.
-  auto StagePipeline = llvm::make_unique<Pipeline>();
+  // Create the pipeline stages.
   auto Fetch = llvm::make_unique<FetchStage>(IB, SrcMgr);
-  auto Dispatch = llvm::make_unique<DispatchStage>(
-      STI, MRI, Opts.RegisterFileSize, Opts.DispatchWidth, *RCU, *PRF);
+  auto Dispatch = llvm::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
+                                                   *RCU, *PRF);
   auto Execute = llvm::make_unique<ExecuteStage>(*HWS);
   auto Retire = llvm::make_unique<RetireStage>(*RCU, *PRF);
 
@@ -55,6 +54,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   addHardwareUnit(std::move(HWS));
 
   // Build the pipeline.
+  auto StagePipeline = llvm::make_unique<Pipeline>();
   StagePipeline->appendStage(std::move(Fetch));
   StagePipeline->appendStage(std::move(Dispatch));
   StagePipeline->appendStage(std::move(Execute));

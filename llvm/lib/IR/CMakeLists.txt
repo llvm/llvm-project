@@ -44,6 +44,7 @@ add_llvm_library(LLVMCore
   Pass.cpp
   PassManager.cpp
   PassRegistry.cpp
+  PassTimingInfo.cpp
   SafepointIRVerifier.cpp
   ProfileSummary.cpp
   Statepoint.cpp

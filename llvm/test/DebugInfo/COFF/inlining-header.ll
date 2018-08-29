@@ -28,7 +28,7 @@
 ; ASM:         .cv_func_id 0
 ; ASM: # %bb.0:                                 # %entry
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
-; ASM:         .cv_loc 0 1 9 5 is_stmt 0       # t.cpp:9:5
+; ASM:         .cv_loc 0 1 9 5       # t.cpp:9:5
 ; ASM:         incl    "?x@@3HC"
 ; ASM:         .cv_inline_site_id 1 within 0 inlined_at 1 10 3
 ; ASM:         .cv_loc 1 1 4 5                 # t.cpp:4:5

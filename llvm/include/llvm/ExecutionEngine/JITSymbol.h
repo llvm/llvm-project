@@ -298,7 +298,6 @@ class JITSymbolResolver {
 public:
   using LookupSet = std::set<StringRef>;
   using LookupResult = std::map<StringRef, JITEvaluatedSymbol>;
-  using LookupFlagsResult = std::map<StringRef, JITSymbolFlags>;
 
   virtual ~JITSymbolResolver() = default;
 
@@ -309,11 +308,11 @@ public:
   /// resolved, or if the resolution process itself triggers an error.
   virtual Expected<LookupResult> lookup(const LookupSet &Symbols) = 0;
 
-  /// Returns the symbol flags for each of the given symbols.
-  ///
-  /// This method does NOT return an error if any of the given symbols is
-  /// missing. Instead, that symbol will be left out of the result map.
-  virtual Expected<LookupFlagsResult> lookupFlags(const LookupSet &Symbols) = 0;
+  /// Returns the subset of the given symbols that should be materialized by
+  /// the caller. Only weak/common symbols should be looked up, as strong
+  /// definitions are implicitly always part of the caller's responsibility.
+  virtual Expected<LookupSet>
+  getResponsibilitySet(const LookupSet &Symbols) = 0;
 
 private:
   virtual void anchor();
@@ -329,7 +328,7 @@ public:
 
   /// Performs flags lookup by calling findSymbolInLogicalDylib and
   ///        returning the flags value for that symbol.
-  Expected<LookupFlagsResult> lookupFlags(const LookupSet &Symbols) final;
+  Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) final;
 
   /// This method returns the address of the specified symbol if it exists
   /// within the logical dynamic library represented by this JITSymbolResolver.

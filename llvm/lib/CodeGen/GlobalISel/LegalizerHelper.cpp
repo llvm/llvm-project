@@ -619,6 +619,32 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_USUBO: {
+    if (TypeIdx == 1)
+      return UnableToLegalize; // TODO
+    auto LHSZext = MIRBuilder.buildInstr(TargetOpcode::G_ZEXT, WideTy,
+                                         MI.getOperand(2).getReg());
+    auto RHSZext = MIRBuilder.buildInstr(TargetOpcode::G_ZEXT, WideTy,
+                                         MI.getOperand(3).getReg());
+    unsigned Opcode = MI.getOpcode() == TargetOpcode::G_UADDO
+                          ? TargetOpcode::G_ADD
+                          : TargetOpcode::G_SUB;
+    // Do the arithmetic in the larger type.
+    auto NewOp = MIRBuilder.buildInstr(Opcode, WideTy, LHSZext, RHSZext);
+    LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
+    APInt Mask = APInt::getAllOnesValue(OrigTy.getSizeInBits());
+    auto AndOp = MIRBuilder.buildInstr(
+        TargetOpcode::G_AND, WideTy, NewOp,
+        MIRBuilder.buildConstant(WideTy, Mask.getZExtValue()));
+    // There is no overflow if the AndOp is the same as NewOp.
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, MI.getOperand(1).getReg(), NewOp,
+                         AndOp);
+    // Now trunc the NewOp to the original result.
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), NewOp);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
   case TargetOpcode::G_CTLZ:

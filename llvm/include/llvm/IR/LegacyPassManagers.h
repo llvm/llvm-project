@@ -508,7 +508,6 @@ public:
   }
 };
 
-Timer *getPassTimer(Pass *);
 }
 
 #endif

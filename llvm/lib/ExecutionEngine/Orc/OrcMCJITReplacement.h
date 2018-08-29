@@ -144,26 +144,29 @@ class OrcMCJITReplacement : public ExecutionEngine {
   public:
     LinkingORCResolver(OrcMCJITReplacement &M) : M(M) {}
 
-    SymbolFlagsMap lookupFlags(const SymbolNameSet &Symbols) override {
-      SymbolFlagsMap SymbolFlags;
+    SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) override {
+      SymbolNameSet Result;
 
       for (auto &S : Symbols) {
         if (auto Sym = M.findMangledSymbol(*S)) {
-          SymbolFlags[S] = Sym.getFlags();
+          if (!Sym.getFlags().isStrong())
+            Result.insert(S);
         } else if (auto Err = Sym.takeError()) {
           M.reportError(std::move(Err));
-          return SymbolFlagsMap();
+          return SymbolNameSet();
         } else {
           if (auto Sym2 = M.ClientResolver->findSymbolInLogicalDylib(*S)) {
-            SymbolFlags[S] = Sym2.getFlags();
+            if (!Sym2.getFlags().isStrong())
+              Result.insert(S);
           } else if (auto Err = Sym2.takeError()) {
             M.reportError(std::move(Err));
-            return SymbolFlagsMap();
-          }
+            return SymbolNameSet();
+          } else
+            Result.insert(S);
         }
       }
 
-      return SymbolFlags;
+      return Result;
     }
 
     SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,

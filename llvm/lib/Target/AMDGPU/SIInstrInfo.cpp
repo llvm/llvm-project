@@ -2572,7 +2572,60 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
          !hasModifiersSet(MI, AMDGPU::OpName::clamp);
+}
 
+// Set VCC operand with all flags from \p Orig, except for setting it as
+// implicit.
+static void copyFlagsToImplicitVCC(MachineInstr &MI,
+                                   const MachineOperand &Orig) {
+
+  for (MachineOperand &Use : MI.implicit_operands()) {
+    if (Use.isUse() && Use.getReg() == AMDGPU::VCC) {
+      Use.setIsUndef(Orig.isUndef());
+      Use.setIsKill(Orig.isKill());
+      return;
+    }
+  }
+}
+
+MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
+                                           unsigned Op32) const {
+  MachineBasicBlock *MBB = MI.getParent();;
+  MachineInstrBuilder Inst32 =
+    BuildMI(*MBB, MI, MI.getDebugLoc(), get(Op32));
+
+  // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
+  // For VOPC instructions, this is replaced by an implicit def of vcc.
+  int Op32DstIdx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst);
+  if (Op32DstIdx != -1) {
+    // dst
+    Inst32.add(MI.getOperand(0));
+  } else {
+    assert(MI.getOperand(0).getReg() == AMDGPU::VCC &&
+           "Unexpected case");
+  }
+
+  Inst32.add(*getNamedOperand(MI, AMDGPU::OpName::src0));
+
+  const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
+  if (Src1)
+    Inst32.add(*Src1);
+
+  const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
+
+  if (Src2) {
+    int Op32Src2Idx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2);
+    if (Op32Src2Idx != -1) {
+      Inst32.add(*Src2);
+    } else {
+      // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
+      // replaced with an implicit read of vcc. This was already added
+      // during the initial BuildMI, so find it to preserve the flags.
+      copyFlagsToImplicitVCC(*Inst32, *Src2);
+    }
+  }
+
+  return Inst32;
 }
 
 bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
