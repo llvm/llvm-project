@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64-fuchsia -mattr=+reserve-x20 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X20
 ; RUN: llc -mtriple=aarch64-fuchsia -mattr=+reserve-x18,+reserve-x20 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18 --check-prefix=CHECK-RESERVE-X20
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-android -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-fuchsia -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 

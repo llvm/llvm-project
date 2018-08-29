@@ -226,6 +226,28 @@ unsigned char test_kortest_mask64_u8(__m512i __A, __m512i __B, __m512i __C, __m5
                             _mm512_cmpneq_epu8_mask(__C, __D), CF);
 }
 
+__mmask32 test_kadd_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kadd_mask32
+  // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // CHECK: [[RES:%.*]] = call <32 x i1> @llvm.x86.avx512.kadd.d(<32 x i1> [[LHS]], <32 x i1> [[RHS]])
+  // CHECK: bitcast <32 x i1> [[RES]] to i32
+  return _mm512_mask_cmpneq_epu16_mask(_kadd_mask32(_mm512_cmpneq_epu16_mask(__A, __B),
+                                                    _mm512_cmpneq_epu16_mask(__C, __D)),
+                                                    __E, __F);
+}
+
+__mmask64 test_kadd_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
+  // CHECK-LABEL: @test_kadd_mask64
+  // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // CHECK: [[RES:%.*]] = call <64 x i1> @llvm.x86.avx512.kadd.q(<64 x i1> [[LHS]], <64 x i1> [[RHS]])
+  // CHECK: bitcast <64 x i1> [[RES]] to i64
+  return _mm512_mask_cmpneq_epu8_mask(_kadd_mask64(_mm512_cmpneq_epu8_mask(__A, __B),
+                                                   _mm512_cmpneq_epu8_mask(__C, __D)),
+                                                   __E, __F);
+}
+
 __mmask64 test_mm512_cmpeq_epi8_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpeq_epi8_mask
   // CHECK: icmp eq <64 x i8> %{{.*}}, %{{.*}}

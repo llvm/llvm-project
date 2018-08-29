@@ -70,11 +70,28 @@ Improvements to clang-tidy
   Finds instances of ``absl::StrSplit()`` or ``absl::MaxSplits()`` where the
   delimiter is a single character string literal and replaces with a character.
 
+- New :doc:`abseil-no-internal-dependencies
+  <clang-tidy/checks/abseil-no-internal-dependencies>` check.
+  
+  Gives a warning if code using Abseil depends on internal details.
+
 - New :doc:`abseil-no-namespace
   <clang-tidy/checks/abseil-no-namespace>` check.
 
   Ensures code does not open ``namespace absl`` as that violates Abseil's
   compatibility guidelines.
+
+- New :doc:`abseil-redundant-strcat-calls
+  <clang-tidy/checks/abseil-redundant-strcat-calls>` check.
+
+  Suggests removal of unnecessary calls to ``absl::StrCat`` when the result is
+  being passed to another ``absl::StrCat`` or ``absl::StrAppend``.
+
+- New :doc:`abseil-str-cat-append
+  <clang-tidy/checks/abseil-str-cat-append>` check.
+
+  Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests 
+  ``absl::StrAppend()`` should be used instead.
 
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.

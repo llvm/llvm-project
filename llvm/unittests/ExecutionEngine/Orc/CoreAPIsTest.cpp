@@ -531,6 +531,57 @@ TEST_F(CoreAPIsStandardTest, AddAndMaterializeLazySymbol) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run";
 }
 
+TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
+  // Test that weak symbols are materialized correctly when we look them up.
+  BarSym.setFlags(static_cast<JITSymbolFlags::FlagNames>(BarSym.getFlags() |
+                                                         JITSymbolFlags::Weak));
+
+  bool BarMaterialized = false;
+  auto MU1 = llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [&](MaterializationResponsibility R) {
+        R.resolve(SymbolMap({{Foo, FooSym}, {Bar, BarSym}})), R.emit();
+        BarMaterialized = true;
+      });
+
+  bool DuplicateBarDiscarded = false;
+  auto MU2 = llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [&](MaterializationResponsibility R) {
+        ADD_FAILURE() << "Attempt to materialize Bar from the wrong unit";
+        R.failMaterialization();
+      },
+      [&](const JITDylib &JD, SymbolStringPtr Name) {
+        EXPECT_EQ(Name, Bar) << "Expected \"Bar\" to be discarded";
+        DuplicateBarDiscarded = true;
+      });
+
+  cantFail(JD.define(MU1));
+  cantFail(JD.define(MU2));
+
+  bool OnResolvedRun = false;
+  bool OnReadyRun = false;
+
+  auto OnResolution = [&](Expected<SymbolMap> Result) {
+    cantFail(std::move(Result));
+    OnResolvedRun = true;
+  };
+
+  auto OnReady = [&](Error Err) {
+    cantFail(std::move(Err));
+    OnReadyRun = true;
+  };
+
+  ES.lookup({&JD}, {Bar}, std::move(OnResolution), std::move(OnReady),
+            NoDependenciesToRegister);
+
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved not run";
+  EXPECT_TRUE(OnReadyRun) << "OnReady not run";
+  EXPECT_TRUE(BarMaterialized) << "Bar was not materialized at all";
+  EXPECT_TRUE(DuplicateBarDiscarded)
+      << "Duplicate bar definition not discarded";
+}
+
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
   ES.setDispatchMaterialization(

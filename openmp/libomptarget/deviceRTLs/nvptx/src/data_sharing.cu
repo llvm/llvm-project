@@ -79,7 +79,7 @@ __device__ static size_t AlignVal(size_t Val) {
 EXTERN void
 __kmpc_initialize_data_sharing_environment(__kmpc_data_sharing_slot *rootS,
                                            size_t InitialDataSize) {
-
+  assert(isRuntimeInitialized() && "Expected initialized runtime.");
   DSPRINT0(DSFLAG_INIT,
            "Entering __kmpc_initialize_data_sharing_environment\n");
 
@@ -331,6 +331,7 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
 ////////////////////////////////////////////////////////////////////////////////
 
 INLINE void data_sharing_init_stack_common() {
+  assert(isRuntimeInitialized() && "Expected initialized runtime.");
   omptarget_nvptx_TeamDescr *teamDescr =
       &omptarget_nvptx_threadPrivateContext->TeamContext();
 
@@ -346,6 +347,7 @@ INLINE void data_sharing_init_stack_common() {
 // initialization). This function is called only by the MASTER thread of each
 // team in non-SPMD mode.
 EXTERN void __kmpc_data_sharing_init_stack() {
+  assert(isRuntimeInitialized() && "Expected initialized runtime.");
   // This function initializes the stack pointer with the pointer to the
   // statically allocated shared memory slots. The size of a shared memory
   // slot is pre-determined to be 256 bytes.
@@ -357,6 +359,7 @@ EXTERN void __kmpc_data_sharing_init_stack() {
 // once at the beginning of a data sharing context (coincides with the kernel
 // initialization). This function is called in SPMD mode only.
 EXTERN void __kmpc_data_sharing_init_stack_spmd() {
+  assert(isRuntimeInitialized() && "Expected initialized runtime.");
   // This function initializes the stack pointer with the pointer to the
   // statically allocated shared memory slots. The size of a shared memory
   // slot is pre-determined to be 256 bytes.

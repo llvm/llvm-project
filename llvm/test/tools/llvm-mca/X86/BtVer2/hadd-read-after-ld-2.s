@@ -7,7 +7,10 @@ vhaddps (%rdi), %ymm1, %ymm2
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      12
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        3
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.25
 # CHECK-NEXT: IPC:               0.17
 # CHECK-NEXT: Block RThroughput: 2.0
 

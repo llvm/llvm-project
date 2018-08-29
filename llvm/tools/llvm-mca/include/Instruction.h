@@ -16,6 +16,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 
 #ifndef NDEBUG
@@ -339,7 +340,7 @@ public:
   int getCyclesLeft() const { return CyclesLeft; }
 
   bool hasDependentUsers() const {
-    return std::any_of(Defs.begin(), Defs.end(), [](const UniqueDef &Def) {
+    return llvm::any_of(Defs, [](const UniqueDef &Def) {
       return Def->getNumUsers() > 0;
     });
   }

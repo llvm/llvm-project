@@ -2,11 +2,11 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: llvm-objdump -d %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: llvm-objdump -d %t | FileCheck %s
 
         .global test
         .p2align        4

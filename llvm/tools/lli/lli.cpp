@@ -337,8 +337,7 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
   exit(1);
 }
 
-int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
-                  const std::vector<std::string> &Args);
+int runOrcLazyJIT(const char *ProgName);
 
 //===----------------------------------------------------------------------===//
 // main Driver function
@@ -362,6 +361,9 @@ int main(int argc, char **argv, char * const *envp) {
   if (DisableCoreFiles)
     sys::Process::PreventCoreFiles();
 
+  if (UseJITKind == JITKind::OrcLazy)
+    return runOrcLazyJIT(argv[0]);
+
   LLVMContext Context;
 
   // Load the bitcode...
@@ -370,21 +372,6 @@ int main(int argc, char **argv, char * const *envp) {
   Module *Mod = Owner.get();
   if (!Mod)
     reportError(Err, argv[0]);
-
-  if (UseJITKind == JITKind::OrcLazy) {
-    std::vector<std::unique_ptr<Module>> Ms;
-    Ms.push_back(std::move(Owner));
-    for (auto &ExtraMod : ExtraModules) {
-      Ms.push_back(parseIRFile(ExtraMod, Err, Context));
-      if (!Ms.back())
-        reportError(Err, argv[0]);
-    }
-    std::vector<std::string> Args;
-    Args.push_back(InputFile);
-    for (auto &Arg : InputArgv)
-      Args.push_back(Arg);
-    return runOrcLazyJIT(Context, std::move(Ms), Args);
-  }
 
   if (EnableCacheManager) {
     std::string CacheName("file:");
@@ -736,13 +723,10 @@ static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
   llvm_unreachable("Unknown DumpKind");
 }
 
-int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
-                  const std::vector<std::string> &Args) {
-  // Bail out early if no modules loaded.
-  if (Ms.empty())
-    return 0;
+int runOrcLazyJIT(const char *ProgName) {
+  // Start setting up the JIT environment.
 
-  // Add lli's symbols into the JIT's search space.
+  // First add lli's symbols into the JIT's search space.
   std::string ErrMsg;
   sys::DynamicLibrary LibLLI =
       sys::DynamicLibrary::getPermanentLibrary(nullptr, &ErrMsg);
@@ -751,7 +735,14 @@ int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
     return 1;
   }
 
-  const auto &TT = Ms.front()->getTargetTriple();
+  // Parse the main module.
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  auto MainModule = parseIRFile(InputFile, Err, Ctx);
+  if (!MainModule)
+    reportError(Err, ProgName);
+
+  const auto &TT = MainModule->getTargetTriple();
   orc::JITTargetMachineBuilder TMD =
       TT.empty() ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
                  : orc::JITTargetMachineBuilder(Triple(TT));
@@ -789,13 +780,35 @@ int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
   orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;
   ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
 
-  for (auto &M : Ms) {
+  // Add the main module.
+  ExitOnErr(J->addLazyIRModule(std::move(MainModule)));
+
+  // Add any extra modules.
+  for (auto &ModulePath : ExtraModules) {
+    auto M = parseIRFile(ModulePath, Err, Ctx);
+    if (!M)
+      reportError(Err, ProgName);
+
     orc::makeAllSymbolsExternallyAccessible(*M);
     ExitOnErr(J->addLazyIRModule(std::move(M)));
   }
 
+  // Add the objects.
+  for (auto &ObjPath : ExtraObjects) {
+    auto Obj = ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ObjPath)));
+    ExitOnErr(J->addObjectFile(std::move(Obj)));
+  }
+
+  // Generate a argument string.
+  std::vector<std::string> Args;
+  Args.push_back(InputFile);
+  for (auto &Arg : InputArgv)
+    Args.push_back(Arg);
+
+  // Run any static constructors.
   ExitOnErr(J->runConstructors());
 
+  // Run main.
   auto MainSym = ExitOnErr(J->lookup("main"));
   typedef int (*MainFnPtr)(int, const char *[]);
   std::vector<const char *> ArgV;

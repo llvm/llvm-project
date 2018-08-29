@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -1395,6 +1396,33 @@ bool AsmPrinter::doFinalization(Module &M) {
 
       EmitAlignment(Log2_32(DL.getPointerSize()));
       for (const auto &Stub : Stubs) {
+        OutStreamer->EmitLabel(Stub.first);
+        OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
+                                     DL.getPointerSize());
+      }
+    }
+  }
+
+  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    MachineModuleInfoCOFF &MMICOFF =
+        MMI->getObjFileInfo<MachineModuleInfoCOFF>();
+
+    // Output stubs for external and common global variables.
+    MachineModuleInfoCOFF::SymbolListTy Stubs = MMICOFF.GetGVStubList();
+    if (!Stubs.empty()) {
+      const DataLayout &DL = M.getDataLayout();
+
+      for (const auto &Stub : Stubs) {
+        SmallString<256> SectionName = StringRef(".rdata$");
+        SectionName += Stub.first->getName();
+        OutStreamer->SwitchSection(OutContext.getCOFFSection(
+            SectionName,
+            COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+                COFF::IMAGE_SCN_LNK_COMDAT,
+            SectionKind::getReadOnly(), Stub.first->getName(),
+            COFF::IMAGE_COMDAT_SELECT_ANY));
+        EmitAlignment(Log2_32(DL.getPointerSize()));
+        OutStreamer->EmitSymbolAttribute(Stub.first, MCSA_Global);
         OutStreamer->EmitLabel(Stub.first);
         OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
                                      DL.getPointerSize());

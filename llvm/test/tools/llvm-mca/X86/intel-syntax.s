@@ -12,7 +12,10 @@
 # ALL:        Iterations:        100
 # ALL-NEXT:   Instructions:      400
 # ALL-NEXT:   Total Cycles:      305
-# ALL-NEXT:   Dispatch Width:    2
+# ALL-NEXT:   Total uOps:        500
+
+# ALL:        Dispatch Width:    2
+# ALL-NEXT:   uOps Per Cycle:    1.64
 # ALL-NEXT:   IPC:               1.31
 # ALL-NEXT:   Block RThroughput: 2.5
 

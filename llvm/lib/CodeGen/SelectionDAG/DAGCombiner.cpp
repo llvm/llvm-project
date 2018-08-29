@@ -3074,18 +3074,35 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  unsigned Opc = N->getOpcode();
+  bool IsDiv = (ISD::SDIV == Opc) || (ISD::UDIV == Opc);
+
   // X / undef -> undef
   // X % undef -> undef
   // X / 0 -> undef
   // X % 0 -> undef
   // NOTE: This includes vectors where any divisor element is zero/undef.
-  if (DAG.isUndef(N->getOpcode(), {N0, N1}))
+  if (DAG.isUndef(Opc, {N0, N1}))
     return DAG.getUNDEF(VT);
 
   // undef / X -> 0
   // undef % X -> 0
   if (N0.isUndef())
     return DAG.getConstant(0, DL, VT);
+
+  // TODO: 0 / X -> 0
+  // TODO: 0 % X -> 0
+
+  // X / X -> 1
+  // X % X -> 0
+  if (N0 == N1)
+    return DAG.getConstant(IsDiv ? 1 : 0, DL, VT);
+
+  // TODO: X / 1 -> X
+  // TODO: X % 1 -> 0
+  // If this is a boolean op (single-bit element type), we can't have
+  // division-by-zero or remainder-by-zero, so assume the divisor is 1.
+  // Similarly, if we're zero-extending a boolean divisor, then assume it's a 1.
 
   return SDValue();
 }

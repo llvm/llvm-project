@@ -94,16 +94,24 @@ LegacyJITSymbolResolver::lookup(const LookupSet &Symbols) {
 
 /// Performs flags lookup by calling findSymbolInLogicalDylib and
 ///        returning the flags value for that symbol.
-Expected<JITSymbolResolver::LookupFlagsResult>
-LegacyJITSymbolResolver::lookupFlags(const LookupSet &Symbols) {
-  JITSymbolResolver::LookupFlagsResult Result;
+Expected<JITSymbolResolver::LookupSet>
+LegacyJITSymbolResolver::getResponsibilitySet(const LookupSet &Symbols) {
+  JITSymbolResolver::LookupSet Result;
 
   for (auto &Symbol : Symbols) {
     std::string SymName = Symbol.str();
-    if (auto Sym = findSymbolInLogicalDylib(SymName))
-      Result[Symbol] = Sym.getFlags();
-    else if (auto Err = Sym.takeError())
+    if (auto Sym = findSymbolInLogicalDylib(SymName)) {
+      // If there's an existing def but it is not strong, then the caller is
+      // responsible for it.
+      if (!Sym.getFlags().isStrong())
+        Result.insert(Symbol);
+    } else if (auto Err = Sym.takeError())
       return std::move(Err);
+    else {
+      // If there is no existing definition then the caller is responsible for
+      // it.
+      Result.insert(Symbol);
+    }
   }
 
   return std::move(Result);

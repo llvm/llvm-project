@@ -22,7 +22,7 @@
 ; 17: }
 
 ; ASM: .cv_func_id 0
-; ASM: .cv_loc 0 1 13 0 is_stmt 0      # t.cpp:13:0
+; ASM: .cv_loc 0 1 13 0      # t.cpp:13:0
 ; ASM: .cv_loc 0 1 14 5                # t.cpp:14:5
 ; ASM: addl    $6, "?x@@3HC"
 ; ASM: .cv_inline_site_id 1 within 0 inlined_at 1 15 3

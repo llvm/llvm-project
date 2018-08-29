@@ -191,6 +191,8 @@ static bool isTagType(StringView S) {
   return false;
 }
 
+static bool isCustomType(StringView S) { return S[0] == '?'; }
+
 static bool isPointerType(StringView S) {
   if (S.startsWith("$$Q")) // foo &&
     return true;
@@ -288,6 +290,7 @@ private:
   // Parser functions. This is a recursive-descent parser.
   TypeNode *demangleType(StringView &MangledName, QualifierMangleMode QMM);
   PrimitiveTypeNode *demanglePrimitiveType(StringView &MangledName);
+  CustomTypeNode *demangleCustomType(StringView &MangledName);
   TagTypeNode *demangleClassType(StringView &MangledName);
   PointerTypeNode *demanglePointerType(StringView &MangledName);
   PointerTypeNode *demangleMemberPointerType(StringView &MangledName);
@@ -304,6 +307,7 @@ private:
   int64_t demangleSigned(StringView &MangledName);
 
   void memorizeString(StringView s);
+  void memorizeIdentifier(IdentifierNode *Identifier);
 
   /// Allocate a copy of \p Borrowed into memory that we own.
   StringView copyString(StringView Borrowed);
@@ -972,6 +976,19 @@ NamedIdentifierNode *Demangler::demangleBackRefName(StringView &MangledName) {
   return Backrefs.Names[I];
 }
 
+void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
+  // Render this class template name into a string buffer so that we can
+  // memorize it for the purpose of back-referencing.
+  OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
+  Identifier->output(OS, OF_Default);
+  OS << '\0';
+  char *Name = OS.getBuffer();
+
+  StringView Owned = copyString(Name);
+  memorizeString(Owned);
+  std::free(Name);
+}
+
 IdentifierNode *
 Demangler::demangleTemplateInstantiationName(StringView &MangledName,
                                              NameBackrefBehavior NBB) {
@@ -990,18 +1007,8 @@ Demangler::demangleTemplateInstantiationName(StringView &MangledName,
   if (Error)
     return nullptr;
 
-  if (NBB & NBB_Template) {
-    // Render this class template name into a string buffer so that we can
-    // memorize it for the purpose of back-referencing.
-    OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
-    Identifier->output(OS);
-    OS << '\0';
-    char *Name = OS.getBuffer();
-
-    StringView Owned = copyString(Name);
-    memorizeString(Owned);
-    std::free(Name);
-  }
+  if (NBB & NBB_Template)
+    memorizeIdentifier(Identifier);
 
   return Identifier;
 }
@@ -1422,7 +1429,7 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
   // Render the parent symbol's name into a buffer.
   OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
   OS << '`';
-  Scope->output(OS);
+  Scope->output(OS, OF_Default);
   OS << '\'';
   OS << "::`" << Number.first << "'";
   OS << '\0';
@@ -1749,6 +1756,8 @@ TypeNode *Demangler::demangleType(StringView &MangledName,
       MangledName.consumeFront("$$A6");
       Ty = demangleFunctionType(MangledName, false);
     }
+  } else if (isCustomType(MangledName)) {
+    Ty = demangleCustomType(MangledName);
   } else {
     Ty = demanglePrimitiveType(MangledName);
     assert(Ty && !Error);
@@ -1835,6 +1844,19 @@ Demangler::demangleFunctionEncoding(StringView &MangledName) {
   FunctionSymbolNode *Symbol = Arena.alloc<FunctionSymbolNode>();
   Symbol->Signature = FSN;
   return Symbol;
+}
+
+CustomTypeNode *Demangler::demangleCustomType(StringView &MangledName) {
+  assert(MangledName.startsWith('?'));
+  MangledName.popFront();
+
+  CustomTypeNode *CTN = Arena.alloc<CustomTypeNode>();
+  CTN->Identifier = demangleUnqualifiedTypeName(MangledName, true);
+  if (!MangledName.consumeFront('@'))
+    Error = true;
+  if (Error)
+    return nullptr;
+  return CTN;
 }
 
 // Reads a primitive type.
@@ -2131,8 +2153,12 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       // I - virtual inheritance      <name> <number> <number> <number>
       // J - unspecified inheritance  <name> <number> <number> <number>
       char InheritanceSpecifier = MangledName.popFront();
-      SymbolNode *S =
-          MangledName.startsWith('?') ? parse(MangledName) : nullptr;
+      SymbolNode *S = nullptr;
+      if (MangledName.startsWith('?')) {
+        S = parse(MangledName);
+        memorizeIdentifier(S->Name->getUnqualifiedIdentifier());
+      }
+
       switch (InheritanceSpecifier) {
       case 'J':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
@@ -2223,7 +2249,7 @@ void Demangler::dumpBackReferences() {
     OS.setCurrentPosition(0);
 
     TypeNode *T = Backrefs.FunctionParams[I];
-    T->output(OS);
+    T->output(OS, OF_Default);
 
     std::printf("  [%d] - %.*s\n", (int)I, (int)OS.getCurrentPosition(),
                 OS.getBuffer());
@@ -2254,7 +2280,7 @@ char *llvm::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
     OS << MangledName;
     *Status = llvm::demangle_invalid_mangled_name;
   } else {
-    S->output(OS);
+    S->output(OS, OF_Default);
     *Status = llvm::demangle_success;
   }
 
