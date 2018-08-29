@@ -167,6 +167,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
   options.SetTimeout(g_po_function_timeout);
+  options.SetIsForUtilityExpr(true);
 
   ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
       exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);

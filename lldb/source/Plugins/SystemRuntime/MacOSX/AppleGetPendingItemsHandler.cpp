@@ -349,6 +349,7 @@ AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
   options.SetStopOthers(true);
   options.SetTimeout(std::chrono::milliseconds(500));
   options.SetTryAllThreads(false);
+  options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
 
   if (get_pending_items_caller == NULL) {

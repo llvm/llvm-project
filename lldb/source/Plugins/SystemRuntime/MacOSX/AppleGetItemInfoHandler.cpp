@@ -340,6 +340,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   options.SetStopOthers(true);
   options.SetTimeout(std::chrono::milliseconds(500));
   options.SetTryAllThreads(false);
+  options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
 
   if (!m_get_item_info_impl_code) {
