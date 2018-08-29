@@ -237,6 +237,10 @@ protected:
                             // breakpoints we set.
 
 private:
+  /// Helper for \p SetSCMatchesByLine.
+  void AddLocation(SearchFilter &filter, const SymbolContext &sc,
+                   bool skip_prologue, llvm::StringRef log_ident);
+
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;
   DISALLOW_COPY_AND_ASSIGN(BreakpointResolver);
