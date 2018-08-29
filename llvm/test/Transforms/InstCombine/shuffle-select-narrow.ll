@@ -16,6 +16,21 @@ define <2 x i8> @narrow_shuffle_of_select(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %
   ret <2 x i8> %r
 }
 
+; TODO: The 1st shuffle is not extending with undefs, but demanded elements should correct that.
+
+define <2 x i8> @narrow_shuffle_of_select_overspecified_extend(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @narrow_shuffle_of_select_overspecified_extend(
+; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[WIDESEL:%.*]] = select <4 x i1> [[WIDECMP]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[WIDESEL]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %widecmp = shufflevector <2 x i1> %cmp, <2 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %widesel = select <4 x i1> %widecmp, <4 x i8> %x, <4 x i8> %y
+  %r = shufflevector <4 x i8> %widesel, <4 x i8> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %r
+}
+
 ; TODO: Verify that undef elements are acceptable for identity shuffle mask. Also check FP types.
 
 define <3 x float> @narrow_shuffle_of_select_undefs(<3 x i1> %cmp, <4 x float> %x, <4 x float> %y) {

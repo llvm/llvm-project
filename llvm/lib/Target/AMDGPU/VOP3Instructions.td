@@ -651,23 +651,23 @@ defm V_MAD_I64_I32      : VOP3be_Real_ci <0x177>;
 let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
 
 multiclass VOP3_Real_vi<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3e_vi <op, !cast<VOP_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3be_Real_vi<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3be_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3be_vi <op, !cast<VOP_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3OpSel_Real_gfx9<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3OpSel_gfx9 <op, !cast<VOP_Pseudo>(NAME).Pfl>;
 }
 
 multiclass VOP3Interp_Real_vi<bits<10> op> {
-  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3Interp_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+  def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3Interp_vi <op, !cast<VOP_Pseudo>(NAME).Pfl>;
 }
 
 } // End AssemblerPredicates = [isVI], DecoderNamespace = "VI"
@@ -812,6 +812,9 @@ defm V_MUL_LO_I32       : VOP3_Real_vi <0x285>;
 
 defm V_MUL_HI_U32       : VOP3_Real_vi <0x286>;
 defm V_MUL_HI_I32       : VOP3_Real_vi <0x287>;
+
+defm V_READLANE_B32     : VOP3_Real_vi <0x289>;
+defm V_WRITELANE_B32    : VOP3_Real_vi <0x28a>;
 
 defm V_LSHLREV_B64      : VOP3_Real_vi <0x28f>;
 defm V_LSHRREV_B64      : VOP3_Real_vi <0x290>;

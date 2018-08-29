@@ -78,7 +78,7 @@ USEVAR(GlobalRedecl2c)
 // NB: MSC issues a warning and makes GlobalRedecl3 dllexport. We follow GCC
 // and drop the dllimport with a warning.
 // MSC-DAG: @"?GlobalRedecl3@@3HA" = external dso_local global i32
-// GNU-DAG: @GlobalRedecl3            = external dso_local global i32
+// GNU-DAG: @GlobalRedecl3            = external global i32
 __declspec(dllimport) extern int GlobalRedecl3;
                       extern int GlobalRedecl3; // dllimport ignored
 USEVAR(GlobalRedecl3)
@@ -137,7 +137,7 @@ template<typename T> __declspec(dllimport) int VarTmplRedecl2;
 USEVAR(VarTmplRedecl2<ImplicitInst_Imported>)
 
 // MSC-DAG: @"??$VarTmplRedecl3@UImplicitInst_Imported@@@@3HA" = external dso_local global i32
-// GNU-DAG: @_Z14VarTmplRedecl3I21ImplicitInst_ImportedE          = external dso_local global i32
+// GNU-DAG: @_Z14VarTmplRedecl3I21ImplicitInst_ImportedE          = external global i32
 template<typename T> __declspec(dllimport) extern int VarTmplRedecl3;
 template<typename T>                       extern int VarTmplRedecl3; // dllimport ignored
 USEVAR(VarTmplRedecl3<ImplicitInst_Imported>)

@@ -42,10 +42,8 @@ EXTERN int32_t __kmpc_cancel_barrier(kmp_Indent *loc_ref, int32_t tid) {
 
 EXTERN void __kmpc_barrier(kmp_Indent *loc_ref, int32_t tid) {
   if (isRuntimeUninitialized()) {
-    if (isSPMDMode())
-      __kmpc_barrier_simple_spmd(loc_ref, tid);
-    else
-      __kmpc_barrier_simple_generic(loc_ref, tid);
+    assert(isSPMDMode() && "Expected SPMD mode with uninitialized runtime.");
+    __kmpc_barrier_simple_spmd(loc_ref, tid);
   } else {
     tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr =

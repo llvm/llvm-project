@@ -2,6 +2,62 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512bw --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64
 
+define i32 @test_int_x86_avx512_kadd_d(<32 x i16> %A, <32 x i16> %B) nounwind {
+; CHECK-LABEL: test_int_x86_avx512_kadd_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vptestmw %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x26,0xc0]
+; CHECK-NEXT:    vptestmw %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0xf5,0x48,0x26,0xc9]
+; CHECK-NEXT:    kaddd %k1, %k0, %k0 # encoding: [0xc4,0xe1,0xfd,0x4a,0xc1]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    kortestd %k0, %k0 # encoding: [0xc4,0xe1,0xf9,0x98,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = icmp ne <32 x i16> %A, zeroinitializer
+  %1 = icmp ne <32 x i16> %B, zeroinitializer
+  %2 = call <32 x i1> @llvm.x86.avx512.kadd.d(<32 x i1> %0, <32 x i1> %1)
+  %3 = bitcast <32 x i1> %2 to i32
+  %4 = icmp eq i32 %3, 0
+  %5 = zext i1 %4 to i32
+  ret i32 %5
+}
+declare <32 x i1> @llvm.x86.avx512.kadd.d(<32 x i1>, <32 x i1>)
+
+define i32 @test_int_x86_avx512_kadd_q(<64 x i8> %A, <64 x i8> %B) nounwind {
+; X86-LABEL: test_int_x86_avx512_kadd_q:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vptestmb %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x48,0x26,0xc0]
+; X86-NEXT:    vptestmb %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0x75,0x48,0x26,0xc9]
+; X86-NEXT:    kaddq %k1, %k0, %k0 # encoding: [0xc4,0xe1,0xfc,0x4a,0xc1]
+; X86-NEXT:    kshiftrq $32, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x31,0xc8,0x20]
+; X86-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; X86-NEXT:    kortestd %k1, %k0 # encoding: [0xc4,0xe1,0xf9,0x98,0xc1]
+; X86-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_kadd_q:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vptestmb %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x48,0x26,0xc0]
+; X64-NEXT:    vptestmb %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0x75,0x48,0x26,0xc9]
+; X64-NEXT:    kaddq %k1, %k0, %k0 # encoding: [0xc4,0xe1,0xfc,0x4a,0xc1]
+; X64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; X64-NEXT:    kortestq %k0, %k0 # encoding: [0xc4,0xe1,0xf8,0x98,0xc0]
+; X64-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq # encoding: [0xc3]
+entry:
+  %0 = icmp ne <64 x i8> %A, zeroinitializer
+  %1 = icmp ne <64 x i8> %B, zeroinitializer
+  %2 = call <64 x i1> @llvm.x86.avx512.kadd.q(<64 x i1> %0, <64 x i1> %1)
+  %3 = bitcast <64 x i1> %2 to i64
+  %4 = icmp eq i64 %3, 0
+  %5 = zext i1 %4 to i32
+  ret i32 %5
+}
+declare <64 x i1> @llvm.x86.avx512.kadd.q(<64 x i1>, <64 x i1>)
+
 define <32 x i16> @test_mask_packs_epi32_rr_512(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: test_mask_packs_epi32_rr_512:
 ; CHECK:       # %bb.0:

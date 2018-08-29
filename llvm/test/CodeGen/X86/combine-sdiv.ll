@@ -205,100 +205,36 @@ define <4 x i32> @combine_vec_sdiv_zero(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
-; TODO fold (sdiv x, x) -> 1
+; fold (sdiv x, x) -> 1
 define i32 @combine_sdiv_dupe(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_dupe:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %edi
+; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, %x
   ret i32 %1
 }
 
 define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
-; SSE2-LABEL: combine_vec_sdiv_dupe:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    cltd
-; SSE2-NEXT:    idivl %ecx
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    cltd
-; SSE2-NEXT:    idivl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    cltd
-; SSE2-NEXT:    idivl %ecx
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    movl %ecx, %eax
-; SSE2-NEXT:    cltd
-; SSE2-NEXT:    idivl %ecx
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    retq
+; SSE-LABEL: combine_vec_sdiv_dupe:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
+; SSE-NEXT:    retq
 ;
-; SSE41-LABEL: combine_vec_sdiv_dupe:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pextrd $1, %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    cltd
-; SSE41-NEXT:    idivl %ecx
-; SSE41-NEXT:    movl %eax, %ecx
-; SSE41-NEXT:    movd %xmm0, %esi
-; SSE41-NEXT:    movl %esi, %eax
-; SSE41-NEXT:    cltd
-; SSE41-NEXT:    idivl %esi
-; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    pinsrd $1, %ecx, %xmm1
-; SSE41-NEXT:    pextrd $2, %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    cltd
-; SSE41-NEXT:    idivl %ecx
-; SSE41-NEXT:    pinsrd $2, %eax, %xmm1
-; SSE41-NEXT:    pextrd $3, %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    cltd
-; SSE41-NEXT:    idivl %ecx
-; SSE41-NEXT:    pinsrd $3, %eax, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; AVX1-LABEL: combine_vec_sdiv_dupe:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; AVX1-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_sdiv_dupe:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrd $1, %xmm0, %ecx
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm0, %esi
-; AVX-NEXT:    movl %esi, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %esi
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $3, %xmm0, %ecx
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX2ORLATER-LABEL: combine_vec_sdiv_dupe:
+; AVX2ORLATER:       # %bb.0:
+; AVX2ORLATER-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX2ORLATER-NEXT:    retq
+;
+; XOP-LABEL: combine_vec_sdiv_dupe:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; XOP-NEXT:    retq
   %1 = sdiv <4 x i32> %x, %x
   ret <4 x i32> %1
 }

@@ -115,7 +115,7 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
 
 void TypeNode::outputQuals(bool SpaceBefore, bool SpaceAfter) const {}
 
-void PrimitiveTypeNode::outputPre(OutputStream &OS) const {
+void PrimitiveTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
   switch (PrimKind) {
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Void, "void");
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Bool, "bool");
@@ -141,20 +141,24 @@ void PrimitiveTypeNode::outputPre(OutputStream &OS) const {
   outputQualifiers(OS, Quals, true, false);
 }
 
-void NodeArrayNode::output(OutputStream &OS) const { output(OS, ", "); }
+void NodeArrayNode::output(OutputStream &OS, OutputFlags Flags) const {
+  output(OS, Flags, ", ");
+}
 
-void NodeArrayNode::output(OutputStream &OS, StringView Separator) const {
+void NodeArrayNode::output(OutputStream &OS, OutputFlags Flags,
+                           StringView Separator) const {
   if (Count == 0)
     return;
   if (Nodes[0])
-    Nodes[0]->output(OS);
+    Nodes[0]->output(OS, Flags);
   for (size_t I = 1; I < Count; ++I) {
     OS << Separator;
-    Nodes[I]->output(OS);
+    Nodes[I]->output(OS, Flags);
   }
 }
 
-void EncodedStringLiteralNode::output(OutputStream &OS) const {
+void EncodedStringLiteralNode::output(OutputStream &OS,
+                                      OutputFlags Flags) const {
   switch (Char) {
   case CharKind::Wchar:
     OS << "const wchar_t * {L\"";
@@ -175,20 +179,21 @@ void EncodedStringLiteralNode::output(OutputStream &OS) const {
   OS << "}";
 }
 
-void IntegerLiteralNode::output(OutputStream &OS) const {
+void IntegerLiteralNode::output(OutputStream &OS, OutputFlags Flags) const {
   if (IsNegative)
     OS << '-';
   OS << Value;
 }
 
-void TemplateParameterReferenceNode::output(OutputStream &OS) const {
+void TemplateParameterReferenceNode::output(OutputStream &OS,
+                                            OutputFlags Flags) const {
   if (ThunkOffsetCount > 0)
     OS << "{";
   else if (Affinity == PointerAffinity::Pointer)
     OS << "&";
 
   if (Symbol) {
-    Symbol->output(OS);
+    Symbol->output(OS, Flags);
     if (ThunkOffsetCount > 0)
       OS << ", ";
   }
@@ -202,31 +207,34 @@ void TemplateParameterReferenceNode::output(OutputStream &OS) const {
     OS << "}";
 }
 
-void IdentifierNode::outputTemplateParameters(OutputStream &OS) const {
+void IdentifierNode::outputTemplateParameters(OutputStream &OS,
+                                              OutputFlags Flags) const {
   if (!TemplateParams)
     return;
   OS << "<";
-  TemplateParams->output(OS);
+  TemplateParams->output(OS, Flags);
   OS << ">";
 }
 
-void DynamicStructorIdentifierNode::output(OutputStream &OS) const {
+void DynamicStructorIdentifierNode::output(OutputStream &OS,
+                                           OutputFlags Flags) const {
   if (IsDestructor)
     OS << "`dynamic atexit destructor for ";
   else
     OS << "`dynamic initializer for ";
 
   OS << "'";
-  Name->output(OS);
+  Name->output(OS, Flags);
   OS << "''";
 }
 
-void NamedIdentifierNode::output(OutputStream &OS) const {
+void NamedIdentifierNode::output(OutputStream &OS, OutputFlags Flags) const {
   OS << Name;
-  outputTemplateParameters(OS);
+  outputTemplateParameters(OS, Flags);
 }
 
-void IntrinsicFunctionIdentifierNode::output(OutputStream &OS) const {
+void IntrinsicFunctionIdentifierNode::output(OutputStream &OS,
+                                             OutputFlags Flags) const {
   switch (Operator) {
     OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, New, "operator new");
     OUTPUT_ENUM_CLASS_VALUE(IntrinsicFunctionKind, Delete, "operator delete");
@@ -322,36 +330,39 @@ void IntrinsicFunctionIdentifierNode::output(OutputStream &OS) const {
   case IntrinsicFunctionKind::None:
     break;
   }
-  outputTemplateParameters(OS);
+  outputTemplateParameters(OS, Flags);
 }
 
-void LocalStaticGuardIdentifierNode::output(OutputStream &OS) const {
+void LocalStaticGuardIdentifierNode::output(OutputStream &OS,
+                                            OutputFlags Flags) const {
   OS << "`local static guard'";
   if (ScopeIndex > 0)
     OS << "{" << ScopeIndex << "}";
 }
 
-void ConversionOperatorIdentifierNode::output(OutputStream &OS) const {
+void ConversionOperatorIdentifierNode::output(OutputStream &OS,
+                                              OutputFlags Flags) const {
   OS << "operator";
-  outputTemplateParameters(OS);
+  outputTemplateParameters(OS, Flags);
   OS << " ";
-  TargetType->output(OS);
+  TargetType->output(OS, Flags);
 }
 
-void StructorIdentifierNode::output(OutputStream &OS) const {
+void StructorIdentifierNode::output(OutputStream &OS, OutputFlags Flags) const {
   if (IsDestructor)
     OS << "~";
-  Class->output(OS);
-  outputTemplateParameters(OS);
+  Class->output(OS, Flags);
+  outputTemplateParameters(OS, Flags);
 }
 
-void LiteralOperatorIdentifierNode::output(OutputStream &OS) const {
+void LiteralOperatorIdentifierNode::output(OutputStream &OS,
+                                           OutputFlags Flags) const {
   OS << "operator \"\"" << Name;
-  outputTemplateParameters(OS);
+  outputTemplateParameters(OS, Flags);
 }
 
 void FunctionSignatureNode::outputPre(OutputStream &OS,
-                                      FunctionSigFlags Flags) const {
+                                      OutputFlags Flags) const {
   if (!(FunctionClass & FC_Global)) {
     if (FunctionClass & FC_Static)
       OS << "static ";
@@ -363,20 +374,20 @@ void FunctionSignatureNode::outputPre(OutputStream &OS,
     OS << "virtual ";
 
   if (ReturnType) {
-    ReturnType->outputPre(OS);
+    ReturnType->outputPre(OS, Flags);
     OS << " ";
   }
 
-  if (!(Flags & FSF_NoCallingConvention))
+  if (!(Flags & OF_NoCallingConvention))
     outputCallingConvention(OS, CallConvention);
 }
 
 void FunctionSignatureNode::outputPost(OutputStream &OS,
-                                       FunctionSigFlags Flags) const {
+                                       OutputFlags Flags) const {
   if (!(FunctionClass & FC_NoParameterList)) {
     OS << "(";
     if (Params)
-      Params->output(OS);
+      Params->output(OS, Flags);
     else
       OS << "void";
     OS << ")";
@@ -397,18 +408,16 @@ void FunctionSignatureNode::outputPost(OutputStream &OS,
     OS << " &&";
 
   if (ReturnType)
-    ReturnType->outputPost(OS);
+    ReturnType->outputPost(OS, Flags);
 }
 
-void ThunkSignatureNode::outputPre(OutputStream &OS,
-                                   FunctionSigFlags Flags) const {
+void ThunkSignatureNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
   OS << "[thunk]: ";
 
   FunctionSignatureNode::outputPre(OS, Flags);
 }
 
-void ThunkSignatureNode::outputPost(OutputStream &OS,
-                                    FunctionSigFlags Flags) const {
+void ThunkSignatureNode::outputPost(OutputStream &OS, OutputFlags Flags) const {
   if (FunctionClass & FC_StaticThisAdjust) {
     OS << "`adjustor{" << ThisAdjust.StaticOffset << "}'";
   } else if (FunctionClass & FC_VirtualThisAdjust) {
@@ -425,15 +434,15 @@ void ThunkSignatureNode::outputPost(OutputStream &OS,
   FunctionSignatureNode::outputPost(OS, Flags);
 }
 
-void PointerTypeNode::outputPre(OutputStream &OS) const {
+void PointerTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
   if (Pointee->kind() == NodeKind::FunctionSignature) {
     // If this is a pointer to a function, don't output the calling convention.
     // It needs to go inside the parentheses.
     const FunctionSignatureNode *Sig =
         static_cast<const FunctionSignatureNode *>(Pointee);
-    Sig->outputPre(OS, FSF_NoCallingConvention);
+    Sig->outputPre(OS, OF_NoCallingConvention);
   } else
-    Pointee->outputPre(OS);
+    Pointee->outputPre(OS, Flags);
 
   outputSpaceIfNecessary(OS);
 
@@ -451,7 +460,7 @@ void PointerTypeNode::outputPre(OutputStream &OS) const {
   }
 
   if (ClassParent) {
-    ClassParent->output(OS);
+    ClassParent->output(OS, Flags);
     OS << "::";
   }
 
@@ -471,15 +480,15 @@ void PointerTypeNode::outputPre(OutputStream &OS) const {
   outputQualifiers(OS, Quals, false, false);
 }
 
-void PointerTypeNode::outputPost(OutputStream &OS) const {
+void PointerTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {
   if (Pointee->kind() == NodeKind::ArrayType ||
       Pointee->kind() == NodeKind::FunctionSignature)
     OS << ")";
 
-  Pointee->outputPost(OS);
+  Pointee->outputPost(OS, Flags);
 }
 
-void TagTypeNode::outputPre(OutputStream &OS) const {
+void TagTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
   switch (Tag) {
     OUTPUT_ENUM_CLASS_VALUE(TagKind, Class, "class");
     OUTPUT_ENUM_CLASS_VALUE(TagKind, Struct, "struct");
@@ -487,58 +496,57 @@ void TagTypeNode::outputPre(OutputStream &OS) const {
     OUTPUT_ENUM_CLASS_VALUE(TagKind, Enum, "enum");
   }
   OS << " ";
-  QualifiedName->output(OS);
+  QualifiedName->output(OS, Flags);
   outputQualifiers(OS, Quals, true, false);
 }
 
-void TagTypeNode::outputPost(OutputStream &OS) const {}
+void TagTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {}
 
-void ArrayTypeNode::outputPre(OutputStream &OS) const {
-  ElementType->outputPre(OS);
+void ArrayTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
+  ElementType->outputPre(OS, Flags);
   outputQualifiers(OS, Quals, true, false);
 }
 
-void ArrayTypeNode::outputOneDimension(OutputStream &OS, Node *N) const {
+void ArrayTypeNode::outputOneDimension(OutputStream &OS, OutputFlags Flags,
+                                       Node *N) const {
   assert(N->kind() == NodeKind::IntegerLiteral);
   IntegerLiteralNode *ILN = static_cast<IntegerLiteralNode *>(N);
   if (ILN->Value != 0)
-    ILN->output(OS);
+    ILN->output(OS, Flags);
 }
 
-void ArrayTypeNode::outputDimensionsImpl(OutputStream &OS) const {
+void ArrayTypeNode::outputDimensionsImpl(OutputStream &OS,
+                                         OutputFlags Flags) const {
   if (Dimensions->Count == 0)
     return;
 
-  outputOneDimension(OS, Dimensions->Nodes[0]);
+  outputOneDimension(OS, Flags, Dimensions->Nodes[0]);
   for (size_t I = 1; I < Dimensions->Count; ++I) {
     OS << "][";
-    outputOneDimension(OS, Dimensions->Nodes[I]);
+    outputOneDimension(OS, Flags, Dimensions->Nodes[I]);
   }
 }
 
-void ArrayTypeNode::outputPost(OutputStream &OS) const {
+void ArrayTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {
   OS << "[";
-  outputDimensionsImpl(OS);
+  outputDimensionsImpl(OS, Flags);
   OS << "]";
 
-  ElementType->outputPost(OS);
+  ElementType->outputPost(OS, Flags);
 }
 
-void SymbolNode::output(OutputStream &OS) const { Name->output(OS); }
-
-void FunctionSymbolNode::output(OutputStream &OS) const {
-  output(OS, FunctionSigFlags::FSF_Default);
+void SymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
+  Name->output(OS, Flags);
 }
 
-void FunctionSymbolNode::output(OutputStream &OS,
-                                FunctionSigFlags Flags) const {
+void FunctionSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   Signature->outputPre(OS, Flags);
   outputSpaceIfNecessary(OS);
-  Name->output(OS);
+  Name->output(OS, Flags);
   Signature->outputPost(OS, Flags);
 }
 
-void VariableSymbolNode::output(OutputStream &OS) const {
+void VariableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   switch (SC) {
   case StorageClass::PrivateStatic:
   case StorageClass::PublicStatic:
@@ -549,41 +557,47 @@ void VariableSymbolNode::output(OutputStream &OS) const {
   }
 
   if (Type) {
-    Type->outputPre(OS);
+    Type->outputPre(OS, Flags);
     outputSpaceIfNecessary(OS);
   }
-  Name->output(OS);
+  Name->output(OS, Flags);
   if (Type)
-    Type->outputPost(OS);
+    Type->outputPost(OS, Flags);
 }
 
-void CustomNode::output(OutputStream &OS) const { OS << Name; }
+void CustomTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
+  Identifier->output(OS, Flags);
+}
+void CustomTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {}
 
-void QualifiedNameNode::output(OutputStream &OS) const {
-  Components->output(OS, "::");
+void QualifiedNameNode::output(OutputStream &OS, OutputFlags Flags) const {
+  Components->output(OS, Flags, "::");
 }
 
-void RttiBaseClassDescriptorNode::output(OutputStream &OS) const {
+void RttiBaseClassDescriptorNode::output(OutputStream &OS,
+                                         OutputFlags Flags) const {
   OS << "`RTTI Base Class Descriptor at (";
   OS << NVOffset << ", " << VBPtrOffset << ", " << VBTableOffset << ", "
-     << Flags;
+     << this->Flags;
   OS << ")'";
 }
 
-void LocalStaticGuardVariableNode::output(OutputStream &OS) const {
-  Name->output(OS);
+void LocalStaticGuardVariableNode::output(OutputStream &OS,
+                                          OutputFlags Flags) const {
+  Name->output(OS, Flags);
 }
 
-void VcallThunkIdentifierNode::output(OutputStream &OS) const {
+void VcallThunkIdentifierNode::output(OutputStream &OS,
+                                      OutputFlags Flags) const {
   OS << "`vcall'{" << OffsetInVTable << ", {flat}}";
 }
 
-void SpecialTableSymbolNode::output(OutputStream &OS) const {
+void SpecialTableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   outputQualifiers(OS, Quals, false, true);
-  Name->output(OS);
+  Name->output(OS, Flags);
   if (TargetName) {
     OS << "{for `";
-    TargetName->output(OS);
+    TargetName->output(OS, Flags);
     OS << "'}";
   }
   return;

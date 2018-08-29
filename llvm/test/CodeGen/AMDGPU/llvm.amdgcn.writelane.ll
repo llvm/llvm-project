@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0

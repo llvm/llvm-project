@@ -585,10 +585,30 @@ void ConstantHoistingPass::findBaseConstants() {
   for (auto CC = std::next(ConstCandVec.begin()), E = ConstCandVec.end();
        CC != E; ++CC) {
     if (MinValItr->ConstInt->getType() == CC->ConstInt->getType()) {
+      Type *MemUseValTy = nullptr;
+      for (auto &U : CC->Uses) {
+        auto *UI = U.Inst;
+        if (LoadInst *LI = dyn_cast<LoadInst>(UI)) {
+          MemUseValTy = LI->getType();
+          break;
+        } else if (StoreInst *SI = dyn_cast<StoreInst>(UI)) {
+          // Make sure the constant is used as pointer operand of the StoreInst.
+          if (SI->getPointerOperand() == SI->getOperand(U.OpndIdx)) {
+            MemUseValTy = SI->getValueOperand()->getType();
+            break;
+          }
+        }
+      }
+
       // Check if the constant is in range of an add with immediate.
       APInt Diff = CC->ConstInt->getValue() - MinValItr->ConstInt->getValue();
       if ((Diff.getBitWidth() <= 64) &&
-          TTI->isLegalAddImmediate(Diff.getSExtValue()))
+          TTI->isLegalAddImmediate(Diff.getSExtValue()) &&
+          // Check if Diff can be used as offset in addressing mode of the user
+          // memory instruction.
+          (!MemUseValTy || TTI->isLegalAddressingMode(MemUseValTy,
+           /*BaseGV*/nullptr, /*BaseOffset*/Diff.getSExtValue(),
+           /*HasBaseReg*/true, /*Scale*/0)))
         continue;
     }
     // We either have now a different constant type or the constant is not in

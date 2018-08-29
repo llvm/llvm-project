@@ -216,10 +216,9 @@ EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
                                            int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
-  omptarget_nvptx_workFn = WorkFn;
+  assert(IsOMPRuntimeInitialized && "expected initialized runtime.");
 
-  if (!IsOMPRuntimeInitialized)
-    return;
+  omptarget_nvptx_workFn = WorkFn;
 
   // This routine is only called by the team master.  The team master is
   // the first thread of the last warp.  It always has the logical thread
@@ -320,11 +319,10 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
                                    int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_parallel\n");
 
+  assert(IsOMPRuntimeInitialized && "expected initialized runtime.");
+
   // Work function and arguments for L1 parallel region.
   *WorkFn = omptarget_nvptx_workFn;
-
-  if (!IsOMPRuntimeInitialized)
-    return true;
 
   // If this is the termination signal from the master, quit early.
   if (!*WorkFn)
@@ -363,6 +361,8 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
 EXTERN void __kmpc_kernel_end_parallel() {
   // pop stack
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_end_parallel\n");
+  assert(isRuntimeInitialized() && "expected initialized runtime.");
+
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
   int threadId = GetThreadIdInBlock();
@@ -378,6 +378,12 @@ EXTERN void __kmpc_kernel_end_parallel() {
 EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
 
+  if (isRuntimeUninitialized()) {
+    assert(isSPMDMode() && "Expected SPMD mode with uninitialized runtime.");
+    omptarget_nvptx_simpleThreadPrivateContext->IncParLevel();
+    return;
+  }
+
   // assume this is only called for nested parallel
   int threadId = GetLogicalThreadIdInBlock();
 
@@ -392,7 +398,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
   // it
   omptarget_nvptx_TaskDescr *newTaskDescr =
       (omptarget_nvptx_TaskDescr *)SafeMalloc(sizeof(omptarget_nvptx_TaskDescr),
-                                              (char *)"new seq parallel task");
+                                              "new seq parallel task");
   newTaskDescr->CopyParent(currTaskDescr);
 
   // tweak values for serialized parallel case:
@@ -410,6 +416,12 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Indent *loc,
                                            uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
 
+  if (isRuntimeUninitialized()) {
+    assert(isSPMDMode() && "Expected SPMD mode with uninitialized runtime.");
+    omptarget_nvptx_simpleThreadPrivateContext->DecParLevel();
+    return;
+  }
+
   // pop stack
   int threadId = GetLogicalThreadIdInBlock();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
@@ -424,6 +436,11 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Indent *loc,
 
 EXTERN uint16_t __kmpc_parallel_level(kmp_Indent *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_parallel_level\n");
+
+  if (isRuntimeUninitialized()) {
+    assert(isSPMDMode() && "Expected SPMD mode with uninitialized runtime.");
+    return omptarget_nvptx_simpleThreadPrivateContext->GetParallelLevel();
+  }
 
   int threadId = GetLogicalThreadIdInBlock();
   omptarget_nvptx_TaskDescr *currTaskDescr =
@@ -451,6 +468,7 @@ EXTERN int32_t __kmpc_global_thread_num(kmp_Indent *loc) {
 EXTERN void __kmpc_push_num_threads(kmp_Indent *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
+  assert(isRuntimeInitialized() && "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
       num_threads;
@@ -459,6 +477,7 @@ EXTERN void __kmpc_push_num_threads(kmp_Indent *loc, int32_t tid,
 EXTERN void __kmpc_push_simd_limit(kmp_Indent *loc, int32_t tid,
                                    int32_t simd_limit) {
   PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", simd_limit);
+  assert(isRuntimeInitialized() && "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(tid) = simd_limit;
 }

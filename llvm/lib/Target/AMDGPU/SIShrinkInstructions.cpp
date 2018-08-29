@@ -120,19 +120,6 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   return false;
 }
 
-// Copy MachineOperand with all flags except setting it as implicit.
-static void copyFlagsToImplicitVCC(MachineInstr &MI,
-                                   const MachineOperand &Orig) {
-
-  for (MachineOperand &Use : MI.implicit_operands()) {
-    if (Use.isUse() && Use.getReg() == AMDGPU::VCC) {
-      Use.setIsUndef(Orig.isUndef());
-      Use.setIsKill(Orig.isKill());
-      return;
-    }
-  }
-}
-
 static bool isKImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
   return isInt<16>(Src.getImm()) &&
     !TII->isInlineConstant(*Src.getParent(),
@@ -434,40 +421,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       // We can shrink this instruction
       LLVM_DEBUG(dbgs() << "Shrinking " << MI);
 
-      MachineInstrBuilder Inst32 =
-          BuildMI(MBB, I, MI.getDebugLoc(), TII->get(Op32));
-
-      // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
-      // For VOPC instructions, this is replaced by an implicit def of vcc.
-      int Op32DstIdx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst);
-      if (Op32DstIdx != -1) {
-        // dst
-        Inst32.add(MI.getOperand(0));
-      } else {
-        assert(MI.getOperand(0).getReg() == AMDGPU::VCC &&
-               "Unexpected case");
-      }
-
-
-      Inst32.add(*TII->getNamedOperand(MI, AMDGPU::OpName::src0));
-
-      const MachineOperand *Src1 =
-          TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-      if (Src1)
-        Inst32.add(*Src1);
-
-      if (Src2) {
-        int Op32Src2Idx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2);
-        if (Op32Src2Idx != -1) {
-          Inst32.add(*Src2);
-        } else {
-          // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
-          // replaced with an implicit read of vcc. This was already added
-          // during the initial BuildMI, so find it to preserve the flags.
-          copyFlagsToImplicitVCC(*Inst32, *Src2);
-        }
-      }
-
+      MachineInstr *Inst32 = TII->buildShrunkInst(MI, Op32);
       ++NumInstructionsShrunk;
 
       // Copy extra operands not present in the instruction definition.

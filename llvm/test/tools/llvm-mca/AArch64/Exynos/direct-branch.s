@@ -8,12 +8,17 @@
 # ALL-NEXT: Instructions:      300
 
 # M1-NEXT:  Total Cycles:      76
-# M1-NEXT:  Dispatch Width:    4
+# M3-NEXT:  Total Cycles:      51
+
+# ALL-NEXT: Total uOps:        300
+
+# M1:       Dispatch Width:    4
+# M1-NEXT:  uOps Per Cycle:    3.95
 # M1-NEXT:  IPC:               3.95
 # M1-NEXT:  Block RThroughput: 0.3
 
-# M3-NEXT:  Total Cycles:      51
-# M3-NEXT:  Dispatch Width:    6
+# M3:       Dispatch Width:    6
+# M3-NEXT:  uOps Per Cycle:    5.88
 # M3-NEXT:  IPC:               5.88
 # M3-NEXT:  Block RThroughput: 0.2
 

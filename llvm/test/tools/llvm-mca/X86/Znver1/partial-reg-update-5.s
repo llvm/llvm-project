@@ -6,7 +6,10 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      1500
 # CHECK-NEXT: Total Cycles:      1504
-# CHECK-NEXT: Dispatch Width:    4
+# CHECK-NEXT: Total uOps:        1500
+
+# CHECK:      Dispatch Width:    4
+# CHECK-NEXT: uOps Per Cycle:    1.00
 # CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 0.3
 

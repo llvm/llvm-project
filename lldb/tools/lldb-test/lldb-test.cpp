@@ -103,6 +103,7 @@ static cl::list<std::string> InputFilenames(cl::Positional,
 enum class FindType {
   None,
   Function,
+  Block,
   Namespace,
   Type,
   Variable,
@@ -112,6 +113,7 @@ static cl::opt<FindType> Find(
     cl::values(
         clEnumValN(FindType::None, "none", "No search, just dump the module."),
         clEnumValN(FindType::Function, "function", "Find functions."),
+        clEnumValN(FindType::Block, "block", "Find blocks."),
         clEnumValN(FindType::Namespace, "namespace", "Find namespaces."),
         clEnumValN(FindType::Type, "type", "Find types."),
         clEnumValN(FindType::Variable, "variable", "Find global variables.")),
@@ -158,6 +160,7 @@ static cl::opt<int> Line("line", cl::desc("Line to search."),
 static Expected<CompilerDeclContext> getDeclContext(SymbolVendor &Vendor);
 
 static Error findFunctions(lldb_private::Module &Module);
+static Error findBlocks(lldb_private::Module &Module);
 static Error findNamespaces(lldb_private::Module &Module);
 static Error findTypes(lldb_private::Module &Module);
 static Error findVariables(lldb_private::Module &Module);
@@ -383,6 +386,42 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
   return Error::success();
 }
 
+Error opts::symbols::findBlocks(lldb_private::Module &Module) {
+  assert(!Regex);
+  assert(!File.empty());
+  assert(Line != 0);
+
+  SymbolContextList List;
+
+  FileSpec src_file(File, false);
+  size_t cu_count = Module.GetNumCompileUnits();
+  for (size_t i = 0; i < cu_count; i++) {
+    lldb::CompUnitSP cu_sp = Module.GetCompileUnitAtIndex(i);
+    if (!cu_sp)
+      continue;
+
+    LineEntry le;
+    cu_sp->FindLineEntry(0, Line, &src_file, false, &le);
+    if (!le.IsValid())
+      continue;
+
+    auto addr = le.GetSameLineContiguousAddressRange().GetBaseAddress();
+    if (!addr.IsValid())
+      continue;
+
+    SymbolContext sc;
+    uint32_t resolved = addr.CalculateSymbolContext(&sc, eSymbolContextBlock);
+    if (resolved & eSymbolContextBlock)
+      List.Append(sc);
+  }
+
+  outs() << formatv("Found {0} blocks:\n", List.GetSize());
+  StreamString Stream;
+  List.Dump(&Stream, nullptr);
+  outs() << Stream.GetData() << "\n";
+  return Error::success();
+}
+
 Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
   SymbolVendor &Vendor = *Module.GetSymbolVendor();
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
@@ -565,6 +604,15 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
                                "and file position may be used simultaneously "
                                "when searching a function.");
     return findFunctions;
+
+  case FindType::Block:
+    if (File.empty() || Line == 0)
+      return make_string_error("Both file name and line number must be "
+                               "specified when searching a block.");
+    if (Regex || getFunctionNameFlags() != 0)
+      return make_string_error("Cannot use regular expression or "
+                               "function-flags for searching a block.");
+    return findBlocks;
 
   case FindType::Namespace:
     if (Regex || !File.empty() || Line != 0)

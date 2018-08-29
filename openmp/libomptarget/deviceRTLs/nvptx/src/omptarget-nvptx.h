@@ -395,6 +395,38 @@ struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
 
+class omptarget_nvptx_SimpleThreadPrivateContext {
+  uint16_t par_level[MAX_THREADS_PER_TEAM];
+public:
+  INLINE void Init() {
+    assert(isSPMDMode() && isRuntimeUninitialized() &&
+           "Expected SPMD + uninitialized runtime modes.");
+    par_level[GetThreadIdInBlock()] = 0;
+  }
+  INLINE void IncParLevel() {
+    assert(isSPMDMode() && isRuntimeUninitialized() &&
+           "Expected SPMD + uninitialized runtime modes.");
+    ++par_level[GetThreadIdInBlock()];
+  }
+  INLINE void DecParLevel() {
+    assert(isSPMDMode() && isRuntimeUninitialized() &&
+           "Expected SPMD + uninitialized runtime modes.");
+    assert(par_level[GetThreadIdInBlock()] > 0 &&
+           "Expected parallel level >0.");
+    --par_level[GetThreadIdInBlock()];
+  }
+  INLINE bool InL2OrHigherParallelRegion() const {
+    assert(isSPMDMode() && isRuntimeUninitialized() &&
+           "Expected SPMD + uninitialized runtime modes.");
+    return par_level[GetThreadIdInBlock()] > 0;
+  }
+  INLINE uint16_t GetParallelLevel() const {
+    assert(isSPMDMode() && isRuntimeUninitialized() &&
+           "Expected SPMD + uninitialized runtime modes.");
+    return par_level[GetThreadIdInBlock()] + 1;
+  }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // global device envrionment
 ////////////////////////////////////////////////////////////////////////////////
@@ -409,6 +441,9 @@ extern __device__ omptarget_device_environmentTy omptarget_device_environment;
 
 extern __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
+extern __device__ __shared__ omptarget_nvptx_SimpleThreadPrivateContext
+    *omptarget_nvptx_simpleThreadPrivateContext;
+
 extern __device__ __shared__ uint32_t execution_param;
 extern __device__ __shared__ void *ReductionScratchpadPtr;
 

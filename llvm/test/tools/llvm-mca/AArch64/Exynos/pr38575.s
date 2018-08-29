@@ -14,7 +14,10 @@ ror x1, x2, x3
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
 # CHECK-NEXT: Total Cycles:      28
-# CHECK-NEXT: Dispatch Width:    6
+# CHECK-NEXT: Total uOps:        100
+
+# CHECK:      Dispatch Width:    6
+# CHECK-NEXT: uOps Per Cycle:    3.57
 # CHECK-NEXT: IPC:               3.57
 # CHECK-NEXT: Block RThroughput: 0.3
 

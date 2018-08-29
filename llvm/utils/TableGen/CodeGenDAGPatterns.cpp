@@ -4485,9 +4485,6 @@ void CodeGenDAGPatterns::GenerateVariants() {
       MatchedPredicates[p] = (i == p) || (PatternsToMatch[i].getPredicates() ==
                                           PatternsToMatch[p].getPredicates());
 
-    unsigned NumMatches = MatchedPredicates.count();
-    (void)NumMatches;
-
     for (unsigned v = 0, e = Variants.size(); v != e; ++v) {
       TreePatternNodePtr Variant = Variants[v];
 

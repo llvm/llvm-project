@@ -48,6 +48,18 @@ define <2 x float> @fneg_v2f32(<2 x float> %x) {
   ret <2 x float> %cos
 }
 
+; FMF are not required, but they should propagate.
+
+define <2 x float> @fneg_cos_fmf(<2 x float> %x){
+; CHECK-LABEL: @fneg_cos_fmf(
+; CHECK-NEXT:    [[R:%.*]] = call nnan afn <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fsub fast <2 x float> <float -0.0, float -0.0>, %x
+  %r = call nnan afn <2 x float> @llvm.cos.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
 define float @fabs_f32(float %x) {
 ; CHECK-LABEL: @fabs_f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
@@ -78,5 +90,33 @@ define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
   %x.fabs.fneg = fsub <2 x float> <float -0.0, float -0.0>, %x.fabs
   %cos = call <2 x float> @llvm.cos.v2f32(<2 x float> %x.fabs.fneg)
   ret <2 x float> %cos
+}
+
+; TODO: Negate is canonicalized after sin.
+
+declare <2 x float> @llvm.sin.v2f32(<2 x float>)
+
+define <2 x float> @fneg_sin(<2 x float> %x){
+; CHECK-LABEL: @fneg_sin(
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+; TODO: FMF are not required, but they should propagate.
+
+define <2 x float> @fneg_sin_fmf(<2 x float> %x){
+; CHECK-LABEL: @fneg_sin_fmf(
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub fast <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fsub fast <2 x float> <float -0.0, float -0.0>, %x
+  %r = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
 }
 

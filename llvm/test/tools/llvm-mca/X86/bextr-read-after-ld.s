@@ -12,29 +12,44 @@ bextrl	%esi, (%rdi), %eax
 # ALL-NEXT:     Instructions:      2
 
 # BDWELL-NEXT:  Total Cycles:      10
-# BDWELL-NEXT:  Dispatch Width:    4
-# BDWELL-NEXT:  IPC:               0.20
-# BDWELL-NEXT:  Block RThroughput: 1.0
+# BDWELL-NEXT:  Total uOps:        4
 
 # BTVER2-NEXT:  Total Cycles:      7
-# BTVER2-NEXT:  Dispatch Width:    2
+# BTVER2-NEXT:  Total uOps:        2
+
+# HASWELL-NEXT: Total Cycles:      10
+# HASWELL-NEXT: Total uOps:        4
+
+# SKYLAKE-NEXT: Total Cycles:      10
+# SKYLAKE-NEXT: Total uOps:        4
+
+# ZNVER1-NEXT:  Total Cycles:      8
+# ZNVER1-NEXT:  Total uOps:        3
+
+# BTVER2:       Dispatch Width:    2
+# BTVER2-NEXT:  uOps Per Cycle:    0.29
 # BTVER2-NEXT:  IPC:               0.29
 # BTVER2-NEXT:  Block RThroughput: 1.0
 
-# HASWELL-NEXT: Total Cycles:      10
-# HASWELL-NEXT: Dispatch Width:    4
+# ZNVER1:       Dispatch Width:    4
+# ZNVER1-NEXT:  uOps Per Cycle:    0.38
+# ZNVER1-NEXT:  IPC:               0.25
+# ZNVER1-NEXT:  Block RThroughput: 0.8
+
+# BDWELL:       Dispatch Width:    4
+# BDWELL-NEXT:  uOps Per Cycle:    0.40
+# BDWELL-NEXT:  IPC:               0.20
+# BDWELL-NEXT:  Block RThroughput: 1.0
+
+# HASWELL:      Dispatch Width:    4
+# HASWELL-NEXT: uOps Per Cycle:    0.40
 # HASWELL-NEXT: IPC:               0.20
 # HASWELL-NEXT: Block RThroughput: 1.0
 
-# SKYLAKE-NEXT: Total Cycles:      10
-# SKYLAKE-NEXT: Dispatch Width:    6
+# SKYLAKE:      Dispatch Width:    6
+# SKYLAKE-NEXT: uOps Per Cycle:    0.40
 # SKYLAKE-NEXT: IPC:               0.20
 # SKYLAKE-NEXT: Block RThroughput: 0.7
-
-# ZNVER1-NEXT:  Total Cycles:      8
-# ZNVER1-NEXT:  Dispatch Width:    4
-# ZNVER1-NEXT:  IPC:               0.25
-# ZNVER1-NEXT:  Block RThroughput: 0.8
 
 # ALL:          Instruction Info:
 # ALL-NEXT:     [1]: #uOps
