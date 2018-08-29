@@ -130,6 +130,15 @@ class ABSS_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
   HARDFLOAT,
   NeverHasSideEffects;
 
+class CVT_PS_S_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC, InstrItinClass Itin, bit IsComm,
+              SDPatternOperator OpNode= null_frag> :
+  InstSE<(outs DstRC:$fd), (ins SrcRC:$fs, SrcRC:$ft),
+         !strconcat(opstr, "\t$fd, $fs, $ft"),
+         [(set DstRC:$fd, (OpNode SrcRC:$fs, SrcRC:$ft))], Itin, FrmFR, opstr>,
+  HARDFLOAT {
+  let isCommutable = IsComm;
+}
+
 multiclass ABSS_M<string opstr, InstrItinClass Itin,
                   SDPatternOperator OpNode= null_frag> {
   def _D32 : MMRel, ABSS_FT<opstr, AFGR64Opnd, AFGR64Opnd, Itin, OpNode>,
@@ -432,6 +441,29 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def CVT_D32_W : MMRel, ABSS_FT<"cvt.d.w", AFGR64Opnd, FGR32Opnd, II_CVT>,
                   ABSS_FM<0x21, 20>, ISA_MIPS1, FGR_32;
 }
+
+let DecoderNamespace = "MipsFP64" in {
+  let AdditionalPredicates = [NotInMicroMips] in {
+    def PLL_PS64    : ADDS_FT<"pll.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2C, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def PLU_PS64    : ADDS_FT<"plu.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2D, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+
+    def CVT_S_PU64  : ABSS_FT<"cvt.s.pu", FGR32Opnd, FGR64Opnd, II_CVT>,
+                      ABSS_FM<0x20, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def CVT_S_PL64  : ABSS_FT<"cvt.s.pl", FGR32Opnd, FGR64Opnd, II_CVT>,
+                      ABSS_FM<0x28, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+
+    def CVT_PS_S64  : CVT_PS_S_FT<"cvt.ps.s", FGR64Opnd, FGR32Opnd, II_CVT, 0>,
+                      ADDS_FM<0x26, 16>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+  }
+}
+
 let DecoderNamespace = "MipsFP64" in {
   let AdditionalPredicates = [NotInMicroMips] in {
     def CVT_S_L   : ABSS_FT<"cvt.s.l", FGR32Opnd, FGR64Opnd, II_CVT>,

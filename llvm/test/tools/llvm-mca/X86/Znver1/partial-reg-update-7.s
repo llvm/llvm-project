@@ -12,7 +12,10 @@ addq  %rcx, %rdx
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
 # CHECK-NEXT: Total Cycles:      9
-# CHECK-NEXT: Dispatch Width:    4
+# CHECK-NEXT: Total uOps:        4
+
+# CHECK:      Dispatch Width:    4
+# CHECK-NEXT: uOps Per Cycle:    0.44
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 1.0
 

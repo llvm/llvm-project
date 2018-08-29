@@ -138,6 +138,14 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     }
   }
 
+  // For MinGW, if a data reference isn't marked as DSO local or DLLImport,
+  // and it's a pure declaration without a definition, it might potentially
+  // be automatically imported from another DLL, thus route accesses via a stub.
+  if (isTargetWindowsGNU() && GV && !GV->isDSOLocal() &&
+      !GV->hasDLLImportStorageClass() && GV->isDeclarationForLinker() &&
+      isa<GlobalVariable>(GV))
+    return X86II::MO_COFFSTUB;
+
   if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);
 

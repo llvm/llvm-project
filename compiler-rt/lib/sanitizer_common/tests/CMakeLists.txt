@@ -26,7 +26,6 @@ set(SANITIZER_UNITTESTS
   sanitizer_posix_test.cc
   sanitizer_printf_test.cc
   sanitizer_procmaps_test.cc
-  sanitizer_ring_buffer_test.cc
   sanitizer_quarantine_test.cc
   sanitizer_stackdepot_test.cc
   sanitizer_stacktrace_printer_test.cc

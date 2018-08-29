@@ -4,10 +4,7 @@
 define void @pr32372(i8*) {
 ; CHECK-LABEL: pr32372:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    llc %r1, 0(%r2)
 ; CHECK-NEXT:    mvhhi 0(%r1), -3825
-; CHECK-NEXT:    llill %r0, 0
-; CHECK-NEXT:    dlr %r0, %r1
 ; CHECK-NEXT:  .LBB0_1: # %CF251
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    j .LBB0_1
@@ -15,7 +12,8 @@ BB:
   %L = load i8, i8* %0
   store i16 -3825, i16* undef
   %L5 = load i8, i8* %0
-  %B9 = urem i8 %L5, %L
+  %B8 = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %L5, i8 %L)
+  %B9 = extractvalue {i8, i1} %B8, 0
   %I107 = insertelement <8 x i8> zeroinitializer, i8 %B9, i32 7
   %ZE141 = zext i8 %L5 to i16
   br label %CF251
@@ -29,3 +27,5 @@ CF258:                                            ; preds = %CF251
   %Shuff230 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> <i32 3, i32 1>
   br label %CF251
 }
+
+declare {i8, i1} @llvm.umul.with.overflow.i8(i8, i8) nounwind readnone

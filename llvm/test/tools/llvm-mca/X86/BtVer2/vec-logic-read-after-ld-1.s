@@ -7,7 +7,10 @@ vandps (%rdi), %xmm1, %xmm2
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      9
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        2
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.22
 # CHECK-NEXT: IPC:               0.22
 # CHECK-NEXT: Block RThroughput: 1.0
 

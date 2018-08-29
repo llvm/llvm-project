@@ -7,7 +7,10 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK:      Iterations:        5
 # CHECK-NEXT: Instructions:      10
 # CHECK-NEXT: Total Cycles:      28
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        10
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 1.0
 

@@ -131,7 +131,7 @@ public:
     ST stride = *pstride;
     T entityId, numberOfEntities;
     // init
-    switch (schedtype) {
+    switch (SCHEDULE_WITHOUT_MODIFIERS(schedtype)) {
     case kmp_sched_static_chunk: {
       if (chunk > 0) {
         entityId =
@@ -140,6 +140,28 @@ public:
                                                  IsRuntimeUninitialized);
         ForStaticChunk(lastiter, lb, ub, stride, chunk, entityId,
                        numberOfEntities);
+        break;
+      }
+    } // note: if chunk <=0, use nochunk
+    case kmp_sched_static_balanced_chunk: {
+      if (chunk > 0) {
+        entityId =
+            GetOmpThreadId(tid, IsSPMDExecutionMode, IsRuntimeUninitialized);
+        numberOfEntities = GetNumberOfOmpThreads(tid, IsSPMDExecutionMode,
+                                                 IsRuntimeUninitialized);
+
+        // round up to make sure the chunk is enough to cover all iterations
+        T tripCount = ub - lb + 1; // +1 because ub is inclusive
+        T span = (tripCount + numberOfEntities - 1) / numberOfEntities;
+        // perform chunk adjustment
+        chunk = (span + chunk - 1) & ~(chunk - 1);
+
+        assert(ub >= lb && "ub must be >= lb.");
+        T oldUb = ub;
+        ForStaticChunk(lastiter, lb, ub, stride, chunk, entityId,
+                       numberOfEntities);
+        if (ub > oldUb)
+          ub = oldUb;
         break;
       }
     } // note: if chunk <=0, use nochunk
@@ -199,12 +221,13 @@ public:
     *plower = lb;
     *pupper = ub;
     *pstride = stride;
-    PRINT(LD_LOOP,
-          "Got sched: Active %d, total %d: lb %lld, ub %lld, stride %lld\n",
-          GetNumberOfOmpThreads(tid, IsSPMDExecutionMode,
-                                IsRuntimeUninitialized),
-          GetNumberOfWorkersInTeam(), P64(*plower), P64(*pupper),
-          P64(*pstride));
+    PRINT(
+        LD_LOOP,
+        "Got sched: Active %d, total %d: lb %lld, ub %lld, stride %lld, last "
+        "%d\n",
+        GetNumberOfOmpThreads(tid, IsSPMDExecutionMode, IsRuntimeUninitialized),
+        GetNumberOfWorkersInTeam(), P64(*plower), P64(*pupper), P64(*pstride),
+        lastiter);
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -218,6 +241,8 @@ public:
   INLINE static void dispatch_init(kmp_Indent *loc, int32_t threadId,
                                    kmp_sched_t schedule, T lb, T ub, ST st,
                                    ST chunk) {
+    assert(isRuntimeInitialized() &&
+           "Expected non-SPMD mode + initialized runtime.");
     int tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = currTaskDescr->ThreadsInTeam();
@@ -308,7 +333,38 @@ public:
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
             omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
             omptarget_nvptx_threadPrivateContext->Stride(tid));
+    } else if (schedule == kmp_sched_static_balanced_chunk) {
+      ASSERT0(LT_FUSSY, chunk > 0, "bad chunk value");
+      // save sched state
+      omptarget_nvptx_threadPrivateContext->ScheduleType(tid) = schedule;
+      // save ub
+      omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid) = ub;
+      // compute static chunk
+      ST stride;
+      int lastiter = 0;
+      // round up to make sure the chunk is enough to cover all iterations
+      T span = (tripCount + tnum - 1) / tnum;
+      // perform chunk adjustment
+      chunk = (span + chunk - 1) & ~(chunk - 1);
 
+      T oldUb = ub;
+      ForStaticChunk(
+          lastiter, lb, ub, stride, chunk,
+          GetOmpThreadId(tid, isSPMDMode(), isRuntimeUninitialized()), tnum);
+      assert(ub >= lb && "ub must be >= lb.");
+      if (ub > oldUb)
+        ub = oldUb;
+      // save computed params
+      omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
+      omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
+      omptarget_nvptx_threadPrivateContext->Stride(tid) = stride;
+      PRINT(LD_LOOP,
+            "dispatch init (static chunk) : num threads = %d, ub =  %" PRId64
+            ", next lower bound = %llu, stride = %llu\n",
+            GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            omptarget_nvptx_threadPrivateContext->Stride(tid));
     } else if (schedule == kmp_sched_static_nochunk) {
       ASSERT0(LT_FUSSY, chunk == 0, "bad chunk value");
       // save sched state
@@ -398,6 +454,8 @@ public:
   // in a warp cannot make independent progress.
   NOINLINE static int dispatch_next(int32_t *plast, T *plower, T *pupper,
                                     ST *pstride) {
+    assert(isRuntimeInitialized() &&
+           "Expected non-SPMD mode + initialized runtime.");
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
@@ -458,10 +516,11 @@ public:
     *pstride = 1;
 
     PRINT(LD_LOOP,
-          "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld\n",
+          "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld, "
+          "last %d\n",
           GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
-          GetNumberOfWorkersInTeam(), P64(*plower), P64(*pupper),
-          P64(*pstride));
+          GetNumberOfWorkersInTeam(), P64(*plower), P64(*pupper), P64(*pstride),
+          *plast);
     return DISPATCH_NOTFINISHED;
   }
 
@@ -736,6 +795,8 @@ INLINE void syncWorkersInGenericMode(uint32_t NumThreads) {
 EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Indent *loc, int32_t gtid,
                                                   int32_t varNum, void *array) {
   PRINT0(LD_IO, "call to __kmpc_reduce_conditional_lastprivate(...)\n");
+  assert(isRuntimeInitialized() &&
+         "Expected non-SPMD mode + initialized runtime.");
 
   omptarget_nvptx_TeamDescr &teamDescr = getMyTeamDescriptor();
   int tid = GetOmpThreadId(GetLogicalThreadIdInBlock(), isSPMDMode(),

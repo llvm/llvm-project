@@ -63,7 +63,9 @@ void SummaryView::printView(raw_ostream &OS) const {
   unsigned Iterations = Source.getNumIterations();
   unsigned Instructions = Source.size();
   unsigned TotalInstructions = Instructions * Iterations;
+  unsigned TotalUOps = NumMicroOps * Iterations;
   double IPC = (double)TotalInstructions / TotalCycles;
+  double UOpsPerCycle = (double)TotalUOps / TotalCycles;
   double BlockRThroughput = computeBlockRThroughput(
       SM, DispatchWidth, NumMicroOps, ProcResourceUsage);
 
@@ -72,10 +74,12 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream << "Iterations:        " << Iterations;
   TempStream << "\nInstructions:      " << TotalInstructions;
   TempStream << "\nTotal Cycles:      " << TotalCycles;
+  TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
   TempStream << "\nDispatch Width:    " << DispatchWidth;
-  TempStream << "\nIPC:               " << format("%.2f", IPC);
-
-  // Round to the block reciprocal throughput to the nearest tenth.
+  TempStream << "\nuOps Per Cycle:    "
+             << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
+  TempStream << "\nIPC:               "
+             << format("%.2f", floor((IPC * 100) + 0.5) / 100);
   TempStream << "\nBlock RThroughput: "
              << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
              << '\n';

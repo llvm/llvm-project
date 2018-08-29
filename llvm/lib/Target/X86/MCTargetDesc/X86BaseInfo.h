@@ -231,6 +231,11 @@ namespace X86II {
     /// to be an absolute symbol in range [0,128), so we can use the @ABS8
     /// symbol modifier.
     MO_ABS8,
+
+    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the ".refptr.FOO" symbol.  This is used for
+    /// stub symbols on windows.
+    MO_COFFSTUB,
   };
 
   enum : uint64_t {

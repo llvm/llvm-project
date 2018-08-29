@@ -15,27 +15,54 @@ add %edi, %eax
 # ALL:              Iterations:        100
 # ALL-NEXT:         Instructions:      100
 # ALL-NEXT:         Total Cycles:      103
+# ALL-NEXT:         Total uOps:        100
 
-# BROADWELL-NEXT:   Dispatch Width:    4
-# BTVER2-NEXT:      Dispatch Width:    2
-# HASWELL-NEXT:     Dispatch Width:    4
-# IVYBRIDGE-NEXT:   Dispatch Width:    4
-# KNL-NEXT:         Dispatch Width:    4
-# SANDYBRIDGE-NEXT: Dispatch Width:    4
-# SKX-NEXT:         Dispatch Width:    6
-# SKX-AVX512-NEXT:  Dispatch Width:    6
-# SLM-NEXT:         Dispatch Width:    2
-# ZNVER1-NEXT:      Dispatch Width:    4
-
-# ALL-NEXT:         IPC:               0.97
-
-# BROADWELL-NEXT:   Block RThroughput: 0.3
+# BTVER2:           Dispatch Width:    2
+# BTVER2-NEXT:      uOps Per Cycle:    0.97
+# BTVER2-NEXT:      IPC:               0.97
 # BTVER2-NEXT:      Block RThroughput: 0.5
-# HASWELL-NEXT:     Block RThroughput: 0.3
-# IVYBRIDGE-NEXT:   Block RThroughput: 0.3
-# KNL-NEXT:         Block RThroughput: 0.3
-# SANDYBRIDGE-NEXT: Block RThroughput: 0.3
-# SKX-NEXT:         Block RThroughput: 0.3
-# SKX-AVX512-NEXT:  Block RThroughput: 0.3
+
+# SLM:              Dispatch Width:    2
+# SLM-NEXT:         uOps Per Cycle:    0.97
+# SLM-NEXT:         IPC:               0.97
 # SLM-NEXT:         Block RThroughput: 0.5
+
+# BROADWELL:        Dispatch Width:    4
+# BROADWELL-NEXT:   uOps Per Cycle:    0.97
+# BROADWELL-NEXT:   IPC:               0.97
+# BROADWELL-NEXT:   Block RThroughput: 0.3
+
+# HASWELL:          Dispatch Width:    4
+# HASWELL-NEXT:     uOps Per Cycle:    0.97
+# HASWELL-NEXT:     IPC:               0.97
+# HASWELL-NEXT:     Block RThroughput: 0.3
+
+# IVYBRIDGE:        Dispatch Width:    4
+# IVYBRIDGE-NEXT:   uOps Per Cycle:    0.97
+# IVYBRIDGE-NEXT:   IPC:               0.97
+# IVYBRIDGE-NEXT:   Block RThroughput: 0.3
+
+# KNL:              Dispatch Width:    4
+# KNL-NEXT:         uOps Per Cycle:    0.97
+# KNL-NEXT:         IPC:               0.97
+# KNL-NEXT:         Block RThroughput: 0.3
+
+# SANDYBRIDGE:      Dispatch Width:    4
+# SANDYBRIDGE-NEXT: uOps Per Cycle:    0.97
+# SANDYBRIDGE-NEXT: IPC:               0.97
+# SANDYBRIDGE-NEXT: Block RThroughput: 0.3
+
+# ZNVER1:           Dispatch Width:    4
+# ZNVER1-NEXT:      uOps Per Cycle:    0.97
+# ZNVER1-NEXT:      IPC:               0.97
 # ZNVER1-NEXT:      Block RThroughput: 0.3
+
+# SKX:              Dispatch Width:    6
+# SKX-NEXT:         uOps Per Cycle:    0.97
+# SKX-NEXT:         IPC:               0.97
+# SKX-NEXT:         Block RThroughput: 0.3
+
+# SKX-AVX512:       Dispatch Width:    6
+# SKX-AVX512-NEXT:  uOps Per Cycle:    0.97
+# SKX-AVX512-NEXT:  IPC:               0.97
+# SKX-AVX512-NEXT:  Block RThroughput: 0.3
