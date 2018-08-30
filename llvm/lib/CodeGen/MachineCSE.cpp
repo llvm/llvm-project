@@ -180,6 +180,14 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
       continue;
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
     LLVM_DEBUG(dbgs() << "***     to: " << *MI);
+
+    // Collect matching debug values.
+    SmallVector<MachineInstr *, 2> DbgValues;
+    DefMI->collectDebugValues(DbgValues);
+    // Propagate SrcReg to debug value instructions.
+    for (auto *DBI : DbgValues)
+      DBI->getOperand(0).setReg(SrcReg);
+
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
     MRI->clearKillFlags(SrcReg);
