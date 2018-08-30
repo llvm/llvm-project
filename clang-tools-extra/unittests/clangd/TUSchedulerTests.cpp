@@ -22,6 +22,7 @@ namespace {
 using ::testing::_;
 using ::testing::AnyOf;
 using ::testing::Each;
+using ::testing::ElementsAre;
 using ::testing::Pair;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
@@ -63,7 +64,7 @@ TEST_F(TUSchedulerTests, MissingFiles) {
     ASSERT_FALSE(bool(AST));
     ignoreError(AST.takeError());
   });
-  S.runWithPreamble("", Missing,
+  S.runWithPreamble("", Missing, TUScheduler::Stale,
                     [&](llvm::Expected<InputsAndPreamble> Preamble) {
                       ASSERT_FALSE(bool(Preamble));
                       ignoreError(Preamble.takeError());
@@ -75,9 +76,10 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   S.runWithAST("", Added, [&](llvm::Expected<InputsAndAST> AST) {
     EXPECT_TRUE(bool(AST));
   });
-  S.runWithPreamble("", Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
-    EXPECT_TRUE(bool(Preamble));
-  });
+  S.runWithPreamble("", Added, TUScheduler::Stale,
+                    [&](llvm::Expected<InputsAndPreamble> Preamble) {
+                      EXPECT_TRUE(bool(Preamble));
+                    });
   S.remove(Added);
 
   // Assert that all operations fail after removing the file.
@@ -85,10 +87,11 @@ TEST_F(TUSchedulerTests, MissingFiles) {
     ASSERT_FALSE(bool(AST));
     ignoreError(AST.takeError());
   });
-  S.runWithPreamble("", Added, [&](llvm::Expected<InputsAndPreamble> Preamble) {
-    ASSERT_FALSE(bool(Preamble));
-    ignoreError(Preamble.takeError());
-  });
+  S.runWithPreamble("", Added, TUScheduler::Stale,
+                    [&](llvm::Expected<InputsAndPreamble> Preamble) {
+                      ASSERT_FALSE(bool(Preamble));
+                      ignoreError(Preamble.takeError());
+                    });
   // remove() shouldn't crash on missing files.
   S.remove(Added);
 }
@@ -144,6 +147,64 @@ TEST_F(TUSchedulerTests, Debounce) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
     S.update(Path, getInputs(Path, "auto (shut down)"), WantDiagnostics::Auto,
              [&](std::vector<Diag> Diags) { ++CallbackCount; });
+  }
+  EXPECT_EQ(2, CallbackCount);
+}
+
+static std::vector<std::string> includes(const PreambleData *Preamble) {
+  std::vector<std::string> Result;
+  if (Preamble)
+    for (const auto &Inclusion : Preamble->Includes.MainFileIncludes)
+      Result.push_back(Inclusion.Written);
+  return Result;
+}
+
+TEST_F(TUSchedulerTests, PreambleConsistency) {
+  std::atomic<int> CallbackCount(0);
+  {
+    Notification InconsistentReadDone; // Must live longest.
+    TUScheduler S(
+        getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
+        noopParsingCallbacks(),
+        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+        ASTRetentionPolicy());
+    auto Path = testPath("foo.cpp");
+    // Schedule two updates (A, B) and two preamble reads (stale, consistent).
+    // The stale read should see A, and the consistent read should see B.
+    // (We recognize the preambles by their included files).
+    S.update(Path, getInputs(Path, "#include <A>"), WantDiagnostics::Yes,
+             [&](std::vector<Diag> Diags) {
+               // This callback runs in between the two preamble updates.
+
+               // This blocks update B, preventing it from winning the race
+               // against the stale read.
+               // If the first read was instead consistent, this would deadlock.
+               InconsistentReadDone.wait();
+               // This delays update B, preventing it from winning a race
+               // against the consistent read. The consistent read sees B
+               // only because it waits for it.
+               // If the second read was stale, it would usually see A.
+               std::this_thread::sleep_for(std::chrono::milliseconds(100));
+             });
+    S.update(Path, getInputs(Path, "#include <B>"), WantDiagnostics::Yes,
+             [&](std::vector<Diag> Diags) {});
+
+    S.runWithPreamble("StaleRead", Path, TUScheduler::Stale,
+                      [&](llvm::Expected<InputsAndPreamble> Pre) {
+                        ASSERT_TRUE(bool(Pre));
+                        assert(bool(Pre));
+                        EXPECT_THAT(includes(Pre->Preamble),
+                                    ElementsAre("<A>"));
+                        InconsistentReadDone.notify();
+                        ++CallbackCount;
+                      });
+    S.runWithPreamble("ConsistentRead", Path, TUScheduler::Consistent,
+                      [&](llvm::Expected<InputsAndPreamble> Pre) {
+                        ASSERT_TRUE(bool(Pre));
+                        EXPECT_THAT(includes(Pre->Preamble),
+                                    ElementsAre("<B>"));
+                        ++CallbackCount;
+                      });
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -229,7 +290,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
           S.runWithPreamble(
-              "CheckPreamble", File,
+              "CheckPreamble", File, TUScheduler::Stale,
               [File, Inputs, Nonce, &Mut, &TotalPreambleReads](
                   llvm::Expected<InputsAndPreamble> Preamble) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
@@ -324,7 +385,7 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   auto WithEmptyPreamble = R"cpp(int main() {})cpp";
   S.update(Foo, getInputs(Foo, WithPreamble), WantDiagnostics::Auto,
            [](std::vector<Diag>) {});
-  S.runWithPreamble("getNonEmptyPreamble", Foo,
+  S.runWithPreamble("getNonEmptyPreamble", Foo, TUScheduler::Stale,
                     [&](llvm::Expected<InputsAndPreamble> Preamble) {
                       // We expect to get a non-empty preamble.
                       EXPECT_GT(cantFail(std::move(Preamble))
@@ -340,7 +401,7 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
            [](std::vector<Diag>) {});
   // Wait for the preamble is being built.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  S.runWithPreamble("getEmptyPreamble", Foo,
+  S.runWithPreamble("getEmptyPreamble", Foo, TUScheduler::Stale,
                     [&](llvm::Expected<InputsAndPreamble> Preamble) {
                       // We expect to get an empty preamble.
                       EXPECT_EQ(cantFail(std::move(Preamble))
@@ -372,7 +433,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
            [](std::vector<Diag>) {});
   for (int I = 0; I < ReadsToSchedule; ++I) {
     S.runWithPreamble(
-        "test", Foo,
+        "test", Foo, TUScheduler::Stale,
         [I, &PreamblesMut, &Preambles](llvm::Expected<InputsAndPreamble> IP) {
           std::lock_guard<std::mutex> Lock(PreamblesMut);
           Preambles[I] = cantFail(std::move(IP)).Preamble;
