@@ -138,6 +138,7 @@ if(APPLE)
   add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_runtime(clang_rt.asan
     SHARED

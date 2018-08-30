@@ -177,9 +177,6 @@ OptionEnumValueElement g_language_enumerators[] = {
 // args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-
 // without-args}}:\n}{${current-pc-arrow} }{${addr-file-or-load}}:
 
-#define DEFAULT_STOP_SHOW_COLUMN_ANSI_PREFIX "${ansi.underline}"
-#define DEFAULT_STOP_SHOW_COLUMN_ANSI_SUFFIX "${ansi.normal}"
-
 static OptionEnumValueElement s_stop_show_column_values[] = {
     {eStopShowColumnAnsiOrCaret, "ansi-or-caret",
      "Highlight the stop column with ANSI terminal codes when color/ANSI mode "
@@ -239,13 +236,13 @@ static PropertyDefinition g_properties[] = {
      eStopShowColumnAnsiOrCaret, nullptr, s_stop_show_column_values,
      "If true, LLDB will use the column information from the debug info to "
      "mark the current position when displaying a stopped context."},
-    {"stop-show-column-ansi-prefix", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_STOP_SHOW_COLUMN_ANSI_PREFIX, nullptr,
+    {"stop-show-column-ansi-prefix", OptionValue::eTypeString, true, 0,
+     "${ansi.underline}", nullptr,
      "When displaying the column marker in a color-enabled (i.e. ANSI) "
      "terminal, use the ANSI terminal code specified in this format at the "
      "immediately before the column to be marked."},
-    {"stop-show-column-ansi-suffix", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_STOP_SHOW_COLUMN_ANSI_SUFFIX, nullptr,
+    {"stop-show-column-ansi-suffix", OptionValue::eTypeString, true, 0,
+     "${ansi.normal}", nullptr,
      "When displaying the column marker in a color-enabled (i.e. ANSI) "
      "terminal, use the ANSI terminal code specified in this format "
      "immediately after the column to be marked."},
@@ -485,14 +482,14 @@ StopShowColumn Debugger::GetStopShowColumn() const {
       nullptr, idx, g_properties[idx].default_uint_value);
 }
 
-const FormatEntity::Entry *Debugger::GetStopShowColumnAnsiPrefix() const {
+llvm::StringRef Debugger::GetStopShowColumnAnsiPrefix() const {
   const uint32_t idx = ePropertyStopShowColumnAnsiPrefix;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
 }
 
-const FormatEntity::Entry *Debugger::GetStopShowColumnAnsiSuffix() const {
+llvm::StringRef Debugger::GetStopShowColumnAnsiSuffix() const {
   const uint32_t idx = ePropertyStopShowColumnAnsiSuffix;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
 }
 
 uint32_t Debugger::GetStopSourceLineCount(bool before) const {

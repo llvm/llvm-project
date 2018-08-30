@@ -101,6 +101,10 @@ CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(this, type);
 }
 
+size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+  return 0;
+}
+
 TemplateArgumentKind
 TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx) {
   return eTemplateArgumentKindNull;

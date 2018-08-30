@@ -277,9 +277,9 @@ public:
 
   lldb::StopShowColumn GetStopShowColumn() const;
 
-  const FormatEntity::Entry *GetStopShowColumnAnsiPrefix() const;
+  llvm::StringRef GetStopShowColumnAnsiPrefix() const;
 
-  const FormatEntity::Entry *GetStopShowColumnAnsiSuffix() const;
+  llvm::StringRef GetStopShowColumnAnsiSuffix() const;
 
   uint32_t GetStopSourceLineCount(bool before) const;
 

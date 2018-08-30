@@ -310,10 +310,6 @@ public:
                                 const char *name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
-  size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) override {
-    return 0;
-  }
-
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------

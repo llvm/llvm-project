@@ -86,7 +86,7 @@ class LargeMmapAllocator {
 
     ReservedAddressRange AddressRange;
     uptr ReservedBeg = AddressRange.Init(ReservedSize, SecondaryAllocatorName);
-    if (UNLIKELY(!ReservedBeg))
+    if (UNLIKELY(ReservedBeg == ~static_cast<uptr>(0)))
       return nullptr;
     // A page-aligned pointer is assumed after that, so check it now.
     DCHECK(IsAligned(ReservedBeg, PageSize));

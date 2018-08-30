@@ -1,4 +1,4 @@
-//===-- hwasan_allocator.h ----------------------------------------*- C++ -*-===//
+//===-- hwasan_allocator.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #define HWASAN_ALLOCATOR_H
 
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
 
 namespace __hwasan {
 
@@ -48,6 +49,17 @@ class HwasanChunkView {
 };
 
 HwasanChunkView FindHeapChunkByAddress(uptr address);
+
+// Information about one (de)allocation that happened in the past.
+// These are recorded in a thread-local ring buffer.
+struct HeapAllocationRecord {
+  uptr tagged_addr;
+  u32  free_context_id;
+  u32  requested_size;
+};
+
+typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
+
 
 } // namespace __hwasan
 

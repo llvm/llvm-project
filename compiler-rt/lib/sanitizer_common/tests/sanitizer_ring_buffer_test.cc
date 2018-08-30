@@ -16,11 +16,11 @@
 namespace __sanitizer {
 
 struct LargeStruct {
-  long v;
-  long extra[3];
+  int64_t v;
+  int64_t extra[3];
 
-  explicit LargeStruct(long v) : v(v) {}
-  operator long() { return v; }
+  explicit LargeStruct(int64_t v) : v(v) {}
+  operator int64_t() { return v; }
 };
 
 struct Struct10Bytes {
@@ -28,7 +28,7 @@ struct Struct10Bytes {
 };
 
 TEST(RingBuffer, Construct) {
-  RingBuffer<long> *RBlong = RingBuffer<long>::New(20);
+  RingBuffer<int64_t> *RBlong = RingBuffer<int64_t>::New(20);
   EXPECT_EQ(RBlong->size(), 20U);
   RBlong->Delete();
 }
@@ -45,10 +45,10 @@ template <class T> void TestRB() {
   RB = RingBuffer<T>::New(4);
   EXPECT_EQ(RB->size(), 4U);
 #define EXPECT_RING_BUFFER(a0, a1, a2, a3) \
-  EXPECT_EQ((long)(*RB)[0], (long)a0);                 \
-  EXPECT_EQ((long)(*RB)[1], (long)a1);                 \
-  EXPECT_EQ((long)(*RB)[2], (long)a2);                 \
-  EXPECT_EQ((long)(*RB)[3], (long)a3);
+  EXPECT_EQ((int64_t)(*RB)[0], (int64_t)a0);                 \
+  EXPECT_EQ((int64_t)(*RB)[1], (int64_t)a1);                 \
+  EXPECT_EQ((int64_t)(*RB)[2], (int64_t)a2);                 \
+  EXPECT_EQ((int64_t)(*RB)[3], (int64_t)a3);
 
   RB->push(T(1)); EXPECT_RING_BUFFER(1, 0, 0, 0);
   RB->push(T(2)); EXPECT_RING_BUFFER(2, 1, 0, 0);
@@ -66,15 +66,8 @@ template <class T> void TestRB() {
 #undef EXPECT_RING_BUFFER
 }
 
-TEST(RingBuffer, Int) {
-  EXPECT_DEATH(RingBuffer<short>::New(10), "");
-  EXPECT_DEATH(RingBuffer<Struct10Bytes>::New(10), "");
-  if (sizeof(int) < sizeof(void *))
-    EXPECT_DEATH(RingBuffer<int>::New(10), "");
-}
-
-TEST(RingBuffer, Long) {
-  TestRB<long>();
+TEST(RingBuffer, int64) {
+  TestRB<int64_t>();
 }
 
 TEST(RingBuffer, LargeStruct) {
