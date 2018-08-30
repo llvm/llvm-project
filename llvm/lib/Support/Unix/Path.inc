@@ -769,8 +769,10 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  if ((ResultFD = sys::RetryAfterSignal(-1, ::open, P.begin(), OpenFlags, Mode)) <
-      0)
+  // Call ::open in a lambda to avoid overload resolution in RetryAfterSignal
+  // when open is overloaded, such as in Bionic.
+  auto Open = [&]() { return ::open(P.begin(), OpenFlags, Mode); };
+  if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
     return std::error_code(errno, std::generic_category());
 #ifndef O_CLOEXEC
   if (!(Flags & OF_ChildInherit)) {
