@@ -825,8 +825,7 @@ TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
 
   EXPECT_TRUE(Results.Completions.empty());
 }
-
-SignatureHelp signatures(StringRef Text,
+SignatureHelp signatures(StringRef Text, Position Point,
                          std::vector<Symbol> IndexSymbols = {}) {
   std::unique_ptr<SymbolIndex> Index;
   if (!IndexSymbols.empty())
@@ -840,9 +839,14 @@ SignatureHelp signatures(StringRef Text,
 
   ClangdServer Server(CDB, FS, DiagConsumer, Opts);
   auto File = testPath("foo.cpp");
+  runAddDocument(Server, File, Text);
+  return cantFail(runSignatureHelp(Server, File, Point));
+}
+
+SignatureHelp signatures(StringRef Text,
+                         std::vector<Symbol> IndexSymbols = {}) {
   Annotations Test(Text);
-  runAddDocument(Server, File, Test.code());
-  return cantFail(runSignatureHelp(Server, File, Test.point()));
+  return signatures(Test.code(), Test.point(), std::move(IndexSymbols));
 }
 
 MATCHER_P(ParamsAre, P, "") {
@@ -905,6 +909,54 @@ TEST(SignatureHelpTest, ActiveArg) {
                               {"int a", "int b", "int c"})));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(1, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, OpeningParen) {
+  llvm::StringLiteral Tests[] = {// Recursive function call.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    int main() {
+      foo(foo $p^( foo(10, 10, 10), ^ )));
+    })cpp",
+                                 // Functional type cast.
+                                 R"cpp(
+    struct Foo {
+      Foo(int a, int b, int c);
+    };
+    int main() {
+      Foo $p^( 10, ^ );
+    })cpp",
+                                 // New expression.
+                                 R"cpp(
+    struct Foo {
+      Foo(int a, int b, int c);
+    };
+    int main() {
+      new Foo $p^( 10, ^ );
+    })cpp",
+                                 // Macro expansion.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    #define FOO foo(
+
+    int main() {
+      // Macro expansions.
+      $p^FOO 10, ^ );
+    })cpp",
+                                 // Macro arguments.
+                                 R"cpp(
+    int foo(int a, int b, int c);
+    int main() {
+    #define ID(X) X
+      ID(foo $p^( foo(10), ^ ))
+    })cpp"};
+
+  for (auto Test : Tests) {
+    Annotations Code(Test);
+    EXPECT_EQ(signatures(Code.code(), Code.point()).argListStart,
+              Code.point("p"))
+        << "Test source:" << Test;
+  }
 }
 
 class IndexRequestCollector : public SymbolIndex {

@@ -143,4 +143,8 @@ int baz5() {
 // CHECK-DAG: declare extern_weak signext i32 @__create()
 
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1}}
+
+// CHECK-DAG: !{i32 1, !"aaa", i32 0, i32 {{[0-9]+}}}
+// CHECK-DAG: !{i32 1, !"ccc", i32 0, i32 {{[0-9]+}}}
+
 #endif // HEADER

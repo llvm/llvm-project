@@ -1,8 +1,3 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-tbird | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-4 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-xp | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-mp | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=k8 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=opteron | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon64 | FileCheck %s

@@ -22,7 +22,6 @@ add_llvm_library(LLVMTransformUtils
   InlineFunction.cpp
   ImportedFunctionsInliningStatistics.cpp
   InstructionNamer.cpp
-  InstructionPrecedenceTracking.cpp
   IntegerDivision.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
@@ -42,7 +41,6 @@ add_llvm_library(LLVMTransformUtils
   MetaRenamer.cpp
   ModuleUtils.cpp
   NameAnonGlobals.cpp
-  OrderedInstructions.cpp
   PredicateInfo.cpp
   PromoteMemoryToRegister.cpp
   StripGCRelocates.cpp

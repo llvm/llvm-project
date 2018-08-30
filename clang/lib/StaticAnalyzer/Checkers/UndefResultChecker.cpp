@@ -69,6 +69,7 @@ static bool isLeftShiftResultUnrepresentable(const BinaryOperator *B,
   ProgramStateRef State = C.getState();
   const llvm::APSInt *LHS = SB.getKnownValue(State, C.getSVal(B->getLHS()));
   const llvm::APSInt *RHS = SB.getKnownValue(State, C.getSVal(B->getRHS()));
+  assert(LHS && RHS && "Values unknown, inconsistent state");
   return (unsigned)RHS->getZExtValue() > LHS->countLeadingZeros();
 }
 

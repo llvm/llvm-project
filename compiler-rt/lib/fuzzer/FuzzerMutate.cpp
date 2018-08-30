@@ -30,41 +30,34 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
   DefaultMutators.insert(
       DefaultMutators.begin(),
       {
-          // Initialize useful and total mutation counts as 1 in order to
-          // have mutation stats (i.e. weights) with equal non-zero values.
-          {&MutationDispatcher::Mutate_EraseBytes, "EraseBytes", 1, 1},
-          {&MutationDispatcher::Mutate_InsertByte, "InsertByte", 1, 1},
+          {&MutationDispatcher::Mutate_EraseBytes, "EraseBytes"},
+          {&MutationDispatcher::Mutate_InsertByte, "InsertByte"},
           {&MutationDispatcher::Mutate_InsertRepeatedBytes,
-           "InsertRepeatedBytes", 1, 1},
-          {&MutationDispatcher::Mutate_ChangeByte, "ChangeByte", 1, 1},
-          {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit", 1, 1},
-          {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes", 1, 1},
-          {&MutationDispatcher::Mutate_ChangeASCIIInteger, "ChangeASCIIInt", 1,
-           1},
-          {&MutationDispatcher::Mutate_ChangeBinaryInteger, "ChangeBinInt", 1,
-           1},
-          {&MutationDispatcher::Mutate_CopyPart, "CopyPart", 1, 1},
-          {&MutationDispatcher::Mutate_CrossOver, "CrossOver", 1, 1},
+           "InsertRepeatedBytes"},
+          {&MutationDispatcher::Mutate_ChangeByte, "ChangeByte"},
+          {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit"},
+          {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes"},
+          {&MutationDispatcher::Mutate_ChangeASCIIInteger, "ChangeASCIIInt"},
+          {&MutationDispatcher::Mutate_ChangeBinaryInteger, "ChangeBinInt"},
+          {&MutationDispatcher::Mutate_CopyPart, "CopyPart"},
+          {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
           {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
-           "ManualDict", 1, 1},
+           "ManualDict"},
           {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
-           "PersAutoDict", 1, 1},
+           "PersAutoDict"},
       });
   if(Options.UseCmp)
     DefaultMutators.push_back(
-        {&MutationDispatcher::Mutate_AddWordFromTORC, "CMP", 1, 1});
+        {&MutationDispatcher::Mutate_AddWordFromTORC, "CMP"});
 
   if (EF->LLVMFuzzerCustomMutator)
-    Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom", 1, 1});
+    Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom"});
   else
     Mutators = DefaultMutators;
 
   if (EF->LLVMFuzzerCustomCrossOver)
     Mutators.push_back(
-        {&MutationDispatcher::Mutate_CustomCrossOver, "CustomCrossOver", 1, 1});
-
-  // For weighted mutation selection, init with uniform weights distribution.
-  Stats.resize(Mutators.size());
+        {&MutationDispatcher::Mutate_CustomCrossOver, "CustomCrossOver"});
 }
 
 static char RandCh(Random &Rand) {
@@ -471,7 +464,6 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
       PersistentAutoDictionary.push_back({DE->GetW(), 1});
   }
-  RecordUsefulMutations();
 }
 
 void MutationDispatcher::PrintRecommendedDictionary() {
@@ -492,7 +484,8 @@ void MutationDispatcher::PrintRecommendedDictionary() {
 
 void MutationDispatcher::PrintMutationSequence() {
   Printf("MS: %zd ", CurrentMutatorSequence.size());
-  for (auto M : CurrentMutatorSequence) Printf("%s-", M->Name);
+  for (auto M : CurrentMutatorSequence)
+    Printf("%s-", M.Name);
   if (!CurrentDictionaryEntrySequence.empty()) {
     Printf(" DE: ");
     for (auto DE : CurrentDictionaryEntrySequence) {
@@ -519,20 +512,13 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
   // Some mutations may fail (e.g. can't insert more bytes if Size == MaxSize),
   // in which case they will return 0.
   // Try several times before returning un-mutated data.
-  Mutator *M = nullptr;
   for (int Iter = 0; Iter < 100; Iter++) {
-    // Even when using weighted mutations, fallback to the default selection in
-    // 20% of cases.
-    if (Options.UseWeightedMutations && Rand(5))
-      M = &Mutators[WeightedIndex()];
-    else
-      M = &Mutators[Rand(Mutators.size())];
-    size_t NewSize = (this->*(M->Fn))(Data, Size, MaxSize);
+    auto M = Mutators[Rand(Mutators.size())];
+    size_t NewSize = (this->*(M.Fn))(Data, Size, MaxSize);
     if (NewSize && NewSize <= MaxSize) {
       if (Options.OnlyASCII)
         ToASCII(Data, NewSize);
       CurrentMutatorSequence.push_back(M);
-      M->TotalCount++;
       return NewSize;
     }
   }
@@ -572,35 +558,5 @@ void MutationDispatcher::AddWordToManualDictionary(const Word &W) {
   ManualDictionary.push_back(
       {W, std::numeric_limits<size_t>::max()});
 }
-
-void MutationDispatcher::RecordUsefulMutations() {
-  for (auto M : CurrentMutatorSequence) M->UsefulCount++;
-}
-
-void MutationDispatcher::PrintMutationStats() {
-  Printf("\nstat::mutation_usefulness:      ");
-  UpdateMutationStats();
-  for (size_t i = 0; i < Stats.size(); i++) {
-    Printf("%.3f", 100 * Stats[i]);
-    if (i < Stats.size() - 1)
-      Printf(",");
-    else
-      Printf("\n");
-  }
-}
-
-void MutationDispatcher::UpdateMutationStats() {
-  // Calculate usefulness statistic for each mutation
-  for (size_t i = 0; i < Stats.size(); i++)
-    Stats[i] =
-        static_cast<double>(Mutators[i].UsefulCount) / Mutators[i].TotalCount;
-}
-
-void MutationDispatcher::UpdateDistribution() {
-  UpdateMutationStats();
-  Distribution = std::discrete_distribution<size_t>(Stats.begin(), Stats.end());
-}
-
-size_t MutationDispatcher::WeightedIndex() { return Distribution(GetRand()); }
 
 }  // namespace fuzzer

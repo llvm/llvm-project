@@ -1729,6 +1729,10 @@ void Process::SetRunningUserExpression(bool on) {
   m_mod_id.SetRunningUserExpression(on);
 }
 
+void Process::SetRunningUtilityFunction(bool on) {
+  m_mod_id.SetRunningUtilityFunction(on);
+}
+
 addr_t Process::GetImageInfoAddress() { return LLDB_INVALID_ADDRESS; }
 
 const lldb::ABISP &Process::GetABI() {
@@ -4685,7 +4689,12 @@ bool Process::PushProcessIOHandler() {
       log->Printf("Process::%s pushing IO handler", __FUNCTION__);
 
     io_handler_sp->SetIsDone(false);
-    GetTarget().GetDebugger().PushIOHandler(io_handler_sp);
+    // If we evaluate an utility function, then we don't cancel the current
+    // IOHandler. Our IOHandler is non-interactive and shouldn't disturb the
+    // existing IOHandler that potentially provides the user interface (e.g.
+    // the IOHandler for Editline).
+    bool cancel_top_handler = !m_mod_id.IsRunningUtilityFunction();
+    GetTarget().GetDebugger().PushIOHandler(io_handler_sp, cancel_top_handler);
     return true;
   }
   return false;
@@ -4874,6 +4883,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   thread_plan_sp->SetIsMasterPlan(true);
   thread_plan_sp->SetOkayToDiscard(false);
+
+  // If we are running some utility expression for LLDB, we now have to mark
+  // this in the ProcesModID of this process. This RAII takes care of marking
+  // and reverting the mark it once we are done running the expression.
+  UtilityFunctionScope util_scope(options.IsForUtilityExpr() ? this : nullptr);
 
   if (m_private_state.GetValue() != eStateStopped) {
     diagnostic_manager.PutString(

@@ -16,7 +16,6 @@
 
 declare float @powf(float, float) nounwind readonly
 declare double @pow(double, double) nounwind readonly
-declare double @llvm.pow.f64(double, double)
 declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>) nounwind readonly
 declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) nounwind readonly
 
@@ -58,18 +57,18 @@ define <2 x double> @test_simplify2v(<2 x double> %x) {
 
 define float @test_simplify3(float %x) {
 ; ANY-LABEL: @test_simplify3(
-; ANY-NEXT:    [[EXP2F:%.*]] = call float @exp2f(float [[X:%.*]]) [[NUW_RO:#[0-9]+]]
-; ANY-NEXT:    ret float [[EXP2F]]
+; ANY-NEXT:    [[EXP2:%.*]] = call float @llvm.exp2.f32(float [[X:%.*]])
+; ANY-NEXT:    ret float [[EXP2]]
 ;
   %retval = call float @powf(float 2.0, float %x)
   ret float %retval
 }
 
+; TODO: Should result in exp2(-2.0 * x).
 define double @test_simplify3n(double %x) {
 ; ANY-LABEL: @test_simplify3n(
-; ANY-NEXT:    [[MUL:%.*]] = fmul double [[X:%.*]], -2.000000e+00
-; ANY-NEXT:    [[EXP2:%.*]] = call double @exp2(double [[MUL]]) [[NUW_RO]]
-; ANY-NEXT:    ret double [[EXP2]]
+; ANY-NEXT:    [[RETVAL:%.*]] = call double @pow(double 2.500000e-01, double [[X:%.*]])
+; ANY-NEXT:    ret double [[RETVAL]]
 ;
   %retval = call double @pow(double 0.25, double %x)
   ret double %retval
@@ -84,11 +83,11 @@ define <2 x float> @test_simplify3v(<2 x float> %x) {
   ret <2 x float> %retval
 }
 
+; TODO: Should result in exp2(2.0 * x).
 define <2 x double> @test_simplify3vn(<2 x double> %x) {
 ; ANY-LABEL: @test_simplify3vn(
-; ANY-NEXT:    [[MUL:%.*]] = fmul <2 x double> [[X:%.*]], <double 2.000000e+00, double 2.000000e+00>
-; ANY-NEXT:    [[EXP2:%.*]] = call <2 x double> @llvm.exp2.v2f64(<2 x double> [[MUL]])
-; ANY-NEXT:    ret <2 x double> [[EXP2]]
+; ANY-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.000000e+00, double 4.000000e+00>, <2 x double> [[X:%.*]])
+; ANY-NEXT:    ret <2 x double> [[RETVAL]]
 ;
   %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 4.0, double 4.0>, <2 x double> %x)
   ret <2 x double> %retval
@@ -96,18 +95,18 @@ define <2 x double> @test_simplify3vn(<2 x double> %x) {
 
 define double @test_simplify4(double %x) {
 ; ANY-LABEL: @test_simplify4(
-; ANY-NEXT:    [[EXP2:%.*]] = call double @exp2(double [[X:%.*]]) [[NUW_RO]]
+; ANY-NEXT:    [[EXP2:%.*]] = call double @llvm.exp2.f64(double [[X:%.*]])
 ; ANY-NEXT:    ret double [[EXP2]]
 ;
   %retval = call double @pow(double 2.0, double %x)
   ret double %retval
 }
 
+; TODO: Should result in exp2f(3.0 * x).
 define float @test_simplify4n(float %x) {
 ; ANY-LABEL: @test_simplify4n(
-; ANY-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 3.000000e+00
-; ANY-NEXT:    [[EXP2F:%.*]] = call float @exp2f(float [[MUL]]) [[NUW_RO]]
-; ANY-NEXT:    ret float [[EXP2F]]
+; ANY-NEXT:    [[RETVAL:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
+; ANY-NEXT:    ret float [[RETVAL]]
 ;
   %retval = call float @powf(float 8.0, float %x)
   ret float %retval
@@ -122,11 +121,11 @@ define <2 x double> @test_simplify4v(<2 x double> %x) {
   ret <2 x double> %retval
 }
 
+; TODO: Should result in exp2f(-x).
 define <2 x float> @test_simplify4vn(<2 x float> %x) {
 ; ANY-LABEL: @test_simplify4vn(
-; ANY-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; ANY-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[MUL]])
-; ANY-NEXT:    ret <2 x float> [[EXP2]]
+; ANY-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X:%.*]])
+; ANY-NEXT:    ret <2 x float> [[RETVAL]]
 ;
   %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 0.5, float 0.5>, <2 x float> %x)
   ret <2 x float> %retval
@@ -170,7 +169,7 @@ define <2 x double> @test_simplify6v(<2 x double> %x) {
 
 define float @test_simplify7(float %x) {
 ; ANY-LABEL: @test_simplify7(
-; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) [[NUW_RO]]
+; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) [[NUW_RO:#[0-9]+]]
 ; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
 ; ANY-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
@@ -331,6 +330,7 @@ define <2 x double> @pow_neg1_double_fastv(<2 x double> %x) {
   ret <2 x double> %r
 }
 
+declare double @llvm.pow.f64(double %Val, double %Power)
 define double @test_simplify17(double %x) {
 ; ANY-LABEL: @test_simplify17(
 ; ANY-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])

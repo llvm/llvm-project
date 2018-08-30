@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-store=region -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-output=text -verify %s
 
 typedef unsigned int NSUInteger;
 typedef __typeof__(sizeof(int)) size_t;
@@ -8,6 +8,112 @@ void *calloc(size_t nmemb, size_t size);
 void free(void *);
 
 void clang_analyzer_eval(int);
+
+struct s {
+  int data;
+};
+
+struct s global;
+
+void g(int);
+
+void f4() {
+  int a;
+  if (global.data == 0)
+    a = 3;
+  if (global.data == 0) // When the true branch is feasible 'a = 3'.
+    g(a); // no-warning
+}
+
+
+// Test uninitialized value due to part of the structure being uninitialized.
+struct TestUninit { int x; int y; };
+struct TestUninit test_uninit_aux();
+void test_unit_aux2(int);
+void test_uninit_pos() {
+  struct TestUninit v1 = { 0, 0 };
+  struct TestUninit v2 = test_uninit_aux();
+  int z; // expected-note{{'z' declared without an initial value}}
+  v1.y = z; // expected-warning{{Assigned value is garbage or undefined}}
+            // expected-note@-1{{Assigned value is garbage or undefined}}
+  test_unit_aux2(v2.x + v1.y);
+}
+void test_uninit_pos_2() {
+  struct TestUninit v1 = { 0, 0 };
+  struct TestUninit v2;
+  test_unit_aux2(v2.x + v1.y);  // expected-warning{{The left operand of '+' is a garbage value}}
+                                // expected-note@-1{{The left operand of '+' is a garbage value}}
+}
+void test_uninit_pos_3() {
+  struct TestUninit v1 = { 0, 0 };
+  struct TestUninit v2;
+  test_unit_aux2(v1.y + v2.x);  // expected-warning{{The right operand of '+' is a garbage value}}
+                                // expected-note@-1{{The right operand of '+' is a garbage value}}
+}
+
+void test_uninit_neg() {
+  struct TestUninit v1 = { 0, 0 };
+  struct TestUninit v2 = test_uninit_aux();
+  test_unit_aux2(v2.x + v1.y);
+}
+
+extern void test_uninit_struct_arg_aux(struct TestUninit arg);
+void test_uninit_struct_arg() {
+  struct TestUninit x; // expected-note{{'x' initialized here}}
+  test_uninit_struct_arg_aux(x); // expected-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
+                                 // expected-note@-1{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
+}
+
+@interface Foo
+- (void) passVal:(struct TestUninit)arg;
+@end
+void testFoo(Foo *o) {
+  struct TestUninit x; // expected-note{{'x' initialized here}}
+  [o passVal:x]; // expected-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
+                 // expected-note@-1{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
+}
+
+// Test case from <rdar://problem/7780304>.  That shows an uninitialized value
+// being used in the LHS of a compound assignment.
+void rdar_7780304() {
+  typedef struct s_r7780304 { int x; } s_r7780304;
+  s_r7780304 b;
+  b.x |= 1; // expected-warning{{The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage}}
+            // expected-note@-1{{The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage}}
+}
+
+
+// The flip side of PR10163 -- float arrays that are actually uninitialized
+void test_PR10163(float);
+void PR10163 (void) {
+  float x[2];
+  test_PR10163(x[1]); // expected-warning{{uninitialized value}}
+                      // expected-note@-1{{1st function call argument is an uninitialized value}}
+}
+
+// PR10163 -- don't warn for default-initialized float arrays.
+void PR10163_default_initialized_arrays(void) {
+  float x[2] = {0};
+  test_PR10163(x[1]); // no-warning  
+}
+
+struct MyStr {
+  int x;
+  int y;
+};
+void swap(struct MyStr *To, struct MyStr *From) {
+  // This is not really a swap but close enough for our test.
+  To->x = From->x;
+  To->y = From->y; // expected-note{{Uninitialized value stored to field 'y'}}
+}
+int test_undefined_member_assignment_in_swap(struct MyStr *s2) {
+  struct MyStr s1;
+  s1.x = 5;
+  swap(s2, &s1); // expected-note{{Calling 'swap'}}
+                 // expected-note@-1{{Returning from 'swap'}}
+  return s2->y; // expected-warning{{Undefined or garbage value returned to caller}}
+                // expected-note@-1{{Undefined or garbage value returned to caller}}
+}
 
 @interface A
 - (NSUInteger)foo;
@@ -31,13 +137,6 @@ NSUInteger f8(A* x){
 }
 
 
-// PR10163 -- don't warn for default-initialized float arrays.
-// (An additional test is in uninit-vals-ps-region.m)
-void test_PR10163(float);
-void PR10163 (void) {
-  float x[2] = {0};
-  test_PR10163(x[1]); // no-warning  
-}
 
 
 typedef struct {
@@ -62,15 +161,17 @@ void PR14765_test() {
   Circle *testObj = calloc(sizeof(Circle), 1);
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
+                                           // expected-note@-1{{TRUE}}
 
   testObj->origin = makePoint(0.0, 0.0);
-  if (testObj->size > 0) { ; } // warning occurs here
+  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also
   // default to 0. Tracked by <rdar://problem/12701038>.
   // This should be TRUE.
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{UNKNOWN}}
+                                           // expected-note@-1{{UNKNOWN}}
 
   free(testObj);
 }
@@ -78,9 +179,11 @@ void PR14765_test() {
 void PR14765_argument(Circle *testObj) {
   int oldSize = testObj->size;
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
 
   testObj->origin = makePoint(0.0, 0.0);
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
 }
 
 
@@ -106,21 +209,32 @@ void PR14765_test_int() {
   IntCircle *testObj = calloc(sizeof(IntCircle), 1);
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
+                                           // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.x == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.z == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint(1, 2);
-  if (testObj->size > 0) { ; } // warning occurs here
+  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
+                               // expected-note@-1{{Taking false branch}}
+                               // expected-note@-2{{Taking false branch}}
+                               // expected-note@-3{{Taking false branch}}
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also
   // default to 0. Tracked by <rdar://problem/12701038>.
   // This should be TRUE.
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{UNKNOWN}}
+                                           // expected-note@-1{{UNKNOWN}}
   clang_analyzer_eval(testObj->origin.x == 1); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 2); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.z == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 
   free(testObj);
 }
@@ -128,12 +242,17 @@ void PR14765_test_int() {
 void PR14765_argument_int(IntCircle *testObj) {
   int oldSize = testObj->size;
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint(1, 2);
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.x == 1); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 2); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.z == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 }
 
 
@@ -173,6 +292,7 @@ void testSmallStructsCopiedPerField() {
   extern void useInt(int);
   useInt(b.x); // no-warning
   useInt(b.y); // expected-warning{{uninitialized}}
+               // expected-note@-1{{uninitialized}}
 }
 
 void testLargeStructsNotCopiedPerField() {
@@ -189,15 +309,23 @@ void testSmallStructInLargerStruct() {
   IntCircle2D *testObj = calloc(sizeof(IntCircle2D), 1);
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
+                                           // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.x == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 0); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint2D(1, 2);
-  if (testObj->size > 0) { ; } // warning occurs here
+  if (testObj->size > 0) { ; } // expected-note{{Taking false branch}}
+                               // expected-note@-1{{Taking false branch}}
+                               // expected-note@-2{{Taking false branch}}
 
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{TRUE}}
+                                           // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.x == 1); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 2); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 
   free(testObj);
 }
@@ -205,11 +333,15 @@ void testSmallStructInLargerStruct() {
 void testCopySmallStructIntoArgument(IntCircle2D *testObj) {
   int oldSize = testObj->size;
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
 
   testObj->origin = makeIntPoint2D(1, 2);
   clang_analyzer_eval(testObj->size == oldSize); // expected-warning{{TRUE}}
+                                                 // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.x == 1); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
   clang_analyzer_eval(testObj->origin.y == 2); // expected-warning{{TRUE}}
+                                               // expected-note@-1{{TRUE}}
 }
 
 void testSmallStructBitfields() {
@@ -223,7 +355,9 @@ void testSmallStructBitfields() {
 
   b = a;
   clang_analyzer_eval(b.x == 1); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
   clang_analyzer_eval(b.y == 2); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
 }
 
 void testSmallStructBitfieldsFirstUndef() {
@@ -236,7 +370,9 @@ void testSmallStructBitfieldsFirstUndef() {
 
   b = a;
   clang_analyzer_eval(b.y == 2); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
   clang_analyzer_eval(b.x == 1); // expected-warning{{garbage}}
+                                 // expected-note@-1{{garbage}}
 }
 
 void testSmallStructBitfieldsSecondUndef() {
@@ -249,7 +385,9 @@ void testSmallStructBitfieldsSecondUndef() {
 
   b = a;
   clang_analyzer_eval(b.x == 1); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
   clang_analyzer_eval(b.y == 2); // expected-warning{{garbage}}
+                                 // expected-note@-1{{garbage}}
 }
 
 void testSmallStructBitfieldsFirstUnnamed() {
@@ -260,11 +398,13 @@ void testSmallStructBitfieldsFirstUnnamed() {
 
   a.y = 2;
 
-  b = a;
+  b = a; // expected-note{{Value assigned to 'c'}}
   clang_analyzer_eval(b.y == 2); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
 
-  b = c;
+  b = c; // expected-note{{Uninitialized value stored to 'b.y'}}
   clang_analyzer_eval(b.y == 2); // expected-warning{{garbage}}
+                                 // expected-note@-1{{garbage}}
 }
 
 void testSmallStructBitfieldsSecondUnnamed() {
@@ -275,10 +415,11 @@ void testSmallStructBitfieldsSecondUnnamed() {
 
   a.x = 1;
 
-  b = a;
+  b = a; // expected-note{{Value assigned to 'c'}}
   clang_analyzer_eval(b.x == 1); // expected-warning{{TRUE}}
+                                 // expected-note@-1{{TRUE}}
 
-  b = c;
+  b = c; // expected-note{{Uninitialized value stored to 'b.x'}}
   clang_analyzer_eval(b.x == 1); // expected-warning{{garbage}}
+                                 // expected-note@-1{{garbage}}
 }
-

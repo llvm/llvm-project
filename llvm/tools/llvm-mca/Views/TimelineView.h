@@ -126,7 +126,7 @@ class TimelineView : public View {
   unsigned LastCycle;
 
   struct TimelineViewEntry {
-    unsigned CycleDispatched;
+    int CycleDispatched;  // A negative value is an "invalid cycle".
     unsigned CycleReady;
     unsigned CycleIssued;
     unsigned CycleExecuted;

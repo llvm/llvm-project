@@ -95,6 +95,8 @@ public:
   /// consume() must *not* be called on children that don't contain the current
   /// doc.
   virtual float consume() = 0;
+  /// Returns an estimate of advance() calls before the iterator is exhausted.
+  virtual size_t estimateSize() const = 0;
 
   virtual ~Iterator() {}
 

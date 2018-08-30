@@ -222,7 +222,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
                                              Expression &expr,
                                              bool generate_debug_info)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
-      m_code_generator(), m_pp_callbacks(nullptr) {
+      m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We can't compile expressions without a target.  So if the exe_scope is

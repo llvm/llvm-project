@@ -35,9 +35,19 @@ int maini1() {
 // CHECK-NOT: @__kmpc_data_sharing_push_stack
 
 // CHECK: define {{.*}}[[BAR]]()
+// CHECK: [[STACK:%.+]] = alloca [[GLOBAL_ST:%.+]],
+// CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
+// CHECK: [[IS_SPMD:%.+]] = icmp ne i8 [[RES]], 0
+// CHECK: br i1 [[IS_SPMD]], label
+// CHECK: br label
 // CHECK: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 4, i16 0)
-// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_ST:%struct[.].*]]*
-// CHECK: [[A_ADDR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[GLOBALS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_ST]]*
+// CHECK: br label
+// CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ [[STACK]], {{.+}} ], [ [[GLOBALS]], {{.+}} ]
+// CHECK: [[A_ADDR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[ITEMS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: call {{.*}}[[FOO]](i32* dereferenceable{{.*}} [[A_ADDR]])
-// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[RES]])
+// CHECK: br i1 [[IS_SPMD]], label
+// CHECK: [[BC:%.+]] = bitcast [[GLOBAL_ST]]* [[ITEMS]] to i8*
+// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[BC]])
+// CHECK: br label
 // CHECK: ret i32

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s -analyzer-eagerly-assume
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s
 // expected-no-diagnostics
 
 // Delta-reduced header stuff (needed for test cases).
@@ -86,7 +86,7 @@ void pr3836(int *a, int *b) {
 // This false positive occurred because the symbolic constraint on a short was
 // not maintained via sign extension.  The analyzer doesn't properly handle
 // the sign extension, but now tracks the constraint.  This particular
-// case relies on -analyzer-eagerly-assume because of the expression
+// case relies on -analyzer-options eagerly-assume=true because of the expression
 // 'Flag1 != Count > 0'.
 //===---------------------------------------------------------------------===//
 
@@ -125,8 +125,8 @@ void rdar7342806() {
 
 //===---------------------------------------------------------------------===//
 // PR 5627 - http://llvm.org/bugs/show_bug.cgi?id=5627
-//  This test case depends on using -analyzer-eagerly-assume and
-//  -analyzer-store=region.  The '-analyzer-eagerly-assume' causes the path
+//  This test case depends on using -analyzer-config eagerly-assume=true and
+//  -analyzer-store=region.  The 'eagerly-assume=true' causes the path
 //  to bifurcate when evaluating the function call argument, and a state
 //  caching bug in GRExprEngine::CheckerVisit (and friends) caused the store
 //  to 'p' to not be evaluated along one path, but then an autotransition caused

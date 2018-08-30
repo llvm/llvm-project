@@ -4340,6 +4340,7 @@ public:
               m_file_sp->GetFileSpec(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
+              0,     // Unspecified column.
               0,     // No offset
               eLazyBoolCalculate,  // Check inlines using global setting
               eLazyBoolCalculate,  // Skip prologue using global setting,
@@ -4379,6 +4380,7 @@ public:
               m_file_sp->GetFileSpec(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
+              0,     // No column specified.
               0,     // No offset
               eLazyBoolCalculate,  // Check inlines using global setting
               eLazyBoolCalculate,  // Skip prologue using global setting,

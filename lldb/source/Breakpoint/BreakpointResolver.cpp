@@ -44,9 +44,9 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",        "FileName",   "Inlines", "Language",
-    "LineNumber",    "ModuleName",   "NameMask",   "Offset",  "Regex",
-    "SectionName",   "SkipPrologue", "SymbolNames"};
+    "AddressOffset", "Exact",       "FileName",     "Inlines",    "Language",
+    "LineNumber",    "Column",      "ModuleName",   "NameMask",   "Offset",
+    "Regex",         "SectionName", "SkipPrologue", "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)
@@ -176,132 +176,161 @@ void BreakpointResolver::ResolveBreakpoint(SearchFilter &filter) {
   filter.Search(*this);
 }
 
+namespace {
+struct SourceLoc {
+  uint32_t line = UINT32_MAX;
+  uint32_t column;
+  SourceLoc(uint32_t l, uint32_t c) : line(l), column(c ? c : UINT32_MAX) {}
+  SourceLoc(const SymbolContext &sc)
+      : line(sc.line_entry.line),
+        column(sc.line_entry.column ? sc.line_entry.column : UINT32_MAX) {}
+};
+
+bool operator<(const SourceLoc a, const SourceLoc b) {
+  if (a.line < b.line)
+    return true;
+  if (a.line > b.line)
+    return false;
+  uint32_t a_col = a.column ? a.column : UINT32_MAX;
+  uint32_t b_col = b.column ? b.column : UINT32_MAX;
+  return a_col < b_col;
+}
+} // namespace
+
 void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
                                             SymbolContextList &sc_list,
                                             bool skip_prologue,
-                                            llvm::StringRef log_ident) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+                                            llvm::StringRef log_ident,
+                                            uint32_t line, uint32_t column) {
+  llvm::SmallVector<SymbolContext, 16> all_scs;
+  for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
+    all_scs.push_back(sc_list[i]);
 
-  while (sc_list.GetSize() > 0) {
-    SymbolContextList tmp_sc_list;
-    unsigned current_idx = 0;
-    SymbolContext sc;
-    bool first_entry = true;
+  while (all_scs.size()) {
+    uint32_t closest_line = UINT32_MAX;
 
-    FileSpec match_file_spec;
-    FileSpec match_original_file_spec;
-    uint32_t closest_line_number = UINT32_MAX;
-
-    // Pull out the first entry, and all the others that match its file spec,
-    // and stuff them in the tmp list.
-    while (current_idx < sc_list.GetSize()) {
-      bool matches;
-
-      sc_list.GetContextAtIndex(current_idx, sc);
-      if (first_entry) {
-        match_file_spec = sc.line_entry.file;
-        match_original_file_spec = sc.line_entry.original_file;
-        matches = true;
-        first_entry = false;
-      } else
-        matches = ((sc.line_entry.file == match_file_spec) ||
-                   (sc.line_entry.original_file == match_original_file_spec));
-
-      if (matches) {
-        tmp_sc_list.Append(sc);
-        sc_list.RemoveContextAtIndex(current_idx);
-
-        // ResolveSymbolContext will always return a number that is >= the line
-        // number you pass in. So the smaller line number is always better.
-        if (sc.line_entry.line < closest_line_number)
-          closest_line_number = sc.line_entry.line;
-      } else
-        current_idx++;
-    }
-
-    // Okay, we've found the closest line number match, now throw away all the
-    // others:
-
-    current_idx = 0;
-    while (current_idx < tmp_sc_list.GetSize()) {
-      if (tmp_sc_list.GetContextAtIndex(current_idx, sc)) {
-        if (sc.line_entry.line != closest_line_number)
-          tmp_sc_list.RemoveContextAtIndex(current_idx);
-        else
-          current_idx++;
-      }
-    }
-
-    // Next go through and see if there are line table entries that are
-    // contiguous, and if so keep only the first of the contiguous range:
-
-    current_idx = 0;
-    std::map<Block *, lldb::addr_t> blocks_with_breakpoints;
-
-    while (current_idx < tmp_sc_list.GetSize()) {
-      if (tmp_sc_list.GetContextAtIndex(current_idx, sc)) {
-        if (blocks_with_breakpoints.find(sc.block) !=
-            blocks_with_breakpoints.end())
-          tmp_sc_list.RemoveContextAtIndex(current_idx);
-        else {
-          blocks_with_breakpoints.insert(std::pair<Block *, lldb::addr_t>(
-              sc.block, sc.line_entry.range.GetBaseAddress().GetFileAddress()));
-          current_idx++;
-        }
-      }
-    }
-
-    // and make breakpoints out of the closest line number match.
-
-    uint32_t tmp_sc_list_size = tmp_sc_list.GetSize();
-
-    for (uint32_t i = 0; i < tmp_sc_list_size; i++) {
-      if (tmp_sc_list.GetContextAtIndex(i, sc)) {
-        Address line_start = sc.line_entry.range.GetBaseAddress();
-        if (line_start.IsValid()) {
-          if (filter.AddressPasses(line_start)) {
-            // If the line number is before the prologue end, move it there...
-            bool skipped_prologue = false;
-            if (skip_prologue) {
-              if (sc.function) {
-                Address prologue_addr(
-                    sc.function->GetAddressRange().GetBaseAddress());
-                if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
-                  const uint32_t prologue_byte_size =
-                      sc.function->GetPrologueByteSize();
-                  if (prologue_byte_size) {
-                    prologue_addr.Slide(prologue_byte_size);
-
-                    if (filter.AddressPasses(prologue_addr)) {
-                      skipped_prologue = true;
-                      line_start = prologue_addr;
-                    }
-                  }
-                }
-              }
-            }
-
-            BreakpointLocationSP bp_loc_sp(AddLocation(line_start));
-            if (log && bp_loc_sp && !m_breakpoint->IsInternal()) {
-              StreamString s;
-              bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-              log->Printf("Added location (skipped prologue: %s): %s \n",
-                          skipped_prologue ? "yes" : "no", s.GetData());
-            }
-          } else if (log) {
-            log->Printf("Breakpoint %s at file address 0x%" PRIx64
-                        " didn't pass the filter.\n",
-                        log_ident.str().c_str(), line_start.GetFileAddress());
+    // Move all the elements with a matching file spec to the end.
+    auto &match = all_scs[0];
+    auto worklist_begin = std::partition(
+        all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
+          if (sc.line_entry.file == match.line_entry.file ||
+              sc.line_entry.original_file == match.line_entry.original_file) {
+            // When a match is found, keep track of the smallest line number.
+            closest_line = std::min(closest_line, sc.line_entry.line);
+            return false;
           }
-        } else {
-          if (log)
-            log->Printf(
-                "error: Unable to set breakpoint %s at file address 0x%" PRIx64
-                "\n",
-                log_ident.str().c_str(), line_start.GetFileAddress());
+          return true;
+        });
+
+    // (worklist_begin, worklist_end) now contains all entries for one filespec.
+    auto worklist_end = all_scs.end();
+
+    if (column) {
+      // If a column was requested, do a more precise match and only
+      // return the first location that comes after or at the
+      // requested location.
+      SourceLoc requested(line, column);
+      // First, filter out all entries left of the requested column.
+      worklist_end = std::remove_if(
+          worklist_begin, worklist_end,
+          [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
+      // Sort the remaining entries by (line, column).
+      std::sort(worklist_begin, worklist_end,
+                [](const SymbolContext &a, const SymbolContext &b) {
+                  return SourceLoc(a) < SourceLoc(b);
+                });
+
+      // Filter out all locations with a source location after the closest match.
+      if (worklist_begin != worklist_end)
+        worklist_end = std::remove_if(
+            worklist_begin, worklist_end, [&](const SymbolContext &sc) {
+              return SourceLoc(*worklist_begin) < SourceLoc(sc);
+            });
+    } else {
+      // Remove all entries with a larger line number.
+      // ResolveSymbolContext will always return a number that is >=
+      // the line number you pass in. So the smaller line number is
+      // always better.
+      worklist_end = std::remove_if(worklist_begin, worklist_end,
+                                    [&](const SymbolContext &sc) {
+                                      return closest_line != sc.line_entry.line;
+                                    });
+    }
+
+    // Sort by file address.
+    std::sort(worklist_begin, worklist_end,
+              [](const SymbolContext &a, const SymbolContext &b) {
+                return a.line_entry.range.GetBaseAddress().GetFileAddress() <
+                       b.line_entry.range.GetBaseAddress().GetFileAddress();
+              });
+
+    // Go through and see if there are line table entries that are
+    // contiguous, and if so keep only the first of the contiguous range.
+    // We do this by picking the first location in each lexical block.
+    llvm::SmallDenseSet<Block *, 8> blocks_with_breakpoints;
+    for (auto first = worklist_begin; first != worklist_end; ++first) {
+      assert(!blocks_with_breakpoints.count(first->block));
+      blocks_with_breakpoints.insert(first->block);
+      worklist_end =
+          std::remove_if(std::next(first), worklist_end,
+                         [&](const SymbolContext &sc) {
+                           return blocks_with_breakpoints.count(sc.block);
+                         });
+    }
+
+    // Make breakpoints out of the closest line number match.
+    for (auto &sc : llvm::make_range(worklist_begin, worklist_end))
+      AddLocation(filter, sc, skip_prologue, log_ident);
+
+    // Remove all contexts processed by this iteration.
+    all_scs.erase(worklist_begin, all_scs.end());
+  }
+}
+
+void BreakpointResolver::AddLocation(SearchFilter &filter,
+                                     const SymbolContext &sc,
+                                     bool skip_prologue,
+                                     llvm::StringRef log_ident) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Address line_start = sc.line_entry.range.GetBaseAddress();
+  if (!line_start.IsValid()) {
+    if (log)
+      log->Printf("error: Unable to set breakpoint %s at file address "
+                  "0x%" PRIx64 "\n",
+                  log_ident.str().c_str(), line_start.GetFileAddress());
+    return;
+  }
+
+  if (!filter.AddressPasses(line_start)) {
+    if (log)
+      log->Printf("Breakpoint %s at file address 0x%" PRIx64
+                  " didn't pass the filter.\n",
+                  log_ident.str().c_str(), line_start.GetFileAddress());
+  }
+
+  // If the line number is before the prologue end, move it there...
+  bool skipped_prologue = false;
+  if (skip_prologue && sc.function) {
+    Address prologue_addr(sc.function->GetAddressRange().GetBaseAddress());
+    if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
+      const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
+      if (prologue_byte_size) {
+        prologue_addr.Slide(prologue_byte_size);
+
+        if (filter.AddressPasses(prologue_addr)) {
+          skipped_prologue = true;
+          line_start = prologue_addr;
         }
       }
     }
+  }
+
+  BreakpointLocationSP bp_loc_sp(AddLocation(line_start));
+  if (log && bp_loc_sp && !m_breakpoint->IsInternal()) {
+    StreamString s;
+    bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
+    log->Printf("Added location (skipped prologue: %s): %s \n",
+                skipped_prologue ? "yes" : "no", s.GetData());
   }
 }
 
@@ -315,7 +344,8 @@ void BreakpointResolver::SetOffset(lldb::addr_t offset) {
   // There may already be an offset, so we are actually adjusting location
   // addresses by the difference.
   // lldb::addr_t slide = offset - m_offset;
-  // FIXME: We should go fix up all the already set locations for the new slide.
+  // FIXME: We should go fix up all the already set locations for the new
+  // slide.
 
   m_offset = offset;
 }

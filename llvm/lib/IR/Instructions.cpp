@@ -1660,17 +1660,17 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
   }
 }
 
-bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
+static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
-  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+  for (int i = 0, NumMaskElts = Mask.size(); i < NumMaskElts; ++i) {
     if (Mask[i] == -1)
       continue;
-    assert(Mask[i] >= 0 && Mask[i] < (NumElts * 2) &&
+    assert(Mask[i] >= 0 && Mask[i] < (NumOpElts * 2) &&
            "Out-of-bounds shuffle mask element");
-    UsesLHS |= (Mask[i] < NumElts);
-    UsesRHS |= (Mask[i] >= NumElts);
+    UsesLHS |= (Mask[i] < NumOpElts);
+    UsesRHS |= (Mask[i] >= NumOpElts);
     if (UsesLHS && UsesRHS)
       return false;
   }
@@ -1678,16 +1678,28 @@ bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
   return true;
 }
 
-bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
-  if (!isSingleSourceMask(Mask))
+bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
+  // We don't have vector operand size information, so assume operands are the
+  // same size as the mask.
+  return isSingleSourceMaskImpl(Mask, Mask.size());
+}
+
+static bool isIdentityMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
+  if (!isSingleSourceMaskImpl(Mask, NumOpElts))
     return false;
-  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+  for (int i = 0, NumMaskElts = Mask.size(); i < NumMaskElts; ++i) {
     if (Mask[i] == -1)
       continue;
-    if (Mask[i] != i && Mask[i] != (NumElts + i))
+    if (Mask[i] != i && Mask[i] != (NumOpElts + i))
       return false;
   }
   return true;
+}
+
+bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
+  // We don't have vector operand size information, so assume operands are the
+  // same size as the mask.
+  return isIdentityMaskImpl(Mask, Mask.size());
 }
 
 bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask) {
@@ -1761,6 +1773,33 @@ bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
   return true;
 }
 
+bool ShuffleVectorInst::isIdentityWithPadding() const {
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getType()->getVectorNumElements();
+  if (NumMaskElts <= NumOpElts)
+    return false;
+
+  // The first part of the mask must choose elements from exactly 1 source op.
+  ArrayRef<int> Mask = getShuffleMask();
+  if (!isIdentityMaskImpl(Mask, NumOpElts))
+    return false;
+
+  // All extending must be with undef elements.
+  for (int i = NumOpElts; i < NumMaskElts; ++i)
+    if (Mask[i] != -1)
+      return false;
+
+  return true;
+}
+
+bool ShuffleVectorInst::isIdentityWithExtract() const {
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getType()->getVectorNumElements();
+  if (NumMaskElts >= NumOpElts)
+    return false;
+
+  return isIdentityMaskImpl(getShuffleMask(), NumOpElts);
+}
 
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class

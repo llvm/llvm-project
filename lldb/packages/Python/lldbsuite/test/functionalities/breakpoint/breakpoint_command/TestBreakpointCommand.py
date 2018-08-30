@@ -133,9 +133,9 @@ class BreakpointCommandTestCase(TestBase):
             patterns=[
                 "1: file = '.*main.c', line = %d, exact_match = 0, locations = 1" %
                 self.line,
-                "1.1: .+at main.c:%d, .+unresolved, hit count = 0" %
+                "1.1: .+at main.c:%d:?[0-9]*, .+unresolved, hit count = 0" %
                 self.line,
-                "2.1: .+at main.c:%d, .+unresolved, hit count = 0" %
+                "2.1: .+at main.c:%d:?[0-9]*, .+unresolved, hit count = 0" %
                 self.line])
 
         self.expect("breakpoint command list 1", "Breakpoint 1 command ok",

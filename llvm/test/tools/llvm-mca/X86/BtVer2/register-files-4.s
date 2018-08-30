@@ -25,17 +25,17 @@ idiv %eax
 # CHECK-NEXT:  2      25    25.00                 U     idivl	%eax
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      6
+# CHECK-NEXT: RAT     - Register unavailable:                      6  (1.1%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
 # CHECK-NEXT:  0,              531  (96.0%)
-# CHECK-NEXT:  1,              22  (4.0%)
+# CHECK-NEXT:  2,              22  (4.0%)
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    66

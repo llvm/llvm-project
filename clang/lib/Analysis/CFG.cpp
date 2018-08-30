@@ -2421,8 +2421,6 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!boundType.isNull()) calleeType = boundType;
   }
 
-  findConstructionContextsForArguments(C);
-
   // If this is a call to a no-return function, this stops the block here.
   bool NoReturn = getFunctionExtInfo(*calleeType).getNoReturn();
 
@@ -2439,6 +2437,13 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   bool OmitArguments = false;
 
   if (FunctionDecl *FD = C->getDirectCallee()) {
+    // TODO: Support construction contexts for variadic function arguments.
+    // These are a bit problematic and not very useful because passing
+    // C++ objects as C-style variadic arguments doesn't work in general
+    // (see [expr.call]).
+    if (!FD->isVariadic())
+      findConstructionContextsForArguments(C);
+
     if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())

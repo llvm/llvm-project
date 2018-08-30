@@ -696,7 +696,8 @@ protected:
 
       bp_sp = target->CreateBreakpoint(&(m_options.m_modules), 
                                        file,
-                                       m_options.m_line_num, 
+                                       m_options.m_line_num,
+                                       m_options.m_column,
                                        m_options.m_offset_addr,
                                        check_inlines, 
                                        m_options.m_skip_prologue,

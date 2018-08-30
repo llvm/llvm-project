@@ -60,7 +60,8 @@ EXTERN void __kmpc_kernel_init_params(void *Ptr) {
 EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   PRINT(LD_IO, "call to __kmpc_kernel_init with version %f\n",
         OMPTARGET_NVPTX_VERSION);
-  assert(RequiresOMPRuntime && "Generic always requires initialized runtime.");
+  ASSERT0(LT_FUSSY, RequiresOMPRuntime,
+          "Generic always requires initialized runtime.");
   setExecutionParameters(Generic, RuntimeInitialized);
 
   int threadIdInBlock = GetThreadIdInBlock();
@@ -97,8 +98,8 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
-  assert(IsOMPRuntimeInitialized &&
-         "Generic always requires initialized runtime.");
+  ASSERT0(LT_FUSSY, IsOMPRuntimeInitialized,
+          "Generic always requires initialized runtime.");
   // Enqueue omp state object for use by another team.
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
   int slot = omptarget_nvptx_threadPrivateContext->GetSourceQueue();

@@ -18,18 +18,17 @@
 // a content of some tracked block is changed.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
-#define LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
+#ifndef LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
+#define LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 
 #include "llvm/IR/Dominators.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
+#include "llvm/Analysis/OrderedInstructions.h"
 
 namespace llvm {
 
 class InstructionPrecedenceTracking {
   // Maps a block to the topmost special instruction in it.
-  DenseMap<const BasicBlock *, const Instruction *>
-      FirstImplicitControlFlowInsts;
+  DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
   // Allows to answer queries about precedence of instructions within one block.
   OrderedInstructions OI;
   // Blocks for which we have the up-to-date cached information.
@@ -37,6 +36,15 @@ class InstructionPrecedenceTracking {
 
   // Fills information about the given block's special instructions.
   void fill(const BasicBlock *BB);
+
+#ifndef NDEBUG
+  /// Asserts whether or not the contents of this tracking is up-to-date. It can
+  /// be used to detect situations where we failed to invalidate the map
+  /// properly. The behavior of request to an invalid tracking is undefined, and
+  /// we should avoid such situations. It is slow and should only be called in
+  /// debug mode.
+  void validate() const;
+#endif
 
 protected:
   InstructionPrecedenceTracking(DominatorTree *DT)
@@ -105,4 +113,4 @@ public:
 
 } // llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
+#endif // LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
