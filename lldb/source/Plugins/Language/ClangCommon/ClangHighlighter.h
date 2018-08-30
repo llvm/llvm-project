@@ -29,6 +29,7 @@ public:
   llvm::StringRef GetName() const override { return "clang"; }
 
   void Highlight(const HighlightStyle &options, llvm::StringRef line,
+                 llvm::Optional<size_t> cursor_pos,
                  llvm::StringRef previous_lines, Stream &s) const override;
 
   /// Returns true if the given string represents a keywords in any Clang
