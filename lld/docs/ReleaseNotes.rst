@@ -24,7 +24,15 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* Item 1.
+* lld is now able to overcome MIPS GOT entries number limitation
+  and generate multi-GOT if necessary.
+
+* lld is now able to produce MIPS position-independent executable (PIE).
+
+* Fixed MIPS TLS GOT entries for local symbols in shared libraries.
+
+* Fixed calculation of MIPS GP relative relocations
+  in case of relocatable output.
 
 COFF Improvements
 -----------------
