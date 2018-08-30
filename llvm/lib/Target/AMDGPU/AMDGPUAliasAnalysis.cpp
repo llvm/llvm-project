@@ -54,8 +54,8 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   static const AliasResult ASAliasRulesPrivIsZero[6][6] = {
   /*             Private    Global    Constant  Group     Flat      Region*/
   /* Private  */ {MayAlias, NoAlias , NoAlias , NoAlias , MayAlias, NoAlias},
-  /* Global   */ {NoAlias , MayAlias, NoAlias , NoAlias , MayAlias, NoAlias},
-  /* Constant */ {NoAlias , NoAlias , MayAlias, NoAlias , MayAlias, NoAlias},
+  /* Global   */ {NoAlias , MayAlias, MayAlias, NoAlias , MayAlias, NoAlias},
+  /* Constant */ {NoAlias , MayAlias, MayAlias, NoAlias , MayAlias, NoAlias},
   /* Group    */ {NoAlias , NoAlias , NoAlias , MayAlias, MayAlias, NoAlias},
   /* Flat     */ {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias},
   /* Region   */ {NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, MayAlias}
@@ -63,10 +63,10 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Ar
   static const AliasResult ASAliasRulesGenIsZero[6][6] = {
   /*             Flat       Global    Region    Group     Constant  Private */
   /* Flat     */ {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias},
-  /* Global   */ {MayAlias, MayAlias, NoAlias , NoAlias , NoAlias , NoAlias},
-  /* Constant */ {MayAlias, NoAlias , MayAlias, NoAlias , NoAlias,  NoAlias},
-  /* Group    */ {MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , NoAlias},
+  /* Global   */ {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias},
   /* Region   */ {MayAlias, NoAlias , NoAlias , NoAlias,  MayAlias, NoAlias},
+  /* Group    */ {MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , NoAlias},
+  /* Constant */ {MayAlias, MayAlias, MayAlias, NoAlias , NoAlias,  NoAlias},
   /* Private  */ {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias}
   };
   assert(AS.MAX_COMMON_ADDRESS <= 5);
