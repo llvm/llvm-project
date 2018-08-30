@@ -193,7 +193,6 @@ public:
   OrIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
       : Children(std::move(AllChildren)) {
     assert(Children.size() > 0 && "Or Iterator must have at least one child.");
-    std::sort(begin(Children), end(Children));
   }
 
   /// Returns true if all children are exhausted.
