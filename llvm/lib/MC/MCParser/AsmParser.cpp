@@ -3348,17 +3348,17 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     }
   }
 
-  // In case there is a -g option as well as debug info from directive .file,
-  // we turn off the -g option, directly use the existing debug info instead.
-  // Also reset any implicit ".file 0" for the assembler source.
-  if (Ctx.getGenDwarfForAssembly()) {
-    Ctx.getMCDwarfLineTable(0).resetRootFile();
-    Ctx.setGenDwarfForAssembly(false);
-  }
-
   if (FileNumber == -1)
     getStreamer().EmitFileDirective(Filename);
   else {
+    // In case there is a -g option as well as debug info from directive .file,
+    // we turn off the -g option, directly use the existing debug info instead.
+    // Also reset any implicit ".file 0" for the assembler source.
+    if (Ctx.getGenDwarfForAssembly()) {
+      Ctx.getMCDwarfLineTable(0).resetRootFile();
+      Ctx.setGenDwarfForAssembly(false);
+    }
+
     MD5::MD5Result *CKMem = nullptr;
     if (HasMD5) {
       CKMem = (MD5::MD5Result *)Ctx.allocate(sizeof(MD5::MD5Result), 1);
