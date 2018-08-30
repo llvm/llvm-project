@@ -858,6 +858,10 @@ SwiftLanguage::GetHardcodedSynthetics() {
   return g_formatters;
 }
 
+bool SwiftLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  return file_path.endswith(".swift");
+}
+
 std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
     ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
   std::vector<ConstString> result;

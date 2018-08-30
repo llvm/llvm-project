@@ -18,7 +18,7 @@ class TestMultipleSimultaneousDebuggers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # This test case fails non-deterministically. 
+    # This test case fails non-deterministically.
     @skipIfNoSBHeaders
     @expectedFailureAll(bugnumber="llvm.org/pr20282")
     def test_multiple_debuggers(self):

@@ -32,6 +32,7 @@ add_lldb_library(lldbPluginObjCLanguage PLUGIN
     lldbUtility
     lldbPluginAppleObjCRuntime
     lldbPluginSwiftLanguage
+    lldbPluginClangCommon
 
   EXTRA_CXXFLAGS ${EXTRA_CXXFLAGS}
 )

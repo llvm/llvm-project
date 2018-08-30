@@ -50,7 +50,6 @@ bool LineEntry::IsValid() const {
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
-  bool result = false;
   if (file) {
     if (show_fullpaths)
       file.Dump(s);
@@ -59,14 +58,15 @@ bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
 
     if (line)
       s->PutChar(':');
-    result = true;
   }
-  if (line)
+  if (line) {
     s->Printf("%u", line);
-  else
-    result = false;
-
-  return result;
+    if (column) {
+      s->PutChar(':');
+      s->Printf("%u", column);
+    }
+  }
+  return file || line;
 }
 
 bool LineEntry::Dump(Stream *s, Target *target, bool show_file,

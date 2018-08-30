@@ -25,6 +25,8 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbPluginClangCommon
+
   LINK_COMPONENTS
     Support
 )

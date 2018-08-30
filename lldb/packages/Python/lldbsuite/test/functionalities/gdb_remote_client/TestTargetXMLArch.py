@@ -98,12 +98,12 @@ class TestTargetXMLArch(GDBRemoteTestBase):
                 return "T05thread:00000001;06:9038d60f00700000;07:98b4062680ffffff;10:c0d7bf1b80ffffff;"
 
             def readRegister(self, register):
-                regs = {0x0: "00b0060000610000", 
-                        0xa: "68fe471c80ffffff", 
-                        0xc: "60574a1c80ffffff", 
-                        0xd: "18f3042680ffffff", 
-                        0xe: "be8a4d7142000000", 
-                        0xf: "50df471c80ffffff", 
+                regs = {0x0: "00b0060000610000",
+                        0xa: "68fe471c80ffffff",
+                        0xc: "60574a1c80ffffff",
+                        0xd: "18f3042680ffffff",
+                        0xe: "be8a4d7142000000",
+                        0xf: "50df471c80ffffff",
                         0x10: "c0d7bf1b80ffffff" }
                 if register in regs:
                     return regs[register]

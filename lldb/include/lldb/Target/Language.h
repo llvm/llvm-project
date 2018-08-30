@@ -20,6 +20,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -152,12 +153,23 @@ public:
 
   static Language *FindPlugin(lldb::LanguageType language);
 
+  /// Returns the Language associated with the given file path or a nullptr
+  /// if there is no known language.
+  static Language *FindPlugin(llvm::StringRef file_path);
+
+  static Language *FindPlugin(lldb::LanguageType language,
+                              llvm::StringRef file_path);
+
   // return false from callback to stop iterating
   static void ForEach(std::function<bool(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
   virtual bool IsTopLevelFunction(Function &function);
+
+  virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
+
+  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 

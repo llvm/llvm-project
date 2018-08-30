@@ -96,7 +96,7 @@ class ExecTestCase(TestBase):
         if not skip_exec:
             self.assertTrue(process.GetState() == lldb.eStateStopped,
                             "Process should be stopped at __dyld_start")
-            
+
             threads = lldbutil.get_stopped_threads(
                 process, lldb.eStopReasonExec)
             self.assertTrue(

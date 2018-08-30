@@ -86,13 +86,6 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
     return false;
   }
 
-  if (command.GetArgumentCount() > 1) {
-    result.AppendError("Too many arguments for 'quit'. Only an optional exit "
-                       "code is allowed");
-    result.SetStatus(eReturnStatusFailed);
-    return false;
-  }
-
   // We parse the exit code argument if there is one.
   if (command.GetArgumentCount() == 1) {
     llvm::StringRef arg = command.GetArgumentAtIndex(0);

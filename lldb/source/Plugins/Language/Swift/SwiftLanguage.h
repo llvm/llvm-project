@@ -41,6 +41,8 @@ public:
   HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics() override;
 
+  bool IsSourceFile(llvm::StringRef file_path) const override;
+
   std::vector<ConstString>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;

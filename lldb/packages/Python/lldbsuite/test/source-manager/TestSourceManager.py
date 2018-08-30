@@ -22,6 +22,8 @@ def ansi_underline_surround_regex(inner_regex_text):
     # return re.compile(r"\[4m%s\[0m" % inner_regex_text)
     return "4.+\033\\[4m%s\033\\[0m" % inner_regex_text
 
+def ansi_color_surround_regex(inner_regex_text):
+    return "\033\\[3[0-7]m%s\033\\[0m" % inner_regex_text
 
 class SourceManagerTestCase(TestBase):
 
@@ -47,7 +49,7 @@ class SourceManagerTestCase(TestBase):
         # the character column after the initial whitespace.
         return len(stop_line) - len(stop_line.lstrip()) + 1
 
-    def do_display_source_python_api(self, use_color, column_marker_regex):
+    def do_display_source_python_api(self, use_color, needle_regex, highlight_source=False):
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -69,6 +71,9 @@ class SourceManagerTestCase(TestBase):
         # Setup whether we should use ansi escape sequences, including color
         # and styles such as underline.
         self.dbg.SetUseColor(use_color)
+        # Disable syntax highlighting if needed.
+
+        self.runCmd("settings set highlight-source " + str(highlight_source).lower())
 
         filespec = lldb.SBFileSpec(self.file, False)
         source_mgr = self.dbg.GetSourceManager()
@@ -87,10 +92,10 @@ class SourceManagerTestCase(TestBase):
         # => 4        printf("Hello world.\n"); // Set break point at this line.
         #    5        return 0;
         #    6    }
-        self.expect(stream.GetData(), "Source code displayed correctly",
+        self.expect(stream.GetData(), "Source code displayed correctly:\n" + stream.GetData(),
                     exe=False,
                     patterns=['=> %d.*Hello world' % self.line,
-                              column_marker_regex])
+                              needle_regex])
 
         # Boundary condition testings for SBStream().  LLDB should not crash!
         stream.Print(None)
@@ -108,8 +113,27 @@ class SourceManagerTestCase(TestBase):
         """Test display of source using the SBSourceManager API, using a
         dumb terminal and thus no color support (the default)."""
         use_color = True
-        underline_regex = ansi_underline_surround_regex(r".")
+        underline_regex = ansi_underline_surround_regex(r"printf")
         self.do_display_source_python_api(use_color, underline_regex)
+
+    @add_test_categories(['pyapi'])
+    def test_display_source_python_ansi_terminal_syntax_highlighting(self):
+        """Test display of source using the SBSourceManager API and check for
+        the syntax highlighted output"""
+        use_color = True
+        syntax_highlighting = True;
+
+        # Just pick 'int' as something that should be colored.
+        color_regex = ansi_color_surround_regex("int")
+        self.do_display_source_python_api(use_color, color_regex, syntax_highlighting)
+
+        # Same for 'char'.
+        color_regex = ansi_color_surround_regex("char")
+        self.do_display_source_python_api(use_color, color_regex, syntax_highlighting)
+
+        # Test that we didn't color unrelated identifiers.
+        self.do_display_source_python_api(use_color, r" main\(", syntax_highlighting)
+        self.do_display_source_python_api(use_color, r"\);", syntax_highlighting)
 
     def test_move_and_then_display_source(self):
         """Test that target.source-map settings work by moving main.c to hidden/main.c."""

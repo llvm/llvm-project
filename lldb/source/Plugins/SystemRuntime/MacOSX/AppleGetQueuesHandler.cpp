@@ -354,6 +354,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   options.SetStopOthers(true);
   options.SetTimeout(std::chrono::milliseconds(500));
   options.SetTryAllThreads(false);
+  options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
 
   ExpressionResults func_call_ret;

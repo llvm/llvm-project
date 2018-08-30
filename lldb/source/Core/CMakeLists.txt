@@ -25,6 +25,7 @@ add_lldb_library(lldbCore
   FileLineResolver.cpp
   FileSpecList.cpp
   FormatEntity.cpp
+  Highlighter.cpp
   IOHandler.cpp
   Listener.cpp
   Mangled.cpp

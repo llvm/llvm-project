@@ -30,7 +30,8 @@ public:
 
   void Flush() override;
 
-  size_t Write(const void *src, size_t src_len) override;
+protected:
+  size_t WriteImpl(const void *src, size_t src_len) override;
 
 private:
   Debugger &m_debugger;

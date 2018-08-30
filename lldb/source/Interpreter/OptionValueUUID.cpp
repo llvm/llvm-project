@@ -70,7 +70,6 @@ lldb::OptionValueSP OptionValueUUID::DeepCopy() const {
 size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
                                      CompletionRequest &request) {
   request.SetWordComplete(false);
-  request.GetMatches().Clear();
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
@@ -86,12 +85,12 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
             llvm::ArrayRef<uint8_t> module_bytes = module_uuid.GetBytes();
             if (module_bytes.size() >= uuid_bytes.size() &&
                 module_bytes.take_front(uuid_bytes.size()).equals(uuid_bytes)) {
-              request.GetMatches().AppendString(module_uuid.GetAsString());
+              request.AddCompletion(module_uuid.GetAsString());
             }
           }
         }
       }
     }
   }
-  return request.GetMatches().GetSize();
+  return request.GetNumberOfMatches();
 }

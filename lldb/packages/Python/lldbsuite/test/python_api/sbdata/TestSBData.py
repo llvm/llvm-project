@@ -23,7 +23,7 @@ class SBDataAPICase(TestBase):
 
     @add_test_categories(['pyapi'])
     def test_byte_order_and_address_byte_size(self):
-        """Test the SBData::SetData() to ensure the byte order and address 
+        """Test the SBData::SetData() to ensure the byte order and address
         byte size are obeyed"""
         addr_data = b'\x11\x22\x33\x44\x55\x66\x77\x88'
         error = lldb.SBError()

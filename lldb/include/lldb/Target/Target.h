@@ -406,6 +406,10 @@ public:
 
   bool GetAutoApplyFixIts() const { return m_auto_apply_fixits; }
 
+  bool IsForUtilityExpr() const { return m_running_utility_expression; }
+
+  void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
+
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
   lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
@@ -424,6 +428,10 @@ private:
   bool m_ansi_color_errors = false;
   bool m_result_is_internal = false;
   bool m_auto_apply_fixits = true;
+  /// True if the executed code should be treated as utility code that is only
+  /// used by LLDB internally.
+  bool m_running_utility_expression = false;
+
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
   Timeout<std::micro> m_one_thread_timeout = llvm::None;
@@ -584,7 +592,7 @@ public:
   // module it is nullptr
   lldb::BreakpointSP CreateBreakpoint(const FileSpecList *containingModules,
                                       const FileSpec &file, uint32_t line_no,
-                                      lldb::addr_t offset,
+                                      uint32_t column, lldb::addr_t offset,
                                       LazyBool check_inlines,
                                       LazyBool skip_prologue, bool internal,
                                       bool request_hardware,

@@ -467,7 +467,7 @@ class GDBRemoteTestBase(TestBase):
         i = 0
         j = 0
         log = self.server.responder.packetLog
-        
+
         while i < len(packets) and j < len(log):
             if log[j] == packets[i]:
                 i += 1

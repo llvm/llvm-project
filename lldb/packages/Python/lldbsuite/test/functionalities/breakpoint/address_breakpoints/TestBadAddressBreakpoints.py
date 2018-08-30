@@ -31,7 +31,7 @@ class BadAddressBreakpointTestCase(TestBase):
     def address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
         target, process, thread, bkpt = \
-            lldbutil.run_to_source_breakpoint(self, 
+            lldbutil.run_to_source_breakpoint(self,
                                               "Set a breakpoint here",
                                               lldb.SBFileSpec("main.c"))
 

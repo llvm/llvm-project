@@ -268,8 +268,7 @@ private:
 ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
                                              Expression &expr,
                                              bool generate_debug_info)
-    : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
-      m_builtin_context(), m_selector_table(), m_code_generator(),
+    : ExpressionParser(exe_scope, expr, generate_debug_info),
       m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -569,15 +568,18 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 8. Most of this we get from the CompilerInstance, but we also want to give
   // the context an ExternalASTSource.
-  m_selector_table.reset(new SelectorTable());
-  m_builtin_context.reset(new Builtin::Context());
+  // We enable all builtin functions beside the builtins from libc/libm (e.g.
+  // 'fopen'). Those libc functions are already correctly handled by LLDB, and
+  // additionally enabling them as expandable builtins is breaking Clang.
+  m_compiler->getLangOpts().NoBuiltin = true;
 
-  std::unique_ptr<clang::ASTContext> ast_context(
-      new ASTContext(m_compiler->getLangOpts(), m_compiler->getSourceManager(),
-                     m_compiler->getPreprocessor().getIdentifierTable(),
-                     *m_selector_table.get(), *m_builtin_context.get()));
+  auto &PP = m_compiler->getPreprocessor();
+  auto &builtin_context = PP.getBuiltinInfo();
+  builtin_context.initializeBuiltins(PP.getIdentifierTable(),
+                                     m_compiler->getLangOpts());
 
-  ast_context->InitBuiltinTypes(m_compiler->getTarget());
+  m_compiler->createASTContext();
+  clang::ASTContext &ast_context = m_compiler->getASTContext();
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
@@ -586,14 +588,13 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   if (decl_map) {
     llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source(
         decl_map->CreateProxy());
-    decl_map->InstallASTContext(*ast_context, m_compiler->getFileManager());
-    ast_context->setExternalSource(ast_source);
+    decl_map->InstallASTContext(ast_context, m_compiler->getFileManager());
+    ast_context.setExternalSource(ast_source);
   }
 
   m_ast_context.reset(
       new ClangASTContext(m_compiler->getTargetOpts().Triple.c_str()));
-  m_ast_context->setASTContext(ast_context.get());
-  m_compiler->setASTContext(ast_context.release());
+  m_ast_context->setASTContext(&ast_context);
 
   std::string module_name("$__lldb_module");
 

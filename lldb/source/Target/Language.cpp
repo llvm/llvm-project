@@ -77,7 +77,39 @@ Language *Language::FindPlugin(lldb::LanguageType language) {
   return nullptr;
 }
 
+Language *Language::FindPlugin(llvm::StringRef file_path) {
+  Language *result = nullptr;
+  ForEach([&result, file_path](Language *language) {
+    if (language->IsSourceFile(file_path)) {
+      result = language;
+      return false;
+    }
+    return true;
+  });
+  return result;
+}
+
+Language *Language::FindPlugin(LanguageType language,
+                               llvm::StringRef file_path) {
+  Language *result = FindPlugin(language);
+  // Finding a language by file path is slower, we so we use this as the
+  // fallback.
+  if (!result)
+    result = FindPlugin(file_path);
+  return result;
+}
+
 void Language::ForEach(std::function<bool(Language *)> callback) {
+  // If we want to iterate over all languages, we first have to complete the
+  // LanguagesMap.
+  static llvm::once_flag g_initialize;
+  llvm::call_once(g_initialize, [] {
+    for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
+         ++lang) {
+      FindPlugin(static_cast<lldb::LanguageType>(lang));
+    }
+  });
+
   std::lock_guard<std::mutex> guard(GetLanguagesMutex());
   LanguagesMap &map(GetLanguagesMap());
   for (const auto &entry : map) {

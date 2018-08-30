@@ -482,7 +482,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_ap(
       new CommandObjectRegexCommand(
           *this, "_regexp-break",
-          "Set a breakpoint using one of several shorthand formats.\n",
+          "Set a breakpoint using one of several shorthand formats.",
           "\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
@@ -531,7 +531,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_ap(
       new CommandObjectRegexCommand(
           *this, "_regexp-tbreak",
-          "Set a one-shot breakpoint using one of several shorthand formats.\n",
+          "Set a one-shot breakpoint using one of several shorthand formats.",
           "\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
@@ -1699,33 +1699,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
           remainder.c_str());
 
     cmd_obj->Execute(remainder.c_str(), result);
-  } else {
-    // We didn't find the first command object, so complete the first argument.
-    Args command_args(command_string);
-    StringList matches;
-    unsigned cursor_char_position = strlen(command_args.GetArgumentAtIndex(0));
-    CompletionRequest request(command_line, cursor_char_position, 0, -1,
-                              matches);
-    int num_matches = HandleCompletionMatches(request);
-
-    if (num_matches > 0) {
-      std::string error_msg;
-      error_msg.assign("ambiguous command '");
-      error_msg.append(command_args.GetArgumentAtIndex(0));
-      error_msg.append("'.");
-
-      error_msg.append(" Possible completions:");
-      for (int i = 0; i < num_matches; i++) {
-        error_msg.append("\n\t");
-        error_msg.append(matches.GetStringAtIndex(i));
-      }
-      error_msg.append("\n");
-      result.AppendRawError(error_msg.c_str());
-    } else
-      result.AppendErrorWithFormat("Unrecognized command '%s'.\n",
-                                   command_args.GetArgumentAtIndex(0));
-
-    result.SetStatus(eReturnStatusFailed);
   }
 
   if (log)
@@ -1736,7 +1709,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 }
 
 int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
-  auto &matches = request.GetMatches();
   int num_command_matches = 0;
   bool look_for_subcommand = false;
 
@@ -1746,30 +1718,34 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
+    StringList new_matches;
     num_command_matches =
-        GetCommandNamesMatchingPartialString("", include_aliases, matches);
+        GetCommandNamesMatchingPartialString("", include_aliases, new_matches);
+    request.AddCompletions(new_matches);
   } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
     // dictionary.
+    StringList new_matches;
     CommandObject *cmd_obj = GetCommandObject(
-        request.GetParsedLine().GetArgumentAtIndex(0), &matches);
-    num_command_matches = matches.GetSize();
+        request.GetParsedLine().GetArgumentAtIndex(0), &new_matches);
 
     if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
-        matches.GetStringAtIndex(0) != nullptr &&
+        new_matches.GetStringAtIndex(0) != nullptr &&
         strcmp(request.GetParsedLine().GetArgumentAtIndex(0),
-               matches.GetStringAtIndex(0)) == 0) {
+               new_matches.GetStringAtIndex(0)) == 0) {
       if (request.GetParsedLine().GetArgumentCount() == 1) {
         request.SetWordComplete(true);
       } else {
         look_for_subcommand = true;
         num_command_matches = 0;
-        matches.DeleteStringAtIndex(0);
+        new_matches.DeleteStringAtIndex(0);
         request.GetParsedLine().AppendArgument(llvm::StringRef());
         request.SetCursorIndex(request.GetCursorIndex() + 1);
         request.SetCursorCharPosition(0);
       }
     }
+    request.AddCompletions(new_matches);
+    num_command_matches = request.GetNumberOfMatches();
   }
 
   if (request.GetCursorIndex() > 0 || look_for_subcommand) {
@@ -1806,8 +1782,7 @@ int CommandInterpreter::HandleCompletion(
       return 0;
     else if (first_arg[0] == CommandHistory::g_repeat_char) {
       if (auto hist_str = m_command_history.FindString(first_arg)) {
-        request.GetMatches().Clear();
-        request.GetMatches().InsertStringAtIndex(0, *hist_str);
+        matches.InsertStringAtIndex(0, *hist_str);
         return -2;
       } else
         return 0;
@@ -1845,7 +1820,7 @@ int CommandInterpreter::HandleCompletion(
         common_prefix.push_back(quote_char);
       common_prefix.push_back(' ');
     }
-    request.GetMatches().InsertStringAtIndex(0, common_prefix.c_str());
+    matches.InsertStringAtIndex(0, common_prefix.c_str());
   }
   return num_command_matches;
 }
@@ -2965,8 +2940,6 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           actual_cmd_name_len = cmd_obj->GetCommandName().size();
         }
       } else {
-        if (!cmd_obj)
-          cmd_obj = GetCommandObject(next_word, &matches);
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
           actual_cmd_name_len += cmd_name.size();
