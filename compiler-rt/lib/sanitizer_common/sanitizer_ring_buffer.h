@@ -22,12 +22,12 @@ namespace __sanitizer {
 template<class T>
 class RingBuffer {
  public:
+  COMPILER_CHECK(sizeof(T) % sizeof(void *) == 0);
   static RingBuffer *New(uptr Size) {
     void *Ptr = MmapOrDie(SizeInBytes(Size), "RingBuffer");
     RingBuffer *RB = reinterpret_cast<RingBuffer*>(Ptr);
     uptr End = reinterpret_cast<uptr>(Ptr) + SizeInBytes(Size);
     RB->last_ = RB->next_ = reinterpret_cast<T*>(End - sizeof(T));
-    CHECK_EQ(sizeof(T) % sizeof(void*), 0U);
     return RB;
   }
   void Delete() {

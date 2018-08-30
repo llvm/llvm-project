@@ -45,12 +45,13 @@ static inline tag_t GetTagFromPointer(uptr p) {
   return p >> kAddressTagShift;
 }
 
-static inline uptr GetAddressFromPointer(uptr p) {
-  return p & ~kAddressTagMask;
+static inline uptr UntagAddr(uptr tagged_addr) {
+  return tagged_addr & ~kAddressTagMask;
 }
 
-static inline void * GetAddressFromPointer(const void *p) {
-  return (void *)((uptr)p & ~kAddressTagMask);
+static inline void *UntagPtr(const void *tagged_ptr) {
+  return reinterpret_cast<void *>(
+      UntagAddr(reinterpret_cast<uptr>(tagged_ptr)));
 }
 
 static inline uptr AddTagToPointer(uptr p, tag_t tag) {

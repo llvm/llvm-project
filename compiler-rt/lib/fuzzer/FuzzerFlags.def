@@ -162,6 +162,3 @@ FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
-FUZZER_FLAG_INT(print_mutation_stats, 0, "Experimental")
-FUZZER_FLAG_INT(use_weighted_mutations, 0, "Experimental: If 1, fuzzing will "
-    "favor mutations that perform better during runtime.")
