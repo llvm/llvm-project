@@ -97,6 +97,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
                                    typename traits_t<T>::signed_t chunk,
                                    T nproc, T tid) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
   typedef typename traits_t<T>::floating_t DBL;
 
   int active;
@@ -105,7 +106,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   kmp_team_t *team;
 
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -731,6 +731,8 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
                     T ub, typename traits_t<T>::signed_t st,
                     typename traits_t<T>::signed_t chunk, int push_ws) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
+  typedef typename traits_t<T>::floating_t DBL;
 
   int active;
   kmp_info_t *th;
@@ -751,7 +753,6 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   SSC_MARK_DISPATCH_INIT();
 #endif
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -1866,6 +1867,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
+  typedef typename traits_t<T>::floating_t DBL;
   // This is potentially slightly misleading, schedule(runtime) will appear here
   // even if the actual runtme schedule is static. (Which points out a
   // disadavantage of schedule(runtime): even when static scheduling is used it
@@ -2121,6 +2123,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
                                   kmp_int32 *plastiter, T *plower, T *pupper,
                                   typename traits_t<T>::signed_t incr) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
   kmp_uint32 team_id;
   kmp_uint32 nteams;
   UT trip_count;
@@ -2130,7 +2133,6 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   KMP_DEBUG_ASSERT(plastiter && plower && pupper);
   KE_TRACE(10, ("__kmpc_dist_get_bounds called (%d)\n", gtid));
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -2168,7 +2170,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
 
   // compute global trip count
   if (incr == 1) {

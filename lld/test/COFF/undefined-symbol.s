@@ -5,12 +5,12 @@
 # CHECK: error: undefined symbol: ?foo@@YAHXZ
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
-# CHECK-EMPTY:
-# CHECK-NEXT: error: undefined symbol: ?bar@@YAHXZ
+
+# CHECK: error: undefined symbol: ?bar@@YAHXZ
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f1)
-# CHECK-EMPTY:
-# CHECK-NEXT: error: undefined symbol: ?baz@@YAHXZ
+
+# CHECK: error: undefined symbol: ?baz@@YAHXZ
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f2)
 
         .section        .text,"xr",one_only,main

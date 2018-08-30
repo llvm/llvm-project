@@ -46,9 +46,7 @@
 #define kmp_realloc kmpc_realloc
 #define kmp_free kmpc_free
 
-#if KMP_OS_WINDOWS
 static double frequency = 0.0;
-#endif
 
 // Helper functions.
 static size_t __kmps_init() {

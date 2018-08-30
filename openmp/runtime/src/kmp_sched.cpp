@@ -475,7 +475,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
 
   // compute global trip count
   if (incr == 1) {
@@ -717,7 +717,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
 
   // compute trip count
   if (incr == 1) {

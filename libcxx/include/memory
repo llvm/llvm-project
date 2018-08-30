@@ -1989,10 +1989,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator*() {return *this;}
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator=(const _Tp& __element)
-        {::new(&*__x_) _Tp(__element); return *this;}
+        {::new(_VSTD::addressof(*__x_)) _Tp(__element); return *this;}
 #if _LIBCPP_STD_VER >= 14
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator=(_Tp&& __element)
-        {::new(&*__x_) _Tp(_VSTD::move(__element)); return *this;}
+        {::new(_VSTD::addressof(*__x_)) _Tp(_VSTD::move(__element)); return *this;}
 #endif
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator++() {++__x_; return *this;}
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator  operator++(int)
@@ -3682,7 +3682,7 @@ private:
     virtual void __on_zero_shared_weak() _NOEXCEPT;
 public:
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* get() _NOEXCEPT {return &__data_.second();}
+    _Tp* get() _NOEXCEPT {return _VSTD::addressof(__data_.second());}
 };
 
 template <class _Tp, class _Alloc>
