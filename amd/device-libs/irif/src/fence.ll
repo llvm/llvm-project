@@ -102,4 +102,3 @@ define protected void @__llvm_fence_sc_sys() local_unnamed_addr #0 {
 }
 
 attributes #0 = { alwaysinline norecurse nounwind }
-
