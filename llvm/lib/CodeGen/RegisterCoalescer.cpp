@@ -1960,6 +1960,28 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   // Update regalloc hint.
   TRI->updateRegAllocHint(CP.getSrcReg(), CP.getDstReg(), *MF);
 
+  if (!CP.isPhys()) {
+    // Fix up the case that some subreg was undefined at a use, and thus the
+    // use was not in the live range, but due to merging it has now become
+    // defined.
+    LiveInterval &LI = LIS->getInterval(CP.getDstReg());
+    LLVM_DEBUG(dbgs() << "\tBefore extending subranges: " << LI << "\n");
+    for (auto &S : LI.subranges()) {
+      SmallVector<SlotIndex, 8> Uses;
+      for (auto &MO : MRI->reg_operands(CP.getDstReg())) {
+        if (!MO.isUse() || MO.isUndef() || MO.isDebug())
+          continue;
+        auto OperandMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+        if ((OperandMask & S.LaneMask).none())
+          continue;
+        Uses.push_back(LIS->getInstructionIndex(*MO.getParent()).getRegSlot());
+      }
+      SmallVector<SlotIndex, 8> Undefs;
+      LI.computeSubRangeUndefs(Undefs, S.LaneMask, *MRI, *LIS->getSlotIndexes());
+      LIS->extendToIndices(S, Uses, Undefs);
+    }
+  }
+
   LLVM_DEBUG({
     dbgs() << "\tSuccess: " << printReg(CP.getSrcReg(), TRI, CP.getSrcIdx())
            << " -> " << printReg(CP.getDstReg(), TRI, CP.getDstIdx()) << '\n';
