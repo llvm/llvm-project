@@ -1218,7 +1218,8 @@ void CGOpenMPRuntimeNVPTX::emitSPMDEntryHeader(
   EST.ExitBB = CGF.createBasicBlock(".exit");
 
   // Initialize the OMP state in the runtime; called by all active threads.
-  bool RequiresFullRuntime = !supportsLightweightRuntime(CGF.getContext(), D);
+  bool RequiresFullRuntime = CGM.getLangOpts().OpenMPCUDAForceFullRuntime ||
+                             !supportsLightweightRuntime(CGF.getContext(), D);
   llvm::Value *Args[] = {
       getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
       /*RequiresOMPRuntime=*/

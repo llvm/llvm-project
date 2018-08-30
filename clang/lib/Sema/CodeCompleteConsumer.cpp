@@ -20,8 +20,8 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Sema/Sema.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -624,16 +625,17 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
   return OS.str();
 }
 
-void
-PrintingCodeCompleteConsumer::ProcessOverloadCandidates(Sema &SemaRef,
-                                                        unsigned CurrentArg,
-                                              OverloadCandidate *Candidates,
-                                                     unsigned NumCandidates) {
+void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
+    Sema &SemaRef, unsigned CurrentArg, OverloadCandidate *Candidates,
+    unsigned NumCandidates, SourceLocation OpenParLoc) {
+  OS << "OPENING_PAREN_LOC: ";
+  OpenParLoc.print(OS, SemaRef.getSourceManager());
+  OS << "\n";
+
   for (unsigned I = 0; I != NumCandidates; ++I) {
-    if (CodeCompletionString *CCS
-          = Candidates[I].CreateSignatureString(CurrentArg, SemaRef,
-                                                getAllocator(), CCTUInfo,
-                                                includeBriefComments())) {
+    if (CodeCompletionString *CCS = Candidates[I].CreateSignatureString(
+            CurrentArg, SemaRef, getAllocator(), CCTUInfo,
+            includeBriefComments())) {
       OS << "OVERLOAD: " << getOverloadAsString(*CCS) << "\n";
     }
   }
