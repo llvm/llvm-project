@@ -170,6 +170,8 @@ defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;
 
 defm : X86WriteRes<WriteBSWAP32, [JALU01], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHG,[JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHGRMW,[JALU01, JSAGU, JLAGU], 4, [1, 1, 1], 2>;
 defm : X86WriteRes<WriteXCHG,        [JALU01], 1, [1], 1>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;

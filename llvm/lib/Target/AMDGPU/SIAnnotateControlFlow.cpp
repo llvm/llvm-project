@@ -16,7 +16,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
@@ -52,7 +52,7 @@ using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
 
 class SIAnnotateControlFlow : public FunctionPass {
-  DivergenceAnalysis *DA;
+  LegacyDivergenceAnalysis *DA;
 
   Type *Boolean;
   Type *Void;
@@ -116,7 +116,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<DivergenceAnalysis>();
+    AU.addRequired<LegacyDivergenceAnalysis>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
@@ -127,7 +127,7 @@ public:
 INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
 
@@ -387,7 +387,7 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DA = &getAnalysis<DivergenceAnalysis>();
+  DA = &getAnalysis<LegacyDivergenceAnalysis>();
 
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {

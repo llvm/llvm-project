@@ -1885,19 +1885,15 @@ void PragmaClangAttributeSupport::emitMatchRuleList(raw_ostream &OS) {
 
 bool PragmaClangAttributeSupport::isAttributedSupported(
     const Record &Attribute) {
-  if (Attribute.getValueAsBit("ForcePragmaAttributeSupport"))
-    return true;
+  // If the attribute explicitly specified whether to support #pragma clang
+  // attribute, use that setting.
+  bool Unset;
+  bool SpecifiedResult =
+    Attribute.getValueAsBitOrUnset("PragmaAttributeSupport", Unset);
+  if (!Unset)
+    return SpecifiedResult;
+
   // Opt-out rules:
-  // FIXME: The documentation check should be moved before
-  // the ForcePragmaAttributeSupport check after annotate is documented.
-  // No documentation present.
-  if (Attribute.isValueUnset("Documentation"))
-    return false;
-  std::vector<Record *> Docs = Attribute.getValueAsListOfDefs("Documentation");
-  if (Docs.empty())
-    return false;
-  if (Docs.size() == 1 && Docs[0]->getName() == "Undocumented")
-    return false;
   // An attribute requires delayed parsing (LateParsed is on)
   if (Attribute.getValueAsBit("LateParsed"))
     return false;

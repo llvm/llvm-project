@@ -367,6 +367,18 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
       unsigned RC;
+      bool FirstHalf;
+      const ARMBaseTargetMachine &ATM =
+        static_cast<const ARMBaseTargetMachine &>(TM);
+
+      // 'Q' should correspond to the low order register and 'R' to the high
+      // order register.  Whether this corresponds to the upper or lower half
+      // depends on the endianess mode.
+      if (ExtraCode[0] == 'Q')
+        FirstHalf = ATM.isLittleEndian();
+      else
+        // ExtraCode[0] == 'R'.
+        FirstHalf = !ATM.isLittleEndian();
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
           ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
@@ -376,14 +388,14 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         if (!MO.isReg())
           return true;
         const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-        unsigned Reg = TRI->getSubReg(MO.getReg(), ExtraCode[0] == 'Q' ?
+        unsigned Reg = TRI->getSubReg(MO.getReg(), FirstHalf ?
             ARM::gsub_0 : ARM::gsub_1);
         O << ARMInstPrinter::getRegisterName(Reg);
         return false;
       }
       if (NumVals != 2)
         return true;
-      unsigned RegOp = ExtraCode[0] == 'Q' ? OpNum : OpNum + 1;
+      unsigned RegOp = FirstHalf ? OpNum : OpNum + 1;
       if (RegOp >= MI->getNumOperands())
         return true;
       const MachineOperand &MO = MI->getOperand(RegOp);

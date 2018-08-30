@@ -80,8 +80,18 @@ UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
     // PDB70 record
     const CvRecordPdb70 *pdb70_uuid = nullptr;
     Status error = consumeObject(cv_record, pdb70_uuid);
-    if (!error.Fail())
-      return UUID::fromData(pdb70_uuid, sizeof(*pdb70_uuid));
+    if (!error.Fail()) {
+      auto arch = GetArchitecture();
+      // For Apple targets we only need a 16 byte UUID so that we can match
+      // the UUID in the Module to actual UUIDs from the built binaries. The
+      // "Age" field is zero in breakpad minidump files for Apple targets, so
+      // we restrict the UUID to the "Uuid" field so we have a UUID we can use
+      // to match.
+      if (arch.GetTriple().getVendor() == llvm::Triple::Apple)
+        return UUID::fromData(pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
+      else
+        return UUID::fromData(pdb70_uuid, sizeof(*pdb70_uuid));
+    }
   } else if (cv_signature == CvSignature::ElfBuildId)
     return UUID::fromData(cv_record);
 

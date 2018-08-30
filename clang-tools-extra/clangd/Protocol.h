@@ -828,6 +828,13 @@ struct SignatureHelp {
 
   /// The active parameter of the active signature.
   int activeParameter = 0;
+
+  /// Position of the start of the argument list, including opening paren. e.g.
+  /// foo("first arg",   "second arg",
+  ///    ^-argListStart   ^-cursor
+  /// This is a clangd-specific extension, it is only available via C++ API and
+  /// not currently serialized for the LSP.
+  Position argListStart;
 };
 llvm::json::Value toJSON(const SignatureHelp &);
 

@@ -15,13 +15,15 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
+// CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
 // CHECK: [[LLVM_LINK:"*.llvm-link"]] [[A_BC]] [[B_BC]]

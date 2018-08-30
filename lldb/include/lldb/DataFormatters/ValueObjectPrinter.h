@@ -24,10 +24,6 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/CompilerType.h"
 
-//#include <functional>
-//#include <memory>
-//#include <set>
-
 namespace lldb_private {
 
 class ValueObjectPrinter {

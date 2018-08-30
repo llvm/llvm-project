@@ -3,8 +3,9 @@
 
 define void @test(i32* %loc) {
 ; CHECK-LABEL: @test
-; CHECK-LABEL: exit:
+; CHECK-LABEL: entry:
 ; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 
@@ -21,10 +22,9 @@ exit:
 
 define void @test_multiexit(i32* %loc, i1 %earlycnd) {
 ; CHECK-LABEL: @test_multiexit
-; CHECK-LABEL: exit1:
+; CHECK-LABEL: entry:
 ; CHECK: store i32 0, i32* %loc
-; CHECK-LABEL: exit2:
-; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: loop:
 entry:
   br label %loop
 
@@ -42,6 +42,24 @@ exit1:
   ret void
 exit2:
   ret void
+}
+
+define i32* @false_negative_2use(i32* %loc) {
+; CHECK-LABEL: @false_negative_2use
+; CHECK-LABEL: exit:
+; CHECK: store i32 0, i32* %loc
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 0, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32* %loc
 }
 
 define void @neg_lv_value(i32* %loc) {
@@ -227,4 +245,184 @@ exit:
   ret void
 }
 
+declare void @maythrow() inaccessiblememonly
 
+define void @neg_early_exit(i32* %loc) {
+; CHECK-LABEL: @neg_early_exit
+; CHECK-LABEL: body:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %body]
+  %is_null = icmp eq i32* %loc, null
+  br i1 %is_null, label %exit, label %body
+body:
+  call void @maythrow()
+  store i32 0, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @neg_early_throw(i32* %loc) {
+; CHECK-LABEL: @neg_early_throw
+; CHECK-LABEL: loop:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @maythrow()
+  store i32 0, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_late_throw(i32* %loc) {
+; CHECK-LABEL: @test_late_throw
+; CHECK-LABEL: entry:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: loop:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 0, i32* %loc
+  call void @maythrow()
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; TODO: could validly hoist the store here since we know what value
+; the load must observe.
+define i32 @test_dominated_read(i32* %loc) {
+; CHECK-LABEL: @test_dominated_read
+; CHECK-LABEL: exit:
+; CHECK: store i32 0, i32* %loc
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 0, i32* %loc
+  %reload = load i32, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %reload
+}
+
+; TODO: could validly hoist the store since we already hoisted the load and
+; it's no longer in the loop.
+define i32 @test_dominating_read(i32* %loc) {
+; CHECK-LABEL: @test_dominating_read
+; CHECK-LABEL: exit:
+; CHECK: store i32 0, i32* %loc
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %reload = load i32, i32* %loc
+  store i32 0, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %reload
+}
+
+declare void @readonly() readonly
+
+; TODO: can legally hoist since value read by call is known
+define void @test_dominated_readonly(i32* %loc) {
+; CHECK-LABEL: @test_dominated_readonly
+; CHECK-LABEL: loop:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 0, i32* %loc
+  call void @readonly()
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; While technically possible to hoist the store to %loc, this runs across
+; a funemental limitation of alias sets since both stores and the call are
+; within the same alias set and we can't distinguish them cheaply.
+define void @test_aliasset_fn(i32* %loc, i32* %loc2) {
+; CHECK-LABEL: @test_aliasset_fn
+; CHECK-LABEL: loop:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 0, i32* %loc
+  call void @readonly()
+  store i32 %iv, i32* %loc2
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+; If we can't tell if the value is read before the write, we can't hoist the
+; write over the potential read (since we don't know the value read)
+define void @neg_may_read(i32* %loc, i1 %maybe) {
+; CHECK-LABEL: @neg_may_read
+; CHECK-LABEL: loop:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit:
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %merge]
+  ;; maybe is a placeholder for an unanalyzable condition
+  br i1 %maybe, label %taken, label %merge
+taken:
+  call void @readonly()
+  br label %merge
+merge:
+  store i32 0, i32* %loc
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

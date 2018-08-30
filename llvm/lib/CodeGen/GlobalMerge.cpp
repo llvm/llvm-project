@@ -462,17 +462,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
 
-      // Make sure we use the same alignment AsmPrinter would use. There
-      // currently isn't any helper to compute that, so we compute it
-      // explicitly here.
-      //
-      // getPreferredAlignment will sometimes return an alignment higher
-      // than the explicitly specified alignment; we must ignore that
-      // if the section is explicitly specified, to avoid inserting extra
-      // padding into that section.
+      // Make sure we use the same alignment AsmPrinter would use.
       unsigned Align = DL.getPreferredAlignment(Globals[j]);
-      if (Globals[j]->hasSection() && Globals[j]->getAlignment())
-        Align = Globals[j]->getAlignment();
       unsigned Padding = alignTo(MergedSize, Align) - MergedSize;
       MergedSize += Padding;
       MergedSize += DL.getTypeAllocSize(Ty);
@@ -648,7 +639,7 @@ bool GlobalMerge::doInitialization(Module &M) {
     Type *Ty = GV.getValueType();
     if (DL.getTypeAllocSize(Ty) < MaxOffset) {
       if (TM &&
-          TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSSLocal())
+          TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
       else if (GV.isConstant())
         ConstGlobals[{AddressSpace, Section}].push_back(&GV);

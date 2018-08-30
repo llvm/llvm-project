@@ -291,7 +291,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   Opts.AnalyzerDisplayProgress = Args.hasArg(OPT_analyzer_display_progress);
   Opts.AnalyzeNestedBlocks =
     Args.hasArg(OPT_analyzer_opt_analyze_nested_blocks);
-  Opts.eagerlyAssumeBinOpBifurcation = Args.hasArg(OPT_analyzer_eagerly_assume);
   Opts.AnalyzeSpecificFunction = Args.getLastArgValue(OPT_analyze_function);
   Opts.UnoptimizedCFG = Args.hasArg(OPT_analysis_UnoptimizedCFG);
   Opts.TrimGraph = Args.hasArg(OPT_trim_egraph);
@@ -2678,9 +2677,14 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << Opts.OMPHostIRFile;
   }
 
-  // set CUDA mode for OpenMP target NVPTX if specified in options
+  // Set CUDA mode for OpenMP target NVPTX if specified in options
   Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && T.isNVPTX() &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
+
+  // Set CUDA mode for OpenMP target NVPTX if specified in options
+  Opts.OpenMPCUDAForceFullRuntime =
+      Opts.OpenMPIsDevice && T.isNVPTX() &&
+      Args.hasArg(options::OPT_fopenmp_cuda_force_full_runtime);
 
   // Record whether the __DEPRECATED define was requested.
   Opts.Deprecated = Args.hasFlag(OPT_fdeprecated_macro,

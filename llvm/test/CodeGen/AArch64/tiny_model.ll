@@ -89,9 +89,8 @@ define void @foo3() {
 ; CHECK-LABEL: foo3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, src
-; CHECK-NEXT:    adr x9, ptr
 ; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    ldr x9, ptr
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
@@ -209,9 +208,8 @@ define void @bar3() {
 ; CHECK-LABEL: bar3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    adr x9, lptr
 ; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    ldr x9, lptr
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
@@ -227,9 +225,8 @@ define void @bar3() {
 ; CHECK-PIC-LABEL: bar3:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lsrc
-; CHECK-PIC-NEXT:    adr x9, lptr
 ; CHECK-PIC-NEXT:    ldrb w8, [x8]
-; CHECK-PIC-NEXT:    ldr x9, [x9]
+; CHECK-PIC-NEXT:    ldr x9, lptr
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;
@@ -329,9 +326,8 @@ define void @baz3() {
 ; CHECK-LABEL: baz3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    adr x9, lptr
 ; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    ldr x9, lptr
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
@@ -347,9 +343,8 @@ define void @baz3() {
 ; CHECK-PIC-LABEL: baz3:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lbsrc
-; CHECK-PIC-NEXT:    adr x9, lptr
 ; CHECK-PIC-NEXT:    ldrb w8, [x8]
-; CHECK-PIC-NEXT:    ldr x9, [x9]
+; CHECK-PIC-NEXT:    ldr x9, lptr
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;

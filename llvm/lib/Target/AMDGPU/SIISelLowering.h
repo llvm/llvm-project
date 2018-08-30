@@ -339,7 +339,7 @@ public:
                                      unsigned Depth = 0) const override;
 
   bool isSDNodeSourceOfDivergence(const SDNode *N,
-    FunctionLoweringInfo *FLI, DivergenceAnalysis *DA) const override;
+    FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;

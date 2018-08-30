@@ -113,7 +113,7 @@ class SourceManagerTestCase(TestBase):
         """Test display of source using the SBSourceManager API, using a
         dumb terminal and thus no color support (the default)."""
         use_color = True
-        underline_regex = ansi_underline_surround_regex(r".")
+        underline_regex = ansi_underline_surround_regex(r"printf")
         self.do_display_source_python_api(use_color, underline_regex)
 
     @add_test_categories(['pyapi'])
@@ -132,7 +132,8 @@ class SourceManagerTestCase(TestBase):
         self.do_display_source_python_api(use_color, color_regex, syntax_highlighting)
 
         # Test that we didn't color unrelated identifiers.
-        self.do_display_source_python_api(use_color, r" printf\(", syntax_highlighting)
+        self.do_display_source_python_api(use_color, r" main\(", syntax_highlighting)
+        self.do_display_source_python_api(use_color, r"\);", syntax_highlighting)
 
     def test_move_and_then_display_source(self):
         """Test that target.source-map settings work by moving main.c to hidden/main.c."""

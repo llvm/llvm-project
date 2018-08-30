@@ -89,9 +89,21 @@ def HI22 : SDNodeXForm<imm, [{
                                    MVT::i32);
 }]>;
 
+// Return the complement of a HI22 immediate value.
+def HI22_not : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(~(unsigned)N->getZExtValue() >> 10, SDLoc(N),
+                                   MVT::i32);
+}]>;
+
 def SETHIimm : PatLeaf<(imm), [{
   return isShiftedUInt<22, 10>(N->getZExtValue());
 }], HI22>;
+
+// The N->hasOneUse() prevents the immediate from being instantiated in both
+// normal and complement form.
+def SETHIimm_not : PatLeaf<(i32 imm), [{
+  return N->hasOneUse() && isShiftedUInt<22, 10>(~(unsigned)N->getZExtValue());
+}], HI22_not>;
 
 // Addressing modes.
 def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
@@ -679,6 +691,12 @@ def XNORrr  : F3_1<2, 0b000111,
 def XNORri  : F3_2<2, 0b000111,
                    (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "xnor $rs1, $simm13, $rd", []>;
+
+def : Pat<(and IntRegs:$rs1, SETHIimm_not:$rs2),
+          (ANDNrr i32:$rs1, (SETHIi SETHIimm_not:$rs2))>;
+
+def : Pat<(or IntRegs:$rs1, SETHIimm_not:$rs2),
+          (ORNrr i32:$rs1,  (SETHIi SETHIimm_not:$rs2))>;
 
 let Defs = [ICC] in {
   defm ANDCC  : F3_12np<"andcc",  0b010001>;

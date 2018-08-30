@@ -15,6 +15,7 @@
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_mapping.h"
+#include "hwasan_thread.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -60,6 +61,21 @@ struct HeapAddressDescription {
     GetStackTraceFromId(alloc_stack_id).Print();
   }
 };
+
+bool FindHeapAllocation(HeapAllocationsRingBuffer *rb,
+                        uptr tagged_addr,
+                        HeapAllocationRecord *har) {
+  if (!rb) return false;
+  for (uptr i = 0, size = rb->size(); i < size; i++) {
+    auto h = (*rb)[i];
+    if (h.tagged_addr <= tagged_addr &&
+        h.tagged_addr + h.requested_size > tagged_addr) {
+      *har = h;
+      return true;
+    }
+  }
+  return false;
+}
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
                                HeapAddressDescription *description) {
@@ -131,25 +147,25 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
   }
 }
 
-void ReportInvalidFree(StackTrace *stack, uptr addr) {
+void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   ScopedErrorReportLock l;
-  uptr address = GetAddressFromPointer(addr);
-  tag_t ptr_tag = GetTagFromPointer(addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
+  uptr untagged_addr = UntagAddr(tagged_addr);
+  tag_t ptr_tag = GetTagFromPointer(tagged_addr);
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   tag_t mem_tag = *tag_ptr;
   Decorator d;
   Printf("%s", d.Error());
   uptr pc = stack->size ? stack->trace[0] : 0;
   const char *bug_type = "invalid-free";
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
-         address, pc);
+         untagged_addr, pc);
   Printf("%s", d.Access());
   Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
   Printf("%s", d.Default());
 
   stack->Print();
 
-  PrintAddressDescription(address, 0);
+  PrintAddressDescription(untagged_addr, 0);
 
   PrintTagsAroundAddr(tag_ptr);
 
@@ -157,30 +173,45 @@ void ReportInvalidFree(StackTrace *stack, uptr addr) {
   Die();
 }
 
-void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
+void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
                        bool is_store) {
   ScopedErrorReportLock l;
 
   Decorator d;
   Printf("%s", d.Error());
-  uptr address = GetAddressFromPointer(addr);
+  uptr untagged_addr = UntagAddr(tagged_addr);
   // TODO: when possible, try to print heap-use-after-free, etc.
   const char *bug_type = "tag-mismatch";
   uptr pc = stack->size ? stack->trace[0] : 0;
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
-         address, pc);
+         untagged_addr, pc);
 
-  tag_t ptr_tag = GetTagFromPointer(addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MEM_TO_SHADOW(address));
+  tag_t ptr_tag = GetTagFromPointer(tagged_addr);
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   tag_t mem_tag = *tag_ptr;
   Printf("%s", d.Access());
   Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem)\n",
-         is_store ? "WRITE" : "READ", access_size, address, ptr_tag, mem_tag);
+         is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
+         mem_tag);
   Printf("%s", d.Default());
 
   stack->Print();
 
-  PrintAddressDescription(address, access_size);
+  PrintAddressDescription(untagged_addr, access_size);
+
+  // Temporary functionality; to be folded into PrintAddressDescription.
+  // TODOs:
+  // * implement ThreadRegistry
+  // * check all threads, not just the current one.
+  // * remove reduntant fields from the allocator metadata
+  // * use the allocations found in the ring buffer for the main report.
+  HeapAllocationRecord har;
+  Thread *t = GetCurrentThread();
+  if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har))
+    Printf("Address found in the ring buffer: %p %u %u\n", har.tagged_addr,
+           har.free_context_id, har.requested_size);
+  Printf("Current thread: tid: %d\n", t->context()->tid);
+
 
   PrintTagsAroundAddr(tag_ptr);
 

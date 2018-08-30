@@ -192,7 +192,8 @@ public:
                                        lldb::StreamFileSP &out,
                                        lldb::StreamFileSP &err);
 
-  void PushIOHandler(const lldb::IOHandlerSP &reader_sp);
+  void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
+                     bool cancel_top_handler = true);
 
   bool PopIOHandler(const lldb::IOHandlerSP &reader_sp);
 
@@ -276,9 +277,9 @@ public:
 
   lldb::StopShowColumn GetStopShowColumn() const;
 
-  const FormatEntity::Entry *GetStopShowColumnAnsiPrefix() const;
+  llvm::StringRef GetStopShowColumnAnsiPrefix() const;
 
-  const FormatEntity::Entry *GetStopShowColumnAnsiSuffix() const;
+  llvm::StringRef GetStopShowColumnAnsiSuffix() const;
 
   uint32_t GetStopSourceLineCount(bool before) const;
 

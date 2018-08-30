@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
+#include "llvm/Analysis/OrderedInstructions.h"
 using namespace llvm;
 
 bool OrderedInstructions::localDominates(const Instruction *InstA,

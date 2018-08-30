@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_ORDEREDINSTRUCTIONS_H
-#define LLVM_TRANSFORMS_UTILS_ORDEREDINSTRUCTIONS_H
+#ifndef LLVM_ANALYSIS_ORDEREDINSTRUCTIONS_H
+#define LLVM_ANALYSIS_ORDEREDINSTRUCTIONS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
@@ -62,4 +62,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_ORDEREDINSTRUCTIONS_H
+#endif // LLVM_ANALYSIS_ORDEREDINSTRUCTIONS_H

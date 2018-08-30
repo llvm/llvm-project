@@ -29,7 +29,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -87,7 +87,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AMDGPUArgumentUsageInfo>();
     AU.addRequired<AMDGPUPerfHintAnalysis>();
-    AU.addRequired<DivergenceAnalysis>();
+    AU.addRequired<LegacyDivergenceAnalysis>();
     SelectionDAGISel::getAnalysisUsage(AU);
   }
 
@@ -253,7 +253,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 
@@ -1408,7 +1408,11 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                      SDValue &Offset, bool &Imm) const {
   SDLoc SL(Addr);
 
-  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+  // A 32-bit (address + offset) should not cause unsigned 32-bit integer
+  // wraparound, because s_load instructions perform the addition in 64 bits.
+  if ((Addr.getValueType() != MVT::i32 ||
+       Addr->getFlags().hasNoUnsignedWrap()) &&
+      CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
 

@@ -2853,10 +2853,10 @@ def am_ldrlit : Operand<iPTR> {
   let OperandType = "OPERAND_PCREL";
 }
 
-let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
-class LoadLiteral<bits<2> opc, bit V, RegisterOperand regtype, string asm>
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0, AddedComplexity = 20 in
+class LoadLiteral<bits<2> opc, bit V, RegisterOperand regtype, string asm, list<dag> pat>
     : I<(outs regtype:$Rt), (ins am_ldrlit:$label),
-        asm, "\t$Rt, $label", "", []>,
+        asm, "\t$Rt, $label", "", pat>,
       Sched<[WriteLD]> {
   bits<5> Rt;
   bits<19> label;

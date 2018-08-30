@@ -837,6 +837,78 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
 
   EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
   EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+
+  // Identity with undef elts.
+  ShuffleVectorInst *Id1 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C3, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, CU, CU}));
+  EXPECT_TRUE(Id1->isIdentity());
+  EXPECT_FALSE(Id1->isIdentityWithPadding());
+  EXPECT_FALSE(Id1->isIdentityWithExtract());
+  delete Id1;
+
+  // Result has less elements than operands.
+  ShuffleVectorInst *Id2 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2}));
+  EXPECT_FALSE(Id2->isIdentity());
+  EXPECT_FALSE(Id2->isIdentityWithPadding());
+  EXPECT_TRUE(Id2->isIdentityWithExtract());
+  delete Id2;
+
+  // Result has less elements than operands; choose from Op1.
+  ShuffleVectorInst *Id3 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C4, CU, C6}));
+  EXPECT_FALSE(Id3->isIdentity());
+  EXPECT_FALSE(Id3->isIdentityWithPadding());
+  EXPECT_TRUE(Id3->isIdentityWithExtract());
+  delete Id3;
+
+  // Result has less elements than operands; choose from Op0 and Op1 is not identity.
+  ShuffleVectorInst *Id4 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C4, C1, C6}));
+  EXPECT_FALSE(Id4->isIdentity());
+  EXPECT_FALSE(Id4->isIdentityWithPadding());
+  EXPECT_FALSE(Id4->isIdentityWithExtract());
+  delete Id4;
+
+  // Result has more elements than operands, and extra elements are undef.
+  ShuffleVectorInst *Id5 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({CU, C1, C2, C3, CU, CU}));
+  EXPECT_FALSE(Id5->isIdentity());
+  EXPECT_TRUE(Id5->isIdentityWithPadding());
+  EXPECT_FALSE(Id5->isIdentityWithExtract());
+  delete Id5;
+
+  // Result has more elements than operands, and extra elements are undef; choose from Op1.
+  ShuffleVectorInst *Id6 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C4, C5, C6, CU, CU, CU}));
+  EXPECT_FALSE(Id6->isIdentity());
+  EXPECT_TRUE(Id6->isIdentityWithPadding());
+  EXPECT_FALSE(Id6->isIdentityWithExtract());
+  delete Id6;
+  
+  // Result has more elements than operands, but extra elements are not undef.
+  ShuffleVectorInst *Id7 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3, CU, C1}));
+  EXPECT_FALSE(Id7->isIdentity());
+  EXPECT_FALSE(Id7->isIdentityWithPadding());
+  EXPECT_FALSE(Id7->isIdentityWithExtract());
+  delete Id7;
+  
+  // Result has more elements than operands; choose from Op0 and Op1 is not identity.
+  ShuffleVectorInst *Id8 = new ShuffleVectorInst(ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C0, C1, C2, C3}),
+                                                 ConstantVector::get({C4, CU, C2, C3, CU, CU}));
+  EXPECT_FALSE(Id8->isIdentity());
+  EXPECT_FALSE(Id8->isIdentityWithPadding());
+  EXPECT_FALSE(Id8->isIdentityWithExtract());
+  delete Id8;
 }
 
 TEST(InstructionsTest, SkipDebug) {

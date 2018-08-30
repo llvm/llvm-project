@@ -3505,3 +3505,38 @@ static and thread duration variable with this attribute is equivalent to
 invoking clang with -fno-c++-static-destructors.
   }];
 }
+
+def GnuInlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``gnu_inline`` changes the meaning of ``extern inline`` to use GNU inline
+semantics, meaning:
+
+* If any declaration that is declared ``inline`` is not declared ``extern``,
+then the ``inline`` keyword is just a hint. In particular, an out-of-line
+definition is still emitted for a function with external linkage, even if all
+call sites are inlined, unlike in C99 and C++ inline semantics.
+
+* If all declarations that are declared ``inline`` are also declared
+``extern``, then the function body is present only for inlining and no
+out-of-line version is emitted.
+
+Some important consequences: ``static inline`` emits an out-of-line
+version if needed, a plain ``inline`` definition emits an out-of-line version
+always, and an ``extern inline`` definition (in a header) followed by a
+(non-``extern``) ``inline`` declaration in a source file emits an out-of-line
+version of the function in that source file but provides the function body for
+inlining to all includers of the header.
+
+Either ``__GNUC_GNU_INLINE__`` (GNU inline semantics) or
+``__GNUC_STDC_INLINE__`` (C99 semantics) will be defined (they are mutually
+exclusive). If ``__GNUC_STDC_INLINE__`` is defined, then the ``gnu_inline``
+function attribute can be used to get GNU inline semantics on a per function
+basis. If ``__GNUC_GNU_INLINE__`` is defined, then the translation unit is
+already being compiled with GNU inline semantics as the implied default. It is
+unspecified which macro is defined in a C++ compilation.
+
+GNU inline semantics are the default behavior with ``-std=gnu89``,
+``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+  }];
+}

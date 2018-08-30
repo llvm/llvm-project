@@ -1380,12 +1380,20 @@ deleteDeadBlocksFromLoop(Loop &L,
                          DominatorTree &DT, LoopInfo &LI) {
   // Find all the dead blocks, and remove them from their successors.
   SmallVector<BasicBlock *, 16> DeadBlocks;
-  for (BasicBlock *BB : llvm::concat<BasicBlock *const>(L.blocks(), ExitBlocks))
+  for (BasicBlock *BB : ExitBlocks)
     if (!DT.isReachableFromEntry(BB)) {
       for (BasicBlock *SuccBB : successors(BB))
         SuccBB->removePredecessor(BB);
       DeadBlocks.push_back(BB);
     }
+
+  for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop())
+    for (BasicBlock *BB : ParentL->blocks())
+      if (!DT.isReachableFromEntry(BB)) {
+        for (BasicBlock *SuccBB : successors(BB))
+          SuccBB->removePredecessor(BB);
+        DeadBlocks.push_back(BB);
+      }
 
   SmallPtrSet<BasicBlock *, 16> DeadBlockSet(DeadBlocks.begin(),
                                              DeadBlocks.end());
@@ -1431,7 +1439,7 @@ deleteDeadBlocksFromLoop(Loop &L,
 
   // Actually delete the blocks now that they've been fully unhooked from the
   // IR.
-  for (auto *BB : DeadBlocks)
+  for (auto *BB : DeadBlockSet)
     BB->eraseFromParent();
 }
 

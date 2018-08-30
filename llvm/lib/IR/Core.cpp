@@ -1065,6 +1065,54 @@ unsigned LLVMGetMDNodeNumOperands(LLVMValueRef V) {
   return cast<MDNode>(MD->getMetadata())->getNumOperands();
 }
 
+LLVMNamedMDNodeRef LLVMGetFirstNamedMetadata(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::named_metadata_iterator I = Mod->named_metadata_begin();
+  if (I == Mod->named_metadata_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMNamedMDNodeRef LLVMGetLastNamedMetadata(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::named_metadata_iterator I = Mod->named_metadata_end();
+  if (I == Mod->named_metadata_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMNamedMDNodeRef LLVMGetNextNamedMetadata(LLVMNamedMDNodeRef NMD) {
+  NamedMDNode *NamedNode = unwrap<NamedMDNode>(NMD);
+  Module::named_metadata_iterator I(NamedNode);
+  if (++I == NamedNode->getParent()->named_metadata_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMNamedMDNodeRef LLVMGetPreviousNamedMetadata(LLVMNamedMDNodeRef NMD) {
+  NamedMDNode *NamedNode = unwrap<NamedMDNode>(NMD);
+  Module::named_metadata_iterator I(NamedNode);
+  if (I == NamedNode->getParent()->named_metadata_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMNamedMDNodeRef LLVMGetNamedMetadata(LLVMModuleRef M,
+                                        const char *Name, size_t NameLen) {
+  return wrap(unwrap(M)->getNamedMetadata(StringRef(Name, NameLen)));
+}
+
+LLVMNamedMDNodeRef LLVMGetOrInsertNamedMetadata(LLVMModuleRef M,
+                                                const char *Name, size_t NameLen) {
+  return wrap(unwrap(M)->getOrInsertNamedMetadata({Name, NameLen}));
+}
+
+const char *LLVMGetNamedMetadataName(LLVMNamedMDNodeRef NMD, size_t *NameLen) {
+  NamedMDNode *NamedNode = unwrap<NamedMDNode>(NMD);
+  *NameLen = NamedNode->getName().size();
+  return NamedNode->getName().data();
+}
+
 void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest) {
   auto *MD = cast<MetadataAsValue>(unwrap(V));
   if (auto *MDV = dyn_cast<ValueAsMetadata>(MD->getMetadata())) {

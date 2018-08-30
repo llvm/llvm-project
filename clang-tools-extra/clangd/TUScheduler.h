@@ -119,19 +119,28 @@ public:
   void runWithAST(llvm::StringRef Name, PathRef File,
                   Callback<InputsAndAST> Action);
 
-  /// Schedule an async read of the Preamble.
-  /// The preamble may be stale, generated from an older version of the file.
-  /// Reading from locations in the preamble may cause the files to be re-read.
-  /// This gives callers two options:
-  /// - validate that the preamble is still valid, and only use it in this case
-  /// - accept that preamble contents may be outdated, and try to avoid reading
-  ///   source code from headers.
+  /// Controls whether preamble reads wait for the preamble to be up-to-date.
+  enum PreambleConsistency {
+    /// The preamble is generated from the current version of the file.
+    /// If the content was recently updated, we will wait until we have a
+    /// preamble that reflects that update.
+    /// This is the slowest option, and may be delayed by other tasks.
+    Consistent,
+    /// The preamble may be generated from an older version of the file.
+    /// Reading from locations in the preamble may cause files to be re-read.
+    /// This gives callers two options:
+    /// - validate that the preamble is still valid, and only use it if so
+    /// - accept that the preamble contents may be outdated, and try to avoid
+    ///   reading source code from headers.
+    /// This is the fastest option, usually a preamble is available immediately.
+    Stale,
+  };
+  /// Schedule an async read of the preamble.
   /// If there's no preamble yet (because the file was just opened), we'll wait
-  /// for it to build. The preamble may still be null if it fails to build or is
-  /// empty.
-  /// If an error occurs during processing, it is forwarded to the \p Action
-  /// callback.
+  /// for it to build. The result may be null if it fails to build or is empty.
+  /// If an error occurs, it is forwarded to the \p Action callback.
   void runWithPreamble(llvm::StringRef Name, PathRef File,
+                       PreambleConsistency Consistency,
                        Callback<InputsAndPreamble> Action);
 
   /// Wait until there are no scheduled or running tasks.

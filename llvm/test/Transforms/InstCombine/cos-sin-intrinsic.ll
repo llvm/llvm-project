@@ -92,14 +92,14 @@ define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
   ret <2 x float> %cos
 }
 
-; TODO: Negate is canonicalized after sin.
+; Negate is canonicalized after sin.
 
 declare <2 x float> @llvm.sin.v2f32(<2 x float>)
 
 define <2 x float> @fneg_sin(<2 x float> %x){
 ; CHECK-LABEL: @fneg_sin(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -107,12 +107,12 @@ define <2 x float> @fneg_sin(<2 x float> %x){
   ret <2 x float> %r
 }
 
-; TODO: FMF are not required, but they should propagate.
+; FMF are not required, but they should propagate.
 
 define <2 x float> @fneg_sin_fmf(<2 x float> %x){
 ; CHECK-LABEL: @fneg_sin_fmf(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub fast <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan arcp afn <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub fast <2 x float> <float -0.0, float -0.0>, %x

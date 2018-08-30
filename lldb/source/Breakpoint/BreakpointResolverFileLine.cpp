@@ -28,11 +28,12 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 BreakpointResolverFileLine::BreakpointResolverFileLine(
     Breakpoint *bkpt, const FileSpec &file_spec, uint32_t line_no,
-    lldb::addr_t offset, bool check_inlines, bool skip_prologue,
-    bool exact_match)
+    uint32_t column, lldb::addr_t offset, bool check_inlines,
+    bool skip_prologue, bool exact_match)
     : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver, offset),
-      m_file_spec(file_spec), m_line_number(line_no), m_inlines(check_inlines),
-      m_skip_prologue(skip_prologue), m_exact_match(exact_match) {}
+      m_file_spec(file_spec), m_line_number(line_no), m_column(column),
+      m_inlines(check_inlines), m_skip_prologue(skip_prologue),
+      m_exact_match(exact_match) {}
 
 BreakpointResolverFileLine::~BreakpointResolverFileLine() {}
 
@@ -41,6 +42,7 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
     Status &error) {
   llvm::StringRef filename;
   uint32_t line_no;
+  uint32_t column;
   bool check_inlines;
   bool skip_prologue;
   bool exact_match;
@@ -60,6 +62,13 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
   if (!success) {
     error.SetErrorString("BRFL::CFSD: Couldn't find line number entry.");
     return nullptr;
+  }
+
+  success =
+      options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Column), column);
+  if (!success) {
+    // Backwards compatibility.
+    column = 0;
   }
 
   success = options_dict.GetValueForKeyAsBoolean(GetKey(OptionNames::Inlines),
@@ -85,8 +94,8 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
 
   FileSpec file_spec(filename, false);
 
-  return new BreakpointResolverFileLine(bkpt, file_spec, line_no, offset,
-                                        check_inlines, skip_prologue,
+  return new BreakpointResolverFileLine(bkpt, file_spec, line_no, column,
+                                        offset, check_inlines, skip_prologue,
                                         exact_match);
 }
 
@@ -99,6 +108,8 @@ BreakpointResolverFileLine::SerializeToStructuredData() {
                                  m_file_spec.GetPath());
   options_dict_sp->AddIntegerItem(GetKey(OptionNames::LineNumber),
                                   m_line_number);
+  options_dict_sp->AddIntegerItem(GetKey(OptionNames::Column),
+                                  m_column);
   options_dict_sp->AddBooleanItem(GetKey(OptionNames::Inlines), m_inlines);
   options_dict_sp->AddBooleanItem(GetKey(OptionNames::SkipPrologue),
                                   m_skip_prologue);
@@ -240,7 +251,8 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
   s.Printf("for %s:%d ", m_file_spec.GetFilename().AsCString("<Unknown>"),
            m_line_number);
 
-  SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString());
+  SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString(),
+                     m_line_number, m_column);
 
   return Searcher::eCallbackReturnContinue;
 }
@@ -250,8 +262,11 @@ Searcher::Depth BreakpointResolverFileLine::GetDepth() {
 }
 
 void BreakpointResolverFileLine::GetDescription(Stream *s) {
-  s->Printf("file = '%s', line = %u, exact_match = %d",
-            m_file_spec.GetPath().c_str(), m_line_number, m_exact_match);
+  s->Printf("file = '%s', line = %u, ", m_file_spec.GetPath().c_str(),
+            m_line_number);
+  if (m_column)
+    s->Printf("column = %u, ", m_column);
+  s->Printf("exact_match = %d", m_exact_match);
 }
 
 void BreakpointResolverFileLine::Dump(Stream *s) const {}
@@ -259,7 +274,7 @@ void BreakpointResolverFileLine::Dump(Stream *s) const {}
 lldb::BreakpointResolverSP
 BreakpointResolverFileLine::CopyForBreakpoint(Breakpoint &breakpoint) {
   lldb::BreakpointResolverSP ret_sp(new BreakpointResolverFileLine(
-      &breakpoint, m_file_spec, m_line_number, m_offset, m_inlines,
+      &breakpoint, m_file_spec, m_line_number, m_column, m_offset, m_inlines,
       m_skip_prologue, m_exact_match));
 
   return ret_sp;

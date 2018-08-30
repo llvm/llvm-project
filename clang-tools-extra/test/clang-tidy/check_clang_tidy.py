@@ -98,6 +98,9 @@ def main():
     sys.exit('%s, %s or %s not found in the input' % (check_fixes_prefix,
              check_messages_prefix, check_notes_prefix) )
 
+  if has_check_notes and has_check_messages:
+    sys.exit('Please use either CHECK-NOTES or CHECK-MESSAGES but not both')
+
   # Remove the contents of the CHECK lines to avoid CHECKs matching on
   # themselves.  We need to keep the comments to preserve line numbers while
   # avoiding empty lines which could potentially trigger formatting-related

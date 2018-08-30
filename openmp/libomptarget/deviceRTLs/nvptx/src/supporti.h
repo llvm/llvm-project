@@ -101,7 +101,8 @@ INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode,
   int rc;
 
   if (isRuntimeUninitialized) {
-    assert(isSPMDExecutionMode && "Uninitialized runtime with non-SPMD mode.");
+    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
+            "Uninitialized runtime with non-SPMD mode.");
     // For level 2 parallelism all parallel regions are executed sequentially.
     if (omptarget_nvptx_simpleThreadPrivateContext
             ->InL2OrHigherParallelRegion())
@@ -122,7 +123,8 @@ INLINE int GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
   int rc;
 
   if (isRuntimeUninitialized) {
-    assert(isSPMDExecutionMode && "Uninitialized runtime with non-SPMD mode.");
+    ASSERT0(LT_FUSSY, isSPMDExecutionMode,
+            "Uninitialized runtime with non-SPMD mode.");
     // For level 2 parallelism all parallel regions are executed sequentially.
     if (omptarget_nvptx_simpleThreadPrivateContext
             ->InL2OrHigherParallelRegion())

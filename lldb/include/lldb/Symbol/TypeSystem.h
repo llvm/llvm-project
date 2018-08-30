@@ -347,7 +347,7 @@ public:
                                 const char *name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) = 0;
 
-  virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) = 0;
+  virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type);
 
   virtual lldb::TemplateArgumentKind
   GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx);

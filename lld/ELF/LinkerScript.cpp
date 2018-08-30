@@ -209,6 +209,7 @@ static void declareSymbol(SymbolAssignment *Cmd) {
                          STT_NOTYPE, 0, 0, nullptr);
   Cmd->Sym = cast<Defined>(Sym);
   Cmd->Provide = false;
+  Sym->ScriptDefined = true;
 }
 
 // This method is used to handle INSERT AFTER statement. Here we rebuild

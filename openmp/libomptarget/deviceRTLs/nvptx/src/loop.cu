@@ -156,7 +156,7 @@ public:
         // perform chunk adjustment
         chunk = (span + chunk - 1) & ~(chunk - 1);
 
-        assert(ub >= lb && "ub must be >= lb.");
+        ASSERT0(LT_FUSSY, ub >= lb, "ub must be >= lb.");
         T oldUb = ub;
         ForStaticChunk(lastiter, lb, ub, stride, chunk, entityId,
                        numberOfEntities);
@@ -241,8 +241,8 @@ public:
   INLINE static void dispatch_init(kmp_Indent *loc, int32_t threadId,
                                    kmp_sched_t schedule, T lb, T ub, ST st,
                                    ST chunk) {
-    assert(isRuntimeInitialized() &&
-           "Expected non-SPMD mode + initialized runtime.");
+    ASSERT0(LT_FUSSY, isRuntimeInitialized(),
+            "Expected non-SPMD mode + initialized runtime.");
     int tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = currTaskDescr->ThreadsInTeam();
@@ -351,7 +351,7 @@ public:
       ForStaticChunk(
           lastiter, lb, ub, stride, chunk,
           GetOmpThreadId(tid, isSPMDMode(), isRuntimeUninitialized()), tnum);
-      assert(ub >= lb && "ub must be >= lb.");
+      ASSERT0(LT_FUSSY, ub >= lb, "ub must be >= lb.");
       if (ub > oldUb)
         ub = oldUb;
       // save computed params
@@ -454,8 +454,8 @@ public:
   // in a warp cannot make independent progress.
   NOINLINE static int dispatch_next(int32_t *plast, T *plower, T *pupper,
                                     ST *pstride) {
-    assert(isRuntimeInitialized() &&
-           "Expected non-SPMD mode + initialized runtime.");
+    ASSERT0(LT_FUSSY, isRuntimeInitialized(),
+            "Expected non-SPMD mode + initialized runtime.");
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
@@ -795,8 +795,8 @@ INLINE void syncWorkersInGenericMode(uint32_t NumThreads) {
 EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Indent *loc, int32_t gtid,
                                                   int32_t varNum, void *array) {
   PRINT0(LD_IO, "call to __kmpc_reduce_conditional_lastprivate(...)\n");
-  assert(isRuntimeInitialized() &&
-         "Expected non-SPMD mode + initialized runtime.");
+  ASSERT0(LT_FUSSY, isRuntimeInitialized(),
+          "Expected non-SPMD mode + initialized runtime.");
 
   omptarget_nvptx_TeamDescr &teamDescr = getMyTeamDescriptor();
   int tid = GetOmpThreadId(GetLogicalThreadIdInBlock(), isSPMDMode(),

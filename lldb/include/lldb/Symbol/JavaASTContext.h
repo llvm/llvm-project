@@ -201,8 +201,6 @@ public:
 
   unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) override;
 
-  size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) override;
-
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,

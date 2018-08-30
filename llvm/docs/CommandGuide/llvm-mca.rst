@@ -479,13 +479,13 @@ sections.
   Dynamic Dispatch Stall Cycles:
   RAT     - Register unavailable:                      0
   RCU     - Retire tokens unavailable:                 0
-  SCHEDQ  - Scheduler full:                            272
+  SCHEDQ  - Scheduler full:                            272  (44.6%)
   LQ      - Load queue full:                           0
   SQ      - Store queue full:                          0
   GROUP   - Static restrictions on the dispatch group: 0
 
 
-  Dispatch Logic - number of cycles where we saw N instructions dispatched:
+  Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
   [# dispatched], [# cycles]
    0,              24  (3.9%)
    1,              272  (44.6%)
@@ -533,12 +533,11 @@ sections.
 
 If we look at the *Dynamic Dispatch Stall Cycles* table, we see the counter for
 SCHEDQ reports 272 cycles.  This counter is incremented every time the dispatch
-logic is unable to dispatch a group of two instructions because the scheduler's
-queue is full.
+logic is unable to dispatch a full group because the scheduler's queue is full.
 
 Looking at the *Dispatch Logic* table, we see that the pipeline was only able to
-dispatch two instructions 51.5% of the time.  The dispatch group was limited to
-one instruction 44.6% of the cycles, which corresponds to 272 cycles.  The
+dispatch two micro opcodes 51.5% of the time.  The dispatch group was limited to
+one micro opcode 44.6% of the cycles, which corresponds to 272 cycles.  The
 dispatch statistics are displayed by either using the command option
 ``-all-stats`` or ``-dispatch-stats``.
 
