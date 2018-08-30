@@ -58,6 +58,11 @@ static cl::list<std::string> CommandFiles("f",
                                           cl::value_desc("file"),
                                           cl::cat(ClangQueryCategory));
 
+static cl::opt<std::string> PreloadFile(
+    "preload",
+    cl::desc("Preload commands from file and start interactive mode"),
+    cl::value_desc("file"), cl::cat(ClangQueryCategory));
+
 bool runCommandsInFile(const char *ExeName, std::string const &FileName,
                        QuerySession &QS) {
   std::ifstream Input(FileName.c_str());
@@ -86,6 +91,12 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+  if ((!Commands.empty() || !CommandFiles.empty()) && !PreloadFile.empty()) {
+    llvm::errs() << argv[0]
+                 << ": cannot specify both -c or -f with --preload\n";
+    return 1;
+  }
+
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
@@ -106,6 +117,10 @@ int main(int argc, const char **argv) {
         return 1;
     }
   } else {
+    if (!PreloadFile.empty()) {
+      if (runCommandsInFile(argv[0], PreloadFile, QS))
+        return 1;
+    }
     LineEditor LE("clang-query");
     LE.setListCompleter([&QS](StringRef Line, size_t Pos) {
       return QueryParser::complete(Line, Pos, QS);
