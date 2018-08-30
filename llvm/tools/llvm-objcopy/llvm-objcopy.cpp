@@ -748,7 +748,8 @@ static void restoreDateOnFile(StringRef Filename,
                               const sys::fs::file_status &Stat) {
   int FD;
 
-  if (auto EC = sys::fs::openFileForWrite(Filename, FD))
+  if (auto EC =
+          sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
     reportError(Filename, EC);
 
   if (auto EC = sys::fs::setLastAccessAndModificationTime(

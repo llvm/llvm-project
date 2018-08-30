@@ -52,8 +52,6 @@ struct FuzzingOptions {
   bool PrintNewCovPcs = false;
   int PrintNewCovFuncs = 0;
   bool PrintFinalStats = false;
-  bool PrintMutationStats = false;
-  bool UseWeightedMutations = false;
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;
   bool PrintUnstableStats = false;

@@ -129,15 +129,8 @@
 
 #if LIBFUZZER_WINDOWS
 #define ATTRIBUTE_INTERFACE __declspec(dllexport)
-// This is used for __sancov_lowest_stack which is needed for
-// -fsanitize-coverage=stack-depth. That feature is not yet available on
-// Windows, so make the symbol static to avoid linking errors.
-#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC \
-  __attribute__((tls_model("initial-exec"))) thread_local static
 #else
 #define ATTRIBUTE_INTERFACE __attribute__((visibility("default")))
-#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC \
-  ATTRIBUTE_INTERFACE __attribute__((tls_model("initial-exec"))) thread_local
 #endif
 
 namespace fuzzer {

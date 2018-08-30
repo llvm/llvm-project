@@ -3989,6 +3989,9 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
           CGM.getDiags().Report(DiagID);
           continue;
         }
+        // The vaiable has no definition - no need to add the entry.
+        if (CE->getVarSize().isZero())
+          continue;
         break;
       }
       case OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryLink:
@@ -8108,7 +8111,12 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
     case OMPDeclareTargetDeclAttr::MT_To:
       Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
       VarName = CGM.getMangledName(VD);
-      VarSize = CGM.getContext().getTypeSizeInChars(VD->getType());
+      if (VD->hasDefinition(CGM.getContext()) != VarDecl::DeclarationOnly) {
+        VarSize = CGM.getContext().getTypeSizeInChars(VD->getType());
+        assert(!VarSize.isZero() && "Expected non-zero size of the variable");
+      } else {
+        VarSize = CharUnits::Zero();
+      }
       Linkage = CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
       // Temp solution to prevent optimizations of the internal variables.
       if (CGM.getLangOpts().OpenMPIsDevice && !VD->isExternallyVisible()) {

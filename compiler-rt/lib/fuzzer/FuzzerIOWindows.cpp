@@ -72,26 +72,6 @@ bool IsFile(const std::string &Path) {
   return IsFile(Path, Att);
 }
 
-std::string Basename(const std::string &Path) {
-  size_t Pos = Path.find_last_of("/\\");
-  if (Pos == std::string::npos) return Path;
-  assert(Pos < Path.size());
-  return Path.substr(Pos + 1);
-}
-
-size_t FileSize(const std::string &Path) {
-  WIN32_FILE_ATTRIBUTE_DATA attr;
-  if (!GetFileAttributesExA(Path.c_str(), GetFileExInfoStandard, &attr)) {
-    Printf("GetFileAttributesExA() failed for \"%s\" (Error code: %lu).\n",
-           Path.c_str(), GetLastError());
-    return 0;
-  }
-  ULARGE_INTEGER size;
-  size.HighPart = attr.nFileSizeHigh;
-  size.LowPart = attr.nFileSizeLow;
-  return size.QuadPart;
-}
-
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);

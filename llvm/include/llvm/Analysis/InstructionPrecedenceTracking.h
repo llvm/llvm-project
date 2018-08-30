@@ -18,11 +18,11 @@
 // a content of some tracked block is changed.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
-#define LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
+#ifndef LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
+#define LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 
 #include "llvm/IR/Dominators.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
+#include "llvm/Analysis/OrderedInstructions.h"
 
 namespace llvm {
 
@@ -105,4 +105,4 @@ public:
 
 } // llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_INSTRUCTIONPRECEDENCETRACKING_H
+#endif // LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H

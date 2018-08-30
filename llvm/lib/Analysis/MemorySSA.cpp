@@ -253,7 +253,7 @@ struct ClobberAlias {
 
 // Return a pair of {IsClobber (bool), AR (AliasResult)}. It relies on AR being
 // ignored if IsClobber = false.
-static ClobberAlias instructionClobbersQuery(MemoryDef *MD,
+static ClobberAlias instructionClobbersQuery(const MemoryDef *MD,
                                              const MemoryLocation &UseLoc,
                                              const Instruction *UseInst,
                                              AliasAnalysis &AA) {
@@ -377,11 +377,11 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
 /// \param Start     The MemoryAccess that we want to walk from.
 /// \param ClobberAt A clobber for Start.
 /// \param StartLoc  The MemoryLocation for Start.
-/// \param MSSA      The MemorySSA isntance that Start and ClobberAt belong to.
+/// \param MSSA      The MemorySSA instance that Start and ClobberAt belong to.
 /// \param Query     The UpwardsMemoryQuery we used for our search.
 /// \param AA        The AliasAnalysis we used for our search.
-static void LLVM_ATTRIBUTE_UNUSED
-checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
+static void
+checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
                    const MemoryLocation &StartLoc, const MemorySSA &MSSA,
                    const UpwardsMemoryQuery &Query, AliasAnalysis &AA) {
   assert(MSSA.dominates(ClobberAt, Start) && "Clobber doesn't dominate start?");
@@ -393,21 +393,21 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
   }
 
   bool FoundClobber = false;
-  DenseSet<MemoryAccessPair> VisitedPhis;
-  SmallVector<MemoryAccessPair, 8> Worklist;
+  DenseSet<ConstMemoryAccessPair> VisitedPhis;
+  SmallVector<ConstMemoryAccessPair, 8> Worklist;
   Worklist.emplace_back(Start, StartLoc);
   // Walk all paths from Start to ClobberAt, while looking for clobbers. If one
   // is found, complain.
   while (!Worklist.empty()) {
-    MemoryAccessPair MAP = Worklist.pop_back_val();
+    auto MAP = Worklist.pop_back_val();
     // All we care about is that nothing from Start to ClobberAt clobbers Start.
     // We learn nothing from revisiting nodes.
     if (!VisitedPhis.insert(MAP).second)
       continue;
 
-    for (MemoryAccess *MA : def_chain(MAP.first)) {
+    for (const auto *MA : def_chain(MAP.first)) {
       if (MA == ClobberAt) {
-        if (auto *MD = dyn_cast<MemoryDef>(MA)) {
+        if (const auto *MD = dyn_cast<MemoryDef>(MA)) {
           // instructionClobbersQuery isn't essentially free, so don't use `|=`,
           // since it won't let us short-circuit.
           //
@@ -429,16 +429,28 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
       // We should never hit liveOnEntry, unless it's the clobber.
       assert(!MSSA.isLiveOnEntryDef(MA) && "Hit liveOnEntry before clobber?");
 
-      if (auto *MD = dyn_cast<MemoryDef>(MA)) {
-        (void)MD;
+      if (const auto *MD = dyn_cast<MemoryDef>(MA)) {
+        // If Start is a Def, skip self.
+        if (MD == Start)
+          continue;
+
         assert(!instructionClobbersQuery(MD, MAP.second, Query.Inst, AA)
                     .IsClobber &&
                "Found clobber before reaching ClobberAt!");
         continue;
       }
 
+      if (const auto *MU = dyn_cast<MemoryUse>(MA)) {
+        (void)MU;
+        assert (MU == Start &&
+                "Can only find use in def chain if Start is a use");
+        continue;
+      }
+
       assert(isa<MemoryPhi>(MA));
-      Worklist.append(upward_defs_begin({MA, MAP.second}), upward_defs_end());
+      Worklist.append(
+          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second}),
+          upward_defs_end());
     }
   }
 
@@ -1668,6 +1680,34 @@ void MemorySSA::verifyMemorySSA() const {
   verifyOrdering(F);
   verifyDominationNumbers(F);
   Walker->verify(this);
+  verifyClobberSanity(F);
+}
+
+/// Check sanity of the clobbering instruction for access MA.
+void MemorySSA::checkClobberSanityAccess(const MemoryAccess *MA) const {
+  if (const auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
+    if (!MUD->isOptimized())
+      return;
+    auto *I = MUD->getMemoryInst();
+    auto Loc = MemoryLocation::getOrNone(I);
+    if (Loc == None)
+      return;
+    auto *Clobber = MUD->getOptimized();
+    UpwardsMemoryQuery Q(I, MUD);
+    checkClobberSanity(MUD, Clobber, *Loc, *this, Q, *AA);
+  }
+}
+
+void MemorySSA::verifyClobberSanity(const Function &F) const {
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  for (const BasicBlock &BB : F) {
+    const AccessList *Accesses = getBlockAccesses(&BB);
+    if (!Accesses)
+      continue;
+    for (const MemoryAccess &MA : *Accesses)
+      checkClobberSanityAccess(&MA);
+  }
+#endif
 }
 
 /// Verify that all of the blocks we believe to have valid domination numbers

@@ -68,7 +68,7 @@ void GetSizedFilesFromDir(const std::string &Dir, Vector<SizedFile> *V);
 
 char GetSeparator();
 // Similar to the basename utility: returns the file name w/o the dir prefix.
-std::string Basename(const std::string &Path);
+std::string Basename(const std::string &Path, char Separator = GetSeparator());
 
 FILE* OpenFile(int Fd, const char *Mode);
 

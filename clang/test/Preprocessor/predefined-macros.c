@@ -183,9 +183,11 @@
 // CHECK-HIP: #define __HIP__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device \
+// RUN:   -aux-triple x86_64-unknown-linux -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV
 // CHECK-HIP-DEV-NOT: #define __CUDA_ARCH__
 // CHECK-HIP-DEV: #define __HIPCC__ 1
 // CHECK-HIP-DEV: #define __HIP_DEVICE_COMPILE__ 1
 // CHECK-HIP-DEV: #define __HIP__ 1
+// CHECK_HIP-DEV: #define __linux__ 1
+// CHECK_HIP-DEV: #define __gnu_linux__ 1

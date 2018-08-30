@@ -554,13 +554,20 @@ int baz(int f, double &a) {
   // CHECK: ret void
 
   // CHECK: define i32 [[BAZ]](i32 [[F:%.*]], double* dereferenceable{{.*}})
+  // CHECK: [[STACK:%.+]] = alloca [[GLOBAL_ST:%.+]],
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
   // CHECK: [[GTID_ADDR:%.+]] = alloca i32,
   // CHECK: store i32 0, i32* [[ZERO_ADDR]]
+  // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
+  // CHECK: [[IS_SPMD:%.+]] = icmp ne i8 [[RES]], 0
+  // CHECK: br i1 [[IS_SPMD]], label
+  // CHECK: br label
   // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 4, i16 0)
-  // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
-  // CHECK: [[F_PTR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[REC_ADDR]], i32 0, i32 0
+  // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to [[GLOBAL_ST]]*
+  // CHECK: br label
+  // CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ [[STACK]], {{.+}} ], [ [[REC_ADDR]], {{.+}} ]
+  // CHECK: [[F_PTR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[ITEMS]], i32 0, i32 0
   // CHECK: store i32 %{{.+}}, i32* [[F_PTR]],
 
   // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
@@ -595,7 +602,12 @@ int baz(int f, double &a) {
   // CHECK: br label
 
   // CHECK: [[RES:%.+]] = load i32, i32* [[F_PTR]],
-  // CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[PTR]])
+  // CHECK: store i32 [[RES]], i32* [[RET:%.+]],
+  // CHECK: br i1 [[IS_SPMD]], label
+  // CHECK: [[BC:%.+]] = bitcast [[GLOBAL_ST]]* [[ITEMS]] to i8*
+  // CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[BC]])
+  // CHECK: br label
+  // CHECK: [[RES:%.+]] = load i32, i32* [[RET]],
   // CHECK: ret i32 [[RES]]
 
 

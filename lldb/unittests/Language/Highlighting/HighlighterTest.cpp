@@ -99,31 +99,49 @@ TEST_F(HighlighterTest, FallbackHighlighter) {
   style.semicolons.Set("<", ">");
 
   const char *code = "program Hello;";
-  std::string output = h.Highlight(style, code);
+  std::string output = h.Highlight(style, code, llvm::Optional<size_t>());
 
   EXPECT_STREQ(output.c_str(), code);
+}
+
+static std::string
+highlightDefault(llvm::StringRef code, HighlightStyle style,
+                 llvm::Optional<size_t> cursor = llvm::Optional<size_t>()) {
+  HighlighterManager mgr;
+  return mgr.getDefaultHighlighter().Highlight(style, code, cursor);
 }
 
 TEST_F(HighlighterTest, DefaultHighlighter) {
-  HighlighterManager mgr;
-  const Highlighter &h = mgr.getHighlighterFor(lldb::eLanguageTypeC, "main.c");
+  const char *code = "int my_main() { return 22; } \n";
 
   HighlightStyle style;
-
-  const char *code = "int my_main() { return 22; } \n";
-  std::string output = h.Highlight(style, code);
-
-  EXPECT_STREQ(output.c_str(), code);
+  EXPECT_EQ(code, highlightDefault(code, style));
 }
 
+TEST_F(HighlighterTest, DefaultHighlighterWithCursor) {
+  HighlightStyle style;
+  style.selected.Set("<c>", "</c>");
+  EXPECT_EQ("<c>a</c> bc", highlightDefault("a bc", style, 0));
+  EXPECT_EQ("a<c> </c>bc", highlightDefault("a bc", style, 1));
+  EXPECT_EQ("a <c>b</c>c", highlightDefault("a bc", style, 2));
+  EXPECT_EQ("a b<c>c</c>", highlightDefault("a bc", style, 3));
+}
+
+TEST_F(HighlighterTest, DefaultHighlighterWithCursorOutOfBounds) {
+  HighlightStyle style;
+  style.selected.Set("<c>", "</c>");
+  EXPECT_EQ("a bc", highlightDefault("a bc", style, 4));
+}
 //------------------------------------------------------------------------------
 // Tests highlighting with the Clang highlighter.
 //------------------------------------------------------------------------------
 
-static std::string highlightC(llvm::StringRef code, HighlightStyle style) {
+static std::string
+highlightC(llvm::StringRef code, HighlightStyle style,
+           llvm::Optional<size_t> cursor = llvm::Optional<size_t>()) {
   HighlighterManager mgr;
   const Highlighter &h = mgr.getHighlighterFor(lldb::eLanguageTypeC, "main.c");
-  return h.Highlight(style, code);
+  return h.Highlight(style, code, cursor);
 }
 
 TEST_F(HighlighterTest, ClangEmptyInput) {
@@ -218,4 +236,68 @@ TEST_F(HighlighterTest, ClangIdentifiers) {
 
   EXPECT_EQ(" <id>foo</id> <id>c</id> = <id>bar</id>(); return 1;",
             highlightC(" foo c = bar(); return 1;", s));
+}
+
+TEST_F(HighlighterTest, ClangCursorPos) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+
+  EXPECT_EQ("<c> </c>foo c = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 0));
+  EXPECT_EQ(" <c>foo</c> c = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 1));
+  EXPECT_EQ(" <c>foo</c> c = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 2));
+  EXPECT_EQ(" <c>foo</c> c = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 3));
+  EXPECT_EQ(" foo<c> </c>c = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 4));
+  EXPECT_EQ(" foo <c>c</c> = bar(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 5));
+}
+
+TEST_F(HighlighterTest, ClangCursorPosEndOfLine) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+
+  EXPECT_EQ("f", highlightC("f", s, 1));
+}
+
+TEST_F(HighlighterTest, ClangCursorOutOfBounds) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+  EXPECT_EQ("f", highlightC("f", s, 2));
+  EXPECT_EQ("f", highlightC("f", s, 3));
+  EXPECT_EQ("f", highlightC("f", s, 4));
+}
+
+TEST_F(HighlighterTest, ClangCursorPosBeforeOtherToken) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ("<c> </c><id>foo</id> <id>c</id> = <id>bar</id>(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 0));
+}
+
+TEST_F(HighlighterTest, ClangCursorPosAfterOtherToken) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ(" <id>foo</id><c> </c><id>c</id> = <id>bar</id>(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 4));
+}
+
+TEST_F(HighlighterTest, ClangCursorPosInOtherToken) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 1));
+  EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 2));
+  EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
+            highlightC(" foo c = bar(); return 1;", s, 3));
 }

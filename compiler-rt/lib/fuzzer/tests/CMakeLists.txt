@@ -17,8 +17,6 @@ list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lc++ -lpthread)
-elseif(WIN32)
-  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lstdc++)
 else()
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lstdc++ -lpthread)
 endif()

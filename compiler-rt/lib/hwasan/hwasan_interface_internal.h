@@ -1,4 +1,4 @@
-//===-- hwasan_interface_internal.h -------------------------------*- C++ -*-===//
+//===-- hwasan_interface_internal.h -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

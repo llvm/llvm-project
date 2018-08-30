@@ -34,13 +34,6 @@ TEST(Fuzzer, Basename) {
   EXPECT_EQ(Basename("/bar"), "bar");
   EXPECT_EQ(Basename("foo/x"), "x");
   EXPECT_EQ(Basename("foo/"), "");
-#if LIBFUZZER_WINDOWS
-  EXPECT_EQ(Basename("foo\\bar"), "bar");
-  EXPECT_EQ(Basename("foo\\bar/baz"), "baz");
-  EXPECT_EQ(Basename("\\bar"), "bar");
-  EXPECT_EQ(Basename("foo\\x"), "x");
-  EXPECT_EQ(Basename("foo\\"), "");
-#endif
 }
 
 TEST(Fuzzer, CrossOver) {

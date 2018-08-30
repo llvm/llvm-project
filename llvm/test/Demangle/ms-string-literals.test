@@ -762,3 +762,12 @@
 
 ??_C@_0CA@KFPHPCC@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA?$AA?$AA?$AA?$AA@
 ; CHECK: const char32_t * {U"0123456"}
+
+; There are too many bytes encoded in this string literal (it should encode a max of 32 bytes)
+; but some buggy compilers will incorrectly generate this, so we need to be able to demangle
+; both the correct and incorrect versions.
+??_C@_0CG@HJGBPLNO@l?$AAo?$AAo?$AAk?$AAA?$AAh?$AAe?$AAa?$AAd?$AAH?$AAa?$AAr?$AAd?$AAB?$AAr?$AAe?$AAa?$AAk?$AA?$AA?$AA@
+; CHECK: const char16_t * {u"lookAheadHardBreak"}
+
+??_C@_0CG@HJGBPLNO@l?$AAo?$AAo?$AAk?$AAA?$AAh?$AAe?$AAa?$AAd?$AAH?$AAa?$AAr?$AAd?$AAB?$AAr?$AAe?$AA@
+; CHECK: const char16_t * {u"lookAheadHardBre"...}

@@ -6,6 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare void @has_i32_arg(i32)
+declare void @has_struct_arg({i32})
 declare i32 @has_i32_ret()
 declare void @vararg(...)
 declare void @plain(i32)
@@ -16,9 +17,10 @@ declare void @foo2()
 declare void @foo3()
 
 ; CHECK-LABEL: test:
-; CHECK-NEXT: call        .Lhas_i32_arg_bitcast@FUNCTION{{$}}
-; CHECK-NEXT: call        .Lhas_i32_arg_bitcast@FUNCTION{{$}}
+; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
+; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_ret_bitcast@FUNCTION{{$}}
+; CHECK-NEXT: i32.call     $drop=, has_i32_ret@FUNCTION
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0
 ; CHECK-NEXT: call        .Lfoo0_bitcast@FUNCTION, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, 0
@@ -36,6 +38,7 @@ entry:
   call void bitcast (void (i32)* @has_i32_arg to void ()*)()
   call void bitcast (void (i32)* @has_i32_arg to void ()*)()
   call void bitcast (i32 ()* @has_i32_ret to void ()*)()
+  call i32 bitcast (i32 ()* @has_i32_ret to i32 ()*)()
   call void bitcast (void ()* @foo0 to void (i32)*)(i32 0)
   %p = bitcast void ()* @foo0 to void (i32)*
   call void %p(i32 0)
@@ -48,6 +51,30 @@ entry:
   call void @foo1()
   call void @foo3()
 
+  ret void
+}
+
+; CHECK-LABEL: test_structs:
+; CHECK: call     .Lhas_i32_arg_bitcast.1@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
+; CHECK: call     .Lhas_i32_arg_bitcast@FUNCTION, $0, $pop2
+; CHECK: call     .Lhas_struct_arg_bitcast@FUNCTION{{$}}
+define void @test_structs() {
+entry:
+  call void bitcast (void (i32)* @has_i32_arg to void (i32, {i32})*)(i32 5, {i32} {i32 6})
+  call {i32, i64} bitcast (void (i32)* @has_i32_arg to {i32, i64} (i32)*)(i32 7)
+  call void bitcast (void ({i32})* @has_struct_arg to void ()*)()
+  ret void
+}
+
+; CHECK-LABEL: test_structs_unhandled:
+; CHECK: call    has_struct_arg@FUNCTION, $pop{{[0-9]+$}}
+; CHECK: call    has_struct_arg@FUNCTION, $pop{{[0-9]+$}}
+; CHECK: call    has_i32_ret@FUNCTION, $pop{{[0-9]+$}}
+define void @test_structs_unhandled() {
+entry:
+  call void @has_struct_arg({i32} {i32 3})
+  call void bitcast (void ({i32})* @has_struct_arg to void ({i64})*)({i64} {i64 4})
+  call {i32, i32} bitcast (i32 ()* @has_i32_ret to {i32, i32} ()*)()
   ret void
 }
 
@@ -113,7 +140,7 @@ define void @test_argument() {
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, call_func@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, has_i32_arg@FUNCTION{{$}}
 ; CHECK-NEXT: call        "__invoke_void_i32()*"@FUNCTION, $pop[[L3]], $pop[[L2]]{{$}}
-; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast@FUNCTION{{$}}
+; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
 ; CHECK-NEXT: call        __invoke_void@FUNCTION, $pop[[L4]]{{$}}
 declare i32 @personality(...)
 define void @test_invoke() personality i32 (...)* @personality {
@@ -139,6 +166,16 @@ end:
 }
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast:
+; CHECK-NEXT: .param      i32, i32
+; CHECK-NEXT: call        has_i32_arg@FUNCTION, $1{{$}}
+; CHECK-NEXT: end_function
+
+; CHECK-LABEL: .Lhas_i32_arg_bitcast.1:
+; CHECK-NEXT: .param      i32, i32
+; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
+; CHECK-NEXT: end_function
+
+; CHECK-LABEL: .Lhas_i32_arg_bitcast.2:
 ; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
 ; CHECK-NEXT: end_function
 

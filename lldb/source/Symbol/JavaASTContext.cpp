@@ -878,11 +878,6 @@ JavaASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
   return 0;
 }
 
-size_t
-JavaASTContext::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
-  return 0;
-}
-
 uint32_t JavaASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
   if (JavaObjectType *obj =
           llvm::dyn_cast<JavaObjectType>(static_cast<JavaType *>(type))) {

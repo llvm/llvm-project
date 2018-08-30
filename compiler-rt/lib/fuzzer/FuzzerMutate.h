@@ -93,29 +93,10 @@ public:
 
   Random &GetRand() { return Rand; }
 
-  /// Records tally of mutations resulting in new coverage, for usefulness
-  /// metric.
-  void RecordUsefulMutations();
-
-  /// Outputs usefulness stats on command line if option is enabled.
-  void PrintMutationStats();
-
-  /// Recalculates mutation stats based on latest run data.
-  void UpdateMutationStats();
-
-  /// Sets weights based on mutation performance during fuzzer run.
-  void UpdateDistribution();
-
-  /// Returns the index of a mutation based on how useful it has been.
-  /// Favors mutations with higher usefulness ratios but can return any index.
-  size_t WeightedIndex();
-
  private:
   struct Mutator {
     size_t (MutationDispatcher::*Fn)(uint8_t *Data, size_t Size, size_t Max);
     const char *Name;
-    uint64_t UsefulCount;
-    uint64_t TotalCount;
   };
 
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
@@ -154,7 +135,6 @@ public:
   Dictionary PersistentAutoDictionary;
 
   Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
-  Vector<Mutator *> CurrentMutatorSequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
@@ -169,10 +149,7 @@ public:
 
   Vector<Mutator> Mutators;
   Vector<Mutator> DefaultMutators;
-
-  // Used to weight mutations based on usefulness.
-  Vector<double> Stats;
-  std::discrete_distribution<size_t> Distribution;
+  Vector<Mutator> CurrentMutatorSequence;
 };
 
 }  // namespace fuzzer

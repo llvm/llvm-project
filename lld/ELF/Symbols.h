@@ -164,7 +164,8 @@ protected:
       : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
         Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
         IsInIplt(false), IsInIgot(false), IsPreemptible(false),
-        Used(!Config->GcSections), NeedsTocRestore(false) {}
+        Used(!Config->GcSections), NeedsTocRestore(false),
+        ScriptDefined(false) {}
 
 public:
   // True the symbol should point to its PLT entry.
@@ -186,6 +187,9 @@ public:
   // True if a call to this symbol needs to be followed by a restore of the
   // PPC64 toc pointer.
   unsigned NeedsTocRestore : 1;
+
+  // True if this symbol is defined by a linker script.
+  unsigned ScriptDefined : 1;
 
   // The Type field may also have this value. It means that we have not yet seen
   // a non-Lazy symbol with this name, so we don't know what its type is. The
@@ -376,6 +380,7 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   S->ExportDynamic = Sym.ExportDynamic;
   S->CanInline = Sym.CanInline;
   S->Traced = Sym.Traced;
+  S->ScriptDefined = Sym.ScriptDefined;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
