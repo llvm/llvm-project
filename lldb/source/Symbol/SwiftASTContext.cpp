@@ -1803,6 +1803,13 @@ bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
         log->Printf("%p: SwiftASTContext::SetTriple('%s') setting to '%s'%s",
                     this, triple_cstr, triple.c_str(),
                     m_target_wp.lock() ? " (target)" : "");
+
+      if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
+        // This case triggers an llvm_unreachable() in the Swift compiler.
+        if (log)
+          log->Printf("Cannot initialize Swift with an unknown OS");
+        return false;
+      }
       m_compiler_invocation_ap->setTargetTriple(triple);
 
       // Every time the triple is changed the LangOpts must be
