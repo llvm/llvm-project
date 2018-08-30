@@ -223,9 +223,15 @@ void DynamicStructorIdentifierNode::output(OutputStream &OS,
   else
     OS << "`dynamic initializer for ";
 
-  OS << "'";
-  Name->output(OS, Flags);
-  OS << "''";
+  if (Variable) {
+    OS << "`";
+    Variable->output(OS, Flags);
+    OS << "''";
+  } else {
+    OS << "'";
+    Name->output(OS, Flags);
+    OS << "''";
+  }
 }
 
 void NamedIdentifierNode::output(OutputStream &OS, OutputFlags Flags) const {

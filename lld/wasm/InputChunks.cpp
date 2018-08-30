@@ -25,7 +25,9 @@ using namespace lld::wasm;
 
 static StringRef ReloctTypeToString(uint8_t RelocType) {
   switch (RelocType) {
-#define WASM_RELOC(NAME, REL) case REL: return #NAME;
+#define WASM_RELOC(NAME, REL)                                                  \
+  case REL:                                                                    \
+    return #NAME;
 #include "llvm/BinaryFormat/WasmRelocs.def"
 #undef WASM_RELOC
   }
@@ -257,7 +259,8 @@ void InputFunction::writeTo(uint8_t *Buf) const {
     return InputChunk::writeTo(Buf);
 
   Buf += OutputOffset;
-  uint8_t *Orig = Buf; (void)Orig;
+  uint8_t *Orig = Buf;
+  (void)Orig;
 
   const uint8_t *SecStart = File->CodeSection->Content.data();
   const uint8_t *FuncStart = SecStart + getInputSectionOffset();

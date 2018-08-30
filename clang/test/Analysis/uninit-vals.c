@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -fblocks -verify -analyzer-output=text %s
 
 struct FPRec {
   void (*my_func)(int * x);  
@@ -13,30 +13,34 @@ int f1_a(struct FPRec* foo) {
 }
 
 int f1_b() {
-  int x;
+  int x; // expected-note{{'x' declared without an initial value}}
   return bar(x)+1;  // expected-warning{{1st function call argument is an uninitialized value}}
+                    // expected-note@-1{{1st function call argument is an uninitialized value}}
 }
 
 int f2() {
   
-  int x;
+  int x; // expected-note{{'x' declared without an initial value}}
   
   if (x+1)  // expected-warning{{The left operand of '+' is a garbage value}}
+            // expected-note@-1{{The left operand of '+' is a garbage value}}
     return 1;
     
   return 2;  
 }
 
 int f2_b() {
-  int x;
+  int x; // expected-note{{'x' declared without an initial value}}
   
   return ((1+x)+2+((x))) + 1 ? 1 : 2; // expected-warning{{The right operand of '+' is a garbage value}}
+                                      // expected-note@-1{{The right operand of '+' is a garbage value}}
 }
 
 int f3(void) {
-  int i;
+  int i; // expected-note{{'i' declared without an initial value}}
   int *p = &i;
   if (*p > 0) // expected-warning{{The left operand of '>' is a garbage value}}
+              // expected-note@-1{{The left operand of '>' is a garbage value}}
     return 0;
   else
     return 1;
@@ -59,14 +63,17 @@ int f5(void) {
 
 void f6(int x) {
   int a[20];
-  if (x == 25) {}
+  if (x == 25) {} // expected-note{{Assuming 'x' is equal to 25}}
+                  // expected-note@-1{{Taking true branch}}
   if (a[x] == 123) {} // expected-warning{{The left operand of '==' is a garbage value due to array index out of bounds}}
+                      // expected-note@-1{{The left operand of '==' is a garbage value due to array index out of bounds}}
 }
 
 int ret_uninit() {
-  int i;
+  int i; // expected-note{{'i' declared without an initial value}}
   int *p = &i;
   return *p;  // expected-warning{{Undefined or garbage value returned to caller}}
+              // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
 
 // <rdar://problem/6451816>
@@ -141,6 +148,9 @@ typedef void (*RetVoidFuncType)();
 int test_radar12278788_FP() {
   RetVoidFuncType f = foo_radar12278788_fp;
   return ((RetIntFuncType)f)(); //expected-warning {{Undefined or garbage value returned to caller}}
+                                //expected-note@-1 {{Undefined or garbage value returned to caller}}
+                                //expected-note@-2 {{Calling 'foo_radar12278788_fp'}}
+                                //expected-note@-3 {{Returning from 'foo_radar12278788_fp'}}
 }
 
 void rdar13665798() {
@@ -150,8 +160,40 @@ void rdar13665798() {
   ^void() {
     return foo_radar12278788(); // no-warning
   }();
-  ^int() {
+  ^int() { // expected-note{{Calling anonymous block}}
     RetVoidFuncType f = foo_radar12278788_fp;
     return ((RetIntFuncType)f)(); //expected-warning {{Undefined or garbage value returned to caller}}
+                                  //expected-note@-1 {{Undefined or garbage value returned to caller}}
+                                  //expected-note@-2 {{Calling 'foo_radar12278788_fp'}}
+                                  //expected-note@-3 {{Returning from 'foo_radar12278788_fp'}}
   }();
+}
+
+struct Point {
+  int x, y;
+};
+
+struct Point getHalfPoint() {
+  struct Point p;
+  p.x = 0;
+  return p;
+}
+
+void use(struct Point p); 
+
+void testUseHalfPoint() {
+  struct Point p = getHalfPoint(); // expected-note{{Calling 'getHalfPoint'}}
+                                   // expected-note@-1{{Returning from 'getHalfPoint'}}
+                                   // expected-note@-2{{'p' initialized here}}
+  use(p); // expected-warning{{uninitialized}}
+          // expected-note@-1{{uninitialized}}
+}
+
+void testUseHalfPoint2() {
+  struct Point p;
+  p = getHalfPoint(); // expected-note{{Calling 'getHalfPoint'}}
+                      // expected-note@-1{{Returning from 'getHalfPoint'}}
+                      // expected-note@-2{{Value assigned to 'p'}}
+  use(p); // expected-warning{{uninitialized}}
+          // expected-note@-1{{uninitialized}}
 }

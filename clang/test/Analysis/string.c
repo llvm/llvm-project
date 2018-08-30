@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify %s
-// RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify %s
-// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=alpha.security.taint,core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify %s
-// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DVARIANT -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DUSE_BUILTINS -DVARIANT -analyzer-checker=alpha.security.taint,core,unix.cstring,unix.Malloc,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DSUPPRESS_OUT_OF_BOUND -analyzer-checker=core,unix.cstring,unix.Malloc,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,debug.ExprInspection -analyzer-store=region -Wno-null-dereference -verify -analyzer-config eagerly-assume=false %s
 
 //===----------------------------------------------------------------------===
 // Declarations

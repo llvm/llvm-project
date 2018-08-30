@@ -1210,14 +1210,31 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
     LibFunc LibFn;
 
     Function *CalleeFn = BaseFn->getCalledFunction();
-    if (CalleeFn && TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
-        (LibFn == LibFunc_exp || LibFn == LibFunc_exp2) && TLI->has(LibFn)) {
+    if (CalleeFn &&
+        TLI->getLibFunc(CalleeFn->getName(), LibFn) && TLI->has(LibFn)) {
+      StringRef ExpName;
+      Intrinsic::ID ID;
       Value *ExpFn;
+
+      switch (LibFn) {
+      default:
+        return nullptr;
+      case LibFunc_expf:  case LibFunc_exp:  case LibFunc_expl:
+        ExpName = TLI->getName(LibFunc_exp);
+        ID = Intrinsic::exp;
+        break;
+      case LibFunc_exp2f: case LibFunc_exp2: case LibFunc_exp2l:
+        ExpName = TLI->getName(LibFunc_exp2);
+        ID = Intrinsic::exp2;
+        break;
+      }
 
       // Create new exp{,2}() with the product as its argument.
       Value *FMul = B.CreateFMul(BaseFn->getArgOperand(0), Expo, "mul");
-      ExpFn = emitUnaryFloatFnCall(FMul, CalleeFn->getName(), B,
-                                   BaseFn->getAttributes());
+      ExpFn = BaseFn->doesNotAccessMemory()
+              ? B.CreateCall(Intrinsic::getDeclaration(Mod, ID, Ty),
+                             FMul, ExpName)
+              : emitUnaryFloatFnCall(FMul, ExpName, B, BaseFn->getAttributes());
 
       // Since the new exp{,2}() is different from the original one, dead code
       // elimination cannot be trusted to remove it, since it may have side

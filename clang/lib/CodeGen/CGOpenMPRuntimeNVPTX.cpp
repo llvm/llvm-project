@@ -672,11 +672,19 @@ static bool hasParallelIfNumThreadsClause(ASTContext &Ctx,
   return false;
 }
 
+/// Checks if the directive is the distribute clause with the lastprivate
+/// clauses. This construct does not support SPMD execution mode.
+static bool hasDistributeWithLastprivateClauses(const OMPExecutableDirective &D) {
+  return isOpenMPDistributeDirective(D.getDirectiveKind()) &&
+         D.hasClausesOfKind<OMPLastprivateClause>();
+}
+
 /// Check for inner (nested) SPMD construct, if any
 static bool hasNestedSPMDDirective(ASTContext &Ctx,
                                    const OMPExecutableDirective &D) {
   const auto *CS = D.getInnermostCapturedStmt();
-  const auto *Body = CS->getCapturedStmt()->IgnoreContainers();
+  const auto *Body =
+      CS->getCapturedStmt()->IgnoreContainers(/*IgnoreCaptured=*/true);
   const Stmt *ChildStmt = getSingleCompoundChild(Body);
 
   if (const auto *NestedDir = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
@@ -684,57 +692,33 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     switch (D.getDirectiveKind()) {
     case OMPD_target:
       if (isOpenMPParallelDirective(DKind) &&
-          !hasParallelIfNumThreadsClause(Ctx, *NestedDir))
+          !hasParallelIfNumThreadsClause(Ctx, *NestedDir) &&
+          !hasDistributeWithLastprivateClauses(*NestedDir))
         return true;
-      if (DKind == OMPD_teams || DKind == OMPD_teams_distribute) {
-        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
+      if (DKind == OMPD_teams) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
         if (!Body)
           return false;
         ChildStmt = getSingleCompoundChild(Body);
         if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
           if (isOpenMPParallelDirective(DKind) &&
-              !hasParallelIfNumThreadsClause(Ctx, *NND))
+              !hasParallelIfNumThreadsClause(Ctx, *NND) &&
+              !hasDistributeWithLastprivateClauses(*NND))
             return true;
-          if (DKind == OMPD_distribute) {
-            Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
-            if (!Body)
-              return false;
-            ChildStmt = getSingleCompoundChild(Body);
-            if (!ChildStmt)
-              return false;
-            if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
-              DKind = NND->getDirectiveKind();
-              return isOpenMPParallelDirective(DKind) &&
-                     !hasParallelIfNumThreadsClause(Ctx, *NND);
-            }
-          }
         }
       }
       return false;
     case OMPD_target_teams:
-      if (isOpenMPParallelDirective(DKind) &&
-          !hasParallelIfNumThreadsClause(Ctx, *NestedDir))
-        return true;
-      if (DKind == OMPD_distribute) {
-        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
-        if (!Body)
-          return false;
-        ChildStmt = getSingleCompoundChild(Body);
-        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
-          DKind = NND->getDirectiveKind();
-          return isOpenMPParallelDirective(DKind) &&
-                 !hasParallelIfNumThreadsClause(Ctx, *NND);
-        }
-      }
-      return false;
-    case OMPD_target_teams_distribute:
       return isOpenMPParallelDirective(DKind) &&
-             !hasParallelIfNumThreadsClause(Ctx, *NestedDir);
+             !hasParallelIfNumThreadsClause(Ctx, *NestedDir) &&
+             !hasDistributeWithLastprivateClauses(*NestedDir);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
@@ -794,15 +778,239 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   switch (DirectiveKind) {
   case OMPD_target:
   case OMPD_target_teams:
-  case OMPD_target_teams_distribute:
     return hasNestedSPMDDirective(Ctx, D);
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
+    return !hasParallelIfNumThreadsClause(Ctx, D);
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
-    return !hasParallelIfNumThreadsClause(Ctx, D);
+    // Distribute with lastprivates requires non-SPMD execution mode.
+    return !hasParallelIfNumThreadsClause(Ctx, D) &&
+           !hasDistributeWithLastprivateClauses(D);
   case OMPD_target_simd:
+  case OMPD_target_teams_distribute:
+  case OMPD_target_teams_distribute_simd:
+    return false;
+  case OMPD_parallel:
+  case OMPD_for:
+  case OMPD_parallel_for:
+  case OMPD_parallel_sections:
+  case OMPD_for_simd:
+  case OMPD_parallel_for_simd:
+  case OMPD_cancel:
+  case OMPD_cancellation_point:
+  case OMPD_ordered:
+  case OMPD_threadprivate:
+  case OMPD_task:
+  case OMPD_simd:
+  case OMPD_sections:
+  case OMPD_section:
+  case OMPD_single:
+  case OMPD_master:
+  case OMPD_critical:
+  case OMPD_taskyield:
+  case OMPD_barrier:
+  case OMPD_taskwait:
+  case OMPD_taskgroup:
+  case OMPD_atomic:
+  case OMPD_flush:
+  case OMPD_teams:
+  case OMPD_target_data:
+  case OMPD_target_exit_data:
+  case OMPD_target_enter_data:
+  case OMPD_distribute:
+  case OMPD_distribute_simd:
+  case OMPD_distribute_parallel_for:
+  case OMPD_distribute_parallel_for_simd:
+  case OMPD_teams_distribute:
+  case OMPD_teams_distribute_simd:
+  case OMPD_teams_distribute_parallel_for:
+  case OMPD_teams_distribute_parallel_for_simd:
+  case OMPD_target_update:
+  case OMPD_declare_simd:
+  case OMPD_declare_target:
+  case OMPD_end_declare_target:
+  case OMPD_declare_reduction:
+  case OMPD_taskloop:
+  case OMPD_taskloop_simd:
+  case OMPD_unknown:
+    break;
+  }
+  llvm_unreachable(
+      "Unknown programming model for OpenMP directive on NVPTX target.");
+}
+
+/// Check if the directive is loops based and has schedule clause at all or has
+/// static scheduling.
+static bool hasStaticScheduling(const OMPExecutableDirective &D) {
+  assert(isOpenMPWorksharingDirective(D.getDirectiveKind()) &&
+         isOpenMPLoopDirective(D.getDirectiveKind()) &&
+         "Expected loop-based directive.");
+  return !D.hasClausesOfKind<OMPOrderedClause>() &&
+         (!D.hasClausesOfKind<OMPScheduleClause>() ||
+          llvm::any_of(D.getClausesOfKind<OMPScheduleClause>(),
+                       [](const OMPScheduleClause *C) {
+                         return C->getScheduleKind() == OMPC_SCHEDULE_static;
+                       }));
+}
+
+/// Check for inner (nested) lightweight runtime construct, if any
+static bool hasNestedLightweightDirective(ASTContext &Ctx,
+                                          const OMPExecutableDirective &D) {
+  assert(supportsSPMDExecutionMode(Ctx, D) && "Expected SPMD mode directive.");
+  const auto *CS = D.getInnermostCapturedStmt();
+  const auto *Body =
+      CS->getCapturedStmt()->IgnoreContainers(/*IgnoreCaptured=*/true);
+  const Stmt *ChildStmt = getSingleCompoundChild(Body);
+
+  if (const auto *NestedDir = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+    OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
+    switch (D.getDirectiveKind()) {
+    case OMPD_target:
+      if (isOpenMPParallelDirective(DKind) &&
+          isOpenMPWorksharingDirective(DKind) && isOpenMPLoopDirective(DKind) &&
+          hasStaticScheduling(*NestedDir))
+        return true;
+      if (DKind == OMPD_parallel) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
+        if (!Body)
+          return false;
+        ChildStmt = getSingleCompoundChild(Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          if (isOpenMPWorksharingDirective(DKind) &&
+              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
+            return true;
+        }
+      } else if (DKind == OMPD_teams) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
+        if (!Body)
+          return false;
+        ChildStmt = getSingleCompoundChild(Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          if (isOpenMPParallelDirective(DKind) &&
+              isOpenMPWorksharingDirective(DKind) &&
+              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
+            return true;
+          if (DKind == OMPD_parallel) {
+            Body = NND->getInnermostCapturedStmt()->IgnoreContainers(
+                /*IgnoreCaptured=*/true);
+            if (!Body)
+              return false;
+            ChildStmt = getSingleCompoundChild(Body);
+            if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+              DKind = NND->getDirectiveKind();
+              if (isOpenMPWorksharingDirective(DKind) &&
+                  isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
+                return true;
+            }
+          }
+        }
+      }
+      return false;
+    case OMPD_target_teams:
+      if (isOpenMPParallelDirective(DKind) &&
+          isOpenMPWorksharingDirective(DKind) && isOpenMPLoopDirective(DKind) &&
+          hasStaticScheduling(*NestedDir))
+        return true;
+      if (DKind == OMPD_parallel) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
+        if (!Body)
+          return false;
+        ChildStmt = getSingleCompoundChild(Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          if (isOpenMPWorksharingDirective(DKind) &&
+              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
+            return true;
+        }
+      }
+      return false;
+    case OMPD_target_parallel:
+      return isOpenMPWorksharingDirective(DKind) &&
+             isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NestedDir);
+    case OMPD_target_teams_distribute:
+    case OMPD_target_simd:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_parallel:
+    case OMPD_for:
+    case OMPD_parallel_for:
+    case OMPD_parallel_sections:
+    case OMPD_for_simd:
+    case OMPD_parallel_for_simd:
+    case OMPD_cancel:
+    case OMPD_cancellation_point:
+    case OMPD_ordered:
+    case OMPD_threadprivate:
+    case OMPD_task:
+    case OMPD_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_taskgroup:
+    case OMPD_atomic:
+    case OMPD_flush:
+    case OMPD_teams:
+    case OMPD_target_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_enter_data:
+    case OMPD_distribute:
+    case OMPD_distribute_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_target_update:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_declare_reduction:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_unknown:
+      llvm_unreachable("Unexpected directive.");
+    }
+  }
+
+  return false;
+}
+
+/// Checks if the construct supports lightweight runtime. It must be SPMD
+/// construct + inner loop-based construct with static scheduling.
+static bool supportsLightweightRuntime(ASTContext &Ctx,
+                                       const OMPExecutableDirective &D) {
+  if (!supportsSPMDExecutionMode(Ctx, D))
+    return false;
+  OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
+  switch (DirectiveKind) {
+  case OMPD_target:
+  case OMPD_target_teams:
+  case OMPD_target_parallel:
+    return hasNestedLightweightDirective(Ctx, D);
+  case OMPD_target_parallel_for:
+  case OMPD_target_parallel_for_simd:
+  case OMPD_target_teams_distribute_parallel_for:
+  case OMPD_target_teams_distribute_parallel_for_simd:
+    // (Last|First)-privates must be shared in parallel region.
+    return hasStaticScheduling(D);
+  case OMPD_target_simd:
+  case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd:
     return false;
   case OMPD_parallel:
@@ -1010,18 +1218,20 @@ void CGOpenMPRuntimeNVPTX::emitSPMDEntryHeader(
   EST.ExitBB = CGF.createBasicBlock(".exit");
 
   // Initialize the OMP state in the runtime; called by all active threads.
-  // TODO: Set RequiresOMPRuntime and RequiresDataSharing parameters
-  // based on code analysis of the target region.
-  llvm::Value *Args[] = {getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
-                         /*RequiresOMPRuntime=*/Bld.getInt16(1),
-                         /*RequiresDataSharing=*/Bld.getInt16(1)};
+  bool RequiresFullRuntime = !supportsLightweightRuntime(CGF.getContext(), D);
+  llvm::Value *Args[] = {
+      getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
+      /*RequiresOMPRuntime=*/
+      Bld.getInt16(RequiresFullRuntime ? 1 : 0),
+      /*RequiresDataSharing=*/Bld.getInt16(RequiresFullRuntime ? 1 : 0)};
   CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_spmd_kernel_init), Args);
 
-  // For data sharing, we need to initialize the stack.
-  CGF.EmitRuntimeCall(
-      createNVPTXRuntimeFunction(
-          OMPRTL_NVPTX__kmpc_data_sharing_init_stack_spmd));
+  if (RequiresFullRuntime) {
+    // For data sharing, we need to initialize the stack.
+    CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
+        OMPRTL_NVPTX__kmpc_data_sharing_init_stack_spmd));
+  }
 
   CGF.EmitBranch(ExecuteBB);
 
@@ -1414,7 +1624,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     /// Build void __kmpc_data_sharing_init_stack_spmd();
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, llvm::None, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_data_sharing_init_stack_spmd");
+    RTLFn =
+        CGM.CreateRuntimeFunction(FnTy, "__kmpc_data_sharing_init_stack_spmd");
     break;
   }
   case OMPRTL_NVPTX__kmpc_data_sharing_push_stack: {
@@ -1607,7 +1818,8 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
           .emitGenericVarsEpilog(CGF);
     }
   } Action(Loc);
-  CodeGen.setAction(Action);
+  if (getExecutionMode() != CGOpenMPRuntimeNVPTX::EM_SPMD)
+    CodeGen.setAction(Action);
   llvm::Value *OutlinedFunVal = CGOpenMPRuntime::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
   llvm::Function *OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
@@ -1640,19 +1852,61 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
     unsigned GlobalRecordSize =
         CGM.getContext().getTypeSizeInChars(RecTy).getQuantity();
     GlobalRecordSize = llvm::alignTo(GlobalRecordSize, Alignment);
-    // TODO: allow the usage of shared memory to be controlled by
-    // the user, for now, default to global.
-    llvm::Value *GlobalRecordSizeArg[] = {
-        llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
-        CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
-    llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
-        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
-        GlobalRecordSizeArg);
-    llvm::Value *GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        GlobalRecValue, CGF.ConvertTypeForMem(RecTy)->getPointerTo());
+
+    llvm::Value *GlobalRecCastAddr;
+    if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
+      llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
+      llvm::BasicBlock *SPMDBB = CGF.createBasicBlock(".spmd");
+      llvm::BasicBlock *NonSPMDBB = CGF.createBasicBlock(".non-spmd");
+      llvm::Value *IsSPMD = Bld.CreateIsNotNull(CGF.EmitNounwindRuntimeCall(
+          createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_is_spmd_exec_mode)));
+      Bld.CreateCondBr(IsSPMD, SPMDBB, NonSPMDBB);
+      // There is no need to emit line number for unconditional branch.
+      (void)ApplyDebugLocation::CreateEmpty(CGF);
+      CGF.EmitBlock(SPMDBB);
+      Address RecPtr = CGF.CreateMemTemp(RecTy, "_local_stack");
+      CGF.EmitBranch(ExitBB);
+      // There is no need to emit line number for unconditional branch.
+      (void)ApplyDebugLocation::CreateEmpty(CGF);
+      CGF.EmitBlock(NonSPMDBB);
+      // TODO: allow the usage of shared memory to be controlled by
+      // the user, for now, default to global.
+      llvm::Value *GlobalRecordSizeArg[] = {
+          llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
+          CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
+      llvm::Value *GlobalRecValue =
+          CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
+                                  OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
+                              GlobalRecordSizeArg);
+      GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
+          GlobalRecValue, CGF.ConvertTypeForMem(RecTy)->getPointerTo());
+      CGF.EmitBlock(ExitBB);
+      auto *Phi = Bld.CreatePHI(GlobalRecCastAddr->getType(),
+                                /*NumReservedValues=*/2, "_select_stack");
+      Phi->addIncoming(RecPtr.getPointer(), SPMDBB);
+      Phi->addIncoming(GlobalRecCastAddr, NonSPMDBB);
+      GlobalRecCastAddr = Phi;
+      I->getSecond().GlobalRecordAddr = Phi;
+      I->getSecond().IsInSPMDModeFlag = IsSPMD;
+    } else {
+      assert(getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_NonSPMD &&
+             "Expected Non-SPMD construct.");
+      // TODO: allow the usage of shared memory to be controlled by
+      // the user, for now, default to global.
+      llvm::Value *GlobalRecordSizeArg[] = {
+          llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
+          CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
+      llvm::Value *GlobalRecValue =
+          CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
+                                  OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
+                              GlobalRecordSizeArg);
+      GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
+          GlobalRecValue, CGF.ConvertTypeForMem(RecTy)->getPointerTo());
+      I->getSecond().GlobalRecordAddr = GlobalRecValue;
+      I->getSecond().IsInSPMDModeFlag = nullptr;
+    }
     LValue Base =
         CGF.MakeNaturalAlignPointeeAddrLValue(GlobalRecCastAddr, RecTy);
-    I->getSecond().GlobalRecordAddr = GlobalRecValue;
 
     // Emit the "global alloca" which is a GEP from the global declaration
     // record using the pointer returned by the runtime.
@@ -1724,9 +1978,26 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF) {
           Addr);
     }
     if (I->getSecond().GlobalRecordAddr) {
-      CGF.EmitRuntimeCall(
-          createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
-          I->getSecond().GlobalRecordAddr);
+      if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
+        CGBuilderTy &Bld = CGF.Builder;
+        llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
+        llvm::BasicBlock *NonSPMDBB = CGF.createBasicBlock(".non-spmd");
+        Bld.CreateCondBr(I->getSecond().IsInSPMDModeFlag, ExitBB, NonSPMDBB);
+        // There is no need to emit line number for unconditional branch.
+        (void)ApplyDebugLocation::CreateEmpty(CGF);
+        CGF.EmitBlock(NonSPMDBB);
+        CGF.EmitRuntimeCall(
+            createNVPTXRuntimeFunction(
+                OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
+            CGF.EmitCastToVoidPtr(I->getSecond().GlobalRecordAddr));
+        CGF.EmitBlock(ExitBB);
+      } else {
+        assert(getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_NonSPMD &&
+               "Expected Non-SPMD mode.");
+        CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
+                                OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
+                            I->getSecond().GlobalRecordAddr);
+      }
     }
   }
 }

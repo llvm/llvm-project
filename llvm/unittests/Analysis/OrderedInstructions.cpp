@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
+#include "llvm/Analysis/OrderedInstructions.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"

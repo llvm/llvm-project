@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-allocator-inlining=true -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-allocator-inlining=true -std=c++11 -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_dump(int);

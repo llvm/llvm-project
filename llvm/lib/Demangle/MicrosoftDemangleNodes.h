@@ -322,7 +322,7 @@ enum class NodeKind {
   LocalStaticGuardVariable,
   FunctionSymbol,
   VariableSymbol,
-  SpecialTableSymbol,
+  SpecialTableSymbol
 };
 
 struct Node {
@@ -443,6 +443,7 @@ struct DynamicStructorIdentifierNode : public IdentifierNode {
 
   void output(OutputStream &OS, OutputFlags Flags) const override;
 
+  VariableSymbolNode *Variable = nullptr;
   QualifiedNameNode *Name = nullptr;
   bool IsDestructor = false;
 };

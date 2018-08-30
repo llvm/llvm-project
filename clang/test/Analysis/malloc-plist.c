@@ -1,5 +1,5 @@
 // RUN: rm -f %t
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -analyzer-output=plist -verify -o %t %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -analyzer-output=plist -verify -o %t -analyzer-config eagerly-assume=false %s
 // RUN: FileCheck -input-file %t %s
 
 typedef __typeof(sizeof(int)) size_t;

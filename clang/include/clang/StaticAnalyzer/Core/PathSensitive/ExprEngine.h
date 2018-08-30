@@ -734,10 +734,14 @@ private:
   ///
   /// If \p Result is provided, the new region will be bound to this expression
   /// instead of \p InitWithAdjustments.
-  ProgramStateRef createTemporaryRegionIfNeeded(ProgramStateRef State,
-                                                const LocationContext *LC,
-                                                const Expr *InitWithAdjustments,
-                                                const Expr *Result = nullptr);
+  ///
+  /// Returns the temporary region with adjustments into the optional
+  /// OutRegionWithAdjustments out-parameter if a new region was indeed needed,
+  /// otherwise sets it to nullptr.
+  ProgramStateRef createTemporaryRegionIfNeeded(
+      ProgramStateRef State, const LocationContext *LC,
+      const Expr *InitWithAdjustments, const Expr *Result = nullptr,
+      const SubRegion **OutRegionWithAdjustments = nullptr);
 
   /// Returns a region representing the first element of a (possibly
   /// multi-dimensional) array, for the purposes of element construction or

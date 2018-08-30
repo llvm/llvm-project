@@ -127,11 +127,6 @@ static bool should_show_stop_column_with_ansi(DebuggerSP debugger_sp) {
   if (!debugger_sp->GetUseColor())
     return false;
 
-  // Don't use terminal attributes when we have highlighting enabled. This
-  // can mess up the command line.
-  if (debugger_sp->GetHighlightSource())
-    return false;
-
   // We only use ANSI stop column formatting if we're either supposed to show
   // ANSI where available (which we know we have when we get to this point), or
   // if we're only supposed to use ANSI.
@@ -201,8 +196,16 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       return_value +=
           s->Printf("%s%2.2s %-4u\t", prefix,
                     line == curr_line ? current_line_cstr : "", line);
-      size_t this_line_size = m_last_file_sp->DisplaySourceLines(
-          line, line == curr_line ? column : 0, 0, 0, s);
+
+      // So far we treated column 0 as a special 'no column value', but
+      // DisplaySourceLines starts counting columns from 0 (and no column is
+      // expressed by passing an empty optional).
+      llvm::Optional<size_t> columnToHighlight;
+      if (line == curr_line && column)
+        columnToHighlight = column - 1;
+
+      size_t this_line_size =
+          m_last_file_sp->DisplaySourceLines(line, columnToHighlight, 0, 0, s);
       if (column != 0 && line == curr_line &&
           should_show_stop_column_with_caret(m_debugger_wp.lock())) {
         // Display caret cursor.
@@ -521,7 +524,8 @@ void SourceManager::File::UpdateIfNeeded() {
   }
 }
 
-size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
+size_t SourceManager::File::DisplaySourceLines(uint32_t line,
+                                               llvm::Optional<size_t> column,
                                                uint32_t context_before,
                                                uint32_t context_after,
                                                Stream *s) {
@@ -535,15 +539,24 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
 
   size_t bytes_written = s->GetWrittenBytes();
 
-  std::string previous_content;
+  auto debugger_sp = m_debugger_wp.lock();
 
-  HighlightStyle style = HighlightStyle::MakeVimStyle();
+  HighlightStyle style;
+  // Use the default Vim style if source highlighting is enabled.
+  if (should_highlight_source(debugger_sp))
+    style = HighlightStyle::MakeVimStyle();
+
+  // If we should mark the stop column with color codes, then copy the prefix
+  // and suffix to our color style.
+  if (should_show_stop_column_with_ansi(debugger_sp))
+    style.selected.Set(debugger_sp->GetStopShowColumnAnsiPrefix(),
+                       debugger_sp->GetStopShowColumnAnsiSuffix());
+
   HighlighterManager mgr;
   std::string path = GetFileSpec().GetPath(/*denormalize*/ false);
   // FIXME: Find a way to get the definitive language this file was written in
   // and pass it to the highlighter.
-  auto &highlighter =
-      mgr.getHighlighterFor(lldb::LanguageType::eLanguageTypeUnknown, path);
+  const auto &h = mgr.getHighlighterFor(lldb::eLanguageTypeUnknown, path);
 
   const uint32_t start_line =
       line <= context_before ? 1 : line - context_before;
@@ -560,64 +573,8 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
       const uint8_t *cstr = m_data_sp->GetBytes() + start_line_offset;
 
       auto ref = llvm::StringRef(reinterpret_cast<const char *>(cstr), count);
-      bool displayed_line = false;
 
-      auto debugger_sp = m_debugger_wp.lock();
-      if (should_highlight_source(debugger_sp)) {
-        highlighter.Highlight(style, ref, previous_content, *s);
-        displayed_line = true;
-        // Add the new line to the previous lines.
-        previous_content += ref.str();
-      }
-
-      if (!displayed_line && column && (column < count)) {
-        if (should_show_stop_column_with_ansi(debugger_sp) && debugger_sp) {
-          // Check if we have any ANSI codes with which to mark this column. If
-          // not, no need to do this work.
-          auto ansi_prefix_entry = debugger_sp->GetStopShowColumnAnsiPrefix();
-          auto ansi_suffix_entry = debugger_sp->GetStopShowColumnAnsiSuffix();
-
-          // We only bother breaking up the line to format the marked column if
-          // there is any marking specified on both sides of the marked column.
-          // In ANSI-terminal-sequence land, there must be a post if there is a
-          // pre format, and vice versa.
-          if (ansi_prefix_entry && ansi_suffix_entry) {
-            // Mark the current column with the desired escape sequence for
-            // formatting the column (e.g. underline, inverse, etc.)
-
-            // First print the part before the column to mark.
-            s->Write(cstr, column - 1);
-
-            // Write the pre escape sequence.
-            const SymbolContext *sc = nullptr;
-            const ExecutionContext *exe_ctx = nullptr;
-            const Address addr = LLDB_INVALID_ADDRESS;
-            ValueObject *valobj = nullptr;
-            const bool function_changed = false;
-            const bool initial_function = false;
-
-            FormatEntity::Format(*ansi_prefix_entry, *s, sc, exe_ctx, &addr,
-                                 valobj, function_changed, initial_function);
-
-            s->Write(cstr + column - 1, 1);
-
-            // Write the post escape sequence.
-            FormatEntity::Format(*ansi_suffix_entry, *s, sc, exe_ctx, &addr,
-                                 valobj, function_changed, initial_function);
-
-            // And finish up with the rest of the line.
-            s->Write(cstr + column, count - column);
-
-            // Keep track of the fact that we just wrote the line.
-            displayed_line = true;
-          }
-        }
-      }
-
-      // If we didn't end up displaying the line with ANSI codes for whatever
-      // reason, display it now sans codes.
-      if (!displayed_line)
-        s->PutCString(ref);
+      h.Highlight(style, ref, column, "", *s);
 
       // Ensure we get an end of line character one way or another.
       if (!is_newline_char(ref.back()))

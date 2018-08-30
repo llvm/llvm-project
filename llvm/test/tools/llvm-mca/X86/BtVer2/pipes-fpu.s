@@ -20,7 +20,10 @@ vsqrtps     %ymm0, %ymm2
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
 # CHECK-NEXT: Total Cycles:      6306
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        1200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.19
 # CHECK-NEXT: IPC:               0.13
 # CHECK-NEXT: Block RThroughput: 63.0
 

@@ -18,8 +18,8 @@
 // a content of some tracked block is changed.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Transforms/Utils/InstructionPrecedenceTracking.h"
 
 using namespace llvm;
 

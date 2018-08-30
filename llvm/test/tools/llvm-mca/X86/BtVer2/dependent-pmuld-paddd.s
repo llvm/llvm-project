@@ -8,7 +8,10 @@ vpaddd %xmm0, %xmm0, %xmm3
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1500
 # CHECK-NEXT: Total Cycles:      1504
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        1500
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.00
 # CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 1.5
 

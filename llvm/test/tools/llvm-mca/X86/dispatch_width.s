@@ -8,11 +8,14 @@ add %eax, %eax
 # ALL:          Iterations:        100
 # ALL-NEXT:     Instructions:      100
 # ALL-NEXT:     Total Cycles:      103
+# ALL-NEXT:     Total uOps:        100
 
-# CUSTOM-NEXT:  Dispatch Width:    1
-# DEFAULT-NEXT: Dispatch Width:    2
-
-# ALL-NEXT:     IPC:               0.97
-
+# CUSTOM:       Dispatch Width:    1
+# CUSTOM-NEXT:  uOps Per Cycle:    0.97
+# CUSTOM-NEXT:  IPC:               0.97
 # CUSTOM-NEXT:  Block RThroughput: 1.0
+
+# DEFAULT:      Dispatch Width:    2
+# DEFAULT-NEXT: uOps Per Cycle:    0.97
+# DEFAULT-NEXT: IPC:               0.97
 # DEFAULT-NEXT: Block RThroughput: 0.5

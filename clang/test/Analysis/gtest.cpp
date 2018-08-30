@@ -1,5 +1,5 @@
-//RUN: %clang_analyze_cc1 -cc1 -std=c++11  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -analyzer-eagerly-assume %s -verify
-//RUN: %clang_analyze_cc1 -cc1 -std=c++11  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -analyzer-eagerly-assume -DGTEST_VERSION_1_8_AND_LATER=1 %s -verify
+//RUN: %clang_analyze_cc1 -cc1 -std=c++11  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection %s -verify
+//RUN: %clang_analyze_cc1 -cc1 -std=c++11  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -DGTEST_VERSION_1_8_AND_LATER=1 %s -verify
 
 void clang_analyzer_eval(int);
 void clang_analyzer_warnIfReached();
