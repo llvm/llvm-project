@@ -209,6 +209,7 @@ static void declareSymbol(SymbolAssignment *Cmd) {
                          STT_NOTYPE, 0, 0, nullptr);
   Cmd->Sym = cast<Defined>(Sym);
   Cmd->Provide = false;
+  Sym->ScriptDefined = true;
 }
 
 // This method is used to handle INSERT AFTER statement. Here we rebuild
@@ -701,6 +702,7 @@ uint64_t LinkerScript::advance(uint64_t Size, unsigned Alignment) {
 }
 
 void LinkerScript::output(InputSection *S) {
+  assert(Ctx->OutSec == S->getParent());
   uint64_t Before = advance(0, 1);
   uint64_t Pos = advance(S->getSize(), S->Alignment);
   S->OutSecOff = Pos - S->getSize() - Ctx->OutSec->Addr;
@@ -816,21 +818,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     // Handle a single input section description command.
     // It calculates and assigns the offsets for each section and also
     // updates the output section size.
-    auto *Cmd = cast<InputSectionDescription>(Base);
-    for (InputSection *Sec : Cmd->Sections) {
-      // We tentatively added all synthetic sections at the beginning and
-      // removed empty ones afterwards (because there is no way to know
-      // whether they were going be empty or not other than actually running
-      // linker scripts.) We need to ignore remains of empty sections.
-      if (auto *S = dyn_cast<SyntheticSection>(Sec))
-        if (S->empty())
-          continue;
-
-      if (!Sec->Live)
-        continue;
-      assert(Ctx->OutSec == Sec->getParent());
+    for (InputSection *Sec : cast<InputSectionDescription>(Base)->Sections)
       output(Sec);
-    }
   }
 }
 

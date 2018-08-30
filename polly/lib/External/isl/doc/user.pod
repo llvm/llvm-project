@@ -767,7 +767,6 @@ The following unary operations are available on C<isl_val>s.
 	__isl_give isl_val *isl_val_ceil(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_trunc(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_inv(__isl_take isl_val *v);
-	__isl_give isl_val *isl_val_2exp(__isl_take isl_val *v);
 
 The following binary operations are available on C<isl_val>s.
 
@@ -796,6 +795,7 @@ The following binary operations are available on C<isl_val>s.
 On integer values, we additionally have the following operations.
 
 	#include <isl/val.h>
+	__isl_give isl_val *isl_val_pow2(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_2exp(__isl_take isl_val *v);
 	__isl_give isl_val *isl_val_mod(__isl_take isl_val *v1,
 		__isl_take isl_val *v2);
@@ -805,6 +805,7 @@ On integer values, we additionally have the following operations.
 		__isl_take isl_val *v2, __isl_give isl_val **x,
 		__isl_give isl_val **y);
 
+C<isl_val_2exp> is an alternative name for C<isl_val_pow2>.
 The function C<isl_val_gcdext> returns the greatest common divisor g
 of C<v1> and C<v2> as well as two integers C<*x> and C<*y> such
 that C<*x> * C<v1> + C<*y> * C<v2> = g.
@@ -5128,6 +5129,17 @@ the following option.
 		isl_ctx *ctx, int val);
 	int isl_options_get_coalesce_bounded_wrapping(
 		isl_ctx *ctx);
+
+One of the other methods tries to combine pairs of basic sets
+with different local variables, treating them as existentially
+quantified variables even if they have known (but different)
+integer division expressions.  The result may then also have
+existentially quantified variables.  Turning on the following
+option prevents this from happening.
+
+	isl_stat isl_options_set_coalesce_preserve_locals(
+		isl_ctx *ctx, int val);
+	int isl_options_get_coalesce_preserve_locals(isl_ctx *ctx);
 
 =item * Detecting equalities
 

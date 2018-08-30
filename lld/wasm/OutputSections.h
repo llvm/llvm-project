@@ -113,7 +113,7 @@ protected:
   size_t BodySize = 0;
 };
 
-// Represents a custom section in the output file.  Wasm custom sections are 
+// Represents a custom section in the output file.  Wasm custom sections are
 // used for storing user-defined metadata.  Unlike the core sections types
 // they are identified by their string name.
 // The linker combines custom sections that have the same name by simply

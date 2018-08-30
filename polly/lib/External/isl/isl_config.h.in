@@ -205,6 +205,9 @@
 /* Define to getInstantiationLineNumber for older versions of clang */
 #undef getExpansionLineNumber
 
+/* Define to getImmediateInstantiationRange for older versions of clang */
+#undef getImmediateExpansionRange
+
 /* Define to getNumParams for newer versions of clang */
 #undef getNumArgs
 

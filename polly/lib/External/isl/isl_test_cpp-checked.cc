@@ -173,4 +173,6 @@ int main()
 	test_foreach(ctx);
 
 	isl_ctx_free(ctx);
+
+	return EXIT_SUCCESS;
 }

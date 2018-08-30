@@ -158,6 +158,7 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable();
+  void createRuntimePseudoRelocs();
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *File,
                               ArrayRef<SectionChunk *> SymIdxChunks,
@@ -524,6 +525,9 @@ void Writer::createMiscChunks() {
   // Create /guard:cf tables if requested.
   if (Config->GuardCF != GuardCFLevel::Off)
     createGuardCFTables();
+
+  if (Config->MinGW)
+    createRuntimePseudoRelocs();
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1013,13 +1017,19 @@ static void markSymbolsWithRelocations(ObjFile *File,
     if (!SC || !SC->isLive())
       continue;
 
-    // Look for relocations in this section against symbols in executable output
-    // sections.
-    for (Symbol *Ref : SC->symbols()) {
-      // FIXME: Do further testing to see if the relocation type matters,
-      // especially for 32-bit where taking the address of something usually
-      // uses an absolute relocation instead of a relative one.
-      if (auto *D = dyn_cast_or_null<Defined>(Ref)) {
+    for (const coff_relocation &Reloc : SC->Relocs) {
+      if (Config->Machine == I386 && Reloc.Type == COFF::IMAGE_REL_I386_REL32)
+        // Ignore relative relocations on x86. On x86_64 they can't be ignored
+        // since they're also used to compute absolute addresses.
+        continue;
+
+      Symbol *Ref = SC->File->getSymbol(Reloc.SymbolTableIndex);
+      if (auto *D = dyn_cast_or_null<DefinedCOFF>(Ref)) {
+        if (D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+          // Ignore relocations against non-functions (e.g. labels).
+          continue;
+
+        // Mark the symbol if it's in an executable section.
         Chunk *RefChunk = D->getChunk();
         OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
         if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
@@ -1132,6 +1142,33 @@ void Writer::maybeAddRVATable(SymbolRVASet TableSymbols, StringRef TableSym,
   Symbol *C = Symtab->findUnderscore(CountSym);
   replaceSymbol<DefinedSynthetic>(T, T->getName(), TableChunk);
   cast<DefinedAbsolute>(C)->setVA(TableChunk->getSize() / 4);
+}
+
+// MinGW specific. Gather all relocations that are imported from a DLL even
+// though the code didn't expect it to, produce the table that the runtime
+// uses for fixing them up, and provide the synthetic symbols that the
+// runtime uses for finding the table.
+void Writer::createRuntimePseudoRelocs() {
+  std::vector<RuntimePseudoReloc> Rels;
+
+  for (Chunk *C : Symtab->getChunks()) {
+    auto *SC = dyn_cast<SectionChunk>(C);
+    if (!SC || !SC->isLive())
+      continue;
+    SC->getRuntimePseudoRelocs(Rels);
+  }
+
+  if (!Rels.empty())
+    log("Writing " + Twine(Rels.size()) + " runtime pseudo relocations");
+  PseudoRelocTableChunk *Table = make<PseudoRelocTableChunk>(Rels);
+  RdataSec->addChunk(Table);
+  EmptyChunk *EndOfList = make<EmptyChunk>();
+  RdataSec->addChunk(EndOfList);
+
+  Symbol *HeadSym = Symtab->findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
+  Symbol *EndSym = Symtab->findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
+  replaceSymbol<DefinedSynthetic>(HeadSym, HeadSym->getName(), Table);
+  replaceSymbol<DefinedSynthetic>(EndSym, EndSym->getName(), EndOfList);
 }
 
 // Handles /section options to allow users to overwrite

@@ -1,0 +1,12 @@
+// RUN: env GOPATH=%S/Inputs llgoi < %s | FileCheck %s
+
+// Test that importing binary before source works.
+import "strconv"
+
+import "foo"
+
+foo.Answer()
+// CHECK: 42
+
+strconv.FormatBool(true)
+// CHECK: true

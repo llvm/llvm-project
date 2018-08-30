@@ -78,7 +78,7 @@ private:
 
 bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
                      raw_ostream &Error) {
-  errorHandler().LogName = sys::path::filename(Args[0]);
+  errorHandler().LogName = args::getFilenameWithoutExe(Args[0]);
   errorHandler().ErrorOS = &Error;
   errorHandler().ColorDiagnostics = Error.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -186,8 +186,7 @@ static void readImportFile(StringRef Filename) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> static getArchiveMembers(
-    MemoryBufferRef MB) {
+std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       CHECK(Archive::create(MB),
             MB.getBufferIdentifier() + ": failed to parse archive");
@@ -205,8 +204,8 @@ std::vector<MemoryBufferRef> static getArchiveMembers(
     V.push_back(MBRef);
   }
   if (Err)
-    fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
-          toString(std::move(Err)));
+    fatal(MB.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(Err)));
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
@@ -329,14 +328,19 @@ static void handleWeakUndefines() {
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
-static Symbol *addUndefined(StringRef Name) {
-  Symbol *S = Symtab->addUndefinedFunction(Name, 0, nullptr, nullptr);
+static Symbol *handleUndefined(StringRef Name) {
+  Symbol *Sym = Symtab->find(Name);
+  if (!Sym)
+    return nullptr;
 
   // Since symbol S may not be used inside the program, LTO may
   // eliminate it. Mark the symbol as "used" to prevent it.
-  S->IsUsedInRegularObj = true;
+  Sym->IsUsedInRegularObj = true;
 
-  return S;
+  if (auto *LazySym = dyn_cast<LazySymbol>(Sym))
+    LazySym->fetch();
+
+  return Sym;
 }
 
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
@@ -390,6 +394,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->CompressRelocTargets = Args.hasArg(OPT_compress_relocations);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
   Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
   Config->ThinLTOCachePolicy = CHECK(
@@ -405,7 +410,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
-  Config->CompressRelocTargets = Config->Optimize > 0 && !Config->Relocatable;
+  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocTargets)
+    error("--compress-relocations is incompatible with output debug"
+          " information. Please pass --strip-debug or --strip-all");
 
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));
@@ -433,6 +440,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       error("entry point specified for relocatable output file");
     if (Config->GcSections)
       error("-r and --gc-sections may not be used together");
+    if (Config->CompressRelocTargets)
+      error("-r -and --compress-relocations may not be used together");
     if (Args.hasArg(OPT_undefined))
       error("-r -and --undefined may not be used together");
   }
@@ -462,15 +471,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
-
-    // For now, since we don't actually use the start function as the
-    // wasm start symbol, we don't need to care about it signature.
-    if (!Config->Entry.empty())
-      EntrySym = addUndefined(Config->Entry);
-
-    // Handle the `--undefined <sym>` options.
-    for (auto *Arg : Args.filtered(OPT_undefined))
-      addUndefined(Arg->getValue());
   }
 
   createFiles(Args);
@@ -484,44 +484,43 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
-  // Add synthetic dummies for weak undefined functions.
-  if (!Config->Relocatable)
-    handleWeakUndefines();
+  // Handle the `--undefined <sym>` options.
+  for (auto *Arg : Args.filtered(OPT_undefined))
+    handleUndefined(Arg->getValue());
 
-  // Handle --export.
+  // Handle the `--export <sym>` options
+  // This works like --undefined but also exports the symbol if its found
   for (auto *Arg : Args.filtered(OPT_export)) {
-    StringRef Name = Arg->getValue();
-    Symbol *Sym = Symtab->find(Name);
+    Symbol *Sym = handleUndefined(Arg->getValue());
     if (Sym && Sym->isDefined())
       Sym->ForceExport = true;
     else if (!Config->AllowUndefined)
-      error("symbol exported via --export not found: " + Name);
+      error(Twine("symbol exported via --export not found: ") +
+            Arg->getValue());
   }
+
+  if (!Config->Relocatable) {
+    // Add synthetic dummies for weak undefined functions.
+    handleWeakUndefines();
+
+    if (!Config->Entry.empty()) {
+      EntrySym = handleUndefined(Config->Entry);
+      if (!EntrySym)
+        error("entry symbol not defined (pass --no-entry to supress): " +
+              Config->Entry);
+    }
+
+    // Make sure we have resolved all symbols.
+    if (!Config->AllowUndefined)
+      Symtab->reportRemainingUndefines();
+  }
+
+  if (errorCount())
+    return;
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   Symtab->addCombinedLTOObject();
-  if (errorCount())
-    return;
-
-  // Make sure we have resolved all symbols.
-  if (!Config->Relocatable && !Config->AllowUndefined) {
-    Symtab->reportRemainingUndefines();
-  } else {
-    // Even when using --allow-undefined we still want to report the absence of
-    // our initial set of undefined symbols (i.e. the entry point and symbols
-    // specified via --undefined).
-    // Part of the reason for this is that these function don't have signatures
-    // so which means they cannot be written as wasm function imports.
-    for (auto *Arg : Args.filtered(OPT_undefined)) {
-      Symbol *Sym = Symtab->find(Arg->getValue());
-      if (!Sym->isDefined())
-        error("symbol forced with --undefined not found: " + Sym->getName());
-    }
-    if (EntrySym && !EntrySym->isDefined())
-      error("entry symbol not defined (pass --no-entry to supress): " +
-            EntrySym->getName());
-  }
   if (errorCount())
     return;
 

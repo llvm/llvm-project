@@ -200,6 +200,7 @@ protected:
     Inlines,
     LanguageName,
     LineNumber,
+    Column,
     ModuleName,
     NameMaskArray,
     Offset,
@@ -224,8 +225,11 @@ protected:
   /// number that matches, and then filter down the matching addresses to
   /// unique entries, and skip the prologue if asked to do so, and then set
   /// breakpoint locations in this breakpoint for all the resultant addresses.
+  /// When \p column is nonzero the \p line and \p column args are used to
+  /// filter the results to find the first breakpoint >= (line, column).
   void SetSCMatchesByLine(SearchFilter &filter, SymbolContextList &sc_list,
-                          bool skip_prologue, llvm::StringRef log_ident);
+                          bool skip_prologue, llvm::StringRef log_ident,
+                          uint32_t line = 0, uint32_t column = 0);
   void SetSCMatchesByLine(SearchFilter &, SymbolContextList &, bool,
                           const char *) = delete;
 

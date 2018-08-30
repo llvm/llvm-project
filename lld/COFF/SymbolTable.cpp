@@ -109,7 +109,7 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   }
 
   if (Locations.empty())
-    return "\n>>> referenced by " + toString(File) + "\n";
+    return "\n>>> referenced by " + toString(File);
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -122,8 +122,54 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
     if (!Loc.SymName.empty())
       OS << ":(" << Loc.SymName << ')';
   }
-  OS << '\n';
   return OS.str();
+}
+
+void SymbolTable::loadMinGWAutomaticImports() {
+  for (auto &I : SymMap) {
+    Symbol *Sym = I.second;
+    auto *Undef = dyn_cast<Undefined>(Sym);
+    if (!Undef)
+      continue;
+    if (!Sym->IsUsedInRegularObj)
+      continue;
+
+    StringRef Name = Undef->getName();
+
+    if (Name.startswith("__imp_"))
+      continue;
+    // If we have an undefined symbol, but we have a Lazy representing a
+    // symbol we could load from file, make sure to load that.
+    Lazy *L = dyn_cast_or_null<Lazy>(find(("__imp_" + Name).str()));
+    if (!L || L->PendingArchiveLoad)
+      continue;
+
+    log("Loading lazy " + L->getName() + " from " + L->File->getName() +
+        " for automatic import");
+    L->PendingArchiveLoad = true;
+    L->File->addMember(&L->Sym);
+  }
+}
+
+bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
+  if (Name.startswith("__imp_"))
+    return false;
+  DefinedImportData *Imp =
+      dyn_cast_or_null<DefinedImportData>(find(("__imp_" + Name).str()));
+  if (!Imp)
+    return false;
+
+  log("Automatically importing " + Name + " from " + Imp->getDLLName());
+
+  // Replace the reference directly to a variable with a reference
+  // to the import address table instead. This obviously isn't right,
+  // but we mark the symbol as IsRuntimePseudoReloc, and a later pass
+  // will add runtime pseudo relocations for every relocation against
+  // this Symbol. The runtime pseudo relocation framework expects the
+  // reference itself to point at the IAT entry.
+  Sym->replaceKeepingName(Imp, sizeof(DefinedImportData));
+  cast<DefinedImportData>(Sym)->IsRuntimePseudoReloc = true;
+  return true;
 }
 
 void SymbolTable::reportRemainingUndefines() {
@@ -169,6 +215,9 @@ void SymbolTable::reportRemainingUndefines() {
       }
     }
 
+    if (Config->MinGW && handleMinGWAutomaticImport(Sym, Name))
+      continue;
+
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
     if (Config->Force)
@@ -206,23 +255,25 @@ void SymbolTable::reportRemainingUndefines() {
   }
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
+  bool Inserted = false;
   Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
-  if (Sym)
-    return {Sym, false};
-  Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  Sym->IsUsedInRegularObj = false;
-  Sym->PendingArchiveLoad = false;
-  return {Sym, true};
+  if (!Sym) {
+    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+    Sym->IsUsedInRegularObj = false;
+    Sym->PendingArchiveLoad = false;
+    Inserted = true;
+  }
+  if (!File || !isa<BitcodeFile>(File))
+    Sym->IsUsedInRegularObj = true;
+  return {Sym, Inserted};
 }
 
 Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
                                   bool IsWeakAlias) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-  if (!F || !isa<BitcodeFile>(F))
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, F);
   if (WasInserted || (isa<Lazy>(S) && IsWeakAlias)) {
     replaceSymbol<Undefined>(S, Name);
     return S;
@@ -240,7 +291,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
   StringRef Name = Sym.getName();
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insert(Name, nullptr);
   if (WasInserted) {
     replaceSymbol<Lazy>(S, F, Sym);
     return;
@@ -260,7 +311,7 @@ void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
 Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
+  std::tie(S, WasInserted) = insert(N, nullptr);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceSymbol<DefinedAbsolute>(S, N, Sym);
@@ -272,7 +323,7 @@ Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
 Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
+  std::tie(S, WasInserted) = insert(N, nullptr);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceSymbol<DefinedAbsolute>(S, N, VA);
@@ -284,7 +335,7 @@ Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
 Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
+  std::tie(S, WasInserted) = insert(N, nullptr);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceSymbol<DefinedSynthetic>(S, N, C);
@@ -298,9 +349,7 @@ Symbol *SymbolTable::addRegular(InputFile *F, StringRef N,
                                 SectionChunk *C) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
-  if (!isa<BitcodeFile>(F))
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(N, F);
   if (WasInserted || !isa<DefinedRegular>(S))
     replaceSymbol<DefinedRegular>(S, F, N, /*IsCOMDAT*/ false,
                                   /*IsExternal*/ true, Sym, C);
@@ -314,9 +363,7 @@ SymbolTable::addComdat(InputFile *F, StringRef N,
                        const coff_symbol_generic *Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
-  if (!isa<BitcodeFile>(F))
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(N, F);
   if (WasInserted || !isa<DefinedRegular>(S)) {
     replaceSymbol<DefinedRegular>(S, F, N, /*IsCOMDAT*/ true,
                                   /*IsExternal*/ true, Sym, nullptr);
@@ -331,9 +378,7 @@ Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
                                const coff_symbol_generic *Sym, CommonChunk *C) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
-  if (!isa<BitcodeFile>(F))
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(N, F);
   if (WasInserted || !isa<DefinedCOFF>(S))
     replaceSymbol<DefinedCommon>(S, F, N, Size, Sym, C);
   else if (auto *DC = dyn_cast<DefinedCommon>(S))
@@ -345,7 +390,7 @@ Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
 Symbol *SymbolTable::addImportData(StringRef N, ImportFile *F) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N);
+  std::tie(S, WasInserted) = insert(N, nullptr);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
     replaceSymbol<DefinedImportData>(S, N, F);
@@ -360,7 +405,7 @@ Symbol *SymbolTable::addImportThunk(StringRef Name, DefinedImportData *ID,
                                     uint16_t Machine) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insert(Name, nullptr);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
     replaceSymbol<DefinedImportThunk>(S, Name, ID, Machine);
