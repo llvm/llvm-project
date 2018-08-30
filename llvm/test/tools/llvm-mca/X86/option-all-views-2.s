@@ -10,7 +10,10 @@ add %eax, %eax
 # ALL:             Iterations:        100
 # ALL-NEXT:        Instructions:      100
 # ALL-NEXT:        Total Cycles:      103
-# ALL-NEXT:        Dispatch Width:    2
+# ALL-NEXT:        Total uOps:        100
+
+# ALL:             Dispatch Width:    2
+# ALL-NEXT:        uOps Per Cycle:    0.97
 # ALL-NEXT:        IPC:               0.97
 # ALL-NEXT:        Block RThroughput: 0.5
 

@@ -34,7 +34,10 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1800
 # CHECK-NEXT: Total Cycles:      3811
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        3400
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.89
 # CHECK-NEXT: IPC:               0.47
 # CHECK-NEXT: Block RThroughput: 38.0
 

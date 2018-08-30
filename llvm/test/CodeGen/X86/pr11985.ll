@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=prescott | FileCheck %s --check-prefix=PRESCOTT
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=nocona | FileCheck %s --check-prefix=PRESCOTT
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=nehalem | FileCheck %s --check-prefix=NEHALEM
 
 ;;; TODO: (1) Some of the loads and stores are certainly unaligned and (2) the first load and first

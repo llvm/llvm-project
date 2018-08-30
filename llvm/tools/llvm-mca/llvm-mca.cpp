@@ -318,7 +318,6 @@ static void processViewOptions() {
       EnableAllViews.getPosition() < EnableAllStats.getPosition()
           ? EnableAllStats
           : EnableAllViews;
-  processOptionImpl(PrintSummaryView, Default);
   processOptionImpl(PrintRegisterFileStats, Default);
   processOptionImpl(PrintDispatchStats, Default);
   processOptionImpl(PrintSchedulerStats, Default);

@@ -8,7 +8,10 @@ add    %ecx, %ebx
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
 # CHECK-NEXT: Total Cycles:      11
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        4
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.27
 # CHECK-NEXT: Block RThroughput: 4.0
 

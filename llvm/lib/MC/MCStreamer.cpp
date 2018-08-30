@@ -272,10 +272,10 @@ void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName, SMLoc Loc) {}
 
-bool MCStreamer::checkCVLocSection(unsigned FunctionId, unsigned FileNo,
+bool MCStreamer::checkCVLocSection(unsigned FuncId, unsigned FileNo,
                                    SMLoc Loc) {
   CodeViewContext &CVC = getContext().getCVContext();
-  MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FunctionId);
+  MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FuncId);
   if (!FI) {
     getContext().reportError(
         Loc, "function id not introduced by .cv_func_id or .cv_inline_site_id");

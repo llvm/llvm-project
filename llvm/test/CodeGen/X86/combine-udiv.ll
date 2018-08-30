@@ -213,108 +213,35 @@ define <4 x i32> @combine_vec_udiv_zero(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
-; TODO fold (udiv x, x) -> 1
+; fold (udiv x, x) -> 1
 define i32 @combine_udiv_dupe(i32 %x) {
 ; CHECK-LABEL: combine_udiv_dupe:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    divl %edi
+; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retq
   %1 = udiv i32 %x, %x
   ret i32 %1
 }
 
 define <4 x i32> @combine_vec_udiv_dupe(<4 x i32> %x) {
-; SSE2-LABEL: combine_vec_udiv_dupe:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    retq
+; SSE-LABEL: combine_vec_udiv_dupe:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
+; SSE-NEXT:    retq
 ;
-; SSE41-LABEL: combine_vec_udiv_dupe:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pextrd $1, %xmm0, %eax
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    divl %eax
-; SSE41-NEXT:    movl %eax, %ecx
-; SSE41-NEXT:    movd %xmm0, %eax
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    divl %eax
-; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    pinsrd $1, %ecx, %xmm1
-; SSE41-NEXT:    pextrd $2, %xmm0, %eax
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    divl %eax
-; SSE41-NEXT:    pinsrd $2, %eax, %xmm1
-; SSE41-NEXT:    pextrd $3, %xmm0, %eax
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    divl %eax
-; SSE41-NEXT:    pinsrd $3, %eax, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; AVX1-LABEL: combine_vec_udiv_dupe:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; AVX1-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_udiv_dupe:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %eax
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %eax
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: combine_vec_udiv_dupe:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_udiv_dupe:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpextrd $1, %xmm0, %eax
-; XOP-NEXT:    xorl %edx, %edx
-; XOP-NEXT:    divl %eax
-; XOP-NEXT:    movl %eax, %ecx
-; XOP-NEXT:    vmovd %xmm0, %eax
-; XOP-NEXT:    xorl %edx, %edx
-; XOP-NEXT:    divl %eax
-; XOP-NEXT:    vmovd %eax, %xmm1
-; XOP-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; XOP-NEXT:    vpextrd $2, %xmm0, %eax
-; XOP-NEXT:    xorl %edx, %edx
-; XOP-NEXT:    divl %eax
-; XOP-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; XOP-NEXT:    vpextrd $3, %xmm0, %eax
-; XOP-NEXT:    xorl %edx, %edx
-; XOP-NEXT:    divl %eax
-; XOP-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
 ; XOP-NEXT:    retq
   %1 = udiv <4 x i32> %x, %x
   ret <4 x i32> %1

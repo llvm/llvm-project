@@ -182,6 +182,8 @@ defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 
 defm : X86WriteRes<WriteBSWAP32, [ZnALU], 1, [4], 1>;
 defm : X86WriteRes<WriteBSWAP64, [ZnALU], 1, [4], 1>;
+defm : X86WriteRes<WriteCMPXCHG, [ZnALU], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHGRMW,[ZnALU,ZnAGU], 8, [1,1], 5>;
 defm : X86WriteRes<WriteXCHG, [ZnALU], 1, [2], 2>;
 
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
@@ -743,13 +745,6 @@ def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)rrCL")>;
 def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)mrCL")>;
 
 //-- Misc instructions --//
-// CMPXCHG.
-def ZnWriteCMPXCHG : SchedWriteRes<[ZnAGU, ZnALU]> {
-  let Latency = 8;
-  let NumMicroOps = 5;
-}
-def : InstRW<[ZnWriteCMPXCHG], (instregex "CMPXCHG(8|16|32|64)rm")>;
-
 // CMPXCHG8B.
 def ZnWriteCMPXCHG8B : SchedWriteRes<[ZnAGU, ZnALU]> {
   let NumMicroOps = 18;

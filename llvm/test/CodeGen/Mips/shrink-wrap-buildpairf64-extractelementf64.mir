@@ -1,0 +1,150 @@
+# RUN: llc -o - %s -mtriple=mips-unknown-linux-gnu -enable-shrink-wrap=true \
+# RUN:     -start-before=shrink-wrap -stop-after=prologepilog | FileCheck %s
+
+--- |
+  declare void @foo()
+  define void @testBuildPairF64() {
+    ret void
+  }
+  define void @testBuildPairF64_64() {
+    ret void
+  }
+  define void @testBuildPairF64implicitSp() {
+    ret void
+  }
+  define void @testBuildPairF64_64implicitSp() {
+    ret void
+  }
+  define void @testExtractElementF64() {
+    ret void
+  }
+  define void @testExtractElementF64_64() {
+    ret void
+  }
+  define void @testExtractElementF64implicitSp() {
+    ret void
+  }
+  define void @testExtractElementF64_64implicitSp() {
+    ret void
+  }
+...
+---
+name: testBuildPairF64
+# CHECK-LABEL: name: testBuildPairF64
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: BuildPairF64
+body: |
+  bb.0:
+    $d0 = BuildPairF64 $zero, $zero
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testBuildPairF64_64
+# CHECK-LABEL: name: testBuildPairF64_64
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: BuildPairF64_64
+body: |
+  bb.0:
+    $d0_64 = BuildPairF64_64 $zero, $zero
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testBuildPairF64implicitSp
+# CHECK-LABEL: name: testBuildPairF64implicitSp
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+body: |
+  bb.0:
+    $d0 = BuildPairF64 $zero, $zero, implicit $sp
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testBuildPairF64_64implicitSp
+# CHECK-LABEL: name: testBuildPairF64_64implicitSp
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+body: |
+  bb.0:
+    $d0_64 = BuildPairF64_64 $zero, $zero, implicit $sp
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testExtractElementF64
+# CHECK-LABEL: name: testExtractElementF64
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: ExtractElementF64
+body: |
+  bb.0:
+    $at = ExtractElementF64 $d6, 1
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testExtractElementF64_64
+# CHECK-LABEL: name: testExtractElementF64_64
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: ExtractElementF64_64
+body: |
+  bb.0:
+    $at = ExtractElementF64_64 $d12_64, 1
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testExtractElementF64implicitSp
+# CHECK-LABEL: name: testExtractElementF64implicitSp
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+body: |
+  bb.0:
+    $at = ExtractElementF64 $d6, 1, implicit $sp
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...
+---
+name: testExtractElementF64_64implicitSp
+# CHECK-LABEL: name: testExtractElementF64_64implicitSp
+# CHECK: bb.0
+# CHECK-NEXT: successors
+# CHECK-NEXT: {{[[:space:]]$}}
+# CHECK-NEXT: $sp = ADDiu $sp, -{{[0-9]+}}
+body: |
+  bb.0:
+    $at = ExtractElementF64_64 $d12_64, 1, implicit $sp
+  bb.1:
+    JAL @foo, implicit-def $ra
+  bb.2:
+    RetRA
+...

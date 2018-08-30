@@ -238,7 +238,10 @@ the following command using the example located at
   Iterations:        300
   Instructions:      900
   Total Cycles:      610
+  Total uOps:        900
+
   Dispatch Width:    2
+  uOps Per Cycle:    1.48
   IPC:               1.48
   Block RThroughput: 2.0
 
@@ -285,35 +288,45 @@ the following command using the example located at
    -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     vhaddps	%xmm3, %xmm3, %xmm4
 
 According to this report, the dot-product kernel has been executed 300 times,
-for a total of 900 dynamically executed instructions.
+for a total of 900 simulated instructions. The total number of simulated micro
+opcodes (uOps) is also 900.
 
 The report is structured in three main sections.  The first section collects a
 few performance numbers; the goal of this section is to give a very quick
-overview of the performance throughput. In this example, the two important
-performance indicators are **IPC** and **Block RThroughput** (Block Reciprocal
+overview of the performance throughput. Important performance indicators are
+**IPC**, **uOps Per Cycle**, and  **Block RThroughput** (Block Reciprocal
 Throughput).
 
 IPC is computed dividing the total number of simulated instructions by the total
-number of cycles.  A delta between Dispatch Width and IPC is an indicator of a
-performance issue. In the absence of loop-carried data dependencies, the
+number of cycles. In the absence of loop-carried data dependencies, the
 observed IPC tends to a theoretical maximum which can be computed by dividing
 the number of instructions of a single iteration by the *Block RThroughput*.
 
-IPC is bounded from above by the dispatch width. That is because the dispatch
-width limits the maximum size of a dispatch group. IPC is also limited by the
-amount of hardware parallelism. The availability of hardware resources affects
-the resource pressure distribution, and it limits the number of instructions
-that can be executed in parallel every cycle.  A delta between Dispatch
-Width and the theoretical maximum IPC is an indicator of a performance
-bottleneck caused by the lack of hardware resources. In general, the lower the
-Block RThroughput, the better.
+Field 'uOps Per Cycle' is computed dividing the total number of simulated micro
+opcodes by the total number of cycles. A delta between Dispatch Width and this
+field is an indicator of a performance issue. In the absence of loop-carried
+data dependencies, the observed 'uOps Per Cycle' should tend to a theoretical
+maximum throughput which can be computed by dividing the number of uOps of a
+single iteration by the *Block RThroughput*.
 
-In this example, ``Instructions per iteration/Block RThroughput`` is 1.50. Since
-there are no loop-carried dependencies, the observed IPC is expected to approach
-1.50 when the number of iterations tends to infinity. The delta between the
-Dispatch Width (2.00), and the theoretical maximum IPC (1.50) is an indicator of
-a performance bottleneck caused by the lack of hardware resources, and the
-*Resource pressure view* can help to identify the problematic resource usage.
+Field *uOps Per Cycle* is bounded from above by the dispatch width. That is
+because the dispatch width limits the maximum size of a dispatch group. Both IPC
+and 'uOps Per Cycle' are limited by the amount of hardware parallelism. The
+availability of hardware resources affects the resource pressure distribution,
+and it limits the number of instructions that can be executed in parallel every
+cycle.  A delta between Dispatch Width and the theoretical maximum uOps per
+Cycle (computed by dividing the number of uOps of a single iteration by the
+*Block RTrhoughput*) is an indicator of a performance bottleneck caused by the
+lack of hardware resources.
+In general, the lower the Block RThroughput, the better.
+
+In this example, ``uOps per iteration/Block RThroughput`` is 1.50. Since there
+are no loop-carried dependencies, the observed *uOps Per Cycle* is expected to
+approach 1.50 when the number of iterations tends to infinity. The delta between
+the Dispatch Width (2.00), and the theoretical maximum uOp throughput (1.50) is
+an indicator of a performance bottleneck caused by the lack of hardware
+resources, and the *Resource pressure view* can help to identify the problematic
+resource usage.
 
 The second section of the report shows the latency and reciprocal
 throughput of every instruction in the sequence. That section also reports

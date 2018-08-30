@@ -7,13 +7,16 @@
 # ALL:      Iterations:        1
 # ALL-NEXT: Instructions:      1
 # ALL-NEXT: Total Cycles:      2
+# ALL-NEXT: Total uOps:        1
 
-# M1-NEXT:  Dispatch Width:    4
-# M3-NEXT:  Dispatch Width:    6
-
-# ALL-NEXT: IPC:               0.50
-
+# M1:       Dispatch Width:    4
+# M1-NEXT:  uOps Per Cycle:    0.50
+# M1-NEXT:  IPC:               0.50
 # M1-NEXT:  Block RThroughput: 0.3
+
+# M3:       Dispatch Width:    6
+# M3-NEXT:  uOps Per Cycle:    0.50
+# M3-NEXT:  IPC:               0.50
 # M3-NEXT:  Block RThroughput: 0.2
 
 # ALL:      Schedulers - number of cycles where we saw N instructions issued:
