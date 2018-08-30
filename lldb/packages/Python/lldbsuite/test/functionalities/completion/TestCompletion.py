@@ -281,39 +281,3 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('breakpoint set -n Fo',
                               'breakpoint set -n Foo::Bar(int,\\ int)',
                               turn_off_re_match=True)
-
-    def complete_from_to(self, str_input, patterns, turn_off_re_match=False):
-        """Test that the completion mechanism completes str_input to patterns,
-        where patterns could be a pattern-string or a list of pattern-strings"""
-        # Patterns should not be None in order to proceed.
-        self.assertFalse(patterns is None)
-        # And should be either a string or list of strings.  Check for list type
-        # below, if not, make a list out of the singleton string.  If patterns
-        # is not a string or not a list of strings, there'll be runtime errors
-        # later on.
-        if not isinstance(patterns, list):
-            patterns = [patterns]
-
-        interp = self.dbg.GetCommandInterpreter()
-        match_strings = lldb.SBStringList()
-        num_matches = interp.HandleCompletion(str_input, len(str_input), 0, -1, match_strings)
-        common_match = match_strings.GetStringAtIndex(0)
-        if num_matches == 0:
-            compare_string = str_input
-        else:
-            if common_match != None and len(common_match) > 0:
-                compare_string = str_input + common_match
-            else:
-                compare_string = ""
-                for idx in range(1, num_matches+1):
-                    compare_string += match_strings.GetStringAtIndex(idx) + "\n"
-
-        for p in patterns:
-            if turn_off_re_match:
-                self.expect(
-                    compare_string, msg=COMPLETION_MSG(
-                        str_input, p, match_strings), exe=False, substrs=[p])
-            else:
-                self.expect(
-                    compare_string, msg=COMPLETION_MSG(
-                        str_input, p, match_strings), exe=False, patterns=[p])

@@ -10230,9 +10230,11 @@ public:
                                       const VirtSpecifiers *VS = nullptr);
   void CodeCompleteBracketDeclarator(Scope *S);
   void CodeCompleteCase(Scope *S);
-  void CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args);
+  void CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
+                        SourceLocation OpenParLoc);
   void CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
-                               ArrayRef<Expr *> Args);
+                               ArrayRef<Expr *> Args,
+                               SourceLocation OpenParLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   void CodeCompleteReturn(Scope *S);
   void CodeCompleteAfterIf(Scope *S);

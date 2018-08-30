@@ -25,7 +25,6 @@ add_llvm_library(LLVMAnalysis
   Delinearization.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
-  DivergenceAnalysis.cpp
   DomPrinter.cpp
   DominanceFrontier.cpp
   EHPersonalities.cpp
@@ -44,6 +43,7 @@ add_llvm_library(LLVMAnalysis
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
   LazyValueInfo.cpp
+  LegacyDivergenceAnalysis.cpp
   Lint.cpp
   Loads.cpp
   LoopAccessAnalysis.cpp

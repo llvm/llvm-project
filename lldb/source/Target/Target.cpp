@@ -322,7 +322,7 @@ BreakpointSP Target::CreateSourceRegexBreakpoint(
 
 BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
                                       const FileSpec &file, uint32_t line_no,
-                                      lldb::addr_t offset,
+                                      uint32_t column, lldb::addr_t offset,
                                       LazyBool check_inlines,
                                       LazyBool skip_prologue, bool internal,
                                       bool hardware,
@@ -366,8 +366,8 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
     move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(
-      nullptr, remapped_file, line_no, offset, check_inlines, skip_prologue,
-      !static_cast<bool>(move_to_nearest_code)));
+      nullptr, remapped_file, line_no, column, offset, check_inlines,
+      skip_prologue, !static_cast<bool>(move_to_nearest_code)));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
 }
 

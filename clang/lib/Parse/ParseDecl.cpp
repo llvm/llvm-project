@@ -2304,7 +2304,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     auto ConstructorCompleter = [&, ThisVarDecl] {
       Actions.CodeCompleteConstructor(
           getCurScope(), ThisVarDecl->getType()->getCanonicalTypeInternal(),
-          ThisDecl->getLocation(), Exprs);
+          ThisDecl->getLocation(), Exprs, T.getOpenLocation());
     };
     if (ThisVarDecl) {
       // ParseExpressionList can sometimes succeed even when ThisDecl is not

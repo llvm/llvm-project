@@ -230,7 +230,8 @@ TaskHandle ClangdServer::codeComplete(PathRef File, Position Pos,
     // is called as soon as results are available.
   };
 
-  WorkScheduler.runWithPreamble("CodeComplete", File,
+  // We use a potentially-stale preamble because latency is critical here.
+  WorkScheduler.runWithPreamble("CodeComplete", File, TUScheduler::Stale,
                                 Bind(Task, File.str(), std::move(CB)));
   return TH;
 }
@@ -252,7 +253,11 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                              IP->Contents, Pos, FS, PCHs, Index));
   };
 
-  WorkScheduler.runWithPreamble("SignatureHelp", File,
+  // Unlike code completion, we wait for an up-to-date preamble here.
+  // Signature help is often triggered after code completion. If the code
+  // completion inserted a header to make the symbol available, then using
+  // the old preamble would yield useless results.
+  WorkScheduler.runWithPreamble("SignatureHelp", File, TUScheduler::Consistent,
                                 Bind(Action, File.str(), std::move(CB)));
 }
 

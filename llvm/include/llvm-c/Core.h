@@ -843,6 +843,63 @@ LLVMContextRef LLVMGetModuleContext(LLVMModuleRef M);
 LLVMTypeRef LLVMGetTypeByName(LLVMModuleRef M, const char *Name);
 
 /**
+ * Obtain an iterator to the first NamedMDNode in a Module.
+ *
+ * @see llvm::Module::named_metadata_begin()
+ */
+LLVMNamedMDNodeRef LLVMGetFirstNamedMetadata(LLVMModuleRef M);
+
+/**
+ * Obtain an iterator to the last NamedMDNode in a Module.
+ *
+ * @see llvm::Module::named_metadata_end()
+ */
+LLVMNamedMDNodeRef LLVMGetLastNamedMetadata(LLVMModuleRef M);
+
+/**
+ * Advance a NamedMDNode iterator to the next NamedMDNode.
+ *
+ * Returns NULL if the iterator was already at the end and there are no more
+ * named metadata nodes.
+ */
+LLVMNamedMDNodeRef LLVMGetNextNamedMetadata(LLVMNamedMDNodeRef NamedMDNode);
+
+/**
+ * Decrement a NamedMDNode iterator to the previous NamedMDNode.
+ *
+ * Returns NULL if the iterator was already at the beginning and there are
+ * no previous named metadata nodes.
+ */
+LLVMNamedMDNodeRef LLVMGetPreviousNamedMetadata(LLVMNamedMDNodeRef NamedMDNode);
+
+/**
+ * Retrieve a NamedMDNode with the given name, returning NULL if no such
+ * node exists.
+ *
+ * @see llvm::Module::getNamedMetadata()
+ */
+LLVMNamedMDNodeRef LLVMGetNamedMetadata(LLVMModuleRef M,
+                                        const char *Name, size_t NameLen);
+
+/**
+ * Retrieve a NamedMDNode with the given name, creating a new node if no such
+ * node exists.
+ *
+ * @see llvm::Module::getOrInsertNamedMetadata()
+ */
+LLVMNamedMDNodeRef LLVMGetOrInsertNamedMetadata(LLVMModuleRef M,
+                                                const char *Name,
+                                                size_t NameLen);
+
+/**
+ * Retrieve the name of a NamedMDNode.
+ *
+ * @see llvm::NamedMDNode::getName()
+ */
+const char *LLVMGetNamedMetadataName(LLVMNamedMDNodeRef NamedMD,
+                                     size_t *NameLen);
+
+/**
  * Obtain the number of operands for named metadata in a module.
  *
  * @see llvm::Module::getNamedMetadata()

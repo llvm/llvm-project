@@ -51,6 +51,7 @@ class DispatchStage final : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;
+  InstRef CarriedOver;
   const llvm::MCSubtargetInfo &STI;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
@@ -63,7 +64,8 @@ class DispatchStage final : public Stage {
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
   void notifyInstructionDispatched(const InstRef &IR,
-                                   llvm::ArrayRef<unsigned> UsedPhysRegs);
+                                   llvm::ArrayRef<unsigned> UsedPhysRegs,
+                                   unsigned uOps);
 
   void collectWrites(llvm::SmallVectorImpl<WriteRef> &Vec,
                      unsigned RegID) const {
@@ -75,7 +77,7 @@ public:
                 const llvm::MCRegisterInfo &MRI, unsigned MaxDispatchWidth,
                 RetireControlUnit &R, RegisterFile &F)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), STI(Subtarget), RCU(R), PRF(F) {}
+        CarryOver(0U), CarriedOver(), STI(Subtarget), RCU(R), PRF(F) {}
 
   bool isAvailable(const InstRef &IR) const override;
 

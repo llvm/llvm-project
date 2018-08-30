@@ -510,6 +510,13 @@ public:
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns false if we can't guarantee that Physreg, specified as an IR asm
+  /// clobber constraint, will be preserved across the statement.
+  virtual bool isAsmClobberable(const MachineFunction &MF,
+                               unsigned PhysReg) const {
+    return true;
+  }
+
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
   virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }

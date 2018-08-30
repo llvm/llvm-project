@@ -15,14 +15,14 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      13
+# CHECK-NEXT: RAT     - Register unavailable:                      13  (46.4%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
 # CHECK-NEXT:  0,              20  (71.4%)
 # CHECK-NEXT:  1,              6  (21.4%)

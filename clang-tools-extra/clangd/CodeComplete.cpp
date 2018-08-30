@@ -794,7 +794,17 @@ public:
 
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
-                                 unsigned NumCandidates) override {
+                                 unsigned NumCandidates,
+                                 SourceLocation OpenParLoc) override {
+    assert(!OpenParLoc.isInvalid());
+    SourceManager &SrcMgr = S.getSourceManager();
+    OpenParLoc = SrcMgr.getFileLoc(OpenParLoc);
+    if (SrcMgr.isInMainFile(OpenParLoc))
+      SigHelp.argListStart = sourceLocToPosition(SrcMgr, OpenParLoc);
+    else
+      elog("Location oustide main file in signature help: {0}",
+           OpenParLoc.printToString(SrcMgr));
+
     std::vector<ScoredSignature> ScoredSignatures;
     SigHelp.signatures.reserve(NumCandidates);
     ScoredSignatures.reserve(NumCandidates);

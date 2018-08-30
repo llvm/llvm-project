@@ -33,16 +33,14 @@ define i32 @global_i32() {
 ; CHECK-LABEL: global_i32:
   %val = load i32, i32* @var32
   ret i32 %val
-; CHECK: adr x[[ADDR_REG:[0-9]+]], var32
-; CHECK: ldr w0, [x[[ADDR_REG]]]
+; CHECK: ldr w0, var32
 }
 
 define i64 @global_i64() {
 ; CHECK-LABEL: global_i64:
   %val = load i64, i64* @var64
   ret i64 %val
-; CHECK: adr x[[ADDR_REG:[0-9]+]], var64
-; CHECK: ldr x0, [x[[ADDR_REG]]]
+; CHECK: ldr x0, var64
 }
 
 define <2 x i64> @constpool() {

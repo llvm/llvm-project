@@ -150,6 +150,88 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC %s
+// CHECK-CLANG-NO-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC: "-lc"
+// CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+//
+// RUN: %clang++ -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGXX-NO-LIBGCC %s
+// CHECK-CLANGXX-NO-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANGXX-NO-LIBGCC: "-lgcc_s" "-lgcc"
+// CHECK-CLANGXX-NO-LIBGCC: "-lc"
+// CHECK-CLANGXX-NO-LIBGCC: "-lgcc_s" "-lgcc"
+//
+// RUN: %clang -static -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-STATIC %s
+// CHECK-CLANG-NO-LIBGCC-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-NO-LIBGCC-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
+//
+// RUN: %clang -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-DYNAMIC %s
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lc"
+// CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+//
+// RUN: %clang -static-libgcc -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-STATIC-LIBGCC %s
+// CHECK-CLANG-STATIC-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
+// CHECK-CLANG-STATIC-LIBGCC: "-lc"
+// CHECK-CLANG-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
+//
+// RUN: %clang -static-libgcc -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-STATIC-LIBGCC-DYNAMIC %s
+// CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lgcc" "-lgcc_eh"
+// CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lc"
+// CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lgcc" "-lgcc_eh"
+//
+// RUN: %clang -shared-libgcc -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-SHARED-LIBGCC %s
+// CHECK-CLANG-SHARED-LIBGCC: warning: argument unused during compilation: '-shared-libgcc'
+// This will be the correct check once the driver supports -shared-libgcc
+// SKIP-CHECK-CLANG-SHARED-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// SKIP-CHECK-CLANG-SHARED-LIBGCC: "-lgcc_s" "-lgcc"
+// SKIP-CHECK-CLANG-SHARED-LIBGCC: "-lc"
+// SKIP-CHECK-CLANG-SHARED-LIBGCC: "-lgcc_s" "-lgcc"
+//
+// RUN: %clang -shared-libgcc -dynamic -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-SHARED-LIBGCC-DYNAMIC %s
+// CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: warning: argument unused during compilation: '-shared-libgcc'
+// CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// This will be the correct check once the driver supports -shared-libgcc
+// SKIP-CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lgcc_s" "-lgcc"
+// SKIP-CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lc"
+// SKIP-CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lgcc_s" "-lgcc"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1      \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     -static \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \

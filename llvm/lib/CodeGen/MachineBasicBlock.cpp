@@ -1375,12 +1375,56 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
                                            unsigned Neighborhood) const {
   unsigned N = Neighborhood;
 
-  // Start by searching backwards from Before, looking for kills, reads or defs.
+  // Try searching forwards from Before, looking for reads or defs.
   const_iterator I(Before);
+  // If this is the last insn in the block, don't search forwards.
+  if (I != end()) {
+    for (++I; I != end() && N > 0; ++I) {
+      if (I->isDebugInstr())
+        continue;
+
+      --N;
+
+      MachineOperandIteratorBase::PhysRegInfo Info =
+          ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
+
+      // Register is live when we read it here.
+      if (Info.Read)
+        return LQR_Live;
+      // Register is dead if we can fully overwrite or clobber it here.
+      if (Info.FullyDefined || Info.Clobbered)
+        return LQR_Dead;
+    }
+  }
+
+  // If we reached the end, it is safe to clobber Reg at the end of a block of
+  // no successor has it live in.
+  if (I == end()) {
+    for (MachineBasicBlock *S : successors()) {
+      for (MCSubRegIterator SubReg(Reg, TRI, /*IncludeSelf*/true);
+           SubReg.isValid(); ++SubReg) {
+        if (S->isLiveIn(*SubReg))
+          return LQR_Live;
+      }
+    }
+
+    return LQR_Dead;
+  }
+
+
+  N = Neighborhood;
+
+  // Start by searching backwards from Before, looking for kills, reads or defs.
+  I = const_iterator(Before);
   // If this is the first insn in the block, don't search backwards.
   if (I != begin()) {
     do {
       --I;
+
+      if (I->isDebugInstr())
+        continue;
+
+      --N;
 
       MachineOperandIteratorBase::PhysRegInfo Info =
           ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
@@ -1406,7 +1450,8 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
       // Register must be live if we read it.
       if (Info.Read)
         return LQR_Live;
-    } while (I != begin() && --N > 0);
+
+    } while (I != begin() && N > 0);
   }
 
   // Did we get to the start of the block?
@@ -1418,25 +1463,6 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
         return LQR_Live;
 
     return LQR_Dead;
-  }
-
-  N = Neighborhood;
-
-  // Try searching forwards from Before, looking for reads or defs.
-  I = const_iterator(Before);
-  // If this is the last insn in the block, don't search forwards.
-  if (I != end()) {
-    for (++I; I != end() && N > 0; ++I, --N) {
-      MachineOperandIteratorBase::PhysRegInfo Info =
-          ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
-
-      // Register is live when we read it here.
-      if (Info.Read)
-        return LQR_Live;
-      // Register is dead if we can fully overwrite or clobber it here.
-      if (Info.FullyDefined || Info.Clobbered)
-        return LQR_Dead;
-    }
   }
 
   // At this point we have no idea of the liveness of the register.

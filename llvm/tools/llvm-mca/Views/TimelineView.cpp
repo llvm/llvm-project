@@ -29,6 +29,8 @@ TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
     MaxIterations = DEFAULT_ITERATIONS;
   NumInstructions *= std::min(MaxIterations, AsmSequence.getNumIterations());
   Timeline.resize(NumInstructions);
+  TimelineViewEntry InvalidTVEntry = {-1, 0, 0, 0, 0};
+  std::fill(Timeline.begin(), Timeline.end(), InvalidTVEntry);
 
   WaitTimeEntry NullWTEntry = {0, 0, 0};
   std::fill(WaitTime.begin(), WaitTime.end(), NullWTEntry);
@@ -68,10 +70,13 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
       TVEntry.CycleRetired = CurrentCycle;
 
     // Update the WaitTime entry which corresponds to this Index.
+    assert(TVEntry.CycleDispatched >= 0 && "Invalid TVEntry found!");
+    unsigned CycleDispatched = static_cast<unsigned>(TVEntry.CycleDispatched);
     WaitTimeEntry &WTEntry = WaitTime[Index % AsmSequence.size()];
     WTEntry.CyclesSpentInSchedulerQueue +=
-        TVEntry.CycleIssued - TVEntry.CycleDispatched;
-    assert(TVEntry.CycleDispatched <= TVEntry.CycleReady);
+        TVEntry.CycleIssued - CycleDispatched;
+    assert(CycleDispatched <= TVEntry.CycleReady &&
+           "Instruction cannot be ready if it hasn't been dispatched yet!");
     WTEntry.CyclesSpentInSQWhileReady +=
         TVEntry.CycleIssued - TVEntry.CycleReady;
     WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
@@ -88,7 +93,11 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
     Timeline[Index].CycleExecuted = CurrentCycle;
     break;
   case HWInstructionEvent::Dispatched:
-    Timeline[Index].CycleDispatched = CurrentCycle;
+    // There may be multiple dispatch events. Microcoded instructions that are
+    // expanded into multiple uOps may require multiple dispatch cycles. Here,
+    // we want to capture the first dispatch cycle.
+    if (Timeline[Index].CycleDispatched == -1)
+      Timeline[Index].CycleDispatched = static_cast<int>(CurrentCycle);
     break;
   default:
     return;
@@ -193,19 +202,20 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
     OS << '\n';
   OS << '[' << Iteration << ',' << SourceIndex << ']';
   OS.PadToColumn(10);
-  for (unsigned I = 0, E = Entry.CycleDispatched; I < E; ++I)
+  assert(Entry.CycleDispatched >= 0 && "Invalid TimelineViewEntry!");
+  unsigned CycleDispatched = static_cast<unsigned>(Entry.CycleDispatched);
+  for (unsigned I = 0, E = CycleDispatched; I < E; ++I)
     OS << ((I % 5 == 0) ? '.' : ' ');
   OS << TimelineView::DisplayChar::Dispatched;
-  if (Entry.CycleDispatched != Entry.CycleExecuted) {
+  if (CycleDispatched != Entry.CycleExecuted) {
     // Zero latency instructions have the same value for CycleDispatched,
     // CycleIssued and CycleExecuted.
-    for (unsigned I = Entry.CycleDispatched + 1, E = Entry.CycleIssued; I < E;
-         ++I)
+    for (unsigned I = CycleDispatched + 1, E = Entry.CycleIssued; I < E; ++I)
       OS << TimelineView::DisplayChar::Waiting;
     if (Entry.CycleIssued == Entry.CycleExecuted)
       OS << TimelineView::DisplayChar::DisplayChar::Executed;
     else {
-      if (Entry.CycleDispatched != Entry.CycleIssued)
+      if (CycleDispatched != Entry.CycleIssued)
         OS << TimelineView::DisplayChar::Executing;
       for (unsigned I = Entry.CycleIssued + 1, E = Entry.CycleExecuted; I < E;
            ++I)

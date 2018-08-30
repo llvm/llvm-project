@@ -90,6 +90,13 @@ typedef struct LLVMOpaqueBasicBlock *LLVMBasicBlockRef;
 typedef struct LLVMOpaqueMetadata *LLVMMetadataRef;
 
 /**
+ * Represents an LLVM Named Metadata Node.
+ *
+ * This models llvm::NamedMDNode.
+ */
+typedef struct LLVMOpaqueNamedMDNode *LLVMNamedMDNodeRef;
+
+/**
  * Represents an LLVM basic block builder.
  *
  * This models llvm::IRBuilder.

@@ -2694,6 +2694,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
     // all instructions before Cond other than DbgInfoIntrinsic are bonus
     // instructions.
     for (auto BonusInst = BB->begin(); Cond != &*BonusInst; ++BonusInst) {
+      if (isa<DbgInfoIntrinsic>(BonusInst))
+        continue;
       Instruction *NewBonusInst = BonusInst->clone();
       RemapInstruction(NewBonusInst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -2821,6 +2823,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
+
+    // Copy any debug value intrinsics into the end of PredBlock.
+    for (Instruction &I : *BB)
+      if (isa<DbgInfoIntrinsic>(I))
+        I.clone()->insertBefore(PBI);
+
     return true;
   }
   return false;

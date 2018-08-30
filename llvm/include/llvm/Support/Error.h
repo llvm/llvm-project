@@ -156,9 +156,10 @@ private:
 /// they're moved-assigned or constructed from Success values that have already
 /// been checked. This enforces checking through all levels of the call stack.
 class LLVM_NODISCARD Error {
-  // ErrorList needs to be able to yank ErrorInfoBase pointers out of this
-  // class to add to the error list.
+  // Both ErrorList and FileError need to be able to yank ErrorInfoBase
+  // pointers out of this class to add to the error list.
   friend class ErrorList;
+  friend class FileError;
 
   // handleErrors needs to be able to set the Checked flag.
   template <typename... HandlerTs>
@@ -343,6 +344,8 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&... Args) {
 template <typename ThisErrT, typename ParentErrT = ErrorInfoBase>
 class ErrorInfo : public ParentErrT {
 public:
+  using ParentErrT::ParentErrT; // inherit constructors
+
   static const void *classID() { return &ThisErrT::ID; }
 
   const void *dynamicClassID() const override { return &ThisErrT::ID; }
@@ -1110,10 +1113,33 @@ template <typename T> ErrorOr<T> expectedToErrorOr(Expected<T> &&E) {
 /// StringError is useful in cases where the client is not expected to be able
 /// to consume the specific error message programmatically (for example, if the
 /// error message is to be presented to the user).
+///
+/// StringError can also be used when additional information is to be printed
+/// along with a error_code message. Depending on the constructor called, this
+/// class can either display:
+///    1. the error_code message (ECError behavior)
+///    2. a string
+///    3. the error_code message and a string
+///
+/// These behaviors are useful when subtyping is required; for example, when a
+/// specific library needs an explicit error type. In the example below,
+/// PDBError is derived from StringError:
+///
+///   @code{.cpp}
+///   Expected<int> foo() {
+///      return llvm::make_error<PDBError>(pdb_error_code::dia_failed_loading,
+///                                        "Additional information");
+///   }
+///   @endcode
+///
 class StringError : public ErrorInfo<StringError> {
 public:
   static char ID;
 
+  // Prints EC + S and converts to EC
+  StringError(std::error_code EC, const Twine &S = Twine());
+
+  // Prints S and converts to EC
   StringError(const Twine &S, std::error_code EC);
 
   void log(raw_ostream &OS) const override;
@@ -1124,6 +1150,7 @@ public:
 private:
   std::string Msg;
   std::error_code EC;
+  const bool PrintMsgOnly = false;
 };
 
 /// Create formatted StringError object.
@@ -1137,6 +1164,53 @@ Error createStringError(std::error_code EC, char const *Fmt,
 }
 
 Error createStringError(std::error_code EC, char const *Msg);
+
+/// This class wraps a filename and another Error.
+///
+/// In some cases, an error needs to live along a 'source' name, in order to
+/// show more detailed information to the user.
+class FileError final : public ErrorInfo<FileError> {
+
+  template <class Err>
+  friend Error createFileError(std::string, Err);
+
+public:
+  void log(raw_ostream &OS) const override {
+    assert(Err && !FileName.empty() && "Trying to log after takeError().");
+    OS << "'" << FileName << "': ";
+    Err->log(OS);
+  }
+
+  Error takeError() { return Error(std::move(Err)); }
+
+  std::error_code convertToErrorCode() const override;
+
+  // Used by ErrorInfo::classID.
+  static char ID;
+
+private:
+  FileError(std::string F, std::unique_ptr<ErrorInfoBase> E) {
+    assert(E && "Cannot create FileError from Error success value.");
+    assert(!F.empty() &&
+           "The file name provided to FileError must not be empty.");
+    FileName = F;
+    Err = std::move(E);
+  }
+
+  static Error build(std::string F, Error E) {
+    return Error(std::unique_ptr<FileError>(new FileError(F, E.takePayload())));
+  }
+
+  std::string FileName;
+  std::unique_ptr<ErrorInfoBase> Err;
+};
+
+/// Concatenate a source file path and/or name with an Error. The resulting
+/// Error is unchecked.
+template <class Err>
+inline Error createFileError(std::string F, Err E) {
+  return FileError::build(F, std::move(E));
+}
 
 /// Helper for check-and-exit error handling.
 ///

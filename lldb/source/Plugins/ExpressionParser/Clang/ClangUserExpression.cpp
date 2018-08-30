@@ -402,6 +402,16 @@ llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
                                    "couldn't construct expression body");
       return llvm::Optional<lldb::LanguageType>();
     }
+
+    // Find and store the start position of the original code inside the
+    // transformed code. We need this later for the code completion.
+    std::size_t original_start;
+    std::size_t original_end;
+    bool found_bounds = source_code->GetOriginalBodyBounds(
+        m_transformed_text, lang_type, original_start, original_end);
+    if (found_bounds) {
+      m_user_expression_start_pos = original_start;
+    }
   }
   return lang_type;
 }
@@ -588,6 +598,119 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
     m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
+  return true;
+}
+
+//------------------------------------------------------------------
+/// Converts an absolute position inside a given code string into
+/// a column/line pair.
+///
+/// @param[in] abs_pos
+///     A absolute position in the code string that we want to convert
+///     to a column/line pair.
+///
+/// @param[in] code
+///     A multi-line string usually representing source code.
+///
+/// @param[out] line
+///     The line in the code that contains the given absolute position.
+///     The first line in the string is indexed as 1.
+///
+/// @param[out] column
+///     The column in the line that contains the absolute position.
+///     The first character in a line is indexed as 0.
+//------------------------------------------------------------------
+static void AbsPosToLineColumnPos(unsigned abs_pos, llvm::StringRef code,
+                                  unsigned &line, unsigned &column) {
+  // Reset to code position to beginning of the file.
+  line = 0;
+  column = 0;
+
+  assert(abs_pos <= code.size() && "Absolute position outside code string?");
+
+  // We have to walk up to the position and count lines/columns.
+  for (std::size_t i = 0; i < abs_pos; ++i) {
+    // If we hit a line break, we go back to column 0 and enter a new line.
+    // We only handle \n because that's what we internally use to make new
+    // lines for our temporary code strings.
+    if (code[i] == '\n') {
+      ++line;
+      column = 0;
+      continue;
+    }
+    ++column;
+  }
+}
+
+bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
+                                   StringList &matches, unsigned complete_pos) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  // We don't want any visible feedback when completing an expression. Mostly
+  // because the results we get from an incomplete invocation are probably not
+  // correct.
+  DiagnosticManager diagnostic_manager;
+
+  if (!PrepareForParsing(diagnostic_manager, exe_ctx))
+    return false;
+
+  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+  if (auto new_lang = GetLanguageForExpr(diagnostic_manager, exe_ctx))
+    lang_type = new_lang.getValue();
+
+  if (log)
+    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
+
+  //////////////////////////
+  // Parse the expression
+  //
+
+  m_materializer_ap.reset(new Materializer());
+
+  ResetDeclMap(exe_ctx, m_result_delegate, /*keep result in memory*/ true);
+
+  OnExit on_exit([this]() { ResetDeclMap(); });
+
+  if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get())) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "current process state is unsuitable for expression parsing");
+
+    return false;
+  }
+
+  if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
+    DeclMap()->SetLookupsEnabled(true);
+  }
+
+  Process *process = exe_ctx.GetProcessPtr();
+  ExecutionContextScope *exe_scope = process;
+
+  if (!exe_scope)
+    exe_scope = exe_ctx.GetTargetPtr();
+
+  ClangExpressionParser parser(exe_scope, *this, false);
+
+  // We have to find the source code location where the user text is inside
+  // the transformed expression code. When creating the transformed text, we
+  // already stored the absolute position in the m_transformed_text string. The
+  // only thing left to do is to transform it into the line:column format that
+  // Clang expects.
+
+  // The line and column of the user expression inside the transformed source
+  // code.
+  unsigned user_expr_line, user_expr_column;
+  if (m_user_expression_start_pos.hasValue())
+    AbsPosToLineColumnPos(*m_user_expression_start_pos, m_transformed_text,
+                          user_expr_line, user_expr_column);
+  else
+    return false;
+
+  // The actual column where we have to complete is the start column of the
+  // user expression + the offset inside the user code that we were given.
+  const unsigned completion_column = user_expr_column + complete_pos;
+  parser.Complete(matches, user_expr_line, completion_column, complete_pos);
+
   return true;
 }
 
