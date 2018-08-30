@@ -34,7 +34,11 @@
 #  define _LIBUNWIND_TARGET_X86_64 1
 #  if defined(_WIN64)
 #    define _LIBUNWIND_CONTEXT_SIZE 54
-#    define _LIBUNWIND_CURSOR_SIZE 66
+#    ifdef __SEH__
+#      define _LIBUNWIND_CURSOR_SIZE 204
+#    else
+#      define _LIBUNWIND_CURSOR_SIZE 66
+#    endif
 #  else
 #    define _LIBUNWIND_CONTEXT_SIZE 21
 #    define _LIBUNWIND_CURSOR_SIZE 33
@@ -57,7 +61,10 @@
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64
 # elif defined(__arm__)
 #  define _LIBUNWIND_TARGET_ARM 1
-#  if defined(__ARM_WMMX)
+#  if defined(__SEH__)
+#    define _LIBUNWIND_CONTEXT_SIZE 42
+#    define _LIBUNWIND_CURSOR_SIZE 85
+#  elif defined(__ARM_WMMX)
 #    define _LIBUNWIND_CONTEXT_SIZE 61
 #    define _LIBUNWIND_CURSOR_SIZE 68
 #  else

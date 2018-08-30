@@ -11,9 +11,9 @@
 #define liblldb_IOHandler_h_
 
 #include "lldb/Core/ValueObjectList.h"
-#include "lldb/Host/Predicate.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h"  // for DISALLOW_COPY_AND_ASSIGN
