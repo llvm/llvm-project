@@ -53,6 +53,11 @@ struct HighlightStyle {
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
   };
 
+  /// The style for the token which is below the cursor of the user. Note that
+  /// this style is overwritten by the SourceManager with the values of
+  /// stop-show-column-ansi-prefix/stop-show-column-ansi-suffix.
+  ColorStyle selected;
+
   /// Matches identifiers to variable or functions.
   ColorStyle identifier;
   /// Matches any string or character literals in the language: "foo" or 'f'
@@ -106,6 +111,9 @@ public:
   /// \param options
   /// \param line
   ///     The user supplied line that needs to be highlighted.
+  /// \param cursor_pos
+  ///     The cursor position of the user in this line, starting at 0 (which
+  ///     means the cursor is on the first character in 'line').
   /// \param previous_lines
   ///     Any previous lines the user has written which we should only use
   ///     for getting the context of the Highlighting right.
@@ -113,25 +121,29 @@ public:
   ///     The stream to which the highlighted version of the user string should
   ///     be written.
   virtual void Highlight(const HighlightStyle &options, llvm::StringRef line,
+                         llvm::Optional<size_t> cursor_pos,
                          llvm::StringRef previous_lines, Stream &s) const = 0;
 
   /// Utility method for calling Highlight without a stream.
   std::string Highlight(const HighlightStyle &options, llvm::StringRef line,
+                        llvm::Optional<size_t> cursor_pos,
                         llvm::StringRef previous_lines = "") const;
 };
 
-/// A default highlighter that does nothing. Used as a fallback.
-class NoHighlighter : public Highlighter {
+/// A default highlighter that only highlights the user cursor, but doesn't
+/// do any other highlighting.
+class DefaultHighlighter : public Highlighter {
 public:
   llvm::StringRef GetName() const override { return "none"; }
 
   void Highlight(const HighlightStyle &options, llvm::StringRef line,
+                 llvm::Optional<size_t> cursor_pos,
                  llvm::StringRef previous_lines, Stream &s) const override;
 };
 
 /// Manages the available highlighters.
 class HighlighterManager {
-  NoHighlighter m_no_highlighter;
+  DefaultHighlighter m_default;
 
 public:
   /// Queries all known highlighter for one that can highlight some source code.
@@ -145,6 +157,7 @@ public:
   ///     empty highlighter that does nothing.
   const Highlighter &getHighlighterFor(lldb::LanguageType language_type,
                                        llvm::StringRef path) const;
+  const Highlighter &getDefaultHighlighter() const { return m_default; }
 };
 
 } // namespace lldb_private
