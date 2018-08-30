@@ -6,9 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <algorithm>
 
 namespace clang {
 namespace ast_matchers {
@@ -28,10 +29,9 @@ namespace ast_matchers {
 ///
 /// Usable as: Matcher<Decl>, Matcher<Stmt>, Matcher<TypeLoc>,
 /// Matcher<NestedNameSpecifierLoc>
-
-AST_POLYMORPHIC_MATCHER(isInAbseilFile,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(
-                            Decl, Stmt, TypeLoc, NestedNameSpecifierLoc)) {
+AST_POLYMORPHIC_MATCHER(
+    isInAbseilFile, AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc,
+                                                    NestedNameSpecifierLoc)) {
   auto &SourceManager = Finder->getASTContext().getSourceManager();
   SourceLocation Loc = Node.getBeginLoc();
   if (Loc.isInvalid())
@@ -40,11 +40,21 @@ AST_POLYMORPHIC_MATCHER(isInAbseilFile,
       SourceManager.getFileEntryForID(SourceManager.getFileID(Loc));
   if (!FileEntry)
     return false;
-  StringRef Filename = FileEntry->getName();
-  llvm::Regex RE(
-      "absl/(algorithm|base|container|debugging|memory|meta|numeric|strings|"
-      "synchronization|time|types|utility)");
-  return RE.match(Filename);
+  // Determine whether filepath contains "absl/[absl-library]" substring, where
+  // [absl-library] is AbseilLibraries list entry.
+  StringRef Path = FileEntry->getName();
+  const static llvm::SmallString<5> AbslPrefix("absl/");
+  size_t PrefixPosition = Path.find(AbslPrefix);
+  if (PrefixPosition == StringRef::npos)
+    return false;
+  Path = Path.drop_front(PrefixPosition + AbslPrefix.size());
+  static const char *AbseilLibraries[] = {
+      "algorithm",       "base", "container", "debugging",
+      "memory",          "meta", "numeric",   "strings",
+      "synchronization", "time", "types",     "utility"};
+  return std::any_of(
+      std::begin(AbseilLibraries), std::end(AbseilLibraries),
+      [&](const char *Library) { return Path.startswith(Library); });
 }
 
 } // namespace ast_matchers
