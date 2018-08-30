@@ -30,10 +30,12 @@ add_llvm_library(LLVMAnalysis
   DominanceFrontier.cpp
   EHPersonalities.cpp
   GlobalsModRef.cpp
+  GuardUtils.cpp
   IVUsers.cpp
   IndirectCallPromotionAnalysis.cpp
   InlineCost.cpp
   InstCount.cpp
+  InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   Interval.cpp
   IntervalPartition.cpp
@@ -64,6 +66,7 @@ add_llvm_library(LLVMAnalysis
   ObjCARCInstKind.cpp
   OptimizationRemarkEmitter.cpp
   OrderedBasicBlock.cpp
+  OrderedInstructions.cpp
   PHITransAddr.cpp
   PhiValues.cpp
   PostDominators.cpp

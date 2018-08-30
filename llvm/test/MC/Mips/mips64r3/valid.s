@@ -103,6 +103,12 @@ a:
                                        # CHECK:                     # <MCInst #{{[0-9]+}} CVT_W_D64
         cvt.w.s   $f20,$f24            # CHECK: cvt.w.s $f20, $f24  # encoding: [0x46,0x00,0xc5,0x24]
                                        # CHECK:                     # <MCInst #{{[0-9]+}} CVT_W_S
+        cvt.ps.s  $f4,$f18,$f20        # CHECK: cvt.ps.s $f4, $f18, $f20  # encoding: [0x46,0x14,0x91,0x26]
+                                       # CHECK:                           # <MCInst #{{[0-9]+}} CVT_PS_S64
+        cvt.s.pl  $f30,$f2             # CHECK: cvt.s.pl $f30, $f2  # encoding: [0x46,0xc0,0x17,0xa8]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_S_PL64
+        cvt.s.pu  $f14,$f26            # CHECK: cvt.s.pu $f14, $f26 # encoding: [0x46,0xc0,0xd3,0xa0]
+                                       # CHECK:                     # <MCInst #{{[0-9]+}} CVT_S_PU64
         dadd      $s3,$at,$ra
         dadd      $sp,$s4,-27705       # CHECK: daddi $sp, $20, -27705 # encoding: [0x62,0x9d,0x93,0xc7]
         dadd      $sp,-27705           # CHECK: daddi $sp, $sp, -27705 # encoding: [0x63,0xbd,0x93,0xc7]
@@ -277,6 +283,10 @@ a:
         pause                          # CHECK: pause # encoding:  [0x00,0x00,0x01,0x40]
                                        # CHECK-NEXT:  # <MCInst #{{[0-9]+}} PAUSE
                                        # CHECK-NOT    # <MCInst #{{[0-9}+}} PAUSE_MM
+        pll.ps  $f26,$f10,$f30         # CHECK: pll.ps $f26, $f10, $f30  # encoding: [0x46,0xde,0x56,0xac]
+                                       # CHECK:                          # <MCInst #{{[0-9]+}} PLL_PS64
+        plu.ps  $f2,$f26,$f30          # CHECK: plu.ps $f2, $f26, $f30    # encoding: [0x46,0xde,0xd0,0xad]
+                                       # CHECK:                          # <MCInst #{{[0-9]+}} PLU_PS64
         pref      1, 8($5)             # CHECK: pref 1, 8($5)           # encoding: [0xcc,0xa1,0x00,0x08]
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.

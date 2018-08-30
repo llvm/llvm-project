@@ -6,7 +6,10 @@ idiv %eax
 # CHECK:      Iterations:        22
 # CHECK-NEXT: Instructions:      22
 # CHECK-NEXT: Total Cycles:      553
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        44
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.08
 # CHECK-NEXT: IPC:               0.04
 # CHECK-NEXT: Block RThroughput: 25.0
 

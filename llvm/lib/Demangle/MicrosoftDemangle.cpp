@@ -350,8 +350,8 @@ private:
   VariableSymbolNode *
   demangleRttiBaseClassDescriptorNode(ArenaAllocator &Arena,
                                       StringView &MangledName);
-  FunctionSymbolNode *demangleDynamicStructorFunction(StringView &MangledName,
-                                                      bool IsDestructor);
+  FunctionSymbolNode *demangleInitFiniStub(StringView &MangledName,
+                                           bool IsDestructor);
 
   NamedIdentifierNode *demangleSimpleName(StringView &MangledName,
                                           bool Memorize);
@@ -520,16 +520,35 @@ Demangler::demangleRttiBaseClassDescriptorNode(ArenaAllocator &Arena,
   return VSN;
 }
 
-FunctionSymbolNode *
-Demangler::demangleDynamicStructorFunction(StringView &MangledName,
-                                           bool IsDestructor) {
+FunctionSymbolNode *Demangler::demangleInitFiniStub(StringView &MangledName,
+                                                    bool IsDestructor) {
   DynamicStructorIdentifierNode *DSIN =
       Arena.alloc<DynamicStructorIdentifierNode>();
   DSIN->IsDestructor = IsDestructor;
-  DSIN->Name = demangleFullyQualifiedTypeName(MangledName);
-  QualifiedNameNode *QNN = synthesizeQualifiedName(Arena, DSIN);
-  FunctionSymbolNode *FSN = demangleFunctionEncoding(MangledName);
-  FSN->Name = QNN;
+
+  // What follows is a main symbol name. This may include namespaces or class
+  // back references.
+  QualifiedNameNode *QN = demangleFullyQualifiedSymbolName(MangledName);
+
+  SymbolNode *Symbol = demangleEncodedSymbol(MangledName, QN);
+  FunctionSymbolNode *FSN = nullptr;
+  Symbol->Name = QN;
+
+  if (Symbol->kind() == NodeKind::VariableSymbol) {
+    DSIN->Variable = static_cast<VariableSymbolNode *>(Symbol);
+    if (!MangledName.consumeFront('@')) {
+      Error = true;
+      return nullptr;
+    }
+
+    FSN = demangleFunctionEncoding(MangledName);
+    FSN->Name = synthesizeQualifiedName(Arena, DSIN);
+  } else {
+    FSN = static_cast<FunctionSymbolNode *>(Symbol);
+    DSIN->Name = Symbol->Name;
+    FSN->Name = synthesizeQualifiedName(Arena, DSIN);
+  }
+
   return FSN;
 }
 
@@ -569,9 +588,9 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(StringView &MangledName) {
   case SpecialIntrinsicKind::RttiBaseClassDescriptor:
     return demangleRttiBaseClassDescriptorNode(Arena, MangledName);
   case SpecialIntrinsicKind::DynamicInitializer:
-    return demangleDynamicStructorFunction(MangledName, false);
+    return demangleInitFiniStub(MangledName, false);
   case SpecialIntrinsicKind::DynamicAtexitDestructor:
-    return demangleDynamicStructorFunction(MangledName, true);
+    return demangleInitFiniStub(MangledName, true);
   default:
     break;
   }
@@ -837,6 +856,8 @@ SymbolNode *Demangler::parse(StringView &MangledName) {
   // What follows is a main symbol name. This may include namespaces or class
   // back references.
   QualifiedNameNode *QN = demangleFullyQualifiedSymbolName(MangledName);
+  if (Error)
+    return nullptr;
 
   SymbolNode *Symbol = demangleEncodedSymbol(MangledName, QN);
   if (Symbol) {
@@ -1325,10 +1346,9 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
         goto StringLiteralError;
     }
   } else {
-    if (StringByteSize > 32)
-      Result->IsTruncated = true;
-
-    constexpr unsigned MaxStringByteLength = 32;
+    // The max byte length is actually 32, but some compilers mangled strings
+    // incorrectly, so we have to assume it can go higher.
+    constexpr unsigned MaxStringByteLength = 32 * 4;
     uint8_t StringBytes[MaxStringByteLength];
 
     unsigned BytesDecoded = 0;
@@ -1336,6 +1356,9 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
       assert(StringByteSize >= 1);
       StringBytes[BytesDecoded++] = demangleCharLiteral(MangledName);
     }
+
+    if (StringByteSize > BytesDecoded)
+      Result->IsTruncated = true;
 
     unsigned CharBytes =
         guessCharByteSize(StringBytes, BytesDecoded, StringByteSize);
@@ -1587,6 +1610,10 @@ FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
     return FuncClass(FC_Private | FC_Virtual);
   case 'F':
     return FuncClass(FC_Private | FC_Virtual);
+  case 'G':
+    return FuncClass(FC_Private | FC_StaticThisAdjust);
+  case 'H':
+    return FuncClass(FC_Private | FC_StaticThisAdjust | FC_Far);
   case 'I':
     return FuncClass(FC_Protected);
   case 'J':
@@ -1760,7 +1787,6 @@ TypeNode *Demangler::demangleType(StringView &MangledName,
     Ty = demangleCustomType(MangledName);
   } else {
     Ty = demanglePrimitiveType(MangledName);
-    assert(Ty && !Error);
     if (!Ty || Error)
       return Ty;
   }
@@ -1976,14 +2002,14 @@ PointerTypeNode *Demangler::demangleMemberPointerType(StringView &MangledName) {
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
   if (MangledName.consumeFront("8")) {
-    Pointer->ClassParent = demangleFullyQualifiedSymbolName(MangledName);
+    Pointer->ClassParent = demangleFullyQualifiedTypeName(MangledName);
     Pointer->Pointee = demangleFunctionType(MangledName, true);
   } else {
     Qualifiers PointeeQuals = Q_None;
     bool IsMember = false;
     std::tie(PointeeQuals, IsMember) = demangleQualifiers(MangledName);
     assert(IsMember);
-    Pointer->ClassParent = demangleFullyQualifiedSymbolName(MangledName);
+    Pointer->ClassParent = demangleFullyQualifiedTypeName(MangledName);
 
     Pointer->Pointee = demangleType(MangledName, QualifierMangleMode::Drop);
     Pointer->Pointee->Quals = PointeeQuals;
@@ -2121,18 +2147,21 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
   size_t Count = 0;
 
   while (!Error && !MangledName.startsWith('@')) {
+    if (MangledName.consumeFront("$S") || MangledName.consumeFront("$$V") ||
+        MangledName.consumeFront("$$$V")) {
+      // Empty parameter pack.
+      continue;
+    }
+
     ++Count;
+
     // Template parameter lists don't participate in back-referencing.
     *Current = Arena.alloc<NodeList>();
 
     NodeList &TP = **Current;
 
     TemplateParameterReferenceNode *TPRN = nullptr;
-    if (MangledName.consumeFront("$S") || MangledName.consumeFront("$$V") ||
-        MangledName.consumeFront("$$$V")) {
-      // Empty parameter pack.
-      TP.N = nullptr;
-    } else if (MangledName.consumeFront("$$Y")) {
+    if (MangledName.consumeFront("$$Y")) {
       // Template alias
       TP.N = demangleFullyQualifiedTypeName(MangledName);
     } else if (MangledName.consumeFront("$$B")) {

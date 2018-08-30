@@ -6,7 +6,10 @@
 # CHECK:      Iterations:        600
 # CHECK-NEXT: Instructions:      600
 # CHECK-NEXT: Total Cycles:      603
-# CHECK-NEXT: Dispatch Width:    3
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    3
+# CHECK-NEXT: uOps Per Cycle:    1.00
 # CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 1.0
 

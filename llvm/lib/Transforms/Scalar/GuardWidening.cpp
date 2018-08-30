@@ -45,6 +45,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -105,12 +106,6 @@ static void setCondition(Instruction *I, Value *NewCond) {
     return;
   }
   cast<BranchInst>(I)->setCondition(NewCond);
-}
-
-// Whether or not the particular instruction \p I is a guard.
-static bool isGuard(const Instruction *I) {
-  using namespace llvm::PatternMatch;
-  return match(I, m_Intrinsic<Intrinsic::experimental_guard>());
 }
 
 // Eliminates the guard instruction properly.

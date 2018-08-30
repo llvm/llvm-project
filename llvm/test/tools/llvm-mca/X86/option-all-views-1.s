@@ -11,7 +11,10 @@ add %eax, %eax
 # DEFAULTREPORT:      Iterations:        100
 # DEFAULTREPORT-NEXT: Instructions:      100
 # DEFAULTREPORT-NEXT: Total Cycles:      103
-# DEFAULTREPORT-NEXT: Dispatch Width:    2
+# DEFAULTREPORT-NEXT: Total uOps:        100
+
+# DEFAULTREPORT:      Dispatch Width:    2
+# DEFAULTREPORT-NEXT: uOps Per Cycle:    0.97
 # DEFAULTREPORT-NEXT: IPC:               0.97
 # DEFAULTREPORT-NEXT: Block RThroughput: 0.5
 

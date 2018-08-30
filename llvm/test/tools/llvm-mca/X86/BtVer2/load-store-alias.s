@@ -13,7 +13,10 @@ vmovaps %xmm0, 48(%rdi)
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
 # CHECK-NEXT: Total Cycles:      2403
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        800
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.33
 # CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 4.0
 

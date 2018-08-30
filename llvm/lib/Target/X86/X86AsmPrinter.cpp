@@ -129,6 +129,9 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     if (MO.getTargetFlags() == X86II::MO_DLLIMPORT)
       GVSym =
           P.OutContext.getOrCreateSymbol(Twine("__imp_") + GVSym->getName());
+    else if (MO.getTargetFlags() == X86II::MO_COFFSTUB)
+      GVSym =
+          P.OutContext.getOrCreateSymbol(Twine(".refptr.") + GVSym->getName());
 
     if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE) {
@@ -161,6 +164,7 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case X86II::MO_DARWIN_NONLAZY:
   case X86II::MO_DLLIMPORT:
+  case X86II::MO_COFFSTUB:
     // These affect the name of the symbol, not any suffix.
     break;
   case X86II::MO_GOT_ABSOLUTE_ADDRESS:

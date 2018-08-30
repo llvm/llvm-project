@@ -7402,7 +7402,8 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DARWIN_NONLAZY_PIC_BASE, "x86-darwin-nonlazy-pic-base"},
       {MO_TLVP, "x86-tlvp"},
       {MO_TLVP_PIC_BASE, "x86-tlvp-pic-base"},
-      {MO_SECREL, "x86-secrel"}};
+      {MO_SECREL, "x86-secrel"},
+      {MO_COFFSTUB, "x86-coffstub"}};
   return makeArrayRef(TargetFlags);
 }
 
