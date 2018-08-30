@@ -84,7 +84,7 @@ EnqueueScheduler(__global SchedulerParam* param)
 }
 
 __attribute__((always_inline)) void
-__amd_scheduler(__global SchedulerParam* param)
+__amd_scheduler_pal(__global SchedulerParam* param)
 {
     __global AmdVQueueHeader* queue = (__global AmdVQueueHeader*)(param->vqueue_header);
     __global AmdAqlWrap* wraps = (__global AmdAqlWrap*)&queue[1];
