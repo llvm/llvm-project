@@ -1114,9 +1114,13 @@ public:
   /// \param Candidates an array of overload candidates.
   ///
   /// \param NumCandidates the number of overload candidates
+  ///
+  /// \param OpenParLoc location of the opening parenthesis of the argument
+  ///        list.
   virtual void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                          OverloadCandidate *Candidates,
-                                         unsigned NumCandidates) {}
+                                         unsigned NumCandidates,
+                                         SourceLocation OpenParLoc) {}
   //@}
 
   /// Retrieve the allocator that will be used to allocate
@@ -1166,7 +1170,8 @@ public:
 
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
-                                 unsigned NumCandidates) override;
+                                 unsigned NumCandidates,
+                                 SourceLocation OpenParLoc) override;
 
   bool isResultFilteredOut(StringRef Filter, CodeCompletionResult Results) override;
 
