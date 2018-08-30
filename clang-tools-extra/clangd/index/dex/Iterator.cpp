@@ -48,6 +48,8 @@ public:
 
   float consume() override { return DEFAULT_BOOST_SCORE; }
 
+  size_t estimateSize() const override { return Documents.size(); }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << '[';
@@ -85,6 +87,18 @@ public:
     assert(!Children.empty() && "AndIterator should have at least one child.");
     // Establish invariants.
     sync();
+    // When children are sorted by the estimateSize(), sync() calls are more
+    // effective. Each sync() starts with the first child and makes sure all
+    // children point to the same element. If any child is "above" the previous
+    // ones, the algorithm resets and and advances the children to the next
+    // highest element starting from the front. When child iterators in the
+    // beginning have smaller estimated size, the sync() will have less restarts
+    // and become more effective.
+    std::sort(begin(Children), end(Children),
+              [](const std::unique_ptr<Iterator> &LHS,
+                 const std::unique_ptr<Iterator> &RHS) {
+                return LHS->estimateSize() < RHS->estimateSize();
+              });
   }
 
   bool reachedEnd() const override { return ReachedEnd; }
@@ -112,6 +126,10 @@ public:
         [&](float Current, const std::unique_ptr<Iterator> &Child) {
           return Current * Child->consume();
         });
+  }
+
+  size_t estimateSize() const override {
+    return Children.front()->estimateSize();
   }
 
 private:
@@ -146,9 +164,6 @@ private:
           return;
         // If any child goes beyond given ID (i.e. ID is not the common item),
         // all children should be advanced to the next common item.
-        // FIXME(kbobyrev): This is not a very optimized version; after costs
-        // are introduced, cycle should break whenever ID exceeds current one
-        // and cheapest children should be advanced over again.
         if (Child->peek() > SyncID) {
           SyncID = Child->peek();
           NeedsAdvance = true;
@@ -178,6 +193,7 @@ public:
   OrIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
       : Children(std::move(AllChildren)) {
     assert(Children.size() > 0 && "Or Iterator must have at least one child.");
+    std::sort(begin(Children), end(Children));
   }
 
   /// Returns true if all children are exhausted.
@@ -235,6 +251,14 @@ public:
         });
   }
 
+  size_t estimateSize() const override {
+    return std::accumulate(
+        begin(Children), end(Children), Children.front()->estimateSize(),
+        [&](size_t Current, const std::unique_ptr<Iterator> &Child) {
+          return std::max(Current, Child->estimateSize());
+        });
+  }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
@@ -277,6 +301,8 @@ public:
 
   float consume() override { return DEFAULT_BOOST_SCORE; }
 
+  size_t estimateSize() const override { return Size; }
+
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(TRUE {" << Index << "} out of " << Size << ")";
@@ -304,6 +330,8 @@ public:
   DocID peek() const override { return Child->peek(); }
 
   float consume() override { return Child->consume() * Factor; }
+
+  size_t estimateSize() const override { return Child->estimateSize(); }
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
@@ -340,6 +368,10 @@ public:
     assert(!reachedEnd() && "LimitIterator can't consume at the end.");
     --ItemsLeft;
     return Child->consume();
+  }
+
+  size_t estimateSize() const override {
+    return std::min(Child->estimateSize(), Limit);
   }
 
 private:
