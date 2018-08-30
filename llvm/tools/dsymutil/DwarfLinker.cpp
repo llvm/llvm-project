@@ -155,6 +155,40 @@ static bool isODRAttribute(uint16_t Attr) {
   llvm_unreachable("Improper attribute.");
 }
 
+static bool isTypeTag(uint16_t Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_array_type:
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_string_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_ptr_to_member_type:
+  case dwarf::DW_TAG_set_type:
+  case dwarf::DW_TAG_subrange_type:
+  case dwarf::DW_TAG_base_type:
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_constant:
+  case dwarf::DW_TAG_file_type:
+  case dwarf::DW_TAG_namelist:
+  case dwarf::DW_TAG_packed_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_atomic_type:
+  case dwarf::DW_TAG_interface_type:
+  case dwarf::DW_TAG_unspecified_type:
+  case dwarf::DW_TAG_shared_type:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 bool DwarfLinker::DIECloner::getDIENames(const DWARFDie &Die,
                                          AttributesInfo &Info,
                                          OffsetsStringPool &StringPool,
@@ -269,7 +303,8 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
   // DW_TAG_module or a DW_TAG_module that contains nothing but
   // forward declarations.
   Info.Prune &= (DIE.getTag() == dwarf::DW_TAG_module) ||
-                dwarf::toUnsigned(DIE.find(dwarf::DW_AT_declaration), 0);
+                (isTypeTag(DIE.getTag()) &&
+                 dwarf::toUnsigned(DIE.find(dwarf::DW_AT_declaration), 0));
 
   // Don't prune it if there is no definition for the DIE.
   Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset();
@@ -1256,40 +1291,6 @@ bool DwarfLinker::RelocationManager::applyValidRelocs(
   }
 
   return Applied;
-}
-
-static bool isTypeTag(uint16_t Tag) {
-  switch (Tag) {
-  case dwarf::DW_TAG_array_type:
-  case dwarf::DW_TAG_class_type:
-  case dwarf::DW_TAG_enumeration_type:
-  case dwarf::DW_TAG_pointer_type:
-  case dwarf::DW_TAG_reference_type:
-  case dwarf::DW_TAG_string_type:
-  case dwarf::DW_TAG_structure_type:
-  case dwarf::DW_TAG_subroutine_type:
-  case dwarf::DW_TAG_typedef:
-  case dwarf::DW_TAG_union_type:
-  case dwarf::DW_TAG_ptr_to_member_type:
-  case dwarf::DW_TAG_set_type:
-  case dwarf::DW_TAG_subrange_type:
-  case dwarf::DW_TAG_base_type:
-  case dwarf::DW_TAG_const_type:
-  case dwarf::DW_TAG_constant:
-  case dwarf::DW_TAG_file_type:
-  case dwarf::DW_TAG_namelist:
-  case dwarf::DW_TAG_packed_type:
-  case dwarf::DW_TAG_volatile_type:
-  case dwarf::DW_TAG_restrict_type:
-  case dwarf::DW_TAG_atomic_type:
-  case dwarf::DW_TAG_interface_type:
-  case dwarf::DW_TAG_unspecified_type:
-  case dwarf::DW_TAG_shared_type:
-    return true;
-  default:
-    break;
-  }
-  return false;
 }
 
 static bool isObjCSelector(StringRef Name) {
