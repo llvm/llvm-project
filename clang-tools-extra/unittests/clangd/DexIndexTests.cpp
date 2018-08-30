@@ -259,7 +259,7 @@ TEST(DexIndexIterators, StringRepresentation) {
                           createOr(create(L3), create(L4), create(L5)));
 
   EXPECT_EQ(llvm::to_string(*Nested),
-            "(& (| [{END}] [0, {5}, END] [0, {1}, 5, END]) (& [{1}, 5, 7, 9, "
+            "(& (| [0, {5}, END] [0, {1}, 5, END] [{END}]) (& [{1}, 5, 7, 9, "
             "END] [{1}, 3, 5, 8, 9, END]))");
 }
 
