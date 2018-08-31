@@ -78,7 +78,7 @@ public:
 
 int foo();
 
-int baz1();
+static int baz1() { return 0; }
 
 int baz2();
 

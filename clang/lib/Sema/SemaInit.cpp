@@ -9062,6 +9062,10 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     return QualType();
   }
 
+  Diag(TSInfo->getTypeLoc().getBeginLoc(),
+       diag::warn_cxx14_compat_class_template_argument_deduction)
+      << TSInfo->getTypeLoc().getSourceRange();
+
   // Can't deduce from dependent arguments.
   if (Expr::hasAnyTypeDependentArguments(Inits))
     return Context.DependentTy;
