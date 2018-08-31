@@ -7,21 +7,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "TestIndex.h"
+#include "TestTU.h"
+#include "gmock/gmock.h"
+#include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using testing::Pointee;
 using testing::UnorderedElementsAre;
+using testing::AllOf;
 
 namespace clang {
 namespace clangd {
 namespace {
 
+std::shared_ptr<MemIndex::OccurrenceMap> emptyOccurrences() {
+  return llvm::make_unique<MemIndex::OccurrenceMap>();
+}
+
 MATCHER_P(Named, N, "") { return arg.Name == N; }
+MATCHER_P(OccurrenceRange, Range, "") {
+  return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
+                  arg.Location.End.Line, arg.Location.End.Column) ==
+         std::tie(Range.start.line, Range.start.character, Range.end.line,
+                  Range.end.character);
+}
+MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 
 TEST(SymbolSlab, FindAndIterate) {
   SymbolSlab::Builder B;
@@ -42,14 +57,14 @@ TEST(SymbolSlab, FindAndIterate) {
 TEST(MemIndexTest, MemIndexSymbolsRecycled) {
   MemIndex I;
   std::weak_ptr<SlabAndPointers> Symbols;
-  I.build(generateNumSymbols(0, 10, &Symbols));
+  I.build(generateNumSymbols(0, 10, &Symbols), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "7";
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("7"));
 
   EXPECT_FALSE(Symbols.expired());
   // Release old symbols.
-  I.build(generateNumSymbols(0, 0));
+  I.build(generateNumSymbols(0, 0), emptyOccurrences());
   EXPECT_TRUE(Symbols.expired());
 }
 
@@ -65,14 +80,14 @@ TEST(MemIndexTest, MemIndexDeduplicate) {
   FuzzyFindRequest Req;
   Req.Query = "7";
   MemIndex I;
-  I.build(std::move(Symbols));
+  I.build(std::move(Symbols), emptyOccurrences());
   auto Matches = match(I, Req);
   EXPECT_EQ(Matches.size(), 1u);
 }
 
 TEST(MemIndexTest, MemIndexLimitedNumMatches) {
   MemIndex I;
-  I.build(generateNumSymbols(0, 100));
+  I.build(generateNumSymbols(0, 100), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.MaxCandidateCount = 3;
@@ -85,7 +100,8 @@ TEST(MemIndexTest, MemIndexLimitedNumMatches) {
 TEST(MemIndexTest, FuzzyMatch) {
   MemIndex I;
   I.build(
-      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
+      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
+      emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.MaxCandidateCount = 2;
@@ -95,7 +111,7 @@ TEST(MemIndexTest, FuzzyMatch) {
 
 TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "y";
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
@@ -103,7 +119,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
 
 TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  I.build(generateSymbols({"a::y1", "b::y2", "y3"}), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
@@ -112,7 +128,8 @@ TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
 
 TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
   MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}),
+          emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -121,7 +138,8 @@ TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
 
 TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
   MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
+  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}),
+          emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
@@ -130,7 +148,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
 
 TEST(MemIndexTest, NoMatchNestedScopes) {
   MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::b::y2"}));
+  I.build(generateSymbols({"a::y1", "a::b::y2"}), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -139,7 +157,7 @@ TEST(MemIndexTest, NoMatchNestedScopes) {
 
 TEST(MemIndexTest, IgnoreCases) {
   MemIndex I;
-  I.build(generateSymbols({"ns::ABC", "ns::abc"}));
+  I.build(generateSymbols({"ns::ABC", "ns::abc"}), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
@@ -148,7 +166,7 @@ TEST(MemIndexTest, IgnoreCases) {
 
 TEST(MemIndexTest, Lookup) {
   MemIndex I;
-  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
+  I.build(generateSymbols({"ns::abc", "ns::xyz"}), emptyOccurrences());
   EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
   EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
@@ -159,8 +177,8 @@ TEST(MemIndexTest, Lookup) {
 
 TEST(MergeIndexTest, Lookup) {
   MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}));
-  J.build(generateSymbols({"ns::B", "ns::C"}));
+  I.build(generateSymbols({"ns::A", "ns::B"}), emptyOccurrences());
+  J.build(generateSymbols({"ns::B", "ns::C"}), emptyOccurrences());
   EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::A")),
               UnorderedElementsAre("ns::A"));
   EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::B")),
@@ -180,8 +198,8 @@ TEST(MergeIndexTest, Lookup) {
 
 TEST(MergeIndexTest, FuzzyFind) {
   MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}));
-  J.build(generateSymbols({"ns::B", "ns::C"}));
+  I.build(generateSymbols({"ns::A", "ns::B"}), emptyOccurrences());
+  J.build(generateSymbols({"ns::B", "ns::C"}), emptyOccurrences());
   FuzzyFindRequest Req;
   Req.Scopes = {"ns::"};
   EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
@@ -232,6 +250,60 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
   EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
   EXPECT_EQ(M.Name, "right");
+}
+
+TEST(MergeIndexTest, FindOccurrences) {
+  FileIndex Dyn({"unittest"});
+  FileIndex StaticIndex({"unittest"});
+  auto MergedIndex = mergeIndex(&Dyn, &StaticIndex);
+
+  const char *HeaderCode = "class Foo;";
+  auto HeaderSymbols = TestTU::withHeaderCode("class Foo;").headerSymbols();
+  auto Foo = findSymbol(HeaderSymbols, "Foo");
+
+  // Build dynamic index for test.cc.
+  Annotations Test1Code(R"(class $Foo[[Foo]];)");
+  TestTU Test;
+  Test.HeaderCode = HeaderCode;
+  Test.Code = Test1Code.code();
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  Dyn.update(Test.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
+             AST.getLocalTopLevelDecls());
+
+  // Build static index for test.cc.
+  Test.HeaderCode = HeaderCode;
+  Test.Code = "// static\nclass Foo {};";
+  Test.Filename = "test.cc";
+  auto StaticAST = Test.build();
+  // Add stale occurrences for test.cc.
+  StaticIndex.update(Test.Filename, &StaticAST.getASTContext(),
+                     StaticAST.getPreprocessorPtr(),
+                     StaticAST.getLocalTopLevelDecls());
+
+  // Add occcurrences for test2.cc
+  Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
+  TestTU Test2;
+  Test2.HeaderCode = HeaderCode;
+  Test2.Code = Test2Code.code();
+  Test2.Filename = "test2.cc";
+  StaticAST = Test2.build();
+  StaticIndex.update(Test2.Filename, &StaticAST.getASTContext(),
+                     StaticAST.getPreprocessorPtr(),
+                     StaticAST.getLocalTopLevelDecls());
+
+  OccurrencesRequest Request;
+  Request.IDs = {Foo.ID};
+  Request.Filter = AllOccurrenceKinds;
+  std::vector<SymbolOccurrence> Results;
+  MergedIndex->findOccurrences(
+      Request, [&](const SymbolOccurrence &O) { Results.push_back(O); });
+
+  EXPECT_THAT(Results, UnorderedElementsAre(
+                           AllOf(OccurrenceRange(Test1Code.range("Foo")),
+                                 FileURI("unittest:///test.cc")),
+                           AllOf(OccurrenceRange(Test2Code.range("Foo")),
+                                 FileURI("unittest:///test2.cc"))));
 }
 
 } // namespace
