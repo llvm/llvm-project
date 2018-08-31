@@ -28,9 +28,15 @@
 #include <memory>
 #include <string>
 
+namespace clang {
+namespace clangd {
+
+namespace {
+
 using testing::AllOf;
 using testing::Eq;
 using testing::Field;
+using testing::IsEmpty;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
@@ -74,11 +80,18 @@ MATCHER_P(Refs, R, "") { return int(arg.References) == R; }
 MATCHER_P(ForCodeCompletion, IsIndexedForCodeCompletion, "") {
   return arg.IsIndexedForCodeCompletion == IsIndexedForCodeCompletion;
 }
-
-namespace clang {
-namespace clangd {
-
-namespace {
+MATCHER(OccurrenceRange, "") {
+  const SymbolOccurrence &Pos = testing::get<0>(arg);
+  const Range &Range = testing::get<1>(arg);
+  return std::tie(Pos.Location.Start.Line, Pos.Location.Start.Column,
+                  Pos.Location.End.Line, Pos.Location.End.Column) ==
+         std::tie(Range.start.line, Range.start.character, Range.end.line,
+                  Range.end.character);
+}
+testing::Matcher<const std::vector<SymbolOccurrence> &>
+HaveRanges(const std::vector<Range> Ranges) {
+  return testing::UnorderedPointwise(OccurrenceRange(), Ranges);
+}
 
 class ShouldCollectSymbolTest : public ::testing::Test {
 public:
@@ -237,6 +250,7 @@ public:
                                 llvm::MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
+    SymbolOccurrences = Factory->Collector->takeOccurrences();
     return true;
   }
 
@@ -247,6 +261,7 @@ protected:
   std::string TestFileName;
   std::string TestFileURI;
   SymbolSlab Symbols;
+  SymbolOccurrenceSlab SymbolOccurrences;
   SymbolCollector::Options CollectorOpts;
   std::unique_ptr<CommentHandler> PragmaHandler;
 };
@@ -411,6 +426,59 @@ o]]();
           AllOf(QName("Z"), DeclRange(Header.range("zdecl"))),
           AllOf(QName("foo"), DeclRange(Header.range("foodecl")))
           ));
+}
+
+TEST_F(SymbolCollectorTest, Occurrences) {
+  Annotations Header(R"(
+  class $foo[[Foo]] {
+  public:
+    $foo[[Foo]]() {}
+    $foo[[Foo]](int);
+  };
+  class $bar[[Bar]];
+  void $func[[func]]();
+  )");
+  Annotations Main(R"(
+  class $bar[[Bar]] {};
+
+  void $func[[func]]();
+
+  void fff() {
+    $foo[[Foo]] foo;
+    $bar[[Bar]] bar;
+    $func[[func]]();
+    int abc = 0;
+    $foo[[Foo]] foo2 = abc;
+  }
+  )");
+  Annotations SymbolsOnlyInMainCode(R"(
+  int a;
+  void b() {}
+  static const int c = 0;
+  class d {};
+  )");
+  CollectorOpts.OccurrenceFilter = AllOccurrenceKinds;
+  runSymbolCollector(Header.code(),
+                     (Main.code() + SymbolsOnlyInMainCode.code()).str());
+  auto HeaderSymbols = TestTU::withHeaderCode(Header.code()).headerSymbols();
+
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(Symbols, "Foo").ID),
+              HaveRanges(Main.ranges("foo")));
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(Symbols, "Bar").ID),
+              HaveRanges(Main.ranges("bar")));
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(Symbols, "func").ID),
+              HaveRanges(Main.ranges("func")));
+
+  // Retrieve IDs for symbols *only* in the main file, and verify these symbols
+  // are not collected.
+  auto MainSymbols =
+      TestTU::withHeaderCode(SymbolsOnlyInMainCode.code()).headerSymbols();
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(MainSymbols, "a").ID),
+              IsEmpty());
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(MainSymbols, "b").ID),
+              IsEmpty());
+  EXPECT_THAT(SymbolOccurrences.find(findSymbol(MainSymbols, "c").ID),
+              IsEmpty());
 }
 
 TEST_F(SymbolCollectorTest, References) {

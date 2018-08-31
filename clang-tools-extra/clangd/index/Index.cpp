@@ -128,5 +128,48 @@ SymbolSlab SymbolSlab::Builder::build() && {
   return SymbolSlab(std::move(NewArena), std::move(Symbols));
 }
 
+raw_ostream &operator<<(raw_ostream &OS, SymbolOccurrenceKind K) {
+  if (K == SymbolOccurrenceKind::Unknown)
+    return OS << "Unknown";
+  static const std::vector<const char *> Messages = {"Decl", "Def", "Ref"};
+  bool VisitedOnce = false;
+  for (unsigned I = 0; I < Messages.size(); ++I) {
+    if (static_cast<uint8_t>(K) & 1u << I) {
+      if (VisitedOnce)
+        OS << ", ";
+      OS << Messages[I];
+      VisitedOnce = true;
+    }
+  }
+  return OS;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const SymbolOccurrence &Occurrence) {
+  OS << Occurrence.Location << ":" << Occurrence.Kind;
+  return OS;
+}
+
+void SymbolOccurrenceSlab::insert(const SymbolID &SymID,
+                                  const SymbolOccurrence &Occurrence) {
+  assert(!Frozen &&
+         "Can't insert a symbol occurrence after the slab has been frozen!");
+  auto &SymOccurrences = Occurrences[SymID];
+  SymOccurrences.push_back(Occurrence);
+  SymOccurrences.back().Location.FileURI =
+      UniqueStrings.save(Occurrence.Location.FileURI);
+}
+
+void SymbolOccurrenceSlab::freeze() {
+  // Deduplicate symbol occurrenes.
+  for (auto &IDAndOccurrence : Occurrences) {
+    auto &Occurrence = IDAndOccurrence.getSecond();
+    std::sort(Occurrence.begin(), Occurrence.end());
+    Occurrence.erase(std::unique(Occurrence.begin(), Occurrence.end()),
+                     Occurrence.end());
+  }
+  Frozen = true;
+}
+
 } // namespace clangd
 } // namespace clang
