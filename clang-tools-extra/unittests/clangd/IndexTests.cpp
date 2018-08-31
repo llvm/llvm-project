@@ -198,32 +198,23 @@ TEST(MergeTest, Merge) {
   R.References = 2;
   L.Signature = "()";                   // present in left only
   R.CompletionSnippetSuffix = "{$1:0}"; // present in right only
-  Symbol::Details DetL, DetR;
-  DetL.ReturnType = "DetL";
-  DetR.ReturnType = "DetR";
-  DetR.Documentation = "--doc--";
-  L.Detail = &DetL;
-  R.Detail = &DetR;
+  R.Documentation = "--doc--";
   L.Origin = SymbolOrigin::Dynamic;
   R.Origin = SymbolOrigin::Static;
 
-  Symbol::Details Scratch;
-  Symbol M = mergeSymbol(L, R, &Scratch);
+  Symbol M = mergeSymbol(L, R);
   EXPECT_EQ(M.Name, "Foo");
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:///left.h");
   EXPECT_EQ(M.References, 3u);
   EXPECT_EQ(M.Signature, "()");
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
-  ASSERT_TRUE(M.Detail);
-  EXPECT_EQ(M.Detail->ReturnType, "DetL");
-  EXPECT_EQ(M.Detail->Documentation, "--doc--");
+  EXPECT_EQ(M.Documentation, "--doc--");
   EXPECT_EQ(M.Origin,
             SymbolOrigin::Dynamic | SymbolOrigin::Static | SymbolOrigin::Merge);
 }
 
 TEST(MergeTest, PreferSymbolWithDefn) {
   Symbol L, R;
-  Symbol::Details Scratch;
 
   L.ID = R.ID = SymbolID("hello");
   L.CanonicalDeclaration.FileURI = "file:/left.h";
@@ -231,13 +222,13 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   L.Name = "left";
   R.Name = "right";
 
-  Symbol M = mergeSymbol(L, R, &Scratch);
+  Symbol M = mergeSymbol(L, R);
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/left.h");
   EXPECT_EQ(M.Definition.FileURI, "");
   EXPECT_EQ(M.Name, "left");
 
   R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
-  M = mergeSymbol(L, R, &Scratch);
+  M = mergeSymbol(L, R);
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
   EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
   EXPECT_EQ(M.Name, "right");

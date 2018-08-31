@@ -45,22 +45,16 @@ using testing::UnorderedElementsAreArray;
 MATCHER_P(Labeled, Label, "") {
   return (arg.Name + arg.Signature).str() == Label;
 }
-MATCHER(HasReturnType, "") {
-  return arg.Detail && !arg.Detail->ReturnType.empty();
-}
-MATCHER_P(ReturnType, D, "") {
-  return arg.Detail && arg.Detail->ReturnType == D;
-}
-MATCHER_P(Doc, D, "") { return arg.Detail && arg.Detail->Documentation == D; }
+MATCHER(HasReturnType, "") { return !arg.ReturnType.empty(); }
+MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
+MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
 MATCHER_P(Snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
 MATCHER_P(DefURI, P, "") { return arg.Definition.FileURI == P; }
-MATCHER_P(IncludeHeader, P, "") {
-  return arg.Detail && arg.Detail->IncludeHeader == P;
-}
+MATCHER_P(IncludeHeader, P, "") { return arg.IncludeHeader == P; }
 MATCHER_P(DeclRange, Pos, "") {
   return std::tie(arg.CanonicalDeclaration.Start.Line,
                   arg.CanonicalDeclaration.Start.Column,
@@ -764,9 +758,8 @@ CanonicalDeclaration:
     Line: 1
     Column: 1
 IsIndexedForCodeCompletion:    true
-Detail:
-  Documentation:    'Foo doc'
-  ReturnType:    'int'
+Documentation:    'Foo doc'
+ReturnType:    'int'
 ...
 )";
   const std::string YAML2 = R"(

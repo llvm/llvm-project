@@ -422,9 +422,7 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   }
   S.Signature = Signature;
   S.CompletionSnippetSuffix = SnippetSuffix;
-  Symbol::Details Detail;
-  Detail.IncludeHeader = Include;
-  S.Detail = &Detail;
+  S.IncludeHeader = Include;
   Symbols.insert(S);
   return true;
 }
@@ -530,11 +528,9 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   }
   S.Signature = Signature;
   S.CompletionSnippetSuffix = SnippetSuffix;
-  Symbol::Details Detail;
-  Detail.Documentation = Documentation;
-  Detail.ReturnType = ReturnType;
-  Detail.IncludeHeader = Include;
-  S.Detail = &Detail;
+  S.Documentation = Documentation;
+  S.ReturnType = ReturnType;
+  S.IncludeHeader = Include;
 
   S.Origin = Opts.Origin;
   Symbols.insert(S);

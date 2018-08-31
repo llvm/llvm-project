@@ -180,7 +180,7 @@ struct UnwindInfoSections {
 /// LocalAddressSpace is used as a template parameter to UnwindCursor when
 /// unwinding a thread in the same process.  The wrappers compile away,
 /// making local unwinds fast.
-class __attribute__((visibility("hidden"))) LocalAddressSpace {
+class _LIBUNWIND_HIDDEN LocalAddressSpace {
 public:
   typedef uintptr_t pint_t;
   typedef intptr_t  sint_t;

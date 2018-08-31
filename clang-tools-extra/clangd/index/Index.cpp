@@ -90,18 +90,9 @@ static void own(Symbol &S, llvm::UniqueStringSaver &Strings,
 
   Intern(S.Signature);
   Intern(S.CompletionSnippetSuffix);
-
-  if (S.Detail) {
-    // Copy values of StringRefs into arena.
-    auto *Detail = Arena.Allocate<Symbol::Details>();
-    *Detail = *S.Detail;
-    // Intern the actual strings.
-    Intern(Detail->Documentation);
-    Intern(Detail->ReturnType);
-    Intern(Detail->IncludeHeader);
-    // Replace the detail pointer with our copy.
-    S.Detail = Detail;
-  }
+  Intern(S.Documentation);
+  Intern(S.ReturnType);
+  Intern(S.IncludeHeader);
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {
