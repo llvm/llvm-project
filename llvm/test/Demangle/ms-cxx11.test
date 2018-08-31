@@ -86,6 +86,10 @@
 ??$templ_fun_with_pack@$S@@YAXXZ
 ; CHECK: void __cdecl templ_fun_with_pack<>(void)
 
+; $$Z is a parameter pack separator.
+??$func@H$$ZH@@YAHAEBU?$Foo@H@@0@Z
+; CHECK: int __cdecl func<int, int>(struct Foo<int> const &, struct Foo<int> const &)
+
 ??$templ_fun_with_ty_pack@$$$V@@YAXXZ
 ; CHECK: void __cdecl templ_fun_with_ty_pack<>(void)
 ??$templ_fun_with_ty_pack@$$V@@YAXXZ

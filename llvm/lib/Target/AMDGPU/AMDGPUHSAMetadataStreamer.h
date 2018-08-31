@@ -37,7 +37,6 @@ namespace HSAMD {
 class MetadataStreamer final {
 private:
   Metadata HSAMetadata;
-  AMDGPUAS AMDGPUASI;
 
   void dump(StringRef HSAMetadataString) const;
 

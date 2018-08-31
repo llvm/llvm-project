@@ -89,6 +89,8 @@ private:
                     MachineFunction &MF) const;
   bool selectCmp(MachineInstr &I, MachineRegisterInfo &MRI,
                  MachineFunction &MF) const;
+  bool selectFCmp(MachineInstr &I, MachineRegisterInfo &MRI,
+                  MachineFunction &MF) const;
   bool selectUadde(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -362,6 +364,8 @@ bool X86InstructionSelector::select(MachineInstr &I,
     return selectAnyext(I, MRI, MF);
   case TargetOpcode::G_ICMP:
     return selectCmp(I, MRI, MF);
+  case TargetOpcode::G_FCMP:
+    return selectFCmp(I, MRI, MF);
   case TargetOpcode::G_UADDE:
     return selectUadde(I, MRI, MF);
   case TargetOpcode::G_UNMERGE_VALUES:
@@ -963,6 +967,98 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
 
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectFCmp(MachineInstr &I,
+                                        MachineRegisterInfo &MRI,
+                                        MachineFunction &MF) const {
+  assert((I.getOpcode() == TargetOpcode::G_FCMP) && "unexpected instruction");
+
+  unsigned LhsReg = I.getOperand(2).getReg();
+  unsigned RhsReg = I.getOperand(3).getReg();
+  CmpInst::Predicate Predicate =
+      (CmpInst::Predicate)I.getOperand(1).getPredicate();
+
+  // FCMP_OEQ and FCMP_UNE cannot be checked with a single instruction.
+  static const uint16_t SETFOpcTable[2][3] = {
+      {X86::SETEr, X86::SETNPr, X86::AND8rr},
+      {X86::SETNEr, X86::SETPr, X86::OR8rr}};
+  const uint16_t *SETFOpc = nullptr;
+  switch (Predicate) {
+  default:
+    break;
+  case CmpInst::FCMP_OEQ:
+    SETFOpc = &SETFOpcTable[0][0];
+    break;
+  case CmpInst::FCMP_UNE:
+    SETFOpc = &SETFOpcTable[1][0];
+    break;
+  }
+
+  // Compute the opcode for the CMP instruction.
+  unsigned OpCmp;
+  LLT Ty = MRI.getType(LhsReg);
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 32:
+    OpCmp = X86::UCOMISSrr;
+    break;
+  case 64:
+    OpCmp = X86::UCOMISDrr;
+    break;
+  }
+
+  unsigned ResultReg = I.getOperand(0).getReg();
+  RBI.constrainGenericRegister(
+      ResultReg,
+      *getRegClass(LLT::scalar(8), *RBI.getRegBank(ResultReg, MRI, TRI)), MRI);
+  if (SETFOpc) {
+    MachineInstr &CmpInst =
+        *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
+             .addReg(LhsReg)
+             .addReg(RhsReg);
+
+    unsigned FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
+    unsigned FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
+    MachineInstr &Set1 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                  TII.get(SETFOpc[0]), FlagReg1);
+    MachineInstr &Set2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                  TII.get(SETFOpc[1]), FlagReg2);
+    MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                  TII.get(SETFOpc[2]), ResultReg)
+                              .addReg(FlagReg1)
+                              .addReg(FlagReg2);
+    constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Set1, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Set2, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Set3, TII, TRI, RBI);
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  X86::CondCode CC;
+  bool SwapArgs;
+  std::tie(CC, SwapArgs) = X86::getX86ConditionCode(Predicate);
+  assert(CC <= X86::LAST_VALID_COND && "Unexpected condition code.");
+  unsigned Opc = X86::getSETFromCond(CC);
+
+  if (SwapArgs)
+    std::swap(LhsReg, RhsReg);
+
+  // Emit a compare of LHS/RHS.
+  MachineInstr &CmpInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
+           .addReg(LhsReg)
+           .addReg(RhsReg);
+
+  MachineInstr &Set =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), ResultReg);
+  constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(Set, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }

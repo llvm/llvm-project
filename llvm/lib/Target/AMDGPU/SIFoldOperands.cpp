@@ -438,14 +438,37 @@ void SIFoldOperands::foldOperand(
 
   bool FoldingImm = OpToFold.isImm();
 
-  // In order to fold immediates into copies, we need to change the
-  // copy to a MOV.
   if (FoldingImm && UseMI->isCopy()) {
     unsigned DestReg = UseMI->getOperand(0).getReg();
     const TargetRegisterClass *DestRC
       = TargetRegisterInfo::isVirtualRegister(DestReg) ?
       MRI->getRegClass(DestReg) :
       TRI->getPhysRegClass(DestReg);
+
+    unsigned SrcReg  = UseMI->getOperand(1).getReg();
+    if (TargetRegisterInfo::isVirtualRegister(DestReg) &&
+      TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+      const TargetRegisterClass * SrcRC = MRI->getRegClass(SrcReg);
+      if (TRI->isSGPRClass(SrcRC) && TRI->hasVGPRs(DestRC)) {
+        MachineRegisterInfo::use_iterator NextUse;
+        SmallVector<FoldCandidate, 4> CopyUses;
+        for (MachineRegisterInfo::use_iterator
+          Use = MRI->use_begin(DestReg), E = MRI->use_end();
+          Use != E; Use = NextUse) {
+          NextUse = std::next(Use);
+          FoldCandidate FC = FoldCandidate(Use->getParent(),
+           Use.getOperandNo(), &UseMI->getOperand(1));
+          CopyUses.push_back(FC);
+       }
+        for (auto & F : CopyUses) {
+          foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo,
+           FoldList, CopiesToReplace);
+        }
+      }
+    }
+
+    // In order to fold immediates into copies, we need to change the
+    // copy to a MOV.
 
     unsigned MovOp = TII->getMovOpcode(DestRC);
     if (MovOp == AMDGPU::COPY)

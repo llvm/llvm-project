@@ -209,6 +209,21 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpRegBankIdx[1] = getPartialMappingIdx(Ty1, /* isFP */ false);
     break;
   }
+  case TargetOpcode::G_FCMP: {
+    LLT Ty1 = MRI.getType(MI.getOperand(2).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(3).getReg());
+    (void)Ty2;
+    assert(Ty1.getSizeInBits() == Ty2.getSizeInBits() &&
+           "Mismatched operand sizes for G_FCMP");
+
+    unsigned Size = Ty1.getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
+
+    auto FpRegBank = getPartialMappingIdx(Ty1, /* isFP */ true);
+    OpRegBankIdx = {PMI_GPR8,
+                    /* Predicate */ PMI_None, FpRegBank, FpRegBank};
+    break;
+  }
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_ANYEXT: {
     auto &Op0 = MI.getOperand(0);

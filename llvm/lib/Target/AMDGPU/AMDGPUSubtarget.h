@@ -378,7 +378,6 @@ protected:
   bool FeatureDisable;
 
   SelectionDAGTargetInfo TSInfo;
-  AMDGPUAS AS;
 private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
@@ -445,10 +444,6 @@ public:
 
   unsigned getMaxPrivateElementSize() const {
     return MaxPrivateElementSize;
-  }
-
-  AMDGPUAS getAMDGPUAS() const {
-    return AS;
   }
 
   bool hasIntClamp() const {
@@ -975,7 +970,6 @@ private:
   R600TargetLowering TLInfo;
   InstrItineraryData InstrItins;
   SelectionDAGTargetInfo TSInfo;
-  AMDGPUAS AS;
 
 public:
   R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
@@ -1059,8 +1053,6 @@ public:
   bool hasVertexCache() const { return HasVertexCache; }
 
   short getTexVTXClauseSize() const { return TexVTXClauseSize; }
-
-  AMDGPUAS getAMDGPUAS() const { return AS; }
 
   bool enableMachineScheduler() const override {
     return true;

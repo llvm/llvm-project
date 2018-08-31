@@ -222,6 +222,12 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   // Comparison
   setAction({G_ICMP, 1, s64}, Legal);
 
+  getActionDefinitionsBuilder(G_FCMP)
+      .legalForCartesianProduct({s8}, {s32, s64})
+      .clampScalar(0, s8, s8)
+      .clampScalar(1, s32, s64)
+      .widenScalarToNextPow2(1);
+
   // Shifts and SDIV
   getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR, G_SDIV})
     .legalFor({s8, s16, s32, s64})

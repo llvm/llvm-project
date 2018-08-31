@@ -260,8 +260,14 @@ bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
 bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
                                    const Value *AllocaPtr,
                                    uint64_t AllocaSize) {
-  // All MemIntrinsics have destination address in Arg0 and size in Arg2.
-  if (MI->getRawDest() != U) return true;
+  if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
+    if (MTI->getRawSource() != U && MTI->getRawDest() != U)
+      return true;
+  } else {
+    if (MI->getRawDest() != U)
+      return true;
+  }
+
   const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;

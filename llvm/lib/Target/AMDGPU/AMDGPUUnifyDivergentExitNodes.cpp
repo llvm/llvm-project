@@ -25,7 +25,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -70,7 +70,7 @@ char &llvm::AMDGPUUnifyDivergentExitNodesID = AMDGPUUnifyDivergentExitNodes::ID;
 INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                      "Unify divergent function exit nodes", false, false)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                     "Unify divergent function exit nodes", false, false)
 
@@ -78,10 +78,10 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
   // TODO: Preserve dominator tree.
   AU.addRequired<PostDominatorTreeWrapperPass>();
 
-  AU.addRequired<DivergenceAnalysis>();
+  AU.addRequired<LegacyDivergenceAnalysis>();
 
   // No divergent values are changed, only blocks and branch edges.
-  AU.addPreserved<DivergenceAnalysis>();
+  AU.addPreserved<LegacyDivergenceAnalysis>();
 
   // We preserve the non-critical-edgeness property
   AU.addPreservedID(BreakCriticalEdgesID);
@@ -95,7 +95,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
 
 /// \returns true if \p BB is reachable through only uniform branches.
 /// XXX - Is there a more efficient way to find this?
-static bool isUniformlyReached(const DivergenceAnalysis &DA,
+static bool isUniformlyReached(const LegacyDivergenceAnalysis &DA,
                                BasicBlock &BB) {
   SmallVector<BasicBlock *, 8> Stack;
   SmallPtrSet<BasicBlock *, 8> Visited;
@@ -163,7 +163,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (PDT.getRoots().size() <= 1)
     return false;
 
-  DivergenceAnalysis &DA = getAnalysis<DivergenceAnalysis>();
+  LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.

@@ -978,29 +978,6 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
   return true;
 }
 
-} // end namespace AMDGPU
-
-} // end namespace llvm
-
-namespace llvm {
-namespace AMDGPU {
-
-AMDGPUAS getAMDGPUAS(Triple T) {
-  AMDGPUAS AS;
-  AS.FLAT_ADDRESS = 0;
-  AS.PRIVATE_ADDRESS = 5;
-  AS.REGION_ADDRESS = 2;
-  return AS;
-}
-
-AMDGPUAS getAMDGPUAS(const TargetMachine &M) {
-  return getAMDGPUAS(M.getTargetTriple());
-}
-
-AMDGPUAS getAMDGPUAS(const Module &M) {
-  return getAMDGPUAS(Triple(M.getTargetTriple()));
-}
-
 namespace {
 
 struct SourceOfDivergence {

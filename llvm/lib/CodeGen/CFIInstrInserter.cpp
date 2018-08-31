@@ -317,6 +317,10 @@ unsigned CFIInstrInserter::verify(MachineFunction &MF) {
       // outgoing offset and register values of CurrMBB
       if (SuccMBBInfo.IncomingCFAOffset != CurrMBBInfo.OutgoingCFAOffset ||
           SuccMBBInfo.IncomingCFARegister != CurrMBBInfo.OutgoingCFARegister) {
+        // Inconsistent offsets/registers are ok for 'noreturn' blocks because
+        // we don't generate epilogues inside such blocks.
+        if (SuccMBBInfo.MBB->succ_empty() && !SuccMBBInfo.MBB->isReturnBlock())
+          continue;
         report(CurrMBBInfo, SuccMBBInfo);
         ErrorNum++;
       }

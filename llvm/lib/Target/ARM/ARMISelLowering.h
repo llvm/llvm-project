@@ -770,6 +770,8 @@ class VectorType;
 
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
+    bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue CCR, SDValue Cmp,
                     SelectionDAG &DAG) const;

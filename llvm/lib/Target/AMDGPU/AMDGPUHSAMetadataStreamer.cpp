@@ -76,17 +76,17 @@ AccessQualifier MetadataStreamer::getAccessQualifier(StringRef AccQual) const {
 
 AddressSpaceQualifier MetadataStreamer::getAddressSpaceQualifer(
     unsigned AddressSpace) const {
-  if (AddressSpace == AMDGPUASI.PRIVATE_ADDRESS)
+  if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return AddressSpaceQualifier::Private;
-  if (AddressSpace == AMDGPUASI.GLOBAL_ADDRESS)
+  if (AddressSpace == AMDGPUAS::GLOBAL_ADDRESS)
     return AddressSpaceQualifier::Global;
-  if (AddressSpace == AMDGPUASI.CONSTANT_ADDRESS)
+  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS)
     return AddressSpaceQualifier::Constant;
-  if (AddressSpace == AMDGPUASI.LOCAL_ADDRESS)
+  if (AddressSpace == AMDGPUAS::LOCAL_ADDRESS)
     return AddressSpaceQualifier::Local;
-  if (AddressSpace == AMDGPUASI.FLAT_ADDRESS)
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS)
     return AddressSpaceQualifier::Generic;
-  if (AddressSpace == AMDGPUASI.REGION_ADDRESS)
+  if (AddressSpace == AMDGPUAS::REGION_ADDRESS)
     return AddressSpaceQualifier::Region;
 
   llvm_unreachable("Unknown address space qualifier");
@@ -114,7 +114,7 @@ ValueKind MetadataStreamer::getValueKind(Type *Ty, StringRef TypeQual,
              .Case("queue_t", ValueKind::Queue)
              .Default(isa<PointerType>(Ty) ?
                           (Ty->getPointerAddressSpace() ==
-                           AMDGPUASI.LOCAL_ADDRESS ?
+                           AMDGPUAS::LOCAL_ADDRESS ?
                            ValueKind::DynamicSharedPointer :
                            ValueKind::GlobalBuffer) :
                       ValueKind::ByValue);
@@ -355,7 +355,7 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
 
   unsigned PointeeAlign = 0;
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
-    if (PtrTy->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS) {
+    if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       PointeeAlign = Arg.getParamAlignment();
       if (PointeeAlign == 0)
         PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
@@ -422,7 +422,7 @@ void MetadataStreamer::emitHiddenKernelArgs(const Function &Func) {
     emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetZ);
 
   auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUASI.GLOBAL_ADDRESS);
+                                      AMDGPUAS::GLOBAL_ADDRESS);
 
   // Emit "printf buffer" argument if printf is used, otherwise emit dummy
   // "none" argument.
@@ -447,7 +447,6 @@ void MetadataStreamer::emitHiddenKernelArgs(const Function &Func) {
 }
 
 void MetadataStreamer::begin(const Module &Mod) {
-  AMDGPUASI = getAMDGPUAS(Mod);
   emitVersion();
   emitPrintf(Mod);
 }

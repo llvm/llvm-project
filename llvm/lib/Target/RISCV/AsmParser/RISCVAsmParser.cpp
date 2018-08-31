@@ -684,7 +684,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
 
-  switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
+  auto Result =
+    MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
+  switch (Result) {
   default:
     break;
   case Match_Success:
@@ -705,6 +707,20 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
+  }
+
+  // Handle the case when the error message is of specific type
+  // other than the generic Match_InvalidOperand, and the
+  // corresponding operand is missing.
+  if (Result > FIRST_TARGET_MATCH_RESULT_TY) {
+    SMLoc ErrorLoc = IDLoc;
+    if (ErrorInfo != ~0U && ErrorInfo >= Operands.size())
+        return Error(ErrorLoc, "too few operands for instruction");
+  }
+
+  switch(Result) {
+  default:
+    break;
   case Match_InvalidImmXLen:
     if (isRV64()) {
       SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();

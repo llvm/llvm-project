@@ -11,7 +11,7 @@
 ; This can be expressed in a several ways in IR:
 ;   trunc + sext + icmp ne <- not canonical
 ;   shl   + ashr + icmp ne
-;   add          + icmp ult
+;   add          + icmp ult/ule
 ;   add          + icmp uge/ugt
 ; However only the simplest form (with two shifts) gets lowered best.
 
@@ -285,6 +285,29 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; X64-NEXT:    retq
   %tmp0 = add i64 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i64 %tmp0, -256 ; ~0U << 8
+  ret i1 %tmp1
+}
+
+; Slightly more canonical variant
+define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
+; X86-LABEL: add_ulecmp_i16_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $-128, %eax
+; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    cmpl $65280, %eax # imm = 0xFF00
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_ulecmp_i16_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    addl $-128, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cmpl $65280, %eax # imm = 0xFF00
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
+  %tmp1 = icmp ule i16 %tmp0, -257 ; ~0U << 8 - 1
   ret i1 %tmp1
 }
 
