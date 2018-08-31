@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-directives-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 

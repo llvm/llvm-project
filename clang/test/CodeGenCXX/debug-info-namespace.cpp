@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -S -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-tables-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLT %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-directives-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLI %s
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-NOLIMIT %s
 
 namespace A {
@@ -124,6 +125,10 @@ void C::c() {}
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(
 // CHECK-GMLT-SAME:                            emissionKind: LineTablesOnly,
 // CHECK-GMLT-NOT:                             imports:
+
+// CHECK-GMLI: [[CU:![0-9]+]] = distinct !DICompileUnit(
+// CHECK-GMLI-SAME:                            emissionKind: DebugDirectivesOnly,
+// CHECK-GMLI-NOT:                             imports:
 
 // CHECK-NOLIMIT: !DICompositeType(tag: DW_TAG_structure_type, name: "bar",{{.*}} line: 6,
 // CHECK-NOLIMIT-NOT:              DIFlagFwdDecl
