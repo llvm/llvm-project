@@ -48,7 +48,7 @@ public:
     /// Return true if there are any results.
     bool FindMatchingDecls(
         const ConstString &name,
-        std::vector<swift::ValueDecl *> excluding_equivalents,
+        const std::vector<swift::ValueDecl *> &excluding_equivalents,
         std::vector<swift::ValueDecl *> &matches);
 
     void CopyDeclsTo(SwiftDeclMap &target_map);
@@ -102,7 +102,7 @@ public:
   /// if there are any results.
   bool GetSwiftPersistentDecls(
       const ConstString &name,
-      std::vector<swift::ValueDecl *> excluding_equivalents,
+      const std::vector<swift::ValueDecl *> &excluding_equivalents,
       std::vector<swift::ValueDecl *> &matches);
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
