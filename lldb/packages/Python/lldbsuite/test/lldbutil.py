@@ -511,7 +511,7 @@ def run_break_set_command(test, command):
     patterns = [
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>[0-9]+) locations\.$",
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>no) locations \(pending\)\.",
-        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+), address = (?P<address>0x[0-9a-fA-F]+)$",
+        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+)(?P<column>(:[0-9]+)?), address = (?P<address>0x[0-9a-fA-F]+)$",
         r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$"]
     match_object = test.match(command, patterns)
     break_results = match_object.groupdict()
@@ -819,8 +819,30 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec, bkpt_module)
     test.assertTrue(breakpoint.GetNumLocations() > 0,
-                    'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
+
+def run_to_line_breakpoint(test, source_spec, line_number, column = 0,
+                           launch_info = None, exe_name = "a.out",
+                           bkpt_module = None,
+                           in_cwd = True):
+    """Start up a target, using exe_name as the executable, and run it to
+       a breakpoint set by (source_spec, line_number(, column)).
+
+       The rest of the behavior is the same as run_to_name_breakpoint.
+    """
+
+    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
+    # Set the breakpoints
+    breakpoint = target.BreakpointCreateByLocation(
+        source_spec, line_number, column, 0, lldb.SBFileSpecList())
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+        'No locations found for line breakpoint: "%s:%d(:%d)", dir: "%s"'
+        %(source_spec.GetFilename(), line_number, column,
+          source_spec.GetDirectory()))
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
+
 
 def continue_to_breakpoint(process, bkpt):
     """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""

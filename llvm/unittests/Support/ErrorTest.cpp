@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
@@ -104,7 +105,7 @@ TEST(Error, CheckedSuccess) {
   EXPECT_FALSE(E) << "Unexpected error while testing Error 'Success'";
 }
 
-// Test that unchecked succes values cause an abort.
+// Test that unchecked success values cause an abort.
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(Error, UncheckedSuccess) {
   EXPECT_DEATH({ Error E = Error::success(); },
@@ -864,4 +865,113 @@ TEST(Error, C_API) {
   EXPECT_TRUE(GotCE) << "Failed to round-trip ErrorList via C API";
 }
 
+TEST(Error, FileErrorTest) {
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+    EXPECT_DEATH(
+      {
+        Error S = Error::success();
+        consumeError(createFileError("file.bin", std::move(S)));
+      },
+      "");
+#endif
+  Error E1 = make_error<CustomError>(1);
+  Error FE1 = createFileError("file.bin", std::move(E1));
+  EXPECT_EQ(toString(std::move(FE1)).compare("'file.bin': CustomError {1}"), 0);
+
+  Error E2 = make_error<CustomError>(2);
+  Error FE2 = createFileError("file.bin", std::move(E2));
+  handleAllErrors(std::move(FE2), [](const FileError &F) {
+    EXPECT_EQ(F.message().compare("'file.bin': CustomError {2}"), 0);
+  });
+
+  Error E3 = make_error<CustomError>(3);
+  Error FE3 = createFileError("file.bin", std::move(E3));
+  auto E31 = handleErrors(std::move(FE3), [](std::unique_ptr<FileError> F) {
+    return F->takeError();
+  });
+  handleAllErrors(std::move(E31), [](const CustomError &C) {
+    EXPECT_EQ(C.message().compare("CustomError {3}"), 0);
+  });
+
+  Error FE4 =
+      joinErrors(createFileError("file.bin", make_error<CustomError>(41)),
+                 createFileError("file2.bin", make_error<CustomError>(42)));
+  EXPECT_EQ(toString(std::move(FE4))
+                .compare("'file.bin': CustomError {41}\n"
+                         "'file2.bin': CustomError {42}"),
+            0);
+}
+
+enum class test_error_code {
+  unspecified = 1,
+  error_1,
+  error_2,
+};
+
 } // end anon namespace
+
+namespace std {
+    template <>
+    struct is_error_code_enum<test_error_code> : std::true_type {};
+} // namespace std
+
+namespace {
+
+const std::error_category &TErrorCategory();
+
+inline std::error_code make_error_code(test_error_code E) {
+    return std::error_code(static_cast<int>(E), TErrorCategory());
+}
+
+class TestDebugError : public ErrorInfo<TestDebugError, StringError> {
+public:
+    using ErrorInfo<TestDebugError, StringError >::ErrorInfo; // inherit constructors
+    TestDebugError(const Twine &S) : ErrorInfo(S, test_error_code::unspecified) {}
+    static char ID;
+};
+
+class TestErrorCategory : public std::error_category {
+public:
+  const char *name() const noexcept override { return "error"; }
+  std::string message(int Condition) const override {
+    switch (static_cast<test_error_code>(Condition)) {
+    case test_error_code::unspecified:
+      return "An unknown error has occurred.";
+    case test_error_code::error_1:
+      return "Error 1.";
+    case test_error_code::error_2:
+      return "Error 2.";
+    }
+    llvm_unreachable("Unrecognized test_error_code");
+  }
+};
+
+static llvm::ManagedStatic<TestErrorCategory> TestErrCategory;
+const std::error_category &TErrorCategory() { return *TestErrCategory; }
+
+char TestDebugError::ID;
+
+TEST(Error, SubtypeStringErrorTest) {
+  auto E1 = make_error<TestDebugError>(test_error_code::error_1);
+  EXPECT_EQ(toString(std::move(E1)).compare("Error 1."), 0);
+
+  auto E2 = make_error<TestDebugError>(test_error_code::error_1,
+                                       "Detailed information");
+  EXPECT_EQ(toString(std::move(E2)).compare("Error 1. Detailed information"),
+            0);
+
+  auto E3 = make_error<TestDebugError>(test_error_code::error_2);
+  handleAllErrors(std::move(E3), [](const TestDebugError &F) {
+    EXPECT_EQ(F.message().compare("Error 2."), 0);
+  });
+
+  auto E4 = joinErrors(make_error<TestDebugError>(test_error_code::error_1,
+                                                  "Detailed information"),
+                       make_error<TestDebugError>(test_error_code::error_2));
+  EXPECT_EQ(toString(std::move(E4))
+                .compare("Error 1. Detailed information\n"
+                         "Error 2."),
+            0);
+}
+
+} // namespace

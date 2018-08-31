@@ -32,8 +32,7 @@ ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
 
 // Used by -fsanitize-coverage=stack-depth to track stack depth
-ATTRIBUTE_INTERFACE __attribute__((tls_model("initial-exec")))
-thread_local uintptr_t __sancov_lowest_stack;
+ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC uintptr_t __sancov_lowest_stack;
 
 namespace fuzzer {
 

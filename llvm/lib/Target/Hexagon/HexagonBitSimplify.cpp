@@ -2227,6 +2227,10 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
   for (unsigned S = AVs.find_first(); S; S = AVs.find_next(S)) {
     // The number of leading zeros here should be the number of trailing
     // non-zeros in RC.
+    unsigned SRC = MRI.getRegClass(S)->getID();
+    if (SRC != Hexagon::IntRegsRegClassID &&
+        SRC != Hexagon::DoubleRegsRegClassID)
+      continue;
     if (!BT.has(S))
       continue;
     const BitTracker::RegisterCell &SC = BT.lookup(S);

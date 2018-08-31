@@ -19,7 +19,7 @@ define void @check_float() {
   %newval2 = fadd float %val, 128.0
   store volatile float %newval2, float* @varf32
 ; CHECK-DAG: ldr {{s[0-9]+}}, [{{x[0-9]+}}, {{#?}}:lo12:.LCPI0_0
-; TINY-DAG: ldr {{s[0-9]+}}, [{{x[0-9]+}}]
+; TINY-DAG: ldr {{s[0-9]+}}, .LCPI0_0
 
 ; CHECK: ret
 ; TINY: ret
@@ -39,7 +39,7 @@ define void @check_double() {
   %newval2 = fadd double %val, 128.0
   store volatile double %newval2, double* @varf64
 ; CHECK-DAG: ldr {{d[0-9]+}}, [{{x[0-9]+}}, {{#?}}:lo12:.LCPI1_0
-; TINY-DAG: ldr {{d[0-9]+}}, [{{x[0-9]+}}]
+; TINY-DAG: ldr {{d[0-9]+}}, .LCPI1_0
 
 ; CHECK: ret
 ; TINY: ret
@@ -51,8 +51,7 @@ define void @check_double() {
 ; LARGE-NEXT:  movk [[REG]], #16457, lsl #16
 ; LARGE-NEXT:  fmov s0, [[REG]]
 ; TINY-LABEL: check_float2
-; TINY:       adr     x[[REG:[0-9]+]], .LCPI2_0
-; TINY-NEXT:  ldr     s0, [x[[REG]]]
+; TINY:  ldr     s0, .LCPI2_0
 define float @check_float2() {
   ret float 3.14159274101257324218750
 }
@@ -64,8 +63,7 @@ define float @check_float2() {
 ; LARGE-NEXT:  movk [[REG]], #16393, lsl #48
 ; LARGE-NEXT:  fmov d0, [[REG]]
 ; TINY-LABEL: check_double2
-; TINY:       adr     x[[REG:[0-9]+]], .LCPI3_0
-; TINY-NEXT:  ldr     d0, [x[[REG]]]
+; TINY:  ldr     d0, .LCPI3_0
 define double @check_double2() {
   ret double 3.1415926535897931159979634685441851615905761718750
 }

@@ -44,9 +44,9 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",        "FileName",   "Inlines", "Language",
-    "LineNumber",    "ModuleName",   "NameMask",   "Offset",  "Regex",
-    "SectionName",   "SkipPrologue", "SymbolNames"};
+    "AddressOffset", "Exact",       "FileName",     "Inlines",    "Language",
+    "LineNumber",    "Column",      "ModuleName",   "NameMask",   "Offset",
+    "Regex",         "SectionName", "SkipPrologue", "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)
@@ -176,18 +176,37 @@ void BreakpointResolver::ResolveBreakpoint(SearchFilter &filter) {
   filter.Search(*this);
 }
 
+namespace {
+struct SourceLoc {
+  uint32_t line = UINT32_MAX;
+  uint32_t column;
+  SourceLoc(uint32_t l, uint32_t c) : line(l), column(c ? c : UINT32_MAX) {}
+  SourceLoc(const SymbolContext &sc)
+      : line(sc.line_entry.line),
+        column(sc.line_entry.column ? sc.line_entry.column : UINT32_MAX) {}
+};
+
+bool operator<(const SourceLoc a, const SourceLoc b) {
+  if (a.line < b.line)
+    return true;
+  if (a.line > b.line)
+    return false;
+  uint32_t a_col = a.column ? a.column : UINT32_MAX;
+  uint32_t b_col = b.column ? b.column : UINT32_MAX;
+  return a_col < b_col;
+}
+} // namespace
+
 void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
                                             SymbolContextList &sc_list,
                                             bool skip_prologue,
-                                            llvm::StringRef log_ident) {
+                                            llvm::StringRef log_ident,
+                                            uint32_t line, uint32_t column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
     all_scs.push_back(sc_list[i]);
 
   while (all_scs.size()) {
-    // ResolveSymbolContext will always return a number that is >= the
-    // line number you pass in. So the smaller line number is always
-    // better.
     uint32_t closest_line = UINT32_MAX;
 
     // Move all the elements with a matching file spec to the end.
@@ -202,12 +221,41 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
           }
           return true;
         });
-    
-    // Within, remove all entries with a larger line number.
-    auto worklist_end = std::remove_if(
-        worklist_begin, all_scs.end(), [&](const SymbolContext &sc) {
-          return closest_line != sc.line_entry.line;
-        });
+
+    // (worklist_begin, worklist_end) now contains all entries for one filespec.
+    auto worklist_end = all_scs.end();
+
+    if (column) {
+      // If a column was requested, do a more precise match and only
+      // return the first location that comes after or at the
+      // requested location.
+      SourceLoc requested(line, column);
+      // First, filter out all entries left of the requested column.
+      worklist_end = std::remove_if(
+          worklist_begin, worklist_end,
+          [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
+      // Sort the remaining entries by (line, column).
+      std::sort(worklist_begin, worklist_end,
+                [](const SymbolContext &a, const SymbolContext &b) {
+                  return SourceLoc(a) < SourceLoc(b);
+                });
+
+      // Filter out all locations with a source location after the closest match.
+      if (worklist_begin != worklist_end)
+        worklist_end = std::remove_if(
+            worklist_begin, worklist_end, [&](const SymbolContext &sc) {
+              return SourceLoc(*worklist_begin) < SourceLoc(sc);
+            });
+    } else {
+      // Remove all entries with a larger line number.
+      // ResolveSymbolContext will always return a number that is >=
+      // the line number you pass in. So the smaller line number is
+      // always better.
+      worklist_end = std::remove_if(worklist_begin, worklist_end,
+                                    [&](const SymbolContext &sc) {
+                                      return closest_line != sc.line_entry.line;
+                                    });
+    }
 
     // Sort by file address.
     std::sort(worklist_begin, worklist_end,

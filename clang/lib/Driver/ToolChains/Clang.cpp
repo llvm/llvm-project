@@ -4039,8 +4039,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
-      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_cuda_mode,
-                      options::OPT_fno_openmp_cuda_mode);
+      if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,
+                       options::OPT_fno_openmp_cuda_mode, /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-cuda-mode");
+
+      // When in OpenMP offloading mode with NVPTX target, check if full runtime
+      // is required.
+      if (Args.hasFlag(options::OPT_fopenmp_cuda_force_full_runtime,
+                       options::OPT_fno_openmp_cuda_force_full_runtime,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-cuda-force-full-runtime");
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code

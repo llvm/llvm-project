@@ -36,9 +36,8 @@ enum {
 
 struct Metadata {
   u64 state : 2;
-  u32 requested_size;  // Current use cases of hwasan do not expect sizes > 4G.
-  u32 alloc_context_id;
-  u32 free_context_id;
+  u64 requested_size : 31;  // sizes are < 4G.
+  u32 alloc_context_id : 31;
 };
 
 bool HwasanChunkView::IsValid() const {
@@ -58,9 +57,6 @@ uptr HwasanChunkView::UsedSize() const {
 }
 u32 HwasanChunkView::GetAllocStackId() const {
   return metadata_->alloc_context_id;
-}
-u32 HwasanChunkView::GetFreeStackId() const {
-  return metadata_->free_context_id;
 }
 
 struct HwasanMapUnmapCallback {
@@ -197,7 +193,7 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   meta->state = CHUNK_FREE;
   meta->requested_size = 0;
   u32 free_context_id = StackDepotPut(*stack);
-  meta->free_context_id = free_context_id;
+  u32 alloc_context_id = meta->alloc_context_id;
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
   Thread *t = GetCurrentThread();
@@ -213,8 +209,8 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, untagged_ptr);
     if (auto *ha = t->heap_allocations())
-      ha->push({reinterpret_cast<uptr>(tagged_ptr), free_context_id,
-                static_cast<u32>(size)});
+      ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_context_id,
+                free_context_id, static_cast<u32>(size)});
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;

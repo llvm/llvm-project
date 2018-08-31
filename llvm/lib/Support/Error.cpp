@@ -19,6 +19,7 @@ namespace {
 
   enum class ErrorErrorCode : int {
     MultipleErrors = 1,
+    FileError,
     InconvertibleError
   };
 
@@ -37,6 +38,8 @@ namespace {
         return "Inconvertible error value. An error has occurred that could "
                "not be converted to a known std::error_code. Please file a "
                "bug.";
+      case ErrorErrorCode::FileError:
+          return "A file error occurred.";
       }
       llvm_unreachable("Unhandled error code");
     }
@@ -53,6 +56,7 @@ char ErrorInfoBase::ID = 0;
 char ErrorList::ID = 0;
 char ECError::ID = 0;
 char StringError::ID = 0;
+char FileError::ID = 0;
 
 void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner) {
   if (!E)
@@ -72,6 +76,11 @@ std::error_code ErrorList::convertToErrorCode() const {
 
 std::error_code inconvertibleErrorCode() {
   return std::error_code(static_cast<int>(ErrorErrorCode::InconvertibleError),
+                         *ErrorErrorCat);
+}
+
+std::error_code FileError::convertToErrorCode() const {
+  return std::error_code(static_cast<int>(ErrorErrorCode::FileError),
                          *ErrorErrorCat);
 }
 
@@ -103,10 +112,21 @@ void Error::fatalUncheckedError() const {
 }
 #endif
 
-StringError::StringError(const Twine &S, std::error_code EC)
+StringError::StringError(std::error_code EC, const Twine &S)
     : Msg(S.str()), EC(EC) {}
 
-void StringError::log(raw_ostream &OS) const { OS << Msg; }
+StringError::StringError(const Twine &S, std::error_code EC)
+    : Msg(S.str()), EC(EC), PrintMsgOnly(true) {}
+
+void StringError::log(raw_ostream &OS) const {
+  if (PrintMsgOnly) {
+    OS << Msg;
+  } else {
+    OS << EC.message();
+    if (!Msg.empty())
+      OS << (" " + Msg);
+  }
+}
 
 std::error_code StringError::convertToErrorCode() const {
   return EC;

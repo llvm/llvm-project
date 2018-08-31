@@ -72,10 +72,11 @@ private:
   void emitNonSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
   /// Helper for generic variables globalization prolog.
-  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
+  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc,
+                             bool WithSPMDCheck = false);
 
   /// Helper for generic variables globalization epilog.
-  void emitGenericVarsEpilog(CodeGenFunction &CGF);
+  void emitGenericVarsEpilog(CodeGenFunction &CGF, bool WithSPMDCheck = false);
 
   /// Helper for SPMD mode target directive's entry function.
   void emitSPMDEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,

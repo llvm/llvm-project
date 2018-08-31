@@ -26,7 +26,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/File.h"            // for File
-#include "lldb/Host/Predicate.h"       // for Predicate, ::eBroad...
+#include "lldb/Utility/Predicate.h"    // for Predicate, ::eBroad...
 #include "lldb/Utility/Status.h"       // for Status
 #include "lldb/Utility/StreamString.h" // for StreamString
 #include "lldb/Utility/StringList.h"   // for StringList
@@ -4340,6 +4340,7 @@ public:
               m_file_sp->GetFileSpec(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
+              0,     // Unspecified column.
               0,     // No offset
               eLazyBoolCalculate,  // Check inlines using global setting
               eLazyBoolCalculate,  // Skip prologue using global setting,
@@ -4379,6 +4380,7 @@ public:
               m_file_sp->GetFileSpec(), // Source file
               m_selected_line +
                   1, // Source line number (m_selected_line is zero based)
+              0,     // No column specified.
               0,     // No offset
               eLazyBoolCalculate,  // Check inlines using global setting
               eLazyBoolCalculate,  // Skip prologue using global setting,

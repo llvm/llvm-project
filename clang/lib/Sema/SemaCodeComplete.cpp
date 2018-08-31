@@ -4435,10 +4435,11 @@ static QualType getParamType(Sema &SemaRef,
   return ParamType;
 }
 
-static void CodeCompleteOverloadResults(Sema &SemaRef, Scope *S,
-                                    MutableArrayRef<ResultCandidate> Candidates,
-                                        unsigned CurrentArg,
-                                 bool CompleteExpressionWithCurrentArg = true) {
+static void
+CodeCompleteOverloadResults(Sema &SemaRef, Scope *S,
+                            MutableArrayRef<ResultCandidate> Candidates,
+                            unsigned CurrentArg, SourceLocation OpenParLoc,
+                            bool CompleteExpressionWithCurrentArg = true) {
   QualType ParamType;
   if (CompleteExpressionWithCurrentArg)
     ParamType = getParamType(SemaRef, Candidates, CurrentArg);
@@ -4449,12 +4450,12 @@ static void CodeCompleteOverloadResults(Sema &SemaRef, Scope *S,
     SemaRef.CodeCompleteExpression(S, ParamType);
 
   if (!Candidates.empty())
-    SemaRef.CodeCompleter->ProcessOverloadCandidates(SemaRef, CurrentArg,
-                                                     Candidates.data(),
-                                                     Candidates.size());
+    SemaRef.CodeCompleter->ProcessOverloadCandidates(
+        SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
 }
 
-void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args) {
+void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
+                            SourceLocation OpenParLoc) {
   if (!CodeCompleter)
     return;
 
@@ -4552,12 +4553,13 @@ void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args) {
   }
 
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc);
-  CodeCompleteOverloadResults(*this, S, Results, Args.size(),
+  CodeCompleteOverloadResults(*this, S, Results, Args.size(), OpenParLoc,
                               !CandidateSet.empty());
 }
 
 void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
-                                   ArrayRef<Expr *> Args) {
+                                   ArrayRef<Expr *> Args,
+                                   SourceLocation OpenParLoc) {
   if (!CodeCompleter)
     return;
 
@@ -4592,7 +4594,7 @@ void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
 
   SmallVector<ResultCandidate, 8> Results;
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc);
-  CodeCompleteOverloadResults(*this, S, Results, Args.size());
+  CodeCompleteOverloadResults(*this, S, Results, Args.size(), OpenParLoc);
 }
 
 void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {

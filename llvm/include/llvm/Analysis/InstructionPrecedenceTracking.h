@@ -28,8 +28,7 @@ namespace llvm {
 
 class InstructionPrecedenceTracking {
   // Maps a block to the topmost special instruction in it.
-  DenseMap<const BasicBlock *, const Instruction *>
-      FirstImplicitControlFlowInsts;
+  DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
   // Allows to answer queries about precedence of instructions within one block.
   OrderedInstructions OI;
   // Blocks for which we have the up-to-date cached information.

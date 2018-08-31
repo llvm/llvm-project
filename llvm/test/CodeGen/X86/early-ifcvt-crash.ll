@@ -1,7 +1,7 @@
 ; RUN: llc < %s -x86-early-ifcvt -verify-machineinstrs
 ; RUN: llc < %s -x86-early-ifcvt -stress-early-ifcvt -verify-machineinstrs
 ; CPU without a scheduling model:
-; RUN: llc < %s -x86-early-ifcvt -mcpu=pentium3 -verify-machineinstrs
+; RUN: llc < %s -x86-early-ifcvt -mcpu=k8 -verify-machineinstrs
 ;
 ; Run these tests with and without -stress-early-ifcvt to exercise heuristics.
 ;

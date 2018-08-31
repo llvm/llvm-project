@@ -4307,7 +4307,7 @@ define void @test_cmpxchg_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    cmpxchgb %dil, %sil # sched: [5:1.33]
-; GENERIC-NEXT:    cmpxchgb %dil, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    cmpxchgb %dil, (%rdx) # sched: [8:2.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4331,7 +4331,7 @@ define void @test_cmpxchg_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    cmpxchgb %dil, %sil # sched: [5:1.33]
-; SANDY-NEXT:    cmpxchgb %dil, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    cmpxchgb %dil, (%rdx) # sched: [8:2.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4390,7 +4390,7 @@ define void @test_cmpxchg_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    cmpxchgw %di, %si # sched: [5:1.33]
-; GENERIC-NEXT:    cmpxchgw %di, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    cmpxchgw %di, (%rdx) # sched: [8:2.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4414,7 +4414,7 @@ define void @test_cmpxchg_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    cmpxchgw %di, %si # sched: [5:1.33]
-; SANDY-NEXT:    cmpxchgw %di, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    cmpxchgw %di, (%rdx) # sched: [8:2.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4473,7 +4473,7 @@ define void @test_cmpxchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    cmpxchgl %edi, %esi # sched: [5:1.33]
-; GENERIC-NEXT:    cmpxchgl %edi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    cmpxchgl %edi, (%rdx) # sched: [8:2.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4497,7 +4497,7 @@ define void @test_cmpxchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    cmpxchgl %edi, %esi # sched: [5:1.33]
-; SANDY-NEXT:    cmpxchgl %edi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    cmpxchgl %edi, (%rdx) # sched: [8:2.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4556,7 +4556,7 @@ define void @test_cmpxchg_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    cmpxchgq %rdi, %rsi # sched: [5:1.33]
-; GENERIC-NEXT:    cmpxchgq %rdi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    cmpxchgq %rdi, (%rdx) # sched: [8:2.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4580,7 +4580,7 @@ define void @test_cmpxchg_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    cmpxchgq %rdi, %rsi # sched: [5:1.33]
-; SANDY-NEXT:    cmpxchgq %rdi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    cmpxchgq %rdi, (%rdx) # sched: [8:2.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;

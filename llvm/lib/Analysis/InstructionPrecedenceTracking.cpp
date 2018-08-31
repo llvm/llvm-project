@@ -27,7 +27,7 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     const BasicBlock *BB) {
   if (!KnownBlocks.count(BB))
     fill(BB);
-  auto *FirstICF = FirstImplicitControlFlowInsts.lookup(BB);
+  auto *FirstICF = FirstSpecialInsts.lookup(BB);
   assert((!FirstICF || FirstICF->getParent() == BB) && "Inconsistent cache!");
   return FirstICF;
 }
@@ -45,10 +45,10 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
 }
 
 void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
-  FirstImplicitControlFlowInsts.erase(BB);
+  FirstSpecialInsts.erase(BB);
   for (auto &I : *BB)
     if (isSpecialInstruction(&I)) {
-      FirstImplicitControlFlowInsts[BB] = &I;
+      FirstSpecialInsts[BB] = &I;
       break;
     }
 
@@ -58,14 +58,14 @@ void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
 
 void InstructionPrecedenceTracking::invalidateBlock(const BasicBlock *BB) {
   OI.invalidateBlock(BB);
-  FirstImplicitControlFlowInsts.erase(BB);
+  FirstSpecialInsts.erase(BB);
   KnownBlocks.erase(BB);
 }
 
 void InstructionPrecedenceTracking::clear() {
-  for (auto It : FirstImplicitControlFlowInsts)
+  for (auto It : FirstSpecialInsts)
     OI.invalidateBlock(It.first);
-  FirstImplicitControlFlowInsts.clear();
+  FirstSpecialInsts.clear();
   KnownBlocks.clear();
 }
 

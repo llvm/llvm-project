@@ -166,6 +166,11 @@ exit:
   ret void
 }
 
-!llvm.module.flags = !{!1}
+!llvm.module.flags = !{!0}
+!named = !{!1, !2, !3}
 
-!1 = !{i32 2, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !{}
+!2 = distinct !{}
+!3 = !{!4}
+!4 = distinct !{}

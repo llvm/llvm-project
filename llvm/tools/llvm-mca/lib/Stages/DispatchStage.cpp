@@ -28,9 +28,11 @@ using namespace llvm;
 namespace mca {
 
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
-                                                ArrayRef<unsigned> UsedRegs) {
+                                                ArrayRef<unsigned> UsedRegs,
+                                                unsigned UOps) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: #" << IR << '\n');
-  notifyEvent<HWInstructionEvent>(HWInstructionDispatchedEvent(IR, UsedRegs));
+  notifyEvent<HWInstructionEvent>(
+      HWInstructionDispatchedEvent(IR, UsedRegs, UOps));
 }
 
 bool DispatchStage::checkPRF(const InstRef &IR) const {
@@ -92,6 +94,7 @@ llvm::Error DispatchStage::dispatch(InstRef IR) {
     assert(AvailableEntries == DispatchWidth);
     AvailableEntries = 0;
     CarryOver = NumMicroOps - DispatchWidth;
+    CarriedOver = IR;
   } else {
     assert(AvailableEntries >= NumMicroOps);
     AvailableEntries -= NumMicroOps;
@@ -125,13 +128,26 @@ llvm::Error DispatchStage::dispatch(InstRef IR) {
 
   // Notify listeners of the "instruction dispatched" event,
   // and move IR to the next stage.
-  notifyInstructionDispatched(IR, RegisterFiles);
+  notifyInstructionDispatched(IR, RegisterFiles,
+                              std::min(DispatchWidth, NumMicroOps));
   return moveToTheNextStage(IR);
 }
 
 llvm::Error DispatchStage::cycleStart() {
+  if (!CarryOver) {
+    AvailableEntries = DispatchWidth;
+    return llvm::ErrorSuccess();
+  }
+
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
-  CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
+  unsigned DispatchedOpcodes = DispatchWidth - AvailableEntries;
+  CarryOver -= DispatchedOpcodes;
+  assert(CarriedOver.isValid() && "Invalid dispatched instruction");
+  
+  SmallVector<unsigned, 8> RegisterFiles(PRF.getNumRegisterFiles(), 0U);
+  notifyInstructionDispatched(CarriedOver, RegisterFiles, DispatchedOpcodes);
+  if (!CarryOver)
+    CarriedOver = InstRef();
   return llvm::ErrorSuccess();
 }
 

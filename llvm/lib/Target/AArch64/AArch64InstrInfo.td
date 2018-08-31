@@ -1891,14 +1891,37 @@ def : InstAlias<"prfm $Rt, [$Rn]", (PRFMui prfop:$Rt, GPR64sp:$Rn, 0)>;
 
 //---
 // (literal)
-def LDRWl : LoadLiteral<0b00, 0, GPR32z, "ldr">;
-def LDRXl : LoadLiteral<0b01, 0, GPR64z, "ldr">;
-def LDRSl : LoadLiteral<0b00, 1, FPR32Op, "ldr">;
-def LDRDl : LoadLiteral<0b01, 1, FPR64Op, "ldr">;
-def LDRQl : LoadLiteral<0b10, 1, FPR128Op, "ldr">;
+
+def alignedglobal : PatLeaf<(iPTR iPTR:$label), [{
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(N)) {
+    const DataLayout &DL = MF->getDataLayout();
+    unsigned Align = G->getGlobal()->getPointerAlignment(DL);
+    return Align >= 4 && G->getOffset() % 4 == 0;
+  }
+  if (auto *C = dyn_cast<ConstantPoolSDNode>(N))
+    return C->getAlignment() >= 4 && C->getOffset() % 4 == 0;
+  return false;
+}]>;
+
+def LDRWl : LoadLiteral<0b00, 0, GPR32z, "ldr",
+  [(set GPR32z:$Rt, (load (AArch64adr alignedglobal:$label)))]>;
+def LDRXl : LoadLiteral<0b01, 0, GPR64z, "ldr",
+  [(set GPR64z:$Rt, (load (AArch64adr alignedglobal:$label)))]>;
+def LDRSl : LoadLiteral<0b00, 1, FPR32Op, "ldr",
+  [(set (f32 FPR32Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
+def LDRDl : LoadLiteral<0b01, 1, FPR64Op, "ldr",
+  [(set (f64 FPR64Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
+def LDRQl : LoadLiteral<0b10, 1, FPR128Op, "ldr",
+  [(set (f128 FPR128Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
 
 // load sign-extended word
-def LDRSWl : LoadLiteral<0b10, 0, GPR64z, "ldrsw">;
+def LDRSWl : LoadLiteral<0b10, 0, GPR64z, "ldrsw",
+  [(set GPR64z:$Rt, (sextloadi32 (AArch64adr alignedglobal:$label)))]>;
+
+let AddedComplexity = 20 in {
+def : Pat<(i64 (zextloadi32 (AArch64adr alignedglobal:$label))),
+        (SUBREG_TO_REG (i64 0), (LDRWl $label), sub_32)>;
+}
 
 // prefetch
 def PRFMl : PrefetchLiteral<0b11, 0, "prfm", []>;

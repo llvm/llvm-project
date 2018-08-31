@@ -180,7 +180,8 @@ class BreakpointSerialization(TestBase):
         # actually have locations.
         source_bps = lldb.SBBreakpointList(self.orig_target)
 
-        bkpt = self.orig_target.BreakpointCreateByLocation("blubby.c", 666)
+        bkpt = self.orig_target.BreakpointCreateByLocation(
+            lldb.SBFileSpec("blubby.c"), 666, 333, 0, lldb.SBFileSpecList())
         bkpt.SetEnabled(False)
         bkpt.SetOneShot(True)
         bkpt.SetThreadID(10)
@@ -226,7 +227,8 @@ class BreakpointSerialization(TestBase):
         all_bps = lldb.SBBreakpointList(self.orig_target)
         source_bps = lldb.SBBreakpointList(self.orig_target)
 
-        bkpt = self.orig_target.BreakpointCreateByLocation("blubby.c", 666)
+        bkpt = self.orig_target.BreakpointCreateByLocation(
+            lldb.SBFileSpec("blubby.c"), 666, 333, 0, lldb.SBFileSpecList())
         bkpt.SetEnabled(False)
         bkpt.SetOneShot(True)
         bkpt.SetThreadID(10)
@@ -260,7 +262,8 @@ class BreakpointSerialization(TestBase):
         self.check_equivalence(all_bps)
 
     def do_check_names(self):
-        bkpt = self.orig_target.BreakpointCreateByLocation("blubby.c", 666)
+        bkpt = self.orig_target.BreakpointCreateByLocation(
+            lldb.SBFileSpec("blubby.c"), 666, 333, 0, lldb.SBFileSpecList())
         good_bkpt_name = "GoodBreakpoint"
         write_bps = lldb.SBBreakpointList(self.orig_target)
         bkpt.AddName(good_bkpt_name)
