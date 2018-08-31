@@ -18035,7 +18035,13 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
         if (!ZeroCheck)
           break;
 
-        assert(!isa<ConstantSDNode>(Op0) && "AND node isn't canonicalized");
+        // And with cosntant should be canonicalized unless we're dealing
+        // with opaque constants.
+        assert((!isa<ConstantSDNode>(Op0) ||
+                (isa<ConstantSDNode>(Op1) &&
+                 (cast<ConstantSDNode>(Op0)->isOpaque() ||
+                  cast<ConstantSDNode>(Op1)->isOpaque()))) &&
+               "AND node isn't canonicalized");
         auto *CN = dyn_cast<ConstantSDNode>(Op1);
         if (!CN)
           break;

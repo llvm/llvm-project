@@ -103,7 +103,8 @@ struct RefQualifier {
 
 auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
 #ifdef CXX14COMPAT
-auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
+auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}} 
+// expected-warning@-1 {{return type deduction is incompatible with C++ standards before C++14}}
 #endif
 
 void RangeFor() {

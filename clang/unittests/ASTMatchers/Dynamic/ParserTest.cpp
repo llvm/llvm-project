@@ -359,6 +359,44 @@ TEST(ParserTest, CompletionNamedValues) {
       Comps[2].MatcherDecl);
 }
 
+TEST(ParserTest, ParseBindOnLet) {
+
+  auto NamedValues = getTestNamedValues();
+
+  Diagnostics Error;
+
+  {
+    llvm::Optional<DynTypedMatcher> TopLevelLetBinding(
+        Parser::parseMatcherExpression("hasParamA.bind(\"parmABinding\")",
+                                       nullptr, &NamedValues, &Error));
+    EXPECT_EQ("", Error.toStringFull());
+    auto M = TopLevelLetBinding->unconditionalConvertTo<Decl>();
+
+    EXPECT_TRUE(matchAndVerifyResultTrue(
+        "void foo(int a);", M,
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+    EXPECT_TRUE(matchAndVerifyResultFalse(
+        "void foo(int b);", M,
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+  }
+
+  {
+    llvm::Optional<DynTypedMatcher> NestedLetBinding(
+        Parser::parseMatcherExpression(
+            "functionDecl(hasParamA.bind(\"parmABinding\"))", nullptr,
+            &NamedValues, &Error));
+    EXPECT_EQ("", Error.toStringFull());
+    auto M = NestedLetBinding->unconditionalConvertTo<Decl>();
+
+    EXPECT_TRUE(matchAndVerifyResultTrue(
+        "void foo(int a);", M,
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+    EXPECT_TRUE(matchAndVerifyResultFalse(
+        "void foo(int b);", M,
+        llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("parmABinding")));
+  }
+}
+
 }  // end anonymous namespace
 }  // end namespace dynamic
 }  // end namespace ast_matchers

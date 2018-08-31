@@ -1255,10 +1255,6 @@ function(configure_lit_site_cfg site_in site_out)
     set(TARGET_TRIPLE "\"+config.target_triple+\"")
   endif()
 
-  string(CONCAT LIT_SITE_CFG_IN_FOOTER
-     "import lit.llvm\n"
-     "lit.llvm.initialize(lit_config, config)\n")
-
   configure_file(${site_in} ${site_out} @ONLY)
   if (EXISTS "${ARG_MAIN_CONFIG}")
     set(PYTHON_STATEMENT "map_config('${ARG_MAIN_CONFIG}', '${site_out}')")

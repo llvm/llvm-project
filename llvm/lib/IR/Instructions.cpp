@@ -1780,7 +1780,7 @@ bool ShuffleVectorInst::isIdentityWithPadding() const {
     return false;
 
   // The first part of the mask must choose elements from exactly 1 source op.
-  ArrayRef<int> Mask = getShuffleMask();
+  SmallVector<int, 16> Mask = getShuffleMask();
   if (!isIdentityMaskImpl(Mask, NumOpElts))
     return false;
 
