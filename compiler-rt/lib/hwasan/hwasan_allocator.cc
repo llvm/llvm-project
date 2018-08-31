@@ -64,11 +64,15 @@ void HwasanThreadLocalMallocStorage::CommitBack() {
   allocator.SwallowCache(GetAllocatorCache(this));
 }
 
+static uptr TaggedSize(uptr size) {
+  if (!size) size = 1;
+  return RoundUpTo(size, kShadowAlignment);
+}
+
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                             bool zeroise) {
-  if (!orig_size) return nullptr;
   alignment = Max(alignment, kShadowAlignment);
-  uptr size = RoundUpTo(orig_size, kShadowAlignment);
+  uptr size = TaggedSize(orig_size);
 
   if (size > kMaxAllowedMallocSize) {
     if (AllocatorMayReturnNull()) {
@@ -134,7 +138,7 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   void *untagged_ptr = UntagPtr(tagged_ptr);
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr));
-  uptr size = meta->requested_size;
+  uptr orig_size = meta->requested_size;
   u32 free_context_id = StackDepotPut(*stack);
   u32 alloc_context_id = meta->alloc_context_id;
   meta->requested_size = 0;
@@ -143,19 +147,19 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   // poisoned.
   Thread *t = GetCurrentThread();
   if (flags()->max_free_fill_size > 0) {
-    uptr fill_size = Min(size, (uptr)flags()->max_free_fill_size);
+    uptr fill_size = Min(orig_size, (uptr)flags()->max_free_fill_size);
     internal_memset(untagged_ptr, flags()->free_fill_byte, fill_size);
   }
   if (flags()->tag_in_free &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-    TagMemoryAligned((uptr)untagged_ptr, RoundUpTo(size, kShadowAlignment),
+    TagMemoryAligned((uptr)untagged_ptr, TaggedSize(orig_size),
                      t ? t->GenerateRandomTag() : kFallbackFreeTag);
   if (t) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, untagged_ptr);
     if (auto *ha = t->heap_allocations())
       ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_context_id,
-                free_context_id, static_cast<u32>(size)});
+                free_context_id, static_cast<u32>(orig_size)});
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
@@ -165,9 +169,6 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
 
 void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old, uptr new_size,
                      uptr alignment) {
-  alignment = Max(alignment, kShadowAlignment);
-  new_size = RoundUpTo(new_size, kShadowAlignment);
-
   if (!PointerAndMemoryTagsMatch(tagged_ptr_old))
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr_old));
 
