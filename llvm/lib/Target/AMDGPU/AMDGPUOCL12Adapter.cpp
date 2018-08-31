@@ -61,25 +61,25 @@ char &llvm::AMDGPUOCL12AdapterID = AMDGPUOCL12Adapter::ID;
 /// \brief Check whether the type is a pointer and also whether it points to
 /// non-default address space. If it is not an opaque type, return true.
 /// Always skip opaque types because they are not "real" pointers.
-static bool isNonDefaultAddrSpacePtr(Type *Ty, AMDGPUAS AMDGPUASI) {
+static bool isNonDefaultAddrSpacePtr(Type *Ty) {
   PointerType *PtrType = dyn_cast<PointerType>(Ty);
   if(!PtrType)
     return false;
   StructType* StrType = dyn_cast<StructType>(PtrType->getElementType());
   if(StrType && StrType->isOpaque())
     return false;
-  return (PtrType->getAddressSpace() != AMDGPUASI.FLAT_ADDRESS &&
-          PtrType->getAddressSpace() != AMDGPUASI.CONSTANT_ADDRESS);
+  return (PtrType->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS &&
+          PtrType->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS);
 }
 
 /// \brief Check whether the Function signature has any of the
 /// non-default address space pointers as arguments. If yes,
 /// this funtion will return true.
-static bool hasNonDefaultAddrSpaceArg(const Function *F, AMDGPUAS AMDGPUASI) {
+static bool hasNonDefaultAddrSpaceArg(const Function *F) {
 
   for (const Argument &AI: F->args())
     if (!AI.hasStructRetAttr() &&
-        isNonDefaultAddrSpacePtr(AI.getType(), AMDGPUASI))
+        isNonDefaultAddrSpacePtr(AI.getType()))
       return true;
   return false;
 }
@@ -105,10 +105,7 @@ static bool locateFuncName(StringRef FuncName, size_t &FuncNameStart,
 ///  with all the address space of the arguments are "4".
 ///  Name mangling is also modified accordingly to match the
 ///  defintion in the OpenCL2.0 builtins library.
-static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc,
-    AMDGPUAS AMDGPUASI) {
-
-  bool GIZ = AMDGPUASI.FLAT_ADDRESS == 0;
+static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc) {
   size_t FuncNameStart, FuncNameSize;
   std::string MangledFuncName = OldFunc->getName();
   locateFuncName(OldFunc->getName(),FuncNameStart,FuncNameSize);
@@ -128,20 +125,8 @@ static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc,
       // Skip in cases where CV qualifiers are used: r, V, K
       tmp = NewFuncName.find("U3AS", StartIndexPos);
       bool HasNonZeroAddr = tmp != std::string::npos && tmp <= StartIndexPos+3;
-      if (GIZ) {
-        if (HasNonZeroAddr) {
-          NewFuncName.erase(tmp, 5);
-        }
-      } else {
-        char GenAddr = '0' + AMDGPUASI.FLAT_ADDRESS;
-        if (HasNonZeroAddr)
-            NewFuncName.at(tmp+4) = GenAddr;
-        else {
-          NewFuncName.insert(StartIndexPos + 1, "U3AS");
-          NewFuncName.insert(StartIndexPos + 5, 1, GenAddr);
-        }
-
-        StartIndexPos += 5;
+      if (HasNonZeroAddr) {
+        NewFuncName.erase(tmp, 5);
       }
     }
   }
@@ -152,14 +137,14 @@ static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc,
     AI!= E; ++AI) {
     Type *ArgType = AI->getType();
 
-    if (!isNonDefaultAddrSpacePtr(ArgType, AMDGPUASI)) {
+    if (!isNonDefaultAddrSpacePtr(ArgType)) {
       NewFuncArgs.push_back(ArgType);
       continue;
     }
 
     PointerType *PtrType = cast<PointerType>(ArgType);
     Type *EleType = PtrType->getElementType();
-    PointerType *NewPtrType = PointerType::get(EleType, AMDGPUASI.FLAT_ADDRESS);
+    PointerType *NewPtrType = PointerType::get(EleType, AMDGPUAS::FLAT_ADDRESS);
     NewFuncArgs.push_back(NewPtrType);
   }
 
@@ -176,8 +161,7 @@ static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc,
 
 /// \brief Define the 1.2 OpenCL builtin called by the user to call the
 /// OpenCL 2.0 builtin which has only generic address space arguments.
-void createOCL20BuiltinFuncDefn(Function *OldFunc, Function *NewFunc,
-    AMDGPUAS AMDGPUASI) {
+void createOCL20BuiltinFuncDefn(Function *OldFunc, Function *NewFunc) {
 
   // Adding alwaysinline attribute for the adapter function.
   OldFunc->addFnAttr(Attribute::AlwaysInline);
@@ -187,14 +171,14 @@ void createOCL20BuiltinFuncDefn(Function *OldFunc, Function *NewFunc,
   SmallVector<llvm::Value *, 1> NewFuncCallArgs;
 
   for (auto &Arg : OldFunc->args()) {
-    if (!isNonDefaultAddrSpacePtr(Arg.getType(), AMDGPUASI)) {
+    if (!isNonDefaultAddrSpacePtr(Arg.getType())) {
       NewFuncCallArgs.push_back(&Arg);
       continue;
     }
 
     PointerType *PtrType = cast<PointerType>(Arg.getType());
     Type *EleType = PtrType->getElementType();
-    PointerType *NewPtrType = PointerType::get(EleType, AMDGPUASI.FLAT_ADDRESS);
+    PointerType *NewPtrType = PointerType::get(EleType, AMDGPUAS::FLAT_ADDRESS);
 
     // Cast all non-default addr space pointer arguments to default addr
     // space pointers. Note that this cast will result in no-op.
@@ -216,14 +200,13 @@ void createOCL20BuiltinFuncDefn(Function *OldFunc, Function *NewFunc,
 /// in the whole Module. Returns true if at least one of the 1.2 OpenCL builtin
 /// has been modified.
 static bool findAndDefineBuiltinCalls(Module &M) {
-  auto AMDGPUASI = AMDGPU::getAMDGPUAS(M);
   bool isModified = false;
   for (auto &F : M) {
 
     // Search only for used, undefined OpenCL builtin functions,
     // which has non-default addr space pointer arguments.
     if (!F.empty() || F.use_empty() || !F.getName().startswith("_Z") ||
-        !hasNonDefaultAddrSpaceArg(&F, AMDGPUASI))
+        !hasNonDefaultAddrSpaceArg(&F))
       continue;
     // These functions should not be modified.
     if (F.getName().find("async_work_group", 0) == StringRef::npos &&
@@ -232,11 +215,11 @@ static bool findAndDefineBuiltinCalls(Module &M) {
         F.getName().find("capture_event_profiling_info", 0) ==
             StringRef::npos) {
       isModified = true;
-      Function *NewFunc = getNewOCL20BuiltinFuncDecl(&F, AMDGPUASI);
+      Function *NewFunc = getNewOCL20BuiltinFuncDecl(&F);
       // Get the new Function declaration.
       LLVM_DEBUG(dbgs() << "\n Modifying Func " << F.getName() << " to call "
        << NewFunc->getName() << " Function");
-      createOCL20BuiltinFuncDefn(&F, NewFunc, AMDGPUASI);
+      createOCL20BuiltinFuncDefn(&F, NewFunc);
     }
   }
   return isModified;
