@@ -22,9 +22,6 @@
 //    int __oclc_daz_opt(void)
 //        - the application allows subnormal inputs or outputs to be flushed to zero
 //
-//    int __oclc_amd_opt(void)
-//        - the applicaiton is running on an AMD device
-//
 //    int __oclc_correctly_rounded_sqrt32(void)
 //        - the application is expecting sqrt(float) to produce a correctly rounded result
 //
@@ -35,14 +32,13 @@
 // C code:
 //
 //     __attribute__((always_inline, const)) int __oclc_...(void) { return 0; /* or 1 */ }
-// 
+//
 // allowing them and any control flow associated with them to be optimized away
 
 
 extern __attribute__((const)) int __oclc_finite_only_opt(void);
 extern __attribute__((const)) int __oclc_unsafe_math_opt(void);
 extern __attribute__((const)) int __oclc_daz_opt(void);
-extern __attribute__((const)) int __oclc_amd_opt(void);
 extern __attribute__((const)) int __oclc_correctly_rounded_sqrt32(void);
 extern __attribute__((const)) int __oclc_ISA_version(void);
 
