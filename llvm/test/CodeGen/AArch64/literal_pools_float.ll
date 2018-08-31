@@ -17,8 +17,7 @@ define void @floating_lits() {
 ; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
 ; CHECK-NOFP-NOT: ldr {{s[0-9]+}},
 
-; CHECK-TINY: adr x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK-TINY: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]]]
+; CHECK-TINY: ldr [[LIT128:s[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-NOFP-TINY-NOT: ldr {{s[0-9]+}},
 
 ; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
@@ -39,8 +38,7 @@ define void @floating_lits() {
 ; CHECK-NOFP-NOT: ldr {{d[0-9]+}},
 ; CHECK-NOFP-NOT: fadd
 
-; CHECK-TINY: adr x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK-TINY: ldr [[LIT129:d[0-9]+]], [x[[LITBASE]]]
+; CHECK-TINY: ldr [[LIT129:d[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-NOFP-TINY-NOT: ldr {{d[0-9]+}},
 ; CHECK-NOFP-TINY-NOT: fadd
 

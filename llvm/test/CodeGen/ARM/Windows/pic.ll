@@ -18,6 +18,7 @@ entry:
 ; CHECK-WIN: ldrb r0, [r0]
 
 ; CHECK-GNU-LABEL: return_external
-; CHECK-GNU: movw r0, :lower16:external
-; CHECK-GNU: movt r0, :upper16:external
+; CHECK-GNU: movw r0, :lower16:.refptr.external
+; CHECK-GNU: movt r0, :upper16:.refptr.external
+; CHECK-GNU: ldr  r0, [r0]
 ; CHECK-GNU: ldrb r0, [r0]

@@ -10,6 +10,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
@@ -112,6 +113,128 @@ TEST(RTDyldObjectLinkingLayer2Test, TestSetProcessAllSections) {
       << "Debug section seen despite ProcessAllSections being false";
   EXPECT_TRUE(testSetProcessAllSections(std::move(Obj), true))
       << "Expected to see debug section when ProcessAllSections is true";
+}
+
+TEST(RTDyldObjectLinkingLayer2Test, TestOverrideObjectFlags) {
+
+  OrcNativeTarget::initialize();
+
+  std::unique_ptr<TargetMachine> TM(
+      EngineBuilder().selectTarget(Triple("x86_64-unknown-linux-gnu"), "", "",
+                                   SmallVector<std::string, 1>()));
+
+  if (!TM)
+    return;
+
+  // Our compiler is going to modify symbol visibility settings without telling
+  // ORC. This will test our ability to override the flags later.
+  class FunkySimpleCompiler : public SimpleCompiler {
+  public:
+    FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
+
+    CompileResult operator()(Module &M) {
+      auto *Foo = M.getFunction("foo");
+      assert(Foo && "Expected function Foo not found");
+      Foo->setVisibility(GlobalValue::HiddenVisibility);
+      return SimpleCompiler::operator()(M);
+    }
+  };
+
+  // Create a module with two void() functions: foo and bar.
+  LLVMContext Context;
+  std::unique_ptr<Module> M;
+  {
+    ModuleBuilder MB(Context, TM->getTargetTriple().str(), "dummy");
+    MB.getModule()->setDataLayout(TM->createDataLayout());
+
+    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    BasicBlock *FooEntry = BasicBlock::Create(Context, "entry", FooImpl);
+    IRBuilder<> B1(FooEntry);
+    B1.CreateRetVoid();
+
+    Function *BarImpl = MB.createFunctionDecl<void()>("bar");
+    BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
+    IRBuilder<> B2(BarEntry);
+    B2.CreateRetVoid();
+
+    M = MB.takeModule();
+  }
+
+  // Create a simple stack and set the override flags option.
+  ExecutionSession ES;
+  auto &JD = ES.createJITDylib("main");
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  RTDyldObjectLinkingLayer2 ObjLayer(
+      ES, [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); });
+  IRCompileLayer2 CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
+
+  ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
+
+  cantFail(CompileLayer.add(JD, ES.allocateVModule(), std::move(M)));
+  ES.lookup({&JD}, {Foo}, [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+            [](Error Err) { cantFail(std::move(Err)); },
+            NoDependenciesToRegister);
+}
+
+TEST(RTDyldObjectLinkingLayer2Test, TestAutoClaimResponsibilityForSymbols) {
+
+  OrcNativeTarget::initialize();
+
+  std::unique_ptr<TargetMachine> TM(
+      EngineBuilder().selectTarget(Triple("x86_64-unknown-linux-gnu"), "", "",
+                                   SmallVector<std::string, 1>()));
+
+  if (!TM)
+    return;
+
+  // Our compiler is going to add a new symbol without telling ORC.
+  // This will test our ability to auto-claim responsibility later.
+  class FunkySimpleCompiler : public SimpleCompiler {
+  public:
+    FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
+
+    CompileResult operator()(Module &M) {
+      Function *BarImpl =
+          Function::Create(TypeBuilder<void(), false>::get(M.getContext()),
+                           GlobalValue::ExternalLinkage, "bar", &M);
+      BasicBlock *BarEntry =
+          BasicBlock::Create(M.getContext(), "entry", BarImpl);
+      IRBuilder<> B(BarEntry);
+      B.CreateRetVoid();
+
+      return SimpleCompiler::operator()(M);
+    }
+  };
+
+  // Create a module with two void() functions: foo and bar.
+  LLVMContext Context;
+  std::unique_ptr<Module> M;
+  {
+    ModuleBuilder MB(Context, TM->getTargetTriple().str(), "dummy");
+    MB.getModule()->setDataLayout(TM->createDataLayout());
+
+    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    BasicBlock *FooEntry = BasicBlock::Create(Context, "entry", FooImpl);
+    IRBuilder<> B(FooEntry);
+    B.CreateRetVoid();
+
+    M = MB.takeModule();
+  }
+
+  // Create a simple stack and set the override flags option.
+  ExecutionSession ES;
+  auto &JD = ES.createJITDylib("main");
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  RTDyldObjectLinkingLayer2 ObjLayer(
+      ES, [](VModuleKey) { return std::make_shared<SectionMemoryManager>(); });
+  IRCompileLayer2 CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
+
+  ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
+
+  cantFail(CompileLayer.add(JD, ES.allocateVModule(), std::move(M)));
+  ES.lookup({&JD}, {Foo}, [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
+            [](Error Err) { cantFail(std::move(Err)); },
+            NoDependenciesToRegister);
 }
 
 TEST(RTDyldObjectLinkingLayer2Test, NoDuplicateFinalization) {

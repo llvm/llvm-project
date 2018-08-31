@@ -42,15 +42,16 @@ void emitWebAssemblyDisassemblerTables(
     auto Prefix = Opc >> 8;
     Opc = Opc & 0xFF;
     auto &CGIP = OpcodeTable[Prefix][Opc];
-    if (!CGIP.second ||
-        // Make sure we store the variant with the least amount of operands,
-        // which is the one without explicit registers. Only few instructions
-        // have these currently, would be good to have for all of them.
-        // FIXME: this picks the first of many typed variants, which is
-        // currently the except_ref one, though this shouldn't matter for
-        // disassembly purposes.
-        CGIP.second->Operands.OperandList.size() >
-            CGI.Operands.OperandList.size()) {
+    // All wasm instructions have a StackBased fieldof type bit, we only want
+    // the instructions for which this is 1.
+    auto Bit = Def.getValue("StackBased")->getValue()->
+                 getCastTo(BitRecTy::get());
+    auto IsStackBased = Bit && reinterpret_cast<const BitInit *>(Bit)
+                                 ->getValue();
+    if (IsStackBased && !CGIP.second) {
+      // this picks the first of many typed variants, which is
+      // currently the except_ref one, though this shouldn't matter for
+      // disassembly purposes.
       CGIP = std::make_pair(I, &CGI);
     }
   }
@@ -63,8 +64,9 @@ void emitWebAssemblyDisassemblerTables(
   OS << "  uint16_t Opcode;\n";
   OS << "  EntryType ET;\n";
   OS << "  uint8_t NumOperands;\n";
-  OS << "  uint8_t Operands[4];\n";
+  OS << "  uint16_t OperandStart;\n";
   OS << "};\n\n";
+  std::vector<std::string> OperandTable, CurOperandList;
   // Output one table per prefix.
   for (auto &PrefixPair : OpcodeTable) {
     if (PrefixPair.second.empty())
@@ -81,24 +83,53 @@ void emitWebAssemblyDisassemblerTables(
         OS.write_hex(static_cast<unsigned long long>(I));
         OS << ": " << CGI.AsmString << "\n";
         OS << "  { " << InstIt->second.first << ", ET_Instruction, ";
-        OS << CGI.Operands.OperandList.size() << ", {\n";
+        OS << CGI.Operands.OperandList.size() << ", ";
+        // Collect operand types for storage in a shared list.
+        CurOperandList.clear();
         for (auto &Op : CGI.Operands.OperandList) {
-          OS << "      " << Op.OperandType << ",\n";
+          CurOperandList.push_back(Op.OperandType);
         }
-        OS << "    }\n";
+        // See if we already have stored this sequence before. This is not
+        // strictly necessary but makes the table really small.
+        size_t OperandStart = OperandTable.size();
+        if (CurOperandList.size() <= OperandTable.size()) {
+          for (size_t J = 0; J <= OperandTable.size() - CurOperandList.size();
+               ++J) {
+            size_t K = 0;
+            for (; K < CurOperandList.size(); ++K) {
+              if (OperandTable[J + K] != CurOperandList[K]) break;
+            }
+            if (K == CurOperandList.size()) {
+              OperandStart = J;
+              break;
+            }
+          }
+        }
+        // Store operands if no prior occurrence.
+        if (OperandStart == OperandTable.size()) {
+          OperandTable.insert(OperandTable.end(), CurOperandList.begin(),
+                              CurOperandList.end());
+        }
+        OS << OperandStart;
       } else {
         auto PrefixIt = OpcodeTable.find(I);
         // If we have a non-empty table for it that's not 0, this is a prefix.
         if (PrefixIt != OpcodeTable.end() && I && !PrefixPair.first) {
-          OS << "  { 0, ET_Prefix, 0, {}";
+          OS << "  { 0, ET_Prefix, 0, 0";
         } else {
-          OS << "  { 0, ET_Unused, 0, {}";
+          OS << "  { 0, ET_Unused, 0, 0";
         }
       }
       OS << "  },\n";
     }
     OS << "};\n\n";
   }
+  // Create a table of all operands:
+  OS << "const uint8_t OperandTable[] = {\n";
+  for (auto &Op : OperandTable) {
+    OS << "  " << Op << ",\n";
+  }
+  OS << "};\n\n";
   // Create a table of all extension tables:
   OS << "struct { uint8_t Prefix; const WebAssemblyInstruction *Table; }\n";
   OS << "PrefixTable[] = {\n";

@@ -370,7 +370,7 @@ defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 defm : JWriteResFpuPair<WriteFVarBlend,   [JFPU01, JFPX],  2, [1, 4], 3>;
 defm : JWriteResYMMPair<WriteFVarBlendY,  [JFPU01, JFPX],  3, [2, 6], 6>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
-defm : JWriteResFpuPair<WriteFShuffle256, [JFPU01, JFPX],  1>;
+defm : JWriteResFpuPair<WriteFShuffle256, [JFPU01, JFPX],  1, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -562,13 +562,17 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
+def JWriteVecExtractF128: SchedWriteRes<[JFPU01, JFPX]>;
+def : InstRW<[JWriteVecExtractF128], (instrs VEXTRACTF128rr)>;
+
 def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let Latency = 6;
   let ResourceCycles = [1, 2, 4];
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVBROADCASTYLd, ReadAfterLd], (instrs VBROADCASTSDYrm,
-                                                         VBROADCASTSSYrm)>;
+                                                         VBROADCASTSSYrm,
+                                                         VBROADCASTF128)>;
 
 def JWriteJVZEROALL: SchedWriteRes<[]> {
   let Latency = 90;

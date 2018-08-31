@@ -16,7 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUIntrinsicInfo.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/IRBuilder.h"
@@ -32,12 +32,11 @@ namespace {
 
 class AMDGPUAnnotateUniformValues : public FunctionPass,
                        public InstVisitor<AMDGPUAnnotateUniformValues> {
-  DivergenceAnalysis *DA;
+  LegacyDivergenceAnalysis *DA;
   MemoryDependenceResults *MDR;
   LoopInfo *LI;
   DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isKernelFunc;
-  AMDGPUAS AMDGPUASI;
 
 public:
   static char ID;
@@ -49,7 +48,7 @@ public:
     return "AMDGPU Annotate Uniform Values";
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DivergenceAnalysis>();
+    AU.addRequired<LegacyDivergenceAnalysis>();
     AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.setPreservesAll();
@@ -64,7 +63,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                       "Add AMDGPU uniform metadata", false, false)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
@@ -133,7 +132,7 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   if (!DA->isUniform(Ptr))
     return;
   auto isGlobalLoad = [&](LoadInst &Load)->bool {
-    return Load.getPointerAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
+    return Load.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
   };
   // We're tracking up to the Function boundaries
   // We cannot go beyond because of FunctionPass restrictions
@@ -168,7 +167,6 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
 }
 
 bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
-  AMDGPUASI = AMDGPU::getAMDGPUAS(M);
   return false;
 }
 
@@ -176,7 +174,7 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  DA  = &getAnalysis<DivergenceAnalysis>();
+  DA  = &getAnalysis<LegacyDivergenceAnalysis>();
   MDR = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
   LI  = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   isKernelFunc = F.getCallingConv() == CallingConv::AMDGPU_KERNEL;

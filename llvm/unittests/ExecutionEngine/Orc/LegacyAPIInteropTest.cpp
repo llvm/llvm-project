@@ -27,7 +27,6 @@ TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
   auto Resolver = createSymbolResolver(
       [&](const SymbolNameSet &Symbols) {
         auto FlagsMap = JD.lookupFlags(Symbols);
-        llvm::dbgs() << "FlagsMap is " << FlagsMap << "\n";
         SymbolNameSet Result;
         for (auto &KV : FlagsMap)
           if (!KV.second.isStrong())

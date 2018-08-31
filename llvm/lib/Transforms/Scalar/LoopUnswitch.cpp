@@ -33,7 +33,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -215,7 +215,7 @@ namespace {
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
       if (hasBranchDivergence)
-        AU.addRequired<DivergenceAnalysis>();
+        AU.addRequired<LegacyDivergenceAnalysis>();
       getLoopAnalysisUsage(AU);
     }
 
@@ -383,7 +383,7 @@ INITIALIZE_PASS_BEGIN(LoopUnswitch, "loop-unswitch", "Unswitch loops",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
 
@@ -864,7 +864,7 @@ bool LoopUnswitch::UnswitchIfProfitable(Value *LoopCond, Constant *Val,
     return false;
   }
   if (hasBranchDivergence &&
-      getAnalysis<DivergenceAnalysis>().isDivergent(LoopCond)) {
+      getAnalysis<LegacyDivergenceAnalysis>().isDivergent(LoopCond)) {
     LLVM_DEBUG(dbgs() << "NOT unswitching loop %"
                       << currentLoop->getHeader()->getName()
                       << " at non-trivial condition '" << *Val

@@ -2456,7 +2456,7 @@ public:
   }
 
   /// Return true if this shuffle returns a vector with a different number of
-  /// elements than its source elements.
+  /// elements than its source vectors.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2>
   bool changesLength() const {
     unsigned NumSourceElts = Op<0>()->getType()->getVectorNumElements();
@@ -2497,14 +2497,21 @@ public:
     return isIdentityMask(MaskAsInts);
   }
 
-  /// Return true if this shuffle mask chooses elements from exactly one source
+  /// Return true if this shuffle chooses elements from exactly one source
   /// vector without lane crossings and does not change the number of elements
   /// from its input vectors.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
-  /// TODO: Optionally allow length-changing shuffles.
   bool isIdentity() const {
     return !changesLength() && isIdentityMask(getShuffleMask());
   }
+
+  /// Return true if this shuffle lengthens exactly one source vector with
+  /// undefs in the high elements.
+  bool isIdentityWithPadding() const;
+
+  /// Return true if this shuffle extracts the first N elements of exactly one
+  /// source vector.
+  bool isIdentityWithExtract() const;
 
   /// Return true if this shuffle mask chooses elements from its source vectors
   /// without lane crossings. A shuffle using this mask would be

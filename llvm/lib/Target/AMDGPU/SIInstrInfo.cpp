@@ -1937,16 +1937,16 @@ unsigned SIInstrInfo::getAddressSpaceForPseudoSourceKind(
   switch(Kind) {
   case PseudoSourceValue::Stack:
   case PseudoSourceValue::FixedStack:
-    return ST.getAMDGPUAS().PRIVATE_ADDRESS;
+    return AMDGPUAS::PRIVATE_ADDRESS;
   case PseudoSourceValue::ConstantPool:
   case PseudoSourceValue::GOT:
   case PseudoSourceValue::JumpTable:
   case PseudoSourceValue::GlobalValueCallEntry:
   case PseudoSourceValue::ExternalSymbolCallEntry:
   case PseudoSourceValue::TargetCustom:
-    return ST.getAMDGPUAS().CONSTANT_ADDRESS;
+    return AMDGPUAS::CONSTANT_ADDRESS;
   }
-  return ST.getAMDGPUAS().FLAT_ADDRESS;
+  return AMDGPUAS::FLAT_ADDRESS;
 }
 
 static void removeModOperands(MachineInstr &MI) {
@@ -4605,7 +4605,7 @@ void SIInstrInfo::splitScalarBuffer(SetVectorType &Worklist,
   unsigned Count = 0;
   const TargetRegisterClass *DestRC = MRI.getRegClass(Dest.getReg());
   const TargetRegisterClass *NewDestRC = RI.getEquivalentVGPRClass(DestRC);
-    
+
   switch(Opcode) {
   default:
     return;
@@ -4619,7 +4619,7 @@ void SIInstrInfo::splitScalarBuffer(SetVectorType &Worklist,
 
   // FIXME: Should also attempt to build VAddr and Offset like the non-split
   // case (see call site for this function)
-  
+
   // Create a vector of result registers
   SmallVector<unsigned, 8> ResultRegs;
   for (unsigned i = 0; i < Count ; ++i) {
@@ -4913,7 +4913,7 @@ unsigned SIInstrInfo::isStackAccess(const MachineInstr &MI,
     return AMDGPU::NoRegister;
 
   assert(!MI.memoperands_empty() &&
-         (*MI.memoperands_begin())->getAddrSpace() == ST.getAMDGPUAS().PRIVATE_ADDRESS);
+         (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS);
 
   FrameIndex = Addr->getIndex();
   return getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
@@ -5030,7 +5030,7 @@ bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {
     return true;
 
   for (const MachineMemOperand *MMO : MI.memoperands()) {
-    if (MMO->getAddrSpace() == ST.getAMDGPUAS().FLAT_ADDRESS)
+    if (MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS)
       return true;
   }
   return false;

@@ -916,7 +916,7 @@ AliasDecl:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    return;
+    goto NamedMDDecl;
   }
 
   Cur = Begin;
@@ -942,6 +942,38 @@ AliasDecl:
       report_fatal_error("Next.Previous global is not Current");
 
     Cur = Next;
+  }
+
+NamedMDDecl:
+  LLVMNamedMDNodeRef BeginMD = LLVMGetFirstNamedMetadata(Src);
+  LLVMNamedMDNodeRef EndMD = LLVMGetLastNamedMetadata(Src);
+  if (!BeginMD) {
+    if (EndMD != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    return;
+  }
+
+  LLVMNamedMDNodeRef CurMD = BeginMD;
+  LLVMNamedMDNodeRef NextMD = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetNamedMetadataName(CurMD, &NameLen);
+    if (LLVMGetNamedMetadata(M, Name, NameLen))
+      report_fatal_error("Named Metadata Node already cloned");
+    LLVMGetOrInsertNamedMetadata(M, Name, NameLen);
+
+    NextMD = LLVMGetNextNamedMetadata(CurMD);
+    if (NextMD == nullptr) {
+      if (CurMD != EndMD)
+        report_fatal_error("");
+      break;
+    }
+
+    LLVMNamedMDNodeRef PrevMD = LLVMGetPreviousNamedMetadata(NextMD);
+    if (PrevMD != CurMD)
+      report_fatal_error("Next.Previous global is not Current");
+
+    CurMD = NextMD;
   }
 }
 
@@ -1041,7 +1073,7 @@ AliasClone:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    return;
+    goto NamedMDClone;
   }
 
   Cur = Begin;
@@ -1073,6 +1105,47 @@ AliasClone:
 
     Cur = Next;
   }
+
+NamedMDClone:
+  LLVMNamedMDNodeRef BeginMD = LLVMGetFirstNamedMetadata(Src);
+  LLVMNamedMDNodeRef EndMD = LLVMGetLastNamedMetadata(Src);
+  if (!BeginMD) {
+    if (EndMD != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    return;
+  }
+
+  LLVMNamedMDNodeRef CurMD = BeginMD;
+  LLVMNamedMDNodeRef NextMD = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetNamedMetadataName(CurMD, &NameLen);
+    LLVMNamedMDNodeRef NamedMD = LLVMGetNamedMetadata(M, Name, NameLen);
+    if (!NamedMD)
+      report_fatal_error("Named MD Node must have been declared already");
+
+    unsigned OperandCount = LLVMGetNamedMetadataNumOperands(Src, Name);
+    LLVMValueRef *OperandBuf = static_cast<LLVMValueRef *>(
+              safe_malloc(OperandCount * sizeof(LLVMValueRef)));
+    LLVMGetNamedMetadataOperands(Src, Name, OperandBuf);
+    for (unsigned i = 0, e = OperandCount; i != e; ++i) {
+      LLVMAddNamedMetadataOperand(M, Name, OperandBuf[i]);
+    }
+    free(OperandBuf);
+
+    NextMD = LLVMGetNextNamedMetadata(CurMD);
+    if (NextMD == nullptr) {
+      if (CurMD != EndMD)
+        report_fatal_error("Last Named MD Node does not match End");
+      break;
+    }
+
+    LLVMNamedMDNodeRef PrevMD = LLVMGetPreviousNamedMetadata(NextMD);
+    if (PrevMD != CurMD)
+      report_fatal_error("Next.Previous Named MD Node is not Current");
+
+    CurMD = NextMD;
+  }
 }
 
 int llvm_echo(void) {
@@ -1089,18 +1162,6 @@ int llvm_echo(void) {
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);
   LLVMSetModuleIdentifier(M, ModuleName, ModuleIdentLen);
 
-  size_t SourceFlagsLen;
-  LLVMModuleFlagEntry *ModuleFlags =
-      LLVMCopyModuleFlagsMetadata(Src, &SourceFlagsLen);
-  for (unsigned i = 0; i < SourceFlagsLen; ++i) {
-    size_t EntryNameLen;
-    const char *EntryName =
-        LLVMModuleFlagEntriesGetKey(ModuleFlags, i, &EntryNameLen);
-    LLVMAddModuleFlag(M, LLVMModuleFlagEntriesGetFlagBehavior(ModuleFlags, i),
-                      EntryName, EntryNameLen,
-                      LLVMModuleFlagEntriesGetMetadata(ModuleFlags, i));
-  }
-
   LLVMSetTarget(M, LLVMGetTarget(Src));
   LLVMSetModuleDataLayout(M, LLVMGetModuleDataLayout(Src));
   if (strcmp(LLVMGetDataLayoutStr(M), LLVMGetDataLayoutStr(Src)))
@@ -1115,7 +1176,6 @@ int llvm_echo(void) {
   char *Str = LLVMPrintModuleToString(M);
   fputs(Str, stdout);
 
-  LLVMDisposeModuleFlagsMetadata(ModuleFlags);
   LLVMDisposeMessage(Str);
   LLVMDisposeModule(Src);
   LLVMDisposeModule(M);
