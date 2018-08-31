@@ -52058,14 +52058,91 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
+  lldb::SBFileSpec *arg2 = 0 ;
+  uint32_t arg3 ;
+  uint32_t arg4 ;
+  lldb::addr_t arg5 ;
+  lldb::SBFileSpecList *arg6 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  unsigned int val3 ;
+  int ecode3 = 0 ;
+  unsigned int val4 ;
+  int ecode4 = 0 ;
+  unsigned long long val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  lldb::SBBreakpoint result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:SBTarget_BreakpointCreateByLocation",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_lldb__SBFileSpec,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  arg2 = reinterpret_cast< lldb::SBFileSpec * >(argp2);
+  ecode3 = SWIG_AsVal_unsigned_SS_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "3"" of type '" "uint32_t""'");
+  } 
+  arg3 = static_cast< uint32_t >(val3);
+  ecode4 = SWIG_AsVal_unsigned_SS_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "4"" of type '" "uint32_t""'");
+  } 
+  arg4 = static_cast< uint32_t >(val4);
+  ecode5 = SWIG_AsVal_unsigned_SS_long_SS_long(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "5"" of type '" "lldb::addr_t""'");
+  } 
+  arg5 = static_cast< lldb::addr_t >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6, SWIGTYPE_p_lldb__SBFileSpecList,  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "6"" of type '" "lldb::SBFileSpecList &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "6"" of type '" "lldb::SBFileSpecList &""'"); 
+  }
+  arg6 = reinterpret_cast< lldb::SBFileSpecList * >(argp6);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->BreakpointCreateByLocation((lldb::SBFileSpec const &)*arg2,arg3,arg4,arg5,*arg6);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBBreakpoint(static_cast< const lldb::SBBreakpoint& >(result))), SWIGTYPE_p_lldb__SBBreakpoint, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation(PyObject *self, PyObject *args) {
   int argc;
-  PyObject *argv[6];
+  PyObject *argv[7];
   int ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = (int)PyObject_Length(args);
-  for (ii = 0; (ii < argc) && (ii < 5); ii++) {
+  for (ii = 0; (ii < argc) && (ii < 6); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
   }
   if (argc == 3) {
@@ -52161,6 +52238,42 @@ SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation(PyObject *self, P
       }
     }
   }
+  if (argc == 6) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBTarget, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_lldb__SBFileSpec, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_unsigned_SS_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_unsigned_SS_int(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            {
+              int res = SWIG_AsVal_unsigned_SS_long_SS_long(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              void *vptr = 0;
+              int res = SWIG_ConvertPtr(argv[5], &vptr, SWIGTYPE_p_lldb__SBFileSpecList, 0);
+              _v = SWIG_CheckState(res);
+              if (_v) {
+                return _wrap_SBTarget_BreakpointCreateByLocation__SWIG_4(self, args);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBTarget_BreakpointCreateByLocation'.\n"
@@ -52168,7 +52281,8 @@ fail:
     "    BreakpointCreateByLocation(lldb::SBTarget *,char const *,uint32_t)\n"
     "    BreakpointCreateByLocation(lldb::SBTarget *,lldb::SBFileSpec const &,uint32_t)\n"
     "    BreakpointCreateByLocation(lldb::SBTarget *,lldb::SBFileSpec const &,uint32_t,lldb::addr_t)\n"
-    "    BreakpointCreateByLocation(lldb::SBTarget *,lldb::SBFileSpec const &,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n");
+    "    BreakpointCreateByLocation(lldb::SBTarget *,lldb::SBFileSpec const &,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n"
+    "    BreakpointCreateByLocation(lldb::SBTarget *,lldb::SBFileSpec const &,uint32_t,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n");
   return NULL;
 }
 
@@ -77674,8 +77788,10 @@ static PyMethodDef SwigMethods[] = {
 		"BreakpointCreateByLocation(char file, uint32_t line) -> SBBreakpoint\n"
 		"BreakpointCreateByLocation(SBFileSpec file_spec, uint32_t line) -> SBBreakpoint\n"
 		"BreakpointCreateByLocation(SBFileSpec file_spec, uint32_t line, addr_t offset) -> SBBreakpoint\n"
+		"BreakpointCreateByLocation(SBFileSpec file_spec, uint32_t line, addr_t offset, \n"
+		"    SBFileSpecList module_list) -> SBBreakpoint\n"
 		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, \n"
-		"    addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
+		"    uint32_t column, addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
 		""},
 	 { (char *)"SBTarget_BreakpointCreateByName", _wrap_SBTarget_BreakpointCreateByName, METH_VARARGS, (char *)"\n"
 		"BreakpointCreateByName(char symbol_name, char module_name = None) -> SBBreakpoint\n"
