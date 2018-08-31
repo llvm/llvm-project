@@ -435,7 +435,7 @@ void Writer::createSections() {
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
-    if (SC && !SC->isLive()) {
+    if (SC && !SC->Live) {
       if (Config->Verbose)
         SC->printDiscardedMessage();
       continue;
@@ -1014,7 +1014,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
     // We only care about live section chunks. Common chunks and other chunks
     // don't generally contain relocations.
     SectionChunk *SC = dyn_cast<SectionChunk>(C);
-    if (!SC || !SC->isLive())
+    if (!SC || !SC->Live)
       continue;
 
     for (const coff_relocation &Reloc : SC->Relocs) {
@@ -1097,7 +1097,7 @@ void Writer::markSymbolsForRVATable(ObjFile *File,
     // is associated with something like a vtable and the vtable is discarded.
     // In this case, the associated gfids section is discarded, and we don't
     // mark the virtual member functions as address-taken by the vtable.
-    if (!C->isLive())
+    if (!C->Live)
       continue;
 
     // Validate that the contents look like symbol table indices.
@@ -1153,7 +1153,7 @@ void Writer::createRuntimePseudoRelocs() {
 
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
-    if (!SC || !SC->isLive())
+    if (!SC || !SC->Live)
       continue;
     SC->getRuntimePseudoRelocs(Rels);
   }

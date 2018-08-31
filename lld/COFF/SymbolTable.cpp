@@ -169,6 +169,23 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
   // reference itself to point at the IAT entry.
   Sym->replaceKeepingName(Imp, sizeof(DefinedImportData));
   cast<DefinedImportData>(Sym)->IsRuntimePseudoReloc = true;
+
+  // There may exist symbols named .refptr.<name> which only consist
+  // of a single pointer to <name>. If it turns out <name> is
+  // automatically imported, we don't need to keep the .refptr.<name>
+  // pointer at all, but redirect all accesses to it to the IAT entry
+  // for __imp_<name> instead, and drop the whole .refptr.<name> chunk.
+  DefinedRegular *Refptr =
+      dyn_cast_or_null<DefinedRegular>(find((".refptr." + Name).str()));
+  size_t PtrSize = Config->is64() ? 8 : 4;
+  if (Refptr && Refptr->getChunk()->getSize() == PtrSize) {
+    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Refptr->getChunk());
+    if (SC && SC->Relocs.size() == 1 && *SC->symbols().begin() == Sym) {
+        log("Replacing .refptr." + Name + " with " + Imp->getName());
+        Refptr->getChunk()->Live = false;
+        Refptr->replaceKeepingName(Imp, sizeof(DefinedImportData));
+    }
+  }
   return true;
 }
 
