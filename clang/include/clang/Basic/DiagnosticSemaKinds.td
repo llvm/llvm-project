@@ -2143,8 +2143,11 @@ def note_deduction_guide_template_access : Note<
   "member template declared %0 here">;
 def note_deduction_guide_access : Note<
   "deduction guide declared %0 by intervening access specifier">;
+def warn_cxx14_compat_class_template_argument_deduction : Warning<
+  "class template argument deduction is incompatible with C++ standards "
+  "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
 
-// C++1y deduced return types
+// C++14 deduced return types
 def err_auto_fn_deduction_failure : Error<
   "cannot deduce return type %0 from returned value of type %1">;
 def err_auto_fn_different_deductions : Error<
@@ -2160,6 +2163,9 @@ def err_auto_fn_return_init_list : Error<
   "cannot deduce return type from initializer list">;
 def err_auto_fn_virtual : Error<
   "function with deduced return type cannot be virtual">;
+def warn_cxx11_compat_deduced_return_type : Warning<
+  "return type deduction is incompatible with C++ standards before C++14">,
+  InGroup<CXXPre14Compat>, DefaultIgnore;
 
 // C++11 override control
 def override_keyword_only_allowed_on_virtual_member_functions : Error<
@@ -6575,6 +6581,11 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
+
+  // C++14 generic lambdas.
+  def warn_cxx11_compat_generic_lambda : Warning<
+    "generic lambdas are incompatible with C++11">,
+    InGroup<CXXPre14Compat>, DefaultIgnore;
 
   // C++17 '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<

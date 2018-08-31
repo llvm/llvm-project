@@ -158,7 +158,7 @@
 // CHECK-CLANG-NO-LIBGCC: "-lc"
 // CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang++ -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \

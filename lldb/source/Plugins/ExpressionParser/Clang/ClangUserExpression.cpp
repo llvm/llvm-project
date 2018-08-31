@@ -643,7 +643,8 @@ static void AbsPosToLineColumnPos(unsigned abs_pos, llvm::StringRef code,
 }
 
 bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
-                                   StringList &matches, unsigned complete_pos) {
+                                   CompletionRequest &request,
+                                   unsigned complete_pos) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We don't want any visible feedback when completing an expression. Mostly
@@ -709,7 +710,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // The actual column where we have to complete is the start column of the
   // user expression + the offset inside the user code that we were given.
   const unsigned completion_column = user_expr_column + complete_pos;
-  parser.Complete(matches, user_expr_line, completion_column, complete_pos);
+  parser.Complete(request, user_expr_line, completion_column, complete_pos);
 
   return true;
 }

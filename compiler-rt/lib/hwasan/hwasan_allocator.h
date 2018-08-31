@@ -42,7 +42,6 @@ class HwasanChunkView {
   uptr End() const;            // Last byte of user memory
   uptr UsedSize() const;       // Size requested by the user
   u32 GetAllocStackId() const;
-  u32 GetFreeStackId() const;
  private:
   uptr block_;
   Metadata *const metadata_;
@@ -54,6 +53,7 @@ HwasanChunkView FindHeapChunkByAddress(uptr address);
 // These are recorded in a thread-local ring buffer.
 struct HeapAllocationRecord {
   uptr tagged_addr;
+  u32  alloc_context_id;
   u32  free_context_id;
   u32  requested_size;
 };

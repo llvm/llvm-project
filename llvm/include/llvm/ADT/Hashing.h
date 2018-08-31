@@ -133,7 +133,7 @@ hash_code hash_value(const std::basic_string<T> &arg);
 /// undone. This makes it thread-hostile and very hard to use outside of
 /// immediately on start of a simple program designed for reproducible
 /// behavior.
-void set_fixed_execution_hash_seed(size_t fixed_value);
+void set_fixed_execution_hash_seed(uint64_t fixed_value);
 
 
 // All of the implementation details of actually computing the various hash
@@ -316,9 +316,9 @@ struct hash_state {
 /// This variable can be set using the \see llvm::set_fixed_execution_seed
 /// function. See that function for details. Do not, under any circumstances,
 /// set or read this variable.
-extern size_t fixed_seed_override;
+extern uint64_t fixed_seed_override;
 
-inline size_t get_execution_seed() {
+inline uint64_t get_execution_seed() {
   // FIXME: This needs to be a per-execution seed. This is just a placeholder
   // implementation. Switching to a per-execution seed is likely to flush out
   // instability bugs and so will happen as its own commit.
@@ -326,8 +326,7 @@ inline size_t get_execution_seed() {
   // However, if there is a fixed seed override set the first time this is
   // called, return that instead of the per-execution seed.
   const uint64_t seed_prime = 0xff51afd7ed558ccdULL;
-  static size_t seed = fixed_seed_override ? fixed_seed_override
-                                           : (size_t)seed_prime;
+  static uint64_t seed = fixed_seed_override ? fixed_seed_override : seed_prime;
   return seed;
 }
 
@@ -402,7 +401,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
 /// combining them, this (as an optimization) directly combines the integers.
 template <typename InputIteratorT>
 hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
-  const size_t seed = get_execution_seed();
+  const uint64_t seed = get_execution_seed();
   char buffer[64], *buffer_ptr = buffer;
   char *const buffer_end = std::end(buffer);
   while (first != last && store_and_advance(buffer_ptr, buffer_end,
@@ -446,7 +445,7 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
 template <typename ValueT>
 typename std::enable_if<is_hashable_data<ValueT>::value, hash_code>::type
 hash_combine_range_impl(ValueT *first, ValueT *last) {
-  const size_t seed = get_execution_seed();
+  const uint64_t seed = get_execution_seed();
   const char *s_begin = reinterpret_cast<const char *>(first);
   const char *s_end = reinterpret_cast<const char *>(last);
   const size_t length = std::distance(s_begin, s_end);
@@ -496,7 +495,7 @@ namespace detail {
 struct hash_combine_recursive_helper {
   char buffer[64];
   hash_state state;
-  const size_t seed;
+  const uint64_t seed;
 
 public:
   /// Construct a recursive hash combining helper.

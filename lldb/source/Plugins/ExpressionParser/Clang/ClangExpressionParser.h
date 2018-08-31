@@ -62,7 +62,7 @@ public:
   //------------------------------------------------------------------
   ~ClangExpressionParser() override;
 
-  bool Complete(StringList &matches, unsigned line, unsigned pos,
+  bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
                 unsigned typed_pos) override;
 
   //------------------------------------------------------------------

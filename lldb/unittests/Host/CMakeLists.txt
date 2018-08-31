@@ -3,7 +3,6 @@ set (FILES
   HostInfoTest.cpp
   HostTest.cpp
   MainLoopTest.cpp
-  PredicateTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
   SymbolsTest.cpp

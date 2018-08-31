@@ -2,7 +2,8 @@
 
 set(LIBUNWIND_CXX_SOURCES
     libunwind.cpp
-    Unwind-EHABI.cpp)
+    Unwind-EHABI.cpp
+    Unwind-seh.cpp)
 append_if(LIBUNWIND_CXX_SOURCES APPLE Unwind_AppleExtras.cpp)
 
 set(LIBUNWIND_C_SOURCES

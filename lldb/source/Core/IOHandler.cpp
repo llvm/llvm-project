@@ -26,7 +26,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/File.h"            // for File
-#include "lldb/Host/Predicate.h"       // for Predicate, ::eBroad...
+#include "lldb/Utility/Predicate.h"    // for Predicate, ::eBroad...
 #include "lldb/Utility/Status.h"       // for Status
 #include "lldb/Utility/StreamString.h" // for StreamString
 #include "lldb/Utility/StringList.h"   // for StringList

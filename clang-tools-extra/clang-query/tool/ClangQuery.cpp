@@ -58,6 +58,29 @@ static cl::list<std::string> CommandFiles("f",
                                           cl::value_desc("file"),
                                           cl::cat(ClangQueryCategory));
 
+static cl::opt<std::string> PreloadFile(
+    "preload",
+    cl::desc("Preload commands from file and start interactive mode"),
+    cl::value_desc("file"), cl::cat(ClangQueryCategory));
+
+bool runCommandsInFile(const char *ExeName, std::string const &FileName,
+                       QuerySession &QS) {
+  std::ifstream Input(FileName.c_str());
+  if (!Input.is_open()) {
+    llvm::errs() << ExeName << ": cannot open " << FileName << "\n";
+    return 1;
+  }
+  while (Input.good()) {
+    std::string Line;
+    std::getline(Input, Line);
+
+    QueryRef Q = QueryParser::parse(Line, QS);
+    if (!Q->run(llvm::outs(), QS))
+      return true;
+  }
+  return false;
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
@@ -65,6 +88,12 @@ int main(int argc, const char **argv) {
 
   if (!Commands.empty() && !CommandFiles.empty()) {
     llvm::errs() << argv[0] << ": cannot specify both -c and -f\n";
+    return 1;
+  }
+
+  if ((!Commands.empty() || !CommandFiles.empty()) && !PreloadFile.empty()) {
+    llvm::errs() << argv[0]
+                 << ": cannot specify both -c or -f with --preload\n";
     return 1;
   }
 
@@ -84,21 +113,14 @@ int main(int argc, const char **argv) {
     }
   } else if (!CommandFiles.empty()) {
     for (auto I = CommandFiles.begin(), E = CommandFiles.end(); I != E; ++I) {
-      std::ifstream Input(I->c_str());
-      if (!Input.is_open()) {
-        llvm::errs() << argv[0] << ": cannot open " << *I << "\n";
+      if (runCommandsInFile(argv[0], *I, QS))
         return 1;
-      }
-      while (Input.good()) {
-        std::string Line;
-        std::getline(Input, Line);
-
-        QueryRef Q = QueryParser::parse(Line, QS);
-        if (!Q->run(llvm::outs(), QS))
-          return 1;
-      }
     }
   } else {
+    if (!PreloadFile.empty()) {
+      if (runCommandsInFile(argv[0], PreloadFile, QS))
+        return 1;
+    }
     LineEditor LE("clang-query");
     LE.setListCompleter([&QS](StringRef Line, size_t Pos) {
       return QueryParser::complete(Line, Pos, QS);
