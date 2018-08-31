@@ -107,8 +107,8 @@ public:
   ///     are needed for parsing and completing (locations of functions, types
   ///     of variables, persistent variables, etc.)
   ///
-  /// @param[out] matches
-  ///     The list of completions that should be appended with string
+  /// @param[out] request
+  ///     The completion request to fill out. The completion should be a string
   ///     that would complete the current token at the cursor position.
   ///     Note that the string in the list replaces the current token
   ///     in the command line.
@@ -121,7 +121,7 @@ public:
   ///     True if we added any completion results to the output;
   ///     false otherwise.
   //------------------------------------------------------------------
-  virtual bool Complete(ExecutionContext &exe_ctx, StringList &matches,
+  virtual bool Complete(ExecutionContext &exe_ctx, CompletionRequest &request,
                         unsigned complete_pos) {
     return false;
   }

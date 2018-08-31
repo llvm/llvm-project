@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
@@ -1183,12 +1184,13 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
 }
 
 /// Use exp{,2}(x * y) for pow(exp{,2}(x), y);
-/// exp2(x) for pow(2.0, x); exp10(x) for pow(10.0, x).
+/// exp2(n * x) for pow(2.0 ** n, x); exp10(x) for pow(10.0, x).
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
   AttributeList Attrs = Pow->getCalledFunction()->getAttributes();
   Module *Mod = Pow->getModule();
   Type *Ty = Pow->getType();
+  bool Ignored;
 
   // Evaluate special cases related to a nested function as the base.
 
@@ -1249,10 +1251,30 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
 
   // Evaluate special cases related to a constant base.
 
-  // pow(2.0, x) -> exp2(x)
-  if (match(Base, m_SpecificFP(2.0))) {
-    Value *Exp2 = Intrinsic::getDeclaration(Mod, Intrinsic::exp2, Ty);
-    return B.CreateCall(Exp2, Expo, "exp2");
+  const APFloat *BaseF;
+  if (!match(Pow->getArgOperand(0), m_APFloat(BaseF)))
+    return nullptr;
+
+  // pow(2.0 ** n, x) -> exp2(n * x)
+  if (hasUnaryFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l)) {
+    APFloat BaseR = APFloat(1.0);
+    BaseR.convert(BaseF->getSemantics(), APFloat::rmTowardZero, &Ignored);
+    BaseR = BaseR / *BaseF;
+    bool IsInteger    = BaseF->isInteger(),
+         IsReciprocal = BaseR.isInteger();
+    const APFloat *NF = IsReciprocal ? &BaseR : BaseF;
+    APSInt NI(64, false);
+    if ((IsInteger || IsReciprocal) &&
+        !NF->convertToInteger(NI, APFloat::rmTowardZero, &Ignored) &&
+        NI > 1 && NI.isPowerOf2()) {
+      double N = NI.logBase2() * (IsReciprocal ? -1.0 : 1.0);
+      Value *FMul = B.CreateFMul(Expo, ConstantFP::get(Ty, N), "mul");
+      if (Pow->doesNotAccessMemory())
+        return B.CreateCall(Intrinsic::getDeclaration(Mod, Intrinsic::exp2, Ty),
+                            FMul, "exp2");
+      else
+        return emitUnaryFloatFnCall(FMul, TLI->getName(LibFunc_exp2), B, Attrs);
+    }
   }
 
   // pow(10.0, x) -> exp10(x)

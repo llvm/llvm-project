@@ -369,9 +369,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   if (error.Fail())
     return 0;
 
-  StringList matches;
-  expr->Complete(exe_ctx, matches, cursor_pos);
-  request.AddCompletions(matches);
+  expr->Complete(exe_ctx, request, cursor_pos);
   return request.GetNumberOfMatches();
 }
 

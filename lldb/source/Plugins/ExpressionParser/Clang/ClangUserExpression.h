@@ -143,7 +143,7 @@ public:
              lldb_private::ExecutionPolicy execution_policy,
              bool keep_result_in_memory, bool generate_debug_info) override;
 
-  bool Complete(ExecutionContext &exe_ctx, StringList &matches,
+  bool Complete(ExecutionContext &exe_ctx, CompletionRequest &request,
                 unsigned complete_pos) override;
 
   ExpressionTypeSystemHelper *GetTypeSystemHelper() override {

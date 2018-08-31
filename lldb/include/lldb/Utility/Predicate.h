@@ -34,11 +34,11 @@ typedef enum {
   eBroadcastNever,   ///< No broadcast will be sent when the value is modified.
   eBroadcastAlways,  ///< Always send a broadcast when the value is modified.
   eBroadcastOnChange ///< Only broadcast if the value changes when the value is
-                     ///modified.
+                     /// modified.
 } PredicateBroadcastType;
 
 //----------------------------------------------------------------------
-/// @class Predicate Predicate.h "lldb/Host/Predicate.h"
+/// @class Predicate Predicate.h "lldb/Utility/Predicate.h"
 /// A C++ wrapper class for providing threaded access to a value of
 /// type T.
 ///
@@ -220,8 +220,8 @@ protected:
   T m_value; ///< The templatized value T that we are protecting access to
   mutable std::mutex m_mutex; ///< The mutex to use when accessing the data
   std::condition_variable m_condition; ///< The pthread condition variable to
-                                       ///use for signaling that data available
-                                       ///or changed.
+                                       /// use for signaling that data available
+                                       /// or changed.
 
 private:
   //------------------------------------------------------------------

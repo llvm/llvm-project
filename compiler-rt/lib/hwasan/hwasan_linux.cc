@@ -238,6 +238,7 @@ void HwasanTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+  t->Destroy();
   __hwasan_thread_exit();
 }
 

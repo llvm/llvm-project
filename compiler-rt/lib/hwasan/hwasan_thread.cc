@@ -24,6 +24,39 @@ static u32 RandomSeed() {
   return seed;
 }
 
+Thread *Thread::main_thread;
+SpinMutex Thread::thread_list_mutex;
+
+void Thread::InsertIntoThreadList(Thread *t) {
+  CHECK(!t->next_);
+  if (!main_thread) {
+    main_thread = t;
+    return;
+  }
+  SpinMutexLock l(&thread_list_mutex);
+  Thread *last = main_thread;
+  while (last->next_)
+    last = last->next_;
+  last->next_ = t;
+}
+
+void Thread::RemoveFromThreadList(Thread *t) {
+  CHECK_NE(t, main_thread);
+  SpinMutexLock l(&thread_list_mutex);
+  Thread *prev = main_thread;
+  Thread *cur = prev->next_;
+  CHECK(cur);
+  while (cur) {
+    if (cur == t) {
+      prev->next_ = cur->next_;
+      return;
+    }
+    prev = cur;
+    cur = cur->next_;
+  }
+  CHECK(0 && "RemoveFromThreadList: thread not found");
+}
+
 Thread *Thread::Create(thread_callback_t start_routine,
                                void *arg) {
   uptr PageSize = GetPageSizeCached();
@@ -33,11 +66,9 @@ Thread *Thread::Create(thread_callback_t start_routine,
   thread->arg_ = arg;
   thread->destructor_iterations_ = GetPthreadDestructorIterations();
   thread->random_state_ = flags()->random_tags ? RandomSeed() : 0;
-  thread->context_ = nullptr;
-  ThreadContext::Args args = {thread};
-  thread->tid_ = GetThreadRegistry().CreateThread(0, false, 0, &args);
   if (auto sz = flags()->heap_history_size)
     thread->heap_allocations_ = RingBuffer<HeapAllocationRecord>::New(sz);
+  InsertIntoThreadList(thread);
   return thread;
 }
 
@@ -80,15 +111,12 @@ void Thread::ClearShadowForThreadStackAndTLS() {
 void Thread::Destroy() {
   malloc_storage().CommitBack();
   ClearShadowForThreadStackAndTLS();
+  RemoveFromThreadList(this);
   uptr size = RoundUpTo(sizeof(Thread), GetPageSizeCached());
   if (heap_allocations_)
     heap_allocations_->Delete();
   UnmapOrDie(this, size);
   DTLS_Destroy();
-}
-
-thread_return_t Thread::ThreadStart() {
-  return start_routine_(arg_);
 }
 
 static u32 xorshift(u32 state) {
@@ -113,34 +141,6 @@ tag_t Thread::GenerateRandomTag() {
     }
   } while (!tag);
   return tag;
-}
-
-void ThreadContext::OnCreated(void *arg) {
-  Args *args = static_cast<Args*>(arg);
-  thread = args->thread;
-  thread->set_context(this);
-}
-
-void ThreadContext::OnFinished() {
-  thread = nullptr;
-}
-
-static const u32 kMaxLiveThreads = 1024;
-
-static ThreadContextBase *ThreadContextFactory(u32 tid) {
-  static ALIGNED(16) char placeholder[sizeof(ThreadContext) * kMaxLiveThreads];
-  void *mem = &placeholder[0] + tid * sizeof(ThreadContext);
-  CHECK_LT(tid, kMaxLiveThreads);
-  return new (mem) ThreadContext(tid);
-}
-
-ThreadRegistry &GetThreadRegistry() {
-  static ALIGNED(16) char placeholder[sizeof(ThreadRegistry)];
-  static ThreadRegistry *registry;
-  if (!registry)
-    registry = new (placeholder)
-        ThreadRegistry(ThreadContextFactory, kMaxLiveThreads, kMaxLiveThreads);
-  return *registry;
 }
 
 } // namespace __hwasan

@@ -25,11 +25,6 @@ using namespace llvm;
 
 const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     const BasicBlock *BB) {
-#ifndef NDEBUG
-  // Make sure that we are making this request to tracking which is up-to-date.
-  validate();
-#endif
-
   if (!KnownBlocks.count(BB))
     fill(BB);
   auto *FirstICF = FirstSpecialInsts.lookup(BB);
@@ -61,36 +56,6 @@ void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
   KnownBlocks.insert(BB);
 }
 
-#ifndef NDEBUG
-void InstructionPrecedenceTracking::validate() const {
-  unsigned NumNoSpecialBlocks = 0;
-  // Check that for every known block we have something cached for it.
-  for (auto *BB : KnownBlocks) {
-    auto It = FirstSpecialInsts.find(BB);
-    bool BlockHasSpecialInsns = false;
-    for (const Instruction &Insn : *BB) {
-      if (isSpecialInstruction(&Insn)) {
-        assert(It != FirstSpecialInsts.end() &&
-               "Blocked marked as known but we have no cached value for it!");
-        assert(It->second == &Insn &&
-               "Cached first special instruction is wrong!");
-        BlockHasSpecialInsns = true;
-        break;
-      }
-    }
-    if (!BlockHasSpecialInsns) {
-      assert(It == FirstSpecialInsts.end() &&
-             "Block is marked as having special instructions but in fact it "
-             "has none!");
-      ++NumNoSpecialBlocks;
-    }
-  }
-
-  assert(KnownBlocks.size() == NumNoSpecialBlocks + FirstSpecialInsts.size() &&
-         "We don't have info for some blocks?");
-}
-#endif
-
 void InstructionPrecedenceTracking::invalidateBlock(const BasicBlock *BB) {
   OI.invalidateBlock(BB);
   FirstSpecialInsts.erase(BB);
@@ -102,10 +67,6 @@ void InstructionPrecedenceTracking::clear() {
     OI.invalidateBlock(It.first);
   FirstSpecialInsts.clear();
   KnownBlocks.clear();
-#ifndef NDEBUG
-  // The map should be valid after clearing (at least empty).
-  validate();
-#endif
 }
 
 bool ImplicitControlFlowTracking::isSpecialInstruction(

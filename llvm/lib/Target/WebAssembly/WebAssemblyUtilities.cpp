@@ -63,6 +63,8 @@ bool WebAssembly::isCopy(const MachineInstr &MI) {
   case WebAssembly::COPY_F32_S:
   case WebAssembly::COPY_F64:
   case WebAssembly::COPY_F64_S:
+  case WebAssembly::COPY_V128:
+  case WebAssembly::COPY_V128_S:
     return true;
   default:
     return false;
@@ -79,6 +81,8 @@ bool WebAssembly::isTee(const MachineInstr &MI) {
   case WebAssembly::TEE_F32_S:
   case WebAssembly::TEE_F64:
   case WebAssembly::TEE_F64_S:
+  case WebAssembly::TEE_V128:
+  case WebAssembly::TEE_V128_S:
     return true;
   default:
     return false;
@@ -177,6 +181,18 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   case WebAssembly::CALL_F32_S:
   case WebAssembly::CALL_F64:
   case WebAssembly::CALL_F64_S:
+  case WebAssembly::CALL_v16i8:
+  case WebAssembly::CALL_v16i8_S:
+  case WebAssembly::CALL_v8i16:
+  case WebAssembly::CALL_v8i16_S:
+  case WebAssembly::CALL_v4i32:
+  case WebAssembly::CALL_v4i32_S:
+  case WebAssembly::CALL_v2i64:
+  case WebAssembly::CALL_v2i64_S:
+  case WebAssembly::CALL_v4f32:
+  case WebAssembly::CALL_v4f32_S:
+  case WebAssembly::CALL_v2f64:
+  case WebAssembly::CALL_v2f64_S:
   case WebAssembly::CALL_EXCEPT_REF:
   case WebAssembly::CALL_EXCEPT_REF_S:
   case WebAssembly::CALL_INDIRECT_I32:
@@ -187,6 +203,18 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   case WebAssembly::CALL_INDIRECT_F32_S:
   case WebAssembly::CALL_INDIRECT_F64:
   case WebAssembly::CALL_INDIRECT_F64_S:
+  case WebAssembly::CALL_INDIRECT_v16i8:
+  case WebAssembly::CALL_INDIRECT_v16i8_S:
+  case WebAssembly::CALL_INDIRECT_v8i16:
+  case WebAssembly::CALL_INDIRECT_v8i16_S:
+  case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v4i32_S:
+  case WebAssembly::CALL_INDIRECT_v2i64:
+  case WebAssembly::CALL_INDIRECT_v2i64_S:
+  case WebAssembly::CALL_INDIRECT_v4f32:
+  case WebAssembly::CALL_INDIRECT_v4f32_S:
+  case WebAssembly::CALL_INDIRECT_v2f64:
+  case WebAssembly::CALL_INDIRECT_v2f64_S:
   case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
   case WebAssembly::CALL_INDIRECT_EXCEPT_REF_S:
     return 1;
