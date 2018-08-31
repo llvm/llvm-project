@@ -17,7 +17,7 @@ int main() {
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in main{{.*}}stack-uar.cc:16
 
-  // CHECK: HWAddressSanitizer can not describe address in more detail.
+  // CHECK: is located in stack of thread
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }

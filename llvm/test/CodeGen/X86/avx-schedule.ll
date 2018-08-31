@@ -768,7 +768,7 @@ define <8 x float> @test_broadcastf128(<4 x float> *%a0) {
 ;
 ; BTVER2-LABEL: test_broadcastf128:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [6:1.00]
+; BTVER2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [6:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastf128:
@@ -1225,7 +1225,7 @@ define <8 x i32> @test_cvtpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [6:2.00]
-; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtpd2dq:
@@ -1289,7 +1289,7 @@ define <8 x i32> @test_cvttpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [6:2.00]
-; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvttpd2dq:
@@ -1352,7 +1352,7 @@ define <8 x float> @test_cvtpd2ps(<4 x double> %a0, <4 x double> *%a1) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [6:2.00]
-; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtpd2ps:
@@ -1984,7 +1984,7 @@ define <8 x float> @test_insertf128(<8 x float> %a0, <4 x float> %a1, <4 x float
 ;
 ; BTVER2-LABEL: test_insertf128:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:0.50]
+; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:1.00]
 ; BTVER2-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -3526,7 +3526,7 @@ define <4 x double> @test_perm2f128(<4 x double> %a0, <4 x double> %a1, <4 x dou
 ;
 ; BTVER2-LABEL: test_perm2f128:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:0.50]
+; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
 ; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]

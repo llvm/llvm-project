@@ -558,7 +558,8 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // namespace, these decls are always copied to new.h/cc. Those in classes,
   // functions are covered in other matchers.
   Finder->addMatcher(namedDecl(anyOf(usingDecl(IsOldCCTopLevelDecl),
-                                     usingDirectiveDecl(IsOldCCTopLevelDecl),
+                                     usingDirectiveDecl(unless(isImplicit()),
+                                                        IsOldCCTopLevelDecl),
                                      typeAliasDecl(IsOldCCTopLevelDecl)),
                                notInMacro())
                          .bind("using_decl"),

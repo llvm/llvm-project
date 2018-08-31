@@ -42,13 +42,12 @@ class MergedIndex : public SymbolIndex {
      SymbolSlab Dyn = std::move(DynB).build();
 
      DenseSet<SymbolID> SeenDynamicSymbols;
-     Symbol::Details Scratch;
      More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
        auto DynS = Dyn.find(S.ID);
        if (DynS == Dyn.end())
          return Callback(S);
        SeenDynamicSymbols.insert(S.ID);
-       Callback(mergeSymbol(*DynS, S, &Scratch));
+       Callback(mergeSymbol(*DynS, S));
      });
      for (const Symbol &S : Dyn)
        if (!SeenDynamicSymbols.count(S.ID))
@@ -64,14 +63,13 @@ class MergedIndex : public SymbolIndex {
     Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
 
     auto RemainingIDs = Req.IDs;
-    Symbol::Details Scratch;
     Static->lookup(Req, [&](const Symbol &S) {
       const Symbol *Sym = B.find(S.ID);
       RemainingIDs.erase(S.ID);
       if (!Sym)
         Callback(S);
       else
-        Callback(mergeSymbol(*Sym, S, &Scratch));
+        Callback(mergeSymbol(*Sym, S));
     });
     for (const auto &ID : RemainingIDs)
       if (const Symbol *Sym = B.find(ID))
@@ -93,8 +91,7 @@ private:
 };
 } // namespace
 
-Symbol
-mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
+Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   assert(L.ID == R.ID);
   // We prefer information from TUs that saw the definition.
   // Classes: this is the def itself. Functions: hopefully the header decl.
@@ -114,21 +111,12 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
     S.Signature = O.Signature;
   if (S.CompletionSnippetSuffix == "")
     S.CompletionSnippetSuffix = O.CompletionSnippetSuffix;
-
-  if (O.Detail) {
-    if (S.Detail) {
-      // Copy into scratch space so we can merge.
-      *Scratch = *S.Detail;
-      if (Scratch->Documentation == "")
-        Scratch->Documentation = O.Detail->Documentation;
-      if (Scratch->ReturnType == "")
-        Scratch->ReturnType = O.Detail->ReturnType;
-      if (Scratch->IncludeHeader == "")
-        Scratch->IncludeHeader = O.Detail->IncludeHeader;
-      S.Detail = Scratch;
-    } else
-      S.Detail = O.Detail;
-  }
+  if (S.Documentation == "")
+    S.Documentation = O.Documentation;
+  if (S.ReturnType == "")
+    S.ReturnType = O.ReturnType;
+  if (S.IncludeHeader == "")
+    S.IncludeHeader = O.IncludeHeader;
 
   S.Origin |= O.Origin | SymbolOrigin::Merge;
   return S;

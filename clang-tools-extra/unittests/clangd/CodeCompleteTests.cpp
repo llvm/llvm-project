@@ -564,12 +564,10 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
 
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-  Symbol::Details Scratch;
   auto BarURI = URI::createFile(BarHeader).toString();
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI;
-  Scratch.IncludeHeader = BarURI;
-  Sym.Detail = &Scratch;
+  Sym.IncludeHeader = BarURI;
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -595,16 +593,14 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
 
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-  Symbol::Details Scratch;
   Symbol SymX = cls("ns::X");
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
   auto BarURI = URI::createFile(BarHeader).toString();
   SymX.CanonicalDeclaration.FileURI = BarURI;
   SymY.CanonicalDeclaration.FileURI = BarURI;
-  Scratch.IncludeHeader = "<bar>";
-  SymX.Detail = &Scratch;
-  SymY.Detail = &Scratch;
+  SymX.IncludeHeader = "<bar>";
+  SymY.IncludeHeader = "<bar>";
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -1179,11 +1175,9 @@ TEST(CompletionTest, OverloadBundling) {
       UnorderedElementsAre(Labeled("GFuncC(…)"), Labeled("GFuncD(int)")));
 
   // Differences in header-to-insert suppress bundling.
-  Symbol::Details Detail;
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
   NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
-  Detail.IncludeHeader = "<foo>";
-  NoArgsGFunc.Detail = &Detail;
+  NoArgsGFunc.IncludeHeader = "<foo>";
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
       UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
@@ -1664,13 +1658,10 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
 }
 
 TEST(SignatureHelpTest, IndexDocumentation) {
-  Symbol::Details DocDetails;
-  DocDetails.Documentation = "Doc from the index";
-
   Symbol Foo0 = sym("foo", index::SymbolKind::Function, "@F@\\0#");
-  Foo0.Detail = &DocDetails;
+  Foo0.Documentation = "Doc from the index";
   Symbol Foo1 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#");
-  Foo1.Detail = &DocDetails;
+  Foo1.Documentation = "Doc from the index";
   Symbol Foo2 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#I#");
 
   StringRef Sig0 = R"cpp(

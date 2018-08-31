@@ -47,8 +47,8 @@ entry:
 
 ; VI: s_waitcnt
 ; VI-NEXT: v_sub_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT: v_sub_f16_e32 v0, v0, v1
-; VI-NEXT: v_sub_f16_e32 v0, v2, v0
+; VI-NEXT: v_sub_f16_e32 v0, v1, v0
+; VI-NEXT: v_add_f16_e32 v0, v2, v0
 ; VI-NEXT: s_setpc_b64
 define half @reduction_fsub_v4f16_preserve_fmf(<4 x half> %vec4) {
 entry:

@@ -146,7 +146,6 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                                            const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
-  AMDGPUASI = AMDGPU::getAMDGPUAS(TM);
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
   setOperationAction(ISD::LOAD, MVT::f32, Promote);
@@ -725,7 +724,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
     {
       const LoadSDNode * L = dyn_cast<LoadSDNode>(N);
       if (L->getMemOperand()->getAddrSpace()
-      == AMDGPUASI.CONSTANT_ADDRESS_32BIT)
+      == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
         return true;
       return false;
     }
@@ -1193,8 +1192,8 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = G->getGlobal();
 
-  if (G->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS ||
-      G->getAddressSpace() == AMDGPUASI.REGION_ADDRESS) {
+  if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+      G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isEntryFunction()) {
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(

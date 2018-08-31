@@ -160,17 +160,14 @@ public:
 
   SymbolSlab mergeResults() override {
     SymbolSlab::Builder UniqueSymbols;
-    llvm::BumpPtrAllocator Arena;
-    Symbol::Details Scratch;
     Executor.getToolResults()->forEachResult(
         [&](llvm::StringRef Key, llvm::StringRef Value) {
-          Arena.Reset();
-          llvm::yaml::Input Yin(Value, &Arena);
-          auto Sym = clang::clangd::SymbolFromYAML(Yin, Arena);
+          llvm::yaml::Input Yin(Value);
+          auto Sym = clang::clangd::SymbolFromYAML(Yin);
           clang::clangd::SymbolID ID;
           Key >> ID;
           if (const auto *Existing = UniqueSymbols.find(ID))
-            UniqueSymbols.insert(mergeSymbol(*Existing, Sym, &Scratch));
+            UniqueSymbols.insert(mergeSymbol(*Existing, Sym));
           else
             UniqueSymbols.insert(Sym);
         });
@@ -188,9 +185,8 @@ public:
   void consumeSymbols(SymbolSlab Symbols) override {
     std::lock_guard<std::mutex> Lock(Mut);
     for (auto &&Sym : Symbols) {
-      Symbol::Details Scratch;
       if (const auto *Existing = Result.find(Sym.ID))
-        Result.insert(mergeSymbol(*Existing, Sym, &Scratch));
+        Result.insert(mergeSymbol(*Existing, Sym));
       else
         Result.insert(Sym);
     }

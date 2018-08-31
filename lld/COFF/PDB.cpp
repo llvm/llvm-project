@@ -821,7 +821,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   uint32_t Modi = File->ModuleDBI->getModuleIndex();
   for (Chunk *C : Chunks) {
     auto *SecChunk = dyn_cast<SectionChunk>(C);
-    if (!SecChunk || !SecChunk->isLive())
+    if (!SecChunk || !SecChunk->Live)
       continue;
     pdb::SectionContrib SC = createSectionContrib(SecChunk, Modi);
     File->ModuleDBI->setFirstSectionContrib(SC);
@@ -851,7 +851,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   DebugChecksumsSubsectionRef Checksums;
   std::vector<ulittle32_t *> StringTableReferences;
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
-    if (!DebugChunk->isLive() || DebugChunk->getSectionName() != ".debug$S")
+    if (!DebugChunk->Live || DebugChunk->getSectionName() != ".debug$S")
       continue;
 
     ArrayRef<uint8_t> RelocatedDebugContents =

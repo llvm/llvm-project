@@ -202,8 +202,6 @@ public:
 
 class SIMemOpAccess final {
 private:
-
-  AMDGPUAS SIAddrSpaceInfo;
   AMDGPUMachineModuleInfo *MMI = nullptr;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
@@ -453,22 +451,21 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
 }
 
 SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
-  if (AS == SIAddrSpaceInfo.FLAT_ADDRESS)
+  if (AS == AMDGPUAS::FLAT_ADDRESS)
     return SIAtomicAddrSpace::FLAT;
-  if (AS == SIAddrSpaceInfo.GLOBAL_ADDRESS)
+  if (AS == AMDGPUAS::GLOBAL_ADDRESS)
     return SIAtomicAddrSpace::GLOBAL;
-  if (AS == SIAddrSpaceInfo.LOCAL_ADDRESS)
+  if (AS == AMDGPUAS::LOCAL_ADDRESS)
     return SIAtomicAddrSpace::LDS;
-  if (AS == SIAddrSpaceInfo.PRIVATE_ADDRESS)
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return SIAtomicAddrSpace::SCRATCH;
-  if (AS == SIAddrSpaceInfo.REGION_ADDRESS)
+  if (AS == AMDGPUAS::REGION_ADDRESS)
     return SIAtomicAddrSpace::GDS;
 
   return SIAtomicAddrSpace::OTHER;
 }
 
 SIMemOpAccess::SIMemOpAccess(MachineFunction &MF) {
-  SIAddrSpaceInfo = getAMDGPUAS(MF.getTarget());
   MMI = &MF.getMMI().getObjFileInfo<AMDGPUMachineModuleInfo>();
 }
 
