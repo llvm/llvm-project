@@ -318,11 +318,11 @@ public:
   /// library name and a list of paths, searching along the list of
   /// paths till you find a matching library.
   ///
-  /// @param[in] local_spec
+  /// @param[in] image_spec
   ///     The name of the shared library that you want to load.  
-  ///     If local_spec is a relative path, the relative path will be
+  ///     If image_spec is a relative path, the relative path will be
   ///     appended to the search paths.
-  ///     If the local_spec is an absolute path, just the basename is used.
+  ///     If the image_spec is an absolute path, just the basename is used.
   ///
   /// @param[in] paths
   ///     A list of paths to search for the library whose basename is 
