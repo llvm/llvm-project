@@ -114,6 +114,12 @@ Non-comprehensive list of changes in this release
   relocation scanning. The ``-faddrsig`` and ``-fno-addrsig`` flags can be
   used to control whether to emit the address-significance table.
 
+- Integrated assembler is enabled by default on OpenBSD / FreeBSD
+  for MIPS 64-bit targets.
+
+- On MIPS FreeBSD default CPUs have been changed to ``mips2``
+  for 32-bit targets and ``mips3`` for 64-bit targets.
+
 - ...
 
 New Compiler Flags
@@ -132,6 +138,15 @@ New Compiler Flags
    In order to improve devirtualization, forces emitting of vtables even in
    modules where it isn't necessary. It causes more inline virtual functions
    to be emitted.
+
+- Added the``-mcrc`` and ``-mno-crc`` flags to enable/disable using
+  of MIPS Cyclic Redundancy Check instructions.
+
+- Added the``-mvirt`` and ``-mno-virt`` flags to enable/disable using
+  of MIPS Virtualization instructions.
+
+- Added the``-mginv`` and ``-mno-ginv`` flags to enable/disable using
+  of MIPS Global INValidate instructions.
 
 - ...
 
