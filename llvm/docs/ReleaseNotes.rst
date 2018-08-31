@@ -187,8 +187,45 @@ Changes to the Hexagon Target
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+During this release the MIPS target has:
 
+* Added support for Virtualization, Global INValidate ASE,
+  and CRC ASE instructions.
+
+* Introduced definitions of ``[d]rem``, ``[d]remu``,
+  and microMIPSR6 ``ll/sc`` instructions.
+
+* Shrink-wrapping is now supported and enabled by default (except for -O0).
+
+* Extended size reduction pass by the LWP and SWP instructions.
+
+* Gained initial support of GlobalISel instruction selection framework.
+
+* Updated the P5600 scheduler model not to use instruction itineraries.
+
+* Added disassembly support for comparison and fused (negative) multiply
+  ``add/sub`` instructions.
+
+* Improved the selection of multiple instructions.
+
+* Load/store lb, sb, ld, sd, lld, ... instructions
+  now support 32/64-bit offsets.
+
+* Added support for ``y``, ``M``, and ``L`` inline assembler operand codes.
+
+* Extended list of relocations supported by the ``.reloc`` directive
+
+* Fixed using a wrong register class for creating an emergency
+  spill slot for mips3 / n64 abi.
+
+* MIPS relocation types were generated for microMIPS code.
+
+* Corrected definitions of multiple instructions (``lwp``, ``swp``, ``ctc2``,
+  ``cfc2``, ``sync``, ``synci``, ``cvt.d.w``, ...).
+
+* Fixed atomic operations at O0 level.
+
+* Fixed local dynamic TLS with Sym64
 
 Changes to the PowerPC Target
 -----------------------------
