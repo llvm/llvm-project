@@ -19,7 +19,7 @@ int main() {
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in f{{.*}}stack-oob.cc:14
 
-  // CHECK: HWAddressSanitizer can not describe address in more detail.
+  // CHECK: is located in stack of threa
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in f
 }

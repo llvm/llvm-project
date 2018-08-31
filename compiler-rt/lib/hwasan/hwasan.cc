@@ -183,7 +183,6 @@ void __hwasan_init() {
   if (hwasan_inited) return;
   hwasan_init_is_running = 1;
   SanitizerToolName = "HWAddressSanitizer";
-  GetThreadRegistry();
 
   InitTlsSize();
 
