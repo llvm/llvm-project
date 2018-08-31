@@ -16,16 +16,24 @@
 namespace clang {
 namespace clangd {
 
-/// \brief This implements an index for a (relatively small) set of symbols that
-/// can be easily managed in memory.
+/// \brief This implements an index for a (relatively small) set of symbols (or
+/// symbol occurrences) that can be easily managed in memory.
 class MemIndex : public SymbolIndex {
 public:
-  /// \brief (Re-)Build index for `Symbols`. All symbol pointers must remain
-  /// accessible as long as `Symbols` is kept alive.
-  void build(std::shared_ptr<std::vector<const Symbol *>> Symbols);
+  /// Maps from a symbol ID to all corresponding symbol occurrences.
+  /// The map doesn't own occurrence objects.
+  using OccurrenceMap =
+      llvm::DenseMap<SymbolID, std::vector<const SymbolOccurrence *>>;
 
-  /// \brief Build index from a symbol slab.
-  static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab);
+  /// \brief (Re-)Build index for `Symbols` and update `Occurrences`.
+  /// All symbol pointers and symbol occurrence pointers must remain accessible
+  /// as long as `Symbols` and `Occurrences` are kept alive.
+  void build(std::shared_ptr<std::vector<const Symbol *>> Symbols,
+             std::shared_ptr<OccurrenceMap> Occurrences);
+
+  /// \brief Build index from a symbol slab and a symbol occurrence slab.
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab Symbols,
+                                            SymbolOccurrenceSlab Occurrences);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -47,6 +55,8 @@ private:
   // Index is a set of symbols that are deduplicated by symbol IDs.
   // FIXME: build smarter index structure.
   llvm::DenseMap<SymbolID, const Symbol *> Index;
+  // A map from symbol ID to symbol occurrences, support query by IDs.
+  std::shared_ptr<OccurrenceMap> Occurrences;
   mutable std::mutex Mutex;
 };
 

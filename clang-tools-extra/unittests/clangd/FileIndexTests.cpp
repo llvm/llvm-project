@@ -7,18 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "ClangdUnit.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "gmock/gmock.h"
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using testing::UnorderedElementsAre;
+using testing::AllOf;
+
+MATCHER_P(OccurrenceRange, Range, "") {
+  return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
+                  arg.Location.End.Line, arg.Location.End.Column) ==
+         std::tie(Range.start.line, Range.start.character, Range.end.line,
+                  Range.end.character);
+}
+MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 
 namespace clang {
 namespace clangd {
@@ -39,6 +49,15 @@ std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
   return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
+std::unique_ptr<SymbolOccurrenceSlab> occurrenceSlab(const SymbolID &ID,
+                                                     llvm::StringRef Path) {
+  auto Slab = llvm::make_unique<SymbolOccurrenceSlab>();
+  SymbolOccurrence Occurrence;
+  Occurrence.Location.FileURI = Path;
+  Slab->insert(ID, Occurrence);
+  return Slab;
+}
+
 std::vector<std::string>
 getSymbolNames(const std::vector<const Symbol *> &Symbols) {
   std::vector<std::string> Names;
@@ -47,19 +66,38 @@ getSymbolNames(const std::vector<const Symbol *> &Symbols) {
   return Names;
 }
 
+std::vector<std::string>
+getOccurrencePath(const std::vector<const SymbolOccurrence *> &Occurrences) {
+  std::vector<std::string> Paths;
+  for (const auto *O : Occurrences)
+    Paths.push_back(O->Location.FileURI);
+  return Paths;
+}
+
+std::unique_ptr<SymbolOccurrenceSlab> emptyOccurrence() {
+  auto EmptySlab = llvm::make_unique<SymbolOccurrenceSlab>();
+  EmptySlab->freeze();
+  return EmptySlab;
+}
+
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
+  EXPECT_TRUE(FS.allOccurrences()->empty());
 
-  FS.update("f1", numSlab(1, 3));
+  SymbolID ID("1");
+  FS.update("f1", numSlab(1, 3), occurrenceSlab(ID, "f1.cc"));
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
               UnorderedElementsAre("1", "2", "3"));
+  auto Occurrences = FS.allOccurrences();
+  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
+              UnorderedElementsAre("f1.cc"));
 }
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3));
-  FS.update("f2", numSlab(3, 5));
+  FS.update("f1", numSlab(1, 3), emptyOccurrence());
+  FS.update("f2", numSlab(3, 5), emptyOccurrence());
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
               UnorderedElementsAre("1", "2", "3", "3", "4", "5"));
 }
@@ -67,14 +105,22 @@ TEST(FileSymbolsTest, Overlap) {
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
-  FS.update("f1", numSlab(1, 3));
+  SymbolID ID("1");
+  FS.update("f1", numSlab(1, 3), occurrenceSlab(ID, "f1.cc"));
 
   auto Symbols = FS.allSymbols();
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+  auto Occurrences = FS.allOccurrences();
+  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
+              UnorderedElementsAre("f1.cc"));
 
-  FS.update("f1", nullptr);
+  FS.update("f1", nullptr, nullptr);
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+
+  EXPECT_TRUE(FS.allOccurrences()->empty());
+  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
+              UnorderedElementsAre("f1.cc"));
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
@@ -268,6 +314,52 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   EXPECT_THAT(
       match(Index, Req),
       UnorderedElementsAre("ns_in_header", "ns_in_header::func_in_header"));
+}
+
+TEST(FileIndexTest, Occurrences) {
+  const char *HeaderCode = "class Foo {};";
+  Annotations MainCode(R"cpp(
+  void f() {
+    $foo[[Foo]] foo;
+  }
+  )cpp");
+
+  auto Foo =
+      findSymbol(TestTU::withHeaderCode(HeaderCode).headerSymbols(), "Foo");
+
+  OccurrencesRequest Request;
+  Request.IDs = {Foo.ID};
+  Request.Filter = SymbolOccurrenceKind::Declaration |
+                   SymbolOccurrenceKind::Definition |
+                   SymbolOccurrenceKind::Reference;
+
+  FileIndex Index(/*URISchemes*/ {"unittest"});
+  // Add test.cc
+  TestTU Test;
+  Test.HeaderCode = HeaderCode;
+  Test.Code = MainCode.code();
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  Index.update(Test.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
+               AST.getLocalTopLevelDecls());
+  // Add test2.cc
+  TestTU Test2;
+  Test2.HeaderCode = HeaderCode;
+  Test2.Code = MainCode.code();
+  Test2.Filename = "test2.cc";
+  AST = Test2.build();
+  Index.update(Test2.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
+               AST.getLocalTopLevelDecls());
+
+  std::vector<SymbolOccurrence> Results;
+  Index.findOccurrences(
+      Request, [&Results](const SymbolOccurrence &O) { Results.push_back(O); });
+
+  EXPECT_THAT(Results,
+              UnorderedElementsAre(AllOf(OccurrenceRange(MainCode.range("foo")),
+                                         FileURI("unittest:///test.cc")),
+                                   AllOf(OccurrenceRange(MainCode.range("foo")),
+                                         FileURI("unittest:///test2.cc"))));
 }
 
 } // namespace
