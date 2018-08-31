@@ -53,7 +53,7 @@ static SmallString<128> canonicalize(StringRef Path) {
   return Result;
 }
 
-constexpr const unsigned FileDistance::kUnreachable;
+constexpr const unsigned FileDistance::Unreachable;
 
 FileDistance::FileDistance(StringMap<SourceParams> Sources,
                            const FileDistanceOptions &Opts)
