@@ -177,7 +177,7 @@ TEST(FileIndexTest, NoIncludeCollected) {
   Req.Query = "";
   bool SeenSymbol = false;
   M.fuzzyFind(Req, [&](const Symbol &Sym) {
-    EXPECT_TRUE(Sym.Detail->IncludeHeader.empty());
+    EXPECT_TRUE(Sym.IncludeHeader.empty());
     SeenSymbol = true;
   });
   EXPECT_TRUE(SeenSymbol);

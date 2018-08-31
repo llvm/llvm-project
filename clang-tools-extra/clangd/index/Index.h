@@ -208,30 +208,19 @@ struct Symbol {
   /// This is in LSP snippet syntax (e.g. "({$0})" for a no-args function).
   /// (When snippets are disabled, the symbol name alone is used).
   llvm::StringRef CompletionSnippetSuffix;
-
-  /// Optional symbol details that are not required to be set. For example, an
-  /// index fuzzy match can return a large number of symbol candidates, and it
-  /// is preferable to send only core symbol information in the batched results
-  /// and have clients resolve full symbol information for a specific candidate
-  /// if needed.
-  struct Details {
-    /// Documentation including comment for the symbol declaration.
-    llvm::StringRef Documentation;
-    /// Type when this symbol is used in an expression. (Short display form).
-    /// e.g. return type of a function, or type of a variable.
-    llvm::StringRef ReturnType;
-    /// This can be either a URI of the header to be #include'd for this symbol,
-    /// or a literal header quoted with <> or "" that is suitable to be included
-    /// directly. When this is a URI, the exact #include path needs to be
-    /// calculated according to the URI scheme.
-    ///
-    /// This is a canonical include for the symbol and can be different from
-    /// FileURI in the CanonicalDeclaration.
-    llvm::StringRef IncludeHeader;
-  };
-
-  // Optional details of the symbol.
-  const Details *Detail = nullptr;
+  /// Documentation including comment for the symbol declaration.
+  llvm::StringRef Documentation;
+  /// Type when this symbol is used in an expression. (Short display form).
+  /// e.g. return type of a function, or type of a variable.
+  llvm::StringRef ReturnType;
+  /// This can be either a URI of the header to be #include'd for this symbol,
+  /// or a literal header quoted with <> or "" that is suitable to be included
+  /// directly. When this is a URI, the exact #include path needs to be
+  /// calculated according to the URI scheme.
+  ///
+  /// This is a canonical include for the symbol and can be different from
+  /// FileURI in the CanonicalDeclaration.
+  llvm::StringRef IncludeHeader;
 
   // FIXME: add all occurrences support.
   // FIXME: add extra fields for index scoring signals.
