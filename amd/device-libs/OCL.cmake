@@ -67,7 +67,7 @@ macro(opencl_bc_lib name)
 
   add_custom_command(TARGET ${lib_tgt}
     POST_BUILD
-    COMMAND ${PREPARE_BUILTINS} ${name}${LIB_SUFFIX} -o ${output_name}
+    COMMAND ${PREPARE_BUILTINS} $<TARGET_FILE:${lib_tgt}> -o ${output_name}
     DEPENDS ${lib_tgt}
     COMMENT "Generating ${output_name}"
   )
