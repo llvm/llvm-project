@@ -7,5 +7,5 @@
 
 #include "oclc.h"
 
-__attribute__((always_inline, const)) int __oclc_unsafe_math_opt(void) { return 0; }
+__attribute__((always_inline, const)) bool __oclc_unsafe_math_opt(void) { return 0; }
 

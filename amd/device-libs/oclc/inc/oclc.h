@@ -13,16 +13,16 @@
 //
 // The current list of controls is as follows:
 //
-//    int __oclc_finite_only_opt(void)
+//    bool __oclc_finite_only_opt(void)
 //        - the application will only pass finite arguments and expects only finite results
 //
-//    int __oclc_unsafe_math_opt(void)
+//    bool __oclc_unsafe_math_opt(void)
 //        - the aopplication accepts optimizations that may lower the accuracy of the results
 //
-//    int __oclc_daz_opt(void)
+//    bool __oclc_daz_opt(void)
 //        - the application allows subnormal inputs or outputs to be flushed to zero
 //
-//    int __oclc_correctly_rounded_sqrt32(void)
+//    bool __oclc_correctly_rounded_sqrt32(void)
 //        - the application is expecting sqrt(float) to produce a correctly rounded result
 //
 //    int __oclc_ISA_version
@@ -36,10 +36,10 @@
 // allowing them and any control flow associated with them to be optimized away
 
 
-extern __attribute__((const)) int __oclc_finite_only_opt(void);
-extern __attribute__((const)) int __oclc_unsafe_math_opt(void);
-extern __attribute__((const)) int __oclc_daz_opt(void);
-extern __attribute__((const)) int __oclc_correctly_rounded_sqrt32(void);
+extern __attribute__((const)) bool __oclc_finite_only_opt(void);
+extern __attribute__((const)) bool __oclc_unsafe_math_opt(void);
+extern __attribute__((const)) bool __oclc_daz_opt(void);
+extern __attribute__((const)) bool __oclc_correctly_rounded_sqrt32(void);
 extern __attribute__((const)) int __oclc_ISA_version(void);
 
 #endif // OCLC_H
