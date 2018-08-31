@@ -568,6 +568,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     unsigned Val =
         llvm::StringSwitch<unsigned>(A->getValue())
             .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
+            .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
             .Case("limited", codegenoptions::LimitedDebugInfo)
             .Case("standalone", codegenoptions::FullDebugInfo)
             .Default(~0U);

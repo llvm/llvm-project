@@ -54,7 +54,6 @@ void f5(char a, short b) {}
 // WEBASSEMBLY64: define void @f6(i8 zeroext %a, i16 zeroext %b)
 void f6(unsigned char a, unsigned short b) {}
 
-
 enum my_enum {
   ENUM1,
   ENUM2,

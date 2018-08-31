@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-windows-msvc -std=c++11 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-windows-msvc -std=c++11 -emit-llvm -debug-info-kind=line-directives-only %s -o - | FileCheck %s
 
 struct A {
   virtual ~A() {}

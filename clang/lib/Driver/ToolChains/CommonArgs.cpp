@@ -1126,23 +1126,42 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   bool IsIAMCU = Triple.isOSIAMCU();
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
                       Args.hasArg(options::OPT_static);
-  if (!D.CCCIsCXX())
+
+  // The driver ignores -shared-libgcc and therefore treats such cases as
+  // unspecified.  Breaking out the two variables as below makes the current
+  // behavior explicit.
+  bool UnspecifiedLibgcc = !StaticLibgcc;
+  bool SharedLibgcc = !StaticLibgcc;
+
+  // Gcc adds libgcc arguments in various ways:
+  //
+  // gcc <none>: -lgcc --as-needed -lgcc_s --no-as-needed
+  // g++ <none>:                   -lgcc_s               -lgcc
+  // gcc shared:                   -lgcc_s               -lgcc
+  // g++ shared:                   -lgcc_s               -lgcc
+  // gcc static: -lgcc             -lgcc_eh
+  // g++ static: -lgcc             -lgcc_eh
+  //
+  // Also, certain targets need additional adjustments.
+
+  bool LibGccFirst = (D.CCCIsCC() && UnspecifiedLibgcc) || StaticLibgcc;
+  if (LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
-  if (StaticLibgcc || isAndroid) {
-    if (D.CCCIsCXX())
-      CmdArgs.push_back("-lgcc");
-  } else {
-    if (!D.CCCIsCXX() && !isCygMing)
-      CmdArgs.push_back("--as-needed");
-    CmdArgs.push_back("-lgcc_s");
-    if (!D.CCCIsCXX() && !isCygMing)
-      CmdArgs.push_back("--no-as-needed");
-  }
+  bool AsNeeded = D.CCCIsCC() && !StaticLibgcc && !isAndroid && !isCygMing;
+  if (AsNeeded)
+    CmdArgs.push_back("--as-needed");
 
-  if (StaticLibgcc && !isAndroid && !IsIAMCU)
+  if ((UnspecifiedLibgcc || SharedLibgcc) && !isAndroid)
+    CmdArgs.push_back("-lgcc_s");
+
+  else if (StaticLibgcc && !isAndroid && !IsIAMCU)
     CmdArgs.push_back("-lgcc_eh");
-  else if (!Args.hasArg(options::OPT_shared) && D.CCCIsCXX())
+
+  if (AsNeeded)
+    CmdArgs.push_back("--no-as-needed");
+
+  if (!LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
   // According to Android ABI, we have to link with libdl if we are
