@@ -30,7 +30,7 @@ namespace {
 // * Types
 std::vector<Token> generateSearchTokens(const Symbol &Sym) {
   std::vector<Token> Result = generateIdentifierTrigrams(Sym.Name);
-  Result.push_back(Token(Token::Kind::Scope, Sym.Scope));
+  Result.emplace_back(Token::Kind::Scope, Sym.Scope);
   return Result;
 }
 
