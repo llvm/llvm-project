@@ -4,8 +4,10 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <sanitizer/hwasan_interface.h>
 
 int main() {
+  __hwasan_enable_allocator_tagging();
   char *x = (char*)realloc(nullptr, 4);
   x[0] = 10;
   x[1] = 20;

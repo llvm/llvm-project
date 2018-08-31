@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   x = realloc(x, realloc_size);
 // CHECK: ERROR: HWAddressSanitizer: invalid-free on address
 // CHECK: tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
-// CHECK: freed here:
+// CHECK: freed by thread {{.*}} here:
 // CHECK: previously allocated here:
 // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
 // CHECK: =>{{.*}}[[MEM_TAG]]

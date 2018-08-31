@@ -619,7 +619,10 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND FUZZER_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|FreeBSD|OpenBSD|Fuchsia")
+    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|FreeBSD|OpenBSD|Fuchsia|Windows" AND
+    # TODO: Support builds with MSVC.
+    NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND
+    NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
   set(COMPILER_RT_HAS_FUZZER TRUE)
 else()
   set(COMPILER_RT_HAS_FUZZER FALSE)

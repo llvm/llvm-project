@@ -16,29 +16,13 @@
 
 #include "hwasan_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_thread_registry.h"
 
 namespace __hwasan {
 
-class Thread;
-
-class ThreadContext : public ThreadContextBase {
- public:
-  explicit ThreadContext(int tid)
-      : ThreadContextBase(tid), thread(nullptr){}
-
-  Thread *thread;
-
-  void OnCreated(void *arg) override;
-  void OnFinished() override;
-
-  struct Args {
-    Thread *thread;
-  };
+struct ThreadStartArg {
+  thread_callback_t callback;
+  void *param;
 };
-
-// We want this to be small.
-COMPILER_CHECK(sizeof(ThreadContext) <= 256);
 
 class Thread {
  public:
@@ -46,7 +30,6 @@ class Thread {
   void Destroy();
 
   void Init();
-  thread_return_t ThreadStart();
 
   uptr stack_top() { return stack_top_; }
   uptr stack_bottom() { return stack_bottom_; }
@@ -75,15 +58,26 @@ class Thread {
     return heap_allocations_;
   }
 
-  void set_context(ThreadContext *context) { context_ = context; }
-  const ThreadContext *context() const { return context_; }
-
   tag_t GenerateRandomTag();
 
   int destructor_iterations_;
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
   bool TaggingIsDisabled() const { return tagging_disabled_; }
+
+  template <class CB>
+  static void VisitAllLiveThreads(CB cb) {
+    SpinMutexLock l(&thread_list_mutex);
+    Thread *t = main_thread;
+    while (t) {
+      cb(t);
+      t = t->next_;
+    }
+  }
+
+  // Return a scratch ThreadStartArg object to be used in
+  // pthread_create interceptor.
+  ThreadStartArg *thread_start_arg() { return &thread_start_arg_; }
 
  private:
   // NOTE: There is no Thread constructor. It is allocated
@@ -107,24 +101,24 @@ class Thread {
   HwasanThreadLocalMallocStorage malloc_storage_;
   HeapAllocationsRingBuffer *heap_allocations_;
 
-  u32 tid_;
-  ThreadContext *context_;
+  static void InsertIntoThreadList(Thread *t);
+  static void RemoveFromThreadList(Thread *t);
+  Thread *next_;  // All live threads form a linked list.
+  static SpinMutex thread_list_mutex;
+  static Thread *main_thread;
 
   u32 tagging_disabled_;  // if non-zero, malloc uses zero tag in this thread.
+
+  ThreadStartArg thread_start_arg_;
 };
 
 Thread *GetCurrentThread();
 void SetCurrentThread(Thread *t);
 
-// Returns the ThreadRegistry singleton.
-ThreadRegistry &GetThreadRegistry();
-
 struct ScopedTaggingDisabler {
   ScopedTaggingDisabler() { GetCurrentThread()->DisableTagging(); }
   ~ScopedTaggingDisabler() { GetCurrentThread()->EnableTagging(); }
 };
-
-// Returns the ThreadRegistry singleton.
 
 } // namespace __hwasan
 

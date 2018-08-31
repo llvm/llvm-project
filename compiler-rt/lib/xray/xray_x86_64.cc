@@ -89,7 +89,7 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     int Mib[2] = { CTL_MACHDEP, CPU_TSCFREQ };
     if (sysctl(Mib, 2, &TSCFrequency, &tscfreqsz, NULL, 0) != -1) {
 #elif SANITIZER_MAC
-    if (sysctlbyname("machdep.tsc.frequency", &TSCFrequency, &tscfreqz,
+    if (sysctlbyname("machdep.tsc.frequency", &TSCFrequency, &tscfreqsz,
         NULL, 0) != -1 ) {
 
 #else

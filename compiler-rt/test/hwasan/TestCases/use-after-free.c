@@ -23,7 +23,7 @@ int main() {
   // CHECK: [[TYPE]] of size 1 at {{.*}} tags: [[PTR_TAG:[0-9a-f][0-9a-f]]]/[[MEM_TAG:[0-9a-f][0-9a-f]]] (ptr/mem)
   // CHECK: #0 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-2]]
 
-  // CHECK: freed here:
+  // CHECK: freed by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_interceptors.cc
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-11]]
 
