@@ -211,8 +211,11 @@ void InnerPointerChecker::checkPostCall(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   if (const auto *ICall = dyn_cast<CXXInstanceCall>(&Call)) {
+    // TODO: Do we need these to be typed?
     const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(
         ICall->getCXXThisVal().getAsRegion());
+    if (!ObjRegion)
+      return;
 
     if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
       SVal RawPtr = Call.getReturnValue();

@@ -1832,7 +1832,8 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
 }
 
 void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
-                                                 SourceLocation Loc) {
+                                                 SourceLocation Loc,
+                                                 bool WithSPMDCheck) {
   if (getDataSharingMode(CGM) != CGOpenMPRuntimeNVPTX::Generic)
     return;
 
@@ -1855,7 +1856,8 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
     GlobalRecordSize = llvm::alignTo(GlobalRecordSize, Alignment);
 
     llvm::Value *GlobalRecCastAddr;
-    if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
+    if (WithSPMDCheck ||
+        getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
       llvm::BasicBlock *SPMDBB = CGF.createBasicBlock(".spmd");
       llvm::BasicBlock *NonSPMDBB = CGF.createBasicBlock(".non-spmd");
@@ -1963,7 +1965,8 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
   I->getSecond().MappedParams->apply(CGF);
 }
 
-void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF) {
+void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF,
+                                                 bool WithSPMDCheck) {
   if (getDataSharingMode(CGM) != CGOpenMPRuntimeNVPTX::Generic)
     return;
 
@@ -1979,7 +1982,8 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF) {
           Addr);
     }
     if (I->getSecond().GlobalRecordAddr) {
-      if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
+      if (WithSPMDCheck ||
+          getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_Unknown) {
         CGBuilderTy &Bld = CGF.Builder;
         llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
         llvm::BasicBlock *NonSPMDBB = CGF.createBasicBlock(".non-spmd");
@@ -3972,13 +3976,13 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
     Data.insert(std::make_pair(VD, std::make_pair(FD, Address::invalid())));
   }
   if (!NeedToDelayGlobalization) {
-    emitGenericVarsProlog(CGF, D->getBeginLoc());
+    emitGenericVarsProlog(CGF, D->getBeginLoc(), /*WithSPMDCheck=*/true);
     struct GlobalizationScope final : EHScopeStack::Cleanup {
       GlobalizationScope() = default;
 
       void Emit(CodeGenFunction &CGF, Flags flags) override {
         static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
-            .emitGenericVarsEpilog(CGF);
+            .emitGenericVarsEpilog(CGF, /*WithSPMDCheck=*/true);
       }
     };
     CGF.EHStack.pushCleanup<GlobalizationScope>(NormalAndEHCleanup);

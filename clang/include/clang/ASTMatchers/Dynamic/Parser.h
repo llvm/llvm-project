@@ -234,6 +234,7 @@ private:
          const NamedValueMap *NamedValues,
          Diagnostics *Error);
 
+  bool parseBindID(std::string &BindID);
   bool parseExpressionImpl(VariantValue *Value);
   bool parseMatcherExpressionImpl(const TokenInfo &NameToken,
                                   VariantValue *Value);

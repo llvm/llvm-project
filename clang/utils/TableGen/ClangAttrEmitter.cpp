@@ -3772,18 +3772,66 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
   getPragmaAttributeSupport(Records).generateParsingHelpers(OS);
 }
 
+enum class SpellingKind {
+  GNU,
+  CXX11,
+  C2x,
+  Declspec,
+  Microsoft,
+  Keyword,
+  Pragma,
+};
+static const size_t NumSpellingKinds = (size_t)SpellingKind::Pragma + 1;
+
+class SpellingList {
+  std::vector<std::string> Spellings[NumSpellingKinds];
+
+public:
+  ArrayRef<std::string> operator[](SpellingKind K) const {
+    return Spellings[(size_t)K];
+  }
+
+  void add(const Record &Attr, FlattenedSpelling Spelling) {
+    SpellingKind Kind = StringSwitch<SpellingKind>(Spelling.variety())
+                            .Case("GNU", SpellingKind::GNU)
+                            .Case("CXX11", SpellingKind::CXX11)
+                            .Case("C2x", SpellingKind::C2x)
+                            .Case("Declspec", SpellingKind::Declspec)
+                            .Case("Microsoft", SpellingKind::Microsoft)
+                            .Case("Keyword", SpellingKind::Keyword)
+                            .Case("Pragma", SpellingKind::Pragma);
+    std::string Name;
+    if (!Spelling.nameSpace().empty()) {
+      switch (Kind) {
+      case SpellingKind::CXX11:
+      case SpellingKind::C2x:
+        Name = Spelling.nameSpace() + "::";
+        break;
+      case SpellingKind::Pragma:
+        Name = Spelling.nameSpace() + " ";
+        break;
+      default:
+        PrintFatalError(Attr.getLoc(), "Unexpected namespace in spelling");
+      }
+    }
+    Name += Spelling.name();
+
+    Spellings[(size_t)Kind].push_back(Name);
+  }
+};
+
 class DocumentationData {
 public:
   const Record *Documentation;
   const Record *Attribute;
   std::string Heading;
-  unsigned SupportedSpellings;
+  SpellingList SupportedSpellings;
 
   DocumentationData(const Record &Documentation, const Record &Attribute,
-                    const std::pair<std::string, unsigned> HeadingAndKinds)
+                    std::pair<std::string, SpellingList> HeadingAndSpellings)
       : Documentation(&Documentation), Attribute(&Attribute),
-        Heading(std::move(HeadingAndKinds.first)),
-        SupportedSpellings(HeadingAndKinds.second) {}
+        Heading(std::move(HeadingAndSpellings.first)),
+        SupportedSpellings(std::move(HeadingAndSpellings.second)) {}
 };
 
 static void WriteCategoryHeader(const Record *DocCategory,
@@ -3799,28 +3847,21 @@ static void WriteCategoryHeader(const Record *DocCategory,
   OS << "\n\n";
 }
 
-enum SpellingKind {
-  GNU = 1 << 0,
-  CXX11 = 1 << 1,
-  C2x = 1 << 2,
-  Declspec = 1 << 3,
-  Microsoft = 1 << 4,
-  Keyword = 1 << 5,
-  Pragma = 1 << 6
-};
-
-static std::pair<std::string, unsigned>
-GetAttributeHeadingAndSpellingKinds(const Record &Documentation,
-                                    const Record &Attribute) {
+static std::pair<std::string, SpellingList>
+GetAttributeHeadingAndSpellings(const Record &Documentation,
+                                const Record &Attribute) {
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
 
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
+  if (Spellings.empty())
+    PrintFatalError(Attribute.getLoc(),
+                    "Attribute has no supported spellings; cannot be "
+                    "documented");
 
   // Determine the heading to be used for this attribute.
   std::string Heading = Documentation.getValueAsString("Heading");
-  bool CustomHeading = !Heading.empty();
   if (Heading.empty()) {
     // If there's only one spelling, we can simply use that.
     if (Spellings.size() == 1)
@@ -3844,51 +3885,11 @@ GetAttributeHeadingAndSpellingKinds(const Record &Documentation,
     PrintFatalError(Attribute.getLoc(),
                     "This attribute requires a heading to be specified");
 
-  // Gather a list of unique spellings; this is not the same as the semantic
-  // spelling for the attribute. Variations in underscores and other non-
-  // semantic characters are still acceptable.
-  std::vector<std::string> Names;
+  SpellingList SupportedSpellings;
+  for (const auto &I : Spellings)
+    SupportedSpellings.add(Attribute, I);
 
-  unsigned SupportedSpellings = 0;
-  for (const auto &I : Spellings) {
-    SpellingKind Kind = StringSwitch<SpellingKind>(I.variety())
-                            .Case("GNU", GNU)
-                            .Case("CXX11", CXX11)
-                            .Case("C2x", C2x)
-                            .Case("Declspec", Declspec)
-                            .Case("Microsoft", Microsoft)
-                            .Case("Keyword", Keyword)
-                            .Case("Pragma", Pragma);
-
-    // Mask in the supported spelling.
-    SupportedSpellings |= Kind;
-
-    std::string Name;
-    if ((Kind == CXX11 || Kind == C2x) && !I.nameSpace().empty())
-      Name = I.nameSpace() + "::";
-    Name += I.name();
-
-    // If this name is the same as the heading, do not add it.
-    if (Name != Heading)
-      Names.push_back(Name);
-  }
-
-  // Print out the heading for the attribute. If there are alternate spellings,
-  // then display those after the heading.
-  if (!CustomHeading && !Names.empty()) {
-    Heading += " (";
-    for (auto I = Names.begin(), E = Names.end(); I != E; ++I) {
-      if (I != Names.begin())
-        Heading += ", ";
-      Heading += *I;
-    }
-    Heading += ")";
-  }
-  if (!SupportedSpellings)
-    PrintFatalError(Attribute.getLoc(),
-                    "Attribute has no supported spellings; cannot be "
-                    "documented");
-  return std::make_pair(std::move(Heading), SupportedSpellings);
+  return std::make_pair(std::move(Heading), std::move(SupportedSpellings));
 }
 
 static void WriteDocumentation(RecordKeeper &Records,
@@ -3897,23 +3898,30 @@ static void WriteDocumentation(RecordKeeper &Records,
 
   // List what spelling syntaxes the attribute supports.
   OS << ".. csv-table:: Supported Syntaxes\n";
-  OS << "   :header: \"GNU\", \"C++11\", \"C2x\", \"__declspec\", \"Keyword\",";
-  OS << " \"Pragma\", \"Pragma clang attribute\"\n\n";
+  OS << "   :header: \"GNU\", \"C++11\", \"C2x\", \"``__declspec``\",";
+  OS << " \"Keyword\", \"``#pragma``\", \"``#pragma clang attribute``\"\n\n";
   OS << "   \"";
-  if (Doc.SupportedSpellings & GNU) OS << "X";
-  OS << "\",\"";
-  if (Doc.SupportedSpellings & CXX11) OS << "X";
-  OS << "\",\"";
-  if (Doc.SupportedSpellings & C2x) OS << "X";
-  OS << "\",\"";
-  if (Doc.SupportedSpellings & Declspec) OS << "X";
-  OS << "\",\"";
-  if (Doc.SupportedSpellings & Keyword) OS << "X";
-  OS << "\", \"";
-  if (Doc.SupportedSpellings & Pragma) OS << "X";
-  OS << "\", \"";
-  if (getPragmaAttributeSupport(Records).isAttributedSupported(*Doc.Attribute))
-    OS << "X";
+  for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
+    SpellingKind K = (SpellingKind)Kind;
+    // TODO: List Microsoft (IDL-style attribute) spellings once we fully
+    // support them.
+    if (K == SpellingKind::Microsoft)
+      continue;
+
+    bool PrintedAny = false;
+    for (StringRef Spelling : Doc.SupportedSpellings[K]) {
+      if (PrintedAny)
+        OS << " |br| ";
+      OS << "``" << Spelling << "``";
+      PrintedAny = true;
+    }
+
+    OS << "\",\"";
+  }
+
+  if (getPragmaAttributeSupport(Records).isAttributedSupported(
+          *Doc.Attribute))
+    OS << "Yes";
   OS << "\"\n\n";
 
   // If the attribute is deprecated, print a message about it, and possibly
@@ -3969,7 +3977,7 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
 
       if (!Undocumented)
         SplitDocs[Category].push_back(DocumentationData(
-            Doc, Attr, GetAttributeHeadingAndSpellingKinds(Doc, Attr)));
+            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr)));
     }
   }
 
