@@ -82,6 +82,10 @@ static cl::opt<bool> ConstHoistWithBlockFrequency(
              "chance to execute const materialization more frequently than "
              "without hoisting."));
 
+static cl::opt<bool> ConstHoistGEP(
+    "consthoist-gep", cl::init(false), cl::Hidden,
+    cl::desc("Try hoisting constant gep expressions"));
+
 namespace {
 
 /// The constant hoisting pass.
@@ -340,7 +344,7 @@ SmallPtrSet<Instruction *, 8> ConstantHoistingPass::findConstantInsertionPoint(
 ///
 /// The operand at index Idx is not necessarily the constant integer itself. It
 /// could also be a cast instruction or a constant expression that uses the
-// constant integer.
+/// constant integer.
 void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
     ConstantInt *ConstInt) {
@@ -358,12 +362,13 @@ void ConstantHoistingPass::collectConstantCandidates(
   if (Cost > TargetTransformInfo::TCC_Basic) {
     ConstCandMapType::iterator Itr;
     bool Inserted;
-    std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(ConstInt, 0));
+    ConstPtrUnionType Cand = ConstInt;
+    std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
     if (Inserted) {
-      ConstCandVec.push_back(ConstantCandidate(ConstInt));
-      Itr->second = ConstCandVec.size() - 1;
+      ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
+      Itr->second = ConstIntCandVec.size() - 1;
     }
-    ConstCandVec[Itr->second].addUser(Inst, Idx, Cost);
+    ConstIntCandVec[Itr->second].addUser(Inst, Idx, Cost);
     LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
                    << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
@@ -372,6 +377,48 @@ void ConstantHoistingPass::collectConstantCandidates(
                            << *Inst->getOperand(Idx) << " with cost " << Cost
                            << '\n';);
   }
+}
+
+/// Record constant GEP expression for instruction Inst at operand index Idx.
+void ConstantHoistingPass::collectConstantCandidates(
+    ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
+    ConstantExpr *ConstExpr) {
+  // TODO: Handle vector GEPs
+  if (ConstExpr->getType()->isVectorTy())
+    return;
+
+  GlobalVariable *BaseGV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+  if (!BaseGV)
+    return;
+
+  // Get offset from the base GV.
+  PointerType *GVPtrTy = dyn_cast<PointerType>(BaseGV->getType());
+  IntegerType *PtrIntTy = DL->getIntPtrType(*Ctx, GVPtrTy->getAddressSpace());
+  APInt Offset(DL->getTypeSizeInBits(PtrIntTy), /*val*/0, /*isSigned*/true);
+  auto *GEPO = cast<GEPOperator>(ConstExpr);
+  if (!GEPO->accumulateConstantOffset(*DL, Offset))
+    return;
+
+  if (!Offset.isIntN(32))
+    return;
+
+  // A constant GEP expression that has a GlobalVariable as base pointer is
+  // usually lowered to a load from constant pool. Such operation is unlikely
+  // to be cheaper than compute it by <Base + Offset>, which can be lowered to
+  // an ADD instruction or folded into Load/Store instruction.
+  int Cost = TTI->getIntImmCost(Instruction::Add, 1, Offset, PtrIntTy);
+  ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
+  ConstCandMapType::iterator Itr;
+  bool Inserted;
+  ConstPtrUnionType Cand = ConstExpr;
+  std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
+  if (Inserted) {
+    ExprCandVec.push_back(ConstantCandidate(
+        ConstantInt::get(Type::getInt32Ty(*Ctx), Offset.getLimitedValue()),
+        ConstExpr));
+    Itr->second = ExprCandVec.size() - 1;
+  }
+  ExprCandVec[Itr->second].addUser(Inst, Idx, Cost);
 }
 
 /// Check the operand for instruction Inst at index Idx.
@@ -402,6 +449,10 @@ void ConstantHoistingPass::collectConstantCandidates(
 
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
+    // Handle constant gep expressions.
+    if (ConstHoistGEP && ConstExpr->isGEPWithNoNotionalOverIndexing())
+      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
+
     // Only visit constant cast expressions.
     if (!ConstExpr->isCast())
       return;
@@ -544,7 +595,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
 /// Find the base constant within the given range and rebase all other
 /// constants with respect to the base constant.
 void ConstantHoistingPass::findAndMakeBaseConstant(
-    ConstCandVecType::iterator S, ConstCandVecType::iterator E) {
+    ConstCandVecType::iterator S, ConstCandVecType::iterator E,
+    SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec) {
   auto MaxCostItr = S;
   unsigned NumUses = maximizeConstantsInRange(S, E, MaxCostItr);
 
@@ -552,24 +604,35 @@ void ConstantHoistingPass::findAndMakeBaseConstant(
   if (NumUses <= 1)
     return;
 
+  ConstantInt *ConstInt = MaxCostItr->ConstInt;
+  ConstantExpr *ConstExpr = MaxCostItr->ConstExpr;
   ConstantInfo ConstInfo;
-  ConstInfo.BaseConstant = MaxCostItr->ConstInt;
-  Type *Ty = ConstInfo.BaseConstant->getType();
+  ConstInfo.BaseInt = ConstInt;
+  ConstInfo.BaseExpr = ConstExpr;
+  Type *Ty = ConstInt->getType();
 
   // Rebase the constants with respect to the base constant.
   for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
-    APInt Diff = ConstCand->ConstInt->getValue() -
-                 ConstInfo.BaseConstant->getValue();
+    APInt Diff = ConstCand->ConstInt->getValue() - ConstInt->getValue();
     Constant *Offset = Diff == 0 ? nullptr : ConstantInt::get(Ty, Diff);
+    Type *ConstTy =
+        ConstCand->ConstExpr ? ConstCand->ConstExpr->getType() : nullptr;
     ConstInfo.RebasedConstants.push_back(
-      RebasedConstantInfo(std::move(ConstCand->Uses), Offset));
+      RebasedConstantInfo(std::move(ConstCand->Uses), Offset, ConstTy));
   }
-  ConstantVec.push_back(std::move(ConstInfo));
+  ConstInfoVec.push_back(std::move(ConstInfo));
 }
 
 /// Finds and combines constant candidates that can be easily
 /// rematerialized with an add from a common base constant.
-void ConstantHoistingPass::findBaseConstants() {
+void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
+  // If BaseGV is nullptr, find base among candidate constant integers;
+  // Otherwise find base among constant GEPs that share the same BaseGV.
+  ConstCandVecType &ConstCandVec = BaseGV ?
+      ConstGEPCandMap[BaseGV] : ConstIntCandVec;
+  ConstInfoVecType &ConstInfoVec = BaseGV ?
+      ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
+
   // Sort the constants by value and type. This invalidates the mapping!
   llvm::sort(ConstCandVec.begin(), ConstCandVec.end(),
              [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
@@ -613,12 +676,12 @@ void ConstantHoistingPass::findBaseConstants() {
     }
     // We either have now a different constant type or the constant is not in
     // range of an add with immediate anymore.
-    findAndMakeBaseConstant(MinValItr, CC);
+    findAndMakeBaseConstant(MinValItr, CC, ConstInfoVec);
     // Start a new base constant search.
     MinValItr = CC;
   }
   // Finalize the last base constant search.
-  findAndMakeBaseConstant(MinValItr, ConstCandVec.end());
+  findAndMakeBaseConstant(MinValItr, ConstCandVec.end(), ConstInfoVec);
 }
 
 /// Updates the operand at Idx in instruction Inst with the result of
@@ -653,12 +716,28 @@ static bool updateOperand(Instruction *Inst, unsigned Idx, Instruction *Mat) {
 /// users.
 void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
                                              Constant *Offset,
+                                             Type *Ty,
                                              const ConstantUser &ConstUser) {
   Instruction *Mat = Base;
+
+  // The same offset can be dereferenced to different types in nested struct.
+  if (!Offset && Ty && Ty != Base->getType())
+    Offset = ConstantInt::get(Type::getInt32Ty(*Ctx), 0);
+
   if (Offset) {
     Instruction *InsertionPt = findMatInsertPt(ConstUser.Inst,
                                                ConstUser.OpndIdx);
-    Mat = BinaryOperator::Create(Instruction::Add, Base, Offset,
+    if (Ty) {
+      // Constant being rebased is a ConstantExpr.
+      PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx,
+          cast<PointerType>(Ty)->getAddressSpace());
+      Base = new BitCastInst(Base, Int8PtrTy, "base_bitcast", InsertionPt);
+      Mat = GetElementPtrInst::Create(Int8PtrTy->getElementType(), Base,
+          Offset, "mat_gep", InsertionPt);
+      Mat = new BitCastInst(Mat, Ty, "mat_bitcast", InsertionPt);
+    } else
+      // Constant being rebased is a ConstantInt.
+      Mat = BinaryOperator::Create(Instruction::Add, Base, Offset,
                                  "const_mat", InsertionPt);
 
     LLVM_DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
@@ -702,6 +781,14 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
   // Visit constant expression.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
+    if (ConstExpr->isGEPWithNoNotionalOverIndexing()) {
+      // Operand is a ConstantGEP, replace it.
+      updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat);
+      return;
+    }
+
+    // Aside from constant GEPs, only constant cast expressions are collected.
+    assert(ConstExpr->isCast() && "ConstExpr should be a cast");
     Instruction *ConstExprInst = ConstExpr->getAsInstruction();
     ConstExprInst->setOperand(0, Mat);
     ConstExprInst->insertBefore(findMatInsertPt(ConstUser.Inst,
@@ -725,23 +812,31 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
 /// Hoist and hide the base constant behind a bitcast and emit
 /// materialization code for derived constants.
-bool ConstantHoistingPass::emitBaseConstants() {
+bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
   bool MadeChange = false;
-  for (auto const &ConstInfo : ConstantVec) {
-    // Hoist and hide the base constant behind a bitcast.
+  SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec =
+      BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
+  for (auto const &ConstInfo : ConstInfoVec) {
     SmallPtrSet<Instruction *, 8> IPSet = findConstantInsertionPoint(ConstInfo);
     assert(!IPSet.empty() && "IPSet is empty");
 
     unsigned UsesNum = 0;
     unsigned ReBasesNum = 0;
     for (Instruction *IP : IPSet) {
-      IntegerType *Ty = ConstInfo.BaseConstant->getType();
-      Instruction *Base =
-          new BitCastInst(ConstInfo.BaseConstant, Ty, "const", IP);
+      Instruction *Base = nullptr;
+      // Hoist and hide the base constant behind a bitcast.
+      if (ConstInfo.BaseExpr) {
+        assert(BaseGV && "A base constant expression must have an base GV");
+        Type *Ty = ConstInfo.BaseExpr->getType();
+        Base = new BitCastInst(ConstInfo.BaseExpr, Ty, "const", IP);
+      } else {
+        IntegerType *Ty = ConstInfo.BaseInt->getType();
+        Base = new BitCastInst(ConstInfo.BaseInt, Ty, "const", IP);
+      }
 
       Base->setDebugLoc(IP->getDebugLoc());
 
-      LLVM_DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant
+      LLVM_DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseInt
                         << ") to BB " << IP->getParent()->getName() << '\n'
                         << *Base << '\n');
 
@@ -756,11 +851,12 @@ bool ConstantHoistingPass::emitBaseConstants() {
           // generate rebase for U using the Base dominating U.
           if (IPSet.size() == 1 ||
               DT->dominates(Base->getParent(), OrigMatInsertBB)) {
-            emitBaseConstants(Base, RCI.Offset, U);
+            emitBaseConstants(Base, RCI.Offset, RCI.Ty, U);
             ReBasesNum++;
           }
 
-          Base->setDebugLoc(DILocation::getMergedLocation(Base->getDebugLoc(), U.Inst->getDebugLoc()));
+          Base->setDebugLoc(DILocation::getMergedLocation(
+              Base->getDebugLoc(), U.Inst->getDebugLoc()));
         }
       }
       UsesNum = Uses;
@@ -779,7 +875,7 @@ bool ConstantHoistingPass::emitBaseConstants() {
 
     // Base constant is also included in ConstInfo.RebasedConstants, so
     // deduct 1 from ConstInfo.RebasedConstants.size().
-    NumConstantsRebased = ConstInfo.RebasedConstants.size() - 1;
+    NumConstantsRebased += ConstInfo.RebasedConstants.size() - 1;
 
     MadeChange = true;
   }
@@ -801,25 +897,29 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
+  this->DL = &Fn.getParent()->getDataLayout();
+  this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 
-  // There are no constant candidates to worry about.
-  if (ConstCandVec.empty())
-    return false;
-
   // Combine constants that can be easily materialized with an add from a common
   // base constant.
-  findBaseConstants();
-
-  // There are no constants to emit.
-  if (ConstantVec.empty())
-    return false;
+  if (!ConstIntCandVec.empty())
+    findBaseConstants(nullptr);
+  for (auto &MapEntry : ConstGEPCandMap)
+    if (!MapEntry.second.empty())
+      findBaseConstants(MapEntry.first);
 
   // Finally hoist the base constant and emit materialization code for dependent
   // constants.
-  bool MadeChange = emitBaseConstants();
+  bool MadeChange = false;
+  if (!ConstIntInfoVec.empty())
+    MadeChange = emitBaseConstants(nullptr);
+  for (auto MapEntry : ConstGEPInfoMap)
+    if (!MapEntry.second.empty())
+      MadeChange |= emitBaseConstants(MapEntry.first);
+
 
   // Cleanup dead instructions.
   deleteDeadCastInst();

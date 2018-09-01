@@ -194,19 +194,24 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
     // Instruction having only floating-point operands (all scalars in VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
     break;
-  case TargetOpcode::G_SITOFP: {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_FPTOSI: {
     // Some of the floating-point instructions have mixed GPR and FP operands:
     // fine-tune the computed mapping.
     auto &Op0 = MI.getOperand(0);
     auto &Op1 = MI.getOperand(1);
     const LLT Ty0 = MRI.getType(Op0.getReg());
     const LLT Ty1 = MRI.getType(Op1.getReg());
-    OpRegBankIdx[0] = getPartialMappingIdx(Ty0, /* isFP */ true);
-    OpRegBankIdx[1] = getPartialMappingIdx(Ty1, /* isFP */ false);
+
+    bool FirstArgIsFP = Opc == TargetOpcode::G_SITOFP;
+    bool SecondArgIsFP = Opc == TargetOpcode::G_FPTOSI;
+    OpRegBankIdx[0] = getPartialMappingIdx(Ty0, /* isFP */ FirstArgIsFP);
+    OpRegBankIdx[1] = getPartialMappingIdx(Ty1, /* isFP */ SecondArgIsFP);
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -217,6 +222,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
            "Mismatched operand sizes for G_FCMP");
 
     unsigned Size = Ty1.getSizeInBits();
+    (void)Size;
     assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
     auto FpRegBank = getPartialMappingIdx(Ty1, /* isFP */ true);

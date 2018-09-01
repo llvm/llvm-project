@@ -99,7 +99,7 @@ TYPED_TEST_P(RoundTripTest, RoundTripsSingleValue) {
   ASSERT_FALSE(errorToBool(R->apply(*this->Writer)));
   this->OS.flush();
 
-  DataExtractor DE(this->Data, true, 8);
+  DataExtractor DE(this->Data, sys::IsLittleEndianHost, 8);
   uint32_t OffsetPtr = 0;
   auto HeaderOrErr = readBinaryFormatHeader(DE, OffsetPtr);
   if (!HeaderOrErr)

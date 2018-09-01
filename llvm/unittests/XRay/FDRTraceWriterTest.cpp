@@ -56,23 +56,24 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion3) {
   OS.flush();
 
   // Then from here we load the Trace file.
-  DataExtractor DE(Data, true, 8);
+  DataExtractor DE(Data, sys::IsLittleEndianHost, 8);
   auto TraceOrErr = loadTrace(DE, true);
   if (!TraceOrErr)
     FAIL() << TraceOrErr.takeError();
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::PId, Eq(1u)),
+                                 Field(&XRayRecord::PId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 // This version is almost exactly the same as above, except writing version 2
@@ -100,23 +101,22 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion2) {
   OS.flush();
 
   // Then from here we load the Trace file.
-  DataExtractor DE(Data, true, 8);
+  DataExtractor DE(Data, sys::IsLittleEndianHost, 8);
   auto TraceOrErr = loadTrace(DE, true);
   if (!TraceOrErr)
     FAIL() << TraceOrErr.takeError();
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 // This covers version 1 of the log, without a BufferExtents record but has an
@@ -135,6 +135,11 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion1) {
   std::memcpy(H.FreeFormData, reinterpret_cast<const char *>(&BufferSize),
               sizeof(BufferSize));
   FDRTraceWriter Writer(OS, H);
+  OS.flush();
+
+  // Ensure that at this point the Data buffer has the file header serialized
+  // size.
+  ASSERT_THAT(Data.size(), Eq(32u));
   auto L = LogBuilder()
                .add<NewBufferRecord>(1)
                .add<WallclockRecord>(1, 1)
@@ -150,24 +155,27 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion1) {
   OS.write_zeros(4016);
   OS.flush();
 
+  // For version 1 of the log, we need the whole buffer to be the size of the
+  // file header plus 32.
+  ASSERT_THAT(Data.size(), Eq(BufferSize + 32));
+
   // Then from here we load the Trace file.
-  DataExtractor DE(Data, true, 8);
+  DataExtractor DE(Data, sys::IsLittleEndianHost, 8);
   auto TraceOrErr = loadTrace(DE, true);
   if (!TraceOrErr)
     FAIL() << TraceOrErr.takeError();
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 } // namespace

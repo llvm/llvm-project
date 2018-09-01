@@ -31,7 +31,8 @@ using XRayRecordStorage =
 // record it is.
 constexpr auto kFDRMetadataBodySize = 15;
 
-Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
+Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
+                         XRayFileHeader &FileHeader,
                          std::vector<XRayRecord> &Records) {
   if (Data.size() < 32)
     return make_error<StringError>(
@@ -43,7 +44,7 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
         "Invalid-sized XRay data.",
         std::make_error_code(std::errc::invalid_argument));
 
-  DataExtractor Reader(Data, true, 8);
+  DataExtractor Reader(Data, IsLittleEndian, 8);
   uint32_t OffsetPtr = 0;
   auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
   if (!FileHeaderOrError)
@@ -207,7 +208,7 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
 /// encoded TSC values into absolute encodings on each record.
 struct FDRState {
   uint16_t CPUId;
-  uint16_t ThreadId;
+  int32_t ThreadId;
   int32_t ProcessId;
   uint64_t BaseTSC;
 
@@ -267,7 +268,7 @@ Error processFDRNewBufferRecord(FDRState &State, DataExtractor &RecordExtractor,
         fdrStateToTwine(State.Expects), OffsetPtr);
 
   auto PreReadOffset = OffsetPtr;
-  State.ThreadId = RecordExtractor.getU16(&OffsetPtr);
+  State.ThreadId = RecordExtractor.getSigned(&OffsetPtr, 4);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),
@@ -276,7 +277,7 @@ Error processFDRNewBufferRecord(FDRState &State, DataExtractor &RecordExtractor,
 
   // Advance the offset pointer by enough bytes representing the remaining
   // padding in a metadata record.
-  OffsetPtr += kFDRMetadataBodySize - 2;
+  OffsetPtr += kFDRMetadataBodySize - 4;
   assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
@@ -395,7 +396,7 @@ Error processFDRPidRecord(FDRState &State, DataExtractor &RecordExtractor,
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
   auto PreReadOffset = OffsetPtr;
-  State.ProcessId = RecordExtractor.getU32(&OffsetPtr);
+  State.ProcessId = RecordExtractor.getSigned(&OffsetPtr, 4);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),
@@ -600,6 +601,19 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
     Records.emplace_back();
     auto &Record = Records.back();
     Record.RecordType = 0; // Record is type NORMAL.
+    // Back up one byte to re-read the first byte, which is important for
+    // computing the function id for a record.
+    --OffsetPtr;
+
+    auto PreReadOffset = OffsetPtr;
+    uint32_t FuncIdBitField = RecordExtractor.getU32(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading truncated function id field at offset %d.",
+          OffsetPtr);
+
+    FirstByte = FuncIdBitField & 0xffu;
     // Strip off record type bit and use the next three bits.
     auto T = (FirstByte >> 1) & 0x07;
     switch (T) {
@@ -625,23 +639,11 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
     Record.TId = State.ThreadId;
     Record.PId = State.ProcessId;
 
-    // Back up one byte to re-read the first byte, which is important for
-    // computing the function id for a record.
-    --OffsetPtr;
-
     // Despite function Id being a signed int on XRayRecord,
     // when it is written to an FDR format, the top bits are truncated,
     // so it is effectively an unsigned value. When we shift off the
     // top four bits, we want the shift to be logical, so we read as
     // uint32_t.
-    auto PreReadOffset = OffsetPtr;
-    uint32_t FuncIdBitField = RecordExtractor.getU32(&OffsetPtr);
-    if (OffsetPtr == PreReadOffset)
-      return createStringError(
-          std::make_error_code(std::errc::executable_format_error),
-          "Failed reading truncated function id field at offset %d.",
-          OffsetPtr);
-
     Record.FuncId = FuncIdBitField >> 4;
 
     // FunctionRecords have a 32 bit delta from the previous absolute TSC
@@ -703,17 +705,16 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
 /// ThreadBuffer: BufferExtents NewBuffer WallClockTime Pid NewCPUId
 ///               FunctionSequence
 /// EOB: *deprecated*
-Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
-                 std::vector<XRayRecord> &Records) {
+Error loadFDRLog(StringRef Data, bool IsLittleEndian,
+                 XRayFileHeader &FileHeader, std::vector<XRayRecord> &Records) {
 
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
         std::make_error_code(std::errc::invalid_argument));
 
-  DataExtractor Reader(Data, true, 8);
+  DataExtractor Reader(Data, IsLittleEndian, 8);
   uint32_t OffsetPtr = 0;
-
   auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
   if (!FileHeaderOrError)
     return FileHeaderOrError.takeError();
@@ -722,7 +723,7 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
   uint64_t BufferSize = 0;
   {
     StringRef ExtraDataRef(FileHeader.FreeFormData, 16);
-    DataExtractor ExtraDataExtractor(ExtraDataRef, true, 8);
+    DataExtractor ExtraDataExtractor(ExtraDataRef, IsLittleEndian, 8);
     uint32_t ExtraDataOffset = 0;
     BufferSize = ExtraDataExtractor.getU64(&ExtraDataOffset);
   }
@@ -862,8 +863,15 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
         Twine("Cannot read log from '") + Filename + "'", EC);
   }
   auto Data = StringRef(MappedFile.data(), MappedFile.size());
-  DataExtractor DE(Data, true, 8);
-  return loadTrace(DE, Sort);
+
+  // TODO: Lift the endianness and implementation selection here.
+  DataExtractor LittleEndianDE(Data, true, 8);
+  auto TraceOrError = loadTrace(LittleEndianDE, Sort);
+  if (!TraceOrError) {
+    DataExtractor BigEndianDE(Data, false, 8);
+    TraceOrError = loadTrace(BigEndianDE, Sort);
+  }
+  return TraceOrError;
 }
 
 Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
@@ -881,7 +889,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   //
   // Only if we can't load either the binary or the YAML format will we yield an
   // error.
-  DataExtractor HeaderExtractor(DE.getData(), true, 8);
+  DataExtractor HeaderExtractor(DE.getData(), DE.isLittleEndian(), 8);
   uint32_t OffsetPtr = 0;
   uint16_t Version = HeaderExtractor.getU16(&OffsetPtr);
   uint16_t Type = HeaderExtractor.getU16(&OffsetPtr);
@@ -892,7 +900,8 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   switch (Type) {
   case NAIVE_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadNaiveFormatLog(DE.getData(), T.FileHeader, T.Records))
+      if (auto E = loadNaiveFormatLog(DE.getData(), DE.isLittleEndian(),
+                                      T.FileHeader, T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(
@@ -903,7 +912,8 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     break;
   case FLIGHT_DATA_RECORDER_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadFDRLog(DE.getData(), T.FileHeader, T.Records))
+      if (auto E = loadFDRLog(DE.getData(), DE.isLittleEndian(), T.FileHeader,
+                              T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(

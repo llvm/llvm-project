@@ -326,7 +326,7 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
            "second pass found more bad indices");
     if (!LastError && NumBadIndices == BadIndicesRemaining) {
       return llvm::make_error<CodeViewError>(
-          cv_error_code::corrupt_record, "input type graph contains cycles");
+          cv_error_code::corrupt_record, "Input type graph contains cycles");
     }
   }
 

@@ -570,9 +570,9 @@ def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let ResourceCycles = [1, 2, 4];
   let NumMicroOps = 2;
 }
-def : InstRW<[JWriteVBROADCASTYLd, ReadAfterLd], (instrs VBROADCASTSDYrm,
-                                                         VBROADCASTSSYrm,
-                                                         VBROADCASTF128)>;
+def : InstRW<[JWriteVBROADCASTYLd], (instrs VBROADCASTSDYrm,
+                                            VBROADCASTSSYrm,
+                                            VBROADCASTF128)>;
 
 def JWriteJVZEROALL: SchedWriteRes<[]> {
   let Latency = 90;

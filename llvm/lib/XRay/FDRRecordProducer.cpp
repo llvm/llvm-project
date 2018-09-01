@@ -14,66 +14,54 @@ namespace xray {
 
 namespace {
 
-// Keep this in sync with the values written in the XRay FDR mode runtime in
-// compiler-rt.
-enum class MetadataRecordKinds : uint8_t {
-  NewBuffer,
-  EndOfBuffer,
-  NewCPUId,
-  TSCWrap,
-  WalltimeMarker,
-  CustomEventMarker,
-  CallArgument,
-  BufferExtents,
-  TypedEventMarker,
-  Pid,
-  // This is an end marker, used to identify the upper bound for this enum.
-  EnumEndMarker,
-};
-
 Expected<std::unique_ptr<Record>>
 metadataRecordType(const XRayFileHeader &Header, uint8_t T) {
+  // Keep this in sync with the values written in the XRay FDR mode runtime in
+  // compiler-rt.
+  enum MetadataRecordKinds : uint8_t {
+    NewBufferKind,
+    EndOfBufferKind,
+    NewCPUIdKind,
+    TSCWrapKind,
+    WalltimeMarkerKind,
+    CustomEventMarkerKind,
+    CallArgumentKind,
+    BufferExtentsKind,
+    TypedEventMarkerKind,
+    PidKind,
+    // This is an end marker, used to identify the upper bound for this enum.
+    EnumEndMarker,
+  };
+
   if (T >= static_cast<uint8_t>(MetadataRecordKinds::EnumEndMarker))
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Invalid metadata record type: %d", T);
-  static constexpr MetadataRecordKinds Mapping[] = {
-      MetadataRecordKinds::NewBuffer,
-      MetadataRecordKinds::EndOfBuffer,
-      MetadataRecordKinds::NewCPUId,
-      MetadataRecordKinds::TSCWrap,
-      MetadataRecordKinds::WalltimeMarker,
-      MetadataRecordKinds::CustomEventMarker,
-      MetadataRecordKinds::CallArgument,
-      MetadataRecordKinds::BufferExtents,
-      MetadataRecordKinds::TypedEventMarker,
-      MetadataRecordKinds::Pid,
-  };
-  switch (Mapping[T]) {
-  case MetadataRecordKinds::NewBuffer:
+  switch (T) {
+  case MetadataRecordKinds::NewBufferKind:
     return make_unique<NewBufferRecord>();
-  case MetadataRecordKinds::EndOfBuffer:
+  case MetadataRecordKinds::EndOfBufferKind:
     if (Header.Version >= 2)
       return createStringError(
           std::make_error_code(std::errc::executable_format_error),
           "End of buffer records are no longer supported starting version "
           "2 of the log.");
     return make_unique<EndBufferRecord>();
-  case MetadataRecordKinds::NewCPUId:
+  case MetadataRecordKinds::NewCPUIdKind:
     return make_unique<NewCPUIDRecord>();
-  case MetadataRecordKinds::TSCWrap:
+  case MetadataRecordKinds::TSCWrapKind:
     return make_unique<TSCWrapRecord>();
-  case MetadataRecordKinds::WalltimeMarker:
+  case MetadataRecordKinds::WalltimeMarkerKind:
     return make_unique<WallclockRecord>();
-  case MetadataRecordKinds::CustomEventMarker:
+  case MetadataRecordKinds::CustomEventMarkerKind:
     return make_unique<CustomEventRecord>();
-  case MetadataRecordKinds::CallArgument:
+  case MetadataRecordKinds::CallArgumentKind:
     return make_unique<CallArgRecord>();
-  case MetadataRecordKinds::BufferExtents:
+  case MetadataRecordKinds::BufferExtentsKind:
     return make_unique<BufferExtents>();
-  case MetadataRecordKinds::TypedEventMarker:
+  case MetadataRecordKinds::TypedEventMarkerKind:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Encountered an unsupported TypedEventMarker.");
-  case MetadataRecordKinds::Pid:
+  case MetadataRecordKinds::PidKind:
     return make_unique<PIDRecord>();
   case MetadataRecordKinds::EnumEndMarker:
     llvm_unreachable("Invalid MetadataRecordKind");
