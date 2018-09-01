@@ -390,7 +390,8 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
            if (TheVNI && TheVNI != VNI)
              UniqueVNI = false;
            TheVNI = VNI;
-         }
+         } else
+           FoundUndef = true;
          continue;
        }
 
