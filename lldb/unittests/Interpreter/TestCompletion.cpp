@@ -170,7 +170,7 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
 #endif
   size_t Count =
       CommandCompletions::DiskDirectories(BaseDir, Results, Resolver);
-  ASSERT_EQ(1u, Count);
+  ASSERT_EQ(1u, Count) << "Failed to get BaseDir completions. BaseDir is '" << BaseDir << "'. Exists: " << llvm::sys::fs::exists(BaseDir) << " Results: " << Results.GetSize() << "\n";
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(BaseDir, Results));
 
