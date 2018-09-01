@@ -344,6 +344,12 @@ public:
 
   SymbolOccurrenceSlab() : UniqueStrings(Arena) {}
 
+  static SymbolOccurrenceSlab createEmpty() {
+    SymbolOccurrenceSlab Empty;
+    Empty.freeze();
+    return Empty;
+  }
+
   // Define move semantics for the slab, allowing assignment from an rvalue.
   // Implicit move assignment is deleted by the compiler because
   // StringSaver has a reference type member.
@@ -359,6 +365,12 @@ public:
 
   const_iterator begin() const { return Occurrences.begin(); }
   const_iterator end() const { return Occurrences.end(); }
+
+  size_t bytes() const {
+    return sizeof(*this) + Arena.getTotalMemory() + Occurrences.getMemorySize();
+  }
+
+  size_t size() const { return Occurrences.size(); }
 
   // Adds a symbol occurrence.
   // This is a deep copy: underlying FileURI will be owned by the slab.

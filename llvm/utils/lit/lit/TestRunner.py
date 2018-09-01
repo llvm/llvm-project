@@ -879,7 +879,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Expand all glob expressions
         args = expand_glob_expressions(args, cmd_shenv.cwd)
         if is_builtin_cmd:
-            args.insert(0, "python")
+            args.insert(0, sys.executable)
             args[1] = os.path.join(builtin_commands_dir ,args[1] + ".py")
 
         # On Windows, do our own command line quoting for better compatibility

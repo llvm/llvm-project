@@ -20,7 +20,8 @@
 ; CGSCC-SAME: IR instruction count changed from
 ; CGSCC-SAME: [[ORIG:[1-9][0-9]*]] to [[FINAL:[1-9][0-9]*]];
 ; CGSCC-SAME: Delta: [[DELTA:-?[1-9][0-9]*]]
-; CGSCC: --- !Analysis
+; CGSCC-NEXT: ---
+; CGSCC-DAG: !Analysis
 ; CGSCC-NEXT: Pass:            size-info
 ; CGSCC-NEXT: Name:            IRSizeChange
 ; CGSCC-NEXT: Function:
@@ -44,7 +45,8 @@
 ; FUNC-SAME: IR instruction count changed from
 ; FUNC-SAME: [[SIZE2]] to [[SIZE3:[1-9][0-9]*]];
 ; FUNC-SAME: Delta: [[DELTA2:-?[1-9][0-9]*]]
-; FUNC: --- !Analysis
+; FUNC-NEXT: ---
+; FUNC-DAG: !Analysis
 ; FUNC-NEXT: Pass:            size-info
 ; FUNC-NEXT: Name:            IRSizeChange
 ; FUNC-NEXT: Function:
@@ -77,7 +79,8 @@
 ; MODULE-SAME: IR instruction count changed from
 ; MODULE-SAME: [[ORIG:[1-9][0-9]*]] to [[FINAL:[1-9][0-9]*]];
 ; MODULE-SAME: Delta: [[DELTA:-?[1-9][0-9]*]]
-; MODULE: --- !Analysis
+; MODULE-NEXT: ---
+; MODULE-DAG: !Analysis
 ; MODULE-NEXT: Pass:            size-info
 ; MODULE-NEXT: Name:            IRSizeChange
 ; MODULE-NEXT: Function:
@@ -97,7 +100,8 @@
 ; BB-SAME: IR instruction count changed from
 ; BB-SAME: [[ORIG:[1-9][0-9]*]] to [[FINAL:[1-9][0-9]*]];
 ; BB-SAME: Delta: [[DELTA:-?[1-9][0-9]*]]
-; BB: --- !Analysis
+; BB-NEXT: ---
+; BB-DAG: !Analysis
 ; BB-NEXT: Pass:            size-info
 ; BB-NEXT: Name:            IRSizeChange
 ; BB-NEXT: Function:
@@ -117,7 +121,8 @@
 ; LOOP-SAME: IR instruction count changed from
 ; LOOP-SAME: [[ORIG:[1-9][0-9]*]] to [[FINAL:[1-9][0-9]*]];
 ; LOOP-SAME: Delta: [[DELTA:-?[1-9][0-9]*]]
-; LOOP: --- !Analysis
+; LOOP-NEXT: ---
+; LOOP-DAG: !Analysis
 ; LOOP-NEXT: Pass:            size-info
 ; LOOP-NEXT: Name:            IRSizeChange
 ; LOOP-NEXT: Function:

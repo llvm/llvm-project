@@ -38,7 +38,7 @@ void g() {
 
 // Test various aspects of static constructor calls.
 struct A {
-    A();
+  A();
 };
 
 A theA;

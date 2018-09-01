@@ -1,5 +1,5 @@
-// Test basic malloc functionality.
-// RUN: %clang_hwasan %s -o %t
+// Test basic new functionality.
+// RUN: %clangxx_hwasan %s -o %t
 // RUN: %run %t
 
 #include <stdlib.h>
@@ -9,8 +9,10 @@
 
 int main() {
   __hwasan_enable_allocator_tagging();
-  char *a1 = (char*)malloc(0);
-  assert(a1 != 0);
+
+  size_t volatile n = 0;
+  char *a1 = new char[n];
+  assert(a1 != nullptr);
   assert(__sanitizer_get_allocated_size(a1) == 0);
-  free(a1);
+  delete[] a1;
 }

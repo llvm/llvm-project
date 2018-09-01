@@ -1167,4 +1167,4 @@ BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0047 | `* Linker *`:
 
-BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock
+BAD-BLOCK-SIZE: The PDB file is corrupt. MSF superblock is missing

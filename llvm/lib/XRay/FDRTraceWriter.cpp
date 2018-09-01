@@ -18,27 +18,6 @@ namespace xray {
 
 namespace {
 
-struct alignas(32) FileHeader {
-  uint16_t Version;
-  uint16_t Type;
-  uint32_t BitField;
-  uint64_t CycleFrequency;
-  char FreeForm[16];
-};
-
-struct MetadataBlob {
-  uint8_t Type : 1;
-  uint8_t RecordKind : 7;
-  char Data[15];
-};
-
-struct FunctionDeltaBlob {
-  uint8_t Type : 1;
-  uint8_t RecordKind : 3;
-  int FuncId : 28;
-  uint32_t TSCDelta;
-};
-
 template <size_t Index> struct IndexedWriter {
   template <
       class Tuple,
@@ -139,16 +118,16 @@ Error FDRTraceWriter::visit(EndBufferRecord &R) {
 }
 
 Error FDRTraceWriter::visit(FunctionRecord &R) {
-  FunctionDeltaBlob B;
-  B.Type = 0;
-  B.RecordKind = static_cast<uint8_t>(R.recordType());
-  B.FuncId = R.functionId();
-  B.TSCDelta = R.delta();
-  ArrayRef<char> Bytes(reinterpret_cast<const char *>(&B),
-                       sizeof(FunctionDeltaBlob));
-  OS.write(Bytes);
+  // Write out the data in "field" order, to be endian-aware.
+  uint32_t TypeRecordFuncId = uint32_t{R.functionId() & ~uint32_t{0x0Fu << 28}};
+  TypeRecordFuncId <<= 3;
+  TypeRecordFuncId |= static_cast<uint32_t>(R.recordType());
+  TypeRecordFuncId <<= 1;
+  TypeRecordFuncId &= ~uint32_t{0x01};
+  OS.write(TypeRecordFuncId);
+  OS.write(R.delta());
   return Error::success();
-}
+} // namespace xray
 
 } // namespace xray
 } // namespace llvm

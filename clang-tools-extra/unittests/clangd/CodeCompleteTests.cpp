@@ -76,7 +76,8 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   SymbolSlab::Builder Slab;
   for (const auto &Sym : Symbols)
     Slab.insert(Sym);
-  return MemIndex::build(std::move(Slab).build());
+  return MemIndex::build(std::move(Slab).build(),
+                         SymbolOccurrenceSlab::createEmpty());
 }
 
 CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,

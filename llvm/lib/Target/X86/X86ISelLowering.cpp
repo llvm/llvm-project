@@ -21297,6 +21297,14 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // ptest and testp intrinsics. The intrinsic these come from are designed to
   // return an integer value, not just an instruction so lower it to the ptest
   // or testp pattern and a setcc for the result.
+  case Intrinsic::x86_avx512_ktestc_b:
+  case Intrinsic::x86_avx512_ktestc_w:
+  case Intrinsic::x86_avx512_ktestc_d:
+  case Intrinsic::x86_avx512_ktestc_q:
+  case Intrinsic::x86_avx512_ktestz_b:
+  case Intrinsic::x86_avx512_ktestz_w:
+  case Intrinsic::x86_avx512_ktestz_d:
+  case Intrinsic::x86_avx512_ktestz_q:
   case Intrinsic::x86_sse41_ptestz:
   case Intrinsic::x86_sse41_ptestc:
   case Intrinsic::x86_sse41_ptestnzc:
@@ -21315,15 +21323,30 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::x86_avx_vtestz_pd_256:
   case Intrinsic::x86_avx_vtestc_pd_256:
   case Intrinsic::x86_avx_vtestnzc_pd_256: {
-    bool IsTestPacked = false;
+    unsigned TestOpc = X86ISD::PTEST;
     X86::CondCode X86CC;
     switch (IntNo) {
     default: llvm_unreachable("Bad fallthrough in Intrinsic lowering.");
+    case Intrinsic::x86_avx512_ktestc_b:
+    case Intrinsic::x86_avx512_ktestc_w:
+    case Intrinsic::x86_avx512_ktestc_d:
+    case Intrinsic::x86_avx512_ktestc_q:
+      // CF = 1
+      TestOpc = X86ISD::KTEST;
+      X86CC = X86::COND_B;
+      break;
+    case Intrinsic::x86_avx512_ktestz_b:
+    case Intrinsic::x86_avx512_ktestz_w:
+    case Intrinsic::x86_avx512_ktestz_d:
+    case Intrinsic::x86_avx512_ktestz_q:
+      TestOpc = X86ISD::KTEST;
+      X86CC = X86::COND_E;
+      break;
     case Intrinsic::x86_avx_vtestz_ps:
     case Intrinsic::x86_avx_vtestz_pd:
     case Intrinsic::x86_avx_vtestz_ps_256:
     case Intrinsic::x86_avx_vtestz_pd_256:
-      IsTestPacked = true;
+      TestOpc = X86ISD::TESTP;
       LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestz:
     case Intrinsic::x86_avx_ptestz_256:
@@ -21334,7 +21357,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::x86_avx_vtestc_pd:
     case Intrinsic::x86_avx_vtestc_ps_256:
     case Intrinsic::x86_avx_vtestc_pd_256:
-      IsTestPacked = true;
+      TestOpc = X86ISD::TESTP;
       LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestc:
     case Intrinsic::x86_avx_ptestc_256:
@@ -21345,7 +21368,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::x86_avx_vtestnzc_pd:
     case Intrinsic::x86_avx_vtestnzc_ps_256:
     case Intrinsic::x86_avx_vtestnzc_pd_256:
-      IsTestPacked = true;
+      TestOpc = X86ISD::TESTP;
       LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestnzc:
     case Intrinsic::x86_avx_ptestnzc_256:
@@ -21356,7 +21379,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDValue LHS = Op.getOperand(1);
     SDValue RHS = Op.getOperand(2);
-    unsigned TestOpc = IsTestPacked ? X86ISD::TESTP : X86ISD::PTEST;
     SDValue Test = DAG.getNode(TestOpc, dl, MVT::i32, LHS, RHS);
     SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);

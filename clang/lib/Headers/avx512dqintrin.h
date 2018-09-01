@@ -86,6 +86,42 @@ _kortest_mask8_u8(__mmask8 __A, __mmask8 __B, unsigned char *__C) {
   return (unsigned char)__builtin_ia32_kortestzqi(__A, __B);
 }
 
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktestc_mask8_u8(__mmask8 __A, __mmask8 __B)
+{
+  return (unsigned char)__builtin_ia32_ktestcqi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktestz_mask8_u8(__mmask8 __A, __mmask8 __B)
+{
+  return (unsigned char)__builtin_ia32_ktestzqi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktest_mask8_u8(__mmask8 __A, __mmask8 __B, unsigned char *__C) {
+  *__C = (unsigned char)__builtin_ia32_ktestcqi(__A, __B);
+  return (unsigned char)__builtin_ia32_ktestzqi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktestc_mask16_u8(__mmask16 __A, __mmask16 __B)
+{
+  return (unsigned char)__builtin_ia32_ktestchi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktestz_mask16_u8(__mmask16 __A, __mmask16 __B)
+{
+  return (unsigned char)__builtin_ia32_ktestzhi(__A, __B);
+}
+
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
+_ktest_mask16_u8(__mmask16 __A, __mmask16 __B, unsigned char *__C) {
+  *__C = (unsigned char)__builtin_ia32_ktestchi(__A, __B);
+  return (unsigned char)__builtin_ia32_ktestzhi(__A, __B);
+}
+
 static __inline__ __mmask8 __DEFAULT_FN_ATTRS
 _kadd_mask8(__mmask8 __A, __mmask8 __B)
 {
@@ -96,6 +132,32 @@ static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _kadd_mask16(__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16)__builtin_ia32_kaddhi((__mmask16)__A, (__mmask16)__B);
+}
+
+#define _kshiftli_mask8(A, I) \
+  (__mmask8)__builtin_ia32_kshiftliqi((__mmask8)(A), (unsigned int)(I))
+
+#define _kshiftri_mask8(A, I) \
+  (__mmask8)__builtin_ia32_kshiftriqi((__mmask8)(A), (unsigned int)(I))
+
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
+_cvtmask8_u32(__mmask8 __A) {
+  return (unsigned int)__builtin_ia32_kmovb((__mmask8)__A);
+}
+
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS
+_cvtu32_mask8(unsigned int __A) {
+  return (__mmask8)__builtin_ia32_kmovb((__mmask8)__A);
+}
+
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS
+_load_mask8(__mmask8 *__A) {
+  return (__mmask8)__builtin_ia32_kmovb(*(__mmask8 *)__A);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_store_mask8(__mmask8 *__A, __mmask8 __B) {
+  *(__mmask8 *)__A = __builtin_ia32_kmovb((__mmask8)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
