@@ -82,6 +82,8 @@ static uint32_t readUint32(WasmObjectFile::ReadContext &Ctx) {
 }
 
 static int32_t readFloat32(WasmObjectFile::ReadContext &Ctx) {
+  if (Ctx.Ptr + 4 > Ctx.End)
+    report_fatal_error("EOF while reading float64");
   int32_t Result = 0;
   memcpy(&Result, Ctx.Ptr, sizeof(Result));
   Ctx.Ptr += sizeof(Result);
@@ -89,6 +91,8 @@ static int32_t readFloat32(WasmObjectFile::ReadContext &Ctx) {
 }
 
 static int64_t readFloat64(WasmObjectFile::ReadContext &Ctx) {
+  if (Ctx.Ptr + 8 > Ctx.End)
+    report_fatal_error("EOF while reading float64");
   int64_t Result = 0;
   memcpy(&Result, Ctx.Ptr, sizeof(Result));
   Ctx.Ptr += sizeof(Result);

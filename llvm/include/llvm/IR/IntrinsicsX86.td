@@ -2773,6 +2773,24 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v32i1_ty], [llvm_v32i1_ty, llvm_v32i1_ty], [IntrNoMem]>;
   def int_x86_avx512_kadd_q :
         Intrinsic<[llvm_v64i1_ty], [llvm_v64i1_ty, llvm_v64i1_ty], [IntrNoMem]>;
+
+  def int_x86_avx512_ktestc_b :
+          Intrinsic<[llvm_i32_ty], [llvm_v8i1_ty, llvm_v8i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestc_w :
+          Intrinsic<[llvm_i32_ty], [llvm_v16i1_ty, llvm_v16i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestc_d :
+          Intrinsic<[llvm_i32_ty], [llvm_v32i1_ty, llvm_v32i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestc_q :
+          Intrinsic<[llvm_i32_ty], [llvm_v64i1_ty, llvm_v64i1_ty], [IntrNoMem]>;
+
+  def int_x86_avx512_ktestz_b :
+          Intrinsic<[llvm_i32_ty], [llvm_v8i1_ty, llvm_v8i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestz_w :
+          Intrinsic<[llvm_i32_ty], [llvm_v16i1_ty, llvm_v16i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestz_d :
+          Intrinsic<[llvm_i32_ty], [llvm_v32i1_ty, llvm_v32i1_ty], [IntrNoMem]>;
+  def int_x86_avx512_ktestz_q :
+          Intrinsic<[llvm_i32_ty], [llvm_v64i1_ty, llvm_v64i1_ty], [IntrNoMem]>;
 }
 
 // Conversion ops

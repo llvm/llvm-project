@@ -219,6 +219,13 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0);
 
+  getActionDefinitionsBuilder(G_FPTOSI)
+      .legalForCartesianProduct({s32, s64})
+      .clampScalar(1, s32, s64)
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
+      .widenScalarToNextPow2(1);
+
   // Comparison
   setAction({G_ICMP, 1, s64}, Legal);
 
@@ -297,6 +304,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
 
   setAction({G_FPEXT, s64}, Legal);
   setAction({G_FPEXT, 1, s32}, Legal);
+
+  setAction({G_FPTRUNC, s32}, Legal);
+  setAction({G_FPTRUNC, 1, s64}, Legal);
 
   // Constants
   setAction({TargetOpcode::G_FCONSTANT, s64}, Legal);

@@ -157,7 +157,7 @@ Error RecordInitializer::visit(PIDRecord &R) {
                              OffsetPtr);
 
   auto PreReadOffset = OffsetPtr;
-  R.PID = E.getU64(&OffsetPtr);
+  R.PID = E.getSigned(&OffsetPtr, 4);
   if (PreReadOffset == OffsetPtr)
     return createStringError(std::make_error_code(std::errc::bad_message),
                              "Cannot read a process ID record at offset %d.",

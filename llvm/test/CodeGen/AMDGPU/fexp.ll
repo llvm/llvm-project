@@ -224,37 +224,23 @@ define <4 x half> @v_exp_v4f16(<4 x half> %arg0) {
 ; SI-LABEL: v_exp_v4f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x3fb8aa3b
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SI-NEXT:    v_mul_f32_e32 v3, v3, v4
-; SI-NEXT:    v_mul_f32_e32 v2, v2, v4
-; SI-NEXT:    v_mul_f32_e32 v1, v1, v4
-; SI-NEXT:    v_mul_f32_e32 v0, v0, v4
-; SI-NEXT:    v_exp_f32_e32 v3, v3
-; SI-NEXT:    v_exp_f32_e32 v2, v2
-; SI-NEXT:    v_exp_f32_e32 v1, v1
-; SI-NEXT:    v_exp_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_or_b32_e32 v3, v2, v3
-; SI-NEXT:    v_or_b32_e32 v1, v0, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v4
+; SI-NEXT:    v_mul_f32_e32 v1, v1, v4
+; SI-NEXT:    v_mul_f32_e32 v2, v2, v4
+; SI-NEXT:    v_mul_f32_e32 v3, v3, v4
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_exp_f32_e32 v1, v1
+; SI-NEXT:    v_exp_f32_e32 v2, v2
+; SI-NEXT:    v_exp_f32_e32 v3, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_exp_v4f16:

@@ -118,6 +118,8 @@ private:
                    MachineFunction &MF) const;
   bool selectSDiv(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
+  bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
+                                   MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -387,6 +389,8 @@ bool X86InstructionSelector::select(MachineInstr &I,
     return selectShift(I, MRI, MF);
   case TargetOpcode::G_SDIV:
     return selectSDiv(I, MRI, MF);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWSideEffects(I, MRI, MF);
   }
 
   return false;
@@ -1656,6 +1660,21 @@ bool X86InstructionSelector::selectSDiv(MachineInstr &I,
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
           DstReg)
       .addReg(SDivEntryIt->QuotientReg);
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectIntrinsicWSideEffects(
+    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) const {
+
+  assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+         "unexpected instruction");
+
+  if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
+    return false;
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TRAP));
 
   I.eraseFromParent();
   return true;

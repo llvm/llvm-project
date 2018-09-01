@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=GCN-HSA -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=GCN-HSA -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}constant_load_i32:
 ; GCN: s_load_dword s{{[0-9]+}}
@@ -187,10 +188,10 @@ define amdgpu_kernel void @constant_sextload_v4i32_to_v4i64(<4 x i64> addrspace(
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-SA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-SA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 define amdgpu_kernel void @constant_zextload_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i32> addrspace(4)* %in) #0 {
   %ld = load <8 x i32>, <8 x i32> addrspace(4)* %in
   %ext = zext <8 x i32> %ld to <8 x i64>
@@ -215,10 +216,10 @@ define amdgpu_kernel void @constant_zextload_v8i32_to_v8i64(<8 x i64> addrspace(
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 define amdgpu_kernel void @constant_sextload_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i32> addrspace(4)* %in) #0 {
   %ld = load <8 x i32>, <8 x i32> addrspace(4)* %in
   %ext = sext <8 x i32> %ld to <8 x i64>
@@ -259,14 +260,14 @@ define amdgpu_kernel void @constant_sextload_v16i32_to_v16i64(<16 x i64> addrspa
 ; GCN-NOHSA: buffer_store_dwordx4
 ; GCN-NOHSA: buffer_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
+; GCN-HSA: {{flat|global}}_store_dwordx4
 define amdgpu_kernel void @constant_zextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16 x i32> addrspace(4)* %in) #0 {
   %ld = load <16 x i32>, <16 x i32> addrspace(4)* %in
   %ext = zext <16 x i32> %ld to <16 x i64>
@@ -299,25 +300,25 @@ define amdgpu_kernel void @constant_zextload_v16i32_to_v16i64(<16 x i64> addrspa
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
 define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
@@ -351,29 +352,78 @@ define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-DAG: buffer_store_dwordx4
 
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
-; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 define amdgpu_kernel void @constant_zextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
   %ext = zext <32 x i32> %ld to <32 x i64>
   store <32 x i64> %ext, <32 x i64> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}constant_load_v32i32:
+; GCN: s_load_dwordx16
+; GCN: s_load_dwordx16
+
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
+define amdgpu_kernel void @constant_load_v32i32(<32 x i32> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
+  %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
+  store <32 x i32> %ld, <32 x i32> addrspace(1)* %out
   ret void
 }
 

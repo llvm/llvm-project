@@ -609,8 +609,8 @@ A few notes about CMake Caches:
 For more information about some of the advanced build configurations supported
 via Cache files see :doc:`AdvancedBuilds`.
 
-Executing the test suite
-========================
+Executing the Tests
+===================
 
 Testing is performed when the *check-all* target is built. For instance, if you are
 using Makefiles, execute this command in the root of your build directory:

@@ -31,23 +31,29 @@ enum class raw_error_code {
   stream_too_long,
   invalid_tpi_hash,
 };
+} // namespace pdb
+} // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::pdb::raw_error_code> : std::true_type {};
+} // namespace std
+
+namespace llvm {
+namespace pdb {
+const std::error_category &RawErrCategory();
+
+inline std::error_code make_error_code(raw_error_code E) {
+  return std::error_code(static_cast<int>(E), RawErrCategory());
+}
 
 /// Base class for errors originating when parsing raw PDB files
-class RawError : public ErrorInfo<RawError> {
+class RawError : public ErrorInfo<RawError, StringError> {
 public:
+  using ErrorInfo<RawError, StringError>::ErrorInfo; // inherit constructors
+  RawError(const Twine &S) : ErrorInfo(S, raw_error_code::unspecified) {}
   static char ID;
-  RawError(raw_error_code C);
-  RawError(const std::string &Context);
-  RawError(raw_error_code C, const std::string &Context);
-
-  void log(raw_ostream &OS) const override;
-  const std::string &getErrorMessage() const;
-  std::error_code convertToErrorCode() const override;
-
-private:
-  std::string ErrMsg;
-  raw_error_code Code;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif
