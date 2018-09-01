@@ -20,7 +20,7 @@ namespace clangd {
 // Returned symbol may contain data owned by either source.
 Symbol mergeSymbol(const Symbol &L, const Symbol &R);
 
-// mergedIndex returns a composite index based on two provided Indexes:
+// mergeIndex returns a composite index based on two provided Indexes:
 //  - the Dynamic index covers few files, but is relatively up-to-date.
 //  - the Static index covers a bigger set of files, but is relatively stale.
 // The returned index attempts to combine results, and avoid duplicates.

@@ -56,7 +56,7 @@ void log(Logger::Level L, const char *Fmt, Ts &&... Vals) {
 template <typename... Ts> void elog(const char *Fmt, Ts &&... Vals) {
   detail::log(Logger::Error, Fmt, std::forward<Ts>(Vals)...);
 }
-// log() is used for information important to understanding a clangd session.
+// log() is used for information important to understand a clangd session.
 // e.g. the names of LSP messages sent are logged at this level.
 // This level could be enabled in production builds to allow later inspection.
 template <typename... Ts> void log(const char *Fmt, Ts &&... Vals) {

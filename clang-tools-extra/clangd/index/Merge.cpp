@@ -87,7 +87,7 @@ class MergedIndex : public SymbolIndex {
     // We consider the dynamic index authoritative and report all its
     // occurrences, and only report static index occurrences from other files.
     //
-    // FIXME: The heuristic fails if the dynamic index containts a file, but all
+    // FIXME: The heuristic fails if the dynamic index contains a file, but all
     // occurrences were removed (we will report stale ones from the static
     // index). Ultimately we should explicit check which index has the file
     // instead.
