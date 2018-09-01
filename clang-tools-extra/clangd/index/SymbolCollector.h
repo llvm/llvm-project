@@ -104,7 +104,7 @@ private:
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
   // All symbol occurrences collected from the AST.
-  // Only symbols declared in preamble (from #inclues) and references from the
+  // Only symbols declared in preamble (from #include) and references from the
   // main file will be included.
   SymbolOccurrenceSlab SymbolOccurrences;
   ASTContext *ASTCtx;

@@ -456,7 +456,7 @@ public:
   /// CrossReference finds all symbol occurrences (e.g. references,
   /// declarations, definitions) and applies \p Callback on each result.
   ///
-  /// Resutls are returned in arbitrary order.
+  /// Results are returned in arbitrary order.
   ///
   /// The returned result must be deep-copied if it's used outside Callback.
   virtual void findOccurrences(

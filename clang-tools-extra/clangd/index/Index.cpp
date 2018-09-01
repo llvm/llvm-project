@@ -152,7 +152,7 @@ void SymbolOccurrenceSlab::insert(const SymbolID &SymID,
 }
 
 void SymbolOccurrenceSlab::freeze() {
-  // Deduplicate symbol occurrenes.
+  // Deduplicate symbol occurrences.
   for (auto &IDAndOccurrence : Occurrences) {
     auto &Occurrence = IDAndOccurrence.getSecond();
     std::sort(Occurrence.begin(), Occurrence.end());
