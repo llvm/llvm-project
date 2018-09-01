@@ -36,7 +36,7 @@ namespace clangd {
 /// the snapshot, either this class or the symbol index.
 ///
 /// The snapshot semantics keeps critical sections minimal since we only need
-/// locking when we swap or obtain refereces to snapshots.
+/// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
   /// \brief Updates all symbols and occurrences in a file.
@@ -60,7 +60,7 @@ private:
   llvm::StringMap<std::shared_ptr<SymbolOccurrenceSlab>> FileToOccurrenceSlabs;
 };
 
-/// \brief This manages symbls from files and an in-memory index on all symbols.
+/// \brief This manages symbols from files and an in-memory index on all symbols.
 class FileIndex : public SymbolIndex {
 public:
   /// If URISchemes is empty, the default schemes in SymbolCollector will be

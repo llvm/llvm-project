@@ -31,7 +31,7 @@ def _encoded_write(old_write, encoding):
         # If we were asked to write a `str` (in Py2) or a `bytes` (in Py3) decode it
         # as unicode before attempting to write.
         if isinstance(s, six.binary_type):
-            s = s.decode(encoding)
+            s = s.decode(encoding, "replace")
         return old_write(s)
     return impl
 

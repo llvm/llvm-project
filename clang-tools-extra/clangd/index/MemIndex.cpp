@@ -44,7 +44,7 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms,
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     Index = std::move(TempIndex);
-    Symbols = std::move(Syms); // Relase old symbols.
+    Symbols = std::move(Syms); // Release old symbols.
     Occurrences = std::move(AllOccurrences);
   }
 

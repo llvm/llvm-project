@@ -2156,37 +2156,22 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
-  // Given an OR instruction, check to see if this is a bswap.
   if (Instruction *BSwap = MatchBSwap(I))
     return BSwap;
 
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  {
-    Value *A;
-    const APInt *C;
-    // (X^C)|Y -> (X|Y)^C iff Y&C == 0
-    if (match(Op0, m_OneUse(m_Xor(m_Value(A), m_APInt(C)))) &&
-        MaskedValueIsZero(Op1, *C, 0, &I)) {
-      Value *NOr = Builder.CreateOr(A, Op1);
-      NOr->takeName(Op0);
-      return BinaryOperator::CreateXor(NOr,
-                                       ConstantInt::get(NOr->getType(), *C));
-    }
-
-    // Y|(X^C) -> (X|Y)^C iff Y&C == 0
-    if (match(Op1, m_OneUse(m_Xor(m_Value(A), m_APInt(C)))) &&
-        MaskedValueIsZero(Op0, *C, 0, &I)) {
-      Value *NOr = Builder.CreateOr(A, Op0);
-      NOr->takeName(Op0);
-      return BinaryOperator::CreateXor(NOr,
-                                       ConstantInt::get(NOr->getType(), *C));
-    }
+  Value *X, *Y;
+  const APInt *CV;
+  if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
+      !CV->isAllOnesValue() && MaskedValueIsZero(Y, *CV, 0, &I)) {
+    // (X ^ C) | Y -> (X | Y) ^ C iff Y & C == 0
+    // The check for a 'not' op is for efficiency (if Y is known zero --> ~X).
+    Value *Or = Builder.CreateOr(X, Y);
+    return BinaryOperator::CreateXor(Or, ConstantInt::get(I.getType(), *CV));
   }
 
-  Value *A, *B;
-
   // (A & C)|(B & D)
-  Value *C = nullptr, *D = nullptr;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
     ConstantInt *C1 = dyn_cast<ConstantInt>(C);
@@ -2378,12 +2363,12 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   // be simplified by a later pass either, so we try swapping the inner/outer
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
-  ConstantInt *C1;
+  ConstantInt *CI;
   if (Op0->hasOneUse() && !isa<ConstantInt>(Op1) &&
-      match(Op0, m_Or(m_Value(A), m_ConstantInt(C1)))) {
+      match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     Value *Inner = Builder.CreateOr(A, Op1);
     Inner->takeName(Op0);
-    return BinaryOperator::CreateOr(Inner, C1);
+    return BinaryOperator::CreateOr(Inner, CI);
   }
 
   // Change (or (bool?A:B),(bool?C:D)) --> (bool?(or A,C):(or B,D))

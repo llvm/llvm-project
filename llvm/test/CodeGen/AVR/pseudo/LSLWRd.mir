@@ -15,8 +15,8 @@ body: |
 
     ; CHECK-LABEL: test
 
-    ; CHECK:      $r14 = LSLRd $r14, implicit-def $sreg
-    ; CHECK-NEXT: $r15 = ROLRd $r15, implicit-def $sreg, implicit killed $sreg
+    ; CHECK:      $r14 = ADDRdRr $r14, $r14, implicit-def $sreg
+    ; CHECK-NEXT: $r15 = ADCRdRr $r15, $r15, implicit-def $sreg, implicit killed $sreg
 
     $r15r14 = LSLWRd $r15r14, implicit-def $sreg
 ...
