@@ -410,7 +410,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName,
                                     Objects.first->getFileName(), Session)) {
         Modules.insert(
             std::make_pair(ModuleName, std::unique_ptr<SymbolizableModule>()));
-        return std::move(Err);
+        // Return along the PDB filename to provide more context
+        return createFileError(PDBFileName, std::move(Err));
       }
       Context.reset(new PDBContext(*CoffObject, std::move(Session)));
     }

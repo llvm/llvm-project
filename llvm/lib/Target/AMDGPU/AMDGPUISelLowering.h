@@ -41,8 +41,6 @@ public:
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
 protected:
-  AMDGPUAS AMDGPUASI;
-
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   /// Split a vector store into multiple scalar stores.
@@ -305,10 +303,6 @@ public:
   /// type of implicit parameter.
   uint32_t getImplicitParameterOffset(const MachineFunction &MF,
                                       const ImplicitParameter Param) const;
-
-  AMDGPUAS getAMDGPUAS() const {
-    return AMDGPUASI;
-  }
 
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;

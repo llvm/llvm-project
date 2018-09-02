@@ -72,14 +72,12 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Subtarget - Keep a pointer to the AMDGPU Subtarget around so that we can
   // make the right decision when generating code for different targets.
   const GCNSubtarget *Subtarget;
-  AMDGPUAS AMDGPUASI;
   bool EnableLateStructurizeCFG;
 
 public:
   explicit AMDGPUDAGToDAGISel(TargetMachine *TM = nullptr,
                               CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
     : SelectionDAGISel(*TM, OptLevel) {
-    AMDGPUASI = AMDGPU::getAMDGPUAS(*TM);
     EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
   }
   ~AMDGPUDAGToDAGISel() override = default;
@@ -222,7 +220,6 @@ protected:
 
 class R600DAGToDAGISel : public AMDGPUDAGToDAGISel {
   const R600Subtarget *Subtarget;
-  AMDGPUAS AMDGPUASI;
 
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
   bool SelectGlobalValueConstantOffset(SDValue Addr, SDValue& IntPtr);
@@ -230,9 +227,7 @@ class R600DAGToDAGISel : public AMDGPUDAGToDAGISel {
                                        SDValue& Offset);
 public:
   explicit R600DAGToDAGISel(TargetMachine *TM, CodeGenOpt::Level OptLevel) :
-      AMDGPUDAGToDAGISel(TM, OptLevel) {
-    AMDGPUASI = AMDGPU::getAMDGPUAS(*TM);
-      }
+      AMDGPUDAGToDAGISel(TM, OptLevel) {}
 
   void Select(SDNode *N) override;
 
@@ -348,7 +343,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 }
 
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
-  if (cast<MemSDNode>(N)->getAddressSpace() != AMDGPUASI.LOCAL_ADDRESS ||
+  if (cast<MemSDNode>(N)->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS ||
       !Subtarget->ldsRequiresM0Init())
     return N;
 
@@ -1725,7 +1720,7 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
   MemSDNode *Mem = cast<MemSDNode>(N);
   unsigned AS = Mem->getAddressSpace();
-  if (AS == AMDGPUASI.FLAT_ADDRESS) {
+  if (AS == AMDGPUAS::FLAT_ADDRESS) {
     SelectCode(N);
     return;
   }
@@ -2108,10 +2103,10 @@ bool R600DAGToDAGISel::isConstantLoad(const MemSDNode *N, int CbId) const {
   if (!N->readMem())
     return false;
   if (CbId == -1)
-    return N->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-           N->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT;
+    return N->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+           N->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
 
-  return N->getAddressSpace() == AMDGPUASI.CONSTANT_BUFFER_0 + CbId;
+  return N->getAddressSpace() == AMDGPUAS::CONSTANT_BUFFER_0 + CbId;
 }
 
 bool R600DAGToDAGISel::SelectGlobalValueConstantOffset(SDValue Addr,

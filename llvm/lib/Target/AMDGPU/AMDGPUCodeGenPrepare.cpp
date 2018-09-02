@@ -63,7 +63,6 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   LegacyDivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
-  AMDGPUAS AMDGPUASI;
 
   /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
@@ -799,8 +798,8 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
   if (!WidenLoads)
     return false;
 
-  if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-       I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
+  if ((I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+       I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
@@ -900,7 +899,6 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   DA = &getAnalysis<LegacyDivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
-  AMDGPUASI = TM.getAMDGPUAS();
 
   bool MadeChange = false;
 

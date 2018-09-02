@@ -53,7 +53,7 @@ const std::error_category &obj2yaml_category() {
 
 char Obj2YamlError::ID = 0;
 
-void Obj2YamlError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
+void Obj2YamlError::log(raw_ostream &OS) const { OS << ErrMsg; }
 
 std::error_code Obj2YamlError::convertToErrorCode() const {
   return std::error_code(static_cast<int>(Code), obj2yaml_category());

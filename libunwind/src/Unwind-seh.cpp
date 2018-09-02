@@ -164,17 +164,22 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     // This should never happen in phase 1.
     if (!IS_UNWINDING(ms_exc->ExceptionFlags))
       _LIBUNWIND_ABORT("Personality installed context during phase 1!");
-    exc->private_[2] = disp->TargetIp;
 #ifdef __x86_64__
+    exc->private_[2] = disp->TargetIp;
     unw_get_reg(&cursor, UNW_X86_64_RAX, &retval);
     unw_get_reg(&cursor, UNW_X86_64_RDX, &exc->private_[3]);
 #elif defined(__arm__)
+    exc->private_[2] = disp->TargetPc;
     unw_get_reg(&cursor, UNW_ARM_R0, &retval);
     unw_get_reg(&cursor, UNW_ARM_R1, &exc->private_[3]);
 #endif
     unw_get_reg(&cursor, UNW_REG_IP, &target);
     ms_exc->ExceptionCode = STATUS_GCC_UNWIND;
+#ifdef __x86_64__
     ms_exc->ExceptionInformation[2] = disp->TargetIp;
+#elif defined(__arm__)
+    ms_exc->ExceptionInformation[2] = disp->TargetPc;
+#endif
     ms_exc->ExceptionInformation[3] = exc->private_[3];
     // Give NTRTL some scratch space to keep track of the collided unwind.
     // Don't use the one that was passed in; we don't want to overwrite the

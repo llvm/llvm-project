@@ -66,40 +66,9 @@ template <> struct MappingTraits<SymbolInfo> {
   }
 };
 
-template <> struct MappingTraits<Symbol::Details> {
-  static void mapping(IO &io, Symbol::Details &Detail) {
-    io.mapOptional("Documentation", Detail.Documentation);
-    io.mapOptional("ReturnType", Detail.ReturnType);
-    io.mapOptional("IncludeHeader", Detail.IncludeHeader);
-  }
-};
-
-// A YamlIO normalizer for fields of type "const T*" allocated on an arena.
-// Normalizes to Optional<T>, so traits should be provided for T.
-template <typename T> struct ArenaPtr {
-  ArenaPtr(IO &) {}
-  ArenaPtr(IO &, const T *D) {
-    if (D)
-      Opt = *D;
-  }
-
-  const T *denormalize(IO &IO) {
-    assert(IO.getContext() && "Expecting an arena (as context) to allocate "
-                              "data for read symbols.");
-    if (!Opt)
-      return nullptr;
-    return new (*static_cast<llvm::BumpPtrAllocator *>(IO.getContext()))
-        T(std::move(*Opt)); // Allocate a copy of Opt on the arena.
-  }
-
-  llvm::Optional<T> Opt;
-};
-
 template <> struct MappingTraits<Symbol> {
   static void mapping(IO &IO, Symbol &Sym) {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
-    MappingNormalization<ArenaPtr<Symbol::Details>, const Symbol::Details *>
-        NDetail(IO, Sym.Detail);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -112,7 +81,9 @@ template <> struct MappingTraits<Symbol> {
                    false);
     IO.mapOptional("Signature", Sym.Signature);
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
-    IO.mapOptional("Detail", NDetail->Opt);
+    IO.mapOptional("Documentation", Sym.Documentation);
+    IO.mapOptional("ReturnType", Sym.ReturnType);
+    IO.mapOptional("IncludeHeader", Sym.IncludeHeader);
   }
 };
 
@@ -169,9 +140,7 @@ namespace clang {
 namespace clangd {
 
 SymbolSlab symbolsFromYAML(llvm::StringRef YAMLContent) {
-  // Store data of pointer fields (excl. `StringRef`) like `Detail`.
-  llvm::BumpPtrAllocator Arena;
-  llvm::yaml::Input Yin(YAMLContent, &Arena);
+  llvm::yaml::Input Yin(YAMLContent);
   std::vector<Symbol> S;
   Yin >> S;
 
@@ -181,9 +150,7 @@ SymbolSlab symbolsFromYAML(llvm::StringRef YAMLContent) {
   return std::move(Syms).build();
 }
 
-Symbol SymbolFromYAML(llvm::yaml::Input &Input, llvm::BumpPtrAllocator &Arena) {
-  // We could grab Arena out of Input, but it'd be a huge hazard for callers.
-  assert(Input.getContext() == &Arena);
+Symbol SymbolFromYAML(llvm::yaml::Input &Input) {
   Symbol S;
   Input >> S;
   return S;

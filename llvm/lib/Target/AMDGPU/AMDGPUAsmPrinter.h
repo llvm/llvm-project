@@ -143,7 +143,6 @@ public:
 protected:
   mutable std::vector<std::string> DisasmLines, HexLines;
   mutable size_t DisasmLineMaxLen;
-  AMDGPUAS AMDGPUASI;
 };
 
 } // end namespace llvm

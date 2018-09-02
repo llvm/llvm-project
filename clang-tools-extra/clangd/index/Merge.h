@@ -18,7 +18,7 @@ namespace clangd {
 // Merge symbols L and R, preferring data from L in case of conflict.
 // The two symbols must have the same ID.
 // Returned symbol may contain data owned by either source.
-Symbol mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch);
+Symbol mergeSymbol(const Symbol &L, const Symbol &R);
 
 // mergedIndex returns a composite index based on two provided Indexes:
 //  - the Dynamic index covers few files, but is relatively up-to-date.

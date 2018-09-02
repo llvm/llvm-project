@@ -139,7 +139,10 @@ public:
   JITDylib &getTargetJITDylib() const { return JD; }
 
   /// Returns the symbol flags map for this responsibility instance.
-  SymbolFlagsMap getSymbols() { return SymbolFlags; }
+  /// Note: The returned flags may have transient flags (Lazy, Materializing)
+  /// set. These should be stripped with JITSymbolFlags::stripTransientFlags
+  /// before using.
+  const SymbolFlagsMap &getSymbols() { return SymbolFlags; }
 
   /// Returns the names of any symbols covered by this
   /// MaterializationResponsibility object that have queries pending. This

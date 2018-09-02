@@ -420,8 +420,8 @@ void ARMV7PILongThunk::writeLong(uint8_t *Buf) {
   const uint8_t Data[] = {
       0xf0, 0xcf, 0x0f, 0xe3, // P:  movw ip,:lower16:S - (P + (L1-P) + 8)
       0x00, 0xc0, 0x40, 0xe3, //     movt ip,:upper16:S - (P + (L1-P) + 8)
-      0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
-      0x1c, 0xff, 0x2f, 0xe1, //     bx r12
+      0x0f, 0xc0, 0x8c, 0xe0, // L1: add  ip, ip, pc
+      0x1c, 0xff, 0x2f, 0xe1, //     bx   ip
   };
   uint64_t S = getARMThunkDestVA(Destination);
   uint64_t P = getThunkTargetSym()->getVA();
@@ -441,8 +441,8 @@ void ThumbV7PILongThunk::writeLong(uint8_t *Buf) {
   const uint8_t Data[] = {
       0x4f, 0xf6, 0xf4, 0x7c, // P:  movw ip,:lower16:S - (P + (L1-P) + 4)
       0xc0, 0xf2, 0x00, 0x0c, //     movt ip,:upper16:S - (P + (L1-P) + 4)
-      0xfc, 0x44,             // L1: add  r12, pc
-      0x60, 0x47,             //     bx   r12
+      0xfc, 0x44,             // L1: add  ip, pc
+      0x60, 0x47,             //     bx   ip
   };
   uint64_t S = getARMThunkDestVA(Destination);
   uint64_t P = getThunkTargetSym()->getVA() & ~0x1;

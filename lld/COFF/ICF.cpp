@@ -80,7 +80,7 @@ private:
 bool ICF::isEligible(SectionChunk *C) {
   // Non-comdat chunks, dead chunks, and writable chunks are not elegible.
   bool Writable = C->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
-  if (!C->isCOMDAT() || !C->isLive() || Writable)
+  if (!C->isCOMDAT() || !C->Live || Writable)
     return false;
 
   // Code sections are eligible.

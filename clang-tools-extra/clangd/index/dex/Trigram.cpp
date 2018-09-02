@@ -87,10 +87,10 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
     if (Roles[I] != Head && Roles[I] != Tail)
       continue;
     for (const unsigned J : Next[I]) {
-      if (!J)
+      if (J == 0)
         continue;
       for (const unsigned K : Next[J]) {
-        if (!K)
+        if (K == 0)
           continue;
         add({{LowercaseIdentifier[I], LowercaseIdentifier[J],
               LowercaseIdentifier[K]}});
@@ -113,8 +113,8 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
   // Additional pass is necessary to count valid identifier characters.
   // Depending on that, this function might return incomplete trigram.
   unsigned ValidSymbolsCount = 0;
-  for (size_t I = 0; I < Roles.size(); ++I)
-    if (Roles[I] == Head || Roles[I] == Tail)
+  for (const auto Role : Roles)
+    if (Role == Head || Role == Tail)
       ++ValidSymbolsCount;
 
   std::string LowercaseQuery = Query.lower();

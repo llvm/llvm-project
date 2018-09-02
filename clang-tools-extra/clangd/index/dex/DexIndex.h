@@ -41,7 +41,7 @@ class DexIndex : public SymbolIndex {
 public:
   /// \brief (Re-)Build index for `Symbols`. All symbol pointers must remain
   /// accessible as long as `Symbols` is kept alive.
-  void build(std::shared_ptr<std::vector<const Symbol *>> Symbols);
+  void build(std::shared_ptr<std::vector<const Symbol *>> Syms);
 
   /// \brief Build index from a symbol slab.
   static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab);

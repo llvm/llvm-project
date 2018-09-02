@@ -12,7 +12,6 @@
 #include "llvm/ADT/BitVector.h"
 
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"

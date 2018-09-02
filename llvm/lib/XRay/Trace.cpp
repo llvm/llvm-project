@@ -31,7 +31,8 @@ using XRayRecordStorage =
 // record it is.
 constexpr auto kFDRMetadataBodySize = 15;
 
-Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
+Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
+                         XRayFileHeader &FileHeader,
                          std::vector<XRayRecord> &Records) {
   if (Data.size() < 32)
     return make_error<StringError>(
@@ -43,7 +44,7 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
         "Invalid-sized XRay data.",
         std::make_error_code(std::errc::invalid_argument));
 
-  DataExtractor Reader(Data, true, 8);
+  DataExtractor Reader(Data, IsLittleEndian, 8);
   uint32_t OffsetPtr = 0;
   auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
   if (!FileHeaderOrError)
@@ -703,17 +704,16 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
 /// ThreadBuffer: BufferExtents NewBuffer WallClockTime Pid NewCPUId
 ///               FunctionSequence
 /// EOB: *deprecated*
-Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
-                 std::vector<XRayRecord> &Records) {
+Error loadFDRLog(StringRef Data, bool IsLittleEndian,
+                 XRayFileHeader &FileHeader, std::vector<XRayRecord> &Records) {
 
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
         std::make_error_code(std::errc::invalid_argument));
 
-  DataExtractor Reader(Data, true, 8);
+  DataExtractor Reader(Data, IsLittleEndian, 8);
   uint32_t OffsetPtr = 0;
-
   auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
   if (!FileHeaderOrError)
     return FileHeaderOrError.takeError();
@@ -722,7 +722,7 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
   uint64_t BufferSize = 0;
   {
     StringRef ExtraDataRef(FileHeader.FreeFormData, 16);
-    DataExtractor ExtraDataExtractor(ExtraDataRef, true, 8);
+    DataExtractor ExtraDataExtractor(ExtraDataRef, IsLittleEndian, 8);
     uint32_t ExtraDataOffset = 0;
     BufferSize = ExtraDataExtractor.getU64(&ExtraDataOffset);
   }
@@ -862,8 +862,15 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
         Twine("Cannot read log from '") + Filename + "'", EC);
   }
   auto Data = StringRef(MappedFile.data(), MappedFile.size());
-  DataExtractor DE(Data, true, 8);
-  return loadTrace(DE, Sort);
+
+  // TODO: Lift the endianness and implementation selection here.
+  DataExtractor LittleEndianDE(Data, true, 8);
+  auto TraceOrError = loadTrace(LittleEndianDE, Sort);
+  if (!TraceOrError) {
+    DataExtractor BigEndianDE(Data, false, 8);
+    TraceOrError = loadTrace(BigEndianDE, Sort);
+  }
+  return TraceOrError;
 }
 
 Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
@@ -881,7 +888,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   //
   // Only if we can't load either the binary or the YAML format will we yield an
   // error.
-  DataExtractor HeaderExtractor(DE.getData(), true, 8);
+  DataExtractor HeaderExtractor(DE.getData(), DE.isLittleEndian(), 8);
   uint32_t OffsetPtr = 0;
   uint16_t Version = HeaderExtractor.getU16(&OffsetPtr);
   uint16_t Type = HeaderExtractor.getU16(&OffsetPtr);
@@ -892,7 +899,8 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   switch (Type) {
   case NAIVE_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadNaiveFormatLog(DE.getData(), T.FileHeader, T.Records))
+      if (auto E = loadNaiveFormatLog(DE.getData(), DE.isLittleEndian(),
+                                      T.FileHeader, T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(
@@ -903,7 +911,8 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     break;
   case FLIGHT_DATA_RECORDER_FORMAT:
     if (Version == 1 || Version == 2 || Version == 3) {
-      if (auto E = loadFDRLog(DE.getData(), T.FileHeader, T.Records))
+      if (auto E = loadFDRLog(DE.getData(), DE.isLittleEndian(), T.FileHeader,
+                              T.Records))
         return std::move(E);
     } else {
       return make_error<StringError>(
