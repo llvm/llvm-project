@@ -170,8 +170,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
     if (!StubSym.getPointer()) {
       assert(MO.isGlobal() && "Extern symbol not handled yet");
       StubSym = MachineModuleInfoImpl::StubValueTy(
-          AsmPrinter.getSymbol(MO.getGlobal()),
-          !MO.getGlobal()->hasInternalLinkage());
+          AsmPrinter.getSymbol(MO.getGlobal()), true);
     }
     break;
   }

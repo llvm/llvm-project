@@ -1,6 +1,6 @@
 ; RUN: not llvm-readobj -codeview-merged-types %S/Inputs/codeview-cycle.obj 2>&1 | FileCheck %s
 
-; CHECK: Error{{.*}} input type graph contains cycles
+; CHECK: Error{{.*}} Input type graph contains cycles
 
 ; To reproduce codeview-cycle.obj:
 ; $ cat codeview-cycle.asm

@@ -3,9 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -D %t2 | FileCheck %s
+# RUN: llvm-objdump -D %t2 | FileCheck -check-prefix=CHECK-LE %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
+# RUN: llvm-objdump -D %t2 | FileCheck %s
 # RUN: llvm-objdump -D %t2 | FileCheck -check-prefix=CHECK-BE %s
 
 .text
@@ -36,14 +38,11 @@ _start:
 // CHECK-NEXT: 10010004:       {{.*}}     addi 4, 4, 0
 // CHECK-NEXT: 10010008:       {{.*}}     lis 5, 2
 // CHECK-NEXT: 1001000c:       {{.*}}     addi 5, 5, -32768
-// CHECK: Disassembly of section .got:
-// CHECK-NEXT: .got:
-// CHECK-NEXT: 10020000:       00 80 02 10
 
-// CHECK-BE: 10010000:       {{.*}}     lis 4, 4097
-// CHECK-BE-NEXT: 10010004:       {{.*}}     addi 4, 4, 0
-// CHECK-BE-NEXT: 10010008:       {{.*}}     lis 5, 2
-// CHECK-BE-NEXT: 1001000c:       {{.*}}     addi 5, 5, -32768
+// CHECK-LE: Disassembly of section .got:
+// CHECK-LE-NEXT: .got:
+// CHECK-LE-NEXT: 10020000:       00 80 02 10
+
 // CHECK-BE: Disassembly of section .got:
 // CHECK-BE-NEXT: .got:
 // CHECK-BE-NEXT: 10020000:       00 00 00 00 {{.*}}

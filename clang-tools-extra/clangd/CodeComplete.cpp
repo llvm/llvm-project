@@ -285,8 +285,7 @@ struct CompletionCandidate {
   }
 
   llvm::Optional<llvm::StringRef> headerToInsertIfNotPresent() const {
-    if (!IndexResult || !IndexResult->Detail ||
-        IndexResult->Detail->IncludeHeader.empty())
+    if (!IndexResult || IndexResult->IncludeHeader.empty())
       return llvm::None;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
@@ -296,7 +295,7 @@ struct CompletionCandidate {
         if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
           return llvm::None;
     }
-    return IndexResult->Detail->IncludeHeader;
+    return IndexResult->IncludeHeader;
   }
 
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
@@ -382,7 +381,7 @@ struct CodeCompletionBuilder {
         log("Failed to generate include insertion edits for adding header "
             "(FileURI='{0}', IncludeHeader='{1}') into {2}",
             C.IndexResult->CanonicalDeclaration.FileURI,
-            C.IndexResult->Detail->IncludeHeader, FileName);
+            C.IndexResult->IncludeHeader, FileName);
     }
   }
 
@@ -397,12 +396,11 @@ struct CodeCompletionBuilder {
     } else if (C.IndexResult) {
       S.Signature = C.IndexResult->Signature;
       S.SnippetSuffix = C.IndexResult->CompletionSnippetSuffix;
-      if (auto *D = C.IndexResult->Detail)
-        S.ReturnType = D->ReturnType;
+      S.ReturnType = C.IndexResult->ReturnType;
     }
     if (ExtractDocumentation && Completion.Documentation.empty()) {
-      if (C.IndexResult && C.IndexResult->Detail)
-        Completion.Documentation = C.IndexResult->Detail->Documentation;
+      if (C.IndexResult)
+        Completion.Documentation = C.IndexResult->Documentation;
       else if (C.SemaResult)
         Completion.Documentation = getDocComment(ASTCtx, *C.SemaResult,
                                                  /*CommentsFromHeader=*/false);
@@ -846,9 +844,8 @@ public:
         IndexRequest.IDs.insert(*S.IDForDoc);
       }
       Index->lookup(IndexRequest, [&](const Symbol &S) {
-        if (!S.Detail || S.Detail->Documentation.empty())
-          return;
-        FetchedDocs[S.ID] = S.Detail->Documentation;
+        if (!S.Documentation.empty())
+          FetchedDocs[S.ID] = S.Documentation;
       });
       log("SigHelp: requested docs for {0} symbols from the index, got {1} "
           "symbols with non-empty docs in the response",

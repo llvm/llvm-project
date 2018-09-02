@@ -66,7 +66,7 @@ struct SourceParams {
 // This object should be reused, it memoizes intermediate computations.
 class FileDistance {
 public:
-  static constexpr unsigned kUnreachable = std::numeric_limits<unsigned>::max();
+  static constexpr unsigned Unreachable = std::numeric_limits<unsigned>::max();
 
   FileDistance(llvm::StringMap<SourceParams> Sources,
                const FileDistanceOptions &Opts = {});

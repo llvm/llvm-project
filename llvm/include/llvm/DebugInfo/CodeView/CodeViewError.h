@@ -24,23 +24,32 @@ enum class cv_error_code {
   no_records,
   unknown_member_record,
 };
+} // namespace codeview
+} // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::codeview::cv_error_code> : std::true_type {};
+} // namespace std
+
+namespace llvm {
+namespace codeview {
+const std::error_category &CVErrorCategory();
+
+inline std::error_code make_error_code(cv_error_code E) {
+  return std::error_code(static_cast<int>(E), CVErrorCategory());
+}
 
 /// Base class for errors originating when parsing raw PDB files
-class CodeViewError : public ErrorInfo<CodeViewError> {
+class CodeViewError : public ErrorInfo<CodeViewError, StringError> {
 public:
+  using ErrorInfo<CodeViewError,
+                  StringError>::ErrorInfo; // inherit constructors
+  CodeViewError(const Twine &S) : ErrorInfo(S, cv_error_code::unspecified) {}
   static char ID;
-  CodeViewError(cv_error_code C);
-  CodeViewError(const std::string &Context);
-  CodeViewError(cv_error_code C, const std::string &Context);
-
-  void log(raw_ostream &OS) const override;
-  const std::string &getErrorMessage() const;
-  std::error_code convertToErrorCode() const override;
-
-private:
-  std::string ErrMsg;
-  cv_error_code Code;
 };
-}
-}
+
+} // namespace codeview
+} // namespace llvm
+
 #endif

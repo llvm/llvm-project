@@ -5081,6 +5081,7 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace ARMII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_COFFSTUB, "arm-coffstub"},
       {MO_GOT, "arm-got"},
       {MO_SBREL, "arm-sbrel"},
       {MO_DLLIMPORT, "arm-dllimport"},

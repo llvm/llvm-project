@@ -46,7 +46,6 @@
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -681,7 +680,7 @@ static void yamlToPdb(StringRef Path) {
                                    /*RequiresNullTerminator=*/false);
 
   if (ErrorOrBuffer.getError()) {
-    ExitOnErr(make_error<GenericError>(generic_error_code::invalid_path, Path));
+    ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();

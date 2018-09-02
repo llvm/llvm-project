@@ -557,6 +557,9 @@ void CGDebugInfo::CreateCompileUnit() {
   case codegenoptions::DebugLineTablesOnly:
     EmissionKind = llvm::DICompileUnit::LineTablesOnly;
     break;
+  case codegenoptions::DebugDirectivesOnly:
+    EmissionKind = llvm::DICompileUnit::DebugDirectivesOnly;
+    break;
   case codegenoptions::LimitedDebugInfo:
   case codegenoptions::FullDebugInfo:
     EmissionKind = llvm::DICompileUnit::FullDebug;

@@ -1149,43 +1149,32 @@ static It fastUpperBound(It First, It Last, const T &Value, Compare Comp) {
   return Comp(Value, *First) ? First : First + 1;
 }
 
-// Do binary search to get a section piece at a given input offset.
-static SectionPiece *findSectionPiece(MergeInputSection *Sec, uint64_t Offset) {
-  if (Sec->Data.size() <= Offset)
-    fatal(toString(Sec) + ": entry is past the end of the section");
-
-  // Find the element this offset points to.
-  auto I = fastUpperBound(
-      Sec->Pieces.begin(), Sec->Pieces.end(), Offset,
-      [](const uint64_t &A, const SectionPiece &B) { return A < B.InputOff; });
-  --I;
-  return &*I;
-}
-
 SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
+  if (this->Data.size() <= Offset)
+    fatal(toString(this) + ": offset is outside the section");
+
   // Find a piece starting at a given offset.
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
     return &Pieces[It->second];
 
   // If Offset is not at beginning of a section piece, it is not in the map.
-  // In that case we need to search from the original section piece vector.
-  return findSectionPiece(this, Offset);
+  // In that case we need to  do a binary search of the original section piece vector.
+  auto I = fastUpperBound(
+      Pieces.begin(), Pieces.end(), Offset,
+      [](const uint64_t &A, const SectionPiece &B) { return A < B.InputOff; });
+  --I;
+  return &*I;
 }
 
 // Returns the offset in an output section for a given input offset.
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
 uint64_t MergeInputSection::getParentOffset(uint64_t Offset) const {
-  // Find a string starting at a given offset.
-  auto It = OffsetMap.find(Offset);
-  if (It != OffsetMap.end())
-    return Pieces[It->second].OutputOff;
-
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
   const SectionPiece &Piece =
-      *findSectionPiece(const_cast<MergeInputSection *>(this), Offset);
+      *(const_cast<MergeInputSection *>(this)->getSectionPiece (Offset));
   uint64_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
 }

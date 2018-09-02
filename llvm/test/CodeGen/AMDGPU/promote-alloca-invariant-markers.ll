@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn---amdgiz -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mtriple=amdgcn-- -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 target datalayout = "A5"
 
 declare {}* @llvm.invariant.start.p5i8(i64, i8 addrspace(5)* nocapture) #0
