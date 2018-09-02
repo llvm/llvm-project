@@ -354,6 +354,7 @@ bool Mangled::DemangleWithRichManglingInfo(
     }
   }
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 //----------------------------------------------------------------------

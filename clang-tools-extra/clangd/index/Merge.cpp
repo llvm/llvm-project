@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
+
 #include "Merge.h"
 #include "../Logger.h"
 #include "llvm/ADT/STLExtras.h"
@@ -42,13 +44,12 @@ class MergedIndex : public SymbolIndex {
      SymbolSlab Dyn = std::move(DynB).build();
 
      DenseSet<SymbolID> SeenDynamicSymbols;
-     Symbol::Details Scratch;
      More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
        auto DynS = Dyn.find(S.ID);
        if (DynS == Dyn.end())
          return Callback(S);
        SeenDynamicSymbols.insert(S.ID);
-       Callback(mergeSymbol(*DynS, S, &Scratch));
+       Callback(mergeSymbol(*DynS, S));
      });
      for (const Symbol &S : Dyn)
        if (!SeenDynamicSymbols.count(S.ID))
@@ -64,14 +65,13 @@ class MergedIndex : public SymbolIndex {
     Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
 
     auto RemainingIDs = Req.IDs;
-    Symbol::Details Scratch;
     Static->lookup(Req, [&](const Symbol &S) {
       const Symbol *Sym = B.find(S.ID);
       RemainingIDs.erase(S.ID);
       if (!Sym)
         Callback(S);
       else
-        Callback(mergeSymbol(*Sym, S, &Scratch));
+        Callback(mergeSymbol(*Sym, S));
     });
     for (const auto &ID : RemainingIDs)
       if (const Symbol *Sym = B.find(ID))
@@ -81,7 +81,26 @@ class MergedIndex : public SymbolIndex {
   void findOccurrences(const OccurrencesRequest &Req,
                        llvm::function_ref<void(const SymbolOccurrence &)>
                            Callback) const override {
-    log("findOccurrences is not implemented.");
+    // We don't want duplicated occurrences from the static/dynamic indexes,
+    // and we can't reliably duplicate them because occurrence offsets may
+    // differ slightly.
+    // We consider the dynamic index authoritative and report all its
+    // occurrences, and only report static index occurrences from other files.
+    //
+    // FIXME: The heuristic fails if the dynamic index contains a file, but all
+    // occurrences were removed (we will report stale ones from the static
+    // index). Ultimately we should explicit check which index has the file
+    // instead.
+    std::set<std::string> DynamicIndexFileURIs;
+    Dynamic->findOccurrences(Req, [&](const SymbolOccurrence &O) {
+      DynamicIndexFileURIs.insert(O.Location.FileURI);
+      Callback(O);
+    });
+    Static->findOccurrences(Req, [&](const SymbolOccurrence &O) {
+      if (DynamicIndexFileURIs.count(O.Location.FileURI))
+        return;
+      Callback(O);
+    });
   }
 
   size_t estimateMemoryUsage() const override {
@@ -93,8 +112,7 @@ private:
 };
 } // namespace
 
-Symbol
-mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
+Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   assert(L.ID == R.ID);
   // We prefer information from TUs that saw the definition.
   // Classes: this is the def itself. Functions: hopefully the header decl.
@@ -114,21 +132,12 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
     S.Signature = O.Signature;
   if (S.CompletionSnippetSuffix == "")
     S.CompletionSnippetSuffix = O.CompletionSnippetSuffix;
-
-  if (O.Detail) {
-    if (S.Detail) {
-      // Copy into scratch space so we can merge.
-      *Scratch = *S.Detail;
-      if (Scratch->Documentation == "")
-        Scratch->Documentation = O.Detail->Documentation;
-      if (Scratch->ReturnType == "")
-        Scratch->ReturnType = O.Detail->ReturnType;
-      if (Scratch->IncludeHeader == "")
-        Scratch->IncludeHeader = O.Detail->IncludeHeader;
-      S.Detail = Scratch;
-    } else
-      S.Detail = O.Detail;
-  }
+  if (S.Documentation == "")
+    S.Documentation = O.Documentation;
+  if (S.ReturnType == "")
+    S.ReturnType = O.ReturnType;
+  if (S.IncludeHeader == "")
+    S.IncludeHeader = O.IncludeHeader;
 
   S.Origin |= O.Origin | SymbolOrigin::Merge;
   return S;

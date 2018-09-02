@@ -33,13 +33,12 @@ class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
   friend AAResultBase<AMDGPUAAResult>;
 
   const DataLayout &DL;
-  AMDGPUAS AS;
 
 public:
   explicit AMDGPUAAResult(const DataLayout &DL, Triple T) : AAResultBase(),
-    DL(DL), AS(AMDGPU::getAMDGPUAS(T)), ASAliasRules(AS, T.getArch()) {}
+    DL(DL), ASAliasRules(T.getArch()) {}
   AMDGPUAAResult(AMDGPUAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), AS(Arg.AS),
+      : AAResultBase(std::move(Arg)), DL(Arg.DL),
         ASAliasRules(Arg.ASAliasRules){}
 
   /// Handle invalidation events from the new pass manager.
@@ -56,13 +55,12 @@ private:
 
   class ASAliasRulesTy {
   public:
-    ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Arch_);
+    ASAliasRulesTy(Triple::ArchType Arch_);
 
     AliasResult getAliasResult(unsigned AS1, unsigned AS2) const;
 
   private:
     Triple::ArchType Arch;
-    AMDGPUAS AS;
     const AliasResult (*ASAliasRules)[7][7];
   } ASAliasRules;
 };

@@ -18,41 +18,16 @@ namespace xray {
 
 namespace {
 
-struct alignas(32) FileHeader {
-  uint16_t Version;
-  uint16_t Type;
-  bool ConstantTSC : 1;
-  bool NonstopTSC : 1;
-  alignas(8) uint64_t CycleFrequency;
-  char FreeForm[16];
-};
-
-struct MetadataBlob {
-  uint8_t Type : 1;
-  uint8_t RecordKind : 7;
-  char Data[15];
-};
-
-struct FunctionDeltaBlob {
-  uint8_t Type : 1;
-  uint8_t RecordKind : 3;
-  int FuncId : 28;
-  uint32_t TSCDelta;
-};
-
-template <size_t Index> struct IndexedMemcpy {
+template <size_t Index> struct IndexedWriter {
   template <
       class Tuple,
       typename std::enable_if<
           (Index <
            std::tuple_size<typename std::remove_reference<Tuple>::type>::value),
           int>::type = 0>
-  static void Copy(char *Dest, Tuple &&T) {
-    auto Next = static_cast<char *>(std::memcpy(
-                    Dest, reinterpret_cast<const char *>(&std::get<Index>(T)),
-                    sizeof(std::get<Index>(T)))) +
-                sizeof(std::get<Index>(T));
-    IndexedMemcpy<Index + 1>::Copy(Next, T);
+  static size_t write(support::endian::Writer &OS, Tuple &&T) {
+    OS.write(std::get<Index>(T));
+    return sizeof(std::get<Index>(T)) + IndexedWriter<Index + 1>::write(OS, T);
   }
 
   template <
@@ -61,35 +36,43 @@ template <size_t Index> struct IndexedMemcpy {
           (Index >=
            std::tuple_size<typename std::remove_reference<Tuple>::type>::value),
           int>::type = 0>
-  static void Copy(char *, Tuple &&) {}
+  static size_t write(support::endian::Writer &OS, Tuple &&) {
+    return 0;
+  }
 };
 
 template <uint8_t Kind, class... Values>
-Error writeMetadata(raw_ostream &OS, Values&&... Ds) {
-  MetadataBlob B;
-  B.Type = 1;
-  B.RecordKind = Kind;
-  std::memset(B.Data, 0, 15);
+Error writeMetadata(support::endian::Writer &OS, Values &&... Ds) {
+  uint8_t FirstByte = (Kind << 1) | uint8_t{0x01};
   auto T = std::make_tuple(std::forward<Values>(std::move(Ds))...);
-  IndexedMemcpy<0>::Copy(B.Data, T);
-  OS.write(reinterpret_cast<const char *>(&B), sizeof(MetadataBlob));
+  // Write in field order.
+  OS.write(FirstByte);
+  auto Bytes = IndexedWriter<0>::write(OS, T);
+  assert(Bytes <= 15 && "Must only ever write at most 16 byte metadata!");
+  // Pad out with appropriate numbers of zero's.
+  for (; Bytes < 15; ++Bytes)
+    OS.write('\0');
   return Error::success();
 }
 
 } // namespace
 
 FDRTraceWriter::FDRTraceWriter(raw_ostream &O, const XRayFileHeader &H)
-    : OS(O) {
+    : OS(O, support::endianness::native) {
   // We need to re-construct a header, by writing the fields we care about for
   // traces, in the format that the runtime would have written.
-  FileHeader Raw;
-  Raw.Version = H.Version;
-  Raw.Type = H.Type;
-  Raw.ConstantTSC = H.ConstantTSC;
-  Raw.NonstopTSC = H.NonstopTSC;
-  Raw.CycleFrequency = H.CycleFrequency;
-  memcpy(&Raw.FreeForm, H.FreeFormData, 16);
-  OS.write(reinterpret_cast<const char *>(&Raw), sizeof(XRayFileHeader));
+  uint32_t BitField =
+      (H.ConstantTSC ? 0x01 : 0x0) | (H.NonstopTSC ? 0x02 : 0x0);
+
+  // For endian-correctness, we need to write these fields in the order they
+  // appear and that we expect, instead of blasting bytes of the struct through.
+  OS.write(H.Version);
+  OS.write(H.Type);
+  OS.write(BitField);
+  OS.write(H.CycleFrequency);
+  ArrayRef<char> FreeFormBytes(H.FreeFormData,
+                               sizeof(XRayFileHeader::FreeFormData));
+  OS.write(FreeFormBytes);
 }
 
 FDRTraceWriter::~FDRTraceWriter() {}
@@ -113,7 +96,8 @@ Error FDRTraceWriter::visit(TSCWrapRecord &R) {
 Error FDRTraceWriter::visit(CustomEventRecord &R) {
   if (auto E = writeMetadata<5u>(OS, R.size(), R.tsc()))
     return E;
-  OS.write(R.data().data(), R.data().size());
+  ArrayRef<char> Bytes(R.data().data(), R.data().size());
+  OS.write(Bytes);
   return Error::success();
 }
 
@@ -134,14 +118,16 @@ Error FDRTraceWriter::visit(EndBufferRecord &R) {
 }
 
 Error FDRTraceWriter::visit(FunctionRecord &R) {
-  FunctionDeltaBlob B;
-  B.Type = 0;
-  B.RecordKind = static_cast<uint8_t>(R.recordType());
-  B.FuncId = R.functionId();
-  B.TSCDelta = R.delta();
-  OS.write(reinterpret_cast<const char *>(&B), sizeof(FunctionDeltaBlob));
+  // Write out the data in "field" order, to be endian-aware.
+  uint32_t TypeRecordFuncId = uint32_t{R.functionId() & ~uint32_t{0x0Fu << 28}};
+  TypeRecordFuncId <<= 3;
+  TypeRecordFuncId |= static_cast<uint32_t>(R.recordType());
+  TypeRecordFuncId <<= 1;
+  TypeRecordFuncId &= ~uint32_t{0x01};
+  OS.write(TypeRecordFuncId);
+  OS.write(R.delta());
   return Error::success();
-}
+} // namespace xray
 
 } // namespace xray
 } // namespace llvm

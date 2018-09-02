@@ -606,14 +606,14 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _msContext.R12 = r.getRegister(UNW_ARM_R12);
   _msContext.Sp = r.getRegister(UNW_ARM_SP);
   _msContext.Lr = r.getRegister(UNW_ARM_LR);
-  _msContext.Pc = r.getRegister(UNW_ARM_PC);
-  for (int r = UNW_ARM_D0; r <= UNW_ARM_D31; ++r) {
+  _msContext.Pc = r.getRegister(UNW_ARM_IP);
+  for (int i = UNW_ARM_D0; i <= UNW_ARM_D31; ++i) {
     union {
       uint64_t w;
       double d;
     } d;
-    d.d = r.getFloatRegister(r);
-    _msContext.D[r - UNW_ARM_D0] = d.w;
+    d.d = r.getFloatRegister(i);
+    _msContext.D[i - UNW_ARM_D0] = d.w;
   }
 #endif
 }
@@ -682,7 +682,7 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   case UNW_ARM_SP: return _msContext.Sp;
   case UNW_ARM_LR: return _msContext.Lr;
   case UNW_REG_IP:
-  case UNW_ARM_PC: return _msContext.Pc;
+  case UNW_ARM_IP: return _msContext.Pc;
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register");
@@ -728,7 +728,7 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   case UNW_ARM_SP: _msContext.Sp = value; break;
   case UNW_ARM_LR: _msContext.Lr = value; break;
   case UNW_REG_IP:
-  case UNW_ARM_PC: _msContext.Pc = value; break;
+  case UNW_ARM_IP: _msContext.Pc = value; break;
 #endif
   default:
     _LIBUNWIND_ABORT("unsupported register");
@@ -842,7 +842,7 @@ const char *UnwindCursor<A, R>::getRegisterName(int regNum) {
   case UNW_ARM_SP: return "sp";
   case UNW_ARM_LR: return "lr";
   case UNW_REG_IP:
-  case UNW_ARM_PC: return "pc";
+  case UNW_ARM_IP: return "pc";
   case UNW_ARM_S0: return "s0";
   case UNW_ARM_S1: return "s1";
   case UNW_ARM_S2: return "s2";

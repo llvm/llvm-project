@@ -10,7 +10,7 @@
 ; This can be expressed in a several ways in IR:
 ;   trunc + sext + icmp ne <- not canonical
 ;   shl   + ashr + icmp ne
-;   add          + icmp ult
+;   add          + icmp ult/ule
 ;   add          + icmp uge/ugt
 ; However only the simplest form (with two shifts) gets lowered best.
 
@@ -173,6 +173,20 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; CHECK-NEXT:    ret
   %tmp0 = add i64 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i64 %tmp0, -256 ; ~0U << 8
+  ret i1 %tmp1
+}
+
+; Slightly more canonical variant
+define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
+; CHECK-LABEL: add_ulecmp_i16_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w0, #128 // =128
+; CHECK-NEXT:    ubfx w8, w8, #8, #8
+; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
+  %tmp1 = icmp ule i16 %tmp0, -257 ; ~0U << 8 - 1
   ret i1 %tmp1
 }
 

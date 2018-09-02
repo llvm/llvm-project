@@ -1251,24 +1251,26 @@ bool AVRExpandPseudo::expand<AVR::LSLWRd>(Block &MBB, BlockIt MBBI) {
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   bool ImpIsDead = MI.getOperand(2).isDead();
-  OpLo = AVR::LSLRd;
-  OpHi = AVR::ROLRd;
+  OpLo = AVR::ADDRdRr; // ADD Rd, Rd <==> LSL Rd
+  OpHi = AVR::ADCRdRr; // ADC Rd, Rd <==> ROL Rd
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
   // Low part
   buildMI(MBB, MBBI, OpLo)
     .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(DstLoReg)
     .addReg(DstLoReg, getKillRegState(DstIsKill));
 
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
     .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(DstHiReg)
     .addReg(DstHiReg, getKillRegState(DstIsKill));
 
   if (ImpIsDead)
-    MIBHI->getOperand(2).setIsDead();
+    MIBHI->getOperand(3).setIsDead();
 
   // SREG is always implicitly killed
-  MIBHI->getOperand(3).setIsKill();
+  MIBHI->getOperand(4).setIsKill();
 
   MI.eraseFromParent();
   return true;
@@ -1387,8 +1389,9 @@ template <> bool AVRExpandPseudo::expand<AVR::SEXT>(Block &MBB, BlockIt MBBI) {
       .addReg(SrcReg, getKillRegState(SrcIsKill));
   }
 
-  buildMI(MBB, MBBI, AVR::LSLRd)
+  buildMI(MBB, MBBI, AVR::ADDRdRr) // LSL Rd <==> ADD Rd, Rr
     .addReg(DstHiReg, RegState::Define)
+    .addReg(DstHiReg)
     .addReg(DstHiReg, RegState::Kill);
 
   auto SBC = buildMI(MBB, MBBI, AVR::SBCRdRr)

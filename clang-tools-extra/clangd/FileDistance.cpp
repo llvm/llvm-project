@@ -53,7 +53,7 @@ static SmallString<128> canonicalize(StringRef Path) {
   return Result;
 }
 
-constexpr const unsigned FileDistance::kUnreachable;
+constexpr const unsigned FileDistance::Unreachable;
 
 FileDistance::FileDistance(StringMap<SourceParams> Sources,
                            const FileDistanceOptions &Opts)
@@ -102,7 +102,7 @@ FileDistance::FileDistance(StringMap<SourceParams> Sources,
     auto ParentCost = Cache.lookup(Next.front());
     for (auto Child : DownEdges.lookup(Next.front())) {
       auto &ChildCost =
-          Cache.try_emplace(Child, kUnreachable).first->getSecond();
+          Cache.try_emplace(Child, Unreachable).first->getSecond();
       if (ParentCost + Opts.DownCost < ChildCost)
         ChildCost = ParentCost + Opts.DownCost;
       Next.push(Child);
@@ -113,7 +113,7 @@ FileDistance::FileDistance(StringMap<SourceParams> Sources,
 
 unsigned FileDistance::distance(StringRef Path) {
   auto Canonical = canonicalize(Path);
-  unsigned Cost = kUnreachable;
+  unsigned Cost = Unreachable;
   SmallVector<hash_code, 16> Ancestors;
   // Walk up ancestors until we find a path we know the distance for.
   for (StringRef Rest = Canonical; !Rest.empty();
@@ -129,7 +129,7 @@ unsigned FileDistance::distance(StringRef Path) {
   // Now we know the costs for (known node, queried node].
   // Fill these in, walking down the directory tree.
   for (hash_code Hash : reverse(Ancestors)) {
-    if (Cost != kUnreachable)
+    if (Cost != Unreachable)
       Cost += Opts.DownCost;
     Cache.try_emplace(Hash, Cost);
   }
@@ -138,7 +138,7 @@ unsigned FileDistance::distance(StringRef Path) {
 }
 
 unsigned URIDistance::distance(llvm::StringRef URI) {
-  auto R = Cache.try_emplace(llvm::hash_value(URI), FileDistance::kUnreachable);
+  auto R = Cache.try_emplace(llvm::hash_value(URI), FileDistance::Unreachable);
   if (!R.second)
     return R.first->getSecond();
   if (auto U = clangd::URI::parse(URI)) {

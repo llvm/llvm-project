@@ -54,9 +54,9 @@ int internal_mprotect(void *addr, uptr length, int prot) {
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
   // On OpenBSD we cannot get the full path
   struct kinfo_proc kp;
-  size_t kl;
+  uptr kl;
   const int Mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
-  if (sysctl(Mib, ARRAY_SIZE(Mib), &kp, &kl, NULL, 0) != -1)
+  if (internal_sysctl(Mib, ARRAY_SIZE(Mib), &kp, &kl, NULL, 0) != -1)
     return internal_snprintf(buf,
                              (KI_MAXCOMLEN < buf_len ? KI_MAXCOMLEN : buf_len),
                              "%s", kp.p_comm);
@@ -64,23 +64,23 @@ uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
 }
 
 static void GetArgsAndEnv(char ***argv, char ***envp) {
-  size_t nargv;
-  size_t nenv;
+  uptr nargv;
+  uptr nenv;
   int argvmib[4] = {CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV};
   int envmib[4] = {CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ENV};
-  if (sysctl(argvmib, 4, NULL, &nargv, NULL, 0) == -1) {
+  if (internal_sysctl(argvmib, 4, NULL, &nargv, NULL, 0) == -1) {
     Printf("sysctl KERN_PROC_NARGV failed\n");
     Die();
   }
-  if (sysctl(envmib, 4, NULL, &nenv, NULL, 0) == -1) {
+  if (internal_sysctl(envmib, 4, NULL, &nenv, NULL, 0) == -1) {
     Printf("sysctl KERN_PROC_NENV failed\n");
     Die();
   }
-  if (sysctl(argvmib, 4, &argv, &nargv, NULL, 0) == -1) {
+  if (internal_sysctl(argvmib, 4, &argv, &nargv, NULL, 0) == -1) {
     Printf("sysctl KERN_PROC_ARGV failed\n");
     Die();
   }
-  if (sysctl(envmib, 4, &envp, &nenv, NULL, 0) == -1) {
+  if (internal_sysctl(envmib, 4, &envp, &nenv, NULL, 0) == -1) {
     Printf("sysctl KERN_PROC_ENV failed\n");
     Die();
   }

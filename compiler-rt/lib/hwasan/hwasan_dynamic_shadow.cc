@@ -58,6 +58,7 @@ static uptr MapDynamicShadow(uptr shadow_size_bytes) {
 
 }  // namespace __hwasan
 
+#if SANITIZER_ANDROID
 extern "C" {
 
 INTERFACE_ATTRIBUTE void __hwasan_shadow();
@@ -124,3 +125,13 @@ uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
 }
 
 }  // namespace __hwasan
+#else
+namespace __hwasan {
+
+uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
+  return MapDynamicShadow(shadow_size_bytes);
+}
+
+}  // namespace __hwasan
+#
+#endif  // SANITIZER_ANDROID

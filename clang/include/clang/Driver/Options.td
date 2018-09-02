@@ -1777,6 +1777,8 @@ def g_Flag : Flag<["-"], "g">, Group<g_Group>,
   HelpText<"Generate source-level debug information">;
 def gline_tables_only : Flag<["-"], "gline-tables-only">, Group<gN_Group>,
   Flags<[CoreOption]>, HelpText<"Emit debug line number tables only">;
+def gline_directives_only : Flag<["-"], "gline-directives-only">, Group<gN_Group>,
+  Flags<[CoreOption]>, HelpText<"Emit debug line info directives only">;
 def gmlt : Flag<["-"], "gmlt">, Alias<gline_tables_only>;
 def g0 : Flag<["-"], "g0">, Group<gN_Group>;
 def g1 : Flag<["-"], "g1">, Group<gN_Group>, Alias<gline_tables_only>;

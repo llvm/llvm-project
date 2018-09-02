@@ -326,8 +326,8 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
   // must match the GUID specified in the TypeServer2 record.
   if (ExpectedInfo->getGuid() != GuidFromObj)
-    return make_error<pdb::GenericError>(
-        pdb::generic_error_code::type_server_not_found, TSPath);
+    return make_error<pdb::PDBError>(
+        pdb::pdb_error_code::type_server_not_found, TSPath);
 
   return std::move(NS);
 }
@@ -339,8 +339,8 @@ Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
 
   // First, check if the PDB has previously failed to load.
   if (MissingTypeServerPDBs.count(TSId))
-    return make_error<pdb::GenericError>(
-      pdb::generic_error_code::type_server_not_found, TSPath);
+    return make_error<pdb::PDBError>(
+      pdb::pdb_error_code::type_server_not_found, TSPath);
 
   // Second, check if we already loaded a PDB with this GUID. Return the type
   // index mapping if we have it.
@@ -821,7 +821,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   uint32_t Modi = File->ModuleDBI->getModuleIndex();
   for (Chunk *C : Chunks) {
     auto *SecChunk = dyn_cast<SectionChunk>(C);
-    if (!SecChunk || !SecChunk->isLive())
+    if (!SecChunk || !SecChunk->Live)
       continue;
     pdb::SectionContrib SC = createSectionContrib(SecChunk, Modi);
     File->ModuleDBI->setFirstSectionContrib(SC);
@@ -851,7 +851,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   DebugChecksumsSubsectionRef Checksums;
   std::vector<ulittle32_t *> StringTableReferences;
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
-    if (!DebugChunk->isLive() || DebugChunk->getSectionName() != ".debug$S")
+    if (!DebugChunk->Live || DebugChunk->getSectionName() != ".debug$S")
       continue;
 
     ArrayRef<uint8_t> RelocatedDebugContents =

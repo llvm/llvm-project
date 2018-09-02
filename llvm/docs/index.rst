@@ -145,6 +145,9 @@ representation.
 :doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
    A reference manual for using the LLVM testing infrastructure.
 
+:doc:`TestSuiteGuide`
+  Describes how to compile and run the test-suite benchmarks.
+
 `How to build the C, C++, ObjC, and ObjC++ front end`__
    Instructions for building the clang front-end from source.
 

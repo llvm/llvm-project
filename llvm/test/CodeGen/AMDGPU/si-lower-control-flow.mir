@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgizcl -run-pass=si-lower-control-flow -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=si-lower-control-flow -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN %s
 
 # Check that assert is not triggered
 # GCN-LABEL: name: si-lower-control-flow{{$}}
