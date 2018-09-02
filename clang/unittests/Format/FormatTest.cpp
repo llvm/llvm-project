@@ -999,6 +999,24 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                    "  }\n"
                    "});",
                    getLLVMStyle()));
+  EXPECT_EQ("switch (n) {\n"
+            "case 0: {\n"
+            "  return false;\n"
+            "}\n"
+            "default: {\n"
+            "  return true;\n"
+            "}\n"
+            "}",
+            format("switch (n)\n"
+                   "{\n"
+                   "case 0: {\n"
+                   "  return false;\n"
+                   "}\n"
+                   "default: {\n"
+                   "  return true;\n"
+                   "}\n"
+                   "}",
+                   getLLVMStyle()));
   verifyFormat("switch (a) {\n"
                "case (b):\n"
                "  return;\n"
