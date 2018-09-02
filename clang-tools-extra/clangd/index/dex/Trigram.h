@@ -62,7 +62,7 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier);
 ///
 /// For short queries (less than 3 characters with Head or Tail roles in Fuzzy
 /// Matching segmentation) this returns a single trigram with the first
-/// characters (up to 3) to perfrom prefix match.
+/// characters (up to 3) to perform prefix match.
 std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 
 } // namespace dex

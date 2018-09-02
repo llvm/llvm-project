@@ -1644,7 +1644,7 @@ MPPassManager::runOnModule(Module &M) {
           int64_t Delta = static_cast<int64_t>(ModuleCount) -
                           static_cast<int64_t>(InstrCount);
           emitInstrCountChangedRemark(MP, M, Delta, InstrCount);
-          ModuleCount = InstrCount;
+          InstrCount = ModuleCount;
         }
       }
     }

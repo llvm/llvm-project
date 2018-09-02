@@ -1158,8 +1158,8 @@ void JITDylib::emit(const SymbolFlagsMap &Emitted) {
             assert(DependantJD.Symbols.count(DependantName) &&
                    "Dependant has no entry in the Symbols table");
             auto &DependantSym = DependantJD.Symbols[DependantName];
-            DependantSym.setFlags(static_cast<JITSymbolFlags::FlagNames>(
-                DependantSym.getFlags() & ~JITSymbolFlags::Materializing));
+            DependantSym.setFlags(DependantSym.getFlags() &
+                                  ~JITSymbolFlags::Materializing);
             DependantJD.MaterializingInfos.erase(DependantMII);
           }
         }
@@ -1177,8 +1177,7 @@ void JITDylib::emit(const SymbolFlagsMap &Emitted) {
         assert(Symbols.count(Name) &&
                "Symbol has no entry in the Symbols table");
         auto &Sym = Symbols[Name];
-        Sym.setFlags(static_cast<JITSymbolFlags::FlagNames>(
-            Sym.getFlags() & ~JITSymbolFlags::Materializing));
+        Sym.setFlags(Sym.getFlags() & ~JITSymbolFlags::Materializing);
         MaterializingInfos.erase(MII);
       }
     }
