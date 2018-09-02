@@ -533,8 +533,7 @@ TEST_F(CoreAPIsStandardTest, AddAndMaterializeLazySymbol) {
 
 TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
   // Test that weak symbols are materialized correctly when we look them up.
-  BarSym.setFlags(static_cast<JITSymbolFlags::FlagNames>(BarSym.getFlags() |
-                                                         JITSymbolFlags::Weak));
+  BarSym.setFlags(BarSym.getFlags() | JITSymbolFlags::Weak);
 
   bool BarMaterialized = false;
   auto MU1 = llvm::make_unique<SimpleMaterializationUnit>(
