@@ -483,6 +483,12 @@ private:
     if (Line.First->isOneOf(tok::kw_else, tok::kw_case) ||
         (Line.First->Next && Line.First->Next->is(tok::kw_else)))
       return 0;
+    // default: in switch statement
+    if (Line.First->is(tok::kw_default)) {
+      const FormatToken *Tok = Line.First->getNextNonComment();
+      if (Tok && Tok->is(tok::colon))
+        return 0;
+    }
     if (Line.First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_try,
                             tok::kw___try, tok::kw_catch, tok::kw___finally,
                             tok::kw_for, tok::r_brace, Keywords.kw___except)) {
