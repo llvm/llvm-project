@@ -23,6 +23,7 @@
 #include <set>
 #include <string>
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -54,7 +55,8 @@ public:
     Exported = 1U << 4,
     Callable = 1U << 5,
     Lazy = 1U << 6,
-    Materializing = 1U << 7
+    Materializing = 1U << 7,
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Materializing)
   };
 
   static JITSymbolFlags stripTransientFlags(JITSymbolFlags Orig) {
@@ -71,6 +73,26 @@ public:
   ///        flags.
   JITSymbolFlags(FlagNames Flags, TargetFlagsType TargetFlags)
     : Flags(Flags), TargetFlags(TargetFlags) {}
+
+  /// Implicitly convert to bool. Returs true if any flag is set.
+  explicit operator bool() const { return Flags != None || TargetFlags != 0; }
+
+  /// Compare for equality.
+  bool operator==(const JITSymbolFlags &RHS) const {
+    return Flags == RHS.Flags && TargetFlags == RHS.TargetFlags;
+  }
+
+  /// Bitwise AND-assignment for FlagNames.
+  JITSymbolFlags &operator&=(const FlagNames &RHS) {
+    Flags &= RHS;
+    return *this;
+  }
+
+  /// Bitwise OR-assignment for FlagNames.
+  JITSymbolFlags &operator|=(const FlagNames &RHS) {
+    Flags |= RHS;
+    return *this;
+  }
 
   /// Return true if there was an error retrieving this symbol.
   bool hasError() const {
@@ -113,11 +135,10 @@ public:
   /// Returns true if the given symbol is known to be callable.
   bool isCallable() const { return (Flags & Callable) == Callable; }
 
-  /// Implicitly convert to the underlying flags type.
-  operator UnderlyingType&() { return Flags; }
-
-  /// Implicitly convert to the underlying flags type.
-  operator const UnderlyingType&() const { return Flags; }
+  /// Get the underlying flags value as an integer.
+  UnderlyingType getRawFlagsValue() const {
+    return static_cast<UnderlyingType>(Flags);
+  }
 
   /// Return a reference to the target-specific flags.
   TargetFlagsType& getTargetFlags() { return TargetFlags; }
@@ -135,9 +156,23 @@ public:
   fromObjectSymbol(const object::SymbolRef &Symbol);
 
 private:
-  UnderlyingType Flags = None;
+  FlagNames Flags = None;
   TargetFlagsType TargetFlags = 0;
 };
+
+inline JITSymbolFlags operator&(const JITSymbolFlags &LHS,
+                                const JITSymbolFlags::FlagNames &RHS) {
+  JITSymbolFlags Tmp = LHS;
+  Tmp &= RHS;
+  return Tmp;
+}
+
+inline JITSymbolFlags operator|(const JITSymbolFlags &LHS,
+                                const JITSymbolFlags::FlagNames &RHS) {
+  JITSymbolFlags Tmp = LHS;
+  Tmp |= RHS;
+  return Tmp;
+}
 
 /// ARM-specific JIT symbol flags.
 /// FIXME: This should be moved into a target-specific header.
