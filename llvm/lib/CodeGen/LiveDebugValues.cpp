@@ -470,7 +470,7 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
                                          MachineFunction *MF, unsigned &Reg) {
   const MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   int FI;
-  const MachineMemOperand *MMO;
+  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
 
   // TODO: Handle multiple stores folded into one.
   if (!MI.hasOneMemOperand())
@@ -478,7 +478,7 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
 
   // To identify a spill instruction, use the same criteria as in AsmPrinter.
   if (!((TII->isStoreToStackSlotPostFE(MI, FI) ||
-         TII->hasStoreToStackSlot(MI, MMO, FI)) &&
+         TII->hasStoreToStackSlot(MI, Accesses)) &&
         FrameInfo.isSpillSlotObjectIndex(FI)))
     return false;
 
