@@ -3120,18 +3120,24 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
       for (MachineInstr &MI : *MBB) {
-        const MachineMemOperand *MMO;
+        SmallVector<TargetInstrInfo::FrameAccess, 2> Accesses;
 
         if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
           ++Reloads;
-        else if (TII->hasLoadFromStackSlot(MI, MMO, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
+        else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+                 llvm::any_of(Accesses,
+                              [&MFI](const TargetInstrInfo::FrameAccess &A) {
+                                return MFI.isSpillSlotObjectIndex(A.FI);
+                              }))
           ++FoldedReloads;
         else if (TII->isStoreToStackSlot(MI, FI) &&
                  MFI.isSpillSlotObjectIndex(FI))
           ++Spills;
-        else if (TII->hasStoreToStackSlot(MI, MMO, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
+        else if (TII->hasStoreToStackSlot(MI, Accesses) &&
+                 llvm::any_of(Accesses,
+                              [&MFI](const TargetInstrInfo::FrameAccess &A) {
+                                return MFI.isSpillSlotObjectIndex(A.FI);
+                              }))
           ++FoldedSpills;
       }
 

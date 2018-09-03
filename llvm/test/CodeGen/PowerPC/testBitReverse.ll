@@ -47,49 +47,49 @@ define i64 @testBitReverseIntrinsicI64(i64 %arg) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
-; CHECK-NEXT:    lis 6, -13108
-; CHECK-NEXT:    lis 7, 13107
-; CHECK-NEXT:    sldi 8, 3, 1
-; CHECK-NEXT:    rldicl 3, 3, 63, 1
+; CHECK-NEXT:    lis 7, -13108
+; CHECK-NEXT:    lis 8, 13107
 ; CHECK-NEXT:    ori 4, 4, 43690
 ; CHECK-NEXT:    ori 5, 5, 21845
-; CHECK-NEXT:    ori 6, 6, 52428
-; CHECK-NEXT:    ori 7, 7, 13107
+; CHECK-NEXT:    ori 7, 7, 52428
+; CHECK-NEXT:    ori 8, 8, 13107
 ; CHECK-NEXT:    sldi 4, 4, 32
 ; CHECK-NEXT:    sldi 5, 5, 32
 ; CHECK-NEXT:    oris 4, 4, 43690
 ; CHECK-NEXT:    oris 5, 5, 21845
+; CHECK-NEXT:    sldi 6, 3, 1
+; CHECK-NEXT:    rldicl 3, 3, 63, 1
 ; CHECK-NEXT:    ori 4, 4, 43690
 ; CHECK-NEXT:    ori 5, 5, 21845
-; CHECK-NEXT:    and 4, 8, 4
-; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    sldi 5, 6, 32
-; CHECK-NEXT:    sldi 6, 7, 32
-; CHECK-NEXT:    lis 7, 3855
-; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    oris 4, 5, 52428
-; CHECK-NEXT:    oris 5, 6, 13107
-; CHECK-NEXT:    lis 6, -3856
-; CHECK-NEXT:    ori 7, 7, 3855
-; CHECK-NEXT:    sldi 8, 3, 2
-; CHECK-NEXT:    ori 4, 4, 52428
-; CHECK-NEXT:    rldicl 3, 3, 62, 2
-; CHECK-NEXT:    ori 5, 5, 13107
-; CHECK-NEXT:    ori 6, 6, 61680
-; CHECK-NEXT:    and 4, 8, 4
-; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    sldi 5, 6, 32
-; CHECK-NEXT:    sldi 6, 7, 32
-; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    oris 4, 5, 61680
-; CHECK-NEXT:    oris 5, 6, 3855
-; CHECK-NEXT:    sldi 6, 3, 4
-; CHECK-NEXT:    ori 4, 4, 61680
-; CHECK-NEXT:    rldicl 3, 3, 60, 4
-; CHECK-NEXT:    ori 5, 5, 3855
+; CHECK-NEXT:    sldi 7, 7, 32
+; CHECK-NEXT:    sldi 8, 8, 32
 ; CHECK-NEXT:    and 4, 6, 4
 ; CHECK-NEXT:    and 3, 3, 5
+; CHECK-NEXT:    lis 5, -3856
+; CHECK-NEXT:    oris 6, 7, 52428
+; CHECK-NEXT:    oris 7, 8, 13107
 ; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    lis 4, 3855
+; CHECK-NEXT:    ori 5, 5, 61680
+; CHECK-NEXT:    ori 6, 6, 52428
+; CHECK-NEXT:    ori 7, 7, 13107
+; CHECK-NEXT:    ori 4, 4, 3855
+; CHECK-NEXT:    sldi 8, 3, 2
+; CHECK-NEXT:    rldicl 3, 3, 62, 2
+; CHECK-NEXT:    and 6, 8, 6
+; CHECK-NEXT:    and 3, 3, 7
+; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    sldi 4, 4, 32
+; CHECK-NEXT:    or 3, 3, 6
+; CHECK-NEXT:    oris 5, 5, 61680
+; CHECK-NEXT:    oris 4, 4, 3855
+; CHECK-NEXT:    sldi 6, 3, 4
+; CHECK-NEXT:    ori 5, 5, 61680
+; CHECK-NEXT:    ori 4, 4, 3855
+; CHECK-NEXT:    rldicl 3, 3, 60, 4
+; CHECK-NEXT:    and 5, 6, 5
+; CHECK-NEXT:    and 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 5
 ; CHECK-NEXT:    rldicl 4, 3, 32, 32
 ; CHECK-NEXT:    rlwinm 5, 3, 24, 0, 31
 ; CHECK-NEXT:    rlwinm 6, 4, 24, 0, 31

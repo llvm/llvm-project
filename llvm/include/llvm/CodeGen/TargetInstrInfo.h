@@ -79,6 +79,13 @@ public:
     return Opc <= TargetOpcode::GENERIC_OP_END;
   }
 
+  // Simple struct describing access to a FrameIndex.
+  struct FrameAccess {
+    const MachineMemOperand *MMO;
+    int FI;
+    FrameAccess(const MachineMemOperand *MMO, int FI) : MMO(MMO), FI(FI) {}
+  };
+
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
   const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
@@ -246,14 +253,13 @@ public:
   }
 
   /// If the specified machine instruction has a load from a stack slot,
-  /// return true along with the FrameIndex of the loaded stack slot and the
-  /// machine mem operand containing the reference.
+  /// return true along with the FrameIndices of the loaded stack slot and the
+  /// machine mem operands containing the reference.
   /// If not, return false.  Unlike isLoadFromStackSlot, this returns true for
   /// any instructions that loads from the stack.  This is just a hint, as some
   /// cases may be missed.
   virtual bool hasLoadFromStackSlot(const MachineInstr &MI,
-                                    const MachineMemOperand *&MMO,
-                                    int &FrameIndex) const;
+                                    SmallVectorImpl<FrameAccess> &Accesses) const;
 
   /// If the specified machine instruction is a direct
   /// store to a stack slot, return the virtual or physical register number of
@@ -284,14 +290,13 @@ public:
   }
 
   /// If the specified machine instruction has a store to a stack slot,
-  /// return true along with the FrameIndex of the loaded stack slot and the
-  /// machine mem operand containing the reference.
+  /// return true along with the FrameIndices of the loaded stack slot and the
+  /// machine mem operands containing the reference.
   /// If not, return false.  Unlike isStoreToStackSlot,
   /// this returns true for any instructions that stores to the
   /// stack.  This is just a hint, as some cases may be missed.
   virtual bool hasStoreToStackSlot(const MachineInstr &MI,
-                                   const MachineMemOperand *&MMO,
-                                   int &FrameIndex) const;
+                                    SmallVectorImpl<FrameAccess> &Accesses) const;
 
   /// Return true if the specified machine instruction
   /// is a copy of one stack slot to another and has no other effect.
