@@ -17,17 +17,15 @@
 #include "index/Merge.h"
 #include "gtest/gtest.h"
 
+using testing::AllOf;
+using testing::ElementsAre;
 using testing::Pointee;
 using testing::UnorderedElementsAre;
-using testing::AllOf;
+using namespace llvm;
 
 namespace clang {
 namespace clangd {
 namespace {
-
-std::shared_ptr<MemIndex::OccurrenceMap> emptyOccurrences() {
-  return llvm::make_unique<MemIndex::OccurrenceMap>();
-}
 
 MATCHER_P(Named, N, "") { return arg.Name == N; }
 MATCHER_P(OccurrenceRange, Range, "") {
@@ -54,155 +52,139 @@ TEST(SymbolSlab, FindAndIterate) {
     EXPECT_THAT(*S.find(SymbolID(Sym)), Named(Sym));
 }
 
-TEST(MemIndexTest, MemIndexSymbolsRecycled) {
-  MemIndex I;
-  std::weak_ptr<SlabAndPointers> Symbols;
-  I.build(generateNumSymbols(0, 10, &Symbols), emptyOccurrences());
-  FuzzyFindRequest Req;
-  Req.Query = "7";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("7"));
+TEST(SwapIndexTest, OldIndexRecycled) {
+  auto Token = std::make_shared<int>();
+  std::weak_ptr<int> WeakToken = Token;
 
-  EXPECT_FALSE(Symbols.expired());
-  // Release old symbols.
-  I.build(generateNumSymbols(0, 0), emptyOccurrences());
-  EXPECT_TRUE(Symbols.expired());
+  SwapIndex S(make_unique<MemIndex>(SymbolSlab(), MemIndex::OccurrenceMap(),
+                                    std::move(Token)));
+  EXPECT_FALSE(WeakToken.expired()); // Current MemIndex keeps it alive.
+  S.reset(make_unique<MemIndex>());  // Now the MemIndex is destroyed.
+  EXPECT_TRUE(WeakToken.expired());  // So the token is too.
 }
 
 TEST(MemIndexTest, MemIndexDeduplicate) {
-  auto Symbols = generateNumSymbols(0, 10);
-
-  // Inject some duplicates and make sure we only match the same symbol once.
-  auto Sym = symbol("7");
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-
+  std::vector<Symbol> Symbols = {symbol("1"), symbol("2"), symbol("3"),
+                                 symbol("2") /* duplicate */};
   FuzzyFindRequest Req;
-  Req.Query = "7";
-  MemIndex I;
-  I.build(std::move(Symbols), emptyOccurrences());
-  auto Matches = match(I, Req);
-  EXPECT_EQ(Matches.size(), 1u);
+  Req.Query = "2";
+  MemIndex I(Symbols, MemIndex::OccurrenceMap());
+  EXPECT_THAT(match(I, Req), ElementsAre("2"));
 }
 
 TEST(MemIndexTest, MemIndexLimitedNumMatches) {
-  MemIndex I;
-  I.build(generateNumSymbols(0, 100), emptyOccurrences());
+  auto I = MemIndex::build(generateNumSymbols(0, 100), SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.MaxCandidateCount = 3;
   bool Incomplete;
-  auto Matches = match(I, Req, &Incomplete);
+  auto Matches = match(*I, Req, &Incomplete);
   EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
   EXPECT_TRUE(Incomplete);
 }
 
 TEST(MemIndexTest, FuzzyMatch) {
-  MemIndex I;
-  I.build(
+  auto I = MemIndex::build(
       generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
-      emptyOccurrences());
+      SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.MaxCandidateCount = 2;
-  EXPECT_THAT(match(I, Req),
+  EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}), emptyOccurrences());
+  auto I = MemIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}),
+                           SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}), emptyOccurrences());
+  auto I = MemIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}),
+                           SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}),
-          emptyOccurrences());
+  auto I = MemIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}),
+      SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}),
-          emptyOccurrences());
+  auto I = MemIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}),
+      SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
 }
 
 TEST(MemIndexTest, NoMatchNestedScopes) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::b::y2"}), emptyOccurrences());
+  auto I = MemIndex::build(generateSymbols({"a::y1", "a::b::y2"}),
+                           SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1"));
 }
 
 TEST(MemIndexTest, IgnoreCases) {
-  MemIndex I;
-  I.build(generateSymbols({"ns::ABC", "ns::abc"}), emptyOccurrences());
+  auto I = MemIndex::build(generateSymbols({"ns::ABC", "ns::abc"}),
+                           SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
 }
 
 TEST(MemIndexTest, Lookup) {
-  MemIndex I;
-  I.build(generateSymbols({"ns::abc", "ns::xyz"}), emptyOccurrences());
-  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+  auto I = MemIndex::build(generateSymbols({"ns::abc", "ns::xyz"}),
+                           SymbolOccurrenceSlab());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::xyz"));
-  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
 TEST(MergeIndexTest, Lookup) {
-  MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}), emptyOccurrences());
-  J.build(generateSymbols({"ns::B", "ns::C"}), emptyOccurrences());
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::A")),
-              UnorderedElementsAre("ns::A"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::B")),
-              UnorderedElementsAre("ns::B"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::C")),
-              UnorderedElementsAre("ns::C"));
-  EXPECT_THAT(
-      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::B")}),
-      UnorderedElementsAre("ns::A", "ns::B"));
-  EXPECT_THAT(
-      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::C")}),
-      UnorderedElementsAre("ns::A", "ns::C"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::D")),
-              UnorderedElementsAre());
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), {}), UnorderedElementsAre());
+  auto I = MemIndex::build(generateSymbols({"ns::A", "ns::B"}),
+                           SymbolOccurrenceSlab()),
+       J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}),
+                           SymbolOccurrenceSlab());
+  auto M = mergeIndex(I.get(), J.get());
+  EXPECT_THAT(lookup(*M, SymbolID("ns::A")), UnorderedElementsAre("ns::A"));
+  EXPECT_THAT(lookup(*M, SymbolID("ns::B")), UnorderedElementsAre("ns::B"));
+  EXPECT_THAT(lookup(*M, SymbolID("ns::C")), UnorderedElementsAre("ns::C"));
+  EXPECT_THAT(lookup(*M, {SymbolID("ns::A"), SymbolID("ns::B")}),
+              UnorderedElementsAre("ns::A", "ns::B"));
+  EXPECT_THAT(lookup(*M, {SymbolID("ns::A"), SymbolID("ns::C")}),
+              UnorderedElementsAre("ns::A", "ns::C"));
+  EXPECT_THAT(lookup(*M, SymbolID("ns::D")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(*M, {}), UnorderedElementsAre());
 }
 
 TEST(MergeIndexTest, FuzzyFind) {
-  MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}), emptyOccurrences());
-  J.build(generateSymbols({"ns::B", "ns::C"}), emptyOccurrences());
+  auto I = MemIndex::build(generateSymbols({"ns::A", "ns::B"}),
+                           SymbolOccurrenceSlab()),
+       J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}),
+                           SymbolOccurrenceSlab());
   FuzzyFindRequest Req;
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
+  EXPECT_THAT(match(*mergeIndex(I.get(), J.get()), Req),
               UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
 }
 

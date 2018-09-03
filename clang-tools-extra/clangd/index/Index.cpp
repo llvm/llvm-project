@@ -165,5 +165,36 @@ void SymbolOccurrenceSlab::freeze() {
   Frozen = true;
 }
 
+void SwapIndex::reset(std::unique_ptr<SymbolIndex> Index) {
+  // Keep the old index alive, so we don't destroy it under lock (may be slow).
+  std::shared_ptr<SymbolIndex> Pin;
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    Pin = std::move(this->Index);
+    this->Index = std::move(Index);
+  }
+}
+std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return Index;
+}
+
+bool SwapIndex::fuzzyFind(const FuzzyFindRequest &R,
+                          llvm::function_ref<void(const Symbol &)> CB) const {
+  return snapshot()->fuzzyFind(R, CB);
+}
+void SwapIndex::lookup(const LookupRequest &R,
+                       llvm::function_ref<void(const Symbol &)> CB) const {
+  return snapshot()->lookup(R, CB);
+}
+void SwapIndex::findOccurrences(
+    const OccurrencesRequest &R,
+    llvm::function_ref<void(const SymbolOccurrence &)> CB) const {
+  return snapshot()->findOccurrences(R, CB);
+}
+size_t SwapIndex::estimateMemoryUsage() const {
+  return snapshot()->estimateMemoryUsage();
+}
+
 } // namespace clangd
 } // namespace clang

@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
 #include <array>
+#include <mutex>
 #include <string>
 #include <tuple>
 
@@ -331,6 +332,7 @@ inline SymbolOccurrenceKind operator&(SymbolOccurrenceKind A,
   return static_cast<SymbolOccurrenceKind>(static_cast<uint8_t>(A) &
                                            static_cast<uint8_t>(B));
 }
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, SymbolOccurrenceKind);
 static const SymbolOccurrenceKind AllOccurrenceKinds =
     SymbolOccurrenceKind::Declaration | SymbolOccurrenceKind::Definition |
     SymbolOccurrenceKind::Reference;
@@ -447,10 +449,10 @@ struct LookupRequest {
 
 struct OccurrencesRequest {
   llvm::DenseSet<SymbolID> IDs;
-  SymbolOccurrenceKind Filter;
+  SymbolOccurrenceKind Filter = AllOccurrenceKinds;
 };
 
-/// \brief Interface for symbol indexes that can be used for searching or
+/// Interface for symbol indexes that can be used for searching or
 /// matching symbols among a set of symbols based on names or unique IDs.
 class SymbolIndex {
 public:
@@ -487,6 +489,31 @@ public:
   // excluding the size of actual symbol slab index refers to. We should include
   // both.
   virtual size_t estimateMemoryUsage() const = 0;
+};
+
+// Delegating implementation of SymbolIndex whose delegate can be swapped out.
+class SwapIndex : public SymbolIndex {
+public:
+  // If an index is not provided, reset() must be called.
+  SwapIndex(std::unique_ptr<SymbolIndex> Index = nullptr)
+      : Index(std::move(Index)) {}
+  void reset(std::unique_ptr<SymbolIndex>);
+
+  // SymbolIndex methods delegate to the current index, which is kept alive
+  // until the call returns (even if reset() is called).
+  bool fuzzyFind(const FuzzyFindRequest &,
+                 llvm::function_ref<void(const Symbol &)>) const override;
+  void lookup(const LookupRequest &,
+              llvm::function_ref<void(const Symbol &)>) const override;
+  void findOccurrences(
+      const OccurrencesRequest &,
+      llvm::function_ref<void(const SymbolOccurrence &)>) const override;
+  size_t estimateMemoryUsage() const override;
+
+private:
+  std::shared_ptr<SymbolIndex> snapshot() const;
+  mutable std::mutex Mutex;
+  std::shared_ptr<SymbolIndex> Index;
 };
 
 } // namespace clangd

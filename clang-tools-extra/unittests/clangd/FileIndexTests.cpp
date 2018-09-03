@@ -54,23 +54,27 @@ std::unique_ptr<SymbolOccurrenceSlab> occurrenceSlab(const SymbolID &ID,
   auto Slab = llvm::make_unique<SymbolOccurrenceSlab>();
   SymbolOccurrence Occurrence;
   Occurrence.Location.FileURI = Path;
+  Occurrence.Kind = SymbolOccurrenceKind::Reference;
   Slab->insert(ID, Occurrence);
   return Slab;
 }
 
-std::vector<std::string>
-getSymbolNames(const std::vector<const Symbol *> &Symbols) {
+std::vector<std::string> getSymbolNames(const SymbolIndex &I,
+                                        std::string Query = "") {
+  FuzzyFindRequest Req;
+  Req.Query = Query;
   std::vector<std::string> Names;
-  for (const Symbol *Sym : Symbols)
-    Names.push_back(Sym->Name);
+  I.fuzzyFind(Req, [&](const Symbol &S) { Names.push_back(S.Name); });
   return Names;
 }
 
-std::vector<std::string>
-getOccurrencePath(const std::vector<const SymbolOccurrence *> &Occurrences) {
+std::vector<std::string> getOccurrencePaths(const SymbolIndex &I, SymbolID ID) {
+  OccurrencesRequest Req;
+  Req.IDs = {ID};
   std::vector<std::string> Paths;
-  for (const auto *O : Occurrences)
-    Paths.push_back(O->Location.FileURI);
+  I.findOccurrences(Req, [&](const SymbolOccurrence &S) {
+    Paths.push_back(S.Location.FileURI);
+  });
   return Paths;
 }
 
@@ -82,15 +86,12 @@ std::unique_ptr<SymbolOccurrenceSlab> emptyOccurrence() {
 
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
-  EXPECT_TRUE(FS.allOccurrences()->empty());
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()), UnorderedElementsAre());
 
-  SymbolID ID("1");
-  FS.update("f1", numSlab(1, 3), occurrenceSlab(ID, "f1.cc"));
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
+  FS.update("f1", numSlab(1, 3), occurrenceSlab(SymbolID("1"), "f1.cc"));
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
               UnorderedElementsAre("1", "2", "3"));
-  auto Occurrences = FS.allOccurrences();
-  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
+  EXPECT_THAT(getOccurrencePaths(*FS.buildMemIndex(), SymbolID("1")),
               UnorderedElementsAre("f1.cc"));
 }
 
@@ -98,8 +99,8 @@ TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
   FS.update("f1", numSlab(1, 3), emptyOccurrence());
   FS.update("f2", numSlab(3, 5), emptyOccurrence());
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
-              UnorderedElementsAre("1", "2", "3", "3", "4", "5"));
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
+              UnorderedElementsAre("1", "2", "3", "4", "5"));
 }
 
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
@@ -108,19 +109,17 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   SymbolID ID("1");
   FS.update("f1", numSlab(1, 3), occurrenceSlab(ID, "f1.cc"));
 
-  auto Symbols = FS.allSymbols();
+  auto Symbols = FS.buildMemIndex();
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
-  auto Occurrences = FS.allOccurrences();
-  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
-              UnorderedElementsAre("f1.cc"));
+  EXPECT_THAT(getOccurrencePaths(*Symbols, ID), UnorderedElementsAre("f1.cc"));
 
   FS.update("f1", nullptr, nullptr);
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
-  EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+  auto Empty = FS.buildMemIndex();
+  EXPECT_THAT(getSymbolNames(*Empty), UnorderedElementsAre());
+  EXPECT_THAT(getOccurrencePaths(*Empty, ID), UnorderedElementsAre());
 
-  EXPECT_TRUE(FS.allOccurrences()->empty());
-  EXPECT_THAT(getOccurrencePath((*Occurrences)[ID]),
-              UnorderedElementsAre("f1.cc"));
+  EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+  EXPECT_THAT(getOccurrencePaths(*Symbols, ID), UnorderedElementsAre("f1.cc"));
 }
 
 std::vector<std::string> match(const SymbolIndex &I,

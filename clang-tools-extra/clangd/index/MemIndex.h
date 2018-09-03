@@ -16,8 +16,7 @@
 namespace clang {
 namespace clangd {
 
-/// \brief This implements an index for a (relatively small) set of symbols (or
-/// symbol occurrences) that can be easily managed in memory.
+/// MemIndex is a naive in-memory index suitable for a small set of symbols.
 class MemIndex : public SymbolIndex {
 public:
   /// Maps from a symbol ID to all corresponding symbol occurrences.
@@ -25,23 +24,33 @@ public:
   using OccurrenceMap =
       llvm::DenseMap<SymbolID, std::vector<const SymbolOccurrence *>>;
 
-  /// \brief (Re-)Build index for `Symbols` and update `Occurrences`.
-  /// All symbol pointers and symbol occurrence pointers must remain accessible
-  /// as long as `Symbols` and `Occurrences` are kept alive.
-  void build(std::shared_ptr<std::vector<const Symbol *>> Symbols,
-             std::shared_ptr<OccurrenceMap> Occurrences);
+  MemIndex() = default;
+  // All symbols and occurrences must outlive this index.
+  // TODO: find a better type for Occurrences here.
+  template <typename SymbolRange>
+  MemIndex(SymbolRange &&Symbols, OccurrenceMap Occurrences)
+      : Occurrences(std::move(Occurrences)) {
+    for (const Symbol &S : Symbols)
+      Index[S.ID] = &S;
+  }
+  // Symbols are owned by BackingData, Index takes ownership.
+  template <typename Range, typename Payload>
+  MemIndex(Range &&Symbols, OccurrenceMap Occurrences, Payload &&BackingData)
+      : MemIndex(std::forward<Range>(Symbols), std::move(Occurrences)) {
+    KeepAlive = std::shared_ptr<void>(
+        std::make_shared<Payload>(std::move(BackingData)), nullptr);
+  }
 
-  /// \brief Build index from a symbol slab and a symbol occurrence slab.
-  static std::unique_ptr<SymbolIndex> build(SymbolSlab Symbols,
+  /// Builds an index from a slab. The index takes ownership of the data.
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab,
                                             SymbolOccurrenceSlab Occurrences);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
-  void
-  lookup(const LookupRequest &Req,
-         llvm::function_ref<void(const Symbol &)> Callback) const override;
+  void lookup(const LookupRequest &Req,
+              llvm::function_ref<void(const Symbol &)> Callback) const override;
 
   void findOccurrences(const OccurrencesRequest &Req,
                        llvm::function_ref<void(const SymbolOccurrence &)>
@@ -50,20 +59,12 @@ public:
   size_t estimateMemoryUsage() const override;
 
 private:
-
-  std::shared_ptr<std::vector<const Symbol *>> Symbols;
   // Index is a set of symbols that are deduplicated by symbol IDs.
-  // FIXME: build smarter index structure.
   llvm::DenseMap<SymbolID, const Symbol *> Index;
   // A map from symbol ID to symbol occurrences, support query by IDs.
-  std::shared_ptr<OccurrenceMap> Occurrences;
-  mutable std::mutex Mutex;
+  OccurrenceMap Occurrences;
+  std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
 };
-
-// Returns pointers to the symbols in given slab and bundles slab lifetime with
-// returned symbol pointers so that the pointers are never invalid.
-std::shared_ptr<std::vector<const Symbol *>>
-getSymbolsFromSlab(SymbolSlab Slab);
 
 } // namespace clangd
 } // namespace clang
