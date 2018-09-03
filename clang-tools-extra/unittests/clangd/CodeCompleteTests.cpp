@@ -1765,6 +1765,21 @@ TEST(CompletionTest, SuggestOverrides) {
                     Not(Contains(Labeled("void vfunc(bool param) override")))));
 }
 
+TEST(CompletionTest, OverridesNonIdentName) {
+  // Check the completions call does not crash.
+  completions(R"cpp(
+    struct Base {
+      virtual ~Base() = 0;
+      virtual operator int() = 0;
+      virtual Base& operator+(Base&) = 0;
+    };
+
+    struct Derived : Base {
+      ^
+    };
+  )cpp");
+}
+
 TEST(SpeculateCompletionFilter, Filters) {
   Annotations F(R"cpp($bof^
       $bol^
