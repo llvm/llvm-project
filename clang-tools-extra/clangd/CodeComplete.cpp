@@ -210,7 +210,7 @@ getNonOverridenMethodCompletionResults(const DeclContext *DC, Sema *S) {
   // These are stored by name to make querying fast in the later step.
   llvm::StringMap<std::vector<FunctionDecl *>> Overrides;
   for (auto *Method : CR->methods()) {
-    if (!Method->isVirtual())
+    if (!Method->isVirtual() || !Method->getIdentifier())
       continue;
     Overrides[Method->getName()].push_back(Method);
   }
@@ -221,14 +221,14 @@ getNonOverridenMethodCompletionResults(const DeclContext *DC, Sema *S) {
     if (!BR)
       continue;
     for (auto *Method : BR->methods()) {
-      if (!Method->isVirtual())
+      if (!Method->isVirtual() || !Method->getIdentifier())
         continue;
       const auto it = Overrides.find(Method->getName());
       bool IsOverriden = false;
       if (it != Overrides.end()) {
         for (auto *MD : it->second) {
           // If the method in current body is not an overload of this virtual
-          // function, that it overrides this one.
+          // function, then it overrides this one.
           if (!S->IsOverload(MD, Method, false)) {
             IsOverriden = true;
             break;
