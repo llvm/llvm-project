@@ -16,7 +16,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
 #include <array>
 #include <string>
@@ -213,14 +215,31 @@ struct Symbol {
   /// Type when this symbol is used in an expression. (Short display form).
   /// e.g. return type of a function, or type of a variable.
   llvm::StringRef ReturnType;
-  /// This can be either a URI of the header to be #include'd for this symbol,
-  /// or a literal header quoted with <> or "" that is suitable to be included
-  /// directly. When this is a URI, the exact #include path needs to be
-  /// calculated according to the URI scheme.
-  ///
-  /// This is a canonical include for the symbol and can be different from
-  /// FileURI in the CanonicalDeclaration.
-  llvm::StringRef IncludeHeader;
+
+  struct IncludeHeaderWithReferences {
+    IncludeHeaderWithReferences() = default;
+
+    IncludeHeaderWithReferences(llvm::StringRef IncludeHeader,
+                                unsigned References)
+        : IncludeHeader(IncludeHeader), References(References) {}
+
+    /// This can be either a URI of the header to be #include'd
+    /// for this symbol, or a literal header quoted with <> or "" that is
+    /// suitable to be included directly. When it is a URI, the exact #include
+    /// path needs to be calculated according to the URI scheme.
+    ///
+    /// Note that the include header is a canonical include for the symbol and
+    /// can be different from FileURI in the CanonicalDeclaration.
+    llvm::StringRef IncludeHeader = "";
+    /// The number of translation units that reference this symbol and include
+    /// this header. This number is only meaningful if aggregated in an index.
+    unsigned References = 0;
+  };
+  /// One Symbol can potentially be incuded via different headers.
+  ///   - If we haven't seen a definition, this covers all declarations.
+  ///   - If we have seen a definition, this covers declarations visible from
+  ///   any definition.
+  llvm::SmallVector<IncludeHeaderWithReferences, 1> IncludeHeaders;
 
   // FIXME: add all occurrences support.
   // FIXME: add extra fields for index scoring signals.

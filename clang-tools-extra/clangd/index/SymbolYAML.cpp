@@ -10,11 +10,13 @@
 #include "SymbolYAML.h"
 #include "Index.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(clang::clangd::Symbol)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 
 namespace llvm {
 namespace yaml {
@@ -66,6 +68,15 @@ template <> struct MappingTraits<SymbolInfo> {
   }
 };
 
+template <>
+struct MappingTraits<clang::clangd::Symbol::IncludeHeaderWithReferences> {
+  static void mapping(IO &io,
+                      clang::clangd::Symbol::IncludeHeaderWithReferences &Inc) {
+    io.mapRequired("Header", Inc.IncludeHeader);
+    io.mapRequired("References", Inc.References);
+  }
+};
+
 template <> struct MappingTraits<Symbol> {
   static void mapping(IO &IO, Symbol &Sym) {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
@@ -83,7 +94,7 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
-    IO.mapOptional("IncludeHeader", Sym.IncludeHeader);
+    IO.mapOptional("IncludeHeaders", Sym.IncludeHeaders);
   }
 };
 
