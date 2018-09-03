@@ -296,11 +296,10 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   buildPreamble(
       FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
       std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
-      [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
-                              std::shared_ptr<Preprocessor> PP) {
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
         IndexUpdated = true;
-        Index.update(FilePath, &Ctx, std::move(PP));
+        Index.update(FooCpp, &Ctx, std::move(PP));
       });
   ASSERT_TRUE(IndexUpdated);
 

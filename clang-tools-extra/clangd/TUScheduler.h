@@ -74,8 +74,6 @@ public:
   virtual void onMainAST(PathRef Path, ParsedAST &AST) {}
 };
 
-ParsingCallbacks &noopParsingCallbacks();
-
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
 /// preambles and ASTs) for opened files.
 /// TUScheduler is not thread-safe, only one thread should be providing updates
@@ -86,7 +84,7 @@ ParsingCallbacks &noopParsingCallbacks();
 class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
-              ParsingCallbacks &ASTCallbacks,
+              std::unique_ptr<ParsingCallbacks> ASTCallbacks,
               std::chrono::steady_clock::duration UpdateDebounce,
               ASTRetentionPolicy RetentionPolicy);
   ~TUScheduler();
@@ -166,7 +164,7 @@ public:
 private:
   const bool StorePreamblesInMemory;
   const std::shared_ptr<PCHContainerOperations> PCHOps;
-  ParsingCallbacks &Callbacks;
+  std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;

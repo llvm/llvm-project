@@ -798,7 +798,7 @@ struct ScoredSignature {
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
-                         SymbolIndex *Index, SignatureHelp &SigHelp)
+                         const SymbolIndex *Index, SignatureHelp &SigHelp)
       : CodeCompleteConsumer(CodeCompleteOpts,
                              /*OutputIsBinary=*/false),
         SigHelp(SigHelp),
@@ -1584,7 +1584,7 @@ SignatureHelp signatureHelp(PathRef FileName,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
-                            SymbolIndex *Index) {
+                            const SymbolIndex *Index) {
   SignatureHelp Result;
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
