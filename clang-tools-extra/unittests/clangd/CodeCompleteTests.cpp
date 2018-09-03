@@ -55,10 +55,16 @@ MATCHER_P(SigHelpLabeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.Kind == K; }
 MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
 MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
-MATCHER_P(InsertInclude, IncludeHeader, "") {
-  return arg.Header == IncludeHeader && bool(arg.HeaderInsertion);
+MATCHER_P(HasInclude, IncludeHeader, "") {
+  return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader;
 }
-MATCHER(InsertInclude, "") { return bool(arg.HeaderInsertion); }
+MATCHER_P(InsertInclude, IncludeHeader, "") {
+  return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader &&
+         bool(arg.Includes[0].Insertion);
+}
+MATCHER(InsertInclude, "") {
+  return !arg.Includes.empty() && bool(arg.Includes[0].Insertion);
+}
 MATCHER_P(SnippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(Origin, OriginSet, "") { return arg.Origin == OriginSet; }
 
@@ -568,7 +574,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
   auto BarURI = URI::createFile(BarHeader).toString();
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI;
-  Sym.IncludeHeader = BarURI;
+  Sym.IncludeHeaders.emplace_back(BarURI, 1);
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -600,8 +606,8 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   auto BarURI = URI::createFile(BarHeader).toString();
   SymX.CanonicalDeclaration.FileURI = BarURI;
   SymY.CanonicalDeclaration.FileURI = BarURI;
-  SymX.IncludeHeader = "<bar>";
-  SymY.IncludeHeader = "<bar>";
+  SymX.IncludeHeaders.emplace_back("<bar>", 1);
+  SymY.IncludeHeaders.emplace_back("<bar>", 1);
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
                              R"cpp(
@@ -1178,7 +1184,7 @@ TEST(CompletionTest, OverloadBundling) {
   // Differences in header-to-insert suppress bundling.
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
   NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
-  NoArgsGFunc.IncludeHeader = "<foo>";
+  NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1);
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
       UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
@@ -1345,7 +1351,9 @@ TEST(CompletionTest, Render) {
   C.RequiredQualifier = "Foo::";
   C.Scope = "ns::Foo::";
   C.Documentation = "This is x().";
-  C.Header = "\"foo.h\"";
+  C.Includes.emplace_back();
+  auto &Include = C.Includes.back();
+  Include.Header = "\"foo.h\"";
   C.Kind = CompletionItemKind::Method;
   C.Score.Total = 1.0;
   C.Origin = SymbolOrigin::AST | SymbolOrigin::Static;
@@ -1370,7 +1378,7 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertText, "Foo::x(${0:bool})");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
 
-  C.HeaderInsertion.emplace();
+  Include.Insertion.emplace();
   R = C.render(Opts);
   EXPECT_EQ(R.label, "^Foo::x(bool) const");
   EXPECT_THAT(R.additionalTextEdits, Not(IsEmpty()));
@@ -1824,6 +1832,41 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
   // request after sema.
   auto Reqs3 = Requests.consumeRequests();
   ASSERT_EQ(Reqs3.size(), 2u);
+}
+
+TEST(CompletionTest, InsertTheMostPopularHeader) {
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  Symbol sym = func("Func");
+  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+
+  auto Results = completions("Fun^", {sym}).Completions;
+  assert(!Results.empty());
+  EXPECT_THAT(Results[0], AllOf(Named("Func"), InsertInclude("\"bar.h\"")));
+  EXPECT_EQ(Results[0].Includes.size(), 2u);
+}
+
+TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+
+  std::string FooHeader = testPath("foo.h");
+  FS.Files[FooHeader] = "";
+
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  Symbol sym = func("Func");
+  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+
+  EXPECT_THAT(
+      completions(Server, "#include \"foo.h\"\nFun^", {sym}).Completions,
+      UnorderedElementsAre(
+          AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
 }
 
 } // namespace

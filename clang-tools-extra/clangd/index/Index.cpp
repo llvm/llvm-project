@@ -9,6 +9,7 @@
 
 #include "Index.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -90,9 +91,11 @@ static void own(Symbol &S, llvm::UniqueStringSaver &Strings,
 
   Intern(S.Signature);
   Intern(S.CompletionSnippetSuffix);
+
   Intern(S.Documentation);
   Intern(S.ReturnType);
-  Intern(S.IncludeHeader);
+  for (auto &I : S.IncludeHeaders)
+    Intern(I.IncludeHeader);
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {

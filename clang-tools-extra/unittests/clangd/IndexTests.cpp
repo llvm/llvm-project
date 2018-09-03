@@ -306,6 +306,46 @@ TEST(MergeIndexTest, FindOccurrences) {
                                  FileURI("unittest:///test2.cc"))));
 }
 
+MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References,  "") {
+  return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
+}
+
+TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
+  Symbol L, R;
+  L.Name = "left";
+  R.Name = "right";
+  L.ID = R.ID = SymbolID("hello");
+  L.IncludeHeaders.emplace_back("common", 1);
+  R.IncludeHeaders.emplace_back("common", 1);
+  R.IncludeHeaders.emplace_back("new", 1);
+
+  // Both have no definition.
+  Symbol M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
+
+  // Only merge references of the same includes but do not merge new #includes.
+  L.Definition.FileURI = "file:/left.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u)));
+
+  // Definitions are the same.
+  R.Definition.FileURI = "file:/right.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
+
+  // Definitions are different.
+  R.Definition.FileURI = "file:/right.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

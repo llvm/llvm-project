@@ -44,10 +44,13 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <algorithm>
+#include <iterator>
 #include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
@@ -247,6 +250,7 @@ struct CompletionCandidate {
   // We may have a result from Sema, from the index, or both.
   const CodeCompletionResult *SemaResult = nullptr;
   const Symbol *IndexResult = nullptr;
+  llvm::SmallVector<StringRef, 1> RankedIncludeHeaders;
 
   // States whether this item is an override suggestion.
   bool IsOverride = false;
@@ -267,7 +271,7 @@ struct CompletionCandidate {
         // This could break #include insertion.
         return hash_combine(
             (IndexResult->Scope + IndexResult->Name).toStringRef(Scratch),
-            headerToInsertIfNotPresent().getValueOr(""));
+            headerToInsertIfAllowed().getValueOr(""));
       default:
         return 0;
       }
@@ -281,11 +285,12 @@ struct CompletionCandidate {
       llvm::raw_svector_ostream OS(Scratch);
       D->printQualifiedName(OS);
     }
-    return hash_combine(Scratch, headerToInsertIfNotPresent().getValueOr(""));
+    return hash_combine(Scratch, headerToInsertIfAllowed().getValueOr(""));
   }
 
-  llvm::Optional<llvm::StringRef> headerToInsertIfNotPresent() const {
-    if (!IndexResult || IndexResult->IncludeHeader.empty())
+  // The best header to include if include insertion is allowed.
+  llvm::Optional<llvm::StringRef> headerToInsertIfAllowed() const {
+    if (RankedIncludeHeaders.empty())
       return llvm::None;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
@@ -295,7 +300,7 @@ struct CompletionCandidate {
         if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
           return llvm::None;
     }
-    return IndexResult->IncludeHeader;
+    return RankedIncludeHeaders[0];
   }
 
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
@@ -358,31 +363,41 @@ struct CodeCompletionBuilder {
       if (Completion.Name.empty())
         Completion.Name = C.IndexResult->Name;
     }
-    if (auto Inserted = C.headerToInsertIfNotPresent()) {
-      // Turn absolute path into a literal string that can be #included.
-      auto Include = [&]() -> Expected<std::pair<std::string, bool>> {
-        auto ResolvedDeclaring =
-            toHeaderFile(C.IndexResult->CanonicalDeclaration.FileURI, FileName);
-        if (!ResolvedDeclaring)
-          return ResolvedDeclaring.takeError();
-        auto ResolvedInserted = toHeaderFile(*Inserted, FileName);
-        if (!ResolvedInserted)
-          return ResolvedInserted.takeError();
-        return std::make_pair(Includes.calculateIncludePath(*ResolvedDeclaring,
-                                                            *ResolvedInserted),
-                              Includes.shouldInsertInclude(*ResolvedDeclaring,
-                                                           *ResolvedInserted));
-      }();
-      if (Include) {
-        Completion.Header = Include->first;
-        if (Include->second)
-          Completion.HeaderInsertion = Includes.insert(Include->first);
+
+    // Turn absolute path into a literal string that can be #included.
+    auto Inserted =
+        [&](StringRef Header) -> Expected<std::pair<std::string, bool>> {
+      auto ResolvedDeclaring =
+          toHeaderFile(C.IndexResult->CanonicalDeclaration.FileURI, FileName);
+      if (!ResolvedDeclaring)
+        return ResolvedDeclaring.takeError();
+      auto ResolvedInserted = toHeaderFile(Header, FileName);
+      if (!ResolvedInserted)
+        return ResolvedInserted.takeError();
+      return std::make_pair(
+          Includes.calculateIncludePath(*ResolvedDeclaring, *ResolvedInserted),
+          Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
+    };
+    bool ShouldInsert = C.headerToInsertIfAllowed().hasValue();
+    // Calculate include paths and edits for all possible headers.
+    for (const auto &Inc : C.RankedIncludeHeaders) {
+      if (auto ToInclude = Inserted(Inc)) {
+        CodeCompletion::IncludeCandidate Include;
+        Include.Header = ToInclude->first;
+        if (ToInclude->second && ShouldInsert)
+          Include.Insertion = Includes.insert(ToInclude->first);
+        Completion.Includes.push_back(std::move(Include));
       } else
         log("Failed to generate include insertion edits for adding header "
             "(FileURI='{0}', IncludeHeader='{1}') into {2}",
-            C.IndexResult->CanonicalDeclaration.FileURI,
-            C.IndexResult->IncludeHeader, FileName);
+            C.IndexResult->CanonicalDeclaration.FileURI, Inc, FileName);
     }
+    // Prefer includes that do not need edits (i.e. already exist).
+    std::stable_partition(Completion.Includes.begin(),
+                          Completion.Includes.end(),
+                          [](const CodeCompletion::IncludeCandidate &I) {
+                            return !I.Insertion.hasValue();
+                          });
   }
 
   void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS) {
@@ -1135,6 +1150,26 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   return Result;
 }
 
+// Returns the most popular include header for \p Sym. If two headers are
+// equally popular, prefer the shorter one. Returns empty string if \p Sym has
+// no include header.
+llvm::SmallVector<StringRef, 1>
+getRankedIncludes(const Symbol &Sym) {
+  auto Includes = Sym.IncludeHeaders;
+  // Sort in descending order by reference count and header length.
+  std::sort(Includes.begin(), Includes.end(),
+            [](const Symbol::IncludeHeaderWithReferences &LHS,
+               const Symbol::IncludeHeaderWithReferences &RHS) {
+              if (LHS.References == RHS.References)
+                return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
+              return LHS.References > RHS.References;
+            });
+  llvm::SmallVector<StringRef, 1> Headers;
+  for (const auto &Include : Includes)
+    Headers.push_back(Include.IncludeHeader);
+  return Headers;
+}
+
 // Runs Sema-based (AST) and Index-based completion, returns merged results.
 //
 // There are a few tricky considerations:
@@ -1383,6 +1418,8 @@ private:
       CompletionCandidate C;
       C.SemaResult = SemaResult;
       C.IndexResult = IndexResult;
+      if (C.IndexResult)
+        C.RankedIncludeHeaders = getRankedIncludes(*C.IndexResult);
       C.IsOverride = IsOverride;
       C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
       if (auto OverloadSet = Opts.BundleOverloads ? C.overloadSet() : 0) {
@@ -1576,16 +1613,18 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
 
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
-  LSP.label = (HeaderInsertion ? Opts.IncludeIndicator.Insert
-                               : Opts.IncludeIndicator.NoInsert) +
+  const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
+  LSP.label = ((InsertInclude && InsertInclude->Insertion)
+                   ? Opts.IncludeIndicator.Insert
+                   : Opts.IncludeIndicator.NoInsert) +
               (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
               RequiredQualifier + Name + Signature;
 
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
                               : ReturnType;
-  if (!Header.empty())
-    LSP.detail += "\n" + Header;
+  if (InsertInclude)
+    LSP.detail += "\n" + InsertInclude->Header;
   LSP.documentation = Documentation;
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
@@ -1613,8 +1652,8 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.insertText = LSP.textEdit->newText;
   LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
                                              : InsertTextFormat::PlainText;
-  if (HeaderInsertion)
-    LSP.additionalTextEdits.push_back(*HeaderInsertion);
+  if (InsertInclude && InsertInclude->Insertion)
+    LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
   return LSP;
 }
 
