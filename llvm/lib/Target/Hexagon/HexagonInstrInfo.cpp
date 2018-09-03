@@ -335,37 +335,37 @@ unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 /// This function checks if the instruction or bundle of instructions
 /// has load from stack slot and returns frameindex and machine memory
 /// operand of that instruction if true.
-bool HexagonInstrInfo::hasLoadFromStackSlot(const MachineInstr &MI,
-                                           const MachineMemOperand *&MMO,
-                                           int &FrameIndex) const {
+bool HexagonInstrInfo::hasLoadFromStackSlot(
+    const MachineInstr &MI,
+    SmallVectorImpl<TargetInstrInfo::FrameAccess> &Accesses) const {
   if (MI.isBundle()) {
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator MII = MI.getIterator();
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (TargetInstrInfo::hasLoadFromStackSlot(*MII, MMO, FrameIndex))
+      if (TargetInstrInfo::hasLoadFromStackSlot(*MII, Accesses))
         return true;
     return false;
   }
 
-  return TargetInstrInfo::hasLoadFromStackSlot(MI, MMO, FrameIndex);
+  return TargetInstrInfo::hasLoadFromStackSlot(MI, Accesses);
 }
 
 /// This function checks if the instruction or bundle of instructions
 /// has store to stack slot and returns frameindex and machine memory
 /// operand of that instruction if true.
-bool HexagonInstrInfo::hasStoreToStackSlot(const MachineInstr &MI,
-                                           const MachineMemOperand *&MMO,
-                                           int &FrameIndex) const {
+bool HexagonInstrInfo::hasStoreToStackSlot(
+    const MachineInstr &MI,
+    SmallVectorImpl<TargetInstrInfo::FrameAccess> &Accesses) const {
   if (MI.isBundle()) {
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator MII = MI.getIterator();
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (TargetInstrInfo::hasStoreToStackSlot(*MII, MMO, FrameIndex))
+      if (TargetInstrInfo::hasStoreToStackSlot(*MII, Accesses))
         return true;
     return false;
   }
 
-  return TargetInstrInfo::hasStoreToStackSlot(MI, MMO, FrameIndex);
+  return TargetInstrInfo::hasStoreToStackSlot(MI, Accesses);
 }
 
 /// This function can analyze one/two way branching only and should (mostly) be

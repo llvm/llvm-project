@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_UNITTESTS_RENAME_CLANGRENAMETEST_H
+#define LLVM_CLANG_UNITTESTS_RENAME_CLANGRENAMETEST_H
+
 #include "unittests/Tooling/RewriterTestContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
@@ -110,3 +113,5 @@ protected:
 } // namespace test
 } // namespace clang_rename
 } // namesdpace clang
+
+#endif

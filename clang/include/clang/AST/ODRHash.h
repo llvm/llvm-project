@@ -13,6 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_AST_ODRHASH_H
+#define LLVM_CLANG_AST_ODRHASH_H
+
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
@@ -91,3 +94,5 @@ public:
 };
 
 }  // end namespace clang
+
+#endif

@@ -339,42 +339,37 @@ bool TargetInstrInfo::PredicateInstruction(
   return MadeChange;
 }
 
-bool TargetInstrInfo::hasLoadFromStackSlot(const MachineInstr &MI,
-                                           const MachineMemOperand *&MMO,
-                                           int &FrameIndex) const {
+bool TargetInstrInfo::hasLoadFromStackSlot(
+    const MachineInstr &MI, SmallVectorImpl<FrameAccess> &Accesses) const {
+
+  size_t StartSize = Accesses.size();
   for (MachineInstr::mmo_iterator o = MI.memoperands_begin(),
                                   oe = MI.memoperands_end();
        o != oe; ++o) {
     if ((*o)->isLoad()) {
       if (const FixedStackPseudoSourceValue *Value =
           dyn_cast_or_null<FixedStackPseudoSourceValue>(
-              (*o)->getPseudoValue())) {
-        FrameIndex = Value->getFrameIndex();
-        MMO = *o;
-        return true;
-      }
+              (*o)->getPseudoValue()))
+        Accesses.emplace_back(*o, Value->getFrameIndex());
     }
   }
-  return false;
+  return Accesses.size() != StartSize;
 }
 
-bool TargetInstrInfo::hasStoreToStackSlot(const MachineInstr &MI,
-                                          const MachineMemOperand *&MMO,
-                                          int &FrameIndex) const {
+bool TargetInstrInfo::hasStoreToStackSlot(
+    const MachineInstr &MI, SmallVectorImpl<FrameAccess> &Accesses) const {
+  size_t StartSize = Accesses.size();
   for (MachineInstr::mmo_iterator o = MI.memoperands_begin(),
                                   oe = MI.memoperands_end();
        o != oe; ++o) {
     if ((*o)->isStore()) {
       if (const FixedStackPseudoSourceValue *Value =
           dyn_cast_or_null<FixedStackPseudoSourceValue>(
-              (*o)->getPseudoValue())) {
-        FrameIndex = Value->getFrameIndex();
-        MMO = *o;
-        return true;
-      }
+              (*o)->getPseudoValue()))
+        Accesses.emplace_back(*o, Value->getFrameIndex());
     }
   }
-  return false;
+  return Accesses.size() != StartSize;
 }
 
 bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,

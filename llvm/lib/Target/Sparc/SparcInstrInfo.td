@@ -1334,7 +1334,7 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
 //===----------------------------------------------------------------------===//
 // Instructions for Thread Local Storage(TLS).
 //===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, isAsmParserOnly = 1 in {
+let isAsmParserOnly = 1 in {
 def TLS_ADDrr : F3_1<2, 0b000000,
                     (outs IntRegs:$rd),
                     (ins IntRegs:$rs1, IntRegs:$rs2, TLSSym:$sym),

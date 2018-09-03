@@ -26,6 +26,7 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <future>
@@ -131,12 +132,20 @@ struct CodeCompletion {
   // Other fields should apply equally to all bundled completions.
   unsigned BundleSize = 1;
   SymbolOrigin Origin = SymbolOrigin::Unknown;
-  // The header through which this symbol could be included.
-  // Quoted string as expected by an #include directive, e.g. "<memory>".
-  // Empty for non-symbol completions, or when not known.
-  std::string Header;
-  // Present if Header is set and should be inserted to use this item.
-  llvm::Optional<TextEdit> HeaderInsertion;
+
+  struct IncludeCandidate {
+    // The header through which this symbol could be included.
+    // Quoted string as expected by an #include directive, e.g. "<memory>".
+    // Empty for non-symbol completions, or when not known.
+    std::string Header;
+    // Present if Header should be inserted to use this item.
+    llvm::Optional<TextEdit> Insertion;
+  };
+  // All possible include headers ranked by preference. By default, the first
+  // include is used.
+  // If we've bundled together overloads that have different sets of includes,
+  // thse includes may not be accurate for all of them.
+  llvm::SmallVector<IncludeCandidate, 1> Includes;
 
   /// Holds information about small corrections that needs to be done. Like
   /// converting '->' to '.' on member access.
@@ -211,11 +220,13 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp
-signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
-              PrecompiledPreamble const *Preamble, StringRef Contents,
-              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-              std::shared_ptr<PCHContainerOperations> PCHs, SymbolIndex *Index);
+SignatureHelp signatureHelp(PathRef FileName,
+                            const tooling::CompileCommand &Command,
+                            PrecompiledPreamble const *Preamble,
+                            StringRef Contents, Position Pos,
+                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                            std::shared_ptr<PCHContainerOperations> PCHs,
+                            const SymbolIndex *Index);
 
 // For index-based completion, we only consider:
 //   * symbols in namespaces or translation unit scopes (e.g. no class

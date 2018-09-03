@@ -1,7 +1,7 @@
 // RUN: %clangxx -fsanitize=pointer-overflow %s -o %t
-// RUN: %t 1 2>&1 | FileCheck %s --check-prefix=ERR
-// RUN: %t 0 2>&1 | FileCheck %s --check-prefix=SAFE
-// RUN: %t -1 2>&1 | FileCheck %s --check-prefix=SAFE
+// RUN: %run %t 1 2>&1 | FileCheck %s --check-prefix=ERR
+// RUN: %run %t 0 2>&1 | FileCheck %s --check-prefix=SAFE
+// RUN: %run %t -1 2>&1 | FileCheck %s --check-prefix=SAFE
 
 #include <stdio.h>
 #include <stdint.h>

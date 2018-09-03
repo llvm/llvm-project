@@ -1889,6 +1889,14 @@ bool Sema::checkOpenCLDisabledTypeDeclSpec(const DeclSpec &DS, QualType QT) {
   if (auto TagT = dyn_cast<TagType>(QT.getCanonicalType().getTypePtr()))
     Decl = TagT->getDecl();
   auto Loc = DS.getTypeSpecTypeLoc();
+
+  // Check extensions for vector types.
+  // e.g. double4 is not allowed when cl_khr_fp64 is absent.
+  if (QT->isExtVectorType()) {
+    auto TypePtr = QT->castAs<ExtVectorType>()->getElementType().getTypePtr();
+    return checkOpenCLDisabledTypeOrDecl(TypePtr, Loc, QT, OpenCLTypeExtMap);
+  }
+
   if (checkOpenCLDisabledTypeOrDecl(Decl, Loc, QT, OpenCLDeclExtMap))
     return true;
 
