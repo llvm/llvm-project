@@ -191,11 +191,10 @@ TaskHandle ClangdServer::codeComplete(PathRef File, Position Pos,
   auto Task = [PCHs, Pos, FS, CodeCompleteOpts,
                this](Path File, Callback<CodeCompleteResult> CB,
                      llvm::Expected<InputsAndPreamble> IP) {
-    if (isCancelled())
-      return CB(llvm::make_error<CancelledError>());
-
     if (!IP)
       return CB(IP.takeError());
+    if (isCancelled())
+      return CB(llvm::make_error<CancelledError>());
 
     auto PreambleData = IP->Preamble;
 
