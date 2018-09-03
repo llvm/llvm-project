@@ -56,11 +56,11 @@ TEST(SwapIndexTest, OldIndexRecycled) {
   auto Token = std::make_shared<int>();
   std::weak_ptr<int> WeakToken = Token;
 
-  SwapIndex S(make_unique<MemIndex>(SymbolSlab(), MemIndex::OccurrenceMap(),
-                                    std::move(Token)));
-  EXPECT_FALSE(WeakToken.expired()); // Current MemIndex keeps it alive.
-  S.reset(make_unique<MemIndex>());  // Now the MemIndex is destroyed.
-  EXPECT_TRUE(WeakToken.expired());  // So the token is too.
+  SwapIndex S(llvm::make_unique<MemIndex>(
+      SymbolSlab(), MemIndex::OccurrenceMap(), std::move(Token)));
+  EXPECT_FALSE(WeakToken.expired());     // Current MemIndex keeps it alive.
+  S.reset(llvm::make_unique<MemIndex>()); // Now the MemIndex is destroyed.
+  EXPECT_TRUE(WeakToken.expired());      // So the token is too.
 }
 
 TEST(MemIndexTest, MemIndexDeduplicate) {
