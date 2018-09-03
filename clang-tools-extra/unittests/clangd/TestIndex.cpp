@@ -26,30 +26,18 @@ Symbol symbol(llvm::StringRef QName) {
   return Sym;
 }
 
-std::shared_ptr<std::vector<const Symbol *>>
-generateSymbols(std::vector<std::string> QualifiedNames,
-                std::weak_ptr<SlabAndPointers> *WeakSymbols) {
+SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
   SymbolSlab::Builder Slab;
   for (llvm::StringRef QName : QualifiedNames)
     Slab.insert(symbol(QName));
-
-  auto Storage = std::make_shared<SlabAndPointers>();
-  Storage->Slab = std::move(Slab).build();
-  for (const auto &Sym : Storage->Slab)
-    Storage->Pointers.push_back(&Sym);
-  if (WeakSymbols)
-    *WeakSymbols = Storage;
-  auto *Pointers = &Storage->Pointers;
-  return {std::move(Storage), Pointers};
+  return std::move(Slab).build();
 }
 
-std::shared_ptr<std::vector<const Symbol *>>
-generateNumSymbols(int Begin, int End,
-                   std::weak_ptr<SlabAndPointers> *WeakSymbols) {
+SymbolSlab generateNumSymbols(int Begin, int End) {
   std::vector<std::string> Names;
   for (int i = Begin; i <= End; i++)
     Names.push_back(std::to_string(i));
-  return generateSymbols(Names, WeakSymbols);
+  return generateSymbols(Names);
 }
 
 std::string getQualifiedName(const Symbol &Sym) {

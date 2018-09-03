@@ -24,7 +24,7 @@
 namespace clang {
 namespace clangd {
 
-/// \brief A container of Symbols from several source files. It can be updated
+/// A container of Symbols from several source files. It can be updated
 /// at source-file granularity, replacing all symbols from one file with a new
 /// set.
 ///
@@ -39,35 +39,31 @@ namespace clangd {
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
-  /// \brief Updates all symbols and occurrences in a file.
-  /// If \p Slab (Occurrence) is nullptr, symbols (occurrences) for \p Path
-  /// will be removed.
+  /// Updates all symbols and occurrences in a file.
+  /// If either is nullptr, corresponding data for \p Path will be removed.
   void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
               std::unique_ptr<SymbolOccurrenceSlab> Occurrences);
 
-  // The shared_ptr keeps the symbols alive
-  std::shared_ptr<std::vector<const Symbol *>> allSymbols();
-
-  /// Returns all symbol occurrences for all active files.
-  std::shared_ptr<MemIndex::OccurrenceMap> allOccurrences() const;
+  // The index keeps the symbols alive.
+  std::unique_ptr<SymbolIndex> buildMemIndex();
 
 private:
   mutable std::mutex Mutex;
 
-  /// \brief Stores the latest snapshots for all active files.
+  /// Stores the latest snapshots for all active files.
   llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSlabs;
   /// Stores the latest occurrence slabs for all active files.
   llvm::StringMap<std::shared_ptr<SymbolOccurrenceSlab>> FileToOccurrenceSlabs;
 };
 
-/// \brief This manages symbols from files and an in-memory index on all symbols.
-class FileIndex : public SymbolIndex {
+/// This manages symbols from files and an in-memory index on all symbols.
+class FileIndex : public SwapIndex {
 public:
   /// If URISchemes is empty, the default schemes in SymbolCollector will be
   /// used.
   FileIndex(std::vector<std::string> URISchemes = {});
 
-  /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
+  /// Update symbols in \p Path with symbols in \p AST. If \p AST is
   /// nullptr, this removes all symbols in the file.
   /// If \p AST is not null, \p PP cannot be null and it should be the
   /// preprocessor that was used to build \p AST.
@@ -77,23 +73,11 @@ public:
   update(PathRef Path, ASTContext *AST, std::shared_ptr<Preprocessor> PP,
          llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None);
 
-  bool
-  fuzzyFind(const FuzzyFindRequest &Req,
-            llvm::function_ref<void(const Symbol &)> Callback) const override;
-
-  void lookup(const LookupRequest &Req,
-              llvm::function_ref<void(const Symbol &)> Callback) const override;
-
-
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override;
-
-  size_t estimateMemoryUsage() const override;
-
 private:
+  // Only update() should swap the index.
+  using SwapIndex::reset;
+
   FileSymbols FSymbols;
-  MemIndex Index;
   std::vector<std::string> URISchemes;
 };
 

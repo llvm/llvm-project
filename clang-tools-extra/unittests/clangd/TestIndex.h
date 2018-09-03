@@ -23,26 +23,11 @@ namespace clangd {
 // Creates Symbol instance and sets SymbolID to given QualifiedName.
 Symbol symbol(llvm::StringRef QName);
 
-// Bundles symbol pointers with the actual symbol slab the pointers refer to in
-// order to ensure that the slab isn't destroyed while it's used by and index.
-struct SlabAndPointers {
-  SymbolSlab Slab;
-  std::vector<const Symbol *> Pointers;
-};
+// Create a slab of symbols with the given qualified names as IDs and names.
+SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames);
 
-// Create a slab of symbols with the given qualified names as both IDs and
-// names. The life time of the slab is managed by the returned shared pointer.
-// If \p WeakSymbols is provided, it will be pointed to the managed object in
-// the returned shared pointer.
-std::shared_ptr<std::vector<const Symbol *>>
-generateSymbols(std::vector<std::string> QualifiedNames,
-                std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr);
-
-// Create a slab of symbols with IDs and names [Begin, End], otherwise identical
-// to the `generateSymbols` above.
-std::shared_ptr<std::vector<const Symbol *>>
-generateNumSymbols(int Begin, int End,
-                   std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr);
+// Create a slab of symbols with IDs and names [Begin, End].
+SymbolSlab generateNumSymbols(int Begin, int End);
 
 // Returns fully-qualified name out of given symbol.
 std::string getQualifiedName(const Symbol &Sym);

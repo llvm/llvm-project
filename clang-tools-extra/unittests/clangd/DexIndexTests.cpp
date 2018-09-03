@@ -23,6 +23,7 @@
 
 using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
+using namespace llvm;
 
 namespace clang {
 namespace clangd {
@@ -408,62 +409,46 @@ TEST(DexIndexTrigrams, QueryTrigrams) {
 }
 
 TEST(DexIndex, Lookup) {
-  DexIndex I;
-  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
-  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+  auto I = DexIndex::build(generateSymbols({"ns::abc", "ns::xyz"}));
+  EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::xyz"));
-  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
 TEST(DexIndex, FuzzyFind) {
-  DexIndex Index;
-  Index.build(generateSymbols({"ns::ABC", "ns::BCD", "::ABC", "ns::nested::ABC",
-                               "other::ABC", "other::A"}));
+  auto Index = DexIndex::build(
+      generateSymbols({"ns::ABC", "ns::BCD", "::ABC", "ns::nested::ABC",
+                       "other::ABC", "other::A"}));
   FuzzyFindRequest Req;
   Req.Query = "ABC";
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(Index, Req), UnorderedElementsAre("ns::ABC"));
+  EXPECT_THAT(match(*Index, Req), UnorderedElementsAre("ns::ABC"));
   Req.Scopes = {"ns::", "ns::nested::"};
-  EXPECT_THAT(match(Index, Req),
+  EXPECT_THAT(match(*Index, Req),
               UnorderedElementsAre("ns::ABC", "ns::nested::ABC"));
   Req.Query = "A";
   Req.Scopes = {"other::"};
-  EXPECT_THAT(match(Index, Req),
+  EXPECT_THAT(match(*Index, Req),
               UnorderedElementsAre("other::A", "other::ABC"));
   Req.Query = "";
   Req.Scopes = {};
-  EXPECT_THAT(match(Index, Req),
+  EXPECT_THAT(match(*Index, Req),
               UnorderedElementsAre("ns::ABC", "ns::BCD", "::ABC",
                                    "ns::nested::ABC", "other::ABC",
                                    "other::A"));
 }
 
 TEST(DexIndexTest, FuzzyMatchQ) {
-  DexIndex I;
-  I.build(
+  auto I = DexIndex::build(
       generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.MaxCandidateCount = 2;
-  EXPECT_THAT(match(I, Req),
+  EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
-}
-
-TEST(DexIndexTest, DexIndexSymbolsRecycled) {
-  DexIndex I;
-  std::weak_ptr<SlabAndPointers> Symbols;
-  I.build(generateNumSymbols(0, 10, &Symbols));
-  FuzzyFindRequest Req;
-  Req.Query = "7";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("7"));
-
-  EXPECT_FALSE(Symbols.expired());
-  // Release old symbols.
-  I.build(generateNumSymbols(0, 0));
-  EXPECT_TRUE(Symbols.expired());
 }
 
 // FIXME(kbobyrev): This test is different for DexIndex and MemIndex: while
@@ -472,107 +457,92 @@ TEST(DexIndexTest, DexIndexSymbolsRecycled) {
 // Before drop-in replacement of MemIndex with DexIndex happens, FileIndex
 // should handle deduplication instead.
 TEST(DexIndexTest, DexIndexDeduplicate) {
-  auto Symbols = generateNumSymbols(0, 10);
-
-  // Inject duplicates.
-  auto Sym = symbol("7");
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-
+  std::vector<Symbol> Symbols = {symbol("1"), symbol("2"), symbol("3"),
+                                 symbol("2") /* duplicate */};
   FuzzyFindRequest Req;
-  Req.Query = "7";
-  DexIndex I;
-  I.build(std::move(Symbols));
-  auto Matches = match(I, Req);
-  EXPECT_EQ(Matches.size(), 4u);
+  Req.Query = "2";
+  DexIndex I(Symbols);
+  EXPECT_THAT(match(I, Req), ElementsAre("2", "2"));
 }
 
 TEST(DexIndexTest, DexIndexLimitedNumMatches) {
-  DexIndex I;
-  I.build(generateNumSymbols(0, 100));
+  auto I = DexIndex::build(generateNumSymbols(0, 100));
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.MaxCandidateCount = 3;
   bool Incomplete;
-  auto Matches = match(I, Req, &Incomplete);
+  auto Matches = match(*I, Req, &Incomplete);
   EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
   EXPECT_TRUE(Incomplete);
 }
 
 TEST(DexIndexTest, FuzzyMatch) {
-  DexIndex I;
-  I.build(
+  auto I = DexIndex::build(
       generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.MaxCandidateCount = 2;
-  EXPECT_THAT(match(I, Req),
+  EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
 TEST(DexIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
-  DexIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  auto I = DexIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 
 TEST(DexIndexTest, MatchQualifiedNamesWithGlobalScope) {
-  DexIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  auto I = DexIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("y3"));
 }
 
 TEST(DexIndexTest, MatchQualifiedNamesWithOneScope) {
-  DexIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
+  auto I = DexIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2"));
 }
 
 TEST(DexIndexTest, MatchQualifiedNamesWithMultipleScopes) {
-  DexIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
+  auto I = DexIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
 }
 
 TEST(DexIndexTest, NoMatchNestedScopes) {
-  DexIndex I;
-  I.build(generateSymbols({"a::y1", "a::b::y2"}));
+  auto I = DexIndex::build(generateSymbols({"a::y1", "a::b::y2"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1"));
 }
 
 TEST(DexIndexTest, IgnoreCases) {
-  DexIndex I;
-  I.build(generateSymbols({"ns::ABC", "ns::abc"}));
+  auto I = DexIndex::build(generateSymbols({"ns::ABC", "ns::abc"}));
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
 }
 
 TEST(DexIndexTest, Lookup) {
-  DexIndex I;
-  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
-  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+  auto I = DexIndex::build(generateSymbols({"ns::abc", "ns::xyz"}));
+  EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::xyz"));
-  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
 } // namespace

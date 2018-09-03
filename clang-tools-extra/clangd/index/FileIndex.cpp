@@ -71,7 +71,9 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 }
 
 FileIndex::FileIndex(std::vector<std::string> URISchemes)
-    : URISchemes(std::move(URISchemes)) {}
+    : URISchemes(std::move(URISchemes)) {
+  reset(FSymbols.buildMemIndex());
+}
 
 void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
                          std::unique_ptr<SymbolOccurrenceSlab> Occurrences) {
@@ -86,52 +88,32 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
     FileToOccurrenceSlabs[Path] = std::move(Occurrences);
 }
 
-std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
-  // The snapshot manages life time of symbol slabs and provides pointers of all
-  // symbols in all slabs.
-  struct Snapshot {
-    std::vector<const Symbol *> Pointers;
-    std::vector<std::shared_ptr<SymbolSlab>> KeepAlive;
-  };
-  auto Snap = std::make_shared<Snapshot>();
+std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
+  std::vector<std::shared_ptr<SymbolSlab>> Slabs;
+  std::vector<std::shared_ptr<SymbolOccurrenceSlab>> OccurrenceSlabs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-
-    for (const auto &FileAndSlab : FileToSlabs) {
-      Snap->KeepAlive.push_back(FileAndSlab.second);
-      for (const auto &Iter : *FileAndSlab.second)
-        Snap->Pointers.push_back(&Iter);
-    }
+    for (const auto &FileAndSlab : FileToSlabs)
+      Slabs.push_back(FileAndSlab.second);
+    for (const auto &FileAndOccurrenceSlab : FileToOccurrenceSlabs)
+      OccurrenceSlabs.push_back(FileAndOccurrenceSlab.second);
   }
-  auto *Pointers = &Snap->Pointers;
-  // Use aliasing constructor to keep the snapshot alive along with the
-  // pointers.
-  return {std::move(Snap), Pointers};
-}
-
-std::shared_ptr<MemIndex::OccurrenceMap> FileSymbols::allOccurrences() const {
-  // The snapshot manages life time of symbol occurrence slabs and provides
-  // pointers to all occurrences in all occurrence slabs.
-  struct Snapshot {
-    MemIndex::OccurrenceMap Occurrences; // ID => {Occurrence}
-    std::vector<std::shared_ptr<SymbolOccurrenceSlab>> KeepAlive;
-  };
-
-  auto Snap = std::make_shared<Snapshot>();
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-
-    for (const auto &FileAndSlab : FileToOccurrenceSlabs) {
-      Snap->KeepAlive.push_back(FileAndSlab.second);
-      for (const auto &IDAndOccurrences : *FileAndSlab.second) {
-        auto &Occurrences = Snap->Occurrences[IDAndOccurrences.first];
-        for (const auto &Occurrence : IDAndOccurrences.second)
-          Occurrences.push_back(&Occurrence);
-      }
+  std::vector<const Symbol *> AllSymbols;
+  for (const auto &Slab : Slabs)
+    for (const auto &Sym : *Slab)
+      AllSymbols.push_back(&Sym);
+  MemIndex::OccurrenceMap AllOccurrences;
+  for (const auto &OccurrenceSlab : OccurrenceSlabs)
+    for (const auto &Sym : *OccurrenceSlab) {
+      auto &Entry = AllOccurrences[Sym.first];
+      for (const auto &Occ : Sym.second)
+        Entry.push_back(&Occ);
     }
-  }
 
-  return {std::move(Snap), &Snap->Occurrences};
+  // Index must keep the slabs alive.
+  return llvm::make_unique<MemIndex>(
+      llvm::make_pointee_range(AllSymbols), std::move(AllOccurrences),
+      std::make_pair(std::move(Slabs), std::move(OccurrenceSlabs)));
 }
 
 void FileIndex::update(PathRef Path, ASTContext *AST,
@@ -148,30 +130,7 @@ void FileIndex::update(PathRef Path, ASTContext *AST,
         indexAST(*AST, PP, TopLevelDecls, URISchemes);
     FSymbols.update(Path, std::move(Slab), std::move(OccurrenceSlab));
   }
-  auto Symbols = FSymbols.allSymbols();
-  Index.build(std::move(Symbols), FSymbols.allOccurrences());
-}
-
-bool FileIndex::fuzzyFind(
-    const FuzzyFindRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
-  return Index.fuzzyFind(Req, Callback);
-}
-
-void FileIndex::lookup(
-    const LookupRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
-  Index.lookup(Req, Callback);
-}
-
-void FileIndex::findOccurrences(
-    const OccurrencesRequest &Req,
-    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
-  Index.findOccurrences(Req, Callback);
-}
-
-size_t FileIndex::estimateMemoryUsage() const {
-  return Index.estimateMemoryUsage();
+  reset(FSymbols.buildMemIndex());
 }
 
 } // namespace clangd
