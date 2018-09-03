@@ -821,7 +821,7 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
                     uptr *oldlenp, const void *newp, uptr newlen) {
 #if SANITIZER_OPENBSD
   return sysctl(name, namelen, oldp, (size_t *)oldlenp, (void *)newp,
-	(size_t)newlen);
+                (size_t)newlen);
 #else
   return sysctl(name, namelen, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
 #endif
