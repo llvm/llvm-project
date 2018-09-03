@@ -2673,8 +2673,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
 
     // ~(X - Y) --> ~X + Y
-    if (match(NotVal, m_OneUse(m_Sub(m_Value(X), m_Value(Y)))))
-      return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
+    if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
+      if (isa<Constant>(X) || NotVal->hasOneUse())
+        return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
 
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
@@ -2713,18 +2714,13 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       Value *X;
       const APInt *C;
       if (match(Op0, m_Sub(m_APInt(C), m_Value(X)))) {
-        // ~(c-X) == X-c-1 == X+(-c-1)
-        if (RHSC->isAllOnesValue()) {
-          Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
-          return BinaryOperator::CreateAdd(X, NewC);
-        }
         if (RHSC->isSignMask()) {
           // (C - X) ^ signmask -> (C + signmask - X)
           Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
           return BinaryOperator::CreateSub(NewC, X);
         }
       } else if (match(Op0, m_Add(m_Value(X), m_APInt(C)))) {
-        // ~(X-c) --> (-c-1)-X
+        // ~(X + C) --> (-C - 1) - X
         if (RHSC->isAllOnesValue()) {
           Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
           return BinaryOperator::CreateSub(NewC, X);

@@ -36,8 +36,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 6, -8857
 ; CHECK-NEXT:    clrldi 5, 5, 27
-; CHECK-NEXT:    clrldi 4, 4, 27
 ; CHECK-NEXT:    ori 6, 6, 51366
+; CHECK-NEXT:    clrldi 4, 4, 27
 ; CHECK-NEXT:    sldi 6, 6, 32
 ; CHECK-NEXT:    oris 6, 6, 3542
 ; CHECK-NEXT:    ori 6, 6, 31883

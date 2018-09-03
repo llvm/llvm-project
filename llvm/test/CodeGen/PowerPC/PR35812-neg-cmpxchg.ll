@@ -33,20 +33,20 @@ define signext i32 @main() {
 ;
 ; CHECK-P7-LABEL: main:
 ; CHECK-P7:    li 3, -32477
-; CHECK-P7:    lis 4, 0
+; CHECK-P7:    lis 5, 0
 ; CHECK-P7:    li 7, 0
-; CHECK-P7:    li 5, 234
 ; CHECK-P7:    sth 3, 46(1)
-; CHECK-P7:    ori 4, 4, 33059
-; CHECK-P7:    rlwinm 3, 6, 3, 27, 27
+; CHECK-P7:    li 6, 234
+; CHECK-P7:    ori 5, 5, 33059
+; CHECK-P7:    rlwinm 3, 4, 3, 27, 27
 ; CHECK-P7:    ori 7, 7, 65535
 ; CHECK-P7:    sync
+; CHECK-P7:    slw 6, 6, 3
 ; CHECK-P7:    slw 8, 5, 3
-; CHECK-P7:    slw 9, 4, 3
-; CHECK-P7:    rldicr 4, 6, 0, 61
 ; CHECK-P7:    slw 5, 7, 3
-; CHECK-P7:    and 7, 8, 5
-; CHECK-P7:    and 8, 9, 5
+; CHECK-P7:    rldicr 4, 4, 0, 61
+; CHECK-P7:    and 7, 6, 5
+; CHECK-P7:    and 8, 8, 5
 ; CHECK-P7:  .LBB0_1: # %L.entry
 ; CHECK-P7:    lwarx 9, 0, 4
 ; CHECK-P7:    and 6, 9, 5
