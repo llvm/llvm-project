@@ -127,8 +127,8 @@ private:
   IncludeStructure Includes;
 };
 
-using PreambleParsedCallback = std::function<void(
-    PathRef Path, ASTContext &, std::shared_ptr<clang::Preprocessor>)>;
+using PreambleParsedCallback =
+    std::function<void(ASTContext &, std::shared_ptr<clang::Preprocessor>)>;
 
 /// Builds compiler invocation that could be used to build AST or preamble.
 std::unique_ptr<CompilerInvocation>

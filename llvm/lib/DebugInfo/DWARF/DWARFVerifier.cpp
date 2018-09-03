@@ -1059,16 +1059,19 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
   return NumErrors;
 }
 
-static SmallVector<StringRef, 2> getNames(const DWARFDie &DIE) {
+static SmallVector<StringRef, 2> getNames(const DWARFDie &DIE,
+                                          bool IncludeLinkageName = true) {
   SmallVector<StringRef, 2> Result;
   if (const char *Str = DIE.getName(DINameKind::ShortName))
     Result.emplace_back(Str);
   else if (DIE.getTag() == dwarf::DW_TAG_namespace)
     Result.emplace_back("(anonymous namespace)");
 
-  if (const char *Str = DIE.getName(DINameKind::LinkageName)) {
-    if (Result.empty() || Result[0] != Str)
-      Result.emplace_back(Str);
+  if (IncludeLinkageName) {
+    if (const char *Str = DIE.getName(DINameKind::LinkageName)) {
+      if (Result.empty() || Result[0] != Str)
+        Result.emplace_back(Str);
+    }
   }
 
   return Result;
@@ -1211,7 +1214,9 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // "If a subprogram or inlined subroutine is included, and has a
   // DW_AT_linkage_name attribute, there will be an additional index entry for
   // the linkage name."
-  auto EntryNames = getNames(Die);
+  auto IncludeLinkageName = Die.getTag() == DW_TAG_subprogram ||
+                            Die.getTag() == DW_TAG_inlined_subroutine;
+  auto EntryNames = getNames(Die, IncludeLinkageName);
   if (EntryNames.empty())
     return 0;
 

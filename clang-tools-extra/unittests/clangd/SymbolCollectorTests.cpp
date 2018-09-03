@@ -54,7 +54,13 @@ MATCHER_P(Snippet, S, "") {
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
 MATCHER_P(DefURI, P, "") { return arg.Definition.FileURI == P; }
-MATCHER_P(IncludeHeader, P, "") { return arg.IncludeHeader == P; }
+MATCHER_P(IncludeHeader, P, "") {
+  return (arg.IncludeHeaders.size() == 1) &&
+         (arg.IncludeHeaders.begin()->IncludeHeader == P);
+}
+MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References,  "") {
+  return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
+}
 MATCHER_P(DeclRange, Pos, "") {
   return std::tie(arg.CanonicalDeclaration.Start.Line,
                   arg.CanonicalDeclaration.Start.Column,
@@ -760,6 +766,11 @@ CanonicalDeclaration:
 IsIndexedForCodeCompletion:    true
 Documentation:    'Foo doc'
 ReturnType:    'int'
+IncludeHeaders:
+  - Header:    'include1'
+    References:    7
+  - Header:    'include2'
+    References:    3
 ...
 )";
   const std::string YAML2 = R"(
@@ -791,6 +802,10 @@ CompletionSnippetSuffix:    '-snippet'
                                          Doc("Foo doc"), ReturnType("int"),
                                          DeclURI("file:///path/foo.h"),
                                          ForCodeCompletion(true))));
+  auto &Sym1 = *Symbols1.begin();
+  EXPECT_THAT(Sym1.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("include1", 7u),
+                                   IncludeHeaderWithRef("include2", 3u)));
   auto Symbols2 = symbolsFromYAML(YAML2);
   EXPECT_THAT(Symbols2, UnorderedElementsAre(AllOf(
                             QName("clang::Foo2"), Labeled("Foo2-sig"),
@@ -812,9 +827,10 @@ CompletionSnippetSuffix:    '-snippet'
 TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
   CollectorOpts.CollectIncludePath = true;
   runSymbolCollector("class Foo {};", /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI),
-                                         IncludeHeader(TestHeaderURI))));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
+  EXPECT_THAT(Symbols.begin()->IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef(TestHeaderURI, 1u)));
 }
 
 #ifndef _WIN32

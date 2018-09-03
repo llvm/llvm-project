@@ -46,7 +46,7 @@ protected:
 
 TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(getDefaultAsyncThreadsCount(),
-                /*StorePreamblesInMemory=*/true, noopParsingCallbacks(),
+                /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
                 ASTRetentionPolicy());
 
@@ -104,7 +104,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     Notification Ready;
     TUScheduler S(
         getDefaultAsyncThreadsCount(),
-        /*StorePreamblesInMemory=*/true, noopParsingCallbacks(),
+        /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
         ASTRetentionPolicy());
     auto Path = testPath("foo.cpp");
@@ -132,7 +132,7 @@ TEST_F(TUSchedulerTests, Debounce) {
   std::atomic<int> CallbackCount(0);
   {
     TUScheduler S(getDefaultAsyncThreadsCount(),
-                  /*StorePreamblesInMemory=*/true, noopParsingCallbacks(),
+                  /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
                   /*UpdateDebounce=*/std::chrono::seconds(1),
                   ASTRetentionPolicy());
     // FIXME: we could probably use timeouts lower than 1 second here.
@@ -165,7 +165,7 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
     Notification InconsistentReadDone; // Must live longest.
     TUScheduler S(
         getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
-        noopParsingCallbacks(),
+        /*ASTCallbacks=*/nullptr,
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
         ASTRetentionPolicy());
     auto Path = testPath("foo.cpp");
@@ -221,7 +221,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
   // Run TUScheduler and collect some stats.
   {
     TUScheduler S(getDefaultAsyncThreadsCount(),
-                  /*StorePreamblesInMemory=*/true, noopParsingCallbacks(),
+                  /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
                   /*UpdateDebounce=*/std::chrono::milliseconds(50),
                   ASTRetentionPolicy());
 
@@ -319,7 +319,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   Policy.MaxRetainedASTs = 2;
   TUScheduler S(
       /*AsyncThreadsCount=*/1, /*StorePreambleInMemory=*/true,
-      noopParsingCallbacks(),
+      /*ASTCallbacks=*/nullptr,
       /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(), Policy);
 
   llvm::StringLiteral SourceContents = R"cpp(
@@ -369,7 +369,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
 TEST_F(TUSchedulerTests, EmptyPreamble) {
   TUScheduler S(
       /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-      noopParsingCallbacks(),
+      /*ASTCallbacks=*/nullptr,
       /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
       ASTRetentionPolicy());
 
@@ -416,7 +416,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
   // the same time. All reads should get the same non-null preamble.
   TUScheduler S(
       /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-      noopParsingCallbacks(),
+      /*ASTCallbacks=*/nullptr,
       /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
       ASTRetentionPolicy());
   auto Foo = testPath("foo.cpp");
@@ -449,7 +449,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
 TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   TUScheduler S(
       /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-      /*StorePreambleInMemory=*/true, noopParsingCallbacks(),
+      /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/nullptr,
       /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
       ASTRetentionPolicy());
 
@@ -502,7 +502,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
 TEST_F(TUSchedulerTests, NoChangeDiags) {
   TUScheduler S(
       /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-      /*StorePreambleInMemory=*/true, noopParsingCallbacks(),
+      /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/nullptr,
       /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
       ASTRetentionPolicy());
 

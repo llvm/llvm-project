@@ -118,6 +118,10 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   // Classes: this is the def itself. Functions: hopefully the header decl.
   // If both did (or both didn't), continue to prefer L over R.
   bool PreferR = R.Definition && !L.Definition;
+  // Merge include headers only if both have definitions or both have no
+  // definition; otherwise, only accumulate references of common includes.
+  bool MergeIncludes =
+      L.Definition.FileURI.empty() == R.Definition.FileURI.empty();
   Symbol S = PreferR ? R : L;        // The target symbol we're merging into.
   const Symbol &O = PreferR ? L : R; // The "other" less-preferred symbol.
 
@@ -136,8 +140,18 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
     S.Documentation = O.Documentation;
   if (S.ReturnType == "")
     S.ReturnType = O.ReturnType;
-  if (S.IncludeHeader == "")
-    S.IncludeHeader = O.IncludeHeader;
+  for (const auto &OI : O.IncludeHeaders) {
+    bool Found = false;
+    for (auto &SI : S.IncludeHeaders) {
+      if (SI.IncludeHeader == OI.IncludeHeader) {
+        Found = true;
+        SI.References += OI.References;
+        break;
+      }
+    }
+    if (!Found && MergeIncludes)
+      S.IncludeHeaders.emplace_back(OI.IncludeHeader, OI.References);
+  }
 
   S.Origin |= O.Origin | SymbolOrigin::Merge;
   return S;
