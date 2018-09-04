@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
 #include "Path.h"
+#include "RIFF.h"
 #include "Trace.h"
 #include "index/SymbolYAML.h"
 #include "index/dex/DexIndex.h"
