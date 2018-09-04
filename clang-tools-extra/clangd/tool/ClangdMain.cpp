@@ -281,9 +281,15 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   if (EnableIndex && !YamlSymbolFile.empty()) {
-    StaticIdx = loadIndex(YamlSymbolFile, UseDex);
-    Opts.StaticIndex = StaticIdx.get();
+    // Load the index asynchronously. Meanwhile SwapIndex returns no results.
+    SwapIndex *Placeholder;
+    StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
+    runAsync<void>([Placeholder] {
+      if (auto Idx = loadIndex(YamlSymbolFile))
+        Placeholder->reset(std::move(Idx));
+    });
   }
+  Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
 
   clangd::CodeCompleteOptions CCOpts;
