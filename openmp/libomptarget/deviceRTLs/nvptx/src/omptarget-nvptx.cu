@@ -196,8 +196,8 @@ EXTERN void __kmpc_spmd_kernel_deinit() {
       int slot = smid() % MAX_SM;
       omptarget_nvptx_device_simpleState[slot].Enqueue(
           omptarget_nvptx_simpleThreadPrivateContext);
-      return;
     }
+    return;
   }
   if (threadId == 0) {
     // Enqueue omp state object for use by another team.

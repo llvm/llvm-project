@@ -421,12 +421,16 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandERet(MBB, MI);
     break;
   case Mips::PseudoMFHI:
-    Opc = isMicroMips ? Mips::MFHI16_MM : Mips::MFHI;
-    expandPseudoMFHiLo(MBB, MI, Opc);
+    expandPseudoMFHiLo(MBB, MI, Mips::MFHI);
+    break;
+  case Mips::PseudoMFHI_MM:
+    expandPseudoMFHiLo(MBB, MI, Mips::MFHI16_MM);
     break;
   case Mips::PseudoMFLO:
-    Opc = isMicroMips ? Mips::MFLO16_MM : Mips::MFLO;
-    expandPseudoMFHiLo(MBB, MI, Opc);
+    expandPseudoMFHiLo(MBB, MI, Mips::MFLO);
+    break;
+  case Mips::PseudoMFLO_MM:
+    expandPseudoMFHiLo(MBB, MI, Mips::MFLO16_MM);
     break;
   case Mips::PseudoMFHI64:
     expandPseudoMFHiLo(MBB, MI, Mips::MFHI64);

@@ -125,7 +125,6 @@ void FileIndex::update(PathRef Path, ASTContext *AST,
     assert(PP);
     auto Slab = llvm::make_unique<SymbolSlab>();
     auto OccurrenceSlab = llvm::make_unique<SymbolOccurrenceSlab>();
-    auto IndexResults = indexAST(*AST, PP, TopLevelDecls, URISchemes);
     std::tie(*Slab, *OccurrenceSlab) =
         indexAST(*AST, PP, TopLevelDecls, URISchemes);
     FSymbols.update(Path, std::move(Slab), std::move(OccurrenceSlab));

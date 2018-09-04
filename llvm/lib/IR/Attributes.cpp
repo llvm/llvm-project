@@ -323,6 +323,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "returns_twice";
   if (hasAttribute(Attribute::SExt))
     return "signext";
+  if (hasAttribute(Attribute::SpeculativeLoadHardening))
+    return "speculative_load_hardening";
   if (hasAttribute(Attribute::Speculatable))
     return "speculatable";
   if (hasAttribute(Attribute::StackProtect))

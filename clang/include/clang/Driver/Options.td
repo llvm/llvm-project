@@ -2009,6 +2009,10 @@ def mno_stackrealign : Flag<["-"], "mno-stackrealign">, Group<m_Group>;
 
 def mretpoline : Flag<["-"], "mretpoline">, Group<m_Group>, Flags<[CoreOption,DriverOption]>;
 def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_Group>, Flags<[CoreOption,DriverOption]>;
+def mspeculative_load_hardening : Flag<["-"], "mspeculative-load-hardening">,
+  Group<m_Group>, Flags<[CoreOption,CC1Option]>;
+def mno_speculative_load_hardening : Flag<["-"], "mno-speculative-load-hardening">,
+  Group<m_Group>, Flags<[CoreOption]>;
 
 def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
   HelpText<"Enable linker relaxation">;
