@@ -1592,7 +1592,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                            "command extends past the end of the symbol table");
       return;
     }
-    if (Dysymtab.nextdefsym != 0 && Dysymtab.ilocalsym > Symtab.nsyms) {
+    if (Dysymtab.nextdefsym != 0 && Dysymtab.iextdefsym > Symtab.nsyms) {
       Err = malformedError("nextdefsym in LC_DYSYMTAB load command "
                            "extends past the end of the symbol table");
       return;
