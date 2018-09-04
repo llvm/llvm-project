@@ -29,6 +29,7 @@ add_clang_library(clangDaemon
   Protocol.cpp
   ProtocolHandlers.cpp
   Quality.cpp
+  RIFF.cpp
   SourceCode.cpp
   Threading.cpp
   Trace.cpp
@@ -41,6 +42,7 @@ add_clang_library(clangDaemon
   index/Index.cpp
   index/MemIndex.cpp
   index/Merge.cpp
+  index/Serialization.cpp
   index/SymbolCollector.cpp
   index/SymbolYAML.cpp
 

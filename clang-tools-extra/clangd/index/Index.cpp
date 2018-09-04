@@ -10,6 +10,7 @@
 #include "Index.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,21 +29,20 @@ SymbolID::SymbolID(StringRef USR)
     : HashValue(SHA1::hash(arrayRefFromStringRef(USR))) {}
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
-  OS << toHex(toStringRef(ID.HashValue));
-  return OS;
+  return OS << toHex(ID.raw());
 }
 
-std::string SymbolID::str() const {
-  std::string ID;
-  llvm::raw_string_ostream OS(ID);
-  OS << *this;
-  return OS.str();
+SymbolID SymbolID::fromRaw(llvm::StringRef Raw) {
+  SymbolID ID;
+  assert(Raw.size() == RawSize);
+  memcpy(ID.HashValue.data(), Raw.data(), RawSize);
+  return ID;
 }
+
+std::string SymbolID::str() const { return toHex(raw()); }
 
 void operator>>(StringRef Str, SymbolID &ID) {
-  std::string HexString = fromHex(Str);
-  assert(HexString.size() == ID.HashValue.size());
-  std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
+  ID = SymbolID::fromRaw(fromHex(Str));
 }
 
 raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
@@ -78,34 +78,18 @@ SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
 }
 
 // Copy the underlying data of the symbol into the owned arena.
-static void own(Symbol &S, llvm::UniqueStringSaver &Strings,
-                BumpPtrAllocator &Arena) {
-  // Intern replaces V with a reference to the same string owned by the arena.
-  auto Intern = [&](StringRef &V) { V = Strings.save(V); };
-
-  // We need to copy every StringRef field onto the arena.
-  Intern(S.Name);
-  Intern(S.Scope);
-  Intern(S.CanonicalDeclaration.FileURI);
-  Intern(S.Definition.FileURI);
-
-  Intern(S.Signature);
-  Intern(S.CompletionSnippetSuffix);
-
-  Intern(S.Documentation);
-  Intern(S.ReturnType);
-  for (auto &I : S.IncludeHeaders)
-    Intern(I.IncludeHeader);
+static void own(Symbol &S, llvm::UniqueStringSaver &Strings) {
+  visitStrings(S, [&](StringRef &V) { V = Strings.save(V); });
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {
   auto R = SymbolIndex.try_emplace(S.ID, Symbols.size());
   if (R.second) {
     Symbols.push_back(S);
-    own(Symbols.back(), UniqueStrings, Arena);
+    own(Symbols.back(), UniqueStrings);
   } else {
     auto &Copy = Symbols[R.first->second] = S;
-    own(Copy, UniqueStrings, Arena);
+    own(Copy, UniqueStrings);
   }
 }
 
@@ -118,7 +102,7 @@ SymbolSlab SymbolSlab::Builder::build() && {
   BumpPtrAllocator NewArena;
   llvm::UniqueStringSaver Strings(NewArena);
   for (auto &S : Symbols)
-    own(S, Strings, NewArena);
+    own(S, Strings);
   return SymbolSlab(std::move(NewArena), std::move(Symbols));
 }
 

@@ -9,6 +9,7 @@
 
 #include "SymbolYAML.h"
 #include "Index.h"
+#include "Serialization.h"
 #include "dex/DexIndex.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -189,10 +190,20 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFile,
     llvm::errs() << "Can't open " << SymbolFile << "\n";
     return nullptr;
   }
-  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
+  StringRef Data = Buffer->get()->getBuffer();
 
-  return UseDex ? dex::DexIndex::build(std::move(Slab))
-                : MemIndex::build(std::move(Slab), RefSlab());
+  llvm::Optional<SymbolSlab> Slab;
+  if (Data.startswith("RIFF")) { // Magic for binary index file.
+    if (auto RIFF = readIndexFile(Data))
+      Slab = std::move(RIFF->Symbols);
+    else
+      llvm::errs() << "Bad RIFF: " << llvm::toString(RIFF.takeError()) << "\n";
+  } else {
+    Slab = symbolsFromYAML(Data);
+  }
+
+  return UseDex ? dex::DexIndex::build(std::move(*Slab))
+                : MemIndex::build(std::move(*Slab), RefSlab());
 }
 
 } // namespace clangd

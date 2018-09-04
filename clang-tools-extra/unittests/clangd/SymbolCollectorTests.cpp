@@ -48,7 +48,6 @@ using testing::UnorderedElementsAreArray;
 MATCHER_P(Labeled, Label, "") {
   return (arg.Name + arg.Signature).str() == Label;
 }
-MATCHER(HasReturnType, "") { return !arg.ReturnType.empty(); }
 MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
 MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
 MATCHER_P(Snippet, S, "") {
@@ -742,84 +741,6 @@ TEST_F(SymbolCollectorTest, Snippet) {
                   AllOf(QName("nx::f"), Labeled("f()"), Snippet("f()")),
                   AllOf(QName("nx::ff"), Labeled("ff(int x, double y)"),
                         Snippet("ff(${1:int x}, ${2:double y})"))));
-}
-
-TEST_F(SymbolCollectorTest, YAMLConversions) {
-  const std::string YAML1 = R"(
----
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
-Name:   'Foo1'
-Scope:   'clang::'
-SymInfo:
-  Kind:            Function
-  Lang:            Cpp
-CanonicalDeclaration:
-  FileURI:        file:///path/foo.h
-  Start:
-    Line: 1
-    Column: 0
-  End:
-    Line: 1
-    Column: 1
-IsIndexedForCodeCompletion:    true
-Documentation:    'Foo doc'
-ReturnType:    'int'
-IncludeHeaders:
-  - Header:    'include1'
-    References:    7
-  - Header:    'include2'
-    References:    3
-...
-)";
-  const std::string YAML2 = R"(
----
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
-Name:   'Foo2'
-Scope:   'clang::'
-SymInfo:
-  Kind:            Function
-  Lang:            Cpp
-CanonicalDeclaration:
-  FileURI:        file:///path/bar.h
-  Start:
-    Line: 1
-    Column: 0
-  End:
-    Line: 1
-    Column: 1
-IsIndexedForCodeCompletion:    false
-Signature:    '-sig'
-CompletionSnippetSuffix:    '-snippet'
-...
-)";
-
-  auto Symbols1 = symbolsFromYAML(YAML1);
-
-  EXPECT_THAT(Symbols1,
-              UnorderedElementsAre(AllOf(QName("clang::Foo1"), Labeled("Foo1"),
-                                         Doc("Foo doc"), ReturnType("int"),
-                                         DeclURI("file:///path/foo.h"),
-                                         ForCodeCompletion(true))));
-  auto &Sym1 = *Symbols1.begin();
-  EXPECT_THAT(Sym1.IncludeHeaders,
-              UnorderedElementsAre(IncludeHeaderWithRef("include1", 7u),
-                                   IncludeHeaderWithRef("include2", 3u)));
-  auto Symbols2 = symbolsFromYAML(YAML2);
-  EXPECT_THAT(Symbols2, UnorderedElementsAre(AllOf(
-                            QName("clang::Foo2"), Labeled("Foo2-sig"),
-                            Not(HasReturnType()), DeclURI("file:///path/bar.h"),
-                            ForCodeCompletion(false))));
-
-  std::string ConcatenatedYAML;
-  {
-    llvm::raw_string_ostream OS(ConcatenatedYAML);
-    SymbolsToYAML(Symbols1, OS);
-    SymbolsToYAML(Symbols2, OS);
-  }
-  auto ConcatenatedSymbols = symbolsFromYAML(ConcatenatedYAML);
-  EXPECT_THAT(ConcatenatedSymbols,
-              UnorderedElementsAre(QName("clang::Foo1"),
-                                   QName("clang::Foo2")));
 }
 
 TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {

@@ -84,25 +84,27 @@ public:
     return HashValue < Sym.HashValue;
   }
 
+  constexpr static size_t RawSize = 20;
+  llvm::StringRef raw() const {
+    return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
+  }
+  static SymbolID fromRaw(llvm::StringRef);
   // Returns a 40-bytes hex encoded string.
   std::string str() const;
 
 private:
-  static constexpr unsigned HashByteLength = 20;
-
-  friend llvm::hash_code hash_value(const SymbolID &ID) {
-    // We already have a good hash, just return the first bytes.
-    static_assert(sizeof(size_t) <= HashByteLength, "size_t longer than SHA1!");
-    size_t Result;
-    memcpy(&Result, ID.HashValue.data(), sizeof(size_t));
-    return llvm::hash_code(Result);
-  }
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                       const SymbolID &ID);
   friend void operator>>(llvm::StringRef Str, SymbolID &ID);
 
-  std::array<uint8_t, HashByteLength> HashValue;
+  std::array<uint8_t, RawSize> HashValue;
 };
+
+inline llvm::hash_code hash_value(const SymbolID &ID) {
+  // We already have a good hash, just return the first bytes.
+  assert(sizeof(size_t) <= SymbolID::RawSize && "size_t longer than SHA1!");
+  size_t Result;
+  memcpy(&Result, ID.raw().data(), sizeof(size_t));
+  return llvm::hash_code(Result);
+}
 
 // Write SymbolID into the given stream. SymbolID is encoded as a 40-bytes
 // hex string.
@@ -245,6 +247,21 @@ struct Symbol {
   // FIXME: add extra fields for index scoring signals.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S);
+
+// Invokes Callback with each StringRef& contained in the Symbol.
+// Useful for deduplicating backing strings.
+template <typename Callback> void visitStrings(Symbol &S, const Callback &CB) {
+  CB(S.Name);
+  CB(S.Scope);
+  CB(S.CanonicalDeclaration.FileURI);
+  CB(S.Definition.FileURI);
+  CB(S.Signature);
+  CB(S.CompletionSnippetSuffix);
+  CB(S.Documentation);
+  CB(S.ReturnType);
+  for (auto &Include : S.IncludeHeaders)
+    CB(Include.IncludeHeader);
+}
 
 // Computes query-independent quality score for a Symbol.
 // This currently falls in the range [1, ln(#indexed documents)].
