@@ -1414,7 +1414,7 @@ private:
     llvm::DenseMap<size_t, size_t> BundleLookup;
     auto AddToBundles = [&](const CodeCompletionResult *SemaResult,
                             const Symbol *IndexResult,
-                            bool IsOverride = false) {
+                            bool IsOverride) {
       CompletionCandidate C;
       C.SemaResult = SemaResult;
       C.IndexResult = IndexResult;
@@ -1446,7 +1446,7 @@ private:
     };
     // Emit all Sema results, merging them with Index results if possible.
     for (auto &SemaResult : Recorder->Results)
-      AddToBundles(&SemaResult, CorrespondingIndexResult(SemaResult));
+      AddToBundles(&SemaResult, CorrespondingIndexResult(SemaResult), false);
     // Handle OverrideResults the same way we deal with SemaResults. Since these
     // results use the same structs as a SemaResult it is safe to do that, but
     // we need to make sure we dont' duplicate things in future if Sema starts
@@ -1458,7 +1458,7 @@ private:
     for (const auto &IndexResult : IndexResults) {
       if (UsedIndexResults.count(&IndexResult))
         continue;
-      AddToBundles(/*SemaResult=*/nullptr, &IndexResult);
+      AddToBundles(/*SemaResult=*/nullptr, &IndexResult, false);
     }
     // We only keep the best N results at any time, in "native" format.
     TopN<ScoredBundle, ScoredBundleGreater> Top(
