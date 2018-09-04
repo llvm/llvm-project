@@ -235,6 +235,14 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
+Clang now supports the GNUstep Objective-C ABI v2 on ELF platforms.  This is
+enabled with the `-fobjc-runtime=gnustep-2.0` flag.  The new ABI is incompatible
+with the older GNUstep ABIs, which were incremental changes on the old GCC ABI.
+The new ABI provides richer reflection metadata and allows the linker to remove
+duplicate selector and protocol definitions, giving smaller binaries.  Windows
+support for the new ABI is underway, but was not completed in time for the LLVM
+7.0 release.
+
 ...
 
 OpenCL C/C++ Language Changes in Clang
