@@ -54,8 +54,7 @@ std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
     SymsBuilder.insert(Sym);
 
   return UseDex ? dex::DexIndex::build(std::move(SymsBuilder).build())
-                : MemIndex::build(std::move(SymsBuilder).build(),
-                                  SymbolOccurrenceSlab::createEmpty());
+                : MemIndex::build(std::move(SymsBuilder).build(), RefSlab());
 }
 
 } // namespace

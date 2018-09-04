@@ -19,10 +19,13 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "gtest/gtest.h"
 
-using testing::UnorderedElementsAre;
+using testing::_;
 using testing::AllOf;
+using testing::ElementsAre;
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
-MATCHER_P(OccurrenceRange, Range, "") {
+MATCHER_P(RefRange, Range, "") {
   return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
                   arg.Location.End.Line, arg.Location.End.Column) ==
          std::tie(Range.start.line, Range.start.character, Range.end.line,
@@ -32,8 +35,11 @@ MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 
 namespace clang {
 namespace clangd {
-
 namespace {
+testing::Matcher<const RefSlab &>
+RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
+  return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
+}
 
 Symbol symbol(llvm::StringRef ID) {
   Symbol Sym;
@@ -49,14 +55,13 @@ std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
   return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
-std::unique_ptr<SymbolOccurrenceSlab> occurrenceSlab(const SymbolID &ID,
-                                                     llvm::StringRef Path) {
-  auto Slab = llvm::make_unique<SymbolOccurrenceSlab>();
-  SymbolOccurrence Occurrence;
-  Occurrence.Location.FileURI = Path;
-  Occurrence.Kind = SymbolOccurrenceKind::Reference;
-  Slab->insert(ID, Occurrence);
-  return Slab;
+std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, llvm::StringRef Path) {
+  RefSlab::Builder Slab;
+  Ref R;
+  R.Location.FileURI = Path;
+  R.Kind = RefKind::Reference;
+  Slab.insert(ID, R);
+  return llvm::make_unique<RefSlab>(std::move(Slab).build());
 }
 
 std::vector<std::string> getSymbolNames(const SymbolIndex &I,
@@ -68,37 +73,29 @@ std::vector<std::string> getSymbolNames(const SymbolIndex &I,
   return Names;
 }
 
-std::vector<std::string> getOccurrencePaths(const SymbolIndex &I, SymbolID ID) {
-  OccurrencesRequest Req;
+RefSlab getRefs(const SymbolIndex &I, SymbolID ID) {
+  RefsRequest Req;
   Req.IDs = {ID};
-  std::vector<std::string> Paths;
-  I.findOccurrences(Req, [&](const SymbolOccurrence &S) {
-    Paths.push_back(S.Location.FileURI);
-  });
-  return Paths;
-}
-
-std::unique_ptr<SymbolOccurrenceSlab> emptyOccurrence() {
-  auto EmptySlab = llvm::make_unique<SymbolOccurrenceSlab>();
-  EmptySlab->freeze();
-  return EmptySlab;
+  RefSlab::Builder Slab;
+  I.refs(Req, [&](const Ref &S) { Slab.insert(ID, S); });
+  return std::move(Slab).build();
 }
 
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()), UnorderedElementsAre());
 
-  FS.update("f1", numSlab(1, 3), occurrenceSlab(SymbolID("1"), "f1.cc"));
+  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"));
   EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
               UnorderedElementsAre("1", "2", "3"));
-  EXPECT_THAT(getOccurrencePaths(*FS.buildMemIndex(), SymbolID("1")),
-              UnorderedElementsAre("f1.cc"));
+  EXPECT_THAT(getRefs(*FS.buildMemIndex(), SymbolID("1")),
+              RefsAre({FileURI("f1.cc")}));
 }
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3), emptyOccurrence());
-  FS.update("f2", numSlab(3, 5), emptyOccurrence());
+  FS.update("f1", numSlab(1, 3), nullptr);
+  FS.update("f2", numSlab(3, 5), nullptr);
   EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
               UnorderedElementsAre("1", "2", "3", "4", "5"));
 }
@@ -107,19 +104,19 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
   SymbolID ID("1");
-  FS.update("f1", numSlab(1, 3), occurrenceSlab(ID, "f1.cc"));
+  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"));
 
   auto Symbols = FS.buildMemIndex();
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
-  EXPECT_THAT(getOccurrencePaths(*Symbols, ID), UnorderedElementsAre("f1.cc"));
+  EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 
   FS.update("f1", nullptr, nullptr);
   auto Empty = FS.buildMemIndex();
   EXPECT_THAT(getSymbolNames(*Empty), UnorderedElementsAre());
-  EXPECT_THAT(getOccurrencePaths(*Empty, ID), UnorderedElementsAre());
+  EXPECT_THAT(getRefs(*Empty, ID), ElementsAre());
 
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
-  EXPECT_THAT(getOccurrencePaths(*Symbols, ID), UnorderedElementsAre("f1.cc"));
+  EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
@@ -314,7 +311,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
       UnorderedElementsAre("ns_in_header", "ns_in_header::func_in_header"));
 }
 
-TEST(FileIndexTest, Occurrences) {
+TEST(FileIndexTest, Refs) {
   const char *HeaderCode = "class Foo {};";
   Annotations MainCode(R"cpp(
   void f() {
@@ -325,11 +322,8 @@ TEST(FileIndexTest, Occurrences) {
   auto Foo =
       findSymbol(TestTU::withHeaderCode(HeaderCode).headerSymbols(), "Foo");
 
-  OccurrencesRequest Request;
+  RefsRequest Request;
   Request.IDs = {Foo.ID};
-  Request.Filter = SymbolOccurrenceKind::Declaration |
-                   SymbolOccurrenceKind::Definition |
-                   SymbolOccurrenceKind::Reference;
 
   FileIndex Index(/*URISchemes*/ {"unittest"});
   // Add test.cc
@@ -349,15 +343,11 @@ TEST(FileIndexTest, Occurrences) {
   Index.update(Test2.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
                AST.getLocalTopLevelDecls());
 
-  std::vector<SymbolOccurrence> Results;
-  Index.findOccurrences(
-      Request, [&Results](const SymbolOccurrence &O) { Results.push_back(O); });
-
-  EXPECT_THAT(Results,
-              UnorderedElementsAre(AllOf(OccurrenceRange(MainCode.range("foo")),
-                                         FileURI("unittest:///test.cc")),
-                                   AllOf(OccurrenceRange(MainCode.range("foo")),
-                                         FileURI("unittest:///test2.cc"))));
+  EXPECT_THAT(getRefs(Index, Foo.ID),
+              RefsAre({AllOf(RefRange(MainCode.range("foo")),
+                             FileURI("unittest:///test.cc")),
+                       AllOf(RefRange(MainCode.range("foo")),
+                             FileURI("unittest:///test2.cc"))}));
 }
 
 } // namespace
