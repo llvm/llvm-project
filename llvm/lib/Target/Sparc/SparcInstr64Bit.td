@@ -239,7 +239,7 @@ let Predicates = [Is64Bit] in {
 let DecoderMethod = "DecodeLoadInt" in
   defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
 
-let mayLoad = 1, isCodeGenOnly = 1, isAsmParserOnly = 1 in
+let mayLoad = 1, isAsmParserOnly = 1 in
   def TLS_LDXrr : F3_1<3, 0b001011,
                        (outs IntRegs:$dst), (ins MEMrr:$addr, TLSSym:$sym),
                        "ldx [$addr], $dst, $sym",

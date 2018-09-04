@@ -477,9 +477,12 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
     return false;
 
   // To identify a spill instruction, use the same criteria as in AsmPrinter.
-  if (!((TII->isStoreToStackSlotPostFE(MI, FI) ||
-         TII->hasStoreToStackSlot(MI, Accesses)) &&
-        FrameInfo.isSpillSlotObjectIndex(FI)))
+  if (!((TII->isStoreToStackSlotPostFE(MI, FI) &&
+         FrameInfo.isSpillSlotObjectIndex(FI)) ||
+        (TII->hasStoreToStackSlot(MI, Accesses) &&
+         llvm::any_of(Accesses, [&FrameInfo](TargetInstrInfo::FrameAccess &FA) {
+           return FrameInfo.isSpillSlotObjectIndex(FA.FI);
+         }))))
     return false;
 
   auto isKilledReg = [&](const MachineOperand MO, unsigned &Reg) {

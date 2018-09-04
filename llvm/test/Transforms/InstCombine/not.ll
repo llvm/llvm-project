@@ -219,3 +219,35 @@ define <2 x i32> @not_sub_extra_use_vec(<2 x i32> %y, <2 x i32>* %p) {
   ret <2 x i32> %r
 }
 
+; ~(X + C) --> -X - C - 1 --> -(C + 1) - X
+
+define i32 @not_add(i32 %x) {
+; CHECK-LABEL: @not_add(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 -124, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 123
+  %r = xor i32 %a, -1
+  ret i32 %r
+}
+
+define <2 x i32> @not_add_splat(<2 x i32> %x) {
+; CHECK-LABEL: @not_add_splat(
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> <i32 -124, i32 -124>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> %x, <i32 123, i32 123>
+  %r = xor <2 x i32> %a, <i32 -1, i32 -1>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @not_add_vec(<2 x i32> %x) {
+; CHECK-LABEL: @not_add_vec(
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> <i32 -43, i32 -124>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> %x, <i32 42, i32 123>
+  %r = xor <2 x i32> %a, <i32 -1, i32 -1>
+  ret <2 x i32> %r
+}
+

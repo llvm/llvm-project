@@ -3928,9 +3928,6 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
                                                   SelectionDAG &DAG) const {
   GlobalAddressSDNode *GN = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = GN->getGlobal();
-  const AArch64II::TOF TargetFlags =
-      (GV->hasDLLImportStorageClass() ? AArch64II::MO_DLLIMPORT
-                                      : AArch64II::MO_NO_FLAG);
   unsigned char OpFlags =
       Subtarget->ClassifyGlobalReference(GV, getTargetMachine());
 
@@ -3941,16 +3938,16 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   // This also catches the large code model case for Darwin, and tiny code
   // model with got relocations.
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
-    return getGOT(GN, DAG, TargetFlags);
+    return getGOT(GN, DAG, OpFlags);
   }
 
   SDValue Result;
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
-    Result = getAddrLarge(GN, DAG, TargetFlags);
+    Result = getAddrLarge(GN, DAG, OpFlags);
   } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
-    Result = getAddrTiny(GN, DAG, TargetFlags);
+    Result = getAddrTiny(GN, DAG, OpFlags);
   } else {
-    Result = getAddr(GN, DAG, TargetFlags);
+    Result = getAddr(GN, DAG, OpFlags);
   }
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc DL(GN);

@@ -157,46 +157,6 @@ define <2 x i1> @test12vec(<2 x i8> %a) {
   ret <2 x i1> %c
 }
 
-define i32 @test15(i32 %A) {
-; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[C:%.*]] = sub i32 0, %A
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %B = add i32 %A, -1
-  %C = xor i32 %B, -1
-  ret i32 %C
-}
-
-define <2 x i32> @test15vec(<2 x i32> %A) {
-; CHECK-LABEL: @test15vec(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[C]]
-;
-  %B = add <2 x i32> %A, <i32 -1, i32 -1>
-  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
-  ret <2 x i32> %C
-}
-
-define i32 @test16(i32 %A) {
-; CHECK-LABEL: @test16(
-; CHECK-NEXT:    [[C:%.*]] = sub i32 -124, %A
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %B = add i32 %A, 123
-  %C = xor i32 %B, -1
-  ret i32 %C
-}
-
-define <2 x i32> @test16vec(<2 x i32> %A) {
-; CHECK-LABEL: @test16vec(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> <i32 -124, i32 -124>, [[A:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[C]]
-;
-  %B = add <2 x i32> %A, <i32 123, i32 123>
-  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
-  ret <2 x i32> %C
-}
-
 define i32 @test18(i32 %A) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[C:%.*]] = add i32 %A, 124

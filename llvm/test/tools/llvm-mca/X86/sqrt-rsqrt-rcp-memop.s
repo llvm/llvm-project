@@ -29,35 +29,35 @@ rcpss (%rax), %xmm1
 
 # ALL:            Timeline view:
 
-# BROADWELL-NEXT:                     012345678
+# BROADWELL-NEXT:                     0123456789
 # BROADWELL-NEXT: Index     0123456789
 
-# BTVER2-NEXT:                        0123456789
-# BTVER2-NEXT:    Index     0123456789          012345678
+# BTVER2-NEXT:                        0123456789          0
+# BTVER2-NEXT:    Index     0123456789          0123456789
 
-# HASWELL-NEXT:                       012345678
+# HASWELL-NEXT:                       0123456789
 # HASWELL-NEXT:   Index     0123456789
 
 # SKYLAKE-NEXT:                       0123456789
-# SKYLAKE-NEXT:   Index     0123456789
+# SKYLAKE-NEXT:   Index     0123456789          0
 
-# ZNVER1-NEXT:                        0123456789
+# ZNVER1-NEXT:                        0123456789          0
 # ZNVER1-NEXT:    Index     0123456789          0123456789
 
-# ZNVER1:         [0,0]     DeER .    .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# ZNVER1:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# SKYLAKE:        [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     DeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# SKYLAKE:        [0,0]     DeER .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# BROADWELL:      [0,0]     DeER .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     DeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BROADWELL:      [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# HASWELL:        [0,0]     DeER .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     DeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# HASWELL:        [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# BTVER2:         [0,0]     DeeER.    .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     DeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BTVER2:         [0,0]     DeeER.    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# BTVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -67,41 +67,46 @@ rcpss (%rax), %xmm1
 
 # ALL:                  [0]    [1]    [2]    [3]
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
-# ALL-NEXT:       1.     1     1.0    0.0    0.0       sqrtss	(%rax), %xmm1
+
+# BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
+# BTVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtss	(%rax), %xmm1
+# HASWELL-NEXT:   1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
+# SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
+# ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
 
 # ALL:            [1] Code Region - test_sqrtsd
 
 # ALL:            Timeline view:
 
 # BROADWELL-NEXT:                     0123456789
-# BROADWELL-NEXT: Index     0123456789          0123
+# BROADWELL-NEXT: Index     0123456789          01234
 
-# BTVER2-NEXT:                        0123456789          01234
+# BTVER2-NEXT:                        0123456789          0123456
 # BTVER2-NEXT:    Index     0123456789          0123456789
 
 # HASWELL-NEXT:                       0123456789
-# HASWELL-NEXT:   Index     0123456789          0123
+# HASWELL-NEXT:   Index     0123456789          01234
 
 # SKYLAKE-NEXT:                       0123456789
-# SKYLAKE-NEXT:   Index     0123456789          012345
+# SKYLAKE-NEXT:   Index     0123456789          0123456
 
-# ZNVER1-NEXT:                        0123456789
+# ZNVER1-NEXT:                        0123456789          0
 # ZNVER1-NEXT:    Index     0123456789          0123456789
 
-# ZNVER1:         [0,0]     DeER .    .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# ZNVER1:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
-# SKYLAKE:        [0,0]     DeER .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     DeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# SKYLAKE:        [0,0]     DeER .    .    .    .    ..   leaq	8(%rsp,%rdi,2), %rax
+# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
-# BROADWELL:      [0,0]     DeER .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     DeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BROADWELL:      [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
-# HASWELL:        [0,0]     DeER .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     DeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# HASWELL:        [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
+# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
-# BTVER2:         [0,0]     DeeER.    .    .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BTVER2:         [0,0]     DeeER.    .    .    .    .    .    ..   leaq	8(%rsp,%rdi,2), %rax
+# BTVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -111,43 +116,39 @@ rcpss (%rax), %xmm1
 
 # ALL:                  [0]    [1]    [2]    [3]
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
-# ALL-NEXT:       1.     1     1.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+
+# BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+# BTVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+# HASWELL-NEXT:   1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+# SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+# ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
 
 # ALL:            [2] Code Region - test_rsqrtss
 
-# SKYLAKE:        Timeline view:
-# SKYLAKE-NEXT:                       01
-# SKYLAKE-NEXT:   Index     0123456789
+# ALL:            Timeline view:
 
-# BROADWELL:      Timeline view:
-# BROADWELL-NEXT:                     012
-# BROADWELL-NEXT: Index     0123456789
+# BROADWELL-NEXT:                     0123
+# BTVER2-NEXT:                        01
+# HASWELL-NEXT:                       0123
+# SKYLAKE-NEXT:                       012
+# ZNVER1-NEXT:                        012345
 
-# HASWELL:        Timeline view:
-# HASWELL-NEXT:                       012
-# HASWELL-NEXT:   Index     0123456789
+# ALL-NEXT:       Index     0123456789
 
-# ZNVER1:         Timeline view:
-# ZNVER1-NEXT:                        01234
-# ZNVER1-NEXT:    Index     0123456789
+# ZNVER1:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
-# BTVER2:         Timeline view:
-# BTVER2-NEXT:    Index     0123456789
+# BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
-# ZNVER1:         [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     DeeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# HASWELL:        [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
-# BROADWELL:      [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     DeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# SKYLAKE:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
+# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
-# HASWELL:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     DeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
-
-# SKYLAKE:        [0,0]     DeER .    ..   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     DeeeeeeeeeER   rsqrtss	(%rax), %xmm1
-
-# BTVER2:         [0,0]     DeeER.   .   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     DeeeeeeeER   rsqrtss	(%rax), %xmm1
+# BTVER2:         [0,0]     DeeER.    ..   leaq	8(%rsp,%rdi,2), %rax
+# BTVER2-NEXT:    [0,1]     D==eeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -157,43 +158,39 @@ rcpss (%rax), %xmm1
 
 # ALL:                  [0]    [1]    [2]    [3]
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
-# ALL-NEXT:       1.     1     1.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+
+# BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+# BTVER2-NEXT:    1.     1     3.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+# HASWELL-NEXT:   1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+# SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+# ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
 
 # ALL:            [3] Code Region - test_rcp
 
-# SKYLAKE:        Timeline view:
-# SKYLAKE-NEXT:                       01
-# SKYLAKE-NEXT:   Index     0123456789
+# ALL:            Timeline view:
 
-# BROADWELL:      Timeline view:
-# BROADWELL-NEXT:                     012
-# BROADWELL-NEXT: Index     0123456789
+# BROADWELL-NEXT:                     0123
+# BTVER2-NEXT:                        01
+# HASWELL-NEXT:                       0123
+# SKYLAKE-NEXT:                       012
+# ZNVER1-NEXT:                        012345
 
-# HASWELL:        Timeline view:
-# HASWELL-NEXT:                       012
-# HASWELL-NEXT:   Index     0123456789
+# ALL-NEXT:       Index     0123456789
 
-# ZNVER1:         Timeline view:
-# ZNVER1-NEXT:                        01234
-# ZNVER1-NEXT:    Index     0123456789
+# ZNVER1:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
-# BTVER2:         Timeline view:
-# BTVER2-NEXT:    Index     0123456789
+# BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
 
-# ZNVER1:         [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     DeeeeeeeeeeeeER   rcpss	(%rax), %xmm1
+# HASWELL:        [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
 
-# BROADWELL:      [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     DeeeeeeeeeeER   rcpss	(%rax), %xmm1
+# SKYLAKE:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
+# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeER   rcpss	(%rax), %xmm1
 
-# HASWELL:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     DeeeeeeeeeeER   rcpss	(%rax), %xmm1
-
-# SKYLAKE:        [0,0]     DeER .    ..   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     DeeeeeeeeeER   rcpss	(%rax), %xmm1
-
-# BTVER2:         [0,0]     DeeER.   .   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     DeeeeeeeER   rcpss	(%rax), %xmm1
+# BTVER2:         [0,0]     DeeER.    ..   leaq	8(%rsp,%rdi,2), %rax
+# BTVER2-NEXT:    [0,1]     D==eeeeeeeER   rcpss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -203,4 +200,9 @@ rcpss (%rax), %xmm1
 
 # ALL:                  [0]    [1]    [2]    [3]
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
-# ALL-NEXT:       1.     1     1.0    0.0    0.0       rcpss	(%rax), %xmm1
+
+# BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
+# BTVER2-NEXT:    1.     1     3.0    0.0    0.0       rcpss	(%rax), %xmm1
+# HASWELL-NEXT:   1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
+# SKYLAKE-NEXT:   1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
+# ZNVER1-NEXT:    1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
