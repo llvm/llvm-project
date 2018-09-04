@@ -9,6 +9,7 @@
 
 #include "SymbolYAML.h"
 #include "Index.h"
+#include "dex/DexIndex.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
@@ -25,18 +26,18 @@ using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
 using clang::index::SymbolInfo;
-using clang::index::SymbolLanguage;
 using clang::index::SymbolKind;
+using clang::index::SymbolLanguage;
 
 // Helper to (de)serialize the SymbolID. We serialize it as a hex string.
 struct NormalizedSymbolID {
   NormalizedSymbolID(IO &) {}
-  NormalizedSymbolID(IO &, const SymbolID& ID) {
+  NormalizedSymbolID(IO &, const SymbolID &ID) {
     llvm::raw_string_ostream OS(HexString);
     OS << ID;
   }
 
-  SymbolID denormalize(IO&) {
+  SymbolID denormalize(IO &) {
     SymbolID ID;
     HexString >> ID;
     return ID;
@@ -167,7 +168,7 @@ Symbol SymbolFromYAML(llvm::yaml::Input &Input) {
   return S;
 }
 
-void SymbolsToYAML(const SymbolSlab& Symbols, llvm::raw_ostream &OS) {
+void SymbolsToYAML(const SymbolSlab &Symbols, llvm::raw_ostream &OS) {
   llvm::yaml::Output Yout(OS);
   for (Symbol S : Symbols) // copy: Yout<< requires mutability.
     Yout << S;
@@ -179,6 +180,19 @@ std::string SymbolToYAML(Symbol Sym) {
   llvm::yaml::Output Yout(OS);
   Yout << Sym;
   return OS.str();
+}
+
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFile,
+                                       bool UseDex) {
+  auto Buffer = llvm::MemoryBuffer::getFile(SymbolFile);
+  if (!Buffer) {
+    llvm::errs() << "Can't open " << SymbolFile << "\n";
+    return nullptr;
+  }
+  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
+
+  return UseDex ? dex::DexIndex::build(std::move(Slab))
+                : MemIndex::build(std::move(Slab), RefSlab());
 }
 
 } // namespace clangd
