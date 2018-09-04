@@ -41,6 +41,12 @@ std::string SymbolToYAML(Symbol Sym);
 // The YAML result is safe to concatenate if you have multiple symbol slabs.
 void SymbolsToYAML(const SymbolSlab &Symbols, llvm::raw_ostream &OS);
 
+// Build an in-memory static index for global symbols from a symbol file.
+// The size of global symbols should be relatively small, so that all symbols
+// can be managed in memory.
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFile,
+                                       bool UseDex = true);
+
 } // namespace clangd
 } // namespace clang
 

@@ -39,24 +39,6 @@ namespace {
 
 enum class PCHStorageFlag { Disk, Memory };
 
-// Build an in-memory static index for global symbols from a YAML-format file.
-// The size of global symbols should be relatively small, so that all symbols
-// can be managed in memory.
-std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
-  auto Buffer = llvm::MemoryBuffer::getFile(YamlSymbolFile);
-  if (!Buffer) {
-    llvm::errs() << "Can't open " << YamlSymbolFile << "\n";
-    return nullptr;
-  }
-  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
-  SymbolSlab::Builder SymsBuilder;
-  for (auto Sym : Slab)
-    SymsBuilder.insert(Sym);
-
-  return UseDex ? dex::DexIndex::build(std::move(SymsBuilder).build())
-                : MemIndex::build(std::move(SymsBuilder).build(), RefSlab());
-}
-
 } // namespace
 
 static llvm::cl::opt<Path> CompileCommandsDir(
@@ -298,7 +280,7 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   if (EnableIndex && !YamlSymbolFile.empty()) {
-    StaticIdx = buildStaticIndex(YamlSymbolFile);
+    StaticIdx = loadIndex(YamlSymbolFile, UseDex);
     Opts.StaticIndex = StaticIdx.get();
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
