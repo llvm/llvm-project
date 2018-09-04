@@ -2338,12 +2338,15 @@ Instruction *InstCombiner::foldICmpAddConstant(ICmpInst &Cmp,
   CmpInst::Predicate Pred = Cmp.getPredicate();
 
   // If the add does not wrap, we can always adjust the compare by subtracting
-  // the constants. Equality comparisons are handled elsewhere. SGE/SLE are
-  // canonicalized to SGT/SLT.
-  if (Add->hasNoSignedWrap() &&
-      (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) {
+  // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
+  // are canonicalized to SGT/SLT/UGT/ULT.
+  if ((Add->hasNoSignedWrap() &&
+       (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) ||
+      (Add->hasNoUnsignedWrap() &&
+       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT))) {
     bool Overflow;
-    APInt NewC = C.ssub_ov(*C2, Overflow);
+    APInt NewC =
+        Cmp.isSigned() ? C.ssub_ov(*C2, Overflow) : C.usub_ov(*C2, Overflow);
     // If there is overflow, the result must be true or false.
     // TODO: Can we assert there is no overflow because InstSimplify always
     // handles those cases?

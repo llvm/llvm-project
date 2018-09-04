@@ -54,10 +54,6 @@ static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableSpeculativeLoadHardening(
-    "x86-speculative-load-hardening",
-    cl::desc("Enable speculative load hardening"), cl::init(false), cl::Hidden);
-
 namespace llvm {
 
 void initializeWinEHStatePassPass(PassRegistry &);
@@ -475,9 +471,7 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocks());
   }
 
-  if (EnableSpeculativeLoadHardening)
-    addPass(createX86SpeculativeLoadHardeningPass());
-
+  addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86WinAllocaExpander());
 }

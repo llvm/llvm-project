@@ -18,7 +18,7 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1, !dbg !9
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg !9
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1, !dbg !9
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4, !dbg !9
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3, !dbg !9
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]], !dbg !9
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1, !dbg !9

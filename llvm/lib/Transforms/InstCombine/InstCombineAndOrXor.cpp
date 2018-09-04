@@ -2685,20 +2685,21 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     // the 'not' by inverting the constant and using the opposite shift type.
     // Canonicalization rules ensure that only a negative constant uses 'ashr',
     // but we must check that in case that transform has not fired yet.
+
+    // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
     Constant *C;
     if (match(NotVal, m_AShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_Negative())) {
-      // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
-      Constant *NotC = ConstantExpr::getNot(C);
-      return BinaryOperator::CreateLShr(NotC, Y);
-    }
+        match(C, m_Negative()))
+      return BinaryOperator::CreateLShr(ConstantExpr::getNot(C), Y);
 
+    // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
     if (match(NotVal, m_LShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_NonNegative())) {
-      // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
-      Constant *NotC = ConstantExpr::getNot(C);
-      return BinaryOperator::CreateAShr(NotC, Y);
-    }
+        match(C, m_NonNegative()))
+      return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
+
+    // ~(X + C) --> -(C + 1) - X
+    if (match(Op0, m_Add(m_Value(X), m_Constant(C))))
+      return BinaryOperator::CreateSub(ConstantExpr::getNeg(AddOne(C)), X);
   }
 
   // not (cmp A, B) = !cmp A, B
@@ -2713,23 +2714,15 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     if (match(Op1, m_APInt(RHSC))) {
       Value *X;
       const APInt *C;
-      if (match(Op0, m_Sub(m_APInt(C), m_Value(X)))) {
-        if (RHSC->isSignMask()) {
-          // (C - X) ^ signmask -> (C + signmask - X)
-          Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-          return BinaryOperator::CreateSub(NewC, X);
-        }
-      } else if (match(Op0, m_Add(m_Value(X), m_APInt(C)))) {
-        // ~(X + C) --> (-C - 1) - X
-        if (RHSC->isAllOnesValue()) {
-          Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
-          return BinaryOperator::CreateSub(NewC, X);
-        }
-        if (RHSC->isSignMask()) {
-          // (X + C) ^ signmask -> (X + C + signmask)
-          Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-          return BinaryOperator::CreateAdd(X, NewC);
-        }
+      if (RHSC->isSignMask() && match(Op0, m_Sub(m_APInt(C), m_Value(X)))) {
+        // (C - X) ^ signmask -> (C + signmask - X)
+        Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
+        return BinaryOperator::CreateSub(NewC, X);
+      }
+      if (RHSC->isSignMask() && match(Op0, m_Add(m_Value(X), m_APInt(C)))) {
+        // (X + C) ^ signmask -> (X + C + signmask)
+        Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
+        return BinaryOperator::CreateAdd(X, NewC);
       }
 
       // (X|C1)^C2 -> X^(C1^C2) iff X&~C1 == 0

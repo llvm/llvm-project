@@ -57,10 +57,9 @@ define double @bar(double %x, double %y) {
 ; MM6:       # %bb.0: # %entry
 ; MM6-NEXT:    cmp.lt.d $f0, $f12, $f14 # encoding: [0x55,0xcc,0x01,0x15]
 ; MM6-NEXT:    mfc1 $1, $f0 # encoding: [0x54,0x20,0x20,0x3b]
-; MM6-NEXT:    mtc1 $1, $f0 # encoding: [0x44,0x81,0x00,0x00]
+; MM6-NEXT:    mtc1 $1, $f0 # encoding: [0x54,0x20,0x28,0x3b]
 ; MM6-NEXT:    sel.d $f0, $f14, $f12 # encoding: [0x55,0x8e,0x02,0xb8]
 ; MM6-NEXT:    jrc $ra # encoding: [0x45,0xbf]
-; FIXME: mtc1 is encoded as a regular non-microMIPS instruction
 entry:
   %z = fcmp olt double %x, %y
   %r = select i1 %z, double %x, double %y

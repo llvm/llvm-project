@@ -1878,7 +1878,7 @@ define void @foo4(double* %A, double* %B, i32* %trigger)  {
 ; AVX1-NEXT:    br label [[FOR_INC]]
 ; AVX1:       for.inc:
 ; AVX1-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or i64 [[INDVARS_IV]], 16
-; AVX1-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], 10000
+; AVX1-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV]], 9984
 ; AVX1-NEXT:    br i1 [[CMP]], label [[FOR_BODY_1:%.*]], label [[FOR_END:%.*]]
 ; AVX1:       for.end:
 ; AVX1-NEXT:    ret void
@@ -1920,7 +1920,7 @@ define void @foo4(double* %A, double* %B, i32* %trigger)  {
 ; AVX2-NEXT:    br label [[FOR_INC]]
 ; AVX2:       for.inc:
 ; AVX2-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or i64 [[INDVARS_IV]], 16
-; AVX2-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], 10000
+; AVX2-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV]], 9984
 ; AVX2-NEXT:    br i1 [[CMP]], label [[FOR_BODY_1:%.*]], label [[FOR_END:%.*]]
 ; AVX2:       for.end:
 ; AVX2-NEXT:    ret void
@@ -2119,7 +2119,7 @@ define void @foo4(double* %A, double* %B, i32* %trigger)  {
 ; AVX512-NEXT:    br label [[FOR_INC_3]]
 ; AVX512:       for.inc.3:
 ; AVX512-NEXT:    [[INDVARS_IV_NEXT_3]] = add nsw i64 [[INDVARS_IV]], 64
-; AVX512-NEXT:    [[CMP_3:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT_3]], 10000
+; AVX512-NEXT:    [[CMP_3:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT_2]], 9984
 ; AVX512-NEXT:    br i1 [[CMP_3]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop !52
 ;
 entry:

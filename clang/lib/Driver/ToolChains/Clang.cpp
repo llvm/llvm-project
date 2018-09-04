@@ -4132,6 +4132,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
+  Args.AddLastArg(CmdArgs, options::OPT_mspeculative_load_hardening,
+                  options::OPT_mno_speculative_load_hardening);
+
   RenderSSPOptions(getToolChain(), Args, CmdArgs, KernelOrKext);
 
   // Translate -mstackrealign

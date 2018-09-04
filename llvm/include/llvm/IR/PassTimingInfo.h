@@ -16,6 +16,7 @@
 #ifndef LLVM_IR_PASSTIMINGINFO_H
 #define LLVM_IR_PASSTIMINGINFO_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Timer.h"
@@ -30,7 +31,12 @@ class TimerGroup;
 /// Legacy pass managers should specialize with \p PassInfo*.
 /// New pass managers should specialize with \p StringRef.
 template <typename PassInfoT> class PassTimingInfo {
-  StringMap<Timer *> TimingData;
+public:
+  using PassInstanceID = void *;
+
+private:
+  StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
+  DenseMap<PassInstanceID, Timer *> TimingData; ///< timers for pass instances
   TimerGroup TG;
 
 public:
@@ -51,9 +57,12 @@ public:
   void print();
 
   /// Returns the timer for the specified pass if it exists.
-  Timer *getPassTimer(PassInfoT);
+  Timer *getPassTimer(PassInfoT, PassInstanceID);
 
   static PassTimingInfo *TheTimeInfo;
+
+private:
+  Timer *newPassTimer(StringRef PassID, StringRef PassDesc);
 };
 
 Timer *getPassTimer(Pass *);
