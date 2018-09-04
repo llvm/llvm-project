@@ -19,31 +19,26 @@ namespace clangd {
 /// MemIndex is a naive in-memory index suitable for a small set of symbols.
 class MemIndex : public SymbolIndex {
 public:
-  /// Maps from a symbol ID to all corresponding symbol occurrences.
-  /// The map doesn't own occurrence objects.
-  using OccurrenceMap =
-      llvm::DenseMap<SymbolID, std::vector<const SymbolOccurrence *>>;
-
   MemIndex() = default;
-  // All symbols and occurrences must outlive this index.
-  // TODO: find a better type for Occurrences here.
-  template <typename SymbolRange>
-  MemIndex(SymbolRange &&Symbols, OccurrenceMap Occurrences)
-      : Occurrences(std::move(Occurrences)) {
+  // All symbols and refs must outlive this index.
+  template <typename SymbolRange, typename RefRange>
+  MemIndex(SymbolRange &&Symbols, RefRange &&Refs) {
     for (const Symbol &S : Symbols)
       Index[S.ID] = &S;
+    for (const std::pair<SymbolID, llvm::ArrayRef<Ref>> &R : Refs)
+      this->Refs.try_emplace(R.first, R.second.begin(), R.second.end());
   }
   // Symbols are owned by BackingData, Index takes ownership.
-  template <typename Range, typename Payload>
-  MemIndex(Range &&Symbols, OccurrenceMap Occurrences, Payload &&BackingData)
-      : MemIndex(std::forward<Range>(Symbols), std::move(Occurrences)) {
+  template <typename SymbolRange, typename RefRange, typename Payload>
+  MemIndex(SymbolRange &&Symbols, RefRange &&Refs, Payload &&BackingData)
+      : MemIndex(std::forward<SymbolRange>(Symbols),
+                 std::forward<RefRange>(Refs)) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
   }
 
-  /// Builds an index from a slab. The index takes ownership of the data.
-  static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab,
-                                            SymbolOccurrenceSlab Occurrences);
+  /// Builds an index from slabs. The index takes ownership of the data.
+  static std::unique_ptr<SymbolIndex> build(SymbolSlab Symbols, RefSlab Refs);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -52,17 +47,16 @@ public:
   void lookup(const LookupRequest &Req,
               llvm::function_ref<void(const Symbol &)> Callback) const override;
 
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override;
+  void refs(const RefsRequest &Req,
+            llvm::function_ref<void(const Ref &)> Callback) const override;
 
   size_t estimateMemoryUsage() const override;
 
 private:
   // Index is a set of symbols that are deduplicated by symbol IDs.
   llvm::DenseMap<SymbolID, const Symbol *> Index;
-  // A map from symbol ID to symbol occurrences, support query by IDs.
-  OccurrenceMap Occurrences;
+  // A map from symbol ID to symbol refs, support query by IDs.
+  llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
 };
 

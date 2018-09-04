@@ -144,10 +144,9 @@ void DexIndex::lookup(const LookupRequest &Req,
   }
 }
 
-void DexIndex::findOccurrences(
-    const OccurrencesRequest &Req,
-    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
-  log("findOccurrences is not implemented.");
+void DexIndex::refs(const RefsRequest &Req,
+                    llvm::function_ref<void(const Ref &)> Callback) const {
+  log("refs is not implemented.");
 }
 
 size_t DexIndex::estimateMemoryUsage() const {

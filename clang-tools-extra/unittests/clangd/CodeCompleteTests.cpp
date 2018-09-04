@@ -82,8 +82,7 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   SymbolSlab::Builder Slab;
   for (const auto &Sym : Symbols)
     Slab.insert(Sym);
-  return MemIndex::build(std::move(Slab).build(),
-                         SymbolOccurrenceSlab::createEmpty());
+  return MemIndex::build(std::move(Slab).build(), RefSlab());
 }
 
 CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
@@ -974,9 +973,8 @@ public:
   void lookup(const LookupRequest &,
               llvm::function_ref<void(const Symbol &)>) const override {}
 
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override {}
+  void refs(const RefsRequest &,
+            llvm::function_ref<void(const Ref &)>) const override {}
 
   // This is incorrect, but IndexRequestCollector is not an actual index and it
   // isn't used in production code.

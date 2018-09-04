@@ -122,8 +122,8 @@ SymbolSlab SymbolSlab::Builder::build() && {
   return SymbolSlab(std::move(NewArena), std::move(Symbols));
 }
 
-raw_ostream &operator<<(raw_ostream &OS, SymbolOccurrenceKind K) {
-  if (K == SymbolOccurrenceKind::Unknown)
+raw_ostream &operator<<(raw_ostream &OS, RefKind K) {
+  if (K == RefKind::Unknown)
     return OS << "Unknown";
   static const std::vector<const char *> Messages = {"Decl", "Def", "Ref"};
   bool VisitedOnce = false;
@@ -138,31 +138,32 @@ raw_ostream &operator<<(raw_ostream &OS, SymbolOccurrenceKind K) {
   return OS;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const SymbolOccurrence &Occurrence) {
-  OS << Occurrence.Location << ":" << Occurrence.Kind;
-  return OS;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Ref &R) {
+  return OS << R.Location << ":" << R.Kind;
 }
 
-void SymbolOccurrenceSlab::insert(const SymbolID &SymID,
-                                  const SymbolOccurrence &Occurrence) {
-  assert(!Frozen &&
-         "Can't insert a symbol occurrence after the slab has been frozen!");
-  auto &SymOccurrences = Occurrences[SymID];
-  SymOccurrences.push_back(Occurrence);
-  SymOccurrences.back().Location.FileURI =
-      UniqueStrings.save(Occurrence.Location.FileURI);
+void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
+  auto &M = Refs[ID];
+  M.push_back(S);
+  M.back().Location.FileURI = UniqueStrings.save(M.back().Location.FileURI);
 }
 
-void SymbolOccurrenceSlab::freeze() {
-  // Deduplicate symbol occurrences.
-  for (auto &IDAndOccurrence : Occurrences) {
-    auto &Occurrence = IDAndOccurrence.getSecond();
-    std::sort(Occurrence.begin(), Occurrence.end());
-    Occurrence.erase(std::unique(Occurrence.begin(), Occurrence.end()),
-                     Occurrence.end());
+RefSlab RefSlab::Builder::build() && {
+  // We can reuse the arena, as it only has unique strings and we need them all.
+  // Reallocate refs on the arena to reduce waste and indirections when reading.
+  std::vector<std::pair<SymbolID, ArrayRef<Ref>>> Result;
+  Result.reserve(Refs.size());
+  for (auto &Sym : Refs) {
+    auto &SymRefs = Sym.second;
+    std::sort(SymRefs.begin(), SymRefs.end());
+    // TODO: do we really need to dedup?
+    SymRefs.erase(std::unique(SymRefs.begin(), SymRefs.end()), SymRefs.end());
+
+    auto *Array = Arena.Allocate<Ref>(SymRefs.size());
+    std::uninitialized_copy(SymRefs.begin(), SymRefs.end(), Array);
+    Result.emplace_back(Sym.first, ArrayRef<Ref>(Array, SymRefs.size()));
   }
-  Frozen = true;
+  return RefSlab(std::move(Result), std::move(Arena));
 }
 
 void SwapIndex::reset(std::unique_ptr<SymbolIndex> Index) {
@@ -187,10 +188,9 @@ void SwapIndex::lookup(const LookupRequest &R,
                        llvm::function_ref<void(const Symbol &)> CB) const {
   return snapshot()->lookup(R, CB);
 }
-void SwapIndex::findOccurrences(
-    const OccurrencesRequest &R,
-    llvm::function_ref<void(const SymbolOccurrence &)> CB) const {
-  return snapshot()->findOccurrences(R, CB);
+void SwapIndex::refs(const RefsRequest &R,
+                     llvm::function_ref<void(const Ref &)> CB) const {
+  return snapshot()->refs(R, CB);
 }
 size_t SwapIndex::estimateMemoryUsage() const {
   return snapshot()->estimateMemoryUsage();

@@ -106,7 +106,7 @@ private:
   // Contains information from each file's preamble only.
   // These are large, but update fairly infrequently (preambles are stable).
   // Missing information:
-  //  - symbol occurrences (these are always "from the main file")
+  //  - symbol refs (these are always "from the main file")
   //  - definition locations in the main file
   //
   // FIXME: Because the preambles for different TUs have large overlap and
@@ -118,7 +118,7 @@ private:
   // Contains information from each file's main AST.
   // These are updated frequently (on file change), but are relatively small.
   // Mostly contains:
-  //  - occurrences of symbols declared in the preamble and referenced from main
+  //  - refs to symbols declared in the preamble and referenced from main
   //  - symbols declared both in the main file and the preamble
   // (Note that symbols *only* in the main file are not indexed).
   FileIndex MainFileIdx;
