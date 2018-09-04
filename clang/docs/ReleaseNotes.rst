@@ -241,7 +241,7 @@ with the older GNUstep ABIs, which were incremental changes on the old GCC ABI.
 The new ABI provides richer reflection metadata and allows the linker to remove
 duplicate selector and protocol definitions, giving smaller binaries.  Windows
 support for the new ABI is underway, but was not completed in time for the LLVM
-7.0 release.
+7.0.0 release.
 
 ...
 
