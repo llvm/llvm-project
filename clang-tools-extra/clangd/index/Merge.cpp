@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <set>
-
 #include "Merge.h"
 #include "../Logger.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 
 namespace clang {
 namespace clangd {
@@ -78,28 +78,24 @@ class MergedIndex : public SymbolIndex {
         Callback(*Sym);
   }
 
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override {
-    // We don't want duplicated occurrences from the static/dynamic indexes,
-    // and we can't reliably duplicate them because occurrence offsets may
-    // differ slightly.
-    // We consider the dynamic index authoritative and report all its
-    // occurrences, and only report static index occurrences from other files.
+  void refs(const RefsRequest &Req,
+            llvm::function_ref<void(const Ref &)> Callback) const override {
+    // We don't want duplicated refs from the static/dynamic indexes,
+    // and we can't reliably duplicate them because offsets may differ slightly.
+    // We consider the dynamic index authoritative and report all its refs,
+    // and only report static index refs from other files.
     //
     // FIXME: The heuristic fails if the dynamic index contains a file, but all
-    // occurrences were removed (we will report stale ones from the static
-    // index). Ultimately we should explicit check which index has the file
-    // instead.
-    std::set<std::string> DynamicIndexFileURIs;
-    Dynamic->findOccurrences(Req, [&](const SymbolOccurrence &O) {
+    // refs were removed (we will report stale ones from the static index).
+    // Ultimately we should explicit check which index has the file instead.
+    llvm::StringSet<> DynamicIndexFileURIs;
+    Dynamic->refs(Req, [&](const Ref &O) {
       DynamicIndexFileURIs.insert(O.Location.FileURI);
       Callback(O);
     });
-    Static->findOccurrences(Req, [&](const SymbolOccurrence &O) {
-      if (DynamicIndexFileURIs.count(O.Location.FileURI))
-        return;
-      Callback(O);
+    Static->refs(Req, [&](const Ref &O) {
+      if (!DynamicIndexFileURIs.count(O.Location.FileURI))
+        Callback(O);
     });
   }
 

@@ -419,7 +419,7 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
       uintptr_t ub = (uintptr_t) HstPtrBegin + data_size;
       Device.ShadowMtx.lock();
       for (ShadowPtrListTy::iterator it = Device.ShadowPtrMap.begin();
-          it != Device.ShadowPtrMap.end(); ++it) {
+           it != Device.ShadowPtrMap.end();) {
         void **ShadowHstPtrAddr = (void**) it->first;
 
         // An STL map is sorted on its keys; use this property
@@ -439,7 +439,9 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         // If the struct is to be deallocated, remove the shadow entry.
         if (DelEntry) {
           DP("Removing shadow pointer " DPxMOD "\n", DPxPTR(ShadowHstPtrAddr));
-          Device.ShadowPtrMap.erase(it);
+          it = Device.ShadowPtrMap.erase(it);
+        } else {
+          ++it;
         }
       }
       Device.ShadowMtx.unlock();

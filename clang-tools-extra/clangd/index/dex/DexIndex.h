@@ -64,9 +64,8 @@ public:
   void lookup(const LookupRequest &Req,
               llvm::function_ref<void(const Symbol &)> Callback) const override;
 
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override;
+  void refs(const RefsRequest &Req,
+            llvm::function_ref<void(const Ref &)> Callback) const override;
 
   size_t estimateMemoryUsage() const override;
 

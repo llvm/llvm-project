@@ -39,10 +39,10 @@ namespace clangd {
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
-  /// Updates all symbols and occurrences in a file.
+  /// Updates all symbols and refs in a file.
   /// If either is nullptr, corresponding data for \p Path will be removed.
   void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
-              std::unique_ptr<SymbolOccurrenceSlab> Occurrences);
+              std::unique_ptr<RefSlab> Refs);
 
   // The index keeps the symbols alive.
   std::unique_ptr<SymbolIndex> buildMemIndex();
@@ -50,10 +50,10 @@ public:
 private:
   mutable std::mutex Mutex;
 
-  /// Stores the latest snapshots for all active files.
-  llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSlabs;
-  /// Stores the latest occurrence slabs for all active files.
-  llvm::StringMap<std::shared_ptr<SymbolOccurrenceSlab>> FileToOccurrenceSlabs;
+  /// Stores the latest symbol snapshots for all active files.
+  llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSymbols;
+  /// Stores the latest ref snapshots for all active files.
+  llvm::StringMap<std::shared_ptr<RefSlab>> FileToRefs;
 };
 
 /// This manages symbols from files and an in-memory index on all symbols.
@@ -81,12 +81,12 @@ private:
   std::vector<std::string> URISchemes;
 };
 
-/// Retrieves symbols and symbol occurrences in \p AST.
+/// Retrieves symbols and refs in \p AST.
 /// Exposed to assist in unit tests.
 /// If URISchemes is empty, the default schemes in SymbolCollector will be used.
 /// If \p TopLevelDecls is set, only these decls are indexed. Otherwise, all top
 /// level decls obtained from \p AST are indexed.
-std::pair<SymbolSlab, SymbolOccurrenceSlab>
+std::pair<SymbolSlab, RefSlab>
 indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
          llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None,
          llvm::ArrayRef<std::string> URISchemes = {});

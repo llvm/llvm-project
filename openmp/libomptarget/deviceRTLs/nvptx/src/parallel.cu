@@ -306,8 +306,6 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
   workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr,
                                              CudaThreadsForParallel / NumLanes);
-  // init counters (copy start to init)
-  workDescr.CounterGroup().Reset();
 }
 
 // All workers call this function.  Deactivate those not needed.
@@ -345,8 +343,6 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                                newTaskDescr);
     // init private from int value
-    workDescr.CounterGroup().Init(
-        omptarget_nvptx_threadPrivateContext->Priv(threadId));
     PRINT(LD_PAR,
           "thread will execute parallel region with id %d in a team of "
           "%d threads\n",
