@@ -23,7 +23,7 @@ LoadCommands:
     ilocalsym:       0
     nlocalsym:       0
     iextdefsym:      4
-#CHECK: truncated or malformed object (nextdefsym in LC_DYSYMTAB load command extends past the end of the symbol table)
+#CHECK: truncated or malformed object (iextdefsym in LC_DYSYMTAB load command extends past the end of the symbol table)
     nextdefsym:      2
     iundefsym:       2
     nundefsym:       1

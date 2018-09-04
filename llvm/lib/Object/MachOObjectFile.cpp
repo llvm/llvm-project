@@ -1593,7 +1593,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       return;
     }
     if (Dysymtab.nextdefsym != 0 && Dysymtab.iextdefsym > Symtab.nsyms) {
-      Err = malformedError("nextdefsym in LC_DYSYMTAB load command "
+      Err = malformedError("iextdefsym in LC_DYSYMTAB load command "
                            "extends past the end of the symbol table");
       return;
     }
@@ -1606,7 +1606,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       return;
     }
     if (Dysymtab.nundefsym != 0 && Dysymtab.iundefsym > Symtab.nsyms) {
-      Err = malformedError("nundefsym in LC_DYSYMTAB load command "
+      Err = malformedError("iundefsym in LC_DYSYMTAB load command "
                            "extends past the end of the symbol table");
       return;
     }
