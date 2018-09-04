@@ -50,6 +50,8 @@ if(AMDGCN_TARGETS_LIB_LIST)
   set(${AMDGCN_TARGETS_LIB_LIST} ${AMDGCN_LIB_LIST} PARENT_SCOPE)
 endif()
 
+include(Packages.cmake)
+
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
   if (NOT AMDHSACOD)
     message(WARNING "amdhsacod is not found, testing disabled")

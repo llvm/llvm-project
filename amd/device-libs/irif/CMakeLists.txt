@@ -25,7 +25,3 @@ set_target_properties(irif_lib PROPERTIES
 if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
   add_dependencies(irif_lib llvm-link)
 endif()
-
-# FIXME: Remove this once the usage in the runtime build is removed
-list(APPEND AMDGCN_LIB_LIST irif_lib)
-set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)

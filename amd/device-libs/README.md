@@ -95,6 +95,16 @@ shows how to compile simple OpenCL source test.cl into code object test.so:
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_unsafe_math_off.amdgcn.bc \
         test.cl -o test.so
 
+### USING FROM CMAKE
+
+The bitcode libraries are exported as CMake targets, organized in a CMake
+package. You can depend on this package using
+`find_package(AMDDeviceLibs REQUIRED CONFIG)` after ensuring the
+`CMAKE_PREFIX_PATH` includes either the build directory or install prefix of
+the bitcode libraries. The package defines a variable
+`AMD_DEVICE_LIBS_TARGETS` containing a list of the exported CMake
+targets.
+
 ## TESTING
 
 Currently all tests are offline:

@@ -15,6 +15,8 @@ set (LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt")
 
 set (BC_EXT .bc)
 set (LIB_SUFFIX ".lib${BC_EXT}")
+set (STRIP_SUFFIX ".strip${BC_EXT}")
+set (FINAL_SUFFIX ".amdgcn${BC_EXT}")
 set (CMAKE_INCLUDE_FLAG_OCL "-I")
 set (CMAKE_OCL_COMPILER_ENV_VAR OCL)
 set (CMAKE_OCL_OUTPUT_EXTENTION ${BC_EXT})
@@ -28,7 +30,7 @@ set (CMAKE_EXECUTABLE_SUFFIX_OCL ".co")
 macro(opencl_bc_lib name)
   get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
 
-  set(lib_tgt ${name}_lib_impl)
+  set(impl_lib_tgt ${name}_lib_impl)
   set(final_lib_tgt ${name}_lib)
 
   list(APPEND AMDGCN_LIB_LIST ${final_lib_tgt})
@@ -47,41 +49,44 @@ macro(opencl_bc_lib name)
     endif()
   endforeach()
 
-  add_library(${lib_tgt} STATIC ${ARGN})
-  add_dependencies(${lib_tgt} irif_lib)
+  add_library(${impl_lib_tgt} STATIC ${ARGN})
+  add_dependencies(${impl_lib_tgt} irif_lib)
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-    add_dependencies(${lib_tgt} llvm-link clang)
+    add_dependencies(${impl_lib_tgt} llvm-link clang)
   endif()
 
-  set_target_properties(${lib_tgt} PROPERTIES
+  set_target_properties(${impl_lib_tgt} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     ARCHIVE_OUTPUT_NAME "${name}"
     PREFIX "" SUFFIX ${LIB_SUFFIX}
     COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang ${irif_lib_output}"
     LINK_DEPENDS ${LLVM_LINK}
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
-  set(output_name "${name}.amdgcn${BC_EXT}")
+  set(strip_name "${name}${STRIP_SUFFIX}")
+  set(final_name "${name}${FINAL_SUFFIX}")
 
   if (TARGET prepare-builtins)
-    add_dependencies(${lib_tgt} prepare-builtins)
+    add_dependencies(${impl_lib_tgt} prepare-builtins)
   endif()
 
-  add_custom_command(TARGET ${lib_tgt}
+  add_custom_command(TARGET ${impl_lib_tgt}
     POST_BUILD
-    COMMAND ${LLVM_OPT} -strip -o ${name}.strip.bc $<TARGET_FILE:${lib_tgt}>
-    COMMAND ${PREPARE_BUILTINS} ${name}.strip.bc -o ${output_name}
+    COMMAND ${LLVM_OPT} -strip -o ${strip_name} $<TARGET_FILE:${impl_lib_tgt}>
+    COMMAND ${PREPARE_BUILTINS} ${strip_name} -o ${final_name}
     DEPENDS ${lib_tgt}
-    COMMENT "Generating ${output_name}")
+    COMMENT "Generating ${final_name}")
 
   add_custom_target(${final_lib_tgt})
-  add_dependencies(${final_lib_tgt} ${lib_tgt})
+  add_dependencies(${final_lib_tgt} ${impl_lib_tgt})
 
   set_target_properties(${final_lib_tgt} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    ARCHIVE_OUTPUT_NAME "${name}")
+    ARCHIVE_OUTPUT_NAME "${name}"
+    PREFIX "" SUFFIX "${FINAL_SUFFIX}")
 
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${output_name} DESTINATION lib COMPONENT device-libs)
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/${final_name}"
+    DESTINATION lib COMPONENT device-libs)
 endmacro()
 
 function(clang_opencl_code name dir)
@@ -93,7 +98,9 @@ function(clang_opencl_code name dir)
     add_dependencies(${tgt_name} ${lib}_lib)
     get_target_property(lib_file ${lib}_lib ARCHIVE_OUTPUT_NAME)
     get_target_property(lib_path ${lib}_lib ARCHIVE_OUTPUT_DIRECTORY)
-    set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}/${lib_file}.amdgcn${BC_EXT}")
+    get_target_property(lib_prefix ${lib}_lib PREFIX)
+    get_target_property(lib_suffix ${lib}_lib SUFFIX)
+    set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}/${lib_prefix}${lib_file}${lib_suffix}")
   endforeach()
   set(test_build_flags "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
   #dummy link since clang already generated CodeObject file
