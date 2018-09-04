@@ -19,35 +19,35 @@ distribution used.
 
 An example command-line to build Comgr on Linux is:
 
-  $ cd ~/llvm/
-  $ mkdir build
-  $ cd build
-  $ cmake -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX=dist \
-      -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
-  $ make
-  $ make install
-  $ cd ~/support/lib/comgr
-  $ mkdir build
-  $ cd build
-  $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR=~/llvm/build/dist ..
-  $ make
-  $ make test
+    $ cd ~/llvm/
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=dist \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
+    $ make
+    $ make install
+    $ cd ~/support/lib/comgr
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR=~/llvm/build/dist ..
+    $ make
+    $ make test
 
 The equivalent on Windows will use another build tool, such as msbuild or
 Visual Studio:
 
-  $ cd "%HOMEPATH%\llvm"
-  $ mkdir build
-  $ cd build
-  $ cmake -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX=dist \
-      -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
-  $ msbuild ALL_BUILD.vcxproj
-  $ msbuild INSTALL.vcxproj
-  $ cd "%HOMEPATH%\support\lib\comgr"
-  $ mkdir build
-  $ cd build
-  $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR="%HOMEPATH%\llvm\build\dist" ..
-  $ msbuild ALL_BUILD.vcxproj
-  $ msbuild RUN_TESTS.vcxproj
+    $ cd "%HOMEPATH%\llvm"
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=dist \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ..
+    $ msbuild ALL_BUILD.vcxproj
+    $ msbuild INSTALL.vcxproj
+    $ cd "%HOMEPATH%\support\lib\comgr"
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR="%HOMEPATH%\llvm\build\dist" ..
+    $ msbuild ALL_BUILD.vcxproj
+    $ msbuild RUN_TESTS.vcxproj
