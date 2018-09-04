@@ -1451,7 +1451,11 @@ bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                      SDValue &Offset, bool &Imm) const {
   SDLoc SL(Addr);
 
-  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+  // A 32-bit (address + offset) should not cause unsigned 32-bit integer
+  // wraparound, because s_load instructions perform the addition in 64 bits.
+  if ((Addr.getValueType() != MVT::i32 ||
+       Addr->getFlags().hasNoUnsignedWrap()) &&
+      CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
 
