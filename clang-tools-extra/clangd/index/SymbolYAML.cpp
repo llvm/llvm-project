@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolYAML.h"
+#include "../Trace.h"
 #include "Index.h"
 #include "Serialization.h"
 #include "dex/DexIndex.h"
@@ -183,25 +184,31 @@ std::string SymbolToYAML(Symbol Sym) {
   return OS.str();
 }
 
-std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFile,
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
                                        bool UseDex) {
-  auto Buffer = llvm::MemoryBuffer::getFile(SymbolFile);
+  trace::Span OverallTracer("LoadIndex");
+  auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
-    llvm::errs() << "Can't open " << SymbolFile << "\n";
+    llvm::errs() << "Can't open " << SymbolFilename << "\n";
     return nullptr;
   }
   StringRef Data = Buffer->get()->getBuffer();
 
   llvm::Optional<SymbolSlab> Slab;
   if (Data.startswith("RIFF")) { // Magic for binary index file.
+    trace::Span Tracer("ParseRIFF");
     if (auto RIFF = readIndexFile(Data))
       Slab = std::move(RIFF->Symbols);
     else
       llvm::errs() << "Bad RIFF: " << llvm::toString(RIFF.takeError()) << "\n";
   } else {
+    trace::Span Tracer("ParseYAML");
     Slab = symbolsFromYAML(Data);
   }
 
+  if (!Slab)
+    return nullptr;
+  trace::Span Tracer("BuildIndex");
   return UseDex ? dex::DexIndex::build(std::move(*Slab))
                 : MemIndex::build(std::move(*Slab), RefSlab());
 }

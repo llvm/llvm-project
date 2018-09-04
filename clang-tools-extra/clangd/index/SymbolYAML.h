@@ -44,7 +44,7 @@ void SymbolsToYAML(const SymbolSlab &Symbols, llvm::raw_ostream &OS);
 // Build an in-memory static index for global symbols from a symbol file.
 // The size of global symbols should be relatively small, so that all symbols
 // can be managed in memory.
-std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFile,
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
                                        bool UseDex = true);
 
 } // namespace clangd
