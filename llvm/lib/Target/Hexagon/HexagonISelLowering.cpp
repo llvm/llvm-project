@@ -22,7 +22,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -239,51 +238,6 @@ bool HexagonTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
     return false;
 
   return true;
-}
-
-unsigned  HexagonTargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                              SelectionDAG &DAG) const {
-  unsigned Reg = StringSwitch<unsigned>(RegName)
-                     .Case("r0", Hexagon::R0)
-                     .Case("r1", Hexagon::R1)
-                     .Case("r2", Hexagon::R2)
-                     .Case("r3", Hexagon::R3)
-                     .Case("r4", Hexagon::R4)
-                     .Case("r5", Hexagon::R5)
-                     .Case("r6", Hexagon::R6)
-                     .Case("r7", Hexagon::R7)
-                     .Case("r8", Hexagon::R8)
-                     .Case("r9", Hexagon::R9)
-                     .Case("r10", Hexagon::R10)
-                     .Case("r11", Hexagon::R11)
-                     .Case("r12", Hexagon::R12)
-                     .Case("r13", Hexagon::R13)
-                     .Case("r14", Hexagon::R14)
-                     .Case("r15", Hexagon::R15)
-                     .Case("r16", Hexagon::R16)
-                     .Case("r17", Hexagon::R17)
-                     .Case("r18", Hexagon::R18)
-                     .Case("r19", Hexagon::R19)
-                     .Case("r20", Hexagon::R20)
-                     .Case("r21", Hexagon::R21)
-                     .Case("r22", Hexagon::R22)
-                     .Case("r23", Hexagon::R23)
-                     .Case("r24", Hexagon::R24)
-                     .Case("r25", Hexagon::R25)
-                     .Case("r26", Hexagon::R26)
-                     .Case("r27", Hexagon::R27)
-                     .Case("r28", Hexagon::R28)
-                     .Case("r29", Hexagon::R29)
-                     .Case("sp", Hexagon::R29)
-                     .Case("r30", Hexagon::R30)
-                     .Case("fp", Hexagon::R30)
-                     .Case("r31", Hexagon::R31)
-                     .Case("sp", Hexagon::R31)
-                     .Default(0);
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
 }
 
 /// LowerCallResult - Lower the result values of an ISD::CALL into the

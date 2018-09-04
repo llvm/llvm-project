@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+
 #include "CompileUnit.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
@@ -31,9 +34,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-
-#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
-#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
 
 namespace llvm {
 namespace dsymutil {

@@ -267,6 +267,6 @@ namespace AMDGPUAS {
     // Some places use this if the address space can't be determined.
     UNKNOWN_ADDRESS_SPACE = ~0u,
   };
-};
+}
 
 #endif

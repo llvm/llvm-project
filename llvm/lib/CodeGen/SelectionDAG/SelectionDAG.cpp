@@ -3715,6 +3715,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
 
   // TODO: Handle FMINNUM/FMAXNUM/FMINNAN/FMAXNAN when there is an agreement on
   // what they should do.
+  case ISD::EXTRACT_VECTOR_ELT: {
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END ||
         Opcode == ISD::INTRINSIC_WO_CHAIN ||
