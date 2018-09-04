@@ -59,7 +59,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &S) {
   return OS << S.Scope << S.Name;
 }
 
-double quality(const Symbol &S) {
+float quality(const Symbol &S) {
   // This avoids a sharp gradient for tail symbols, and also neatly avoids the
   // question of whether 0 references means a bad symbol or missing data.
   if (S.References < 3)
