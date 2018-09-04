@@ -1547,7 +1547,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   // them in.
   swift_ast_context->AddDebuggerClient(external_lookup);
 
-  swift::PersistentParserState persistent_state;
+  swift::PersistentParserState persistent_state(*ast_context);
 
   while (!done) {
     swift::parseIntoSourceFile(*source_file, buffer_id, &done, nullptr,
