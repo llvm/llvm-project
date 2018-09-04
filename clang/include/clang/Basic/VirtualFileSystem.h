@@ -323,6 +323,7 @@ public:
 namespace detail {
 
 class InMemoryDirectory;
+class InMemoryFile;
 
 } // namespace detail
 
@@ -331,6 +332,15 @@ class InMemoryFileSystem : public FileSystem {
   std::unique_ptr<detail::InMemoryDirectory> Root;
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;
+
+  /// If HardLinkTarget is non-null, a hardlink is created to the To path which
+  /// must be a file. If it is null then it adds the file as the public addFile.
+  bool addFile(const Twine &Path, time_t ModificationTime,
+               std::unique_ptr<llvm::MemoryBuffer> Buffer,
+               Optional<uint32_t> User, Optional<uint32_t> Group,
+               Optional<llvm::sys::fs::file_type> Type,
+               Optional<llvm::sys::fs::perms> Perms,
+               const detail::InMemoryFile *HardLinkTarget);
 
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
@@ -347,6 +357,20 @@ public:
                Optional<uint32_t> User = None, Optional<uint32_t> Group = None,
                Optional<llvm::sys::fs::file_type> Type = None,
                Optional<llvm::sys::fs::perms> Perms = None);
+
+  /// Add a hard link to a file.
+  /// Here hard links are not intended to be fully equivalent to the classical
+  /// filesystem. Both the hard link and the file share the same buffer and
+  /// status (and thus have the same UniqueID). Because of this there is no way
+  /// to distinguish between the link and the file after the link has been
+  /// added.
+  ///
+  /// The To path must be an existing file or a hardlink. The From file must not
+  /// have been added before. The To Path must not be a directory. The From Node
+  /// is added as a hard link which points to the resolved file of To Node.
+  /// \return true if the above condition is satisfied and hardlink was
+  /// successfully created, false otherwise.
+  bool addHardLink(const Twine &From, const Twine &To);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file
