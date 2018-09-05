@@ -26,82 +26,76 @@ template <> struct Helper<BufferExtents> {
     return make_unique<BufferExtents>(1);
   }
 
-  static constexpr char Expected[] = "<Buffer: size = 1 bytes>";
+  static const char *expected() { return "<Buffer: size = 1 bytes>"; }
 };
-constexpr char Helper<BufferExtents>::Expected[];
 
 template <> struct Helper<WallclockRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<WallclockRecord>(1, 2);
   }
 
-  static constexpr char Expected[] = "<Wall Time: seconds = 1.000002>";
+  static const char *expected() { return "<Wall Time: seconds = 1.000002>"; }
 };
-constexpr char Helper<WallclockRecord>::Expected[];
 
 template <> struct Helper<NewCPUIDRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<NewCPUIDRecord>(1);
   }
 
-  static constexpr char Expected[] = "<CPU ID: 1>";
+  static const char *expected() { return "<CPU ID: 1>"; }
 };
-constexpr char Helper<NewCPUIDRecord>::Expected[];
 
 template <> struct Helper<TSCWrapRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<TSCWrapRecord>(1);
   }
 
-  static constexpr char Expected[] = "<TSC Wrap: base = 1>";
+  static const char *expected() { return "<TSC Wrap: base = 1>"; }
 };
-constexpr char Helper<TSCWrapRecord>::Expected[];
 
 template <> struct Helper<CustomEventRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<CustomEventRecord>(4, 1, "data");
   }
 
-  static constexpr char Expected[] =
-      "<Custom Event: tsc = 1, size = 4, data = 'data'>";
+  static const char *expected() {
+    return "<Custom Event: tsc = 1, size = 4, data = 'data'>";
+  }
 };
-constexpr char Helper<CustomEventRecord>::Expected[];
 
 template <> struct Helper<CallArgRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<CallArgRecord>(1);
   }
 
-  static constexpr char Expected[] = "<Call Argument: data = 1 (hex = 0x1)>";
+  static const char *expected() {
+    return "<Call Argument: data = 1 (hex = 0x1)>";
+  }
 };
-constexpr char Helper<CallArgRecord>::Expected[];
 
 template <> struct Helper<PIDRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<PIDRecord>(1);
   }
 
-  static constexpr char Expected[] = "<PID: 1>";
+  static const char *expected() { return "<PID: 1>"; }
 };
-constexpr char Helper<PIDRecord>::Expected[];
 
 template <> struct Helper<NewBufferRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<NewBufferRecord>(1);
   }
 
-  static constexpr char Expected[] = "<Thread ID: 1>";
+  static const char *expected() { return "<Thread ID: 1>"; }
 };
-constexpr char Helper<NewBufferRecord>::Expected[];
 
 template <> struct Helper<EndBufferRecord> {
   static std::unique_ptr<Record> construct() {
     return make_unique<EndBufferRecord>();
   }
 
-  static constexpr char Expected[] = "<End of Buffer>";
+  static const char *expected() { return "<End of Buffer>"; }
 };
-constexpr char Helper<EndBufferRecord>::Expected[];
 
 template <class T> class PrinterTest : public ::testing::Test {
 protected:
@@ -120,7 +114,7 @@ TYPED_TEST_P(PrinterTest, PrintsRecord) {
   ASSERT_NE(nullptr, this->R);
   ASSERT_FALSE(errorToBool(this->R->apply(this->P)));
   this->OS.flush();
-  EXPECT_THAT(this->Data, Eq(Helper<TypeParam>::Expected));
+  EXPECT_THAT(this->Data, Eq(Helper<TypeParam>::expected()));
 }
 
 REGISTER_TYPED_TEST_CASE_P(PrinterTest, PrintsRecord);

@@ -25,7 +25,7 @@
 
 ; DWARF: .debug_loc contents:
 ; DWARF-NEXT: 0x00000000:
-; DWARF-NEXT: {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
+; DWARF-NEXT: {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4
 
 ; ModuleID = 't.c'
 source_filename = "t.c"
