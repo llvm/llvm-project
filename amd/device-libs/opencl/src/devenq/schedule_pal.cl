@@ -1,23 +1,20 @@
 
-#include "ockl_hsa.h"
 #include "devenq.h"
 
 typedef struct _SchedulerParam {
-    ulong  kernarg_address;           //!< set to the VM address of SchedulerParam
-    ulong  hidden_global_offset_x;    //!< set to 0 before queuing the scheduler
-    ulong  hidden_global_offset_y;    //!< set to 0 before queuing the scheduler
-    ulong  hidden_global_offset_z;    //!< set to 0 before queuing the scheduler
-    ulong  thread_counter;            //!< set to 0 before queuing the scheduler
-    __global hsa_queue_t* child_queue; //!< set to the device queue the child kernels will be queued to
-    hsa_kernel_dispatch_packet_t scheduler_aql; //!< Dispatch packet used to relaunch the scheduler
-    hsa_signal_t     complete_signal;  //!< Notify the host queue to continue processing
-    AmdVQueueHeader* vqueue_header;  //!< The vqueue
-    uint   signal;                   //!< Signal to stop the child queue
-    uint   eng_clk;                  //!< Engine clock in Mhz
-    uint   releaseHostCP;            //!< Releases CP on the host queue
-    ulong  parentAQL;                //!< Host parent AmdAqlWrap packet
-    uint   dedicatedQueue;           //!< Scheduler uses a dedicated queue
-    uint   reserved[2];              //!< Processed mask groups by one thread
+    uint    signal;         //!< Signal to stop the child queue
+    uint    eng_clk;        //!< Engine clock in Mhz
+    ulong   hw_queue;       //!< Address to HW queue
+    ulong   hsa_queue;      //!< Address to HSA dummy queue
+    uint    useATC;         //!< GPU access to shader program by ATC.
+    uint    scratchSize;    //!< Scratch buffer size
+    ulong   scratch;        //!< GPU address to the scratch buffer
+    uint    numMaxWaves;    //!< Num max waves on the asic
+    uint    releaseHostCP;  //!< Releases CP on the host queue
+    ulong   parentAQL;      //!< Host parent AmdAqlWrap packet
+    uint    dedicatedQueue; //!< Scheduler uses a dedicated queue
+    uint    scratchOffset;  //!< Scratch buffer offset
+    uint    reserved[2];    //!< Processed mask groups by one thread
 } SchedulerParam;
 
 static inline int
@@ -63,37 +60,43 @@ min_command(uint slot_num, __global AmdAqlWrap* wraps)
     return minCommand;
 }
 
-static inline void
-EnqueueDispatch(__global hsa_kernel_dispatch_packet_t* aqlPkt, __global hsa_queue_t* child_queue)
-{
-    ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
-    const ulong queueMask = child_queue->size - 1;
-    __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
-    *dispatch_packet = *aqlPkt;
-}
-
-static inline void
-EnqueueScheduler(__global SchedulerParam* param)
-{
-    __global hsa_queue_t* child_queue = param->child_queue;
-    ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
-    const ulong queueMask = child_queue->size - 1;
-    __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
-    *dispatch_packet = param->scheduler_aql;
-    __ockl_hsa_signal_store(child_queue->doorbell_signal, index, __ockl_memory_order_release);
-}
+extern uint GetCmdTemplateHeaderSize(void);
+extern uint GetCmdTemplateDispatchSize(void);
+extern void EmptyCmdTemplateDispatch(ulong cmdBuf);
+extern void RunCmdTemplateDispatch(
+            ulong   cmdBuf,
+            __global hsa_kernel_dispatch_packet_t* aqlPkt,
+            ulong   scratch,
+            ulong   hsaQueue,
+            uint    scratchSize,
+            uint    scratchOffset,
+            uint    numMaxWaves,
+            uint    useATC);
 
 __attribute__((always_inline)) void
-__amd_scheduler_pal(__global SchedulerParam* param)
+__amd_scheduler_pal(
+    __global AmdVQueueHeader* queue,
+    __global SchedulerParam* params,
+    uint paramIdx)
 {
-    __global AmdVQueueHeader* queue = (__global AmdVQueueHeader*)(param->vqueue_header);
+    __global  SchedulerParam* param = &params[paramIdx];
+    ulong hwDisp = param->hw_queue + GetCmdTemplateHeaderSize();
+    __global AmdAqlWrap* hostParent = (__global AmdAqlWrap*)(param->parentAQL);
+    __global uint* counter = (__global uint*)(&hostParent->child_counter);
+    __global uint* signal = (__global uint*)(&param->signal);
     __global AmdAqlWrap* wraps = (__global AmdAqlWrap*)&queue[1];
     __global uint* amask = (__global uint *)queue->aql_slot_mask;
 
-    // unused? __global uint* signal = (__global uint*)(&param->signal);
+    //! @todo This is an unexplained behavior.
+    //! The scheduler can be launched one more time after termination.
+    if (1 == atomic_load_explicit((__global atomic_uint*)&param->releaseHostCP,
+        memory_order_acquire, memory_scope_device)) {
+        return;
+    }
 
     int launch = 0;
     int  grpId = get_group_id(0);
+    hwDisp += GetCmdTemplateDispatchSize() * grpId;
     uint mskGrp = queue->mask_groups;
 
     for (uint m = 0; m < mskGrp && launch == 0; ++m) {
@@ -115,7 +118,7 @@ __amd_scheduler_pal(__global SchedulerParam* param)
                 if (launch == 0) {
                     // Attempt to find a new dispatch if nothing was launched yet
                     uint parentState = atomic_load_explicit((__global atomic_uint*)(&parent->state), memory_order_relaxed, memory_scope_device);
-                    uint enqueueFlags = atomic_load_explicit( (__global atomic_uint*)(&disp->enqueue_flags), memory_order_relaxed, memory_scope_device);
+                    uint enqueueFlags = atomic_load_explicit((__global atomic_uint*)(&disp->enqueue_flags), memory_order_relaxed, memory_scope_device);
 
                     // Check the launch flags
                     if (((enqueueFlags == CLK_ENQUEUE_FLAGS_WAIT_KERNEL) ||
@@ -133,7 +136,8 @@ __amd_scheduler_pal(__global SchedulerParam* param)
                         }
                         if (launch > 0) {
                             // Launch child kernel ....
-                            EnqueueDispatch(&disp->aql, param->child_queue);
+                            RunCmdTemplateDispatch(hwDisp, &disp->aql, param->scratch, param->hsa_queue,
+                                param->scratchSize, param->scratchOffset, param->numMaxWaves, param->useATC);
                         } else if (event != 0) {
                             event->state = -1;
                         }
@@ -202,17 +206,20 @@ __amd_scheduler_pal(__global SchedulerParam* param)
         }
     }
 
-    ulong threads_done = atomic_fetch_add_explicit((__global atomic_ulong*)&param->thread_counter, (ulong)1, memory_order_relaxed, memory_scope_device);
-    if (threads_done >= (get_global_size(0) - 1)) {
-        // The last thread finishes the processing
-        __global AmdAqlWrap* hostParent = (__global AmdAqlWrap*)(param->parentAQL);
-        bool complete = atomic_load_explicit((__global atomic_uint*)&hostParent->child_counter, memory_order_relaxed, memory_scope_device) == 0;
-        if (complete) {
-            __ockl_hsa_signal_store(param->complete_signal, 0, __ockl_memory_order_relaxed);
-        } else {
-            param->thread_counter = 0;
-            EnqueueScheduler(param);
-        }
+    if (launch <= 0) {
+        EmptyCmdTemplateDispatch(hwDisp);
+    }
+
+    __global atomic_uint *againptr = param->dedicatedQueue ? (__global atomic_uint*)&param->signal : (__global atomic_uint*)&hostParent->child_counter;
+
+    uint again = atomic_load_explicit(againptr, memory_order_relaxed, memory_scope_device);
+
+    if (!again) {
+        //! \todo Write deadcode to the template, but somehow
+        //! the scheduler will be launched one more time.
+        atomic_store_explicit((__global atomic_uint*)hwDisp, 0xdeadc0de, memory_order_relaxed, memory_scope_device);
+        atomic_store_explicit((__global atomic_uint*)&param->signal, 0, memory_order_relaxed, memory_scope_device);
+        atomic_store_explicit((__global atomic_uint*)&param->releaseHostCP, 1, memory_order_relaxed, memory_scope_device);
     }
 }
 
