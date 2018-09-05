@@ -17,6 +17,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/Support/Path.h"
+
 namespace clang {
 namespace clangd {
 using namespace llvm;

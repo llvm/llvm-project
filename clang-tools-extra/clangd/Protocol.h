@@ -878,6 +878,11 @@ struct DocumentHighlight {
 llvm::json::Value toJSON(const DocumentHighlight &DH);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DocumentHighlight &);
 
+struct ReferenceParams : public TextDocumentPositionParams {
+  // For now, no options like context.includeDeclaration are supported.
+};
+bool fromJSON(const llvm::json::Value &, ReferenceParams &);
+
 struct CancelParams {
   /// The request id to cancel.
   /// This can be either a number or string, if it is a number simply print it

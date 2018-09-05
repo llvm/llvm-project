@@ -129,6 +129,7 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
             {"renameProvider", true},
             {"documentSymbolProvider", true},
             {"workspaceSymbolProvider", true},
+            {"referencesProvider", true},
             {"executeCommandProvider",
              json::Object{
                  {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
@@ -447,6 +448,17 @@ void ClangdLSPServer::applyConfiguration(
 void ClangdLSPServer::onChangeConfiguration(
     DidChangeConfigurationParams &Params) {
   applyConfiguration(Params.settings);
+}
+
+void ClangdLSPServer::onReference(ReferenceParams &Params) {
+  Server.findReferences(Params.textDocument.uri.file(), Params.position,
+                        [](llvm::Expected<std::vector<Location>> Locations) {
+                          if (!Locations)
+                            return replyError(
+                                ErrorCode::InternalError,
+                                llvm::toString(Locations.takeError()));
+                          reply(llvm::json::Array(*Locations));
+                        });
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,

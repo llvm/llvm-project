@@ -157,6 +157,10 @@ public:
   void documentSymbols(StringRef File,
                        Callback<std::vector<SymbolInformation>> CB);
 
+  /// Retrieve locations for symbol references.
+  void findReferences(PathRef File, Position Pos,
+                      Callback<std::vector<Location>> CB);
+
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
                                                     PathRef File, Range Rng);
