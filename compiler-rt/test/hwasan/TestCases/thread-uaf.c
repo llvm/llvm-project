@@ -1,3 +1,5 @@
+// Tests UAF detection where Allocate/Deallocate/Use
+// happen in separate threads.
 // RUN: %clang_hwasan %s -o %t && not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
@@ -7,20 +9,48 @@
 
 #include <sanitizer/hwasan_interface.h>
 
-void *Thread(void *arg) {
-  char * volatile x = (char*)malloc(10);
-  fprintf(stderr, "ZZZ %p\n", x);
+char *volatile x;
+int state;
+
+void *Allocate(void *arg) {
+  x = (char*)malloc(10);
+  __sync_fetch_and_add(&state, 1);
+  while (__sync_fetch_and_add(&state, 0) != 3) {}
+  return NULL;
+}
+void *Deallocate(void *arg) {
+  while (__sync_fetch_and_add(&state, 0) != 1) {}
   free(x);
+  __sync_fetch_and_add(&state, 1);
+  while (__sync_fetch_and_add(&state, 0) != 3) {}
+  return NULL;
+}
+
+void *Use(void *arg) {
+  while (__sync_fetch_and_add(&state, 0) != 2) {}
   x[5] = 42;
   // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address
-  // CHECK: WRITE of size 1
+  // CHECK: WRITE of size 1 {{.*}} in thread T3
   // CHECK: thread-uaf.c:[[@LINE-3]]
+  // CHECK: freed by thread T2 here
+  // CHECK: in Deallocate
+  // CHECK: previously allocated here:
+  // CHECK: in Allocate
+  // CHECK: Thread: T2 0x
+  // CHECK: Thread: T3 0x
+  __sync_fetch_and_add(&state, 1);
   return NULL;
 }
 
 int main() {
   __hwasan_enable_allocator_tagging();
-  pthread_t t;
-  pthread_create(&t, NULL, Thread, NULL);
-  pthread_join(t, NULL);
+  pthread_t t1, t2, t3;
+
+  pthread_create(&t1, NULL, Allocate, NULL);
+  pthread_create(&t2, NULL, Deallocate, NULL);
+  pthread_create(&t3, NULL, Use, NULL);
+
+  pthread_join(t1, NULL);
+  pthread_join(t2, NULL);
+  pthread_join(t3, NULL);
 }

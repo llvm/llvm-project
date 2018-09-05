@@ -1,5 +1,6 @@
+# AFL doesn't work on Windows. No reason to test the driver.
+UNSUPPORTED: freebsd, windows
 XFAIL: ios
-UNSUPPORTED: freebsd
 RUN: %no_fuzzer_cpp_compiler %S/AFLDriverTest.cpp %libfuzzer_src/afl/afl_driver.cpp -o %t-AFLDriverTest
 
 ; Test that not specifying a stderr file isn't broken.

@@ -1,3 +1,5 @@
+# FIXME: Disabled on Windows until symbolization works properly.
+UNSUPPORTED: windows
 # Temporary use -mllvm -use-unknown-locations=Disable so that
 # all instructions have debug info (file line numbers) attached.
 # TODO: Find out why test fails on Darwin with -O2.
