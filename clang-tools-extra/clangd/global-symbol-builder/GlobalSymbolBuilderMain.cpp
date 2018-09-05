@@ -60,7 +60,7 @@ static llvm::cl::opt<bool> MergeOnTheFly(
         "MapReduce."),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-enum class Format { YAML, Binary };
+enum Format { YAML, Binary };
 static llvm::cl::opt<Format>
     Format("format", llvm::cl::desc("Format of the index to be written"),
            llvm::cl::values(
