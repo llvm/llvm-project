@@ -26,6 +26,13 @@
 //
 
 ATTR ulong
+OCKL_MANGLE_T(hsa_queue,load_read_index)(const __global hsa_queue_t *queue, __ockl_memory_order mem_order)
+{
+    const __global amd_queue_t *q = (const __global amd_queue_t *)queue;
+    return AL(ulong, (__global atomic_ulong *)&q->read_dispatch_id, mem_order, memory_scope_all_svm_devices);
+}
+
+ATTR ulong
 OCKL_MANGLE_T(hsa_queue,load_write_index)(const __global hsa_queue_t *queue, __ockl_memory_order mem_order)
 {
     const __global amd_queue_t *q = (const __global amd_queue_t *)queue;
