@@ -634,7 +634,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
       ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
 
   // Sort the constants by value and type. This invalidates the mapping!
-  llvm::sort(ConstCandVec.begin(), ConstCandVec.end(),
+  std::stable_sort(ConstCandVec.begin(), ConstCandVec.end(),
              [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
     if (LHS.ConstInt->getType() != RHS.ConstInt->getType())
       return LHS.ConstInt->getType()->getBitWidth() <

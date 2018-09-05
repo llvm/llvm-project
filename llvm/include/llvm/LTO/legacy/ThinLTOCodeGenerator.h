@@ -299,11 +299,6 @@ public:
    */
   void optimize(Module &Module);
 
-  /**
-   * Perform ThinLTO CodeGen.
-   */
-  std::unique_ptr<MemoryBuffer> codegen(Module &Module);
-
   /**@}*/
 
 private:

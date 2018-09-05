@@ -57,10 +57,9 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       // FIXME: For CALL_INDIRECT_VOID, don't print a leading comma, because
       // we have an extra flags operand which is not currently printed, for
       // compatiblity reasons.
-      if (i != 0 &&
-          ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
-            MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID_S) ||
-           i != Desc.getNumOperands()))
+      if (i != 0 && ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
+                      MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID_S) ||
+                     i != Desc.getNumOperands()))
         OS << ", ";
       printOperand(MI, i, OS);
     }
@@ -88,12 +87,14 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     case WebAssembly::END_LOOP_S:
       // Have to guard against an empty stack, in case of mismatched pairs
       // in assembly parsing.
-      if (!ControlFlowStack.empty()) ControlFlowStack.pop_back();
+      if (!ControlFlowStack.empty())
+        ControlFlowStack.pop_back();
       break;
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
-      if (!ControlFlowStack.empty()) printAnnotation(
-          OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      if (!ControlFlowStack.empty())
+        printAnnotation(
+            OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
       break;
     }
 
@@ -118,17 +119,15 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
 
 static std::string toString(const APFloat &FP) {
   // Print NaNs with custom payloads specially.
-  if (FP.isNaN() &&
-      !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
+  if (FP.isNaN() && !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
       !FP.bitwiseIsEqual(
           APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
     APInt AI = FP.bitcastToAPInt();
-    return
-        std::string(AI.isNegative() ? "-" : "") + "nan:0x" +
-        utohexstr(AI.getZExtValue() &
-                  (AI.getBitWidth() == 32 ? INT64_C(0x007fffff) :
-                                            INT64_C(0x000fffffffffffff)),
-                  /*LowerCase=*/true);
+    return std::string(AI.isNegative() ? "-" : "") + "nan:0x" +
+           utohexstr(AI.getZExtValue() &
+                         (AI.getBitWidth() == 32 ? INT64_C(0x007fffff)
+                                                 : INT64_C(0x000fffffffffffff)),
+                     /*LowerCase=*/true);
   }
 
   // Use C99's hexadecimal floating-point representation.
@@ -199,25 +198,40 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(
-    const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
+                                                            unsigned OpNo,
+                                                            raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == WebAssembly::GetDefaultP2Align(MI->getOpcode()))
     return;
   O << ":p2align=" << Imm;
 }
 
-void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(
-    const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
+                                                              unsigned OpNo,
+                                                              raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   switch (WebAssembly::ExprType(Imm)) {
-  case WebAssembly::ExprType::Void: break;
-  case WebAssembly::ExprType::I32: O << "i32"; break;
-  case WebAssembly::ExprType::I64: O << "i64"; break;
-  case WebAssembly::ExprType::F32: O << "f32"; break;
-  case WebAssembly::ExprType::F64: O << "f64"; break;
-  case WebAssembly::ExprType::V128: O << "v128"; break;
-  case WebAssembly::ExprType::ExceptRef: O << "except_ref"; break;
+  case WebAssembly::ExprType::Void:
+    break;
+  case WebAssembly::ExprType::I32:
+    O << "i32";
+    break;
+  case WebAssembly::ExprType::I64:
+    O << "i64";
+    break;
+  case WebAssembly::ExprType::F32:
+    O << "f32";
+    break;
+  case WebAssembly::ExprType::F64:
+    O << "f64";
+    break;
+  case WebAssembly::ExprType::V128:
+    O << "v128";
+    break;
+  case WebAssembly::ExprType::ExceptRef:
+    O << "except_ref";
+    break;
   }
 }
 

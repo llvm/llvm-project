@@ -328,6 +328,15 @@ bool Process::StandardErrHasColors() {
 
 static bool UseANSI = false;
 void Process::UseANSIEscapeCodes(bool enable) {
+#if defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+  if (enable) {
+    HANDLE Console = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD Mode;
+    GetConsoleMode(Console, &Mode);
+    Mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(Console, Mode);
+  }
+#endif
   UseANSI = enable;
 }
 

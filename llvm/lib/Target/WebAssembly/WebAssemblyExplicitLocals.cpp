@@ -316,8 +316,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (MO.isDef()) {
           assert(MI.getOpcode() == TargetOpcode::INLINEASM);
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
-          MRI.removeRegOperandFromUseList(&MO);
-          MO = MachineOperand::CreateImm(LocalId);
+          MO.ChangeToImmediate(LocalId);
           continue;
         }
 
@@ -332,8 +331,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // indices as immediates.
         if (MI.getOpcode() == TargetOpcode::INLINEASM) {
           unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
-          MRI.removeRegOperandFromUseList(&MO);
-          MO = MachineOperand::CreateImm(LocalId);
+          MO.ChangeToImmediate(LocalId);
           continue;
         }
 

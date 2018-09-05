@@ -18,13 +18,13 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -65,18 +65,18 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   };
 
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, TokOp T)
-    : Kind(K), StartLoc(Start), EndLoc(End), Tok(T) {}
+      : Kind(K), StartLoc(Start), EndLoc(End), Tok(T) {}
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, IntOp I)
-    : Kind(K), StartLoc(Start), EndLoc(End), Int(I) {}
+      : Kind(K), StartLoc(Start), EndLoc(End), Int(I) {}
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, FltOp F)
-    : Kind(K), StartLoc(Start), EndLoc(End), Flt(F) {}
+      : Kind(K), StartLoc(Start), EndLoc(End), Flt(F) {}
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, SymOp S)
-    : Kind(K), StartLoc(Start), EndLoc(End), Sym(S) {}
+      : Kind(K), StartLoc(Start), EndLoc(End), Sym(S) {}
 
   bool isToken() const override { return Kind == Token; }
-  bool isImm() const override { return Kind == Integer ||
-                                       Kind == Float ||
-                                       Kind == Symbol; }
+  bool isImm() const override {
+    return Kind == Integer || Kind == Float || Kind == Symbol;
+  }
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
 
@@ -145,8 +145,8 @@ public:
 #include "WebAssemblyGenAsmMatcher.inc"
 
   // TODO: This is required to be implemented, but appears unused.
-  bool ParseRegister(unsigned &/*RegNo*/, SMLoc &/*StartLoc*/,
-                     SMLoc &/*EndLoc*/) override {
+  bool ParseRegister(unsigned & /*RegNo*/, SMLoc & /*StartLoc*/,
+                     SMLoc & /*EndLoc*/) override {
     llvm_unreachable("ParseRegister is not implemented.");
   }
 
@@ -156,7 +156,8 @@ public:
 
   bool IsNext(AsmToken::TokenKind Kind) {
     auto ok = Lexer.is(Kind);
-    if (ok) Parser.Lex();
+    if (ok)
+      Parser.Lex();
     return ok;
   }
 
@@ -190,15 +191,15 @@ public:
   void ParseSingleInteger(bool IsNegative, OperandVector &Operands) {
     auto &Int = Lexer.getTok();
     int64_t Val = Int.getIntVal();
-    if (IsNegative) Val = -Val;
+    if (IsNegative)
+      Val = -Val;
     Operands.push_back(make_unique<WebAssemblyOperand>(
-                         WebAssemblyOperand::Integer, Int.getLoc(),
-                         Int.getEndLoc(), WebAssemblyOperand::IntOp{Val}));
+        WebAssemblyOperand::Integer, Int.getLoc(), Int.getEndLoc(),
+        WebAssemblyOperand::IntOp{Val}));
     Parser.Lex();
   }
 
-  bool ParseOperandStartingWithInteger(bool IsNegative,
-                                       OperandVector &Operands,
+  bool ParseOperandStartingWithInteger(bool IsNegative, OperandVector &Operands,
                                        StringRef InstName) {
     ParseSingleInteger(IsNegative, Operands);
     // FIXME: there is probably a cleaner way to do this.
@@ -217,25 +218,24 @@ public:
         // We can't just call WebAssembly::GetDefaultP2Align since we don't have
         // an opcode until after the assembly matcher.
         Operands.push_back(make_unique<WebAssemblyOperand>(
-                             WebAssemblyOperand::Integer, Offset.getLoc(),
-                             Offset.getEndLoc(), WebAssemblyOperand::IntOp{0}));
+            WebAssemblyOperand::Integer, Offset.getLoc(), Offset.getEndLoc(),
+            WebAssemblyOperand::IntOp{0}));
       }
     }
     return false;
   }
 
-  bool ParseInstruction(ParseInstructionInfo &/*Info*/, StringRef Name,
+  bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
-    Operands.push_back(
-          make_unique<WebAssemblyOperand>(WebAssemblyOperand::Token, NameLoc,
-                                          SMLoc::getFromPointer(
-                                            NameLoc.getPointer() + Name.size()),
-                                          WebAssemblyOperand::TokOp{
-                                            StringRef(NameLoc.getPointer(),
-                                                    Name.size())}));
+    Operands.push_back(make_unique<WebAssemblyOperand>(
+        WebAssemblyOperand::Token, NameLoc,
+        SMLoc::getFromPointer(NameLoc.getPointer() + Name.size()),
+        WebAssemblyOperand::TokOp{
+            StringRef(NameLoc.getPointer(), Name.size())}));
     auto NamePair = Name.split('.');
     // If no '.', there is no type prefix.
-    if (NamePair.second.empty()) std::swap(NamePair.first, NamePair.second);
+    if (NamePair.second.empty())
+      std::swap(NamePair.first, NamePair.second);
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
       auto &Tok = Lexer.getTok();
       switch (Tok.getKind()) {
@@ -246,8 +246,8 @@ public:
         if (Parser.parsePrimaryExpr(Val, End))
           return Error("Cannot parse symbol: ", Lexer.getTok());
         Operands.push_back(make_unique<WebAssemblyOperand>(
-                             WebAssemblyOperand::Symbol, Id.getLoc(),
-                             Id.getEndLoc(), WebAssemblyOperand::SymOp{Val}));
+            WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
+            WebAssemblyOperand::SymOp{Val}));
         break;
       }
       case AsmToken::Minus:
@@ -266,8 +266,8 @@ public:
         if (Tok.getString().getAsDouble(Val, false))
           return Error("Cannot parse real: ", Tok);
         Operands.push_back(make_unique<WebAssemblyOperand>(
-                             WebAssemblyOperand::Float, Tok.getLoc(),
-                             Tok.getEndLoc(), WebAssemblyOperand::FltOp{Val}));
+            WebAssemblyOperand::Float, Tok.getLoc(), Tok.getEndLoc(),
+            WebAssemblyOperand::FltOp{Val}));
         Parser.Lex();
         break;
       }
@@ -275,7 +275,8 @@ public:
         return Error("Unexpected token in operand: ", Tok);
       }
       if (Lexer.isNot(AsmToken::EndOfStatement)) {
-        if (Expect(AsmToken::Comma, ",")) return true;
+        if (Expect(AsmToken::Comma, ","))
+          return true;
       }
     }
     Parser.Lex();
@@ -285,34 +286,30 @@ public:
     // the wasm module is generated).
     if (NamePair.second == "block" || NamePair.second == "loop") {
       Operands.push_back(make_unique<WebAssemblyOperand>(
-                           WebAssemblyOperand::Integer, NameLoc,
-                           NameLoc, WebAssemblyOperand::IntOp{-1}));
+          WebAssemblyOperand::Integer, NameLoc, NameLoc,
+          WebAssemblyOperand::IntOp{-1}));
     }
     return false;
   }
 
-  void onLabelParsed(MCSymbol *Symbol) override {
-    LastLabel = Symbol;
-  }
+  void onLabelParsed(MCSymbol *Symbol) override { LastLabel = Symbol; }
 
   bool ParseDirective(AsmToken DirectiveID) override {
     assert(DirectiveID.getKind() == AsmToken::Identifier);
     auto &Out = getStreamer();
-    auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
-                   *Out.getTargetStreamer());
+    auto &TOut =
+        reinterpret_cast<WebAssemblyTargetStreamer &>(*Out.getTargetStreamer());
     // TODO: we're just parsing the subset of directives we're interested in,
     // and ignoring ones we don't recognise. We should ideally verify
     // all directives here.
     if (DirectiveID.getString() == ".type") {
       // This could be the start of a function, check if followed by
       // "label,@function"
-      if (!(IsNext(AsmToken::Identifier) &&
-            IsNext(AsmToken::Comma) &&
-            IsNext(AsmToken::At) &&
-            Lexer.is(AsmToken::Identifier)))
+      if (!(IsNext(AsmToken::Identifier) && IsNext(AsmToken::Comma) &&
+            IsNext(AsmToken::At) && Lexer.is(AsmToken::Identifier)))
         return Error("Expected label,@type declaration, got: ", Lexer.getTok());
       Parser.Lex();
-      //Out.EmitSymbolAttribute(??, MCSA_ELF_TypeFunction);
+      // Out.EmitSymbolAttribute(??, MCSA_ELF_TypeFunction);
     } else if (DirectiveID.getString() == ".param" ||
                DirectiveID.getString() == ".local") {
       // Track the number of locals, needed for correct virtual register
@@ -322,28 +319,31 @@ public:
       std::vector<MVT> Locals;
       while (Lexer.is(AsmToken::Identifier)) {
         auto RegType = ParseRegType(Lexer.getTok().getString());
-        if (RegType == MVT::INVALID_SIMPLE_VALUE_TYPE) return true;
+        if (RegType == MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return true;
         if (DirectiveID.getString() == ".param") {
           Params.push_back(RegType);
         } else {
           Locals.push_back(RegType);
         }
         Parser.Lex();
-        if (!IsNext(AsmToken::Comma)) break;
+        if (!IsNext(AsmToken::Comma))
+          break;
       }
       assert(LastLabel);
       TOut.emitParam(LastLabel, Params);
       TOut.emitLocal(Locals);
     } else {
       // For now, ignore anydirective we don't recognize:
-      while (Lexer.isNot(AsmToken::EndOfStatement)) Parser.Lex();
+      while (Lexer.isNot(AsmToken::EndOfStatement))
+        Parser.Lex();
     }
     return Expect(AsmToken::EndOfStatement, "EOL");
   }
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &/*Opcode*/,
-                               OperandVector &Operands,
-                               MCStreamer &Out, uint64_t &ErrorInfo,
+  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
+                               OperandVector &Operands, MCStreamer &Out,
+                               uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override {
     MCInst Inst;
     unsigned MatchResult =
@@ -354,8 +354,8 @@ public:
       return false;
     }
     case Match_MissingFeature:
-      return Parser.Error(IDLoc,
-          "instruction requires a WASM feature not currently enabled");
+      return Parser.Error(
+          IDLoc, "instruction requires a WASM feature not currently enabled");
     case Match_MnemonicFail:
       return Parser.Error(IDLoc, "invalid instruction");
     case Match_NearMisses:

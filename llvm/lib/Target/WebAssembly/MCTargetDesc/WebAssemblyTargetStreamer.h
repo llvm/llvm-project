@@ -65,8 +65,7 @@ public:
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbol *Symbol,
-                                SmallVectorImpl<MVT> &Params,
+  void emitIndirectFunctionType(MCSymbol *Symbol, SmallVectorImpl<MVT> &Params,
                                 SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
@@ -82,8 +81,7 @@ public:
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbol *Symbol,
-                                SmallVectorImpl<MVT> &Params,
+  void emitIndirectFunctionType(MCSymbol *Symbol, SmallVectorImpl<MVT> &Params,
                                 SmallVectorImpl<MVT> &Results) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;

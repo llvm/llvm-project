@@ -26,7 +26,6 @@
 #include <vector>
 
 namespace llvm {
-enum class DebugCompressionType;
 namespace objcopy {
 
 class Buffer;
@@ -40,7 +39,6 @@ class DynamicRelocationSection;
 class GnuDebugLinkSection;
 class GroupSection;
 class SectionIndexSection;
-class CompressedSection;
 class Segment;
 class Object;
 struct Symbol;
@@ -88,7 +86,6 @@ public:
   virtual void visit(const GnuDebugLinkSection &Sec) = 0;
   virtual void visit(const GroupSection &Sec) = 0;
   virtual void visit(const SectionIndexSection &Sec) = 0;
-  virtual void visit(const CompressedSection &Sec) = 0;
 };
 
 class SectionWriter : public SectionVisitor {
@@ -107,7 +104,6 @@ public:
   virtual void visit(const GnuDebugLinkSection &Sec) override = 0;
   virtual void visit(const GroupSection &Sec) override = 0;
   virtual void visit(const SectionIndexSection &Sec) override = 0;
-  virtual void visit(const CompressedSection &Sec) override = 0;
 
   explicit SectionWriter(Buffer &Buf) : Out(Buf) {}
 };
@@ -126,7 +122,6 @@ public:
   void visit(const GnuDebugLinkSection &Sec) override;
   void visit(const GroupSection &Sec) override;
   void visit(const SectionIndexSection &Sec) override;
-  void visit(const CompressedSection &Sec) override;
 
   explicit ELFSectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
 };
@@ -144,7 +139,6 @@ public:
   void visit(const GnuDebugLinkSection &Sec) override;
   void visit(const GroupSection &Sec) override;
   void visit(const SectionIndexSection &Sec) override;
-  void visit(const CompressedSection &Sec) override;
 
   explicit BinarySectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
 };
@@ -252,7 +246,7 @@ public:
 
 class SectionBase {
 public:
-  std::string Name;
+  StringRef Name;
   Segment *ParentSegment = nullptr;
   uint64_t HeaderOffset;
   uint64_t OriginalOffset = std::numeric_limits<uint64_t>::max();
@@ -270,9 +264,6 @@ public:
   uint64_t Size = 0;
   uint64_t Type = ELF::SHT_NULL;
   ArrayRef<uint8_t> OriginalData;
-
-  SectionBase() = default;
-  SectionBase(const SectionBase &) = default;
 
   virtual ~SectionBase() = default;
 
@@ -350,27 +341,13 @@ class OwnedDataSection : public SectionBase {
 public:
   OwnedDataSection(StringRef SecName, ArrayRef<uint8_t> Data)
       : Data(std::begin(Data), std::end(Data)) {
-    Name = SecName.str();
+    Name = SecName;
     Type = ELF::SHT_PROGBITS;
     Size = Data.size();
     OriginalOffset = std::numeric_limits<uint64_t>::max();
   }
 
   void accept(SectionVisitor &Sec) const override;
-};
-
-class CompressedSection : public SectionBase {
-  MAKE_SEC_WRITER_FRIEND
-
-  DebugCompressionType CompressionType;
-  uint64_t DecompressedSize;
-  uint64_t DecompressedAlign;
-  SmallVector<char, 128> CompressedData;
-
-public:
-  CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType);
-  void accept(SectionVisitor &Visitor) const override;
 };
 
 // There are two types of string tables that can exist, dynamic and not dynamic.

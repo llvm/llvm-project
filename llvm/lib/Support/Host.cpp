@@ -1022,8 +1022,10 @@ StringRef sys::getHostCPUName() {
   mach_msg_type_number_t infoCount;
 
   infoCount = HOST_BASIC_INFO_COUNT;
-  host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)&hostInfo,
+  mach_port_t hostPort = mach_host_self();
+  host_info(hostPort, HOST_BASIC_INFO, (host_info_t)&hostInfo,
             &infoCount);
+  mach_port_deallocate(mach_task_self(), hostPort);
 
   if (hostInfo.cpu_type != CPU_TYPE_POWERPC)
     return "generic";

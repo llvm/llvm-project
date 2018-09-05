@@ -50,7 +50,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   // overaligned values on the user stack.
   unsigned BasePtrVreg = -1U;
 
- public:
+public:
   explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {}
   ~WebAssemblyFunctionInfo() override;
 
@@ -60,7 +60,10 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   void addResult(MVT VT) { Results.push_back(VT); }
   const std::vector<MVT> &getResults() const { return Results; }
 
-  void clearParamsAndResults() { Params.clear(); Results.clear(); }
+  void clearParamsAndResults() {
+    Params.clear();
+    Results.clear();
+  }
 
   void setNumLocals(size_t NumLocals) { Locals.resize(NumLocals, MVT::i32); }
   void setLocal(size_t i, MVT VT) { Locals[i] = VT; }
@@ -115,8 +118,8 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   }
 };
 
-void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM,
-                          Type *Ty, SmallVectorImpl<MVT> &ValueVTs);
+void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
+                          SmallVectorImpl<MVT> &ValueVTs);
 
 void ComputeSignatureVTs(const Function &F, const TargetMachine &TM,
                          SmallVectorImpl<MVT> &Params,

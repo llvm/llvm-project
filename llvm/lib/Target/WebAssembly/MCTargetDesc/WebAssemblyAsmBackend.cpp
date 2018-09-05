@@ -73,13 +73,13 @@ public:
 const MCFixupKindInfo &
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
-    // This table *must* be in the order that the fixup_* kinds are defined in
-    // WebAssemblyFixupKinds.h.
-    //
-    // Name                     Offset (bits) Size (bits)     Flags
-    { "fixup_code_sleb128_i32", 0,            5*8,            0 },
-    { "fixup_code_sleb128_i64", 0,            10*8,           0 },
-    { "fixup_code_uleb128_i32", 0,            5*8,            0 },
+      // This table *must* be in the order that the fixup_* kinds are defined in
+      // WebAssemblyFixupKinds.h.
+      //
+      // Name                     Offset (bits) Size (bits)     Flags
+      {"fixup_code_sleb128_i32", 0, 5 * 8, 0},
+      {"fixup_code_sleb128_i64", 0, 10 * 8, 0},
+      {"fixup_code_uleb128_i32", 0, 5 * 8, 0},
   };
 
   if (Kind < FirstTargetFixupKind)

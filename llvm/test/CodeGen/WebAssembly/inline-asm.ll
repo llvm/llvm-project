@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -no-integrated-as | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -no-integrated-as -verify-machineinstrs | FileCheck %s
 
 ; Test basic inline assembly. Pass -no-integrated-as since these aren't
 ; actually valid assembly syntax.
