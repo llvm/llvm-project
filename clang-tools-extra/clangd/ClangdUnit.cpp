@@ -95,7 +95,7 @@ public:
     if (!ParsedCallback)
       return;
     trace::Span Tracer("Running PreambleCallback");
-    ParsedCallback(File, CI.getASTContext(), CI.getPreprocessorPtr());
+    ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr());
   }
 
   void BeforeExecute(CompilerInstance &CI) override {

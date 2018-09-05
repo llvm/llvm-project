@@ -271,7 +271,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
     for (const WriteRef &WR : Writes) {
       const WriteState &WS = *WR.getWriteState();
       dbgs() << "[PRF] Found a dependent use of Register "
-             << MRI.getName(WS.getRegisterID()) << " (defined by intruction #"
+             << MRI.getName(WS.getRegisterID()) << " (defined by instruction #"
              << WR.getSourceIndex() << ")\n";
     }
   });

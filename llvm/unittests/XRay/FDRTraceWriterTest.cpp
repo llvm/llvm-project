@@ -63,16 +63,17 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion3) {
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::PId, Eq(1u)),
+                                 Field(&XRayRecord::PId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 // This version is almost exactly the same as above, except writing version 2
@@ -107,16 +108,15 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion2) {
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 // This covers version 1 of the log, without a BufferExtents record but has an
@@ -167,16 +167,15 @@ TEST(FDRTraceWriterTest, WriteToStringBufferVersion1) {
   auto &Trace = TraceOrErr.get();
 
   ASSERT_THAT(Trace, Not(IsEmpty()));
-  ASSERT_THAT(
-      Trace,
-      ElementsAre(AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::ENTER))),
-                  AllOf(Field(&XRayRecord::FuncId, Eq(1)),
-                        Field(&XRayRecord::TId, Eq(1u)),
-                        Field(&XRayRecord::CPU, Eq(1u)),
-                        Field(&XRayRecord::Type, Eq(RecordTypes::EXIT)))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::FuncId, Eq(1)),
+                                 Field(&XRayRecord::FuncId, Eq(1))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::TId, Eq(1u)),
+                                 Field(&XRayRecord::TId, Eq(1u))));
+  EXPECT_THAT(Trace, ElementsAre(Field(&XRayRecord::CPU, Eq(1u)),
+                                 Field(&XRayRecord::CPU, Eq(1u))));
+  EXPECT_THAT(Trace,
+              ElementsAre(Field(&XRayRecord::Type, Eq(RecordTypes::ENTER)),
+                          Field(&XRayRecord::Type, Eq(RecordTypes::EXIT))));
 }
 
 } // namespace

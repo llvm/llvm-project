@@ -146,15 +146,23 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   // Translate the high level `-mretpoline` flag to the specific target feature
   // flags. We also detect if the user asked for retpoline external thunks but
-  // failed to ask for retpolines themselves. This is a bit hacky but keeps
-  // existing usages working. We should consider deprecated this and instead
-  // warning if the user requests external retpoline thunks and *doesn't*
-  // request some form of retpolines.
-  if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline)) {
+  // failed to ask for retpolines themselves (through any of the different
+  // flags). This is a bit hacky but keeps existing usages working. We should
+  // consider deprecating this and instead warn if the user requests external
+  // retpoline thunks and *doesn't* request some form of retpolines.
+  if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
+                         options::OPT_mspeculative_load_hardening,
+                         options::OPT_mno_speculative_load_hardening)) {
     if (Args.hasFlag(options::OPT_mretpoline, options::OPT_mno_retpoline,
                      false)) {
       Features.push_back("+retpoline-indirect-calls");
       Features.push_back("+retpoline-indirect-branches");
+    } else if (Args.hasFlag(options::OPT_mspeculative_load_hardening,
+                            options::OPT_mno_speculative_load_hardening,
+                            false)) {
+      // On x86, speculative load hardening relies on at least using retpolines
+      // for indirect calls.
+      Features.push_back("+retpoline-indirect-calls");
     }
   } else if (Args.hasFlag(options::OPT_mretpoline_external_thunk,
                           options::OPT_mno_retpoline_external_thunk, false)) {

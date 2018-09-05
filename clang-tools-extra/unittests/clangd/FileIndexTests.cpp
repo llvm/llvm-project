@@ -7,23 +7,39 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "ClangdUnit.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "gmock/gmock.h"
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::_;
+using testing::AllOf;
+using testing::ElementsAre;
+using testing::Pair;
 using testing::UnorderedElementsAre;
+
+MATCHER_P(RefRange, Range, "") {
+  return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
+                  arg.Location.End.Line, arg.Location.End.Column) ==
+         std::tie(Range.start.line, Range.start.character, Range.end.line,
+                  Range.end.character);
+}
+MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 
 namespace clang {
 namespace clangd {
-
 namespace {
+testing::Matcher<const RefSlab &>
+RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
+  return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
+}
 
 Symbol symbol(llvm::StringRef ID) {
   Symbol Sym;
@@ -39,42 +55,68 @@ std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
   return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
-std::vector<std::string>
-getSymbolNames(const std::vector<const Symbol *> &Symbols) {
+std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, llvm::StringRef Path) {
+  RefSlab::Builder Slab;
+  Ref R;
+  R.Location.FileURI = Path;
+  R.Kind = RefKind::Reference;
+  Slab.insert(ID, R);
+  return llvm::make_unique<RefSlab>(std::move(Slab).build());
+}
+
+std::vector<std::string> getSymbolNames(const SymbolIndex &I,
+                                        std::string Query = "") {
+  FuzzyFindRequest Req;
+  Req.Query = Query;
   std::vector<std::string> Names;
-  for (const Symbol *Sym : Symbols)
-    Names.push_back(Sym->Name);
+  I.fuzzyFind(Req, [&](const Symbol &S) { Names.push_back(S.Name); });
   return Names;
+}
+
+RefSlab getRefs(const SymbolIndex &I, SymbolID ID) {
+  RefsRequest Req;
+  Req.IDs = {ID};
+  RefSlab::Builder Slab;
+  I.refs(Req, [&](const Ref &S) { Slab.insert(ID, S); });
+  return std::move(Slab).build();
 }
 
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()), UnorderedElementsAre());
 
-  FS.update("f1", numSlab(1, 3));
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
+  FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"));
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
               UnorderedElementsAre("1", "2", "3"));
+  EXPECT_THAT(getRefs(*FS.buildMemIndex(), SymbolID("1")),
+              RefsAre({FileURI("f1.cc")}));
 }
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-  FS.update("f1", numSlab(1, 3));
-  FS.update("f2", numSlab(3, 5));
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
-              UnorderedElementsAre("1", "2", "3", "3", "4", "5"));
+  FS.update("f1", numSlab(1, 3), nullptr);
+  FS.update("f2", numSlab(3, 5), nullptr);
+  EXPECT_THAT(getSymbolNames(*FS.buildMemIndex()),
+              UnorderedElementsAre("1", "2", "3", "4", "5"));
 }
 
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
-  FS.update("f1", numSlab(1, 3));
+  SymbolID ID("1");
+  FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"));
 
-  auto Symbols = FS.allSymbols();
+  auto Symbols = FS.buildMemIndex();
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+  EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 
-  FS.update("f1", nullptr);
-  EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
+  FS.update("f1", nullptr, nullptr);
+  auto Empty = FS.buildMemIndex();
+  EXPECT_THAT(getSymbolNames(*Empty), UnorderedElementsAre());
+  EXPECT_THAT(getRefs(*Empty, ID), ElementsAre());
+
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
+  EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
@@ -177,7 +219,7 @@ TEST(FileIndexTest, NoIncludeCollected) {
   Req.Query = "";
   bool SeenSymbol = false;
   M.fuzzyFind(Req, [&](const Symbol &Sym) {
-    EXPECT_TRUE(Sym.IncludeHeader.empty());
+    EXPECT_TRUE(Sym.IncludeHeaders.empty());
     SeenSymbol = true;
   });
   EXPECT_TRUE(SeenSymbol);
@@ -251,11 +293,10 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   buildPreamble(
       FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
       std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
-      [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
-                              std::shared_ptr<Preprocessor> PP) {
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
         IndexUpdated = true;
-        Index.update(FilePath, &Ctx, std::move(PP));
+        Index.update(FooCpp, &Ctx, std::move(PP));
       });
   ASSERT_TRUE(IndexUpdated);
 
@@ -268,6 +309,45 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   EXPECT_THAT(
       match(Index, Req),
       UnorderedElementsAre("ns_in_header", "ns_in_header::func_in_header"));
+}
+
+TEST(FileIndexTest, Refs) {
+  const char *HeaderCode = "class Foo {};";
+  Annotations MainCode(R"cpp(
+  void f() {
+    $foo[[Foo]] foo;
+  }
+  )cpp");
+
+  auto Foo =
+      findSymbol(TestTU::withHeaderCode(HeaderCode).headerSymbols(), "Foo");
+
+  RefsRequest Request;
+  Request.IDs = {Foo.ID};
+
+  FileIndex Index(/*URISchemes*/ {"unittest"});
+  // Add test.cc
+  TestTU Test;
+  Test.HeaderCode = HeaderCode;
+  Test.Code = MainCode.code();
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  Index.update(Test.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
+               AST.getLocalTopLevelDecls());
+  // Add test2.cc
+  TestTU Test2;
+  Test2.HeaderCode = HeaderCode;
+  Test2.Code = MainCode.code();
+  Test2.Filename = "test2.cc";
+  AST = Test2.build();
+  Index.update(Test2.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
+               AST.getLocalTopLevelDecls());
+
+  EXPECT_THAT(getRefs(Index, Foo.ID),
+              RefsAre({AllOf(RefRange(MainCode.range("foo")),
+                             FileURI("unittest:///test.cc")),
+                       AllOf(RefRange(MainCode.range("foo")),
+                             FileURI("unittest:///test2.cc"))}));
 }
 
 } // namespace

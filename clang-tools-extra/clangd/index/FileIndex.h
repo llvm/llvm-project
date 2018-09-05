@@ -24,7 +24,7 @@
 namespace clang {
 namespace clangd {
 
-/// \brief A container of Symbols from several source files. It can be updated
+/// A container of Symbols from several source files. It can be updated
 /// at source-file granularity, replacing all symbols from one file with a new
 /// set.
 ///
@@ -36,31 +36,34 @@ namespace clangd {
 /// the snapshot, either this class or the symbol index.
 ///
 /// The snapshot semantics keeps critical sections minimal since we only need
-/// locking when we swap or obtain refereces to snapshots.
+/// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
-  /// \brief Updates all symbols in a file. If \p Slab is nullptr, symbols for
-  /// \p Path will be removed.
-  void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab);
+  /// Updates all symbols and refs in a file.
+  /// If either is nullptr, corresponding data for \p Path will be removed.
+  void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
+              std::unique_ptr<RefSlab> Refs);
 
-  // The shared_ptr keeps the symbols alive
-  std::shared_ptr<std::vector<const Symbol *>> allSymbols();
+  // The index keeps the symbols alive.
+  std::unique_ptr<SymbolIndex> buildMemIndex();
 
 private:
   mutable std::mutex Mutex;
 
-  /// \brief Stores the latest snapshots for all active files.
-  llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSlabs;
+  /// Stores the latest symbol snapshots for all active files.
+  llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSymbols;
+  /// Stores the latest ref snapshots for all active files.
+  llvm::StringMap<std::shared_ptr<RefSlab>> FileToRefs;
 };
 
-/// \brief This manages symbls from files and an in-memory index on all symbols.
-class FileIndex : public SymbolIndex {
+/// This manages symbols from files and an in-memory index on all symbols.
+class FileIndex : public SwapIndex {
 public:
   /// If URISchemes is empty, the default schemes in SymbolCollector will be
   /// used.
   FileIndex(std::vector<std::string> URISchemes = {});
 
-  /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
+  /// Update symbols in \p Path with symbols in \p AST. If \p AST is
   /// nullptr, this removes all symbols in the file.
   /// If \p AST is not null, \p PP cannot be null and it should be the
   /// preprocessor that was used to build \p AST.
@@ -70,32 +73,20 @@ public:
   update(PathRef Path, ASTContext *AST, std::shared_ptr<Preprocessor> PP,
          llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None);
 
-  bool
-  fuzzyFind(const FuzzyFindRequest &Req,
-            llvm::function_ref<void(const Symbol &)> Callback) const override;
-
-  void lookup(const LookupRequest &Req,
-              llvm::function_ref<void(const Symbol &)> Callback) const override;
-
-
-  void findOccurrences(const OccurrencesRequest &Req,
-                       llvm::function_ref<void(const SymbolOccurrence &)>
-                           Callback) const override;
-
-  size_t estimateMemoryUsage() const override;
-
 private:
+  // Only update() should swap the index.
+  using SwapIndex::reset;
+
   FileSymbols FSymbols;
-  MemIndex Index;
   std::vector<std::string> URISchemes;
 };
 
-/// Retrieves namespace and class level symbols in \p AST.
+/// Retrieves symbols and refs in \p AST.
 /// Exposed to assist in unit tests.
 /// If URISchemes is empty, the default schemes in SymbolCollector will be used.
 /// If \p TopLevelDecls is set, only these decls are indexed. Otherwise, all top
 /// level decls obtained from \p AST are indexed.
-SymbolSlab
+std::pair<SymbolSlab, RefSlab>
 indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
          llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls = llvm::None,
          llvm::ArrayRef<std::string> URISchemes = {});

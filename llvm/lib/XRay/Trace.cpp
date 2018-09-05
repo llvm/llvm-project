@@ -208,7 +208,7 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
 /// encoded TSC values into absolute encodings on each record.
 struct FDRState {
   uint16_t CPUId;
-  uint16_t ThreadId;
+  int32_t ThreadId;
   int32_t ProcessId;
   uint64_t BaseTSC;
 
@@ -268,7 +268,7 @@ Error processFDRNewBufferRecord(FDRState &State, DataExtractor &RecordExtractor,
         fdrStateToTwine(State.Expects), OffsetPtr);
 
   auto PreReadOffset = OffsetPtr;
-  State.ThreadId = RecordExtractor.getU16(&OffsetPtr);
+  State.ThreadId = RecordExtractor.getSigned(&OffsetPtr, 4);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),
@@ -277,7 +277,7 @@ Error processFDRNewBufferRecord(FDRState &State, DataExtractor &RecordExtractor,
 
   // Advance the offset pointer by enough bytes representing the remaining
   // padding in a metadata record.
-  OffsetPtr += kFDRMetadataBodySize - 2;
+  OffsetPtr += kFDRMetadataBodySize - 4;
   assert(OffsetPtr - PreReadOffset == kFDRMetadataBodySize);
   return Error::success();
 }
@@ -396,7 +396,7 @@ Error processFDRPidRecord(FDRState &State, DataExtractor &RecordExtractor,
             fdrStateToTwine(State.Expects),
         std::make_error_code(std::errc::executable_format_error));
   auto PreReadOffset = OffsetPtr;
-  State.ProcessId = RecordExtractor.getU32(&OffsetPtr);
+  State.ProcessId = RecordExtractor.getSigned(&OffsetPtr, 4);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),
@@ -601,6 +601,19 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
     Records.emplace_back();
     auto &Record = Records.back();
     Record.RecordType = 0; // Record is type NORMAL.
+    // Back up one byte to re-read the first byte, which is important for
+    // computing the function id for a record.
+    --OffsetPtr;
+
+    auto PreReadOffset = OffsetPtr;
+    uint32_t FuncIdBitField = RecordExtractor.getU32(&OffsetPtr);
+    if (OffsetPtr == PreReadOffset)
+      return createStringError(
+          std::make_error_code(std::errc::executable_format_error),
+          "Failed reading truncated function id field at offset %d.",
+          OffsetPtr);
+
+    FirstByte = FuncIdBitField & 0xffu;
     // Strip off record type bit and use the next three bits.
     auto T = (FirstByte >> 1) & 0x07;
     switch (T) {
@@ -626,23 +639,11 @@ Error processFDRFunctionRecord(FDRState &State, DataExtractor &RecordExtractor,
     Record.TId = State.ThreadId;
     Record.PId = State.ProcessId;
 
-    // Back up one byte to re-read the first byte, which is important for
-    // computing the function id for a record.
-    --OffsetPtr;
-
     // Despite function Id being a signed int on XRayRecord,
     // when it is written to an FDR format, the top bits are truncated,
     // so it is effectively an unsigned value. When we shift off the
     // top four bits, we want the shift to be logical, so we read as
     // uint32_t.
-    auto PreReadOffset = OffsetPtr;
-    uint32_t FuncIdBitField = RecordExtractor.getU32(&OffsetPtr);
-    if (OffsetPtr == PreReadOffset)
-      return createStringError(
-          std::make_error_code(std::errc::executable_format_error),
-          "Failed reading truncated function id field at offset %d.",
-          OffsetPtr);
-
     Record.FuncId = FuncIdBitField >> 4;
 
     // FunctionRecords have a 32 bit delta from the previous absolute TSC

@@ -1147,6 +1147,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
+  Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
+
   return Success;
 }
 

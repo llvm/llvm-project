@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_UNITTESTS_TOOLS_LLVMEXEGESIS_ASSEMBLERUTILS_H
+#define LLVM_UNITTESTS_TOOLS_LLVMEXEGESIS_ASSEMBLERUTILS_H
+
 #include "Assembler.h"
 #include "BenchmarkRunner.h"
 #include "Target.h"
@@ -85,3 +88,5 @@ private:
 };
 
 } // namespace exegesis
+
+#endif

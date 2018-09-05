@@ -1172,8 +1172,12 @@ unsigned ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 unsigned ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                     int &FrameIndex) const {
-  const MachineMemOperand *Dummy;
-  return MI.mayStore() && hasStoreToStackSlot(MI, Dummy, FrameIndex);
+  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
+  if (MI.mayStore() && hasStoreToStackSlot(MI, Accesses)) {
+    FrameIndex = Accesses.begin()->FI;
+    return true;
+  }
+  return false;
 }
 
 void ARMBaseInstrInfo::
@@ -1386,8 +1390,12 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 unsigned ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                      int &FrameIndex) const {
-  const MachineMemOperand *Dummy;
-  return MI.mayLoad() && hasLoadFromStackSlot(MI, Dummy, FrameIndex);
+  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
+  if (MI.mayLoad() && hasLoadFromStackSlot(MI, Accesses)) {
+    FrameIndex = Accesses.begin()->FI;
+    return true;
+  }
+  return false;
 }
 
 /// Expands MEMCPY to either LDMIA/STMIA or LDMIA_UPD/STMID_UPD

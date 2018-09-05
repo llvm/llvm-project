@@ -43,7 +43,6 @@ struct RTLInfoTy {
                                    // i.e. the OpenMP index of the first device
                                    // to be registered with this RTL.
   int32_t NumberOfDevices;         // Number of devices this RTL deals with.
-  std::vector<DeviceTy *> Devices; // one per device (NumberOfDevices in total).
 
   void *LibraryHandler;
 
@@ -74,7 +73,7 @@ struct RTLInfoTy {
   // The existence of the mutex above makes RTLInfoTy non-copyable.
   // We need to provide a copy constructor explicitly.
   RTLInfoTy()
-      : Idx(-1), NumberOfDevices(-1), Devices(), LibraryHandler(0),
+      : Idx(-1), NumberOfDevices(-1), LibraryHandler(0),
 #ifdef OMPTARGET_DEBUG
         RTLName(),
 #endif
@@ -86,7 +85,6 @@ struct RTLInfoTy {
   RTLInfoTy(const RTLInfoTy &r) : Mtx() {
     Idx = r.Idx;
     NumberOfDevices = r.NumberOfDevices;
-    Devices = r.Devices;
     LibraryHandler = r.LibraryHandler;
 #ifdef OMPTARGET_DEBUG
     RTLName = r.RTLName;

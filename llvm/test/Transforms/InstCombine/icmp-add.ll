@@ -283,8 +283,7 @@ define i1 @slt_zero_add_nuw_signbit(i8 %x) {
 
 define i1 @reduce_add_ult(i32 %in) {
 ; CHECK-LABEL: @reduce_add_ult(
-; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
-; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[A6]], 12
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[IN:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[A18]]
 ;
   %a6 = add nuw i32 %in, 3
@@ -294,8 +293,7 @@ define i1 @reduce_add_ult(i32 %in) {
 
 define i1 @reduce_add_ugt(i32 %in) {
 ; CHECK-LABEL: @reduce_add_ugt(
-; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
-; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 12
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[IN:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[A18]]
 ;
   %a6 = add nuw i32 %in, 3
@@ -305,8 +303,7 @@ define i1 @reduce_add_ugt(i32 %in) {
 
 define i1 @reduce_add_ule(i32 %in) {
 ; CHECK-LABEL: @reduce_add_ule(
-; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
-; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[A6]], 13
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[IN:%.*]], 10
 ; CHECK-NEXT:    ret i1 [[A18]]
 ;
   %a6 = add nuw i32 %in, 3
@@ -316,11 +313,41 @@ define i1 @reduce_add_ule(i32 %in) {
 
 define i1 @reduce_add_uge(i32 %in) {
 ; CHECK-LABEL: @reduce_add_uge(
-; CHECK-NEXT:    [[A6:%.*]] = add nuw i32 [[IN:%.*]], 3
-; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 11
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[IN:%.*]], 8
 ; CHECK-NEXT:    ret i1 [[A18]]
 ;
   %a6 = add nuw i32 %in, 3
+  %a18 = icmp uge i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @ult_add_ssubov(i32 %in) {
+; CHECK-LABEL: @ult_add_ssubov(
+; CHECK-NEXT:    ret i1 false
+;
+  %a6 = add nuw i32 %in, 71
+  %a18 = icmp ult i32 %a6, 3
+  ret i1 %a18
+}
+
+define i1 @ult_add_nonuw(i8 %in) {
+; CHECK-LABEL: @ult_add_nonuw(
+; CHECK-NEXT:    [[A6:%.*]] = add i8 [[IN:%.*]], 71
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i8 [[A6]], 12
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add i8 %in, 71
+  %a18 = icmp ult i8 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @uge_add_nonuw(i32 %in) {
+; CHECK-LABEL: @uge_add_nonuw(
+; CHECK-NEXT:    [[A6:%.*]] = add i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 11
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add i32 %in, 3
   %a18 = icmp uge i32 %a6, 12
   ret i1 %a18
 }

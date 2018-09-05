@@ -18,15 +18,15 @@ add_llvm_unittest(AnalysisTests
   LazyCallGraphTest.cpp
   LoopInfoTest.cpp
   MemoryBuiltinsTest.cpp
-  MemorySSA.cpp
+  MemorySSATest.cpp
   OrderedBasicBlockTest.cpp
-  OrderedInstructions.cpp
+  OrderedInstructionsTest.cpp
   PhiValuesTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
   TBAATest.cpp
-  UnrollAnalyzer.cpp
+  UnrollAnalyzerTest.cpp
   ValueTrackingTest.cpp
   )

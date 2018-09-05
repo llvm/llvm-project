@@ -174,6 +174,11 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(BaseDir, Results));
 
+  Count =
+    CommandCompletions::DiskDirectories(Twine(BaseDir) + "/.", Results, Resolver);
+  ASSERT_EQ(0u, Count);
+  ASSERT_EQ(Count, Results.GetSize());
+
   // When the same directory ends with a slash, it finds all children.
   Count = CommandCompletions::DiskDirectories(Prefixes[0], Results, Resolver);
   ASSERT_EQ(7u, Count);

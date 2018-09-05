@@ -3225,6 +3225,25 @@ TEST_P(ASTImporterTestBase, ClassTemplateFullAndPartialSpecsShouldNotBeMixed) {
                               unless(classTemplatePartialSpecializationDecl()))));
 }
 
+TEST_P(ASTImporterTestBase, InitListExprValueKindShouldBeImported) {
+  Decl *TU = getTuDecl(
+      R"(
+      const int &init();
+      void foo() { const int &a{init()}; }
+      )", Lang_CXX11, "input0.cc");
+  auto *FromD = FirstDeclMatcher<VarDecl>().match(TU, varDecl(hasName("a")));
+  ASSERT_TRUE(FromD->getAnyInitializer());
+  auto *InitExpr = FromD->getAnyInitializer();
+  ASSERT_TRUE(InitExpr);
+  ASSERT_TRUE(InitExpr->isGLValue());
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  EXPECT_TRUE(ToD);
+  auto *ToInitExpr = cast<VarDecl>(ToD)->getAnyInitializer();
+  EXPECT_TRUE(ToInitExpr);
+  EXPECT_TRUE(ToInitExpr->isGLValue());
+}
+
 struct DeclContextTest : ASTImporterTestBase {};
 
 TEST_P(DeclContextTest, removeDeclOfClassTemplateSpecialization) {

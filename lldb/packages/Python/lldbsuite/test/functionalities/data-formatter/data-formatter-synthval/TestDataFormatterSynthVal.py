@@ -107,7 +107,7 @@ class DataFormatterSynthValueTestCase(TestBase):
         # check that an aptly defined synthetic provider does not affect
         # one-lining
         self.expect(
-            "expression struct S { myInt theInt{12}; }; S()",
+            "expression struct Struct { myInt theInt{12}; }; Struct()",
             substrs=['(theInt = 12)'])
 
         # check that we can use a synthetic value in a summary

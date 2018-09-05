@@ -1266,7 +1266,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()
-                                  : MBB.getLastNonDebugInstr()->getDebugLoc();
+                                  : MBB.findDebugLoc(MBB.end());
     MachineInstr *DeallocCall = nullptr;
 
     if (HasTC) {
