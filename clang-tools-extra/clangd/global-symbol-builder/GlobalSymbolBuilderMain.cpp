@@ -60,13 +60,12 @@ static llvm::cl::opt<bool> MergeOnTheFly(
         "MapReduce."),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-enum Format { YAML, Binary };
-static llvm::cl::opt<Format>
-    Format("format", llvm::cl::desc("Format of the index to be written"),
-           llvm::cl::values(
-               clEnumValN(Format::YAML, "yaml", "human-readable YAML format"),
-               clEnumValN(Format::Binary, "binary", "binary RIFF format")),
-           llvm::cl::init(Format::YAML));
+enum IndexFormat { YAML, Binary };
+static llvm::cl::opt<IndexFormat> Format(
+    "format", llvm::cl::desc("Format of the index to be written"),
+    llvm::cl::values(clEnumValN(YAML, "yaml", "human-readable YAML format"),
+                     clEnumValN(Binary, "binary", "binary RIFF format")),
+    llvm::cl::init(YAML));
 
 /// Responsible for aggregating symbols from each processed file and producing
 /// the final results. All methods in this class must be thread-safe,
@@ -273,10 +272,10 @@ int main(int argc, const char **argv) {
   auto UniqueSymbols = Consumer->mergeResults();
   // Output phase: emit result symbols.
   switch (clang::clangd::Format) {
-  case clang::clangd::Format::YAML:
+  case clang::clangd::IndexFormat::YAML:
     SymbolsToYAML(UniqueSymbols, llvm::outs());
     break;
-  case clang::clangd::Format::Binary: {
+  case clang::clangd::IndexFormat::Binary: {
     clang::clangd::IndexFileOut Out;
     Out.Symbols = &UniqueSymbols;
     llvm::outs() << Out;
