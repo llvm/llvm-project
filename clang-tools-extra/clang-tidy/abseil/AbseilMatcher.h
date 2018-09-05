@@ -48,10 +48,19 @@ AST_POLYMORPHIC_MATCHER(
   if (PrefixPosition == StringRef::npos)
     return false;
   Path = Path.drop_front(PrefixPosition + AbslPrefix.size());
-  static const char *AbseilLibraries[] = {
-      "algorithm",       "base", "container", "debugging",
-      "memory",          "meta", "numeric",   "strings",
-      "synchronization", "time", "types",     "utility"};
+  static const char *AbseilLibraries[] = {"algorithm",
+                                          "base",
+                                          "container",
+                                          "debugging",
+                                          "flags"
+                                          "memory",
+                                          "meta",
+                                          "numeric",
+                                          "strings",
+                                          "synchronization",
+                                          "time",
+                                          "types",
+                                          "utility"};
   return std::any_of(
       std::begin(AbseilLibraries), std::end(AbseilLibraries),
       [&](const char *Library) { return Path.startswith(Library); });
