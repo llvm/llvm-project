@@ -6,7 +6,7 @@
 
 define i1 @test0(i1 %A) {
 ; CHECK-LABEL: @test0(
-; CHECK-NEXT:    ret i1 %A
+; CHECK-NEXT:    ret i1 [[A:%.*]]
 ;
   %B = xor i1 %A, false
   ret i1 %B
@@ -14,7 +14,7 @@ define i1 @test0(i1 %A) {
 
 define i32 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i32 %A
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   %B = xor i32 %A, 0
   ret i32 %B
@@ -47,7 +47,7 @@ define i32 @test4(i32 %A) {
 
 define i32 @test5(i32 %A) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %A, -124
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %t1 = or i32 %A, 123
@@ -57,7 +57,7 @@ define i32 @test5(i32 %A) {
 
 define i8 @test6(i8 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    ret i8 %A
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %B = xor i8 %A, 17
   %C = xor i8 %B, 17
@@ -66,8 +66,8 @@ define i8 @test6(i8 %A) {
 
 define i32 @test7(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[A1:%.*]] = and i32 %A, 7
-; CHECK-NEXT:    [[B1:%.*]] = and i32 %B, 128
+; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A:%.*]], 7
+; CHECK-NEXT:    [[B1:%.*]] = and i32 [[B:%.*]], 128
 ; CHECK-NEXT:    [[C11:%.*]] = or i32 [[A1]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[C11]]
 ;
@@ -79,7 +79,7 @@ define i32 @test7(i32 %A, i32 %B) {
 
 define i8 @test8(i1 %c) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    br i1 %c, label %False, label %True
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       True:
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       False:
@@ -97,7 +97,7 @@ False:
 
 define i1 @test9(i8 %A) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 %A, 89
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 89
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = xor i8 %A, 123
@@ -107,7 +107,7 @@ define i1 @test9(i8 %A) {
 
 define <2 x i1> @test9vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> %a, <i8 89, i8 89>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], <i8 89, i8 89>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 123, i8 123>
@@ -117,7 +117,7 @@ define <2 x i1> @test9vec(<2 x i8> %a) {
 
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[B:%.*]] = and i8 %A, 3
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 3
 ; CHECK-NEXT:    [[C1:%.*]] = or i8 [[B]], 4
 ; CHECK-NEXT:    ret i8 [[C1]]
 ;
@@ -128,7 +128,7 @@ define i8 @test10(i8 %A) {
 
 define i8 @test11(i8 %A) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[B:%.*]] = and i8 %A, -13
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], -13
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[B]], 8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
@@ -139,7 +139,7 @@ define i8 @test11(i8 %A) {
 
 define i1 @test12(i8 %A) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 %A, 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = xor i8 %A, 4
@@ -149,7 +149,7 @@ define i1 @test12(i8 %A) {
 
 define <2 x i1> @test12vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test12vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> %a, <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 4, i8 4>
@@ -159,7 +159,7 @@ define <2 x i1> @test12vec(<2 x i8> %a) {
 
 define i32 @test18(i32 %A) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[C:%.*]] = add i32 %A, 124
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], 124
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = xor i32 %A, -1
@@ -169,7 +169,7 @@ define i32 @test18(i32 %A) {
 
 define i32 @test19(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    ret i32 %B
+; CHECK-NEXT:    ret i32 [[B:%.*]]
 ;
   %C = xor i32 %A, %B
   %D = xor i32 %C, %A
@@ -178,8 +178,8 @@ define i32 @test19(i32 %A, i32 %B) {
 
 define void @test20(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    store i32 %B, i32* @G1, align 4
-; CHECK-NEXT:    store i32 %A, i32* @G2, align 4
+; CHECK-NEXT:    store i32 [[B:%.*]], i32* @G1, align 4
+; CHECK-NEXT:    store i32 [[A:%.*]], i32* @G2, align 4
 ; CHECK-NEXT:    ret void
 ;
   %t2 = xor i32 %B, %A
@@ -192,7 +192,7 @@ define void @test20(i32 %A, i32 %B) {
 
 define i32 @test21(i1 %C, i32 %A, i32 %B) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[D:%.*]] = select i1 %C, i32 %B, i32 %A
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %C2 = xor i1 %C, true
@@ -202,7 +202,7 @@ define i32 @test21(i1 %C, i32 %A, i32 %B) {
 
 define i32 @test22(i1 %X) {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 %X to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = xor i1 %X, true
@@ -215,7 +215,7 @@ define i32 @test22(i1 %X) {
 
 define i32 @fold_zext_xor_sandwich(i1 %X) {
 ; CHECK-LABEL: @fold_zext_xor_sandwich(
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 %X to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[Q:%.*]] = xor i32 [[Z]], 3
 ; CHECK-NEXT:    ret i32 [[Q]]
 ;
@@ -227,7 +227,7 @@ define i32 @fold_zext_xor_sandwich(i1 %X) {
 
 define <2 x i32> @fold_zext_xor_sandwich_vec(<2 x i1> %X) {
 ; CHECK-LABEL: @fold_zext_xor_sandwich_vec(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> %X to <2 x i32>
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[Q:%.*]] = xor <2 x i32> [[Z]], <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[Q]]
 ;
@@ -239,7 +239,7 @@ define <2 x i32> @fold_zext_xor_sandwich_vec(<2 x i1> %X) {
 
 define i1 @test23(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 %b, 0
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[T4]]
 ;
   %t2 = xor i32 %b, %a
@@ -249,7 +249,7 @@ define i1 @test23(i32 %a, i32 %b) {
 
 define i1 @test24(i32 %c, i32 %d) {
 ; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 %d, 0
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[D:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[T4]]
 ;
   %t2 = xor i32 %d, %c
@@ -259,7 +259,7 @@ define i1 @test24(i32 %c, i32 %d) {
 
 define i32 @test25(i32 %g, i32 %h) {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[T4:%.*]] = and i32 %h, %g
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[H:%.*]], [[G:%.*]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %h2 = xor i32 %h, -1
@@ -270,7 +270,7 @@ define i32 @test25(i32 %g, i32 %h) {
 
 define i32 @test27(i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[T6:%.*]] = icmp eq i32 %b, %c
+; CHECK-NEXT:    [[T6:%.*]] = icmp eq i32 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext i1 [[T6]] to i32
 ; CHECK-NEXT:    ret i32 [[T7]]
 ;
@@ -283,7 +283,7 @@ define i32 @test27(i32 %b, i32 %c, i32 %d) {
 
 define i32 @test28(i32 %indvar) {
 ; CHECK-LABEL: @test28(
-; CHECK-NEXT:    [[T214:%.*]] = add i32 %indvar, 1
+; CHECK-NEXT:    [[T214:%.*]] = add i32 [[INDVAR:%.*]], 1
 ; CHECK-NEXT:    ret i32 [[T214]]
 ;
   %t7 = add i32 %indvar, -2147483647
@@ -417,92 +417,174 @@ final:
   ret <2 x i32> %value
 }
 
-define i32 @test31(i32 %A, i32 %B) {
-; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B | A) --> A & ~B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @or_xor_commute1(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @or_xor_commute1(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = or i32 %A, %B
-  %xor = xor i32 %B, %and
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = or i32 %b, %a
+  %r = xor i32 %b, %o
+  ret i32 %r
 }
 
-define i32 @test32(i32 %A, i32 %B) {
-; CHECK-LABEL: @test32(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B | A) --> A & ~B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @or_xor_commute2(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @or_xor_commute2(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = or i32 %B, %A
-  %xor = xor i32 %B, %and
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = or i32 %a, %b
+  %r = xor i32 %o, %b
+  ret i32 %r
 }
 
-define i32 @test33(i32 %A, i32 %B) {
-; CHECK-LABEL: @test33(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B | A) --> A & ~B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @or_xor_commute3(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @or_xor_commute3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = or i32 %A, %B
-  %xor = xor i32 %and, %B
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = or i32 %b, %a
+  %r = xor i32 %o, %b
+  ret i32 %r
 }
 
-define i32 @test34(i32 %A, i32 %B) {
-; CHECK-LABEL: @test34(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B | A) --> A & ~B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @or_xor_commute4(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @or_xor_commute4(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = or i32 %B, %A
-  %xor = xor i32 %and, %B
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = or i32 %a, %b
+  %r = xor i32 %b, %o
+  ret i32 %r
 }
 
-define i32 @test35(i32 %A, i32 %B) {
-; CHECK-LABEL: @test35(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+define i32 @or_xor_extra_use(i32 %a, i32 %b, i32* %p) {
+; CHECK-LABEL: @or_xor_extra_use(
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[O]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[O]], [[B]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = and i32 %A, %B
-  %xor = xor i32 %B, %and
-  ret i32 %xor
+  %o = or i32 %a, %b
+  store i32 %o, i32* %p
+  %r = xor i32 %b, %o
+  ret i32 %r
 }
 
-define i32 @test36(i32 %A, i32 %B) {
-; CHECK-LABEL: @test36(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B & A) --> ~A & B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @and_xor_commute1(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @and_xor_commute1(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = and i32 %B, %A
-  %xor = xor i32 %B, %and
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = and i32 %b, %a
+  %r = xor i32 %b, %o
+  ret i32 %r
 }
 
-define i32 @test37(i32 %A, i32 %B) {
-; CHECK-LABEL: @test37(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B & A) --> ~A & B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @and_xor_commute2(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @and_xor_commute2(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = and i32 %A, %B
-  %xor = xor i32 %and, %B
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = and i32 %a, %b
+  %r = xor i32 %o, %b
+  ret i32 %r
 }
 
-define i32 @test38(i32 %A, i32 %B) {
-; CHECK-LABEL: @test38(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+; B ^ (B & A) --> ~A & B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @and_xor_commute3(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @and_xor_commute3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %and = and i32 %B, %A
-  %xor = xor i32 %and, %B
-  ret i32 %xor
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = and i32 %b, %a
+  %r = xor i32 %o, %b
+  ret i32 %r
+}
+
+; B ^ (B & A) --> ~A & B
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @and_xor_commute4(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @and_xor_commute4(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = and i32 %a, %b
+  %r = xor i32 %b, %o
+  ret i32 %r
+}
+
+define i32 @and_xor_extra_use(i32 %a, i32 %b, i32* %p) {
+; CHECK-LABEL: @and_xor_extra_use(
+; CHECK-NEXT:    [[O:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[O]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[O]], [[B]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %o = and i32 %a, %b
+  store i32 %o, i32* %p
+  %r = xor i32 %b, %o
+  ret i32 %r
 }
 
 ; The tests 39-47 are related to the canonicalization:

@@ -9206,10 +9206,10 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
     }
     break;
     case ISD::LOAD: {
-      const LoadSDNode *L = dyn_cast<LoadSDNode>(N);
-      // FIXME: Also needs to handle flat.
-      if (L->getMemOperand()->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS)
-        return true;
+      const LoadSDNode *L = cast<LoadSDNode>(N);
+      unsigned AS = L->getAddressSpace();
+      // A flat load may access private memory.
+      return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
     } break;
     case ISD::CALLSEQ_END:
     return true;

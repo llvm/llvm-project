@@ -15,9 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
@@ -137,65 +135,6 @@ void SectionWriter::visit(const OwnedDataSection &Sec) {
 }
 
 void OwnedDataSection::accept(SectionVisitor &Visitor) const {
-  Visitor.visit(*this);
-}
-
-void BinarySectionWriter::visit(const CompressedSection &Sec) {
-  error("Cannot write compressed section '" + Sec.Name + "' ");
-}
-
-template <class ELFT>
-void ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
-  uint8_t *Buf = Out.getBufferStart();
-  Buf += Sec.Offset;
-
-  if (Sec.CompressionType == DebugCompressionType::GNU) {
-    ArrayRef<uint8_t> Magic = {'Z', 'L', 'I', 'B'};
-    std::copy(Magic.begin(), Magic.end(), Buf);
-    Buf += Magic.size();
-    const uint64_t DecompressedSize =
-        support::endian::read64be(&Sec.DecompressedSize);
-    memcpy(Buf, &DecompressedSize, sizeof(DecompressedSize));
-    Buf += sizeof(DecompressedSize);
-  } else {
-    auto Chdr = reinterpret_cast<Elf_Chdr_Impl<ELFT> *>(Buf);
-    Chdr->ch_type = ELF::ELFCOMPRESS_ZLIB;
-    Chdr->ch_size = Sec.DecompressedSize;
-    Chdr->ch_addralign = Sec.DecompressedAlign;
-    Buf += sizeof(*Chdr);
-  }
-
-  std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
-}
-
-CompressedSection::CompressedSection(const SectionBase &Sec,
-                                     DebugCompressionType CompressionType)
-    : SectionBase(Sec), CompressionType(CompressionType),
-      DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-
-  if (Error E = zlib::compress(
-          StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                    OriginalData.size()),
-          CompressedData))
-    reportError(Name, std::move(E));
-
-  size_t ChdrSize;
-  if (CompressionType == DebugCompressionType::GNU) {
-    Name = ".z" + Sec.Name.substr(1);
-    ChdrSize = sizeof("ZLIB") - 1 + sizeof(uint64_t);
-  } else {
-    Flags |= ELF::SHF_COMPRESSED;
-    ChdrSize =
-        std::max(std::max(sizeof(object::Elf_Chdr_Impl<object::ELF64LE>),
-                          sizeof(object::Elf_Chdr_Impl<object::ELF64BE>)),
-                 std::max(sizeof(object::Elf_Chdr_Impl<object::ELF32LE>),
-                          sizeof(object::Elf_Chdr_Impl<object::ELF32BE>)));
-  }
-  Size = ChdrSize + CompressedData.size();
-  Align = 8;
-}
-
-void CompressedSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
@@ -436,11 +375,13 @@ void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
 template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::initialize(
     SectionTableRef SecTable) {
-  setSymTab(SecTable.getSectionOfType<SymTabType>(
-      Link,
-      "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
-      "Link field value " + Twine(Link) + " in section " + Name +
-          " is not a symbol table"));
+  if (Link != SHN_UNDEF)
+    setSymTab(SecTable.getSectionOfType<SymTabType>(
+        Link,
+        "Link field value " + Twine(Link) + " in section " + Name +
+            " is invalid",
+        "Link field value " + Twine(Link) + " in section " + Name +
+            " is not a symbol table"));
 
   if (Info != SHN_UNDEF)
     setSection(SecTable.getSection(Info, "Info field value " + Twine(Info) +
@@ -452,7 +393,8 @@ void RelocSectionWithSymtabBase<SymTabType>::initialize(
 
 template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::finalize() {
-  this->Link = Symbols->Index;
+  this->Link = Symbols ? Symbols->Index : 0;
+
   if (SecToApplyRel != nullptr)
     this->Info = SecToApplyRel->Index;
 }

@@ -750,19 +750,21 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   bool Commented = false;
 
-  auto getSize = [&MFI](
-      const SmallVectorImpl<TargetInstrInfo::FrameAccess> &Accesses) {
-    unsigned Size = 0;
-    for (auto &A : Accesses)
-      if (MFI.isSpillSlotObjectIndex(A.FI))
-        Size += A.MMO->getSize();
-    return Size;
-  };
+  auto getSize =
+      [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
+        unsigned Size = 0;
+        for (auto A : Accesses)
+          if (MFI.isSpillSlotObjectIndex(
+                  cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                      ->getFrameIndex()))
+            Size += A->getSize();
+        return Size;
+      };
 
   // We assume a single instruction only has a spill or reload, not
   // both.
   const MachineMemOperand *MMO;
-  SmallVector<TargetInstrInfo::FrameAccess, 2> Accesses;
+  SmallVector<const MachineMemOperand *, 2> Accesses;
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();

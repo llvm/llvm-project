@@ -818,14 +818,6 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
   optimizeModule(TheModule, *TMBuilder.create(), OptLevel, Freestanding);
 }
 
-/**
- * Perform ThinLTO CodeGen.
- */
-std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
-  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
-  return codegenModule(TheModule, *TMBuilder.create());
-}
-
 /// Write out the generated object file, either from CacheEntryPath or from
 /// OutputBuffer, preferring hard-link when possible.
 /// Returns the path to the generated file in SavedObjectsDirectoryPath.
@@ -893,7 +885,7 @@ void ThinLTOCodeGenerator::run() {
                                  /*IsImporting*/ false);
 
         // CodeGen
-        auto OutputBuffer = codegen(*TheModule);
+        auto OutputBuffer = codegenModule(*TheModule, *TMBuilder.create());
         if (SavedObjectsDirectoryPath.empty())
           ProducedBinaries[count] = std::move(OutputBuffer);
         else

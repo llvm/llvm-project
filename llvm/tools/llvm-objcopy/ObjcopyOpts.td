@@ -17,12 +17,6 @@ def I : JoinedOrSeparate<[ "-" ], "I">, Alias<input_target>;
 defm output_target : Eq<"output-target">,
                      HelpText<"Format of the output file">,
                      Values<"binary">;
-def compress_debug_sections : Flag<["--", "-"], "compress-debug-sections">;
-def compress_debug_sections_eq : Joined<["--", "-"], "compress-debug-sections=">,
-                                 MetaVarName<"[ zlib | zlib-gnu ]">,
-                                 HelpText<"Compress DWARF debug sections using "
-                                          "specified style. Supported styles: "
-                                          "'zlib-gnu' and 'zlib'">;
 def O : JoinedOrSeparate<["-"], "O">,
         Alias<output_target>;
 defm split_dwo : Eq<"split-dwo">,

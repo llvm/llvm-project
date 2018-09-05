@@ -470,7 +470,7 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
                                          MachineFunction *MF, unsigned &Reg) {
   const MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   int FI;
-  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
+  SmallVector<const MachineMemOperand*, 1> Accesses;
 
   // TODO: Handle multiple stores folded into one.
   if (!MI.hasOneMemOperand())
@@ -480,8 +480,10 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
   if (!((TII->isStoreToStackSlotPostFE(MI, FI) &&
          FrameInfo.isSpillSlotObjectIndex(FI)) ||
         (TII->hasStoreToStackSlot(MI, Accesses) &&
-         llvm::any_of(Accesses, [&FrameInfo](TargetInstrInfo::FrameAccess &FA) {
-           return FrameInfo.isSpillSlotObjectIndex(FA.FI);
+         llvm::any_of(Accesses, [&FrameInfo](const MachineMemOperand *MMO) {
+           return FrameInfo.isSpillSlotObjectIndex(
+               cast<FixedStackPseudoSourceValue>(MMO->getPseudoValue())
+                   ->getFrameIndex());
          }))))
     return false;
 

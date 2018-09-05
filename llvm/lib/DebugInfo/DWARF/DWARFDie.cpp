@@ -244,15 +244,17 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   else
     formValue.dump(OS, DumpOpts);
 
+  std::string Space = DumpOpts.ShowAddresses ? " " : "";
+
   // We have dumped the attribute raw value. For some attributes
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin) {
     if (const char *Name = Die.getAttributeValueAsReferencedDie(Attr).getName(
             DINameKind::LinkageName))
-      OS << " \"" << Name << '\"';
+      OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
-    OS << " \"";
+    OS << Space << "\"";
     dumpTypeName(OS, Die);
     OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {

@@ -96,8 +96,8 @@ enum TOF {
 
   // Flags to indicate the type of the symbol being referenced
   MO_SYMBOL_FUNCTION = 0x1,
-  MO_SYMBOL_GLOBAL   = 0x2,
-  MO_SYMBOL_MASK     = 0x3,
+  MO_SYMBOL_GLOBAL = 0x2,
+  MO_SYMBOL_MASK = 0x3,
 };
 } // end namespace WebAssemblyII
 

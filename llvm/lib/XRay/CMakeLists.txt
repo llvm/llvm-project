@@ -7,6 +7,7 @@ add_llvm_library(LLVMXRay
   LogBuilderConsumer.cpp
   Profile.cpp
   RecordInitializer.cpp
+  RecordPrinter.cpp
   Trace.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -4,12 +4,12 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-none--musleabi"
 
 ; Check that for the same offset from the base constant, different types are materialized separately.
-; CHECK:  %const = bitcast %5** getelementptr inbounds (%0, %0* @global, i32 0, i32 2, i32 0) to %5**
-; CHECK:  %tmp = load %5*, %5** %const, align 4
-; CHECK:  %base_bitcast = bitcast %5** %const to i8*
-; CHECK:  %mat_gep = getelementptr i8, i8* %base_bitcast, i32 0
-; CHECK:  %mat_bitcast = bitcast i8* %mat_gep to %4*
-; CHECK:  tail call void undef(%5* nonnull %tmp, %4* %mat_bitcast)
+; CHECK: %const = bitcast %5** getelementptr inbounds (%0, %0* @global, i32 0, i32 2, i32 0) to %5**
+; CHECK: %tmp = load %5*, %5** %const, align 4
+; CHECK: %base_bitcast = bitcast %5** %const to i8*
+; CHECK: %mat_gep = getelementptr i8, i8* %base_bitcast, i32 0
+; CHECK: %mat_bitcast = bitcast i8* %mat_gep to %4*
+; CHECK: tail call void undef(%5* nonnull %tmp, %4* %mat_bitcast)
 
 %0 = type { [16 x %1], %2, %4, [16 x %5], %6, %7, i32, [4 x i32], [8 x %3], i8, i8, i8, i8, i8, i8, i8, %8, %11, %11*, i32, i16, i8, i8, i8, i8, i8, i8, [15 x i16], i8, i8, [23 x %12], i8, i8*, i8, %13, i8, i8 }
 %1 = type { i32, i32, i8, i8, i8, i8, i8, i8, i8, i8 }

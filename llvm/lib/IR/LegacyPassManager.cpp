@@ -152,8 +152,11 @@ void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
   if (P->getAsPMDataManager())
     return;
 
+  // Set to true if this isn't a module pass or CGSCC pass.
+  bool CouldOnlyImpactOneFunction = (F != nullptr);
+
   // Do we have a function we can use to emit a remark?
-  if (F == nullptr) {
+  if (!CouldOnlyImpactOneFunction) {
     // We need a function containing at least one basic block in order to output
     // remarks. Since it's possible that the first function in the module
     // doesn't actually contain a basic block, we have to go and find one that's
