@@ -2409,7 +2409,7 @@ void NeonEmitter::run(raw_ostream &OS) {
     OS << "#endif\n";
   OS << "\n";
 
-  OS << "#define __ai static inline __attribute__((__always_inline__, "
+  OS << "#define __ai static __inline __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
 
   SmallVector<Intrinsic *, 128> Defs;
@@ -2518,7 +2518,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
 
   OS << "typedef __fp16 float16_t;\n";
 
-  OS << "#define __ai static inline __attribute__((__always_inline__, "
+  OS << "#define __ai static __inline __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
 
   SmallVector<Intrinsic *, 128> Defs;
