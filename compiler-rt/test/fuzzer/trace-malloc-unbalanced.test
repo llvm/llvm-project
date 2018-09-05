@@ -1,6 +1,7 @@
 // FIXME: This test infinite loops on darwin because it crashes
 // printing a stack trace repeatedly
-UNSUPPORTED: darwin
+// FIXME: Disabled on Windows because of reliance on shebang line and failure.
+UNSUPPORTED: darwin, windows
 
 // Verifies lib/fuzzer/scripts/unbalanced_allocs.py script
 

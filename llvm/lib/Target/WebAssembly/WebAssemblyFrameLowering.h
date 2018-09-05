@@ -22,7 +22,7 @@ namespace llvm {
 class MachineFrameInfo;
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
- public:
+public:
   /// Size of the red zone for the user stack (leaf functions can use this much
   /// space below the stack pointer without writing it back to __stack_pointer
   /// global).
@@ -35,9 +35,9 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
                             /*TransientStackAlignment=*/16,
                             /*StackRealignable=*/true) {}
 
-  MachineBasicBlock::iterator eliminateCallFramePseudoInstr(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I) const override;
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const override;
 
   /// These methods insert prolog and epilog code into the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -61,6 +61,6 @@ private:
   bool needsSPWriteback(const MachineFunction &MF) const;
 };
 
-}  // end namespace llvm
+} // end namespace llvm
 
 #endif

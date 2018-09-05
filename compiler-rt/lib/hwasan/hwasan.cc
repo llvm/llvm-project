@@ -213,9 +213,7 @@ void __hwasan_init() {
 
   HwasanAllocatorInit();
 
-  Thread *main_thread = Thread::Create(nullptr, nullptr);
-  SetCurrentThread(main_thread);
-  main_thread->Init();
+  Thread::Create();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();

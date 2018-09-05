@@ -29,8 +29,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
                                  std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)),
-        Subtarget(nullptr), MRI(nullptr), MFI(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), MRI(nullptr),
+        MFI(nullptr) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Assembly Printer";

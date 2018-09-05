@@ -1378,25 +1378,25 @@ static void
 deleteDeadBlocksFromLoop(Loop &L,
                          SmallVectorImpl<BasicBlock *> &ExitBlocks,
                          DominatorTree &DT, LoopInfo &LI) {
-  // Find all the dead blocks, and remove them from their successors.
-  SmallVector<BasicBlock *, 16> DeadBlocks;
-  for (BasicBlock *BB : ExitBlocks)
-    if (!DT.isReachableFromEntry(BB)) {
-      for (BasicBlock *SuccBB : successors(BB))
+  // Find all the dead blocks tied to this loop, and remove them from their
+  // successors.
+  SmallPtrSet<BasicBlock *, 16> DeadBlockSet;
+
+  // Start with loop/exit blocks and get a transitive closure of reachable dead
+  // blocks.
+  SmallVector<BasicBlock *, 16> DeathCandidates(ExitBlocks.begin(),
+                                                ExitBlocks.end());
+  DeathCandidates.append(L.blocks().begin(), L.blocks().end());
+  while (!DeathCandidates.empty()) {
+    auto *BB = DeathCandidates.pop_back_val();
+    if (!DeadBlockSet.count(BB) && !DT.isReachableFromEntry(BB)) {
+      for (BasicBlock *SuccBB : successors(BB)) {
         SuccBB->removePredecessor(BB);
-      DeadBlocks.push_back(BB);
-    }
-
-  for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop())
-    for (BasicBlock *BB : ParentL->blocks())
-      if (!DT.isReachableFromEntry(BB)) {
-        for (BasicBlock *SuccBB : successors(BB))
-          SuccBB->removePredecessor(BB);
-        DeadBlocks.push_back(BB);
+        DeathCandidates.push_back(SuccBB);
       }
-
-  SmallPtrSet<BasicBlock *, 16> DeadBlockSet(DeadBlocks.begin(),
-                                             DeadBlocks.end());
+      DeadBlockSet.insert(BB);
+    }
+  }
 
   // Filter out the dead blocks from the exit blocks list so that it can be
   // used in the caller.
@@ -1405,7 +1405,7 @@ deleteDeadBlocksFromLoop(Loop &L,
 
   // Walk from this loop up through its parents removing all of the dead blocks.
   for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop()) {
-    for (auto *BB : DeadBlocks)
+    for (auto *BB : DeadBlockSet)
       ParentL->getBlocksSet().erase(BB);
     llvm::erase_if(ParentL->getBlocksVector(),
                    [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
@@ -1430,7 +1430,7 @@ deleteDeadBlocksFromLoop(Loop &L,
   // Remove the loop mappings for the dead blocks and drop all the references
   // from these blocks to others to handle cyclic references as we start
   // deleting the blocks themselves.
-  for (auto *BB : DeadBlocks) {
+  for (auto *BB : DeadBlockSet) {
     // Check that the dominator tree has already been updated.
     assert(!DT.getNode(BB) && "Should already have cleared domtree!");
     LI.changeLoopFor(BB, nullptr);

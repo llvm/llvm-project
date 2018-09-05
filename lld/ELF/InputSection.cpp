@@ -947,7 +947,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     // conservative.
     if (Defined *D = dyn_cast<Defined>(Rel.Sym))
       if (InputSection *IS = cast_or_null<InputSection>(D->Section))
-        if (!IS || IS->getFile<ELFT>()->SplitStack)
+        if (!IS || !IS->getFile<ELFT>() || IS->getFile<ELFT>()->SplitStack)
           continue;
 
     if (enclosingPrologueAttempted(Rel.Offset, Prologues))

@@ -43,8 +43,7 @@ using namespace llvm;
 /// require stricter alignment than the stack pointer itself.  Because we need
 /// to shift the stack pointer by some unknown amount to force the alignment,
 /// we need to record the value of the stack pointer on entry to the function.
-bool WebAssemblyFrameLowering::hasBP(
-    const MachineFunction &MF) const {
+bool WebAssemblyFrameLowering::hasBP(const MachineFunction &MF) const {
   const auto *RegInfo =
       MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
   return RegInfo->needsStackRealignment(MF);
@@ -158,7 +157,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   assert(MFI.getCalleeSavedInfo().empty() &&
          "WebAssembly should not have callee-saved registers");
 
-  if (!needsSP(MF)) return;
+  if (!needsSP(MF))
+    return;
   uint64_t StackSize = MFI.getStackSize();
 
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -202,7 +202,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     unsigned BitmaskReg = MRI.createVirtualRegister(PtrRC);
     unsigned Alignment = MFI.getMaxAlignment();
     assert((1u << countTrailingZeros(Alignment)) == Alignment &&
-      "Alignment must be a power of 2");
+           "Alignment must be a power of 2");
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), BitmaskReg)
         .addImm((int)~(Alignment - 1));
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::AND_I32),
@@ -214,8 +214,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     // Unlike most conventional targets (where FP points to the saved FP),
     // FP points to the bottom of the fixed-size locals, so we can use positive
     // offsets in load/store instructions.
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::COPY),
-            WebAssembly::FP32)
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::COPY), WebAssembly::FP32)
         .addReg(WebAssembly::SP32);
   }
   if (StackSize && needsSPWriteback(MF)) {
@@ -226,7 +225,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
 void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
                                             MachineBasicBlock &MBB) const {
   uint64_t StackSize = MF.getFrameInfo().getStackSize();
-  if (!needsSP(MF) || !needsSPWriteback(MF)) return;
+  if (!needsSP(MF) || !needsSPWriteback(MF))
+    return;
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
   auto InsertPt = MBB.getFirstTerminator();

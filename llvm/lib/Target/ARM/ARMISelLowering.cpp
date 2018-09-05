@@ -3317,13 +3317,12 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
   assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
          "ROPI/RWPI not currently supported for Windows");
 
+  const TargetMachine &TM = getTargetMachine();
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   ARMII::TOF TargetFlags = ARMII::MO_NO_FLAG;
   if (GV->hasDLLImportStorageClass())
     TargetFlags = ARMII::MO_DLLIMPORT;
-  else if (Subtarget->getTargetTriple().isWindowsGNUEnvironment() &&
-           !GV->isDSOLocal() && GV->isDeclarationForLinker() &&
-           isa<GlobalVariable>(GV))
+  else if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     TargetFlags = ARMII::MO_COFFSTUB;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;

@@ -1,4 +1,4 @@
-// RUN: %clang_hwasan %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan %s -o %t && not %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
 #include <pthread.h>
@@ -14,6 +14,13 @@ void *BoringThread(void *arg) {
   return NULL;
 }
 
+// CHECK: Creating  : T0
+// CHECK: Creating  : T1
+// CHECK: Destroying: T1
+// CHECK: Creating  : T1100
+// CHECK: Destroying: T1100
+// CHECK: Creating  : T1101
+
 void *UAFThread(void *arg) {
   char * volatile x = (char*)malloc(10);
   fprintf(stderr, "ZZZ %p\n", x);
@@ -22,6 +29,7 @@ void *UAFThread(void *arg) {
   // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address
   // CHECK: WRITE of size 1
   // CHECK: many-threads-uaf.c:[[@LINE-3]]
+  // CHECK: Thread: T1101
   return NULL;
 }
 

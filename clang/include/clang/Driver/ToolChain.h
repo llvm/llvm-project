@@ -149,7 +149,6 @@ private:
 
 protected:
   MultilibSet Multilibs;
-  Multilib SelectedMultilib;
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -227,8 +226,6 @@ public:
   const path_list &getProgramPaths() const { return ProgramPaths; }
 
   const MultilibSet &getMultilibs() const { return Multilibs; }
-
-  const Multilib &getMultilib() const { return SelectedMultilib; }
 
   const SanitizerArgs& getSanitizerArgs() const;
 

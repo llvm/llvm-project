@@ -17,6 +17,8 @@
 // HWASAN_FLAG(Type, Name, DefaultValue, Description)
 // See COMMON_FLAG in sanitizer_flags.inc for more details.
 
+HWASAN_FLAG(bool, verbose_threads, false,
+            "inform on thread creation/destruction")
 HWASAN_FLAG(bool, tag_in_malloc, true, "")
 HWASAN_FLAG(bool, tag_in_free, true, "")
 HWASAN_FLAG(bool, print_stats, false, "")
