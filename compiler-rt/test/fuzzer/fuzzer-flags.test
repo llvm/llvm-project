@@ -1,3 +1,5 @@
+# FIXME: Disabled on Windows since LLVMFuzzerInitialize does not yet work.
+UNSUPPORTED: windows
 RUN: %cpp_compiler %S/FlagsTest.cpp -o %t-FlagsTest
 RUN: %run %t-FlagsTest -runs=10 -foo_bar=1 2>&1 | FileCheck %s --check-prefix=FOO_BAR
 FOO_BAR: WARNING: unrecognized flag '-foo_bar=1'; use -help=1 to list all flags

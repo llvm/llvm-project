@@ -223,9 +223,6 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
           Devices[start + device_id].DeviceID = start + device_id;
           // RTL local device ID
           Devices[start + device_id].RTLDeviceID = device_id;
-
-          // Save pointer to device in RTL in case we want to unregister the RTL
-          R.Devices.push_back(&Devices[start + device_id]);
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.

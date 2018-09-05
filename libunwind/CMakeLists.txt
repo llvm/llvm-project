@@ -234,7 +234,7 @@ endif()
 # Configure compiler.
 include(config-ix)
 
-if (LIBUNWIND_USE_COMPILER_RT)
+if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
 endif()
 
