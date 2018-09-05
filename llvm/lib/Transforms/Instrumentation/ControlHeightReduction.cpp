@@ -13,15 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
-#include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -32,7 +29,10 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 #if !defined(_MSC_VER)
 #include <cxxabi.h>

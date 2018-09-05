@@ -730,21 +730,8 @@ bool HCE::ExtRoot::operator< (const HCE::ExtRoot &ER) const {
     }
     case MachineOperand::MO_ExternalSymbol:
       return StringRef(V.SymbolName) < StringRef(ER.V.SymbolName);
-    case MachineOperand::MO_GlobalAddress: {
-      // Global values may not have names, so compare their positions
-      // in the parent module.
-      const Module &M = *V.GV->getParent();
-      auto FindPos = [&M] (const GlobalValue &V) {
-        unsigned P = 0;
-        for (const GlobalValue &T : M.global_values()) {
-          if (&T == &V)
-            return P;
-          P++;
-        }
-        llvm_unreachable("Global value not found in module");
-      };
-      return FindPos(*V.GV) < FindPos(*ER.V.GV);
-    }
+    case MachineOperand::MO_GlobalAddress:
+      return V.GV->getGUID() < ER.V.GV->getGUID();
     case MachineOperand::MO_BlockAddress: {
       const BasicBlock *ThisB = V.BA->getBasicBlock();
       const BasicBlock *OtherB = ER.V.BA->getBasicBlock();
@@ -1221,6 +1208,12 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   }
 
   ED.UseMI = &MI;
+
+  // Ignore unnamed globals.
+  ExtRoot ER(ED.getOp());
+  if (ER.Kind == MachineOperand::MO_GlobalAddress)
+    if (ER.V.GV->getName().empty())
+      return;
   Extenders.push_back(ED);
 }
 

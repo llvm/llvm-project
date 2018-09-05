@@ -128,6 +128,7 @@ struct SectionRename {
   Optional<uint64_t> NewFlags;
 };
 
+// Configuration for copying/stripping a single file.
 struct CopyConfig {
   // Main input/output options
   StringRef InputFilename;
@@ -175,6 +176,13 @@ struct CopyConfig {
   bool StripSections = false;
   bool StripUnneeded = false;
   bool Weaken = false;
+};
+
+// Configuration for the overall invocation of this tool. When invoked as
+// objcopy, will always contain exactly one CopyConfig. When invoked as strip,
+// will contain one or more CopyConfigs.
+struct DriverConfig {
+  SmallVector<CopyConfig, 1> CopyConfigs;
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
@@ -818,7 +826,7 @@ static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
-static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
+static DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   ObjcopyOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -918,13 +926,15 @@ static CopyConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
 
-  return Config;
+  DriverConfig DC;
+  DC.CopyConfigs.push_back(std::move(Config));
+  return DC;
 }
 
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
-static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
+static DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   StripOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -949,14 +959,10 @@ static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   if (Positional.empty())
     error("No input file specified");
 
-  if (Positional.size() > 1)
-    error("Support for multiple input files is not implemented yet");
+  if (Positional.size() > 1 && InputArgs.hasArg(STRIP_output))
+    error("Multiple input files cannot be used in combination with -o");
 
   CopyConfig Config;
-  Config.InputFilename = Positional[0];
-  Config.OutputFilename =
-      InputArgs.getLastArgValue(STRIP_output, Positional[0]);
-
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
 
   Config.DiscardAll = InputArgs.hasArg(STRIP_discard_all);
@@ -974,16 +980,31 @@ static CopyConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
 
-  return Config;
+  DriverConfig DC;
+  if (Positional.size() == 1) {
+    Config.InputFilename = Positional[0];
+    Config.OutputFilename =
+        InputArgs.getLastArgValue(STRIP_output, Positional[0]);
+    DC.CopyConfigs.push_back(std::move(Config));
+  } else {
+    for (const char *Filename : Positional) {
+      Config.InputFilename = Filename;
+      Config.OutputFilename = Filename;
+      DC.CopyConfigs.push_back(Config);
+    }
+  }
+
+  return DC;
 }
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
-  CopyConfig Config;
+  DriverConfig DriverConfig;
   if (sys::path::stem(ToolName).endswith_lower("strip"))
-    Config = parseStripOptions(makeArrayRef(argv + 1, argc));
+    DriverConfig = parseStripOptions(makeArrayRef(argv + 1, argc));
   else
-    Config = parseObjcopyOptions(makeArrayRef(argv + 1, argc));
-  executeElfObjcopy(Config);
+    DriverConfig = parseObjcopyOptions(makeArrayRef(argv + 1, argc));
+  for (const CopyConfig &CopyConfig : DriverConfig.CopyConfigs)
+    executeElfObjcopy(CopyConfig);
 }
