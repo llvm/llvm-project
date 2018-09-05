@@ -18,7 +18,7 @@
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "test:///main.cpp"
+# CHECK-NEXT:      "uri": "{{.*}}/main.cpp"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "range": {
@@ -31,8 +31,8 @@
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "test:///main.cpp"
-# CHECK-NEXT:    },
+# CHECK-NEXT:      "uri": "{{.*}}/main.cpp"
+# CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
