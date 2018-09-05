@@ -49,6 +49,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -244,6 +245,9 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override;
+private:
+  mutable std::mutex CWDMutex;
+  mutable std::string CWDCache;
 };
 
 } // namespace
@@ -266,10 +270,14 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
+  std::lock_guard<std::mutex> Lock(CWDMutex);
+  if (!CWDCache.empty())
+    return CWDCache;
   SmallString<256> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
-  return Dir.str().str();
+  CWDCache = Dir.str();
+  return CWDCache;
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
@@ -280,7 +288,13 @@ std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   // difference for example on network filesystems, where symlinks might be
   // switched during runtime of the tool. Fixing this depends on having a
   // file system abstraction that allows openat() style interactions.
-  return llvm::sys::fs::set_current_path(Path);
+  if (auto EC = llvm::sys::fs::set_current_path(Path))
+    return EC;
+
+  // Invalidate cache.
+  std::lock_guard<std::mutex> Lock(CWDMutex);
+  CWDCache.clear();
+  return std::error_code();
 }
 
 std::error_code
