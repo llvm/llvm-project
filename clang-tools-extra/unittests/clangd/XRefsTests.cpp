@@ -311,6 +311,47 @@ TEST(GoToDefinition, All) {
   }
 }
 
+TEST(GoToDefinition, Rank) {
+  auto T = Annotations(R"cpp(
+    struct $foo1[[Foo]] {
+      $foo2[[Foo]]();
+      $foo3[[Foo]](Foo&&);
+      $foo4[[Foo]](const char*);
+    };
+
+    Foo $f[[f]]();
+
+    void $g[[g]](Foo foo);
+
+    void call() {
+      const char* $str[[str]] = "123";
+      Foo a = $1^str;
+      Foo b = Foo($2^str);
+      Foo c = $3^f();
+      $4^g($5^f());
+      g($6^str);
+    }
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  EXPECT_THAT(findDefinitions(AST, T.point("1")),
+              ElementsAre(RangeIs(T.range("str")), RangeIs(T.range("foo4"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("2")),
+              ElementsAre(RangeIs(T.range("str"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("3")),
+              ElementsAre(RangeIs(T.range("f")), RangeIs(T.range("foo3"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("4")),
+              ElementsAre(RangeIs(T.range("g"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("5")),
+              ElementsAre(RangeIs(T.range("f")), RangeIs(T.range("foo3"))));
+
+  auto DefinitionAtPoint6 = findDefinitions(AST, T.point("6"));
+  EXPECT_EQ(3ul, DefinitionAtPoint6.size());
+  EXPECT_THAT(DefinitionAtPoint6, HasSubsequence(RangeIs(T.range("str")),
+                                                 RangeIs(T.range("foo4"))));
+  EXPECT_THAT(DefinitionAtPoint6, HasSubsequence(RangeIs(T.range("str")),
+                                                 RangeIs(T.range("foo3"))));
+}
+
 TEST(GoToDefinition, RelPathsInCompileCommand) {
   // The source is in "/clangd-test/src".
   // We build in "/clangd-test/build".
