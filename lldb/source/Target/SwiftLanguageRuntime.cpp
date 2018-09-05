@@ -2199,9 +2199,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  // struct can't inherit from each other, but they can be generic, in which
-  // case
-  // we need to turn MyStruct<U> into MyStruct<$swift.type.U>
   std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
@@ -2221,15 +2218,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  // enums can't inherit from each other, but they can be generic, in which case
-  // we need to turn MyEnum<U> into MyEnum<$swift.type.U>
   std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
   lldb::addr_t enum_address = in_value.GetPointerValue();
-  if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address)
+  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
     enum_address = in_value.GetAddressOf(true, nullptr);
-  if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address) {
+  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address) {
     if (false == SwiftASTContext::IsPossibleZeroSizeType(
                      class_type_or_name.GetCompilerType()))
       return false;
