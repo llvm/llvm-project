@@ -151,7 +151,7 @@ Expected<StringTableIn> readStringTable(StringRef Data) {
     Table.Strings.push_back(Saver.save(consume(Rest, Len)));
     Rest = Rest.drop_front();
   }
-  return Table;
+  return std::move(Table);
 }
 
 // SYMBOL ENCODING
@@ -272,7 +272,7 @@ Expected<Symbol> readSymbol(StringRef &Data, const StringTableIn &Strings) {
   }
 
 #undef READ_STRING
-  return Sym;
+  return std::move(Sym);
 }
 
 } // namespace
@@ -322,7 +322,7 @@ Expected<IndexFileIn> readIndexFile(StringRef Data) {
         return Sym.takeError();
     Result.Symbols = std::move(Symbols).build();
   }
-  return Result;
+  return std::move(Result);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &Data) {
