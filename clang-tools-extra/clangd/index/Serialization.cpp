@@ -86,7 +86,7 @@ uint32_t consumeVar(StringRef &Data) {
 // We store each string once, and refer to them by index.
 //
 // The string table's format is:
-//   - UncompressedSize : uint32
+//   - UncompressedSize : uint32 (or 0 for no compression)
 //   - CompressedData   : byte[CompressedSize]
 //
 // CompressedData is a zlib-compressed byte[UncompressedSize].
@@ -102,6 +102,11 @@ class StringTableOut {
   DenseMap<std::pair<const char *, size_t>, unsigned> Index;
 
 public:
+  StringTableOut() {
+    // Ensure there's at least one string in the table.
+    // Table size zero is reserved to indicate no compression.
+    Unique.insert("");
+  }
   // Add a string to the table. Overwrites S if an identical string exists.
   void intern(StringRef &S) { S = *Unique.insert(S).first; };
   // Finalize the table and write it to OS. No more strings may be added.
@@ -116,10 +121,15 @@ public:
       RawTable.append(S);
       RawTable.push_back(0);
     }
-    SmallString<1> Compressed;
-    cantFail(zlib::compress(RawTable, Compressed));
-    write32(RawTable.size(), OS);
-    OS << Compressed;
+    if (zlib::isAvailable()) {
+      SmallString<1> Compressed;
+      cantFail(zlib::compress(RawTable, Compressed));
+      write32(RawTable.size(), OS);
+      OS << Compressed;
+    } else {
+      write32(0, OS); // No compression.
+      OS << RawTable;
+    }
   }
   // Get the ID of an string, which must be interned. Table must be finalized.
   unsigned index(StringRef S) const {
@@ -138,9 +148,17 @@ Expected<StringTableIn> readStringTable(StringRef Data) {
   if (Data.size() < 4)
     return makeError("Bad string table: not enough metadata");
   size_t UncompressedSize = consume32(Data);
-  SmallString<1> Uncompressed;
-  if (Error E = llvm::zlib::uncompress(Data, Uncompressed, UncompressedSize))
-    return std::move(E);
+
+  StringRef Uncompressed;
+  SmallString<1> UncompressedStorage;
+  if (UncompressedSize == 0) // No compression
+    Uncompressed = Data;
+  else {
+    if (Error E =
+            llvm::zlib::uncompress(Data, UncompressedStorage, UncompressedSize))
+      return std::move(E);
+    Uncompressed = UncompressedStorage;
+  }
 
   StringTableIn Table;
   StringSaver Saver(Table.Arena);
@@ -285,9 +303,9 @@ Expected<Symbol> readSymbol(StringRef &Data, const StringTableIn &Strings) {
 //   - symb: symbols
 
 // The current versioning scheme is simple - non-current versions are rejected.
-// This allows arbitrary format changes, which invalidate stored data.
-// Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 1;
+// If you make a breaking change, bump this version number to invalidate stored
+// data. Later we may want to support some backward compatibility.
+constexpr static uint32_t Version = 2;
 
 Expected<IndexFileIn> readIndexFile(StringRef Data) {
   auto RIFF = riff::readFile(Data);
