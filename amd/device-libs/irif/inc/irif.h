@@ -16,7 +16,11 @@
 // Generic intrinsics
 extern __attribute__((const)) half __llvm_sqrt_f16(half) __asm("llvm.sqrt.f16");
 extern __attribute__((const)) half __llvm_exp2_f16(half) __asm("llvm.exp2.f16");
+extern __attribute__((const)) half __llvm_exp_f16(half) __asm("llvm.exp.f16");
+extern __attribute__((const)) half __llvm_log_f16(half) __asm("llvm.log.f16");
 extern __attribute__((const)) half __llvm_log2_f16(half) __asm("llvm.log2.f16");
+extern __attribute__((const)) half __llvm_log10_f16(half) __asm("llvm.log10.f16");
+
 extern __attribute__((const)) half __llvm_sin_f16(half) __asm("llvm.sin.f16");
 extern __attribute__((const)) half __llvm_cos_f16(half) __asm("llvm.cos.f16");
 

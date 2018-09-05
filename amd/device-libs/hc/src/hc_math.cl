@@ -29,8 +29,8 @@
   FUNC1(__hc_##name##_double, __ocml_##name##_f64, int, double)
 
 #define FUNC1N(name) \
-  FUNC1(__hc_##name##_native##_half, __llvm_##name##_f16, half, half) \
-  FUNC1(__hc_##name##_native, __builtin_##name##f, float, float)
+  FUNC1(__hc_##name##_native##_half, __ocml_native_##name##_f16, half, half) \
+  FUNC1(__hc_##name##_native, __ocml_native_##name##_f32, float, float)
 
 #define FUNC1B(name) \
   FUNC1(__hc_##name##_half, __ocml_##name##_f16, half, uint) \
@@ -112,7 +112,7 @@ FUNC1A(cbrt)
 FUNC1A(ceil)
 FUNC2A(copysign)
 FUNC1A(cos)
-FUNC1N(cos)
+FUNC1A(native_cos)
 FUNC1A(cosh)
 FUNC1A(cospi)
 FUNC1A(erf)
@@ -155,14 +155,13 @@ FUNC1A(nearbyint)
 FUNC2A(nextafter)
 FUNC2A(pow)
 FUNC1A(rcbrt)
-FUNC1(__hc_rcp_native_half, __llvm_amdgcn_rcp_f16, half, half)
-FUNC1(__hc_rcp_native, __builtin_amdgcn_rcpf, float, float)
 FUNC2A(remainder)
 FUNC6A(remquo)
 FUNC1A(round)
 FUNC1A(rsqrt)
-FUNC1(__hc_rsqrt_native_half, __llvm_amdgcn_rsq_f16, half, half)
-FUNC1(__hc_rsqrt_native, __builtin_amdgcn_rsqf, float, float)
+FUNC1A(native_rsqrt)
+FUNC1(__hc_rcp_native, __ocml_native_recip_f32, float, float)
+FUNC1(__hc_rsqrt_native, __ocml_native_rsqrt_f32, float, float)
 FUNC1A(sinpi)
 FUNC2A(scalb)
 FUNC2(__hc_scalbn_half, __ocml_scalbn_f16, half, half, int)
