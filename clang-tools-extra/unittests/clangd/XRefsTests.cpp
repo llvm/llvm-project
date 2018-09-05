@@ -1068,6 +1068,143 @@ TEST(GoToDefinition, WithPreamble) {
       ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
 }
 
+TEST(FindReferences, WithinAST) {
+  const char *Tests[] = {
+      R"cpp(// Local variable
+        int main() {
+          int $foo[[foo]];
+          $foo[[^foo]] = 2;
+          int test1 = $foo[[foo]];
+        }
+      )cpp",
+
+      R"cpp(// Struct
+        namespace ns1 {
+        struct $foo[[Foo]] {};
+        } // namespace ns1
+        int main() {
+          ns1::$foo[[Fo^o]]* Params;
+        }
+      )cpp",
+
+      R"cpp(// Function
+        int $foo[[foo]](int) {}
+        int main() {
+          auto *X = &$foo[[^foo]];
+          $foo[[foo]](42)
+        }
+      )cpp",
+
+      R"cpp(// Field
+        struct Foo {
+          int $foo[[foo]];
+          Foo() : $foo[[foo]](0) {}
+        };
+        int main() {
+          Foo f;
+          f.$foo[[f^oo]] = 1;
+        }
+      )cpp",
+
+      R"cpp(// Method call
+        struct Foo { int [[foo]](); };
+        int Foo::[[foo]]() {}
+        int main() {
+          Foo f;
+          f.^foo();
+        }
+      )cpp",
+
+      R"cpp(// Typedef
+        typedef int $foo[[Foo]];
+        int main() {
+          $foo[[^Foo]] bar;
+        }
+      )cpp",
+
+      R"cpp(// Namespace
+        namespace $foo[[ns]] {
+        struct Foo {};
+        } // namespace ns
+        int main() { $foo[[^ns]]::Foo foo; }
+      )cpp",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto AST = TestTU::withCode(T.code()).build();
+    std::vector<Matcher<Location>> ExpectedLocations;
+    for (const auto &R : T.ranges("foo"))
+      ExpectedLocations.push_back(RangeIs(R));
+    EXPECT_THAT(findReferences(AST, T.point()),
+                ElementsAreArray(ExpectedLocations))
+        << Test;
+  }
+}
+
+TEST(FindReferences, NeedsIndex) {
+  const char *Header = "int foo();";
+  Annotations Main("int main() { [[f^oo]](); }");
+  TestTU TU;
+  TU.Code = Main.code();
+  TU.HeaderCode = Header;
+  auto AST = TU.build();
+
+  // References in main file are returned without index.
+  EXPECT_THAT(findReferences(AST, Main.point(), /*Index=*/nullptr),
+              ElementsAre(RangeIs(Main.range())));
+  Annotations IndexedMain(R"cpp(
+    int main() { [[f^oo]](); }
+  )cpp");
+
+  // References from indexed files are included.
+  TestTU IndexedTU;
+  IndexedTU.Code = IndexedMain.code();
+  IndexedTU.Filename = "Indexed.cpp";
+  IndexedTU.HeaderCode = Header;
+  EXPECT_THAT(findReferences(AST, Main.point(), IndexedTU.index().get()),
+              ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
+
+  // If the main file is in the index, we don't return duplicates.
+  // (even if the references are in a different location)
+  TU.Code = ("\n\n" + Main.code()).str();
+  EXPECT_THAT(findReferences(AST, Main.point(), TU.index().get()),
+              ElementsAre(RangeIs(Main.range())));
+};
+
+TEST(FindReferences, NoQueryForLocalSymbols) {
+  struct RecordingIndex : public MemIndex {
+    mutable Optional<DenseSet<SymbolID>> RefIDs;
+    void refs(const RefsRequest &Req,
+              llvm::function_ref<void(const Ref &)>) const override {
+      RefIDs = Req.IDs;
+    }
+  };
+
+  struct Test {
+    StringRef AnnotatedCode;
+    bool WantQuery;
+  } Tests[] = {
+      {"int ^x;", true},
+      // For now we don't assume header structure which would allow skipping.
+      {"namespace { int ^x; }", true},
+      {"static int ^x;", true},
+      // Anything in a function certainly can't be referenced though.
+      {"void foo() { int ^x; }", false},
+      {"void foo() { struct ^x{}; }", false},
+      {"auto lambda = []{ int ^x; };", false},
+  };
+  for (Test T : Tests) {
+    Annotations File(T.AnnotatedCode);
+    RecordingIndex Rec;
+    auto AST = TestTU::withCode(File.code()).build();
+    findReferences(AST, File.point(), &Rec);
+    if (T.WantQuery)
+      EXPECT_NE(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+    else
+      EXPECT_EQ(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+  }
+};
+
 } // namespace
 } // namespace clangd
 } // namespace clang
