@@ -656,6 +656,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
                     TheBtCast, CastedGEP, Brnch);
           LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
             << *StBuff << '\n');
+          (void)StBuff;
           ++W;
           if (W == *WhatToStore.end()
               && ArgCount+1 == CI->getNumArgOperands())
