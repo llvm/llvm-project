@@ -174,30 +174,27 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   return {DeclMacrosFinder.takeDecls(), DeclMacrosFinder.takeMacroInfos()};
 }
 
-llvm::Optional<Location>
-makeLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
+Range getTokenRange(ParsedAST &AST, SourceLocation TokLoc) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
-  SourceLocation LocStart = ValSourceRange.getBegin();
+  SourceLocation LocEnd = Lexer::getLocForEndOfToken(
+      TokLoc, 0, SourceMgr, AST.getASTContext().getLangOpts());
+  return {sourceLocToPosition(SourceMgr, TokLoc),
+          sourceLocToPosition(SourceMgr, LocEnd)};
+}
 
-  const FileEntry *F =
-      SourceMgr.getFileEntryForID(SourceMgr.getFileID(LocStart));
+llvm::Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc) {
+  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
+  const FileEntry *F = SourceMgr.getFileEntryForID(SourceMgr.getFileID(TokLoc));
   if (!F)
     return llvm::None;
-  SourceLocation LocEnd = Lexer::getLocForEndOfToken(ValSourceRange.getEnd(), 0,
-                                                     SourceMgr, LangOpts);
-  Position Begin = sourceLocToPosition(SourceMgr, LocStart);
-  Position End = sourceLocToPosition(SourceMgr, LocEnd);
-  Range R = {Begin, End};
-  Location L;
-
   auto FilePath = getRealPath(F, SourceMgr);
   if (!FilePath) {
     log("failed to get path!");
     return llvm::None;
   }
+  Location L;
   L.uri = URIForFile(*FilePath);
-  L.range = R;
+  L.range = getTokenRange(AST, TokLoc);
   return L;
 }
 
@@ -223,7 +220,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
 
   for (auto Item : Symbols.Macros) {
     auto Loc = Item.Info->getDefinitionLoc();
-    auto L = makeLocation(AST, SourceRange(Loc, Loc));
+    auto L = makeLocation(AST, Loc);
     if (L)
       Result.push_back(*L);
   }
@@ -266,7 +263,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
 
     auto &Candidate = ResultCandidates[Key];
     auto Loc = findNameLoc(D);
-    auto L = makeLocation(AST, SourceRange(Loc, Loc));
+    auto L = makeLocation(AST, Loc);
     // The declaration in the identified symbols is a definition if possible
     // otherwise it is declaration.
     bool IsDef = getDefinition(D) == D;
@@ -316,24 +313,36 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
 
 namespace {
 
-/// Finds document highlights that a given list of declarations refers to.
-class DocumentHighlightsFinder : public index::IndexDataConsumer {
-  std::vector<const Decl *> &Decls;
-  std::vector<DocumentHighlight> DocumentHighlights;
-  const ASTContext &AST;
-
+/// Collects references to symbols within the main file.
+class ReferenceFinder : public index::IndexDataConsumer {
 public:
-  DocumentHighlightsFinder(ASTContext &AST, Preprocessor &PP,
-                           std::vector<const Decl *> &Decls)
-      : Decls(Decls), AST(AST) {}
-  std::vector<DocumentHighlight> takeHighlights() {
-    // Don't keep the same highlight multiple times.
-    // This can happen when nodes in the AST are visited twice.
-    std::sort(DocumentHighlights.begin(), DocumentHighlights.end());
-    auto Last =
-        std::unique(DocumentHighlights.begin(), DocumentHighlights.end());
-    DocumentHighlights.erase(Last, DocumentHighlights.end());
-    return std::move(DocumentHighlights);
+  struct Reference {
+    const Decl *Target;
+    SourceLocation Loc;
+    index::SymbolRoleSet Role;
+  };
+
+  ReferenceFinder(ASTContext &AST, Preprocessor &PP,
+                  const std::vector<const Decl *> &TargetDecls)
+      : AST(AST) {
+    for (const Decl *D : TargetDecls)
+      Targets.insert(D);
+  }
+
+  std::vector<Reference> take() && {
+    std::sort(References.begin(), References.end(),
+              [](const Reference &L, const Reference &R) {
+                return std::tie(L.Loc, L.Target, L.Role) <
+                       std::tie(R.Loc, R.Target, R.Role);
+              });
+    // We sometimes see duplicates when parts of the AST get traversed twice.
+    References.erase(std::unique(References.begin(), References.end(),
+                                 [](const Reference &L, const Reference &R) {
+                                   return std::tie(L.Target, L.Loc, L.Role) ==
+                                          std::tie(R.Target, R.Loc, R.Role);
+                                 }),
+                     References.end());
+    return std::move(References);
   }
 
   bool
@@ -341,63 +350,53 @@ public:
                       ArrayRef<index::SymbolRelation> Relations,
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    const SourceManager &SourceMgr = AST.getSourceManager();
-    SourceLocation HighlightStartLoc = SourceMgr.getFileLoc(Loc);
-    if (SourceMgr.getMainFileID() != SourceMgr.getFileID(HighlightStartLoc) ||
-        std::find(Decls.begin(), Decls.end(), D) == Decls.end()) {
-      return true;
-    }
-    SourceLocation End;
-    const LangOptions &LangOpts = AST.getLangOpts();
-    End = Lexer::getLocForEndOfToken(HighlightStartLoc, 0, SourceMgr, LangOpts);
-    SourceRange SR(HighlightStartLoc, End);
-
-    DocumentHighlightKind Kind = DocumentHighlightKind::Text;
-    if (static_cast<index::SymbolRoleSet>(index::SymbolRole::Write) & Roles)
-      Kind = DocumentHighlightKind::Write;
-    else if (static_cast<index::SymbolRoleSet>(index::SymbolRole::Read) & Roles)
-      Kind = DocumentHighlightKind::Read;
-
-    DocumentHighlights.push_back(getDocumentHighlight(SR, Kind));
+    const SourceManager &SM = AST.getSourceManager();
+    Loc = SM.getFileLoc(Loc);
+    if (SM.isWrittenInMainFile(Loc) && Targets.count(D))
+      References.push_back({D, Loc, Roles});
     return true;
   }
 
 private:
-  DocumentHighlight getDocumentHighlight(SourceRange SR,
-                                         DocumentHighlightKind Kind) {
-    const SourceManager &SourceMgr = AST.getSourceManager();
-    Position Begin = sourceLocToPosition(SourceMgr, SR.getBegin());
-    Position End = sourceLocToPosition(SourceMgr, SR.getEnd());
-    Range R = {Begin, End};
-    DocumentHighlight DH;
-    DH.range = R;
-    DH.kind = Kind;
-    return DH;
-  }
+  llvm::SmallSet<const Decl *, 4> Targets;
+  std::vector<Reference> References;
+  const ASTContext &AST;
 };
 
-} // namespace
-
-std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
-                                                      Position Pos) {
-  const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  SourceLocation SourceLocationBeg =
-      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
-
-  auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
-  std::vector<const Decl *> SelectedDecls = Symbols.Decls;
-
-  DocumentHighlightsFinder DocHighlightsFinder(
-      AST.getASTContext(), AST.getPreprocessor(), SelectedDecls);
-
+std::vector<ReferenceFinder::Reference>
+findRefs(const std::vector<const Decl *> &Decls, ParsedAST &AST) {
+  ReferenceFinder RefFinder(AST.getASTContext(), AST.getPreprocessor(), Decls);
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
-                     DocHighlightsFinder, IndexOpts);
+                     RefFinder, IndexOpts);
+  return std::move(RefFinder).take();
+}
 
-  return DocHighlightsFinder.takeHighlights();
+} // namespace
+
+std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
+                                                      Position Pos) {
+  const SourceManager &SM = AST.getASTContext().getSourceManager();
+  auto Symbols = getSymbolAtPosition(
+      AST, getBeginningOfIdentifier(AST, Pos, SM.getMainFileID()));
+  auto References = findRefs(Symbols.Decls, AST);
+
+  std::vector<DocumentHighlight> Result;
+  for (const auto &Ref : References) {
+    DocumentHighlight DH;
+    DH.range = getTokenRange(AST, Ref.Loc);
+    if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
+      DH.kind = DocumentHighlightKind::Write;
+    else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
+      DH.kind = DocumentHighlightKind::Read;
+    else
+      DH.kind = DocumentHighlightKind::Text;
+    Result.push_back(std::move(DH));
+  }
+  return Result;
 }
 
 static PrintingPolicy printingPolicyForDecls(PrintingPolicy Base) {
@@ -657,6 +656,52 @@ Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
     return getHoverContents(*DeducedType, AST.getASTContext());
 
   return None;
+}
+
+std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
+                                     const SymbolIndex *Index) {
+  std::vector<Location> Results;
+  const SourceManager &SM = AST.getASTContext().getSourceManager();
+  auto MainFilePath = getRealPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  if (!MainFilePath) {
+    elog("Failed to get a path for the main file, so no references");
+    return Results;
+  }
+  auto Loc = getBeginningOfIdentifier(AST, Pos, SM.getMainFileID());
+  auto Symbols = getSymbolAtPosition(AST, Loc);
+
+  // We traverse the AST to find references in the main file.
+  // TODO: should we handle macros, too?
+  auto MainFileRefs = findRefs(Symbols.Decls, AST);
+  for (const auto &Ref : MainFileRefs) {
+    Location Result;
+    Result.range = getTokenRange(AST, Ref.Loc);
+    Result.uri = URIForFile(*MainFilePath);
+    Results.push_back(std::move(Result));
+  }
+
+  // Now query the index for references from other files.
+  if (!Index)
+    return Results;
+  RefsRequest Req;
+  for (const Decl *D : Symbols.Decls) {
+    // Not all symbols can be referenced from outside (e.g. function-locals).
+    // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
+    // we know this file isn't a header. The details might be tricky.
+    if (D->getParentFunctionOrMethod())
+      continue;
+    if (auto ID = getSymbolID(D))
+      Req.IDs.insert(*ID);
+  }
+  if (Req.IDs.empty())
+    return Results;
+  Index->refs(Req, [&](const Ref &R) {
+    auto LSPLoc = toLSPLocation(R.Location, /*HintPath=*/*MainFilePath);
+    // Avoid indexed results for the main file - the AST is authoritative.
+    if (LSPLoc && LSPLoc->uri.file() != *MainFilePath)
+      Results.push_back(std::move(*LSPLoc));
+  });
+  return Results;
 }
 
 } // namespace clangd
