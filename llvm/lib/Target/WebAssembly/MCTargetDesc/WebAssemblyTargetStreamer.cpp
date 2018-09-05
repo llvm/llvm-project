@@ -85,7 +85,8 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
-    MCSymbol *Symbol, SmallVectorImpl<MVT> &Params, SmallVectorImpl<MVT> &Results) {
+    MCSymbol *Symbol, SmallVectorImpl<MVT> &Params,
+    SmallVectorImpl<MVT> &Results) {
   OS << "\t.functype\t" << Symbol->getName();
   if (Results.empty())
     OS << ", void";

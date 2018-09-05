@@ -375,11 +375,13 @@ void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
 template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::initialize(
     SectionTableRef SecTable) {
-  setSymTab(SecTable.getSectionOfType<SymTabType>(
-      Link,
-      "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
-      "Link field value " + Twine(Link) + " in section " + Name +
-          " is not a symbol table"));
+  if (Link != SHN_UNDEF)
+    setSymTab(SecTable.getSectionOfType<SymTabType>(
+        Link,
+        "Link field value " + Twine(Link) + " in section " + Name +
+            " is invalid",
+        "Link field value " + Twine(Link) + " in section " + Name +
+            " is not a symbol table"));
 
   if (Info != SHN_UNDEF)
     setSection(SecTable.getSection(Info, "Info field value " + Twine(Info) +
@@ -391,7 +393,8 @@ void RelocSectionWithSymtabBase<SymTabType>::initialize(
 
 template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::finalize() {
-  this->Link = Symbols->Index;
+  this->Link = Symbols ? Symbols->Index : 0;
+
   if (SecToApplyRel != nullptr)
     this->Info = SecToApplyRel->Index;
 }

@@ -141,6 +141,15 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && GV->hasDLLImportStorageClass())
     return false;
 
+  // On MinGW, variables that haven't been declared with DLLImport may still
+  // end up automatically imported by the linker. To make this feasible,
+  // don't assume the variables to be DSO local unless we actually know
+  // that for sure. This only has to be done for variables; for functions
+  // the linker can insert thunks for calling functions from another DLL.
+  if (TT.isWindowsGNUEnvironment() && GV && GV->isDeclarationForLinker() &&
+      isa<GlobalVariable>(GV))
+    return false;
+
   // Every other GV is local on COFF.
   // Make an exception for windows OS in the triple: Some firmware builds use
   // *-win32-macho triples. This (accidentally?) produced windows relocations

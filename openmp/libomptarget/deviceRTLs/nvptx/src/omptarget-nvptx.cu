@@ -21,24 +21,9 @@ extern __device__
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
 
-extern __device__ __shared__
-    omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
-
 extern __device__ omptarget_nvptx_Queue<
     omptarget_nvptx_SimpleThreadPrivateContext, OMP_STATE_COUNT>
     omptarget_nvptx_device_simpleState[MAX_SM];
-
-extern __device__ __shared__ omptarget_nvptx_SimpleThreadPrivateContext
-    *omptarget_nvptx_simpleThreadPrivateContext;
-
-//
-// The team master sets the outlined function and its arguments in these
-// variables to communicate with the workers.  Since they are in shared memory,
-// there is one copy of these variables for each kernel, instance, and team.
-//
-extern volatile __device__ __shared__ omptarget_nvptx_WorkFn
-    omptarget_nvptx_workFn;
-extern __device__ __shared__ uint32_t execution_param;
 
 ////////////////////////////////////////////////////////////////////////////////
 // init entry points
@@ -146,8 +131,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
     // init team context
     currTeamDescr.InitTeamDescr();
-    // init counters (copy start to init)
-    workDescr.CounterGroup().Reset();
   }
   __syncthreads();
 
@@ -168,8 +151,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
                                                              newTaskDescr);
 
   // init thread private from init value
-  workDescr.CounterGroup().Init(
-      omptarget_nvptx_threadPrivateContext->Priv(threadId));
   PRINT(LD_PAR,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",

@@ -983,6 +983,27 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
                              DEPENDS llvm-headers
                              COMPONENT llvm-headers)
   endif()
+
+  # Custom target to install all libraries.
+  add_custom_target(llvm-libraries)
+  set_target_properties(llvm-libraries PROPERTIES FOLDER "Misc")
+
+  if (NOT CMAKE_CONFIGURATION_TYPES)
+    add_llvm_install_targets(install-llvm-libraries
+                             DEPENDS llvm-libraries
+                             COMPONENT llvm-libraries)
+  endif()
+
+  get_property(LLVM_LIBS GLOBAL PROPERTY LLVM_LIBS)
+  if(LLVM_LIBS)
+    list(REMOVE_DUPLICATES LLVM_LIBS)
+    foreach(lib ${LLVM_LIBS})
+      add_dependencies(llvm-libraries ${lib})
+      if (NOT CMAKE_CONFIGURATION_TYPES)
+        add_dependencies(install-llvm-libraries install-${lib})
+      endif()
+    endforeach()
+  endif()
 endif()
 
 # This must be at the end of the LLVM root CMakeLists file because it must run

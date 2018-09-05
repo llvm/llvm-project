@@ -90,8 +90,8 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       if (TM.getTargetTriple().isOSBinFormatWasm() &&
           F.hasFnAttribute("wasm-import-module")) {
         MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
-        StringRef Name = F.getFnAttribute("wasm-import-module")
-                             .getValueAsString();
+        StringRef Name =
+            F.getFnAttribute("wasm-import-module").getValueAsString();
         getTargetStreamer()->emitImportModule(WasmSym, Name);
       }
     }

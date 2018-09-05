@@ -26,6 +26,8 @@ add_extra_unittest(ClangdTests
   HeadersTests.cpp
   IndexTests.cpp
   QualityTests.cpp
+  RIFFTests.cpp
+  SerializationTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
   SyncAPI.cpp

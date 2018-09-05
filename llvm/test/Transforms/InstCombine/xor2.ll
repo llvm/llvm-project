@@ -4,7 +4,7 @@
 ; PR1253
 define i1 @test0(i32 %A) {
 ; CHECK-LABEL: @test0(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 %A, 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = xor i32 %A, -2147483648
@@ -14,7 +14,7 @@ define i1 @test0(i32 %A) {
 
 define <2 x i1> @test0vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test0vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %A, zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = xor <2 x i32> %A, <i32 -2147483648, i32 -2147483648>
@@ -24,7 +24,7 @@ define <2 x i1> @test0vec(<2 x i32> %A) {
 
 define i1 @test1(i32 %A) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 %A, 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = xor i32 %A, 12345
@@ -35,7 +35,7 @@ define i1 @test1(i32 %A) {
 ; PR1014
 define i32 @test2(i32 %tmp1) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[OVM:%.*]] = and i32 %tmp1, 32
+; CHECK-NEXT:    [[OVM:%.*]] = and i32 [[TMP1:%.*]], 32
 ; CHECK-NEXT:    [[OV1101:%.*]] = or i32 [[OVM]], 8
 ; CHECK-NEXT:    ret i32 [[OV1101]]
 ;
@@ -47,7 +47,7 @@ define i32 @test2(i32 %tmp1) {
 
 define i32 @test3(i32 %tmp1) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[OVM:%.*]] = and i32 %tmp1, 32
+; CHECK-NEXT:    [[OVM:%.*]] = and i32 [[TMP1:%.*]], 32
 ; CHECK-NEXT:    [[OV1101:%.*]] = or i32 [[OVM]], 8
 ; CHECK-NEXT:    ret i32 [[OV1101]]
 ;
@@ -62,8 +62,8 @@ define i32 @test3(i32 %tmp1) {
 ;   where the "X" has more than one use
 define i32 @test5(i32 %val1) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %val1, 1234
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 %val1, 8
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[VAL1:%.*]], 1234
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[VAL1]], 8
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[SHR]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[XOR1]], [[XOR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -83,8 +83,8 @@ define i32 @test5(i32 %val1) {
 ; unsigned foo(unsigned x) { unsigned t = x ^ 1234; ;  return (t >> 16) + t;}
 define i32 @test6(i32 %x) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, 1234
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 %x, 16
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], 1234
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 16
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHR]], [[XOR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -98,8 +98,8 @@ define i32 @test6(i32 %x) {
 ; (A | B) ^ (~A) -> (A | ~B)
 define i32 @test7(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 %b, -1
-; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], %a
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %or = or i32 %a, %b
@@ -111,8 +111,8 @@ define i32 @test7(i32 %a, i32 %b) {
 ; (~A) ^ (A | B) -> (A | ~B)
 define i32 @test8(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 %b, -1
-; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], %a
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %neg = xor i32 %a, -1
@@ -124,7 +124,7 @@ define i32 @test8(i32 %a, i32 %b) {
 ; (A & B) ^ (A ^ B) -> (A | B)
 define i32 @test9(i32 %b, i32 %c) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[XOR2:%.*]] = or i32 %b, %c
+; CHECK-NEXT:    [[XOR2:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR2]]
 ;
   %and = and i32 %b, %c
@@ -148,7 +148,7 @@ define i32 @test9b(i32 %b, i32 %c) {
 ; (A ^ B) ^ (A & B) -> (A | B)
 define i32 @test10(i32 %b, i32 %c) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[XOR2:%.*]] = or i32 %b, %c
+; CHECK-NEXT:    [[XOR2:%.*]] = or i32 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR2]]
 ;
   %xor = xor i32 %b, %c
@@ -257,7 +257,7 @@ define i32 @test11f(i32 %A, i32 %B, i32 %C) {
 
 define i32 @test12(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -270,7 +270,7 @@ define i32 @test12(i32 %a, i32 %b) {
 
 define i32 @test12commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test12commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -287,7 +287,7 @@ define i32 @test12commuted(i32 %a, i32 %b) {
 
 define i32 @test13(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -300,7 +300,7 @@ define i32 @test13(i32 %a, i32 %b) {
 
 define i32 @test13commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test13commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -312,17 +312,170 @@ define i32 @test13commuted(i32 %a, i32 %b) {
 }
 
 ; (A ^ C) ^ (A | B) -> ((~A) & B) ^ C
-define i32 @test14(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 %a, -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], %b
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP2]], %c
-; CHECK-NEXT:    ret i32 [[XOR]]
+
+define i32 @xor_or_xor_common_op_commute1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %neg = xor i32 %a, %c
-  %or = or i32 %a, %b
-  %xor = xor i32 %neg, %or
-  ret i32 %xor
+  %ac = xor i32 %a, %c
+  %ab = or i32 %a, %b
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+; (C ^ A) ^ (A | B) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute2(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %c, %a
+  %ab = or i32 %a, %b
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+; (A ^ C) ^ (B | A) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute3(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  %ab = or i32 %b, %a
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+; (C ^ A) ^ (B | A) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute4(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute4(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %c, %a
+  %ab = or i32 %b, %a
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+; (A | B) ^ (A ^ C) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute5(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute5(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  %ab = or i32 %a, %b
+  %r = xor i32 %ab, %ac
+  ret i32 %r
+}
+
+; (A | B) ^ (C ^ A) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute6(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute6(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %c, %a
+  %ab = or i32 %a, %b
+  %r = xor i32 %ab, %ac
+  ret i32 %r
+}
+
+; (B | A) ^ (A ^ C) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute7(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute7(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  %ab = or i32 %b, %a
+  %r = xor i32 %ab, %ac
+  ret i32 %r
+}
+
+; (B | A) ^ (C ^ A) -> ((~A) & B) ^ C
+
+define i32 @xor_or_xor_common_op_commute8(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @xor_or_xor_common_op_commute8(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %c, %a
+  %ab = or i32 %b, %a
+  %r = xor i32 %ab, %ac
+  ret i32 %r
+}
+
+define i32 @xor_or_xor_common_op_extra_use1(i32 %a, i32 %b, i32 %c, i32* %p) {
+; CHECK-LABEL: @xor_or_xor_common_op_extra_use1(
+; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    store i32 [[AC]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  store i32 %ac, i32* %p
+  %ab = or i32 %a, %b
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+define i32 @xor_or_xor_common_op_extra_use2(i32 %a, i32 %b, i32 %c, i32* %p) {
+; CHECK-LABEL: @xor_or_xor_common_op_extra_use2(
+; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[AB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  %ab = or i32 %a, %b
+  store i32 %ab, i32* %p
+  %r = xor i32 %ac, %ab
+  ret i32 %r
+}
+
+define i32 @xor_or_xor_common_op_extra_use3(i32 %a, i32 %b, i32 %c, i32* %p1, i32* %p2) {
+; CHECK-LABEL: @xor_or_xor_common_op_extra_use3(
+; CHECK-NEXT:    [[AC:%.*]] = xor i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    store i32 [[AC]], i32* [[P1:%.*]], align 4
+; CHECK-NEXT:    [[AB:%.*]] = or i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[AB]], i32* [[P2:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[AC]], [[AB]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ac = xor i32 %a, %c
+  store i32 %ac, i32* %p1
+  %ab = or i32 %a, %b
+  store i32 %ab, i32* %p2
+  %r = xor i32 %ac, %ab
+  ret i32 %r
 }
 
 define i8 @test15(i8 %A, i8 %B) {

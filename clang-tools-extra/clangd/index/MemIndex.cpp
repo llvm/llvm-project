@@ -15,16 +15,9 @@
 namespace clang {
 namespace clangd {
 
-std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab,
-                                             SymbolOccurrenceSlab Occurrences) {
-  OccurrenceMap M;
-  for (const auto &SymbolAndOccurrences : Occurrences) {
-    auto &Entry = M[SymbolAndOccurrences.first];
-    for (const auto &Occurrence : SymbolAndOccurrences.second)
-      Entry.push_back(&Occurrence);
-  }
-  auto Data = std::make_pair(std::move(Slab), std::move(Occurrences));
-  return llvm::make_unique<MemIndex>(Data.first, std::move(M), std::move(Data));
+std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab, RefSlab Refs) {
+  auto Data = std::make_pair(std::move(Slab), std::move(Refs));
+  return llvm::make_unique<MemIndex>(Data.first, Data.second, std::move(Data));
 }
 
 bool MemIndex::fuzzyFind(
@@ -67,17 +60,15 @@ void MemIndex::lookup(const LookupRequest &Req,
   }
 }
 
-void MemIndex::findOccurrences(
-    const OccurrencesRequest &Req,
-    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
+void MemIndex::refs(const RefsRequest &Req,
+                    llvm::function_ref<void(const Ref &)> Callback) const {
   for (const auto &ReqID : Req.IDs) {
-    auto FoundOccurrences = Occurrences.find(ReqID);
-    if (FoundOccurrences == Occurrences.end())
+    auto SymRefs = Refs.find(ReqID);
+    if (SymRefs == Refs.end())
       continue;
-    for (const auto *O : FoundOccurrences->second) {
-      if (static_cast<int>(Req.Filter & O->Kind))
-        Callback(*O);
-    }
+    for (const auto &O : SymRefs->second)
+      if (static_cast<int>(Req.Filter & O.Kind))
+        Callback(O);
   }
 }
 

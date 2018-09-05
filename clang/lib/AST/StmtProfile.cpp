@@ -189,7 +189,7 @@ namespace {
         // store its nullness.  Add a boolean here to match.
         ID.AddBoolean(true);
       }
-      Hash.AddDeclarationName(Name);
+      Hash.AddDeclarationName(Name, TreatAsDecl);
     }
     void VisitIdentifierInfo(IdentifierInfo *II) override {
       ID.AddBoolean(II);

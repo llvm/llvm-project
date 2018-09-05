@@ -24,10 +24,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-add-missing-prototypes"
@@ -62,14 +62,15 @@ ModulePass *llvm::createWebAssemblyAddMissingPrototypes() {
 bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "runnning AddMissingPrototypes\n");
 
-  std::vector<std::pair<Function*, Function*>> Replacements;
+  std::vector<std::pair<Function *, Function *>> Replacements;
 
   // Find all the prototype-less function declarations
   for (Function &F : M) {
     if (!F.isDeclaration() || !F.hasFnAttribute("no-prototype"))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Found no-prototype function: " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Found no-prototype function: " << F.getName()
+                      << "\n");
 
     // When clang emits prototype-less C functions it uses (...), i.e. varargs
     // function that take no arguments (have no sentinel).  When we see a
@@ -83,11 +84,10 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
           "Functions with 'no-prototype' attribute should not have params: " +
           F.getName());
 
-
     // Create a function prototype based on the first call site (first bitcast)
     // that we find.
     FunctionType *NewType = nullptr;
-    Function* NewF = nullptr;
+    Function *NewF = nullptr;
     for (Use &U : F.uses()) {
       LLVM_DEBUG(dbgs() << "prototype-less use: " << F.getName() << "\n");
       if (BitCastOperator *BC = dyn_cast<BitCastOperator>(U.getUser())) {
@@ -134,8 +134,8 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
 
   // Finally replace the old function declarations with the new ones
   for (auto &Pair : Replacements) {
-    Function* Old = Pair.first;
-    Function* New = Pair.second;
+    Function *Old = Pair.first;
+    Function *New = Pair.second;
     Old->eraseFromParent();
     M.getFunctionList().push_back(New);
   }

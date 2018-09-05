@@ -1112,6 +1112,10 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
     return MJ.isInlineAsm() || MJ.isBranch() || MJ.isBarrier() ||
            MJ.isCall() || MJ.isTerminator();
 
+  // New-value stores cannot coexist with any other stores.
+  if (HII.isNewValueStore(MI) && MJ.mayStore())
+    return true;
+
   switch (MI.getOpcode()) {
   case Hexagon::S2_storew_locked:
   case Hexagon::S4_stored_locked:
@@ -1653,6 +1657,9 @@ bool HexagonPacketizerList::isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
     GlueToNewValueJump = false;
     return false;
   }
+
+  if (!Coexist)
+    return false;
 
   if (ChangedOffset == INT64_MAX && updateOffset(SUI, SUJ)) {
     FoundSequentialDependence = false;

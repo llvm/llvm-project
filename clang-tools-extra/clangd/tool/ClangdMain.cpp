@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
 #include "Path.h"
+#include "RIFF.h"
 #include "Trace.h"
 #include "index/SymbolYAML.h"
 #include "index/dex/DexIndex.h"
@@ -38,25 +39,6 @@ static llvm::cl::opt<bool>
 namespace {
 
 enum class PCHStorageFlag { Disk, Memory };
-
-// Build an in-memory static index for global symbols from a YAML-format file.
-// The size of global symbols should be relatively small, so that all symbols
-// can be managed in memory.
-std::unique_ptr<SymbolIndex> buildStaticIndex(llvm::StringRef YamlSymbolFile) {
-  auto Buffer = llvm::MemoryBuffer::getFile(YamlSymbolFile);
-  if (!Buffer) {
-    llvm::errs() << "Can't open " << YamlSymbolFile << "\n";
-    return nullptr;
-  }
-  auto Slab = symbolsFromYAML(Buffer.get()->getBuffer());
-  SymbolSlab::Builder SymsBuilder;
-  for (auto Sym : Slab)
-    SymsBuilder.insert(Sym);
-
-  return UseDex ? dex::DexIndex::build(std::move(SymsBuilder).build())
-                : MemIndex::build(std::move(SymsBuilder).build(),
-                                  SymbolOccurrenceSlab::createEmpty());
-}
 
 } // namespace
 
@@ -299,9 +281,15 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   if (EnableIndex && !YamlSymbolFile.empty()) {
-    StaticIdx = buildStaticIndex(YamlSymbolFile);
-    Opts.StaticIndex = StaticIdx.get();
+    // Load the index asynchronously. Meanwhile SwapIndex returns no results.
+    SwapIndex *Placeholder;
+    StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
+    runAsync<void>([Placeholder] {
+      if (auto Idx = loadIndex(YamlSymbolFile))
+        Placeholder->reset(std::move(Idx));
+    });
   }
+  Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
 
   clangd::CodeCompleteOptions CCOpts;

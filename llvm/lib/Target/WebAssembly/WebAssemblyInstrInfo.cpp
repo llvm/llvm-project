@@ -77,10 +77,8 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
 }
 
-MachineInstr *
-WebAssemblyInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
-                                             unsigned OpIdx1,
-                                             unsigned OpIdx2) const {
+MachineInstr *WebAssemblyInstrInfo::commuteInstructionImpl(
+    MachineInstr &MI, bool NewMI, unsigned OpIdx1, unsigned OpIdx2) const {
   // If the operands are stackified, we can't reorder them.
   WebAssemblyFunctionInfo &MFI =
       *MI.getParent()->getParent()->getInfo<WebAssemblyFunctionInfo>();
@@ -165,12 +163,9 @@ unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned WebAssemblyInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                            MachineBasicBlock *TBB,
-                                            MachineBasicBlock *FBB,
-                                            ArrayRef<MachineOperand> Cond,
-                                            const DebugLoc &DL,
-                                            int *BytesAdded) const {
+unsigned WebAssemblyInstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {

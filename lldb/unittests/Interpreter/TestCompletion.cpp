@@ -164,15 +164,11 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
   // When a directory is specified that doesn't end in a slash, it searches
   // for that directory, not items under it.
   // Sanity check that the path we complete on exists and isn't too long.
-  ASSERT_TRUE(llvm::sys::fs::exists(BaseDir));
-#ifdef PATH_MAX
-  ASSERT_LE(BaseDir.size(), static_cast<size_t>(PATH_MAX));
-#endif
-  size_t Count =
-      CommandCompletions::DiskDirectories(BaseDir, Results, Resolver);
+  size_t Count = CommandCompletions::DiskDirectories(Twine(BaseDir) + "/fooa",
+                                                     Results, Resolver);
   ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(HasEquivalentFile(BaseDir, Results));
+  EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
 
   Count =
     CommandCompletions::DiskDirectories(Twine(BaseDir) + "/.", Results, Resolver);

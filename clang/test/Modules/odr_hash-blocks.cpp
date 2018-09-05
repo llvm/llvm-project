@@ -41,7 +41,7 @@
 #define ACCESS private:
 #endif
 
-// TODO: S1, S2, and S3 should generate errors.
+// TODO: S1 and S2 should generate errors.
 namespace Blocks {
 #if defined(FIRST)
 struct S1 {
@@ -77,6 +77,8 @@ struct S3 {
 };
 #else
 S3 s3;
+// expected-error@first.h:* {{'Blocks::S3::run' from module 'FirstModule' is not present in definition of 'Blocks::S3' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'run' does not match}}
 #endif
 
 #define DECLS                                       \

@@ -113,6 +113,13 @@ extern char &LoopSimplifyID;
 /// This function returns a new pass that downgrades the debug info in the
 /// module to line tables only.
 ModulePass *createStripNonLineTableDebugInfoPass();
+
+//===----------------------------------------------------------------------===//
+//
+// ControlHeightReudction - Merges conditional blocks of code and reduces the
+// number of conditional branches in the hot paths based on profiles.
+//
+FunctionPass *createControlHeightReductionLegacyPass();
 }
 
 #endif

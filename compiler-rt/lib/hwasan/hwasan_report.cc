@@ -43,6 +43,7 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   const char *Origin() const { return Magenta(); }
   const char *Name() const { return Green(); }
   const char *Location() { return Green(); }
+  const char *Thread() { return Green(); }
 };
 
 bool FindHeapAllocation(HeapAllocationsRingBuffer *rb,
@@ -116,7 +117,7 @@ void PrintAddressDescription(uptr tagged_addr, uptr access_size) {
              har.requested_size, UntagAddr(har.tagged_addr),
              UntagAddr(har.tagged_addr) + har.requested_size);
       Printf("%s", d.Allocation());
-      Printf("freed by thread %p here:\n", t);
+      Printf("freed by thread T%zd here:\n", t->unique_id());
       Printf("%s", d.Default());
       GetStackTraceFromId(har.free_context_id).Print();
 
@@ -124,6 +125,7 @@ void PrintAddressDescription(uptr tagged_addr, uptr access_size) {
       Printf("previously allocated here:\n", t);
       Printf("%s", d.Default());
       GetStackTraceFromId(har.alloc_context_id).Print();
+      t->Announce();
 
       num_descriptions_printed++;
     }
@@ -131,8 +133,11 @@ void PrintAddressDescription(uptr tagged_addr, uptr access_size) {
     // Very basic check for stack memory.
     if (t->AddrIsInStack(untagged_addr)) {
       Printf("%s", d.Location());
-      Printf("Address %p is located in stack of thread %p\n", untagged_addr, t);
+      Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
+             t->unique_id());
       Printf("%s", d.Default());
+      t->Announce();
+
       num_descriptions_printed++;
     }
   });
@@ -230,18 +235,21 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
          untagged_addr, pc);
 
+  Thread *t = GetCurrentThread();
+
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   tag_t mem_tag = *tag_ptr;
   Printf("%s", d.Access());
-  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem)\n",
+  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
          is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
-         mem_tag);
+         mem_tag, t->unique_id());
   Printf("%s", d.Default());
 
   stack->Print();
 
   PrintAddressDescription(tagged_addr, access_size);
+  t->Announce();
 
   PrintTagsAroundAddr(tag_ptr);
 

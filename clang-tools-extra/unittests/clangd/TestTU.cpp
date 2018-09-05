@@ -49,8 +49,8 @@ SymbolSlab TestTU::headerSymbols() const {
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
-  // FIXME: we should generate proper occurrences for TestTU.
-  return MemIndex::build(headerSymbols(), SymbolOccurrenceSlab::createEmpty());
+  // FIXME: we should generate proper refs for TestTU.
+  return MemIndex::build(headerSymbols(), RefSlab());
 }
 
 const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {

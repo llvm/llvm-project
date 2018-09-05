@@ -43,3 +43,59 @@ get_out:
 get_out2:
   unreachable
 }
+
+;
+; This comes from PR38778
+; CHECK-LABEL: @Test2
+define void @Test2(i32) {
+header:
+  br label %loop
+loop:
+  switch i32 %0, label %continue [
+    i32 -2147483648, label %check
+    i32 98, label %guarded1
+    i32 99, label %guarded2
+  ]
+; CHECK-NOT: {{^}}guarded1:
+guarded1:
+  br i1 undef, label %continue, label %leave
+guarded2:
+  br label %continue
+check:
+  %val = add i32 0, 1
+  br i1 undef, label %continue, label %leave
+continue:
+  br label %loop
+leave:
+  %local = phi i32 [ 0, %guarded1 ], [ %val, %check ]
+  ret void
+}
+
+;
+; Yet another test from PR38778
+;
+; CHECK-LABEL: @Test3
+define void @Test3(i32) {
+header:
+  br label %outer
+outer:
+  %bad_input.i = icmp eq i32 %0, -2147483648
+  br label %inner
+inner:
+  br i1 %bad_input.i, label %overflow, label %switchme
+overflow:
+  br label %continue
+switchme:
+  switch i32 %0, label %continue [
+    i32 88, label %go_out
+    i32 99, label %case2
+  ]
+; CHECK-NOT: {{^}}case2:
+case2:
+  br label %continue
+continue:
+  %local_11_92 = phi i32 [ 0, %switchme ], [ 18, %case2 ], [ 0, %overflow ]
+  br i1 undef, label %outer, label %inner
+go_out:
+  unreachable
+}

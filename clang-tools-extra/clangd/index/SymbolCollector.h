@@ -52,10 +52,9 @@ public:
     const CanonicalIncludes *Includes = nullptr;
     // Populate the Symbol.References field.
     bool CountReferences = false;
-    /// The symbol occurrence kind that will be collected.
-    /// If not set (Unknown), SymbolCollector will not collect any symbol
-    /// occurrences.
-    SymbolOccurrenceKind OccurrenceFilter = SymbolOccurrenceKind::Unknown;
+    /// The symbol ref kinds that will be collected.
+    /// If not set, SymbolCollector will not collect refs.
+    RefKind RefFilter = RefKind::Unknown;
     // Every symbol collected will be stamped with this origin.
     SymbolOrigin Origin = SymbolOrigin::Unknown;
     /// Collect macros.
@@ -89,11 +88,7 @@ public:
                             SourceLocation Loc) override;
 
   SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
-
-  SymbolOccurrenceSlab takeOccurrences() {
-    SymbolOccurrences.freeze();
-    return std::move(SymbolOccurrences);
-  }
+  RefSlab takeRefs() { return std::move(Refs).build(); }
 
   void finish() override;
 
@@ -103,21 +98,20 @@ private:
 
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
-  // All symbol occurrences collected from the AST.
-  // Only symbols declared in preamble (from #include) and references from the
+  // All refs collected from the AST.
+  // Only symbols declared in preamble (from #include) and referenced from the
   // main file will be included.
-  SymbolOccurrenceSlab SymbolOccurrences;
+  RefSlab::Builder Refs;
   ASTContext *ASTCtx;
   std::shared_ptr<Preprocessor> PP;
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
-  using DeclOccurrence = std::pair<SourceLocation, index::SymbolRoleSet>;
+  using DeclRef = std::pair<SourceLocation, index::SymbolRoleSet>;
   // Symbols referenced from the current TU, flushed on finish().
   llvm::DenseSet<const NamedDecl *> ReferencedDecls;
   llvm::DenseSet<const IdentifierInfo *> ReferencedMacros;
-  llvm::DenseMap<const NamedDecl *, std::vector<DeclOccurrence>>
-      DeclOccurrences;
+  llvm::DenseMap<const NamedDecl *, std::vector<DeclRef>> DeclRefs;
   // Maps canonical declaration provided by clang to canonical declaration for
   // an index symbol, if clangd prefers a different declaration than that
   // provided by clang. For example, friend declaration might be considered
