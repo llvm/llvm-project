@@ -140,6 +140,15 @@
 // RETPOLINE-EXTERNAL-THUNK: "-target-feature" "+retpoline-external-thunk"
 // NO-RETPOLINE-EXTERNAL-THUNK: "-target-feature" "-retpoline-external-thunk"
 
+// RUN: %clang -target i386-linux-gnu -mspeculative-load-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SLH %s
+// RUN: %clang -target i386-linux-gnu -mretpoline -mspeculative-load-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=RETPOLINE %s
+// RUN: %clang -target i386-linux-gnu -mno-speculative-load-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SLH %s
+// SLH-NOT: retpoline
+// SLH: "-target-feature" "+retpoline-indirect-calls"
+// SLH-NOT: retpoline
+// SLH: "-mspeculative-load-hardening"
+// NO-SLH-NOT: retpoline
+
 // RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WAITPKG %s
 // RUN: %clang -target i386-linux-gnu -mno-waitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
 // WAITPKG: "-target-feature" "+waitpkg"
