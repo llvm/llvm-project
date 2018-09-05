@@ -6,25 +6,23 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK-DWARF2: .byte	8                       # DW_AT_location
-; CHECK-DWARF2	.byte	16
-; CHECK-DWARF2	.byte	4
-; CHECK-DWARF2	.byte	147
-; CHECK-DWARF2	.byte	2
-; CHECK-DWARF2	.byte	16
-; CHECK-DWARF2	.byte	0
-; CHECK-DWARF2	.byte	147
-; CHECK-DWARF2	.byte	2
+; CHECK-DWARF2: .byte   6                       # DW_AT_location
+; CHECK-DWARF2-NEXT: .byte   52
+; CHECK-DWARF2-NEXT: .byte   147
+; CHECK-DWARF2-NEXT: .byte   2
+; CHECK-DWARF2-NEXT: .byte   48
+; CHECK-DWARF2-NEXT: .byte   147
+; CHECK-DWARF2-NEXT: .byte   2
 
-; CHECK-DWARF4:       .byte	10                      # DW_AT_location
-; CHECK-DWARF4-NEXT:  .byte	16
-; CHECK-DWARF4-NEXT:  .byte	4
-; CHECK-DWARF4-NEXT:  .byte	159
-; CHECK-DWARF4-NEXT:  .byte	147
-; CHECK-DWARF4-NEXT:  .byte	2
-; CHECK-DWARF4-NEXT:  .byte	16
-; CHECK-DWARF4-NEXT:  .byte	0
-; CHECK-DWARF4-NEXT:  .byte	159
+; CHECK-DWARF4: .byte   8                       # DW_AT_location
+; CHECK-DWARF4-NEXT:.byte   52
+; CHECK-DWARF4-NEXT:.byte   159
+; CHECK-DWARF4-NEXT:.byte   147
+; CHECK-DWARF4-NEXT:.byte   2
+; CHECK-DWARF4-NEXT:.byte   48
+; CHECK-DWARF4-NEXT:.byte   159
+; CHECK-DWARF4-NEXT:.byte   147
+; CHECK-DWARF4-NEXT:.byte   2
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang", file: !4, globals: !1, emissionKind: FullDebug)
 !1 = !{!2, !10}
