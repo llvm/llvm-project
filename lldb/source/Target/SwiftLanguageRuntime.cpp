@@ -1361,12 +1361,22 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   if (!instance_type.IsValid())
     return llvm::None;
 
-  SwiftASTContext *swift_ast_ctx =
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  // Using the module context for RemoteAST is cheaper bit only safe
+  // when there is no dynamic type resolution involved.
+  auto *module_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem());
-  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+  if (!module_ctx || module_ctx->HasFatalErrors())
     return llvm::None;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  llvm::Optional<SwiftASTContextReader> scratch_ctx;
+  if (instance) {
+    scratch_ctx = instance->GetScratchSwiftASTContext();
+    if (!scratch_ctx)
+      return llvm::None;
+  }
+  
+  auto *remote_ast = &GetRemoteASTContext(*module_ctx);
 
   if (log)
     log->Printf(
@@ -1374,18 +1384,15 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         member_name.AsCString());
 
   // Check whether we've already cached this offset.
-  swift::TypeBase *swift_type =
-    reinterpret_cast<swift::TypeBase *>(
+  auto *swift_type = reinterpret_cast<swift::TypeBase *>(
       instance_type.GetCanonicalType().GetOpaqueQualType());
-  auto known_offset =
-    m_member_offsets.find(
-                       std::make_tuple(swift_type, member_name.GetCString()));
-  if (known_offset != m_member_offsets.end())
-    return known_offset->second;
+  auto key = std::make_tuple(swift_type, member_name.GetCString());
+  auto it = m_member_offsets.find(key);
+  if (it != m_member_offsets.end())
+    return it->second;
 
   // Dig out metadata describing the type, if it's easy to find.
   // FIXME: the Remote AST library should make this easier.
-  auto &remote_ast_context = GetRemoteASTContext(*swift_ast_ctx);
   swift::remote::RemoteAddress optmeta(nullptr);
   const swift::TypeKind type_kind = swift_type->getKind();
   switch (type_kind) {
@@ -1395,41 +1402,54 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
       log->Printf("[MemberVariableOffsetResolver] type is a class - trying to "
                   "get metadata for valueobject %s",
                   (instance ? instance->GetName().AsCString() : "<null>"));
-    // retrieve the metadata for class types as this is where we get the maximum
-    // benefit
     if (instance) {
       lldb::addr_t pointer = instance->GetPointerValue();
-      if (pointer == 0 || pointer == LLDB_INVALID_ADDRESS)
+      if (!pointer || pointer == LLDB_INVALID_ADDRESS)
         break;
       swift::remote::RemoteAddress address(pointer);
-      if (auto metadata =
-              remote_ast_context.getHeapMetadataForObject(address)) {
+      if (auto metadata = remote_ast->getHeapMetadataForObject(address))
         optmeta = metadata.getValue();
-      }
     }
     if (log)
       log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64,
                   optmeta.getAddressData());
-  } break;
-  default: {
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] type is not a class - no "
-                  "metadata needed");
-  } break;
+    break;
+  }
+
+  default:
+    // Bind generic parameters if necessary.
+    if (instance && swift_type->hasTypeParameter())
+      if (auto *frame = instance->GetExecutionContextRef().GetFrameSP().get())
+        if (auto bound = DoArchetypeBindingForType(*frame, instance_type)) {
+          if (log)
+            log->Printf(
+                "[MemberVariableOffsetResolver] resolved non-class type = %s",
+                bound.GetTypeName().AsCString());
+
+          swift_type = reinterpret_cast<swift::TypeBase *>(
+              bound.GetCanonicalType().GetOpaqueQualType());
+
+          auto key = std::make_tuple(swift_type, member_name.GetCString());
+          auto it = m_member_offsets.find(key);
+          if (it != m_member_offsets.end())
+            return it->second;
+
+          assert(bound.GetTypeSystem() == scratch_ctx->get());
+          remote_ast = &GetRemoteASTContext(*scratch_ctx->get());
+        }
   }
 
   // Determine the member offset.
-  swift::remoteAST::Result<uint64_t> result =
-      remote_ast_context.getOffsetOfMember(swift_type, optmeta,
-                                           member_name.GetStringRef());
+  swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
+      swift_type, optmeta, member_name.GetStringRef());
   if (result) {
     if (log)
       log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
                   (uint64_t)result.getValue());
 
     // Cache this result.
-    m_member_offsets[std::make_tuple(swift_type, member_name.GetCString())] =
-      result.getValue();
+    auto key = std::make_tuple(swift_type, member_name.GetCString());
+    m_member_offsets.insert(std::make_pair(key, result.getValue()));
     return result.getValue();
   }
 
@@ -2185,10 +2205,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
   class_type_or_name.SetCompilerType(dyn_tuple_type);
 
   lldb::addr_t tuple_address = in_value.GetPointerValue();
-  tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
-  if (error.Fail() || tuple_address == 0 ||
-      tuple_address == LLDB_INVALID_ADDRESS)
-    return false;
+  if (!tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
+    tuple_address = in_value.GetAddressOf(true, nullptr);
+  else
+    tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
+  if (error.Fail() || !tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
+      return false;
 
   address.SetLoadAddress(tuple_address, in_value.GetTargetSP().get());
 
