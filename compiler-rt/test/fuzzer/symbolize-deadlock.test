@@ -1,4 +1,2 @@
-# Disabled on Widows because <unistd.h> is a posix-only header.
-UNSUPPORTED: windows
 RUN: %cpp_compiler %S/SymbolizeDeadlock.cpp -o %t
 RUN: not %run %t -rss_limit_mb=20 2>&1

@@ -5195,40 +5195,29 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32 ||
                           (VT == MVT::f16 && Subtarget->hasFullFP16()))) {
-    LLVM_DEBUG(
-        dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
+    LLVM_DEBUG(dbgs() << "Legal " << VT.getEVTString() << " imm value: 0\n");
     return true;
   }
 
-  StringRef FPType;
   bool IsLegal = false;
   SmallString<128> ImmStrVal;
   Imm.toString(ImmStrVal);
 
-  if (VT == MVT::f64) {
-    FPType = "f64";
+  if (VT == MVT::f64)
     IsLegal = AArch64_AM::getFP64Imm(Imm) != -1;
-  } else if (VT == MVT::f32) {
-    FPType = "f32";
+  else if (VT == MVT::f32)
     IsLegal = AArch64_AM::getFP32Imm(Imm) != -1;
-  } else if (VT == MVT::f16 && Subtarget->hasFullFP16()) {
-    FPType = "f16";
+  else if (VT == MVT::f16 && Subtarget->hasFullFP16())
     IsLegal = AArch64_AM::getFP16Imm(Imm) != -1;
-  }
 
   if (IsLegal) {
-    LLVM_DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Legal " << VT.getEVTString()
+                      << " imm value: " << ImmStrVal << "\n");
     return true;
   }
 
-  if (!FPType.empty())
-    LLVM_DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal
-                      << "\n");
-  else
-    LLVM_DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal
-                      << ": unsupported fp type\n");
-
+  LLVM_DEBUG(dbgs() << "Illegal " << VT.getEVTString()
+                    << " imm value: " << ImmStrVal << "\n");
   return false;
 }
 

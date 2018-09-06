@@ -1112,6 +1112,11 @@ function(add_unittest test_suite test_name)
   # executable must be linked with it in order to provide consistent
   # API for all shared libaries loaded by this executable.
   target_link_libraries(${test_name} PRIVATE gtest_main gtest ${LLVM_PTHREAD_LIB})
+  
+  set(LLVM_UNITTEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  configure_file(
+    ${LLVM_MAIN_SRC_DIR}/unittests/unittest.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/llvm.srcdir.txt)
 
   add_dependencies(${test_suite} ${test_name})
   get_target_property(test_suite_folder ${test_suite} FOLDER)
@@ -1119,6 +1124,7 @@ function(add_unittest test_suite test_name)
     set_property(TARGET ${test_name} PROPERTY FOLDER "${test_suite_folder}")
   endif ()
 endfunction()
+
 
 # Generic support for adding a benchmark.
 function(add_benchmark benchmark_name)

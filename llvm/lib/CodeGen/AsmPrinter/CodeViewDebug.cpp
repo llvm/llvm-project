@@ -1048,7 +1048,7 @@ CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
 }
 
 void CodeViewDebug::collectVariableInfoFromMFTable(
-    DenseSet<InlinedVariable> &Processed) {
+    DenseSet<InlinedEntity> &Processed) {
   const MachineFunction &MF = *Asm->MF;
   const TargetSubtargetInfo &TSI = MF.getSubtarget();
   const TargetFrameLowering *TFI = TSI.getFrameLowering();
@@ -1060,7 +1060,7 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
            "Expected inlined-at fields to agree");
 
-    Processed.insert(InlinedVariable(VI.Var, VI.Loc->getInlinedAt()));
+    Processed.insert(InlinedEntity(VI.Var, VI.Loc->getInlinedAt()));
     LexicalScope *Scope = LScopes.findLexicalScope(VI.Loc);
 
     // If variable scope is not found then skip this variable.
@@ -1196,15 +1196,15 @@ void CodeViewDebug::calculateRanges(
 }
 
 void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
-  DenseSet<InlinedVariable> Processed;
+  DenseSet<InlinedEntity> Processed;
   // Grab the variable info that was squirreled away in the MMI side-table.
   collectVariableInfoFromMFTable(Processed);
 
   for (const auto &I : DbgValues) {
-    InlinedVariable IV = I.first;
+    InlinedEntity IV = I.first;
     if (Processed.count(IV))
       continue;
-    const DILocalVariable *DIVar = IV.first;
+    const DILocalVariable *DIVar = cast<DILocalVariable>(IV.first);
     const DILocation *InlinedAt = IV.second;
 
     // Instruction ranges, specifying where IV is accessible.

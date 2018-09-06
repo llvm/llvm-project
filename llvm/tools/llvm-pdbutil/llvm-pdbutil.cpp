@@ -1054,7 +1054,9 @@ static void dumpPretty(StringRef Path) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::SectionHeader).get()
         << "---COMPILANDS---";
-    if (auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>()) {
+    auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>();
+
+    if (Compilands) {
       Printer.Indent();
       CompilandDumper Dumper(Printer);
       CompilandDumpFlags options = CompilandDumper::Flags::None;

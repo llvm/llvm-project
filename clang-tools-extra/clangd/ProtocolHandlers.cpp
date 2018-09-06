@@ -63,6 +63,7 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Register("textDocument/completion", &ProtocolCallbacks::onCompletion);
   Register("textDocument/signatureHelp", &ProtocolCallbacks::onSignatureHelp);
   Register("textDocument/definition", &ProtocolCallbacks::onGoToDefinition);
+  Register("textDocument/references", &ProtocolCallbacks::onReference);
   Register("textDocument/switchSourceHeader",
            &ProtocolCallbacks::onSwitchSourceHeader);
   Register("textDocument/rename", &ProtocolCallbacks::onRename);

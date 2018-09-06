@@ -25,7 +25,7 @@ std::unique_ptr<PDBSymbolCompiland> DIASectionContrib::getCompiland() const {
     return nullptr;
 
   auto RawSymbol = llvm::make_unique<DIARawSymbol>(Session, Symbol);
-  return llvm::make_unique<PDBSymbolCompiland>(Session, std::move(RawSymbol));
+  return PDBSymbol::createAs<PDBSymbolCompiland>(Session, std::move(RawSymbol));
 }
 
 template <typename ArgType>

@@ -341,6 +341,8 @@ private:
       return "PriorTemplateArgumentSubstitution";
     case CodeSynthesisContext::DefaultTemplateArgumentChecking:
       return "DefaultTemplateArgumentChecking";
+    case CodeSynthesisContext::ExceptionSpecEvaluation:
+      return "ExceptionSpecEvaluation";
     case CodeSynthesisContext::ExceptionSpecInstantiation:
       return "ExceptionSpecInstantiation";
     case CodeSynthesisContext::DeclaringSpecialMember:

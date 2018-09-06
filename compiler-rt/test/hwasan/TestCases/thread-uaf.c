@@ -19,7 +19,6 @@ void *Allocate(void *arg) {
   return NULL;
 }
 void *Deallocate(void *arg) {
-  while (__sync_fetch_and_add(&state, 0) != 1) {}
   free(x);
   __sync_fetch_and_add(&state, 1);
   while (__sync_fetch_and_add(&state, 0) != 3) {}
@@ -27,7 +26,6 @@ void *Deallocate(void *arg) {
 }
 
 void *Use(void *arg) {
-  while (__sync_fetch_and_add(&state, 0) != 2) {}
   x[5] = 42;
   // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address
   // CHECK: WRITE of size 1 {{.*}} in thread T3
@@ -47,7 +45,9 @@ int main() {
   pthread_t t1, t2, t3;
 
   pthread_create(&t1, NULL, Allocate, NULL);
+  while (__sync_fetch_and_add(&state, 0) != 1) {}
   pthread_create(&t2, NULL, Deallocate, NULL);
+  while (__sync_fetch_and_add(&state, 0) != 2) {}
   pthread_create(&t3, NULL, Use, NULL);
 
   pthread_join(t1, NULL);

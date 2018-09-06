@@ -1629,7 +1629,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
   LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
-  // Merge continious additionalTextEdits into main edit. The main motivation
+  // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main
   // edit.

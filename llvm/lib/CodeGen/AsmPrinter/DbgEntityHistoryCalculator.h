@@ -33,20 +33,19 @@ class DbgValueHistoryMap {
 public:
   using InstrRange = std::pair<const MachineInstr *, const MachineInstr *>;
   using InstrRanges = SmallVector<InstrRange, 4>;
-  using InlinedVariable =
-      std::pair<const DILocalVariable *, const DILocation *>;
-  using InstrRangesMap = MapVector<InlinedVariable, InstrRanges>;
+  using InlinedEntity = std::pair<const DINode *, const DILocation *>;
+  using InstrRangesMap = MapVector<InlinedEntity, InstrRanges>;
 
 private:
   InstrRangesMap VarInstrRanges;
 
 public:
-  void startInstrRange(InlinedVariable Var, const MachineInstr &MI);
-  void endInstrRange(InlinedVariable Var, const MachineInstr &MI);
+  void startInstrRange(InlinedEntity Var, const MachineInstr &MI);
+  void endInstrRange(InlinedEntity Var, const MachineInstr &MI);
 
   // Returns register currently describing @Var. If @Var is currently
   // unaccessible or is not described by a register, returns 0.
-  unsigned getRegisterForVar(InlinedVariable Var) const;
+  unsigned getRegisterForVar(InlinedEntity Var) const;
 
   bool empty() const { return VarInstrRanges.empty(); }
   void clear() { VarInstrRanges.clear(); }
@@ -63,14 +62,14 @@ public:
 /// a temporary (assembler) label before it.
 class DbgLabelInstrMap {
 public:
-  using InlinedLabel = std::pair<const DILabel *, const DILocation *>;
-  using InstrMap = MapVector<InlinedLabel, const MachineInstr *>;
+  using InlinedEntity = std::pair<const DINode *, const DILocation *>;
+  using InstrMap = MapVector<InlinedEntity, const MachineInstr *>;
 
 private:
   InstrMap LabelInstr;
 
 public:
-  void  addInstr(InlinedLabel Label, const MachineInstr &MI);
+  void  addInstr(InlinedEntity Label, const MachineInstr &MI);
 
   bool empty() const { return LabelInstr.empty(); }
   void clear() { LabelInstr.clear(); }

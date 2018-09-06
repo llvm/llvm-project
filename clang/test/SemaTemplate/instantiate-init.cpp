@@ -115,8 +115,10 @@ namespace PR13064 {
   struct A { explicit A(int); }; // expected-note{{here}}
   template<typename T> struct B { T a { 0 }; };
   B<A> b;
-  template<typename T> struct C { T a = { 0 }; }; // expected-error{{explicit}}
-  C<A> c; // expected-note {{in instantiation of default member initializer}}
+  template <typename T> struct C { // expected-note {{in instantiation of default member initializer}}
+    T a = {0}; // expected-error{{explicit}}
+  };
+  C<A> c; // expected-note {{in evaluation of exception spec}}
 }
 
 namespace PR16903 {

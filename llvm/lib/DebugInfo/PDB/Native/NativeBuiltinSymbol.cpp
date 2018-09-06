@@ -16,8 +16,8 @@ namespace pdb {
 NativeBuiltinSymbol::NativeBuiltinSymbol(NativeSession &PDBSession,
                                          SymIndexId Id, PDB_BuiltinType T,
                                          uint64_t L)
-    : NativeRawSymbol(PDBSession, Id), Session(PDBSession), Type(T), Length(L) {
-}
+    : NativeRawSymbol(PDBSession, PDB_SymType::BuiltinType, Id),
+      Session(PDBSession), Type(T), Length(L) {}
 
 NativeBuiltinSymbol::~NativeBuiltinSymbol() {}
 

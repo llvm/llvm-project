@@ -21,12 +21,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeEnum : public PDBSymbol {
-public:
-  PDBSymbolTypeEnum(const IPDBSession &PDBSession,
-                    std::unique_ptr<IPDBRawSymbol> EnumTypeSymbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Enum)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_METHOD(getBuiltinType)

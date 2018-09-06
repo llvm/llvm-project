@@ -36,11 +36,11 @@ Expected<Chunk> readChunk(StringRef &Stream) {
       return makeError("nonzero padding byte");
     Stream = Stream.drop_front();
   }
-  return C;
+  return std::move(C);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Chunk &C) {
-  OS.write(C.ID.begin(), C.ID.size());
+  OS.write(C.ID.data(), C.ID.size());
   char Size[4];
   llvm::support::endian::write32le(Size, C.Data.size());
   OS.write(Size, sizeof(Size));
@@ -65,7 +65,7 @@ llvm::Expected<File> readFile(llvm::StringRef Stream) {
       F.Chunks.push_back(*Chunk);
     } else
       return Chunk.takeError();
-  return F;
+  return std::move(F);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const File &F) {
@@ -77,7 +77,7 @@ raw_ostream &operator<<(raw_ostream &OS, const File &F) {
   char Size[4];
   llvm::support::endian::write32le(Size, DataLen);
   OS.write(Size, sizeof(Size));
-  OS.write(F.Type.begin(), F.Type.size());
+  OS.write(F.Type.data(), F.Type.size());
   for (const auto &C : F.Chunks)
     OS << C;
   return OS;

@@ -22,17 +22,13 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolFunc : public PDBSymbol {
+  DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Function)
 public:
-  PDBSymbolFunc(const IPDBSession &PDBSession,
-                std::unique_ptr<IPDBRawSymbol> FuncSymbol);
-
   void dump(PDBSymDumper &Dumper) const override;
 
   bool isDestructor() const;
 
   std::unique_ptr<IPDBEnumChildren<PDBSymbolData>> getArguments() const;
-
-  DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Function)
 
   FORWARD_SYMBOL_METHOD(getAccess)
   FORWARD_SYMBOL_METHOD(getAddressOffset)

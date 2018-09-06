@@ -1172,9 +1172,11 @@ unsigned ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 unsigned ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                     int &FrameIndex) const {
-  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
+  SmallVector<const MachineMemOperand *, 1> Accesses;
   if (MI.mayStore() && hasStoreToStackSlot(MI, Accesses)) {
-    FrameIndex = Accesses.begin()->FI;
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
     return true;
   }
   return false;
@@ -1390,9 +1392,11 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 unsigned ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                      int &FrameIndex) const {
-  SmallVector<TargetInstrInfo::FrameAccess, 1> Accesses;
+  SmallVector<const MachineMemOperand *, 1> Accesses;
   if (MI.mayLoad() && hasLoadFromStackSlot(MI, Accesses)) {
-    FrameIndex = Accesses.begin()->FI;
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
     return true;
   }
   return false;

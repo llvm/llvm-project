@@ -337,7 +337,7 @@ unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 /// operand of that instruction if true.
 bool HexagonInstrInfo::hasLoadFromStackSlot(
     const MachineInstr &MI,
-    SmallVectorImpl<TargetInstrInfo::FrameAccess> &Accesses) const {
+    SmallVectorImpl<const MachineMemOperand *> &Accesses) const {
   if (MI.isBundle()) {
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator MII = MI.getIterator();
@@ -355,7 +355,7 @@ bool HexagonInstrInfo::hasLoadFromStackSlot(
 /// operand of that instruction if true.
 bool HexagonInstrInfo::hasStoreToStackSlot(
     const MachineInstr &MI,
-    SmallVectorImpl<TargetInstrInfo::FrameAccess> &Accesses) const {
+    SmallVectorImpl<const MachineMemOperand *> &Accesses) const {
   if (MI.isBundle()) {
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator MII = MI.getIterator();

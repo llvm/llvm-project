@@ -67,7 +67,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   bool DebugSectionSeen = false;
   auto MM = std::make_shared<MemoryManagerWrapper>(DebugSectionSeen);
 
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
 
   RTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey) {
     return RTDyldObjectLinkingLayer::Resources{
@@ -123,7 +123,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   if (!SupportsJIT)
     return;
 
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
@@ -207,7 +207,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   if (!SupportsJIT)
     return;
 
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
@@ -268,7 +268,7 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 }
 
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
   RTDyldObjectLinkingLayer ObjLayer(
       ES,
       [](VModuleKey) {

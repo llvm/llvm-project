@@ -2557,6 +2557,14 @@ void Sema::CheckObjCPropertyAttributes(Decl *PDecl,
     PropertyDecl->setInvalidDecl();
   }
 
+  // Check for assign on object types.
+  if ((Attributes & ObjCDeclSpec::DQ_PR_assign) &&
+      !(Attributes & ObjCDeclSpec::DQ_PR_unsafe_unretained) &&
+      PropertyTy->isObjCRetainableType() &&
+      !PropertyTy->isObjCARCImplicitlyUnretainedType()) {
+    Diag(Loc, diag::warn_objc_property_assign_on_object);
+  }
+
   // Check for more than one of { assign, copy, retain }.
   if (Attributes & ObjCDeclSpec::DQ_PR_assign) {
     if (Attributes & ObjCDeclSpec::DQ_PR_copy) {
