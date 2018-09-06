@@ -1037,7 +1037,11 @@ CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 
-#if SANITIZER_LINUX && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+
+#if SANITIZER_LINUX && (__ANDROID_API__ >= 21 || __GLIBC_PREREQ (2, 14))
 CHECK_TYPE_SIZE(mmsghdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_hdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_len);
@@ -1078,9 +1082,6 @@ COMPILER_CHECK(sizeof(__sanitizer_sigaction) == sizeof(struct sigaction));
 // Can't write checks for sa_handler and sa_sigaction due to them being
 // preprocessor macros.
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
 #if !defined(__s390x__) || __GLIBC_PREREQ (2, 20)
 // On s390x glibc 2.19 and earlier sa_flags was unsigned long, and sa_resv
 // didn't exist.
