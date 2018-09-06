@@ -35,7 +35,7 @@ CanonicalDeclaration:
   End:
     Line: 1
     Column: 1
-IsIndexedForCodeCompletion:    true
+Flags:    1
 Documentation:    'Foo doc'
 ReturnType:    'int'
 IncludeHeaders:
@@ -62,7 +62,7 @@ CanonicalDeclaration:
   End:
     Line: 1
     Column: 1
-IsIndexedForCodeCompletion:    false
+Flags:    2
 Signature:    '-sig'
 CompletionSnippetSuffix:    '-snippet'
 ...
@@ -82,7 +82,8 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(Sym1.Documentation, "Foo doc");
   EXPECT_EQ(Sym1.ReturnType, "int");
   EXPECT_EQ(Sym1.CanonicalDeclaration.FileURI, "file:///path/foo.h");
-  EXPECT_TRUE(Sym1.IsIndexedForCodeCompletion);
+  EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
+  EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
   EXPECT_THAT(Sym1.IncludeHeaders,
               UnorderedElementsAre(IncludeHeaderWithRef("include1", 7u),
                                    IncludeHeaderWithRef("include2", 3u)));
@@ -94,7 +95,8 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(Sym2.Signature, "-sig");
   EXPECT_EQ(Sym2.ReturnType, "");
   EXPECT_EQ(Sym2.CanonicalDeclaration.FileURI, "file:///path/bar.h");
-  EXPECT_FALSE(Sym2.IsIndexedForCodeCompletion);
+  EXPECT_FALSE(Sym2.Flags & Symbol::IndexedForCodeCompletion);
+  EXPECT_TRUE(Sym2.Flags & Symbol::Deprecated);
 
   std::string ConcatenatedYAML;
   {
