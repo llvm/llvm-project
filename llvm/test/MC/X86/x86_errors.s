@@ -103,11 +103,11 @@ lea (%si,%bx), %ax
 // 64: error: invalid 16-bit base register
 lea (%di,%bx), %ax
 
-// 32: error: register %eip is only available in 64-bit mode
+// 32: error: invalid base+index expression
 // 64: error: invalid base+index expression
 mov (,%eip), %rbx
 
-// 32: error: register %eip is only available in 64-bit mode
+// 32: error: invalid base+index expression
 // 64: error: invalid base+index expression
 mov (%eip,%eax), %rbx
 
