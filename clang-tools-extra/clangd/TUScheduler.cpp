@@ -365,13 +365,12 @@ void ASTWorker::update(
 
     std::shared_ptr<const PreambleData> OldPreamble =
         getPossiblyStalePreamble();
-    std::shared_ptr<const PreambleData> NewPreamble =
-        buildPreamble(FileName, *Invocation, OldPreamble, OldCommand, Inputs,
-                      PCHs, StorePreambleInMemory,
-                      [this](PathRef Path, ASTContext &Ctx,
-                             std::shared_ptr<clang::Preprocessor> PP) {
-                        Callbacks.onPreambleAST(FileName, Ctx, std::move(PP));
-                      });
+    std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
+        FileName, *Invocation, OldPreamble, OldCommand, Inputs, PCHs,
+        StorePreambleInMemory,
+        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP) {
+          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP));
+        });
 
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);
     {
@@ -654,11 +653,6 @@ unsigned getDefaultAsyncThreadsCount() {
   return HardwareConcurrency;
 }
 
-ParsingCallbacks &noopParsingCallbacks() {
-  static ParsingCallbacks *Instance = new ParsingCallbacks;
-  return *Instance;
-}
-
 struct TUScheduler::FileData {
   /// Latest inputs, passed to TUScheduler::update().
   std::string Contents;
@@ -668,11 +662,13 @@ struct TUScheduler::FileData {
 
 TUScheduler::TUScheduler(unsigned AsyncThreadsCount,
                          bool StorePreamblesInMemory,
-                         ParsingCallbacks &Callbacks,
+                         std::unique_ptr<ParsingCallbacks> Callbacks,
                          std::chrono::steady_clock::duration UpdateDebounce,
                          ASTRetentionPolicy RetentionPolicy)
     : StorePreamblesInMemory(StorePreamblesInMemory),
-      PCHOps(std::make_shared<PCHContainerOperations>()), Callbacks(Callbacks),
+      PCHOps(std::make_shared<PCHContainerOperations>()),
+      Callbacks(Callbacks ? move(Callbacks)
+                          : llvm::make_unique<ParsingCallbacks>()),
       Barrier(AsyncThreadsCount),
       IdleASTs(llvm::make_unique<ASTCache>(RetentionPolicy.MaxRetainedASTs)),
       UpdateDebounce(UpdateDebounce) {
@@ -711,7 +707,7 @@ void TUScheduler::update(
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::create(
         File, *IdleASTs, WorkerThreads ? WorkerThreads.getPointer() : nullptr,
-        Barrier, UpdateDebounce, PCHOps, StorePreamblesInMemory, Callbacks);
+        Barrier, UpdateDebounce, PCHOps, StorePreamblesInMemory, *Callbacks);
     FD = std::unique_ptr<FileData>(new FileData{
         Inputs.Contents, Inputs.CompileCommand, std::move(Worker)});
   } else {

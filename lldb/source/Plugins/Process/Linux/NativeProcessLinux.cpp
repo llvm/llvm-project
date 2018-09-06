@@ -1551,74 +1551,25 @@ Status NativeProcessLinux::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
     return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
-Status NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(
-    size_t trap_opcode_size_hint, size_t &actual_opcode_size,
-    const uint8_t *&trap_opcode_bytes) {
-  // FIXME put this behind a breakpoint protocol class that can be set per
-  // architecture.  Need MIPS support here.
-  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
-  // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
-  // linux kernel does otherwise.
-  static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
-  static const uint8_t g_i386_opcode[] = {0xCC};
-  static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
-  static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
-  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
-  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
+  using ArrayRef = llvm::ArrayRef<uint8_t>;
 
-  switch (m_arch.GetMachine()) {
-  case llvm::Triple::aarch64:
-    trap_opcode_bytes = g_aarch64_opcode;
-    actual_opcode_size = sizeof(g_aarch64_opcode);
-    return Status();
-
+  switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::arm:
-    switch (trap_opcode_size_hint) {
+    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
+    // linux kernel does otherwise.
+    switch (size_hint) {
     case 2:
-      trap_opcode_bytes = g_thumb_breakpoint_opcode;
-      actual_opcode_size = sizeof(g_thumb_breakpoint_opcode);
-      return Status();
+      return ArrayRef{0x01, 0xde};
     case 4:
-      trap_opcode_bytes = g_arm_breakpoint_opcode;
-      actual_opcode_size = sizeof(g_arm_breakpoint_opcode);
-      return Status();
+      return ArrayRef{0xf0, 0x01, 0xf0, 0xe7};
     default:
-      assert(false && "Unrecognised trap opcode size hint!");
-      return Status("Unrecognised trap opcode size hint!");
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Unrecognised trap opcode size hint!");
     }
-
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    trap_opcode_bytes = g_i386_opcode;
-    actual_opcode_size = sizeof(g_i386_opcode);
-    return Status();
-
-  case llvm::Triple::mips:
-  case llvm::Triple::mips64:
-    trap_opcode_bytes = g_mips64_opcode;
-    actual_opcode_size = sizeof(g_mips64_opcode);
-    return Status();
-
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64el:
-    trap_opcode_bytes = g_mips64el_opcode;
-    actual_opcode_size = sizeof(g_mips64el_opcode);
-    return Status();
-
-  case llvm::Triple::systemz:
-    trap_opcode_bytes = g_s390x_opcode;
-    actual_opcode_size = sizeof(g_s390x_opcode);
-    return Status();
-
-  case llvm::Triple::ppc64le:
-    trap_opcode_bytes = g_ppc64le_opcode;
-    actual_opcode_size = sizeof(g_ppc64le_opcode);
-    return Status();
-
   default:
-    assert(false && "CPU type not supported!");
-    return Status("CPU type not supported");
+    return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);
   }
 }
 

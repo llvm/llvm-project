@@ -37,7 +37,7 @@ define <16 x i8> @splat_v16i8(i8 %x) {
   ret <16 x i8> %res
 }
 
-; CHECK-LABEL: const_splat_v16i8
+; CHECK-LABEL: const_splat_v16i8:
 ; SIMD128; i8x16.splat
 define <16 x i8> @const_splat_v16i8() {
   ret <16 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42,
@@ -162,7 +162,7 @@ define <8 x i16> @splat_v8i16(i16 %x) {
   ret <8 x i16> %res
 }
 
-; CHECK-LABEL: const_splat_v8i16
+; CHECK-LABEL: const_splat_v8i16:
 ; SIMD128; i16x8.splat
 define <8 x i16> @const_splat_v8i16() {
   ret <8 x i16> <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
@@ -267,7 +267,7 @@ define <4 x i32> @splat_v4i32(i32 %x) {
   ret <4 x i32> %res
 }
 
-; CHECK-LABEL: const_splat_v4i32
+; CHECK-LABEL: const_splat_v4i32:
 ; SIMD128; i32x4.splat
 define <4 x i32> @const_splat_v4i32() {
   ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
@@ -340,6 +340,12 @@ define <2 x i64> @splat_v2i64(i64 %x) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: const_splat_v2i64:
+; SIMD128; i64x2.splat
+define <2 x i64> @const_splat_v2i64() {
+  ret <2 x i64> <i64 42, i64 42>
+}
+
 ; CHECK-LABEL: extract_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
@@ -362,10 +368,6 @@ define i64 @extract_v2i64(<2 x i64> %v) {
 define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
   %res = insertelement <2 x i64> %v, i64 %x, i32 0
   ret <2 x i64> %res
-}
-
-define <2 x i64> @const_splat_v2i64() {
-  ret <2 x i64> <i64 42, i64 42>
 }
 
 ; CHECK-LABEL: build_v2i64:

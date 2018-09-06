@@ -992,13 +992,6 @@ void UnwrappedLineParser::parseStructuralElement() {
   case tok::kw_namespace:
     parseNamespace();
     return;
-  case tok::kw_inline:
-    nextToken();
-    if (FormatTok->Tok.is(tok::kw_namespace)) {
-      parseNamespace();
-      return;
-    }
-    break;
   case tok::kw_public:
   case tok::kw_protected:
   case tok::kw_private:
@@ -1064,6 +1057,16 @@ void UnwrappedLineParser::parseStructuralElement() {
   case tok::kw_export:
     if (Style.Language == FormatStyle::LK_JavaScript) {
       parseJavaScriptEs6ImportExport();
+      return;
+    }
+    if (!Style.isCpp())
+      break;
+    // Handle C++ "(inline|export) namespace".
+    LLVM_FALLTHROUGH;
+  case tok::kw_inline:
+    nextToken();
+    if (FormatTok->Tok.is(tok::kw_namespace)) {
+      parseNamespace();
       return;
     }
     break;

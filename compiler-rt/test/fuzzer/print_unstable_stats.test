@@ -1,10 +1,11 @@
 # Tests -print_unstable_stats
-UNSUPPORTED: aarch64
+# Disabled on Windows because of differences symbolizing and flakiness.
+UNSUPPORTED: aarch64, windows
 
 RUN: %cpp_compiler %S/PrintUnstableStatsTest.cpp -o %t-PrintUnstableStatsTest
 
 RUN: %run %t-PrintUnstableStatsTest -print_unstable_stats=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=LONG
-; We do not observe ini functions since we take the minimum hit counts, and minimum hit counts for ini is 0.
+# We do not observe ini functions since we take the minimum hit counts, and minimum hit counts for ini is 0.
 LONG: UNSTABLE_FUNCTIONS:
 LONG-NOT: det0()
 LONG-NOT: det1()

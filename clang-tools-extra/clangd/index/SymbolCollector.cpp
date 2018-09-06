@@ -231,9 +231,8 @@ bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
          match(decl(isExpansionInMainFile()), ND, ND.getASTContext()).empty();
 }
 
-SymbolOccurrenceKind toOccurrenceKind(index::SymbolRoleSet Roles) {
-  return static_cast<SymbolOccurrenceKind>(
-      static_cast<unsigned>(AllOccurrenceKinds) & Roles);
+RefKind toRefKind(index::SymbolRoleSet Roles) {
+  return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
 }
 
 } // namespace
@@ -326,9 +325,9 @@ bool SymbolCollector::handleDeclOccurence(
       SM.getFileID(SpellingLoc) == SM.getMainFileID())
     ReferencedDecls.insert(ND);
 
-  if ((static_cast<unsigned>(Opts.OccurrenceFilter) & Roles) &&
+  if ((static_cast<unsigned>(Opts.RefFilter) & Roles) &&
       SM.getFileID(SpellingLoc) == SM.getMainFileID())
-    DeclOccurrences[ND].emplace_back(SpellingLoc, Roles);
+    DeclRefs[ND].emplace_back(SpellingLoc, Roles);
 
   // Don't continue indexing if this is a mere reference.
   if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
@@ -422,7 +421,9 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   }
   S.Signature = Signature;
   S.CompletionSnippetSuffix = SnippetSuffix;
-  S.IncludeHeader = Include;
+  if (!Include.empty())
+    S.IncludeHeaders.emplace_back(Include, 1);
+
   Symbols.insert(S);
   return true;
 }
@@ -457,18 +458,18 @@ void SymbolCollector::finish() {
 
   if (auto MainFileURI = toURI(SM, MainFileEntry->getName(), Opts)) {
     std::string MainURI = *MainFileURI;
-    for (const auto &It : DeclOccurrences) {
+    for (const auto &It : DeclRefs) {
       if (auto ID = getSymbolID(It.first)) {
         if (Symbols.find(*ID)) {
           for (const auto &LocAndRole : It.second) {
-            SymbolOccurrence Occurrence;
+            Ref R;
             auto Range =
                 getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
-            Occurrence.Location.Start = Range.first;
-            Occurrence.Location.End = Range.second;
-            Occurrence.Location.FileURI = MainURI;
-            Occurrence.Kind = toOccurrenceKind(LocAndRole.second);
-            SymbolOccurrences.insert(*ID, Occurrence);
+            R.Location.Start = Range.first;
+            R.Location.End = Range.second;
+            R.Location.FileURI = MainURI;
+            R.Kind = toRefKind(LocAndRole.second);
+            Refs.insert(*ID, R);
           }
         }
       }
@@ -479,7 +480,7 @@ void SymbolCollector::finish() {
 
   ReferencedDecls.clear();
   ReferencedMacros.clear();
-  DeclOccurrences.clear();
+  DeclRefs.clear();
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
@@ -530,7 +531,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   S.CompletionSnippetSuffix = SnippetSuffix;
   S.Documentation = Documentation;
   S.ReturnType = ReturnType;
-  S.IncludeHeader = Include;
+  if (!Include.empty())
+    S.IncludeHeaders.emplace_back(Include, 1);
 
   S.Origin = Opts.Origin;
   Symbols.insert(S);

@@ -1,4 +1,5 @@
-UNSUPPORTED: aarch64
+# FIXME: Disabled on Windows until symbolization works properly.
+UNSUPPORTED: aarch64, windows
 RUN: %cpp_compiler %S/OutOfMemoryTest.cpp -o %t-OutOfMemoryTest
 RUN: %cpp_compiler %S/OutOfMemorySingleLargeMallocTest.cpp -o %t-OutOfMemorySingleLargeMallocTest
 RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest

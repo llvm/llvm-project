@@ -97,8 +97,8 @@ public:
 
 char WebAssemblyCFGStackify::ID = 0;
 INITIALIZE_PASS(WebAssemblyCFGStackify, DEBUG_TYPE,
-                "Insert BLOCK and LOOP markers for WebAssembly scopes",
-                false, false)
+                "Insert BLOCK and LOOP markers for WebAssembly scopes", false,
+                false)
 
 FunctionPass *llvm::createWebAssemblyCFGStackify() {
   return new WebAssemblyCFGStackify();
@@ -633,10 +633,18 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
 
   WebAssembly::ExprType retType;
   switch (MFI.getResults().front().SimpleTy) {
-  case MVT::i32: retType = WebAssembly::ExprType::I32; break;
-  case MVT::i64: retType = WebAssembly::ExprType::I64; break;
-  case MVT::f32: retType = WebAssembly::ExprType::F32; break;
-  case MVT::f64: retType = WebAssembly::ExprType::F64; break;
+  case MVT::i32:
+    retType = WebAssembly::ExprType::I32;
+    break;
+  case MVT::i64:
+    retType = WebAssembly::ExprType::I64;
+    break;
+  case MVT::f32:
+    retType = WebAssembly::ExprType::F32;
+    break;
+  case MVT::f64:
+    retType = WebAssembly::ExprType::F64;
+    break;
   case MVT::v16i8:
   case MVT::v8i16:
   case MVT::v4i32:
@@ -645,8 +653,11 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   case MVT::v2f64:
     retType = WebAssembly::ExprType::V128;
     break;
-  case MVT::ExceptRef: retType = WebAssembly::ExprType::ExceptRef; break;
-  default: llvm_unreachable("unexpected return type");
+  case MVT::ExceptRef:
+    retType = WebAssembly::ExprType::ExceptRef;
+    break;
+  default:
+    llvm_unreachable("unexpected return type");
   }
 
   for (MachineBasicBlock &MBB : reverse(MF)) {
@@ -669,9 +680,8 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
 
 // WebAssembly functions end with an end instruction, as if the function body
 // were a block.
-static void AppendEndToFunction(
-    MachineFunction &MF,
-    const WebAssemblyInstrInfo &TII) {
+static void AppendEndToFunction(MachineFunction &MF,
+                                const WebAssemblyInstrInfo &TII) {
   BuildMI(MF.back(), MF.back().end(),
           MF.back().findPrevDebugLoc(MF.back().end()),
           TII.get(WebAssembly::END_FUNCTION));

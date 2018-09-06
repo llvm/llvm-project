@@ -507,7 +507,7 @@ namespace AArch64II {
 
     MO_NO_FLAG,
 
-    MO_FRAGMENT = 0xf,
+    MO_FRAGMENT = 0x7,
 
     /// MO_PAGE - A symbol operand with this flag represents the pc-relative
     /// offset of the 4K page containing the symbol.  This is used with the
@@ -539,6 +539,11 @@ namespace AArch64II {
     /// 13-24 of a 64-bit address, used in a arithmetic immediate-shifted-left-
     /// by-12-bits instruction.
     MO_HI12 = 7,
+
+    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the ".refptrp.FOO" symbol.  This is used for
+    /// stub symbols on windows.
+    MO_COFFSTUB = 0x8,
 
     /// MO_GOT - This flag indicates that a symbol operand represents the
     /// address of the GOT entry for the symbol, rather than the address of

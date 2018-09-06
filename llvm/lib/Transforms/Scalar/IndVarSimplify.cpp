@@ -152,9 +152,6 @@ class IndVarSimplify {
 
   void sinkUnusedInvariants(Loop *L);
 
-  Value *expandSCEVIfNeeded(SCEVExpander &Rewriter, const SCEV *S, Loop *L,
-                            Instruction *InsertPt, Type *Ty);
-
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
@@ -521,19 +518,6 @@ struct RewritePhi {
 
 } // end anonymous namespace
 
-Value *IndVarSimplify::expandSCEVIfNeeded(SCEVExpander &Rewriter, const SCEV *S,
-                                          Loop *L, Instruction *InsertPt,
-                                          Type *ResultTy) {
-  // Before expanding S into an expensive LLVM expression, see if we can use an
-  // already existing value as the expansion for S.
-  if (Value *ExistingValue = Rewriter.getExactExistingExpansion(S, InsertPt, L))
-    if (ExistingValue->getType() == ResultTy)
-      return ExistingValue;
-
-  // We didn't find anything, fall back to using SCEVExpander.
-  return Rewriter.expandCodeFor(S, ResultTy, InsertPt);
-}
-
 //===----------------------------------------------------------------------===//
 // rewriteLoopExitValues - Optimize IV users outside the loop.
 // As a side effect, reduces the amount of IV processing within the loop.
@@ -650,8 +634,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         }
 
         bool HighCost = Rewriter.isHighCostExpansion(ExitValue, L, Inst);
-        Value *ExitVal =
-            expandSCEVIfNeeded(Rewriter, ExitValue, L, Inst, PN->getType());
+        Value *ExitVal = Rewriter.expandCodeFor(ExitValue, PN->getType(), Inst);
 
         LLVM_DEBUG(dbgs() << "INDVARS: RLEV: AfterLoopVal = " << *ExitVal
                           << '\n'
@@ -661,6 +644,16 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
           DeadInsts.push_back(ExitVal);
           continue;
         }
+
+#ifndef NDEBUG
+        // If we reuse an instruction from a loop which is neither L nor one of
+        // its containing loops, we end up breaking LCSSA form for this loop by
+        // creating a new use of its instruction.
+        if (auto *ExitInsn = dyn_cast<Instruction>(ExitVal))
+          if (auto *EVL = LI->getLoopFor(ExitInsn->getParent()))
+            if (EVL != L)
+              assert(EVL->contains(L) && "LCSSA breach detected!");
+#endif
 
         // Collect all the candidate PHINodes to be rewritten.
         RewritePhiSet.emplace_back(PN, i, ExitVal, HighCost);

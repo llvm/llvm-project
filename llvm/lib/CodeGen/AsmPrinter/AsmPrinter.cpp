@@ -750,18 +750,30 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   bool Commented = false;
 
+  auto getSize =
+      [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
+        unsigned Size = 0;
+        for (auto A : Accesses)
+          if (MFI.isSpillSlotObjectIndex(
+                  cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                      ->getFrameIndex()))
+            Size += A->getSize();
+        return Size;
+      };
+
   // We assume a single instruction only has a spill or reload, not
   // both.
   const MachineMemOperand *MMO;
+  SmallVector<const MachineMemOperand *, 2> Accesses;
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
       CommentOS << MMO->getSize() << "-byte Reload";
       Commented = true;
     }
-  } else if (TII->hasLoadFromStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      CommentOS << MMO->getSize() << "-byte Folded Reload";
+  } else if (TII->hasLoadFromStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Reload";
       Commented = true;
     }
   } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
@@ -770,9 +782,9 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
       CommentOS << MMO->getSize() << "-byte Spill";
       Commented = true;
     }
-  } else if (TII->hasStoreToStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      CommentOS << MMO->getSize() << "-byte Folded Spill";
+  } else if (TII->hasStoreToStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Spill";
       Commented = true;
     }
   }

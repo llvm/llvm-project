@@ -1,0 +1,45 @@
+# Regression test for the following case:
+# $ cat /tmp/a.c
+# int main() { return 0; }
+# $ clang -static /tmp/a.c -o /tmp/a
+# $ llvm-strip /tmp/a -o /tmp/b
+# llvm-strip: error: Link field value 0 in section .rela.plt is invalid.
+
+# RUN: yaml2obj %s > %t.original
+# RUN: llvm-strip %t.original -o %t.stripped
+# RUN: llvm-readobj -sections %t.original | FileCheck %s
+# RUN: llvm-readobj -sections %t.stripped | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:          .text
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:          .rela.plt
+    Type:          SHT_RELA
+    Flags:         [ SHF_ALLOC, SHF_INFO_LINK ]
+    Info:          .got.plt
+    Link:          0
+  - Name:          .plt
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:          .got.plt
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC, SHF_WRITE ]
+
+# CHECK:      Name: .rela.plt
+# CHECK-NEXT: Type: SHT_RELA
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT:   SHF_INFO_LINK
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size: 0
+# CHECK-NEXT: Link: 0
+# CHECK-NEXT: Info: 4

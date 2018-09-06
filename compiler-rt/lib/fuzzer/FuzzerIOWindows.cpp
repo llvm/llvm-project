@@ -111,7 +111,7 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   {
     if (GetLastError() == ERROR_FILE_NOT_FOUND)
       return;
-    Printf("No such directory: %s; exiting\n", Dir.c_str());
+    Printf("No such file or directory: %s; exiting\n", Dir.c_str());
     exit(1);
   }
 

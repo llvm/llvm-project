@@ -616,6 +616,11 @@ bool fromJSON(const json::Value &Params,
          O.map("compilationDatabaseChanges", CCPC.compilationDatabaseChanges);
 }
 
+bool fromJSON(const json::Value &Params, ReferenceParams &R) {
+  TextDocumentPositionParams &Base = R;
+  return fromJSON(Params, Base);
+}
+
 json::Value toJSON(const CancelParams &CP) {
   return json::Object{{"id", CP.ID}};
 }

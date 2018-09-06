@@ -50,6 +50,7 @@
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/windows.h"
 #endif
 
 #include "llvm/ADT/None.h"      // for None
@@ -58,6 +59,7 @@
 #include "llvm/ADT/iterator.h" // for iterator_facade_...
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h" // for raw_fd_ostream
 
@@ -804,6 +806,13 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // Turn off use-color if we don't write to a terminal with color support.
   if (!m_output_file_sp->GetFile().GetIsTerminalWithColors())
     SetUseColor(false);
+
+#if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+  // Enabling use of ANSI color codes because LLDB is using them to highlight
+  // text.
+  llvm::sys::Process::UseANSIEscapeCodes(true);
+  SetUseColor(true);
+#endif
 }
 
 Debugger::~Debugger() { Clear(); }

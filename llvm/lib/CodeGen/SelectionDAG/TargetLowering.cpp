@@ -1481,22 +1481,20 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
-    if (!isa<ConstantSDNode>(Op.getOperand(1)))
-      break;
     SDValue Src = Op.getOperand(0);
+    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    const APInt& Idx = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
-    if (Idx.uge(NumSrcElts - NumElts))
-      break;
-    // Offset the demanded elts by the subvector index.
-    uint64_t SubIdx = Idx.getZExtValue();
-    APInt SrcElts = DemandedElts.zext(NumSrcElts).shl(SubIdx);
-    APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
-      return true;
-    KnownUndef = SrcUndef.extractBits(NumElts, SubIdx);
-    KnownZero = SrcZero.extractBits(NumElts, SubIdx);
+    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
+      // Offset the demanded elts by the subvector index.
+      uint64_t Idx = SubIdx->getZExtValue();
+      APInt SrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+      APInt SrcUndef, SrcZero;
+      if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
+                                     Depth + 1))
+        return true;
+      KnownUndef = SrcUndef.extractBits(NumElts, Idx);
+      KnownZero = SrcZero.extractBits(NumElts, Idx);
+    }
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
@@ -1914,10 +1912,24 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
   } else
     return SDValue();
 
-  const APInt &I01 = C01->getAPIntValue();
-  // Both of them must be power-of-two, and the constant from setcc is bigger.
-  if (!(I1.ugt(I01) && I1.isPowerOf2() && I01.isPowerOf2()))
-    return SDValue();
+  APInt I01 = C01->getAPIntValue();
+
+  auto checkConstants = [&I1, &I01]() -> bool {
+    // Both of them must be power-of-two, and the constant from setcc is bigger.
+    return I1.ugt(I01) && I1.isPowerOf2() && I01.isPowerOf2();
+  };
+
+  if (checkConstants()) {
+    // Great, e.g. got  icmp ult i16 (add i16 %x, 128), 256
+  } else {
+    // What if we invert constants? (and the target predicate)
+    I1.negate();
+    I01.negate();
+    NewCond = getSetCCInverse(NewCond, /*isInteger=*/true);
+    if (!checkConstants())
+      return SDValue();
+    // Great, e.g. got  icmp uge i16 (add i16 %x, -128), -256
+  }
 
   // They are power-of-two, so which bit is set?
   const unsigned KeptBits = I1.logBase2();

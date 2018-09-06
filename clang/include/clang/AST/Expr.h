@@ -99,10 +99,9 @@ struct SubobjectAdjustment {
   }
 };
 
-/// Expr - This represents one expression.  Note that Expr's are subclasses of
-/// Stmt.  This allows an expression to be transparently used any place a Stmt
-/// is required.
-///
+/// This represents one expression.  Note that Expr's are subclasses of Stmt.
+/// This allows an expression to be transparently used any place a Stmt is
+/// required.
 class Expr : public Stmt {
   QualType TR;
 

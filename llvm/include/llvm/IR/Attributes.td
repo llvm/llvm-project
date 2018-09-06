@@ -176,6 +176,14 @@ def SanitizeMemory : EnumAttr<"sanitize_memory">;
 /// HWAddressSanitizer is on.
 def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress">;
 
+/// Speculative Load Hardening is enabled.
+///
+/// Note that this uses the default compatibility (always compatible during
+/// inlining) and a conservative merge strategy where inlining an attributed
+/// body will add the attribute to the caller. This ensures that code carrying
+/// this attribute will always be lowered with hardening enabled.
+def SpeculativeLoadHardening : EnumAttr<"speculative_load_hardening">;
+
 /// Argument is swift error.
 def SwiftError : EnumAttr<"swifterror">;
 
@@ -232,6 +240,7 @@ def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"setOR<ProfileSampleAccurateAttr>">;
+def : MergeRule<"setOR<SpeculativeLoadHardeningAttr>">;
 def : MergeRule<"adjustCallerSSPLevel">;
 def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;

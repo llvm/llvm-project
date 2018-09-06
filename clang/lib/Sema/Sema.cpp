@@ -922,10 +922,9 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
-  // FIXME: This is wrong for TUKind == TU_Prefix. In that case, we need to
-  // write out the lists to the AST file (if any).
+  assert(DelayedOverridingExceptionSpecChecks.empty());
+  assert(DelayedEquivalentExceptionSpecChecks.empty());
   assert(DelayedDefaultedMemberExceptionSpecs.empty());
-  assert(DelayedExceptionSpecChecks.empty());
 
   // All dllexport classes should have been processed already.
   assert(DelayedDllExportClasses.empty());
@@ -1889,6 +1888,14 @@ bool Sema::checkOpenCLDisabledTypeDeclSpec(const DeclSpec &DS, QualType QT) {
   if (auto TagT = dyn_cast<TagType>(QT.getCanonicalType().getTypePtr()))
     Decl = TagT->getDecl();
   auto Loc = DS.getTypeSpecTypeLoc();
+
+  // Check extensions for vector types.
+  // e.g. double4 is not allowed when cl_khr_fp64 is absent.
+  if (QT->isExtVectorType()) {
+    auto TypePtr = QT->castAs<ExtVectorType>()->getElementType().getTypePtr();
+    return checkOpenCLDisabledTypeOrDecl(TypePtr, Loc, QT, OpenCLTypeExtMap);
+  }
+
   if (checkOpenCLDisabledTypeOrDecl(Decl, Loc, QT, OpenCLDeclExtMap))
     return true;
 

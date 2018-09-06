@@ -1,3 +1,5 @@
+# FIXME: Disabled on Windows because memmem is a GNU extension.
+UNSUPPORTED: windows
 RUN: %no_fuzzer_c_compiler %libfuzzer_src/standalone/StandaloneFuzzTargetMain.c -c -o %t_1.o
 RUN: %no_fuzzer_cpp_compiler %S/InitializeTest.cpp -c -o %t_2.o
 

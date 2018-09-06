@@ -1147,6 +1147,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
+  Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
+
   return Success;
 }
 
@@ -2647,6 +2649,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if ((Opts.OpenMPIsDevice && T.isNVPTX()) || Opts.OpenCLCPlusPlus) {
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
+  }
+  // NVPTX does not support RTTI.
+  if (Opts.OpenMPIsDevice && T.isNVPTX()) {
+    Opts.RTTI = 0;
+    Opts.RTTIData = 0;
   }
 
   // Get the OpenMP target triples if any.

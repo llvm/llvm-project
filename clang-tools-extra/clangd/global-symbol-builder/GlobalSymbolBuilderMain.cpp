@@ -7,15 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GlobalSymbolBuilder is a tool to generate YAML-format symbols across the
-// whole project. This tools is for **experimental** only. Don't use it in
-// production code.
+// GlobalSymbolBuilder is a tool to extract symbols from a whole project.
+// This tool is **experimental** only. Don't use it in production code.
 //
 //===----------------------------------------------------------------------===//
 
+#include "RIFF.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/Serialization.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -58,6 +59,13 @@ static llvm::cl::opt<bool> MergeOnTheFly(
         "standalone tool, but cannot be used with multi-process executors like "
         "MapReduce."),
     llvm::cl::init(true), llvm::cl::Hidden);
+
+enum IndexFormat { YAML, Binary };
+static llvm::cl::opt<IndexFormat> Format(
+    "format", llvm::cl::desc("Format of the index to be written"),
+    llvm::cl::values(clEnumValN(YAML, "yaml", "human-readable YAML format"),
+                     clEnumValN(Binary, "binary", "binary RIFF format")),
+    llvm::cl::init(YAML));
 
 /// Responsible for aggregating symbols from each processed file and producing
 /// the final results. All methods in this class must be thread-safe,
@@ -210,8 +218,8 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   const char *Overview = R"(
-  This is an **experimental** tool to generate YAML-format project-wide symbols
-  for clangd (global code completion). It would be changed and deprecated
+  This is an **experimental** tool to extract symbols from a whole project
+  for clangd (global code completion). It will be changed and deprecated
   eventually. Don't use it in production code!
 
   Example usage for building index for the whole project using CMake compile
@@ -262,7 +270,16 @@ int main(int argc, const char **argv) {
   }
   // Reduce phase: combine symbols with the same IDs.
   auto UniqueSymbols = Consumer->mergeResults();
-  // Output phase: emit YAML for result symbols.
-  SymbolsToYAML(UniqueSymbols, llvm::outs());
+  // Output phase: emit result symbols.
+  switch (clang::clangd::Format) {
+  case clang::clangd::IndexFormat::YAML:
+    SymbolsToYAML(UniqueSymbols, llvm::outs());
+    break;
+  case clang::clangd::IndexFormat::Binary: {
+    clang::clangd::IndexFileOut Out;
+    Out.Symbols = &UniqueSymbols;
+    llvm::outs() << Out;
+  }
+  }
   return 0;
 }

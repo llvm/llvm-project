@@ -26,8 +26,8 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R);
 // The returned index attempts to combine results, and avoid duplicates.
 //
 // FIXME: We don't have a mechanism in Index to track deleted symbols and
-// occurrences in dirty files, so the merged index may return stale symbols
-// and occurrences from Static index.
+// refs in dirty files, so the merged index may return stale symbols
+// and refs from Static index.
 std::unique_ptr<SymbolIndex> mergeIndex(const SymbolIndex *Dynamic,
                                         const SymbolIndex *Static);
 

@@ -1116,6 +1116,27 @@ let DecoderNamespace = "MicroMips" in {
                  ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 
+let AdditionalPredicates = [NotDSP] in {
+  def PseudoMULT_MM : MultDivPseudo<MULT, ACC64, GPR32Opnd, MipsMult, II_MULT>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMULTu_MM : MultDivPseudo<MULTu, ACC64, GPR32Opnd, MipsMultu, II_MULTU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMFHI_MM : PseudoMFLOHI<GPR32, ACC64, MipsMFHI>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMFLO_MM : PseudoMFLOHI<GPR32, ACC64, MipsMFLO>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMTLOHI_MM : PseudoMTLOHI<ACC64, GPR32>,
+                        ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMADD_MM : MAddSubPseudo<MADD, MipsMAdd, II_MADD>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMADDU_MM : MAddSubPseudo<MADDU, MipsMAddu, II_MADDU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMSUB_MM : MAddSubPseudo<MSUB, MipsMSub, II_MSUB>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMSUBU_MM : MAddSubPseudo<MSUBU, MipsMSubu, II_MSUBU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+
 def TAILCALL_MM : TailCall<J_MM, jmptarget_mm>, ISA_MIPS1_NOT_32R6_64R6;
 
 def TAILCALLREG_MM  : TailCallReg<JRC16_MM, GPR32Opnd>,

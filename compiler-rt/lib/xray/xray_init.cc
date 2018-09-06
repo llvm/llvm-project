@@ -27,6 +27,15 @@ extern const XRaySledEntry __start_xray_instr_map[] __attribute__((weak));
 extern const XRaySledEntry __stop_xray_instr_map[] __attribute__((weak));
 extern const XRayFunctionSledIndex __start_xray_fn_idx[] __attribute__((weak));
 extern const XRayFunctionSledIndex __stop_xray_fn_idx[] __attribute__((weak));
+
+#if SANITIZER_MAC
+// HACK: This is a temporary workaround to make XRay build on 
+// Darwin, but it will probably not work at runtime.
+const XRaySledEntry __start_xray_instr_map[] = {};
+extern const XRaySledEntry __stop_xray_instr_map[] = {};
+extern const XRayFunctionSledIndex __start_xray_fn_idx[] = {};
+extern const XRayFunctionSledIndex __stop_xray_fn_idx[] = {};
+#endif
 }
 
 using namespace __xray;

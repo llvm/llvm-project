@@ -19,7 +19,7 @@ using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::COFF;
 
-AutoExporter::AutoExporter() {
+void AutoExporter::initSymbolExcludes() {
   if (Config->Machine == I386) {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
@@ -53,7 +53,9 @@ AutoExporter::AutoExporter() {
         "DllMainCRTStartup",
     };
   }
+}
 
+AutoExporter::AutoExporter() {
   ExcludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -88,6 +90,13 @@ AutoExporter::AutoExporter() {
       "crtbegin.o",
       "crtend.o",
   };
+}
+
+void AutoExporter::addWholeArchive(StringRef Path) {
+  StringRef LibName = sys::path::filename(Path);
+  // Drop the file extension, to match the processing below.
+  LibName = LibName.substr(0, LibName.rfind('.'));
+  ExcludeLibs.erase(LibName);
 }
 
 bool AutoExporter::shouldExport(Defined *Sym) const {

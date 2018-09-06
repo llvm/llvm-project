@@ -157,6 +157,10 @@ public:
   void documentSymbols(StringRef File,
                        Callback<std::vector<SymbolInformation>> CB);
 
+  /// Retrieve locations for symbol references.
+  void findReferences(PathRef File, Position Pos,
+                      Callback<std::vector<Location>> CB);
+
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
                                                     PathRef File, Range Rng);
@@ -191,6 +195,10 @@ public:
   /// FIXME: those metrics might be useful too, we should add them.
   std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
 
+  /// Returns the active dynamic index if one was built.
+  /// This can be useful for testing, debugging, or observing memory usage.
+  const SymbolIndex *dynamicIndex() const;
+
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
   LLVM_NODISCARD bool
@@ -224,11 +232,10 @@ private:
   //   - the dynamic index owned by ClangdServer (DynamicIdx)
   //   - the static index passed to the constructor
   //   - a merged view of a static and dynamic index (MergedIndex)
-  SymbolIndex *Index;
-  /// If present, an up-to-date of symbols in open files. Read via Index.
+  const SymbolIndex *Index;
+  // If present, an index of symbols in open files. Read via *Index.
   std::unique_ptr<DynamicIndex> DynamicIdx;
-  // If present, a merged view of DynamicIdx and an external index. Read via
-  // Index.
+  // If present, storage for the merged static/dynamic index. Read via *Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)

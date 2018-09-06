@@ -32,11 +32,11 @@ using namespace llvm;
 
 // This disables the removal of registers when lowering into MC, as required
 // by some current tests.
-static cl::opt<bool> WasmKeepRegisters(
-    "wasm-keep-registers", cl::Hidden,
-    cl::desc("WebAssembly: output stack registers in"
-             " instruction output for test purposes only."),
-    cl::init(false));
+static cl::opt<bool>
+    WasmKeepRegisters("wasm-keep-registers", cl::Hidden,
+                      cl::desc("WebAssembly: output stack registers in"
+                               " instruction output for test purposes only."),
+                      cl::init(false));
 
 static unsigned regInstructionToStackInstruction(unsigned OpCode);
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
@@ -54,10 +54,9 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     SmallVector<wasm::ValType, 4> Returns;
     SmallVector<wasm::ValType, 4> Params;
 
-    wasm::ValType iPTR =
-        MF.getSubtarget<WebAssemblySubtarget>().hasAddr64() ?
-        wasm::ValType::I64 :
-        wasm::ValType::I32;
+    wasm::ValType iPTR = MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()
+                             ? wasm::ValType::I64
+                             : wasm::ValType::I32;
 
     SmallVector<MVT, 4> ResultMVTs;
     ComputeLegalValueVTs(CurrentFunc, TM, FuncTy->getReturnType(), ResultMVTs);
@@ -122,9 +121,9 @@ MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
                                                      bool IsFunc,
                                                      bool IsGlob) const {
   MCSymbolRefExpr::VariantKind VK =
-      IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION :
-      IsGlob ? MCSymbolRefExpr::VK_WebAssembly_GLOBAL
-             : MCSymbolRefExpr::VK_None;
+      IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION
+             : IsGlob ? MCSymbolRefExpr::VK_WebAssembly_GLOBAL
+                      : MCSymbolRefExpr::VK_None;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, VK, Ctx);
 
@@ -238,7 +237,8 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       // variable or a function.
       assert((MO.getTargetFlags() & ~WebAssemblyII::MO_SYMBOL_MASK) == 0 &&
              "WebAssembly uses only symbol flags on ExternalSymbols");
-      MCOp = LowerSymbolOperand(GetExternalSymbolSymbol(MO), /*Offset=*/0,
+      MCOp = LowerSymbolOperand(
+          GetExternalSymbolSymbol(MO), /*Offset=*/0,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_FUNCTION) != 0,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_GLOBAL) != 0);
       break;
@@ -295,7 +295,7 @@ static unsigned regInstructionToStackInstruction(unsigned OpCode) {
   switch (OpCode) {
   default:
     llvm_unreachable(
-          "unknown WebAssembly instruction in Explicit Locals pass");
+        "unknown WebAssembly instruction in WebAssemblyMCInstLower pass");
 #include "WebAssemblyGenStackifier.inc"
   }
 }

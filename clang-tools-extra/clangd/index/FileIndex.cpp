@@ -16,7 +16,7 @@
 namespace clang {
 namespace clangd {
 
-std::pair<SymbolSlab, SymbolOccurrenceSlab>
+std::pair<SymbolSlab, RefSlab>
 indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
          llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls,
          llvm::ArrayRef<std::string> URISchemes) {
@@ -45,12 +45,12 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
     DeclsToIndex.assign(AST.getTranslationUnitDecl()->decls().begin(),
                         AST.getTranslationUnitDecl()->decls().end());
 
-  // We only collect occurrences when indexing main AST.
+  // We only collect refs when indexing main AST.
   // FIXME: this is a hacky way to detect whether we are indexing preamble AST
   // or main AST, we should make it explicitly.
   bool IsIndexMainAST = TopLevelDecls.hasValue();
   if (IsIndexMainAST)
-    CollectorOpts.OccurrenceFilter = AllOccurrenceKinds;
+    CollectorOpts.RefFilter = RefKind::All;
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
@@ -61,77 +61,77 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   std::string FileName = MainFileEntry ? MainFileEntry->getName() : "";
 
   auto Syms = Collector.takeSymbols();
-  auto Occurrences = Collector.takeOccurrences();
+  auto Refs = Collector.takeRefs();
   vlog("index {0}AST for {1}: \n"
        "  symbol slab: {2} symbols, {3} bytes\n"
-       "  occurrence slab: {4} symbols, {5} bytes",
+       "  ref slab: {4} symbols, {5} bytes",
        IsIndexMainAST ? "Main" : "Preamble", FileName, Syms.size(),
-       Syms.bytes(), Occurrences.size(), Occurrences.bytes());
-  return {std::move(Syms), std::move(Occurrences)};
+       Syms.bytes(), Refs.size(), Refs.bytes());
+  return {std::move(Syms), std::move(Refs)};
 }
 
 FileIndex::FileIndex(std::vector<std::string> URISchemes)
-    : URISchemes(std::move(URISchemes)) {}
+    : URISchemes(std::move(URISchemes)) {
+  reset(FSymbols.buildMemIndex());
+}
 
-void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
-                         std::unique_ptr<SymbolOccurrenceSlab> Occurrences) {
+void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
+                         std::unique_ptr<RefSlab> Refs) {
   std::lock_guard<std::mutex> Lock(Mutex);
-  if (!Slab)
-    FileToSlabs.erase(Path);
+  if (!Symbols)
+    FileToSymbols.erase(Path);
   else
-    FileToSlabs[Path] = std::move(Slab);
-  if (!Occurrences)
-    FileToOccurrenceSlabs.erase(Path);
+    FileToSymbols[Path] = std::move(Symbols);
+  if (!Refs)
+    FileToRefs.erase(Path);
   else
-    FileToOccurrenceSlabs[Path] = std::move(Occurrences);
+    FileToRefs[Path] = std::move(Refs);
 }
 
-std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
-  // The snapshot manages life time of symbol slabs and provides pointers of all
-  // symbols in all slabs.
-  struct Snapshot {
-    std::vector<const Symbol *> Pointers;
-    std::vector<std::shared_ptr<SymbolSlab>> KeepAlive;
-  };
-  auto Snap = std::make_shared<Snapshot>();
+std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
+  std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
+  std::vector<std::shared_ptr<RefSlab>> RefSlabs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-
-    for (const auto &FileAndSlab : FileToSlabs) {
-      Snap->KeepAlive.push_back(FileAndSlab.second);
-      for (const auto &Iter : *FileAndSlab.second)
-        Snap->Pointers.push_back(&Iter);
-    }
+    for (const auto &FileAndSymbols : FileToSymbols)
+      SymbolSlabs.push_back(FileAndSymbols.second);
+    for (const auto &FileAndRefs : FileToRefs)
+      RefSlabs.push_back(FileAndRefs.second);
   }
-  auto *Pointers = &Snap->Pointers;
-  // Use aliasing constructor to keep the snapshot alive along with the
-  // pointers.
-  return {std::move(Snap), Pointers};
-}
+  std::vector<const Symbol *> AllSymbols;
+  for (const auto &Slab : SymbolSlabs)
+    for (const auto &Sym : *Slab)
+      AllSymbols.push_back(&Sym);
 
-std::shared_ptr<MemIndex::OccurrenceMap> FileSymbols::allOccurrences() const {
-  // The snapshot manages life time of symbol occurrence slabs and provides
-  // pointers to all occurrences in all occurrence slabs.
-  struct Snapshot {
-    MemIndex::OccurrenceMap Occurrences; // ID => {Occurrence}
-    std::vector<std::shared_ptr<SymbolOccurrenceSlab>> KeepAlive;
-  };
-
-  auto Snap = std::make_shared<Snapshot>();
+  std::vector<Ref> RefsStorage; // Contiguous ranges for each SymbolID.
+  llvm::DenseMap<SymbolID, ArrayRef<Ref>> AllRefs;
   {
-    std::lock_guard<std::mutex> Lock(Mutex);
-
-    for (const auto &FileAndSlab : FileToOccurrenceSlabs) {
-      Snap->KeepAlive.push_back(FileAndSlab.second);
-      for (const auto &IDAndOccurrences : *FileAndSlab.second) {
-        auto &Occurrences = Snap->Occurrences[IDAndOccurrences.first];
-        for (const auto &Occurrence : IDAndOccurrences.second)
-          Occurrences.push_back(&Occurrence);
+    llvm::DenseMap<SymbolID, SmallVector<Ref, 4>> MergedRefs;
+    size_t Count = 0;
+    for (const auto &RefSlab : RefSlabs)
+      for (const auto &Sym : *RefSlab) {
+        MergedRefs[Sym.first].append(Sym.second.begin(), Sym.second.end());
+        Count += Sym.second.size();
       }
+    RefsStorage.reserve(Count);
+    AllRefs.reserve(MergedRefs.size());
+    for (auto &Sym : MergedRefs) {
+      auto &SymRefs = Sym.second;
+      // Sorting isn't required, but yields more stable results over rebuilds.
+      std::sort(SymRefs.begin(), SymRefs.end());
+      std::copy(SymRefs.begin(), SymRefs.end(), back_inserter(RefsStorage));
+      AllRefs.try_emplace(
+          Sym.first,
+          ArrayRef<Ref>(&RefsStorage[RefsStorage.size() - SymRefs.size()],
+                        SymRefs.size()));
     }
   }
 
-  return {std::move(Snap), &Snap->Occurrences};
+  // Index must keep the slabs and contiguous ranges alive.
+  return llvm::make_unique<MemIndex>(
+      llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+      std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
+                      std::move(RefsStorage)));
 }
 
 void FileIndex::update(PathRef Path, ASTContext *AST,
@@ -141,37 +141,12 @@ void FileIndex::update(PathRef Path, ASTContext *AST,
     FSymbols.update(Path, nullptr, nullptr);
   } else {
     assert(PP);
-    auto Slab = llvm::make_unique<SymbolSlab>();
-    auto OccurrenceSlab = llvm::make_unique<SymbolOccurrenceSlab>();
-    auto IndexResults = indexAST(*AST, PP, TopLevelDecls, URISchemes);
-    std::tie(*Slab, *OccurrenceSlab) =
-        indexAST(*AST, PP, TopLevelDecls, URISchemes);
-    FSymbols.update(Path, std::move(Slab), std::move(OccurrenceSlab));
+    auto Contents = indexAST(*AST, PP, TopLevelDecls, URISchemes);
+    FSymbols.update(Path,
+                    llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
+                    llvm::make_unique<RefSlab>(std::move(Contents.second)));
   }
-  auto Symbols = FSymbols.allSymbols();
-  Index.build(std::move(Symbols), FSymbols.allOccurrences());
-}
-
-bool FileIndex::fuzzyFind(
-    const FuzzyFindRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
-  return Index.fuzzyFind(Req, Callback);
-}
-
-void FileIndex::lookup(
-    const LookupRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
-  Index.lookup(Req, Callback);
-}
-
-void FileIndex::findOccurrences(
-    const OccurrencesRequest &Req,
-    llvm::function_ref<void(const SymbolOccurrence &)> Callback) const {
-  Index.findOccurrences(Req, Callback);
-}
-
-size_t FileIndex::estimateMemoryUsage() const {
-  return Index.estimateMemoryUsage();
+  reset(FSymbols.buildMemIndex());
 }
 
 } // namespace clangd

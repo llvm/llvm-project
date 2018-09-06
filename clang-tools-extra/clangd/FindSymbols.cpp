@@ -226,7 +226,7 @@ public:
     // We should be only be looking at "local" decls in the main file.
     if (!SourceMgr.isWrittenInMainFile(NameLoc)) {
       // Even thought we are visiting only local (non-preamble) decls,
-      // we can get here when in the presense of "extern" decls.
+      // we can get here when in the presence of "extern" decls.
       return true;
     }
     const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(ASTNode.OrigD);
