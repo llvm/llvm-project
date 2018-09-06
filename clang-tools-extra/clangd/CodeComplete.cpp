@@ -505,14 +505,15 @@ private:
 };
 
 // Determine the symbol ID for a Sema code completion result, if possible.
-llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
+llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R,
+                                     const SourceManager &SM) {
   switch (R.Kind) {
   case CodeCompletionResult::RK_Declaration:
   case CodeCompletionResult::RK_Pattern: {
     return clang::clangd::getSymbolID(R.Declaration);
   }
   case CodeCompletionResult::RK_Macro:
-    // FIXME: Macros do have USRs, but the CCR doesn't contain enough info.
+    return clang::clangd::getSymbolID(*R.Macro, R.MacroDefInfo, SM);
   case CodeCompletionResult::RK_Keyword:
     return None;
   }
@@ -1435,7 +1436,8 @@ private:
     llvm::DenseSet<const Symbol *> UsedIndexResults;
     auto CorrespondingIndexResult =
         [&](const CodeCompletionResult &SemaResult) -> const Symbol * {
-      if (auto SymID = getSymbolID(SemaResult)) {
+      if (auto SymID =
+              getSymbolID(SemaResult, Recorder->CCSema->getSourceManager())) {
         auto I = IndexResults.find(*SymID);
         if (I != IndexResults.end()) {
           UsedIndexResults.insert(&*I);
