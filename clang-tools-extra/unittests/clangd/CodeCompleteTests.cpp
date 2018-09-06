@@ -1882,6 +1882,17 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
           AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
 }
 
+TEST(CompletionTest, MergeMacrosFromIndexAndSema) {
+  Symbol Sym;
+  Sym.Name = "Clangd_Macro_Test";
+  Sym.ID = SymbolID("c:foo.cpp@8@macro@Clangd_Macro_Test");
+  Sym.SymInfo.Kind = index::SymbolKind::Macro;
+  Sym.IsIndexedForCodeCompletion = true;
+  EXPECT_THAT(completions("#define Clangd_Macro_Test\nClangd_Macro_T^", {Sym})
+                  .Completions,
+              UnorderedElementsAre(Named("Clangd_Macro_Test")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
