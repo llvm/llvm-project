@@ -966,6 +966,7 @@ public:
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override {
+    std::lock_guard<std::mutex> Lock(Mut);
     Requests.push_back(Req);
     return true;
   }
@@ -981,12 +982,15 @@ public:
   size_t estimateMemoryUsage() const override { return 0; }
 
   const std::vector<FuzzyFindRequest> consumeRequests() const {
+    std::lock_guard<std::mutex> Lock(Mut);
     auto Reqs = std::move(Requests);
     Requests = {};
     return Reqs;
   }
 
 private:
+  // We need a mutex to handle async fuzzy find requests.
+  mutable std::mutex Mut;
   mutable std::vector<FuzzyFindRequest> Requests;
 };
 

@@ -655,9 +655,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   if (!PrepareForParsing(diagnostic_manager, exe_ctx))
     return false;
 
-  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
-  if (auto new_lang = GetLanguageForExpr(diagnostic_manager, exe_ctx))
-    lang_type = new_lang.getValue();
+  GetLanguageForExpr(diagnostic_manager, exe_ctx);
 
   if (log)
     log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
