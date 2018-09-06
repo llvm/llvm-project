@@ -283,6 +283,13 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
   return Storage.getAddrOfPtr1() + 1;
 }
 
+int64_t ExplodedNode::getID(ExplodedGraph *G) const {
+  Optional<int64_t> Out = G->getAllocator().identifyObject(this);
+  assert(Out && "Wrong allocator used");
+  assert(*Out % alignof(ExplodedNode) == 0 && "Wrong alignment information");
+  return *Out / alignof(ExplodedNode);
+}
+
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
                                      ProgramStateRef State,
                                      bool IsSink,

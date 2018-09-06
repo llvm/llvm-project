@@ -240,6 +240,8 @@ public:
     return const_cast<ExplodedNode*>(this)->succ_end();
   }
 
+  int64_t getID(ExplodedGraph *G) const;
+
 private:
   void replaceSuccessor(ExplodedNode *node) { Succs.replaceNode(node); }
   void replacePredecessor(ExplodedNode *node) { Preds.replaceNode(node); }
