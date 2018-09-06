@@ -1223,6 +1223,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
+  ident_t *loc = __kmp_threads[gtid]->th.th_ident;
 #if OMPT_SUPPORT
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
@@ -1372,7 +1373,6 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
           this_thr->th.th_teams_microtask == NULL &&
 #endif
           team->t.t_active_level == 1) {
-        ident_t *loc = __kmp_threads[gtid]->th.th_ident;
         kmp_uint64 cur_time = __itt_get_timestamp();
         kmp_info_t **other_threads = team->t.t_threads;
         int nproc = this_thr->th.th_team_nproc;
@@ -1458,8 +1458,8 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
     if (__kmp_tasking_mode != tskm_immediate_exec) {
 #if OMP_45_ENABLED
       if (this_thr->th.th_task_team != NULL) {
-#if USE_ITT_NOTIFY
         void *itt_sync_obj = NULL;
+#if USE_ITT_NOTIFY
         if (__itt_sync_create_ptr || KMP_ITT_DEBUG) {
           itt_sync_obj = __kmp_itt_barrier_object(gtid, bt, 1);
           __kmp_itt_barrier_starting(gtid, itt_sync_obj);

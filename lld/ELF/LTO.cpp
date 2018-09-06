@@ -67,10 +67,9 @@ static std::string getThinLTOOutputFile(StringRef ModulePath) {
 static lto::Config createConfig() {
   lto::Config C;
 
-  // LLD supports the new relocations and address-significance tables.
+  // LLD supports the new relocations.
   C.Options = InitTargetOptionsFromCodeGenFlags();
   C.Options.RelaxELFRelocations = true;
-  C.Options.EmitAddrsig = true;
 
   // Always emit a section per function/datum with LTO.
   C.Options.FunctionSections = true;

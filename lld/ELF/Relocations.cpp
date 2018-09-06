@@ -165,6 +165,9 @@ template <class ELFT>
 static unsigned
 handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
+  if (!(C.Flags & SHF_ALLOC))
+    return 0;
+
   if (!Sym.isTls())
     return 0;
 
@@ -270,14 +273,13 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
-  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC, R_GOT_OFF,
-                     R_TLSIE_HINT>(Expr) &&
+  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC>(Expr) &&
       !Config->Shared && !Sym.IsPreemptible) {
     C.Relocations.push_back({R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Sym});
     return 1;
   }
 
-  if (Expr == R_TLSIE_HINT)
+  if (Expr == R_TLSDESC_CALL)
     return 1;
   return 0;
 }
@@ -361,7 +363,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
           R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
           R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
           R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
-          R_TLSLD_HINT, R_TLSIE_HINT>(E))
+          R_TLSLD_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -464,7 +466,7 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
   SmallSet<SharedSymbol *, 4> Ret;
   for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
-        S.getType() == STT_TLS || S.st_value != SS.Value)
+        S.st_value != SS.Value)
       continue;
     StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);
@@ -625,6 +627,9 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 // Returns true if this function printed out an error message.
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
+    return false;
+
   if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
     return false;
 
@@ -695,7 +700,7 @@ public:
     while (I != Pieces.size() && Pieces[I].InputOff + Pieces[I].Size <= Off)
       ++I;
     if (I == Pieces.size())
-      fatal(".eh_frame: relocation is not in any piece");
+      return Off;
 
     // Pieces must be contiguous, so there must be no holes in between.
     assert(Pieces[I].InputOff <= Off && "Relocation not in any piece");
@@ -1042,11 +1047,6 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
   for (auto I = Rels.begin(), End = Rels.end(); I != End;)
     scanReloc<ELFT>(Sec, GetOffset, I, End);
-
-  // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
-  if (Config->EMachine == EM_RISCV)
-    std::stable_sort(Sec.Relocations.begin(), Sec.Relocations.end(),
-                     RelocationOffsetComparator{});
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
@@ -1271,7 +1271,6 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
 // allow for the creation of a short thunk.
 void ThunkCreator::createInitialThunkSections(
     ArrayRef<OutputSection *> OutputSections) {
-  uint32_t ThunkSectionSpacing = Target->getThunkSectionSpacing();
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         if (ISD->Sections.empty())
@@ -1280,18 +1279,18 @@ void ThunkCreator::createInitialThunkSections(
         uint32_t ISDEnd =
             ISD->Sections.back()->OutSecOff + ISD->Sections.back()->getSize();
         uint32_t LastThunkLowerBound = -1;
-        if (ISDEnd - ISDBegin > ThunkSectionSpacing * 2)
-          LastThunkLowerBound = ISDEnd - ThunkSectionSpacing;
+        if (ISDEnd - ISDBegin > Target->ThunkSectionSpacing * 2)
+          LastThunkLowerBound = ISDEnd - Target->ThunkSectionSpacing;
 
         uint32_t ISLimit;
         uint32_t PrevISLimit = ISDBegin;
-        uint32_t ThunkUpperBound = ISDBegin + ThunkSectionSpacing;
+        uint32_t ThunkUpperBound = ISDBegin + Target->ThunkSectionSpacing;
 
         for (const InputSection *IS : ISD->Sections) {
           ISLimit = IS->OutSecOff + IS->getSize();
           if (ISLimit > ThunkUpperBound) {
             addThunkSection(OS, ISD, PrevISLimit);
-            ThunkUpperBound = PrevISLimit + ThunkSectionSpacing;
+            ThunkUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
           }
           if (ISLimit > LastThunkLowerBound)
             break;
@@ -1386,7 +1385,7 @@ bool ThunkCreator::normalizeExistingThunk(Relocation &Rel, uint64_t Src) {
 // relocation out of range error.
 bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   bool AddressesChanged = false;
-  if (Pass == 0 && Target->getThunkSectionSpacing())
+  if (Pass == 0 && Target->ThunkSectionSpacing)
     createInitialThunkSections(OutputSections);
   else if (Pass == 10)
     // With Thunk Size much smaller than branch range we expect to

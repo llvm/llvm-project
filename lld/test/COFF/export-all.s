@@ -3,13 +3,14 @@
 # RUN: llvm-mc -triple=i686-windows-gnu %s -filetype=obj -o %t.obj
 
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
-# RUN: llvm-readobj -coff-exports %t.dll | grep Name: | FileCheck %s
+# RUN: llvm-readobj -coff-exports %t.dll | FileCheck %s
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
-# CHECK: Name:
-# CHECK-NEXT: Name: dataSym
-# CHECK-NEXT: Name: foobar
-# CHECK-EMPTY:
+# CHECK-NOT: Name: DllMainCRTStartup
+# CHECK-NOT: Name: _imp__unexported
+# CHECK: Name: dataSym
+# CHECK: Name: foobar
+# CHECK-NOT: Name: unexported
 
 # IMPLIB: Symbol: __imp__dataSym
 # IMPLIB-NOT: Symbol: _dataSym
@@ -21,7 +22,6 @@
 .global _dataSym
 .global _unexported
 .global __imp__unexported
-.global .refptr._foobar
 .text
 _DllMainCRTStartup@12:
   ret
@@ -34,8 +34,6 @@ _dataSym:
   .int 4
 __imp__unexported:
   .int _unexported
-.refptr._foobar:
-  .int _foobar
 
 # Test specifying -export-all-symbols, on an object file that contains
 # dllexport directive for some of the symbols.
@@ -65,7 +63,6 @@ __imp__unexported:
 # RUN: mkdir -p %T/libs
 # RUN: echo -e ".global mingwfunc\n.text\nmingwfunc:\nret\n" > %T/libs/mingwfunc.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/mingwfunc.s -filetype=obj -o %T/libs/mingwfunc.o
-# RUN: rm -f %T/libs/libmingwex.a
 # RUN: llvm-ar rcs %T/libs/libmingwex.a %T/libs/mingwfunc.o
 # RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %T/libs/crtfunc.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/crtfunc.s -filetype=obj -o %T/libs/crt2.o

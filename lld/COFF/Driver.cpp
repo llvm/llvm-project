@@ -32,7 +32,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
@@ -57,7 +56,7 @@ Configuration *Config;
 LinkerDriver *Driver;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
-  errorHandler().LogName = args::getFilenameWithoutExe(Args[0]);
+  errorHandler().LogName = sys::path::filename(Args[0]);
   errorHandler().ErrorOS = &Diag;
   errorHandler().ColorDiagnostics = Diag.has_colors();
   errorHandler().ErrorLimitExceededMsg =
@@ -450,19 +449,9 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
-  bool HaveMain = findUnderscoreMangle("main");
-  bool HaveWMain = findUnderscoreMangle("wmain");
-  bool HaveWinMain = findUnderscoreMangle("WinMain");
-  bool HaveWWinMain = findUnderscoreMangle("wWinMain");
-  if (HaveMain || HaveWMain) {
-    if (HaveWinMain || HaveWWinMain) {
-      warn(std::string("found ") + (HaveMain ? "main" : "wmain") + " and " +
-           (HaveWinMain ? "WinMain" : "wWinMain") +
-           "; defaulting to /subsystem:console");
-    }
+  if (findUnderscoreMangle("main") || findUnderscoreMangle("wmain"))
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
-  }
-  if (HaveWinMain || HaveWWinMain)
+  if (findUnderscoreMangle("WinMain") || findUnderscoreMangle("wWinMain"))
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
   return IMAGE_SUBSYSTEM_UNKNOWN;
 }
@@ -687,6 +676,131 @@ static void parseModuleDefs(StringRef Path) {
   }
 }
 
+// A helper function for filterBitcodeFiles.
+static bool needsRebuilding(MemoryBufferRef MB) {
+  // The MSVC linker doesn't support thin archives, so if it's a thin
+  // archive, we always need to rebuild it.
+  std::unique_ptr<Archive> File =
+      CHECK(Archive::create(MB), "Failed to read " + MB.getBufferIdentifier());
+  if (File->isThin())
+    return true;
+
+  // Returns true if the archive contains at least one bitcode file.
+  for (MemoryBufferRef Member : getArchiveMembers(File.get()))
+    if (identify_magic(Member.getBuffer()) == file_magic::bitcode)
+      return true;
+  return false;
+}
+
+// Opens a given path as an archive file and removes bitcode files
+// from them if exists. This function is to appease the MSVC linker as
+// their linker doesn't like archive files containing non-native
+// object files.
+//
+// If a given archive doesn't contain bitcode files, the archive path
+// is returned as-is. Otherwise, a new temporary file is created and
+// its path is returned.
+static Optional<std::string>
+filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
+  std::unique_ptr<MemoryBuffer> MB = CHECK(
+      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+  MemoryBufferRef MBRef = MB->getMemBufferRef();
+  file_magic Magic = identify_magic(MBRef.getBuffer());
+
+  if (Magic == file_magic::bitcode)
+    return None;
+  if (Magic != file_magic::archive)
+    return Path.str();
+  if (!needsRebuilding(MBRef))
+    return Path.str();
+
+  std::unique_ptr<Archive> File =
+      CHECK(Archive::create(MBRef),
+            MBRef.getBufferIdentifier() + ": failed to parse archive");
+
+  std::vector<NewArchiveMember> New;
+  for (MemoryBufferRef Member : getArchiveMembers(File.get()))
+    if (identify_magic(Member.getBuffer()) != file_magic::bitcode)
+      New.emplace_back(Member);
+
+  if (New.empty())
+    return None;
+
+  log("Creating a temporary archive for " + Path + " to remove bitcode files");
+
+  SmallString<128> S;
+  if (std::error_code EC = sys::fs::createTemporaryFile(
+          "lld-" + sys::path::stem(Path), ".lib", S))
+    fatal("cannot create a temporary file: " + EC.message());
+  std::string Temp = S.str();
+  TemporaryFiles.push_back(Temp);
+
+  Error E =
+      llvm::writeArchive(Temp, New, /*WriteSymtab=*/true, Archive::Kind::K_GNU,
+                         /*Deterministics=*/true,
+                         /*Thin=*/false);
+  handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+    error("failed to create a new archive " + S.str() + ": " + EI.message());
+  });
+  return Temp;
+}
+
+// Create response file contents and invoke the MSVC linker.
+void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
+  std::string Rsp = "/nologo\n";
+  std::vector<std::string> Temps;
+
+  // Write out archive members that we used in symbol resolution and pass these
+  // to MSVC before any archives, so that MSVC uses the same objects to satisfy
+  // references.
+  for (ObjFile *Obj : ObjFile::Instances) {
+    if (Obj->ParentName.empty())
+      continue;
+    SmallString<128> S;
+    int Fd;
+    if (auto EC = sys::fs::createTemporaryFile(
+            "lld-" + sys::path::filename(Obj->ParentName), ".obj", Fd, S))
+      fatal("cannot create a temporary file: " + EC.message());
+    raw_fd_ostream OS(Fd, /*shouldClose*/ true);
+    OS << Obj->MB.getBuffer();
+    Temps.push_back(S.str());
+    Rsp += quote(S) + "\n";
+  }
+
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getID()) {
+    case OPT_linkrepro:
+    case OPT_lldmap:
+    case OPT_lldmap_file:
+    case OPT_lldsavetemps:
+    case OPT_msvclto:
+      // LLD-specific options are stripped.
+      break;
+    case OPT_opt:
+      if (!StringRef(Arg->getValue()).startswith("lld"))
+        Rsp += toString(*Arg) + " ";
+      break;
+    case OPT_INPUT: {
+      if (Optional<StringRef> Path = doFindFile(Arg->getValue())) {
+        if (Optional<std::string> S = filterBitcodeFiles(*Path, Temps))
+          Rsp += quote(*S) + "\n";
+        continue;
+      }
+      Rsp += quote(Arg->getValue()) + "\n";
+      break;
+    }
+    default:
+      Rsp += toString(*Arg) + "\n";
+    }
+  }
+
+  std::vector<StringRef> ObjFiles = Symtab->compileBitcodeFiles();
+  runMSVCLinker(Rsp, ObjFiles);
+
+  for (StringRef Path : Temps)
+    sys::fs::remove(Path);
+}
+
 void LinkerDriver::enqueueTask(std::function<void()> Task) {
   TaskQueue.push_back(std::move(Task));
 }
@@ -739,46 +853,6 @@ static void parseOrderFile(StringRef Arg) {
     }
     else
       Config->Order[S] = INT_MIN + Config->Order.size();
-  }
-}
-
-static void markAddrsig(Symbol *S) {
-  if (auto *D = dyn_cast_or_null<Defined>(S))
-    if (Chunk *C = D->getChunk())
-      C->KeepUnique = true;
-}
-
-static void findKeepUniqueSections() {
-  // Exported symbols could be address-significant in other executables or DSOs,
-  // so we conservatively mark them as address-significant.
-  for (Export &R : Config->Exports)
-    markAddrsig(R.Sym);
-
-  // Visit the address-significance table in each object file and mark each
-  // referenced symbol as address-significant.
-  for (ObjFile *Obj : ObjFile::Instances) {
-    ArrayRef<Symbol *> Syms = Obj->getSymbols();
-    if (Obj->AddrsigSec) {
-      ArrayRef<uint8_t> Contents;
-      Obj->getCOFFObj()->getSectionContents(Obj->AddrsigSec, Contents);
-      const uint8_t *Cur = Contents.begin();
-      while (Cur != Contents.end()) {
-        unsigned Size;
-        const char *Err;
-        uint64_t SymIndex = decodeULEB128(Cur, &Size, Contents.end(), &Err);
-        if (Err)
-          fatal(toString(Obj) + ": could not decode addrsig section: " + Err);
-        if (SymIndex >= Syms.size())
-          fatal(toString(Obj) + ": invalid symbol index in addrsig section");
-        markAddrsig(Syms[SymIndex]);
-        Cur += Size;
-      }
-    } else {
-      // If an object file does not have an address-significance table,
-      // conservatively mark all of its symbols as address-significant.
-      for (Symbol *S : Syms)
-        markAddrsig(S);
-    }
   }
 }
 
@@ -1107,12 +1181,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   parseMerge(".xdata=.rdata");
   parseMerge(".bss=.data");
 
-  if (Config->MinGW) {
-    parseMerge(".ctors=.rdata");
-    parseMerge(".dtors=.rdata");
-    parseMerge(".CRT=.rdata");
-  }
-
   // Handle /section
   for (auto *Arg : Args.filtered(OPT_section))
     parseSection(Arg->getValue());
@@ -1373,11 +1441,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Needed for MSVC 2017 15.5 CRT.
   Symtab->addAbsolute(mangle("__enclave_config"), 0);
 
-  if (Config->MinGW) {
-    Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
-    Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
-  }
-
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
   // converge.
@@ -1417,28 +1480,17 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
+  // If /msvclto is given, we use the MSVC linker to link LTO output files.
+  // This is useful because MSVC link.exe can generate complete PDBs.
+  if (Args.hasArg(OPT_msvclto)) {
+    invokeMSVC(Args);
+    return;
+  }
+
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.
   Symtab->addCombinedLTOObjects();
   run();
-
-  if (Config->MinGW) {
-    // Load any further object files that might be needed for doing automatic
-    // imports.
-    //
-    // For cases with no automatically imported symbols, this iterates once
-    // over the symbol table and doesn't do anything.
-    //
-    // For the normal case with a few automatically imported symbols, this
-    // should only need to be run once, since each new object file imported
-    // is an import library and wouldn't add any new undefined references,
-    // but there's nothing stopping the __imp_ symbols from coming from a
-    // normal object file as well (although that won't be used for the
-    // actual autoimport later on). If this pass adds new undefined references,
-    // we won't iterate further to resolve them.
-    Symtab->loadMinGWAutomaticImports();
-    run();
-  }
 
   // Make sure we have resolved all symbols.
   Symtab->reportRemainingUndefines();
@@ -1522,10 +1574,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     markLive(Symtab->getChunks());
 
   // Identify identical COMDAT sections to merge them.
-  if (Config->DoICF) {
-    findKeepUniqueSections();
+  if (Config->DoICF)
     doICF(Symtab->getChunks());
-  }
 
   // Write the result.
   writeResult();
