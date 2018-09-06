@@ -165,9 +165,6 @@
 // RUN: %clang -### -c -gsplit-dwarf %s 2>&1 | FileCheck -check-prefix=GPUB %s
 // RUN: %clang -### -c -gsplit-dwarf -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
-// RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=GPUB %s
-// RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
-//
 // RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
 //
 // RUN: %clang -### -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
