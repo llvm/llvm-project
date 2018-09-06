@@ -25,7 +25,9 @@
 // RUN: echo "}"                        >> %t/Inputs/module.map
 
 // Run test
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x c++ -I%t/Inputs -verify %s -std=c++1z -fcolor-diagnostics
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -std=c++1z \
+// RUN:   -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   -I%t/Inputs -verify %s
 
 #if !defined(FIRST) && !defined(SECOND)
 #include "first.h"

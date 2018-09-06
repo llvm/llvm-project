@@ -3769,6 +3769,32 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
   return EmitDeclare(VD, Storage, llvm::None, Builder);
 }
 
+void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
+  assert(DebugKind >= codegenoptions::LimitedDebugInfo);
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+
+  if (D->hasAttr<NoDebugAttr>())
+    return;
+
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  llvm::DIFile *Unit = getOrCreateFile(D->getLocation());
+
+  // Get location information.
+  unsigned Line = getLineNumber(D->getLocation());
+  unsigned Column = getColumnNumber(D->getLocation());
+
+  StringRef Name = D->getName();
+
+  // Create the descriptor for the label.
+  auto *L =
+      DBuilder.createLabel(Scope, Name, Unit, Line, CGM.getLangOpts().Optimize);
+
+  // Insert an llvm.dbg.label into the current block.
+  DBuilder.insertLabel(L,
+                       llvm::DebugLoc::get(Line, Column, Scope, CurInlinedAt),
+                       Builder.GetInsertBlock());
+}
+
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
                                           llvm::DIType *Ty) {
   llvm::DIType *CachedTy = getTypeOrNull(QualTy);

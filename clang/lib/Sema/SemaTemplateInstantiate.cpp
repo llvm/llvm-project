@@ -199,6 +199,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
   case DefiningSynthesizedFunction:
+  case ExceptionSpecEvaluation:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -621,6 +622,12 @@ void Sema::PrintInstantiationStack() {
       break;
     }
 
+    case CodeSynthesisContext::ExceptionSpecEvaluation:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_evaluating_exception_spec_here)
+          << cast<FunctionDecl>(Active->Entity);
+      break;
+
     case CodeSynthesisContext::ExceptionSpecInstantiation:
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_template_exception_spec_instantiation_here)
@@ -694,6 +701,12 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       // This happens in a context unrelated to template instantiation, so
       // there is no SFINAE.
       return None;
+
+    case CodeSynthesisContext::ExceptionSpecEvaluation:
+      // FIXME: This should not be treated as a SFINAE context, because
+      // we will cache an incorrect exception specification. However, clang
+      // bootstrap relies this! See PR31692.
+      break;
 
     case CodeSynthesisContext::Memoization:
       break;

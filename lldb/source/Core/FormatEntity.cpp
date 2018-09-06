@@ -146,6 +146,7 @@ static FormatEntity::Entry::Definition g_function_child_entries[] = {
 static FormatEntity::Entry::Definition g_line_child_entries[] = {
     ENTRY_CHILDREN("file", LineEntryFile, None, g_file_child_entries),
     ENTRY("number", LineEntryLineNumber, UInt32),
+    ENTRY("column", LineEntryColumn, UInt32),
     ENTRY("start-addr", LineEntryStartAddress, UInt64),
     ENTRY("end-addr", LineEntryEndAddress, UInt64),
 };
@@ -372,6 +373,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionIsOptimized);
     ENUM_TO_CSTR(LineEntryFile);
     ENUM_TO_CSTR(LineEntryLineNumber);
+    ENUM_TO_CSTR(LineEntryColumn);
     ENUM_TO_CSTR(LineEntryStartAddress);
     ENUM_TO_CSTR(LineEntryEndAddress);
     ENUM_TO_CSTR(CurrentPCArrow);
@@ -1810,6 +1812,16 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (!entry.printf_format.empty())
         format = entry.printf_format.c_str();
       s.Printf(format, sc->line_entry.line);
+      return true;
+    }
+    return false;
+
+  case Entry::Type::LineEntryColumn:
+    if (sc && sc->line_entry.IsValid() && sc->line_entry.column) {
+      const char *format = "%" PRIu32;
+      if (!entry.printf_format.empty())
+        format = entry.printf_format.c_str();
+      s.Printf(format, sc->line_entry.column);
       return true;
     }
     return false;
