@@ -7,7 +7,7 @@ func foo() -> Int {
 }
 
 :b foo
-// CHECK: Breakpoint 1: {{.*}}foo() -> Swift.Int {{.*}} repl.swift:6, address = 0x
+// CHECK: Breakpoint 1: {{.*}}foo() -> Swift.Int {{.*}} repl.swift:6:3, address = 0x
 
 // CHECK: Execution stopped at breakpoint
 foo()

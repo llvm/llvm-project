@@ -366,46 +366,58 @@ protected:
                                 const CompilerType &dynamic_type,
                                 bool is_indirect_enum_case);
 
-  virtual bool GetDynamicTypeAndAddress_Class(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
+                                      SwiftASTContext &scratch_ctx,
+                                      lldb::DynamicValueType use_dynamic,
+                                      TypeAndOrName &class_type_or_name,
+                                      Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_Protocol(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
+                                         SwiftASTContext &scratch_ctx,
+                                         lldb::DynamicValueType use_dynamic,
+                                         TypeAndOrName &class_type_or_name,
+                                         Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_ErrorType(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_ErrorType(ValueObject &in_value,
+                                          lldb::DynamicValueType use_dynamic,
+                                          TypeAndOrName &class_type_or_name,
+                                          Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_GenericTypeParam(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Tuple(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Struct(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
-                                             lldb::DynamicValueType use_dynamic,
-                                             TypeAndOrName &class_type_or_name,
-                                             Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_IndirectEnumCase(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Promise(
-      ValueObject &in_value, MetadataPromiseSP promise_sp,
+  bool GetDynamicTypeAndAddress_GenericTypeParam(
+      ValueObject &in_value, SwiftASTContext &scratch_ctx,
       lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
       Address &address);
 
-  virtual MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
-                                                          StackFrame *frame);
+  bool GetDynamicTypeAndAddress_Tuple(ValueObject &in_value,
+                                      SwiftASTContext &scratch_ctx,
+                                      lldb::DynamicValueType use_dynamic,
+                                      TypeAndOrName &class_type_or_name,
+                                      Address &address);
+
+  bool GetDynamicTypeAndAddress_Struct(ValueObject &in_value,
+                                       CompilerType &bound_type,
+                                       lldb::DynamicValueType use_dynamic,
+                                       TypeAndOrName &class_type_or_name,
+                                       Address &address);
+
+  bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
+                                     CompilerType &bound_type,
+                                     lldb::DynamicValueType use_dynamic,
+                                     TypeAndOrName &class_type_or_name,
+                                     Address &address);
+
+  bool GetDynamicTypeAndAddress_IndirectEnumCase(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address);
+
+  bool GetDynamicTypeAndAddress_Promise(ValueObject &in_value,
+                                        MetadataPromiseSP promise_sp,
+                                        lldb::DynamicValueType use_dynamic,
+                                        TypeAndOrName &class_type_or_name,
+                                        Address &address);
+
+  MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
+                                                  StackFrame *frame);
 
   bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
