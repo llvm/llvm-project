@@ -353,6 +353,8 @@ struct CodeCompletionBuilder {
                   return std::tie(X.range.start.line, X.range.start.character) <
                          std::tie(Y.range.start.line, Y.range.start.character);
                 });
+      Completion.Deprecated |=
+          (C.SemaResult->Availability == CXAvailability_Deprecated);
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -362,6 +364,7 @@ struct CodeCompletionBuilder {
         Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind);
       if (Completion.Name.empty())
         Completion.Name = C.IndexResult->Name;
+      Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
 
     // Turn absolute path into a literal string that can be #included.
@@ -1625,6 +1628,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
                               : ReturnType;
+  LSP.deprecated = Deprecated;
   if (InsertInclude)
     LSP.detail += "\n" + InsertInclude->Header;
   LSP.documentation = Documentation;
@@ -1656,6 +1660,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                                              : InsertTextFormat::PlainText;
   if (InsertInclude && InsertInclude->Insertion)
     LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
+
   return LSP;
 }
 

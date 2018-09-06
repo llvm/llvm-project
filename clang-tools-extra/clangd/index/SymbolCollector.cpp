@@ -396,7 +396,7 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   Symbol S;
   S.ID = std::move(*ID);
   S.Name = Name->getName();
-  S.IsIndexedForCodeCompletion = true;
+  S.Flags |= Symbol::IndexedForCodeCompletion;
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(MI->getDefinitionLoc(), SM, Opts,
@@ -491,7 +491,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
 
-  S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
+  if (isIndexedForCodeCompletion(ND, Ctx))
+    S.Flags |= Symbol::IndexedForCodeCompletion;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,
@@ -531,6 +532,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
     S.IncludeHeaders.emplace_back(Include, 1);
 
   S.Origin = Opts.Origin;
+  if (ND.getAvailability() == AR_Deprecated)
+    S.Flags |= Symbol::Deprecated;
   Symbols.insert(S);
   return Symbols.find(S.ID);
 }
