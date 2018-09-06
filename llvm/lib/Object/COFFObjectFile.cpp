@@ -616,6 +616,8 @@ std::error_code COFFObjectFile::initBaseRelocPtr() {
       IntPtr);
   BaseRelocEnd = reinterpret_cast<coff_base_reloc_block_header *>(
       IntPtr + DataEntry->Size);
+  // FIXME: Verify the section containing BaseRelocHeader has at least
+  // DataEntry->Size bytes after DataEntry->RelativeVirtualAddress.
   return std::error_code();
 }
 
@@ -637,10 +639,10 @@ std::error_code COFFObjectFile::initDebugDirectoryPtr() {
   if (std::error_code EC = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr))
     return EC;
   DebugDirectoryBegin = reinterpret_cast<const debug_directory *>(IntPtr);
-  if (std::error_code EC = getRvaPtr(
-          DataEntry->RelativeVirtualAddress + DataEntry->Size, IntPtr))
-    return EC;
-  DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(IntPtr);
+  DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(
+      IntPtr + DataEntry->Size);
+  // FIXME: Verify the section containing DebugDirectoryBegin has at least
+  // DataEntry->Size bytes after DataEntry->RelativeVirtualAddress.
   return std::error_code();
 }
 

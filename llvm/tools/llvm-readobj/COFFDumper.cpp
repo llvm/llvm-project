@@ -751,7 +751,7 @@ void COFFDumper::printCOFFDebugDirectory() {
         W.printNumber("PDBAge", DebugInfo->PDB70.Age);
         W.printString("PDBFileName", PDBFileName);
       }
-    } else {
+    } else if (D.SizeOfData != 0) {
       // FIXME: Type values of 12 and 13 are commonly observed but are not in
       // the documented type enum.  Figure out what they mean.
       ArrayRef<uint8_t> RawData;

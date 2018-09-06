@@ -292,16 +292,23 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
 extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 
+struct ThreadStartArg {
+  thread_callback_t callback;
+  void *param;
+};
+
 static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
-  ThreadStartArg *A = reinterpret_cast<ThreadStartArg*>(arg);
-  return A->callback(A->param);
+  ThreadStartArg A = *reinterpret_cast<ThreadStartArg*>(arg);
+  UnmapOrDie(arg, GetPageSizeCached());
+  return A.callback(A.param);
 }
 
 INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
             void * param) {
   ScopedTaggingDisabler disabler;
-  ThreadStartArg *A = GetCurrentThread()->thread_start_arg();
+  ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
+      GetPageSizeCached(), "pthread_create"));
   *A = {callback, param};
   int res = REAL(pthread_create)(UntagPtr(th), UntagPtr(attr),
                                  &HwasanThreadStartFunc, A);

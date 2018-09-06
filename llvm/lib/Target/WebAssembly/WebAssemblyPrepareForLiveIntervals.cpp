@@ -70,7 +70,8 @@ static bool HasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
+    MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Prepare For LiveIntervals **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -112,7 +113,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(MachineFunction &M
 
   // Move ARGUMENT_* instructions to the top of the entry block, so that their
   // liveness reflects the fact that these really are live-in values.
-  for (auto MII = Entry.begin(), MIE = Entry.end(); MII != MIE; ) {
+  for (auto MII = Entry.begin(), MIE = Entry.end(); MII != MIE;) {
     MachineInstr &MI = *MII++;
     if (WebAssembly::isArgument(MI)) {
       MI.removeFromParent();

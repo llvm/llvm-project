@@ -340,34 +340,29 @@ bool TargetInstrInfo::PredicateInstruction(
 }
 
 bool TargetInstrInfo::hasLoadFromStackSlot(
-    const MachineInstr &MI, SmallVectorImpl<FrameAccess> &Accesses) const {
-
+    const MachineInstr &MI,
+    SmallVectorImpl<const MachineMemOperand *> &Accesses) const {
   size_t StartSize = Accesses.size();
   for (MachineInstr::mmo_iterator o = MI.memoperands_begin(),
                                   oe = MI.memoperands_end();
        o != oe; ++o) {
-    if ((*o)->isLoad()) {
-      if (const FixedStackPseudoSourceValue *Value =
-          dyn_cast_or_null<FixedStackPseudoSourceValue>(
-              (*o)->getPseudoValue()))
-        Accesses.emplace_back(*o, Value->getFrameIndex());
-    }
+    if ((*o)->isLoad() &&
+        dyn_cast_or_null<FixedStackPseudoSourceValue>((*o)->getPseudoValue()))
+      Accesses.push_back(*o);
   }
   return Accesses.size() != StartSize;
 }
 
 bool TargetInstrInfo::hasStoreToStackSlot(
-    const MachineInstr &MI, SmallVectorImpl<FrameAccess> &Accesses) const {
+    const MachineInstr &MI,
+    SmallVectorImpl<const MachineMemOperand *> &Accesses) const {
   size_t StartSize = Accesses.size();
   for (MachineInstr::mmo_iterator o = MI.memoperands_begin(),
                                   oe = MI.memoperands_end();
        o != oe; ++o) {
-    if ((*o)->isStore()) {
-      if (const FixedStackPseudoSourceValue *Value =
-          dyn_cast_or_null<FixedStackPseudoSourceValue>(
-              (*o)->getPseudoValue()))
-        Accesses.emplace_back(*o, Value->getFrameIndex());
-    }
+    if ((*o)->isStore() &&
+        dyn_cast_or_null<FixedStackPseudoSourceValue>((*o)->getPseudoValue()))
+      Accesses.push_back(*o);
   }
   return Accesses.size() != StartSize;
 }

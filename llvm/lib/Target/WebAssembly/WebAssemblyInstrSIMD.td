@@ -71,7 +71,7 @@ multiclass ExtractPat<ValueType lane_t, int mask> {
 defm extract_i8x16 : ExtractPat<i8, 0xff>;
 defm extract_i16x8 : ExtractPat<i16, 0xffff>;
 multiclass ExtractLaneExtended<string sign, bits<32> baseInst> {
-  defm "" : ExtractLane<v16i8, "i8x16", LaneIdx16, I32,  baseInst, sign,
+  defm "" : ExtractLane<v16i8, "i8x16", LaneIdx16, I32, baseInst, sign,
                         !cast<PatFrag>("extract_i8x16"#sign)>;
   defm "" : ExtractLane<v8i16, "i16x8", LaneIdx8, I32, !add(baseInst, 2), sign,
                         !cast<PatFrag>("extract_i16x8"#sign)>;

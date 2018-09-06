@@ -36,10 +36,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-function-bitcasts"
 
-static cl::opt<bool> TemporaryWorkarounds(
-  "wasm-temporary-workarounds",
-  cl::desc("Apply certain temporary workarounds"),
-  cl::init(true), cl::Hidden);
+static cl::opt<bool>
+    TemporaryWorkarounds("wasm-temporary-workarounds",
+                         cl::desc("Apply certain temporary workarounds"),
+                         cl::init(true), cl::Hidden);
 
 namespace {
 class FixFunctionBitcasts final : public ModulePass {
@@ -108,7 +108,7 @@ static void FindUses(Value *V, Function &F,
 // instead).
 //
 // If there is a type mismatch that we know would result in an invalid wasm
-// module then generate wrapper that contains unreachable (i.e. abort at 
+// module then generate wrapper that contains unreachable (i.e. abort at
 // runtime).  Such programs are deep into undefined behaviour territory,
 // but we choose to fail at runtime rather than generate and invalid module
 // or fail at compiler time.  The reason we delay the error is that we want
@@ -117,7 +117,7 @@ static void FindUses(Value *V, Function &F,
 // CMake detects the existence of a function in a toolchain).
 //
 // For bitcasts that involve struct types we don't know at this stage if they
-// would be equivalent at the wasm level and so we can't know if we need to 
+// would be equivalent at the wasm level and so we can't know if we need to
 // generate a wrapper.
 static Function *CreateWrapper(Function *F, FunctionType *Ty) {
   Module *M = F->getParent();
@@ -212,7 +212,8 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
   if (TypeMismatch) {
     // Create a new wrapper that simply contains `unreachable`.
     Wrapper->eraseFromParent();
-    Wrapper = Function::Create(Ty, Function::PrivateLinkage, F->getName() + "_bitcast_invalid", M);
+    Wrapper = Function::Create(Ty, Function::PrivateLinkage,
+                               F->getName() + "_bitcast_invalid", M);
     BasicBlock *BB = BasicBlock::Create(M->getContext(), "body", Wrapper);
     new UnreachableInst(M->getContext(), BB);
     Wrapper->setName(F->getName() + "_bitcast_invalid");
@@ -243,19 +244,15 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     if (!TemporaryWorkarounds && !F.isDeclaration() && F.getName() == "main") {
       Main = &F;
       LLVMContext &C = M.getContext();
-      Type *MainArgTys[] = {
-        PointerType::get(Type::getInt8PtrTy(C), 0),
-        Type::getInt32Ty(C)
-      };
+      Type *MainArgTys[] = {PointerType::get(Type::getInt8PtrTy(C), 0),
+                            Type::getInt32Ty(C)};
       FunctionType *MainTy = FunctionType::get(Type::getInt32Ty(C), MainArgTys,
                                                /*isVarArg=*/false);
       if (F.getFunctionType() != MainTy) {
-        Value *Args[] = {
-          UndefValue::get(MainArgTys[0]),
-          UndefValue::get(MainArgTys[1])
-        };
-        Value *Casted = ConstantExpr::getBitCast(Main,
-                                                 PointerType::get(MainTy, 0));
+        Value *Args[] = {UndefValue::get(MainArgTys[0]),
+                         UndefValue::get(MainArgTys[1])};
+        Value *Casted =
+            ConstantExpr::getBitCast(Main, PointerType::get(MainTy, 0));
         CallMain = CallInst::Create(Casted, Args, "call_main");
         Use *UseMain = &CallMain->getOperandUse(2);
         Uses.push_back(std::make_pair(UseMain, &F));

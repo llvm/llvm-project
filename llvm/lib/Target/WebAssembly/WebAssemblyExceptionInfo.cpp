@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyExceptionInfo.h"
-#include "WebAssemblyUtilities.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"

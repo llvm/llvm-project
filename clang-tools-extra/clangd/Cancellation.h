@@ -93,7 +93,7 @@ public:
   /// extra lookups in the Context.
   bool isCancelled() const { return CT; }
 
-  /// Creates a task handle that can be used by an asyn task to check for
+  /// Creates a task handle that can be used by an async task to check for
   /// information that can change during it's runtime, like Cancellation.
   static std::shared_ptr<Task> createHandle() {
     return std::shared_ptr<Task>(new Task());

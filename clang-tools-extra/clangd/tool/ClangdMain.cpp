@@ -36,12 +36,6 @@ static llvm::cl::opt<bool>
            llvm::cl::desc("Use experimental Dex static index."),
            llvm::cl::init(true), llvm::cl::Hidden);
 
-namespace {
-
-enum class PCHStorageFlag { Disk, Memory };
-
-} // namespace
-
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
     llvm::cl::desc("Specify a path to look for compile_commands.json. If path "
@@ -54,10 +48,7 @@ static llvm::cl::opt<unsigned>
                        llvm::cl::init(getDefaultAsyncThreadsCount()));
 
 // FIXME: also support "plain" style where signatures are always omitted.
-enum CompletionStyleFlag {
-  Detailed,
-  Bundled,
-};
+enum CompletionStyleFlag { Detailed, Bundled };
 static llvm::cl::opt<CompletionStyleFlag> CompletionStyle(
     "completion-style",
     llvm::cl::desc("Granularity of code completion suggestions"),
@@ -106,6 +97,7 @@ static llvm::cl::opt<bool> Test(
         "Intended to simplify lit tests."),
     llvm::cl::init(false), llvm::cl::Hidden);
 
+enum PCHStorageFlag { Disk, Memory };
 static llvm::cl::opt<PCHStorageFlag> PCHStorage(
     "pch-storage",
     llvm::cl::desc("Storing PCHs in memory increases memory usages, but may "
@@ -167,7 +159,6 @@ static llvm::cl::opt<Path> YamlSymbolFile(
     llvm::cl::init(""), llvm::cl::Hidden);
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
-
 static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
     "compile_args_from", llvm::cl::desc("The source of compile commands"),
     llvm::cl::values(clEnumValN(LSPCompileArgs, "lsp",

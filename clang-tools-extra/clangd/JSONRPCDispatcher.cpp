@@ -28,7 +28,7 @@ namespace {
 static Key<json::Value> RequestID;
 static Key<JSONOutput *> RequestOut;
 
-// When tracing, we trace a request and attach the repsonse in reply().
+// When tracing, we trace a request and attach the response in reply().
 // Because the Span isn't available, we find the current request using Context.
 class RequestSpan {
   RequestSpan(llvm::json::Object *Args) : Args(Args) {}

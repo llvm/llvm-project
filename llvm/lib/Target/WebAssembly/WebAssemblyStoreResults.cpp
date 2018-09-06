@@ -91,7 +91,8 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
   SmallVector<SlotIndex, 4> Indices;
 
-  for (auto I = MRI.use_nodbg_begin(FromReg), E = MRI.use_nodbg_end(); I != E;) {
+  for (auto I = MRI.use_nodbg_begin(FromReg), E = MRI.use_nodbg_end();
+       I != E;) {
     MachineOperand &O = *I++;
     MachineInstr *Where = O.getParent();
 
@@ -132,9 +133,9 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
     // If we replaced all dominated uses, FromReg is now killed at MI.
     if (!FromLI->liveAt(FromIdx.getDeadSlot()))
-      MI.addRegisterKilled(FromReg,
-                           MBB.getParent()->getSubtarget<WebAssemblySubtarget>()
-                                 .getRegisterInfo());
+      MI.addRegisterKilled(FromReg, MBB.getParent()
+                                        ->getSubtarget<WebAssemblySubtarget>()
+                                        .getRegisterInfo());
   }
 
   return Changed;
@@ -142,8 +143,7 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
 static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
                          const MachineRegisterInfo &MRI,
-                         MachineDominatorTree &MDT,
-                         LiveIntervals &LIS,
+                         MachineDominatorTree &MDT, LiveIntervals &LIS,
                          const WebAssemblyTargetLowering &TLI,
                          const TargetLibraryInfo &LibInfo) {
   MachineOperand &Op1 = MI.getOperand(1);

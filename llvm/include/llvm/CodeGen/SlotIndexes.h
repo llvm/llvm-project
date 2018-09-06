@@ -414,6 +414,8 @@ class raw_ostream;
     SlotIndex getInstructionIndex(const MachineInstr &MI) const {
       // Instructions inside a bundle have the same number as the bundle itself.
       const MachineInstr &BundleStart = *getBundleStart(MI.getIterator());
+      assert(!BundleStart.isDebugInstr() &&
+             "Could not use a debug instruction to query mi2iMap.");
       Mi2IndexMap::const_iterator itr = mi2iMap.find(&BundleStart);
       assert(itr != mi2iMap.end() && "Instruction not found in maps.");
       return itr->second;

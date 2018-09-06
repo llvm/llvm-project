@@ -35,8 +35,7 @@ public:
   // Use a module name of "env" for now, for compatibility with existing tools.
   // This is temporary, and may change, as the ABI is not yet stable.
   MCSymbolWasm(const StringMapEntry<bool> *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary),
-        ModuleName("env") {}
+      : MCSymbol(SymbolKindWasm, Name, isTemporary), ModuleName("env") {}
   static bool classof(const MCSymbol *S) { return S->isWasm(); }
 
   const MCExpr *getSize() const { return SymbolSize; }
@@ -92,6 +91,6 @@ public:
   }
 };
 
-}  // end namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_MC_MCSYMBOLWASM_H

@@ -25,7 +25,9 @@ std::string llvm::wasm::toString(wasm::WasmSymbolType type) {
 
 std::string llvm::wasm::relocTypetoString(uint32_t type) {
   switch (type) {
-#define WASM_RELOC(NAME, VALUE) case VALUE: return #NAME;
+#define WASM_RELOC(NAME, VALUE)                                                \
+  case VALUE:                                                                  \
+    return #NAME;
 #include "llvm/BinaryFormat/WasmRelocs.def"
 #undef WASM_RELOC
   default:

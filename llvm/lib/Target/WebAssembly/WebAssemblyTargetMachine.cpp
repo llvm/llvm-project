@@ -150,7 +150,7 @@ class StripThreadLocal final : public ModulePass {
   // pass just converts all GlobalVariables to NotThreadLocal
   static char ID;
 
- public:
+public:
   StripThreadLocal() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
     for (auto &GV : M.globals())

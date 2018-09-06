@@ -6385,7 +6385,7 @@ static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
 ///
 /// \param attr The attribute as written on the type.
 ///
-/// \param allowArrayTypes Whether to accept nullability specifiers on an
+/// \param allowOnArrayType Whether to accept nullability specifiers on an
 /// array type (e.g., because it will decay to a pointer).
 ///
 /// \returns true if a problem has been diagnosed, false on success.

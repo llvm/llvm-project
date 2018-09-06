@@ -86,9 +86,8 @@ static bool IsGlobalType(const MCValue &Target) {
   return RefA && RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_GLOBAL;
 }
 
-unsigned
-WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
-                                          const MCFixup &Fixup) const {
+unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
+                                                   const MCFixup &Fixup) const {
   // WebAssembly functions are not allocated in the data address space. To
   // resolve a pointer to a function, we must use a special relocation type.
   bool IsFunction = IsFunctionExpr(Fixup.getValue());

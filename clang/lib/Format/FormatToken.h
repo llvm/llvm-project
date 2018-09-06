@@ -520,8 +520,8 @@ struct FormatToken {
     const FormatToken *NamespaceTok = this;
     if (is(tok::comment))
       NamespaceTok = NamespaceTok->getNextNonComment();
-    // Detect "(inline)? namespace" in the beginning of a line.
-    if (NamespaceTok && NamespaceTok->is(tok::kw_inline))
+    // Detect "(inline|export)? namespace" in the beginning of a line.
+    if (NamespaceTok && NamespaceTok->isOneOf(tok::kw_inline, tok::kw_export))
       NamespaceTok = NamespaceTok->getNextNonComment();
     return NamespaceTok && NamespaceTok->is(tok::kw_namespace) ? NamespaceTok
                                                                : nullptr;

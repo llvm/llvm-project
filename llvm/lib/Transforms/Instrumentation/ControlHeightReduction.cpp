@@ -13,15 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
-#include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -32,7 +29,10 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 #if !defined(_MSC_VER)
 #include <cxxabi.h>
@@ -160,7 +160,8 @@ struct CHRStats {
                                      // count at the scope entry.
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const CHRStats &Stats) {
+inline raw_ostream LLVM_ATTRIBUTE_UNUSED &operator<<(raw_ostream &OS,
+                                                     const CHRStats &Stats) {
   Stats.print(OS);
   return OS;
 }
@@ -459,7 +460,8 @@ static bool shouldApply(Function &F, ProfileSummaryInfo& PSI) {
   return PSI.isFunctionEntryHot(&F);
 }
 
-static void dumpIR(Function &F, const char *Label, CHRStats *Stats) {
+static void LLVM_ATTRIBUTE_UNUSED dumpIR(Function &F, const char *Label,
+                                         CHRStats *Stats) {
   std::string Name = F.getName().str();
   const char *DemangledName = nullptr;
 #if !defined(_MSC_VER)
@@ -478,7 +480,6 @@ static void dumpIR(Function &F, const char *Label, CHRStats *Stats) {
   CHR_DEBUG(dbgs() << "\n");
   CHR_DEBUG(F.dump());
 }
-
 
 void CHRScope::print(raw_ostream &OS) const {
   assert(RegInfos.size() > 0 && "Empty CHRScope");
@@ -613,13 +614,15 @@ static bool CheckMDProf(MDNode *MD, BranchProbability &TrueProb,
   ConstantInt *FalseWeight = mdconst::extract<ConstantInt>(MD->getOperand(2));
   if (!TrueWeight || !FalseWeight)
     return false;
-  APInt TrueWt = TrueWeight->getValue();
-  APInt FalseWt = FalseWeight->getValue();
-  APInt SumWt = TrueWt + FalseWt;
-  TrueProb = BranchProbability::getBranchProbability(TrueWt.getZExtValue(),
-                                                     SumWt.getZExtValue());
-  FalseProb = BranchProbability::getBranchProbability(FalseWt.getZExtValue(),
-                                                      SumWt.getZExtValue());
+  uint64_t TrueWt = TrueWeight->getValue().getZExtValue();
+  uint64_t FalseWt = FalseWeight->getValue().getZExtValue();
+  uint64_t SumWt = TrueWt + FalseWt;
+
+  assert(SumWt >= TrueWt && SumWt >= FalseWt &&
+         "Overflow calculating branch probabilities.");
+
+  TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
+  FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
   return true;
 }
 
@@ -1566,7 +1569,8 @@ static void insertTrivialPHIs(CHRScope *Scope,
 }
 
 // Assert that all the CHR regions of the scope have a biased branch or select.
-static void assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
+static void LLVM_ATTRIBUTE_UNUSED
+assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 #ifndef NDEBUG
   auto HasBiasedBranchOrSelect = [](RegInfo &RI, CHRScope *Scope) {
     if (Scope->TrueBiasedRegions.count(RI.R) ||
@@ -1587,8 +1591,8 @@ static void assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 
 // Assert that all the condition values of the biased branches and selects have
 // been hoisted to the pre-entry block or outside of the scope.
-static void assertBranchOrSelectConditionHoisted(CHRScope *Scope,
-                                                 BasicBlock *PreEntryBlock) {
+static void LLVM_ATTRIBUTE_UNUSED assertBranchOrSelectConditionHoisted(
+    CHRScope *Scope, BasicBlock *PreEntryBlock) {
   CHR_DEBUG(dbgs() << "Biased regions condition values \n");
   for (RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
@@ -1753,8 +1757,8 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
          "NewEntryBlock's only pred must be EntryBlock");
   assert(VMap.find(NewEntryBlock) != VMap.end() &&
          "NewEntryBlock must have been copied");
-  OldBR->removeFromParent();
   OldBR->dropAllReferences();
+  OldBR->eraseFromParent();
   // The true predicate is a placeholder. It will be replaced later in
   // fixupBranchesAndSelects().
   BranchInst *NewBR = BranchInst::Create(NewEntryBlock,
@@ -1908,7 +1912,8 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
   }
 }
 
-static void dumpScopes(SmallVectorImpl<CHRScope *> &Scopes, const char * Label) {
+static void LLVM_ATTRIBUTE_UNUSED
+dumpScopes(SmallVectorImpl<CHRScope *> &Scopes, const char *Label) {
   dbgs() << Label << " " << Scopes.size() << "\n";
   for (CHRScope *Scope : Scopes) {
     dbgs() << *Scope << "\n";

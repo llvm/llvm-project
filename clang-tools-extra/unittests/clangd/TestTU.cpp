@@ -49,8 +49,10 @@ SymbolSlab TestTU::headerSymbols() const {
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
-  // FIXME: we should generate proper refs for TestTU.
-  return MemIndex::build(headerSymbols(), RefSlab());
+  auto AST = build();
+  auto Content = indexAST(AST.getASTContext(), AST.getPreprocessorPtr(),
+                          AST.getLocalTopLevelDecls());
+  return MemIndex::build(std::move(Content.first), std::move(Content.second));
 }
 
 const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {

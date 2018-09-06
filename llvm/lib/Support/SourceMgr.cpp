@@ -345,11 +345,17 @@ static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,
 static void printSourceLine(raw_ostream &S, StringRef LineContents) {
   // Print out the source line one character at a time, so we can expand tabs.
   for (unsigned i = 0, e = LineContents.size(), OutCol = 0; i != e; ++i) {
-    if (LineContents[i] != '\t') {
-      S << LineContents[i];
-      ++OutCol;
-      continue;
+    size_t NextTab = LineContents.find('\t', i);
+    // If there were no tabs left, print the rest, we are done.
+    if (NextTab == StringRef::npos) {
+      S << LineContents.drop_front(i);
+      break;
     }
+
+    // Otherwise, print from i to NextTab.
+    S << LineContents.slice(i, NextTab);
+    OutCol += NextTab - i;
+    i = NextTab;
 
     // If we have a tab, emit at least one space, then round up to 8 columns.
     do {

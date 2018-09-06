@@ -18,8 +18,8 @@
 #define LLVM_OBJECT_WASM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Binary.h"
@@ -98,9 +98,9 @@ public:
 struct WasmSection {
   WasmSection() = default;
 
-  uint32_t Type = 0; // Section type (See below)
-  uint32_t Offset = 0; // Offset with in the file
-  StringRef Name; // Section name (User-defined sections only)
+  uint32_t Type = 0;         // Section type (See below)
+  uint32_t Offset = 0;       // Offset with in the file
+  StringRef Name;            // Section name (User-defined sections only)
   ArrayRef<uint8_t> Content; // Section content
   std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
 };
@@ -119,7 +119,7 @@ public:
   const WasmSymbol &getWasmSymbol(const DataRefImpl &Symb) const;
   const WasmSymbol &getWasmSymbol(const SymbolRef &Symbol) const;
   const WasmSection &getWasmSection(const SectionRef &Section) const;
-  const wasm::WasmRelocation &getWasmRelocation(const RelocationRef& Ref) const;
+  const wasm::WasmRelocation &getWasmRelocation(const RelocationRef &Ref) const;
 
   static bool classof(const Binary *v) { return v->isWasm(); }
 
@@ -131,7 +131,7 @@ public:
   ArrayRef<wasm::WasmGlobal> globals() const { return Globals; }
   ArrayRef<wasm::WasmExport> exports() const { return Exports; }
   ArrayRef<WasmSymbol> syms() const { return Symbols; }
-  const wasm::WasmLinkingData& linkingData() const { return LinkingData; }
+  const wasm::WasmLinkingData &linkingData() const { return LinkingData; }
   uint32_t getNumberOfSymbols() const { return Symbols.size(); }
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
@@ -151,7 +151,7 @@ public:
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
-  uint64_t getWasmSymbolValue(const WasmSymbol& Sym) const;
+  uint64_t getWasmSymbolValue(const WasmSymbol &Sym) const;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
@@ -264,8 +264,7 @@ private:
 
 } // end namespace object
 
-inline raw_ostream &operator<<(raw_ostream &OS,
-                               const object::WasmSymbol &Sym) {
+inline raw_ostream &operator<<(raw_ostream &OS, const object::WasmSymbol &Sym) {
   Sym.print(OS);
   return OS;
 }

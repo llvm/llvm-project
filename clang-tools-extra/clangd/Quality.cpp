@@ -221,7 +221,7 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.8f;
     break;
   case Macro:
-    Score *= 0.2f;
+    Score *= 0.5f;
     break;
   case Unknown:
   case Constructor: // No boost constructors so they are after class types.

@@ -2784,50 +2784,37 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Op0, Builder.CreateNot(X));
   // (X & Y) ^ Y --> ~X & Y
   // (Y & X) ^ Y --> ~X & Y
-  // Canonical form with a non-splat constant is (X & C) ^ C; don't touch that.
-  // TODO: Why do we treat arbitrary vector constants differently?
+  // Canonical form is (X & C) ^ C; don't touch that.
   // TODO: A 'not' op is better for analysis and codegen, but demanded bits must
   //       be fixed to prefer that (otherwise we get infinite looping).
-  const APInt *Unused;
-  if (!match(Op1, m_APInt(Unused)) &&
+  if (!match(Op1, m_Constant()) &&
       match(Op0, m_OneUse(m_c_And(m_Value(X), m_Specific(Op1)))))
     return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(X));
 
-  {
-    Value *A, *B, *C, *D;
-    // (A ^ C)^(A | B) -> ((~A) & B) ^ C
-    if (match(Op0, m_Xor(m_Value(D), m_Value(C))) &&
-        match(Op1, m_Or(m_Value(A), m_Value(B)))) {
-      if (D == A)
-        return BinaryOperator::CreateXor(
-            Builder.CreateAnd(Builder.CreateNot(A), B), C);
-      if (D == B)
-        return BinaryOperator::CreateXor(
-            Builder.CreateAnd(Builder.CreateNot(B), A), C);
-    }
-    // (A | B)^(A ^ C) -> ((~A) & B) ^ C
-    if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Xor(m_Value(D), m_Value(C)))) {
-      if (D == A)
-        return BinaryOperator::CreateXor(
-            Builder.CreateAnd(Builder.CreateNot(A), B), C);
-      if (D == B)
-        return BinaryOperator::CreateXor(
-            Builder.CreateAnd(Builder.CreateNot(B), A), C);
-    }
-    // (A & B) ^ (A ^ B) -> (A | B)
-    if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-        match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
-    // (A ^ B) ^ (A & B) -> (A | B)
-    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-        match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
-  }
+  Value *A, *B, *C;
+  // (A ^ B) ^ (A | C) --> (~A & C) ^ B -- There are 4 commuted variants.
+  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
+                        m_OneUse(m_c_Or(m_Deferred(A), m_Value(C))))))
+      return BinaryOperator::CreateXor(
+          Builder.CreateAnd(Builder.CreateNot(A), C), B);
+
+  // (A ^ B) ^ (B | C) --> (~B & C) ^ A -- There are 4 commuted variants.
+  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
+                        m_OneUse(m_c_Or(m_Deferred(B), m_Value(C))))))
+      return BinaryOperator::CreateXor(
+          Builder.CreateAnd(Builder.CreateNot(B), C), A);
+
+  // (A & B) ^ (A ^ B) -> (A | B)
+  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+      match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
+  // (A ^ B) ^ (A & B) -> (A | B)
+  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+      match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
 
   // (A & ~B) ^ ~A -> ~(A & B)
   // (~B & A) ^ ~A -> ~(A & B)
-  Value *A, *B;
   if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
       match(Op1, m_Not(m_Specific(A))))
     return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));

@@ -75,3 +75,25 @@ for.end:                                          ; preds = %for.body
   ret i64 %retval
 }
 
+; CHECK-LABEL: PR38786
+; Check that first order recurrence phis (%phi32 and %phi64) are not uniform.
+; CHECK-NOT: LV: Found uniform instruction:   %phi
+define void @PR38786(double* %y, double* %x, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %phi32 = phi i32 [ 0, %entry ], [ %i32next, %for.body ]
+  %phi64 = phi i64 [ 0, %entry ], [ %i64next, %for.body ]
+  %i32next = add i32 %phi32, 1
+  %i64next = zext i32 %i32next to i64
+  %xip = getelementptr inbounds double, double* %x, i64 %i64next
+  %yip = getelementptr inbounds double, double* %y, i64 %phi64
+  %xi = load double, double* %xip, align 8
+  store double %xi, double* %yip, align 8
+  %cmp = icmp slt i64 %i64next, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
