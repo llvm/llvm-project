@@ -275,8 +275,8 @@ int main(int argc, char *argv[]) {
     // Load the index asynchronously. Meanwhile SwapIndex returns no results.
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
-    runAsync<void>([Placeholder] {
-      if (auto Idx = loadIndex(YamlSymbolFile))
+    runAsync<void>([Placeholder, &Opts] {
+      if (auto Idx = loadIndex(YamlSymbolFile, Opts.URISchemes, UseDex))
         Placeholder->reset(std::move(Idx));
     });
   }

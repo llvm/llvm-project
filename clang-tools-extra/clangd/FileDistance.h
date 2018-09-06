@@ -37,6 +37,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FILEDISTANCE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FILEDISTANCE_H
+
 #include "URI.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -107,3 +110,5 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_FILEDISTANCE_H
