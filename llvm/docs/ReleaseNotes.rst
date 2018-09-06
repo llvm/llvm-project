@@ -167,6 +167,9 @@ Changes to the AArch64 Target
 
 * Support for TLS on Windows has been added.
 
+* Assembler and disassembler support for the ARM Scalable Vector Extension has
+  been added.
+
 Changes to the ARM Target
 -------------------------
 
