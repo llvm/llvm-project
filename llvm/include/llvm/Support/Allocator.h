@@ -21,6 +21,7 @@
 #ifndef LLVM_SUPPORT_ALLOCATOR_H
 #define LLVM_SUPPORT_ALLOCATOR_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -282,6 +283,33 @@ public:
   using AllocatorBase<BumpPtrAllocatorImpl>::Deallocate;
 
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
+
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  /// The returned value is negative iff the object is inside a custom-size
+  /// slab.
+  /// Returns an empty optional if the pointer is not found in the allocator.
+  llvm::Optional<int64_t> identifyObject(const void *Ptr) {
+    const char *P = static_cast<const char *>(Ptr);
+    int64_t InSlabIdx = 0;
+    for (size_t Idx = 0, E = Slabs.size(); Idx < E; Idx++) {
+      const char *S = static_cast<const char *>(Slabs[Idx]);
+      if (P >= S && P < S + computeSlabSize(Idx))
+        return InSlabIdx + static_cast<int64_t>(P - S);
+      InSlabIdx += static_cast<int64_t>(computeSlabSize(Idx));
+    }
+
+    // Use negative index to denote custom sized slabs.
+    int64_t InCustomSizedSlabIdx = -1;
+    for (size_t Idx = 0, E = CustomSizedSlabs.size(); Idx < E; Idx++) {
+      const char *S = static_cast<const char *>(CustomSizedSlabs[Idx].first);
+      size_t Size = CustomSizedSlabs[Idx].second;
+      if (P >= S && P < S + Size)
+        return InCustomSizedSlabIdx - static_cast<int64_t>(P - S);
+      InCustomSizedSlabIdx -= static_cast<int64_t>(Size);
+    }
+    return None;
+  }
 
   size_t getTotalMemory() const {
     size_t TotalMemory = 0;
