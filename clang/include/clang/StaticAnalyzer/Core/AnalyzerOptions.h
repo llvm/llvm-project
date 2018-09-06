@@ -164,7 +164,6 @@ public:
 
   unsigned TrimGraph : 1;
   unsigned visualizeExplodedGraphWithGraphViz : 1;
-  unsigned visualizeExplodedGraphWithUbiGraph : 1;
   unsigned UnoptimizedCFG : 1;
   unsigned PrintStats : 1;
 
@@ -361,7 +360,7 @@ public:
         AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false),
-        visualizeExplodedGraphWithUbiGraph(false), UnoptimizedCFG(false),
+        UnoptimizedCFG(false),
         PrintStats(false), NoRetryExhausted(false), CXXMemberInliningMode() {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
