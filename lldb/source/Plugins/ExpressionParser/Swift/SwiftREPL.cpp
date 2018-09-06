@@ -300,7 +300,8 @@ bool SwiftREPL::SourceIsComplete(const std::string &source) {
   std::unique_ptr<llvm::MemoryBuffer> source_buffer_ap(
       llvm::MemoryBuffer::getMemBuffer(source));
   swift::ide::SourceCompleteResult result =
-      swift::ide::isSourceInputComplete(std::move(source_buffer_ap));
+      swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
+                                        swift::SourceFileKind::REPL);
   return result.IsComplete;
 }
 
@@ -334,7 +335,8 @@ lldb::offset_t SwiftREPL::GetDesiredIndentation(const StringList &lines,
   std::unique_ptr<llvm::MemoryBuffer> source_buffer_ap(
       llvm::MemoryBuffer::getMemBuffer(source_string));
   swift::ide::SourceCompleteResult result =
-      swift::ide::isSourceInputComplete(std::move(source_buffer_ap));
+      swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
+                                        swift::SourceFileKind::REPL);
 
   int desired_indent =
       (result.IndentLevel * tab_size) + result.IndentPrefix.length();
