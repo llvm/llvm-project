@@ -4510,6 +4510,13 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
     for (auto OV : I->operand_values()) {
       if (isOutOfScope(OV))
         continue;
+      // First order recurrence Phi's should typically be considered
+      // non-uniform.
+      auto *OP = dyn_cast<PHINode>(OV);
+      if (OP && Legal->isFirstOrderRecurrence(OP))
+        continue;
+      // If all the users of the operand are uniform, then add the
+      // operand into the uniform worklist.
       auto *OI = cast<Instruction>(OV);
       if (llvm::all_of(OI->users(), [&](User *U) -> bool {
             auto *J = cast<Instruction>(U);
