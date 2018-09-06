@@ -2529,6 +2529,8 @@ def err_attribute_argument_type : Error<
   "constant|a string|an identifier}1">;
 def err_attribute_argument_outof_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
+def err_attribute_argument_negative : Error<
+  "negative argument is not allowed for %0 attribute">;
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;

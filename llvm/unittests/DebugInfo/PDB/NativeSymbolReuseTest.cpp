@@ -65,7 +65,7 @@ TEST(NativeSymbolReuseTest, CompilandSymbolReuse) {
   {
     auto Compilands = GS->findAllChildren<PDBSymbolCompiland>();
     ASSERT_NE(nullptr, Compilands);
-    ASSERT_EQ(2, Compilands->getChildCount());
+    ASSERT_EQ(2U, Compilands->getChildCount());
     std::vector<SymIndexId> Ids2;
 
     // First try resetting the enumerator, then try destroying the enumerator

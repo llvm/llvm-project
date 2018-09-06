@@ -587,6 +587,78 @@ define i32 @and_xor_extra_use(i32 %a, i32 %b, i32* %p) {
   ret i32 %r
 }
 
+; (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
+; The extra use (store) is here because the simpler case
+; may be transformed using demanded bits.
+
+define i8 @xor_or_not(i8 %x, i8* %p) {
+; CHECK-LABEL: @xor_or_not(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    store i8 [[NX]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -8
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -13
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nx = xor i8 %x, -1
+  store i8 %nx, i8* %p
+  %or = or i8 %nx, 7
+  %r = xor i8 %or, 12
+  ret i8 %r
+}
+
+; Don't do this if the 'or' has extra uses.
+
+define i8 @xor_or_not_uses(i8 %x, i8* %p) {
+; CHECK-LABEL: @xor_or_not_uses(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], -8
+; CHECK-NEXT:    store i8 [[OR]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nx = xor i8 %x, -1
+  %or = or i8 %nx, 7
+  store i8 %or, i8* %p
+  %r = xor i8 %or, 12
+  ret i8 %r
+}
+
+; (~X & C2) ^ C1 --> ((X | ~C2) ^ -1) ^ C1 --> (X | ~C2) ^ ~C1
+; The extra use (store) is here because the simpler case
+; may be transformed using demanded bits.
+
+define i8 @xor_and_not(i8 %x, i8* %p) {
+; CHECK-LABEL: @xor_and_not(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    store i8 [[NX]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], -43
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nx = xor i8 %x, -1
+  store i8 %nx, i8* %p
+  %and = and i8 %nx, 42
+  %r = xor i8 %and, 31
+  ret i8 %r
+}
+
+; Don't do this if the 'and' has extra uses.
+
+define i8 @xor_and_not_uses(i8 %x, i8* %p) {
+; CHECK-LABEL: @xor_and_not_uses(
+; CHECK-NEXT:    [[NX:%.*]] = and i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = xor i8 [[NX]], 42
+; CHECK-NEXT:    store i8 [[AND]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[NX]], 53
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nx = xor i8 %x, -1
+  %and = and i8 %nx, 42
+  store i8 %and, i8* %p
+  %r = xor i8 %and, 31
+  ret i8 %r
+}
+
 ; The tests 39-47 are related to the canonicalization:
 ; %notx = xor i32 %x, -1
 ; %cmp = icmp sgt i32 %notx, %y

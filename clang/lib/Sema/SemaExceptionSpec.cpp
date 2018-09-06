@@ -238,7 +238,7 @@ static bool exceptionSpecNotKnownYet(const FunctionDecl *FD) {
   auto EST = MD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
   return EST == EST_Unparsed ||
          (EST == EST_Unevaluated && MD->getParent()->isBeingDefined());
-};
+}
 
 static bool CheckEquivalentExceptionSpecImpl(
     Sema &S, const PartialDiagnostic &DiagID, const PartialDiagnostic &NoteID,

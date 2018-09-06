@@ -14,7 +14,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @percent_f = constant [3 x i8] c"%f\00"
 @percent_s = constant [4 x i8] c"%s\0A\00"
 @empty = constant [1 x i8] c"\00"
-; CHECK: [[$STR:@[a-z0-9]+]] = private unnamed_addr constant [12 x i8] c"hello world\00"
+; CHECK: [[$STR:@[a-z0-9]+]] = private unnamed_addr constant [12 x i8] c"hello world\00", align 1
 
 declare i32 @printf(i8*, ...)
 

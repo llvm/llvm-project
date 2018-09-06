@@ -20,7 +20,6 @@
 
 #include <cassert>
 #include <vector>
-#include <mutex>
 
 #ifdef OMPTARGET_DEBUG
 int DebugLevel = 0;

@@ -210,6 +210,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
+  SelectedMultilib = GCCInstallation.getMultilib();
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
 
@@ -299,16 +300,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   if (GCCInstallation.isValid()) {
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
     const std::string &LibPath = GCCInstallation.getParentLibPath();
-    const Multilib &Multilib = GCCInstallation.getMultilib();
-    const MultilibSet &Multilibs = GCCInstallation.getMultilibs();
 
     // Add toolchain / multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, Multilib,
+    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
                           GCCInstallation.getInstallPath(), Paths);
 
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
-    addPathIfExists(D, GCCInstallation.getInstallPath() + Multilib.gccSuffix(),
+    addPathIfExists(D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
                     Paths);
 
     // GCC cross compiling toolchains will install target libraries which ship
@@ -330,7 +329,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // Note that this matches the GCC behavior. See the below comment for where
     // Clang diverges from GCC's behavior.
     addPathIfExists(D, LibPath + "/../" + GCCTriple.str() + "/lib/../" +
-                           OSLibDir + Multilib.osSuffix(),
+                           OSLibDir + SelectedMultilib.osSuffix(),
                     Paths);
 
     // If the GCC installation we found is inside of the sysroot, we want to
