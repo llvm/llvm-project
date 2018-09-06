@@ -131,6 +131,9 @@ Non-comprehensive list of changes in this release
 
 * CodeView debug info can now be emitted MinGW configurations, if requested.
 
+* The :program:`opt` tool now supports the :option:`-load-pass-plugin` for
+  loading pass plugins for the new PassManager.
+
 * Note..
 
 .. NOTE
