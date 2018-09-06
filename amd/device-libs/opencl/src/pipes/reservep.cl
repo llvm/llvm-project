@@ -12,7 +12,7 @@
 #define ATTR __attribute__((always_inline))
 
 #define RESERVE_READ_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     size_t wi = __opencl_atomic_load(&p->write_idx, memory_order_relaxed, memory_scope_device); \
@@ -23,12 +23,12 @@ __reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
         __opencl_atomic_store(&p->read_idx, 0, memory_order_relaxed, memory_scope_device); \
     } \
  \
-    return rid; \
+    return __builtin_astype(rid, reserve_id_t); \
 }
 
 // DO_PIPE_SIZE(RESERVE_READ_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
     size_t wi = __opencl_atomic_load(&p->write_idx, memory_order_relaxed, memory_scope_device);
@@ -39,11 +39,11 @@ __reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uint size, uin
         __opencl_atomic_store(&p->read_idx, 0, memory_order_relaxed, memory_scope_device);
     }
 
-    return rid;
+    return __builtin_astype(rid, reserve_id_t);
 }
 
 #define RESERVE_WRITE_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     size_t ri = __opencl_atomic_load(&p->read_idx, memory_order_relaxed, memory_scope_device); \
@@ -53,18 +53,19 @@ __reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 
 // DO_PIPE_SIZE(RESERVE_WRITE_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __reserve_write_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
     size_t ri = __opencl_atomic_load(&p->read_idx, memory_order_relaxed, memory_scope_device);
     size_t ei = p->end_idx;
-    return __amd_wresvn(&p->write_idx, ri + ei, num_packets);
+    size_t rid = __amd_wresvn(&p->write_idx, ri + ei, num_packets);
+    return __builtin_astype(rid, reserve_id_t);
 }
 
 // Work group functions
 
 #define WORK_GROUP_RESERVE_READ_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __work_group_reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     __local size_t *t = (__local size_t *)__get_scratch_lds(); \
@@ -83,12 +84,12 @@ __work_group_reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packe
  \
     work_group_barrier(CLK_LOCAL_MEM_FENCE); \
  \
-    return *t; \
+    return __builtin_astype(*t, reserve_id_t); \
 }
 
 // DO_PIPE_SIZE(WORK_GROUP_RESERVE_READ_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __work_group_reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
     __local size_t *t = (__local size_t *)__get_scratch_lds();
@@ -107,11 +108,11 @@ __work_group_reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uin
 
     work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
-    return *t;
+    return __builtin_astype(*t, reserve_id_t);
 }
 
 #define WORK_GROUP_RESERVE_WRITE_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __work_group_reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     __local size_t *t = (__local size_t *)__get_scratch_lds(); \
@@ -124,12 +125,12 @@ __work_group_reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_pack
  \
     work_group_barrier(CLK_LOCAL_MEM_FENCE); \
  \
-    return *t; \
+    return __builtin_astype(*t, reserve_id_t); \
 }
 
 // DO_PIPE_SIZE(WORK_GROUP_RESERVE_WRITE_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __work_group_reserve_write_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
     __local size_t *t = (__local size_t *)__get_scratch_lds();
@@ -142,13 +143,13 @@ __work_group_reserve_write_pipe(__global struct pipeimp *p, uint num_packets, ui
 
     work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
-    return *t;
+    return __builtin_astype(*t, reserve_id_t);
 }
 
 // sub group functions
 
 #define SUB_GROUP_RESERVE_READ_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __sub_group_reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     size_t rid = ~(size_t)0; \
@@ -163,12 +164,12 @@ __sub_group_reserve_read_pipe_##SIZE(__global struct pipeimp *p, uint num_packet
         } \
     } \
  \
-    return sub_group_broadcast(rid, 0); \
+    return __builtin_astype(sub_group_broadcast(rid, 0), reserve_id_t); \
 }
 
 // DO_PIPE_SIZE(SUB_GROUP_RESERVE_READ_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __sub_group_reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
     size_t rid = ~(size_t)0;
@@ -183,11 +184,11 @@ __sub_group_reserve_read_pipe(__global struct pipeimp *p, uint num_packets, uint
         }
     }
 
-    return sub_group_broadcast(rid, 0);
+    return __builtin_astype(sub_group_broadcast(rid, 0), reserve_id_t);
 }
 
 #define SUB_GROUP_RESERVE_WRITE_PIPE_SIZE(SIZE, STYPE) \
-ATTR size_t \
+ATTR reserve_id_t \
 __sub_group_reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_packets) \
 { \
     size_t rid = ~(size_t)0; \
@@ -198,12 +199,12 @@ __sub_group_reserve_write_pipe_##SIZE(__global struct pipeimp *p, uint num_packe
         rid = reserve(&p->write_idx, ri + ei, num_packets); \
     } \
  \
-    return sub_group_broadcast(rid, 0); \
+    return __builtin_astype(sub_group_broadcast(rid, 0), reserve_id_t); \
 }
 
 // DO_PIPE_SIZE(SUB_GROUP_RESERVE_WRITE_PIPE_SIZE)
 
-ATTR size_t
+ATTR reserve_id_t
 __sub_group_reserve_write_pipe(__global struct pipeimp *p, uint num_packets, uint size, uint align)
 {
      size_t rid = ~(size_t)0;
@@ -214,6 +215,6 @@ __sub_group_reserve_write_pipe(__global struct pipeimp *p, uint num_packets, uin
         rid = reserve(&p->write_idx, ri + ei, num_packets);
     }
 
-    return sub_group_broadcast(rid, 0);
+    return __builtin_astype(sub_group_broadcast(rid, 0), reserve_id_t);
 }
 

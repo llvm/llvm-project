@@ -43,10 +43,10 @@ __write_pipe_2(__global struct pipeimp* p, const void* ptr, uint size, uint alig
 
 #define WRITE_PIPE_RESERVED_SIZE(SIZE, STYPE) \
 ATTR int \
-__write_pipe_4_##SIZE(__global struct pipeimp* p, size_t rid, uint i, const STYPE* ptr)  \
+__write_pipe_4_##SIZE(__global struct pipeimp* p, reserve_id_t rid, uint i, const STYPE* ptr)  \
 { \
-    rid += i; \
-    size_t pi = wrap(rid, p->end_idx); \
+    size_t rin = __builtin_astype(rid, size_t) + i; \
+    size_t pi = wrap(rin, p->end_idx); \
     ((__global STYPE *)p->packets)[pi] = *ptr; \
     return 0; \
 }
@@ -54,10 +54,10 @@ __write_pipe_4_##SIZE(__global struct pipeimp* p, size_t rid, uint i, const STYP
 DO_PIPE_SIZE(WRITE_PIPE_RESERVED_SIZE)
 
 ATTR int
-__write_pipe_4(__global struct pipeimp* p, size_t rid, uint i, const void *ptr, uint size, uint align)
+__write_pipe_4(__global struct pipeimp* p, reserve_id_t rid, uint i, const void *ptr, uint size, uint align)
 {
-    rid += i;
-    size_t pi = wrap(rid, p->end_idx);
+    size_t rin = __builtin_astype(rid, size_t) + i; \
+    size_t pi = wrap(rin, p->end_idx);
     __memcpy_internal_aligned(p->packets + pi*size, ptr, size, align);
 
     return 0;

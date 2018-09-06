@@ -52,10 +52,10 @@ __read_pipe_2(__global struct pipeimp* p, void* ptr, uint size, uint align)
 
 #define READ_PIPE_RESERVED_SIZE(SIZE, STYPE) \
 ATTR int \
-__read_pipe_4_##SIZE(__global struct pipeimp* p, size_t rid, uint i, STYPE* ptr)  \
+__read_pipe_4_##SIZE(__global struct pipeimp* p, reserve_id_t rid, uint i, STYPE* ptr)  \
 { \
-    rid += i; \
-    size_t pi = wrap(rid, p->end_idx); \
+    size_t rin = __builtin_astype(rid, size_t) + i; \
+    size_t pi = wrap(rin, p->end_idx); \
     *ptr = ((__global STYPE *)p->packets)[pi]; \
  \
     return 0; \
@@ -64,10 +64,10 @@ __read_pipe_4_##SIZE(__global struct pipeimp* p, size_t rid, uint i, STYPE* ptr)
 DO_PIPE_SIZE(READ_PIPE_RESERVED_SIZE)
 
 ATTR int
-__read_pipe_4(__global struct pipeimp* p, size_t rid, uint i, void *ptr, uint size, uint align)
+__read_pipe_4(__global struct pipeimp* p, reserve_id_t rid, uint i, void *ptr, uint size, uint align)
 {
-    rid += i;
-    size_t pi = wrap(rid, p->end_idx);
+    size_t rin = __builtin_astype(rid, size_t) + i; \
+    size_t pi = wrap(rin, p->end_idx);
     __memcpy_internal_aligned(ptr, p->packets + pi*size, size, align);
 
     return 0;
