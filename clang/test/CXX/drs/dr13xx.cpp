@@ -226,10 +226,10 @@ namespace dr1330 { // dr1330: 4 c++11
 #endif
   void f(D &d) { d = d; } // ok
 
-  // FIXME: In C++11 onwards, we should also note the declaration of 'e' as the
-  // line that triggers the use of E::E()'s exception specification.
   struct E : C<int> {}; // expected-note {{in instantiation of}}
-  E e;
+#if __cplusplus >= 201103L
+  E e; // expected-note {{needed here}}
+#endif
 }
 
 namespace dr1346 { // dr1346: 3.5

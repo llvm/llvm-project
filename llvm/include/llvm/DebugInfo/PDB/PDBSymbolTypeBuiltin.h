@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeBuiltin : public PDBSymbol {
-public:
-  PDBSymbolTypeBuiltin(const IPDBSession &PDBSession,
-                       std::unique_ptr<IPDBRawSymbol> Symbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::BuiltinType)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_METHOD(getBuiltinType)

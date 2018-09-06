@@ -311,6 +311,47 @@ TEST(GoToDefinition, All) {
   }
 }
 
+TEST(GoToDefinition, Rank) {
+  auto T = Annotations(R"cpp(
+    struct $foo1[[Foo]] {
+      $foo2[[Foo]]();
+      $foo3[[Foo]](Foo&&);
+      $foo4[[Foo]](const char*);
+    };
+
+    Foo $f[[f]]();
+
+    void $g[[g]](Foo foo);
+
+    void call() {
+      const char* $str[[str]] = "123";
+      Foo a = $1^str;
+      Foo b = Foo($2^str);
+      Foo c = $3^f();
+      $4^g($5^f());
+      g($6^str);
+    }
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  EXPECT_THAT(findDefinitions(AST, T.point("1")),
+              ElementsAre(RangeIs(T.range("str")), RangeIs(T.range("foo4"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("2")),
+              ElementsAre(RangeIs(T.range("str"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("3")),
+              ElementsAre(RangeIs(T.range("f")), RangeIs(T.range("foo3"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("4")),
+              ElementsAre(RangeIs(T.range("g"))));
+  EXPECT_THAT(findDefinitions(AST, T.point("5")),
+              ElementsAre(RangeIs(T.range("f")), RangeIs(T.range("foo3"))));
+
+  auto DefinitionAtPoint6 = findDefinitions(AST, T.point("6"));
+  EXPECT_EQ(3ul, DefinitionAtPoint6.size());
+  EXPECT_THAT(DefinitionAtPoint6, HasSubsequence(RangeIs(T.range("str")),
+                                                 RangeIs(T.range("foo4"))));
+  EXPECT_THAT(DefinitionAtPoint6, HasSubsequence(RangeIs(T.range("str")),
+                                                 RangeIs(T.range("foo3"))));
+}
+
 TEST(GoToDefinition, RelPathsInCompileCommand) {
   // The source is in "/clangd-test/src".
   // We build in "/clangd-test/build".
@@ -1067,6 +1108,143 @@ TEST(GoToDefinition, WithPreamble) {
       cantFail(runFindDefinitions(Server, FooCpp, FooWithoutHeader.point())),
       ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
 }
+
+TEST(FindReferences, WithinAST) {
+  const char *Tests[] = {
+      R"cpp(// Local variable
+        int main() {
+          int $foo[[foo]];
+          $foo[[^foo]] = 2;
+          int test1 = $foo[[foo]];
+        }
+      )cpp",
+
+      R"cpp(// Struct
+        namespace ns1 {
+        struct $foo[[Foo]] {};
+        } // namespace ns1
+        int main() {
+          ns1::$foo[[Fo^o]]* Params;
+        }
+      )cpp",
+
+      R"cpp(// Function
+        int $foo[[foo]](int) {}
+        int main() {
+          auto *X = &$foo[[^foo]];
+          $foo[[foo]](42)
+        }
+      )cpp",
+
+      R"cpp(// Field
+        struct Foo {
+          int $foo[[foo]];
+          Foo() : $foo[[foo]](0) {}
+        };
+        int main() {
+          Foo f;
+          f.$foo[[f^oo]] = 1;
+        }
+      )cpp",
+
+      R"cpp(// Method call
+        struct Foo { int [[foo]](); };
+        int Foo::[[foo]]() {}
+        int main() {
+          Foo f;
+          f.^foo();
+        }
+      )cpp",
+
+      R"cpp(// Typedef
+        typedef int $foo[[Foo]];
+        int main() {
+          $foo[[^Foo]] bar;
+        }
+      )cpp",
+
+      R"cpp(// Namespace
+        namespace $foo[[ns]] {
+        struct Foo {};
+        } // namespace ns
+        int main() { $foo[[^ns]]::Foo foo; }
+      )cpp",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto AST = TestTU::withCode(T.code()).build();
+    std::vector<Matcher<Location>> ExpectedLocations;
+    for (const auto &R : T.ranges("foo"))
+      ExpectedLocations.push_back(RangeIs(R));
+    EXPECT_THAT(findReferences(AST, T.point()),
+                ElementsAreArray(ExpectedLocations))
+        << Test;
+  }
+}
+
+TEST(FindReferences, NeedsIndex) {
+  const char *Header = "int foo();";
+  Annotations Main("int main() { [[f^oo]](); }");
+  TestTU TU;
+  TU.Code = Main.code();
+  TU.HeaderCode = Header;
+  auto AST = TU.build();
+
+  // References in main file are returned without index.
+  EXPECT_THAT(findReferences(AST, Main.point(), /*Index=*/nullptr),
+              ElementsAre(RangeIs(Main.range())));
+  Annotations IndexedMain(R"cpp(
+    int main() { [[f^oo]](); }
+  )cpp");
+
+  // References from indexed files are included.
+  TestTU IndexedTU;
+  IndexedTU.Code = IndexedMain.code();
+  IndexedTU.Filename = "Indexed.cpp";
+  IndexedTU.HeaderCode = Header;
+  EXPECT_THAT(findReferences(AST, Main.point(), IndexedTU.index().get()),
+              ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
+
+  // If the main file is in the index, we don't return duplicates.
+  // (even if the references are in a different location)
+  TU.Code = ("\n\n" + Main.code()).str();
+  EXPECT_THAT(findReferences(AST, Main.point(), TU.index().get()),
+              ElementsAre(RangeIs(Main.range())));
+};
+
+TEST(FindReferences, NoQueryForLocalSymbols) {
+  struct RecordingIndex : public MemIndex {
+    mutable Optional<DenseSet<SymbolID>> RefIDs;
+    void refs(const RefsRequest &Req,
+              llvm::function_ref<void(const Ref &)>) const override {
+      RefIDs = Req.IDs;
+    }
+  };
+
+  struct Test {
+    StringRef AnnotatedCode;
+    bool WantQuery;
+  } Tests[] = {
+      {"int ^x;", true},
+      // For now we don't assume header structure which would allow skipping.
+      {"namespace { int ^x; }", true},
+      {"static int ^x;", true},
+      // Anything in a function certainly can't be referenced though.
+      {"void foo() { int ^x; }", false},
+      {"void foo() { struct ^x{}; }", false},
+      {"auto lambda = []{ int ^x; };", false},
+  };
+  for (Test T : Tests) {
+    Annotations File(T.AnnotatedCode);
+    RecordingIndex Rec;
+    auto AST = TestTU::withCode(File.code()).build();
+    findReferences(AST, File.point(), &Rec);
+    if (T.WantQuery)
+      EXPECT_NE(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+    else
+      EXPECT_EQ(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+  }
+};
 
 } // namespace
 } // namespace clangd

@@ -535,7 +535,7 @@ private:
         Tok->SpacesRequiredBefore = 0;
         Tok->CanBreakBefore = true;
         return 1;
-      } else if (Limit != 0 && !Line.startsWith(tok::kw_namespace) &&
+      } else if (Limit != 0 && !Line.startsWithNamespace() &&
                  !startsExternCBlock(Line)) {
         // We don't merge short records.
         FormatToken *RecordTok = Line.First;
@@ -1160,7 +1160,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   // Remove empty lines after "{".
   if (!Style.KeepEmptyLinesAtTheStartOfBlocks && PreviousLine &&
       PreviousLine->Last->is(tok::l_brace) &&
-      PreviousLine->First->isNot(tok::kw_namespace) &&
+      !PreviousLine->startsWithNamespace() &&
       !startsExternCBlock(*PreviousLine))
     Newlines = 1;
 

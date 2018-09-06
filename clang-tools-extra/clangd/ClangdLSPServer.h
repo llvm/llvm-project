@@ -67,6 +67,7 @@ private:
   void onCompletion(TextDocumentPositionParams &Params) override;
   void onSignatureHelp(TextDocumentPositionParams &Params) override;
   void onGoToDefinition(TextDocumentPositionParams &Params) override;
+  void onReference(ReferenceParams &Params) override;
   void onSwitchSourceHeader(TextDocumentIdentifier &Params) override;
   void onDocumentHighlight(TextDocumentPositionParams &Params) override;
   void onFileEvent(DidChangeWatchedFilesParams &Params) override;

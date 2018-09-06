@@ -200,6 +200,42 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "int    i;\n"
                    "}",
                    getGoogleStyle()));
+  EXPECT_EQ("/* something */ namespace N {\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("/* something */ namespace N {\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   getGoogleStyle()));
+  EXPECT_EQ("inline namespace N {\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("inline namespace N {\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   getGoogleStyle()));
+  EXPECT_EQ("/* something */ inline namespace N {\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("/* something */ inline namespace N {\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   getGoogleStyle()));
+  EXPECT_EQ("export namespace N {\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("export namespace N {\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   getGoogleStyle()));
   EXPECT_EQ("extern /**/ \"C\" /**/ {\n"
             "\n"
             "int i;\n"
@@ -1220,7 +1256,20 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
                "private:\n"
                "  void f() {}\n"
                "};");
+  verifyFormat("export class A {\n"
+               "public:\n"
+               "public: // comment\n"
+               "protected:\n"
+               "private:\n"
+               "  void f() {}\n"
+               "};");
   verifyGoogleFormat("class A {\n"
+                     " public:\n"
+                     " protected:\n"
+                     " private:\n"
+                     "  void f() {}\n"
+                     "};");
+  verifyGoogleFormat("export class A {\n"
                      " public:\n"
                      " protected:\n"
                      " private:\n"
@@ -1597,12 +1646,32 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "void f() { f(); }\n"
                "}",
                LLVMWithNoNamespaceFix);
+  verifyFormat("/* something */ namespace some_namespace {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
   verifyFormat("namespace {\n"
                "class A {};\n"
                "void f() { f(); }\n"
                "}",
                LLVMWithNoNamespaceFix);
+  verifyFormat("/* something */ namespace {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
   verifyFormat("inline namespace X {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("/* something */ inline namespace X {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("export namespace X {\n"
                "class A {};\n"
                "void f() { f(); }\n"
                "}",
@@ -7600,6 +7669,12 @@ TEST_F(FormatTest, SplitEmptyNamespace) {
                "{};",
                Style);
   verifyFormat("inline namespace Foo\n"
+               "{};",
+               Style);
+  verifyFormat("/* something */ inline namespace Foo\n"
+               "{};",
+               Style);
+  verifyFormat("export namespace Foo\n"
                "{};",
                Style);
   verifyFormat("namespace Foo\n"

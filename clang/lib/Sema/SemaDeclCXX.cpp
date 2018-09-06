@@ -6635,20 +6635,27 @@ void Sema::CheckExplicitlyDefaultedMemberExceptionSpec(
 }
 
 void Sema::CheckDelayedMemberExceptionSpecs() {
-  decltype(DelayedExceptionSpecChecks) Checks;
-  decltype(DelayedDefaultedMemberExceptionSpecs) Specs;
+  decltype(DelayedOverridingExceptionSpecChecks) Overriding;
+  decltype(DelayedEquivalentExceptionSpecChecks) Equivalent;
+  decltype(DelayedDefaultedMemberExceptionSpecs) Defaulted;
 
-  std::swap(Checks, DelayedExceptionSpecChecks);
-  std::swap(Specs, DelayedDefaultedMemberExceptionSpecs);
+  std::swap(Overriding, DelayedOverridingExceptionSpecChecks);
+  std::swap(Equivalent, DelayedEquivalentExceptionSpecChecks);
+  std::swap(Defaulted, DelayedDefaultedMemberExceptionSpecs);
 
   // Perform any deferred checking of exception specifications for virtual
   // destructors.
-  for (auto &Check : Checks)
+  for (auto &Check : Overriding)
     CheckOverridingFunctionExceptionSpec(Check.first, Check.second);
+
+  // Perform any deferred checking of exception specifications for befriended
+  // special members.
+  for (auto &Check : Equivalent)
+    CheckEquivalentExceptionSpec(Check.second, Check.first);
 
   // Check that any explicitly-defaulted methods have exception specifications
   // compatible with their implicit exception specifications.
-  for (auto &Spec : Specs)
+  for (auto &Spec : Defaulted)
     CheckExplicitlyDefaultedMemberExceptionSpec(Spec.first, Spec.second);
 }
 
@@ -10685,17 +10692,46 @@ void SpecialMemberExceptionSpecInfo::visitSubobjectCall(
     ExceptSpec.CalledDecl(getSubobjectLoc(Subobj), MD);
 }
 
+namespace {
+/// RAII object to register a special member as being currently declared.
+struct ComputingExceptionSpec {
+  Sema &S;
+
+  ComputingExceptionSpec(Sema &S, CXXMethodDecl *MD, SourceLocation Loc)
+      : S(S) {
+    Sema::CodeSynthesisContext Ctx;
+    Ctx.Kind = Sema::CodeSynthesisContext::ExceptionSpecEvaluation;
+    Ctx.PointOfInstantiation = Loc;
+    Ctx.Entity = MD;
+    S.pushCodeSynthesisContext(Ctx);
+  }
+  ~ComputingExceptionSpec() {
+    S.popCodeSynthesisContext();
+  }
+};
+}
+
 static Sema::ImplicitExceptionSpecification
 ComputeDefaultedSpecialMemberExceptionSpec(
     Sema &S, SourceLocation Loc, CXXMethodDecl *MD, Sema::CXXSpecialMember CSM,
     Sema::InheritedConstructorInfo *ICI) {
+  ComputingExceptionSpec CES(S, MD, Loc);
+
   CXXRecordDecl *ClassDecl = MD->getParent();
 
   // C++ [except.spec]p14:
   //   An implicitly declared special member function (Clause 12) shall have an
   //   exception-specification. [...]
-  SpecialMemberExceptionSpecInfo Info(S, MD, CSM, ICI, Loc);
+  SpecialMemberExceptionSpecInfo Info(S, MD, CSM, ICI, MD->getLocation());
   if (ClassDecl->isInvalidDecl())
+    return Info.ExceptSpec;
+
+  // FIXME: If this diagnostic fires, we're probably missing a check for
+  // attempting to resolve an exception specification before it's known
+  // at a higher level.
+  if (S.RequireCompleteType(MD->getLocation(),
+                            S.Context.getRecordType(ClassDecl),
+                            diag::err_exception_spec_incomplete_type))
     return Info.ExceptSpec;
 
   // C++1z [except.spec]p7:
@@ -11172,8 +11208,9 @@ void Sema::ActOnFinishCXXMemberDecls() {
   // If the context is an invalid C++ class, just suppress these checks.
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(CurContext)) {
     if (Record->isInvalidDecl()) {
+      DelayedOverridingExceptionSpecChecks.clear();
+      DelayedEquivalentExceptionSpecChecks.clear();
       DelayedDefaultedMemberExceptionSpecs.clear();
-      DelayedExceptionSpecChecks.clear();
       return;
     }
     checkForMultipleExportedDefaultConstructors(*this, Record);
@@ -11195,10 +11232,12 @@ void Sema::referenceDLLExportedClassMethods() {
   }
 }
 
-void Sema::AdjustDestructorExceptionSpec(CXXRecordDecl *ClassDecl,
-                                         CXXDestructorDecl *Destructor) {
+void Sema::AdjustDestructorExceptionSpec(CXXDestructorDecl *Destructor) {
   assert(getLangOpts().CPlusPlus11 &&
          "adjusting dtor exception specs was introduced in c++11");
+
+  if (Destructor->isDependentContext())
+    return;
 
   // C++11 [class.dtor]p3:
   //   A declaration of a destructor that does not have an exception-

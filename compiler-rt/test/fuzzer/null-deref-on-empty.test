@@ -1,3 +1,4 @@
+UNSUPPORTED: windows
 RUN: %cpp_compiler %S/NullDerefOnEmptyTest.cpp -o %t-NullDerefOnEmptyTest
 
 RUN: not %run %t-NullDerefOnEmptyTest -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=NULL_DEREF_ON_EMPTY

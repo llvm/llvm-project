@@ -3313,14 +3313,14 @@ static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
        M != MEnd; ++M) {
     auto MD = PP.getMacroDefinition(M->first);
     if (IncludeUndefined || MD) {
-      if (MacroInfo *MI = MD.getMacroInfo())
-        if (MI->isUsedForHeaderGuard())
-          continue;
+      MacroInfo *MI = MD.getMacroInfo();
+      if (MI && MI->isUsedForHeaderGuard())
+        continue;
 
-      Results.AddResult(Result(M->first,
-                             getMacroUsagePriority(M->first->getName(),
-                                                   PP.getLangOpts(),
-                                                   TargetTypeIsPointer)));
+      Results.AddResult(
+          Result(M->first, MI,
+                 getMacroUsagePriority(M->first->getName(), PP.getLangOpts(),
+                                       TargetTypeIsPointer)));
     }
   }
 

@@ -87,7 +87,18 @@ static void InitializeFlags() {
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
     cf.exitcode = 99;
+    // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
+
+#if SANITIZER_ANDROID
+    // Let platform handle other signals. It is better at reporting them then we
+    // are.
+    cf.handle_segv = kHandleSignalNo;
+    cf.handle_sigbus = kHandleSignalNo;
+    cf.handle_abort = kHandleSignalNo;
+    cf.handle_sigill = kHandleSignalNo;
+    cf.handle_sigfpe = kHandleSignalNo;
+#endif
     OverrideCommonFlags(cf);
   }
 

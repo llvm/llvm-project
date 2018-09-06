@@ -100,8 +100,13 @@ void Thread::Init() {
     CHECK(MemIsApp(stack_bottom_));
     CHECK(MemIsApp(stack_top_ - 1));
   }
-  if (flags()->verbose_threads)
+  if (flags()->verbose_threads) {
+    if (IsMainThread()) {
+      Printf("sizeof(Thread): %zd sizeof(RB): %zd\n", sizeof(Thread),
+             heap_allocations_->SizeInBytes());
+    }
     Print("Creating  : ");
+  }
 }
 
 void Thread::ClearShadowForThreadStackAndTLS() {
@@ -114,7 +119,7 @@ void Thread::ClearShadowForThreadStackAndTLS() {
 void Thread::Destroy() {
   if (flags()->verbose_threads)
     Print("Destroying: ");
-  malloc_storage().CommitBack();
+  AllocatorSwallowThreadLocalCache(allocator_cache());
   ClearShadowForThreadStackAndTLS();
   RemoveFromThreadList(this);
   uptr size = RoundUpTo(sizeof(Thread), GetPageSizeCached());

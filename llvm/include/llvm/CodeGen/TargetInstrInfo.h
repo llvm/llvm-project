@@ -79,13 +79,6 @@ public:
     return Opc <= TargetOpcode::GENERIC_OP_END;
   }
 
-  // Simple struct describing access to a FrameIndex.
-  struct FrameAccess {
-    const MachineMemOperand *MMO;
-    int FI;
-    FrameAccess(const MachineMemOperand *MMO, int FI) : MMO(MMO), FI(FI) {}
-  };
-
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
   const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
@@ -258,8 +251,9 @@ public:
   /// If not, return false.  Unlike isLoadFromStackSlot, this returns true for
   /// any instructions that loads from the stack.  This is just a hint, as some
   /// cases may be missed.
-  virtual bool hasLoadFromStackSlot(const MachineInstr &MI,
-                                    SmallVectorImpl<FrameAccess> &Accesses) const;
+  virtual bool hasLoadFromStackSlot(
+      const MachineInstr &MI,
+      SmallVectorImpl<const MachineMemOperand *> &Accesses) const;
 
   /// If the specified machine instruction is a direct
   /// store to a stack slot, return the virtual or physical register number of
@@ -295,8 +289,9 @@ public:
   /// If not, return false.  Unlike isStoreToStackSlot,
   /// this returns true for any instructions that stores to the
   /// stack.  This is just a hint, as some cases may be missed.
-  virtual bool hasStoreToStackSlot(const MachineInstr &MI,
-                                    SmallVectorImpl<FrameAccess> &Accesses) const;
+  virtual bool hasStoreToStackSlot(
+      const MachineInstr &MI,
+      SmallVectorImpl<const MachineMemOperand *> &Accesses) const;
 
   /// Return true if the specified machine instruction
   /// is a copy of one stack slot to another and has no other effect.

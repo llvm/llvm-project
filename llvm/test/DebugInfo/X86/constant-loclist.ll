@@ -14,7 +14,7 @@
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_constu 0x0
+; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_lit0
 ; CHECK-NEXT:   [0x{{.*}}, 0x{{.*}}): DW_OP_constu 0x4000000000000000)
 ; CHECK-NEXT: DW_AT_name {{.*}}"u"
 

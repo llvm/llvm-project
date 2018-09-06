@@ -216,7 +216,7 @@ public:
   void finishEntityDefinition(const DbgEntity *Entity);
 
   /// Find abstract variable associated with Var.
-  using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
+  using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
   DbgEntity *getExistingAbstractEntity(const DINode *Node);
   void createAbstractEntity(const DINode *Node, LexicalScope *Scope);
 
