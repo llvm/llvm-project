@@ -122,10 +122,6 @@ public:
                   << Message.Message << Name;
       for (const auto &FileAndReplacements : Error.Fix) {
         for (const auto &Repl : FileAndReplacements.second) {
-          // Retrieve the source range for applicable fixes. Macro definitions
-          // on the command line have locations in a virtual buffer and don't
-          // have valid file paths and are therefore not applicable.
-          SourceRange Range;
           SourceLocation FixLoc;
           ++TotalFixes;
           bool CanBeApplied = false;
@@ -166,7 +162,11 @@ public:
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
             SourceLocation FixEndLoc =
                 FixLoc.getLocWithOffset(Repl.getLength());
-            Range = SourceRange(FixLoc, FixEndLoc);
+            // Retrieve the source range for applicable fixes. Macro definitions
+            // on the command line have locations in a virtual buffer and don't
+            // have valid file paths and are therefore not applicable.
+            CharSourceRange Range =
+                CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
             Diag << FixItHint::CreateReplacement(Range,
                                                  Repl.getReplacementText());
           }
