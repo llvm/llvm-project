@@ -390,8 +390,15 @@ The following methods have been added:
 
 -  ...
 
-Significant Known Problems
-==========================
+libc++ Changes
+==============
+Users that wish to link together translation units built with different
+versions of libc++'s headers into the same final linked image should define the
+`_LIBCPP_HIDE_FROM_ABI_PER_TU` macro to `1` when building those translation
+units. In a future release, not defining `_LIBCPP_HIDE_FROM_ABI_PER_TU` to `1`
+and linking translation units built with different versions of libc++'s headers
+together may lead to ODR violations and ABI issues.
+
 
 Additional Information
 ======================
