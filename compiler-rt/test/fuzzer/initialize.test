@@ -1,4 +1,4 @@
-# FIXME: Disabled on Windows because memmem is a GNU extension.
+# FIXME: Disabled on Windows since LLVMFuzzerInitialize does not yet work.
 UNSUPPORTED: windows
 CHECK: BINGO
 RUN: %cpp_compiler %S/InitializeTest.cpp -o %t-InitializeTest
