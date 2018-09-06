@@ -10,7 +10,7 @@
 #include "MemIndex.h"
 #include "../FuzzyMatch.h"
 #include "../Logger.h"
-#include <queue>
+#include "../Quality.h"
 
 namespace clang {
 namespace clangd {
@@ -26,7 +26,7 @@ bool MemIndex::fuzzyFind(
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
 
-  std::priority_queue<std::pair<float, const Symbol *>> Top;
+  TopN<std::pair<float, const Symbol *>> Top(Req.MaxCandidateCount);
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
   for (const auto Pair : Index) {
@@ -38,16 +38,12 @@ bool MemIndex::fuzzyFind(
     if (Req.RestrictForCodeCompletion && !Sym->IsIndexedForCodeCompletion)
       continue;
 
-    if (auto Score = Filter.match(Sym->Name)) {
-      Top.emplace(-*Score * quality(*Sym), Sym);
-      if (Top.size() > Req.MaxCandidateCount) {
-        More = true;
-        Top.pop();
-      }
-    }
+    if (auto Score = Filter.match(Sym->Name))
+      if (Top.push({*Score * quality(*Sym), Sym}))
+        More = true; // An element with smallest score was discarded.
   }
-  for (; !Top.empty(); Top.pop())
-    Callback(*Top.top().second);
+  for (const auto &Item : std::move(Top).items())
+    Callback(*Item.second);
   return More;
 }
 
