@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(DebugInfoPDBTests
   HashTableTest.cpp
+  NativeSymbolReuseTest.cpp
   StringTableBuilderTest.cpp
   PDBApiTest.cpp
   )

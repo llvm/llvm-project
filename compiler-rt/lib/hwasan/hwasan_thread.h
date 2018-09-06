@@ -46,7 +46,7 @@ class Thread {
   void EnterInterceptorScope() { in_interceptor_scope_++; }
   void LeaveInterceptorScope() { in_interceptor_scope_--; }
 
-  HwasanThreadLocalMallocStorage &malloc_storage() { return malloc_storage_; }
+  AllocatorCache *allocator_cache() { return &allocator_cache_; }
   HeapAllocationsRingBuffer *heap_allocations() {
     return heap_allocations_;
   }
@@ -93,7 +93,7 @@ class Thread {
   u32 random_state_;
   u32 random_buffer_;
 
-  HwasanThreadLocalMallocStorage malloc_storage_;
+  AllocatorCache allocator_cache_;
   HeapAllocationsRingBuffer *heap_allocations_;
 
   static void InsertIntoThreadList(Thread *t);

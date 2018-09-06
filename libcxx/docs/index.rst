@@ -34,6 +34,7 @@ Getting Started with libc++
 .. toctree::
    :maxdepth: 2
 
+   ReleaseNotes
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx

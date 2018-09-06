@@ -41,6 +41,10 @@ struct Token {
   /// Kind specifies Token type which defines semantics for the internal
   /// representation. Each Kind has different representation stored in Data
   /// field.
+  // FIXME(kbobyrev): Storing Data hash would be more efficient than storing raw
+  // strings. For example, PathURI store URIs of each directory and its parents,
+  // which induces a lot of overhead because these paths tend to be long and
+  // each parent directory is a prefix.
   enum class Kind {
     /// Represents trigram used for fuzzy search of unqualified symbol names.
     ///
@@ -48,15 +52,20 @@ struct Token {
     Trigram,
     /// Scope primitives, e.g. "symbol belongs to namespace foo::bar".
     ///
-    /// Data stroes full scope name , e.g. "foo::bar::baz::" or "" (for global
+    /// Data stroes full scope name, e.g. "foo::bar::baz::" or "" (for global
     /// scope).
     Scope,
+    /// Path Proximity URI to symbol declaration.
+    ///
+    /// Data stores path URI of symbol declaration file or its parent.
+    ///
+    /// Example: "file:///path/to/clang-tools-extra/clangd/index/SymbolIndex.h"
+    /// and some amount of its parents.
+    ProximityURI,
     /// Internal Token type for invalid/special tokens, e.g. empty tokens for
     /// llvm::DenseMap.
     Sentinel,
     /// FIXME(kbobyrev): Add other Token Kinds
-    /// * Path with full or relative path to the directory in which symbol is
-    ///   defined
     /// * Type with qualified type name or its USR
   };
 

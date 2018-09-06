@@ -38,6 +38,9 @@ class RingBuffer {
            reinterpret_cast<T *>(reinterpret_cast<uptr>(this) +
                                  2 * sizeof(T *));
   }
+
+  uptr SizeInBytes() { return SizeInBytes(size()); }
+
   void push(T t) {
     *next_ = t;
     next_--;

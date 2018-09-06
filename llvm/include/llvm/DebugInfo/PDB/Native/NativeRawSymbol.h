@@ -23,7 +23,8 @@ typedef uint32_t SymIndexId;
 
 class NativeRawSymbol : public IPDBRawSymbol {
 public:
-  NativeRawSymbol(NativeSession &PDBSession, SymIndexId SymbolId);
+  NativeRawSymbol(NativeSession &PDBSession, PDB_SymType Tag,
+                  SymIndexId SymbolId);
 
   virtual std::unique_ptr<NativeRawSymbol> clone() const = 0;
 
@@ -230,6 +231,7 @@ public:
 
 protected:
   NativeSession &Session;
+  PDB_SymType Tag;
   SymIndexId SymbolId;
 };
 

@@ -42,7 +42,7 @@ static unsigned isDescribedByReg(const MachineInstr &MI) {
   return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
 }
 
-void DbgValueHistoryMap::startInstrRange(InlinedVariable Var,
+void DbgValueHistoryMap::startInstrRange(InlinedEntity Var,
                                          const MachineInstr &MI) {
   // Instruction range should start with a DBG_VALUE instruction for the
   // variable.
@@ -57,7 +57,7 @@ void DbgValueHistoryMap::startInstrRange(InlinedVariable Var,
   Ranges.push_back(std::make_pair(&MI, nullptr));
 }
 
-void DbgValueHistoryMap::endInstrRange(InlinedVariable Var,
+void DbgValueHistoryMap::endInstrRange(InlinedEntity Var,
                                        const MachineInstr &MI) {
   auto &Ranges = VarInstrRanges[Var];
   // Verify that the current instruction range is not yet closed.
@@ -68,7 +68,7 @@ void DbgValueHistoryMap::endInstrRange(InlinedVariable Var,
   Ranges.back().second = &MI;
 }
 
-unsigned DbgValueHistoryMap::getRegisterForVar(InlinedVariable Var) const {
+unsigned DbgValueHistoryMap::getRegisterForVar(InlinedEntity Var) const {
   const auto &I = VarInstrRanges.find(Var);
   if (I == VarInstrRanges.end())
     return 0;
@@ -78,7 +78,7 @@ unsigned DbgValueHistoryMap::getRegisterForVar(InlinedVariable Var) const {
   return isDescribedByReg(*Ranges.back().first);
 }
 
-void DbgLabelInstrMap::addInstr(InlinedLabel Label, const MachineInstr &MI) {
+void DbgLabelInstrMap::addInstr(InlinedEntity Label, const MachineInstr &MI) {
   assert(MI.isDebugLabel() && "not a DBG_LABEL");
   LabelInstr[Label] = &MI;
 }
@@ -86,15 +86,14 @@ void DbgLabelInstrMap::addInstr(InlinedLabel Label, const MachineInstr &MI) {
 namespace {
 
 // Maps physreg numbers to the variables they describe.
-using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
-using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedVariable, 1>>;
-using InlinedLabel = DbgLabelInstrMap::InlinedLabel;
+using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
+using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedEntity, 1>>;
 
 } // end anonymous namespace
 
 // Claim that @Var is not described by @RegNo anymore.
 static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
-                                InlinedVariable Var) {
+                                InlinedEntity Var) {
   const auto &I = RegVars.find(RegNo);
   assert(RegNo != 0U && I != RegVars.end());
   auto &VarSet = I->second;
@@ -108,7 +107,7 @@ static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
 
 // Claim that @Var is now described by @RegNo.
 static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
-                               InlinedVariable Var) {
+                               InlinedEntity Var) {
   assert(RegNo != 0U);
   auto &VarSet = RegVars[RegNo];
   assert(!is_contained(VarSet, Var));
@@ -249,7 +248,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         const DILocalVariable *RawVar = MI.getDebugVariable();
         assert(RawVar->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
                "Expected inlined-at fields to agree");
-        InlinedVariable Var(RawVar, MI.getDebugLoc()->getInlinedAt());
+        InlinedEntity Var(RawVar, MI.getDebugLoc()->getInlinedAt());
 
         if (unsigned PrevReg = DbgValues.getRegisterForVar(Var))
           dropRegDescribedVar(RegVars, PrevReg, Var);
@@ -266,7 +265,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         // When collecting debug information for labels, there is no MCSymbol
         // generated for it. So, we keep MachineInstr in DbgLabels in order
         // to query MCSymbol afterward.
-        InlinedLabel L(RawLabel, MI.getDebugLoc()->getInlinedAt());
+        InlinedEntity L(RawLabel, MI.getDebugLoc()->getInlinedAt());
         DbgLabels.addInstr(L, MI);
       }
     }
@@ -289,10 +288,10 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
 LLVM_DUMP_METHOD void DbgValueHistoryMap::dump() const {
   dbgs() << "DbgValueHistoryMap:\n";
   for (const auto &VarRangePair : *this) {
-    const InlinedVariable &Var = VarRangePair.first;
+    const InlinedEntity &Var = VarRangePair.first;
     const InstrRanges &Ranges = VarRangePair.second;
 
-    const DILocalVariable *LocalVar = Var.first;
+    const DILocalVariable *LocalVar = cast<DILocalVariable>(Var.first);
     const DILocation *Location = Var.second;
 
     dbgs() << " - " << LocalVar->getName() << " at ";

@@ -121,7 +121,8 @@ OptionEnumValueElement g_language_enumerators[] = {
   "${module.file.basename}{`${function.name-without-args}"                     \
   "{${frame.no-debug}${function.pc-offset}}}}"
 
-#define FILE_AND_LINE "{ at ${line.file.basename}:${line.number}}"
+#define FILE_AND_LINE                                                          \
+  "{ at ${line.file.basename}:${line.number}{:${line.column}}}"
 #define IS_OPTIMIZED "{${function.is-optimized} [opt]}"
 
 #define DEFAULT_THREAD_FORMAT                                                  \

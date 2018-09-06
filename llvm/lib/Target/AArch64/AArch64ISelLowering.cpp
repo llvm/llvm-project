@@ -5195,40 +5195,29 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32 ||
                           (VT == MVT::f16 && Subtarget->hasFullFP16()))) {
-    LLVM_DEBUG(
-        dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
+    LLVM_DEBUG(dbgs() << "Legal " << VT.getEVTString() << " imm value: 0\n");
     return true;
   }
 
-  StringRef FPType;
   bool IsLegal = false;
   SmallString<128> ImmStrVal;
   Imm.toString(ImmStrVal);
 
-  if (VT == MVT::f64) {
-    FPType = "f64";
+  if (VT == MVT::f64)
     IsLegal = AArch64_AM::getFP64Imm(Imm) != -1;
-  } else if (VT == MVT::f32) {
-    FPType = "f32";
+  else if (VT == MVT::f32)
     IsLegal = AArch64_AM::getFP32Imm(Imm) != -1;
-  } else if (VT == MVT::f16 && Subtarget->hasFullFP16()) {
-    FPType = "f16";
+  else if (VT == MVT::f16 && Subtarget->hasFullFP16())
     IsLegal = AArch64_AM::getFP16Imm(Imm) != -1;
-  }
 
   if (IsLegal) {
-    LLVM_DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Legal " << VT.getEVTString()
+                      << " imm value: " << ImmStrVal << "\n");
     return true;
   }
 
-  if (!FPType.empty())
-    LLVM_DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal
-                      << "\n");
-  else
-    LLVM_DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal
-                      << ": unsupported fp type\n");
-
+  LLVM_DEBUG(dbgs() << "Illegal " << VT.getEVTString()
+                    << " imm value: " << ImmStrVal << "\n");
   return false;
 }
 
@@ -8353,27 +8342,30 @@ EVT AArch64TargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
                                                bool ZeroMemset,
                                                bool MemcpyStrSrc,
                                                MachineFunction &MF) const {
-  // Don't use AdvSIMD to implement 16-byte memset. It would have taken one
-  // instruction to materialize the v2i64 zero and one store (with restrictive
-  // addressing mode). Just do two i64 store of zero-registers.
-  bool Fast;
   const Function &F = MF.getFunction();
-  if (Subtarget->hasFPARMv8() && !IsMemset && Size >= 16 &&
-      !F.hasFnAttribute(Attribute::NoImplicitFloat) &&
-      (memOpAlign(SrcAlign, DstAlign, 16) ||
-       (allowsMisalignedMemoryAccesses(MVT::f128, 0, 1, &Fast) && Fast)))
+  bool CanImplicitFloat = !F.hasFnAttribute(Attribute::NoImplicitFloat);
+  bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
+  bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
+  // Only use AdvSIMD to implement memset of 32-byte and above. It would have
+  // taken one instruction to materialize the v2i64 zero and one store (with
+  // restrictive addressing mode). Just do i64 stores.
+  bool IsSmallMemset = IsMemset && Size < 32;
+  auto AlignmentIsAcceptable = [&](EVT VT, unsigned AlignCheck) {
+    if (memOpAlign(SrcAlign, DstAlign, AlignCheck))
+      return true;
+    bool Fast;
+    return allowsMisalignedMemoryAccesses(VT, 0, 1, &Fast) && Fast;
+  };
+
+  if (CanUseNEON && IsMemset && !IsSmallMemset &&
+      AlignmentIsAcceptable(MVT::v2i64, 16))
+    return MVT::v2i64;
+  if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, 16))
     return MVT::f128;
-
-  if (Size >= 8 &&
-      (memOpAlign(SrcAlign, DstAlign, 8) ||
-       (allowsMisalignedMemoryAccesses(MVT::i64, 0, 1, &Fast) && Fast)))
+  if (Size >= 8 && AlignmentIsAcceptable(MVT::i64, 8))
     return MVT::i64;
-
-  if (Size >= 4 &&
-      (memOpAlign(SrcAlign, DstAlign, 4) ||
-       (allowsMisalignedMemoryAccesses(MVT::i32, 0, 1, &Fast) && Fast)))
+  if (Size >= 4 && AlignmentIsAcceptable(MVT::i32, 4))
     return MVT::i32;
-
   return MVT::Other;
 }
 

@@ -50,23 +50,20 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-PDBSymbol::PDBSymbol(const IPDBSession &PDBSession,
-                     std::unique_ptr<IPDBRawSymbol> Symbol)
-    : Session(PDBSession), RawSymbol(std::move(Symbol)) {}
+PDBSymbol::PDBSymbol(const IPDBSession &PDBSession) : Session(PDBSession) {}
 
-PDBSymbol::PDBSymbol(PDBSymbol &Symbol)
-    : Session(Symbol.Session), RawSymbol(std::move(Symbol.RawSymbol)) {}
+PDBSymbol::PDBSymbol(PDBSymbol &&Other)
+    : Session(Other.Session), RawSymbol(std::move(Other.RawSymbol)) {}
 
 PDBSymbol::~PDBSymbol() = default;
 
 #define FACTORY_SYMTAG_CASE(Tag, Type)                                         \
   case PDB_SymType::Tag:                                                       \
-    return std::unique_ptr<PDBSymbol>(new Type(PDBSession, std::move(Symbol)));
+    return std::unique_ptr<PDBSymbol>(new Type(PDBSession));
 
 std::unique_ptr<PDBSymbol>
-PDBSymbol::create(const IPDBSession &PDBSession,
-                  std::unique_ptr<IPDBRawSymbol> Symbol) {
-  switch (Symbol->getSymTag()) {
+PDBSymbol::createSymbol(const IPDBSession &PDBSession, PDB_SymType Tag) {
+  switch (Tag) {
     FACTORY_SYMTAG_CASE(Exe, PDBSymbolExe)
     FACTORY_SYMTAG_CASE(Compiland, PDBSymbolCompiland)
     FACTORY_SYMTAG_CASE(CompilandDetails, PDBSymbolCompilandDetails)
@@ -98,9 +95,24 @@ PDBSymbol::create(const IPDBSession &PDBSession,
     FACTORY_SYMTAG_CASE(ManagedType, PDBSymbolTypeManaged)
     FACTORY_SYMTAG_CASE(Dimension, PDBSymbolTypeDimension)
   default:
-    return std::unique_ptr<PDBSymbol>(
-        new PDBSymbolUnknown(PDBSession, std::move(Symbol)));
+    return std::unique_ptr<PDBSymbol>(new PDBSymbolUnknown(PDBSession));
   }
+}
+
+std::unique_ptr<PDBSymbol>
+PDBSymbol::create(const IPDBSession &PDBSession,
+                  std::unique_ptr<IPDBRawSymbol> RawSymbol) {
+  auto SymbolPtr = createSymbol(PDBSession, RawSymbol->getSymTag());
+  SymbolPtr->RawSymbol = RawSymbol.get();
+  SymbolPtr->OwnedRawSymbol = std::move(RawSymbol);
+  return SymbolPtr;
+}
+
+std::unique_ptr<PDBSymbol> PDBSymbol::create(const IPDBSession &PDBSession,
+                                             IPDBRawSymbol &RawSymbol) {
+  auto SymbolPtr = createSymbol(PDBSession, RawSymbol.getSymTag());
+  SymbolPtr->RawSymbol = &RawSymbol;
+  return SymbolPtr;
 }
 
 void PDBSymbol::defaultDump(raw_ostream &OS, int Indent) const {

@@ -10,9 +10,11 @@
 #ifndef LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 #define LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "gtest/gtest-printers.h"
+
+#include <string>
 
 namespace llvm {
 namespace detail {
@@ -52,6 +54,10 @@ void PrintTo(const ExpectedHolder<T> &Item, std::ostream *Out) {
   }
 }
 } // namespace detail
+
+namespace unittest {
+SmallString<128> getInputFileDirectory();
+}
 } // namespace llvm
 
 #endif

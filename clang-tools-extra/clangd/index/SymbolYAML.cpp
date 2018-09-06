@@ -185,6 +185,7 @@ std::string SymbolToYAML(Symbol Sym) {
 }
 
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
+                                       llvm::ArrayRef<std::string> URISchemes,
                                        bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
@@ -209,7 +210,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   if (!Slab)
     return nullptr;
   trace::Span Tracer("BuildIndex");
-  return UseDex ? dex::DexIndex::build(std::move(*Slab))
+  return UseDex ? dex::DexIndex::build(std::move(*Slab), URISchemes)
                 : MemIndex::build(std::move(*Slab), RefSlab());
 }
 
