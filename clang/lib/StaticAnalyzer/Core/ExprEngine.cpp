@@ -3142,7 +3142,8 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     }
 
     ProgramStateRef state = N->getState();
-    Out << "\\|StateID: " << (const void*) state.get()
+    Out << "\\|StateID: " << state->getID() << " ("
+        << (const void*) state.get() << ")"
         << " NodeID: " << (const void*) N << "\\|";
 
     state->printDOT(Out, N->getLocationContext());
