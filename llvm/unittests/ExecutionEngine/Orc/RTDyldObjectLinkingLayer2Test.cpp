@@ -67,7 +67,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
   bool DebugSectionSeen = false;
   auto MM = std::make_shared<MemoryManagerWrapper>(DebugSectionSeen);
 
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
   auto Foo = ES.getSymbolStringPool().intern("foo");
 
@@ -261,7 +261,7 @@ TEST(RTDyldObjectLinkingLayer2Test, NoDuplicateFinalization) {
     return;
 
   LLVMContext Context;
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
 
   auto Foo = ES.getSymbolStringPool().intern("foo");
@@ -338,7 +338,7 @@ TEST(RTDyldObjectLinkingLayer2Test, NoPrematureAllocation) {
   if (!TM)
     return;
 
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
 
   auto Foo = ES.getSymbolStringPool().intern("foo");
@@ -392,7 +392,7 @@ TEST(RTDyldObjectLinkingLayer2Test, NoPrematureAllocation) {
 }
 
 TEST(RTDyldObjectLinkingLayer2Test, TestNotifyLoadedSignature) {
-  ExecutionSession ES(std::make_shared<SymbolStringPool>());
+  ExecutionSession ES;
   RTDyldObjectLinkingLayer2 ObjLayer(
       ES,
       [](VModuleKey) -> std::shared_ptr<RuntimeDyld::MemoryManager> {

@@ -1054,7 +1054,7 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   // RIP/EIP-relative addressing is only supported in 64-bit mode.
   if (!Is64BitMode && BaseReg != 0 &&
       (BaseReg == X86::RIP || BaseReg == X86::EIP)) {
-    ErrMsg = "RIP-relative addressing requires 64-bit mode";
+    ErrMsg = "IP-relative addressing requires 64-bit mode";
     return true;
   }
 
@@ -1099,7 +1099,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
     // checked.
     // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
     // REX prefix.
-    if (RegNo == X86::RIZ || RegNo == X86::RIP || RegNo == X86::EIP ||
+    if (RegNo == X86::RIZ || RegNo == X86::RIP ||
         X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
         X86II::isX86_64NonExtLowByteReg(RegNo) ||
         X86II::isX86_64ExtendedReg(RegNo))

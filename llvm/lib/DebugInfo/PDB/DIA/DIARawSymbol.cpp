@@ -852,7 +852,7 @@ DIARawSymbol::getVirtualBaseTableType() const {
 
   auto RawVT = llvm::make_unique<DIARawSymbol>(Session, TableType);
   auto Pointer =
-      llvm::make_unique<PDBSymbolTypePointer>(Session, std::move(RawVT));
+      PDBSymbol::createAs<PDBSymbolTypePointer>(Session, std::move(RawVT));
   return unique_dyn_cast<PDBSymbolTypeBuiltin>(Pointer->getPointeeType());
 }
 

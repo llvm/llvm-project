@@ -67,12 +67,6 @@ private:
 };
 }
 
-PDBSymbolTypeFunctionSig::PDBSymbolTypeFunctionSig(
-    const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::FunctionSig);
-}
-
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbolTypeFunctionSig::getArguments() const {
   return llvm::make_unique<FunctionArgEnumerator>(Session, *this);

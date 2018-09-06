@@ -63,7 +63,10 @@ static const struct BuiltinTypeEntry {
 
 NativeSession::NativeSession(std::unique_ptr<PDBFile> PdbFile,
                              std::unique_ptr<BumpPtrAllocator> Allocator)
-    : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)) {}
+    : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)) {
+  // Id 0 is reserved for the invalid symbol.
+  SymbolCache.push_back(nullptr);
+}
 
 NativeSession::~NativeSession() = default;
 
@@ -91,20 +94,10 @@ Error NativeSession::createFromExe(StringRef Path,
   return make_error<RawError>(raw_error_code::feature_unsupported);
 }
 
-std::unique_ptr<PDBSymbolCompiland>
-NativeSession::createCompilandSymbol(DbiModuleDescriptor MI) {
-  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
-  SymbolCache.push_back(
-      llvm::make_unique<NativeCompilandSymbol>(*this, Id, MI));
-  return llvm::make_unique<PDBSymbolCompiland>(
-      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
-}
-
 std::unique_ptr<PDBSymbolTypeEnum>
 NativeSession::createEnumSymbol(codeview::TypeIndex Index) {
   const auto Id = findSymbolByTypeIndex(Index);
-  return llvm::make_unique<PDBSymbolTypeEnum>(
-      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
+  return PDBSymbol::createAs<PDBSymbolTypeEnum>(*this, *SymbolCache[Id]);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -167,20 +160,14 @@ uint64_t NativeSession::getLoadAddress() const { return 0; }
 bool NativeSession::setLoadAddress(uint64_t Address) { return false; }
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
-  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
-  SymbolCache.push_back(llvm::make_unique<NativeExeSymbol>(*this, Id));
-  auto RawSymbol = SymbolCache[Id]->clone();
-  auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));
-  std::unique_ptr<PDBSymbolExe> ExeSymbol(
-      static_cast<PDBSymbolExe *>(PdbSymbol.release()));
-  return ExeSymbol;
+  return PDBSymbol::createAs<PDBSymbolExe>(*this, getNativeGlobalScope());
 }
 
 std::unique_ptr<PDBSymbol>
 NativeSession::getSymbolById(uint32_t SymbolId) const {
   // If the caller has a SymbolId, it'd better be in our SymbolCache.
   return SymbolId < SymbolCache.size()
-             ? PDBSymbol::create(*this, SymbolCache[SymbolId]->clone())
+             ? PDBSymbol::create(*this, *SymbolCache[SymbolId])
              : nullptr;
 }
 
@@ -289,4 +276,12 @@ NativeSession::getInjectedSources() const {
 std::unique_ptr<IPDBEnumSectionContribs>
 NativeSession::getSectionContribs() const {
   return nullptr;
+}
+
+NativeExeSymbol &NativeSession::getNativeGlobalScope() {
+  if (ExeSymbol == 0) {
+    ExeSymbol = static_cast<SymIndexId>(SymbolCache.size());
+    SymbolCache.push_back(llvm::make_unique<NativeExeSymbol>(*this, ExeSymbol));
+  }
+  return static_cast<NativeExeSymbol &>(*SymbolCache[ExeSymbol]);
 }
