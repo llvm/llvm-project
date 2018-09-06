@@ -59,6 +59,7 @@ std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
            "scheme. fuzzyFind request will ignore it.",
            Path);
       llvm::consumeError(PathURI.takeError());
+      continue;
     }
     const auto PathProximityURIs = generateProximityURIs(PathURI->toString());
     for (const auto &ProximityURI : PathProximityURIs)

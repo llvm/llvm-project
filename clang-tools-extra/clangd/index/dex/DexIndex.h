@@ -22,6 +22,7 @@
 
 #include "../Index.h"
 #include "../MemIndex.h"
+#include "../SymbolCollector.h"
 #include "Iterator.h"
 #include "Token.h"
 #include "Trigram.h"
@@ -40,8 +41,14 @@ class DexIndex : public SymbolIndex {
 public:
   // All symbols must outlive this index.
   template <typename Range>
-  DexIndex(Range &&Symbols, llvm::ArrayRef<std::string> URISchemes)
-      : URISchemes(URISchemes) {
+  DexIndex(Range &&Symbols, llvm::ArrayRef<std::string> Schemes)
+      : URISchemes(Schemes) {
+    // If Schemes don't contain any items, fall back to SymbolCollector's
+    // default URI schemes.
+    if (URISchemes.empty()) {
+      SymbolCollector::Options Opts;
+      URISchemes = Opts.URISchemes;
+    }
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
     buildIndex();
@@ -90,7 +97,7 @@ private:
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
 
-  const std::vector<std::string> URISchemes;
+  std::vector<std::string> URISchemes;
 };
 
 /// Returns Search Token for a number of parent directories of given Path.
