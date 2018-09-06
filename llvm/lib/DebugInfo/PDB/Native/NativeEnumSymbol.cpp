@@ -21,7 +21,7 @@ using namespace llvm::pdb;
 
 NativeEnumSymbol::NativeEnumSymbol(NativeSession &Session, SymIndexId Id,
                                    const codeview::CVType &CVT)
-    : NativeRawSymbol(Session, Id), CV(CVT),
+    : NativeRawSymbol(Session, PDB_SymType::Enum, Id), CV(CVT),
       Record(codeview::TypeRecordKind::Enum) {
   assert(CV.kind() == codeview::TypeLeafKind::LF_ENUM);
   cantFail(visitTypeRecord(CV, *this));

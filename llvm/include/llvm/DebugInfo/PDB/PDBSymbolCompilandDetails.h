@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolCompilandDetails : public PDBSymbol {
-public:
-  PDBSymbolCompilandDetails(const IPDBSession &PDBSession,
-                            std::unique_ptr<IPDBRawSymbol> Symbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::CompilandDetails)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   void getFrontEndVersion(VersionInfo &Version) const {

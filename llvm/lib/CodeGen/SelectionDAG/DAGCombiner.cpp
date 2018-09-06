@@ -350,6 +350,7 @@ namespace {
     SDValue visitFREM(SDNode *N);
     SDValue visitFSQRT(SDNode *N);
     SDValue visitFCOPYSIGN(SDNode *N);
+    SDValue visitFPOW(SDNode *N);
     SDValue visitSINT_TO_FP(SDNode *N);
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
@@ -1568,6 +1569,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FREM:               return visitFREM(N);
   case ISD::FSQRT:              return visitFSQRT(N);
   case ISD::FCOPYSIGN:          return visitFCOPYSIGN(N);
+  case ISD::FPOW:               return visitFPOW(N);
   case ISD::SINT_TO_FP:         return visitSINT_TO_FP(N);
   case ISD::UINT_TO_FP:         return visitUINT_TO_FP(N);
   case ISD::FP_TO_SINT:         return visitFP_TO_SINT(N);
@@ -11562,6 +11564,45 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   // copysign(x, fp_round(y)) -> copysign(x, y)
   if (CanCombineFCOPYSIGN_EXTEND_ROUND(N))
     return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT, N0, N1.getOperand(0));
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFPOW(SDNode *N) {
+  ConstantFPSDNode *ExponentC = isConstOrConstSplatFP(N->getOperand(1));
+  if (!ExponentC)
+    return SDValue();
+
+  // Try to convert x ** (1/4) into square roots.
+  // x ** (1/2) is canonicalized to sqrt, so we do not bother with that case.
+  // TODO: This could be extended (using a target hook) to handle smaller
+  // power-of-2 fractional exponents.
+  if (ExponentC->getValueAPF().isExactlyValue(0.25)) {
+    // pow(-0.0, 0.25) = +0.0; sqrt(sqrt(-0.0)) = -0.0.
+    // pow(-inf, 0.25) = +inf; sqrt(sqrt(-inf)) =  NaN.
+    // For regular numbers, rounding may cause the results to differ.
+    // Therefore, we require { nsz ninf afn } for this transform.
+    // TODO: We could select out the special cases if we don't have nsz/ninf.
+    SDNodeFlags Flags = N->getFlags();
+    if (!Flags.hasNoSignedZeros() || !Flags.hasNoInfs() ||
+        !Flags.hasApproximateFuncs())
+      return SDValue();
+
+    // Don't double the number of libcalls. We are trying to inline fast code.
+    EVT VT = N->getValueType(0);
+    if (!DAG.getTargetLoweringInfo().isOperationLegalOrCustom(ISD::FSQRT, VT))
+      return SDValue();
+
+    // Assume that libcalls are the smallest code.
+    // TODO: This restriction should probably be lifted for vectors.
+    if (DAG.getMachineFunction().getFunction().optForSize())
+      return SDValue();
+
+    // pow(X, 0.25) --> sqrt(sqrt(X))
+    SDLoc DL(N);
+    SDValue Sqrt = DAG.getNode(ISD::FSQRT, DL, VT, N->getOperand(0), Flags);
+    return DAG.getNode(ISD::FSQRT, DL, VT, Sqrt, Flags);
+  }
 
   return SDValue();
 }

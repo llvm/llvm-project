@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypePointer : public PDBSymbol {
-public:
-  PDBSymbolTypePointer(const IPDBSession &PDBSession,
-                       std::unique_ptr<IPDBRawSymbol> Symbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::PointerType)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
   void dumpRight(PDBSymDumper &Dumper) const override;
 

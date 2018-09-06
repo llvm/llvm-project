@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
-#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/NativeBuiltinSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/Support/Allocator.h"
@@ -25,6 +24,7 @@ namespace llvm {
 class MemoryBuffer;
 namespace pdb {
 class PDBFile;
+class NativeExeSymbol;
 
 class NativeSession : public IPDBSession {
 public:
@@ -37,8 +37,16 @@ public:
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
 
-  std::unique_ptr<PDBSymbolCompiland>
-  createCompilandSymbol(DbiModuleDescriptor MI);
+  template <typename ConcreteSymbolT, typename... Args>
+  SymIndexId createSymbol(Args &&... ConstructorArgs) {
+    SymIndexId Id = SymbolCache.size();
+    std::unique_ptr<ConcreteSymbolT> Symbol =
+        llvm::make_unique<ConcreteSymbolT>(
+            *this, Id, std::forward<Args>(ConstructorArgs)...);
+    std::unique_ptr<NativeRawSymbol> NRS = std::move(Symbol);
+    SymbolCache.push_back(std::move(NRS));
+    return Id;
+  }
 
   std::unique_ptr<PDBSymbolTypeEnum>
   createEnumSymbol(codeview::TypeIndex Index);
@@ -107,7 +115,11 @@ public:
   PDBFile &getPDBFile() { return *Pdb; }
   const PDBFile &getPDBFile() const { return *Pdb; }
 
+  NativeExeSymbol &getNativeGlobalScope();
+
 private:
+  SymIndexId ExeSymbol = 0;
+
   std::unique_ptr<PDBFile> Pdb;
   std::unique_ptr<BumpPtrAllocator> Allocator;
   std::vector<std::unique_ptr<NativeRawSymbol>> SymbolCache;

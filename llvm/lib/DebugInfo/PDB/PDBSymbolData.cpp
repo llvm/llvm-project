@@ -17,12 +17,6 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-PDBSymbolData::PDBSymbolData(const IPDBSession &PDBSession,
-                             std::unique_ptr<IPDBRawSymbol> DataSymbol)
-    : PDBSymbol(PDBSession, std::move(DataSymbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::Data);
-}
-
 void PDBSymbolData::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }
 
 std::unique_ptr<IPDBEnumLineNumbers> PDBSymbolData::getLineNumbers() const {

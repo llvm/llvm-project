@@ -663,7 +663,8 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
     return false;
 
   for (BasicBlock *Succ : successors(OuterLoopHeaderBI))
-    if (Succ != InnerLoopPreHeader && Succ != OuterLoopLatch)
+    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader() &&
+        Succ != OuterLoopLatch)
       return false;
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
@@ -1016,28 +1017,6 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
         return false;
       }
 
-  // Create unique Preheaders if we already do not have one.
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-
-  // Create  a unique outer preheader -
-  // 1) If OuterLoop preheader is not present.
-  // 2) If OuterLoop Preheader is same as OuterLoop Header
-  // 3) If OuterLoop Preheader is same as Header of the previous loop.
-  // 4) If OuterLoop Preheader is Entry node.
-  if (!OuterLoopPreHeader || OuterLoopPreHeader == OuterLoop->getHeader() ||
-      isa<PHINode>(OuterLoopPreHeader->begin()) ||
-      !OuterLoopPreHeader->getUniquePredecessor()) {
-    OuterLoopPreHeader =
-        InsertPreheaderForLoop(OuterLoop, DT, LI, PreserveLCSSA);
-  }
-
-  if (!InnerLoopPreHeader || InnerLoopPreHeader == InnerLoop->getHeader() ||
-      InnerLoopPreHeader == OuterLoop->getHeader()) {
-    InnerLoopPreHeader =
-        InsertPreheaderForLoop(InnerLoop, DT, LI, PreserveLCSSA);
-  }
-
   // TODO: The loops could not be interchanged due to current limitations in the
   // transform module.
   if (currentLimitations()) {
@@ -1356,13 +1335,27 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   LLVM_DEBUG(dbgs() << "adjustLoopBranches called\n");
   std::vector<DominatorTree::UpdateType> DTUpdates;
 
+  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
+  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+
+  assert(OuterLoopPreHeader != OuterLoop->getHeader() &&
+         InnerLoopPreHeader != InnerLoop->getHeader() && OuterLoopPreHeader &&
+         InnerLoopPreHeader && "Guaranteed by loop-simplify form");
+  // Ensure that both preheaders do not contain PHI nodes and have single
+  // predecessors. This allows us to move them easily. We use
+  // InsertPreHeaderForLoop to create an 'extra' preheader, if the existing
+  // preheaders do not satisfy those conditions.
+  if (isa<PHINode>(OuterLoopPreHeader->begin()) ||
+      !OuterLoopPreHeader->getUniquePredecessor())
+    OuterLoopPreHeader = InsertPreheaderForLoop(OuterLoop, DT, LI, true);
+  if (InnerLoopPreHeader == OuterLoop->getHeader())
+    InnerLoopPreHeader = InsertPreheaderForLoop(InnerLoop, DT, LI, true);
+
   // Adjust the loop preheader
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
   BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopPredecessor = OuterLoopPreHeader->getUniquePredecessor();
   BasicBlock *InnerLoopLatchPredecessor =
       InnerLoopLatch->getUniquePredecessor();

@@ -12,14 +12,25 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 
-namespace llvm {
-namespace pdb {
+using namespace llvm;
+using namespace llvm::pdb;
 
 NativeExeSymbol::NativeExeSymbol(NativeSession &Session, SymIndexId SymbolId)
-    : NativeRawSymbol(Session, SymbolId), File(Session.getPDBFile()) {}
+    : NativeRawSymbol(Session, PDB_SymType::Exe, SymbolId),
+      File(Session.getPDBFile()) {
+  Expected<DbiStream &> DbiS = File.getPDBDbiStream();
+  if (!DbiS) {
+    consumeError(DbiS.takeError());
+    return;
+  }
+  Dbi = &DbiS.get();
+  Compilands.resize(Dbi->modules().getModuleCount());
+}
 
 std::unique_ptr<NativeRawSymbol> NativeExeSymbol::clone() const {
   return llvm::make_unique<NativeExeSymbol>(Session, SymbolId);
@@ -29,13 +40,7 @@ std::unique_ptr<IPDBEnumSymbols>
 NativeExeSymbol::findChildren(PDB_SymType Type) const {
   switch (Type) {
   case PDB_SymType::Compiland: {
-    auto Dbi = File.getPDBDbiStream();
-    if (Dbi) {
-      const DbiModuleList &Modules = Dbi->modules();
-      return std::unique_ptr<IPDBEnumSymbols>(
-          new NativeEnumModules(Session, Modules));
-    }
-    consumeError(Dbi.takeError());
+    return std::unique_ptr<IPDBEnumSymbols>(new NativeEnumModules(Session));
     break;
   }
   case PDB_SymType::Enum:
@@ -82,5 +87,26 @@ bool NativeExeSymbol::hasPrivateSymbols() const {
   return false;
 }
 
-} // namespace pdb
-} // namespace llvm
+uint32_t NativeExeSymbol::getNumCompilands() const {
+  if (!Dbi)
+    return 0;
+
+  return Dbi->modules().getModuleCount();
+}
+
+std::unique_ptr<PDBSymbolCompiland>
+NativeExeSymbol::getOrCreateCompiland(uint32_t Index) {
+  if (!Dbi)
+    return nullptr;
+
+  if (Index >= Compilands.size())
+    return nullptr;
+
+  if (Compilands[Index] == 0) {
+    const DbiModuleList &Modules = Dbi->modules();
+    Compilands[Index] = Session.createSymbol<NativeCompilandSymbol>(
+        Modules.getModuleDescriptor(Index));
+  }
+
+  return Session.getConcreteSymbolById<PDBSymbolCompiland>(Compilands[Index]);
+}
