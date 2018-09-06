@@ -165,10 +165,12 @@ void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
 }
 
 bool SwiftPersistentExpressionState::SwiftDeclMap::FindMatchingDecls(
-    const ConstString &name, std::vector<swift::ValueDecl *> &matches) {
-  std::vector<swift::ValueDecl *> found_elements;
-  size_t start_num_items = matches.size();
+    const ConstString &name,
+    const std::vector<swift::ValueDecl *> &excluding_equivalents,
+    std::vector<swift::ValueDecl *> &matches) {
   std::string name_str(name.AsCString());
+  size_t start_num_items = matches.size();
+  size_t start_num_excluding_equivalents = excluding_equivalents.size();
 
   std::pair<SwiftDeclMapTy::iterator, SwiftDeclMapTy::iterator> found_range =
       m_swift_decls.equal_range(name_str);
@@ -177,8 +179,10 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::FindMatchingDecls(
     bool add_it = true;
     swift::ValueDecl *cur_decl = (*cur_item).second;
 
-    for (size_t idx = 0; idx < start_num_items; idx++) {
-      if (DeclsAreEquivalent(matches[idx], cur_decl)) {
+    // Iterate over only the elements of `excluding_equivalents` that were
+    // originally there, in case `matches` aliases it.
+    for (size_t idx = 0; idx < start_num_excluding_equivalents; idx++) {
+      if (DeclsAreEquivalent(excluding_equivalents[idx], cur_decl)) {
         add_it = false;
         break;
       }
@@ -211,6 +215,9 @@ void SwiftPersistentExpressionState::CopyInSwiftPersistentDecls(
 }
 
 bool SwiftPersistentExpressionState::GetSwiftPersistentDecls(
-    const ConstString &name, std::vector<swift::ValueDecl *> &matches) {
-  return m_swift_persistent_decls.FindMatchingDecls(name, matches);
+    const ConstString &name,
+    const std::vector<swift::ValueDecl *> &excluding_equivalents,
+    std::vector<swift::ValueDecl *> &matches) {
+  return m_swift_persistent_decls.FindMatchingDecls(name, excluding_equivalents,
+                                                    matches);
 }
