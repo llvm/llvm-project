@@ -31,3 +31,5 @@ class FriendUsageInternal {
 namespace absl {
 void OpeningNamespaceInternally() { strings_internal::InternalFunction(); }
 } // namespace absl
+
+#define USE_INTERNAL(x) absl::strings_internal::Internal##x()
