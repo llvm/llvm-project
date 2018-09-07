@@ -1892,6 +1892,7 @@ static void updateExecutedLinesWithDiagnosticPieces(
     FullSourceLoc Loc = P->getLocation().asLocation().getExpansionLoc();
     FileID FID = Loc.getFileID();
     unsigned LineNo = Loc.getLineNumber();
+    assert(FID.isValid());
     ExecutedLines[FID.getHashValue()].insert(LineNo);
   }
 }
@@ -3022,6 +3023,8 @@ static void populateExecutedLinesWithFunctionSignature(
   SourceLocation Start = SignatureSourceRange.getBegin();
   SourceLocation End = Body ? Body->getSourceRange().getBegin()
     : SignatureSourceRange.getEnd();
+  if (!Start.isValid() || !End.isValid())
+    return;
   unsigned StartLine = SM.getExpansionLineNumber(Start);
   unsigned EndLine = SM.getExpansionLineNumber(End);
 
@@ -3034,6 +3037,8 @@ static void populateExecutedLinesWithStmt(
     const Stmt *S, SourceManager &SM,
     std::unique_ptr<FilesToLineNumsMap> &ExecutedLines) {
   SourceLocation Loc = S->getSourceRange().getBegin();
+  if (!Loc.isValid())
+    return;
   SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
   FileID FID = SM.getFileID(ExpansionLoc);
   unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
