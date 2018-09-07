@@ -20,8 +20,8 @@ MATH_MANGLE(LN)(double x) \
     return BUILTIN_##UN##_F64(x); \
 }
 
-GEN(sqrt_rte,SQRT_RTE)
-GEN(sqrt_rtn,SQRT_RTN)
-GEN(sqrt_rtp,SQRT_RTP)
-GEN(sqrt_rtz,SQRT_RTZ)
+// GEN(sqrt_rte,SQRT_RTE)
+// GEN(sqrt_rtn,SQRT_RTN)
+// GEN(sqrt_rtp,SQRT_RTP)
+// GEN(sqrt_rtz,SQRT_RTZ)
 

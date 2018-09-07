@@ -14,8 +14,8 @@ MATH_MANGLE(LN)(half x, half y) \
     return BUILTIN_##UN##_F16(x, y); \
 }
 
-GEN(add_rte,ADD_RTE)
-GEN(add_rtn,ADD_RTN)
-GEN(add_rtp,ADD_RTP)
-GEN(add_rtz,ADD_RTZ)
+// GEN(add_rte,ADD_RTE)
+// GEN(add_rtn,ADD_RTN)
+// GEN(add_rtp,ADD_RTP)
+// GEN(add_rtz,ADD_RTZ)
 
