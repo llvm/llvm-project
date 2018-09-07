@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Merge.h"
-#include "../Logger.h"
+#include "Logger.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"

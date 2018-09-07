@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DexIndex.h"
-#include "../../FileDistance.h"
-#include "../../FuzzyMatch.h"
-#include "../../Logger.h"
-#include "../../Quality.h"
+#include "FileDistance.h"
+#include "FuzzyMatch.h"
+#include "Logger.h"
+#include "Quality.h"
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <queue>

@@ -20,12 +20,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEXINDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEXINDEX_H
 
-#include "../Index.h"
-#include "../MemIndex.h"
-#include "../SymbolCollector.h"
 #include "Iterator.h"
 #include "Token.h"
 #include "Trigram.h"
+#include "index/Index.h"
+#include "index/MemIndex.h"
+#include "index/SymbolCollector.h"
 
 namespace clang {
 namespace clangd {

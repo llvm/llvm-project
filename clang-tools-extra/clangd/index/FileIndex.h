@@ -16,7 +16,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
-#include "../ClangdUnit.h"
+#include "ClangdUnit.h"
 #include "Index.h"
 #include "MemIndex.h"
 #include "clang/Lex/Preprocessor.h"
