@@ -8,9 +8,9 @@
 //===-------------------------------------------------------------------===//
 
 #include "MemIndex.h"
-#include "../FuzzyMatch.h"
-#include "../Logger.h"
-#include "../Quality.h"
+#include "FuzzyMatch.h"
+#include "Logger.h"
+#include "Quality.h"
 
 namespace clang {
 namespace clangd {

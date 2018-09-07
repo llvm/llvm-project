@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolYAML.h"
-#include "../Trace.h"
 #include "Index.h"
 #include "Serialization.h"
+#include "Trace.h"
 #include "dex/DexIndex.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
