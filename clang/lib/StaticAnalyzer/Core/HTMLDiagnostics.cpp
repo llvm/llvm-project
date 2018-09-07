@@ -346,7 +346,7 @@ static void serializeExecutedLines(
     if (I != ExecutedLines.begin())
       os << ", ";
 
-    os << "\"" << I->first << "\": {";
+    os << "\"" << I->first.getHashValue() << "\": {";
     for (unsigned LineNo : I->second) {
       if (LineNo != *(I->second.begin()))
         os << ", ";
