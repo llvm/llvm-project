@@ -327,10 +327,8 @@ namespace {
 class LoopInterchangeLegality {
 public:
   LoopInterchangeLegality(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                          LoopInfo *LI, DominatorTree *DT, bool PreserveLCSSA,
                           OptimizationRemarkEmitter *ORE)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
-        PreserveLCSSA(PreserveLCSSA), ORE(ORE) {}
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
 
   /// Check if the loops can be interchanged.
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -357,9 +355,6 @@ private:
   Loop *InnerLoop;
 
   ScalarEvolution *SE;
-  LoopInfo *LI;
-  DominatorTree *DT;
-  bool PreserveLCSSA;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
@@ -580,8 +575,7 @@ struct LoopInterchange : public FunctionPass {
     Loop *InnerLoop = LoopList[InnerLoopId];
     Loop *OuterLoop = LoopList[OuterLoopId];
 
-    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, LI, DT,
-                                PreserveLCSSA, ORE);
+    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
       return false;

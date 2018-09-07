@@ -23,8 +23,10 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+extern const char *TestMainArgv0;
+
 TEST(NativeSymbolReuseTest, GlobalSymbolReuse) {
-  SmallString<128> InputsDir = unittest::getInputFileDirectory();
+  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
   llvm::sys::path::append(InputsDir, "empty.pdb");
 
   std::unique_ptr<IPDBSession> S;
@@ -51,7 +53,7 @@ TEST(NativeSymbolReuseTest, GlobalSymbolReuse) {
 }
 
 TEST(NativeSymbolReuseTest, CompilandSymbolReuse) {
-  SmallString<128> InputsDir = unittest::getInputFileDirectory();
+  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
   llvm::sys::path::append(InputsDir, "empty.pdb");
 
   std::unique_ptr<IPDBSession> S;
@@ -65,7 +67,7 @@ TEST(NativeSymbolReuseTest, CompilandSymbolReuse) {
   {
     auto Compilands = GS->findAllChildren<PDBSymbolCompiland>();
     ASSERT_NE(nullptr, Compilands);
-    ASSERT_EQ(2, Compilands->getChildCount());
+    ASSERT_EQ(2U, Compilands->getChildCount());
     std::vector<SymIndexId> Ids2;
 
     // First try resetting the enumerator, then try destroying the enumerator
@@ -93,7 +95,7 @@ TEST(NativeSymbolReuseTest, CompilandSymbolReuse) {
 }
 
 TEST(NativeSymbolReuseTest, CompilandSymbolReuseBackwards) {
-  SmallString<128> InputsDir = unittest::getInputFileDirectory();
+  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
   llvm::sys::path::append(InputsDir, "empty.pdb");
 
   std::unique_ptr<IPDBSession> S;

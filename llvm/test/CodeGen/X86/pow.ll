@@ -162,3 +162,27 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
   ret <2 x double> %r
 }
 
+define float @pow_f32_one_third_fmf(float %x) nounwind {
+; CHECK-LABEL: pow_f32_one_third_fmf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    jmp powf # TAILCALL
+  %one = uitofp i32 1 to float
+  %three = uitofp i32 3 to float
+  %exp = fdiv float %one, %three
+  %r = call nsz nnan ninf afn float @llvm.pow.f32(float %x, float %exp)
+  ret float %r
+}
+
+define double @pow_f64_one_third_fmf(double %x) nounwind {
+; CHECK-LABEL: pow_f64_one_third_fmf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    jmp pow # TAILCALL
+  %one = uitofp i32 1 to double
+  %three = uitofp i32 3 to double
+  %exp = fdiv double %one, %three
+  %r = call nsz nnan ninf afn double @llvm.pow.f64(double %x, double %exp)
+  ret double %r
+}
+

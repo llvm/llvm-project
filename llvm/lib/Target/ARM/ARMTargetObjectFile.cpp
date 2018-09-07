@@ -32,13 +32,25 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
   const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
   bool isAAPCS_ABI = ARM_TM.TargetABI == ARMBaseTargetMachine::ARMABI::ARM_ABI_AAPCS;
-  //  genExecuteOnly = ARM_TM.getSubtargetImpl()->genExecuteOnly();
+  bool genExecuteOnly =
+      ARM_TM.getMCSubtargetInfo()->hasFeature(ARM::FeatureExecuteOnly);
 
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(isAAPCS_ABI);
 
   if (isAAPCS_ABI) {
     LSDASection = nullptr;
+  }
+
+  // Make code section unreadable when in execute-only mode
+  if (genExecuteOnly) {
+    unsigned Type = ELF::SHT_PROGBITS;
+    unsigned Flags =
+        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_ARM_PURECODE;
+    // Since we cannot modify flags for an existing section, we create a new
+    // section with the right flags, and use 0 as the unique ID for
+    // execute-only text
+    TextSection = Ctx.getELFSection(".text", Type, Flags, 0, "", 0U);
   }
 }
 

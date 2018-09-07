@@ -1,4 +1,4 @@
-//===- NativeEnumSymbol.h - info about enum type ----------------*- C++ -*-===//
+//===- NativeTypeEnum.h - info about enum type ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
-#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -18,12 +18,12 @@
 namespace llvm {
 namespace pdb {
 
-class NativeEnumSymbol : public NativeRawSymbol,
-                         public codeview::TypeVisitorCallbacks {
+class NativeTypeEnum : public NativeRawSymbol,
+                       public codeview::TypeVisitorCallbacks {
 public:
-  NativeEnumSymbol(NativeSession &Session, SymIndexId Id,
-                   const codeview::CVType &CV);
-  ~NativeEnumSymbol() override;
+  NativeTypeEnum(NativeSession &Session, SymIndexId Id,
+                 const codeview::CVType &CV);
+  ~NativeTypeEnum() override;
 
   std::unique_ptr<NativeRawSymbol> clone() const override;
 
@@ -57,4 +57,4 @@ protected:
 } // namespace pdb
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
