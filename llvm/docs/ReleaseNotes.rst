@@ -5,11 +5,6 @@ LLVM 7.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 7 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
-
 
 Introduction
 ============
@@ -18,38 +13,27 @@ This document contains the release notes for the LLVM Compiler Infrastructure,
 release 7.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
-from the `LLVM releases web site <http://llvm.org/releases/>`_.
+from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 For more information about LLVM, including information about the latest
-release, please check out the `main LLVM web site <http://llvm.org/>`_.  If you
+release, please check out the `main LLVM web site <https://llvm.org/>`_.  If you
 have questions or comments, the `LLVM Developer's Mailing List
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
+<https://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
-
-Note that if you are reading this file from a Subversion checkout or the main
-LLVM web page, this document applies to the *next* release, not the current
-one.  To see the release notes for a specific release, please see the `releases
-page <http://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
 
 * The Windows installer no longer includes a Visual Studio integration.
   Instead, a new
-  `LLVM Compiler Toolchain Visual Studio extension <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`
+  `LLVM Compiler Toolchain Visual Studio extension <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
   is available on the Visual Studio Marketplace. The new integration includes
   support for Visual Studio 2017.
 
 * Libraries have been renamed from 7.0 to 7. This change also impacts
   downstream libraries like lldb.
 
-* The LoopInstSimplify pass (-loop-instsimplify) has been removed.
+* The LoopInstSimplify pass (``-loop-instsimplify``) has been removed.
 
 * Symbols starting with ``?`` are no longer mangled by LLVM when using the
   Windows ``x`` or ``w`` IR mangling schemes.
@@ -64,16 +48,13 @@ Non-comprehensive list of changes in this release
   information available in LLVM to statically predict the performance of
   machine code for a specific CPU.
 
-* The optimization flag to merge constants (-fmerge-all-constants) is no longer
-  applied by default.
-
 * Optimization of floating-point casts is improved. This may cause surprising
-  results for code that is relying on the undefined behavior of overflowing 
+  results for code that is relying on the undefined behavior of overflowing
   casts. The optimization can be disabled by specifying a function attribute:
-  "strict-float-cast-overflow"="false". This attribute may be created by the
+  ``"strict-float-cast-overflow"="false"``. This attribute may be created by the
   clang option ``-fno-strict-float-cast-overflow``.
-  Code sanitizers can be used to detect affected patterns. The option for
-  detecting this problem alone is "-fsanitize=float-cast-overflow":
+  Code sanitizers can be used to detect affected patterns. The clang option for
+  detecting this problem alone is ``-fsanitize=float-cast-overflow``:
 
 .. code-block:: c
 
@@ -86,7 +67,7 @@ Non-comprehensive list of changes in this release
 
 .. code-block:: bash
 
-    clang -O1 ftrunc.c -fsanitize=float-cast-overflow ; ./a.out 
+    clang -O1 ftrunc.c -fsanitize=float-cast-overflow ; ./a.out
     ftrunc.c:5:15: runtime error: 4.29497e+09 is outside the range of representable values of type 'int'
     junk in the ftrunc: 0.000000
 
@@ -104,19 +85,20 @@ Non-comprehensive list of changes in this release
     git grep -l 'DEBUG' | xargs perl -pi -e 's/\bDEBUG\s?\(/LLVM_DEBUG(/g'
     git diff -U0 master | ../clang/tools/clang-format/clang-format-diff.py -i -p1 -style LLVM
 
-* Early support for UBsan, X-Ray instrumentation and libFuzzer (x86 and x86_64) for OpenBSD. Support for MSan
-  (x86_64), X-Ray instrumentation and libFuzzer (x86 and x86_64) for FreeBSD.
+* Early support for UBsan, X-Ray instrumentation and libFuzzer (x86 and x86_64)
+  for OpenBSD. Support for MSan (x86_64), X-Ray instrumentation and libFuzzer
+  (x86 and x86_64) for FreeBSD.
 
 * ``SmallVector<T, 0>`` shrank from ``sizeof(void*) * 4 + sizeof(T)`` to
   ``sizeof(void*) + sizeof(unsigned) * 2``, smaller than ``std::vector<T>`` on
   64-bit platforms.  The maximum capacity is now restricted to ``UINT32_MAX``.
   Since SmallVector doesn't have the exception-safety pessimizations some
-  implementations saddle std::vector with and is better at using ``realloc``,
-  it's now a better choice even on the heap (although when TinyPtrVector works,
-  it's even smaller).
+  implementations saddle ``std::vector`` with and is better at using ``realloc``,
+  it's now a better choice even on the heap (although when ``TinyPtrVector`` works,
+  that's even smaller).
 
 * Preliminary/experimental support for DWARF v5 debugging information,
-  including the new .debug_names accelerator table. DWARF emitted at ``-O0``
+  including the new ``.debug_names`` accelerator table. DWARF emitted at ``-O0``
   should be fully DWARF v5 compliant. Type units and split DWARF are known
   not to be compliant, and higher optimization levels will still emit some
   information in v4 format.
@@ -129,33 +111,22 @@ Non-comprehensive list of changes in this release
   but it can now handle leftover C declarations in preprocessor output, if
   given output from a preprocessor run externally.)
 
-* CodeView debug info can now be emitted MinGW configurations, if requested.
+* CodeView debug info can now be emitted for MinGW configurations, if requested.
 
-* The :program:`opt` tool now supports the :option:`-load-pass-plugin` for
+* The :program:`opt` tool now supports the ``-load-pass-plugin`` option for
   loading pass plugins for the new PassManager.
 
-* Note..
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
 
 Changes to the LLVM IR
 ----------------------
 
-* The signatures for the builtins @llvm.memcpy, @llvm.memmove, and @llvm.memset
-  have changed. Alignment is no longer an argument, and are instead conveyed as
-  parameter attributes.
+* The signatures for the builtins ``@llvm.memcpy``, ``@llvm.memmove``, and
+  ``@llvm.memset`` have changed. Alignment is no longer an argument, and are
+  instead conveyed as parameter attributes.
 
-* invariant.group.barrier has been renamed to launder.invariant.group.
+* ``invariant.group.barrier`` has been renamed to ``launder.invariant.group``.
 
-* invariant.group metadata can now refer only empty metadata nodes.
+* ``invariant.group`` metadata can now refer only to empty metadata nodes.
 
 Changes to the AArch64 Target
 -----------------------------
@@ -201,7 +172,7 @@ During this release the MIPS target has:
 * Introduced definitions of ``[d]rem``, ``[d]remu``,
   and microMIPSR6 ``ll/sc`` instructions.
 
-* Shrink-wrapping is now supported and enabled by default (except for -O0).
+* Shrink-wrapping is now supported and enabled by default (except for ``-O0``).
 
 * Extended size reduction pass by the LWP and SWP instructions.
 
@@ -214,7 +185,7 @@ During this release the MIPS target has:
 
 * Improved the selection of multiple instructions.
 
-* Load/store lb, sb, ld, sd, lld, ... instructions
+* Load/store ``lb``, ``sb``, ``ld``, ``sd``, ``lld``, ... instructions
   now support 32/64-bit offsets.
 
 * Added support for ``y``, ``M``, and ``L`` inline assembler operand codes.
@@ -222,14 +193,14 @@ During this release the MIPS target has:
 * Extended list of relocations supported by the ``.reloc`` directive
 
 * Fixed using a wrong register class for creating an emergency
-  spill slot for mips3 / n64 abi.
+  spill slot for mips3 / n64 ABI.
 
 * MIPS relocation types were generated for microMIPS code.
 
 * Corrected definitions of multiple instructions (``lwp``, ``swp``, ``ctc2``,
   ``cfc2``, ``sync``, ``synci``, ``cvt.d.w``, ...).
 
-* Fixed atomic operations at O0 level.
+* Fixed atomic operations at ``-O0`` level.
 
 * Fixed local dynamic TLS with Sym64
 
@@ -240,11 +211,11 @@ During this release the PowerPC target has:
 
 * Replaced the list scheduler for post register allocation with the machine scheduler.
 
-* Added support for coldcc calling convention.
+* Added support for ``coldcc`` calling convention.
 
 * Added support for ``symbol@high`` and ``symbol@higha`` symbol modifiers.
 
-* Added support for quad-precision floating point type (``__float128``) under the llvm option `-enable-ppc-quad-precision`.
+* Added support for quad-precision floating point type (``__float128``) under the llvm option ``-enable-ppc-quad-precision``.
 
 * Added dump function to ``LatencyPriorityQueue``.
 
@@ -293,57 +264,42 @@ Changes to the X86 Target
   environments - in MSVC environments, long doubles are the same size as
   normal doubles.)
 
-Changes to the AMDGPU Target
------------------------------
-
- During this release ...
-
-Changes to the AVR Target
------------------------------
-
- During this release ...
-
 Changes to the OCaml bindings
 -----------------------------
 
-* Remove ``add_bb_vectorize``.
+* Removed ``add_bb_vectorize``.
 
 
 Changes to the C API
 --------------------
 
-* Remove ``LLVMAddBBVectorizePass``. The implementation was removed and the C
+* Removed ``LLVMAddBBVectorizePass``. The implementation was removed and the C
   interface was made a deprecated no-op in LLVM 5. Use
   ``LLVMAddSLPVectorizePass`` instead to get the supported SLP vectorizer.
 
 Changes to the DAG infrastructure
 ---------------------------------
-* ADDC/ADDE/SUBC/SUBE are now deprecated and will default to expand. Backends
-  that wish to continue to use these opcodes should explicitely request so
+* ``ADDC``/``ADDE``/``SUBC``/``SUBE`` are now deprecated and will default to expand. Backends
+  that wish to continue to use these opcodes should explicitely request to do so
   using ``setOperationAction`` in their ``TargetLowering``. New backends
-  should use UADDO/ADDCARRY/USUBO/SUBCARRY instead of the deprecated opcodes.
+  should use ``UADDO``/``ADDCARRY``/``USUBO``/``SUBCARRY`` instead of the deprecated opcodes.
 
-* The SETCCE opcode has now been removed in favor of SETCCCARRY.
+* The ``SETCCE`` opcode has now been removed in favor of ``SETCCCARRY``.
 
-* TableGen now supports multi-alternative pattern fragments via the PatFrags
-  class.  PatFrag is now derived from PatFrags, which may require minor
-  changes to backends that directly access PatFrag members.
-
-External Open Source Projects Using LLVM 7
-==========================================
-
-* A project...
+* TableGen now supports multi-alternative pattern fragments via the ``PatFrags``
+  class.  ``PatFrag`` is now derived from ``PatFrags``, which may require minor
+  changes to backends that directly access ``PatFrag`` members.
 
 
 Additional Information
 ======================
 
 A wide variety of additional information is available on the `LLVM web page
-<http://llvm.org/>`_, in particular in the `documentation
-<http://llvm.org/docs/>`_ section.  The web page also contains versions of the
+<https://llvm.org/>`_, in particular in the `documentation
+<https://llvm.org/docs/>`_ section.  The web page also contains versions of the
 API documentation which is up-to-date with the Subversion version of the source
 code.  You can access versions of these documents specific to this release by
 going into the ``llvm/docs/`` directory in the LLVM tree.
 
 If you have any questions or comments about LLVM, please feel free to contact
-us via the `mailing lists <http://llvm.org/docs/#maillist>`_.
+us via the `mailing lists <https://llvm.org/docs/#mailing-lists>`_.
