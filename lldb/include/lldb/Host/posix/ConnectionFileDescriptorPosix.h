@@ -20,9 +20,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/Pipe.h"
-#include "lldb/Host/Predicate.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/IOObject.h"
+#include "lldb/Utility/Predicate.h"
 
 namespace lldb_private {
 

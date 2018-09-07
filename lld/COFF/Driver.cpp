@@ -1198,10 +1198,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
 
   std::set<sys::fs::UniqueID> WholeArchives;
-  for (auto *Arg : Args.filtered(OPT_wholearchive_file))
-    if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
+  AutoExporter Exporter;
+  for (auto *Arg : Args.filtered(OPT_wholearchive_file)) {
+    if (Optional<StringRef> Path = doFindFile(Arg->getValue())) {
       if (Optional<sys::fs::UniqueID> ID = getUniqueID(*Path))
         WholeArchives.insert(*ID);
+      Exporter.addWholeArchive(*Path);
+    }
+  }
 
   // A predicate returning true if a given path is an argument for
   // /wholearchive:, or /wholearchive is enabled globally.
@@ -1458,7 +1462,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // are chosen to be exported.
   if (Config->DLL && ((Config->MinGW && Config->Exports.empty()) ||
                       Args.hasArg(OPT_export_all_symbols))) {
-    AutoExporter Exporter;
+    Exporter.initSymbolExcludes();
 
     Symtab->forEachSymbol([=](Symbol *S) {
       auto *Def = dyn_cast<Defined>(S);

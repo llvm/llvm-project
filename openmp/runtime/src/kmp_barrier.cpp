@@ -1984,6 +1984,10 @@ void __kmp_fork_barrier(int gtid, int tid) {
     }
   }
 #endif
+#if OMP_50_ENABLED
+  if (!KMP_MASTER_TID(tid))
+    KMP_CHECK_UPDATE(this_thr->th.th_def_allocator, team->t.t_def_allocator);
+#endif
 
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
   if (__itt_sync_create_ptr || KMP_ITT_DEBUG) {

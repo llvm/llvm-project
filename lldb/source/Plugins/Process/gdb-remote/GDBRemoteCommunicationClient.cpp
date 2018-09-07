@@ -1134,6 +1134,9 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS));
 
   if (force || m_qHostInfo_is_valid == eLazyBoolCalculate) {
+    // host info computation can require DNS traffic and shelling out to external processes.
+    // Increase the timeout to account for that.
+    ScopedTimeout timeout(*this, seconds(10));
     m_qHostInfo_is_valid = eLazyBoolNo;
     StringExtractorGDBRemote response;
     if (SendPacketAndWaitForResponse("qHostInfo", response, false) ==

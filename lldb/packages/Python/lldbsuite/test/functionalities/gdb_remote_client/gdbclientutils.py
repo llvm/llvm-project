@@ -246,7 +246,7 @@ class MockGDBServer:
         addr = ("127.0.0.1", self.port)
         self._socket.bind(addr)
         self.port = self._socket.getsockname()[1]
-        self._socket.listen(0)
+        self._socket.listen(1)
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 

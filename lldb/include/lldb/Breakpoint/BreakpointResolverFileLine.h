@@ -45,7 +45,7 @@ public:
                                           SymbolContext &context, Address *addr,
                                           bool containing) override;
 
-  Searcher::Depth GetDepth() override;
+  lldb::SearchDepth GetDepth() override;
 
   void GetDescription(Stream *s) override;
 

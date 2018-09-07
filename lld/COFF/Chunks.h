@@ -174,16 +174,6 @@ public:
 
   StringRef getDebugName() override;
 
-  // Returns true if the chunk was not dropped by GC.
-  bool isLive() { return Live; }
-
-  // Used by the garbage collector.
-  void markLive() {
-    assert(Config->DoGC && "should only mark things live from GC");
-    assert(!isLive() && "Cannot mark an already live section!");
-    Live = true;
-  }
-
   // True if this is a codeview debug info chunk. These will not be laid out in
   // the image. Instead they will end up in the PDB, if one is requested.
   bool isCodeView() const {
@@ -224,12 +214,12 @@ public:
 
   ArrayRef<coff_relocation> Relocs;
 
+  // Used by the garbage collector.
+  bool Live;
+
 private:
   StringRef SectionName;
   std::vector<SectionChunk *> AssocChildren;
-
-  // Used by the garbage collector.
-  bool Live;
 
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);

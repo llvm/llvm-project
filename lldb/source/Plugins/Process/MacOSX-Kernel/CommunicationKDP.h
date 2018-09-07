@@ -21,7 +21,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/StreamBuffer.h"
-#include "lldb/Host/Predicate.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/lldb-private.h"
 
 class CommunicationKDP : public lldb_private::Communication {

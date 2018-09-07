@@ -16,8 +16,8 @@
 #include "ForwardDecl.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/Predicate.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/Predicate.h"
 
 namespace lldb_private {
 

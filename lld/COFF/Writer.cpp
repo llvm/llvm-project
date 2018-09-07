@@ -83,29 +83,31 @@ namespace {
 
 class DebugDirectoryChunk : public Chunk {
 public:
-  DebugDirectoryChunk(const std::vector<Chunk *> &R) : Records(R) {}
+  DebugDirectoryChunk(const std::vector<Chunk *> &R, bool WriteRepro)
+      : Records(R), WriteRepro(WriteRepro) {}
 
   size_t getSize() const override {
-    return Records.size() * sizeof(debug_directory);
+    return (Records.size() + int(WriteRepro)) * sizeof(debug_directory);
   }
 
   void writeTo(uint8_t *B) const override {
     auto *D = reinterpret_cast<debug_directory *>(B + OutputSectionOff);
 
     for (const Chunk *Record : Records) {
-      D->Characteristics = 0;
-      D->TimeDateStamp = 0;
-      D->MajorVersion = 0;
-      D->MinorVersion = 0;
-      D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
-      D->SizeOfData = Record->getSize();
-      D->AddressOfRawData = Record->getRVA();
       OutputSection *OS = Record->getOutputSection();
       uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
-      D->PointerToRawData = Offs;
-
-      TimeDateStamps.push_back(&D->TimeDateStamp);
+      fillEntry(D, COFF::IMAGE_DEBUG_TYPE_CODEVIEW, Record->getSize(),
+                Record->getRVA(), Offs);
       ++D;
+    }
+
+    if (WriteRepro) {
+      // FIXME: The COFF spec allows either a 0-sized entry to just say
+      // "the timestamp field is really a hash", or a 4-byte size field
+      // followed by that many bytes containing a longer hash (with the
+      // lowest 4 bytes usually being the timestamp in little-endian order).
+      // Consider storing the full 8 bytes computed by xxHash64 here.
+      fillEntry(D, COFF::IMAGE_DEBUG_TYPE_REPRO, 0, 0, 0);
     }
   }
 
@@ -115,8 +117,23 @@ public:
   }
 
 private:
+  void fillEntry(debug_directory *D, COFF::DebugType DebugType, size_t Size,
+                 uint64_t RVA, uint64_t Offs) const {
+    D->Characteristics = 0;
+    D->TimeDateStamp = 0;
+    D->MajorVersion = 0;
+    D->MinorVersion = 0;
+    D->Type = DebugType;
+    D->SizeOfData = Size;
+    D->AddressOfRawData = RVA;
+    D->PointerToRawData = Offs;
+
+    TimeDateStamps.push_back(&D->TimeDateStamp);
+  }
+
   mutable std::vector<support::ulittle32_t *> TimeDateStamps;
   const std::vector<Chunk *> &Records;
+  bool WriteRepro;
 };
 
 class CVDebugRecordChunk : public Chunk {
@@ -435,7 +452,7 @@ void Writer::createSections() {
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
-    if (SC && !SC->isLive()) {
+    if (SC && !SC->Live) {
       if (Config->Verbose)
         SC->printDiscardedMessage();
       continue;
@@ -500,11 +517,13 @@ void Writer::createMiscChunks() {
   }
 
   // Create Debug Information Chunks
+  OutputSection *DebugInfoSec = Config->MinGW ? BuildidSec : RdataSec;
+  if (Config->Debug || Config->Repro) {
+    DebugDirectory = make<DebugDirectoryChunk>(DebugRecords, Config->Repro);
+    DebugInfoSec->addChunk(DebugDirectory);
+  }
+
   if (Config->Debug) {
-    DebugDirectory = make<DebugDirectoryChunk>(DebugRecords);
-
-    OutputSection *DebugInfoSec = Config->MinGW ? BuildidSec : RdataSec;
-
     // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
@@ -513,7 +532,6 @@ void Writer::createMiscChunks() {
     BuildId = CVChunk;
     DebugRecords.push_back(CVChunk);
 
-    DebugInfoSec->addChunk(DebugDirectory);
     for (Chunk *C : DebugRecords)
       DebugInfoSec->addChunk(C);
   }
@@ -911,7 +929,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
                                 : sizeof(object::coff_tls_directory32);
     }
   }
-  if (Config->Debug) {
+  if (DebugDirectory) {
     Dir[DEBUG_DIRECTORY].RelativeVirtualAddress = DebugDirectory->getRVA();
     Dir[DEBUG_DIRECTORY].Size = DebugDirectory->getSize();
   }
@@ -1014,7 +1032,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
     // We only care about live section chunks. Common chunks and other chunks
     // don't generally contain relocations.
     SectionChunk *SC = dyn_cast<SectionChunk>(C);
-    if (!SC || !SC->isLive())
+    if (!SC || !SC->Live)
       continue;
 
     for (const coff_relocation &Reloc : SC->Relocs) {
@@ -1097,7 +1115,7 @@ void Writer::markSymbolsForRVATable(ObjFile *File,
     // is associated with something like a vtable and the vtable is discarded.
     // In this case, the associated gfids section is discarded, and we don't
     // mark the virtual member functions as address-taken by the vtable.
-    if (!C->isLive())
+    if (!C->Live)
       continue;
 
     // Validate that the contents look like symbol table indices.
@@ -1153,7 +1171,7 @@ void Writer::createRuntimePseudoRelocs() {
 
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
-    if (!SC || !SC->isLive())
+    if (!SC || !SC->Live)
       continue;
     SC->getRuntimePseudoRelocs(Rels);
   }

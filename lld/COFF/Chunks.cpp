@@ -758,12 +758,12 @@ void MergeChunk::addSection(SectionChunk *C) {
 
 void MergeChunk::finalizeContents() {
   for (SectionChunk *C : Sections)
-    if (C->isLive())
+    if (C->Live)
       Builder.add(toStringRef(C->getContents()));
   Builder.finalize();
 
   for (SectionChunk *C : Sections) {
-    if (!C->isLive())
+    if (!C->Live)
       continue;
     size_t Off = Builder.getOffset(toStringRef(C->getContents()));
     C->setOutputSection(Out);

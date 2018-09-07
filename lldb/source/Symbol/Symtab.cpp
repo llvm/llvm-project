@@ -253,6 +253,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeNone:
     return true;
   }
+  llvm_unreachable("unknown scheme!");
 }
 
 void Symtab::InitNameIndexes() {

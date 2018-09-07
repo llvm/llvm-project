@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Predicate.h"
+#include "lldb/Utility/Predicate.h"
 #include "gtest/gtest.h"
 #include <thread>
 

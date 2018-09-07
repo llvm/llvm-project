@@ -1221,6 +1221,159 @@ void ___kmp_thread_free(kmp_info_t *th, void *ptr KMP_SRC_LOC_DECL) {
   KE_TRACE(30, ("<- __kmp_thread_free()\n"));
 }
 
+#if OMP_50_ENABLED
+/* OMP 5.0 Memory Management support */
+static int (*p_hbw_check)(void);
+static void *(*p_hbw_malloc)(size_t);
+static void (*p_hbw_free)(void *);
+static int (*p_hbw_set_policy)(int);
+static const char *kmp_mk_lib_name;
+static void *h_memkind;
+
+void __kmp_init_memkind() {
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+  kmp_mk_lib_name = "libmemkind.so";
+  h_memkind = dlopen(kmp_mk_lib_name, RTLD_LAZY);
+  if (h_memkind) {
+    p_hbw_check = (int (*)())dlsym(h_memkind, "hbw_check_available");
+    p_hbw_malloc = (void *(*)(size_t))dlsym(h_memkind, "hbw_malloc");
+    p_hbw_free = (void (*)(void *))dlsym(h_memkind, "hbw_free");
+    p_hbw_set_policy = (int (*)(int))dlsym(h_memkind, "hbw_set_policy");
+    if (p_hbw_check && p_hbw_malloc && p_hbw_free && p_hbw_set_policy) {
+      __kmp_memkind_available = 1;
+      if (p_hbw_check() == 0) {
+        p_hbw_set_policy(1); // return NULL is not enough memory
+        __kmp_hbw_mem_available = 1; // found HBW memory available
+      }
+      return; // success - all symbols resolved
+    }
+    dlclose(h_memkind); // failure
+    h_memkind = NULL;
+  }
+  p_hbw_check = NULL;
+  p_hbw_malloc = NULL;
+  p_hbw_free = NULL;
+  p_hbw_set_policy = NULL;
+#else
+  kmp_mk_lib_name = "";
+  h_memkind = NULL;
+  p_hbw_check = NULL;
+  p_hbw_malloc = NULL;
+  p_hbw_free = NULL;
+  p_hbw_set_policy = NULL;
+#endif
+}
+
+void __kmp_fini_memkind() {
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+  if (h_memkind) {
+    dlclose(h_memkind);
+    h_memkind = NULL;
+  }
+  p_hbw_check = NULL;
+  p_hbw_malloc = NULL;
+  p_hbw_free = NULL;
+  p_hbw_set_policy = NULL;
+#endif
+}
+
+void __kmpc_set_default_allocator(int gtid, const omp_allocator_t *allocator) {
+  if (allocator == OMP_NULL_ALLOCATOR)
+    allocator = omp_default_mem_alloc;
+  KMP_DEBUG_ASSERT(
+      allocator == omp_default_mem_alloc ||
+      allocator == omp_large_cap_mem_alloc ||
+      allocator == omp_const_mem_alloc || allocator == omp_high_bw_mem_alloc ||
+      allocator == omp_low_lat_mem_alloc || allocator == omp_cgroup_mem_alloc ||
+      allocator == omp_pteam_mem_alloc || allocator == omp_thread_mem_alloc);
+  __kmp_threads[gtid]->th.th_def_allocator = allocator;
+}
+const omp_allocator_t *__kmpc_get_default_allocator(int gtid) {
+  return __kmp_threads[gtid]->th.th_def_allocator;
+}
+
+typedef struct kmp_mem_desc { // Memory block descriptor
+  void *ptr_alloc; // Pointer returned by allocator
+  size_t size_a; // Size of allocated memory block (initial+descriptor+align)
+  void *ptr_align; // Pointer to aligned memory, returned
+  const omp_allocator_t *allocator; // allocator
+} kmp_mem_desc_t;
+static int alignment = sizeof(void *); // let's align to pointer size
+
+void *__kmpc_alloc(int gtid, size_t size, const omp_allocator_t *allocator) {
+  KMP_DEBUG_ASSERT(__kmp_init_serial);
+  if (allocator == OMP_NULL_ALLOCATOR)
+    allocator = __kmp_threads[gtid]->th.th_def_allocator;
+
+  int sz_desc = sizeof(kmp_mem_desc_t);
+  void *ptr = NULL;
+  kmp_mem_desc_t desc;
+  kmp_uintptr_t addr; // address returned by allocator
+  kmp_uintptr_t addr_align; // address to return to caller
+  kmp_uintptr_t addr_descr; // address of memory block descriptor
+
+  KE_TRACE(25, ("__kmpc_alloc: T#%d (%d, %p)\n", gtid, (int)size, allocator));
+
+  desc.size_a = size + sz_desc + alignment;
+  if (allocator == omp_default_mem_alloc)
+    ptr = __kmp_allocate(desc.size_a);
+  if (allocator == omp_high_bw_mem_alloc && __kmp_hbw_mem_available) {
+    KMP_DEBUG_ASSERT(p_hbw_malloc != NULL);
+    ptr = p_hbw_malloc(desc.size_a);
+  }
+
+  KE_TRACE(10, ("__kmpc_alloc: T#%d %p=alloc(%d) hbw %d\n", gtid, ptr,
+                desc.size_a, __kmp_hbw_mem_available));
+  if (ptr == NULL)
+    return NULL;
+
+  addr = (kmp_uintptr_t)ptr;
+  addr_align = (addr + sz_desc + alignment - 1) & ~(alignment - 1);
+  addr_descr = addr_align - sz_desc;
+
+  desc.ptr_alloc = ptr;
+  desc.ptr_align = (void *)addr_align;
+  desc.allocator = allocator;
+  *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
+  KMP_MB();
+
+  KE_TRACE(25, ("__kmpc_alloc returns %p, T#%d\n", desc.ptr_align, gtid));
+  return desc.ptr_align;
+}
+
+void __kmpc_free(int gtid, void *ptr, const omp_allocator_t *allocator) {
+  KE_TRACE(25, ("__kmpc_free: T#%d free(%p,%p)\n", gtid, ptr, allocator));
+  if (ptr == NULL)
+    return;
+
+  kmp_mem_desc_t desc;
+  kmp_uintptr_t addr_align; // address to return to caller
+  kmp_uintptr_t addr_descr; // address of memory block descriptor
+
+  addr_align = (kmp_uintptr_t)ptr;
+  addr_descr = addr_align - sizeof(kmp_mem_desc_t);
+  desc = *((kmp_mem_desc_t *)addr_descr); // read descriptor
+
+  KMP_DEBUG_ASSERT(desc.ptr_align == ptr);
+  if (allocator) {
+    KMP_DEBUG_ASSERT(desc.allocator == allocator);
+  } else {
+    allocator = desc.allocator;
+  }
+  KMP_DEBUG_ASSERT(allocator);
+
+  if (allocator == omp_default_mem_alloc)
+    __kmp_free(desc.ptr_alloc);
+  if (allocator == omp_high_bw_mem_alloc && __kmp_hbw_mem_available) {
+    KMP_DEBUG_ASSERT(p_hbw_free != NULL);
+    p_hbw_free(desc.ptr_alloc);
+  }
+  KE_TRACE(10, ("__kmpc_free: T#%d freed %p (%p)\n", gtid, desc.ptr_alloc,
+                allocator));
+}
+
+#endif
+
 /* If LEAK_MEMORY is defined, __kmp_free() will *not* free memory. It causes
    memory leaks, but it may be useful for debugging memory corruptions, used
    freed pointers, etc. */

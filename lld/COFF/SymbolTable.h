@@ -111,6 +111,9 @@ public:
   }
 
 private:
+  /// Inserts symbol if not already present.
+  std::pair<Symbol *, bool> insert(StringRef Name);
+  /// Same as insert(Name), but also sets IsUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef Name, InputFile *F);
   StringRef findByPrefix(StringRef Prefix);
 

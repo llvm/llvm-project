@@ -20,7 +20,6 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <stdarg.h>
 #include <mutex>
 
 // Store target policy (disabled, mandatory, default)

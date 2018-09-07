@@ -77,6 +77,18 @@ __imp__unexported:
 # CHECK-EXCLUDE-NEXT: foobar @1
 # CHECK-EXCLUDE-NEXT: EOF
 
+# Test that libraries included with -wholearchive: are autoexported, even if
+# they are in a library that otherwise normally would be excluded.
+
+# RUN: lld-link -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %T/libs/crt2.o -wholearchive:%T/libs/libmingwex.a -output-def:%t.def
+# RUN: echo "EOF" >> %t.def
+# RUN: cat %t.def | FileCheck -check-prefix=CHECK-WHOLEARCHIVE %s
+
+# CHECK-WHOLEARCHIVE: EXPORTS
+# CHECK-WHOLEARCHIVE-NEXT: foobar @1
+# CHECK-WHOLEARCHIVE-NEXT: mingwfunc @2
+# CHECK-WHOLEARCHIVE-NEXT: EOF
+
 # Test that we handle import libraries together with -opt:noref.
 
 # RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj

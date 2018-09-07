@@ -54,7 +54,7 @@ InputFile *Symbol::getFile() {
 
 bool Symbol::isLive() const {
   if (auto *R = dyn_cast<DefinedRegular>(this))
-    return R->getChunk()->isLive();
+    return R->getChunk()->Live;
   if (auto *Imp = dyn_cast<DefinedImportData>(this))
     return Imp->File->Live;
   if (auto *Imp = dyn_cast<DefinedImportThunk>(this))
