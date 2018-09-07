@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s -analyzer-output=plist -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/generics.m.plist
+// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "<string>.:" -I "clang version" - %S/Inputs/expected-plists/generics.m.plist
 
 #if !__has_feature(objc_generics)
 #  error Compiler does not support Objective-C generics?

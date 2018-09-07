@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file  %s -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/undef-value-param.c.plist
+// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "<string>.:" -I "clang version" - %S/Inputs/expected-plists/undef-value-param.c.plist
 
 void foo_irrelevant(int c) {
     if (c)
