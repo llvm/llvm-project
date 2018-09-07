@@ -13,24 +13,41 @@
 using namespace llvm;
 using namespace llvm::unittest;
 
-extern const char *TestMainArgv0;
+static std::pair<bool, SmallString<128>> findSrcDirMap(StringRef Argv0) {
+  SmallString<128> BaseDir = llvm::sys::path::parent_path(Argv0);
 
-SmallString<128> llvm::unittest::getInputFileDirectory() {
-  llvm::SmallString<128> Result = llvm::sys::path::parent_path(TestMainArgv0);
-  llvm::sys::fs::make_absolute(Result);
-  llvm::sys::path::append(Result, "llvm.srcdir.txt");
+  llvm::sys::fs::make_absolute(BaseDir);
 
-  EXPECT_TRUE(llvm::sys::fs::is_regular_file(Result))
-      << "Unit test source directory file does not exist.";
+  SmallString<128> PathInSameDir = BaseDir;
+  llvm::sys::path::append(PathInSameDir, "llvm.srcdir.txt");
 
-  auto File = MemoryBuffer::getFile(Result);
+  if (llvm::sys::fs::is_regular_file(PathInSameDir))
+    return std::make_pair(true, std::move(PathInSameDir));
+
+  SmallString<128> PathInParentDir = llvm::sys::path::parent_path(BaseDir);
+
+  llvm::sys::path::append(PathInParentDir, "llvm.srcdir.txt");
+  if (llvm::sys::fs::is_regular_file(PathInParentDir))
+    return std::make_pair(true, std::move(PathInParentDir));
+
+  return std::pair<bool, SmallString<128>>(false, {});
+}
+
+SmallString<128> llvm::unittest::getInputFileDirectory(const char *Argv0) {
+  bool Found = false;
+  SmallString<128> InputFilePath;
+  std::tie(Found, InputFilePath) = findSrcDirMap(Argv0);
+
+  EXPECT_TRUE(Found) << "Unit test source directory file does not exist.";
+
+  auto File = MemoryBuffer::getFile(InputFilePath);
 
   EXPECT_TRUE(static_cast<bool>(File))
       << "Could not open unit test source directory file.";
 
-  Result.clear();
-  Result.append((*File)->getBuffer().trim());
-  llvm::sys::path::append(Result, "Inputs");
-  llvm::sys::path::native(Result);
-  return Result;
+  InputFilePath.clear();
+  InputFilePath.append((*File)->getBuffer().trim());
+  llvm::sys::path::append(InputFilePath, "Inputs");
+  llvm::sys::path::native(InputFilePath);
+  return InputFilePath;
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=osx.cocoa.RetainCount,deadcode.DeadStores,core -analyzer-output=plist -o %t.plist
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/plist-output.m.plist
+// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "clang version" - %S/Inputs/expected-plists/plist-output.m.plist
 
 void test_null_init(void) {
   int *p = 0;

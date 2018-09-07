@@ -80,8 +80,10 @@ MATCHER_P(DefRange, Pos, "") {
 }
 MATCHER_P(RefCount, R, "") { return int(arg.References) == R; }
 MATCHER_P(ForCodeCompletion, IsIndexedForCodeCompletion, "") {
-  return arg.IsIndexedForCodeCompletion == IsIndexedForCodeCompletion;
+  return static_cast<bool>(arg.Flags & Symbol::IndexedForCodeCompletion) ==
+         IsIndexedForCodeCompletion;
 }
+MATCHER(Deprecated, "") { return arg.Flags & Symbol::Deprecated; }
 MATCHER(RefRange, "") {
   const Ref &Pos = testing::get<0>(arg);
   const Range &Range = testing::get<1>(arg);
@@ -1012,6 +1014,17 @@ TEST_F(SymbolCollectorTest, CollectMacros) {
                                          DeclRange(Header.range("mac"))),
                                    AllOf(Labeled("USED(y)"), RefCount(1),
                                          DeclRange(Header.range("used")))));
+}
+
+TEST_F(SymbolCollectorTest, DeprecatedSymbols) {
+  const std::string Header = R"(
+    void TestClangc() __attribute__((deprecated("", "")));
+    void TestClangd();
+  )";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("TestClangc"), Deprecated()),
+                           AllOf(QName("TestClangd"), Not(Deprecated()))));
 }
 
 } // namespace

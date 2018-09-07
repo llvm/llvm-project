@@ -880,6 +880,7 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
   else
     return sampleprof_error::unrecognized_format;
 
+  FunctionSamples::Format = Reader->getFormat();
   if (std::error_code EC = Reader->readHeader())
     return EC;
 

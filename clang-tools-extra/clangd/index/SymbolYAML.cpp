@@ -17,6 +17,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(clang::clangd::Symbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
@@ -46,6 +47,19 @@ struct NormalizedSymbolID {
   }
 
   std::string HexString;
+};
+
+struct NormalizedSymbolFlag {
+  NormalizedSymbolFlag(IO &) {}
+  NormalizedSymbolFlag(IO &, Symbol::SymbolFlag F) {
+    Flag = static_cast<uint8_t>(F);
+  }
+
+  Symbol::SymbolFlag denormalize(IO &) {
+    return static_cast<Symbol::SymbolFlag>(Flag);
+  }
+
+  uint8_t Flag = 0;
 };
 
 template <> struct MappingTraits<SymbolLocation::Position> {
@@ -83,6 +97,8 @@ struct MappingTraits<clang::clangd::Symbol::IncludeHeaderWithReferences> {
 template <> struct MappingTraits<Symbol> {
   static void mapping(IO &IO, Symbol &Sym) {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
+    MappingNormalization<NormalizedSymbolFlag, Symbol::SymbolFlag> NSymbolFlag(
+        IO, Sym.Flags);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -91,8 +107,7 @@ template <> struct MappingTraits<Symbol> {
                    SymbolLocation());
     IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
     IO.mapOptional("References", Sym.References, 0u);
-    IO.mapOptional("IsIndexedForCodeCompletion", Sym.IsIndexedForCodeCompletion,
-                   false);
+    IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Documentation", Sym.Documentation);

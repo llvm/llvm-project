@@ -1986,14 +1986,6 @@ def getAddr64Inst : InstrMapping {
   let ValueCols = [["1"]];
 }
 
-def getIfAddr64Inst : InstrMapping {
-  let FilterClass = "MUBUFAddr64Table";
-  let RowFields = ["OpName"];
-  let ColFields = ["IsAddr64"];
-  let KeyCol = ["1"];
-  let ValueCols = [["1"]];
-}
-
 def getMUBUFNoLdsInst : InstrMapping {
   let FilterClass = "MUBUFLdsTable";
   let RowFields = ["OpName"];

@@ -1116,7 +1116,7 @@ function(add_unittest test_suite test_name)
   set(LLVM_UNITTEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
   configure_file(
     ${LLVM_MAIN_SRC_DIR}/unittests/unittest.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/llvm.srcdir.txt)
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm.srcdir.txt)
 
   add_dependencies(${test_suite} ${test_name})
   get_target_property(test_suite_folder ${test_suite} FOLDER)

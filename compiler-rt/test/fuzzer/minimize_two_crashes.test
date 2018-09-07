@@ -1,4 +1,4 @@
-# Test that the minimizer stops when it sees a differe bug.
+# Test that the minimizer stops when it sees a different bug.
 UNSUPPORTED: freebsd,windows
 
 # TODO: Find out why test fails on Darwin with -O2.

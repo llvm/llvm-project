@@ -1,4 +1,4 @@
-//===- NativeEnumSymbol.cpp - info about enum type --------------*- C++ -*-===//
+//===- NativeTypeEnum.cpp - info about enum type ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Native/NativeEnumSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 #include <cassert>
@@ -19,22 +20,22 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-NativeEnumSymbol::NativeEnumSymbol(NativeSession &Session, SymIndexId Id,
-                                   const codeview::CVType &CVT)
+NativeTypeEnum::NativeTypeEnum(NativeSession &Session, SymIndexId Id,
+                               const codeview::CVType &CVT)
     : NativeRawSymbol(Session, PDB_SymType::Enum, Id), CV(CVT),
       Record(codeview::TypeRecordKind::Enum) {
   assert(CV.kind() == codeview::TypeLeafKind::LF_ENUM);
   cantFail(visitTypeRecord(CV, *this));
 }
 
-NativeEnumSymbol::~NativeEnumSymbol() {}
+NativeTypeEnum::~NativeTypeEnum() {}
 
-std::unique_ptr<NativeRawSymbol> NativeEnumSymbol::clone() const {
-  return llvm::make_unique<NativeEnumSymbol>(Session, SymbolId, CV);
+std::unique_ptr<NativeRawSymbol> NativeTypeEnum::clone() const {
+  return llvm::make_unique<NativeTypeEnum>(Session, SymbolId, CV);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
-NativeEnumSymbol::findChildren(PDB_SymType Type) const {
+NativeTypeEnum::findChildren(PDB_SymType Type) const {
   switch (Type) {
   case PDB_SymType::Data: {
     // TODO(amccarth):  Provide an actual implementation.
@@ -45,64 +46,66 @@ NativeEnumSymbol::findChildren(PDB_SymType Type) const {
   }
 }
 
-Error NativeEnumSymbol::visitKnownRecord(codeview::CVType &CVR,
-                                         codeview::EnumRecord &ER) {
+Error NativeTypeEnum::visitKnownRecord(codeview::CVType &CVR,
+                                       codeview::EnumRecord &ER) {
   Record = ER;
   return Error::success();
 }
 
-Error NativeEnumSymbol::visitKnownMember(codeview::CVMemberRecord &CVM,
-                                         codeview::EnumeratorRecord &R) {
+Error NativeTypeEnum::visitKnownMember(codeview::CVMemberRecord &CVM,
+                                       codeview::EnumeratorRecord &R) {
   return Error::success();
 }
 
-PDB_SymType NativeEnumSymbol::getSymTag() const { return PDB_SymType::Enum; }
+PDB_SymType NativeTypeEnum::getSymTag() const { return PDB_SymType::Enum; }
 
-uint32_t NativeEnumSymbol::getClassParentId() const { return 0xFFFFFFFF; }
+uint32_t NativeTypeEnum::getClassParentId() const { return 0xFFFFFFFF; }
 
-uint32_t NativeEnumSymbol::getUnmodifiedTypeId() const { return 0; }
+uint32_t NativeTypeEnum::getUnmodifiedTypeId() const { return 0; }
 
-bool NativeEnumSymbol::hasConstructor() const {
+bool NativeTypeEnum::hasConstructor() const {
   return bool(Record.getOptions() &
               codeview::ClassOptions::HasConstructorOrDestructor);
 }
 
-bool NativeEnumSymbol::hasAssignmentOperator() const {
+bool NativeTypeEnum::hasAssignmentOperator() const {
   return bool(Record.getOptions() &
               codeview::ClassOptions::HasOverloadedAssignmentOperator);
 }
 
-bool NativeEnumSymbol::hasCastOperator() const {
+bool NativeTypeEnum::hasCastOperator() const {
   return bool(Record.getOptions() &
               codeview::ClassOptions::HasConversionOperator);
 }
 
-uint64_t NativeEnumSymbol::getLength() const {
-  const auto Id = Session.findSymbolByTypeIndex(Record.getUnderlyingType());
+uint64_t NativeTypeEnum::getLength() const {
+  const auto Id = Session.getSymbolCache().findSymbolByTypeIndex(
+      Record.getUnderlyingType());
   const auto UnderlyingType =
       Session.getConcreteSymbolById<PDBSymbolTypeBuiltin>(Id);
   return UnderlyingType ? UnderlyingType->getLength() : 0;
 }
 
-std::string NativeEnumSymbol::getName() const { return Record.getName(); }
+std::string NativeTypeEnum::getName() const { return Record.getName(); }
 
-bool NativeEnumSymbol::isNested() const {
+bool NativeTypeEnum::isNested() const {
   return bool(Record.getOptions() & codeview::ClassOptions::Nested);
 }
 
-bool NativeEnumSymbol::hasOverloadedOperator() const {
+bool NativeTypeEnum::hasOverloadedOperator() const {
   return bool(Record.getOptions() &
               codeview::ClassOptions::HasOverloadedOperator);
 }
 
-bool NativeEnumSymbol::isPacked() const {
+bool NativeTypeEnum::isPacked() const {
   return bool(Record.getOptions() & codeview::ClassOptions::Packed);
 }
 
-bool NativeEnumSymbol::isScoped() const {
+bool NativeTypeEnum::isScoped() const {
   return bool(Record.getOptions() & codeview::ClassOptions::Scoped);
 }
 
-uint32_t NativeEnumSymbol::getTypeId() const {
-  return Session.findSymbolByTypeIndex(Record.getUnderlyingType());
+uint32_t NativeTypeEnum::getTypeId() const {
+  return Session.getSymbolCache().findSymbolByTypeIndex(
+      Record.getUnderlyingType());
 }

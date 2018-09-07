@@ -694,7 +694,8 @@ def warn_assume_side_effects : Warning<
   InGroup<DiagGroup<"assume">>;
 
 def warn_memcpy_chk_overflow : Warning<
-  "%0 will always overflow destination buffer">,
+  "'%0' will always overflow; destination buffer has size %1,"
+  " but size argument is %2">,
   InGroup<DiagGroup<"builtin-memcpy-chk-size">>;
 
 /// main()

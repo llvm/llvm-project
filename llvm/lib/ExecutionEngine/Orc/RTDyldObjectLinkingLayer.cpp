@@ -93,10 +93,6 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
   {
     std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
 
-    assert(!ActiveRTDylds.count(K) &&
-           "An active RTDyld already exists for this key?");
-    ActiveRTDylds[K] = RTDyld.get();
-
     assert(!MemMgrs.count(K) &&
            "A memory manager already exists for this key?");
     MemMgrs[K] = std::move(MemoryManager);
@@ -159,11 +155,6 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
 
   RTDyld->finalizeWithMemoryManagerLocking();
 
-  {
-    std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-    ActiveRTDylds.erase(K);
-  }
-
   if (RTDyld->hasError()) {
     ES.reportError(make_error<StringError>(RTDyld->getErrorString(),
                                            inconvertibleErrorCode()));
@@ -175,16 +166,6 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
 
   if (NotifyEmitted)
     NotifyEmitted(K);
-}
-
-void RTDyldObjectLinkingLayer2::mapSectionAddress(
-    VModuleKey K, const void *LocalAddress, JITTargetAddress TargetAddr) const {
-  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  auto ActiveRTDyldItr = ActiveRTDylds.find(K);
-
-  assert(ActiveRTDyldItr != ActiveRTDylds.end() &&
-         "No active RTDyld instance found for key");
-  ActiveRTDyldItr->second->mapSectionAddress(LocalAddress, TargetAddr);
 }
 
 } // End namespace orc.

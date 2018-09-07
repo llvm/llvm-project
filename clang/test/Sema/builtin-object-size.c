@@ -23,7 +23,7 @@ int f3() {
 // rdar://6252231 - cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {
  __builtin_va_list args;
- __builtin___vsnprintf_chk (0, 42, 0, 11, fmt, args); // expected-warning {{'__builtin___vsnprintf_chk' will always overflow destination buffer}}
+ __builtin___vsnprintf_chk (0, 42, 0, 11, fmt, args); // expected-warning {{'__builtin___vsnprintf_chk' will always overflow; destination buffer has size 11, but size argument is 42}}
 }
 
 // rdar://18334276
@@ -50,7 +50,7 @@ void f6(void)
   char b[5];
   char buf[10];
   __builtin___memccpy_chk (buf, b, '\0', sizeof(b), __builtin_object_size (buf, 0));
-  __builtin___memccpy_chk (b, buf, '\0', sizeof(buf), __builtin_object_size (b, 0));  // expected-warning {{'__builtin___memccpy_chk' will always overflow destination buffer}}
+  __builtin___memccpy_chk (b, buf, '\0', sizeof(buf), __builtin_object_size (b, 0));  // expected-warning {{'__builtin___memccpy_chk' will always overflow; destination buffer has size 5, but size argument is 10}}
 }
 
 int pr28314(void) {

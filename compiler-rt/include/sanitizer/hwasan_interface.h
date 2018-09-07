@@ -59,6 +59,9 @@ extern "C" {
   // format.
   void __hwasan_print_shadow(const volatile void *x, size_t size);
 
+  // Print one-line report about the memory usage of the current process.
+  void __hwasan_print_memory_usage();
+
   int __sanitizer_posix_memalign(void **memptr, size_t alignment, size_t size);
   void * __sanitizer_memalign(size_t alignment, size_t size);
   void * __sanitizer_aligned_alloc(size_t alignment, size_t size);

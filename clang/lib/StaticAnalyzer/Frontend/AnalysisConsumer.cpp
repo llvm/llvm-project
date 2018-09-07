@@ -50,8 +50,6 @@ using namespace ento;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 
-static std::unique_ptr<ExplodedNode::Auditor> CreateUbiViz();
-
 STATISTIC(NumFunctionTopLevel, "The # of functions at top level.");
 STATISTIC(NumFunctionsAnalyzed,
                       "The # of functions and blocks analyzed (as top level "
@@ -743,20 +741,9 @@ void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
   ExprEngine Eng(CTU, *Mgr, ObjCGCEnabled, VisitedCallees, &FunctionSummaries,
                  IMode);
 
-  // Set the graph auditor.
-  std::unique_ptr<ExplodedNode::Auditor> Auditor;
-  if (Mgr->options.visualizeExplodedGraphWithUbiGraph) {
-    Auditor = CreateUbiViz();
-    ExplodedNode::SetAuditor(Auditor.get());
-  }
-
   // Execute the worklist algorithm.
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.getMaxNodesPerTopLevelFunction());
-
-  // Release the auditor (if any) so that it doesn't monitor the graph
-  // created BugReporter.
-  ExplodedNode::SetAuditor(nullptr);
 
   // Visualize the exploded graph.
   if (Mgr->options.visualizeExplodedGraphWithGraphViz)
@@ -802,99 +789,4 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
       CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
       hasModelPath ? new ModelInjector(CI) : nullptr);
-}
-
-//===----------------------------------------------------------------------===//
-// Ubigraph Visualization.  FIXME: Move to separate file.
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-class UbigraphViz : public ExplodedNode::Auditor {
-  std::unique_ptr<raw_ostream> Out;
-  std::string Filename;
-  unsigned Cntr;
-
-  typedef llvm::DenseMap<void*,unsigned> VMap;
-  VMap M;
-
-public:
-  UbigraphViz(std::unique_ptr<raw_ostream> Out, StringRef Filename);
-
-  ~UbigraphViz() override;
-
-  void AddEdge(ExplodedNode *Src, ExplodedNode *Dst) override;
-};
-
-} // end anonymous namespace
-
-static std::unique_ptr<ExplodedNode::Auditor> CreateUbiViz() {
-  SmallString<128> P;
-  int FD;
-  llvm::sys::fs::createTemporaryFile("llvm_ubi", "", FD, P);
-  llvm::errs() << "Writing '" << P << "'.\n";
-
-  auto Stream = llvm::make_unique<llvm::raw_fd_ostream>(FD, true);
-
-  return llvm::make_unique<UbigraphViz>(std::move(Stream), P);
-}
-
-void UbigraphViz::AddEdge(ExplodedNode *Src, ExplodedNode *Dst) {
-
-  assert (Src != Dst && "Self-edges are not allowed.");
-
-  // Lookup the Src.  If it is a new node, it's a root.
-  VMap::iterator SrcI= M.find(Src);
-  unsigned SrcID;
-
-  if (SrcI == M.end()) {
-    M[Src] = SrcID = Cntr++;
-    *Out << "('vertex', " << SrcID << ", ('color','#00ff00'))\n";
-  }
-  else
-    SrcID = SrcI->second;
-
-  // Lookup the Dst.
-  VMap::iterator DstI= M.find(Dst);
-  unsigned DstID;
-
-  if (DstI == M.end()) {
-    M[Dst] = DstID = Cntr++;
-    *Out << "('vertex', " << DstID << ")\n";
-  }
-  else {
-    // We have hit DstID before.  Change its style to reflect a cache hit.
-    DstID = DstI->second;
-    *Out << "('change_vertex_style', " << DstID << ", 1)\n";
-  }
-
-  // Add the edge.
-  *Out << "('edge', " << SrcID << ", " << DstID
-       << ", ('arrow','true'), ('oriented', 'true'))\n";
-}
-
-UbigraphViz::UbigraphViz(std::unique_ptr<raw_ostream> OutStream,
-                         StringRef Filename)
-    : Out(std::move(OutStream)), Filename(Filename), Cntr(0) {
-
-  *Out << "('vertex_style_attribute', 0, ('shape', 'icosahedron'))\n";
-  *Out << "('vertex_style', 1, 0, ('shape', 'sphere'), ('color', '#ffcc66'),"
-          " ('size', '1.5'))\n";
-}
-
-UbigraphViz::~UbigraphViz() {
-  Out.reset();
-  llvm::errs() << "Running 'ubiviz' program... ";
-  std::string ErrMsg;
-  std::string Ubiviz;
-  if (auto Path = llvm::sys::findProgramByName("ubiviz"))
-    Ubiviz = *Path;
-  std::array<StringRef, 2> Args{{Ubiviz, Filename}};
-
-  if (llvm::sys::ExecuteAndWait(Ubiviz, Args, llvm::None, {}, 0, 0, &ErrMsg)) {
-    llvm::errs() << "Error viewing graph: " << ErrMsg << "\n";
-  }
-
-  // Delete the file.
-  llvm::sys::fs::remove(Filename);
 }
