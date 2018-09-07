@@ -71,8 +71,8 @@ class LLDBTest(TestFormat):
         # libraries into system binaries, but this can be worked around by
         # copying the binary into a different location.
         if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                sys.executable.startswith('/System/') or \
-                sys.executable.startswith('/usr/'):
+                (sys.executable.startswith('/System/') or \
+                sys.executable.startswith('/usr/')):
             builddir = getBuildDir(cmd)
             mkdir_p(builddir)
             copied_python = os.path.join(builddir, 'copied-system-python')
