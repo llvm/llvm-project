@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -344,24 +348,7 @@
    <key>col</key><integer>10</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>9</integer>
-    <integer>10</integer>
-    <integer>14</integer>
-    <integer>24</integer>
-    <integer>30</integer>
-    <integer>31</integer>
-    <integer>33</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/inlining/eager-reclamation-path-notes.cpp</string>
  </array>
 </dict>
 </plist>

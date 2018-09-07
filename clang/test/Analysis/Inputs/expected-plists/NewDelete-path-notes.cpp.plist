@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>event</string>
@@ -203,17 +207,6 @@
    <key>line</key><integer>14</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>6</integer>
-    <integer>7</integer>
-    <integer>9</integer>
-    <integer>11</integer>
-    <integer>14</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -433,22 +426,7 @@
    <key>col</key><integer>2</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>19</integer>
-    <integer>20</integer>
-    <integer>24</integer>
-    <integer>25</integer>
-    <integer>27</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/NewDelete-path-notes.cpp</string>
  </array>
 </dict>
 </plist>

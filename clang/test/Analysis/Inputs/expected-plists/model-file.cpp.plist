@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -272,28 +276,7 @@
    <key>col</key><integer>15</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>20</integer>
-    <integer>22</integer>
-    <integer>24</integer>
-    <integer>25</integer>
-    <integer>31</integer>
-    <integer>35</integer>
-   </array>
-   <key>1</key>
-   <array>
-    <integer>1</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/model-file.cpp</string>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/Inputs/Models/notzero.model</string>
  </array>
 </dict>
 </plist>

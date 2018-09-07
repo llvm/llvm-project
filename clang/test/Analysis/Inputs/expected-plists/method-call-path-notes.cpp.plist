@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>event</string>
@@ -106,15 +110,6 @@
    <key>line</key><integer>14</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>12</integer>
-    <integer>13</integer>
-    <integer>14</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -227,15 +222,6 @@
    <key>line</key><integer>19</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>17</integer>
-    <integer>18</integer>
-    <integer>19</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -383,16 +369,6 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>22</integer>
-    <integer>23</integer>
-    <integer>24</integer>
-    <integer>25</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -539,15 +515,6 @@
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>28</integer>
-    <integer>29</integer>
-    <integer>30</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -659,16 +626,6 @@
    <key>line</key><integer>37</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>33</integer>
-    <integer>34</integer>
-    <integer>36</integer>
-    <integer>37</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -816,20 +773,7 @@
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>40</integer>
-    <integer>41</integer>
-    <integer>42</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/method-call-path-notes.cpp</string>
  </array>
 </dict>
 </plist>
