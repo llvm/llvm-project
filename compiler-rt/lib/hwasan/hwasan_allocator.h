@@ -97,6 +97,7 @@ struct HeapAllocationRecord {
 
 typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
 
+void GetAllocatorStats(AllocatorStatCounters s);
 
 } // namespace __hwasan
 

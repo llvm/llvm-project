@@ -1,0 +1,19 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the fast math instruction flags.
+
+...
+---
+name:            baz
+body: |
+  bb.0.entry:
+    liveins: $eax
+  
+    $eax = ADD32rr $eax, killed $eax, implicit-def dead $eflags
+    ; CHECK:     $eax = ADD32rr $eax, killed $eax, implicit-def dead $eflags
+    $eax = ADD32rr $eax, killed $eax, implicit-def dead $eflags
+    ; CHECK:     $eax = SAR32ri $eax, 1, implicit-def dead $eflags
+    $eax = SAR32ri $eax, 1, implicit-def dead $eflags
+    ; CHECK:     RET 0, $eax
+    RET 0, $eax
+
+...

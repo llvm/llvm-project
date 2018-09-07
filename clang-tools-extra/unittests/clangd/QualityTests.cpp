@@ -59,7 +59,7 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   F.References = 24; // TestTU doesn't count references, so fake it.
   Quality = {};
   Quality.merge(F);
-  EXPECT_FALSE(Quality.Deprecated); // FIXME: Include deprecated bit in index.
+  EXPECT_TRUE(Quality.Deprecated);
   EXPECT_FALSE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, 24u);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);

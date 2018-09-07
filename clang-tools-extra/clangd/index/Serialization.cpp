@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "Serialization.h"
 #include "../RIFF.h"
+#include "Index.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -200,7 +201,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
     }
   }
   writeVar(Sym.References, OS);
-  OS.write(Sym.IsIndexedForCodeCompletion);
+  OS.write(static_cast<uint8_t>(Sym.Flags));
   OS.write(static_cast<uint8_t>(Sym.Origin));
   writeVar(Strings.index(Sym.Signature), OS);
   writeVar(Strings.index(Sym.CompletionSnippetSuffix), OS);
@@ -274,7 +275,7 @@ Expected<Symbol> readSymbol(StringRef &Data, const StringTableIn &Strings) {
     }
   }
   Sym.References = consumeVar(Data);
-  Sym.IsIndexedForCodeCompletion = consume8(Data);
+  Sym.Flags = static_cast<Symbol::SymbolFlag>(consume8(Data));
   Sym.Origin = static_cast<SymbolOrigin>(consume8(Data));
   READ_STRING(Sym.Signature);
   READ_STRING(Sym.CompletionSnippetSuffix);
@@ -305,7 +306,7 @@ Expected<Symbol> readSymbol(StringRef &Data, const StringTableIn &Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 2;
+constexpr static uint32_t Version = 3;
 
 Expected<IndexFileIn> readIndexFile(StringRef Data) {
   auto RIFF = riff::readFile(Data);

@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
-#include "llvm/DebugInfo/PDB/Native/NativeEnumSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
@@ -41,7 +41,7 @@ uint32_t NativeEnumTypes::getChildCount() const {
 std::unique_ptr<PDBSymbol>
 NativeEnumTypes::getChildAtIndex(uint32_t Index) const {
   if (Index < Matches.size())
-    return Session.createEnumSymbol(Matches[Index]);
+    return Session.getSymbolCache().createEnumSymbol(Matches[Index]);
   return nullptr;
 }
 

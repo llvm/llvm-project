@@ -55,6 +55,17 @@ raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
   return OS;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, Symbol::SymbolFlag F) {
+  if (F == Symbol::None)
+    return OS << "None";
+  std::string s;
+  if (F & Symbol::Deprecated)
+    s += "deprecated|";
+  if (F & Symbol::IndexedForCodeCompletion)
+    s += "completion|";
+  return OS << StringRef(s).rtrim('|');
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &S) {
   return OS << S.Scope << S.Name;
 }

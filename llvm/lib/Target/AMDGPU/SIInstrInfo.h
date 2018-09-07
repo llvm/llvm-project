@@ -919,12 +919,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int getAddr64Inst(uint16_t Opcode);
 
-  /// Check if \p Opcode is an Addr64 opcode.
-  ///
-  /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
-  LLVM_READONLY
-  int getIfAddr64Inst(uint16_t Opcode);
-
   LLVM_READONLY
   int getMUBUFNoLdsInst(uint16_t Opcode);
 

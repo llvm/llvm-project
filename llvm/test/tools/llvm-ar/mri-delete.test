@@ -1,11 +1,17 @@
 RUN: yaml2obj %S/Inputs/elf.yaml -o %t.o
 RUN: rm -f %t.ar
 
-RUN: echo "create %t.ar" > %t.mri
-RUN: echo "addmod %t.o" >> %t.mri
+RUN: echo "create %t.ar;comment" > %t.mri
+RUN: echo "addmod %t.o * comment" >> %t.mri
+RUN: echo "; comment" >> %t.mri
+RUN: echo " ;comment" >> %t.mri
+RUN: echo "* comment" >> %t.mri
+RUN: echo " *comment" >> %t.mri
+RUN: echo "" >> %t.mri
+RUN: echo " " >> %t.mri
 RUN: echo "addmod %S/Inputs/elf.yaml" >> %t.mri
 RUN: echo "delete %t.o" >> %t.mri
-RUN: echo "save" >> %t.mri
+RUN: echo " save" >> %t.mri
 RUN: echo "end" >> %t.mri
 
 RUN: llvm-ar -M < %t.mri

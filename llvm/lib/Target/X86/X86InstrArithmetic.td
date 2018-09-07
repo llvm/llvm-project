@@ -1176,6 +1176,30 @@ let isCompare = 1 in {
 defm CMP : ArithBinOp_F<0x38, 0x3A, 0x3C, "cmp", MRM7r, MRM7m, X86cmp, 0, 0>;
 }
 
+// Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
+// commutable since it has EFLAGs as an input.
+def : Pat<(X86adc_flag (loadi8 addr:$src2), GR8:$src1, EFLAGS),
+          (ADC8rm GR8:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi16 addr:$src2), GR16:$src1, EFLAGS),
+          (ADC16rm GR16:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+          (ADC32rm GR32:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+          (ADC64rm GR64:$src1, addr:$src2)>;
+
+// Patterns to recognize RMW ADC with loads in operand 1.
+def : Pat<(store (X86adc_flag GR8:$src, (loadi8 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC8mr addr:$dst, GR8:$src)>;
+def : Pat<(store (X86adc_flag GR16:$src, (loadi16 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC16mr addr:$dst, GR16:$src)>;
+def : Pat<(store (X86adc_flag GR32:$src, (loadi32 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC32mr addr:$dst, GR32:$src)>;
+def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC64mr addr:$dst, GR64:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Semantically, test instructions are similar like AND, except they don't

@@ -201,9 +201,6 @@ struct Symbol {
   // The number of translation units that reference this symbol from their main
   // file. This number is only meaningful if aggregated in an index.
   unsigned References = 0;
-  /// Whether or not this symbol is meant to be used for the code completion.
-  /// See also isIndexedForCodeCompletion().
-  bool IsIndexedForCodeCompletion = false;
   /// Where this symbol came from. Usually an index provides a constant value.
   SymbolOrigin Origin = SymbolOrigin::Unknown;
   /// A brief description of the symbol that can be appended in the completion
@@ -244,9 +241,27 @@ struct Symbol {
   ///   any definition.
   llvm::SmallVector<IncludeHeaderWithReferences, 1> IncludeHeaders;
 
-  // FIXME: add extra fields for index scoring signals.
+  enum SymbolFlag : uint8_t {
+    None = 0,
+    /// Whether or not this symbol is meant to be used for the code completion.
+    /// See also isIndexedForCodeCompletion().
+    IndexedForCodeCompletion = 1 << 0,
+    /// Indicates if the symbol is deprecated.
+    Deprecated = 1 << 1,
+  };
+
+  SymbolFlag Flags = SymbolFlag::None;
+  /// FIXME: also add deprecation message and fixit?
 };
+inline Symbol::SymbolFlag  operator|(Symbol::SymbolFlag A, Symbol::SymbolFlag  B) {
+  return static_cast<Symbol::SymbolFlag>(static_cast<uint8_t>(A) |
+                                         static_cast<uint8_t>(B));
+}
+inline Symbol::SymbolFlag &operator|=(Symbol::SymbolFlag &A, Symbol::SymbolFlag B) {
+  return A = A | B;
+}
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S);
+raw_ostream &operator<<(raw_ostream &, Symbol::SymbolFlag);
 
 // Invokes Callback with each StringRef& contained in the Symbol.
 // Useful for deduplicating backing strings.

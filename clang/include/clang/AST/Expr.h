@@ -903,16 +903,8 @@ public:
   /// Retrieve the location of this expression.
   SourceLocation getLocation() const { return Loc; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SourceExpr ? SourceExpr->getBeginLoc() : Loc;
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return SourceExpr ? SourceExpr->getEndLoc() : Loc;
@@ -1071,15 +1063,7 @@ public:
 
   SourceLocation getLocation() const { return Loc; }
   void setLocation(SourceLocation L) { Loc = L; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Determine whether this declaration reference was preceded by a
@@ -1257,15 +1241,7 @@ public:
   static StringRef getIdentTypeName(IdentType IT);
   static std::string ComputeName(IdentType IT, const Decl *CurrentDecl);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
   static bool classof(const Stmt *T) {
@@ -1354,15 +1330,7 @@ public:
   /// Returns a new empty integer literal.
   static IntegerLiteral *Create(const ASTContext &C, EmptyShell Empty);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
   /// Retrieve the location of the literal.
@@ -1401,15 +1369,7 @@ class FixedPointLiteral : public Expr, public APIntStorage {
                                              QualType type, SourceLocation l,
                                              unsigned Scale);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
   /// \brief Retrieve the location of the literal.
@@ -1463,15 +1423,7 @@ public:
     return static_cast<CharacterKind>(CharacterLiteralBits.Kind);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
   unsigned getValue() const { return Value; }
@@ -1544,15 +1496,7 @@ public:
   SourceLocation getLocation() const { return Loc; }
   void setLocation(SourceLocation L) { Loc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
   static bool classof(const Stmt *T) {
@@ -1589,16 +1533,8 @@ public:
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return Val->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY { return Val->getEndLoc(); }
 
@@ -1773,15 +1709,7 @@ public:
   tokloc_iterator tokloc_begin() const { return TokLocs; }
   tokloc_iterator tokloc_end() const { return TokLocs + NumConcatenated; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return TokLocs[0]; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return TokLocs[NumConcatenated - 1];
   }
@@ -1821,15 +1749,7 @@ public:
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return L; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return R; }
 
   /// Get the location of the left parentheses '('.
@@ -1953,16 +1873,8 @@ public:
   /// the given unary opcode.
   static OverloadedOperatorKind getOverloadedOperator(Opcode Opc);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return isPostfix() ? Val->getBeginLoc() : Loc;
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return isPostfix() ? Loc : Val->getEndLoc();
@@ -2069,15 +1981,7 @@ public:
   /// contains the location of the period (if there is one) and the
   /// identifier.
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 };
 
@@ -2177,15 +2081,7 @@ public:
     return NumExprs;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -2281,15 +2177,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return OpLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -2363,16 +2251,8 @@ public:
     return getRHS()->getType()->isIntegerType() ? getRHS() : getLHS();
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getLHS()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
 
@@ -2541,15 +2421,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Return true if this is a call to __assume() or __builtin_assume() with
@@ -2795,15 +2667,7 @@ public:
   SourceLocation getMemberLoc() const { return MemberLoc; }
   void setMemberLoc(SourceLocation L) { MemberLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   SourceLocation getExprLoc() const LLVM_READONLY { return MemberLoc; }
@@ -2893,10 +2757,6 @@ public:
     TInfoAndScope.setPointer(tinfo);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     // FIXME: Init should never be null.
     if (!Init)
@@ -2904,10 +2764,6 @@ public:
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     // FIXME: Init should never be null.
@@ -3103,16 +2959,8 @@ public:
   static ImplicitCastExpr *CreateEmpty(const ASTContext &Context,
                                        unsigned PathSize);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getSubExpr()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getSubExpr()->getEndLoc();
@@ -3220,15 +3068,7 @@ public:
   SourceLocation getRParenLoc() const { return RPLoc; }
   void setRParenLoc(SourceLocation L) { RPLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return LPLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getSubExpr()->getEndLoc();
   }
@@ -3308,16 +3148,8 @@ public:
   Expr *getRHS() const { return cast<Expr>(SubExprs[RHS]); }
   void setRHS(Expr *E) { SubExprs[RHS] = E; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getLHS()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getRHS()->getEndLoc();
@@ -3605,16 +3437,8 @@ public:
   Expr *getLHS() const { return cast<Expr>(SubExprs[LHS]); }
   Expr *getRHS() const { return cast<Expr>(SubExprs[RHS]); }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getCond()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getRHS()->getEndLoc();
@@ -3701,16 +3525,8 @@ public:
     return cast<Expr>(SubExprs[RHS]);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getCommon()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getFalseExpr()->getEndLoc();
@@ -3767,15 +3583,7 @@ public:
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return AmpAmpLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return LabelLoc; }
 
   LabelDecl *getLabel() const { return Label; }
@@ -3820,15 +3628,7 @@ public:
   const CompoundStmt *getSubStmt() const { return cast<CompoundStmt>(SubStmt); }
   void setSubStmt(CompoundStmt *S) { SubStmt = S; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -3877,15 +3677,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -3969,15 +3761,7 @@ public:
   /// getRParenLoc - Return the location of final right parenthesis.
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -4058,15 +3842,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -4105,15 +3881,7 @@ public:
   SourceLocation getTokenLocation() const { return TokenLoc; }
   void setTokenLocation(SourceLocation L) { TokenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return TokenLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return TokenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -4165,15 +3933,7 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -4407,15 +4167,7 @@ public:
     InitListExprBits.HadArrayRangeDesignator = ARD;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   static bool classof(const Stmt *T) {
@@ -4650,19 +4402,11 @@ public:
       return ArrayOrRange.Index;
     }
 
-    LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                              "Use getBeginLoc instead") {
-      return getBeginLoc();
-    }
     SourceLocation getBeginLoc() const LLVM_READONLY {
       if (Kind == FieldDesignator)
         return getDotLoc().isInvalid()? getFieldLoc() : getDotLoc();
       else
         return getLBracketLoc();
-    }
-    LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                              "Use getEndLoc instead") {
-      return getEndLoc();
     }
     SourceLocation getEndLoc() const LLVM_READONLY {
       return Kind == FieldDesignator ? getFieldLoc() : getRBracketLoc();
@@ -4747,15 +4491,7 @@ public:
 
   SourceRange getDesignatorsSourceRange() const;
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   static bool classof(const Stmt *T) {
@@ -4797,15 +4533,7 @@ public:
     return T->getStmtClass() == NoInitExprClass;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
 
   // Iterators
@@ -4840,15 +4568,7 @@ public:
   explicit DesignatedInitUpdateExpr(EmptyShell Empty)
     : Expr(DesignatedInitUpdateExprClass, Empty) { }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY;
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   static bool classof(const Stmt *T) {
@@ -4923,16 +4643,8 @@ public:
     return S->getStmtClass() == ArrayInitLoopExprClass;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getCommonExpr()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getCommonExpr()->getEndLoc();
@@ -4966,15 +4678,7 @@ public:
     return S->getStmtClass() == ArrayInitIndexExprClass;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
 
   child_range children() {
@@ -5010,15 +4714,7 @@ public:
     return T->getStmtClass() == ImplicitValueInitExprClass;
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
 
   // Iterators
@@ -5063,15 +4759,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -5195,15 +4883,7 @@ public:
   const Expr *getResultExpr() const { return getAssocExpr(getResultIndex()); }
   Expr *getResultExpr() { return getAssocExpr(getResultIndex()); }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return GenericLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -5269,16 +4949,8 @@ public:
   /// aggregate Constant of ConstantInt(s).
   void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getBase()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
 
@@ -5322,16 +4994,8 @@ public:
   const Stmt *getBody() const;
   Stmt *getBody();
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getCaretLocation();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getBody()->getEndLoc();
@@ -5387,15 +5051,7 @@ public:
   /// getRParenLoc - Return the location of final right parenthesis.
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -5537,16 +5193,8 @@ public:
     return getSyntacticForm()->getExprLoc();
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getSyntacticForm()->getBeginLoc();
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getSyntacticForm()->getEndLoc();
@@ -5672,15 +5320,7 @@ public:
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
@@ -5734,15 +5374,7 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
 
   static bool classof(const Stmt *T) {

@@ -171,6 +171,22 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
   Die();
 }
 
+static void HwasanPrintMemoryUsage() {
+  auto thread_stats = Thread::GetThreadStats();
+  auto *sds = StackDepotGetStats();
+  AllocatorStatCounters asc;
+  GetAllocatorStats(asc);
+  Printf(
+      "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
+      " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
+      " heap: %zd\n",
+      internal_getpid(), GetRSS(), thread_stats.n_live_threads,
+      thread_stats.total_stack_size,
+      thread_stats.n_live_threads * Thread::MemoryUsedPerThread(),
+      sds->allocated, sds->n_uniq_ids,
+      asc[AllocatorStatMapped]);
+}
+
 } // namespace __hwasan
 
 // Interface.
@@ -438,6 +454,8 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
   }
   TagMemory(sp, dst - sp, 0);
 }
+
+void __hwasan_print_memory_usage() { HwasanPrintMemoryUsage(); }
 
 static const u8 kFallbackTag = 0xBB;
 

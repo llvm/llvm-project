@@ -35,7 +35,8 @@ bool MemIndex::fuzzyFind(
     // Exact match against all possible scopes.
     if (!Req.Scopes.empty() && !llvm::is_contained(Req.Scopes, Sym->Scope))
       continue;
-    if (Req.RestrictForCodeCompletion && !Sym->IsIndexedForCodeCompletion)
+    if (Req.RestrictForCodeCompletion &&
+        !(Sym->Flags & Symbol::IndexedForCodeCompletion))
       continue;
 
     if (auto Score = Filter.match(Sym->Name))

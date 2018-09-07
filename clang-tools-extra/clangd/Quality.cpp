@@ -167,9 +167,7 @@ static bool isInstanceMember(const index::SymbolInfo &D) {
 }
 
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
-  if (SemaCCResult.Availability == CXAvailability_Deprecated)
-    Deprecated = true;
-
+  Deprecated |= (SemaCCResult.Availability == CXAvailability_Deprecated);
   Category = categorize(SemaCCResult);
 
   if (SemaCCResult.Declaration) {
@@ -180,6 +178,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
 }
 
 void SymbolQualitySignals::merge(const Symbol &IndexResult) {
+  Deprecated |= (IndexResult.Flags & Symbol::Deprecated);
   References = std::max(IndexResult.References, References);
   Category = categorize(IndexResult.SymInfo);
   ReservedName = ReservedName || isReserved(IndexResult.Name);

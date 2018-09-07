@@ -768,6 +768,9 @@ struct CompletionItem {
   /// themselves.
   std::vector<TextEdit> additionalTextEdits;
 
+  /// Indicates if this item is deprecated.
+  bool deprecated = false;
+
   // TODO(krasimir): The following optional fields defined by the language
   // server protocol are unsupported:
   //
