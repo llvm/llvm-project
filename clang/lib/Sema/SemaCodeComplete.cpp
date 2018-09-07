@@ -3752,6 +3752,10 @@ void Sema::CodeCompleteExpression(Scope *S,
                             Results.data(), Results.size());
 }
 
+void Sema::CodeCompleteExpression(Scope *S, QualType PreferredType) {
+  return CodeCompleteExpression(S, CodeCompleteExpressionData(PreferredType));
+}
+
 void Sema::CodeCompletePostfixExpression(Scope *S, ExprResult E) {
   if (E.isInvalid())
     CodeCompleteOrdinaryName(S, PCC_RecoveryInFunction);
@@ -4435,42 +4439,28 @@ static QualType getParamType(Sema &SemaRef,
   return ParamType;
 }
 
-static void
-CodeCompleteOverloadResults(Sema &SemaRef, Scope *S,
-                            MutableArrayRef<ResultCandidate> Candidates,
-                            unsigned CurrentArg, SourceLocation OpenParLoc,
-                            bool CompleteExpressionWithCurrentArg = true) {
-  QualType ParamType;
-  if (CompleteExpressionWithCurrentArg)
-    ParamType = getParamType(SemaRef, Candidates, CurrentArg);
-
-  if (ParamType.isNull())
-    SemaRef.CodeCompleteOrdinaryName(S, Sema::PCC_Expression);
-  else
-    SemaRef.CodeCompleteExpression(S, ParamType);
-
-  if (!Candidates.empty())
-    SemaRef.CodeCompleter->ProcessOverloadCandidates(
-        SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
+static QualType
+ProduceSignatureHelp(Sema &SemaRef, Scope *S,
+                     MutableArrayRef<ResultCandidate> Candidates,
+                     unsigned CurrentArg, SourceLocation OpenParLoc) {
+  if (Candidates.empty())
+    return QualType();
+  SemaRef.CodeCompleter->ProcessOverloadCandidates(
+      SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
+  return getParamType(SemaRef, Candidates, CurrentArg);
 }
 
-void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
-                            SourceLocation OpenParLoc) {
+QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
+                                        ArrayRef<Expr *> Args,
+                                        SourceLocation OpenParLoc) {
   if (!CodeCompleter)
-    return;
-
-  // When we're code-completing for a call, we fall back to ordinary
-  // name code-completion whenever we can't produce specific
-  // results. We may want to revisit this strategy in the future,
-  // e.g., by merging the two kinds of results.
+    return QualType();
 
   // FIXME: Provide support for variadic template functions.
-
   // Ignore type-dependent call expressions entirely.
   if (!Fn || Fn->isTypeDependent() || anyNullArguments(Args) ||
       Expr::hasAnyTypeDependentArguments(Args)) {
-    CodeCompleteOrdinaryName(S, PCC_Expression);
-    return;
+    return QualType();
   }
 
   // Build an overload candidate set based on the functions we find.
@@ -4551,25 +4541,24 @@ void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
         Results.push_back(ResultCandidate(FT));
     }
   }
-
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc);
-  CodeCompleteOverloadResults(*this, S, Results, Args.size(), OpenParLoc,
-                              !CandidateSet.empty());
+  QualType ParamType =
+      ProduceSignatureHelp(*this, S, Results, Args.size(), OpenParLoc);
+  return !CandidateSet.empty() ? ParamType : QualType();
 }
 
-void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
-                                   ArrayRef<Expr *> Args,
-                                   SourceLocation OpenParLoc) {
+QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
+                                               SourceLocation Loc,
+                                               ArrayRef<Expr *> Args,
+                                               SourceLocation OpenParLoc) {
   if (!CodeCompleter)
-    return;
+    return QualType();
 
   // A complete type is needed to lookup for constructors.
   CXXRecordDecl *RD =
       isCompleteType(Loc, Type) ? Type->getAsCXXRecordDecl() : nullptr;
-  if (!RD) {
-    CodeCompleteExpression(S, Type);
-    return;
-  }
+  if (!RD)
+    return Type;
 
   // FIXME: Provide support for member initializers.
   // FIXME: Provide support for variadic template constructors.
@@ -4594,7 +4583,7 @@ void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
 
   SmallVector<ResultCandidate, 8> Results;
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc);
-  CodeCompleteOverloadResults(*this, S, Results, Args.size(), OpenParLoc);
+  return ProduceSignatureHelp(*this, S, Results, Args.size(), OpenParLoc);
 }
 
 void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {

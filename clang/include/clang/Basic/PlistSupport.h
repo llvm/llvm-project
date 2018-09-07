@@ -25,33 +25,22 @@ namespace markup {
 
 using FIDMap = llvm::DenseMap<FileID, unsigned>;
 
-inline unsigned AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
-                   FileID FID) {
-  FIDMap::iterator I = FIDs.find(FID);
-  if (I != FIDs.end())
-    return I->second;
-  unsigned NewValue = V.size();
-  FIDs[FID] = NewValue;
-  V.push_back(FID);
-  return NewValue;
-}
-
-inline unsigned AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
+inline void AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
                    const SourceManager &SM, SourceLocation L) {
   FileID FID = SM.getFileID(SM.getExpansionLoc(L));
-  return AddFID(FIDs, V, FID);
-}
-
-inline unsigned GetFID(const FIDMap &FIDs, FileID FID) {
-  FIDMap::const_iterator I = FIDs.find(FID);
-  assert(I != FIDs.end());
-  return I->second;
+  FIDMap::iterator I = FIDs.find(FID);
+  if (I != FIDs.end())
+    return;
+  FIDs[FID] = V.size();
+  V.push_back(FID);
 }
 
 inline unsigned GetFID(const FIDMap &FIDs, const SourceManager &SM,
                        SourceLocation L) {
   FileID FID = SM.getFileID(SM.getExpansionLoc(L));
-  return GetFID(FIDs, FID);
+  FIDMap::const_iterator I = FIDs.find(FID);
+  assert(I != FIDs.end());
+  return I->second;
 }
 
 inline raw_ostream &Indent(raw_ostream &o, const unsigned indent) {

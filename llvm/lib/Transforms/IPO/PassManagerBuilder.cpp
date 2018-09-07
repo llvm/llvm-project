@@ -104,6 +104,10 @@ static cl::opt<bool>
     EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
                             cl::desc("Enable preparation for ThinLTO."));
 
+cl::opt<bool> EnableHotColdSplit("hot-cold-split", cl::init(false), cl::Hidden,
+    cl::desc("Enable hot-cold splitting pass"));
+
+
 static cl::opt<bool> RunPGOInstrGen(
     "profile-generate", cl::init(false), cl::Hidden,
     cl::desc("Enable PGO instrumentation."));
@@ -496,6 +500,9 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
+
+  if (EnableHotColdSplit)
+    MPM.add(createHotColdSplittingPass());
 
   addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
 

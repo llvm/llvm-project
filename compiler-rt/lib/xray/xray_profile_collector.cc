@@ -15,6 +15,7 @@
 #include "xray_profile_collector.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_allocator.h"
+#include "xray_defs.h"
 #include "xray_profiling_flags.h"
 #include "xray_segmented_array.h"
 #include <memory>
@@ -81,26 +82,9 @@ static ProfileBufferArray *ProfileBuffers = nullptr;
 static ProfileBufferArrayAllocator *ProfileBuffersAllocator = nullptr;
 static FunctionCallTrie::Allocators *GlobalAllocators = nullptr;
 
-static void *allocateBuffer(size_t S) {
-  auto B = reinterpret_cast<void *>(internal_mmap(
-      NULL, S, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-  if (B == MAP_FAILED) {
-    if (Verbosity())
-      Report("XRay Profiling: Failed to allocate memory of size %d.\n", S);
-    return nullptr;
-  }
-  return B;
-}
-
-static void deallocateBuffer(void *B, size_t S) {
-  if (B == nullptr)
-    return;
-  internal_munmap(B, S);
-}
-
 } // namespace
 
-void post(const FunctionCallTrie &T, tid_t TId) {
+void post(const FunctionCallTrie &T, tid_t TId) XRAY_NEVER_INSTRUMENT {
   static pthread_once_t Once = PTHREAD_ONCE_INIT;
   pthread_once(&Once, +[] { reset(); });
 
@@ -134,8 +118,10 @@ struct ProfileRecord {
   const FunctionCallTrie::Node *Node = nullptr;
 
   // Constructor for in-place construction.
-  ProfileRecord(PathAllocator &A, const FunctionCallTrie::Node *N)
-      : Path(A), Node(N) {}
+  ProfileRecord(PathAllocator &A,
+                const FunctionCallTrie::Node *N) XRAY_NEVER_INSTRUMENT
+      : Path(A),
+        Node(N) {}
 };
 
 namespace {
@@ -144,9 +130,9 @@ using ProfileRecordArray = Array<ProfileRecord>;
 
 // Walk a depth-first traversal of each root of the FunctionCallTrie to generate
 // the path(s) and the data associated with the path.
-static void populateRecords(ProfileRecordArray &PRs,
-                            ProfileRecord::PathAllocator &PA,
-                            const FunctionCallTrie &Trie) {
+static void
+populateRecords(ProfileRecordArray &PRs, ProfileRecord::PathAllocator &PA,
+                const FunctionCallTrie &Trie) XRAY_NEVER_INSTRUMENT {
   using StackArray = Array<const FunctionCallTrie::Node *>;
   using StackAllocator = typename StackArray::AllocatorType;
   StackAllocator StackAlloc(profilingFlags()->stack_allocator_max);
@@ -174,7 +160,8 @@ static void populateRecords(ProfileRecordArray &PRs,
 }
 
 static void serializeRecords(ProfileBuffer *Buffer, const BlockHeader &Header,
-                             const ProfileRecordArray &ProfileRecords) {
+                             const ProfileRecordArray &ProfileRecords)
+    XRAY_NEVER_INSTRUMENT {
   auto NextPtr = static_cast<char *>(
                      internal_memcpy(Buffer->Data, &Header, sizeof(Header))) +
                  sizeof(Header);
@@ -207,7 +194,7 @@ static void serializeRecords(ProfileBuffer *Buffer, const BlockHeader &Header,
 
 } // namespace
 
-void serialize() {
+void serialize() XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Lock(&GlobalMutex);
 
   if (GlobalAllocators == nullptr || ThreadTries == nullptr ||
@@ -266,7 +253,7 @@ void serialize() {
   }
 }
 
-void reset() {
+void reset() XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Lock(&GlobalMutex);
 
   if (ProfileBuffers != nullptr) {
@@ -316,7 +303,7 @@ void reset() {
   new (ProfileBuffers) ProfileBufferArray(*ProfileBuffersAllocator);
 }
 
-XRayBuffer nextBuffer(XRayBuffer B) {
+XRayBuffer nextBuffer(XRayBuffer B) XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Lock(&GlobalMutex);
 
   if (ProfileBuffers == nullptr || ProfileBuffers->size() == 0)

@@ -743,8 +743,8 @@ define i32 @test43(i32 %x, i32 %y) {
 define i32 @test44(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test44(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 -4, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %z = add i32 %y, 3 ; thwart complexity-based canonicalization
@@ -757,7 +757,7 @@ define i32 @test44(i32 %x, i32 %y) {
 
 define i32 @test45(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;

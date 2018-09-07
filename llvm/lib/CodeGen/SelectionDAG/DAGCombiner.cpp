@@ -9777,11 +9777,11 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   if (!VT.isFloatingPoint() || !TLI.hasBitPreservingFPLogic(VT))
     return SDValue();
 
-  // TODO: Use splat values for the constant-checking below and remove this
-  // restriction.
+  // TODO: Handle cases where the integer constant is a different scalar
+  // bitwidth to the FP.
   SDValue N0 = N->getOperand(0);
   EVT SourceVT = N0.getValueType();
-  if (SourceVT.isVector())
+  if (VT.getScalarSizeInBits() != SourceVT.getScalarSizeInBits())
     return SDValue();
 
   unsigned FPOpcode;
@@ -9789,11 +9789,11 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   switch (N0.getOpcode()) {
   case ISD::AND:
     FPOpcode = ISD::FABS;
-    SignMask = ~APInt::getSignMask(SourceVT.getSizeInBits());
+    SignMask = ~APInt::getSignMask(SourceVT.getScalarSizeInBits());
     break;
   case ISD::XOR:
     FPOpcode = ISD::FNEG;
-    SignMask = APInt::getSignMask(SourceVT.getSizeInBits());
+    SignMask = APInt::getSignMask(SourceVT.getScalarSizeInBits());
     break;
   // TODO: ISD::OR --> ISD::FNABS?
   default:
@@ -9803,11 +9803,11 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   // Fold (bitcast int (and (bitcast fp X to int), 0x7fff...) to fp) -> fabs X
   // Fold (bitcast int (xor (bitcast fp X to int), 0x8000...) to fp) -> fneg X
   SDValue LogicOp0 = N0.getOperand(0);
-  ConstantSDNode *LogicOp1 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  ConstantSDNode *LogicOp1 = isConstOrConstSplat(N0.getOperand(1));
   if (LogicOp1 && LogicOp1->getAPIntValue() == SignMask &&
       LogicOp0.getOpcode() == ISD::BITCAST &&
-      LogicOp0->getOperand(0).getValueType() == VT)
-    return DAG.getNode(FPOpcode, SDLoc(N), VT, LogicOp0->getOperand(0));
+      LogicOp0.getOperand(0).getValueType() == VT)
+    return DAG.getNode(FPOpcode, SDLoc(N), VT, LogicOp0.getOperand(0));
 
   return SDValue();
 }

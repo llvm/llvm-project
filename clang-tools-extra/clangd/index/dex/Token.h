@@ -22,7 +22,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
 
-#include "../Index.h"
+#include "index/Index.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>

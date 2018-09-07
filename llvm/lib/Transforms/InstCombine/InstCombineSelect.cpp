@@ -362,6 +362,14 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     return nullptr;
   }
 
+  // If the select condition is a vector, the operands of the original select's
+  // operands also must be vectors. This may not be the case for getelementptr
+  // for example.
+  if (SI.getCondition()->getType()->isVectorTy() &&
+      (!OtherOpT->getType()->isVectorTy() ||
+       !OtherOpF->getType()->isVectorTy()))
+    return nullptr;
+
   // If we reach here, they do have operations in common.
   Value *NewSI = Builder.CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
                                       SI.getName() + ".v", &SI);
@@ -1819,15 +1827,42 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       }
 
       // MAX(~a, ~b) -> ~MIN(a, b)
+      // MAX(~a, C)  -> ~MIN(a, ~C)
       // MIN(~a, ~b) -> ~MAX(a, b)
-      Value *A, *B;
-      if (match(LHS, m_Not(m_Value(A))) && match(RHS, m_Not(m_Value(B))) &&
-          (!LHS->hasNUsesOrMore(3) || !RHS->hasNUsesOrMore(3))) {
-        CmpInst::Predicate InvertedPred = getInverseMinMaxPred(SPF);
-        Value *InvertedCmp = Builder.CreateICmp(InvertedPred, A, B);
-        Value *NewSel = Builder.CreateSelect(InvertedCmp, A, B);
-        return BinaryOperator::CreateNot(NewSel);
-      }
+      // MIN(~a, C)  -> ~MAX(a, ~C)
+      auto moveNotAfterMinMax = [&](Value *X, Value *Y,
+                                    bool Swapped) -> Instruction * {
+        Value *A;
+        if (match(X, m_Not(m_Value(A))) && !X->hasNUsesOrMore(3) &&
+            // Passing false to only consider m_Not and constants.
+            IsFreeToInvert(Y, false)) {
+          Value *B = Builder.CreateNot(Y);
+          Value *NewMinMax = createMinMax(Builder, getInverseMinMaxFlavor(SPF),
+                                          A, B);
+          // Copy the profile metadata.
+          if (MDNode *MD = SI.getMetadata(LLVMContext::MD_prof)) {
+            cast<SelectInst>(NewMinMax)->setMetadata(LLVMContext::MD_prof, MD);
+            // Swap the metadata if the operands are swapped.
+            if (Swapped) {
+              assert(X == SI.getFalseValue() && Y == SI.getTrueValue() &&
+                     "Unexpected operands.");
+              cast<SelectInst>(NewMinMax)->swapProfMetadata();
+            } else {
+              assert(X == SI.getTrueValue() && Y == SI.getFalseValue() &&
+                     "Unexpected operands.");
+            }
+          }
+
+          return BinaryOperator::CreateNot(NewMinMax);
+        }
+
+        return nullptr;
+      };
+
+      if (Instruction *I = moveNotAfterMinMax(LHS, RHS, /*Swapped*/false))
+        return I;
+      if (Instruction *I = moveNotAfterMinMax(RHS, LHS, /*Swapped*/true))
+        return I;
 
       if (Instruction *I = factorizeMinMaxTree(SPF, LHS, RHS, Builder))
         return I;

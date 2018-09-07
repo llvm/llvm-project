@@ -37,3 +37,11 @@ namespace absl {
 SomeContainer b;
 std::string Str = absl::StringsFunction("a");
 } // namespace absl
+
+#define USE_EXTERNAL(x) absl::strings_internal::Internal##x()
+
+void MacroUse() {
+  USE_INTERNAL(Function); // no-warning
+  USE_EXTERNAL(Function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not reference any 'internal' namespaces; those implementation details are reserved to Abseil
+}

@@ -4063,9 +4063,17 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
             getNamedOperand(*Add, SrcNames[i]);
 
           if (Src->isReg()) {
-            auto Mov = MRI.getUniqueVRegDef(Src->getReg());
-            if (Mov && Mov->getOpcode() == AMDGPU::S_MOV_B32)
-              Src = &Mov->getOperand(1);
+            MachineInstr *Def = MRI.getUniqueVRegDef(Src->getReg());
+            if (Def) {
+              if (Def->isMoveImmediate())
+                Src = &Def->getOperand(1);
+              else if (Def->isCopy()) {
+                auto Mov = MRI.getUniqueVRegDef(Def->getOperand(1).getReg());
+                if (Mov && Mov->isMoveImmediate()) {
+                  Src = &Mov->getOperand(1);
+                }
+              }
+            }
           }
 
           if (Src) {

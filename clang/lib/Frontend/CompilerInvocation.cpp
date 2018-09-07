@@ -2648,11 +2648,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
   }
-  // NVPTX does not support RTTI.
-  if (Opts.OpenMPIsDevice && T.isNVPTX()) {
-    Opts.RTTI = 0;
-    Opts.RTTIData = 0;
-  }
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
@@ -3097,7 +3092,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   // names.
   Res.getCodeGenOpts().DiscardValueNames &=
       !LangOpts.Sanitize.has(SanitizerKind::Address) &&
-      !LangOpts.Sanitize.has(SanitizerKind::Memory);
+      !LangOpts.Sanitize.has(SanitizerKind::KernelAddress) &&
+      !LangOpts.Sanitize.has(SanitizerKind::Memory) &&
+      !LangOpts.Sanitize.has(SanitizerKind::KernelMemory);
 
   ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, Diags,
                         Res.getFrontendOpts().ProgramAction);

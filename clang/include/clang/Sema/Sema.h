@@ -10231,6 +10231,7 @@ public:
   struct CodeCompleteExpressionData;
   void CodeCompleteExpression(Scope *S,
                               const CodeCompleteExpressionData &Data);
+  void CodeCompleteExpression(Scope *S, QualType PreferredType);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
                                        bool IsBaseExprStatement);
@@ -10241,11 +10242,14 @@ public:
                                       const VirtSpecifiers *VS = nullptr);
   void CodeCompleteBracketDeclarator(Scope *S);
   void CodeCompleteCase(Scope *S);
-  void CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
-                        SourceLocation OpenParLoc);
-  void CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
-                               ArrayRef<Expr *> Args,
-                               SourceLocation OpenParLoc);
+  /// Reports signatures for a call to CodeCompleteConsumer and returns the
+  /// preferred type for the current argument. Returned type can be null.
+  QualType ProduceCallSignatureHelp(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
+                                    SourceLocation OpenParLoc);
+  QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,
+                                           SourceLocation Loc,
+                                           ArrayRef<Expr *> Args,
+                                           SourceLocation OpenParLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   void CodeCompleteReturn(Scope *S);
   void CodeCompleteAfterIf(Scope *S);

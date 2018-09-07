@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
-#include "../Logger.h"
+#include "Logger.h"
 #include "SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Preprocessor.h"

@@ -22,6 +22,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -238,6 +239,18 @@ bool HexagonTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
     return false;
 
   return true;
+}
+
+unsigned  HexagonTargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                              SelectionDAG &DAG) const {
+  // Just support r19, the linux kernel uses it.
+  unsigned Reg = StringSwitch<unsigned>(RegName)
+                     .Case("r19", Hexagon::R19)
+                     .Default(0);
+  if (Reg)
+    return Reg;
+
+  report_fatal_error("Invalid register name global variable");
 }
 
 /// LowerCallResult - Lower the result values of an ISD::CALL into the

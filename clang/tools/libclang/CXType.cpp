@@ -442,6 +442,7 @@ CXType clang_getPointeeType(CXType CT) {
   if (!TP)
     return MakeCXType(QualType(), GetTU(CT));
 
+try_again:
   switch (TP->getTypeClass()) {
     case Type::Pointer:
       T = cast<PointerType>(TP)->getPointeeType();
@@ -458,6 +459,12 @@ CXType clang_getPointeeType(CXType CT) {
       break;
     case Type::MemberPointer:
       T = cast<MemberPointerType>(TP)->getPointeeType();
+      break;
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
+      TP = cast<DeducedType>(TP)->getDeducedType().getTypePtrOrNull();
+      if (TP)
+        goto try_again;
       break;
     default:
       T = QualType();

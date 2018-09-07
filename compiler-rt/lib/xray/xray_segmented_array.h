@@ -88,7 +88,7 @@ private:
   // segments when elements are trimmed off the end.
   SegmentBase *Freelist = &SentinelSegment;
 
-  Segment *NewSegment() {
+  Segment *NewSegment() XRAY_NEVER_INSTRUMENT {
     // We need to handle the case in which enough elements have been trimmed to
     // allow us to re-use segments we've allocated before. For this we look into
     // the Freelist, to see whether we need to actually allocate new blocks or
@@ -111,7 +111,7 @@ private:
     return S;
   }
 
-  Segment *InitHeadAndTail() {
+  Segment *InitHeadAndTail() XRAY_NEVER_INSTRUMENT {
     DCHECK_EQ(Head, &SentinelSegment);
     DCHECK_EQ(Tail, &SentinelSegment);
     auto Segment = NewSegment();
@@ -123,7 +123,7 @@ private:
     return Segment;
   }
 
-  Segment *AppendNewSegment() {
+  Segment *AppendNewSegment() XRAY_NEVER_INSTRUMENT {
     auto S = NewSegment();
     if (S == nullptr)
       return nullptr;
@@ -144,16 +144,18 @@ private:
     size_t Size = 0;
 
   public:
-    Iterator(SegmentBase *IS, size_t Off, size_t S)
-        : S(IS), Offset(Off), Size(S) {}
-    Iterator(const Iterator &) noexcept = default;
-    Iterator() noexcept = default;
-    Iterator(Iterator &&) noexcept = default;
-    Iterator &operator=(const Iterator &) = default;
-    Iterator &operator=(Iterator &&) = default;
-    ~Iterator() = default;
+    Iterator(SegmentBase *IS, size_t Off, size_t S) XRAY_NEVER_INSTRUMENT
+        : S(IS),
+          Offset(Off),
+          Size(S) {}
+    Iterator(const Iterator &) NOEXCEPT XRAY_NEVER_INSTRUMENT = default;
+    Iterator() NOEXCEPT XRAY_NEVER_INSTRUMENT = default;
+    Iterator(Iterator &&) NOEXCEPT XRAY_NEVER_INSTRUMENT = default;
+    Iterator &operator=(const Iterator &) XRAY_NEVER_INSTRUMENT = default;
+    Iterator &operator=(Iterator &&) XRAY_NEVER_INSTRUMENT = default;
+    ~Iterator() XRAY_NEVER_INSTRUMENT = default;
 
-    Iterator &operator++() {
+    Iterator &operator++() XRAY_NEVER_INSTRUMENT {
       if (++Offset % ElementsPerSegment || Offset == Size)
         return *this;
 
@@ -168,7 +170,7 @@ private:
       return *this;
     }
 
-    Iterator &operator--() {
+    Iterator &operator--() XRAY_NEVER_INSTRUMENT {
       DCHECK_NE(S, &SentinelSegment);
       DCHECK_GT(Offset, 0);
 
@@ -181,29 +183,31 @@ private:
       return *this;
     }
 
-    Iterator operator++(int) {
+    Iterator operator++(int) XRAY_NEVER_INSTRUMENT {
       Iterator Copy(*this);
       ++(*this);
       return Copy;
     }
 
-    Iterator operator--(int) {
+    Iterator operator--(int) XRAY_NEVER_INSTRUMENT {
       Iterator Copy(*this);
       --(*this);
       return Copy;
     }
 
     template <class V, class W>
-    friend bool operator==(const Iterator<V> &L, const Iterator<W> &R) {
+    friend bool operator==(const Iterator<V> &L,
+                           const Iterator<W> &R) XRAY_NEVER_INSTRUMENT {
       return L.S == R.S && L.Offset == R.Offset;
     }
 
     template <class V, class W>
-    friend bool operator!=(const Iterator<V> &L, const Iterator<W> &R) {
+    friend bool operator!=(const Iterator<V> &L,
+                           const Iterator<W> &R) XRAY_NEVER_INSTRUMENT {
       return !(L == R);
     }
 
-    U &operator*() const {
+    U &operator*() const XRAY_NEVER_INSTRUMENT {
       DCHECK_NE(S, &SentinelSegment);
       auto RelOff = Offset % ElementsPerSegment;
 
@@ -214,11 +218,11 @@ private:
       return *reinterpret_cast<U *>(AlignedOffset);
     }
 
-    U *operator->() const { return &(**this); }
+    U *operator->() const XRAY_NEVER_INSTRUMENT { return &(**this); }
   };
 
 public:
-  explicit Array(AllocatorType &A) : Alloc(&A) {}
+  explicit Array(AllocatorType &A) XRAY_NEVER_INSTRUMENT : Alloc(&A) {}
 
   Array(const Array &) = delete;
   Array(Array &&O) NOEXCEPT : Alloc(O.Alloc),
@@ -230,16 +234,16 @@ public:
     O.Size = 0;
   }
 
-  bool empty() const { return Size == 0; }
+  bool empty() const XRAY_NEVER_INSTRUMENT { return Size == 0; }
 
-  AllocatorType &allocator() const {
+  AllocatorType &allocator() const XRAY_NEVER_INSTRUMENT {
     DCHECK_NE(Alloc, nullptr);
     return *Alloc;
   }
 
-  size_t size() const { return Size; }
+  size_t size() const XRAY_NEVER_INSTRUMENT { return Size; }
 
-  T *Append(const T &E) {
+  T *Append(const T &E) XRAY_NEVER_INSTRUMENT {
     if (UNLIKELY(Head == &SentinelSegment))
       if (InitHeadAndTail() == nullptr)
         return nullptr;
@@ -257,7 +261,8 @@ public:
     return Position;
   }
 
-  template <class... Args> T *AppendEmplace(Args &&... args) {
+  template <class... Args>
+  T *AppendEmplace(Args &&... args) XRAY_NEVER_INSTRUMENT {
     if (UNLIKELY(Head == &SentinelSegment))
       if (InitHeadAndTail() == nullptr)
         return nullptr;
@@ -281,7 +286,7 @@ public:
     return reinterpret_cast<T *>(Position);
   }
 
-  T &operator[](size_t Offset) const {
+  T &operator[](size_t Offset) const XRAY_NEVER_INSTRUMENT {
     DCHECK_LE(Offset, Size);
     // We need to traverse the array enough times to find the element at Offset.
     auto S = Head;
@@ -296,13 +301,13 @@ public:
     return *reinterpret_cast<T *>(Position);
   }
 
-  T &front() const {
+  T &front() const XRAY_NEVER_INSTRUMENT {
     DCHECK_NE(Head, &SentinelSegment);
     DCHECK_NE(Size, 0u);
     return *begin();
   }
 
-  T &back() const {
+  T &back() const XRAY_NEVER_INSTRUMENT {
     DCHECK_NE(Tail, &SentinelSegment);
     DCHECK_NE(Size, 0u);
     auto It = end();
@@ -310,7 +315,8 @@ public:
     return *It;
   }
 
-  template <class Predicate> T *find_element(Predicate P) const {
+  template <class Predicate>
+  T *find_element(Predicate P) const XRAY_NEVER_INSTRUMENT {
     if (empty())
       return nullptr;
 
@@ -324,7 +330,7 @@ public:
 
   /// Remove N Elements from the end. This leaves the blocks behind, and not
   /// require allocation of new blocks for new elements added after trimming.
-  void trim(size_t Elements) {
+  void trim(size_t Elements) XRAY_NEVER_INSTRUMENT {
     if (Elements == 0)
       return;
 
@@ -360,10 +366,18 @@ public:
   }
 
   // Provide iterators.
-  Iterator<T> begin() const { return Iterator<T>(Head, 0, Size); }
-  Iterator<T> end() const { return Iterator<T>(Tail, Size, Size); }
-  Iterator<const T> cbegin() const { return Iterator<const T>(Head, 0, Size); }
-  Iterator<const T> cend() const { return Iterator<const T>(Tail, Size, Size); }
+  Iterator<T> begin() const XRAY_NEVER_INSTRUMENT {
+    return Iterator<T>(Head, 0, Size);
+  }
+  Iterator<T> end() const XRAY_NEVER_INSTRUMENT {
+    return Iterator<T>(Tail, Size, Size);
+  }
+  Iterator<const T> cbegin() const XRAY_NEVER_INSTRUMENT {
+    return Iterator<const T>(Head, 0, Size);
+  }
+  Iterator<const T> cend() const XRAY_NEVER_INSTRUMENT {
+    return Iterator<const T>(Tail, Size, Size);
+  }
 };
 
 // We need to have this storage definition out-of-line so that the compiler can

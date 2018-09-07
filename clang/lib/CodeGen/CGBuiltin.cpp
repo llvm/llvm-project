@@ -10405,6 +10405,41 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 1);
   }
+  case X86::BI__builtin_ia32_addcarryx_u32:
+  case X86::BI__builtin_ia32_addcarryx_u64:
+  case X86::BI__builtin_ia32_addcarry_u32:
+  case X86::BI__builtin_ia32_addcarry_u64:
+  case X86::BI__builtin_ia32_subborrow_u32:
+  case X86::BI__builtin_ia32_subborrow_u64: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_addcarryx_u32:
+      IID = Intrinsic::x86_addcarryx_u32;
+      break;
+    case X86::BI__builtin_ia32_addcarryx_u64:
+      IID = Intrinsic::x86_addcarryx_u64;
+      break;
+    case X86::BI__builtin_ia32_addcarry_u32:
+      IID = Intrinsic::x86_addcarry_u32;
+      break;
+    case X86::BI__builtin_ia32_addcarry_u64:
+      IID = Intrinsic::x86_addcarry_u64;
+      break;
+    case X86::BI__builtin_ia32_subborrow_u32:
+      IID = Intrinsic::x86_subborrow_u32;
+      break;
+    case X86::BI__builtin_ia32_subborrow_u64:
+      IID = Intrinsic::x86_subborrow_u64;
+      break;
+    }
+
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID),
+                                     { Ops[0], Ops[1], Ops[2] });
+    Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, 1),
+                                      Ops[3]);
+    return Builder.CreateExtractValue(Call, 0);
+  }
 
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:

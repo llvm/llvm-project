@@ -134,7 +134,8 @@ ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
 
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
 FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
-                                        bool Recover = false);
+                                        bool Recover = false,
+                                        bool EnableKmsan = false);
 
 FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
                                            bool Recover = false);

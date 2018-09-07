@@ -1,9 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
- <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -151,17 +145,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>97</integer>
-    <integer>98</integer>
-    <integer>99</integer>
-    <integer>100</integer>
-    <integer>101</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -308,20 +291,6 @@
    <key>col</key><integer>11</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>97</integer>
-    <integer>98</integer>
-    <integer>99</integer>
-    <integer>100</integer>
-    <integer>101</integer>
-    <integer>102</integer>
-    <integer>103</integer>
-    <integer>104</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -433,22 +402,6 @@
    <key>line</key><integer>107</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>97</integer>
-    <integer>98</integer>
-    <integer>99</integer>
-    <integer>100</integer>
-    <integer>101</integer>
-    <integer>102</integer>
-    <integer>103</integer>
-    <integer>104</integer>
-    <integer>106</integer>
-    <integer>107</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -702,17 +655,6 @@
    <key>col</key><integer>28</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>86</integer>
-    <integer>87</integer>
-    <integer>88</integer>
-    <integer>110</integer>
-    <integer>111</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -859,18 +801,6 @@
    <key>col</key><integer>11</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>114</integer>
-    <integer>115</integer>
-    <integer>116</integer>
-    <integer>117</integer>
-    <integer>118</integer>
-    <integer>119</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -982,19 +912,6 @@
    <key>line</key><integer>121</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>114</integer>
-    <integer>115</integer>
-    <integer>116</integer>
-    <integer>117</integer>
-    <integer>118</integer>
-    <integer>119</integer>
-    <integer>121</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -1142,17 +1059,6 @@
    <key>col</key><integer>11</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>124</integer>
-    <integer>125</integer>
-    <integer>126</integer>
-    <integer>127</integer>
-    <integer>128</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1264,18 +1170,6 @@
    <key>line</key><integer>130</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>124</integer>
-    <integer>125</integer>
-    <integer>126</integer>
-    <integer>127</integer>
-    <integer>128</integer>
-    <integer>130</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -1423,16 +1317,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>133</integer>
-    <integer>134</integer>
-    <integer>135</integer>
-    <integer>136</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1579,19 +1463,6 @@
    <key>col</key><integer>11</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>133</integer>
-    <integer>134</integer>
-    <integer>135</integer>
-    <integer>136</integer>
-    <integer>137</integer>
-    <integer>138</integer>
-    <integer>139</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1703,20 +1574,6 @@
    <key>line</key><integer>141</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>133</integer>
-    <integer>134</integer>
-    <integer>135</integer>
-    <integer>136</integer>
-    <integer>137</integer>
-    <integer>138</integer>
-    <integer>139</integer>
-    <integer>141</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -1961,18 +1818,6 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>144</integer>
-    <integer>145</integer>
-    <integer>146</integer>
-    <integer>150</integer>
-    <integer>151</integer>
-    <integer>153</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -2118,15 +1963,6 @@
    <key>line</key><integer>159</integer>
    <key>col</key><integer>11</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>157</integer>
-    <integer>158</integer>
-    <integer>159</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -2308,18 +2144,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>184</integer>
-    <integer>185</integer>
-    <integer>186</integer>
-    <integer>187</integer>
-    <integer>188</integer>
-    <integer>189</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -2466,20 +2290,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>192</integer>
-    <integer>193</integer>
-    <integer>194</integer>
-    <integer>195</integer>
-    <integer>196</integer>
-    <integer>197</integer>
-    <integer>198</integer>
-    <integer>199</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -2591,21 +2401,6 @@
    <key>line</key><integer>201</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>192</integer>
-    <integer>193</integer>
-    <integer>194</integer>
-    <integer>195</integer>
-    <integer>196</integer>
-    <integer>197</integer>
-    <integer>198</integer>
-    <integer>199</integer>
-    <integer>201</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -2753,20 +2548,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>204</integer>
-    <integer>205</integer>
-    <integer>206</integer>
-    <integer>207</integer>
-    <integer>208</integer>
-    <integer>209</integer>
-    <integer>210</integer>
-    <integer>211</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -2878,21 +2659,6 @@
    <key>line</key><integer>213</integer>
    <key>col</key><integer>2</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>204</integer>
-    <integer>205</integer>
-    <integer>206</integer>
-    <integer>207</integer>
-    <integer>208</integer>
-    <integer>209</integer>
-    <integer>210</integer>
-    <integer>211</integer>
-    <integer>213</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -3040,15 +2806,6 @@
    <key>col</key><integer>27</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>216</integer>
-    <integer>219</integer>
-    <integer>220</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -3194,15 +2951,6 @@
    <key>line</key><integer>225</integer>
    <key>col</key><integer>20</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>223</integer>
-    <integer>224</integer>
-    <integer>225</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -3350,15 +3098,6 @@
    <key>col</key><integer>20</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>228</integer>
-    <integer>229</integer>
-    <integer>230</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -3504,15 +3243,6 @@
    <key>line</key><integer>235</integer>
    <key>col</key><integer>27</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>233</integer>
-    <integer>234</integer>
-    <integer>235</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -3723,16 +3453,6 @@
    <key>col</key><integer>27</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>238</integer>
-    <integer>239</integer>
-    <integer>240</integer>
-    <integer>241</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -3879,15 +3599,6 @@
    <key>col</key><integer>27</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>244</integer>
-    <integer>245</integer>
-    <integer>246</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -4033,15 +3744,6 @@
    <key>line</key><integer>251</integer>
    <key>col</key><integer>20</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>249</integer>
-    <integer>250</integer>
-    <integer>251</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -4252,16 +3954,6 @@
    <key>col</key><integer>20</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>254</integer>
-    <integer>255</integer>
-    <integer>256</integer>
-    <integer>257</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -4471,16 +4163,6 @@
    <key>col</key><integer>27</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>260</integer>
-    <integer>261</integer>
-    <integer>262</integer>
-    <integer>263</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -4626,15 +4308,6 @@
    <key>line</key><integer>276</integer>
    <key>col</key><integer>19</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>274</integer>
-    <integer>275</integer>
-    <integer>276</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -4782,17 +4455,6 @@
    <key>col</key><integer>9</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>274</integer>
-    <integer>275</integer>
-    <integer>276</integer>
-    <integer>277</integer>
-    <integer>278</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -4939,19 +4601,6 @@
    <key>col</key><integer>9</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>274</integer>
-    <integer>275</integer>
-    <integer>276</integer>
-    <integer>277</integer>
-    <integer>278</integer>
-    <integer>279</integer>
-    <integer>280</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -5097,21 +4746,6 @@
    <key>line</key><integer>282</integer>
    <key>col</key><integer>9</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>274</integer>
-    <integer>275</integer>
-    <integer>276</integer>
-    <integer>277</integer>
-    <integer>278</integer>
-    <integer>279</integer>
-    <integer>280</integer>
-    <integer>281</integer>
-    <integer>282</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -5356,18 +4990,6 @@
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>286</integer>
-    <integer>287</integer>
-    <integer>288</integer>
-    <integer>289</integer>
-    <integer>290</integer>
-    <integer>291</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -5577,17 +5199,6 @@
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>298</integer>
-    <integer>299</integer>
-    <integer>300</integer>
-    <integer>301</integer>
-    <integer>302</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -5733,15 +5344,6 @@
    <key>line</key><integer>327</integer>
    <key>col</key><integer>28</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>325</integer>
-    <integer>326</integer>
-    <integer>327</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -5889,16 +5491,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>325</integer>
-    <integer>326</integer>
-    <integer>327</integer>
-    <integer>328</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -6044,15 +5636,6 @@
    <key>line</key><integer>333</integer>
    <key>col</key><integer>18</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>331</integer>
-    <integer>332</integer>
-    <integer>333</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -6234,16 +5817,6 @@
    <key>col</key><integer>30</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>344</integer>
-    <integer>345</integer>
-    <integer>346</integer>
-    <integer>347</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -6424,16 +5997,6 @@
    <key>col</key><integer>30</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>350</integer>
-    <integer>351</integer>
-    <integer>352</integer>
-    <integer>353</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -6579,15 +6142,6 @@
    <key>line</key><integer>358</integer>
    <key>col</key><integer>14</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>356</integer>
-    <integer>357</integer>
-    <integer>358</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -6769,16 +6323,6 @@
    <key>col</key><integer>19</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>362</integer>
-    <integer>363</integer>
-    <integer>364</integer>
-    <integer>365</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -6925,16 +6469,6 @@
    <key>col</key><integer>7</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>372</integer>
-    <integer>373</integer>
-    <integer>374</integer>
-    <integer>375</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -7046,18 +6580,6 @@
    <key>line</key><integer>380</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>372</integer>
-    <integer>373</integer>
-    <integer>374</integer>
-    <integer>375</integer>
-    <integer>379</integer>
-    <integer>380</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -7176,21 +6698,7 @@
    <key>col</key><integer>70</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>388</integer>
-    <integer>389</integer>
-    <integer>390</integer>
-    <integer>391</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-   <string>/clang/test/Analysis/generics.m</string>
  </array>
 </dict>
 </plist>

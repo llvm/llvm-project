@@ -11,63 +11,98 @@
 !//===----------------------------------------------------------------------===//
 !
 
-!***
-!*** Some of the directives for the following routine extend past column 72,
-!*** so process this file in 132-column mode.
-!***
+      integer omp_integer_kind
+      parameter(omp_integer_kind=4)
+      integer omp_logical_kind
+      parameter(omp_logical_kind=4)
+      integer omp_real_kind
+      parameter(omp_real_kind=4)
+      integer omp_lock_kind
+      parameter(omp_lock_kind=int_ptr_kind())
+      integer omp_nest_lock_kind
+      parameter(omp_nest_lock_kind=int_ptr_kind())
+      integer omp_sched_kind
+      parameter(omp_sched_kind=omp_integer_kind)
+      integer omp_proc_bind_kind
+      parameter(omp_proc_bind_kind=omp_integer_kind)
+      integer kmp_pointer_kind
+      parameter(kmp_pointer_kind=int_ptr_kind())
+      integer kmp_size_t_kind
+      parameter(kmp_size_t_kind=int_ptr_kind())
+      integer kmp_affinity_mask_kind
+      parameter(kmp_affinity_mask_kind=int_ptr_kind())
+      integer omp_lock_hint_kind
+      parameter(omp_lock_hint_kind=omp_integer_kind)
+      integer omp_control_tool_kind
+      parameter(omp_control_tool_kind=omp_integer_kind)
+      integer omp_control_tool_result_kind
+      parameter(omp_control_tool_result_kind=omp_integer_kind)
 
-!DIR$ fixedformlinesize:132
+      integer(kind=omp_integer_kind)openmp_version
+      parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
+      integer(kind=omp_integer_kind)kmp_version_major
+      parameter(kmp_version_major=@LIBOMP_VERSION_MAJOR@)
+      integer(kind=omp_integer_kind)kmp_version_minor
+      parameter(kmp_version_minor=@LIBOMP_VERSION_MINOR@)
+      integer(kind=omp_integer_kind)kmp_version_build
+      parameter(kmp_version_build=@LIBOMP_VERSION_BUILD@)
+      character(*)kmp_build_date
+      parameter(kmp_build_date='@LIBOMP_BUILD_DATE@')
 
-      integer, parameter :: omp_integer_kind       = 4
-      integer, parameter :: omp_logical_kind       = 4
-      integer, parameter :: omp_real_kind          = 4
-      integer, parameter :: omp_lock_kind          = int_ptr_kind()
-      integer, parameter :: omp_nest_lock_kind     = int_ptr_kind()
-      integer, parameter :: omp_sched_kind         = omp_integer_kind
-      integer, parameter :: omp_proc_bind_kind     = omp_integer_kind
-      integer, parameter :: kmp_pointer_kind       = int_ptr_kind()
-      integer, parameter :: kmp_size_t_kind        = int_ptr_kind()
-      integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
-      integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
-      integer, parameter :: omp_control_tool_kind  = omp_integer_kind
-      integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
+      integer(kind=omp_sched_kind)omp_sched_static
+      parameter(omp_sched_static=1)
+      integer(kind=omp_sched_kind)omp_sched_dynamic
+      parameter(omp_sched_dynamic=2)
+      integer(kind=omp_sched_kind)omp_sched_guided
+      parameter(omp_sched_guided=3)
+      integer(kind=omp_sched_kind)omp_sched_auto
+      parameter(omp_sched_auto=4)
 
-      integer (kind=omp_integer_kind), parameter :: openmp_version    = @LIBOMP_OMP_YEAR_MONTH@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_major = @LIBOMP_VERSION_MAJOR@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_minor = @LIBOMP_VERSION_MINOR@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_build = @LIBOMP_VERSION_BUILD@
-      character(*)               kmp_build_date
-      parameter( kmp_build_date = '@LIBOMP_BUILD_DATE@' )
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_false
+      parameter(omp_proc_bind_false=0)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_true
+      parameter(omp_proc_bind_true=1)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_master
+      parameter(omp_proc_bind_master=2)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_close
+      parameter(omp_proc_bind_close=3)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_spread
+      parameter(omp_proc_bind_spread=4)
 
-      integer(kind=omp_sched_kind), parameter :: omp_sched_static  = 1
-      integer(kind=omp_sched_kind), parameter :: omp_sched_dynamic = 2
-      integer(kind=omp_sched_kind), parameter :: omp_sched_guided  = 3
-      integer(kind=omp_sched_kind), parameter :: omp_sched_auto    = 4
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_none
+      parameter(omp_lock_hint_none=0)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_uncontended
+      parameter(omp_lock_hint_uncontended=1)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_contended
+      parameter(omp_lock_hint_contended=2)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_nonspeculative
+      parameter(omp_lock_hint_nonspeculative=4)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_speculative
+      parameter(omp_lock_hint_speculative=8)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_hle
+      parameter(kmp_lock_hint_hle=65536)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_rtm
+      parameter(kmp_lock_hint_rtm=131072)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_adaptive
+      parameter(kmp_lock_hint_adaptive=262144)
 
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_false = 0
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_true = 1
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_master = 2
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_close = 3
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_spread = 4
+      integer(kind=omp_control_tool_kind)omp_control_tool_start
+      parameter(omp_control_tool_start=1)
+      integer(kind=omp_control_tool_kind)omp_control_tool_pause
+      parameter(omp_control_tool_pause=2)
+      integer(kind=omp_control_tool_kind)omp_control_tool_flush
+      parameter(omp_control_tool_flush=3)
+      integer(kind=omp_control_tool_kind)omp_control_tool_end
+      parameter(omp_control_tool_end=4)
 
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
-
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_start = 1
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_pause = 2
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_flush = 3
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_end = 4
-
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_notool = -2
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_nocallback = -1
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
+      integer(kind=omp_control_tool_result_kind)omp_control_tool_notool
+      parameter(omp_control_tool_notool=-2)
+      integer(kind=omp_integer_kind)omp_control_tool_nocallback
+      parameter(omp_control_tool_nocallback=-1)
+      integer(kind=omp_control_tool_result_kind)omp_control_tool_success
+      parameter(omp_control_tool_success=0)
+      integer(kind=omp_control_tool_result_kind)omp_control_tool_ignored
+      parameter(omp_control_tool_ignored=1)
 
       interface
 
