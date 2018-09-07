@@ -24,26 +24,35 @@ static u32 RandomSeed() {
   return seed;
 }
 
-Thread *Thread::main_thread;
+Thread *Thread::thread_list_head;
 SpinMutex Thread::thread_list_mutex;
+Thread::ThreadStats Thread::thread_stats;
 
 void Thread::InsertIntoThreadList(Thread *t) {
   CHECK(!t->next_);
-  if (!main_thread) {
-    main_thread = t;
+  SpinMutexLock l(&thread_list_mutex);
+  thread_stats.n_live_threads++;
+  thread_stats.total_stack_size += t->stack_size();
+  if (!thread_list_head) {
+    thread_list_head = t;
     return;
   }
-  SpinMutexLock l(&thread_list_mutex);
-  Thread *last = main_thread;
+  Thread *last = thread_list_head;
   while (last->next_)
     last = last->next_;
   last->next_ = t;
 }
 
 void Thread::RemoveFromThreadList(Thread *t) {
-  CHECK_NE(t, main_thread);
   SpinMutexLock l(&thread_list_mutex);
-  Thread *prev = main_thread;
+  thread_stats.n_live_threads--;
+  thread_stats.total_stack_size -= t->stack_size();
+  if (t == thread_list_head) {
+    thread_list_head = t->next_;
+    t->next_ = nullptr;
+    return;
+  }
+  Thread *prev = thread_list_head;
   Thread *cur = prev->next_;
   CHECK(cur);
   while (cur) {
@@ -67,10 +76,17 @@ void Thread::Create() {
   thread->random_state_ =
       flags()->random_tags ? RandomSeed() : thread->unique_id_;
   if (auto sz = flags()->heap_history_size)
-    thread->heap_allocations_ = RingBuffer<HeapAllocationRecord>::New(sz);
-  InsertIntoThreadList(thread);
+    thread->heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
   SetCurrentThread(thread);
   thread->Init();
+  InsertIntoThreadList(thread);
+}
+
+uptr Thread::MemoryUsedPerThread() {
+  uptr res = sizeof(Thread);
+  if (auto sz = flags()->heap_history_size)
+    res += HeapAllocationsRingBuffer::SizeInBytes(sz);
+  return res;
 }
 
 void Thread::Init() {

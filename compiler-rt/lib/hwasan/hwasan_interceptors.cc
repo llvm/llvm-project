@@ -128,50 +128,24 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
   CHECK_UNPOISONED((x),                                         \
     common_flags()->strict_string_checks ? (len) + 1 : (n) )
 
-#define SANITIZER_ALIAS(RET, FN, ARGS...)                                \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET __sanitizer_##FN(ARGS) \
-      ALIAS(WRAPPER_NAME(FN));
-
-SANITIZER_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,
-                SIZE_T size);
-SANITIZER_ALIAS(void *, memalign, SIZE_T alignment, SIZE_T size);
-SANITIZER_ALIAS(void *, aligned_alloc, SIZE_T alignment, SIZE_T size);
-SANITIZER_ALIAS(void *, __libc_memalign, SIZE_T alignment, SIZE_T size);
-SANITIZER_ALIAS(void *, valloc, SIZE_T size);
-SANITIZER_ALIAS(void *, pvalloc, SIZE_T size);
-SANITIZER_ALIAS(void, free, void *ptr);
-SANITIZER_ALIAS(void, cfree, void *ptr);
-SANITIZER_ALIAS(uptr, malloc_usable_size, const void *ptr);
-SANITIZER_ALIAS(void, mallinfo, __sanitizer_struct_mallinfo *sret);
-SANITIZER_ALIAS(int, mallopt, int cmd, int value);
-SANITIZER_ALIAS(void, malloc_stats, void);
-SANITIZER_ALIAS(void *, calloc, SIZE_T nmemb, SIZE_T size);
-SANITIZER_ALIAS(void *, realloc, void *ptr, SIZE_T size);
-SANITIZER_ALIAS(void *, malloc, SIZE_T size);
-
-INTERCEPTOR(int, posix_memalign, void **memptr, SIZE_T alignment, SIZE_T size) {
+int __sanitizer_posix_memalign(void **memptr, uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   CHECK_NE(memptr, 0);
   int res = hwasan_posix_memalign(memptr, alignment, size, &stack);
   return res;
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(void *, memalign, SIZE_T alignment, SIZE_T size) {
+void * __sanitizer_memalign(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_memalign(alignment, size, &stack);
 }
-#define HWASAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
-#else
-#define HWASAN_MAYBE_INTERCEPT_MEMALIGN
-#endif
 
-INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
+void * __sanitizer_aligned_alloc(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_aligned_alloc(alignment, size, &stack);
 }
 
-INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
+void * __sanitizer___libc_memalign(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   void *ptr = hwasan_memalign(alignment, size, &stack);
   if (ptr)
@@ -179,80 +153,47 @@ INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
   return ptr;
 }
 
-INTERCEPTOR(void *, valloc, SIZE_T size) {
+void * __sanitizer_valloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_valloc(size, &stack);
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(void *, pvalloc, SIZE_T size) {
+void * __sanitizer_pvalloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_pvalloc(size, &stack);
 }
-#define HWASAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
-#else
-#define HWASAN_MAYBE_INTERCEPT_PVALLOC
-#endif
 
-INTERCEPTOR(void, free, void *ptr) {
+void __sanitizer_free(void *ptr) {
   GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
   HwasanDeallocate(&stack, ptr);
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(void, cfree, void *ptr) {
+void __sanitizer_cfree(void *ptr) {
   GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
   HwasanDeallocate(&stack, ptr);
 }
-#define HWASAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
-#else
-#define HWASAN_MAYBE_INTERCEPT_CFREE
-#endif
 
-INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
+uptr __sanitizer_malloc_usable_size(const void *ptr) {
   return __sanitizer_get_allocated_size(ptr);
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-// This function actually returns a struct by value, but we can't unpoison a
-// temporary! The following is equivalent on all supported platforms but
-// aarch64 (which uses a different register for sret value).  We have a test
-// to confirm that.
-INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
-#ifdef __aarch64__
-  uptr r8;
-  asm volatile("mov %0,x8" : "=r" (r8));
-  sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
-#endif
-  internal_memset(sret, 0, sizeof(*sret));
+struct __sanitizer_struct_mallinfo __sanitizer_mallinfo() {
+  __sanitizer_struct_mallinfo sret;
+  internal_memset(&sret, 0, sizeof(sret));
+  return sret;
 }
-#define HWASAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
-#else
-#define HWASAN_MAYBE_INTERCEPT_MALLINFO
-#endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(int, mallopt, int cmd, int value) {
+int __sanitizer_mallopt(int cmd, int value) {
   return -1;
 }
-#define HWASAN_MAYBE_INTERCEPT_MALLOPT INTERCEPT_FUNCTION(mallopt)
-#else
-#define HWASAN_MAYBE_INTERCEPT_MALLOPT
-#endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-INTERCEPTOR(void, malloc_stats, void) {
+void __sanitizer_malloc_stats(void) {
   // FIXME: implement, but don't call REAL(malloc_stats)!
 }
-#define HWASAN_MAYBE_INTERCEPT_MALLOC_STATS INTERCEPT_FUNCTION(malloc_stats)
-#else
-#define HWASAN_MAYBE_INTERCEPT_MALLOC_STATS
-#endif
 
-
-INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
+void * __sanitizer_calloc(uptr nmemb, uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_inited))
     // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
@@ -260,7 +201,7 @@ INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
   return hwasan_calloc(nmemb, size, &stack);
 }
 
-INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
+void * __sanitizer_realloc(void *ptr, uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
@@ -278,7 +219,7 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   return hwasan_realloc(ptr, size, &stack);
 }
 
-INTERCEPTOR(void *, malloc, SIZE_T size) {
+void * __sanitizer_malloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_init_is_running))
     ENSURE_HWASAN_INITED();
@@ -287,6 +228,35 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
     return AllocateFromLocalPool(size);
   return hwasan_malloc(size, &stack);
 }
+
+#if HWASAN_WITH_INTERCEPTORS
+#define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)               \
+      ALIAS("__sanitizer_" #FN);                                            \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
+      ARGS) ALIAS("__sanitizer_" #FN);
+
+INTERCEPTOR_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,
+                  SIZE_T size);
+INTERCEPTOR_ALIAS(void *, aligned_alloc, SIZE_T alignment, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, __libc_memalign, SIZE_T alignment, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, valloc, SIZE_T size);
+INTERCEPTOR_ALIAS(void, free, void *ptr);
+INTERCEPTOR_ALIAS(uptr, malloc_usable_size, const void *ptr);
+INTERCEPTOR_ALIAS(void *, calloc, SIZE_T nmemb, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, realloc, void *ptr, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, malloc, SIZE_T size);
+
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+INTERCEPTOR_ALIAS(void *, memalign, SIZE_T alignment, SIZE_T size);
+INTERCEPTOR_ALIAS(void *, pvalloc, SIZE_T size);
+INTERCEPTOR_ALIAS(void, cfree, void *ptr);
+INTERCEPTOR_ALIAS(__sanitizer_struct_mallinfo, mallinfo);
+INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
+INTERCEPTOR_ALIAS(void, malloc_stats, void);
+#endif
+#endif // HWASAN_WITH_INTERCEPTORS
+
 
 #if HWASAN_WITH_INTERCEPTORS
 extern "C" int pthread_attr_init(void *attr);
@@ -352,22 +322,6 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
-  // FIXME: disable interceptors for allocator functions, keep only __sanitizer
-  // aliases unless HWASAN_WITH_INTERCEPTORS=1.
-  INTERCEPT_FUNCTION(posix_memalign);
-  HWASAN_MAYBE_INTERCEPT_MEMALIGN;
-  INTERCEPT_FUNCTION(__libc_memalign);
-  INTERCEPT_FUNCTION(valloc);
-  HWASAN_MAYBE_INTERCEPT_PVALLOC;
-  INTERCEPT_FUNCTION(malloc);
-  INTERCEPT_FUNCTION(calloc);
-  INTERCEPT_FUNCTION(realloc);
-  INTERCEPT_FUNCTION(free);
-  HWASAN_MAYBE_INTERCEPT_CFREE;
-  INTERCEPT_FUNCTION(malloc_usable_size);
-  HWASAN_MAYBE_INTERCEPT_MALLINFO;
-  HWASAN_MAYBE_INTERCEPT_MALLOPT;
-  HWASAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fork);
 
 #if HWASAN_WITH_INTERCEPTORS
