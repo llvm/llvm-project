@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(XRayTests
   ProfileTest.cpp
+  FDRBlockIndexerTest.cpp
   FDRProducerConsumerTest.cpp
   FDRRecordPrinterTest.cpp
   FDRTraceWriterTest.cpp

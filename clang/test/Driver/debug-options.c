@@ -153,12 +153,12 @@
 // RUN:        | FileCheck -check-prefix=GIGNORE %s
 //
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GPUB %s
-// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -ggnu-pubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -gpubnames %s 2>&1 | FileCheck -check-prefix=PUB %s
-// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //

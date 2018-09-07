@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=thumbv7m-eabi      -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
 ; RUN: llc -mtriple=thumbv8m.main-eabi -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
 
+; CHECK-NOT: {{^ *}}.text{{$}}
+; CHECK: .section .text,"axy",%progbits,unique,0
+
 @var = global i32 0
 
 define i32 @global() minsize {

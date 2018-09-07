@@ -385,20 +385,18 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
     return true;
 
-  llvm::SmallString<128> USR;
-  if (index::generateUSRForMacro(Name->getName(), MI->getDefinitionLoc(), SM,
-                                 USR))
+  auto ID = getSymbolID(*Name, MI, SM);
+  if (!ID)
     return true;
-  SymbolID ID(USR);
 
   // Only collect one instance in case there are multiple.
-  if (Symbols.find(ID) != nullptr)
+  if (Symbols.find(*ID) != nullptr)
     return true;
 
   Symbol S;
-  S.ID = std::move(ID);
+  S.ID = std::move(*ID);
   S.Name = Name->getName();
-  S.IsIndexedForCodeCompletion = true;
+  S.Flags |= Symbol::IndexedForCodeCompletion;
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(MI->getDefinitionLoc(), SM, Opts,
@@ -445,11 +443,9 @@ void SymbolCollector::finish() {
   if (Opts.CollectMacro) {
     assert(PP);
     for (const IdentifierInfo *II : ReferencedMacros) {
-      llvm::SmallString<128> USR;
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
-        if (!index::generateUSRForMacro(II->getName(), MI->getDefinitionLoc(),
-                                        PP->getSourceManager(), USR))
-          IncRef(SymbolID(USR));
+        if (auto ID = getSymbolID(*II, MI, PP->getSourceManager()))
+          IncRef(*ID);
     }
   }
 
@@ -495,7 +491,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
 
-  S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
+  if (isIndexedForCodeCompletion(ND, Ctx))
+    S.Flags |= Symbol::IndexedForCodeCompletion;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,
@@ -535,6 +532,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
     S.IncludeHeaders.emplace_back(Include, 1);
 
   S.Origin = Opts.Origin;
+  if (ND.getAvailability() == AR_Deprecated)
+    S.Flags |= Symbol::Deprecated;
   Symbols.insert(S);
   return Symbols.find(S.ID);
 }

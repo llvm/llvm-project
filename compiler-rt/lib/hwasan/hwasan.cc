@@ -87,7 +87,18 @@ static void InitializeFlags() {
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
     cf.exitcode = 99;
+    // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
+
+#if SANITIZER_ANDROID
+    // Let platform handle other signals. It is better at reporting them then we
+    // are.
+    cf.handle_segv = kHandleSignalNo;
+    cf.handle_sigbus = kHandleSignalNo;
+    cf.handle_abort = kHandleSignalNo;
+    cf.handle_sigill = kHandleSignalNo;
+    cf.handle_sigfpe = kHandleSignalNo;
+#endif
     OverrideCommonFlags(cf);
   }
 
@@ -158,6 +169,22 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
          line, cond, (uptr)v1, (uptr)v2);
   PRINT_CURRENT_STACK_CHECK();
   Die();
+}
+
+static void HwasanPrintMemoryUsage() {
+  auto thread_stats = Thread::GetThreadStats();
+  auto *sds = StackDepotGetStats();
+  AllocatorStatCounters asc;
+  GetAllocatorStats(asc);
+  Printf(
+      "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
+      " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
+      " heap: %zd\n",
+      internal_getpid(), GetRSS(), thread_stats.n_live_threads,
+      thread_stats.total_stack_size,
+      thread_stats.n_live_threads * Thread::MemoryUsedPerThread(),
+      sds->allocated, sds->n_uniq_ids,
+      asc[AllocatorStatMapped]);
 }
 
 } // namespace __hwasan
@@ -427,6 +454,8 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
   }
   TagMemory(sp, dst - sp, 0);
 }
+
+void __hwasan_print_memory_usage() { HwasanPrintMemoryUsage(); }
 
 static const u8 kFallbackTag = 0xBB;
 

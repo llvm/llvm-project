@@ -18,16 +18,11 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolUnknown : public PDBSymbol {
+  DECLARE_PDB_SYMBOL_CUSTOM_TYPE(S->getSymTag() == PDB_SymType::None ||
+                                 S->getSymTag() >= PDB_SymType::Max)
+
 public:
-  PDBSymbolUnknown(const IPDBSession &PDBSession,
-                   std::unique_ptr<IPDBRawSymbol> UnknownSymbol);
-
   void dump(PDBSymDumper &Dumper) const override;
-
-  static bool classof(const PDBSymbol *S) {
-    return (S->getSymTag() == PDB_SymType::None ||
-            S->getSymTag() >= PDB_SymType::Max);
-  }
 };
 
 } // namespace llvm

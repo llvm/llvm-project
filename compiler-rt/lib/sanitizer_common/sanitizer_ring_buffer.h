@@ -38,6 +38,13 @@ class RingBuffer {
            reinterpret_cast<T *>(reinterpret_cast<uptr>(this) +
                                  2 * sizeof(T *));
   }
+
+  static uptr SizeInBytes(uptr Size) {
+    return Size * sizeof(T) + 2 * sizeof(T*);
+  }
+
+  uptr SizeInBytes() { return SizeInBytes(size()); }
+
   void push(T t) {
     *next_ = t;
     next_--;
@@ -58,10 +65,6 @@ class RingBuffer {
   RingBuffer() {}
   ~RingBuffer() {}
   RingBuffer(const RingBuffer&) = delete;
-
-  static uptr SizeInBytes(uptr Size) {
-    return Size * sizeof(T) + 2 * sizeof(T*);
-  }
 
   // Data layout:
   // LNDDDDDDDD

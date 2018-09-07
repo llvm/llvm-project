@@ -14,6 +14,33 @@ entry:
   ret i128 %0
 }
 
+define void @add128_rmw(i128* %a, i128 %b) nounwind {
+; CHECK-LABEL: add128_rmw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rdx, 8(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i128, i128* %a
+  %1 = add i128 %0, %b
+  store i128 %1, i128* %a
+  ret void
+}
+
+define void @add128_rmw2(i128 %a, i128* %b) nounwind {
+; CHECK-LABEL: add128_rmw2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq (%rdx), %rdi
+; CHECK-NEXT:    adcq %rsi, 8(%rdx)
+; CHECK-NEXT:    movq %rdi, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i128, i128* %b
+  %1 = add i128 %a, %0
+  store i128 %1, i128* %b
+  ret void
+}
+
 define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry

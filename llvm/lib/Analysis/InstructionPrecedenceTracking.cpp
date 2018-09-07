@@ -23,13 +23,30 @@
 
 using namespace llvm;
 
+#ifndef NDEBUG
+static cl::opt<bool> ExpensiveAsserts(
+    "ipt-expensive-asserts",
+    cl::desc("Perform expensive assert validation on every query to Instruction"
+             " Precedence Tracking"),
+    cl::init(false), cl::Hidden);
+#endif
+
 const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     const BasicBlock *BB) {
-  if (!KnownBlocks.count(BB))
+#ifndef NDEBUG
+  // If there is a bug connected to invalid cache, turn on ExpensiveAsserts to
+  // catch this situation as early as possible.
+  if (ExpensiveAsserts)
+    validateAll();
+  else
+    validate(BB);
+#endif
+
+  if (FirstSpecialInsts.find(BB) == FirstSpecialInsts.end()) {
     fill(BB);
-  auto *FirstICF = FirstSpecialInsts.lookup(BB);
-  assert((!FirstICF || FirstICF->getParent() == BB) && "Inconsistent cache!");
-  return FirstICF;
+    assert(FirstSpecialInsts.find(BB) != FirstSpecialInsts.end() && "Must be!");
+  }
+  return FirstSpecialInsts[BB];
 }
 
 bool InstructionPrecedenceTracking::hasSpecialInstructions(
@@ -49,24 +66,52 @@ void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
   for (auto &I : *BB)
     if (isSpecialInstruction(&I)) {
       FirstSpecialInsts[BB] = &I;
-      break;
+      return;
     }
 
-  // Mark this block as having a known result.
-  KnownBlocks.insert(BB);
+  // Mark this block as having no special instructions.
+  FirstSpecialInsts[BB] = nullptr;
 }
+
+#ifndef NDEBUG
+void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
+  auto It = FirstSpecialInsts.find(BB);
+  // Bail if we don't have anything cached for this block.
+  if (It == FirstSpecialInsts.end())
+    return;
+
+  for (const Instruction &Insn : *BB)
+    if (isSpecialInstruction(&Insn)) {
+      assert(It->second == &Insn &&
+             "Cached first special instruction is wrong!");
+      return;
+    }
+
+  assert(It->second == nullptr &&
+         "Block is marked as having special instructions but in fact it  has "
+         "none!");
+}
+
+void InstructionPrecedenceTracking::validateAll() const {
+  // Check that for every known block the cached value is correct.
+  for (auto &It : FirstSpecialInsts)
+    validate(It.first);
+}
+#endif
 
 void InstructionPrecedenceTracking::invalidateBlock(const BasicBlock *BB) {
   OI.invalidateBlock(BB);
   FirstSpecialInsts.erase(BB);
-  KnownBlocks.erase(BB);
 }
 
 void InstructionPrecedenceTracking::clear() {
   for (auto It : FirstSpecialInsts)
     OI.invalidateBlock(It.first);
   FirstSpecialInsts.clear();
-  KnownBlocks.clear();
+#ifndef NDEBUG
+  // The map should be valid after clearing (at least empty).
+  validateAll();
+#endif
 }
 
 bool ImplicitControlFlowTracking::isSpecialInstruction(

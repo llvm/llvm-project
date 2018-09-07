@@ -608,7 +608,15 @@ public:
   /// that had their exception spec checks delayed, plus the overridden
   /// function.
   SmallVector<std::pair<const CXXMethodDecl*, const CXXMethodDecl*>, 2>
-    DelayedExceptionSpecChecks;
+    DelayedOverridingExceptionSpecChecks;
+
+  /// All the function redeclarations seen during a class definition that had
+  /// their exception spec checks delayed, plus the prior declaration they
+  /// should be checked against. Except during error recovery, the new decl
+  /// should always be a friend declaration, as that's the only valid way to
+  /// redeclare a special member before its class is complete.
+  SmallVector<std::pair<FunctionDecl*, FunctionDecl*>, 2>
+    DelayedEquivalentExceptionSpecChecks;
 
   /// All the members seen during a class definition which were both
   /// explicitly defaulted and had explicitly-specified exception
@@ -4872,8 +4880,7 @@ public:
   ///
   /// C++11 says that user-defined destructors with no exception spec get one
   /// that looks as if the destructor was implicitly declared.
-  void AdjustDestructorExceptionSpec(CXXRecordDecl *ClassDecl,
-                                     CXXDestructorDecl *Destructor);
+  void AdjustDestructorExceptionSpec(CXXDestructorDecl *Destructor);
 
   /// Define the specified inheriting constructor.
   void DefineInheritingConstructor(SourceLocation UseLoc,
@@ -7141,6 +7148,10 @@ public:
       /// We are checking the validity of a default template argument that
       /// has been used when naming a template-id.
       DefaultTemplateArgumentChecking,
+
+      /// We are computing the exception specification for a defaulted special
+      /// member function.
+      ExceptionSpecEvaluation,
 
       /// We are instantiating the exception specification for a function
       /// template which was deferred until it was needed.
@@ -10635,7 +10646,9 @@ private:
     SavePendingParsedClassStateRAII(Sema &S) : S(S) { swapSavedState(); }
 
     ~SavePendingParsedClassStateRAII() {
-      assert(S.DelayedExceptionSpecChecks.empty() &&
+      assert(S.DelayedOverridingExceptionSpecChecks.empty() &&
+             "there shouldn't be any pending delayed exception spec checks");
+      assert(S.DelayedEquivalentExceptionSpecChecks.empty() &&
              "there shouldn't be any pending delayed exception spec checks");
       assert(S.DelayedDefaultedMemberExceptionSpecs.empty() &&
              "there shouldn't be any pending delayed defaulted member "
@@ -10647,13 +10660,19 @@ private:
 
   private:
     Sema &S;
-    decltype(DelayedExceptionSpecChecks) SavedExceptionSpecChecks;
+    decltype(DelayedOverridingExceptionSpecChecks)
+        SavedOverridingExceptionSpecChecks;
+    decltype(DelayedEquivalentExceptionSpecChecks)
+        SavedEquivalentExceptionSpecChecks;
     decltype(DelayedDefaultedMemberExceptionSpecs)
         SavedDefaultedMemberExceptionSpecs;
     decltype(DelayedDllExportClasses) SavedDllExportClasses;
 
     void swapSavedState() {
-      SavedExceptionSpecChecks.swap(S.DelayedExceptionSpecChecks);
+      SavedOverridingExceptionSpecChecks.swap(
+          S.DelayedOverridingExceptionSpecChecks);
+      SavedEquivalentExceptionSpecChecks.swap(
+          S.DelayedEquivalentExceptionSpecChecks);
       SavedDefaultedMemberExceptionSpecs.swap(
           S.DelayedDefaultedMemberExceptionSpecs);
       SavedDllExportClasses.swap(S.DelayedDllExportClasses);

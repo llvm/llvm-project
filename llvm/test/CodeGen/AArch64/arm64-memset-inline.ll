@@ -139,11 +139,10 @@ define void @bzero_32_stack() {
 
 define void @bzero_40_stack() {
 ; CHECK-LABEL: bzero_40_stack:
-; CHECK:      stp xzr, x30, [sp, #40]
-; CHECK:      movi v0.2d, #0000000000000000
-; CHECK-NEXT: add x0, sp, #8
-; CHECK-NEXT: stur q0, [sp, #24]
-; CHECK-NEXT: stur q0, [sp, #8]
+; CHECK:       movi v0.2d, #0000000000000000
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str xzr, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT: bl something
   %buf = alloca [40 x i8], align 1
   %cast = bitcast [40 x i8]* %buf to i8*
@@ -168,13 +167,11 @@ define void @bzero_64_stack() {
 
 define void @bzero_72_stack() {
 ; CHECK-LABEL: bzero_72_stack:
-; CHECK:       stp xzr, x30, [sp, #72]
 ; CHECK:       movi v0.2d, #0000000000000000
-; CHECK-NEXT:  x0, sp, #8
-; CHECK-NEXT:  stur q0, [sp, #56]
-; CHECK-NEXT:  stur q0, [sp, #40]
-; CHECK-NEXT:  stur q0, [sp, #24]
-; CHECK-NEXT:  stur q0, [sp, #8]
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str xzr, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [72 x i8], align 1
   %cast = bitcast [72 x i8]* %buf to i8*
@@ -215,6 +212,189 @@ define void @bzero_256_stack() {
   %buf = alloca [256 x i8], align 1
   %cast = bitcast [256 x i8]* %buf to i8*
   call void @llvm.memset.p0i8.i32(i8* %cast, i8 0, i32 256, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_4_stack() {
+; CHECK-LABEL: memset_4_stack:
+; CHECK:       mov w8, #-1431655766
+; CHECK-NEXT:  add x0, sp, #12
+; CHECK-NEXT:  str w8, [sp, #12]
+; CHECK-NEXT:  bl something
+  %buf = alloca [4 x i8], align 1
+  %cast = bitcast [4 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 4, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_8_stack() {
+; CHECK-LABEL: memset_8_stack:
+; CHECK:       mov x8, #-6148914691236517206
+; CHECK-NEXT:  add x0, sp, #8
+; CHECK-NEXT:  str x8, [sp, #8]
+; CHECK-NEXT:  bl something
+  %buf = alloca [8 x i8], align 1
+  %cast = bitcast [8 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 8, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+; FIXME This could be better: x9 is a superset of w8's bit-pattern.
+define void @memset_12_stack() {
+; CHECK-LABEL: memset_12_stack:
+; CHECK:       mov w8, #-1431655766
+; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str w8, [sp, #8]
+; CHECK-NEXT:  str x9, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [12 x i8], align 1
+  %cast = bitcast [12 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 12, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_16_stack() {
+; CHECK-LABEL: memset_16_stack:
+; CHECK:       mov x8, #-6148914691236517206
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp x8, x30, [sp, #8]
+; CHECK-NEXT:  str x8, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [16 x i8], align 1
+  %cast = bitcast [16 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 16, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+; FIXME This could be better: x9 is a superset of w8's bit-pattern.
+define void @memset_20_stack() {
+; CHECK-LABEL: memset_20_stack:
+; CHECK:       mov w8, #-1431655766
+; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK-NEXT:  add x0, sp, #8
+; CHECK-NEXT:  str w8, [sp, #24]
+; CHECK-NEXT:  stp x9, x9, [sp, #8]
+; CHECK-NEXT:  bl something
+  %buf = alloca [20 x i8], align 1
+  %cast = bitcast [20 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 20, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+; FIXME This could be better: x9 is a superset of w8's bit-pattern.
+define void @memset_26_stack() {
+; CHECK-LABEL: memset_26_stack:
+; CHECK:       mov w8, #43690
+; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  strh w8, [sp, #24]
+; CHECK-NEXT:  stp x9, x9, [sp, #8]
+; CHECK-NEXT:  str x9, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [26 x i8], align 1
+  %cast = bitcast [26 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 26, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_32_stack() {
+; CHECK-LABEL: memset_32_stack:
+; CHECK:       movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp q0, q0, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [32 x i8], align 1
+  %cast = bitcast [32 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 32, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_40_stack() {
+; CHECK-LABEL: memset_40_stack:
+; CHECK:       mov x8, #-6148914691236517206
+; CHECK-NEXT:  movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
+; CHECK-NEXT: bl something
+  %buf = alloca [40 x i8], align 1
+  %cast = bitcast [40 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 40, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_64_stack() {
+; CHECK-LABEL: memset_64_stack:
+; CHECK:       movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [64 x i8], align 1
+  %cast = bitcast [64 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 64, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_72_stack() {
+; CHECK-LABEL: memset_72_stack:
+; CHECK:       mov x8, #-6148914691236517206
+; CHECK-NEXT:  movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [72 x i8], align 1
+  %cast = bitcast [72 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 72, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_128_stack() {
+; CHECK-LABEL: memset_128_stack:
+; CHECK:       movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp q0, q0, [sp, #96]
+; CHECK-NEXT:  stp q0, q0, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [128 x i8], align 1
+  %cast = bitcast [128 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 128, i1 false)
+  call void @something(i8* %cast)
+  ret void
+}
+
+define void @memset_256_stack() {
+; CHECK-LABEL: memset_256_stack:
+; CHECK:       movi	v0.16b, #170
+; CHECK-NEXT:  mov	x0, sp
+; CHECK-NEXT:  stp	q0, q0, [sp, #224]
+; CHECK-NEXT:  stp	q0, q0, [sp, #192]
+; CHECK-NEXT:  stp	q0, q0, [sp, #160]
+; CHECK-NEXT:  stp	q0, q0, [sp, #128]
+; CHECK-NEXT:  stp	q0, q0, [sp, #96]
+; CHECK-NEXT:  stp	q0, q0, [sp, #64]
+; CHECK-NEXT:  stp	q0, q0, [sp, #32]
+; CHECK-NEXT:  stp	q0, q0, [sp]
+; CHECK-NEXT:  bl something
+  %buf = alloca [256 x i8], align 1
+  %cast = bitcast [256 x i8]* %buf to i8*
+  call void @llvm.memset.p0i8.i32(i8* %cast, i8 -86, i32 256, i1 false)
   call void @something(i8* %cast)
   ret void
 }

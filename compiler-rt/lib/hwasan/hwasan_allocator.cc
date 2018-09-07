@@ -48,6 +48,10 @@ static atomic_uint8_t hwasan_allocator_tagging_enabled;
 static const tag_t kFallbackAllocTag = 0xBB;
 static const tag_t kFallbackFreeTag = 0xBC;
 
+void GetAllocatorStats(AllocatorStatCounters s) {
+  allocator.GetStats(s);
+}
+
 void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
@@ -55,13 +59,8 @@ void HwasanAllocatorInit() {
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
 }
 
-AllocatorCache *GetAllocatorCache(HwasanThreadLocalMallocStorage *ms) {
-  CHECK(ms);
-  return &ms->allocator_cache;
-}
-
-void HwasanThreadLocalMallocStorage::CommitBack() {
-  allocator.SwallowCache(GetAllocatorCache(this));
+void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
+  allocator.SwallowCache(cache);
 }
 
 static uptr TaggedSize(uptr size) {
@@ -85,8 +84,7 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   Thread *t = GetCurrentThread();
   void *allocated;
   if (t) {
-    AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-    allocated = allocator.Allocate(cache, size, alignment);
+    allocated = allocator.Allocate(t->allocator_cache(), size, alignment);
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
@@ -154,8 +152,7 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     TagMemoryAligned((uptr)untagged_ptr, TaggedSize(orig_size),
                      t ? t->GenerateRandomTag() : kFallbackFreeTag);
   if (t) {
-    AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-    allocator.Deallocate(cache, untagged_ptr);
+    allocator.Deallocate(t->allocator_cache(), untagged_ptr);
     if (auto *ha = t->heap_allocations())
       ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_context_id,
                 free_context_id, static_cast<u32>(orig_size)});

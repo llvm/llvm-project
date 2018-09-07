@@ -240,17 +240,7 @@ public:
     return const_cast<ExplodedNode*>(this)->succ_end();
   }
 
-  // For debugging.
-
-public:
-  class Auditor {
-  public:
-    virtual ~Auditor();
-
-    virtual void AddEdge(ExplodedNode *Src, ExplodedNode *Dst) = 0;
-  };
-
-  static void SetAuditor(Auditor* A);
+  int64_t getID(ExplodedGraph *G) const;
 
 private:
   void replaceSuccessor(ExplodedNode *node) { Succs.replaceNode(node); }

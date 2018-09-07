@@ -522,7 +522,9 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
     switch (U->getOpcode()) {
     default: break;
     case X86ISD::ADD:
+    case X86ISD::ADC:
     case X86ISD::SUB:
+    case X86ISD::SBB:
     case X86ISD::AND:
     case X86ISD::XOR:
     case X86ISD::OR:

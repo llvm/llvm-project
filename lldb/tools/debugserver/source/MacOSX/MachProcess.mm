@@ -803,6 +803,8 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         (uint32_t)image_infos[i].macho_info.mach_header.cpusubtype);
     mach_header_dict_sp->AddIntegerItem(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
+    mach_header_dict_sp->AddIntegerItem ("flags", 
+                         image_infos[i].macho_info.mach_header.flags);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
@@ -810,8 +812,6 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     //            image_infos[i].macho_info.mach_header.ncmds);
     //            mach_header_dict_sp->AddIntegerItem ("sizeofcmds",
     //            image_infos[i].macho_info.mach_header.sizeofcmds);
-    //            mach_header_dict_sp->AddIntegerItem ("flags",
-    //            image_infos[i].macho_info.mach_header.flags);
     image_info_dict_sp->AddItem("mach_header", mach_header_dict_sp);
 
     JSONGenerator::ArraySP segments_sp(new JSONGenerator::Array());

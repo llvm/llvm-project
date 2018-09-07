@@ -11,6 +11,7 @@
 ; CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1] {{.*}}debug-label.c
 ; CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1] {{.*}}7
 ; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] {{.*}}{{0x[0-9a-f]+}}
+; CHECK-NOT: DW_AT_name [DW_FORM_strp] {{.*}}"top"
 ;
 ; RUN: llc -O0 -o - %s | FileCheck %s -check-prefix=ASM
 ;
@@ -61,8 +62,9 @@ declare void @llvm.dbg.label(metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "debug-label.c", directory: "./")
 !2 = !{}
+!3 = !{!10}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !2)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !3)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

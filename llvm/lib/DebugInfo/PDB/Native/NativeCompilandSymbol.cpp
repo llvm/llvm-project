@@ -17,7 +17,7 @@ namespace pdb {
 NativeCompilandSymbol::NativeCompilandSymbol(NativeSession &Session,
                                              SymIndexId SymbolId,
                                              DbiModuleDescriptor MI)
-    : NativeRawSymbol(Session, SymbolId), Module(MI) {}
+    : NativeRawSymbol(Session, PDB_SymType::Compiland, SymbolId), Module(MI) {}
 
 PDB_SymType NativeCompilandSymbol::getSymTag() const {
   return PDB_SymType::Compiland;

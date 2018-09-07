@@ -1,0 +1,71 @@
+// Tests __hwasan_print_memory_usage.
+// RUN: %clang_hwasan %s -o %t
+// RUN: ulimit -s 1000
+// RUN: %run %t 2>&1 | FileCheck %s
+// REQUIRES: stable-runtime
+
+#include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <sanitizer/hwasan_interface.h>
+
+int state;
+__thread volatile char *sink;
+
+__attribute__((noinline))
+void *malloc_and_use(int size) {
+  char *x = (char*)malloc(size);
+  for (int i = 0; i < size; i++)
+    x[i] = 42;  // make this memory used.
+  return x;
+}
+
+void *T1(void *arg) {
+
+  for (int i = 1; i <= (1 << 20); i *= 2)
+    sink = malloc_and_use(i);
+
+  __sync_fetch_and_add(&state, 1);
+  while (__sync_fetch_and_add(&state, 0) != 4) {}
+  return NULL;
+}
+
+void *T4(void *arg) { return NULL; }
+
+int main() {
+  __hwasan_enable_allocator_tagging();
+
+  __hwasan_print_memory_usage();
+  // CHECK: HWASAN pid: [[PID:[0-9]*]] rss: {{.*}} threads: 1 stacks: 1024000 thr_aux: {{.*}} stack_depot: 0 uniq_stacks: 0 heap: 0
+
+  void *one_meg = malloc_and_use(1 << 20);
+
+  __hwasan_print_memory_usage();
+  // CHECK: HWASAN pid: [[PID]] rss: {{.*}} threads: 1 stacks: 1024000 thr_aux: {{.*}} stack_depot: {{[1-9][0-9]*}} uniq_stacks: 1 heap: 1052672
+
+  free(one_meg);
+
+  __hwasan_print_memory_usage();
+  // CHECK: HWASAN pid: [[PID]] rss: {{.*}} threads: 1 stacks: 1024000 thr_aux: {{.*}} stack_depot: {{[1-9][0-9]*}} uniq_stacks: 2 heap: 0
+
+  pthread_t t1, t2, t3, t4;
+
+  pthread_create(&t1, NULL, T1, NULL);
+  pthread_create(&t2, NULL, T1, NULL);
+  pthread_create(&t3, NULL, T1, NULL);
+  pthread_create(&t4, NULL, T4, NULL);
+  while (__sync_fetch_and_add(&state, 0) != 3) {}
+  pthread_join(t4, NULL);
+
+  __hwasan_print_memory_usage();
+  // CHECK: HWASAN pid: [[PID]] rss: {{.*}} threads: 4 stacks: 4083520
+
+  __sync_fetch_and_add(&state, 1);
+  pthread_join(t1, NULL);
+  pthread_join(t2, NULL);
+  pthread_join(t3, NULL);
+  __hwasan_print_memory_usage();
+  // CHECK: HWASAN pid: [[PID]] rss: {{.*}} threads: 1 stacks: 1024000
+}

@@ -16,41 +16,39 @@ namespace InClassInitializers {
   // Noexcept::Noexcept is not declared constexpr, therefore noexcept(Noexcept())
   // is false.
   bool ThrowSomething() noexcept(false);
-  struct ConstExpr {
+  struct ConstExpr { // expected-error {{default member initializer for 'b' needed}}
     bool b = // expected-note {{declared here}}
-      noexcept(ConstExpr()) && ThrowSomething(); // expected-error {{default member initializer for 'b' needed}}
+      noexcept(ConstExpr()) && ThrowSomething(); // expected-note {{in evaluation of exception spec}}
   };
 
   // Much more obviously broken: we can't parse the initializer without already
   // knowing whether it produces a noexcept expression.
-  struct TemplateArg {
+  struct TemplateArg { // expected-error {{default member initializer for 'n' needed}}
     int n = // expected-note {{declared here}}
-      ExceptionIf<noexcept(TemplateArg())>::f(); // expected-error {{default member initializer for 'n' needed}}
+      ExceptionIf<noexcept(TemplateArg())>::f(); // expected-note {{in evaluation of exception spec}}
   };
 
   // And within a nested class.
   struct Nested {
-    struct Inner {
+    struct Inner { // expected-error {{default member initializer for 'n' needed}}
       int n = // expected-note {{declared here}}
-        ExceptionIf<noexcept(Nested())>::f();
-    } inner; // expected-error {{default member initializer for 'n' needed}}
+        ExceptionIf<noexcept(Nested())>::f(); // expected-note {{in evaluation of exception spec}}
+    } inner; // expected-note {{in evaluation of exception spec}}
   };
 
   struct Nested2 {
     struct Inner;
-    int n = Inner().n; // expected-error {{initializer for 'n' needed}}
-    struct Inner {
+    int n = Inner().n; // expected-note {{in evaluation of exception spec}}
+    struct Inner { // expected-error {{initializer for 'n' needed}}
       int n = ExceptionIf<noexcept(Nested2())>::f(); // expected-note {{declared here}}
     } inner;
   };
 }
 
 namespace ExceptionSpecification {
-  // FIXME: This diagnostic is quite useless; we should indicate whose
-  // exception specification we were looking for and why.
   struct Nested {
     struct T {
-      T() noexcept(!noexcept(Nested()));
+      T() noexcept(!noexcept(Nested())); // expected-note {{in evaluation of exception spec}}
     } t; // expected-error{{exception specification is not available until end of class definition}}
   };
 }

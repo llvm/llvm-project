@@ -2973,6 +2973,165 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     }
   }
 
+  static void dumpProgramPoint(ProgramPoint Loc,
+                               llvm::raw_string_ostream &Out) {
+    switch (Loc.getKind()) {
+    case ProgramPoint::BlockEntranceKind:
+      Out << "Block Entrance: B"
+          << Loc.castAs<BlockEntrance>().getBlock()->getBlockID();
+      break;
+
+    case ProgramPoint::BlockExitKind:
+      assert(false);
+      break;
+
+    case ProgramPoint::CallEnterKind:
+      Out << "CallEnter";
+      break;
+
+    case ProgramPoint::CallExitBeginKind:
+      Out << "CallExitBegin";
+      break;
+
+    case ProgramPoint::CallExitEndKind:
+      Out << "CallExitEnd";
+      break;
+
+    case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
+      Out << "PostStmtPurgeDeadSymbols";
+      break;
+
+    case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
+      Out << "PreStmtPurgeDeadSymbols";
+      break;
+
+    case ProgramPoint::EpsilonKind:
+      Out << "Epsilon Point";
+      break;
+
+    case ProgramPoint::LoopExitKind: {
+      LoopExit LE = Loc.castAs<LoopExit>();
+      Out << "LoopExit: " << LE.getLoopStmt()->getStmtClassName();
+      break;
+    }
+
+    case ProgramPoint::PreImplicitCallKind: {
+      ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
+      Out << "PreCall: ";
+
+      // FIXME: Get proper printing options.
+      PC.getDecl()->print(Out, LangOptions());
+      printLocation(Out, PC.getLocation());
+      break;
+    }
+
+    case ProgramPoint::PostImplicitCallKind: {
+      ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
+      Out << "PostCall: ";
+
+      // FIXME: Get proper printing options.
+      PC.getDecl()->print(Out, LangOptions());
+      printLocation(Out, PC.getLocation());
+      break;
+    }
+
+    case ProgramPoint::PostInitializerKind: {
+      Out << "PostInitializer: ";
+      const CXXCtorInitializer *Init =
+          Loc.castAs<PostInitializer>().getInitializer();
+      if (const FieldDecl *FD = Init->getAnyMember())
+        Out << *FD;
+      else {
+        QualType Ty = Init->getTypeSourceInfo()->getType();
+        Ty = Ty.getLocalUnqualifiedType();
+        LangOptions LO; // FIXME.
+        Ty.print(Out, LO);
+      }
+      break;
+    }
+
+    case ProgramPoint::BlockEdgeKind: {
+      const BlockEdge &E = Loc.castAs<BlockEdge>();
+      Out << "Edge: (B" << E.getSrc()->getBlockID() << ", B"
+          << E.getDst()->getBlockID() << ')';
+
+      if (const Stmt *T = E.getSrc()->getTerminator()) {
+        SourceLocation SLoc = T->getBeginLoc();
+
+        Out << "\\|Terminator: ";
+        LangOptions LO; // FIXME.
+        E.getSrc()->printTerminator(Out, LO);
+
+        if (SLoc.isFileID()) {
+          Out << "\\lline="
+              << GraphPrintSourceManager->getExpansionLineNumber(SLoc)
+              << " col="
+              << GraphPrintSourceManager->getExpansionColumnNumber(SLoc);
+        }
+
+        if (isa<SwitchStmt>(T)) {
+          const Stmt *Label = E.getDst()->getLabel();
+
+          if (Label) {
+            if (const auto *C = dyn_cast<CaseStmt>(Label)) {
+              Out << "\\lcase ";
+              LangOptions LO; // FIXME.
+              if (C->getLHS())
+                C->getLHS()->printPretty(Out, nullptr, PrintingPolicy(LO));
+
+              if (const Stmt *RHS = C->getRHS()) {
+                Out << " .. ";
+                RHS->printPretty(Out, nullptr, PrintingPolicy(LO));
+              }
+
+              Out << ":";
+            } else {
+              assert(isa<DefaultStmt>(Label));
+              Out << "\\ldefault:";
+            }
+          } else
+            Out << "\\l(implicit) default:";
+        } else if (isa<IndirectGotoStmt>(T)) {
+          // FIXME
+        } else {
+          Out << "\\lCondition: ";
+          if (*E.getSrc()->succ_begin() == E.getDst())
+            Out << "true";
+          else
+            Out << "false";
+        }
+
+        Out << "\\l";
+      }
+
+      break;
+    }
+
+    default: {
+      const Stmt *S = Loc.castAs<StmtPoint>().getStmt();
+      assert(S != nullptr && "Expecting non-null Stmt");
+
+      Out << S->getStmtClassName() << ' ' << (const void *)S << ' ';
+      LangOptions LO; // FIXME.
+      S->printPretty(Out, nullptr, PrintingPolicy(LO));
+      printLocation(Out, S->getBeginLoc());
+
+      if (Loc.getAs<PreStmt>())
+        Out << "\\lPreStmt\\l;";
+      else if (Loc.getAs<PostLoad>())
+        Out << "\\lPostLoad\\l;";
+      else if (Loc.getAs<PostStore>())
+        Out << "\\lPostStore\\l";
+      else if (Loc.getAs<PostLValue>())
+        Out << "\\lPostLValue\\l";
+      else if (Loc.getAs<PostAllocatorCall>())
+        Out << "\\lPostAllocatorCall\\l";
+
+      break;
+    }
+    }
+  }
+
   static std::string getNodeLabel(const ExplodedNode *N, void*){
     std::string sbuf;
     llvm::raw_string_ostream Out(sbuf);
@@ -2980,169 +3139,16 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     // Program Location.
     ProgramPoint Loc = N->getLocation();
 
-    switch (Loc.getKind()) {
-      case ProgramPoint::BlockEntranceKind:
-        Out << "Block Entrance: B"
-            << Loc.castAs<BlockEntrance>().getBlock()->getBlockID();
-        break;
-
-      case ProgramPoint::BlockExitKind:
-        assert(false);
-        break;
-
-      case ProgramPoint::CallEnterKind:
-        Out << "CallEnter";
-        break;
-
-      case ProgramPoint::CallExitBeginKind:
-        Out << "CallExitBegin";
-        break;
-
-      case ProgramPoint::CallExitEndKind:
-        Out << "CallExitEnd";
-        break;
-
-      case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
-        Out << "PostStmtPurgeDeadSymbols";
-        break;
-
-      case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
-        Out << "PreStmtPurgeDeadSymbols";
-        break;
-
-      case ProgramPoint::EpsilonKind:
-        Out << "Epsilon Point";
-        break;
-
-      case ProgramPoint::LoopExitKind: {
-        LoopExit LE = Loc.castAs<LoopExit>();
-        Out << "LoopExit: " << LE.getLoopStmt()->getStmtClassName();
-        break;
-      }
-
-      case ProgramPoint::PreImplicitCallKind: {
-        ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
-        Out << "PreCall: ";
-
-        // FIXME: Get proper printing options.
-        PC.getDecl()->print(Out, LangOptions());
-        printLocation(Out, PC.getLocation());
-        break;
-      }
-
-      case ProgramPoint::PostImplicitCallKind: {
-        ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
-        Out << "PostCall: ";
-
-        // FIXME: Get proper printing options.
-        PC.getDecl()->print(Out, LangOptions());
-        printLocation(Out, PC.getLocation());
-        break;
-      }
-
-      case ProgramPoint::PostInitializerKind: {
-        Out << "PostInitializer: ";
-        const CXXCtorInitializer *Init =
-          Loc.castAs<PostInitializer>().getInitializer();
-        if (const FieldDecl *FD = Init->getAnyMember())
-          Out << *FD;
-        else {
-          QualType Ty = Init->getTypeSourceInfo()->getType();
-          Ty = Ty.getLocalUnqualifiedType();
-          LangOptions LO; // FIXME.
-          Ty.print(Out, LO);
-        }
-        break;
-      }
-
-      case ProgramPoint::BlockEdgeKind: {
-        const BlockEdge &E = Loc.castAs<BlockEdge>();
-        Out << "Edge: (B" << E.getSrc()->getBlockID() << ", B"
-            << E.getDst()->getBlockID()  << ')';
-
-        if (const Stmt *T = E.getSrc()->getTerminator()) {
-          SourceLocation SLoc = T->getBeginLoc();
-
-          Out << "\\|Terminator: ";
-          LangOptions LO; // FIXME.
-          E.getSrc()->printTerminator(Out, LO);
-
-          if (SLoc.isFileID()) {
-            Out << "\\lline="
-              << GraphPrintSourceManager->getExpansionLineNumber(SLoc)
-              << " col="
-              << GraphPrintSourceManager->getExpansionColumnNumber(SLoc);
-          }
-
-          if (isa<SwitchStmt>(T)) {
-            const Stmt *Label = E.getDst()->getLabel();
-
-            if (Label) {
-              if (const auto *C = dyn_cast<CaseStmt>(Label)) {
-                Out << "\\lcase ";
-                LangOptions LO; // FIXME.
-                if (C->getLHS())
-                  C->getLHS()->printPretty(Out, nullptr, PrintingPolicy(LO));
-
-                if (const Stmt *RHS = C->getRHS()) {
-                  Out << " .. ";
-                  RHS->printPretty(Out, nullptr, PrintingPolicy(LO));
-                }
-
-                Out << ":";
-              }
-              else {
-                assert(isa<DefaultStmt>(Label));
-                Out << "\\ldefault:";
-              }
-            }
-            else
-              Out << "\\l(implicit) default:";
-          }
-          else if (isa<IndirectGotoStmt>(T)) {
-            // FIXME
-          }
-          else {
-            Out << "\\lCondition: ";
-            if (*E.getSrc()->succ_begin() == E.getDst())
-              Out << "true";
-            else
-              Out << "false";
-          }
-
-          Out << "\\l";
-        }
-
-        break;
-      }
-
-      default: {
-        const Stmt *S = Loc.castAs<StmtPoint>().getStmt();
-        assert(S != nullptr && "Expecting non-null Stmt");
-
-        Out << S->getStmtClassName() << ' ' << (const void*) S << ' ';
-        LangOptions LO; // FIXME.
-        S->printPretty(Out, nullptr, PrintingPolicy(LO));
-        printLocation(Out, S->getBeginLoc());
-
-        if (Loc.getAs<PreStmt>())
-          Out << "\\lPreStmt\\l;";
-        else if (Loc.getAs<PostLoad>())
-          Out << "\\lPostLoad\\l;";
-        else if (Loc.getAs<PostStore>())
-          Out << "\\lPostStore\\l";
-        else if (Loc.getAs<PostLValue>())
-          Out << "\\lPostLValue\\l";
-        else if (Loc.getAs<PostAllocatorCall>())
-          Out << "\\lPostAllocatorCall\\l";
-
-        break;
-      }
-    }
+    dumpProgramPoint(Loc, Out);
 
     ProgramStateRef state = N->getState();
-    Out << "\\|StateID: " << (const void*) state.get()
-        << " NodeID: " << (const void*) N << "\\|";
+    ExplodedGraph &Graph =
+        static_cast<ExprEngine *>(state->getStateManager().getOwningEngine())
+            ->getGraph();
+
+    Out << "\\|StateID: " << state->getID() << " (" << (const void *)state.get()
+        << ")"
+        << " NodeID: " << N->getID(&Graph) << " (" << (const void *)N << ")\\|";
 
     state->printDOT(Out, N->getLocationContext());
 

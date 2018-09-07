@@ -517,7 +517,7 @@ uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   return getFlags() | Other.getFlags();
 }
 
-bool MachineInstr::hasPropertyInBundle(unsigned Mask, QueryType Type) const {
+bool MachineInstr::hasPropertyInBundle(uint64_t Mask, QueryType Type) const {
   assert(!isBundledWithPred() && "Must be called on bundle header");
   for (MachineBasicBlock::const_instr_iterator MII = getIterator();; ++MII) {
     if (MII->getDesc().getFlags() & Mask) {

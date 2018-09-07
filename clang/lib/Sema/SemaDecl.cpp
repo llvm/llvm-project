@@ -7956,14 +7956,11 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
                                     NameInfo, R, TInfo, isInline,
                                     /*isImplicitlyDeclared=*/false);
 
-      // If the class is complete, then we now create the implicit exception
-      // specification. If the class is incomplete or dependent, we can't do
-      // it yet.
-      if (SemaRef.getLangOpts().CPlusPlus11 && !Record->isDependentType() &&
-          Record->getDefinition() && !Record->isBeingDefined() &&
-          R->getAs<FunctionProtoType>()->getExceptionSpecType() == EST_None) {
-        SemaRef.AdjustDestructorExceptionSpec(Record, NewDD);
-      }
+      // If the destructor needs an implicit exception specification, set it
+      // now. FIXME: It'd be nice to be able to create the right type to start
+      // with, but the type needs to reference the destructor declaration.
+      if (SemaRef.getLangOpts().CPlusPlus11)
+        SemaRef.AdjustDestructorExceptionSpec(NewDD);
 
       IsVirtualOkay = true;
       return NewDD;
@@ -15810,13 +15807,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
 
       if (!CXXRecord->isDependentType()) {
-        if (CXXRecord->hasUserDeclaredDestructor()) {
-          // Adjust user-defined destructor exception spec.
-          if (getLangOpts().CPlusPlus11)
-            AdjustDestructorExceptionSpec(CXXRecord,
-                                          CXXRecord->getDestructor());
-        }
-
         // Add any implicitly-declared members to this class.
         AddImplicitlyDeclaredMembersToClass(CXXRecord);
 

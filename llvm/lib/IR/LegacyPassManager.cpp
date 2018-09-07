@@ -136,15 +136,32 @@ bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
   return PassDebugging >= Executions;
 }
 
-unsigned PMDataManager::initSizeRemarkInfo(Module &M) {
+unsigned PMDataManager::initSizeRemarkInfo(
+    Module &M, StringMap<std::pair<unsigned, unsigned>> &FunctionToInstrCount) {
   // Only calculate getInstructionCount if the size-info remark is requested.
-  return M.getInstructionCount();
+  unsigned InstrCount = 0;
+
+  // Collect instruction counts for every function. We'll use this to emit
+  // per-function size remarks later.
+  for (Function &F : M) {
+    unsigned FCount = F.getInstructionCount();
+
+    // Insert a record into FunctionToInstrCount keeping track of the current
+    // size of the function as the first member of a pair. Set the second
+    // member to 0; if the function is deleted by the pass, then when we get
+    // here, we'll be able to let the user know that F no longer contributes to
+    // the module.
+    FunctionToInstrCount[F.getName().str()] =
+        std::pair<unsigned, unsigned>(FCount, 0);
+    InstrCount += FCount;
+  }
+  return InstrCount;
 }
 
-void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
-                                                int64_t Delta,
-                                                unsigned CountBefore,
-                                                Function *F) {
+void PMDataManager::emitInstrCountChangedRemark(
+    Pass *P, Module &M, int64_t Delta, unsigned CountBefore,
+    StringMap<std::pair<unsigned, unsigned>> &FunctionToInstrCount,
+    Function *F) {
   // If it's a pass manager, don't emit a remark. (This hinges on the assumption
   // that the only passes that return non-null with getAsPMDataManager are pass
   // managers.) The reason we have to do this is to avoid emitting remarks for
@@ -154,6 +171,33 @@ void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
 
   // Set to true if this isn't a module pass or CGSCC pass.
   bool CouldOnlyImpactOneFunction = (F != nullptr);
+
+  // Helper lambda that updates the changes to the size of some function.
+  auto UpdateFunctionChanges =
+      [&FunctionToInstrCount](Function &MaybeChangedFn) {
+        // Update the total module count.
+        unsigned FnSize = MaybeChangedFn.getInstructionCount();
+        auto It = FunctionToInstrCount.find(MaybeChangedFn.getName());
+
+        // If we created a new function, then we need to add it to the map and
+        // say that it changed from 0 instructions to FnSize.
+        if (It == FunctionToInstrCount.end()) {
+          FunctionToInstrCount[MaybeChangedFn.getName()] =
+              std::pair<unsigned, unsigned>(0, FnSize);
+          return;
+        }
+        // Insert the new function size into the second member of the pair. This
+        // tells us whether or not this function changed in size.
+        It->second.second = FnSize;
+      };
+
+  // We need to initially update all of the function sizes.
+  // If no function was passed in, then we're either a module pass or an
+  // CGSCC pass.
+  if (!CouldOnlyImpactOneFunction)
+    std::for_each(M.begin(), M.end(), UpdateFunctionChanges);
+  else
+    UpdateFunctionChanges(*F);
 
   // Do we have a function we can use to emit a remark?
   if (!CouldOnlyImpactOneFunction) {
@@ -185,6 +229,55 @@ void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
     << "; Delta: "
     << DiagnosticInfoOptimizationBase::Argument("DeltaInstrCount", Delta);
   F->getContext().diagnose(R); // Not using ORE for layering reasons.
+
+  // Emit per-function size change remarks separately.
+  std::string PassName = P->getPassName().str();
+
+  // Helper lambda that emits a remark when the size of a function has changed.
+  auto EmitFunctionSizeChangedRemark = [&FunctionToInstrCount, &F, &BB,
+                                        &PassName](const std::string &Fname) {
+    unsigned FnCountBefore, FnCountAfter;
+    std::pair<unsigned, unsigned> &Change = FunctionToInstrCount[Fname];
+    std::tie(FnCountBefore, FnCountAfter) = Change;
+    int64_t FnDelta = static_cast<int64_t>(FnCountAfter) -
+                      static_cast<int64_t>(FnCountBefore);
+
+    if (FnDelta == 0)
+      return;
+
+    // FIXME: We shouldn't use BB for the location here. Unfortunately, because
+    // the function that we're looking at could have been deleted, we can't use
+    // it for the source location. We *want* remarks when a function is deleted
+    // though, so we're kind of stuck here as is. (This remark, along with the
+    // whole-module size change remarks really ought not to have source
+    // locations at all.)
+    OptimizationRemarkAnalysis FR("size-info", "FunctionIRSizeChange",
+                                  DiagnosticLocation(), &BB);
+    FR << DiagnosticInfoOptimizationBase::Argument("Pass", PassName)
+       << ": Function: "
+       << DiagnosticInfoOptimizationBase::Argument("Function", Fname)
+       << ": IR instruction count changed from "
+       << DiagnosticInfoOptimizationBase::Argument("IRInstrsBefore",
+                                                   FnCountBefore)
+       << " to "
+       << DiagnosticInfoOptimizationBase::Argument("IRInstrsAfter",
+                                                   FnCountAfter)
+       << "; Delta: "
+       << DiagnosticInfoOptimizationBase::Argument("DeltaInstrCount", FnDelta);
+    F->getContext().diagnose(FR);
+
+    // Update the function size.
+    Change.first = FnCountAfter;
+  };
+
+  // Are we looking at more than one function? If so, emit remarks for all of
+  // the functions in the module. Otherwise, only emit one remark.
+  if (!CouldOnlyImpactOneFunction)
+    std::for_each(FunctionToInstrCount.keys().begin(),
+                  FunctionToInstrCount.keys().end(),
+                  EmitFunctionSizeChangedRemark);
+  else
+    EmitFunctionSizeChangedRemark(F->getName().str());
 }
 
 void PassManagerPrettyStackEntry::print(raw_ostream &OS) const {
@@ -1284,9 +1377,10 @@ bool BBPassManager::runOnFunction(Function &F) {
   Module &M = *F.getParent();
 
   unsigned InstrCount, BBSize = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   if (EmitICRemark)
-    InstrCount = initSizeRemarkInfo(M);
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
 
   for (BasicBlock &BB : F) {
     // Collect the initial size of the basic block.
@@ -1313,7 +1407,8 @@ bool BBPassManager::runOnFunction(Function &F) {
           if (NewSize != BBSize) {
             int64_t Delta =
                 static_cast<int64_t>(NewSize) - static_cast<int64_t>(BBSize);
-            emitInstrCountChangedRemark(BP, M, Delta, InstrCount, &F);
+            emitInstrCountChangedRemark(BP, M, Delta, InstrCount,
+                                        FunctionToInstrCount, &F);
             InstrCount = static_cast<int64_t>(InstrCount) + Delta;
             BBSize = NewSize;
           }
@@ -1522,10 +1617,11 @@ bool FPPassManager::runOnFunction(Function &F) {
   populateInheritedAnalysis(TPM->activeStack);
 
   unsigned InstrCount, FunctionSize = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   // Collect the initial size of the module.
   if (EmitICRemark) {
-    InstrCount = initSizeRemarkInfo(M);
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
     FunctionSize = F.getInstructionCount();
   }
 
@@ -1550,7 +1646,8 @@ bool FPPassManager::runOnFunction(Function &F) {
         if (NewSize != FunctionSize) {
           int64_t Delta = static_cast<int64_t>(NewSize) -
                           static_cast<int64_t>(FunctionSize);
-          emitInstrCountChangedRemark(FP, M, Delta, InstrCount, &F);
+          emitInstrCountChangedRemark(FP, M, Delta, InstrCount,
+                                      FunctionToInstrCount, &F);
           InstrCount = static_cast<int64_t>(InstrCount) + Delta;
           FunctionSize = NewSize;
         }
@@ -1619,10 +1716,11 @@ MPPassManager::runOnModule(Module &M) {
     Changed |= getContainedPass(Index)->doInitialization(M);
 
   unsigned InstrCount, ModuleCount = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   // Collect the initial size of the module.
   if (EmitICRemark) {
-    InstrCount = initSizeRemarkInfo(M);
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
     ModuleCount = InstrCount;
   }
 
@@ -1646,7 +1744,8 @@ MPPassManager::runOnModule(Module &M) {
         if (ModuleCount != InstrCount) {
           int64_t Delta = static_cast<int64_t>(ModuleCount) -
                           static_cast<int64_t>(InstrCount);
-          emitInstrCountChangedRemark(MP, M, Delta, InstrCount);
+          emitInstrCountChangedRemark(MP, M, Delta, InstrCount,
+                                      FunctionToInstrCount);
           InstrCount = ModuleCount;
         }
       }

@@ -45,6 +45,7 @@ void SymbolsToYAML(const SymbolSlab &Symbols, llvm::raw_ostream &OS);
 // The size of global symbols should be relatively small, so that all symbols
 // can be managed in memory.
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
+                                       llvm::ArrayRef<std::string> URISchemes,
                                        bool UseDex = true);
 
 } // namespace clangd
