@@ -7463,6 +7463,74 @@
 			files = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/scripts/Python/python-wrapper.swig",
+				"$(SRCROOT)/scripts/Python/python-typemaps.swig",
+				"$(SRCROOT)/scripts/Python/python-swigsafecast.swig",
+				"$(SRCROOT)/source/API/SBAddress.cpp",
+				"$(SRCROOT)/source/API/SBAttachInfo.cpp",
+				"$(SRCROOT)/source/API/SBBlock.cpp",
+				"$(SRCROOT)/source/API/SBBreakpoint.cpp",
+				"$(SRCROOT)/source/API/SBBreakpointLocation.cpp",
+				"$(SRCROOT)/source/API/SBBreakpointName.cpp",
+				"$(SRCROOT)/source/API/SBBreakpointOptionCommon.cpp",
+				"$(SRCROOT)/source/API/SBBroadcaster.cpp",
+				"$(SRCROOT)/source/API/SBCommandInterpreter.cpp",
+				"$(SRCROOT)/source/API/SBCommandReturnObject.cpp",
+				"$(SRCROOT)/source/API/SBCompileUnit.cpp",
+				"$(SRCROOT)/source/API/SBData.cpp",
+				"$(SRCROOT)/source/API/SBDebugger.cpp",
+				"$(SRCROOT)/source/API/SBDeclaration.cpp",
+				"$(SRCROOT)/source/API/SBError.cpp",
+				"$(SRCROOT)/source/API/SBEvent.cpp",
+				"$(SRCROOT)/source/API/SBExecutionContext.cpp",
+				"$(SRCROOT)/source/API/SBExpressionOptions.cpp",
+				"$(SRCROOT)/source/API/SBFileSpec.cpp",
+				"$(SRCROOT)/source/API/SBFileSpecList.cpp",
+				"$(SRCROOT)/source/API/SBFrame.cpp",
+				"$(SRCROOT)/source/API/SBFunction.cpp",
+				" $(SRCROOT)/source/API/SBHostOS.cpp",
+				"$(SRCROOT)/source/API/SBInstruction.cpp",
+				"$(SRCROOT)/source/API/SBInstructionList.cpp",
+				"$(SRCROOT)/source/API/SBLanguageRuntime.cpp",
+				"$(SRCROOT)/source/API/SBLaunchInfo.cpp",
+				"$(SRCROOT)/source/API/SBLineEntry.cpp",
+				"$(SRCROOT)/source/API/SBListener.cpp",
+				"$(SRCROOT)/source/API/SBMemoryRegionInfo.cpp",
+				"$(SRCROOT)/source/API/SBMemoryRegionInfoList.cpp",
+				"$(SRCROOT)/source/API/SBModule.cpp",
+				"$(SRCROOT)/source/API/SBModuleSpec.cpp",
+				"$(SRCROOT)/source/API/SBPlatform.cpp",
+				"$(SRCROOT)/source/API/SBProcess.cpp",
+				"$(SRCROOT)/source/API/SBProcessInfo.cpp",
+				"$(SRCROOT)/source/API/SBQueue.cpp",
+				"$(SRCROOT)/source/API/SBQueueItem.cpp",
+				"$(SRCROOT)/source/API/SBSection.cpp",
+				"$(SRCROOT)/source/API/SBSourceManager.cpp",
+				"$(SRCROOT)/source/API/SBStream.cpp",
+				"$(SRCROOT)/source/API/SBStringList.cpp",
+				"$(SRCROOT)/source/API/SBStructuredData.cpp",
+				"$(SRCROOT)/source/API/SBSymbol.cpp",
+				"$(SRCROOT)/source/API/SBSymbolContext.cpp",
+				"$(SRCROOT)/source/API/SBSymbolContextList.cpp",
+				"$(SRCROOT)/source/API/SBTarget.cpp",
+				"$(SRCROOT)/source/API/SBThread.cpp",
+				"$(SRCROOT)/source/API/SBThreadCollection.cpp",
+				"$(SRCROOT)/source/API/SBThreadPlan.cpp",
+				"$(SRCROOT)/source/API/SBTrace.cpp",
+				"$(SRCROOT)/source/API/SBTraceOptions.cpp",
+				"$(SRCROOT)/source/API/SBType.cpp",
+				"$(SRCROOT)/source/API/SBTypeCategory.cpp",
+				"$(SRCROOT)/source/API/SBTypeEnumMember.cpp",
+				"$(SRCROOT)/source/API/SBTypeFilter.cpp",
+				"$(SRCROOT)/source/API/SBTypeFormat.cpp",
+				"$(SRCROOT)/source/API/SBTypeNameSpecifier.cpp",
+				"$(SRCROOT)/source/API/SBTypeSummary.cpp",
+				"$(SRCROOT)/source/API/SBTypeSynthetic.cpp",
+				"$(SRCROOT)/source/API/SBUnixSignals.cpp",
+				"$(SRCROOT)/source/API/SBValue.cpp",
+				"$(SRCROOT)/source/API/SBValueList.cpp",
+				"$(SRCROOT)/source/API/SBVariablesOptions.cpp",
+				"$(SRCROOT)/source/API/SBWatchpoint.cpp",
 			);
 			name = "Prepare Swig Bindings";
 			outputPaths = (
@@ -7531,7 +7599,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $BUILT_PRODUCTS_DIR \"\"";
+			shellScript = "sh $SRCROOT/scripts/finish-swig-wrapper-classes.sh $SRCROOT $TARGET_BUILD_DIR $BUILT_PRODUCTS_DIR \"\"\n";
 		};
 		AF3059151B4B390800E25622 /* Run Script - remove unneeded Resources and Swift dirs from iOS LLDB.framework bundle */ = {
 			isa = PBXShellScriptBuildPhase;

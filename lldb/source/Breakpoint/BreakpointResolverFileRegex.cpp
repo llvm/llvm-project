@@ -157,8 +157,8 @@ BreakpointResolverFileRegex::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth BreakpointResolverFileRegex::GetDepth() {
-  return Searcher::eDepthCompUnit;
+lldb::SearchDepth BreakpointResolverFileRegex::GetDepth() {
+  return lldb::eSearchDepthCompUnit;
 }
 
 void BreakpointResolverFileRegex::GetDescription(Stream *s) {

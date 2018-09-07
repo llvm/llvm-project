@@ -185,7 +185,7 @@ packRelocation(const Relocation &r, bool swap, bool isBigEndian) {
   return result;
 }
 
-static StringRef getString16(const char s[16]) {
+inline StringRef getString16(const char s[16]) {
   // The StringRef(const char *) constructor passes the const char * to
   // strlen(), so we can't use this constructor here, because if there is no
   // null terminator in s, then strlen() will read past the end of the array.

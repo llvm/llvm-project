@@ -539,8 +539,16 @@ static void __kmp_print_team_storage_map(const char *header, kmp_team_t *team,
                                team_id);
 }
 
-static void __kmp_init_allocator() {}
-static void __kmp_fini_allocator() {}
+static void __kmp_init_allocator() {
+#if OMP_50_ENABLED
+  __kmp_init_memkind();
+#endif
+}
+static void __kmp_fini_allocator() {
+#if OMP_50_ENABLED
+  __kmp_fini_memkind();
+#endif
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -1318,6 +1326,9 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
     serial_team->t.t_level = serial_team->t.t_parent->t.t_level + 1;
     serial_team->t.t_active_level = serial_team->t.t_parent->t.t_active_level;
+#if OMP_50_ENABLED
+    serial_team->t.t_def_allocator = this_thr->th.th_def_allocator; // save
+#endif
 
     propagateFPControl(serial_team);
 
@@ -1608,6 +1619,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       KMP_ATOMIC_INC(&root->r.r_in_parallel);
       parent_team->t.t_active_level++;
       parent_team->t.t_level++;
+#if OMP_50_ENABLED
+      parent_team->t.t_def_allocator = master_th->th.th_def_allocator; // save
+#endif
 
       /* Change number of threads in the team if requested */
       if (master_set_numthreads) { // The parallel has num_threads clause
@@ -2073,6 +2087,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #if OMP_40_ENABLED
     KMP_CHECK_UPDATE(team->t.t_cancel_request, cancel_noreq);
 #endif
+#if OMP_50_ENABLED
+    KMP_CHECK_UPDATE(team->t.t_def_allocator, master_th->th.th_def_allocator);
+#endif
 
     // Update the floating point rounding in the team if required.
     propagateFPControl(team);
@@ -2514,6 +2531,9 @@ void __kmp_join_call(ident_t *loc, int gtid
   master_th->th.th_first_place = team->t.t_first_place;
   master_th->th.th_last_place = team->t.t_last_place;
 #endif /* OMP_40_ENABLED */
+#if OMP_50_ENABLED
+  master_th->th.th_def_allocator = team->t.t_def_allocator;
+#endif
 
   updateHWFPControl(team);
 
@@ -3791,11 +3811,13 @@ int __kmp_register_root(int initial_thread) {
   root_thread->th.th_first_place = KMP_PLACE_UNDEFINED;
   root_thread->th.th_last_place = KMP_PLACE_UNDEFINED;
 #endif
-
   if (TCR_4(__kmp_init_middle)) {
     __kmp_affinity_set_init_mask(gtid, TRUE);
   }
 #endif /* KMP_AFFINITY_SUPPORTED */
+#if OMP_50_ENABLED
+  root_thread->th.th_def_allocator = __kmp_def_allocator;
+#endif
 
   __kmp_root_counter++;
 
@@ -4333,6 +4355,9 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   new_thr->th.th_new_place = KMP_PLACE_UNDEFINED;
   new_thr->th.th_first_place = KMP_PLACE_UNDEFINED;
   new_thr->th.th_last_place = KMP_PLACE_UNDEFINED;
+#endif
+#if OMP_50_ENABLED
+  new_thr->th.th_def_allocator = __kmp_def_allocator;
 #endif
 
   TCW_4(new_thr->th.th_in_pool, FALSE);

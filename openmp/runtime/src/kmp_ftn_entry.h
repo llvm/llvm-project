@@ -361,7 +361,35 @@ int FTN_STDCALL FTN_CONTROL_TOOL(int command, int modifier, void *arg) {
   return ret;
 #endif
 }
+
+/* OpenMP 5.0 Memory Management support */
+void FTN_STDCALL FTN_SET_DEFAULT_ALLOCATOR(const omp_allocator_t *allocator) {
+#ifndef KMP_STUB
+  __kmpc_set_default_allocator(__kmp_entry_gtid(), allocator);
 #endif
+}
+const omp_allocator_t *FTN_STDCALL FTN_GET_DEFAULT_ALLOCATOR(void) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmpc_get_default_allocator(__kmp_entry_gtid());
+#endif
+}
+void *FTN_STDCALL FTN_ALLOC(size_t size, const omp_allocator_t *allocator) {
+#ifdef KMP_STUB
+  return malloc(size);
+#else
+  return __kmpc_alloc(__kmp_entry_gtid(), size, allocator);
+#endif
+}
+void FTN_STDCALL FTN_FREE(void *ptr, const omp_allocator_t *allocator) {
+#ifdef KMP_STUB
+  free(ptr);
+#else
+  __kmpc_free(__kmp_entry_gtid(), ptr, allocator);
+#endif
+}
+#endif /* OMP_50_ENABLED */
 
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
 #ifdef KMP_STUB
@@ -1135,7 +1163,7 @@ void *FTN_STDCALL FTN_REALLOC(void *KMP_DEREF ptr, size_t KMP_DEREF size) {
   return kmpc_realloc(KMP_DEREF ptr, KMP_DEREF size);
 }
 
-void FTN_STDCALL FTN_FREE(void *KMP_DEREF ptr) {
+void FTN_STDCALL FTN_KFREE(void *KMP_DEREF ptr) {
   // does nothing if the library is not initialized
   kmpc_free(KMP_DEREF ptr);
 }

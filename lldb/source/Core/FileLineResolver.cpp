@@ -68,8 +68,8 @@ FileLineResolver::SearchCallback(SearchFilter &filter, SymbolContext &context,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth FileLineResolver::GetDepth() {
-  return Searcher::eDepthCompUnit;
+lldb::SearchDepth FileLineResolver::GetDepth() {
+  return lldb::eSearchDepthCompUnit;
 }
 
 void FileLineResolver::GetDescription(Stream *s) {

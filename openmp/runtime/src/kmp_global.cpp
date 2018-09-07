@@ -300,6 +300,21 @@ kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
 #endif
 
+#if OMP_50_ENABLED
+int __kmp_memkind_available = 0;
+int __kmp_hbw_mem_available = 0;
+const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
+const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
+const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
+const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
+const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
+const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
+const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
+const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
+const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
+void *const *__kmp_def_allocator = omp_default_mem_alloc;
+#endif
+
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
    not a 4-byte type, then give an error message about a non-positive length

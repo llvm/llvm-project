@@ -1447,8 +1447,13 @@ unsigned long long Scalar::ULongLong(unsigned long long fail_value) const {
         .getZExtValue();
   case e_float:
     return (ulonglong_t)m_float.convertToFloat();
-  case e_double:
-    return (ulonglong_t)m_float.convertToDouble();
+  case e_double: {
+    double d_val = m_float.convertToDouble();
+    llvm::APInt rounded_double =
+        llvm::APIntOps::RoundDoubleToAPInt(d_val, sizeof(ulonglong_t) * 8);
+    return (ulonglong_t)(rounded_double.zextOrTrunc(sizeof(ulonglong_t) * 8))
+        .getZExtValue();
+  }
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
     return (ulonglong_t)(ldbl_val.zextOrTrunc(sizeof(ulonglong_t) * 8))
