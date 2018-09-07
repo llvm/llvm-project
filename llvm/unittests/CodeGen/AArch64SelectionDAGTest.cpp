@@ -22,13 +22,13 @@ using namespace llvm;
 
 namespace {
 
-void initLLVM() {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-}
-
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
+  static void SetUpTestCase() {
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+  }
+
   void SetUp() override {
     StringRef Assembly = "define void @f() { ret void }";
 
@@ -160,9 +160,3 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
 }
 
 } // end anonymous namespace
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  initLLVM();
-  return RUN_ALL_TESTS();
-}

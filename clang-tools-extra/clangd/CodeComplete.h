@@ -177,6 +177,9 @@ struct CodeCompletion {
   };
   Scores Score;
 
+  /// Indicates if this item is deprecated.
+  bool Deprecated = false;
+
   // Serialize this to an LSP completion item. This is a lossy operation.
   CompletionItem render(const CodeCompleteOptions &) const;
 };

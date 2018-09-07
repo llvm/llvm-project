@@ -643,8 +643,6 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
   if (FS == nullptr)
     return nullptr;
 
-  std::string CalleeGUID;
-  CalleeName = getRepInFormat(CalleeName, Reader->getFormat(), CalleeGUID);
   return FS->findFunctionSamplesAt(LineLocation(FunctionSamples::getOffset(DIL),
                                                 DIL->getBaseDiscriminator()),
                                    CalleeName);
@@ -685,7 +683,10 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
     }
     llvm::sort(R.begin(), R.end(),
                [](const FunctionSamples *L, const FunctionSamples *R) {
-                 return L->getEntrySamples() > R->getEntrySamples();
+                 if (L->getEntrySamples() != R->getEntrySamples())
+                   return L->getEntrySamples() > R->getEntrySamples();
+                 return FunctionSamples::getGUID(L->getName()) <
+                        FunctionSamples::getGUID(R->getName());
                });
   }
   return R;
@@ -760,7 +761,6 @@ bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
-  bool isCompact = (Reader->getFormat() == SPF_Compact_Binary);
   while (true) {
     bool LocalChanged = false;
     SmallVector<Instruction *, 10> CIS;
@@ -792,19 +792,16 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           if (IsThinLTOPreLink) {
             FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
-                                     PSI->getOrCompHotCountThreshold(),
-                                     isCompact);
+                                     PSI->getOrCompHotCountThreshold());
             continue;
           }
-          auto CalleeFunctionName = FS->getName();
+          auto CalleeFunctionName = FS->getFuncNameInModule(F.getParent());
           // If it is a recursive call, we do not inline it as it could bloat
           // the code exponentially. There is way to better handle this, e.g.
           // clone the caller first, and inline the cloned caller if it is
           // recursive. As llvm does not inline recursive calls, we will
           // simply ignore it instead of handling it explicitly.
-          std::string FGUID;
-          auto Fname = getRepInFormat(F.getName(), Reader->getFormat(), FGUID);
-          if (CalleeFunctionName == Fname)
+          if (CalleeFunctionName == F.getName())
             continue;
 
           const char *Reason = "Callee function not available";
@@ -834,8 +831,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           LocalChanged = true;
       } else if (IsThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold(),
-            isCompact);
+            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
       }
     }
     if (LocalChanged) {
@@ -1177,7 +1173,7 @@ static SmallVector<InstrProfValueData, 2> SortCallTargets(
     const SampleRecord::CallTargetMap &M) {
   SmallVector<InstrProfValueData, 2> R;
   for (auto I = M.begin(); I != M.end(); ++I)
-    R.push_back({Function::getGUID(I->getKey()), I->getValue()});
+    R.push_back({FunctionSamples::getGUID(I->getKey()), I->getValue()});
   llvm::sort(R.begin(), R.end(),
              [](const InstrProfValueData &L, const InstrProfValueData &R) {
                if (L.Count == R.Count)
@@ -1533,6 +1529,7 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI) {
+  FunctionSamples::GUIDToFuncNameMapper Mapper(M);
   if (!ProfileIsValid)
     return false;
 

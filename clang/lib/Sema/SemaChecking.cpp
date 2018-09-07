@@ -238,7 +238,8 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall) {
 
 static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
                                   CallExpr *TheCall, unsigned SizeIdx,
-                                  unsigned DstSizeIdx) {
+                                  unsigned DstSizeIdx,
+                                  StringRef LikelyMacroName) {
   if (TheCall->getNumArgs() <= SizeIdx ||
       TheCall->getNumArgs() <= DstSizeIdx)
     return;
@@ -256,12 +257,21 @@ static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
   if (Size.ule(DstSize))
     return;
 
-  // confirmed overflow so generate the diagnostic.
-  IdentifierInfo *FnName = FDecl->getIdentifier();
+  // Confirmed overflow, so generate the diagnostic.
+  StringRef FunctionName = FDecl->getName();
   SourceLocation SL = TheCall->getBeginLoc();
-  SourceRange SR = TheCall->getSourceRange();
+  SourceManager &SM = S.getSourceManager();
+  // If we're in an expansion of a macro whose name corresponds to this builtin,
+  // use the simple macro name and location.
+  if (SL.isMacroID() && Lexer::getImmediateMacroName(SL, SM, S.getLangOpts()) ==
+                            LikelyMacroName) {
+    FunctionName = LikelyMacroName;
+    SL = SM.getImmediateMacroCallerLoc(SL);
+  }
 
-  S.Diag(SL, diag::warn_memcpy_chk_overflow) << SR << FnName;
+  S.Diag(SL, diag::warn_memcpy_chk_overflow)
+      << FunctionName << DstSize.toString(/*Radix=*/10)
+      << Size.toString(/*Radix=*/10);
 }
 
 static bool SemaBuiltinCallWithStaticChain(Sema &S, CallExpr *BuiltinCall) {
@@ -1219,21 +1229,37 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // check secure string manipulation functions where overflows
   // are detectable at compile time
   case Builtin::BI__builtin___memcpy_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memcpy");
+    break;
   case Builtin::BI__builtin___memmove_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memmove");
+    break;
   case Builtin::BI__builtin___memset_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "memset");
+    break;
   case Builtin::BI__builtin___strlcat_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strlcat");
+    break;
   case Builtin::BI__builtin___strlcpy_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strlcpy");
+    break;
   case Builtin::BI__builtin___strncat_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strncat");
+    break;
   case Builtin::BI__builtin___strncpy_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "strncpy");
+    break;
   case Builtin::BI__builtin___stpncpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3);
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 2, 3, "stpncpy");
     break;
   case Builtin::BI__builtin___memccpy_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 3, 4);
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 3, 4, "memccpy");
     break;
   case Builtin::BI__builtin___snprintf_chk:
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 1, 3, "snprintf");
+    break;
   case Builtin::BI__builtin___vsnprintf_chk:
-    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 1, 3);
+    SemaBuiltinMemChkCall(*this, FDecl, TheCall, 1, 3, "vsnprintf");
     break;
   case Builtin::BI__builtin_call_with_static_chain:
     if (SemaBuiltinCallWithStaticChain(*this, TheCall))
@@ -6119,18 +6145,10 @@ class FormatStringLiteral {
                                     StartToken, StartTokenByteOffset);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocStart() const LLVM_READONLY,
-                            "Use getBeginLoc instead") {
-    return getBeginLoc();
-  }
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return FExpr->getBeginLoc().getLocWithOffset(Offset);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(SourceLocation getLocEnd() const LLVM_READONLY,
-                            "Use getEndLoc instead") {
-    return getEndLoc();
-  }
   SourceLocation getEndLoc() const LLVM_READONLY { return FExpr->getEndLoc(); }
 };
 

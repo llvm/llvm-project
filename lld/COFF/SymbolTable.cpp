@@ -272,7 +272,7 @@ void SymbolTable::reportRemainingUndefines() {
   }
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   bool Inserted = false;
   Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
   if (!Sym) {
@@ -281,9 +281,14 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
     Sym->PendingArchiveLoad = false;
     Inserted = true;
   }
-  if (!File || !isa<BitcodeFile>(File))
-    Sym->IsUsedInRegularObj = true;
   return {Sym, Inserted};
+}
+
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
+  std::pair<Symbol *, bool> Result = insert(Name);
+  if (!File || !isa<BitcodeFile>(File))
+    Result.first->IsUsedInRegularObj = true;
+  return Result;
 }
 
 Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
@@ -308,7 +313,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
   StringRef Name = Sym.getName();
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, nullptr);
+  std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceSymbol<Lazy>(S, F, Sym);
     return;
