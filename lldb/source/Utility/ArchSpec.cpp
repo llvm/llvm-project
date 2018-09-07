@@ -815,6 +815,7 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
+  case llvm::Triple::arc:
     return false;
   }
 }

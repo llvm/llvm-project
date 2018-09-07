@@ -540,13 +540,14 @@ public:
                                     value_type,
                                     typename iterator_traits<_ForwardIterator>::reference>::value>::type* = 0);
 
-#if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
     ~vector()
     {
+        __annotate_delete();
+#if _LIBCPP_DEBUG_LEVEL >= 2
         __get_db()->__erase_c(this);
-    }
 #endif
+    }
 
     vector(const vector& __x);
     vector(const vector& __x, const allocator_type& __a);
