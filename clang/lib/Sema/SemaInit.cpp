@@ -1818,6 +1818,30 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
 
+/// Check if the type of a class element has an accessible destructor.
+///
+/// Aggregate initialization requires a class element's destructor be
+/// accessible per 11.6.1 [dcl.init.aggr]:
+///
+/// The destructor for each element of class type is potentially invoked
+/// (15.4 [class.dtor]) from the context where the aggregate initialization
+/// occurs.
+static bool hasAccessibleDestructor(QualType ElementType, SourceLocation Loc,
+                                    Sema &SemaRef) {
+  auto *CXXRD = ElementType->getAsCXXRecordDecl();
+  if (!CXXRD)
+    return false;
+
+  CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
+  SemaRef.CheckDestructorAccess(Loc, Destructor,
+                                SemaRef.PDiag(diag::err_access_dtor_temp)
+                                    << ElementType);
+  SemaRef.MarkFunctionReferenced(Loc, Destructor);
+  if (SemaRef.DiagnoseUseOfDecl(Destructor, Loc))
+    return true;
+  return false;
+}
+
 void InitListChecker::CheckStructUnionTypes(
     const InitializedEntity &Entity, InitListExpr *IList, QualType DeclType,
     CXXRecordDecl::base_class_range Bases, RecordDecl::field_iterator Field,
@@ -1837,6 +1861,15 @@ void InitListChecker::CheckStructUnionTypes(
 
   if (DeclType->isUnionType() && IList->getNumInits() == 0) {
     RecordDecl *RD = DeclType->getAs<RecordType>()->getDecl();
+
+    if (!VerifyOnly)
+      for (FieldDecl *FD : RD->fields()) {
+        QualType ET = SemaRef.Context.getBaseElementType(FD->getType());
+        if (hasAccessibleDestructor(ET, IList->getEndLoc(), SemaRef)) {
+          hadError = true;
+          return;
+        }
+      }
 
     // If there's a default initializer, use it.
     if (isa<CXXRecordDecl>(RD) && cast<CXXRecordDecl>(RD)->hasInClassInitializer()) {
@@ -1874,13 +1907,13 @@ void InitListChecker::CheckStructUnionTypes(
   // If we have any base classes, they are initialized prior to the fields.
   for (auto &Base : Bases) {
     Expr *Init = Index < IList->getNumInits() ? IList->getInit(Index) : nullptr;
-    SourceLocation InitLoc = Init ? Init->getBeginLoc() : IList->getEndLoc();
 
     // Designated inits always initialize fields, so if we see one, all
     // remaining base classes have no explicit initializer.
     if (Init && isa<DesignatedInitExpr>(Init))
       Init = nullptr;
 
+    SourceLocation InitLoc = Init ? Init->getBeginLoc() : IList->getEndLoc();
     InitializedEntity BaseEntity = InitializedEntity::InitializeBase(
         SemaRef.Context, &Base, false, &Entity);
     if (Init) {
@@ -1890,6 +1923,12 @@ void InitListChecker::CheckStructUnionTypes(
     } else if (VerifyOnly) {
       CheckEmptyInitializable(BaseEntity, InitLoc);
     }
+
+    if (!VerifyOnly)
+      if (hasAccessibleDestructor(Base.getType(), InitLoc, SemaRef)) {
+        hadError = true;
+        return;
+      }
   }
 
   // If structDecl is a forward declaration, this loop won't do
@@ -1900,9 +1939,11 @@ void InitListChecker::CheckStructUnionTypes(
   RecordDecl::field_iterator FieldEnd = RD->field_end();
   bool CheckForMissingFields =
     !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
+  bool HasDesignatedInit = false;
 
   while (Index < IList->getNumInits()) {
     Expr *Init = IList->getInit(Index);
+    SourceLocation InitLoc = Init->getBeginLoc();
 
     if (DesignatedInitExpr *DIE = dyn_cast<DesignatedInitExpr>(Init)) {
       // If we're not the subobject that matches up with the '{' for
@@ -1911,6 +1952,8 @@ void InitListChecker::CheckStructUnionTypes(
       if (!SubobjectIsDesignatorContext)
         return;
 
+      HasDesignatedInit = true;
+
       // Handle this designated initializer. Field will be updated to
       // the next field that we'll be initializing.
       if (CheckDesignatedInitializer(Entity, IList, DIE, 0,
@@ -1918,6 +1961,17 @@ void InitListChecker::CheckStructUnionTypes(
                                      StructuredList, StructuredIndex,
                                      true, TopLevelObject))
         hadError = true;
+      else if (!VerifyOnly) {
+        // Find the field named by the designated initializer.
+        RecordDecl::field_iterator F = RD->field_begin();
+        while (std::next(F) != Field)
+          ++F;
+        QualType ET = SemaRef.Context.getBaseElementType(F->getType());
+        if (hasAccessibleDestructor(ET, InitLoc, SemaRef)) {
+          hadError = true;
+          return;
+        }
+      }
 
       InitializedSomething = true;
 
@@ -1960,6 +2014,14 @@ void InitListChecker::CheckStructUnionTypes(
       continue;
     }
 
+    if (!VerifyOnly) {
+      QualType ET = SemaRef.Context.getBaseElementType(Field->getType());
+      if (hasAccessibleDestructor(ET, InitLoc, SemaRef)) {
+        hadError = true;
+        return;
+      }
+    }
+
     InitializedEntity MemberEntity =
       InitializedEntity::InitializeMember(*Field, &Entity);
     CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
@@ -1999,6 +2061,21 @@ void InitListChecker::CheckStructUnionTypes(
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
+    }
+  }
+
+  // Check that the types of the remaining fields have accessible destructors.
+  if (!VerifyOnly) {
+    // If the initializer expression has a designated initializer, check the
+    // elements for which a designated initializer is not provided too.
+    RecordDecl::field_iterator I = HasDesignatedInit ? RD->field_begin()
+                                                     : Field;
+    for (RecordDecl::field_iterator E = RD->field_end(); I != E; ++I) {
+      QualType ET = SemaRef.Context.getBaseElementType(I->getType());
+      if (hasAccessibleDestructor(ET, IList->getEndLoc(), SemaRef)) {
+        hadError = true;
+        return;
+      }
     }
   }
 

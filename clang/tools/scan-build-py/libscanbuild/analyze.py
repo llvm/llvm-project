@@ -395,8 +395,6 @@ def analyzer_params(args):
     if args.disable_checker:
         checkers = ','.join(args.disable_checker)
         result.extend(['-analyzer-disable-checker', checkers])
-    if os.getenv('UBIVIZ'):
-        result.append('-analyzer-viz-egraph-ubigraph')
 
     return prefix_with('-Xclang', result)
 

@@ -415,9 +415,6 @@ public:
                                                    llvm::Value *AI,
                                                    CGBuilderTy &Builder);
 
-  /// Emit call to \c llvm.dbg.label for an label.
-  void EmitLabel(const LabelDecl *D, CGBuilderTy &Builder);
-
   /// Emit call to \c llvm.dbg.declare for an imported variable
   /// declaration in a block.
   void EmitDeclareOfBlockDeclRefVariable(

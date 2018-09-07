@@ -69,6 +69,13 @@ ProgramState::~ProgramState() {
     stateMgr->getStoreManager().decrementReferenceCount(store);
 }
 
+int64_t ProgramState::getID() const {
+  Optional<int64_t> Out = getStateManager().Alloc.identifyObject(this);
+  assert(Out && "Wrong allocator used");
+  assert(*Out % alignof(ProgramState) == 0 && "Wrong alignment information");
+  return *Out / alignof(ProgramState);
+}
+
 ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
                                          StoreManagerCreator CreateSMgr,
                                          ConstraintManagerCreator CreateCMgr,
