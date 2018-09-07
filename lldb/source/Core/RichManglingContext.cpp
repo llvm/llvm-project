@@ -74,6 +74,7 @@ bool RichManglingContext::IsCtorOrDtor() const {
   case None:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 bool RichManglingContext::IsFunction() const {
@@ -86,6 +87,7 @@ bool RichManglingContext::IsFunction() const {
   case None:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {

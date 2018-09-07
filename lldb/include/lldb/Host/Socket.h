@@ -15,9 +15,9 @@
 
 #include "lldb/lldb-private.h"
 
-#include "lldb/Host/Predicate.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/IOObject.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 
 #ifdef _WIN32

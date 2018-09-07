@@ -114,8 +114,6 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
-  void invokeMSVC(llvm::opt::InputArgList &Args);
-
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
                         StringRef ParentName);

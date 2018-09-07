@@ -65,6 +65,8 @@ public:
 
   Options *GetOptions() override;
 
+  int HandleCompletion(CompletionRequest &request) override;
+
 protected:
   //------------------------------------------------------------------
   // IOHandler::Delegate functions

@@ -12,7 +12,6 @@
 #include "IDebugDelegate.h"
 
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Host/Predicate.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -21,6 +20,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"

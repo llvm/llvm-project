@@ -25,6 +25,10 @@
 
 #if defined(_LIBUNWIND_BUILD_ZERO_COST_APIS)
 
+#if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
+#define private_1 private_[0]
+#endif
+
 ///  Called by __cxa_rethrow().
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
 _Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object) {

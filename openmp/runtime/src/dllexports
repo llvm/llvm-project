@@ -539,6 +539,24 @@ kmp_set_warnings_off                        780
 
 kmp_set_disp_num_buffers                    890
 
+%ifdef OMP_50
+    omp_control_tool                        891
+    omp_set_default_allocator               892
+    omp_get_default_allocator               893
+    omp_alloc                               894
+    omp_free                                895
+
+    OMP_NULL_ALLOCATOR                     DATA
+    omp_default_mem_alloc                  DATA
+    omp_large_cap_mem_alloc                DATA
+    omp_const_mem_alloc                    DATA
+    omp_high_bw_mem_alloc                  DATA
+    omp_low_lat_mem_alloc                  DATA
+    omp_cgroup_mem_alloc                   DATA
+    omp_pteam_mem_alloc                    DATA
+    omp_thread_mem_alloc                   DATA
+%endif # OMP_50
+
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
 

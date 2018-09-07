@@ -3,6 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef.s -o %t2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-debug.s -o %t3.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef-bad-debug.s -o %t4.o
+# RUN: rm -f %t2.a
 # RUN: llvm-ar rc %t2.a %t2.o
 # RUN: not ld.lld %t.o %t2.a %t3.o %t4.o -o %t.exe 2>&1 | FileCheck %s
 # RUN: not ld.lld -pie %t.o %t2.a %t3.o %t4.o -o %t.exe 2>&1 | FileCheck %s

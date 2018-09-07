@@ -285,43 +285,48 @@ int32_t __tgt_rtl_init_device(int32_t device_id) {
     return OFFLOAD_FAIL;
   }
 
-  // scan properties to determine number of threads/block and blocks/grid.
-  CUdevprop Properties;
-  err = cuDeviceGetProperties(&Properties, cuDevice);
+  // Query attributes to determine number of threads/block and blocks/grid.
+  int maxGridDimX;
+  err = cuDeviceGetAttribute(&maxGridDimX, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X,
+                             cuDevice);
   if (err != CUDA_SUCCESS) {
-    DP("Error getting device Properties, use defaults\n");
+    DP("Error getting max grid dimension, use default\n");
     DeviceInfo.BlocksPerGrid[device_id] = RTLDeviceInfoTy::DefaultNumTeams;
+  } else if (maxGridDimX <= RTLDeviceInfoTy::HardTeamLimit) {
+    DeviceInfo.BlocksPerGrid[device_id] = maxGridDimX;
+    DP("Using %d CUDA blocks per grid\n", maxGridDimX);
+  } else {
+    DeviceInfo.BlocksPerGrid[device_id] = RTLDeviceInfoTy::HardTeamLimit;
+    DP("Max CUDA blocks per grid %d exceeds the hard team limit %d, capping "
+       "at the hard limit\n",
+       maxGridDimX, RTLDeviceInfoTy::HardTeamLimit);
+  }
+
+  // We are only exploiting threads along the x axis.
+  int maxBlockDimX;
+  err = cuDeviceGetAttribute(&maxBlockDimX, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X,
+                             cuDevice);
+  if (err != CUDA_SUCCESS) {
+    DP("Error getting max block dimension, use default\n");
     DeviceInfo.ThreadsPerBlock[device_id] = RTLDeviceInfoTy::DefaultNumThreads;
+  } else if (maxBlockDimX <= RTLDeviceInfoTy::HardThreadLimit) {
+    DeviceInfo.ThreadsPerBlock[device_id] = maxBlockDimX;
+    DP("Using %d CUDA threads per block\n", maxBlockDimX);
+  } else {
+    DeviceInfo.ThreadsPerBlock[device_id] = RTLDeviceInfoTy::HardThreadLimit;
+    DP("Max CUDA threads per block %d exceeds the hard thread limit %d, capping"
+       "at the hard limit\n",
+       maxBlockDimX, RTLDeviceInfoTy::HardThreadLimit);
+  }
+
+  int warpSize;
+  err =
+      cuDeviceGetAttribute(&warpSize, CU_DEVICE_ATTRIBUTE_WARP_SIZE, cuDevice);
+  if (err != CUDA_SUCCESS) {
+    DP("Error getting warp size, assume default\n");
     DeviceInfo.WarpSize[device_id] = 32;
   } else {
-    // Get blocks per grid
-    if (Properties.maxGridSize[0] <= RTLDeviceInfoTy::HardTeamLimit) {
-      DeviceInfo.BlocksPerGrid[device_id] = Properties.maxGridSize[0];
-      DP("Using %d CUDA blocks per grid\n", Properties.maxGridSize[0]);
-    } else {
-      DeviceInfo.BlocksPerGrid[device_id] = RTLDeviceInfoTy::HardTeamLimit;
-      DP("Max CUDA blocks per grid %d exceeds the hard team limit %d, capping "
-          "at the hard limit\n", Properties.maxGridSize[0],
-          RTLDeviceInfoTy::HardTeamLimit);
-    }
-
-    // Get threads per block, exploit threads only along x axis
-    if (Properties.maxThreadsDim[0] <= RTLDeviceInfoTy::HardThreadLimit) {
-      DeviceInfo.ThreadsPerBlock[device_id] = Properties.maxThreadsDim[0];
-      DP("Using %d CUDA threads per block\n", Properties.maxThreadsDim[0]);
-      if (Properties.maxThreadsDim[0] < Properties.maxThreadsPerBlock) {
-        DP("(fewer than max per block along all xyz dims %d)\n",
-            Properties.maxThreadsPerBlock);
-      }
-    } else {
-      DeviceInfo.ThreadsPerBlock[device_id] = RTLDeviceInfoTy::HardThreadLimit;
-      DP("Max CUDA threads per block %d exceeds the hard thread limit %d, "
-          "capping at the hard limit\n", Properties.maxThreadsDim[0],
-          RTLDeviceInfoTy::HardThreadLimit);
-    }
-
-    // According to the documentation, SIMDWidth is "Warp size in threads".
-    DeviceInfo.WarpSize[device_id] = Properties.SIMDWidth;
+    DeviceInfo.WarpSize[device_id] = warpSize;
   }
 
   // Adjust teams to the env variables

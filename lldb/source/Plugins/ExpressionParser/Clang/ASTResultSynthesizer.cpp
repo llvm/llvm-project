@@ -87,7 +87,8 @@ void ASTResultSynthesizer::TransformTopLevelDecl(Decl *D) {
         SynthesizeObjCMethodResult(method_decl);
       }
     } else if (FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D)) {
-      if (m_ast_context &&
+      // When completing user input the body of the function may be a nullptr.
+      if (m_ast_context && function_decl->hasBody() &&
           !function_decl->getNameInfo().getAsString().compare("$__lldb_expr")) {
         RecordPersistentTypes(function_decl);
         SynthesizeFunctionResult(function_decl);

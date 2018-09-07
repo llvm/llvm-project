@@ -47,7 +47,7 @@
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc
 #define FTN_CALLOC kmp_calloc
 #define FTN_REALLOC kmp_realloc
-#define FTN_FREE kmp_free
+#define FTN_KFREE kmp_free
 
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads
 
@@ -135,6 +135,10 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL omp_control_tool
+#define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator
+#define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator
+#define FTN_ALLOC omp_alloc
+#define FTN_FREE omp_free
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -169,7 +173,7 @@
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc_
 #define FTN_CALLOC kmp_calloc_
 #define FTN_REALLOC kmp_realloc_
-#define FTN_FREE kmp_free_
+#define FTN_KFREE kmp_free_
 
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads_
 
@@ -256,7 +260,11 @@
 #endif
 
 #if OMP_50_ENABLED
-#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
+#define FTN_CONTROL_TOOL omp_control_tool_
+#define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator_
+#define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator_
+#define FTN_ALLOC omp_alloc_
+#define FTN_FREE omp_free_
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -291,7 +299,7 @@
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC
 #define FTN_CALLOC KMP_CALLOC
 #define FTN_REALLOC KMP_REALLOC
-#define FTN_FREE KMP_FREE
+#define FTN_KFREE KMP_FREE
 
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS
 
@@ -379,6 +387,10 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
+#define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR
+#define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR
+#define FTN_ALLOC OMP_ALLOC
+#define FTN_FREE OMP_FREE
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -413,7 +425,7 @@
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC_
 #define FTN_CALLOC KMP_CALLOC_
 #define FTN_REALLOC KMP_REALLOC_
-#define FTN_FREE KMP_FREE_
+#define FTN_KFREE KMP_FREE_
 
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS_
 
@@ -501,6 +513,10 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL_
+#define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR_
+#define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR_
+#define FTN_ALLOC OMP_ALLOC_
+#define FTN_FREE OMP_FREE_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */

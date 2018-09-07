@@ -20,6 +20,8 @@
 #ifndef _INTERFACES_H_
 #define _INTERFACES_H_
 
+#include "option.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP interface
 ////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +117,8 @@ typedef enum kmp_sched_t {
   kmp_sched_guided = 36,
   kmp_sched_runtime = 37,
   kmp_sched_auto = 38,
+
+  kmp_sched_static_balanced_chunk = 45,
 
   kmp_sched_static_ordered = 65,
   kmp_sched_static_nochunk_ordered = 66,

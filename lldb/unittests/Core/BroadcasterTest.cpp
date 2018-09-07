@@ -12,7 +12,7 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
-#include "lldb/Host/Predicate.h"
+#include "lldb/Utility/Predicate.h"
 
 #include <thread>
 

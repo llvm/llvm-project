@@ -94,8 +94,6 @@ static const char* ittnotify_lib_name = "libittnotify.dylib";
         __itt_mutex_lock(&p.mutex);                                  \
 }
 
-const int _N_(err) = 0;
-
 typedef int (__itt_init_ittlib_t)(const char*, __itt_group_id);
 
 /* this define used to control initialization function name. */
@@ -490,7 +488,7 @@ static void ITTAPI ITT_VERSIONIZE(ITT_JOIN(_N_(thread_set_nameW),_init))(const w
 
 static int ITTAPI ITT_VERSIONIZE(ITT_JOIN(_N_(thr_name_setW),_init))(const wchar_t* name, int namelen)
 {
-    namelen = namelen;
+    (void)namelen;
     ITT_VERSIONIZE(ITT_JOIN(_N_(thread_set_nameW),_init))(name);
     return 0;
 }
@@ -538,14 +536,14 @@ static void ITTAPI ITT_VERSIONIZE(ITT_JOIN(_N_(thread_set_name),_init))(const ch
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 static int ITTAPI ITT_VERSIONIZE(ITT_JOIN(_N_(thr_name_setA),_init))(const char* name, int namelen)
 {
-    namelen = namelen;
+    (void)namelen;
     ITT_VERSIONIZE(ITT_JOIN(_N_(thread_set_nameA),_init))(name);
     return 0;
 }
 #else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 static int ITTAPI ITT_VERSIONIZE(ITT_JOIN(_N_(thr_name_set),_init))(const char* name, int namelen)
 {
-    namelen = namelen;
+    (void)namelen;
     ITT_VERSIONIZE(ITT_JOIN(_N_(thread_set_name),_init))(name);
     return 0;
 }

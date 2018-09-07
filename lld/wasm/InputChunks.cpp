@@ -25,7 +25,9 @@ using namespace lld::wasm;
 
 static StringRef ReloctTypeToString(uint8_t RelocType) {
   switch (RelocType) {
-#define WASM_RELOC(NAME, REL) case REL: return #NAME;
+#define WASM_RELOC(NAME, REL)                                                  \
+  case REL:                                                                    \
+    return #NAME;
 #include "llvm/BinaryFormat/WasmRelocs.def"
 #undef WASM_RELOC
   }
@@ -41,16 +43,6 @@ StringRef InputChunk::getComdatName() const {
   if (Index == UINT32_MAX)
     return StringRef();
   return File->getWasmObj()->linkingData().Comdats[Index];
-}
-
-void InputChunk::copyRelocations(const WasmSection &Section) {
-  if (Section.Relocations.empty())
-    return;
-  size_t Start = getInputSectionOffset();
-  size_t Size = getInputSize();
-  for (const WasmRelocation &R : Section.Relocations)
-    if (R.Offset >= Start && R.Offset < Start + Size)
-      Relocations.push_back(R);
 }
 
 void InputChunk::verifyRelocTargets() const {
@@ -242,7 +234,7 @@ void InputFunction::calculateSize() {
   uint32_t End = Start + Function->Size;
 
   uint32_t LastRelocEnd = Start + FunctionSizeLength;
-  for (WasmRelocation &Rel : Relocations) {
+  for (const WasmRelocation &Rel : Relocations) {
     LLVM_DEBUG(dbgs() << "  region: " << (Rel.Offset - LastRelocEnd) << "\n");
     CompressedFuncSize += Rel.Offset - LastRelocEnd;
     CompressedFuncSize += getRelocWidth(Rel, File->calcNewValue(Rel));
@@ -267,7 +259,8 @@ void InputFunction::writeTo(uint8_t *Buf) const {
     return InputChunk::writeTo(Buf);
 
   Buf += OutputOffset;
-  uint8_t *Orig = Buf; (void)Orig;
+  uint8_t *Orig = Buf;
+  (void)Orig;
 
   const uint8_t *SecStart = File->CodeSection->Content.data();
   const uint8_t *FuncStart = SecStart + getInputSectionOffset();

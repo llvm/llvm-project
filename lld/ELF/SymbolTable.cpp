@@ -152,64 +152,21 @@ void SymbolTable::trace(StringRef Name) {
   SymMap.insert({CachedHashStringRef(Name), -1});
 }
 
-// Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
-// Used to implement --wrap.
-template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
-  Symbol *Sym = find(Name);
-  if (!Sym)
-    return;
+void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
+  // Swap symbols as instructed by -wrap.
+  int &Idx1 = Symtab->SymMap[CachedHashStringRef(Sym->getName())];
+  int &Idx2 = Symtab->SymMap[CachedHashStringRef(Real->getName())];
+  int &Idx3 = Symtab->SymMap[CachedHashStringRef(Wrap->getName())];
 
-  // Do not wrap the same symbol twice.
-  for (const WrappedSymbol &S : WrappedSymbols)
-    if (S.Sym == Sym)
-      return;
+  Idx2 = Idx1;
+  Idx1 = Idx3;
 
-  Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
-  Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
-  WrappedSymbols.push_back({Sym, Real, Wrap});
-
-  // We want to tell LTO not to inline symbols to be overwritten
-  // because LTO doesn't know the final symbol contents after renaming.
-  Real->CanInline = false;
-  Sym->CanInline = false;
-
-  // Tell LTO not to eliminate these symbols.
-  Sym->IsUsedInRegularObj = true;
-  Wrap->IsUsedInRegularObj = true;
-}
-
-// Apply symbol renames created by -wrap. The renames are created
-// before LTO in addSymbolWrap() to have a chance to inform LTO (if
-// LTO is running) not to include these symbols in IPO. Now that the
-// symbols are finalized, we can perform the replacement.
-void SymbolTable::applySymbolWrap() {
-  // This function rotates 3 symbols:
-  //
-  // __real_sym becomes sym
-  // sym        becomes __wrap_sym
-  // __wrap_sym becomes __real_sym
-  //
-  // The last part is special in that we don't want to change what references to
-  // __wrap_sym point to, we just want have __real_sym in the symbol table.
-
-  for (WrappedSymbol &W : WrappedSymbols) {
-    // First, make a copy of __real_sym.
-    Symbol *Real = nullptr;
-    if (W.Real->isDefined()) {
-      Real = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-      memcpy(Real, W.Real, sizeof(SymbolUnion));
-    }
-
-    // Replace __real_sym with sym and sym with __wrap_sym.
-    memcpy(W.Real, W.Sym, sizeof(SymbolUnion));
-    memcpy(W.Sym, W.Wrap, sizeof(SymbolUnion));
-
-    // We now have two copies of __wrap_sym. Drop one.
-    W.Wrap->IsUsedInRegularObj = false;
-
-    if (Real)
-      SymVector.push_back(Real);
-  }
+  // Now renaming is complete. No one refers Real symbol. We could leave
+  // Real as-is, but if Real is written to the symbol table, that may
+  // contain irrelevant values. So, we copy all values from Sym to Real.
+  StringRef S = Real->getName();
+  memcpy(Real, Sym, sizeof(SymbolUnion));
+  Real->setName(S);
 }
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
@@ -821,11 +778,6 @@ template void SymbolTable::addFile<ELF32LE>(InputFile *);
 template void SymbolTable::addFile<ELF32BE>(InputFile *);
 template void SymbolTable::addFile<ELF64LE>(InputFile *);
 template void SymbolTable::addFile<ELF64BE>(InputFile *);
-
-template void SymbolTable::addSymbolWrap<ELF32LE>(StringRef);
-template void SymbolTable::addSymbolWrap<ELF32BE>(StringRef);
-template void SymbolTable::addSymbolWrap<ELF64LE>(StringRef);
-template void SymbolTable::addSymbolWrap<ELF64BE>(StringRef);
 
 template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef);
 template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef);

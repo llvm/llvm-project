@@ -79,9 +79,13 @@
 // DISASM-NEXT:    1102d: 90 nop
 // DISASM-NEXT:    1102e: 90 nop
 // DISASM-NEXT:    1102f: 90 nop
+// DISASM-EMPTY:
+// DISASM-NEXT:   bar@plt:
 // DISASM-NEXT:    11030: ff 25 0c 20 01 00 jmpl *73740
 // DISASM-NEXT:    11036: 68 00 00 00 00 pushl $0
 // DISASM-NEXT:    1103b: e9 e0 ff ff ff jmp -32 <.plt>
+// DISASM-EMPTY:
+// DISASM-NEXT:   zed@plt:
 // DISASM-NEXT:    11040: ff 25 10 20 01 00 jmpl *73744
 // DISASM-NEXT:    11046: 68 08 00 00 00 pushl $8
 // DISASM-NEXT:    1104b: e9 d0 ff ff ff jmp -48 <.plt>
