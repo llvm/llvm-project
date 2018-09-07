@@ -130,6 +130,8 @@ public:
   ///  used to query and manipulate MemRegion objects.
   MemRegionManager& getRegionManager() { return MRMgr; }
 
+  SValBuilder& getSValBuilder() { return svalBuilder; }
+
   virtual Loc getLValueVar(const VarDecl *VD, const LocationContext *LC) {
     return svalBuilder.makeLoc(MRMgr.getVarRegion(VD, LC));
   }
