@@ -34,8 +34,9 @@ enum : SanitizerMask {
   RequiresPIE = DataFlow | HWAddress | Scudo,
   NeedsUnwindTables = Address | HWAddress | Thread | Memory | DataFlow,
   SupportsCoverage = Address | HWAddress | KernelAddress | KernelHWAddress |
-                     Memory | Leak | Undefined | Integer | ImplicitConversion |
-                     Nullability | DataFlow | Fuzzer | FuzzerNoLink,
+                     Memory | KernelMemory | Leak | Undefined | Integer |
+                     ImplicitConversion | Nullability | DataFlow | Fuzzer |
+                     FuzzerNoLink,
   RecoverableByDefault = Undefined | Integer | ImplicitConversion | Nullability,
   Unrecoverable = Unreachable | Return,
   AlwaysRecoverable = KernelAddress | KernelHWAddress,
@@ -380,8 +381,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                           SafeStack),
       std::make_pair(KernelHWAddress, Address | HWAddress | Leak | Thread |
                                           Memory | KernelAddress | Efficiency |
-                                          SafeStack | ShadowCallStack)};
-
+                                          SafeStack | ShadowCallStack),
+      std::make_pair(KernelMemory, Address | HWAddress | Leak | Thread |
+                                       Memory | KernelAddress | Efficiency |
+                                       Scudo | SafeStack)};
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 

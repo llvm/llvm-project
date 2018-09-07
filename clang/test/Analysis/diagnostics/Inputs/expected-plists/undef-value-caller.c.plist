@@ -1,3 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+ <key>clang_version</key>
+<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -111,7 +117,26 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>8</integer>
+    <integer>9</integer>
+    <integer>10</integer>
+    <integer>11</integer>
+   </array>
+   <key>1</key>
+   <array>
+    <integer>2</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+   <string>/clang/test/Analysis/diagnostics/undef-value-caller.c</string>
+   <string>/clang/test/Analysis/diagnostics/undef-value-callee.h</string>
  </array>
 </dict>
 </plist>

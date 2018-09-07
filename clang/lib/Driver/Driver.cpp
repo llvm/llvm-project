@@ -1663,14 +1663,13 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   }
 
   if (C.getArgs().hasArg(options::OPT_print_multi_directory)) {
-    for (const Multilib &Multilib : TC.getMultilibs()) {
-      if (Multilib.gccSuffix().empty())
-        llvm::outs() << ".\n";
-      else {
-        StringRef Suffix(Multilib.gccSuffix());
-        assert(Suffix.front() == '/');
-        llvm::outs() << Suffix.substr(1) << "\n";
-      }
+    const Multilib &Multilib = TC.getMultilib();
+    if (Multilib.gccSuffix().empty())
+      llvm::outs() << ".\n";
+    else {
+      StringRef Suffix(Multilib.gccSuffix());
+      assert(Suffix.front() == '/');
+      llvm::outs() << Suffix.substr(1) << "\n";
     }
     return false;
   }
