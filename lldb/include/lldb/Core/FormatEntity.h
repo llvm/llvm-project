@@ -104,6 +104,7 @@ public:
       FunctionIsOptimized,
       LineEntryFile,
       LineEntryLineNumber,
+      LineEntryColumn,
       LineEntryStartAddress,
       LineEntryEndAddress,
       CurrentPCArrow
