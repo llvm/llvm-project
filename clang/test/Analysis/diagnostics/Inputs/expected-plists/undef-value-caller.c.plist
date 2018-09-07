@@ -1,7 +1,3 @@
- <key>diagnostics</key>
- <array>
-  <dict>
-   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>event</string>
@@ -111,7 +107,26 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>8</integer>
+    <integer>9</integer>
+    <integer>10</integer>
+    <integer>11</integer>
+   </array>
+   <key>1</key>
+   <array>
+    <integer>2</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/diagnostics/undef-value-caller.c</string>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/diagnostics/undef-value-callee.h</string>
  </array>
 </dict>
 </plist>

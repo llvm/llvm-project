@@ -1,7 +1,3 @@
- <key>diagnostics</key>
- <array>
-  <dict>
-   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -478,6 +474,23 @@
    <key>line</key><integer>39</integer>
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>34</integer>
+    <integer>35</integer>
+    <integer>36</integer>
+    <integer>39</integer>
+    <integer>53</integer>
+    <integer>54</integer>
+    <integer>55</integer>
+    <integer>56</integer>
+    <integer>59</integer>
+    <integer>60</integer>
+    <integer>62</integer>
+   </array>
   </dict>
   </dict>
   <dict>
@@ -978,7 +991,27 @@
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>43</integer>
+    <integer>44</integer>
+    <integer>45</integer>
+    <integer>48</integer>
+    <integer>65</integer>
+    <integer>66</integer>
+    <integer>67</integer>
+    <integer>68</integer>
+    <integer>71</integer>
+    <integer>72</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/diagnostics/undef-value-param.m</string>
  </array>
 </dict>
 </plist>
