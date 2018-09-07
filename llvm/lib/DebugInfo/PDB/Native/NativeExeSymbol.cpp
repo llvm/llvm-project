@@ -15,22 +15,24 @@
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
+static DbiStream *getDbiStreamPtr(NativeSession &Session) {
+  Expected<DbiStream &> DbiS = Session.getPDBFile().getPDBDbiStream();
+  if (DbiS)
+    return &DbiS.get();
+
+  consumeError(DbiS.takeError());
+  return nullptr;
+}
+
 NativeExeSymbol::NativeExeSymbol(NativeSession &Session, SymIndexId SymbolId)
     : NativeRawSymbol(Session, PDB_SymType::Exe, SymbolId),
-      File(Session.getPDBFile()) {
-  Expected<DbiStream &> DbiS = File.getPDBDbiStream();
-  if (!DbiS) {
-    consumeError(DbiS.takeError());
-    return;
-  }
-  Dbi = &DbiS.get();
-  Compilands.resize(Dbi->modules().getModuleCount());
-}
+      Dbi(getDbiStreamPtr(Session)) {}
 
 std::unique_ptr<NativeRawSymbol> NativeExeSymbol::clone() const {
   return llvm::make_unique<NativeExeSymbol>(Session, SymbolId);
@@ -44,7 +46,7 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
     break;
   }
   case PDB_SymType::Enum:
-    return Session.createTypeEnumerator(codeview::LF_ENUM);
+    return Session.getSymbolCache().createTypeEnumerator(codeview::LF_ENUM);
   default:
     break;
   }
@@ -52,7 +54,7 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
 }
 
 uint32_t NativeExeSymbol::getAge() const {
-  auto IS = File.getPDBInfoStream();
+  auto IS = Session.getPDBFile().getPDBInfoStream();
   if (IS)
     return IS->getAge();
   consumeError(IS.takeError());
@@ -60,11 +62,11 @@ uint32_t NativeExeSymbol::getAge() const {
 }
 
 std::string NativeExeSymbol::getSymbolsFileName() const {
-  return File.getFilePath();
+  return Session.getPDBFile().getFilePath();
 }
 
 codeview::GUID NativeExeSymbol::getGuid() const {
-  auto IS = File.getPDBInfoStream();
+  auto IS = Session.getPDBFile().getPDBInfoStream();
   if (IS)
     return IS->getGuid();
   consumeError(IS.takeError());
@@ -72,7 +74,7 @@ codeview::GUID NativeExeSymbol::getGuid() const {
 }
 
 bool NativeExeSymbol::hasCTypes() const {
-  auto Dbi = File.getPDBDbiStream();
+  auto Dbi = Session.getPDBFile().getPDBDbiStream();
   if (Dbi)
     return Dbi->hasCTypes();
   consumeError(Dbi.takeError());
@@ -80,33 +82,9 @@ bool NativeExeSymbol::hasCTypes() const {
 }
 
 bool NativeExeSymbol::hasPrivateSymbols() const {
-  auto Dbi = File.getPDBDbiStream();
+  auto Dbi = Session.getPDBFile().getPDBDbiStream();
   if (Dbi)
     return !Dbi->isStripped();
   consumeError(Dbi.takeError());
   return false;
-}
-
-uint32_t NativeExeSymbol::getNumCompilands() const {
-  if (!Dbi)
-    return 0;
-
-  return Dbi->modules().getModuleCount();
-}
-
-std::unique_ptr<PDBSymbolCompiland>
-NativeExeSymbol::getOrCreateCompiland(uint32_t Index) {
-  if (!Dbi)
-    return nullptr;
-
-  if (Index >= Compilands.size())
-    return nullptr;
-
-  if (Compilands[Index] == 0) {
-    const DbiModuleList &Modules = Dbi->modules();
-    Compilands[Index] = Session.createSymbol<NativeCompilandSymbol>(
-        Modules.getModuleDescriptor(Index));
-  }
-
-  return Session.getConcreteSymbolById<PDBSymbolCompiland>(Compilands[Index]);
 }

@@ -54,7 +54,7 @@ Error BlockIndexer::visit(CustomEventRecord &R) {
 Error BlockIndexer::visit(CallArgRecord &R) {
   CurrentBlock.Records.push_back(&R);
   return Error::success();
-};
+}
 
 Error BlockIndexer::visit(PIDRecord &R) {
   CurrentBlock.ProcessID = R.pid();

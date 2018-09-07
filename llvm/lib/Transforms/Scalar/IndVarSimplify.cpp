@@ -2491,7 +2491,7 @@ bool IndVarSimplify::run(Loop *L) {
   while (!DeadInsts.empty())
     if (Instruction *Inst =
             dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val()))
-      RecursivelyDeleteTriviallyDeadInstructions(Inst, TLI);
+      Changed |= RecursivelyDeleteTriviallyDeadInstructions(Inst, TLI);
 
   // The Rewriter may not be used from this point on.
 

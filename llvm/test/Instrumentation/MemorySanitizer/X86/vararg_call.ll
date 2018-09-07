@@ -106,5 +106,12 @@ declare void @llvm.va_end(i8*) #2
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
+declare dso_local i80 @sum_i80(i32, ...) local_unnamed_addr
 
-;declare dso_local i32 @sum(i32, ...) local_unnamed_addr
+; Unaligned types like i80 should also work.
+define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
+entry:
+  %call = tail call i80 (i32, ...) @sum_i80(i32 3, i80 %a, i80 %b, i80 %c)
+  ret i80 %call
+}
+

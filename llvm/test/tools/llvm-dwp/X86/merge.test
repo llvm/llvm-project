@@ -1,7 +1,5 @@
-RUN: llvm-dwp %p/../Inputs/merge/notypes/c.dwo %p/../Inputs/merge/notypes/ab.dwp -o %t
-RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
-
-FIXME: For some reason, piping straight from llvm-dwp to llvm-dwarfdump -v doesn't behave well - looks like dwarfdump is reading/closes before dwp has finished.
+RUN: llvm-dwp %p/../Inputs/merge/notypes/c.dwo %p/../Inputs/merge/notypes/ab.dwp -o - | \
+RUN:   llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
 
 DWP from a DWO (c.dwo) and a DWP (ab.dwp, created from a.dwo and b.dwo)
 Make sure the entries for A and B are updated correctly when read/processed from ab.dwp

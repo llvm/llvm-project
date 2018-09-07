@@ -24,12 +24,12 @@ NativeEnumModules::NativeEnumModules(NativeSession &PDBSession, uint32_t Index)
     : Session(PDBSession), Index(Index) {}
 
 uint32_t NativeEnumModules::getChildCount() const {
-  return Session.getNativeGlobalScope().getNumCompilands();
+  return Session.getSymbolCache().getNumCompilands();
 }
 
 std::unique_ptr<PDBSymbol>
 NativeEnumModules::getChildAtIndex(uint32_t N) const {
-  return Session.getNativeGlobalScope().getOrCreateCompiland(N);
+  return Session.getSymbolCache().getOrCreateCompiland(N);
 }
 
 std::unique_ptr<PDBSymbol> NativeEnumModules::getNext() {

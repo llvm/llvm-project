@@ -91,7 +91,7 @@ protected:
   LLJIT(std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
         DataLayout DL);
 
-  std::shared_ptr<RuntimeDyld::MemoryManager> getMemoryManager(VModuleKey K);
+  std::unique_ptr<RuntimeDyld::MemoryManager> getMemoryManager(VModuleKey K);
 
   std::string mangle(StringRef UnmangledName);
 

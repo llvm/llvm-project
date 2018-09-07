@@ -78,6 +78,10 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
+  /// Whether this section has had data emitted into it.
+  /// Right now this is only used by the ARM backend.
+  bool HasData : 1;
+
   bool IsRegistered : 1;
 
   MCDummyFragment DummyFragment;
@@ -136,6 +140,9 @@ public:
 
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
+
+  bool hasData() const { return HasData; }
+  void setHasData(bool Value) { HasData = Value; }
 
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }

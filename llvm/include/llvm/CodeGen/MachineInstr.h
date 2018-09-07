@@ -584,6 +584,8 @@ public:
   /// The second argument indicates whether the query should look inside
   /// instruction bundles.
   bool hasProperty(unsigned MCFlag, QueryType Type = AnyInBundle) const {
+    assert(MCFlag < 64 &&
+           "MCFlag out of range for bit mask in getFlags/hasPropertyInBundle.");
     // Inline the fast path for unbundled or bundle-internal instructions.
     if (Type == IgnoreBundle || !isBundled() || isBundledWithPred())
       return getDesc().getFlags() & (1ULL << MCFlag);
@@ -1550,7 +1552,7 @@ private:
   void AddRegOperandsToUseLists(MachineRegisterInfo&);
 
   /// Slow path for hasProperty when we're dealing with a bundle.
-  bool hasPropertyInBundle(unsigned Mask, QueryType Type) const;
+  bool hasPropertyInBundle(uint64_t Mask, QueryType Type) const;
 
   /// Implements the logic of getRegClassConstraintEffectForVReg for the
   /// this MI and the given operand index \p OpIdx.

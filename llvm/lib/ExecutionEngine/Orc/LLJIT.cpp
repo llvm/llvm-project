@@ -59,7 +59,7 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
       CompileLayer(*this->ES, ObjLinkingLayer, SimpleCompiler(*this->TM)),
       CtorRunner(Main), DtorRunner(Main) {}
 
-std::shared_ptr<RuntimeDyld::MemoryManager>
+std::unique_ptr<RuntimeDyld::MemoryManager>
 LLJIT::getMemoryManager(VModuleKey K) {
   return llvm::make_unique<SectionMemoryManager>();
 }

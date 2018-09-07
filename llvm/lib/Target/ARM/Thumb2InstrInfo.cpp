@@ -621,6 +621,11 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       // MCInst operand expects already scaled value.
       Scale = 1;
       assert((Offset & 3) == 0 && "Can't encode this offset!");
+    } else if (AddrMode == ARMII::AddrModeT2_ldrex) {
+      Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
+      NumBits = 8; // 8 bits scaled by 4
+      Scale = 4;
+      assert((Offset & 3) == 0 && "Can't encode this offset!");
     } else {
       llvm_unreachable("Unsupported addressing mode!");
     }
