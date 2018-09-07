@@ -89,6 +89,7 @@ private:
 // comparison on the bodies.
 class URIDistance {
 public:
+  // \p Sources must contain absolute paths, not URIs.
   URIDistance(llvm::StringMap<SourceParams> Sources,
               const FileDistanceOptions &Opts = {})
       : Sources(Sources), Opts(Opts) {}

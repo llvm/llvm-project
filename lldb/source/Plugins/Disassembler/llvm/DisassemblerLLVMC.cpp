@@ -1126,11 +1126,13 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       triple.getSubArch() == llvm::Triple::NoSubArch)
     triple.setArchName("armv8.2a");
 
+  std::string features_str = "";
   const char *triple_str = triple.getTriple().c_str();
 
   // ARM Cortex M0-M7 devices only execute thumb instructions
   if (arch.IsAlwaysThumbInstructions()) {
     triple_str = thumb_arch.GetTriple().getTriple().c_str();
+    features_str += "+fp-armv8,";
   }
 
   const char *cpu = "";
@@ -1181,7 +1183,6 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     break;
   }
 
-  std::string features_str = "";
   if (triple.getArch() == llvm::Triple::mips ||
       triple.getArch() == llvm::Triple::mipsel ||
       triple.getArch() == llvm::Triple::mips64 ||
@@ -1213,7 +1214,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   if (llvm_arch == llvm::Triple::arm) {
     std::string thumb_triple(thumb_arch.GetTriple().getTriple());
     m_alternate_disasm_up =
-        MCDisasmInstance::Create(thumb_triple.c_str(), "", "", flavor, *this);
+        MCDisasmInstance::Create(thumb_triple.c_str(), "", features_str.c_str(), 
+                                 flavor, *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 
