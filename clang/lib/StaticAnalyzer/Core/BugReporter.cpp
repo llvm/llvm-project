@@ -3010,7 +3010,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
 /// into \p ExecutedLines.
 static void populateExecutedLinesWithFunctionSignature(
     const Decl *Signature, SourceManager &SM,
-    std::unique_ptr<FilesToLineNumsMap> &ExecutedLines) {
+    FilesToLineNumsMap &ExecutedLines) {
   SourceRange SignatureSourceRange;
   const Stmt* Body = Signature->getBody();
   if (const auto FD = dyn_cast<FunctionDecl>(Signature)) {
@@ -3030,19 +3030,19 @@ static void populateExecutedLinesWithFunctionSignature(
 
   FileID FID = SM.getFileID(SM.getExpansionLoc(Start));
   for (unsigned Line = StartLine; Line <= EndLine; Line++)
-    ExecutedLines->operator[](FID).insert(Line);
+    ExecutedLines[FID].insert(Line);
 }
 
 static void populateExecutedLinesWithStmt(
     const Stmt *S, SourceManager &SM,
-    std::unique_ptr<FilesToLineNumsMap> &ExecutedLines) {
+    FilesToLineNumsMap &ExecutedLines) {
   SourceLocation Loc = S->getSourceRange().getBegin();
   if (!Loc.isValid())
     return;
   SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
   FileID FID = SM.getFileID(ExpansionLoc);
   unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
-  ExecutedLines->operator[](FID).insert(LineNo);
+  ExecutedLines[FID].insert(LineNo);
 }
 
 /// \return all executed lines including function signatures on the path
@@ -3055,13 +3055,13 @@ findExecutedLines(SourceManager &SM, const ExplodedNode *N) {
     if (N->getFirstPred() == nullptr) {
       // First node: show signature of the entrance point.
       const Decl *D = N->getLocationContext()->getDecl();
-      populateExecutedLinesWithFunctionSignature(D, SM, ExecutedLines);
+      populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (auto CE = N->getLocationAs<CallEnter>()) {
       // Inlined function: show signature.
       const Decl* D = CE->getCalleeContext()->getDecl();
-      populateExecutedLinesWithFunctionSignature(D, SM, ExecutedLines);
+      populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (const Stmt *S = PathDiagnosticLocation::getStmt(N)) {
-      populateExecutedLinesWithStmt(S, SM, ExecutedLines);
+      populateExecutedLinesWithStmt(S, SM, *ExecutedLines);
 
       // Show extra context for some parent kinds.
       const Stmt *P = N->getParentMap().getParent(S);
@@ -3070,12 +3070,12 @@ findExecutedLines(SourceManager &SM, const ExplodedNode *N) {
       // return statement is generated, but we do want to show the whole
       // return.
       if (const auto *RS = dyn_cast_or_null<ReturnStmt>(P)) {
-        populateExecutedLinesWithStmt(RS, SM, ExecutedLines);
+        populateExecutedLinesWithStmt(RS, SM, *ExecutedLines);
         P = N->getParentMap().getParent(RS);
       }
 
       if (P && (isa<SwitchCase>(P) || isa<LabelStmt>(P)))
-        populateExecutedLinesWithStmt(P, SM, ExecutedLines);
+        populateExecutedLinesWithStmt(P, SM, *ExecutedLines);
     }
 
     N = N->getFirstPred();
