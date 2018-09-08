@@ -1141,8 +1141,8 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
 
   swift::Type type = containing_context->mapTypeIntoContext(
       var_decl->getInterfaceType());
-  swift::TypedPattern *typed_pattern = new (ast_context) swift::TypedPattern(
-      named_pattern, swift::TypeLoc::withoutLoc(type));
+  swift::TypedPattern *typed_pattern =
+    swift::TypedPattern::createImplicit(ast_context, named_pattern, type);
 
   swift::PatternBindingDecl *pattern_binding =
       swift::PatternBindingDecl::createImplicit(
