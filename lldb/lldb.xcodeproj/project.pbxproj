@@ -7488,7 +7488,7 @@
 				"$(SRCROOT)/source/API/SBFileSpecList.cpp",
 				"$(SRCROOT)/source/API/SBFrame.cpp",
 				"$(SRCROOT)/source/API/SBFunction.cpp",
-				" $(SRCROOT)/source/API/SBHostOS.cpp",
+				"$(SRCROOT)/source/API/SBHostOS.cpp",
 				"$(SRCROOT)/source/API/SBInstruction.cpp",
 				"$(SRCROOT)/source/API/SBInstructionList.cpp",
 				"$(SRCROOT)/source/API/SBLanguageRuntime.cpp",

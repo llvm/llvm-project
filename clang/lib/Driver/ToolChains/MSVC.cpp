@@ -355,6 +355,15 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT__SLASH_Zd))
     CmdArgs.push_back("-debug");
 
+  // Pass on /Brepro if it was passed to the compiler.
+  // Note that /Brepro maps to -mno-incremental-linker-compatible.
+  bool DefaultIncrementalLinkerCompatible =
+      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment();
+  if (!Args.hasFlag(options::OPT_mincremental_linker_compatible,
+                    options::OPT_mno_incremental_linker_compatible,
+                    DefaultIncrementalLinkerCompatible))
+    CmdArgs.push_back("-Brepro");
+
   bool DLL = Args.hasArg(options::OPT__SLASH_LD, options::OPT__SLASH_LDd,
                          options::OPT_shared);
   if (DLL) {
