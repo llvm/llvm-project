@@ -145,6 +145,8 @@ void HwasanTSDInit();
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context);
 
+void UpdateMemoryUsage();
+
 }  // namespace __hwasan
 
 #define HWASAN_MALLOC_HOOK(ptr, size)       \
