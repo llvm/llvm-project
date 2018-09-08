@@ -25756,8 +25756,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case X86ISD::ADDUS:
+  case X86ISD::SUBUS:
   case X86ISD::AVG: {
-    // Legalize types for X86ISD::AVG by expanding vectors.
+    // Legalize types for X86ISD::AVG/ADDUS/SUBUS by widening.
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
 
     auto InVT = N->getValueType(0);
@@ -25775,7 +25777,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Ops[0] = N->getOperand(1);
     SDValue InVec1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, RegVT, Ops);
 
-    SDValue Res = DAG.getNode(X86ISD::AVG, dl, RegVT, InVec0, InVec1);
+    SDValue Res = DAG.getNode(N->getOpcode(), dl, RegVT, InVec0, InVec1);
     if (getTypeAction(*DAG.getContext(), InVT) != TypeWidenVector)
       Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, InVT, Res,
                         DAG.getIntPtrConstant(0, dl));
@@ -33147,14 +33149,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Early exit check
-  if (!TLI.isTypeLegal(VT))
-    return SDValue();
-
   // Match VSELECTs into subs with unsigned saturation.
   if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::SETCC &&
       // psubus is available in SSE2 for i8 and i16 vectors.
-      Subtarget.hasSSE2() &&
+      Subtarget.hasSSE2() && VT.getVectorNumElements() >= 2 &&
+      isPowerOf2_32(VT.getVectorNumElements()) &&
       (VT.getVectorElementType() == MVT::i8 ||
        VT.getVectorElementType() == MVT::i16)) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -33227,7 +33226,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Match VSELECTs into add with unsigned saturation.
   if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::SETCC &&
       // paddus is available in SSE2 for i8 and i16 vectors.
-      Subtarget.hasSSE2() &&
+      Subtarget.hasSSE2() && VT.getVectorNumElements() >= 2 &&
+      isPowerOf2_32(VT.getVectorNumElements()) &&
       (VT.getVectorElementType() == MVT::i8 ||
        VT.getVectorElementType() == MVT::i16)) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -33282,6 +33282,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  // Early exit check
+  if (!TLI.isTypeLegal(VT))
+    return SDValue();
 
   if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DCI, Subtarget))
     return V;

@@ -91,18 +91,6 @@ EXTERN int omp_get_initial_device(void);
 EXTERN int omp_get_max_task_priority(void);
 
 ////////////////////////////////////////////////////////////////////////////////
-// OMPTARGET_NVPTX private (debug / temportary?) interface
-////////////////////////////////////////////////////////////////////////////////
-
-// for debug
-EXTERN void __kmpc_print_str(char *title);
-EXTERN void __kmpc_print_title_int(char *title, int data);
-EXTERN void __kmpc_print_index(char *title, int i);
-EXTERN void __kmpc_print_int(int data);
-EXTERN void __kmpc_print_double(double data);
-EXTERN void __kmpc_print_address_int64(int64_t data);
-
-////////////////////////////////////////////////////////////////////////////////
 // file below is swiped from kmpc host interface
 ////////////////////////////////////////////////////////////////////////////////
 

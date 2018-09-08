@@ -448,8 +448,10 @@ protected:
   // -----------------------------------------------------------
   Status SetSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
 
-  virtual llvm::Expected<llvm::ArrayRef<uint8_t>>
-  GetSoftwareBreakpointTrapOpcode(size_t size_hint);
+  virtual Status
+  GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
+                                  size_t &actual_opcode_size,
+                                  const uint8_t *&trap_opcode_bytes) = 0;
 
   // -----------------------------------------------------------
   /// Notify the delegate that an exec occurred.

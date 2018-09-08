@@ -812,7 +812,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
   llvm::sys::Process::UseANSIEscapeCodes(true);
-  SetUseColor(true);
 #endif
 }
 

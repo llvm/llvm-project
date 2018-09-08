@@ -806,6 +806,9 @@ void File::CalculateInteractiveAndTerminal() {
     if (_isatty(fd)) {
       m_is_interactive = eLazyBoolYes;
       m_is_real_terminal = eLazyBoolYes;
+#if defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+      m_supports_colors = eLazyBoolYes;
+#endif
     }
 #else
     if (isatty(fd)) {

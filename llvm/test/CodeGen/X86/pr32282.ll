@@ -25,8 +25,8 @@ define void @foo() {
 ; X86-NEXT:    andl $-2, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    addl $7, %eax
-; X86-NEXT:    adcxl %edx, %ecx
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    adcxl %ecx, %edx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
