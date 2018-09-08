@@ -1420,7 +1420,22 @@ public:
   /// Returns true if \p I is an instruction that will be scalarized with
   /// predication. Such instructions include conditional stores and
   /// instructions that may divide by zero.
-  bool isScalarWithPredication(Instruction *I);
+  /// If a non-zero VF has been calculated, we check if I will be scalarized
+  /// predication for that VF.
+  bool isScalarWithPredication(Instruction *I, unsigned VF = 1);
+
+  // Returns true if \p I is an instruction that will be predicated either
+  // through scalar predication or masked load/store or masked gather/scatter.
+  // Superset of instructions that return true for isScalarWithPredication.
+  bool isPredicatedInst(Instruction *I) {
+    if (!Legal->blockNeedsPredication(I->getParent()))
+      return false;
+    // Loads and stores that need some form of masked operation are predicated
+    // instructions.
+    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+      return Legal->isMaskRequired(I);
+    return isScalarWithPredication(I);
+  }
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -4367,7 +4382,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   Scalars[VF].insert(Worklist.begin(), Worklist.end());
 }
 
-bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I) {
+bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigned VF) {
   if (!Legal->blockNeedsPredication(I->getParent()))
     return false;
   switch(I->getOpcode()) {
@@ -4379,6 +4394,14 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I) {
       return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getMemInstValueType(I);
+    // We have already decided how to vectorize this instruction, get that
+    // result.
+    if (VF > 1) {
+      InstWidening WideningDecision = getWideningDecision(I, VF);
+      assert(WideningDecision != CM_Unknown &&
+             "Widening decision should be ready at this moment");
+      return WideningDecision == CM_Scalarize;
+    }
     return isa<LoadInst>(I) ?
         !(isLegalMaskedLoad(Ty, Ptr)  || isLegalMaskedGather(Ty))
       : !(isLegalMaskedStore(Ty, Ptr) || isLegalMaskedScatter(Ty));
@@ -5472,8 +5495,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I){
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert(isScalarWithPredication(I) &&
-         "Expecting a scalar emulated instruction");
+  assert(isPredicatedInst(I) && "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
           NumPredStores > NumberOfStoresToPredicate);
@@ -5734,7 +5756,7 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // If we have a predicated store, it may not be executed for each vector
   // lane. Scale the cost by the probability of executing the predicated
   // block.
-  if (isScalarWithPredication(I)) {
+  if (isPredicatedInst(I)) {
     Cost /= getReciprocalPredBlockProb();
 
     if (useEmulatedMaskMemRefHack(I))
@@ -5880,7 +5902,12 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
 
       if (isa<StoreInst>(&I) && isScalarWithPredication(&I))
         NumPredStores++;
-      if (isa<LoadInst>(&I) && Legal->isUniform(Ptr)) {
+
+      if (isa<LoadInst>(&I) && Legal->isUniform(Ptr) &&
+          // Conditional loads should be scalarized and predicated.
+          // isScalarWithPredication cannot be used here since masked
+          // gather/scatters are not considered scalar with predication.
+          !Legal->blockNeedsPredication(I.getParent())) {
         // Scalar load + broadcast
         unsigned Cost = getUniformMemOpCost(&I, VF);
         setWideningDecision(&I, VF, CM_Scalarize, Cost);
@@ -6720,7 +6747,11 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
 
 bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
                                  VFRange &Range) {
-  if (CM.isScalarWithPredication(I))
+
+  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
+
+  if (IsPredicated)
     return false;
 
   auto IsVectorizableOpcode = [](unsigned Opcode) {
@@ -6827,7 +6858,9 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       [&](unsigned VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
-  bool IsPredicated = CM.isScalarWithPredication(I);
+  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
+
   auto *Recipe = new VPReplicateRecipe(I, IsUniform, IsPredicated);
 
   // Find if I uses a predicated instruction. If so, it will use its scalar

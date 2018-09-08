@@ -56,15 +56,19 @@ define i64 @test_builtin_rdtscp(i8* %A) {
 ; X64-LABEL: test_builtin_rdtscp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    rdtscp
-; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    shlq $32, %rdx
 ; X64-NEXT:    orq %rdx, %rax
+; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    retq
-  %1 = tail call i64 @llvm.x86.rdtscp(i8* %A)
-  ret i64 %1
+  %1 = call { i64, i32 } @llvm.x86.rdtscp()
+  %2 = extractvalue { i64, i32 } %1, 1
+  %3 = bitcast i8* %A to i32*
+  store i32 %2, i32* %3, align 1
+  %4 = extractvalue { i64, i32 } %1, 0
+  ret i64 %4
 }
 
 declare i64 @llvm.readcyclecounter()
-declare i64 @llvm.x86.rdtscp(i8*)
+declare { i64, i32 } @llvm.x86.rdtscp()
 declare i64 @llvm.x86.rdtsc()
 

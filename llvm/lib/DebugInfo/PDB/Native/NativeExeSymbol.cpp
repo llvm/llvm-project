@@ -47,6 +47,8 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
   }
   case PDB_SymType::Enum:
     return Session.getSymbolCache().createTypeEnumerator(codeview::LF_ENUM);
+  case PDB_SymType::PointerType:
+    return Session.getSymbolCache().createTypeEnumerator(codeview::LF_POINTER);
   default:
     break;
   }

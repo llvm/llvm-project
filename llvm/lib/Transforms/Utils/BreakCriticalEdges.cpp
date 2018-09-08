@@ -201,7 +201,8 @@ llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
   auto *LI = Options.LI;
   auto *MSSAU = Options.MSSAU;
   if (MSSAU)
-    MSSAU->wireOldPredecessorsToNewImmediatePredecessor(DestBB, NewBB, {TIBB});
+    MSSAU->wireOldPredecessorsToNewImmediatePredecessor(
+        DestBB, NewBB, {TIBB}, Options.MergeIdenticalEdges);
 
   if (!DT && !LI)
     return NewBB;

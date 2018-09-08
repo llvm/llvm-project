@@ -30,9 +30,8 @@ entry:
 define void @add128_rmw2(i128 %a, i128* %b) nounwind {
 ; CHECK-LABEL: add128_rmw2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq (%rdx), %rdi
+; CHECK-NEXT:    addq %rdi, (%rdx)
 ; CHECK-NEXT:    adcq %rsi, 8(%rdx)
-; CHECK-NEXT:    movq %rdi, (%rdx)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i128, i128* %b
@@ -77,13 +76,10 @@ entry:
 define void @add256_rmw2(i256 %a, i256* %b) nounwind {
 ; CHECK-LABEL: add256_rmw2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq (%r8), %rdi
-; CHECK-NEXT:    adcq 8(%r8), %rsi
-; CHECK-NEXT:    adcq 16(%r8), %rdx
+; CHECK-NEXT:    addq %rdi, (%r8)
+; CHECK-NEXT:    adcq %rsi, 8(%r8)
+; CHECK-NEXT:    adcq %rdx, 16(%r8)
 ; CHECK-NEXT:    adcq %rcx, 24(%r8)
-; CHECK-NEXT:    movq %rdi, (%r8)
-; CHECK-NEXT:    movq %rsi, 8(%r8)
-; CHECK-NEXT:    movq %rdx, 16(%r8)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i256, i256* %b

@@ -1456,8 +1456,25 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
                                                    unsigned Priority,
                                                    const MCSymbol *KeySym,
                                                    MCSectionCOFF *Default) {
-  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment())
-    return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
+  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
+    // If the priority is the default, use .CRT$XCU, possibly associative.
+    if (Priority == 65535)
+      return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
+
+    // Otherwise, we need to compute a new section name. Low priorities should
+    // run earlier. The linker will sort sections ASCII-betically, and we need a
+    // string that sorts between .CRT$XCA and .CRT$XCU. In the general case, we
+    // make a name like ".CRT$XCT12345", since that runs before .CRT$XCU. Really
+    // low priorities need to sort before 'L', since the CRT uses that
+    // internally, so we use ".CRT$XCA00001" for them.
+    SmallString<24> Name;
+    raw_svector_ostream OS(Name);
+    OS << ".CRT$XC" << (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
+    MCSectionCOFF *Sec = Ctx.getCOFFSection(
+        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
+        SectionKind::getReadOnly());
+    return Ctx.getAssociativeCOFFSection(Sec, KeySym, 0);
+  }
 
   std::string Name = IsCtor ? ".ctors" : ".dtors";
   if (Priority != 65535)

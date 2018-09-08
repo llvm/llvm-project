@@ -11,7 +11,7 @@ include(HandleLLVMStdlib)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
-if(CMAKE_LINKER MATCHES "lld-link.exe" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld"))
+if(CMAKE_LINKER MATCHES "lld-link\.exe" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld") OR LLVM_ENABLE_LLD)
   set(LINKER_IS_LLD_LINK TRUE)
 else()
   set(LINKER_IS_LLD_LINK FALSE)
