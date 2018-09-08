@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -712,24 +713,20 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
 }
 
 APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
-  union {
-    double D;
-    uint64_t I;
-  } T;
-  T.D = Double;
+  uint64_t I = bit_cast<uint64_t>(Double);
 
   // Get the sign bit from the highest order bit
-  bool isNeg = T.I >> 63;
+  bool isNeg = I >> 63;
 
   // Get the 11-bit exponent and adjust for the 1023 bit bias
-  int64_t exp = ((T.I >> 52) & 0x7ff) - 1023;
+  int64_t exp = ((I >> 52) & 0x7ff) - 1023;
 
   // If the exponent is negative, the value is < 0 so just return 0.
   if (exp < 0)
     return APInt(width, 0u);
 
   // Extract the mantissa by clearing the top 12 bits (sign + exponent).
-  uint64_t mantissa = (T.I & (~0ULL >> 12)) | 1ULL << 52;
+  uint64_t mantissa = (I & (~0ULL >> 12)) | 1ULL << 52;
 
   // If the exponent doesn't shift all bits out of the mantissa
   if (exp < 52)
@@ -806,12 +803,8 @@ double APInt::roundToDouble(bool isSigned) const {
 
   // The leading bit of mantissa is implicit, so get rid of it.
   uint64_t sign = isNeg ? (1ULL << (APINT_BITS_PER_WORD - 1)) : 0;
-  union {
-    double D;
-    uint64_t I;
-  } T;
-  T.I = sign | (exp << 52) | mantissa;
-  return T.D;
+  uint64_t I = sign | (exp << 52) | mantissa;
+  return bit_cast<double>(I);
 }
 
 // Truncate to new width.

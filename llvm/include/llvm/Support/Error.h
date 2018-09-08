@@ -322,7 +322,7 @@ private:
 /// Subclass of Error for the sole purpose of identifying the success path in
 /// the type system. This allows to catch invalid conversion to Expected<T> at
 /// compile time.
-class ErrorSuccess : public Error {};
+class ErrorSuccess final : public Error {};
 
 inline ErrorSuccess Error::success() { return ErrorSuccess(); }
 
@@ -1171,8 +1171,7 @@ Error createStringError(std::error_code EC, char const *Msg);
 /// show more detailed information to the user.
 class FileError final : public ErrorInfo<FileError> {
 
-  template <class Err>
-  friend Error createFileError(std::string, Err);
+  friend Error createFileError(std::string, Error);
 
 public:
   void log(raw_ostream &OS) const override {
@@ -1207,10 +1206,11 @@ private:
 
 /// Concatenate a source file path and/or name with an Error. The resulting
 /// Error is unchecked.
-template <class Err>
-inline Error createFileError(std::string F, Err E) {
+inline Error createFileError(std::string F, Error E) {
   return FileError::build(F, std::move(E));
 }
+
+Error createFileError(std::string F, ErrorSuccess) = delete;
 
 /// Helper for check-and-exit error handling.
 ///

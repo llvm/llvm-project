@@ -114,11 +114,10 @@ loop:
   br label %loop
 }
 
-; FIXME: argument aliasing should let us do this transform
 define void @test7(i32* noalias %loc, i32* noalias %loc2) {
 ; CHECK-LABEL: @test7
-; CHECK-LABEL: loop:
 ; CHECK: %val = load i32, i32* %loc2
+; CHECK-LABEL: loop:
 ; CHECK: @custom_memcpy
   br label %loop
 

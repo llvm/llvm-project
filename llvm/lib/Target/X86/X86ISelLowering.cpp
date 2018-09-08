@@ -21286,6 +21286,18 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), Op.getOperand(2), RoundingMode);
     }
+    // ADC/ADCX/SBB
+    case ADX: {
+      SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
+      SDVTList VTs = DAG.getVTList(Op.getOperand(2).getValueType(), MVT::i32);
+      SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(1),
+                                  DAG.getConstant(-1, dl, MVT::i8));
+      SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(2),
+                                Op.getOperand(3), GenCF.getValue(1));
+      SDValue SetCC = getSETCC(X86::COND_B, Res.getValue(1), dl, DAG);
+      SDValue Results[] = { SetCC, Res };
+      return DAG.getMergeValues(Results, dl);
+    }
     default:
       break;
     }
@@ -21734,39 +21746,39 @@ static void getReadTimeStampCounter(SDNode *N, const SDLoc &DL, unsigned Opcode,
   }
   SDValue Chain = HI.getValue(1);
 
+  SDValue TSC;
+  if (Subtarget.is64Bit()) {
+    // The EDX register is loaded with the high-order 32 bits of the MSR, and
+    // the EAX register is loaded with the low-order 32 bits.
+    TSC = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
+                      DAG.getConstant(32, DL, MVT::i8));
+    TSC = DAG.getNode(ISD::OR, DL, MVT::i64, LO, TSC);
+  } else {
+    // Use a buildpair to merge the two 32-bit values into a 64-bit one.
+    TSC = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, { LO, HI });
+  }
+
   if (Opcode == X86ISD::RDTSCP_DAG) {
-    assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
+    assert(N->getNumOperands() == 2 && "Unexpected number of operands!");
 
     // Instruction RDTSCP loads the IA32:TSC_AUX_MSR (address C000_0103H) into
     // the ECX register. Add 'ecx' explicitly to the chain.
     SDValue ecx = DAG.getCopyFromReg(Chain, DL, X86::ECX, MVT::i32,
                                      HI.getValue(2));
-    // Explicitly store the content of ECX at the location passed in input
-    // to the 'rdtscp' intrinsic.
-    Chain = DAG.getStore(ecx.getValue(1), DL, ecx, N->getOperand(2),
-                         MachinePointerInfo());
-  }
 
-  if (Subtarget.is64Bit()) {
-    // The EDX register is loaded with the high-order 32 bits of the MSR, and
-    // the EAX register is loaded with the low-order 32 bits.
-    SDValue Tmp = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
-                              DAG.getConstant(32, DL, MVT::i8));
-    Results.push_back(DAG.getNode(ISD::OR, DL, MVT::i64, LO, Tmp));
-    Results.push_back(Chain);
+    Results.push_back(TSC);
+    Results.push_back(ecx);
+    Results.push_back(ecx.getValue(1));
     return;
   }
 
-  // Use a buildpair to merge the two 32-bit values into a 64-bit one.
-  SDValue Ops[] = { LO, HI };
-  SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Ops);
-  Results.push_back(Pair);
+  Results.push_back(TSC);
   Results.push_back(Chain);
 }
 
 static SDValue LowerREADCYCLECOUNTER(SDValue Op, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
-  SmallVector<SDValue, 2> Results;
+  SmallVector<SDValue, 3> Results;
   SDLoc DL(Op);
   getReadTimeStampCounter(Op.getNode(), DL, X86ISD::RDTSC_DAG, DAG, Subtarget,
                           Results);
@@ -21989,20 +22001,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Ret = DAG.getNode(ISD::ZERO_EXTEND, dl, Op->getValueType(0), SetCC);
     return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(),
                        Ret, SDValue(InTrans.getNode(), 1));
-  }
-  // ADC/ADCX/SBB
-  case ADX: {
-    SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
-    SDVTList VTs = DAG.getVTList(Op.getOperand(3).getValueType(), MVT::i32);
-    SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(2),
-                                DAG.getConstant(-1, dl, MVT::i8));
-    SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(3),
-                              Op.getOperand(4), GenCF.getValue(1));
-    SDValue Store = DAG.getStore(Op.getOperand(0), dl, Res.getValue(0),
-                                 Op.getOperand(5), MachinePointerInfo());
-    SDValue SetCC = getSETCC(X86::COND_B, Res.getValue(1), dl, DAG);
-    SDValue Results[] = { SetCC, Store };
-    return DAG.getMergeValues(Results, dl);
   }
   case TRUNCATE_TO_MEM_VI8:
   case TRUNCATE_TO_MEM_VI16:
@@ -35958,7 +35956,7 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
 
   EVT ScalarVT = VT.getVectorElementType();
   if (!((ScalarVT == MVT::i8 || ScalarVT == MVT::i16) &&
-        isPowerOf2_32(NumElems)))
+        NumElems >= 2 && isPowerOf2_32(NumElems)))
     return SDValue();
 
   // InScalarVT is the intermediate type in AVG pattern and it should be greater
@@ -38182,7 +38180,7 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   EVT InSVT = InVT.getScalarType();
 
   // Input type must be a vector and we must be extending legal integer types.
-  if (!VT.isVector())
+  if (!VT.isVector() || VT.getVectorNumElements() < 2)
     return SDValue();
   if (SVT != MVT::i64 && SVT != MVT::i32 && SVT != MVT::i16)
     return SDValue();

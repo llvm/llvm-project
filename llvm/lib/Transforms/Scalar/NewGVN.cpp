@@ -3497,9 +3497,11 @@ bool NewGVN::runGVN() {
     if (!ToErase->use_empty())
       ToErase->replaceAllUsesWith(UndefValue::get(ToErase->getType()));
 
-    if (ToErase->getParent())
-      ToErase->eraseFromParent();
+    assert(ToErase->getParent() &&
+           "BB containing ToErase deleted unexpectedly!");
+    ToErase->eraseFromParent();
   }
+	Changed |= !InstructionsToErase.empty();
 
   // Delete all unreachable blocks.
   auto UnreachableBlockPred = [&](const BasicBlock &BB) {

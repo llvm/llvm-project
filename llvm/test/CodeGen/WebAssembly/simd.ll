@@ -90,6 +90,23 @@ define <16 x i8> @replace_v16i8(<16 x i8> %v, i8 %x) {
   ret <16 x i8> %res
 }
 
+; CHECK-LABEL: shuffle_v16i8:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 17, 2, 19, 4, 21, 6, 23, 8, 25, 10, 27, 12, 29, 14, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x11,0x02,0x13,0x04,0x15,0x06,0x17,
+; SIMD128-SAME: 0x08,0x19,0x0a,0x1b,0x0c,0x1d,0x0e,0x1f]
+; SIMD128: return $pop0 #
+define <16 x i8> @shuffle_v16i8(<16 x i8> %x, <16 x i8> %y) {
+  %res = shufflevector <16 x i8> %x, <16 x i8> %y,
+    <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23,
+                i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  ret <16 x i8> %res
+}
+
 ; CHECK-LABEL: build_v16i8:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128: .param i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
@@ -214,6 +231,22 @@ define <8 x i16> @replace_v8i16(<8 x i16> %v, i16 %x) {
   ret <8 x i16> %res
 }
 
+; CHECK-LABEL: shuffle_v8i16:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x01,0x12,0x13,0x04,0x05,0x16,0x17,
+; SIMD128-SAME: 0x08,0x09,0x1a,0x1b,0x0c,0x0d,0x1e,0x1f]
+; SIMD128: return $pop0 #
+define <8 x i16> @shuffle_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %res = shufflevector <8 x i16> %x, <8 x i16> %y,
+    <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x i16> %res
+}
+
 ; CHECK-LABEL: build_v8i16:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128: .param i32, i32, i32, i32, i32, i32, i32, i32{{$}}
@@ -295,6 +328,22 @@ define <4 x i32> @replace_v4i32(<4 x i32> %v, i32 %x) {
   ret <4 x i32> %res
 }
 
+; CHECK-LABEL: shuffle_v4i32:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x14,0x15,0x16,0x17,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x1c,0x1d,0x1e,0x1f]
+; SIMD128: return $pop0 #
+define <4 x i32> @shuffle_v4i32(<4 x i32> %x, <4 x i32> %y) {
+  %res = shufflevector <4 x i32> %x, <4 x i32> %y,
+    <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: build_v4i32:
 ; NO-SIMD128-NOT: i32x4
 ; SIMD128: .param i32, i32, i32, i32{{$}}
@@ -370,6 +419,21 @@ define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
   ret <2 x i64> %res
 }
 
+; CHECK-LABEL: shuffle_v2i64:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f]
+; SIMD128: return $pop0 #
+define <2 x i64> @shuffle_v2i64(<2 x i64> %x, <2 x i64> %y) {
+  %res = shufflevector <2 x i64> %x, <2 x i64> %y, <2 x i32> <i32 0, i32 3>
+  ret <2 x i64> %res
+}
+
 ; CHECK-LABEL: build_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
@@ -438,6 +502,22 @@ define float @extract_v4f32(<4 x float> %v) {
 ; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
 define <4 x float> @replace_v4f32(<4 x float> %v, float %x) {
   %res = insertelement <4 x float> %v, float %x, i32 2
+  ret <4 x float> %res
+}
+
+; CHECK-LABEL: shuffle_v4f32:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x14,0x15,0x16,0x17,
+; SIMD128-SAME: 0x08,0x09,0x0a,0x0b,0x1c,0x1d,0x1e,0x1f]
+; SIMD128: return $pop0 #
+define <4 x float> @shuffle_v4f32(<4 x float> %x, <4 x float> %y) {
+  %res = shufflevector <4 x float> %x, <4 x float> %y,
+    <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x float> %res
 }
 
@@ -512,6 +592,22 @@ define double @extract_v2f64(<2 x double> %v) {
 ; SIMD128: return $pop0 # encoding: [0x0f]{{$}}
 define <2 x double> @replace_v2f64(<2 x double> %v, double %x) {
   %res = insertelement <2 x double> %v, double %x, i32 0
+  ret <2 x double> %res
+}
+
+; CHECK-LABEL: shuffle_v2f64:
+; NO-SIMD128-NOT: v8x16
+; SIMD128: .param v128, v128{{$}}
+; SIMD128: .result v128{{$}}
+; SIMD128: v8x16.shuffle $push0=, $0, $1,
+; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; SIMD128-SAME: # encoding: [0xfd,0x17,
+; SIMD128-SAME: 0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+; SIMD128-SAME: 0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f]
+; SIMD128: return $pop0 #
+define <2 x double> @shuffle_v2f64(<2 x double> %x, <2 x double> %y) {
+  %res = shufflevector <2 x double> %x, <2 x double> %y,
+    <2 x i32> <i32 0, i32 3>
   ret <2 x double> %res
 }
 

@@ -296,6 +296,14 @@ static std::string formatRegisterId(RegisterId Id) {
   return formatUnknownEnum(Id);
 }
 
+static std::string formatRegisterId(uint16_t Reg16) {
+  return formatRegisterId(RegisterId(Reg16));
+}
+
+static std::string formatRegisterId(ulittle16_t &Reg16) {
+  return formatRegisterId(uint16_t(Reg16));
+}
+
 static std::string formatRange(LocalVariableAddrRange Range) {
   return formatv("[{0},+{1})",
                  formatSegmentOffset(Range.ISectStart, Range.OffsetStart),
@@ -550,10 +558,11 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeRegisterRelSym &Def) {
   AutoIndent Indent(P, 7);
-  P.formatLine("register = {0}, base ptr = {1}, offset in parent = {2}, has "
+  P.formatLine("register = {0}, offset = {1}, offset in parent = {2}, has "
                "spilled udt = {3}",
-               uint16_t(Def.Hdr.Register), int32_t(Def.Hdr.BasePointerOffset),
-               Def.offsetInParent(), Def.hasSpilledUDTMember());
+               formatRegisterId(Def.Hdr.Register),
+               int32_t(Def.Hdr.BasePointerOffset), Def.offsetInParent(),
+               Def.hasSpilledUDTMember());
   P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
   return Error::success();
@@ -564,8 +573,8 @@ Error MinimalSymbolDumper::visitKnownRecord(
   AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, may have no name = {1}, range start = "
                "{2}, length = {3}",
-               uint16_t(DefRangeRegister.Hdr.Register),
-               uint16_t(DefRangeRegister.Hdr.MayHaveNoName),
+               formatRegisterId(DefRangeRegister.Hdr.Register),
+               bool(DefRangeRegister.Hdr.MayHaveNoName),
                formatSegmentOffset(DefRangeRegister.Range.ISectStart,
                                    DefRangeRegister.Range.OffsetStart),
                DefRangeRegister.Range.Range);
@@ -579,7 +588,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   bool NoName = !!(Def.Hdr.MayHaveNoName == 0);
   P.formatLine("register = {0}, may have no name = {1}, offset in parent = {2}",
-               uint16_t(Def.Hdr.Register), NoName,
+               formatRegisterId(Def.Hdr.Register), NoName,
                uint32_t(Def.Hdr.OffsetInParent));
   P.formatLine("range = {0}, gaps = {1}", formatRange(Def.Range),
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
@@ -606,8 +615,8 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DefRangeSym &Def) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameCookieSym &FC) {
   AutoIndent Indent(P, 7);
   P.formatLine("code offset = {0}, Register = {1}, kind = {2}, flags = {3}",
-               FC.CodeOffset, FC.Register, formatCookieKind(FC.CookieKind),
-               FC.Flags);
+               FC.CodeOffset, formatRegisterId(FC.Register),
+               formatCookieKind(FC.CookieKind), FC.Flags);
   return Error::success();
 }
 

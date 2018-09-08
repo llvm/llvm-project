@@ -104,6 +104,21 @@ inline static RoundingMode stringToRoundingMode(StringRef Str) {
       .Case("dyn", RISCVFPRndMode::DYN)
       .Default(RISCVFPRndMode::Invalid);
 }
+
+inline static bool isValidRoundingMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case RISCVFPRndMode::RNE:
+  case RISCVFPRndMode::RTZ:
+  case RISCVFPRndMode::RDN:
+  case RISCVFPRndMode::RUP:
+  case RISCVFPRndMode::RMM:
+  case RISCVFPRndMode::DYN:
+    return true;
+  }
+}
+
 } // namespace RISCVFPRndMode
 } // namespace llvm
 

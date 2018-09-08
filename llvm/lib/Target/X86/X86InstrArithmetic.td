@@ -1360,3 +1360,12 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
   } // hasSideEffects = 0
   } // mayLoad = 1, SchedRW = [WriteADCLd]
 }
+
+// Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
+// commutable since it has EFLAGs as an input.
+let Predicates = [HasADX], AddedComplexity = 10 in {
+  def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADCX32rm GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADCX64rm GR64:$src1, addr:$src2)>;
+}

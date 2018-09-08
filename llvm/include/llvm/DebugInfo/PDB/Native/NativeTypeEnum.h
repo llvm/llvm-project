@@ -25,6 +25,8 @@ public:
                  const codeview::CVType &CV);
   ~NativeTypeEnum() override;
 
+  void dump(raw_ostream &OS, int Indent) const override;
+
   std::unique_ptr<NativeRawSymbol> clone() const override;
 
   std::unique_ptr<IPDBEnumSymbols>
@@ -35,8 +37,8 @@ public:
   Error visitKnownMember(codeview::CVMemberRecord &CVM,
                          codeview::EnumeratorRecord &Record) override;
 
+  PDB_BuiltinType getBuiltinType() const override;
   PDB_SymType getSymTag() const override;
-  uint32_t getClassParentId() const override;
   uint32_t getUnmodifiedTypeId() const override;
   bool hasConstructor() const override;
   bool hasAssignmentOperator() const override;
@@ -45,9 +47,14 @@ public:
   std::string getName() const override;
   bool isNested() const override;
   bool hasOverloadedOperator() const override;
+  bool hasNestedTypes() const override;
+  bool isIntrinsic() const override;
   bool isPacked() const override;
   bool isScoped() const override;
   uint32_t getTypeId() const override;
+  bool isRefUdt() const override;
+  bool isValueUdt() const override;
+  bool isInterfaceUdt() const override;
 
 protected:
   codeview::CVType CV;
