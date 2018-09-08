@@ -24,6 +24,13 @@ namespace pdb {
 class PDBSymbolTypeVTable;
 class PDBSymbolTypeVTableShape;
 
+template <typename T>
+void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {
+  OS << "\n";
+  OS.indent(Indent);
+  OS << Name << ": " << Value;
+}
+
 /// IPDBRawSymbol defines an interface used to represent an arbitrary symbol.
 /// It exposes a monolithic interface consisting of accessors for the union of
 /// all properties that are valid for any symbol type.  This interface is then

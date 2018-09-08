@@ -396,8 +396,8 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth BreakpointResolverName::GetDepth() {
-  return Searcher::eDepthModule;
+lldb::SearchDepth BreakpointResolverName::GetDepth() {
+  return lldb::eSearchDepthModule;
 }
 
 void BreakpointResolverName::GetDescription(Stream *s) {

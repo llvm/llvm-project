@@ -395,6 +395,17 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   if (Name == "subborrow.u64")
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_subborrow_u64, NewFn);
 
+  if (Name == "rdtscp") {
+    // If this intrinsic has 0 operands, it's the new version.
+    if (F->getFunctionType()->getNumParams() == 0)
+      return false;
+
+    rename(F);
+    NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                      Intrinsic::x86_rdtscp);
+    return true;
+  }
+
   // SSE4.1 ptest functions may have an old signature.
   if (Name.startswith("sse41.ptest")) { // Added in 3.2
     if (Name.substr(11) == "c")
@@ -3439,6 +3450,32 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
     NewCall = Builder.CreateCall(NewFn, {BC0, BC1});
     break;
+  }
+
+  case Intrinsic::x86_rdtscp: {
+    // This used to take 1 arguments. If we have no arguments, it is already
+    // upgraded.
+    if (CI->getNumOperands() == 0)
+      return;
+
+    NewCall = Builder.CreateCall(NewFn);
+    // Extract the second result and store it.
+    Value *Data = Builder.CreateExtractValue(NewCall, 1);
+    // Cast the pointer to the right type.
+    Value *Ptr = Builder.CreateBitCast(CI->getArgOperand(0),
+                                 llvm::PointerType::getUnqual(Data->getType()));
+    Builder.CreateAlignedStore(Data, Ptr, 1);
+    // Replace the original call result with the first result of the new call.
+    Value *TSC = Builder.CreateExtractValue(NewCall, 0);
+
+    std::string Name = CI->getName();
+    if (!Name.empty()) {
+      CI->setName(Name + ".old");
+      NewCall->setName(Name);
+    }
+    CI->replaceAllUsesWith(TSC);
+    CI->eraseFromParent();
+    return;
   }
 
   case Intrinsic::x86_addcarryx_u32:

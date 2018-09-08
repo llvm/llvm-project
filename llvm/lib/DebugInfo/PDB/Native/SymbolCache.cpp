@@ -7,6 +7,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypePointer.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
@@ -60,7 +61,7 @@ SymbolCache::createTypeEnumerator(codeview::TypeLeafKind Kind) {
   }
   auto &Types = Tpi->typeCollection();
   return std::unique_ptr<IPDBEnumSymbols>(
-      new NativeEnumTypes(Session, Types, codeview::LF_ENUM));
+      new NativeEnumTypes(Session, Types, Kind));
 }
 
 SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
@@ -104,9 +105,12 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
   case codeview::LF_ENUM:
     Id = createSymbol<NativeTypeEnum>(CVT);
     break;
+  case codeview::LF_POINTER:
+    Id = createSymbol<NativeTypePointer>(CVT);
+    break;
   default:
-    assert(false && "Unsupported native symbol type!");
-    return 0;
+    Id = createSymbolPlaceholder();
+    break;
   }
   TypeIndexToSymbolId[Index] = Id;
   return Id;
@@ -114,6 +118,10 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
 
 std::unique_ptr<PDBSymbol>
 SymbolCache::getSymbolById(SymIndexId SymbolId) const {
+  // Id 0 is reserved.
+  if (SymbolId == 0)
+    return nullptr;
+
   // If the caller has a SymbolId, it'd better be in our SymbolCache.
   return SymbolId < Cache.size() ? PDBSymbol::create(Session, *Cache[SymbolId])
                                  : nullptr;

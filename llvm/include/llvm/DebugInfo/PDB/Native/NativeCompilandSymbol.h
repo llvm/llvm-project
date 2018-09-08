@@ -21,6 +21,8 @@ public:
   NativeCompilandSymbol(NativeSession &Session, SymIndexId SymbolId,
                         DbiModuleDescriptor MI);
 
+  void dump(raw_ostream &OS, int Indent) const override;
+
   std::unique_ptr<NativeRawSymbol> clone() const override;
 
   PDB_SymType getSymTag() const override;

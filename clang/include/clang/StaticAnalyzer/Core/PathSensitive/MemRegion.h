@@ -769,6 +769,9 @@ class SymbolicRegion : public SubRegion {
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
+
+    // populateWorklistFromSymbol() relies on this assertion, and needs to be
+    // updated if more cases are introduced.
     assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg));
   }
 

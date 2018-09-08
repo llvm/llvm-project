@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config faux-bodies=true,model-path=%S/Inputs/Models -analyzer-output=plist-multi-file -verify %s -o %t
-// RUN: tail -n +11 %t | diff -u -w - %S/Inputs/expected-plists/model-file.cpp.plist
+// RUN: cat %t | diff -u -w -I "<string>/" -I "<string>.:" -I "clang version" - %S/Inputs/expected-plists/model-file.cpp.plist
 
 typedef int* intptr;
 

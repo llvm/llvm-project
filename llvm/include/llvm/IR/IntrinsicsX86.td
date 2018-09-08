@@ -53,8 +53,8 @@ let TargetPrefix = "x86" in {
 let TargetPrefix = "x86" in {
   def int_x86_rdtsc : GCCBuiltin<"__builtin_ia32_rdtsc">,
               Intrinsic<[llvm_i64_ty], [], []>;
-  def int_x86_rdtscp : GCCBuiltin<"__builtin_ia32_rdtscp">,
-              Intrinsic<[llvm_i64_ty], [llvm_ptr_ty], [IntrArgMemOnly]>;
+  def int_x86_rdtscp :
+              Intrinsic<[llvm_i64_ty, llvm_i32_ty], [], []>;
 }
 
 // Read Performance-Monitoring Counter.

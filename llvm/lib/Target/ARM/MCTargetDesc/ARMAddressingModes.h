@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -627,27 +628,22 @@ namespace ARM_AM {
   //
   inline float getFPImmFloat(unsigned Imm) {
     // We expect an 8-bit binary encoding of a floating-point number here.
-    union {
-      uint32_t I;
-      float F;
-    } FPUnion;
 
     uint8_t Sign = (Imm >> 7) & 0x1;
     uint8_t Exp = (Imm >> 4) & 0x7;
     uint8_t Mantissa = Imm & 0xf;
 
-    //   8-bit FP    iEEEE Float Encoding
+    //   8-bit FP    IEEE Float Encoding
     //   abcd efgh   aBbbbbbc defgh000 00000000 00000000
     //
     // where B = NOT(b);
-
-    FPUnion.I = 0;
-    FPUnion.I |= Sign << 31;
-    FPUnion.I |= ((Exp & 0x4) != 0 ? 0 : 1) << 30;
-    FPUnion.I |= ((Exp & 0x4) != 0 ? 0x1f : 0) << 25;
-    FPUnion.I |= (Exp & 0x3) << 23;
-    FPUnion.I |= Mantissa << 19;
-    return FPUnion.F;
+    uint32_t I = 0;
+    I |= Sign << 31;
+    I |= ((Exp & 0x4) != 0 ? 0 : 1) << 30;
+    I |= ((Exp & 0x4) != 0 ? 0x1f : 0) << 25;
+    I |= (Exp & 0x3) << 23;
+    I |= Mantissa << 19;
+    return bit_cast<float>(I);
   }
 
   /// getFP16Imm - Return an 8-bit floating-point version of the 16-bit

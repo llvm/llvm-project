@@ -53,6 +53,7 @@ add_pdb_impl_folder(Native
   Native/NativeRawSymbol.cpp
   Native/NativeTypeBuiltin.cpp
   Native/NativeTypeEnum.cpp
+  Native/NativeTypePointer.cpp
   Native/NamedStreamMap.cpp
   Native/NativeSession.cpp
   Native/PDBFile.cpp

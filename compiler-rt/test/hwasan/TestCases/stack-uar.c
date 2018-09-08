@@ -1,4 +1,4 @@
-// RUN: %clangxx_hwasan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: stable-runtime
 
@@ -15,7 +15,7 @@ char *f() {
 int main() {
   return *f();
   // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in main{{.*}}stack-uar.cc:16
+  // CHECK: #0 {{.*}} in main{{.*}}stack-uar.c:16
 
   // CHECK: is located in stack of thread
 

@@ -34,6 +34,7 @@
         integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
         integer, parameter :: omp_control_tool_kind  = omp_integer_kind
         integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
+        integer, parameter :: omp_allocator_kind = int_ptr_kind()
 
       end module omp_lib_kinds
 
@@ -71,6 +72,16 @@
         integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
         integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
         integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
+
+        integer (kind=omp_allocator_kind), parameter :: omp_null_allocator = 0
+        integer (kind=omp_allocator_kind), parameter :: omp_default_mem_alloc = 1
+        integer (kind=omp_allocator_kind), parameter :: omp_large_cap_mem_alloc = 2
+        integer (kind=omp_allocator_kind), parameter :: omp_const_mem_alloc = 3
+        integer (kind=omp_allocator_kind), parameter :: omp_high_bw_mem_alloc = 4
+        integer (kind=omp_allocator_kind), parameter :: omp_low_lat_mem_alloc = 5
+        integer (kind=omp_allocator_kind), parameter :: omp_cgroup_mem_alloc = 6
+        integer (kind=omp_allocator_kind), parameter :: omp_pteam_mem_alloc = 7
+        integer (kind=omp_allocator_kind), parameter :: omp_thread_mem_alloc = 8
 
         interface
 
@@ -353,6 +364,16 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_task_priority
           end function omp_get_max_task_priority
+
+          subroutine omp_set_default_allocator(svar)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_kind) svar
+          end subroutine omp_set_default_allocator
+
+          function omp_get_default_allocator()
+            use omp_lib_kinds
+            integer (kind=omp_allocator_kind) omp_get_default_allocator
+          end function omp_get_default_allocator
 
 !         ***
 !         *** kmp_* entry points

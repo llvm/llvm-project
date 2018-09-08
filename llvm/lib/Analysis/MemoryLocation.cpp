@@ -108,7 +108,7 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
                                               unsigned ArgIdx,
-                                              const TargetLibraryInfo &TLI) {
+                                              const TargetLibraryInfo *TLI) {
   AAMDNodes AATags;
   CS->getAAMetadata(AATags);
   const Value *Arg = CS.getArgument(ArgIdx);
@@ -163,8 +163,9 @@ MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
   LibFunc F;
-  if (CS.getCalledFunction() && TLI.getLibFunc(*CS.getCalledFunction(), F) &&
-      F == LibFunc_memset_pattern16 && TLI.has(F)) {
+  if (TLI && CS.getCalledFunction() &&
+      TLI->getLibFunc(*CS.getCalledFunction(), F) &&
+      F == LibFunc_memset_pattern16 && TLI->has(F)) {
     assert((ArgIdx == 0 || ArgIdx == 1) &&
            "Invalid argument index for memset_pattern16");
     if (ArgIdx == 1)

@@ -74,7 +74,7 @@ public:
                                           SymbolContext &context, Address *addr,
                                           bool containing) override;
 
-  Searcher::Depth GetDepth() override { return Searcher::eDepthModule; }
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
 
   lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) override {
@@ -124,7 +124,7 @@ public:
                                           SymbolContext &context, Address *addr,
                                           bool containing) override;
 
-  Searcher::Depth GetDepth() override { return Searcher::eDepthModule; }
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
 
   lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) override {
@@ -269,7 +269,7 @@ public:
                                           SymbolContext &context, Address *addr,
                                           bool containing) override;
 
-  Searcher::Depth GetDepth() override { return Searcher::eDepthModule; }
+  lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
 
   lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) override {

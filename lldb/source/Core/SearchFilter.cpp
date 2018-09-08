@@ -207,7 +207,7 @@ void SearchFilter::Search(Searcher &searcher) {
     return;
   empty_sc.target_sp = m_target_sp;
 
-  if (searcher.GetDepth() == Searcher::eDepthTarget)
+  if (searcher.GetDepth() == lldb::eSearchDepthTarget)
     searcher.SearchCallback(*this, empty_sc, nullptr, false);
   else
     DoModuleIteration(empty_sc, searcher);
@@ -220,7 +220,7 @@ void SearchFilter::SearchInModuleList(Searcher &searcher, ModuleList &modules) {
     return;
   empty_sc.target_sp = m_target_sp;
 
-  if (searcher.GetDepth() == Searcher::eDepthTarget)
+  if (searcher.GetDepth() == lldb::eSearchDepthTarget)
     searcher.SearchCallback(*this, empty_sc, nullptr, false);
   else {
     std::lock_guard<std::recursive_mutex> guard(modules.GetMutex());
@@ -247,9 +247,9 @@ SearchFilter::DoModuleIteration(const lldb::ModuleSP &module_sp,
 Searcher::CallbackReturn
 SearchFilter::DoModuleIteration(const SymbolContext &context,
                                 Searcher &searcher) {
-  if (searcher.GetDepth() >= Searcher::eDepthModule) {
+  if (searcher.GetDepth() >= lldb::eSearchDepthModule) {
     if (context.module_sp) {
-      if (searcher.GetDepth() == Searcher::eDepthModule) {
+      if (searcher.GetDepth() == lldb::eSearchDepthModule) {
         SymbolContext matchingContext(context.module_sp.get());
         searcher.SearchCallback(*this, matchingContext, nullptr, false);
       } else {
@@ -267,7 +267,7 @@ SearchFilter::DoModuleIteration(const SymbolContext &context,
         if (!ModulePasses(module_sp))
           continue;
 
-        if (searcher.GetDepth() == Searcher::eDepthModule) {
+        if (searcher.GetDepth() == lldb::eSearchDepthModule) {
           SymbolContext matchingContext(m_target_sp, module_sp);
 
           Searcher::CallbackReturn shouldContinue =
@@ -301,7 +301,7 @@ SearchFilter::DoCUIteration(const ModuleSP &module_sp,
         if (!CompUnitPasses(*(cu_sp.get())))
           continue;
 
-        if (searcher.GetDepth() == Searcher::eDepthCompUnit) {
+        if (searcher.GetDepth() == lldb::eSearchDepthCompUnit) {
           SymbolContext matchingContext(m_target_sp, module_sp, cu_sp.get());
 
           shouldContinue =
@@ -421,7 +421,7 @@ void SearchFilterByModule::Search(Searcher &searcher) {
   if (!m_target_sp)
     return;
 
-  if (searcher.GetDepth() == Searcher::eDepthTarget) {
+  if (searcher.GetDepth() == lldb::eSearchDepthTarget) {
     SymbolContext empty_sc;
     empty_sc.target_sp = m_target_sp;
     searcher.SearchCallback(*this, empty_sc, nullptr, false);
@@ -570,7 +570,7 @@ void SearchFilterByModuleList::Search(Searcher &searcher) {
   if (!m_target_sp)
     return;
 
-  if (searcher.GetDepth() == Searcher::eDepthTarget) {
+  if (searcher.GetDepth() == lldb::eSearchDepthTarget) {
     SymbolContext empty_sc;
     empty_sc.target_sp = m_target_sp;
     searcher.SearchCallback(*this, empty_sc, nullptr, false);
@@ -773,7 +773,7 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   if (!m_target_sp)
     return;
 
-  if (searcher.GetDepth() == Searcher::eDepthTarget) {
+  if (searcher.GetDepth() == lldb::eSearchDepthTarget) {
     SymbolContext empty_sc;
     empty_sc.target_sp = m_target_sp;
     searcher.SearchCallback(*this, empty_sc, nullptr, false);
@@ -797,7 +797,7 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
       SymbolContext matchingContext(m_target_sp, module_sp);
       Searcher::CallbackReturn shouldContinue;
 
-      if (searcher.GetDepth() == Searcher::eDepthModule) {
+      if (searcher.GetDepth() == lldb::eSearchDepthModule) {
         shouldContinue = DoModuleIteration(matchingContext, searcher);
         if (shouldContinue == Searcher::eCallbackReturnStop)
           return;

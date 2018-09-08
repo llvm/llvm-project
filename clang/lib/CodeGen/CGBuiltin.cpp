@@ -9158,6 +9158,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__rdtsc: {
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdtsc));
   }
+  case X86::BI__builtin_ia32_rdtscp: {
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdtscp));
+    Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, 1),
+                                      Ops[0]);
+    return Builder.CreateExtractValue(Call, 0);
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:

@@ -874,6 +874,9 @@ TEST(Error, FileErrorTest) {
       },
       "");
 #endif
+  // Not allowed, would fail at compile-time
+  //consumeError(createFileError("file.bin", ErrorSuccess()));
+
   Error E1 = make_error<CustomError>(1);
   Error FE1 = createFileError("file.bin", std::move(E1));
   EXPECT_EQ(toString(std::move(FE1)).compare("'file.bin': CustomError {1}"), 0);
