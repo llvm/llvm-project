@@ -1685,9 +1685,10 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 
     if (Tok.isNot(tok::r_paren)) {
       if (ParseExpressionList(Exprs, CommaLocs, [&] {
-            Actions.CodeCompleteConstructor(
+            QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
                 getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
                 DS.getEndLoc(), Exprs, T.getOpenLocation());
+            Actions.CodeCompleteExpression(getCurScope(), PreferredType);
           })) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return ExprError();
@@ -2819,9 +2820,10 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
       if (ParseExpressionList(ConstructorArgs, CommaLocs, [&] {
             ParsedType TypeRep = Actions.ActOnTypeName(getCurScope(),
                                                        DeclaratorInfo).get();
-            Actions.CodeCompleteConstructor(
+            QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
                 getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
                 DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
+            Actions.CodeCompleteExpression(getCurScope(), PreferredType);
       })) {
         SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
         return ExprError();
