@@ -1309,7 +1309,7 @@ let Predicates = [HasBMI2] in {
 //
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
     Constraints = "$src1 = $dst", AddedComplexity = 10 in {
-  let SchedRW = [WriteADC] in {
+  let SchedRW = [WriteADC], isCommutable = 1 in {
   def ADCX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
                    "adcx{l}\t{$src2, $dst|$dst, $src2}",
