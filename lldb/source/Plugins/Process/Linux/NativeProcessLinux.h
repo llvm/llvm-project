@@ -134,8 +134,13 @@ public:
   bool SupportHardwareSingleStepping() const;
 
 protected:
-  llvm::Expected<llvm::ArrayRef<uint8_t>>
-  GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
+  // ---------------------------------------------------------------------
+  // NativeProcessProtocol protected interface
+  // ---------------------------------------------------------------------
+  Status
+  GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
+                                  size_t &actual_opcode_size,
+                                  const uint8_t *&trap_opcode_bytes) override;
 
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
