@@ -93,6 +93,16 @@ public:
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
+protected:
+  // ---------------------------------------------------------------------
+  // NativeProcessProtocol protected interface
+  // ---------------------------------------------------------------------
+
+  Status
+  GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
+                                  size_t &actual_opcode_size,
+                                  const uint8_t *&trap_opcode_bytes) override;
+
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;

@@ -682,6 +682,23 @@ Status NativeProcessNetBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
     return SetSoftwareBreakpoint(addr, size);
 }
 
+Status NativeProcessNetBSD::GetSoftwareBreakpointTrapOpcode(
+    size_t trap_opcode_size_hint, size_t &actual_opcode_size,
+    const uint8_t *&trap_opcode_bytes) {
+  static const uint8_t g_i386_opcode[] = {0xCC};
+
+  switch (m_arch.GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    trap_opcode_bytes = g_i386_opcode;
+    actual_opcode_size = sizeof(g_i386_opcode);
+    return Status();
+  default:
+    assert(false && "CPU type not supported!");
+    return Status("CPU type not supported");
+  }
+}
+
 Status NativeProcessNetBSD::GetLoadedModuleFileSpec(const char *module_path,
                                                     FileSpec &file_spec) {
   return Status("Unimplemented");

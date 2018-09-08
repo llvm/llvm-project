@@ -372,38 +372,6 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
       });
 }
 
-llvm::Expected<llvm::ArrayRef<uint8_t>>
-NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
-  using ArrayRef = llvm::ArrayRef<uint8_t>;
-
-  switch (GetArchitecture().GetMachine()) {
-  case llvm::Triple::aarch64:
-    return ArrayRef{0x00, 0x00, 0x20, 0xd4};
-
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    return ArrayRef{0xcc};
-
-  case llvm::Triple::mips:
-  case llvm::Triple::mips64:
-    return ArrayRef{0x00, 0x00, 0x00, 0x0d};
-
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64el:
-    return ArrayRef{0x0d, 0x00, 0x00, 0x00};
-
-  case llvm::Triple::systemz:
-    return ArrayRef{0x00, 0x01};
-
-  case llvm::Triple::ppc64le:
-    return ArrayRef{0x08, 0x00, 0xe0, 0x7f}; // trap
-
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "CPU type not supported!");
-  }
-}
-
 Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
                                                bool hardware) {
   if (hardware)
