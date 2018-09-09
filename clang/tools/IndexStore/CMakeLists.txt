@@ -9,8 +9,7 @@ set(SOURCES
   )
 
 set(LIBS
-  clangDirectoryWatcher
-  clangIndex
+  clangIndexDataStore
 )
 
 set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/IndexStore.exports)
