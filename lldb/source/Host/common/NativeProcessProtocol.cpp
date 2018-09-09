@@ -383,25 +383,25 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
-    return g_aarch64_opcode;
+    return llvm::makeArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return g_i386_opcode;
+    return llvm::makeArrayRef(g_i386_opcode);
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64:
-    return g_mips64_opcode;
+    return llvm::makeArrayRef(g_mips64_opcode);
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el:
-    return g_mips64el_opcode;;
+    return llvm::makeArrayRef(g_mips64el_opcode);
 
   case llvm::Triple::systemz:
-    return g_s390x_opcode;
+    return llvm::makeArrayRef(g_s390x_opcode);
 
   case llvm::Triple::ppc64le:
-    return g_ppc64le_opcode;
+    return llvm::makeArrayRef(g_ppc64le_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
