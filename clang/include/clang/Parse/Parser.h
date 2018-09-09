@@ -119,7 +119,7 @@ class Parser : public CodeCompletionHandler {
   IdentifierInfo *Ident_pixel;
 
   /// Objective-C contextual keywords.
-  mutable IdentifierInfo *Ident_instancetype;
+  IdentifierInfo *Ident_instancetype;
 
   /// Identifier for "introduced".
   IdentifierInfo *Ident_introduced;
