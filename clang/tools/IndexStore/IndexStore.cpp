@@ -222,11 +222,7 @@ indexstore_store_start_unit_event_listening(indexstore_t c_store,
   memcpy(&listen_opts, client_opts, clientOptSize);
 
   std::string error;
-  auto createFn = [](StringRef Path, AbstractDirectoryWatcher::EventReceiver Receiver, bool waitInitialSync, std::string &Error)
-      -> std::unique_ptr<AbstractDirectoryWatcher> {
-    return DirectoryWatcher::create(Path, std::move(Receiver), waitInitialSync, Error);
-  };
-  bool err = store->startEventListening(createFn, listen_opts.wait_initial_sync, error);
+  bool err = store->startEventListening(listen_opts.wait_initial_sync, error);
   if (err && c_error)
     *c_error = new IndexStoreError{ error };
   return err;
