@@ -34,56 +34,18 @@ Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
 
   // Ask the NativeProcessProtocol subclass to fill in the correct software
   // breakpoint trap for the breakpoint site.
-  size_t bp_opcode_size = 0;
-  const uint8_t *bp_opcode_bytes = NULL;
-  Status error = process.GetSoftwareBreakpointTrapOpcode(
-      size_hint, bp_opcode_size, bp_opcode_bytes);
+  auto expected_opcode = process.GetSoftwareBreakpointTrapOpcode(size_hint);
+  if (!expected_opcode)
+    return Status(expected_opcode.takeError());
 
-  if (error.Fail()) {
-    if (log)
-      log->Printf("SoftwareBreakpoint::%s failed to retrieve software "
-                  "breakpoint trap opcode: %s",
-                  __FUNCTION__, error.AsCString());
-    return error;
-  }
-
-  // Validate size of trap opcode.
-  if (bp_opcode_size == 0) {
-    if (log)
-      log->Printf("SoftwareBreakpoint::%s failed to retrieve any trap opcodes",
-                  __FUNCTION__);
-    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                  "returned zero, unable to get breakpoint trap for address "
-                  "0x%" PRIx64,
-                  addr);
-  }
-
-  if (bp_opcode_size > MAX_TRAP_OPCODE_SIZE) {
-    if (log)
-      log->Printf("SoftwareBreakpoint::%s cannot support %zu trapcode bytes, "
-                  "max size is %zu",
-                  __FUNCTION__, bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
-    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                  "returned too many trap opcode bytes: requires %zu but we "
-                  "only support a max of %zu",
-                  bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
-  }
-
-  // Validate that we received opcodes.
-  if (!bp_opcode_bytes) {
-    if (log)
-      log->Printf("SoftwareBreakpoint::%s failed to retrieve trap opcode bytes",
-                  __FUNCTION__);
-    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                  "returned NULL trap opcode bytes, unable to get breakpoint "
-                  "trap for address 0x%" PRIx64,
-                  addr);
-  }
+  assert(expected_opcode->size() > 0);
+  assert(expected_opcode->size() <= MAX_TRAP_OPCODE_SIZE);
 
   // Enable the breakpoint.
   uint8_t saved_opcode_bytes[MAX_TRAP_OPCODE_SIZE];
-  error = EnableSoftwareBreakpoint(process, addr, bp_opcode_size,
-                                   bp_opcode_bytes, saved_opcode_bytes);
+  Status error =
+      EnableSoftwareBreakpoint(process, addr, expected_opcode->size(),
+                               expected_opcode->data(), saved_opcode_bytes);
   if (error.Fail()) {
     if (log)
       log->Printf("SoftwareBreakpoint::%s: failed to enable new breakpoint at "
@@ -99,7 +61,8 @@ Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
   // Set the breakpoint and verified it was written properly.  Now create a
   // breakpoint remover that understands how to undo this breakpoint.
   breakpoint_sp.reset(new SoftwareBreakpoint(process, addr, saved_opcode_bytes,
-                                             bp_opcode_bytes, bp_opcode_size));
+                                             expected_opcode->data(),
+                                             expected_opcode->size()));
   return Status();
 }
 
