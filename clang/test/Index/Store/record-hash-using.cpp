@@ -1,5 +1,3 @@
-// XFAIL: linux
-
 // RUN: rm -rf %t
 // RUN: %clang_cc1 %s -std=c++11 -index-store-path %t/idx -DTYPE1=A -DTYPE2=A -DTYPE3=T -DTYPE4=T
 // RUN: %clang_cc1 %s -std=c++11 -index-store-path %t/idx -DTYPE1=B -DTYPE2=A -DTYPE3=T -DTYPE4=T
