@@ -10,11 +10,11 @@
 #include "Annotations.h"
 #include "TestIndex.h"
 #include "TestTU.h"
-#include "gmock/gmock.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using testing::_;
@@ -58,11 +58,11 @@ TEST(SwapIndexTest, OldIndexRecycled) {
   auto Token = std::make_shared<int>();
   std::weak_ptr<int> WeakToken = Token;
 
-  SwapIndex S(
-      llvm::make_unique<MemIndex>(SymbolSlab(), RefSlab(), std::move(Token)));
-  EXPECT_FALSE(WeakToken.expired());     // Current MemIndex keeps it alive.
+  SwapIndex S(llvm::make_unique<MemIndex>(
+      SymbolSlab(), RefSlab(), std::move(Token), /*BackingDataSize=*/0));
+  EXPECT_FALSE(WeakToken.expired());      // Current MemIndex keeps it alive.
   S.reset(llvm::make_unique<MemIndex>()); // Now the MemIndex is destroyed.
-  EXPECT_TRUE(WeakToken.expired());      // So the token is too.
+  EXPECT_TRUE(WeakToken.expired());       // So the token is too.
 }
 
 TEST(MemIndexTest, MemIndexDeduplicate) {
