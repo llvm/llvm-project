@@ -3267,7 +3267,7 @@ def t2LDREXH : T2I_ldrex<0b0101, (outs rGPR:$Rt), (ins addr_offset_none:$addr),
                          [(set rGPR:$Rt, (ldrex_2 addr_offset_none:$addr))]>,
                Requires<[IsThumb, HasV8MBaseline]>;
 def t2LDREX  : Thumb2I<(outs rGPR:$Rt), (ins t2addrmode_imm0_1020s4:$addr),
-                       AddrModeNone, 4, NoItinerary,
+                       AddrModeT2_ldrex, 4, NoItinerary,
                        "ldrex", "\t$Rt, $addr", "",
                      [(set rGPR:$Rt, (ldrex_4 t2addrmode_imm0_1020s4:$addr))]>,
                Requires<[IsThumb, HasV8MBaseline]> {
@@ -3346,7 +3346,7 @@ def t2STREXH : T2I_strex<0b0101, (outs rGPR:$Rd),
 
 def t2STREX  : Thumb2I<(outs rGPR:$Rd), (ins rGPR:$Rt,
                              t2addrmode_imm0_1020s4:$addr),
-                  AddrModeNone, 4, NoItinerary,
+                  AddrModeT2_ldrex, 4, NoItinerary,
                   "strex", "\t$Rd, $Rt, $addr", "",
                   [(set rGPR:$Rd,
                         (strex_4 rGPR:$Rt, t2addrmode_imm0_1020s4:$addr))]>,
