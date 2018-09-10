@@ -57,7 +57,7 @@ public:
 
 private:
   struct EitherComparator {
-    bool operator()(const TypeOrDecl &r1, const TypeOrDecl &r2) {
+    bool operator()(const TypeOrDecl &r1, const TypeOrDecl &r2) const {
       auto r1_as1 = r1.GetAs<CompilerType>();
       auto r1_as2 = r1.GetAs<swift::Decl *>();
 
