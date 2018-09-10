@@ -198,6 +198,7 @@ class IteratorChecker
                      eval::Assume> {
 
   std::unique_ptr<BugType> OutOfRangeBugType;
+  std::unique_ptr<BugType> MismatchedBugType;
   std::unique_ptr<BugType> InvalidatedBugType;
 
   void handleComparison(CheckerContext &C, const SVal &RetVal, const SVal &LVal,
@@ -221,8 +222,14 @@ class IteratorChecker
   void verifyRandomIncrOrDecr(CheckerContext &C, OverloadedOperatorKind Op,
                               const SVal &RetVal, const SVal &LHS,
                               const SVal &RHS) const;
+  void verifyMatch(CheckerContext &C, const SVal &Iter1,
+                   const SVal &Iter2) const;
+
   void reportOutOfRangeBug(const StringRef &Message, const SVal &Val,
                            CheckerContext &C, ExplodedNode *ErrNode) const;
+  void reportMismatchedBug(const StringRef &Message, const SVal &Val1,
+                           const SVal &Val2, CheckerContext &C,
+                           ExplodedNode *ErrNode) const;
   void reportInvalidatedBug(const StringRef &Message, const SVal &Val,
                             CheckerContext &C, ExplodedNode *ErrNode) const;
 
@@ -231,6 +238,7 @@ public:
 
   enum CheckKind {
     CK_IteratorRangeChecker,
+    CK_MismatchedIteratorChecker,
     CK_InvalidatedIteratorChecker,
     CK_NumCheckKinds
   };
@@ -312,6 +320,8 @@ const ContainerData *getContainerData(ProgramStateRef State,
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
                                  const ContainerData &CData);
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont);
+bool isBoundThroughLazyCompoundVal(const Environment &Env,
+                                   const MemRegion *Reg);
 bool isOutOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isZero(ProgramStateRef State, const NonLoc &Val);
 } // namespace
@@ -320,6 +330,9 @@ IteratorChecker::IteratorChecker() {
   OutOfRangeBugType.reset(
       new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
   OutOfRangeBugType->setSuppressOnSink(true);
+  MismatchedBugType.reset(
+      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs"));
+  MismatchedBugType->setSuppressOnSink(true);
   InvalidatedBugType.reset(
       new BugType(this, "Iterator invalidated", "Misuse of STL APIs"));
   InvalidatedBugType->setSuppressOnSink(true);
@@ -366,6 +379,65 @@ void IteratorChecker::checkPreCall(const CallEvent &Call,
         verifyDereference(C, InstCall->getCXXThisVal());
       } else {
         verifyDereference(C, Call.getArgSVal(0));
+      }
+    }
+  } else if (!isa<CXXConstructorCall>(&Call)) {
+    // The main purpose of iterators is to abstract away from different
+    // containers and provide a (maybe limited) uniform access to them.
+    // This implies that any correctly written template function that
+    // works on multiple containers using iterators takes different
+    // template parameters for different containers. So we can safely
+    // assume that passing iterators of different containers as arguments
+    // whose type replaces the same template parameter is a bug.
+    //
+    // Example:
+    // template<typename I1, typename I2>
+    // void f(I1 first1, I1 last1, I2 first2, I2 last2);
+    // 
+    // In this case the first two arguments to f() must be iterators must belong
+    // to the same container and the last to also to the same container but
+    // not neccessarily to the same as the first two.
+
+    if (!ChecksEnabled[CK_MismatchedIteratorChecker])
+      return;
+
+    const auto *Templ = Func->getPrimaryTemplate();
+    if (!Templ)
+      return;
+
+    const auto *TParams = Templ->getTemplateParameters();
+    const auto *TArgs = Func->getTemplateSpecializationArgs();
+
+    // Iterate over all the template parameters
+    for (size_t I = 0; I < TParams->size(); ++I) {
+      const auto *TPDecl = dyn_cast<TemplateTypeParmDecl>(TParams->getParam(I));
+      if (!TPDecl)
+        continue;
+
+      if (TPDecl->isParameterPack())
+        continue;
+
+      const auto TAType = TArgs->get(I).getAsType();
+      if (!isIteratorType(TAType))
+        continue;
+
+      SVal LHS = UndefinedVal();
+
+      // For every template parameter which is an iterator type in the
+      // instantiation look for all functions' parameters' type by it and
+      // check whether they belong to the same container
+      for (auto J = 0U; J < Func->getNumParams(); ++J) {
+        const auto *Param = Func->getParamDecl(J);
+        const auto *ParamType =
+            Param->getType()->getAs<SubstTemplateTypeParmType>();
+        if (!ParamType ||
+            ParamType->getReplacedParameter()->getDecl() != TPDecl)
+          continue;
+        if (LHS.isUndef()) {
+          LHS = Call.getArgSVal(J);
+        } else {
+          verifyMatch(C, LHS, Call.getArgSVal(J));
+        }
       }
     }
   }
@@ -529,7 +601,12 @@ void IteratorChecker::checkDeadSymbols(SymbolReaper &SR,
   auto RegionMap = State->get<IteratorRegionMap>();
   for (const auto Reg : RegionMap) {
     if (!SR.isLiveRegion(Reg.first)) {
-      State = State->remove<IteratorRegionMap>(Reg.first);
+      // The region behind the `LazyCompoundVal` is often cleaned up before
+      // the `LazyCompoundVal` itself. If there are iterator positions keyed
+      // by these regions their cleanup must be deferred.
+      if (!isBoundThroughLazyCompoundVal(State->getEnvironment(), Reg.first)) {
+        State = State->remove<IteratorRegionMap>(Reg.first);
+      }
     }
   }
 
@@ -820,6 +897,21 @@ void IteratorChecker::verifyRandomIncrOrDecr(CheckerContext &C,
   }
 }
 
+void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter1,
+                                  const SVal &Iter2) const {
+  // Verify match between the containers of two iterators
+  auto State = C.getState();
+  const auto *Pos1 = getIteratorPosition(State, Iter1);
+  const auto *Pos2 = getIteratorPosition(State, Iter2);
+  if (Pos1 && Pos2 && Pos1->getContainer() != Pos2->getContainer()) {
+    auto *N = C.generateNonFatalErrorNode(State);
+    if (!N)
+      return;
+    reportMismatchedBug("Iterators of different containers used where the "
+                        "same container is expected.", Iter1, Iter2, C, N);
+  }
+}
+
 void IteratorChecker::handleBegin(CheckerContext &C, const Expr *CE,
                                   const SVal &RetVal, const SVal &Cont) const {
   const auto *ContReg = Cont.getAsRegion();
@@ -914,6 +1006,16 @@ void IteratorChecker::reportOutOfRangeBug(const StringRef &Message,
                                           ExplodedNode *ErrNode) const {
   auto R = llvm::make_unique<BugReport>(*OutOfRangeBugType, Message, ErrNode);
   R->markInteresting(Val);
+  C.emitReport(std::move(R));
+}
+
+void IteratorChecker::reportMismatchedBug(const StringRef &Message,
+                                          const SVal &Val1, const SVal &Val2,
+                                          CheckerContext &C,
+                                          ExplodedNode *ErrNode) const {
+  auto R = llvm::make_unique<BugReport>(*MismatchedBugType, Message, ErrNode);
+  R->markInteresting(Val1);
+  R->markInteresting(Val2);
   C.emitReport(std::move(R));
 }
 
@@ -1261,6 +1363,18 @@ bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {
   return false;
 }
 
+bool isBoundThroughLazyCompoundVal(const Environment &Env,
+                                   const MemRegion *Reg) {
+  for (const auto Binding: Env) {
+    if (const auto LCVal = Binding.second.getAs<nonloc::LazyCompoundVal>()) {
+      if (LCVal->getRegion() == Reg)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 template <typename Condition, typename Process>
 ProgramStateRef processIteratorPositions(ProgramStateRef State, Condition Cond,
                                          Process Proc) {
@@ -1374,4 +1488,5 @@ bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
   }
 
 REGISTER_CHECKER(IteratorRangeChecker)
+REGISTER_CHECKER(MismatchedIteratorChecker)
 REGISTER_CHECKER(InvalidatedIteratorChecker)
