@@ -54,7 +54,6 @@ public:
   typedef P flag_t;
   kmp_flag_native(volatile P *p, flag_type ft) : loc(p), t(ft) {}
   volatile P *get() { return loc; }
-  void *get_void_p() { return RCAST(void *, CCAST(P *, loc)); }
   void set(volatile P *new_loc) { loc = new_loc; }
   flag_type get_type() { return t; }
   P load() { return *loc; }
@@ -76,10 +75,6 @@ public:
    * @result the pointer to the actual flag
    */
   std::atomic<P> *get() { return loc; }
-  /*!
-   * @result void* pointer to the actual flag
-   */
-  void *get_void_p() { return RCAST(void *, loc); }
   /*!
    * @param new_loc in   set loc to point at new_loc
    */
@@ -142,6 +137,11 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
         ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
             ompt_scope_end, NULL, tId, 0, ds_tid);
       }
+#if OMPT_OPTIONAL
+      if (ompt_enabled.ompt_callback_idle) {
+        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_begin);
+      }
+#endif
       // return to idle state
       this_thr->th.ompt_thread_info.state = omp_state_idle;
     } else {
@@ -153,25 +153,21 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
 
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that
    calls __kmp_wait_*  must make certain that another thread calls __kmp_release
-   to wake it back up to prevent deadlocks!
-
-   NOTE: We may not belong to a team at this point.  */
+   to wake it back up to prevent deadlocks!  */
 template <class C, int final_spin>
 static inline void
 __kmp_wait_template(kmp_info_t *this_thr,
                     C *flag USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  // NOTE: We may not belong to a team at this point.
   volatile void *spin = flag->get();
-#endif
   kmp_uint32 spins;
+  kmp_uint32 hibernate;
   int th_gtid;
   int tasks_completed = FALSE;
   int oversubscribed;
 #if !KMP_USE_MONITOR
   kmp_uint64 poll_count;
   kmp_uint64 hibernate_goal;
-#else
-  kmp_uint32 hibernate;
 #endif
 
   KMP_FSYNC_SPIN_INIT(spin, NULL);
@@ -261,6 +257,13 @@ final_spin=FALSE)
       pId = NULL;
       tId = &(this_thr->th.ompt_thread_info.task_data);
     }
+#if OMPT_OPTIONAL
+    if (ompt_entry_state == omp_state_idle) {
+      if (ompt_enabled.ompt_callback_idle) {
+        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_begin);
+      }
+    } else
+#endif
         if (final_spin && (__kmp_tasking_mode == tskm_immediate_exec ||
                            this_thr->th.th_task_team == NULL)) {
       // implicit task is done. Either no taskqueue, or task-team finished
@@ -441,6 +444,11 @@ final_spin=FALSE)
     }
 #endif
     if (ompt_exit_state == omp_state_idle) {
+#if OMPT_OPTIONAL
+      if (ompt_enabled.ompt_callback_idle) {
+        ompt_callbacks.ompt_callback(ompt_callback_idle)(ompt_scope_end);
+      }
+#endif
       this_thr->th.ompt_thread_info.state = omp_state_overhead;
     }
   }
@@ -471,7 +479,7 @@ template <class C> static inline void __kmp_release_template(C *flag) {
 #endif
   KF_TRACE(20, ("__kmp_release: T#%d releasing flag(%x)\n", gtid, flag->get()));
   KMP_DEBUG_ASSERT(flag->get());
-  KMP_FSYNC_RELEASING(flag->get_void_p());
+  KMP_FSYNC_RELEASING(flag->get());
 
   flag->internal_release();
 

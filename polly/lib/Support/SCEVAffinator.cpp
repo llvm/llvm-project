@@ -157,7 +157,7 @@ isl::pw_aff SCEVAffinator::addModuloSemantic(isl::pw_aff PWA,
   unsigned Width = TD.getTypeSizeInBits(ExprType);
 
   auto ModVal = isl::val::int_from_ui(Ctx, Width);
-  ModVal = ModVal.pow2();
+  ModVal = ModVal.two_exp();
 
   isl::set Domain = PWA.domain();
   isl::pw_aff AddPW =

@@ -52,10 +52,7 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
 
 ompt_data_t *__ompt_get_thread_data_internal();
 
-/*
- * Unused currently
 static uint64_t __ompt_get_get_unique_id_internal();
-*/
 
 /*****************************************************************************
  * macros

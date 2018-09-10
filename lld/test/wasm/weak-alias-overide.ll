@@ -74,12 +74,12 @@ entry:
 ; CHECK-NEXT:       - Name:            __data_end
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:       - Name:            alias_fn
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:       - Name:            alias_fn
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            direct_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           3

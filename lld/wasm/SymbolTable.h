@@ -77,7 +77,7 @@ public:
                                         InputFunction *Function);
 
 private:
-  std::pair<Symbol *, bool> insert(StringRef Name, InputFile *File);
+  std::pair<Symbol *, bool> insert(StringRef Name);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::vector<Symbol *> SymVector;

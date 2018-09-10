@@ -41,7 +41,7 @@ public:
     // The order of these is significant. We start with the regular defined
     // symbols as those are the most prevelant and the zero tag is the cheapest
     // to set. Among the defined kinds, the lower the kind is preferred over
-    // the higher kind when testing whether one symbol should take precedence
+    // the higher kind when testing wether one symbol should take precedence
     // over another.
     DefinedRegularKind = 0,
     DefinedCommonKind,
@@ -65,8 +65,6 @@ public:
 
   // Returns the symbol name.
   StringRef getName();
-
-  void replaceKeepingName(Symbol *Other, size_t Size);
 
   // Returns the file from which this symbol was created.
   InputFile *getFile();
@@ -309,8 +307,6 @@ public:
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
   ImportFile *File;
-
-  bool IsRuntimePseudoReloc = false;
 };
 
 // This class represents a symbol for a jump table entry which jumps
@@ -335,8 +331,8 @@ private:
   Chunk *Data;
 };
 
-// If you have a symbol "foo" in your object file, a symbol name
-// "__imp_foo" becomes automatically available as a pointer to "foo".
+// If you have a symbol "__imp_foo" in your object file, a symbol name
+// "foo" becomes automatically available as a pointer to "__imp_foo".
 // This class is for such automatically-created symbols.
 // Yes, this is an odd feature. We didn't intend to implement that.
 // This is here just for compatibility with MSVC.

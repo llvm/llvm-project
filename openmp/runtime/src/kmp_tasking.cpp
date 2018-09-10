@@ -265,7 +265,6 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
-    KMP_DEBUG_USE_VAR(counter);
     KA_TRACE(
         20,
         ("__kmp_push_task: T#%d untied_count (%d) incremented for task %p\n",
@@ -527,7 +526,6 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
-    KMP_DEBUG_USE_VAR(counter);
     KA_TRACE(20, ("__kmpc_omp_task_begin_if0: T#%d untied_count (%d) "
                   "incremented for task %p\n",
                   gtid, counter, taskdata));
@@ -1266,7 +1264,7 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
                               kmp_taskdata_t *current_task) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
-  kmp_info_t *thread;
+  kmp_uint64 cur_time;
 #if OMP_40_ENABLED
   int discard = 0 /* false */;
 #endif
@@ -1294,10 +1292,19 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
   }
 #endif
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  if (__kmp_forkjoin_frames_mode == 3) {
+    // Get the current time stamp to measure task execution time to correct
+    // barrier imbalance time
+    cur_time = __itt_get_timestamp();
+  }
+#endif
+
 #if OMPT_SUPPORT
   // For untied tasks, the first task executed only calls __kmpc_omp_task and
   // does not execute code.
   ompt_thread_info_t oldInfo;
+  kmp_info_t *thread;
   if (UNLIKELY(ompt_enabled.enabled)) {
     // Store the threads states and restore them after the task
     thread = __kmp_threads[gtid];
@@ -1325,8 +1332,8 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
   // TODO: check if this sequence can be hoisted above __kmp_task_start
   // if cancellation has been enabled for this run ...
   if (__kmp_omp_cancellation) {
-    thread = __kmp_threads[gtid];
-    kmp_team_t *this_team = thread->th.th_team;
+    kmp_info_t *this_thr = __kmp_threads[gtid];
+    kmp_team_t *this_team = this_thr->th.th_team;
     kmp_taskgroup_t *taskgroup = taskdata->td_taskgroup;
     if ((taskgroup && taskgroup->cancel_request) ||
         (this_team->t.t_cancel_request == cancel_parallel)) {
@@ -1386,21 +1393,6 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       __ompt_task_start(task, current_task, gtid);
 #endif
 
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
-    kmp_uint64 cur_time;
-    kmp_int32 kmp_itt_count_task =
-        __kmp_forkjoin_frames_mode == 3 && !taskdata->td_flags.task_serial &&
-        current_task->td_flags.tasktype == TASK_IMPLICIT;
-    if (kmp_itt_count_task) {
-      thread = __kmp_threads[gtid];
-      // Time outer level explicit task on barrier for adjusting imbalance time
-      if (thread->th.th_bar_arrive_time)
-        cur_time = __itt_get_timestamp();
-      else
-        kmp_itt_count_task = 0; // thread is not on a barrier - skip timing
-    }
-#endif
-
 #ifdef KMP_GOMP_COMPAT
     if (taskdata->td_flags.native) {
       ((void (*)(void *))(*(task->routine)))(task->shareds);
@@ -1410,13 +1402,6 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       (*(task->routine))(gtid, task);
     }
     KMP_POP_PARTITIONED_TIMER();
-
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
-    if (kmp_itt_count_task) {
-      // Barrier imbalance - adjust arrive time with the task duration
-      thread->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
-    }
-#endif
 
 #if OMP_40_ENABLED
   }
@@ -1442,6 +1427,15 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
   }
 #endif
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  // Barrier imbalance - correct arrive time after the task finished
+  if (__kmp_forkjoin_frames_mode == 3) {
+    kmp_info_t *this_thr = __kmp_threads[gtid];
+    if (this_thr->th.th_bar_arrive_time) {
+      this_thr->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
+    }
+  }
+#endif
   KA_TRACE(
       30,
       ("__kmp_invoke_task(exit): T#%d completed task %p, resuming task %p\n",
@@ -2408,9 +2402,8 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
       victim_td->td.td_deque[prev] = victim_td->td.td_deque[target];
       prev = target;
     }
-    KMP_DEBUG_ASSERT(
-        victim_td->td.td_deque_tail ==
-        (kmp_uint32)((target + 1) & TASK_DEQUE_MASK(victim_td->td)));
+    KMP_DEBUG_ASSERT(victim_td->td.td_deque_tail ==
+                     ((target + 1) & TASK_DEQUE_MASK(victim_td->td)));
     victim_td->td.td_deque_tail = target; // tail -= 1 (wrapped))
   }
   if (*thread_finished) {
@@ -2469,7 +2462,7 @@ static inline int __kmp_execute_tasks_template(
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
   KMP_DEBUG_ASSERT(thread == __kmp_threads[gtid]);
 
-  if (task_team == NULL || current_task == NULL)
+  if (task_team == NULL)
     return FALSE;
 
   KA_TRACE(15, ("__kmp_execute_tasks_template(enter): T#%d final_spin=%d "
@@ -3959,9 +3952,11 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 #endif
   p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
   kmp_uint64 lower = *lb;
+  kmp_uint64 upper = *ub;
   kmp_info_t *thread = __kmp_threads[gtid];
   //  kmp_taskdata_t *current_task = thread->th.th_current_task;
   kmp_task_t *next_task;
+  kmp_int32 lastpriv = 0;
   size_t lower_offset =
       (char *)lb - (char *)task; // remember offset of lb in the task structure
   size_t upper_offset =

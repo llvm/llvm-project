@@ -168,9 +168,21 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
   topTaskDescr[tid] = NULL;
   // no num threads value has been pushed
   nextRegion.tnum[tid] = 0;
+  // priv counter init to zero
+  priv[tid] = 0;
   // the following don't need to be init here; they are init when using dyn
   // sched
   // current_Event, events_Number, chunk, num_Iterations, schedule
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Work Descriptor
+////////////////////////////////////////////////////////////////////////////////
+
+INLINE void omptarget_nvptx_WorkDescr::InitWorkDescr() {
+  cg.Clear(); // start and stop to zero too
+  // threadsInParallelTeam does not need to be init (done in start parallel)
+  hasCancel = FALSE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -179,6 +191,8 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
 
 INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr() {
   levelZeroTaskDescr.InitLevelZeroTaskDescr();
+  workDescrForActiveParallel.InitWorkDescr();
+  // omp_init_lock(criticalLock);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

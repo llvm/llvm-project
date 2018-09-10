@@ -18,9 +18,8 @@ if [ -n "$1" ]; then
 fi
 (cd $GITDIR && ./autogen.sh)
 mkdir -p $BUILDDIR
-(cd $BUILDDIR && $GITDIR/configure --with-int=imath-32 --with-clang=system)
-echo "#define GIT_HEAD_ID \"\"" > $GITDIR/gitversion.h
-(cd $BUILDDIR && make -j dist)
+(cd $BUILDDIR && $GITDIR/configure --with-int=imath-32)
+(cd $BUILDDIR && make dist)
 
 for DISTFILE in "$BUILDDIR/isl*.tar.gz"; do break; done
 

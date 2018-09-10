@@ -482,25 +482,22 @@ namespace {
 template <>
 bool X86_64<ELF64LE>::adjustPrologueForCrossSplitStack(uint8_t *Loc,
                                                        uint8_t *End) const {
-  if (Loc + 8 >= End)
-    return false;
-
   // Replace "cmp %fs:0x70,%rsp" and subsequent branch
   // with "stc, nopl 0x0(%rax,%rax,1)"
-  if (memcmp(Loc, "\x64\x48\x3b\x24\x25", 5) == 0) {
+  if (Loc + 8 < End && memcmp(Loc, "\x64\x48\x3b\x24\x25", 4) == 0) {
     memcpy(Loc, "\xf9\x0f\x1f\x84\x00\x00\x00\x00", 8);
     return true;
   }
 
-  // Adjust "lea X(%rsp),%rYY" to lea "(X - 0x4000)(%rsp),%rYY" where rYY could
-  // be r10 or r11. The lea instruction feeds a subsequent compare which checks
-  // if there is X available stack space. Making X larger effectively reserves
-  // that much additional space. The stack grows downward so subtract the value.
-  if (memcmp(Loc, "\x4c\x8d\x94\x24", 4) == 0 ||
-      memcmp(Loc, "\x4c\x8d\x9c\x24", 4) == 0) {
-    // The offset bytes are encoded four bytes after the start of the
-    // instruction.
-    write32le(Loc + 4, read32le(Loc + 4) - 0x4000);
+  // Adjust "lea -0x200(%rsp),%r10" to lea "-0x4200(%rsp),%r10"
+  if (Loc + 7 < End && memcmp(Loc, "\x4c\x8d\x94\x24\x00\xfe\xff", 7) == 0) {
+    memcpy(Loc, "\x4c\x8d\x94\x24\x00\xbe\xff", 7);
+    return true;
+  }
+
+  // Adjust "lea -0x200(%rsp),%r11" to lea "-0x4200(%rsp),%r11"
+  if (Loc + 7 < End && memcmp(Loc, "\x4c\x8d\x9c\x24\x00\xfe\xff", 7) == 0) {
+    memcpy(Loc, "\x4c\x8d\x9c\x24\x00\xbe\xff", 7);
     return true;
   }
   return false;

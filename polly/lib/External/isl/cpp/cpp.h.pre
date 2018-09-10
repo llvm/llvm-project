@@ -67,8 +67,9 @@ public:
 	exception(const char *what_arg) {
 		what_str = std::make_shared<std::string>(what_arg);
 	}
-	static inline void throw_error(enum isl_error error, const char *msg,
+	static inline exception create(enum isl_error error, const char *msg,
 		const char *file, int line);
+	static inline exception create_from_last_error(ctx ctx);
 	virtual const char *what() const noexcept {
 		return what_str->c_str();
 	}
@@ -83,9 +84,14 @@ public:
 	/* Wrapper for throwing an exception on NULL input.
 	 */
 	static void throw_NULL_input(const char *file, int line) {
-		throw_error(isl_error_invalid, "NULL input", file, line);
+		throw create(isl_error_invalid, "NULL input", file, line);
 	}
-	static inline void throw_last_error(ctx ctx);
+	/* Wrapper for throwing an exception corresponding to the last
+	 * error on "ctx".
+	 */
+	static void throw_last_error(ctx ctx) {
+		throw create_from_last_error(ctx);
+	}
 };
 
 /* Create an exception of a type described by "what_arg", with
@@ -147,37 +153,37 @@ class exception_unsupported : public exception {
 		exception("unsupported operation", msg, file, line) {}
 };
 
-/* Throw an exception of the class that corresponds to "error", with
+/* Create an exception of the class that corresponds to "error", with
  * error message "msg" in line "line" of file "file".
  *
  * isl_error_none is treated as an invalid error type.
  */
-void exception::throw_error(enum isl_error error, const char *msg,
+exception exception::create(enum isl_error error, const char *msg,
 	const char *file, int line)
 {
 	switch (error) {
 	case isl_error_none:
 		break;
-	case isl_error_abort: throw exception_abort(msg, file, line);
-	case isl_error_alloc: throw exception_alloc(msg, file, line);
-	case isl_error_unknown: throw exception_unknown(msg, file, line);
-	case isl_error_internal: throw exception_internal(msg, file, line);
-	case isl_error_invalid: throw exception_invalid(msg, file, line);
-	case isl_error_quota: throw exception_quota(msg, file, line);
+	case isl_error_abort: return exception_abort(msg, file, line);
+	case isl_error_alloc: return exception_alloc(msg, file, line);
+	case isl_error_unknown: return exception_unknown(msg, file, line);
+	case isl_error_internal: return exception_internal(msg, file, line);
+	case isl_error_invalid: return exception_invalid(msg, file, line);
+	case isl_error_quota: return exception_quota(msg, file, line);
 	case isl_error_unsupported:
-				throw exception_unsupported(msg, file, line);
+				return exception_unsupported(msg, file, line);
 	}
 
 	throw exception_invalid("invalid error type", file, line);
 }
 
-/* Throw an exception corresponding to the last error on "ctx" and
+/* Create an exception from the last error that occurred on "ctx" and
  * reset the error.
  *
  * If "ctx" is NULL or if it is not in an error state at the start,
  * then an invalid argument exception is thrown.
  */
-void exception::throw_last_error(ctx ctx)
+exception exception::create_from_last_error(ctx ctx)
 {
 	enum isl_error error;
 	const char *msg, *file;
@@ -189,7 +195,7 @@ void exception::throw_last_error(ctx ctx)
 	line = isl_ctx_last_error_line(ctx.get());
 	isl_ctx_reset_error(ctx.get());
 
-	throw_error(error, msg, file, line);
+	return create(error, msg, file, line);
 }
 
 #else
@@ -211,7 +217,7 @@ public:
 		fprintf(stderr, "%s:%d: NULL input\n", file, line);
 		abort();
 	}
-	/* Throw an exception corresponding to the last
+	/* Wrapper for throwing an exception corresponding to the last
 	 * error on "ctx".
 	 * isl should already abort when an error condition occurs,
 	 * so this function should never be called.

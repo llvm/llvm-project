@@ -47,9 +47,8 @@ ErrorHandler &lld::errorHandler() {
 }
 
 void lld::exitLld(int Val) {
-  // Delete any temporary file, while keeping the memory mapping open.
-  if (errorHandler().OutputBuffer)
-    errorHandler().OutputBuffer->discard();
+  // Delete the output buffer so that any tempory file is deleted.
+  errorHandler().OutputBuffer.reset();
 
   // Dealloc/destroy ManagedStatic variables before calling
   // _exit(). In a non-LTO build, this is a nop. In an LTO

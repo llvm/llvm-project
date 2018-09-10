@@ -13,7 +13,7 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %t2.s -o %t2-ppc64le.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %t2.s -o %t2-ppc64.o
 
-# RUN: rm -f %t2-i386.a %t2-x86_64.a %t2-ppc64.a %t2-ppc64le.a
+# RUN: rm -f %t2-i386.a %t2-x86_64.a %t2-ppc64.a
 # RUN: llvm-ar rc %t2-i386.a %t2-i386.o
 # RUN: llvm-ar rc %t2-x86_64.a %t2-x86_64.o
 # RUN: llvm-ar rc %t2-ppc64le.a %t2-ppc64le.o

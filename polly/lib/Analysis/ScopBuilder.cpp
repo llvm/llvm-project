@@ -685,7 +685,7 @@ void ScopBuilder::buildAccessFunctions() {
 }
 
 bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
-  return !Inst->isTerminator() && !isIgnoredIntrinsic(Inst) &&
+  return !isa<TerminatorInst>(Inst) && !isIgnoredIntrinsic(Inst) &&
          !canSynthesize(Inst, *scop, &SE, L);
 }
 
@@ -1399,7 +1399,7 @@ static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
         continue;
 
       // Branch conditions are encoded in the statement domains.
-      if (Inst.isTerminator() && Stmt->isBlockStmt())
+      if (isa<TerminatorInst>(&Inst) && Stmt->isBlockStmt())
         continue;
 
       // Verify all uses.

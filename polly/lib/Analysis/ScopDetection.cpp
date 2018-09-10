@@ -1136,8 +1136,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
   // any other pointer. This cannot be handled at the moment.
   AAMDNodes AATags;
   Inst->getAAMetadata(AATags);
-  AliasSet &AS = Context.AST.getAliasSetFor(
-      MemoryLocation(BP->getValue(), MemoryLocation::UnknownSize, AATags));
+  AliasSet &AS = Context.AST.getAliasSetForPointer(
+      BP->getValue(), MemoryLocation::UnknownSize, AATags);
 
   if (!AS.isMustAlias()) {
     if (PollyUseRuntimeAliasChecks) {
@@ -1214,8 +1214,7 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
         for (User *U : PHI->users()) {
-          auto *UI = dyn_cast<Instruction>(U);
-          if (!UI || !UI->isTerminator())
+          if (!isa<TerminatorInst>(U))
             return false;
         }
       } else {

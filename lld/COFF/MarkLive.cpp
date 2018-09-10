@@ -32,13 +32,13 @@ void markLive(ArrayRef<Chunk *> Chunks) {
   // COMDAT section chunks are dead by default. Add non-COMDAT chunks.
   for (Chunk *C : Chunks)
     if (auto *SC = dyn_cast<SectionChunk>(C))
-      if (SC->Live)
+      if (SC->isLive())
         Worklist.push_back(SC);
 
   auto Enqueue = [&](SectionChunk *C) {
-    if (C->Live)
+    if (C->isLive())
       return;
-    C->Live = true;
+    C->markLive();
     Worklist.push_back(C);
   };
 
@@ -57,7 +57,7 @@ void markLive(ArrayRef<Chunk *> Chunks) {
 
   while (!Worklist.empty()) {
     SectionChunk *SC = Worklist.pop_back_val();
-    assert(SC->Live && "We mark as live when pushing onto the worklist!");
+    assert(SC->isLive() && "We mark as live when pushing onto the worklist!");
 
     // Mark all symbols listed in the relocation table for this section.
     for (Symbol *B : SC->symbols())

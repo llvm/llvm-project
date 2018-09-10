@@ -161,11 +161,6 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
     return nullptr;
   }
 
-  if (Name == ".llvm_addrsig") {
-    AddrsigSec = Sec;
-    return nullptr;
-  }
-
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).
   //

@@ -332,6 +332,7 @@ static UT __kmp_wait_yield(volatile UT *spinner, UT checker,
 
 template <typename UT>
 void __kmp_dispatch_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
+  typedef typename traits_t<UT>::signed_t ST;
   dispatch_private_info_template<UT> *pr;
 
   int gtid = *gtid_ref;
