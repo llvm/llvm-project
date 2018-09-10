@@ -1,4 +1,4 @@
-//===--- DexIndex.cpp - Dex Symbol Index Implementation ---------*- C++ -*-===//
+//===--- Dex.cpp - Dex Symbol Index Implementation --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DexIndex.h"
+#include "Dex.h"
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Logger.h"
@@ -90,7 +90,7 @@ std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
 
 } // namespace
 
-void DexIndex::buildIndex() {
+void Dex::buildIndex() {
   std::vector<std::pair<float, const Symbol *>> ScoredSymbols(Symbols.size());
 
   for (size_t I = 0; I < Symbols.size(); ++I) {
@@ -119,16 +119,15 @@ void DexIndex::buildIndex() {
       InvertedIndex[Token].push_back(SymbolRank);
   }
 
-  vlog("Built DexIndex with estimated memory usage {0} bytes.",
+  vlog("Built Dex with estimated memory usage {0} bytes.",
        estimateMemoryUsage());
 }
 
 /// Constructs iterators over tokens extracted from the query and exhausts it
 /// while applying Callback to each symbol in the order of decreasing quality
 /// of the matched symbols.
-bool DexIndex::fuzzyFind(
-    const FuzzyFindRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
+bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
+                    llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
   FuzzyMatcher Filter(Req.Query);
@@ -213,8 +212,8 @@ bool DexIndex::fuzzyFind(
   return More;
 }
 
-void DexIndex::lookup(const LookupRequest &Req,
-                      llvm::function_ref<void(const Symbol &)> Callback) const {
+void Dex::lookup(const LookupRequest &Req,
+                 llvm::function_ref<void(const Symbol &)> Callback) const {
   for (const auto &ID : Req.IDs) {
     auto I = LookupTable.find(ID);
     if (I != LookupTable.end())
@@ -222,12 +221,12 @@ void DexIndex::lookup(const LookupRequest &Req,
   }
 }
 
-void DexIndex::refs(const RefsRequest &Req,
-                    llvm::function_ref<void(const Ref &)> Callback) const {
+void Dex::refs(const RefsRequest &Req,
+               llvm::function_ref<void(const Ref &)> Callback) const {
   log("refs is not implemented.");
 }
 
-size_t DexIndex::estimateMemoryUsage() const {
+size_t Dex::estimateMemoryUsage() const {
   size_t Bytes =
       LookupTable.size() * sizeof(std::pair<SymbolID, const Symbol *>);
   Bytes += SymbolQuality.size() * sizeof(std::pair<const Symbol *, float>);
