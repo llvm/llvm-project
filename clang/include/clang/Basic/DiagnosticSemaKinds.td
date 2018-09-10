@@ -7140,6 +7140,9 @@ def err_atomic_op_has_invalid_synch_scope : Error<
 def warn_atomic_op_misaligned : Warning<
   "misaligned or large atomic operation may incur significant performance penalty">,
   InGroup<DiagGroup<"atomic-alignment">>;
+def warn_atomic_implicit_seq_cst : Warning<
+  "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
+  InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to overflow builtin must be an integer (%0 invalid)">;
