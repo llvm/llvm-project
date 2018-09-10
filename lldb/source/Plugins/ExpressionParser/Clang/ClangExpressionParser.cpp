@@ -610,11 +610,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
 ClangExpressionParser::~ClangExpressionParser() {}
 
-<<<<<<< HEAD
-unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
-                                      uint32_t first_line, uint32_t last_line,
-                                      uint32_t line_offset) {
-=======
 namespace {
 
 //----------------------------------------------------------------------
@@ -847,7 +842,13 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
   return true;
 }
 
-unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
+// Swift only
+// Extra arguments are only used in Swift. We should get rid of them
+// to avoid clashes when merging from upstream.
+// End Swift only
+unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
+                                      uint32_t first_line, uint32_t last_line,
+                                      uint32_t line_offset) {
   return ParseInternal(diagnostic_manager);
 }
 
@@ -866,7 +867,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   const char *expr_text = m_expr.Text();
 
-  clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
+  clang::SourceManager &source_mgr = m_compiler->getSourceManager();
   bool created_main_file = false;
   /* Swift only */
   if (m_expr.GetOptions() &&
@@ -878,8 +879,8 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
             expr_text, *m_expr.GetOptions(), temp_source_path)) {
       auto file = m_file_manager->getFile(temp_source_path);
       if (file) {
-        SourceMgr.setMainFileID(
-            SourceMgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
+        source_mgr.setMainFileID(
+            source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
         created_main_file = true;
       }
     }
@@ -926,7 +927,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   if (!created_main_file) {
     std::unique_ptr<MemoryBuffer> memory_buffer =
         MemoryBuffer::getMemBufferCopy(expr_text, __FUNCTION__);
-    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(memory_buffer)));
+    source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 
   diag_buf->BeginSourceFile(m_compiler->getLangOpts(),
