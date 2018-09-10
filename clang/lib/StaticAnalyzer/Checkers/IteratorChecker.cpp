@@ -114,6 +114,10 @@ public:
     return IteratorPosition(Cont, Valid, NewOf);
   }
 
+  IteratorPosition reAssign(const MemRegion *NewCont) const {
+    return IteratorPosition(NewCont, Valid, Offset);
+  }
+
   bool operator==(const IteratorPosition &X) const {
     return Cont == X.Cont && Valid == X.Valid && Offset == X.Offset;
   }
@@ -218,7 +222,9 @@ class IteratorChecker
                  const SVal &Cont) const;
   void assignToContainer(CheckerContext &C, const Expr *CE, const SVal &RetVal,
                          const MemRegion *Cont) const;
-  void handleAssign(CheckerContext &C, const SVal &Cont) const;
+  void handleAssign(CheckerContext &C, const SVal &Cont,
+                    const Expr *CE = nullptr,
+                    const SVal &OldCont = UndefinedVal()) const;
   void verifyRandomIncrOrDecr(CheckerContext &C, OverloadedOperatorKind Op,
                               const SVal &RetVal, const SVal &LHS,
                               const SVal &RHS) const;
@@ -315,6 +321,17 @@ ProgramStateRef relateIteratorPositions(ProgramStateRef State,
                                         bool Equal);
 ProgramStateRef invalidateAllIteratorPositions(ProgramStateRef State,
                                                const MemRegion *Cont);
+ProgramStateRef reassignAllIteratorPositions(ProgramStateRef State,
+                                             const MemRegion *Cont,
+                                             const MemRegion *NewCont);
+ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
+                                                   const MemRegion *Cont,
+                                                   const MemRegion *NewCont,
+                                                   SymbolRef Offset,
+                                                   BinaryOperator::Opcode Opc);
+ProgramStateRef rebaseSymbolInIteratorPositionsIf(
+    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
+    SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc);
 const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
@@ -454,7 +471,12 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
     const auto Op = Func->getOverloadedOperator();
     if (isAssignmentOperator(Op)) {
       const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
-      handleAssign(C, InstCall->getCXXThisVal());
+      if (Func->getParamDecl(0)->getType()->isRValueReferenceType()) {
+        handleAssign(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
+                     Call.getArgSVal(0));
+      } else {
+        handleAssign(C, InstCall->getCXXThisVal());
+      }
     } else if (isSimpleComparisonOperator(Op)) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
         handleComparison(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
@@ -503,9 +525,6 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
       return;
 
     auto State = C.getState();
-    // Already bound to container?
-    if (getIteratorPosition(State, Call.getReturnValue()))
-      return;
 
     if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
       if (isBeginCall(Func)) {
@@ -519,6 +538,10 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
         return;
       }
     }
+
+    // Already bound to container?
+    if (getIteratorPosition(State, Call.getReturnValue()))
+      return;
 
     // Copy-like and move constructors
     if (isa<CXXConstructorCall>(&Call) && Call.getNumArgs() == 1) {
@@ -981,7 +1004,8 @@ void IteratorChecker::assignToContainer(CheckerContext &C, const Expr *CE,
   C.addTransition(State);
 }
 
-void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont) const {
+void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont,
+                                   const Expr *CE, const SVal &OldCont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -998,6 +1022,65 @@ void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont) const {
     State = invalidateAllIteratorPositions(State, ContReg);
   }
 
+  // In case of move, iterators of the old container (except the past-end
+  // iterators) remain valid but refer to the new container
+  if (!OldCont.isUndef()) {
+    const auto *OldContReg = OldCont.getAsRegion();
+    if (OldContReg) {
+      while (const auto *CBOR = OldContReg->getAs<CXXBaseObjectRegion>()) {
+        OldContReg = CBOR->getSuperRegion();
+      }
+      const auto OldCData = getContainerData(State, OldContReg);
+      if (OldCData) {
+        if (const auto OldEndSym = OldCData->getEnd()) {
+          // If we already assigned an "end" symbol to the old conainer, then
+          // first reassign all iterator positions to the new container which
+          // are not past the container (thus not greater or equal to the
+          // current "end" symbol).
+          State = reassignAllIteratorPositionsUnless(State, OldContReg, ContReg,
+                                                     OldEndSym, BO_GE);
+          auto &SymMgr = C.getSymbolManager();
+          auto &SVB = C.getSValBuilder();
+          // Then generate and assign a new "end" symbol for the new container.
+          auto NewEndSym =
+              SymMgr.conjureSymbol(CE, C.getLocationContext(),
+                                   C.getASTContext().LongTy, C.blockCount());
+          State = assumeNoOverflow(State, NewEndSym, 4);
+          if (CData) {
+            State = setContainerData(State, ContReg, CData->newEnd(NewEndSym));
+          } else {
+            State = setContainerData(State, ContReg,
+                                     ContainerData::fromEnd(NewEndSym));
+          }
+          // Finally, replace the old "end" symbol in the already reassigned
+          // iterator positions with the new "end" symbol.
+          State = rebaseSymbolInIteratorPositionsIf(
+              State, SVB, OldEndSym, NewEndSym, OldEndSym, BO_LT);
+        } else {
+          // There was no "end" symbol assigned yet to the old container,
+          // so reassign all iterator positions to the new container.
+          State = reassignAllIteratorPositions(State, OldContReg, ContReg);
+        }
+        if (const auto OldBeginSym = OldCData->getBegin()) {
+          // If we already assigned a "begin" symbol to the old container, then
+          // assign it to the new container and remove it from the old one.
+          if (CData) {
+            State =
+                setContainerData(State, ContReg, CData->newBegin(OldBeginSym));
+          } else {
+            State = setContainerData(State, ContReg,
+                                     ContainerData::fromBegin(OldBeginSym));
+          }
+          State =
+              setContainerData(State, OldContReg, OldCData->newEnd(nullptr));
+        }
+      } else {
+        // There was neither "begin" nor "end" symbol assigned yet to the old
+        // container, so reassign all iterator positions to the new container.
+        State = reassignAllIteratorPositions(State, OldContReg, ContReg);
+      }
+    }
+  }
   C.addTransition(State);
 }
 
@@ -1035,6 +1118,8 @@ bool compare(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2,
              BinaryOperator::Opcode Opc);
 bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
              BinaryOperator::Opcode Opc);
+SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB, SymbolRef Expr,
+                        SymbolRef OldSym, SymbolRef NewSym);
 
 bool isIteratorType(const QualType &Type) {
   if (Type->isPointerType())
@@ -1416,6 +1501,68 @@ ProgramStateRef invalidateAllIteratorPositions(ProgramStateRef State,
     return Pos.invalidate();
   };
   return processIteratorPositions(State, MatchCont, Invalidate);
+}
+
+ProgramStateRef reassignAllIteratorPositions(ProgramStateRef State,
+                                             const MemRegion *Cont,
+                                             const MemRegion *NewCont) {
+  auto MatchCont = [&](const IteratorPosition &Pos) {
+    return Pos.getContainer() == Cont;
+  };
+  auto ReAssign = [&](const IteratorPosition &Pos) {
+    return Pos.reAssign(NewCont);
+  };
+  return processIteratorPositions(State, MatchCont, ReAssign);
+}
+
+ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
+                                                   const MemRegion *Cont,
+                                                   const MemRegion *NewCont,
+                                                   SymbolRef Offset,
+                                                   BinaryOperator::Opcode Opc) {
+  auto MatchContAndCompare = [&](const IteratorPosition &Pos) {
+    return Pos.getContainer() == Cont &&
+    !compare(State, Pos.getOffset(), Offset, Opc);
+  };
+  auto ReAssign = [&](const IteratorPosition &Pos) {
+    return Pos.reAssign(NewCont);
+  };
+  return processIteratorPositions(State, MatchContAndCompare, ReAssign);
+}
+
+// This function rebases symbolic expression `OldSym + Int` to `NewSym + Int`,
+// `OldSym - Int` to `NewSym - Int` and  `OldSym` to `NewSym` in any iterator
+// position offsets where `CondSym` is true.
+ProgramStateRef rebaseSymbolInIteratorPositionsIf(
+    ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
+    SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc) {
+  auto LessThanEnd = [&](const IteratorPosition &Pos) {
+    return compare(State, Pos.getOffset(), CondSym, Opc);
+  };
+  auto RebaseSymbol = [&](const IteratorPosition &Pos) {
+    return Pos.setTo(rebaseSymbol(State, SVB, Pos.getOffset(), OldSym,
+                                   NewSym));
+  };
+  return processIteratorPositions(State, LessThanEnd, RebaseSymbol);
+}
+
+// This function rebases symbolic expression `OldExpr + Int` to `NewExpr + Int`,
+// `OldExpr - Int` to `NewExpr - Int` and  `OldExpr` to `NewExpr` in expression
+// `OrigExpr`.
+SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
+                       SymbolRef OrigExpr, SymbolRef OldExpr,
+                       SymbolRef NewSym) {
+  auto &SymMgr = SVB.getSymbolManager();
+  auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
+                              nonloc::SymbolVal(OldExpr), 
+                              SymMgr.getType(OrigExpr));
+
+  const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();
+  if (!DiffInt)
+    return OrigExpr;
+
+  return SVB.evalBinOpNN(State, BO_Add, *DiffInt, nonloc::SymbolVal(NewSym),
+                         SymMgr.getType(OrigExpr)).getAsSymbol();
 }
 
 bool isZero(ProgramStateRef State, const NonLoc &Val) {
