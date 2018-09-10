@@ -309,12 +309,16 @@ def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
            "destructor in their base class">,
   DescFile<"DeleteWithNonVirtualDtorChecker.cpp">;
 
+def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
+  HelpText<"Check for use of invalidated iterators">,
+  DescFile<"IteratorChecker.cpp">;
+
 def IteratorRangeChecker : Checker<"IteratorRange">,
   HelpText<"Check for iterators used outside their valid ranges">,
   DescFile<"IteratorChecker.cpp">;
 
-def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
-  HelpText<"Check for use of invalidated iterators">,
+def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
+  HelpText<"Check for use of iterators of different containers where iterators of the same container are expected">,
   DescFile<"IteratorChecker.cpp">;
 
 def MisusedMovedObjectChecker: Checker<"MisusedMovedObject">,
