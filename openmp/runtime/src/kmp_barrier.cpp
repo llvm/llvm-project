@@ -1223,7 +1223,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
-#if OMPT_SUPPORT
+#if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
   void *return_address;
@@ -1599,10 +1599,10 @@ void __kmp_join_barrier(int gtid) {
 
   ANNOTATE_BARRIER_BEGIN(&team->t.t_bar);
 #if OMPT_SUPPORT
-  ompt_data_t *my_task_data;
-  ompt_data_t *my_parallel_data;
   if (ompt_enabled.enabled) {
 #if OMPT_OPTIONAL
+    ompt_data_t *my_task_data;
+    ompt_data_t *my_parallel_data;
     void *codeptr = NULL;
     int ds_tid = this_thr->th.th_info.ds.ds_tid;
     if (KMP_MASTER_TID(ds_tid) &&
