@@ -199,7 +199,7 @@ llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
   if (Request.MaxCandidateCount <= std::numeric_limits<int64_t>::max())
     Result["MaxCandidateCount"] =
         static_cast<int64_t>(Request.MaxCandidateCount);
-  return Result;
+  return std::move(Result);
 }
 
 bool SwapIndex::fuzzyFind(const FuzzyFindRequest &R,
