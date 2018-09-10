@@ -1381,8 +1381,7 @@ private:
     Req.Scopes = QueryScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
-    vlog("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])", Req.Query,
-         llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ","));
+    vlog("Code complete: fuzzyFind({0:2})", toJSON(Req));
 
     if (SpecFuzzyFind)
       SpecFuzzyFind->NewReq = Req;
