@@ -1,16 +1,21 @@
-# This is an object compiled with /Zi (see the LF_TYPESERVER2 record) without an
-# adjacent type server PDB. Test that LLD fails gracefully on it.
-# Also try linking another OBJ with a reference to the same PDB
 
-# RUN: yaml2obj %s -o %t1.obj
-# RUN: yaml2obj %p/Inputs/pdb-type-server-missing-2.yaml -o %t2.obj
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s
+# RUN: cd %S/Inputs
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link %t.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s
+# RUN: cd %S
 
 # CHECK: warning: Cannot use debug info for {{.*}}.obj
-# CHECK-NEXT: {{N|n}}o such file or directory
+# CHECK-NEXT: The signature does not match; the file(s) might be out of date
 
-# CHECK: warning: Cannot use debug info for {{.*}}.obj
-# CHECK-NEXT: {{N|n}}o such file or directory
+# Also test a valid match
+
+# RUN: cd %S/Inputs
+# RUN: yaml2obj %S/Inputs/pdb-type-server-valid-signature.yaml -o %t2.obj
+# RUN: lld-link %t2.obj -out:%t2.exe -debug -pdb:%t2.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=VALID-SIGNATURE -allow-empty
+# RUN: cd %S
+
+# VALID-SIGNATURE-NOT: warning: Cannot use debug info for {{.*}}.obj
+# VALID-SIGNATURE-NOT: The signature does not match; the file(s) might be out of date
 
 --- !COFF
 header:
@@ -84,7 +89,7 @@ sections:
         TypeServer2:
           Guid:            '{01DF191B-22BF-6B42-96CE-5258B8329FE5}'
           Age:             18
-          Name:            'C:\src\llvm-project\build\definitely_not_found_for_sure.pdb'
+          Name:            'pdb-diff-cl.pdb'
   - Name:            '.text$mn'
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16

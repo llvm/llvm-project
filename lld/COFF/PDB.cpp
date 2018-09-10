@@ -165,7 +165,7 @@ private:
 
   /// List of TypeServer PDBs which cannot be loaded.
   /// Cached to prevent repeated load attempts.
-  std::set<GUID> MissingTypeServerPDBs;
+  std::map<GUID, std::string> MissingTypeServerPDBs;
 };
 }
 
@@ -326,21 +326,22 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
   // must match the GUID specified in the TypeServer2 record.
   if (ExpectedInfo->getGuid() != GuidFromObj)
-    return make_error<pdb::PDBError>(
-        pdb::pdb_error_code::type_server_not_found, TSPath);
+    return make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date);
 
   return std::move(NS);
 }
 
 Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
                                                                TypeServer2Record &TS) {
-  const GUID& TSId = TS.getGuid();
+  const GUID &TSId = TS.getGuid();
   StringRef TSPath = TS.getName();
 
   // First, check if the PDB has previously failed to load.
-  if (MissingTypeServerPDBs.count(TSId))
-    return make_error<pdb::PDBError>(
-      pdb::pdb_error_code::type_server_not_found, TSPath);
+  auto PrevErr = MissingTypeServerPDBs.find(TSId);
+  if (PrevErr != MissingTypeServerPDBs.end())
+    return createFileError(
+        TSPath,
+        make_error<StringError>(PrevErr->second, inconvertibleErrorCode()));
 
   // Second, check if we already loaded a PDB with this GUID. Return the type
   // index mapping if we have it.
@@ -355,20 +356,37 @@ Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
   // Check for a PDB at:
   // 1. The given file path
   // 2. Next to the object file or archive file
-  auto ExpectedSession = tryToLoadPDB(TSId, TSPath);
-  if (!ExpectedSession) {
-    consumeError(ExpectedSession.takeError());
-    StringRef LocalPath =
-        !File->ParentName.empty() ? File->ParentName : File->getName();
-    SmallString<128> Path = sys::path::parent_path(LocalPath);
-    sys::path::append(
-        Path, sys::path::filename(TSPath, sys::path::Style::windows));
-    ExpectedSession = tryToLoadPDB(TSId, Path);
-  }
+  auto ExpectedSession = handleExpected(
+      tryToLoadPDB(TSId, TSPath),
+      [&]() {
+        StringRef LocalPath =
+            !File->ParentName.empty() ? File->ParentName : File->getName();
+        SmallString<128> Path = sys::path::parent_path(LocalPath);
+        sys::path::append(
+            Path, sys::path::filename(TSPath, sys::path::Style::windows));
+        return tryToLoadPDB(TSId, Path);
+      },
+      [&](std::unique_ptr<ECError> EC) -> Error {
+        auto SysErr = EC->convertToErrorCode();
+        // Only re-try loading if the previous error was "No such file or
+        // directory"
+        if (SysErr.category() == std::generic_category() &&
+            SysErr.value() == ENOENT)
+          return Error::success();
+        return Error(std::move(EC));
+      });
+
   if (auto E = ExpectedSession.takeError()) {
     TypeServerIndexMappings.erase(TSId);
-    MissingTypeServerPDBs.emplace(TSId);
-    return std::move(E);
+
+    // Flatten the error to a string, for later display, if the error occurs
+    // again on the same PDB.
+    std::string ErrMsg;
+    raw_string_ostream S(ErrMsg);
+    S << E;
+    MissingTypeServerPDBs.emplace(TSId, S.str());
+
+    return createFileError(TSPath, std::move(E));
   }
 
   pdb::NativeSession *Session = ExpectedSession->get();
@@ -837,8 +855,10 @@ void PDBLinker::addObjFile(ObjFile *File) {
 
   // If the .debug$T sections fail to merge, assume there is no debug info.
   if (!IndexMapResult) {
-    warn("Type server PDB for " + Name + " is invalid, ignoring debug info. " +
-         toString(IndexMapResult.takeError()));
+    auto FileName = sys::path::filename(Path);
+    warn("Cannot use debug info for '" + FileName + "'\n" +
+         ">>> failed to load reference " +
+         StringRef(toString(IndexMapResult.takeError())));
     return;
   }
 

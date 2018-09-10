@@ -555,7 +555,7 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
         // address that we haven't resolved to a section yet.  So we'll have to
         // look in all the new modules to resolve this location. Otherwise, if
         // it was set in this module, re-resolve it here.
-        if (section_sp && section_sp->GetModule() == module_sp) {
+        if (!section_sp || section_sp->GetModule() == module_sp) {
           if (!seen)
             seen = true;
 

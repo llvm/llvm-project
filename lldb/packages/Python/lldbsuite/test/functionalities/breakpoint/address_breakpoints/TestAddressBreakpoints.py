@@ -97,3 +97,40 @@ class AddressBreakpointTestCase(TestBase):
 
         # The hit count for the breakpoint should now be 2.
         self.assertTrue(breakpoint.GetHitCount() == 2)
+
+
+
+    def test_address_breakpoint_set_before_launch(self):
+        """Test that an address bp set before the process is launched works correctly."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # get the address of the symbol "main"
+        sc_list = target.FindSymbols("main", lldb.eSymbolTypeCode)
+        symbol = sc_list.GetContextAtIndex(0).GetSymbol()
+        address = symbol.GetStartAddress().GetFileAddress()
+
+        # BreakpointCreateBySBAddress will resolve the address, causing this
+        # test to always pass, so use runCmd
+        self.runCmd("break set -a " + str(address))
+
+        # Disable ASLR.  This will allow us to actually test (on platforms that support this flag)
+        # that the breakpoint was able to track the module.
+
+        launch_info = lldb.SBLaunchInfo(None)
+        flags = launch_info.GetLaunchFlags()
+        flags &= ~lldb.eLaunchFlagDisableASLR
+        launch_info.SetLaunchFlags(flags)
+
+        error = lldb.SBError()
+
+        process = target.Launch(launch_info, error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
+                    substrs=["stop reason = breakpoint 1.1"])
+

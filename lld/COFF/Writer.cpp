@@ -528,9 +528,8 @@ void Writer::createMiscChunks() {
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
     // if we're ultimately not going to write CodeView data to the PDB.
-    auto *CVChunk = make<CVDebugRecordChunk>();
-    BuildId = CVChunk;
-    DebugRecords.push_back(CVChunk);
+    BuildId = make<CVDebugRecordChunk>();
+    DebugRecords.push_back(BuildId);
 
     for (Chunk *C : DebugRecords)
       DebugInfoSec->addChunk(C);
