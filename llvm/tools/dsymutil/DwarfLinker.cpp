@@ -256,6 +256,7 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
                                CompileUnit &CU, DeclContext *CurrentDeclContext,
                                UniquingStringPool &StringPool,
                                DeclContextTree &Contexts,
+                               uint64_t ModulesEndOffset,
                                bool InImportedModule = false) {
   unsigned MyIdx = CU.getOrigUnit().getDIEIndex(DIE);
   CompileUnit::DIEInfo &Info = CU.getInfo(MyIdx);
@@ -296,8 +297,9 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
   Info.Prune = InImportedModule;
   if (DIE.hasChildren())
     for (auto Child : DIE.children())
-      Info.Prune &= analyzeContextInfo(Child, MyIdx, CU, CurrentDeclContext,
-                                       StringPool, Contexts, InImportedModule);
+      Info.Prune &=
+          analyzeContextInfo(Child, MyIdx, CU, CurrentDeclContext, StringPool,
+                             Contexts, ModulesEndOffset, InImportedModule);
 
   // Prune this DIE if it is either a forward declaration inside a
   // DW_TAG_module or a DW_TAG_module that contains nothing but
@@ -306,11 +308,16 @@ static bool analyzeContextInfo(const DWARFDie &DIE, unsigned ParentIdx,
                 (isTypeTag(DIE.getTag()) &&
                  dwarf::toUnsigned(DIE.find(dwarf::DW_AT_declaration), 0));
 
-  // Don't prune it if there is no definition for the DIE.
-  Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset();
+  // Only prune forward declarations inside a DW_TAG_module for which a
+  // definition exists elsewhere.
+  if (ModulesEndOffset == 0)
+    Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset();
+  else
+    Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() > 0 &&
+                  Info.Ctxt->getCanonicalDIEOffset() <= ModulesEndOffset;
 
   return Info.Prune;
-}
+} // namespace dsymutil
 
 static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
   switch (Tag) {
@@ -2025,7 +2032,7 @@ bool DwarfLinker::registerModuleReference(
     const DWARFDie &CUDie, const DWARFUnit &Unit, DebugMap &ModuleMap,
     const DebugMapObject &DMO, RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    unsigned &UnitID, unsigned Indent, bool Quiet) {
+    uint64_t ModulesEndOffset, unsigned &UnitID, unsigned Indent, bool Quiet) {
   std::string PCMfile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
@@ -2067,9 +2074,10 @@ bool DwarfLinker::registerModuleReference(
   // Cyclic dependencies are disallowed by Clang, but we still
   // shouldn't run into an infinite loop, so mark it as processed now.
   ClangModules.insert({PCMfile, DwoId});
-  if (Error E = loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO,
-                                Ranges, StringPool, UniquingStringPool,
-                                ODRContexts, UnitID, Indent + 2, Quiet)) {
+  if (Error E =
+          loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO, Ranges,
+                          StringPool, UniquingStringPool, ODRContexts,
+                          ModulesEndOffset, UnitID, Indent + 2, Quiet)) {
     consumeError(std::move(E));
     return false;
   }
@@ -2103,7 +2111,7 @@ Error DwarfLinker::loadClangModule(
     uint64_t DwoId, DebugMap &ModuleMap, const DebugMapObject &DMO,
     RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    unsigned &UnitID, unsigned Indent, bool Quiet) {
+    uint64_t ModulesEndOffset, unsigned &UnitID, unsigned Indent, bool Quiet) {
   SmallString<80> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
     sys::path::append(Path, ModulePath, Filename);
@@ -2164,8 +2172,8 @@ Error DwarfLinker::loadClangModule(
     if (!CUDie)
       continue;
     if (!registerModuleReference(CUDie, *CU, ModuleMap, DMO, Ranges, StringPool,
-                                 UniquingStringPool, ODRContexts, UnitID,
-                                 Indent, Quiet)) {
+                                 UniquingStringPool, ODRContexts,
+                                 ModulesEndOffset, UnitID, Indent, Quiet)) {
       if (Unit) {
         std::string Err =
             (Filename +
@@ -2194,7 +2202,7 @@ Error DwarfLinker::loadClangModule(
                                             ModuleName);
       Unit->setHasInterestingContent();
       analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts);
+                         UniquingStringPool, ODRContexts, ModulesEndOffset);
       // Keep everything.
       Unit->markEverythingAsKept();
     }
@@ -2469,13 +2477,20 @@ bool DwarfLinker::link(const DebugMap &Map) {
       if (CUDie && !LLVM_UNLIKELY(Options.Update))
         registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
                                 LinkContext.Ranges, OffsetsStringPool,
-                                UniquingStringPool, ODRContexts, UnitID);
+                                UniquingStringPool, ODRContexts, 0, UnitID);
     }
   }
 
   // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
   if (MaxDwarfVersion == 0)
     MaxDwarfVersion = 3;
+
+  // At this point we know how much data we have emitted. We use this value to
+  // compare canonical DIE offsets in analyzeContextInfo to see if a definition
+  // is already emitted, without being affected by canonical die offsets set
+  // later. This prevents undeterminism when analyze and clone execute
+  // concurrently, as clone set the canonical DIE offset and analyze reads it.
+  const uint64_t ModulesEndOffset = OutputDebugInfoSize;
 
   // These variables manage the list of processed object files.
   // The mutex and condition variable are to ensure that this is thread safe.
@@ -2503,8 +2518,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
           !registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
                                    LinkContext.Ranges, OffsetsStringPool,
-                                   UniquingStringPool, ODRContexts, UnitID,
-                                   Quiet)) {
+                                   UniquingStringPool, ODRContexts,
+                                   ModulesEndOffset, UnitID, Quiet)) {
         LinkContext.CompileUnits.push_back(llvm::make_unique<CompileUnit>(
             *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
       }
@@ -2517,7 +2532,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
         continue;
       analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
                          *CurrentUnit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts);
+                         UniquingStringPool, ODRContexts, ModulesEndOffset);
     }
   };
 
