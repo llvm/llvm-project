@@ -27,8 +27,8 @@ Non-comprehensive list of changes in this release
 * The Windows installer no longer includes a Visual Studio integration.
   Instead, a new
   `LLVM Compiler Toolchain Visual Studio extension <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
-  is available on the Visual Studio Marketplace. The new integration includes
-  support for Visual Studio 2017.
+  is available on the Visual Studio Marketplace. The new integration
+  supports Visual Studio 2017.
 
 * Libraries have been renamed from 7.0 to 7. This change also impacts
   downstream libraries like lldb.
@@ -134,7 +134,7 @@ Changes to the AArch64 Target
 * The ``.inst`` assembler directive is now usable on both COFF and Mach-O
   targets, in addition to ELF.
 
-* Support for most remaining COFF relocations have been added.
+* Support for most remaining COFF relocations has been added.
 
 * Support for TLS on Windows has been added.
 
