@@ -227,15 +227,13 @@ void Dex::refs(const RefsRequest &Req,
 }
 
 size_t Dex::estimateMemoryUsage() const {
-  size_t Bytes =
-      LookupTable.size() * sizeof(std::pair<SymbolID, const Symbol *>);
-  Bytes += SymbolQuality.size() * sizeof(std::pair<const Symbol *, float>);
-  Bytes += InvertedIndex.size() * sizeof(Token);
-
-  for (const auto &P : InvertedIndex) {
+  size_t Bytes = Symbols.size() * sizeof(const Symbol *);
+  Bytes += SymbolQuality.size() * sizeof(float);
+  Bytes += LookupTable.getMemorySize();
+  Bytes += InvertedIndex.getMemorySize();
+  for (const auto &P : InvertedIndex)
     Bytes += P.second.size() * sizeof(DocID);
-  }
-  return Bytes;
+  return Bytes + BackingDataSize;
 }
 
 std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath) {

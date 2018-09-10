@@ -55,17 +55,21 @@ public:
   }
   // Symbols are owned by BackingData, Index takes ownership.
   template <typename Range, typename Payload>
-  Dex(Range &&Symbols, Payload &&BackingData,
+  Dex(Range &&Symbols, Payload &&BackingData, size_t BackingDataSize,
       llvm::ArrayRef<std::string> URISchemes)
       : Dex(std::forward<Range>(Symbols), URISchemes) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
+    this->BackingDataSize = BackingDataSize;
   }
 
   /// Builds an index from a slab. The index takes ownership of the slab.
   static std::unique_ptr<SymbolIndex>
   build(SymbolSlab Slab, llvm::ArrayRef<std::string> URISchemes) {
-    return llvm::make_unique<Dex>(Slab, std::move(Slab), URISchemes);
+    // Store Slab size before it is moved.
+    const auto BackingDataSize = Slab.bytes();
+    return llvm::make_unique<Dex>(Slab, std::move(Slab), BackingDataSize,
+                                  URISchemes);
   }
 
   bool
@@ -96,6 +100,8 @@ private:
   /// during the fuzzyFind process.
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
+  // Size of memory retained by KeepAlive.
+  size_t BackingDataSize = 0;
 
   std::vector<std::string> URISchemes;
 };
